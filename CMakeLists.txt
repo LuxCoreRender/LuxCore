@@ -1,0 +1,125 @@
+###########################################################################
+#   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 #
+#                                                                         #
+#   This file is part of LuxRays.                                         #
+#                                                                         #
+#   LuxRays is free software; you can redistribute it and/or modify       #
+#   it under the terms of the GNU General Public License as published by  #
+#   the Free Software Foundation; either version 3 of the License, or     #
+#   (at your option) any later version.                                   #
+#                                                                         #
+#   LuxRays is distributed in the hope that it will be useful,            #
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#   GNU General Public License for more details.                          #
+#                                                                         #
+#   You should have received a copy of the GNU General Public License     #
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>. #
+#                                                                         #
+#   LuxRays website: http://www.luxrender.net                             #
+###########################################################################
+
+# Luxrays build system
+
+cmake_minimum_required(VERSION 2.6)
+project(LuxRays)
+
+# The supported kind of builds: Release or Debug
+#SET(CMAKE_BUILD_TYPE "Debug")
+#SET(CMAKE_BUILD_TYPE "Release")
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release)
+ENDIF(NOT CMAKE_BUILD_TYPE)
+
+message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
+
+# The version number.
+set(LUXRAYS_VERSION_MAJOR 0)
+set(LUXRAYS_VERSION_MINOR 1)
+
+set(LUXRAYS_SOURCE_DIR src)
+set(LUXRAYS_INCLUDE_DIR include)
+set(LUXRAYS_LIB_DIR lib)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${LUXRAYS_LIB_DIR}")
+message(STATUS "Library directory: " ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+
+# Configure a header file to pass some of the CMake settings
+# to the source code
+configure_file(
+  "${LUXRAYS_SOURCE_DIR}/cfg.h.in"
+  "${LUXRAYS_INCLUDE_DIR}/luxrays/cfg.h"
+  )
+
+include_directories("${LUXRAYS_INCLUDE_DIR}" "${LUXRAYS_SOURCE_DIR}")
+
+#############################################################################
+#
+# OpenCL Libraries
+#
+#############################################################################
+
+find_path(OCL_INCLUDE_PATH NAMES CL/cl.hpp OpenCL/cl.hpp PATHS /home/david/src/ati-stream-sdk-v2.0-lnx64/include)
+find_library(OCL_LIBRARY_PATH OpenCL /home/david/src/ati-stream-sdk-v2.01-lnx64/lib/x86_64)
+set(OCL_LIBRARY OpenCL)
+
+message(STATUS "OpenCL include directory: " ${OCL_INCLUDE_PATH})
+message(STATUS "OpenCL library directory: " ${OCL_LIBRARY_PATH})
+
+include_directories("${OCL_INCLUDE_PATH}")
+
+#############################################################################
+#
+# Boost Libraries
+#
+#############################################################################
+
+if(APPLE)
+	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS system-xgcc40-mt-1_39 thread-xgcc40-mt-1_39 program_options-xgcc40-mt-1_39 filesystem-xgcc40-mt-1_39 serialization-xgcc40-mt-1_39 iostreams-xgcc40-mt-1_39 regex-xgcc40-mt-1_39)
+else(APPLE)
+	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
+endif(APPLE)
+
+if(Boost_FOUND)
+	message(STATUS "Boost library directory: " ${Boost_LIBRARY_DIRS})
+	message(STATUS "Boost include directory: " ${Boost_INCLUDE_DIRS})
+else(Boost_FOUND)
+	message(FATAL_ERROR "Could not find Boost")
+endif(Boost_FOUND)
+
+#############################################################################
+#
+# Compiler flags
+#
+#############################################################################
+
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fPIC -O0 -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -fPIC -O3 -msse2 -mfpmath=sse -ftree-vectorize -funroll-loops ")
+
+###########################################################################
+#
+# LuxRays Library
+#
+###########################################################################
+
+# Generate kernel file
+add_custom_command(
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_BVH = " >> ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cl
+   )
+
+set(LUXRAYS_SRCS
+  ${LUXRAYS_SOURCE_DIR}/accelerators/bvhaccel.cpp
+  ${LUXRAYS_SOURCE_DIR}/core/context.cpp
+  ${LUXRAYS_SOURCE_DIR}/core/dataset.cpp
+  ${LUXRAYS_SOURCE_DIR}/core/device.cpp
+  ${LUXRAYS_SOURCE_DIR}/core/geometry/bbox.cpp
+  ${LUXRAYS_SOURCE_DIR}/core/trianglemesh.cpp
+  ${LUXRAYS_SOURCE_DIR}/core/virtualdevice.cpp
+  ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp)
+
+add_library(luxrays STATIC ${LUXRAYS_SRCS})
