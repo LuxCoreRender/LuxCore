@@ -19,59 +19,21 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_BVHACCEL_H
-#define	_LUXRAYS_BVHACCEL_H
+#ifndef _LUXRAYS_ACCELERETOR_H
+#define	_LUXRAYS_ACCELERETOR_H
 
-#include <vector>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/acceleretor.h"
+#include "luxrays/core/geometry/ray.h"
 
 namespace luxrays {
 
-struct BVHAccelTreeNode {
-	BBox bbox;
-	unsigned int primitive;
-	BVHAccelTreeNode *leftChild;
-	BVHAccelTreeNode *rightSibling;
-};
-
-struct BVHAccelArrayNode {
-	BBox bbox;
-	unsigned int primitive;
-	unsigned int skipIndex;
-};
-
-// BVHAccel Declarations
-class BVHAccel : public Accelerator {
+class Accelerator {
 public:
-	// BVHAccel Public Methods
-	BVHAccel(const Context *context,
-			const unsigned int triangleCount, const Triangle *p, const Point *v,
-			const unsigned int treetype, const int csamples, const int icost,
-			const int tcost, const float ebonus);
-	~BVHAccel();
+	Accelerator() { }
+	virtual ~Accelerator() { }
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
-
-	// BVHAccel Private Data
-	unsigned int treeType;
-	int costSamples, isectCost, traversalCost;
-	float emptyBonus;
-	unsigned int nPrims;
-	const Point *vertices;
-	const Triangle *triangles;
-	unsigned int nNodes;
-	BVHAccelArrayNode *bvhTree;
-
-private:
-	// BVHAccel Private Methods
-	BVHAccelTreeNode *BuildHierarchy(std::vector<BVHAccelTreeNode *> &list, unsigned int begin, unsigned int end, unsigned int axis);
-	void FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int begin, unsigned int end, float *splitValue, unsigned int *bestAxis);
-	unsigned int BuildArray(BVHAccelTreeNode *node, unsigned int offset);
-	void FreeHierarchy(BVHAccelTreeNode *node);
 };
 
 }
 
-#endif	/* _LUXRAYS_BVHACCEL_H */
+#endif	/* _LUXRAYS_ACCELERETOR_H */

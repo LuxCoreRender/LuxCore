@@ -30,6 +30,7 @@
 
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/utils.h"
+#include "luxrays/core/context.h"
 
 using std::bind2nd;
 using std::ptr_fun;

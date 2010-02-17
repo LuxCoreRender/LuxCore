@@ -138,7 +138,7 @@ RayBuffer *VirtualM2OIntersectionDevice::VirtualM2ODevInstance::NewRayBuffer() {
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::PushRayBuffer(RayBuffer *rayBuffer) {
 	// Replace the RayBuffer UserData with my index
 	rayBufferUserData.push_back(rayBuffer->GetUserData());
-	rayBuffer->SetUserData(instanceIndex);
+	//rayBuffer->SetUserData(instanceIndex);
 
 	virtualDevice->realDevice->PushRayBuffer(rayBuffer);
 }
@@ -147,7 +147,7 @@ RayBuffer *VirtualM2OIntersectionDevice::VirtualM2ODevInstance::PopRayBuffer() {
 	RayBuffer *rayBuffer = IntersectionDevice::PopRayBuffer();
 
 	// Restore the RayBuffer UserData
-	rayBuffer->SetUserData(rayBufferUserData.front());
+	//rayBuffer->SetUserData(rayBufferUserData.front());
 	rayBufferUserData.pop_front();
 
 	return rayBuffer;

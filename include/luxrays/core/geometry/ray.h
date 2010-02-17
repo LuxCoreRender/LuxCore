@@ -23,15 +23,8 @@
 #ifndef _LUXRAYS_RAY_H
 #define _LUXRAYS_RAY_H
 
-#include <deque>
-#include <cmath>
-#include <limits>
-
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
-
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
 
 #define RAY_EPSILON 1e-4f
 
@@ -79,121 +72,6 @@ public:
 	unsigned int index;
 
 	bool Miss() const { return (index == 0xffffffffu); };
-};
-
-class RayBuffer {
-public:
-	RayBuffer(const size_t bufferSize) : size(bufferSize), currentFreeRayIndex(0) {
-		rays = new Ray[size];
-		rayHits = new RayHit[size];
-		userData = 0;
-	}
-
-	~RayBuffer() {
-		delete rays;
-		delete rayHits;
-	}
-
-	void SetUserData(size_t data) { userData = data; }
-	size_t GetUserData() const { return userData; }
-
-	void Reset() {
-		currentFreeRayIndex = 0;
-	}
-
-	size_t ReserveRay() {
-		assert (currentFreeRayIndex < size);
-
-		return currentFreeRayIndex++;
-	}
-
-	size_t AddRay(const Ray &ray) {
-		assert (currentFreeRayIndex < size);
-
-		rays[currentFreeRayIndex] = ray;
-
-		return currentFreeRayIndex++;
-	}
-
-	const RayHit *GetRayHit(const size_t index) const {
-		assert (index >= 0);
-		assert (index < size);
-
-		return &rayHits[index];
-	}
-
-	size_t GetSize() const {
-		return size;
-	}
-
-	size_t GetRayCount() const {
-		return currentFreeRayIndex;
-	}
-
-	bool IsFull() { return (currentFreeRayIndex >= size); }
-	size_t LeftSpace() { return size - currentFreeRayIndex; }
-
-	Ray *GetRayBuffer() const {
-		return rays;
-	}
-
-	RayHit *GetHitBuffer() {
-		return rayHits;
-	}
-
-private:
-	size_t size;
-	size_t currentFreeRayIndex;
-	size_t userData;
-
-	Ray *rays;
-	RayHit *rayHits;
-};
-
-// NOTE: this class must be thread safe
-class RayBufferQueue {
-public:
-	RayBufferQueue() { }
-	~RayBufferQueue() { }
-
-	void Push(RayBuffer *rayBuffer) {
-		{
-			boost::unique_lock<boost::mutex> lock(queueMutex);
-			queue.push_back(rayBuffer);
-		}
-
-		condition.notify_all();
-	}
-
-	RayBuffer *Pop() {
-		boost::unique_lock<boost::mutex> lock(queueMutex);
-
-		while (queue.size() < 1) {
-			// Wait for a new buffer to arrive
-			condition.wait(lock);
-		}
-
-		RayBuffer *rayBuffer = queue.front();
-		queue.pop_front();
-		return rayBuffer;
-	}
-
-	void Clear() {
-		boost::unique_lock<boost::mutex> lock(queueMutex);
-
-		queue.clear();
-	}
-
-	size_t Size() {
-		boost::unique_lock<boost::mutex> lock(queueMutex);
-		return queue.size();
-	}
-
-private:
-	boost::mutex queueMutex;
-	boost::condition_variable condition;
-
-	std::deque<RayBuffer *> queue;
 };
 
 }

@@ -24,6 +24,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <ostream>
 
 #define __CL_ENABLE_EXCEPTIONS
 #define __NO_STD_VECTOR

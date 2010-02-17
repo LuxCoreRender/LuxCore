@@ -23,8 +23,7 @@
 #ifndef _LUXRAYS_TRIANGLE_H
 #define	_LUXRAYS_TRIANGLE_H
 
-#include "luxrays/core/geometry/ray.h"
-#include "luxrays/core/geometry/bbox.h"
+#include "luxrays/luxrays.h"
 
 namespace luxrays {
 

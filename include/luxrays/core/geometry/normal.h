@@ -19,90 +19,80 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_POINT_H
-#define _LUXRAYS_POINT_H
+#ifndef _LUXRAYS_NORMAL_H
+#define _LUXRAYS_NORMAL_H
 
 #include "luxrays/core/geometry/vector.h"
 
 namespace luxrays {
 
-class Point {
+class Normal {
 public:
-	// Point Methods
+	// Normal Methods
 
-	Point(float _x = 0, float _y = 0, float _z = 0)
+	Normal(float _x = 0, float _y = 0, float _z = 0)
 	: x(_x), y(_y), z(_z) {
 	}
 
-	Point(float v[3]) : x(v[0]), y(v[1]), z(v[2]) {
+	Normal operator-() const {
+		return Normal(-x, -y, -z);
 	}
 
-	Point operator+(const Vector &v) const {
-		return Point(x + v.x, y + v.y, z + v.z);
+	Normal operator+(const Normal &v) const {
+		return Normal(x + v.x, y + v.y, z + v.z);
 	}
 
-	Point & operator+=(const Vector &v) {
+	Normal & operator+=(const Normal &v) {
 		x += v.x;
 		y += v.y;
 		z += v.z;
 		return *this;
 	}
 
-	Vector operator-(const Point &p) const {
-		return Vector(x - p.x, y - p.y, z - p.z);
+	Normal operator-(const Normal &v) const {
+		return Normal(x - v.x, y - v.y, z - v.z);
 	}
 
-	Point operator-(const Vector &v) const {
-		return Point(x - v.x, y - v.y, z - v.z);
-	}
-
-	Point & operator-=(const Vector &v) {
+	Normal & operator-=(const Normal &v) {
 		x -= v.x;
 		y -= v.y;
 		z -= v.z;
 		return *this;
 	}
 
-	Point & operator+=(const Point &p) {
-		x += p.x;
-		y += p.y;
-		z += p.z;
-		return *this;
+	Normal operator*(float f) const {
+		return Normal(f*x, f*y, f * z);
 	}
 
-	Point & operator-=(const Point &p) {
-		x -= p.x;
-		y -= p.y;
-		z -= p.z;
-		return *this;
-	}
-
-	Point operator+(const Point &p) const {
-		return Point(x + p.x, y + p.y, z + p.z);
-	}
-
-	Point operator*(float f) const {
-		return Point(f*x, f*y, f * z);
-	}
-
-	Point & operator*=(float f) {
+	Normal & operator*=(float f) {
 		x *= f;
 		y *= f;
 		z *= f;
 		return *this;
 	}
 
-	Point operator/(float f) const {
+	Normal operator/(float f) const {
 		float inv = 1.f / f;
-		return Point(inv*x, inv*y, inv * z);
+		return Normal(x * inv, y * inv, z * inv);
 	}
 
-	Point & operator/=(float f) {
+	Normal & operator/=(float f) {
 		float inv = 1.f / f;
 		x *= inv;
 		y *= inv;
 		z *= inv;
 		return *this;
+	}
+
+	float LengthSquared() const {
+		return x * x + y * y + z*z;
+	}
+
+	float Length() const {
+		return sqrtf(LengthSquared());
+	}
+
+	explicit Normal(const Vector &v) : x(v.x), y(v.y), z(v.z) {
 	}
 
 	float operator[](int i) const {
@@ -112,32 +102,35 @@ public:
 	float &operator[](int i) {
 		return (&x)[i];
 	}
-
-	// Point Public Data
+	// Normal Public Data
 	float x, y, z;
 };
 
-inline Vector::Vector(const Point &p)
-	: x(p.x), y(p.y), z(p.z) {
+inline Normal operator*(float f, const Normal &n) {
+	return Normal(f * n.x, f * n.y, f * n.z);
 }
 
-inline std::ostream & operator<<(std::ostream &os, const Point &v) {
-	os << "Point[" << v.x << ", " << v.y << ", " << v.z << "]";
+inline Vector::Vector(const Normal &n)
+	: x(n.x), y(n.y), z(n.z) {
+}
+
+inline std::ostream &operator<<(std::ostream &os, const Normal &v) {
+	os << "Normal[" << v.x << ", " << v.y << ", " << "]" << v.z << "]";
 	return os;
 }
 
-inline Point operator*(float f, const Point &p) {
-	return p*f;
+inline Normal Normalize(const Normal &n) {
+	return n / n.Length();
 }
 
-inline float Distance(const Point &p1, const Point &p2) {
-	return (p1 - p2).Length();
+inline float Dot(const Normal &n1, const Normal &n2) {
+	return n1.x * n2.x + n1.y * n2.y + n1.z * n2.z;
 }
 
-inline float DistanceSquared(const Point &p1, const Point &p2) {
-	return (p1 - p2).LengthSquared();
+inline float AbsDot(const Normal &n1, const Normal &n2) {
+	return fabsf(n1.x * n2.x + n1.y * n2.y + n1.z * n2.z);
 }
 
 }
 
-#endif	/* _LUXRAYS_POINT_H */
+#endif 	/* _LUXRAYS_NORMAL_H */
