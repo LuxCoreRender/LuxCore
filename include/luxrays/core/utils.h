@@ -31,8 +31,7 @@
         Unsupported Platform !!!
 #endif
 
-namespace luxrays
-{
+namespace luxrays {
 
 inline double WallClockTime() {
 #if defined(__linux__) || defined(__APPLE__)
@@ -63,6 +62,14 @@ template<class T> inline void Swap(T &a, T &b) {
 	const T tmp = a;
 	a = b;
 	b = tmp;
+}
+
+inline float Sgn(float a) {
+	return a < 0.f ? -1.f : 1.f;
+}
+
+inline int Sgn(int a) {
+	return a < 0 ? -1 : 1.f;
 }
 
 }
