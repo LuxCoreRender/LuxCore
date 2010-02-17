@@ -40,9 +40,12 @@ set(LUXRAYS_VERSION_MINOR 1)
 set(LUXRAYS_SOURCE_DIR src)
 set(LUXRAYS_INCLUDE_DIR include)
 set(LUXRAYS_LIB_DIR lib)
+set(LUXRAYS_BIN_DIR bin)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${LUXRAYS_LIB_DIR}")
 message(STATUS "Library directory: " ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${LUXRAYS_BIN_DIR}")
+message(STATUS "Binaries directory: " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -60,11 +63,10 @@ include_directories("${LUXRAYS_INCLUDE_DIR}" "${LUXRAYS_SOURCE_DIR}")
 #############################################################################
 
 find_path(OCL_INCLUDE_PATH NAMES CL/cl.hpp OpenCL/cl.hpp PATHS /home/david/src/ati-stream-sdk-v2.0-lnx64/include)
-find_library(OCL_LIBRARY_PATH OpenCL /home/david/src/ati-stream-sdk-v2.01-lnx64/lib/x86_64)
-set(OCL_LIBRARY OpenCL)
+find_library(OCL_LIBRARY OpenCL /home/david/src/ati-stream-sdk-v2.01-lnx64/lib/x86_64)
 
 message(STATUS "OpenCL include directory: " ${OCL_INCLUDE_PATH})
-message(STATUS "OpenCL library directory: " ${OCL_LIBRARY_PATH})
+message(STATUS "OpenCL library directory: " ${OCL_LIBRARY})
 
 include_directories("${OCL_INCLUDE_PATH}")
 
@@ -75,7 +77,7 @@ include_directories("${OCL_INCLUDE_PATH}")
 #############################################################################
 
 if(APPLE)
-	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS system-xgcc40-mt-1_39 thread-xgcc40-mt-1_39 program_options-xgcc40-mt-1_39 filesystem-xgcc40-mt-1_39 serialization-xgcc40-mt-1_39 iostreams-xgcc40-mt-1_39 regex-xgcc40-mt-1_39)
+	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39)
 else(APPLE)
 	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
 endif(APPLE)
@@ -123,3 +125,11 @@ set(LUXRAYS_SRCS
   ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp)
 
 add_library(luxrays STATIC ${LUXRAYS_SRCS})
+
+###########################################################################
+#
+# Samples: benchsimple
+#
+###########################################################################
+
+add_subdirectory(samples/benchsimple)

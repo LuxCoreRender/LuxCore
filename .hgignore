@@ -1,8 +1,9 @@
-^CMakeFiles
-^CMakeCache
-^Makefile
-^cmake_install.cmake
 ^config.h
 ^lib/libluxrays.a
+^bin/*
 syntax: glob
 *~
+*CMakeFiles
+*CMakeCache.txt
+*Makefile
+*cmake_install.cmake
