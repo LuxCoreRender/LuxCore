@@ -23,9 +23,18 @@
 #define	_LUXRAYS_H
 
 #include "luxrays/cfg.h"
+#include "luxrays/core/geometry/vector.h"
+#include "luxrays/core/geometry/normal.h"
+#include "luxrays/core/geometry/vector_normal.h"
+#include "luxrays/core/geometry/point.h"
+#include "luxrays/core/geometry/ray.h"
+#include "luxrays/core/geometry/raybuffer.h"
+#include "luxrays/core/geometry/bbox.h"
+#include "luxrays/core/geometry/triangle.h"
 
 namespace luxrays
 {
+class Accelerator;
 class Context;
 class DataSet;
 class IntersectionDevice;

@@ -57,6 +57,8 @@ private:
 		size_t instanceIndex;
 		VirtualM2OIntersectionDevice *virtualDevice;
 
+		RayBufferQueue todoRayBufferQueue;
+		RayBufferQueue doneRayBufferQueue;
 		std::deque<size_t> rayBufferUserData;
 	};
 

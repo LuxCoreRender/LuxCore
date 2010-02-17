@@ -38,8 +38,8 @@
 #include <boost/thread/thread.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/dataset.h"
+#include "luxrays/core/context.h"
 
 namespace luxrays {
 
@@ -73,8 +73,8 @@ public:
 	virtual bool IsRunning() const { return started; };
 
 	virtual RayBuffer *NewRayBuffer() = 0;
-	virtual void PushRayBuffer(RayBuffer *rayBuffer);
-	virtual RayBuffer *PopRayBuffer();
+	virtual void PushRayBuffer(RayBuffer *rayBuffer) = 0;
+	virtual RayBuffer *PopRayBuffer() = 0;
 
 	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 	static std::string GetDeviceType(const DeviceType type);
@@ -85,12 +85,10 @@ protected:
 
 	std::string deviceName;
 	const DataSet *dataSet;
-	bool started;
-
-	RayBufferQueue todoRayBufferQueue;
-	RayBufferQueue doneRayBufferQueue;
 
 	double statsTotalRayTime, statsTotalRayCount, statsDeviceIdleTime, statsDeviceTotalTime;
+
+	bool started;
 };
 
 //------------------------------------------------------------------------------
@@ -127,6 +125,9 @@ protected:
 	static void AddDevices(std::vector<DeviceDescription *> &descriptions);
 
 private:
+	RayBufferQueue todoRayBufferQueue;
+	RayBufferQueue doneRayBufferQueue;
+
 	boost::thread *intersectionThread;
 };
 
@@ -197,6 +198,9 @@ private:
 	cl::Buffer *vertsBuff;
 	cl::Buffer *trisBuff;
 	cl::Buffer *bvhBuff;
+
+	RayBufferQueue todoRayBufferQueue;
+	RayBufferQueue doneRayBufferQueue;
 
 	bool reportedPermissionError;
 };

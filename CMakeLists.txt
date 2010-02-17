@@ -94,7 +94,7 @@ endif(Boost_FOUND)
 #############################################################################
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fPIC -O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-Wall -fPIC -O3 -msse2 -mfpmath=sse -ftree-vectorize -funroll-loops ")
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -msse2 -mfpmath=sse -ftree-vectorize -funroll-loops ")
 
 ###########################################################################
 #

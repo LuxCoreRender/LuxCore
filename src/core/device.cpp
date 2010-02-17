@@ -66,14 +66,6 @@ void IntersectionDevice::Stop() {
 	started = false;
 }
 
-void IntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
-	todoRayBufferQueue.Push(rayBuffer);
-}
-
-RayBuffer *IntersectionDevice::PopRayBuffer() {
-	return doneRayBufferQueue.Pop();
-}
-
 void IntersectionDevice::Filter(const DeviceType type,
 		std::vector<DeviceDescription *> &deviceDescriptions) {
 	size_t i = 0;

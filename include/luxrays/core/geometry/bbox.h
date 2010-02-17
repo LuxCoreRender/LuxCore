@@ -100,7 +100,7 @@ public:
 };
 
 inline std::ostream &operator<<(std::ostream &os, const BBox &b) {
-	os << b.pMin << " -> " << b.pMax;
+	os << "BBox[" << b.pMin << ", " << b.pMax << "]";
 	return os;
 }
 

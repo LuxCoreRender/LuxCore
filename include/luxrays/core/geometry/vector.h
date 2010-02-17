@@ -28,7 +28,6 @@
 #include <limits>
 #include <algorithm>
 
-#include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
 
 namespace luxrays {
@@ -36,28 +35,34 @@ namespace luxrays {
 class Point;
 class Normal;
 
-class  Vector {
+class Vector {
 public:
 	// Vector Public Methods
-	Vector(float _x = 0.f, float _y = 0.f, float _z = 0.f)
-		: x(_x), y(_y), z(_z) {
+
+	Vector(float _x = 0.f, float _y = 0.f, float _z = 0.f) :
+		x(_x), y(_y), z(_z) {
 	}
 	explicit Vector(const Point &p);
+
 	Vector operator+(const Vector &v) const {
 		return Vector(x + v.x, y + v.y, z + v.z);
 	}
-	
-	Vector& operator+=(const Vector &v) {
-		x += v.x; y += v.y; z += v.z;
+
+	Vector & operator+=(const Vector &v) {
+		x += v.x;
+		y += v.y;
+		z += v.z;
 		return *this;
 	}
 
 	Vector operator-(const Vector &v) const {
 		return Vector(x - v.x, y - v.y, z - v.z);
 	}
-	
-	Vector& operator-=(const Vector &v) {
-		x -= v.x; y -= v.y; z -= v.z;
+
+	Vector & operator-=(const Vector &v) {
+		x -= v.x;
+		y -= v.y;
+		z -= v.z;
 		return *this;
 	}
 
@@ -66,11 +71,13 @@ public:
 	}
 
 	Vector operator*(float f) const {
-		return Vector(f*x, f*y, f*z);
+		return Vector(f*x, f*y, f * z);
 	}
-	
-	Vector &operator*=(float f) {
-		x *= f; y *= f; z *= f;
+
+	Vector & operator*=(float f) {
+		x *= f;
+		y *= f;
+		z *= f;
 		return *this;
 	}
 
@@ -78,10 +85,12 @@ public:
 		float inv = 1.f / f;
 		return Vector(x * inv, y * inv, z * inv);
 	}
-	
-	Vector &operator/=(float f) {
+
+	Vector & operator/=(float f) {
 		float inv = 1.f / f;
-		x *= inv; y *= inv; z *= inv;
+		x *= inv;
+		y *= inv;
+		z *= inv;
 		return *this;
 	}
 
@@ -92,13 +101,18 @@ public:
 	float operator[](int i) const {
 		return (&x)[i];
 	}
-	
+
 	float &operator[](int i) {
 		return (&x)[i];
 	}
 
-	float LengthSquared() const { return x*x + y*y + z*z; }
-	float Length() const { return sqrtf(LengthSquared()); }
+	float LengthSquared() const {
+		return x * x + y * y + z*z;
+	}
+
+	float Length() const {
+		return sqrtf(LengthSquared());
+	}
 	explicit Vector(const Normal &n);
 
 	// Vector Public Data
@@ -106,9 +120,10 @@ public:
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Vector &v) {
-	os << v.x << ", " << v.y << ", " << v.z;
+	os << "Vector[" << v.x << ", " << v.y << ", " << v.z << "]";
 	return os;
 }
+
 inline Vector operator*(float f, const Vector &v) {
 	return v*f;
 }
@@ -123,8 +138,8 @@ inline float AbsDot(const Vector &v1, const Vector &v2) {
 
 inline Vector Cross(const Vector &v1, const Vector &v2) {
 	return Vector((v1.y * v2.z) - (v1.z * v2.y),
-                  (v1.z * v2.x) - (v1.x * v2.z),
-                  (v1.x * v2.y) - (v1.y * v2.x));
+			(v1.z * v2.x) - (v1.x * v2.z),
+			(v1.x * v2.y) - (v1.y * v2.x));
 }
 
 inline Vector Normalize(const Vector &v) {
@@ -133,10 +148,10 @@ inline Vector Normalize(const Vector &v) {
 
 inline void CoordinateSystem(const Vector &v1, Vector *v2, Vector *v3) {
 	if (fabsf(v1.x) > fabsf(v1.y)) {
-		float invLen = 1.f / sqrtf(v1.x*v1.x + v1.z*v1.z);
+		float invLen = 1.f / sqrtf(v1.x * v1.x + v1.z * v1.z);
 		*v2 = Vector(-v1.z * invLen, 0.f, v1.x * invLen);
 	} else {
-		float invLen = 1.f / sqrtf(v1.y*v1.y + v1.z*v1.z);
+		float invLen = 1.f / sqrtf(v1.y * v1.y + v1.z * v1.z);
 		*v2 = Vector(0.f, v1.z * invLen, -v1.y * invLen);
 	}
 	*v3 = Cross(v1, *v2);
@@ -147,9 +162,9 @@ inline Vector SphericalDirection(float sintheta, float costheta, float phi) {
 }
 
 inline Vector SphericalDirection(float sintheta, float costheta, float phi,
-	const Vector &x, const Vector &y, const Vector &z) {
+		const Vector &x, const Vector &y, const Vector &z) {
 	return sintheta * cosf(phi) * x + sintheta * sinf(phi) * y +
-		costheta * z;
+			costheta * z;
 }
 
 inline float SphericalTheta(const Vector &v) {
@@ -158,17 +173,19 @@ inline float SphericalTheta(const Vector &v) {
 
 inline float SphericalPhi(const Vector &v) {
 	float p = atan2f(v.y, v.x);
-	return (p < 0.f) ? p + 2.f*M_PI : p;
+	return (p < 0.f) ? p + 2.f * M_PI : p;
 }
 
-inline float CosTheta(const Vector &w) { return w.z; }
+inline float CosTheta(const Vector &w) {
+	return w.z;
+}
 
 inline float SinTheta(const Vector &w) {
-	return sqrtf(Max(0.f, 1.f - w.z*w.z));
+	return sqrtf(Max(0.f, 1.f - w.z * w.z));
 }
 
 inline float SinTheta2(const Vector &w) {
-	return 1.f - CosTheta(w)*CosTheta(w);
+	return 1.f - CosTheta(w) * CosTheta(w);
 }
 
 inline float CosPhi(const Vector &w) {
@@ -180,7 +197,7 @@ inline float SinPhi(const Vector &w) {
 }
 
 inline bool SameHemisphere(const Vector &w,
-                          const Vector &wp) {
+		const Vector &wp) {
 	return w.z * wp.z > 0.f;
 }
 

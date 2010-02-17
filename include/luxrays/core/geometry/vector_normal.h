@@ -22,7 +22,8 @@
 #ifndef _LUXRAYS_VECTOR_NORMAL_H
 #define _LUXRAYS_VECTOR_NORMAL_H
 
-#include "luxrays/geometry/vector.h"
+#include "luxrays/core/geometry/vector.h"
+#include "luxrays/core/geometry/normal.h"
 
 namespace luxrays {
 
