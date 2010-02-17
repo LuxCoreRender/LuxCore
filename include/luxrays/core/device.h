@@ -53,6 +53,14 @@ public:
 	DeviceDescription(const std::string deviceName, const DeviceType deviceType) :
 		name(deviceName), type(deviceType) { }
 
+	const std::string &GetName() const { return name; }
+	const DeviceType GetType() const { return type; };
+
+	static void Filter(std::vector<DeviceDescription *> &deviceDescriptions);
+	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
+	static std::string GetDeviceType(const DeviceType type);
+
+protected:
 	std::string name;
 	DeviceType type;
 };
@@ -77,9 +85,6 @@ public:
 	virtual RayBuffer *PopRayBuffer() = 0;
 	virtual size_t GetQueueSize() = 0;
 
-	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
-	static std::string GetDeviceType(const DeviceType type);
-
 protected:
 	const Context *deviceContext;
 	DeviceType deviceType;
@@ -99,10 +104,13 @@ protected:
 
 class NativeThreadDeviceDescription : public DeviceDescription {
 public:
-	NativeThreadDeviceDescription(const std::string deviceName, const unsigned int deviceIndex) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD), index(deviceIndex) { }
+	NativeThreadDeviceDescription(const std::string deviceName, const unsigned int threadIdx) :
+		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD), threadIndex(threadIdx) { }
 
-	size_t index;
+	size_t GetThreadIndex() const { return threadIndex; };
+
+protected:
+	size_t threadIndex;
 };
 
 class NativeThreadIntersectionDevice : public IntersectionDevice {
@@ -148,12 +156,18 @@ typedef enum {
 class OpenCLDeviceDescription : public DeviceDescription {
 public:
 	OpenCLDeviceDescription(const std::string deviceName, const OpenCLDeviceType type,
-		const size_t deviceIndex, const int deviceComputeUnits, const size_t deviceMaxMemory) :
-		DeviceDescription(deviceName, DEVICE_TYPE_OPENCL), oclType(type), index(deviceIndex),
+		const size_t devIndex, const int deviceComputeUnits, const size_t deviceMaxMemory) :
+		DeviceDescription(deviceName, DEVICE_TYPE_OPENCL), oclType(type), deviceIndex(devIndex),
 		computeUnits(deviceComputeUnits), maxMemory(deviceMaxMemory) { }
 
+	OpenCLDeviceType GetOpenCLType() const { return oclType; }
+	size_t GetDeviceIndex() const { return deviceIndex; }
+	int GetComputeUnits() const { return computeUnits; }
+	size_t GetMaxMemory() const { return maxMemory; }
+
+protected:
 	OpenCLDeviceType oclType;
-	size_t index;
+	size_t deviceIndex;
 	int computeUnits;
 	size_t maxMemory;
 };

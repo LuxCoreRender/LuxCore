@@ -50,7 +50,7 @@ class OpenCLDeviceDescription;
 
 class Context {
 public:
-	Context(LuxRaysDebugHandler handler = NULL);
+	Context(LuxRaysDebugHandler handler = NULL, const int openclPlatformIndex = -1);
 	~Context();
 
 	const std::vector<DeviceDescription *> &GetAvailableDeviceDescriptions() const;

@@ -30,7 +30,7 @@
 
 using namespace luxrays;
 
-Context::Context(LuxRaysDebugHandler handler) {
+Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 	debugHandler = handler;
 	currentDataSet = NULL;
 	started = false;
@@ -39,13 +39,20 @@ Context::Context(LuxRaysDebugHandler handler) {
 	VECTOR_CLASS<cl::Platform> platforms;
 	cl::Platform::get(&platforms);
 	for (size_t i = 0; i < platforms.size(); ++i)
-		LR_LOG(this, "OpenCL Platform " << i << ": " << platforms[i].getInfo<CL_PLATFORM_VENDOR > ().c_str());
+		LR_LOG(this, "OpenCL Platform " << i << ": " << platforms[i].getInfo<CL_PLATFORM_VENDOR>().c_str());
 
-	if (platforms.size() == 0)
-		throw std::runtime_error("Unable to find an appropiate OpenCL platform");
-
-	// Just use the first platform available
-	oclPlatform = platforms[0];
+	if (openclPlatformIndex < 0) {
+		if (platforms.size() > 0) {
+			// Just use the first platform available
+			oclPlatform = platforms[0];
+		} else
+			LR_LOG(this, "No OpenCL platform available");
+	} else {
+		if ((platforms.size() == 0) || (openclPlatformIndex >= (int)platforms.size()))
+			throw std::runtime_error("Unable to find an appropiate OpenCL platform");
+		else
+			oclPlatform = platforms[openclPlatformIndex];
+	}
 
 	// Get the list of devices available on the platform
 	NativeThreadIntersectionDevice::AddDevices(deviceDescriptions);
@@ -53,20 +60,20 @@ Context::Context(LuxRaysDebugHandler handler) {
 
 	// Print device info
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		if (deviceDescriptions[i]->type == DEVICE_TYPE_NATIVE_THREAD) {
-			LR_LOG(this, "NativeThread Device " << i << " name: " <<
-					deviceDescriptions[i]->name);
-		} else if (deviceDescriptions[i]->type == DEVICE_TYPE_OPENCL) {
+		if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
+			LR_LOG(this, "Device " << i << " NativeThread name: " <<
+					deviceDescriptions[i]->GetName());
+		} else if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
-			LR_LOG(this, "OpenCL Device " << i << " name: " <<
-					desc->name);
+			LR_LOG(this, "Device " << i << " OpenCL name: " <<
+					desc->GetName());
 
-			LR_LOG(this, "OpenCL Device " << i << " type: " <<
-					OpenCLIntersectionDevice::GetDeviceType(desc->oclType));
-			LR_LOG(this, "OpenCL Device " << i << " units: " <<
-					desc->computeUnits);
-			LR_LOG(this, "OpenCL Device " << i << " max allocable memory: " <<
-					desc->maxMemory / (1024 * 1024) << "MBytes");
+			LR_LOG(this, "Device " << i << " OpenCL type: " <<
+					OpenCLIntersectionDevice::GetDeviceType(desc->GetOpenCLType()));
+			LR_LOG(this, "Device " << i << " OpenCL units: " <<
+					desc->GetComputeUnits());
+			LR_LOG(this, "Device " << i << " OpenCL max allocable memory: " <<
+					desc->GetMaxMemory() / (1024 * 1024) << "MBytes");
 		} else
 			assert (false);
 	}
@@ -134,18 +141,18 @@ void Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &dev
 	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
 
 	for (size_t i = 0; i < deviceDesc.size(); ++i) {
-		LR_LOG(this, "Allocating intersection device " << i << ": " << deviceDesc[i]->name <<
-				" (Type = " << IntersectionDevice::GetDeviceType(deviceDesc[i]->type) << ")");
+		LR_LOG(this, "Allocating intersection device " << i << ": " << deviceDesc[i]->GetName() <<
+				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
 
 		IntersectionDevice *device;
-		if (deviceDesc[i]->type == DEVICE_TYPE_NATIVE_THREAD) {
+		if (deviceDesc[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
 			// Nathive thread devices
 			const NativeThreadDeviceDescription *ntvDeviceDesc = (const NativeThreadDeviceDescription *)deviceDesc[i];
-			device = new NativeThreadIntersectionDevice(this, ntvDeviceDesc->index, i);
-		} else if (deviceDesc[i]->type == DEVICE_TYPE_OPENCL) {
+			device = new NativeThreadIntersectionDevice(this, ntvDeviceDesc->GetThreadIndex(), i);
+		} else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			// OpenCL devices
 			const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->index], i);
+			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->GetDeviceIndex()], i);
 		} else
 			assert (false);
 

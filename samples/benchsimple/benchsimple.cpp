@@ -23,6 +23,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
+#include "luxrays/core/device.h"
 
 void DebugHandler(const char *msg) {
 	std::cerr << msg << std::endl;
@@ -32,6 +33,18 @@ int main(int argc, char** argv) {
 	std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
 
 	luxrays::Context *ctx = new luxrays::Context(DebugHandler);
+
+	// Looks for the first GPU device
+	std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
+	luxrays::DeviceDescription::Filter(deviceDescs);
+
+	if (deviceDescs.size() < 1) {
+		std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
+		return (EXIT_FAILURE);
+	}
+
+	std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
+	ctx->AddIntersectionDevices(deviceDescs);
 
 	return (EXIT_SUCCESS);
 }
