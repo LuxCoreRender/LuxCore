@@ -121,7 +121,9 @@ set(LUXRAYS_SRCS
   ${LUXRAYS_SOURCE_DIR}/core/device.cpp
   ${LUXRAYS_SOURCE_DIR}/core/geometry/bbox.cpp
   ${LUXRAYS_SOURCE_DIR}/core/trianglemesh.cpp
-  ${LUXRAYS_SOURCE_DIR}/core/virtualdevice.cpp
+  ${LUXRAYS_SOURCE_DIR}/devices/opencldevice.cpp
+  ${LUXRAYS_SOURCE_DIR}/devices/nativedevice.cpp
+  ${LUXRAYS_SOURCE_DIR}/devices/virtualdevice.cpp
   ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp)
 
 add_library(luxrays STATIC ${LUXRAYS_SRCS})
