@@ -137,7 +137,7 @@ public:
 		queue.clear();
 	}
 
-	size_t Size() {
+	size_t GetSize() {
 		boost::unique_lock<boost::mutex> lock(queueMutex);
 
 		return queue.size();

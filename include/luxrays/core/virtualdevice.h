@@ -29,7 +29,10 @@
 
 namespace luxrays {
 
+//------------------------------------------------------------------------------
 // Virtual Many to One device
+//------------------------------------------------------------------------------
+
 class VirtualM2OIntersectionDevice {
 public:
 	VirtualM2OIntersectionDevice(const size_t count, IntersectionDevice *device);
@@ -37,29 +40,33 @@ public:
 
 	IntersectionDevice *GetVirtualDevice(size_t index);
 
+	static size_t RayBufferSize;
+
 private:
 	class VirtualM2ODevInstance : public IntersectionDevice {
 	public:
 		VirtualM2ODevInstance(VirtualM2OIntersectionDevice * device, const size_t index);
 		~VirtualM2ODevInstance();
 
-		void SetDataSet(const DataSet *newDataSet);
 		void Start();
+		void Interrupt();
 		void Stop();
 
 		RayBuffer *NewRayBuffer();
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
+		size_t GetQueueSize() { return virtualDevice->realDevice->GetQueueSize(); }
 
 		void PushRayBufferDone(RayBuffer *rayBuffer);
+
+		double GetLoad() const { return 1.0; }
 
 	private:
 		size_t instanceIndex;
 		VirtualM2OIntersectionDevice *virtualDevice;
 
-		RayBufferQueue todoRayBufferQueue;
+		size_t pendingRayBuffers;
 		RayBufferQueue doneRayBufferQueue;
-		std::deque<size_t> rayBufferUserData;
 	};
 
 	static void RayBufferRouter(VirtualM2OIntersectionDevice *virtualDevice);
@@ -69,11 +76,42 @@ private:
 
 	boost::mutex virtualDeviceMutex;
 	VirtualM2ODevInstance **virtualDeviceInstances;
+
 	boost::thread *routerThread;
 };
 
+//------------------------------------------------------------------------------
 // Virtual One to Many device
-// [...]
+//------------------------------------------------------------------------------
+
+class VirtualO2MIntersectionDevice : public IntersectionDevice {
+public:
+	VirtualO2MIntersectionDevice(std::vector<IntersectionDevice *> devices, const size_t index);
+	~VirtualO2MIntersectionDevice();
+
+	void Start();
+	void Interrupt();
+	void Stop();
+
+	void PushRayBuffer(RayBuffer *rayBuffer);
+	RayBuffer *PopRayBuffer();
+	size_t GetQueueSize() { return todoRayBufferQueue.GetSize(); }
+
+	double GetLoad() const { return 1.0; }
+
+private:
+	// Funny names ...
+	static void PusherRouter(VirtualO2MIntersectionDevice *virtualDevice);
+	static void PopperRouter(VirtualO2MIntersectionDevice *virtualDevice, size_t deviceIndex);
+
+	std::vector<IntersectionDevice *> realDevices;
+
+	RayBufferQueue todoRayBufferQueue;
+	RayBufferQueue doneRayBufferQueue;
+
+	boost::thread *pusherThread;
+	std::vector<boost::thread *> popperThread;
+};
 
 }
 

@@ -31,13 +31,9 @@
 
 namespace luxrays {
 
-IntersectionDevice::IntersectionDevice() {
-	started = false;
-	dataSet = NULL;
-}
-
-IntersectionDevice::IntersectionDevice(const Context *context, const DeviceType type) :
+IntersectionDevice::IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index) :
 	deviceContext(context), deviceType(type) {
+	deviceIndex = index;
 	started = false;
 	dataSet = NULL;
 }
@@ -86,6 +82,8 @@ std::string IntersectionDevice::GetDeviceType(const DeviceType type) {
 			return "NATIVE_THREAD";
 		case DEVICE_TYPE_OPENCL:
 			return "OPENCL";
+		case DEVICE_TYPE_VIRTUAL:
+			return "VIRTUAL";
 		default:
 			return "UNKNOWN";
 	}
@@ -98,9 +96,10 @@ std::string IntersectionDevice::GetDeviceType(const DeviceType type) {
 size_t NativeThreadIntersectionDevice::RayBufferSize = 512;
 
 NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(const Context *context,
-		const size_t index) : IntersectionDevice(context, DEVICE_TYPE_OPENCL) {
+		const size_t threadIndex, const unsigned int devIndex) :
+			IntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
 	char buf[64];
-	sprintf(buf, "NativeThread-%03d", (int)index);
+	sprintf(buf, "NativeThread-%03d", (int)threadIndex);
 	deviceName = std::string(buf);
 
 	intersectionThread = NULL;
@@ -143,6 +142,11 @@ void NativeThreadIntersectionDevice::Start() {
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to set thread priority, error: " << ret);
 	}
 #endif
+}
+
+void NativeThreadIntersectionDevice::Interrupt() {
+	assert (started);
+	intersectionThread->interrupt();
 }
 
 void NativeThreadIntersectionDevice::Stop() {
@@ -230,8 +234,8 @@ void NativeThreadIntersectionDevice::AddDevices(std::vector<DeviceDescription *>
 
 size_t OpenCLIntersectionDevice::RayBufferSize = 8 * 1024;
 
-OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const cl::Device &device) :
-			IntersectionDevice(context, DEVICE_TYPE_OPENCL) {
+OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const cl::Device &device,
+		const unsigned int index) :	IntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
 	deviceName = device.getInfo<CL_DEVICE_NAME > ().c_str();
 	reportedPermissionError = false;
 	intersectionThread = NULL;
@@ -390,6 +394,12 @@ void OpenCLIntersectionDevice::Start() {
 	}
 #endif
 }
+
+void OpenCLIntersectionDevice::Interrupt() {
+	assert (started);
+	intersectionThread->interrupt();
+}
+
 void OpenCLIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 

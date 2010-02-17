@@ -141,11 +141,11 @@ void Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &dev
 		if (deviceDesc[i]->type == DEVICE_TYPE_NATIVE_THREAD) {
 			// Nathive thread devices
 			const NativeThreadDeviceDescription *ntvDeviceDesc = (const NativeThreadDeviceDescription *)deviceDesc[i];
-			device = new NativeThreadIntersectionDevice(this, ntvDeviceDesc->index);
+			device = new NativeThreadIntersectionDevice(this, ntvDeviceDesc->index, i);
 		} else if (deviceDesc[i]->type == DEVICE_TYPE_OPENCL) {
 			// OpenCL devices
 			const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->index]);
+			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->index], i);
 		} else
 			assert (false);
 
