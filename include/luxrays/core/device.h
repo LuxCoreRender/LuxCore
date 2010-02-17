@@ -56,7 +56,7 @@ public:
 	const std::string &GetName() const { return name; }
 	const DeviceType GetType() const { return type; };
 
-	static void Filter(std::vector<DeviceDescription *> &deviceDescriptions);
+	static void FilterOne(std::vector<DeviceDescription *> &deviceDescriptions);
 	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 	static std::string GetDeviceType(const DeviceType type);
 

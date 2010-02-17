@@ -32,11 +32,15 @@ void DebugHandler(const char *msg) {
 int main(int argc, char** argv) {
 	std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
 
+	//--------------------------------------------------------------------------
+	// Create the context
+	//--------------------------------------------------------------------------
+
 	luxrays::Context *ctx = new luxrays::Context(DebugHandler);
 
 	// Looks for the first GPU device
 	std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
-	luxrays::DeviceDescription::Filter(deviceDescs);
+	luxrays::DeviceDescription::FilterOne(deviceDescs);
 
 	if (deviceDescs.size() < 1) {
 		std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
