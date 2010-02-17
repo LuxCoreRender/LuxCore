@@ -44,7 +44,7 @@
 namespace luxrays {
 
 typedef enum {
-	DEVICE_TYPE_ALL, DEVICE_TYPE_OPENCL, DEVICE_TYPE_NATIVE_THREAD
+	DEVICE_TYPE_ALL, DEVICE_TYPE_OPENCL, DEVICE_TYPE_NATIVE_THREAD, DEVICE_TYPE_VIRTUAL
 } DeviceType;
 
 class DeviceDescription {
@@ -59,8 +59,7 @@ public:
 
 class IntersectionDevice {
 public:
-	IntersectionDevice();
-	IntersectionDevice(const Context *context, const DeviceType type);
+	IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index);
 	virtual ~IntersectionDevice();
 
 	const std::string &GetName() const { return deviceName; }
@@ -69,12 +68,14 @@ public:
 
 	virtual void SetDataSet(const DataSet *newDataSet);
 	virtual void Start();
+	virtual void Interrupt() = 0;
 	virtual void Stop();
 	virtual bool IsRunning() const { return started; };
 
 	virtual RayBuffer *NewRayBuffer() = 0;
 	virtual void PushRayBuffer(RayBuffer *rayBuffer) = 0;
 	virtual RayBuffer *PopRayBuffer() = 0;
+	virtual size_t GetQueueSize() = 0;
 
 	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 	static std::string GetDeviceType(const DeviceType type);
@@ -82,6 +83,7 @@ public:
 protected:
 	const Context *deviceContext;
 	DeviceType deviceType;
+	unsigned int deviceIndex;
 
 	std::string deviceName;
 	const DataSet *dataSet;
@@ -97,7 +99,7 @@ protected:
 
 class NativeThreadDeviceDescription : public DeviceDescription {
 public:
-	NativeThreadDeviceDescription(const std::string deviceName, const size_t deviceIndex) :
+	NativeThreadDeviceDescription(const std::string deviceName, const unsigned int deviceIndex) :
 		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD), index(deviceIndex) { }
 
 	size_t index;
@@ -105,14 +107,17 @@ public:
 
 class NativeThreadIntersectionDevice : public IntersectionDevice {
 public:
-	NativeThreadIntersectionDevice(const Context *context, const size_t index);
+	NativeThreadIntersectionDevice(const Context *context, const size_t threadIndex,
+			const unsigned int devIndex);
 	~NativeThreadIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);
 	void Start();
+	void Interrupt();
 	void Stop();
 
 	RayBuffer *NewRayBuffer();
+	size_t GetQueueSize() { return todoRayBufferQueue.GetSize(); }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
 
@@ -155,14 +160,16 @@ public:
 
 class OpenCLIntersectionDevice : public IntersectionDevice {
 public:
-	OpenCLIntersectionDevice(const Context *context, const cl::Device &device);
+	OpenCLIntersectionDevice(const Context *context, const cl::Device &device, const unsigned int index);
 	~OpenCLIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);
 	void Start();
+	void Interrupt();
 	void Stop();
 
 	RayBuffer *NewRayBuffer();
+	size_t GetQueueSize() { return todoRayBufferQueue.GetSize(); }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
 
