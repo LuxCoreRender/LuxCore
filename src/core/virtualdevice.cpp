@@ -27,7 +27,7 @@
 namespace luxrays {
 
 //------------------------------------------------------------------------------
-// VirtualM2MIntersectionDevice
+// Virtual Many To One Device
 //------------------------------------------------------------------------------
 
 size_t VirtualM2OIntersectionDevice::RayBufferSize = OpenCLIntersectionDevice::RayBufferSize;

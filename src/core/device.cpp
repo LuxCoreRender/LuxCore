@@ -161,11 +161,11 @@ RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
 }
 
 void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
-	IntersectionDevice::PushRayBuffer(rayBuffer);
+	todoRayBufferQueue.Push(rayBuffer);
 }
 
 RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer() {
-	return IntersectionDevice::PopRayBuffer();
+	return doneRayBufferQueue.Pop();
 }
 
 void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersectionDevice *renderDevice) {
@@ -306,11 +306,11 @@ RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
 }
 
 void OpenCLIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
-	IntersectionDevice::PushRayBuffer(rayBuffer);
+	todoRayBufferQueue.Push(rayBuffer);
 }
 
 RayBuffer *OpenCLIntersectionDevice::PopRayBuffer() {
-	return IntersectionDevice::PopRayBuffer();
+	return doneRayBufferQueue.Pop();
 }
 
 void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
