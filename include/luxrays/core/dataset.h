@@ -24,13 +24,11 @@
 
 #include <deque>
 
+#include "luxrays/luxrays.h"
+#include "luxrays/core/acceleretor.h"
 #include "luxrays/core/trianglemesh.h"
-#include "luxrays/accelerators/bvhaccel.h"
 
 namespace luxrays {
-
-class Context;
-class BVHAccel;
 
 class DataSet {
 public:
@@ -50,10 +48,18 @@ public:
 		return preprocessedMesh;
 	}
 
-	BVHAccel *GetAccelerator() const {
+	void SetAcceleratorType(AcceleratorType type) {
+		accelType = type;
+	}
+
+	AcceleratorType GetAcceleratorType() const {
+		return accelType;
+	}
+
+	const Accelerator *GetAccelerator() const {
 		assert (preprocessed);
 
-		return bvhAccel;
+		return accel;
 	}
 
 	unsigned int GetTotalVertexCount() const { return totalVertexCount; }
@@ -69,7 +75,9 @@ private:
 	bool preprocessed;
 	TriangleMesh *preprocessedMesh;
 	TriangleMeshID *preprocessedMeshIDs;
-	BVHAccel *bvhAccel;
+
+	AcceleratorType accelType;
+	Accelerator *accel;
 };
 
 }

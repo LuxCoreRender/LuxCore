@@ -22,6 +22,9 @@
 #ifndef _LUXRAYS_UTILS_H
 #define	_LUXRAYS_UTILS_H
 
+#include <malloc.h>
+#include <sstream>
+
 #if defined(__linux__) || defined(__APPLE__)
 #include <stddef.h>
 #include <sys/time.h>
@@ -71,6 +74,170 @@ inline float Sgn(float a) {
 inline int Sgn(int a) {
 	return a < 0 ? -1 : 1.f;
 }
+
+template<class T> inline int Float2Int(T val) {
+	return static_cast<int> (val);
+}
+
+template<class T> inline unsigned int Float2UInt(T val) {
+	return val >= 0 ? static_cast<unsigned int> (val) : 0;
+}
+
+inline int Floor2Int(double val) {
+	return static_cast<int> (floor(val));
+}
+
+inline int Floor2Int(float val) {
+	return static_cast<int> (floorf(val));
+}
+
+inline unsigned int Floor2UInt(double val) {
+	return val > 0. ? static_cast<unsigned int> (floor(val)) : 0;
+}
+
+inline unsigned int Floor2UInt(float val) {
+	return val > 0.f ? static_cast<unsigned int> (floorf(val)) : 0;
+}
+
+inline int Ceil2Int(double val) {
+	return static_cast<int> (ceil(val));
+}
+
+inline int Ceil2Int(float val) {
+	return static_cast<int> (ceilf(val));
+}
+
+inline unsigned int Ceil2UInt(double val) {
+	return val > 0. ? static_cast<unsigned int> (ceil(val)) : 0;
+}
+
+inline unsigned int Ceil2UInt(float val) {
+	return val > 0.f ? static_cast<unsigned int> (ceilf(val)) : 0;
+}
+
+template <class T> inline std::string ToString(const T& t) {
+	std::stringstream ss;
+	ss << t;
+	return ss.str();
+}
+
+//------------------------------------------------------------------------------
+// Memory
+//------------------------------------------------------------------------------
+
+#ifndef L1_CACHE_LINE_SIZE
+#define L1_CACHE_LINE_SIZE 64
+#endif
+
+template<class T> inline T *AllocAligned(size_t size, std::size_t N = L1_CACHE_LINE_SIZE) {
+#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
+	return static_cast<T *> (_aligned_malloc(size * sizeof (T), N));
+#else // NOBOOK
+	return static_cast<T *> (memalign(N, size * sizeof (T)));
+#endif // NOBOOK
+}
+
+template<class T> inline void FreeAligned(T *ptr) {
+#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
+	_aligned_free(ptr);
+#else // NOBOOK
+	free(ptr);
+#endif // NOBOOK
+}
+
+template <typename T, std::size_t N = 16 > class AlignedAllocator {
+public:
+	typedef T value_type;
+	typedef std::size_t size_type;
+	typedef std::ptrdiff_t difference_type;
+
+	typedef T *pointer;
+	typedef const T *const_pointer;
+
+	typedef T &reference;
+	typedef const T &const_reference;
+
+public:
+
+	inline AlignedAllocator() throw () {
+	}
+
+	template <typename T2> inline AlignedAllocator(const AlignedAllocator<T2, N> &) throw () {
+	}
+
+	inline ~AlignedAllocator() throw () {
+	}
+
+	inline pointer adress(reference r) {
+		return &r;
+	}
+
+	inline const_pointer adress(const_reference r) const {
+		return &r;
+	}
+
+	inline pointer allocate(size_type n) {
+		return AllocAligned<value_type > (n, N);
+	}
+
+	inline void deallocate(pointer p, size_type) {
+		FreeAligned(p);
+	}
+
+	inline void construct(pointer p, const value_type &wert) {
+		new (p) value_type(wert);
+	}
+
+	inline void destroy(pointer p) {
+		p->~value_type();
+	}
+
+	inline size_type max_size() const throw () {
+		return size_type(-1) / sizeof (value_type);
+	}
+
+	template <typename T2> struct rebind {
+		typedef AlignedAllocator<T2, N> other;
+	};
+};
+
+#define P_CLASS_ATTR __attribute__
+#define P_CLASS_ATTR __attribute__
+
+#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
+
+class __declspec(align(16)) Aligned16 {
+#else // NOBOOK
+
+class Aligned16 {
+#endif // NOBOOK
+public:
+
+	/*
+	Aligned16(){
+		if(((int)this & 15) != 0){
+			printf("bad alloc\n");
+			assert(0);
+		}
+	}
+	 */
+
+	void *operator new(size_t s) {
+		return AllocAligned<char>(s, 16);
+	}
+
+	void *operator new (size_t s, void *q) {
+		return q;
+	}
+
+	void operator delete(void *p) {
+		FreeAligned(p);
+	}
+#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
+};
+#else // NOBOOK
+} __attribute__((aligned(16)));
+#endif // NOBOOK
 
 }
 

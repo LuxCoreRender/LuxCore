@@ -24,6 +24,8 @@
 #include "luxrays/core/device.h"
 #include "luxrays/core/context.h"
 #include "luxrays/kernels/kernels.h"
+#include "luxrays/accelerators/bvhaccel.h"
+#include "luxrays/accelerators/qbvhaccel.h"
 
 #if defined (__linux__)
 #include <pthread.h>
@@ -60,31 +62,65 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const
 	// BVH kernel
 	//--------------------------------------------------------------------------
 
-	// Compile sources
-	cl::Program::Sources source(1, std::make_pair(KernelSource_BVH.c_str(), KernelSource_BVH.length()));
-	cl::Program program = cl::Program(*oclContext, source);
-	try {
-		VECTOR_CLASS<cl::Device> buildDevice;
-		buildDevice.push_back(device);
-		program.build(buildDevice, "-I.");
-	} catch (cl::Error err) {
-		cl::string strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Compilation error:\n" << strError.c_str());
+	{
+		// Compile sources
+		cl::Program::Sources source(1, std::make_pair(KernelSource_BVH.c_str(), KernelSource_BVH.length()));
+		cl::Program program = cl::Program(*oclContext, source);
+		try {
+			VECTOR_CLASS<cl::Device> buildDevice;
+			buildDevice.push_back(device);
+			program.build(buildDevice, "-I.");
+		} catch (cl::Error err) {
+			cl::string strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
 
-		throw err;
+			throw err;
+		}
+
+		bvhKernel = new cl::Kernel(program, "Intersect");
+		bvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel work group size: " << bvhWorkGroupSize);
+		cl_ulong memSize;
+		bvhKernel->getWorkGroupInfo<cl_ulong>(device, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel memory footprint: " << memSize);
+
+		bvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << bvhWorkGroupSize);
+		// TODO: hard code the workgroup size to 64
+		bvhWorkGroupSize = 64;
 	}
 
-	bvhKernel = new cl::Kernel(program, "Intersect");
-	bvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel work group size: " << bvhWorkGroupSize);
-	cl_ulong memSize;
-	bvhKernel->getWorkGroupInfo<cl_ulong>(device, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel memory footprint: " << memSize);
+	//--------------------------------------------------------------------------
+	// QBVH kernel
+	//--------------------------------------------------------------------------
 
-	bvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << bvhWorkGroupSize);
-	// TODO: hard code the workgroup size to 64
-	bvhWorkGroupSize = 64;
+	{
+		// Compile sources
+		cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
+		cl::Program program = cl::Program(*oclContext, source);
+		try {
+			VECTOR_CLASS<cl::Device> buildDevice;
+			buildDevice.push_back(device);
+			program.build(buildDevice, "-I.");
+		} catch (cl::Error err) {
+			cl::string strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compilation error:\n" << strError.c_str());
+
+			throw err;
+		}
+
+		qbvhKernel = new cl::Kernel(program, "Intersect");
+		qbvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel work group size: " << qbvhWorkGroupSize);
+		cl_ulong memSize;
+		qbvhKernel->getWorkGroupInfo<cl_ulong>(device, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel memory footprint: " << memSize);
+
+		qbvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << qbvhWorkGroupSize);
+		// TODO: hard code the workgroup size to 64
+		qbvhWorkGroupSize = 64;
+	}
 }
 
 OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
@@ -94,12 +130,20 @@ OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 	if (dataSet) {
 		delete raysBuff;
 		delete hitsBuff;
-		delete vertsBuff;
-		delete trisBuff;
-		delete bvhBuff;
+
+		if (bvhBuff) {
+			delete vertsBuff;
+			delete trisBuff;
+			delete bvhBuff;
+		}
+		if (qbvhBuff) {
+			delete qbvhBuff;
+			delete qbvhTrisBuff;
+		}
 	}
 
 	delete bvhKernel;
+	delete qbvhKernel;
 	delete oclQueue;
 	delete oclContext;
 }
@@ -121,9 +165,17 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	if (dataSet) {
 		delete raysBuff;
 		delete hitsBuff;
-		delete vertsBuff;
-		delete trisBuff;
-		delete bvhBuff;
+
+		if (bvhBuff) {
+			delete vertsBuff;
+			delete trisBuff;
+			delete bvhBuff;
+		}
+
+		if (qbvhBuff) {
+			delete qbvhBuff;
+			delete qbvhTrisBuff;
+		}
 	}
 
 	IntersectionDevice::SetDataSet(newDataSet);
@@ -138,32 +190,61 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			CL_MEM_WRITE_ONLY,
 			sizeof(RayHit) * RayBufferSize);
 
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Vertices buffer size: " << (sizeof(Point) * dataSet->GetTotalVertexCount() / 1024) << "Kbytes");
-	vertsBuff = new cl::Buffer(*oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Point) * dataSet->GetTotalVertexCount(),
-			dataSet->GetTriangleMesh()->GetVertices());
+	switch (dataSet->GetAcceleratorType()) {
+		case ACCEL_BVH: {
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Vertices buffer size: " << (sizeof(Point) * dataSet->GetTotalVertexCount() / 1024) << "Kbytes");
+			vertsBuff = new cl::Buffer(*oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(Point) * dataSet->GetTotalVertexCount(),
+					dataSet->GetTriangleMesh()->GetVertices());
 
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Triangle indices buffer size: " << (sizeof(Triangle) * dataSet->GetTotalTriangleCount() / 1024) << "Kbytes");
-	trisBuff = new cl::Buffer(*oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Triangle) * dataSet->GetTotalTriangleCount(),
-			dataSet->GetTriangleMesh()->GetTriangles());
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Triangle indices buffer size: " << (sizeof(Triangle) * dataSet->GetTotalTriangleCount() / 1024) << "Kbytes");
+			trisBuff = new cl::Buffer(*oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(Triangle) * dataSet->GetTotalTriangleCount(),
+					dataSet->GetTriangleMesh()->GetTriangles());
 
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " BVH buffer size: " << (sizeof(BVHAccelArrayNode) * dataSet->GetAccelerator()->nNodes / 1024) << "Kbytes");
-	bvhBuff = new cl::Buffer(*oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(BVHAccelArrayNode) * dataSet->GetAccelerator()->nNodes,
-			dataSet->GetAccelerator()->bvhTree);
+			const BVHAccel *bvh = (BVHAccel *)dataSet->GetAccelerator();
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " BVH buffer size: " << (sizeof(BVHAccelArrayNode) * bvh->nNodes / 1024) << "Kbytes");
+			bvhBuff = new cl::Buffer(*oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(BVHAccelArrayNode) * bvh->nNodes,
+					bvh->bvhTree);
 
-	// Set Arguments
-	bvhKernel->setArg(0, *raysBuff);
-	bvhKernel->setArg(1, *hitsBuff);
-	bvhKernel->setArg(2, *vertsBuff);
-	bvhKernel->setArg(3, *trisBuff);
-	bvhKernel->setArg(4, dataSet->GetTotalTriangleCount());
-	bvhKernel->setArg(5, dataSet->GetAccelerator()->nNodes);
-	bvhKernel->setArg(6, *bvhBuff);
+			// Set Arguments
+			bvhKernel->setArg(0, *raysBuff);
+			bvhKernel->setArg(1, *hitsBuff);
+			bvhKernel->setArg(2, *vertsBuff);
+			bvhKernel->setArg(3, *trisBuff);
+			bvhKernel->setArg(4, dataSet->GetTotalTriangleCount());
+			bvhKernel->setArg(5, bvh->nNodes);
+			bvhKernel->setArg(6, *bvhBuff);
+			break;
+		}
+		case ACCEL_QBVH: {
+			const QBVHAccel *qbvh = (QBVHAccel *)dataSet->GetAccelerator();
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH buffer size: " << (sizeof(QBVHNode) * qbvh->nNodes / 1024) << "Kbytes");
+			qbvhBuff = new cl::Buffer(*oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(QBVHNode) * qbvh->nNodes,
+					qbvh->nodes);
+
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QuadTriangle buffer size: " << (sizeof(QuadTriangle) * qbvh->nQuads / 1024) << "Kbytes");
+			qbvhTrisBuff = new cl::Buffer(*oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(QuadTriangle) * qbvh->nQuads,
+					qbvh->prims);
+
+			// Set Arguments
+			qbvhKernel->setArg(0, *raysBuff);
+			qbvhKernel->setArg(1, *hitsBuff);
+			qbvhKernel->setArg(2, *qbvhBuff);
+			qbvhKernel->setArg(3, *qbvhTrisBuff);
+			break;
+		}
+		default:
+			assert (false);
+	}
 }
 
 void OpenCLIntersectionDevice::Start() {
@@ -217,39 +298,45 @@ void OpenCLIntersectionDevice::Stop() {
 
 void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer) {
 	// Download the rays to the GPU
-	cl::Event writeBufferEvent;
 	oclQueue->enqueueWriteBuffer(
 			*raysBuff,
 			CL_FALSE,
 			0,
 			sizeof(Ray) * rayBuffer->GetRayCount(),
-			rayBuffer->GetRayBuffer(), NULL, &writeBufferEvent);
+			rayBuffer->GetRayBuffer());
 
-	bvhKernel->setArg(7, (unsigned int)rayBuffer->GetRayCount());
-	cl::Event kernelEvent;
-	VECTOR_CLASS<cl::Event> kernelWaitEvents(1, writeBufferEvent);
-	oclQueue->enqueueNDRangeKernel(*bvhKernel, cl::NullRange,
-		cl::NDRange(rayBuffer->GetSize()), cl::NDRange(bvhWorkGroupSize),
-		&kernelWaitEvents, &kernelEvent);
+	switch (dataSet->GetAcceleratorType()) {
+		case ACCEL_BVH: {
+
+			bvhKernel->setArg(7, (unsigned int)rayBuffer->GetRayCount());
+			oclQueue->enqueueNDRangeKernel(*bvhKernel, cl::NullRange,
+				cl::NDRange(rayBuffer->GetSize()), cl::NDRange(bvhWorkGroupSize));
+			break;
+		}
+		case ACCEL_QBVH: {
+			qbvhKernel->setArg(4, (unsigned int)rayBuffer->GetRayCount());
+			oclQueue->enqueueNDRangeKernel(*qbvhKernel, cl::NullRange,
+				cl::NDRange(rayBuffer->GetSize()), cl::NDRange(qbvhWorkGroupSize));
+			break;
+		}
+		default:
+			assert (false);
+	}
 
 	// Upload the results
-	cl::Event readBufferEvent;
-	VECTOR_CLASS<cl::Event> readBufferWaitEvents(1, kernelEvent);
 	oclQueue->enqueueReadBuffer(
 			*hitsBuff,
 			CL_TRUE,
 			0,
 			sizeof(RayHit) * rayBuffer->GetRayCount(),
-			rayBuffer->GetHitBuffer(),
-			&readBufferWaitEvents, &readBufferEvent);
+			rayBuffer->GetHitBuffer());
+
 }
 
 void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *renderDevice) {
 	LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread started");
 
 	try {
-		double lastStatPrint = WallClockTime();
-
 		while (!boost::this_thread::interruption_requested()) {
 			const double t1 = WallClockTime();
 			RayBuffer *rayBuffer = renderDevice->todoRayBufferQueue.Pop();
@@ -266,16 +353,6 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 			renderDevice->statsTotalRayCount += rayCount;
 			renderDevice->statsDeviceIdleTime += t2 - t1;
 			renderDevice->statsDeviceTotalTime += t4 - t1;
-
-			if (t4 - lastStatPrint > 5.0) {
-				// Print some statistic
-				char buf[128];
-				sprintf(buf, "[Rays/sec %dK][Load %.1f%%]",
-					int(renderDevice->statsTotalRayCount / (1000.0 * renderDevice->statsTotalRayTime)),
-					100.0 * renderDevice->statsTotalRayTime / renderDevice->statsDeviceTotalTime);
-				LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "]" << buf);
-				lastStatPrint = t4;
-			}
 		}
 
 		LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread halted");
@@ -352,7 +429,7 @@ void OpenCLIntersectionDevice::AddDevices(
 	}
 }
 
-void OpenCLIntersectionDevice::Filter(const OpenCLDeviceType type,
+void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,
 		std::vector<DeviceDescription *> &deviceDescriptions) {
 	if (type == OCL_DEVICE_TYPE_ALL)
 		return;

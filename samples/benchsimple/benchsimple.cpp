@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include <cstdlib>
+#include <queue>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
@@ -27,7 +28,8 @@
 #include "luxrays/utils/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
-#define TRIANGLE_COUNT 1000000
+#define TRIANGLE_COUNT 100
+#define SPACE_SIZE 1000.f
 
 void DebugHandler(const char *msg) {
 	std::cerr << msg << std::endl;
@@ -47,10 +49,16 @@ int main(int argc, char** argv) {
 	std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
 	luxrays::DeviceDescription::FilterOne(deviceDescs);
 
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
+	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
+
 	if (deviceDescs.size() < 1) {
 		std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
 		return (EXIT_FAILURE);
 	}
+	deviceDescs.resize(1);
 
 	std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
 	ctx->AddIntersectionDevices(deviceDescs);
@@ -79,17 +87,17 @@ int main(int argc, char** argv) {
 		v2 *= 0.1f;
 
 		size_t vIndex = i * 3;
-		verts[vIndex].x = (100.f * rnd.floatValue() - 50.f) + v0.x;
-		verts[vIndex].y = (100.f * rnd.floatValue() - 50.f) + v0.y;
-		verts[vIndex].z = (100.f * rnd.floatValue() - 50.f) + v0.z;
+		verts[vIndex].x = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v0.x;
+		verts[vIndex].y = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v0.y;
+		verts[vIndex].z = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v0.z;
 
-		verts[vIndex + 1].x = (100.f * rnd.floatValue() - 50.f) + v1.x;
-		verts[vIndex + 1].y = (100.f * rnd.floatValue() - 50.f) + v1.y;
-		verts[vIndex + 1].z = (100.f * rnd.floatValue() - 50.f) + v1.z;
+		verts[vIndex + 1].x = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v1.x;
+		verts[vIndex + 1].y = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v1.y;
+		verts[vIndex + 1].z = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v1.z;
 
-		verts[vIndex + 2].x = (100.f * rnd.floatValue() - 50.f) + v2.x;
-		verts[vIndex + 2].y = (100.f * rnd.floatValue() - 50.f) + v2.y;
-		verts[vIndex + 2].z = (100.f * rnd.floatValue() - 50.f) + v2.z;
+		verts[vIndex + 2].x = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v2.x;
+		verts[vIndex + 2].y = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v2.y;
+		verts[vIndex + 2].z = (SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f) + v2.z;
 
 		tris[i].v[0] = vIndex;
 		tris[i].v[1] = vIndex + 1;
@@ -102,28 +110,35 @@ int main(int argc, char** argv) {
 	dataSet->Preprocess();
 	ctx->SetCurrentDataSet(dataSet);
 
+	ctx->Start();
+	device->Start();
+
 	//--------------------------------------------------------------------------
 	// Build the ray buffers
 	//--------------------------------------------------------------------------
 
 	std::cerr << "Creating " << RAYBUFFERS_COUNT << " ray buffers" << std::endl;
 
-	luxrays::RayBuffer *rayBuffers[RAYBUFFERS_COUNT];
+	luxrays::Ray ray;
+	std::queue<luxrays::RayBuffer *> todoRayBuffers;
 	for (size_t i = 0; i < RAYBUFFERS_COUNT; ++i) {
-		rayBuffers[i] = device->NewRayBuffer();
+		luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
+		todoRayBuffers.push(rayBuffer);
 
-		luxrays::RayBuffer *rayBuffer = rayBuffers[i];
-		luxrays::Ray *rays = rayBuffer->GetRayBuffer();
-		for (size_t j = 0; j < rayBuffer->GetSize(); ++i) {
-			rays[j].o = luxrays::Point(100.f * rnd.floatValue() - 50.f, 100.f * rnd.floatValue() - 50.f, 100.f * rnd.floatValue() - 50.f);
+		for (size_t j = 0; j < rayBuffer->GetSize(); ++j) {
+			ray.o = luxrays::Point(SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f,
+					SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f,
+					SPACE_SIZE * rnd.floatValue() - SPACE_SIZE / 2.f);
 
 			do {
-				rays[j].d = luxrays::Vector(rnd.floatValue(), rnd.floatValue(), rnd.floatValue());
-			} while (rays[j].d == luxrays::Vector(0.f, 0.f, 0.f)); // Just in case ...
-			rays[j].d = luxrays::Normalize(rays[j].d);
+				ray.d = luxrays::Vector(rnd.floatValue(), rnd.floatValue(), rnd.floatValue());
+			} while (ray.d == luxrays::Vector(0.f, 0.f, 0.f)); // Just in case ...
+			ray.d = luxrays::Normalize(ray.d);
 
-			rays[j].mint = RAY_EPSILON;
-			rays[j].maxt = 1000.f;
+			ray.mint = RAY_EPSILON;
+			ray.maxt = 1000.f;
+
+			rayBuffer->AddRay(ray);
 		}
 	}
 
@@ -133,16 +148,53 @@ int main(int argc, char** argv) {
 
 	std::cerr << "Running the benchmark for 30 seconds..." << std::endl;
 
-	/*double tStart = luxrays::WallClockTime();
-	for (;;) {
+	double tStart = luxrays::WallClockTime();
+	double tLastCheck = tStart;
+	double bufferDone = 0.0;
+	bool done = false;
+	while (!done) {
+		while (todoRayBuffers.size() > 0) {
+			device->PushRayBuffer(todoRayBuffers.front());
+			todoRayBuffers.pop();
 
+			// Check if it is time to stop
+			const double tNow = luxrays::WallClockTime();
+			if (tNow - tLastCheck > 1.0) {
+				if (tNow - tStart > 30.0) {
+					done = true;
+					break;
+				}
+
+				std::cerr << int(tNow - tStart) << "/30secs" << std::endl;
+				tLastCheck = tNow;
+			}
+		}
+
+		todoRayBuffers.push(device->PopRayBuffer());
+		bufferDone += 1.0;
 	}
-	double tStop = luxrays::WallClockTime();*/
+
+	while (todoRayBuffers.size() != RAYBUFFERS_COUNT) {
+		todoRayBuffers.push(device->PopRayBuffer());
+		bufferDone += 1.0;
+	}
+	double tStop = luxrays::WallClockTime();
+	double tTime = tStop - tStart;
+
+	std::cerr << "Test total time: " << tTime << std::endl;
+	std::cerr << "Test total ray buffer count: " << int(bufferDone) << std::endl;
+	std::cerr << "Test ray buffer size: " << todoRayBuffers.front()->GetRayCount() << std::endl;
+	double raySec = (bufferDone * todoRayBuffers.front()->GetRayCount()) / tTime;
+	if (raySec < 10000.0)
+		std::cerr << "Test performance: " << int(raySec) <<" ray/sec" << std::endl;
+	else
+		std::cerr << "Test performance: " << int(raySec / 1000.0) <<"K ray/sec" << std::endl;
 
 	//--------------------------------------------------------------------------
 	// Free everything
 	//--------------------------------------------------------------------------
 
+	ctx->Start();
 	delete ctx;
 	delete[] tris;
 	delete[] verts;

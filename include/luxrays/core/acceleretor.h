@@ -22,16 +22,22 @@
 #ifndef _LUXRAYS_ACCELERETOR_H
 #define	_LUXRAYS_ACCELERETOR_H
 
-#include "luxrays/core/geometry/ray.h"
+#include "luxrays/luxrays.h"
 
 namespace luxrays {
+
+typedef enum {
+	ACCEL_BVH, ACCEL_QBVH
+} AcceleratorType;
 
 class Accelerator {
 public:
 	Accelerator() { }
 	virtual ~Accelerator() { }
 
-	bool Intersect(const Ray *ray, RayHit *hit) const;
+	virtual AcceleratorType GetType() const = 0;
+
+	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
 };
 
 }

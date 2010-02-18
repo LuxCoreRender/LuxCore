@@ -125,11 +125,10 @@ public:
 	void Stop();
 
 	RayBuffer *NewRayBuffer();
-	size_t GetQueueSize() { return todoRayBufferQueue.GetSize(); }
+	size_t GetQueueSize() { return 0; }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
 
-	static void IntersectionThread(NativeThreadIntersectionDevice *renderDevice);
 	static size_t RayBufferSize;
 
 	friend class Context;
@@ -138,10 +137,7 @@ protected:
 	static void AddDevices(std::vector<DeviceDescription *> &descriptions);
 
 private:
-	RayBufferQueue todoRayBufferQueue;
 	RayBufferQueue doneRayBufferQueue;
-
-	boost::thread *intersectionThread;
 };
 
 //------------------------------------------------------------------------------
@@ -164,6 +160,8 @@ public:
 	size_t GetDeviceIndex() const { return deviceIndex; }
 	int GetComputeUnits() const { return computeUnits; }
 	size_t GetMaxMemory() const { return maxMemory; }
+
+	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 
 protected:
 	OpenCLDeviceType oclType;
@@ -191,8 +189,6 @@ public:
 
 	friend class Context;
 
-	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
-	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 	static size_t RayBufferSize;
 
 protected:
@@ -203,6 +199,8 @@ protected:
 		std::vector<DeviceDescription *> &descriptions);
 
 private:
+	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
+
 	void TraceRayBuffer(RayBuffer *rayBuffer);
 
 	OpenCLDeviceType oclType;
@@ -211,14 +209,22 @@ private:
 	// OpenCL items
 	cl::Context *oclContext;
 	cl::CommandQueue *oclQueue;
+
+	// BVH fields
 	cl::Kernel *bvhKernel;
 	size_t bvhWorkGroupSize;
-
-	cl::Buffer *raysBuff;
-	cl::Buffer *hitsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *trisBuff;
 	cl::Buffer *bvhBuff;
+
+	// QBVH fields
+	cl::Kernel *qbvhKernel;
+	size_t qbvhWorkGroupSize;
+	cl::Buffer *qbvhBuff;
+	cl::Buffer *qbvhTrisBuff;
+
+	cl::Buffer *raysBuff;
+	cl::Buffer *hitsBuff;
 
 	RayBufferQueue todoRayBufferQueue;
 	RayBufferQueue doneRayBufferQueue;

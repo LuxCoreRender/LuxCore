@@ -113,9 +113,18 @@ add_custom_command(
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cl
    )
+add_custom_command(
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_QBVH = " >> ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl
+   )
 
 set(LUXRAYS_SRCS
   ${LUXRAYS_SOURCE_DIR}/accelerators/bvhaccel.cpp
+  ${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp
   ${LUXRAYS_SOURCE_DIR}/core/context.cpp
   ${LUXRAYS_SOURCE_DIR}/core/dataset.cpp
   ${LUXRAYS_SOURCE_DIR}/core/device.cpp
@@ -124,7 +133,8 @@ set(LUXRAYS_SRCS
   ${LUXRAYS_SOURCE_DIR}/devices/opencldevice.cpp
   ${LUXRAYS_SOURCE_DIR}/devices/nativedevice.cpp
   ${LUXRAYS_SOURCE_DIR}/devices/virtualdevice.cpp
-  ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp)
+  ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+  ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp)
 
 add_library(luxrays STATIC ${LUXRAYS_SRCS})
 
