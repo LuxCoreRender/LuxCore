@@ -24,9 +24,11 @@
 #include <deque>
 #include <sstream>
 
+#include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/trianglemesh.h"
-#include "luxrays/core/dataset.h"
+#include "luxrays/accelerators/bvhaccel.h"
+#include "luxrays/accelerators/qbvhaccel.h"
 
 using namespace luxrays;
 
@@ -37,12 +39,14 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	totalTriangleCount = 0;
 	preprocessed = false;
 	preprocessedMesh = NULL;
-	bvhAccel = NULL;
+
+	accelType = ACCEL_QBVH;
+	accel = NULL;
 }
 
 DataSet::~DataSet() {
 	if (preprocessedMesh) {
-		delete bvhAccel;
+		delete accel;
 		delete preprocessedMesh->GetVertices();
 		delete preprocessedMesh->GetTriangles();
 		delete preprocessedMesh;
@@ -85,18 +89,34 @@ void DataSet::Preprocess() {
 	meshes.clear();
 
 	// Build the Acceleretor
-	const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
-	const int costSamples = 0; // Samples to get for cost minimization
-	const int isectCost = 80;
-	const int travCost = 10;
-	const float emptyBonus = 0.5f;
-	bvhAccel = new BVHAccel(context,
-			totalTriangleCount, preprocessedMesh->GetTriangles(), preprocessedMesh->GetVertices(),
-			treeType, costSamples, isectCost, travCost, emptyBonus);
+	switch (accelType) {
+		case ACCEL_BVH: {
+			const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
+			const int costSamples = 0; // Samples to get for cost minimization
+			const int isectCost = 80;
+			const int travCost = 10;
+			const float emptyBonus = 0.5f;
 
-	LR_LOG(context, "Total BVH memory usage: " << bvhAccel->nNodes * sizeof(BVHAccelArrayNode) / 1024 << "Kbytes");
+			accel = new BVHAccel(context,
+					totalTriangleCount, preprocessedMesh->GetTriangles(), preprocessedMesh->GetVertices(),
+					treeType, costSamples, isectCost, travCost, emptyBonus);
+			break;
+		}
+		case ACCEL_QBVH: {
+			const int maxPrimsPerLeaf = 4;
+			const int fullSweepThreshold = 4 * maxPrimsPerLeaf;
+			const int skipFactor = 1;
+
+			accel = new QBVHAccel(context,
+					totalTriangleCount, preprocessedMesh->GetTriangles(), preprocessedMesh->GetVertices(),
+					maxPrimsPerLeaf, fullSweepThreshold, skipFactor);
+			break;
+		}
+		default:
+			assert (false);
+	}
 }
 
 bool DataSet::Intersect(const Ray *ray, RayHit *hit) const {
-	return bvhAccel->Intersect(ray, hit);
+	return accel->Intersect(ray, hit);
 }

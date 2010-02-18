@@ -73,6 +73,7 @@ BVHAccel::BVHAccel(const Context *context,
 	BuildArray(rootNode, 0);
 	FreeHierarchy(rootNode);
 
+	LR_LOG(context, "Total BVH memory usage: " << nNodes * sizeof(BVHAccelArrayNode) / 1024 << "Kbytes");
 	LR_LOG(context, "Finished building Bounding Volume Hierarchy array");
 }
 

@@ -52,6 +52,8 @@ public:
 			const int tcost, const float ebonus);
 	~BVHAccel();
 
+	AcceleratorType GetType() const { return ACCEL_BVH; }
+
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	// BVHAccel Private Data

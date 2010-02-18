@@ -19,16 +19,16 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _KERNELS_H
-#define	_KERNELS_H
+#ifndef _LUXRAYS_KERNELS_H
+#define	_LUXRAYS_KERNELS_H
 
 #include <string>
 
 namespace luxrays {
 
 extern std::string KernelSource_BVH;
+extern std::string KernelSource_QBVH;
 
 }
 
-#endif	/* _KERNELS_H */
-
+#endif	/* _LUXRAYS_KERNELS_H */
