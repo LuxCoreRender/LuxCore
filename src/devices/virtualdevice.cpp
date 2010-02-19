@@ -24,7 +24,7 @@
 #include "luxrays/core/device.h"
 #include "luxrays/core/virtualdevice.h"
 
-namespace luxrays {
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
 // Virtual Many To One Device
@@ -98,7 +98,7 @@ VirtualM2OIntersectionDevice::VirtualM2ODevInstance::~VirtualM2ODevInstance() {
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Start() {
 	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
 
-	started = true;
+	IntersectionDevice::Start();
 	pendingRayBuffers = 0;
 
 	// Start the real device if required
@@ -106,6 +106,7 @@ void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Start() {
 		LR_LOG(deviceContext, "[VirtualM2ODevice::" << deviceName << "] Starting real device");
 		virtualDevice->realDevice->Start();
 	}
+
 }
 
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Interrupt() {
@@ -113,8 +114,6 @@ void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Interrupt() {
 
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Stop() {
 	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
-
-	started = false;
 
 	// Need to wait for all my pending RayBuffer
 	while (pendingRayBuffers > 0)
@@ -133,6 +132,8 @@ void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Stop() {
 		LR_LOG(deviceContext, "[VirtualM2ODevice::" << deviceName << "] Stopping real device");
 		virtualDevice->realDevice->Stop();
 	}
+
+	IntersectionDevice::Stop();
 }
 
 RayBuffer *VirtualM2OIntersectionDevice::VirtualM2ODevInstance::NewRayBuffer() {
@@ -150,6 +151,8 @@ RayBuffer *VirtualM2OIntersectionDevice::VirtualM2ODevInstance::PopRayBuffer() {
 	RayBuffer *rayBuffer = doneRayBufferQueue.Pop();
 	rayBuffer->PopUserData();
 	--pendingRayBuffers;
+
+	statsTotalRayCount += rayBuffer->GetRayCount();
 
 	return rayBuffer;
 }
@@ -287,6 +290,4 @@ void VirtualO2MIntersectionDevice::PopperRouter(VirtualO2MIntersectionDevice *vi
 	} catch (cl::Error err) {
 		LR_LOG(virtualDevice->GetContext(), "[VirtualO2MDevice::" << virtualDevice->deviceIndex << "::" << deviceIndex << "] PopperRouter thread ERROR: " << err.what() << "(" << err.err() << ")");
 	}
-}
-
 }

@@ -24,7 +24,7 @@
 #include "luxrays/core/device.h"
 #include "luxrays/core/context.h"
 
-namespace luxrays {
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
 // Native thread IntersectionDevice
@@ -103,6 +103,4 @@ void NativeThreadIntersectionDevice::AddDevices(std::vector<DeviceDescription *>
 
 		descriptions.push_back(new NativeThreadDeviceDescription(deviceName, i));
 	}
-}
-
 }
