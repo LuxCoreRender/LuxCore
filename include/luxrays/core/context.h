@@ -35,7 +35,12 @@
 #else
 #include <CL/cl.hpp>
 #endif
-
+#  if (__GNUC__ == 3) || (__GNUC__ == 4)
+extern "C" {
+	int isinf(double);
+	int isnan(double);
+}
+#  endif // ONLY GCC 3
 #include "luxrays/luxrays.h"
 #include "luxrays/core/dataset.h"
 
