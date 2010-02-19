@@ -31,7 +31,7 @@ public:
 
 	TriangleLight(const unsigned int index, const ExtTriangleMesh *objs) {
 		triIndex = index;
-		area = objs->GetTriangles()->Area(objs->GetVertices());
+		area = (objs->GetTriangles()[index]).Area(objs->GetVertices());
 	}
 
 	Spectrum Sample_L(const ExtTriangleMesh *objs, const Point &p, const Normal &N,
