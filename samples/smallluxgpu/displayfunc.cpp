@@ -184,7 +184,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 27: // Escape key
 			delete config;
 			cerr << "Done." << endl;
-			exit(0);
+			exit(EXIT_SUCCESS);
 			break;
 		case ' ': // Restart rendering
 			config->ReInit(true, config->scene->camera->film->GetWidth(), config->scene->camera->film->GetHeight());
