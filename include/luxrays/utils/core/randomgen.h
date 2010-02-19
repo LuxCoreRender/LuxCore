@@ -43,7 +43,7 @@ public:
 	}
 
 	~RandomGenerator() {
-		delete buf;
+		delete[] buf;
 	}
 
 	inline void init(unsigned long tn) {

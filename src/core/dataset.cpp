@@ -47,7 +47,9 @@ DataSet::DataSet(const Context *luxRaysContext) {
 DataSet::~DataSet() {
 	if (preprocessedMesh) {
 		delete accel;
-		delete preprocessedMeshIDs;
+		preprocessedMesh->Delete();
+		delete preprocessedMesh;
+		delete[] preprocessedMeshIDs;
 	}
 }
 
