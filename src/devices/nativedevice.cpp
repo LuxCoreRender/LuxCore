@@ -66,25 +66,29 @@ RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
 }
 
 void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
+	assert (started);
+
 	const double t1 = WallClockTime();
 
 	// Trace rays
 	const Ray *rb = rayBuffer->GetRayBuffer();
 	RayHit *hb = rayBuffer->GetHitBuffer();
-	const double rayCount = rayBuffer->GetRayCount();
-	for (unsigned int i = 0; i < rayCount; ++i)
+	const size_t rayCount = rayBuffer->GetRayCount();
+	for (unsigned int i = 0; i < rayCount; ++i) {
+		hb[i].SetMiss();
 		dataSet->Intersect(&rb[i], &hb[i]);
+	}
 
-	const double t2 = WallClockTime();
 	doneRayBufferQueue.Push(rayBuffer);
+	const double t2 = WallClockTime();
 
-	const double dt = t2 - t1;
-	statsTotalRayTime += dt;
 	statsTotalRayCount += rayCount;
-	statsDeviceTotalTime += dt;
+	statsDeviceTotalTime += t2 - t1;
 }
 
 RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer() {
+	assert (started);
+
 	return doneRayBufferQueue.Pop();
 }
 

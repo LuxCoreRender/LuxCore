@@ -27,6 +27,12 @@
 
 namespace luxrays {
 
+inline void UniformSampleTriangle(const float u0, const float u1, float *u, float *v) {
+	float su1 = sqrtf(u0);
+	*u = 1.f - su1;
+	*v = u1 * su1;
+}
+
 class Triangle {
 public:
 	Triangle() { }
@@ -84,6 +90,26 @@ public:
 		triangleHit->b2 = b2;
 
 		return true;
+	}
+
+	float Area(const Point *verts) const {
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+
+		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
+	}
+
+	void Sample(const Point *verts, const float u0,
+		const float u1, Point *p, float *b0, float *b1, float *b2) const {
+		UniformSampleTriangle(u0, u1, b0, b1);
+
+		// Get triangle vertices in _p1_, _p2_, and _p3_
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+		*b2 = 1.f - (*b0) - (*b1);
+		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 	}
 
 	unsigned int v[3];

@@ -93,11 +93,14 @@ public:
 	void Interrupt();
 	void Stop();
 
+	RayBuffer *NewRayBuffer();
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
 	size_t GetQueueSize() { return todoRayBufferQueue.GetSize(); }
 
 	double GetLoad() const { return 1.0; }
+
+	static size_t RayBufferSize;
 
 private:
 	// Funny names ...

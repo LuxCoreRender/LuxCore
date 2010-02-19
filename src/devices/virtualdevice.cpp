@@ -162,6 +162,8 @@ void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::PushRayBufferDone(RayB
 // Virtual One to Many device
 //------------------------------------------------------------------------------
 
+size_t VirtualO2MIntersectionDevice::RayBufferSize = OpenCLIntersectionDevice::RayBufferSize;
+
 VirtualO2MIntersectionDevice::VirtualO2MIntersectionDevice(std::vector<IntersectionDevice *> devices,
 		const size_t index) : IntersectionDevice(devices[0]->GetContext(), DEVICE_TYPE_VIRTUAL, index) {
 	assert (devices.size() > 0);
@@ -229,6 +231,10 @@ void VirtualO2MIntersectionDevice::Stop() {
 	}
 
 	started = false;
+}
+
+RayBuffer *VirtualO2MIntersectionDevice::NewRayBuffer() {
+	return new RayBuffer(RayBufferSize);
 }
 
 void VirtualO2MIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {

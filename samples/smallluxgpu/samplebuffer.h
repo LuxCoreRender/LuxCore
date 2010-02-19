@@ -19,62 +19,51 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_TRIANGLEMESH_H
-#define	_LUXRAYS_TRIANGLEMESH_H
+#ifndef _SAMPLEBUFFER_H
+#define	_SAMPLEBUFFER_H
 
-#include <cassert>
-#include <cstdlib>
+#include "smalllux.h"
+#include "sampler.h"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/triangle.h"
+#define SAMPLE_BUFFER_SIZE (4096)
 
-namespace luxrays {
+typedef struct {
+	float screenX, screenY;
+	unsigned int pass;
+	Spectrum radiance;
+} SampleBufferElem;
 
-typedef unsigned int TriangleMeshID;
-typedef unsigned int TriangleID;
-
-class TriangleMesh {
+class SampleBuffer {
 public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris) {
-		assert (meshVertCount > 0);
-		assert (meshTriCount > 0);
-		assert (meshVertices != NULL);
-		assert (meshTris != NULL);
-
-		vertCount = meshVertCount;
-		triCount = meshTriCount;
-		vertices = meshVertices;
-		tris = meshTris;
-	};
-	virtual ~TriangleMesh() { };
-	virtual void Delete() {
-		delete[] vertices;
-		delete[] tris;
+	SampleBuffer(size_t bufferSize) : size(bufferSize) {
+		samples = new SampleBufferElem[size];
+		Reset();
+	}
+	~SampleBuffer() {
+		delete samples;
 	}
 
-	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
-	unsigned int GetTotalVertexCount() const { return vertCount; }
-	unsigned int GetTotalTriangleCount() const { return triCount; }
+	void Reset() { currentFreeSample = 0; };
+	bool IsFull() const { return (currentFreeSample >= size); }
 
-	static TriangleMesh *Merge(
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
-	static TriangleMesh *Merge(
-		const unsigned int totalVerticesCount,
-		const unsigned int totalIndicesCount,
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
+	void SplatSample(const Sample *sample, const Spectrum &radiance) {
+		SampleBufferElem *s = &samples[currentFreeSample++];
 
-protected:
-	unsigned int vertCount;
-	unsigned int triCount;
-	Point *vertices;
-	Triangle *tris;
+		s->screenX = sample->screenX;
+		s->screenY = sample->screenY;
+		s->pass = sample->pass;
+		s->radiance = radiance;
+	}
+
+	SampleBufferElem *GetSampleBuffer() const { return samples; }
+
+	size_t GetSampleCount() const { return currentFreeSample; }
+
+private:
+	size_t size;
+	size_t currentFreeSample;
+
+	SampleBufferElem *samples;
 };
 
-}
-
-#endif	/* _LUXRAYS_TRIANGLEMESH_H */
+#endif	/* _SAMPLEBUFFER_H */

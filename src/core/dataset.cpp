@@ -47,13 +47,7 @@ DataSet::DataSet(const Context *luxRaysContext) {
 DataSet::~DataSet() {
 	if (preprocessedMesh) {
 		delete accel;
-		delete preprocessedMesh->GetVertices();
-		delete preprocessedMesh->GetTriangles();
-		delete preprocessedMesh;
 		delete preprocessedMeshIDs;
-	} else {
-		for (std::deque<TriangleMesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++)
-			delete *m;
 	}
 }
 

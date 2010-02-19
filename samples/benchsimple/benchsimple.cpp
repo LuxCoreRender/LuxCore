@@ -25,7 +25,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/device.h"
-#include "luxrays/utils/randomgen.h"
+#include "luxrays/utils/core/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
 #define TRIANGLE_COUNT 100
@@ -196,8 +196,8 @@ int main(int argc, char** argv) {
 
 	ctx->Start();
 	delete ctx;
-	delete[] tris;
-	delete[] verts;
+	mesh->Delete();
+	delete mesh;
 
 	std::cerr << "Done." << std::endl;
 

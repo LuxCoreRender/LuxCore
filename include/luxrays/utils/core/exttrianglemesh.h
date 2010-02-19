@@ -19,62 +19,67 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_TRIANGLEMESH_H
-#define	_LUXRAYS_TRIANGLEMESH_H
+#ifndef _LUXRAYS_EXTTRIANGLEMESH_H
+#define	_LUXRAYS_EXTTRIANGLEMESH_H
 
 #include <cassert>
 #include <cstdlib>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/triangle.h"
+#include "luxrays/core/trianglemesh.h"
+#include "luxrays/utils/core/spectrum.h"
 
 namespace luxrays {
 
-typedef unsigned int TriangleMeshID;
-typedef unsigned int TriangleID;
-
-class TriangleMesh {
+class ExtTriangleMesh : public TriangleMesh {
 public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris) {
-		assert (meshVertCount > 0);
-		assert (meshTriCount > 0);
-		assert (meshVertices != NULL);
-		assert (meshTris != NULL);
-
-		vertCount = meshVertCount;
-		triCount = meshTriCount;
-		vertices = meshVertices;
-		tris = meshTris;
+	// NOTE: deleting meshVertices, meshIndices, meshNormals and meshColors is up to the application
+	ExtTriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
+			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, Spectrum *meshColors = NULL) :
+			TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+		normals = meshNormals;
+		colors = meshColors;
 	};
-	virtual ~TriangleMesh() { };
+	~ExtTriangleMesh() { };
 	virtual void Delete() {
-		delete[] vertices;
-		delete[] tris;
+		TriangleMesh::Delete();
+		delete[] normals;
+		delete[] colors;
 	}
 
-	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
-	unsigned int GetTotalVertexCount() const { return vertCount; }
-	unsigned int GetTotalTriangleCount() const { return triCount; }
+	Normal *GetNormal() const { return normals; }
+	Spectrum *GetColors() const { return colors; }
 
-	static TriangleMesh *Merge(
-		const std::deque<TriangleMesh *> &meshes,
+	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName);
+	static ExtTriangleMesh *Merge(
+		const std::deque<ExtTriangleMesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL);
-	static TriangleMesh *Merge(
+	static ExtTriangleMesh *Merge(
 		const unsigned int totalVerticesCount,
 		const unsigned int totalIndicesCount,
-		const std::deque<TriangleMesh *> &meshes,
+		const std::deque<ExtTriangleMesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL);
 
-protected:
-	unsigned int vertCount;
-	unsigned int triCount;
-	Point *vertices;
-	Triangle *tris;
+private:
+	Normal *normals;
+	Spectrum *colors;
 };
+
+inline Normal InterpolateTriNormal(const Triangle &tri, const Normal *normals, const float b1, const float b2) {
+	const float b0 = 1.f - b1 - b2;
+	return Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
+}
+
+inline Spectrum InterpolateTriColor(const Triangle &tri, const Spectrum *colors, const float b0, const float b1, const float b2) {
+	return b0 * colors[tri.v[0]] + b1 * colors[tri.v[1]] + b2 * colors[tri.v[2]];
+}
+
+inline Spectrum InterpolateTriColor(const Triangle &tri, const Spectrum *colors, const float b1, const float b2) {
+	const float b0 = 1.f - b1 - b2;
+	return b0 * colors[tri.v[0]] + b1 * colors[tri.v[1]] + b2 * colors[tri.v[2]];
+}
 
 }
 
-#endif	/* _LUXRAYS_TRIANGLEMESH_H */
+#endif	/* _LUXRAYS_EXTTRIANGLEMESH_H */

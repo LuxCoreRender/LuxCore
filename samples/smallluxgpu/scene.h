@@ -19,62 +19,54 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_TRIANGLEMESH_H
-#define	_LUXRAYS_TRIANGLEMESH_H
+#ifndef _SCENE_H
+#define	_SCENE_H
 
-#include <cassert>
-#include <cstdlib>
+#include <string>
+#include <iostream>
+#include <fstream>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/triangle.h"
+#include "smalllux.h"
+#include "luxrays/core/context.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
+#include "camera.h"
+#include "light.h"
 
-namespace luxrays {
+using namespace std;
 
-typedef unsigned int TriangleMeshID;
-typedef unsigned int TriangleID;
-
-class TriangleMesh {
+class Scene {
 public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris) {
-		assert (meshVertCount > 0);
-		assert (meshTriCount > 0);
-		assert (meshVertices != NULL);
-		assert (meshTris != NULL);
-
-		vertCount = meshVertCount;
-		triCount = meshTriCount;
-		vertices = meshVertices;
-		tris = meshTris;
-	};
-	virtual ~TriangleMesh() { };
-	virtual void Delete() {
-		delete[] vertices;
-		delete[] tris;
+	Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film);
+	~Scene() {
+		delete camera;
+		delete[] lights;
+		delete dataSet;
+		mesh->Delete();
+		delete mesh;
 	}
 
-	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
-	unsigned int GetTotalVertexCount() const { return vertCount; }
-	unsigned int GetTotalTriangleCount() const { return triCount; }
+	unsigned int SampleLights(const float u) const {
+		// One Uniform light strategy
+		const unsigned int lightIndex = min(Floor2UInt(nLights * u), nLights - 1);
 
-	static TriangleMesh *Merge(
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
-	static TriangleMesh *Merge(
-		const unsigned int totalVerticesCount,
-		const unsigned int totalIndicesCount,
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
+		return lightIndex;
+	}
 
-protected:
-	unsigned int vertCount;
-	unsigned int triCount;
-	Point *vertices;
-	Triangle *tris;
+	bool IsLight(const unsigned int index) const {
+		return (index >= meshLightOffset);
+	}
+
+	// Siggned because of the delta parameter
+	int maxPathDepth;
+	unsigned int shadowRayCount;
+
+	PerspectiveCamera *camera;
+
+	unsigned int nLights;
+	unsigned int meshLightOffset;
+	ExtTriangleMesh *mesh;
+	TriangleLight *lights;
+	DataSet *dataSet;
 };
 
-}
-
-#endif	/* _LUXRAYS_TRIANGLEMESH_H */
+#endif	/* _SCENE_H */

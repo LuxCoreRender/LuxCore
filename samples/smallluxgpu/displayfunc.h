@@ -19,62 +19,25 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_TRIANGLEMESH_H
-#define	_LUXRAYS_TRIANGLEMESH_H
+#ifndef _DISPLAYFUNC_H
+#define	_DISPLAYFUNC_H
 
-#include <cassert>
-#include <cstdlib>
+#include <math.h>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/triangle.h"
+// Jens's patch for MacOS
+#if defined(__APPLE__)
+#include <GLut/glut.h>
+#else
+#include <GL/glut.h>
+#endif
 
-namespace luxrays {
+class RenderingConfig;
 
-typedef unsigned int TriangleMeshID;
-typedef unsigned int TriangleID;
+extern RenderingConfig *config;
+extern void DebugHandler(const char *msg);
 
-class TriangleMesh {
-public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris) {
-		assert (meshVertCount > 0);
-		assert (meshTriCount > 0);
-		assert (meshVertices != NULL);
-		assert (meshTris != NULL);
+extern void InitGlut(int argc, char *argv[], unsigned int width, unsigned int height);
+extern void RunGlut();
 
-		vertCount = meshVertCount;
-		triCount = meshTriCount;
-		vertices = meshVertices;
-		tris = meshTris;
-	};
-	virtual ~TriangleMesh() { };
-	virtual void Delete() {
-		delete[] vertices;
-		delete[] tris;
-	}
+#endif	/* _DISPLAYFUNC_H */
 
-	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
-	unsigned int GetTotalVertexCount() const { return vertCount; }
-	unsigned int GetTotalTriangleCount() const { return triCount; }
-
-	static TriangleMesh *Merge(
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
-	static TriangleMesh *Merge(
-		const unsigned int totalVerticesCount,
-		const unsigned int totalIndicesCount,
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
-
-protected:
-	unsigned int vertCount;
-	unsigned int triCount;
-	Point *vertices;
-	Triangle *tris;
-};
-
-}
-
-#endif	/* _LUXRAYS_TRIANGLEMESH_H */

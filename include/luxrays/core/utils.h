@@ -34,6 +34,18 @@
         Unsupported Platform !!!
 #endif
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#ifndef INFINITY
+#define INFINITY (numeric_limits<float>::infinity())
+#endif
+
+#ifndef INV_PI
+#define INV_PI  0.31830988618379067154f
+#endif
+
 namespace luxrays {
 
 inline double WallClockTime() {
@@ -65,6 +77,14 @@ template<class T> inline void Swap(T &a, T &b) {
 	const T tmp = a;
 	a = b;
 	b = tmp;
+}
+
+inline float Radians(float deg) {
+	return (M_PI / 180.f) * deg;
+}
+
+inline float Degrees(float rad) {
+	return (180.f / M_PI) * rad;
 }
 
 inline float Sgn(float a) {

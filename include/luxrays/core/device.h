@@ -38,6 +38,7 @@
 #include <boost/thread/thread.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/utils.h"
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"
 
@@ -85,6 +86,12 @@ public:
 	virtual RayBuffer *PopRayBuffer() = 0;
 	virtual size_t GetQueueSize() = 0;
 
+	double GetPerformance() const {
+		double statsTotalRayTime = WallClockTime() - statsStartTime;
+		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalRayCount / statsTotalRayTime);
+	}
+	virtual double GetLoad() const = 0;
+
 protected:
 	const Context *deviceContext;
 	DeviceType deviceType;
@@ -93,7 +100,7 @@ protected:
 	std::string deviceName;
 	const DataSet *dataSet;
 
-	double statsTotalRayTime, statsTotalRayCount, statsDeviceIdleTime, statsDeviceTotalTime;
+	double statsStartTime, statsTotalRayCount, statsDeviceIdleTime, statsDeviceTotalTime;
 
 	bool started;
 };
@@ -128,6 +135,10 @@ public:
 	size_t GetQueueSize() { return 0; }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
+
+	double GetLoad() const {
+		return 1.0;
+	}
 
 	static size_t RayBufferSize;
 
@@ -186,6 +197,10 @@ public:
 	RayBuffer *PopRayBuffer();
 
 	OpenCLDeviceType GetOpenCLType() const { return oclType; }
+
+	double GetLoad() const {
+		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
+	}
 
 	friend class Context;
 
