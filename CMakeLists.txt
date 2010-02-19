@@ -88,7 +88,11 @@ message(STATUS "GLUT include directory: " ${GLUT_INCLUDE_DIR})
 #
 #############################################################################
 
-FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
+IF(APPLE)
+	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39)
+ELSE(APPLE)
+	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
+ENDIF(APPLE)
 
 if(Boost_FOUND)
 	message(STATUS "Boost library directory: " ${Boost_LIBRARY_DIRS})
@@ -105,6 +109,8 @@ endif(Boost_FOUND)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fPIC -O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -msse2 -mfpmath=sse -ftree-vectorize -funroll-loops ")
+#OSX-flags by jensverwiebe
+#set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable ")
 
 ###########################################################################
 #
