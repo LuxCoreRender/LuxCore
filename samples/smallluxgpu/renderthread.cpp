@@ -147,6 +147,7 @@ DeviceRenderThread::DeviceRenderThread(unsigned int index, IntersectionDevice *d
 	sampleBuffer = new SampleBuffer(sampleBufferSize);
 
 	// Ray buffer
+	// TODO: cross check RAY_BUFFER_SIZE with the Intersection device
 	const size_t rayBufferSize = lowLatency ? (RAY_BUFFER_SIZE / 8) : RAY_BUFFER_SIZE;
 	sampler = new RandomSampler(lowLatency, threadIndex + 1,
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight());

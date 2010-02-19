@@ -37,7 +37,7 @@ namespace luxrays {
 // OpenCL IntersectionDevice
 //------------------------------------------------------------------------------
 
-size_t OpenCLIntersectionDevice::RayBufferSize = 8 * 1024;
+size_t OpenCLIntersectionDevice::RayBufferSize = 65536;
 
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const cl::Device &device,
 		const unsigned int index) :	IntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
@@ -45,6 +45,8 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const
 	reportedPermissionError = false;
 	intersectionThread = NULL;
 	oclType = GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE >());
+	bvhBuff = NULL;
+	qbvhBuff = NULL;
 
 	// Allocate a context with the selected device
 	VECTOR_CLASS<cl::Device> devices;
