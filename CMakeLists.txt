@@ -108,9 +108,10 @@ endif(Boost_FOUND)
 #############################################################################
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fPIC -O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -msse2 -mfpmath=sse -ftree-vectorize -funroll-loops ")
+# NOTE: QBVH can not be compiled with -O3 because of a GCC bug
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O2 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
 #OSX-flags by jensverwiebe
-#set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable ")
+#set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable")
 
 ###########################################################################
 #
