@@ -30,18 +30,19 @@
 #define __NO_STD_VECTOR
 #define __NO_STD_STRING
 
-#if defined(__APPLE__)
+#if defined(__APPLE__)  // OSX adaptions Jens Verwiebe
 #include <OpenCL/cl.hpp>
+	#if (__GNUC__ == 3) || (__GNUC__ == 4)
+	extern "C" {
+		int isinf(double);
+		int isnan(double);
+	}
+	#endif
 #else
 #include <CL/cl.hpp>
 #endif
 
-#  if (__GNUC__ == 3) || (__GNUC__ == 4)
-extern "C" {
-	int isinf(double);
-	int isnan(double);
-}
-#  endif
+
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/dataset.h"
