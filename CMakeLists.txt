@@ -72,15 +72,23 @@ include_directories("${OCL_INCLUDE_PATH}")
 
 #############################################################################
 #
+# OpenGL & GLUT Libraries
+#
+#############################################################################
+
+find_package(GLUT)
+find_package(OpenGL)
+
+message(STATUS "OpenGL include directory: " ${OPENGL_INCLUDE_DIR})
+message(STATUS "GLUT include directory: " ${GLUT_INCLUDE_DIR})
+
+#############################################################################
+#
 # Boost Libraries
 #
 #############################################################################
 
-if(APPLE)
-	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39)
-else(APPLE)
-	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
-endif(APPLE)
+FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
 
 if(Boost_FOUND)
 	message(STATUS "Boost library directory: " ${Boost_LIBRARY_DIRS})
@@ -123,25 +131,30 @@ add_custom_command(
    )
 
 set(LUXRAYS_SRCS
-  ${LUXRAYS_SOURCE_DIR}/accelerators/bvhaccel.cpp
-  ${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp
-  ${LUXRAYS_SOURCE_DIR}/core/context.cpp
-  ${LUXRAYS_SOURCE_DIR}/core/dataset.cpp
-  ${LUXRAYS_SOURCE_DIR}/core/device.cpp
-  ${LUXRAYS_SOURCE_DIR}/core/geometry/bbox.cpp
-  ${LUXRAYS_SOURCE_DIR}/core/trianglemesh.cpp
-  ${LUXRAYS_SOURCE_DIR}/devices/opencldevice.cpp
-  ${LUXRAYS_SOURCE_DIR}/devices/nativedevice.cpp
-  ${LUXRAYS_SOURCE_DIR}/devices/virtualdevice.cpp
-  ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
-  ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp)
+    ${LUXRAYS_SOURCE_DIR}/accelerators/bvhaccel.cpp
+    ${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp
+    ${LUXRAYS_SOURCE_DIR}/core/context.cpp
+    ${LUXRAYS_SOURCE_DIR}/core/dataset.cpp
+    ${LUXRAYS_SOURCE_DIR}/core/device.cpp
+    ${LUXRAYS_SOURCE_DIR}/core/geometry/bbox.cpp
+    ${LUXRAYS_SOURCE_DIR}/core/geometry/matrix4x4.cpp
+    ${LUXRAYS_SOURCE_DIR}/core/geometry/transform.cpp
+    ${LUXRAYS_SOURCE_DIR}/core/trianglemesh.cpp
+    ${LUXRAYS_SOURCE_DIR}/devices/opencldevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/devices/nativedevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/devices/virtualdevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/utils/core/exttrianglemesh.cpp
+    ${LUXRAYS_SOURCE_DIR}/utils/plymesh/rply.cpp)
 
 add_library(luxrays STATIC ${LUXRAYS_SRCS})
 
 ###########################################################################
 #
-# Samples: benchsimple
+# Samples
 #
 ###########################################################################
 
 add_subdirectory(samples/benchsimple)
+add_subdirectory(samples/smallluxgpu)

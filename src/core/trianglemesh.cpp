@@ -26,7 +26,22 @@
 
 #include "luxrays/core/trianglemesh.h"
 
-using namespace luxrays;
+namespace luxrays {
+
+TriangleMesh *TriangleMesh::Merge(
+	const std::deque<TriangleMesh *> &meshes,
+	TriangleMeshID **preprocessedMeshIDs) {
+	unsigned int totalVertexCount = 0;
+	unsigned int totalTriangleCount = 0;
+
+	for (std::deque<TriangleMesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+		const TriangleMesh *mesh = *m;
+		totalVertexCount += mesh->GetTotalVertexCount();
+		totalTriangleCount += mesh->GetTotalTriangleCount();
+	}
+
+	return Merge(totalVertexCount, totalTriangleCount, meshes, preprocessedMeshIDs);
+}
 
 TriangleMesh *TriangleMesh::Merge(
 	const unsigned int totalVertexCount,
@@ -69,4 +84,6 @@ TriangleMesh *TriangleMesh::Merge(
 	}
 
 	return new TriangleMesh(totalVertexCount, totalTriangleCount, v, i);
+}
+
 }

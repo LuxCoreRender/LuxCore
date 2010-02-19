@@ -153,10 +153,14 @@ RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
 }
 
 void OpenCLIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
+	assert (started);
+
 	todoRayBufferQueue.Push(rayBuffer);
 }
 
 RayBuffer *OpenCLIntersectionDevice::PopRayBuffer() {
+	assert (started);
+
 	return doneRayBufferQueue.Pop();
 }
 
@@ -342,17 +346,15 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 			RayBuffer *rayBuffer = renderDevice->todoRayBufferQueue.Pop();
 			const double t2 = WallClockTime();
 			renderDevice->TraceRayBuffer(rayBuffer);
-			const double t3 = WallClockTime();
 
 			const double rayCount = rayBuffer->GetRayCount();
 
 			renderDevice->doneRayBufferQueue.Push(rayBuffer);
-			const double t4 = WallClockTime();
+			const double t3 = WallClockTime();
 
-			renderDevice->statsTotalRayTime += t3 - t2;
 			renderDevice->statsTotalRayCount += rayCount;
 			renderDevice->statsDeviceIdleTime += t2 - t1;
-			renderDevice->statsDeviceTotalTime += t4 - t1;
+			renderDevice->statsDeviceTotalTime += t3 - t1;
 		}
 
 		LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread halted");

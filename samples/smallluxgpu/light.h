@@ -19,62 +19,54 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_TRIANGLEMESH_H
-#define	_LUXRAYS_TRIANGLEMESH_H
+#ifndef _LIGHT_H
+#define	_LIGHT_H
 
-#include <cassert>
-#include <cstdlib>
+#include "smalllux.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/triangle.h"
-
-namespace luxrays {
-
-typedef unsigned int TriangleMeshID;
-typedef unsigned int TriangleID;
-
-class TriangleMesh {
+class TriangleLight {
 public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris) {
-		assert (meshVertCount > 0);
-		assert (meshTriCount > 0);
-		assert (meshVertices != NULL);
-		assert (meshTris != NULL);
+	TriangleLight() { }
 
-		vertCount = meshVertCount;
-		triCount = meshTriCount;
-		vertices = meshVertices;
-		tris = meshTris;
-	};
-	virtual ~TriangleMesh() { };
-	virtual void Delete() {
-		delete[] vertices;
-		delete[] tris;
+	TriangleLight(const unsigned int index, const ExtTriangleMesh *objs) {
+		triIndex = index;
+		area = objs->GetTriangles()->Area(objs->GetVertices());
 	}
 
-	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
-	unsigned int GetTotalVertexCount() const { return vertCount; }
-	unsigned int GetTotalTriangleCount() const { return triCount; }
+	Spectrum Sample_L(const ExtTriangleMesh *objs, const Point &p, const Normal &N,
+		const float u0, const float u1, float *pdf, Ray *shadowRay) const {
+		const Triangle &tri = objs->GetTriangles()[triIndex];
 
-	static TriangleMesh *Merge(
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
-	static TriangleMesh *Merge(
-		const unsigned int totalVerticesCount,
-		const unsigned int totalIndicesCount,
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
+		Point samplePoint;
+		float b0, b1, b2;
+		tri.Sample(objs->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
+		Normal sampleN = objs->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
 
-protected:
-	unsigned int vertCount;
-	unsigned int triCount;
-	Point *vertices;
-	Triangle *tris;
+		Vector wi = samplePoint - p;
+		const float distanceSquared = wi.LengthSquared();
+		const float distance = sqrtf(distanceSquared);
+		wi /= distance;
+
+		float SampleNdotMinusWi = Dot(sampleN, -wi);
+		float NdotMinusWi = Dot(N, wi);
+		if ((SampleNdotMinusWi <= 0.f) || (NdotMinusWi <= 0.f)) {
+			*pdf = 0.f;
+			return Spectrum(0.f, 0.f, 0.f);
+		}
+
+		*shadowRay = Ray(p, wi, RAY_EPSILON, distance - RAY_EPSILON);
+		*pdf = distanceSquared / (SampleNdotMinusWi * NdotMinusWi * area);
+
+		// Return interpolated color
+		return InterpolateTriColor(tri, objs->GetColors(), b0, b1, b2);
+	}
+
+private:
+	unsigned int triIndex;
+	float area;
+
 };
 
-}
+#endif	/* _LIGHT_H */
 
-#endif	/* _LUXRAYS_TRIANGLEMESH_H */

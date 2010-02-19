@@ -19,62 +19,63 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_TRIANGLEMESH_H
-#define	_LUXRAYS_TRIANGLEMESH_H
+#ifndef _LUXRAYS_MATRIX4X4_H
+#define _LUXRAYS_MATRIX4X4_H
 
-#include <cassert>
-#include <cstdlib>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/triangle.h"
+#include <ostream>
 
 namespace luxrays {
 
-typedef unsigned int TriangleMeshID;
-typedef unsigned int TriangleID;
-
-class TriangleMesh {
+class Matrix4x4 {
 public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris) {
-		assert (meshVertCount > 0);
-		assert (meshTriCount > 0);
-		assert (meshVertices != NULL);
-		assert (meshTris != NULL);
+	// Matrix4x4 Public Methods
+	Matrix4x4() {
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				if (i == j)
+					m[i][j] = 1.f;
+				else
+					m[i][j] = 0.f;
+	}
+	Matrix4x4(float mat[4][4]);
+	Matrix4x4(float t00, float t01, float t02, float t03,
+			float t10, float t11, float t12, float t13,
+			float t20, float t21, float t22, float t23,
+			float t30, float t31, float t32, float t33);
 
-		vertCount = meshVertCount;
-		triCount = meshTriCount;
-		vertices = meshVertices;
-		tris = meshTris;
-	};
-	virtual ~TriangleMesh() { };
-	virtual void Delete() {
-		delete[] vertices;
-		delete[] tris;
+	Matrix4x4 Transpose() const;
+	float Determinant() const;
+
+	void Print(std::ostream &os) const {
+		os << "Matrix4x4[ ";
+		for (int i = 0; i < 4; ++i) {
+			os << "[ ";
+			for (int j = 0; j < 4; ++j) {
+				os << m[i][j];
+				if (j != 3) os << ", ";
+			}
+			os << " ] ";
+		}
+		os << " ] ";
 	}
 
-	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
-	unsigned int GetTotalVertexCount() const { return vertCount; }
-	unsigned int GetTotalTriangleCount() const { return triCount; }
+	static Matrix4x4 Mul(const Matrix4x4 &m1, const Matrix4x4 &m2) {
+		float r[4][4];
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				r[i][j] = m1.m[i][0] * m2.m[0][j] +
+					m1.m[i][1] * m2.m[1][j] +
+					m1.m[i][2] * m2.m[2][j] +
+					m1.m[i][3] * m2.m[3][j];
 
-	static TriangleMesh *Merge(
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
-	static TriangleMesh *Merge(
-		const unsigned int totalVerticesCount,
-		const unsigned int totalIndicesCount,
-		const std::deque<TriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
+		return Matrix4x4(r);
+	}
 
-protected:
-	unsigned int vertCount;
-	unsigned int triCount;
-	Point *vertices;
-	Triangle *tris;
+	Matrix4x4 Inverse() const;
+
+	float m[4][4];
 };
 
 }
 
-#endif	/* _LUXRAYS_TRIANGLEMESH_H */
+#endif	/* _LUXRAYS_MATRIX4X4_H */

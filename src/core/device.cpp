@@ -109,8 +109,9 @@ void IntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 void IntersectionDevice::Start() {
 	assert (!started);
+	assert (dataSet != NULL);
 
-	statsTotalRayTime = 0.0;
+	statsStartTime = WallClockTime();
 	statsTotalRayCount = 0.0;
 	statsDeviceIdleTime = 0.0;
 	statsDeviceTotalTime = 0.0;

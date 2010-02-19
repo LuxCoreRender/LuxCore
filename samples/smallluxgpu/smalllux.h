@@ -19,12 +19,22 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_CONTEXT_H
-#define	_LUXRAYS_CONTEXT_H
+#ifndef _SMALLLUX_H
+#define	_SMALLLUX_H
 
-#include <cstdlib>
+#include <cmath>
 #include <sstream>
-#include <ostream>
+#include <fstream>
+#include <iostream>
+
+#if defined(__linux__) || defined(__APPLE__)
+#include <stddef.h>
+#include <sys/time.h>
+#elif defined (WIN32)
+#include <windows.h>
+#else
+	Unsupported Platform !!!
+#endif
 
 #define __CL_ENABLE_EXCEPTIONS
 #define __NO_STD_VECTOR
@@ -37,54 +47,10 @@
 #endif
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/dataset.h"
+#include "luxrays/utils/core/spectrum.h"
+#include "luxrays/core/utils.h"
 
-namespace luxrays {
+using namespace std;
+using namespace luxrays;
 
-typedef void (*LuxRaysDebugHandler)(const char *msg);
-
-#define LR_LOG(c, a) { if (c->HasDebugHandler()) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; c->PrintDebugMsg(_LR_LOG_LOCAL_SS.str().c_str()); } }
-
-class DeviceDescription;
-class OpenCLDeviceDescription;
-
-class Context {
-public:
-	Context(LuxRaysDebugHandler handler = NULL, const int openclPlatformIndex = -1);
-	~Context();
-
-	const std::vector<DeviceDescription *> &GetAvailableDeviceDescriptions() const;
-	const std::vector<IntersectionDevice *> &GetIntersectionDevices() const;
-	const std::vector<IntersectionDevice *> &GetIntersectionDevices(DeviceDescription type) const;
-
-	std::vector<IntersectionDevice *> AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
-	void SetCurrentDataSet(const DataSet *dataSet);
-
-	void Start();
-	void Stop();
-
-	bool HasDebugHandler() const { return debugHandler != NULL; }
-	void PrintDebugMsg(const char *msg) const {
-		if (debugHandler)
-			debugHandler(msg);
-	}
-
-	friend class OpenCLIntersectionDevice;
-
-protected:
-	// OpenCL items
-	cl::Platform oclPlatform;
-
-private:
-	LuxRaysDebugHandler debugHandler;
-
-	const DataSet *currentDataSet;
-	std::vector<DeviceDescription *> deviceDescriptions;
-	std::vector<IntersectionDevice *> devices;
-
-	bool started;
-};
-
-}
-
-#endif	/* _LUXRAYS_CONTEXT_H */
+#endif	/* _SMALLLUX_H */

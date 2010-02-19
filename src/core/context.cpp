@@ -131,7 +131,7 @@ const std::vector<IntersectionDevice *> &Context::GetIntersectionDevices() const
 	return devices;
 }
 
-void Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+std::vector<IntersectionDevice *> Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
 	LR_LOG(this, "Allocating " << deviceDesc.size() << " intersection device(s)");
@@ -140,6 +140,7 @@ void Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &dev
 	VECTOR_CLASS<cl::Device> oclDevices;
 	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
 
+	std::vector<IntersectionDevice *> newDevices;
 	for (size_t i = 0; i < deviceDesc.size(); ++i) {
 		LR_LOG(this, "Allocating intersection device " << i << ": " << deviceDesc[i]->GetName() <<
 				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
@@ -157,5 +158,8 @@ void Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &dev
 			assert (false);
 
 		devices.push_back(device);
+		newDevices.push_back(device);
 	}
+
+	return newDevices;
 }
