@@ -350,7 +350,7 @@ private:
 			// Allocate devices
 			intersectionCPUDevices =  ctx->AddIntersectionDevices(selectedDescs);
 
-			cerr << "NAtive Devices used: ";
+			cerr << "Native Devices used: ";
 			for (size_t i = 0; i < intersectionCPUDevices.size(); ++i)
 				cerr << "[" << intersectionCPUDevices[i]->GetName() << "]";
 			cerr << endl;

@@ -43,8 +43,8 @@ public:
 	}
 
 	~RayBuffer() {
-		delete rays;
-		delete rayHits;
+		delete[] rays;
+		delete[] rayHits;
 	}
 
 	void PushUserData(size_t data) {

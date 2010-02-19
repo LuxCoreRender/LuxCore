@@ -27,4 +27,13 @@
 #define LUXRAYS_VERSION_MAJOR @LUXRAYS_VERSION_MAJOR@
 #define LUXRAYS_VERSION_MINOR @LUXRAYS_VERSION_MINOR@
 
+#if defined(__APPLE__)
+#if (__GNUC__ == 3) || (__GNUC__ == 4)
+extern "C" {
+	int isinf(double);
+	int isnan(double);
+}
+#endif
+#endif
+
 #endif	/* _LUXRAYS_CFG_H */

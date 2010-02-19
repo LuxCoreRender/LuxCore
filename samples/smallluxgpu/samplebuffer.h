@@ -40,7 +40,7 @@ public:
 		Reset();
 	}
 	~SampleBuffer() {
-		delete samples;
+		delete[] samples;
 	}
 
 	void Reset() { currentFreeSample = 0; };

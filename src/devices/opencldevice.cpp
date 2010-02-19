@@ -311,7 +311,6 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer) {
 
 	switch (dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH: {
-
 			bvhKernel->setArg(7, (unsigned int)rayBuffer->GetRayCount());
 			oclQueue->enqueueNDRangeKernel(*bvhKernel, cl::NullRange,
 				cl::NDRange(rayBuffer->GetSize()), cl::NDRange(bvhWorkGroupSize));

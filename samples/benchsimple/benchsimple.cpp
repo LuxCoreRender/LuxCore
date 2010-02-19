@@ -47,9 +47,9 @@ int main(int argc, char** argv) {
 
 	// Looks for the first GPU device
 	std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
-	luxrays::DeviceDescription::FilterOne(deviceDescs);
+	//luxrays::DeviceDescription::FilterOne(deviceDescs);
 
-	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+	luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
 
 	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
 	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
@@ -194,12 +194,17 @@ int main(int argc, char** argv) {
 	// Free everything
 	//--------------------------------------------------------------------------
 
-	ctx->Start();
+	while (todoRayBuffers.size() > 0) {
+		delete todoRayBuffers.front();
+		todoRayBuffers.pop();
+	}
+
+	ctx->Stop();
 	delete ctx;
 	mesh->Delete();
 	delete mesh;
 
 	std::cerr << "Done." << std::endl;
 
-	return (EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }
