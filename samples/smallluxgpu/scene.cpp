@@ -97,7 +97,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	Spectrum *lightCols = meshLights->GetColors();
 	lightGain *= 0.75f;
 	for (unsigned int i = 0; i < meshLights->GetTotalVertexCount(); ++i)
-		lightCols[i] *=  lightGain;
+		lightCols[i] *= lightGain;
 
 	//--------------------------------------------------------------------------
 	// Join the ply objects
