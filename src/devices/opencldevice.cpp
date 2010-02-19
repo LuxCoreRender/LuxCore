@@ -31,7 +31,7 @@
 #include <pthread.h>
 #endif
 
-namespace luxrays {
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
 // OpenCL IntersectionDevice
@@ -446,6 +446,4 @@ void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,
 		} else
 			++i;
 	}
-}
-
 }

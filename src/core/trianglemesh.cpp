@@ -26,7 +26,7 @@
 
 #include "luxrays/core/trianglemesh.h"
 
-namespace luxrays {
+using namespace luxrays;
 
 TriangleMesh *TriangleMesh::Merge(
 	const std::deque<TriangleMesh *> &meshes,
@@ -84,6 +84,4 @@ TriangleMesh *TriangleMesh::Merge(
 	}
 
 	return new TriangleMesh(totalVertexCount, totalTriangleCount, v, i);
-}
-
 }

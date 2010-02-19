@@ -23,7 +23,7 @@
 #include "luxrays/utils/plymesh/rply.h"
 #include "luxrays/core/context.h"
 
-namespace luxrays {
+using namespace luxrays;
 
 // rply vertex callback
 static int VertexCB(p_ply_argument argument) {
@@ -299,6 +299,4 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(
 	}
 
 	return new ExtTriangleMesh(totalVertexCount, totalTriangleCount, v, i, n, c);
-}
-
 }

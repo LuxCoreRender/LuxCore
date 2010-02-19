@@ -26,6 +26,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
+#include "device.h"
 
 namespace luxrays {
 
@@ -59,7 +60,7 @@ private:
 
 		void PushRayBufferDone(RayBuffer *rayBuffer);
 
-		double GetLoad() const { return 1.0; }
+		double GetLoad() const { return virtualDevice->realDevice->GetLoad(); }
 
 	private:
 		size_t instanceIndex;
