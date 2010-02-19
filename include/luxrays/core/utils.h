@@ -22,17 +22,18 @@
 #ifndef _LUXRAYS_UTILS_H
 #define	_LUXRAYS_UTILS_H
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) // OSX adaptions Jens Verwiebe
 #  define memalign(a,b) valloc(b)
 #include <string>
-// Type Declarations - Jens Verwiebe OSX
 typedef unsigned int u_int;
 #endif
+
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #else
 #include <malloc.h>
 #endif
+
 #include <sstream>
 
 #if defined(__linux__) || defined(__APPLE__)

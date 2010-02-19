@@ -88,7 +88,7 @@ message(STATUS "GLUT include directory: " ${GLUT_INCLUDE_DIR})
 #
 #############################################################################
 
-IF(APPLE)
+IF(APPLE) # typical boostlibs from luxrender
 	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39)
 ELSE(APPLE)
 	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
