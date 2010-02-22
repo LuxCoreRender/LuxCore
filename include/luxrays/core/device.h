@@ -68,18 +68,11 @@ protected:
 
 class IntersectionDevice {
 public:
-	IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index);
-	virtual ~IntersectionDevice();
-
 	const std::string &GetName() const { return deviceName; }
 	const Context *GetContext() const { return deviceContext; }
 	const DeviceType GetType() const { return deviceType; }
 	const DataSet *GetDataSet() const { return dataSet; }
 
-	virtual void SetDataSet(const DataSet *newDataSet);
-	virtual void Start();
-	virtual void Interrupt() = 0;
-	virtual void Stop();
 	virtual bool IsRunning() const { return started; };
 
 	virtual RayBuffer *NewRayBuffer() = 0;
@@ -93,7 +86,19 @@ public:
 	}
 	virtual double GetLoad() const = 0;
 
+	friend class Context;
+	friend class VirtualM2OIntersectionDevice;
+	friend class VirtualO2MIntersectionDevice;
+
 protected:
+	IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index);
+	virtual ~IntersectionDevice();
+
+	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void Start();
+	virtual void Interrupt() = 0;
+	virtual void Stop();
+
 	const Context *deviceContext;
 	DeviceType deviceType;
 	unsigned int deviceIndex;
