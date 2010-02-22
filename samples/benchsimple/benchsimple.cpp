@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 	luxrays::DataSet *dataSet = new luxrays::DataSet(ctx);
 	dataSet->Add(mesh);
 	dataSet->Preprocess();
-	ctx->SetCurrentDataSet(dataSet);
+	ctx->SetDataSet(dataSet);
 
 	ctx->Start();
 	device->Start();
@@ -201,6 +201,7 @@ int main(int argc, char** argv) {
 
 	ctx->Stop();
 	delete ctx;
+	delete dataSet;
 	mesh->Delete();
 	delete mesh;
 

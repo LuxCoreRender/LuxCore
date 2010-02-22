@@ -59,7 +59,7 @@ public:
 
 	void SetShadowRays(const int delta);
 
-	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionAllDevices; }
+	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
 	const vector<RenderThread *> &GetRenderThreads() { return renderThreads; }
 
 	Properties cfg;
@@ -72,7 +72,7 @@ public:
 
 private:
 	void SetUpOpenCLDevices(const bool lowLatency, const bool useCPUs, const bool useGPUs,
-		const unsigned int forceGPUWorkSize, const string &oclDeviceConfig);
+		const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig);
 
 	void SetUpNativeDevices(const unsigned int nativeThreadCount);
 
@@ -85,10 +85,8 @@ private:
 	vector<RenderThread *> renderThreads;
 
 	vector<IntersectionDevice *> intersectionGPUDevices;
-	VirtualM2OIntersectionDevice *m2oDevice;
-	VirtualO2MIntersectionDevice *o2mDevice;
-
 	vector<IntersectionDevice *> intersectionCPUDevices;
+	vector<IntersectionDevice *> intersectionCPUGPUDevices;
 
 	vector<IntersectionDevice *> intersectionAllDevices;
 };

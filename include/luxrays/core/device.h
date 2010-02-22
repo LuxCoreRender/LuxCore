@@ -74,6 +74,7 @@ public:
 	const std::string &GetName() const { return deviceName; }
 	const Context *GetContext() const { return deviceContext; }
 	const DeviceType GetType() const { return deviceType; }
+	const DataSet *GetDataSet() const { return dataSet; }
 
 	virtual void SetDataSet(const DataSet *newDataSet);
 	virtual void Start();
