@@ -111,7 +111,6 @@ int main(int argc, char** argv) {
 	ctx->SetDataSet(dataSet);
 
 	ctx->Start();
-	device->Start();
 
 	//--------------------------------------------------------------------------
 	// Build the ray buffers

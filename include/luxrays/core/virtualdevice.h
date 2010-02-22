@@ -49,11 +49,6 @@ private:
 		VirtualM2ODevInstance(VirtualM2OIntersectionDevice * device, const size_t index);
 		~VirtualM2ODevInstance();
 
-		void SetDataSet(const DataSet *newDataSet);
-		void Start();
-		void Interrupt();
-		void Stop();
-
 		RayBuffer *NewRayBuffer();
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
@@ -62,6 +57,12 @@ private:
 		void PushRayBufferDone(RayBuffer *rayBuffer);
 
 		double GetLoad() const { return virtualDevice->realDevice->GetLoad(); }
+
+	protected:
+		void SetDataSet(const DataSet *newDataSet);
+		void Start();
+		void Interrupt();
+		void Stop();
 
 	private:
 		size_t instanceIndex;
@@ -91,11 +92,6 @@ public:
 	VirtualO2MIntersectionDevice(std::vector<IntersectionDevice *> devices, const size_t index);
 	~VirtualO2MIntersectionDevice();
 
-	void SetDataSet(const DataSet *newDataSet);
-	void Start();
-	void Interrupt();
-	void Stop();
-
 	RayBuffer *NewRayBuffer();
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
@@ -104,6 +100,12 @@ public:
 	double GetLoad() const { return 1.0; }
 
 	static size_t RayBufferSize;
+
+protected:
+	void SetDataSet(const DataSet *newDataSet);
+	void Start();
+	void Interrupt();
+	void Stop();
 
 private:
 	// Funny names ...
