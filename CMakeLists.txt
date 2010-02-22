@@ -110,6 +110,7 @@ endif(Boost_FOUND)
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fPIC -O0 -g")
 # NOTE: QBVH can not be compiled with -O3 because of a GCC bug
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O2 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
+
 #OSX-flags by jensverwiebe
 #set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable")
 
@@ -153,7 +154,8 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/core/exttrianglemesh.cpp
-    ${LUXRAYS_SOURCE_DIR}/utils/plymesh/rply.cpp)
+    ${LUXRAYS_SOURCE_DIR}/utils/plymesh/rply.cpp
+    ${LUXRAYS_SOURCE_DIR}/utils/properties.cpp)
 
 add_library(luxrays STATIC ${LUXRAYS_SRCS})
 

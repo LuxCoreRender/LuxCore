@@ -26,6 +26,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 set(SMALLLUXGPU_SRCS
     displayfunc.cpp
     path.cpp
+    renderconfig.cpp
     renderthread.cpp
     scene.cpp
     smallluxgpu.cpp)

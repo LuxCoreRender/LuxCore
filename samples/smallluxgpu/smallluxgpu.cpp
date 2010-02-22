@@ -94,10 +94,10 @@ int main(int argc, char *argv[]) {
 			return BatchMode(180.0);
 		} else if (argc == 2) {
 			config = new RenderingConfig(argv[1]);
-			width = atoi(config->cfg.find("image.width")->second.c_str());
-			height = atoi(config->cfg.find("image.height")->second.c_str());
+			width = config->cfg.GetInt("image.width", 640);
+			height = config->cfg.GetInt("image.height", 480);
 
-			const unsigned int halttime = atoi(config->cfg.find("batch.halttime")->second.c_str());
+			const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
 			if (halttime > 0) {
 				config->Init();
 				return BatchMode(halttime);
