@@ -95,6 +95,15 @@ VirtualM2OIntersectionDevice::VirtualM2ODevInstance::~VirtualM2ODevInstance() {
 		Stop();
 }
 
+void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::SetDataSet(const DataSet *newDataSet) {
+	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+	IntersectionDevice::SetDataSet(newDataSet);
+
+	// Set the real device data set if it is a new one
+	if (virtualDevice->realDevice->GetDataSet() != newDataSet)
+		virtualDevice->realDevice->SetDataSet(newDataSet);
+}
+
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Start() {
 	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
 
@@ -184,8 +193,15 @@ VirtualO2MIntersectionDevice::~VirtualO2MIntersectionDevice() {
 		Stop();
 }
 
+void VirtualO2MIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
+	IntersectionDevice::SetDataSet(newDataSet);
+
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realDevices[i]->SetDataSet(newDataSet);
+}
+
 void VirtualO2MIntersectionDevice::Start() {
-	started = true;
+	IntersectionDevice::Start();
 
 	// Start all real devices
 	for (size_t i = 0; i < realDevices.size(); ++i)
@@ -233,7 +249,7 @@ void VirtualO2MIntersectionDevice::Stop() {
 			realDevices[i]->Stop();
 	}
 
-	started = false;
+	IntersectionDevice::Stop();
 }
 
 RayBuffer *VirtualO2MIntersectionDevice::NewRayBuffer() {

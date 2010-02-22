@@ -58,9 +58,12 @@ public:
 	const std::vector<IntersectionDevice *> &GetIntersectionDevices(DeviceDescription type) const;
 
 	std::vector<IntersectionDevice *> AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
-	void SetCurrentDataSet(const DataSet *dataSet);
+	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
+		const std::vector<DeviceDescription *> &deviceDesc);
 
+	void SetDataSet(const DataSet *dataSet);
 	void Start();
+	void Interrupt();
 	void Stop();
 
 	bool HasDebugHandler() const { return debugHandler != NULL; }
@@ -76,11 +79,17 @@ protected:
 	cl::Platform oclPlatform;
 
 private:
+	std::vector<IntersectionDevice *> CreateIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
+
 	LuxRaysDebugHandler debugHandler;
 
 	const DataSet *currentDataSet;
 	std::vector<DeviceDescription *> deviceDescriptions;
+
+	// All devices
 	std::vector<IntersectionDevice *> devices;
+	// Virtual devices
+	std::vector<VirtualM2OIntersectionDevice *> m2mDevices;
 
 	bool started;
 };

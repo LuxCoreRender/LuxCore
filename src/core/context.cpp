@@ -27,6 +27,7 @@
 
 #include "luxrays/core/context.h"
 #include "luxrays/core/device.h"
+#include "luxrays/core/virtualdevice.h"
 
 using namespace luxrays;
 
@@ -85,20 +86,19 @@ Context::~Context() {
 
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
-	for (size_t i = 0; i < devices.size(); ++i)
-		delete devices[i];
-
-	if (currentDataSet)
-		delete currentDataSet;
+	for (size_t i = 0; i < devices.size(); ++i) {
+		// Virtual devices are deleted below
+		if (devices[i]->GetType() != DEVICE_TYPE_VIRTUAL)
+			delete devices[i];
+	}
+	for (size_t i = 0; i < m2mDevices.size(); ++i)
+		delete m2mDevices[i];
 }
 
-void Context::SetCurrentDataSet(const DataSet *dataSet) {
+void Context::SetDataSet(const DataSet *dataSet) {
 	assert (!started);
 	assert (dataSet != NULL);
 	assert (dataSet->IsPreprocessed());
-
-	if (currentDataSet)
-		delete currentDataSet;
 
 	currentDataSet = dataSet;
 
@@ -109,16 +109,24 @@ void Context::SetCurrentDataSet(const DataSet *dataSet) {
 void Context::Start() {
 	assert (!started);
 
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Start();
+
 	started = true;
+}
+
+void Context::Interrupt() {
+	assert (started);
+
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Interrupt();
 }
 
 void Context::Stop() {
 	assert (started);
 
-	for (size_t i = 0; i < devices.size(); ++i) {
-		if (devices[i]->IsRunning())
-			devices[i]->Stop();
-	}
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Stop();
 
 	started = false;
 }
@@ -131,10 +139,10 @@ const std::vector<IntersectionDevice *> &Context::GetIntersectionDevices() const
 	return devices;
 }
 
-std::vector<IntersectionDevice *> Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
-	LR_LOG(this, "Allocating " << deviceDesc.size() << " intersection device(s)");
+	LR_LOG(this, "Creating " << deviceDesc.size() << " intersection device(s)");
 
 	// Get the list of devices available on the platform
 	VECTOR_CLASS<cl::Device> oclDevices;
@@ -157,9 +165,33 @@ std::vector<IntersectionDevice *> Context::AddIntersectionDevices(const std::vec
 		} else
 			assert (false);
 
-		devices.push_back(device);
 		newDevices.push_back(device);
 	}
 
 	return newDevices;
+}
+
+std::vector<IntersectionDevice *> Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+	assert (!started);
+
+	std::vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc);
+	for (size_t i = 0; i < newDevices.size(); ++i)
+		devices.push_back(newDevices[i]);
+
+	return newDevices;
+}
+
+std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(const unsigned int count,
+		const std::vector<DeviceDescription *> &deviceDesc) {
+	assert (!started);
+
+	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDesc);
+	VirtualO2MIntersectionDevice *o2mDevice = new VirtualO2MIntersectionDevice(realDevices, 0);
+	VirtualM2OIntersectionDevice *m2oDevice = new VirtualM2OIntersectionDevice(count, o2mDevice);
+
+	m2mDevices.push_back(m2oDevice);
+	for (unsigned int i = 0; i < count; ++i)
+		devices.push_back(m2oDevice->GetVirtualDevice(i));
+
+	return realDevices;
 }

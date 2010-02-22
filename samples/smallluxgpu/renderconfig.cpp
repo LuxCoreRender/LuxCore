@@ -32,25 +32,6 @@ RenderingConfig::RenderingConfig(const bool lowLatency, const string &sceneFileN
 }
 
 RenderingConfig::RenderingConfig(const string &fileName) {
-	/*cfg.insert(make_pair("image.width", "640"));
-	cfg.insert(make_pair("image.height", "480"));
-	cfg.insert(make_pair("batch.halttime", "0"));
-	cfg.insert(make_pair("scene.file", "scenes/luxball.scn"));
-	cfg.insert(make_pair("scene.fieldofview", "45"));
-	cfg.insert(make_pair("opencl.latency.mode", "0"));
-	cfg.insert(make_pair("opencl.nativethread.count", "0"));
-	cfg.insert(make_pair("opencl.renderthread.count", "4"));
-	cfg.insert(make_pair("opencl.cpu.use", "0"));
-	cfg.insert(make_pair("opencl.gpu.use", "1"));
-	cfg.insert(make_pair("opencl.gpu.workgroup.size", "64"));
-	cfg.insert(make_pair("opencl.platform.index", "0"));
-	cfg.insert(make_pair("opencl.devices.select", ""));
-	cfg.insert(make_pair("opencl.devices.threads", "")); // Initialized when the GPU count is known
-	cfg.insert(make_pair("screen.refresh.interval", "100"));
-	cfg.insert(make_pair("screen.type", "3"));
-	cfg.insert(make_pair("path.maxdepth", "3"));
-	cfg.insert(make_pair("path.shadowrays", "1"));*/
-
 	cerr << "Reading configuration file: " << fileName << endl;
 	cfg.LoadFile(fileName);
 
@@ -61,17 +42,12 @@ RenderingConfig::RenderingConfig(const string &fileName) {
 }
 
 RenderingConfig::~RenderingConfig() {
+	StopAllRenderThreads();
+
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
 
-	if (m2oDevice)
-		delete m2oDevice;
-	if (o2mDevice)
-		delete o2mDevice;
-
-	for (size_t i = 0; i < intersectionAllDevices.size(); ++i)
-		delete intersectionAllDevices[i];
-
+	delete ctx;
 	delete scene;
 	delete film;
 }
@@ -142,64 +118,45 @@ void RenderingConfig::Init(const bool lowLatency, const string &sceneFileName, c
 	scene = new Scene(ctx, lowLatency, sceneFileName, film);
 
 	// Start OpenCL devices
-	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceConfig);
+	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclDeviceConfig);
 
 	// Start Native threads
 	SetUpNativeDevices(nativeThreadCount);
-
-	// Set the Luxrays SataSet
-	ctx->SetCurrentDataSet(scene->dataSet);
 
 	const size_t deviceCount = intersectionCPUDevices.size()  + intersectionGPUDevices.size();
 	if (deviceCount <= 0)
 		throw runtime_error("Unable to find any appropiate IntersectionDevice");
 
-	intersectionAllDevices.resize(deviceCount);
+	intersectionCPUGPUDevices.resize(deviceCount);
 	if (intersectionGPUDevices.size() > 0)
 		copy(intersectionGPUDevices.begin(), intersectionGPUDevices.end(),
-				intersectionAllDevices.begin());
+				intersectionCPUGPUDevices.begin());
 	if (intersectionCPUDevices.size() > 0)
 		copy(intersectionCPUDevices.begin(), intersectionCPUDevices.end(),
-				intersectionAllDevices.begin() + intersectionGPUDevices.size());
+				intersectionCPUGPUDevices.begin() + intersectionGPUDevices.size());
+
+	// Set the Luxrays SataSet
+	ctx->SetDataSet(scene->dataSet);
+
+	intersectionAllDevices = ctx->GetIntersectionDevices();
 
 	// Create and start render threads
-	const size_t gpuRenderThreadCount = ((oclDeviceThreads < 1) || (intersectionGPUDevices.size() == 0)) ?
-		(2 * intersectionGPUDevices.size()) : oclDeviceThreads;
-	size_t renderThreadCount = intersectionCPUDevices.size() + gpuRenderThreadCount;
+	size_t renderThreadCount = intersectionAllDevices.size();
 	cerr << "Starting "<< renderThreadCount << " render threads" << endl;
-	if (gpuRenderThreadCount > 0) {
-		if ((gpuRenderThreadCount == 1) && (intersectionGPUDevices.size() == 1)) {
-			// Optimize the special case of one render thread and one GPU
-			o2mDevice = NULL;
-			m2oDevice = NULL;
-
-			DeviceRenderThread *t = new DeviceRenderThread(1, intersectionGPUDevices[0], scene, lowLatency);
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		if (intersectionAllDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
+			NativeRenderThread *t = new NativeRenderThread(i,
+					(NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, lowLatency);
 			renderThreads.push_back(t);
-			t->Start();
 		} else {
-			// Create and start the virtual devices (only if htere is more than one GPUs)
-			o2mDevice = new VirtualO2MIntersectionDevice(intersectionGPUDevices, 0);
-			m2oDevice = new VirtualM2OIntersectionDevice(gpuRenderThreadCount, o2mDevice);
-
-			for (size_t i = 0; i < gpuRenderThreadCount; ++i) {
-				DeviceRenderThread *t = new DeviceRenderThread(i + 1, m2oDevice->GetVirtualDevice(i), scene, lowLatency);
-				renderThreads.push_back(t);
-				t->Start();
-			}
+			DeviceRenderThread *t = new DeviceRenderThread(i,
+					intersectionAllDevices[i], scene, lowLatency);
+			renderThreads.push_back(t);
 		}
-	} else {
-		o2mDevice = NULL;
-		m2oDevice = NULL;
-	}
-
-	for (size_t i = 0; i < intersectionCPUDevices.size(); ++i) {
-		NativeRenderThread *t = new NativeRenderThread(gpuRenderThreadCount + i,
-				(NativeThreadIntersectionDevice *)intersectionCPUDevices[i], scene, lowLatency);
-		renderThreads.push_back(t);
-		t->Start();
 	}
 
 	film->StartSampleTime();
+	StartAllRenderThreads();
 }
 
 void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, unsigned int h) {
@@ -241,7 +198,7 @@ void RenderingConfig::SetShadowRays(const int delta) {
 }
 
 void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCPUs, const bool useGPUs,
-	const unsigned int forceGPUWorkSize, const string &oclDeviceConfig) {
+	const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig) {
 
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
@@ -273,7 +230,15 @@ void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCP
 		cerr << "No OpenCL device selected" << endl;
 	else {
 		// Allocate devices
-		intersectionGPUDevices =  ctx->AddIntersectionDevices(selectedDescs);
+		const size_t gpuRenderThreadCount = ((oclDeviceThreads < 1) || (selectedDescs.size() == 0)) ?
+			(2 * selectedDescs.size()) : oclDeviceThreads;
+		if ((oclDeviceThreads == 1) && (selectedDescs.size() == 1)) {
+			// Optimize the special case of one render thread and one GPU
+			intersectionGPUDevices =  ctx->AddIntersectionDevices(selectedDescs);
+		} else {
+			// Create and start the virtual devices (only if there is more than one GPUs)
+			intersectionGPUDevices =  ctx->AddVirtualM2MIntersectionDevices(gpuRenderThreadCount, selectedDescs);
+		}
 
 		cerr << "OpenCL Devices used: ";
 		for (size_t i = 0; i < intersectionGPUDevices.size(); ++i)
@@ -309,6 +274,8 @@ void RenderingConfig::SetUpNativeDevices(const unsigned int nativeThreadCount) {
 }
 
 void RenderingConfig::StartAllRenderThreads() {
+	ctx->Start();
+
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
 }
@@ -316,7 +283,9 @@ void RenderingConfig::StartAllRenderThreads() {
 void RenderingConfig::StopAllRenderThreads() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
+	ctx->Interrupt();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
+	ctx->Stop();
 }

@@ -49,6 +49,7 @@ private:
 		VirtualM2ODevInstance(VirtualM2OIntersectionDevice * device, const size_t index);
 		~VirtualM2ODevInstance();
 
+		void SetDataSet(const DataSet *newDataSet);
 		void Start();
 		void Interrupt();
 		void Stop();
@@ -90,6 +91,7 @@ public:
 	VirtualO2MIntersectionDevice(std::vector<IntersectionDevice *> devices, const size_t index);
 	~VirtualO2MIntersectionDevice();
 
+	void SetDataSet(const DataSet *newDataSet);
 	void Start();
 	void Interrupt();
 	void Stop();

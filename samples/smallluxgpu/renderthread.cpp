@@ -79,8 +79,6 @@ void NativeRenderThread::Start() {
 	rayBuffer->Reset();
 	pathIntegrator->ReInit();
 
-	intersectionDevice->Start();
-
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(NativeRenderThread::RenderThreadImpl, this));
 }
@@ -97,9 +95,6 @@ void NativeRenderThread::Stop() {
 		delete renderThread;
 		renderThread = NULL;
 	}
-
-	if (started)
-		intersectionDevice->Stop();
 
 	RenderThread::Stop();
 }
@@ -128,7 +123,7 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 	} catch (boost::thread_interrupted) {
 		cerr << "[NativeRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (cl::Error err) {
-		cerr << "[NativeRenderThread::" << renderThread->threadIndex << "] RenderingERROR: " << err.what() << "(" << err.err() << ")" << endl;
+		cerr << "[NativeRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
 	}
 }
 
@@ -184,8 +179,6 @@ void DeviceRenderThread::Start() {
 		pathIntegrators[i]->ReInit();
 	}
 
-	intersectionDevice->Start();
-
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(DeviceRenderThread::RenderThreadImpl, this));
 }
@@ -203,9 +196,6 @@ void DeviceRenderThread::Stop() {
 		renderThread = NULL;
 	}
 
-	if (started)
-		intersectionDevice->Stop();
-
 	RenderThread::Stop();
 }
 
@@ -217,12 +207,11 @@ void DeviceRenderThread::ClearPaths() {
 void DeviceRenderThread::RenderThreadImpl(DeviceRenderThread *renderThread) {
 	cerr << "[DeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
+	std::deque<RayBuffer *> todoBuffers;
+	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++)
+		todoBuffers.push_back(renderThread->rayBuffers[i]);
+
 	try {
-		std::deque<RayBuffer *> todoBuffers;
-
-		for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++)
-			todoBuffers.push_back(renderThread->rayBuffers[i]);
-
 		while (!boost::this_thread::interruption_requested()) {
 			// Produce buffers to trace
 			while (todoBuffers.size() > 0) {
@@ -243,6 +232,6 @@ void DeviceRenderThread::RenderThreadImpl(DeviceRenderThread *renderThread) {
 	} catch (boost::thread_interrupted) {
 		cerr << "[DeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (cl::Error err) {
-		cerr << "[DeviceRenderThread::" << renderThread->threadIndex << "] RenderingERROR: " << err.what() << "(" << err.err() << ")" << endl;
+		cerr << "[DeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
 	}
 }
