@@ -19,11 +19,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <stdlib.h>
-
+#include <cstdlib>
 #include <istream>
 #include <stdexcept>
 #include <sstream>
+
 #include <boost/detail/container_fwd.hpp>
 
 #include "scene.h"
@@ -67,65 +67,55 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	camera = new PerspectiveCamera(lowLatency, o, t, film);
 
 	//--------------------------------------------------------------------------
-	// Read objects .ply file
+	// Read all objects .ply file
 	//--------------------------------------------------------------------------
 
-	string plyFileName = scnProp.GetString("scene.objects.matte.all", "scene.scn");
-	cerr << "PLY objects file name: " << plyFileName << endl;
+	std::vector<std::string> objKeys = scnProp.GetAllKeys("scene.objects.");
+	if (objKeys.size() == 0)
+		objKeys.push_back("scene.scn");
 
-	ExtTriangleMesh *meshObjects = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);
-	// Scale vertex colors
-	Spectrum *objCols = meshObjects->GetColors();
-	for (unsigned int i = 0; i < meshObjects->GetTotalVertexCount(); ++i)
-		objCols[i] *= 0.75f;
+	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
+		const string &key = *objKey;
+		const string plyFileName = scnProp.GetString(key, "scene.scn");
+		cerr << "PLY objects file name: " << plyFileName << endl;
 
-	//--------------------------------------------------------------------------
-	// Read lights .ply file
-	//--------------------------------------------------------------------------
+		ExtTriangleMesh *meshObject = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);
+		// Scale vertex colors
+		Spectrum *objCols = meshObject->GetColors();
+		for (unsigned int i = 0; i < meshObject->GetTotalVertexCount(); ++i)
+			objCols[i] *= 0.75f;
 
-	plyFileName = scnProp.GetString("scene.objects.light.all", "scene.scn");
-	cerr << "PLY lights file name: " << plyFileName << endl;
+		objects.push_back(meshObject);
 
-	ExtTriangleMesh *meshLights = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);
-	// Scale lights intensity
-	Spectrum *lightCols = meshLights->GetColors();
-	lightGain *= 0.75f;
-	for (unsigned int i = 0; i < meshLights->GetTotalVertexCount(); ++i)
-		lightCols[i] *= lightGain;
+		// Check if it is a light sources
+		if (key.find("scene.objects.light.") == 0) {
+			cerr << "The objects is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles" << endl;
 
-	//--------------------------------------------------------------------------
-	// Join the ply objects
-	//--------------------------------------------------------------------------
+			// Scale lights intensity
+			Spectrum *lightCols = meshObject->GetColors();
+			for (unsigned int i = 0; i < meshObject->GetTotalVertexCount(); ++i)
+				lightCols[i] *= lightGain;
 
-	meshLightOffset = meshObjects->GetTotalTriangleCount();
-	std::deque<ExtTriangleMesh *> objList;
-	objList.push_back(meshObjects);
-	objList.push_back(meshLights);
-	mesh = ExtTriangleMesh::Merge(objList);
-
-	// Free temporary objects
-	meshObjects->Delete();
-	delete meshObjects;
-	meshLights->Delete();
-	delete meshLights;
-
-	cerr << "Vertex count: " << mesh->GetTotalVertexCount() << " (" << (mesh->GetTotalVertexCount() * sizeof(Point) / 1024) << "Kb)" << endl;
-	cerr << "Triangle count: " << mesh->GetTotalTriangleCount() << " (" << (mesh->GetTotalTriangleCount() * sizeof(Triangle) / 1024) << "Kb)" << endl;
-
-	//--------------------------------------------------------------------------
-	// Create light sources list
-	//--------------------------------------------------------------------------
-
-	nLights = mesh->GetTotalTriangleCount() - meshLightOffset;
-	lights = new TriangleLight[nLights];
-	for (size_t i = 0; i < nLights; ++i)
-		new (&lights[i]) TriangleLight(i + meshLightOffset, mesh);
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
+				TriangleLight *tl = new TriangleLight(objects.size() - 1, i, objects);
+				lights.push_back(tl);
+				triangleMatirials.push_back(tl);
+			}
+		} else {
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+				triangleMatirials.push_back(NULL);
+		}
+	}
 
 	//--------------------------------------------------------------------------
 	// Create the DataSet
 	//--------------------------------------------------------------------------
 
 	dataSet = new DataSet(ctx);
-	dataSet->Add(mesh);
+
+	// Add all objects
+	for (std::vector<ExtTriangleMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
+		dataSet->Add(*obj);
+
 	dataSet->Preprocess();
 }

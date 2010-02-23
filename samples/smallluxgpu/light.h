@@ -23,25 +23,34 @@
 #define	_LIGHT_H
 
 #include "smalllux.h"
+#include "material.h"
+
+#include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 
-class TriangleLight {
+class TriangleLight : public Material {
 public:
 	TriangleLight() { }
 
-	TriangleLight(const unsigned int index, const ExtTriangleMesh *objs) {
-		triIndex = index;
-		area = (objs->GetTriangles()[index]).Area(objs->GetVertices());
+	TriangleLight(const unsigned int mshIndex, const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs) {
+		meshIndex = mshIndex;
+		triIndex = triangleIndex;
+
+		const ExtTriangleMesh *mesh = objs[meshIndex];
+		area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
 	}
 
-	Spectrum Sample_L(const ExtTriangleMesh *objs, const Point &p, const Normal &N,
+	bool IsLightSource() const { return true; }
+
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, float *pdf, Ray *shadowRay) const {
-		const Triangle &tri = objs->GetTriangles()[triIndex];
+		const ExtTriangleMesh *mesh = objs[meshIndex];
+		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
 		Point samplePoint;
 		float b0, b1, b2;
-		tri.Sample(objs->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
-		Normal sampleN = objs->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
+		tri.Sample(mesh->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
+		Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
 
 		Vector wi = samplePoint - p;
 		const float distanceSquared = wi.LengthSquared();
@@ -59,11 +68,11 @@ public:
 		*pdf = distanceSquared / (SampleNdotMinusWi * NdotMinusWi * area);
 
 		// Return interpolated color
-		return InterpolateTriColor(tri, objs->GetColors(), b0, b1, b2);
+		return InterpolateTriColor(tri, mesh->GetColors(), b0, b1, b2);
 	}
 
 private:
-	unsigned int triIndex;
+	unsigned int meshIndex, triIndex;
 	float area;
 
 };

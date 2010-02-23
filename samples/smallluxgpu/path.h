@@ -82,9 +82,10 @@ public:
 
 		// Something was hit
 		const unsigned int currentTriangleIndex = rayHit->index;
-		const Triangle &tri = scene->mesh->GetTriangles()[currentTriangleIndex];
-		Spectrum triInterpCol = InterpolateTriColor(tri, scene->mesh->GetColors(), rayHit->b1, rayHit->b2);
-		Normal shadeN = InterpolateTriNormal(tri, scene->mesh->GetNormal(), rayHit->b1, rayHit->b2);
+		const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+		Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
+		Normal shadeN = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
 
 		// Calculate next step
 		depth++;
@@ -140,15 +141,15 @@ public:
 		const Point hitPoint = pathRay(rayHit->t);
 
 		tracedShadowRayCount = 0;
-		const float lightStrategyPdf = static_cast<float>(scene->shadowRayCount) / static_cast<float>(scene->nLights);
+		const float lightStrategyPdf = static_cast<float>(scene->shadowRayCount) / static_cast<float>(scene->lights.size());
 		for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 			// Select the light to sample
 			const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
-			const TriangleLight &light = scene->lights[currentLightIndex];
+			const TriangleLight *light = scene->lights[currentLightIndex];
 
 			// Select a point on the surface
-			lightColor[tracedShadowRayCount] = light.Sample_L(
-					scene->mesh,
+			lightColor[tracedShadowRayCount] = light->Sample_L(
+					scene->objects,
 					hitPoint, shadeN,
 					sample.GetLazyValue(), sample.GetLazyValue(),
 					&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);

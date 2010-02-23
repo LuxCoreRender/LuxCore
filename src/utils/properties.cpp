@@ -70,6 +70,16 @@ std::vector<std::string> Properties::GetAllKeys() const {
 	return keys;
 }
 
+std::vector<std::string> Properties::GetAllKeys(const std::string prefix) const {
+	std::vector<std::string> keys;
+	for (std::map<std::string, std::string>::const_iterator it = props.begin(); it != props.end(); ++it) {
+		if (it->first.find(prefix) == 0)
+			keys.push_back(it->first);
+	}
+
+	return keys;
+}
+
 std::string Properties::GetString(const std::string propName, const std::string defaultValue) const {
 	std::map<std::string, std::string>::const_iterator it = props.find(propName);
 

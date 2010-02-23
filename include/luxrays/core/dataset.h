@@ -35,7 +35,6 @@ public:
 	DataSet(const Context *luxRaysContext);
 	~DataSet();
 
-	// NOTE: the mesh is delete by this class destructor
 	TriangleMeshID Add(TriangleMesh *mesh);
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
@@ -47,6 +46,9 @@ public:
 
 		return preprocessedMesh;
 	}
+
+	const TriangleMeshID GetMeshID(unsigned int index) const { return preprocessedMeshIDs[index]; }
+	const TriangleID GetMeshTriangleID(unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
 
 	void SetAcceleratorType(AcceleratorType type) {
 		accelType = type;
@@ -75,6 +77,7 @@ private:
 	bool preprocessed;
 	TriangleMesh *preprocessedMesh;
 	TriangleMeshID *preprocessedMeshIDs;
+	TriangleID *preprocessedMeshTriangleIDs;
 
 	AcceleratorType accelType;
 	Accelerator *accel;

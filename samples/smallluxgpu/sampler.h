@@ -195,4 +195,4 @@ private:
 	bool lowLatency;
 };
 
-#endif	/* _FILM_H */
+#endif	/* _SAMPLER_H */

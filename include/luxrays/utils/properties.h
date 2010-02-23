@@ -35,6 +35,7 @@ public:
 	void LoadFile(const std::string &fileName);
 
 	std::vector<std::string> GetAllKeys() const;
+	std::vector<std::string> GetAllKeys(const std::string prefix) const;
 
 	std::string GetString(const std::string propName, const std::string defaultValue) const;
 	int GetInt(const std::string propName, const int defaultValue) const;

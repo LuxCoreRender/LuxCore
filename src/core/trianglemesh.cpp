@@ -30,7 +30,8 @@ using namespace luxrays;
 
 TriangleMesh *TriangleMesh::Merge(
 	const std::deque<TriangleMesh *> &meshes,
-	TriangleMeshID **preprocessedMeshIDs) {
+	TriangleMeshID **preprocessedMeshIDs,
+	TriangleID **preprocessedMeshTriangleIDs) {
 	unsigned int totalVertexCount = 0;
 	unsigned int totalTriangleCount = 0;
 
@@ -40,14 +41,15 @@ TriangleMesh *TriangleMesh::Merge(
 		totalTriangleCount += mesh->GetTotalTriangleCount();
 	}
 
-	return Merge(totalVertexCount, totalTriangleCount, meshes, preprocessedMeshIDs);
+	return Merge(totalVertexCount, totalTriangleCount, meshes, preprocessedMeshIDs, preprocessedMeshTriangleIDs);
 }
 
 TriangleMesh *TriangleMesh::Merge(
 	const unsigned int totalVertexCount,
 	const unsigned int totalTriangleCount,
 	const std::deque<TriangleMesh *> &meshes,
-	TriangleMeshID **preprocessedMeshIDs) {
+	TriangleMeshID **preprocessedMeshIDs,
+	TriangleID **preprocessedMeshTriangleIDs) {
 	assert (totalVertexCount > 0);
 	assert (totalTriangleCount > 0);
 	assert (meshes.size() > 0);
@@ -57,6 +59,8 @@ TriangleMesh *TriangleMesh::Merge(
 
 	if (preprocessedMeshIDs)
 		*preprocessedMeshIDs = new TriangleMeshID[totalTriangleCount];
+	if (preprocessedMeshTriangleIDs)
+		*preprocessedMeshTriangleIDs = new TriangleID[totalTriangleCount];
 
 	unsigned int vIndex = 0;
 	unsigned int iIndex = 0;
@@ -72,12 +76,18 @@ TriangleMesh *TriangleMesh::Merge(
 		for (unsigned int j = 0; j < mesh->GetTotalTriangleCount(); j++) {
 			i[iIndex].v[0] = tris[j].v[0] + vIndex;
 			i[iIndex].v[1] = tris[j].v[1] + vIndex;
-			i[iIndex++].v[2] = tris[j].v[2] + vIndex;
+			i[iIndex].v[2] = tris[j].v[2] + vIndex;
+
+			if (preprocessedMeshIDs)
+				(*preprocessedMeshIDs)[iIndex] = currentID;
+			if (preprocessedMeshTriangleIDs)
+				(*preprocessedMeshTriangleIDs)[iIndex] = j;
+
+			++iIndex;
 		}
 
 		vIndex += mesh->GetTotalVertexCount();
 		if (preprocessedMeshIDs) {
-			(*preprocessedMeshIDs)[currentID] = currentID;
 			// To avoid compiler warning
 			currentID = currentID + 1;
 		}
