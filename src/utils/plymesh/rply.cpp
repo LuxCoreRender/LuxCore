@@ -296,7 +296,7 @@ p_ply ply_open(const char *name, p_ply_error_cb error_cb) {
         return NULL;
     }
     assert(name);
-    fp = fopen(name, "rb");
+    fp = fopen(name, "r");
     if (!fp) {
         error_cb("Unable to open file");
         return NULL;

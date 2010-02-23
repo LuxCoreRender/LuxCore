@@ -54,12 +54,14 @@ public:
 	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName);
 	static ExtTriangleMesh *Merge(
 		const std::deque<ExtTriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
+		TriangleMeshID **preprocessedMeshIDs = NULL,
+		TriangleID **preprocessedMeshTriangleIDs = NULL);
 	static ExtTriangleMesh *Merge(
 		const unsigned int totalVerticesCount,
 		const unsigned int totalIndicesCount,
 		const std::deque<ExtTriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL);
+		TriangleMeshID **preprocessedMeshIDs = NULL,
+		TriangleID **preprocessedMeshTriangleIDs = NULL);
 
 private:
 	Normal *normals;

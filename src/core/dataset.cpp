@@ -50,6 +50,7 @@ DataSet::~DataSet() {
 		preprocessedMesh->Delete();
 		delete preprocessedMesh;
 		delete[] preprocessedMeshIDs;
+		delete[] preprocessedMeshTriangleIDs;
 	}
 }
 
@@ -73,7 +74,7 @@ void DataSet::Preprocess() {
 	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
 
 	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
-			meshes, &preprocessedMeshIDs);
+			meshes, &preprocessedMeshIDs, &preprocessedMeshTriangleIDs);
 	preprocessed = true;
 	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
 	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);

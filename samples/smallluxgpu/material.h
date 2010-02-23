@@ -19,60 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SCENE_H
-#define	_SCENE_H
+#ifndef _MATERIAL_H
+#define	_MATERIAL_H
 
-#include <string>
-#include <iostream>
-#include <fstream>
-
-#include "smalllux.h"
-#include "luxrays/core/context.h"
-#include "luxrays/utils/core/exttrianglemesh.h"
-#include "camera.h"
-#include "light.h"
-
-using namespace std;
-
-class Scene {
+class Material {
 public:
-	Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film);
-	~Scene() {
-		delete camera;
+	virtual ~Material() { }
 
-		for (std::vector<TriangleLight *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
-			delete *l;
-
-		delete dataSet;
-
-		for (std::vector<ExtTriangleMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj) {
-			(*obj)->Delete();
-			delete *obj;
-		}
-	}
-
-	unsigned int SampleLights(const float u) const {
-		// One Uniform light strategy
-		const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lights.size() * u), lights.size() - 1);
-
-		return lightIndex;
-	}
-
-	bool IsLight(const unsigned int index) const {
-		return ((triangleMatirials[index] != NULL) && (triangleMatirials[index]->IsLightSource()));
-	}
-
-	// Siggned because of the delta parameter
-	int maxPathDepth;
-	unsigned int shadowRayCount;
-
-	PerspectiveCamera *camera;
-
-	vector<ExtTriangleMesh *> objects; // All objects
-	vector<TriangleLight *> lights; // One for each light source triangle
-	vector<Material *> triangleMatirials; // One for each triangle
-
-	DataSet *dataSet;
+	virtual bool IsLightSource() const = 0;
 };
 
-#endif	/* _SCENE_H */
+#endif	/* _FILM_H */
