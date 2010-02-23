@@ -22,6 +22,8 @@
 #ifndef _LUXRAYS_UTILS_H
 #define	_LUXRAYS_UTILS_H
 
+#include <cmath>
+
 #if defined(__APPLE__) // OSX adaptions Jens Verwiebe
 #  define memalign(a,b) valloc(b)
 #include <string>
@@ -150,6 +152,15 @@ template <class T> inline std::string ToString(const T& t) {
 	std::stringstream ss;
 	ss << t;
 	return ss.str();
+}
+
+inline void StringTrim(std::string &str) {
+	std::string::size_type pos = str.find_last_not_of(' ');
+	if (pos != std::string::npos) {
+		str.erase(pos + 1);
+		pos = str.find_first_not_of(' ');
+		if (pos != std::string::npos) str.erase(0, pos);
+	} else str.erase(str.begin(), str.end());
 }
 
 //------------------------------------------------------------------------------

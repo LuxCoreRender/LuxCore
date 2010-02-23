@@ -28,6 +28,7 @@
 
 #include "scene.h"
 #include "luxrays/core/dataset.h"
+#include "luxrays/utils/properties.h"
 
 using namespace std;
 
@@ -37,34 +38,28 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 
 	cerr << "Reading scene: " << fileName << endl;
 
-	ifstream file;
-	file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
-	file.open(fileName.c_str(), ios::in);
+	Properties scnProp(fileName);
 
 	//--------------------------------------------------------------------------
 	// Read light position and radius
 	//--------------------------------------------------------------------------
 
-	Spectrum lightGain;
-	file >> lightGain.r;
-	file >> lightGain.g;
-	file >> lightGain.b;
+	vector<float> vf = scnProp.GetFloatVector("scene.lights.globalscale", "1.0 1.0 1.0");
+	if (vf.size() != 3)
+		throw runtime_error("Syntax error in scene.lights.globalscale parameter");
+	Spectrum lightGain(vf.at(0), vf.at(1), vf.at(2));
 
-	cerr << "Light gain: (" << lightGain.r << ", " << lightGain.g << ", " << lightGain.b << ")" << endl;
+	cerr << "Light gain: " << lightGain << endl;
 
 	//--------------------------------------------------------------------------
 	// Read camera position and target
 	//--------------------------------------------------------------------------
 
-	Point o;
-	file >> o.x;
-	file >> o.y;
-	file >> o.z;
-
-	Point t;
-	file >> t.x;
-	file >> t.y;
-	file >> t.z;
+	vf = scnProp.GetFloatVector("scene.camera.lookat", "10.0 0.0 0.0  0.0 0.0 0.0");
+	if (vf.size() != 6)
+		throw runtime_error("Syntax error in scene.camera.lookat parameter");
+	Point o(vf.at(0), vf.at(1), vf.at(2));
+	Point t(vf.at(3), vf.at(4), vf.at(5));
 
 	cerr << "Camera postion: " << o << endl;
 	cerr << "Camera target: " << t << endl;
@@ -75,8 +70,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	// Read objects .ply file
 	//--------------------------------------------------------------------------
 
-	string plyFileName;
-	file >> plyFileName;
+	string plyFileName = scnProp.GetString("scene.objects.matte.all", "scene.scn");
 	cerr << "PLY objects file name: " << plyFileName << endl;
 
 	ExtTriangleMesh *meshObjects = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);
@@ -89,7 +83,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	// Read lights .ply file
 	//--------------------------------------------------------------------------
 
-	file >> plyFileName;
+	plyFileName = scnProp.GetString("scene.objects.light.all", "scene.scn");
 	cerr << "PLY lights file name: " << plyFileName << endl;
 
 	ExtTriangleMesh *meshLights = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);

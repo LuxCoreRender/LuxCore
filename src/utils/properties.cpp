@@ -19,6 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <iostream>
 #include <stdexcept>
 #include <fstream>
 
@@ -26,6 +27,7 @@
 #include <vector>
 
 #include "luxrays/utils/properties.h"
+#include "luxrays/core/utils.h"
 
 using namespace luxrays;
 
@@ -35,7 +37,7 @@ Properties::Properties(const std::string &fileName) {
 
 void Properties::LoadFile(const std::string &fileName) {
 	std::ifstream file(fileName.c_str(), std::ios::in);
-	char buf[512], key[512], value[512];
+	char buf[512];
 	for (int line = 1;; ++line) {
 		file.getline(buf, 512);
 		if (file.eof())
@@ -44,14 +46,19 @@ void Properties::LoadFile(const std::string &fileName) {
 		if (buf[0] == '#')
 			continue;
 
-		const int count = sscanf(buf, "%s = %s", key, value);
-		if (count != 2)
+		std::string line = buf;
+		size_t idx = line.find('=');
+		if (idx == std::string::npos)
 			throw std::runtime_error("Syntax error at line " + line);
 
 		// Check if it is a valid key
-		std::string skey(key);
-		props.erase(skey);
-		props.insert(std::make_pair(skey, std::string(value)));
+		std::string key(line.substr(0, idx));
+		StringTrim(key);
+		std::string value(line.substr(idx + 1));
+		StringTrim(value);
+
+		props.erase(key);
+		props.insert(std::make_pair(key, std::string(value)));
 	}
 }
 

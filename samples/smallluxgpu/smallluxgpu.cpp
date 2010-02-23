@@ -34,6 +34,49 @@
 #include "path.h"
 #include "luxrays/core/device.h"
 
+#if defined(__GNUC__)
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <typeinfo>
+#include <cxxabi.h>
+
+static string Demangle(const char *symbol) {
+	size_t size;
+	int status;
+	char temp[128];
+	char* result;
+
+	if (1 == sscanf(symbol, "%*[^'(']%*[^'_']%[^')''+']", temp)) {
+		if (NULL != (result = abi::__cxa_demangle(temp, NULL, &size, &status))) {
+			string r = result;
+			return r + " [" + symbol + "]";
+		}
+	}
+
+	if (1 == sscanf(symbol, "%127s", temp))
+		return temp;
+
+	return symbol;
+}
+
+void SLGTerminate(void) {
+	cerr << "=========================================================" << endl;
+	cerr << "Unhandled exception" << endl;
+
+	void *array[32];
+	size_t size = backtrace(array, 32);
+	char **strings = backtrace_symbols(array, size);
+
+	cerr << "Obtained " << size << " stack frames." << endl;
+
+	for (size_t i = 0; i < size; i++)
+		cerr << "  " << Demangle(strings[i]) << endl;
+
+	free(strings);
+}
+#endif
+
 static int BatchMode(double stopTime) {
 	const double startTime = WallClockTime();
 
@@ -70,6 +113,8 @@ static int BatchMode(double stopTime) {
 }
 
 int main(int argc, char *argv[]) {
+	set_terminate(SLGTerminate);
+
 	try {
 		std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
 		std::cerr << "Usage (benchmark mode): " << argv[0] << " <native thread count> <use CPU device (0 or 1)> <use GPU device (0 or 1)> <GPU workgroup size (0=default value or anything > 0)>" << std::endl;
@@ -125,7 +170,9 @@ int main(int argc, char *argv[]) {
 
 		RunGlut();
 	} catch (cl::Error err) {
-		std::cerr << "ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
+		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
+	} catch (std::runtime_error err) {
+		std::cerr << "ERROR: " << err.what() << std::endl;
 	}
 
 	return EXIT_SUCCESS;

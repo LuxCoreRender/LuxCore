@@ -1,0 +1,4 @@
+scene.lights.globalscale = 150.0 150.0 150.0
+scene.camera.lookat = 5.951 -7.663 6.017 0.0 0.0 1.0
+scene.objects.matte.all = scenes/simple/simple.ply
+scene.objects.light.all = scenes/simple/simple-lights.ply
