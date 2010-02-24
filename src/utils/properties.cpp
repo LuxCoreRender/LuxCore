@@ -125,6 +125,23 @@ std::vector<float> Properties::GetFloatVector(const std::string propName, const 
 		return ConvertToFloatVector(s);
 }
 
+std::string Properties::ExtractField(const std::string &value, const size_t index) {
+	char buf[512];
+	memcpy(buf, value.c_str(), value.length() + 1);
+	char *t = strtok(buf, ".");
+	if ((index == 0) && (t == NULL))
+		return value;
+
+	size_t i = index;
+	while (t != NULL) {
+		if (i-- == 0)
+			return std::string(t);
+		t = strtok(NULL, ".");
+	}
+
+	return "";
+}
+
 std::vector<int> Properties::ConvertToIntVector(const std::string &values) {
 	std::vector<std::string> strs;
 	boost::split(strs, values, boost::is_any_of("\t "));

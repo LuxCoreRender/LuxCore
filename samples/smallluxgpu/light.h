@@ -28,19 +28,19 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 
-class TriangleLight : public Material {
+class TriangleLight : public LightMaterial {
 public:
 	TriangleLight() { }
 
-	TriangleLight(const unsigned int mshIndex, const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs) {
+	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
+		const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs) {
+		lightMaterial = mat;
 		meshIndex = mshIndex;
 		triIndex = triangleIndex;
 
 		const ExtTriangleMesh *mesh = objs[meshIndex];
 		area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
 	}
-
-	bool IsLightSource() const { return true; }
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, float *pdf, Ray *shadowRay) const {
@@ -68,10 +68,11 @@ public:
 		*pdf = distanceSquared / (SampleNdotMinusWi * NdotMinusWi * area);
 
 		// Return interpolated color
-		return InterpolateTriColor(tri, mesh->GetColors(), b0, b1, b2);
+		return InterpolateTriColor(tri, mesh->GetColors(), b0, b1, b2) * lightMaterial->GetGain();
 	}
 
 private:
+	const AreaLightMaterial *lightMaterial;
 	unsigned int meshIndex, triIndex;
 	float area;
 
