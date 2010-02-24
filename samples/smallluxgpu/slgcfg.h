@@ -19,21 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_CFG_H
-#define	_LUXRAYS_CFG_H
+#ifndef _SLG_CFG_H
+#define	_SLG_CFG_H
 
-// The configured options and settings for LuxRays
+// The configured options and settings for SmallLuxGPU
 
-#define LUXRAYS_VERSION_MAJOR "0"
-#define LUXRAYS_VERSION_MINOR "1"
+#define SLG_VERSION_MAJOR "1"
+#define SLG_VERSION_MINOR "4beta1"
 
-#if defined(__APPLE__)
-#if (__GNUC__ == 3) || (__GNUC__ == 4)
-extern "C" {
-	int isinf(double);
-	int isnan(double);
-}
-#endif
-#endif
-
-#endif	/* _LUXRAYS_CFG_H */
+#endif	/* _SLG_CFG_H */

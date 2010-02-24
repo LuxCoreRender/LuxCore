@@ -21,6 +21,8 @@
 
 #include "renderconfig.h"
 
+string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo)";
+
 RenderingConfig::RenderingConfig(const bool lowLatency, const string &sceneFileName, const unsigned int w,
 	const unsigned int h, const unsigned int nativeThreadCount,
 	const bool useCPUs, const bool useGPUs,

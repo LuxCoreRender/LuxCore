@@ -19,6 +19,16 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
+set(SLG_VERSION_MAJOR 1)
+set(SLG_VERSION_MINOR 4beta1)
+
+# Configure a header file to pass some of the CMake settings
+# to the source code
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/slgcfg.h.in"
+  "${CMAKE_CURRENT_SOURCE_DIR}/slgcfg.h"
+  )
+
 include_directories(${LUXRAYS_INCLUDE_DIR})
 link_directories (${LUXRAYS_LIB_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
