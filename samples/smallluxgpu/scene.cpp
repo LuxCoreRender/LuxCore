@@ -135,10 +135,8 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			}
 		} else {
 			SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-				TriangleSurfMaterial *tm = new TriangleSurfMaterial(surfMat, objects.size() - 1, i, objects);
-				triangleMatirials.push_back(tm);
-			}
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+				triangleMatirials.push_back(surfMat);
 		}
 	}
 
