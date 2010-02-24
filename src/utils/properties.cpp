@@ -22,9 +22,9 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
+#include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include <vector>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/utils.h"
@@ -38,7 +38,12 @@ Properties::Properties(const std::string &fileName) {
 void Properties::LoadFile(const std::string &fileName) {
 	std::ifstream file(fileName.c_str(), std::ios::in);
 	char buf[512];
-	for (int line = 1;; ++line) {
+	if (file.fail()) {
+		sprintf(buf, "Unable to open file %s", fileName.c_str());
+		throw std::runtime_error(buf);
+	}
+	
+	for (int lineNumber = 1;; ++lineNumber) {
 		file.getline(buf, 512);
 		if (file.eof())
 			break;
@@ -48,8 +53,10 @@ void Properties::LoadFile(const std::string &fileName) {
 
 		std::string line = buf;
 		size_t idx = line.find('=');
-		if (idx == std::string::npos)
-			throw std::runtime_error("Syntax error at line " + line);
+		if (idx == std::string::npos) {
+			sprintf(buf, "Syntax error at line %d", lineNumber);
+			throw std::runtime_error(buf);
+		}
 
 		// Check if it is a valid key
 		std::string key(line.substr(0, idx));
