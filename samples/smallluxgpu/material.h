@@ -22,6 +22,11 @@
 #ifndef _MATERIAL_H
 #define	_MATERIAL_H
 
+#include <vector>
+
+#include "smalllux.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
+
 class Material {
 public:
 	virtual ~Material() { }
@@ -29,4 +34,40 @@ public:
 	virtual bool IsLightSource() const = 0;
 };
 
-#endif	/* _FILM_H */
+class LightMaterial : public Material {
+public:
+	bool IsLightSource() const { return true; }
+};
+
+class AreaLightMaterial : public LightMaterial {
+public:
+	AreaLightMaterial(const Spectrum col) { gain = col; }
+
+	const Spectrum &GetGain() const { return gain; }
+
+private:
+	Spectrum gain;
+};
+
+class SurfaceMaterial : public Material {
+public:
+	bool IsLightSource() const { return false; }
+
+	virtual Spectrum Sample_M(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const = 0;
+};
+
+class MatteMaterial : public SurfaceMaterial {
+public:
+	MatteMaterial(const Spectrum col) { Kd = col; }
+
+	Spectrum Sample_M(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const {
+		return 0.f;
+	}
+
+private:
+	Spectrum Kd;
+};
+
+#endif	/* _MATERIAL_H */

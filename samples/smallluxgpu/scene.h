@@ -27,10 +27,12 @@
 #include <fstream>
 
 #include "smalllux.h"
-#include "luxrays/core/context.h"
-#include "luxrays/utils/core/exttrianglemesh.h"
 #include "camera.h"
 #include "light.h"
+#include "material.h"
+
+#include "luxrays/core/context.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
 
 using namespace std;
 
@@ -68,6 +70,8 @@ public:
 
 	PerspectiveCamera *camera;
 
+	vector<Material *> materials; // All materials
+	map<string, size_t> materialIndices; // All materials indices
 	vector<ExtTriangleMesh *> objects; // All objects
 	vector<TriangleLight *> lights; // One for each light source triangle
 	vector<Material *> triangleMatirials; // One for each triangle

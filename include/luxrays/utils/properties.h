@@ -44,6 +44,7 @@ public:
 	std::vector<int> GetIntVector(const std::string propName, const std::string &defaultValue) const;
 	std::vector<float> GetFloatVector(const std::string propName, const std::string &defaultValue) const;
 
+	static std::string ExtractField(const std::string &value, const size_t index);
 	static std::vector<int> ConvertToIntVector(const std::string &values);
 	static std::vector<float> ConvertToFloatVector(const std::string &values);
 

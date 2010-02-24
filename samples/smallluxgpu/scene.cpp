@@ -27,6 +27,7 @@
 #include <boost/detail/container_fwd.hpp>
 
 #include "scene.h"
+
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
 
@@ -41,21 +42,10 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	Properties scnProp(fileName);
 
 	//--------------------------------------------------------------------------
-	// Read light position and radius
-	//--------------------------------------------------------------------------
-
-	vector<float> vf = scnProp.GetFloatVector("scene.lights.globalscale", "1.0 1.0 1.0");
-	if (vf.size() != 3)
-		throw runtime_error("Syntax error in scene.lights.globalscale parameter");
-	Spectrum lightGain(vf.at(0), vf.at(1), vf.at(2));
-
-	cerr << "Light gain: " << lightGain << endl;
-
-	//--------------------------------------------------------------------------
 	// Read camera position and target
 	//--------------------------------------------------------------------------
 
-	vf = scnProp.GetFloatVector("scene.camera.lookat", "10.0 0.0 0.0  0.0 0.0 0.0");
+	vector<float> vf = scnProp.GetFloatVector("scene.camera.lookat", "10.0 0.0 0.0  0.0 0.0 0.0");
 	if (vf.size() != 6)
 		throw runtime_error("Syntax error in scene.camera.lookat parameter");
 	Point o(vf.at(0), vf.at(1), vf.at(2));
@@ -65,6 +55,47 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	cerr << "Camera target: " << t << endl;
 
 	camera = new PerspectiveCamera(lowLatency, o, t, film);
+
+	//--------------------------------------------------------------------------
+	// Read all materials
+	//--------------------------------------------------------------------------
+
+	std::vector<std::string> matKeys = scnProp.GetAllKeys("scene.materials.");
+	if (matKeys.size() == 0)
+		throw runtime_error("No material definition found");
+
+	for (std::vector<std::string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
+		const string &key = *matKey;
+		const string matType = Properties::ExtractField(key, 2);
+		if (matType == "")
+			throw runtime_error("Syntax error in " + key);
+		const string matName = Properties::ExtractField(key, 3);
+		if (matName == "")
+			throw runtime_error("Syntax error in " + key);
+
+		cerr << "Material definition: " << matName << " [" << matType << "]" << endl;
+
+		if (matType == "matte") {
+			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
+			if (vf.size() != 3)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
+			Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+
+			MatteMaterial *mat = new MatteMaterial(col);
+			materialIndices[matName] = materials.size();
+			materials.push_back(mat);
+		} else if (matType == "light") {
+			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
+			if (vf.size() != 3)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
+			Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
+
+			AreaLightMaterial *mat = new AreaLightMaterial(gain);
+			materialIndices[matName] = materials.size();
+			materials.push_back(mat);
+		} else
+			throw runtime_error("Unknown material type " + matType);
+	}
 
 	//--------------------------------------------------------------------------
 	// Read all objects .ply file
@@ -80,30 +111,30 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		cerr << "PLY objects file name: " << plyFileName << endl;
 
 		ExtTriangleMesh *meshObject = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);
-		// Scale vertex colors
-		Spectrum *objCols = meshObject->GetColors();
-		for (unsigned int i = 0; i < meshObject->GetTotalVertexCount(); ++i)
-			objCols[i] *= 0.75f;
-
 		objects.push_back(meshObject);
 
+		// Get the material
+		const string matName = Properties::ExtractField(key, 2);
+		if (matName == "")
+			throw runtime_error("Syntax error in material name: " + matName);
+		if (materialIndices.count(matName) < 1)
+			throw runtime_error("Unknown material: " + matName);
+		Material *mat = materials[materialIndices[matName]];
+
+		const string objName = Properties::ExtractField(key, 3);
 		// Check if it is a light sources
-		if (key.find("scene.objects.light.") == 0) {
-			cerr << "The objects is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles" << endl;
+		if (mat->IsLightSource()) {
+			cerr << "The " << objName << " objects is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles" << endl;
 
-			// Scale lights intensity
-			Spectrum *lightCols = meshObject->GetColors();
-			for (unsigned int i = 0; i < meshObject->GetTotalVertexCount(); ++i)
-				lightCols[i] *= lightGain;
-
+			AreaLightMaterial *light = (AreaLightMaterial *)mat;
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-				TriangleLight *tl = new TriangleLight(objects.size() - 1, i, objects);
+				TriangleLight *tl = new TriangleLight(light, objects.size() - 1, i, objects);
 				lights.push_back(tl);
 				triangleMatirials.push_back(tl);
 			}
 		} else {
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-				triangleMatirials.push_back(NULL);
+				triangleMatirials.push_back(mat);
 		}
 	}
 
