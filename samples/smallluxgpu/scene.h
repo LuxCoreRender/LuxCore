@@ -28,7 +28,7 @@
 
 #include "smalllux.h"
 #include "camera.h"
-#include "light.h"
+#include "trianglemat.h"
 #include "material.h"
 
 #include "luxrays/core/context.h"
@@ -42,8 +42,8 @@ public:
 	~Scene() {
 		delete camera;
 
-		for (std::vector<TriangleLight *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
-			delete *l;
+		for (std::vector<TriangleMaterial *>::const_iterator tm = triangleMatirials.begin(); tm != triangleMatirials.end(); ++tm)
+			delete *tm;
 
 		delete dataSet;
 
@@ -60,10 +60,6 @@ public:
 		return lightIndex;
 	}
 
-	bool IsLight(const unsigned int index) const {
-		return ((triangleMatirials[index] != NULL) && (triangleMatirials[index]->IsLightSource()));
-	}
-
 	// Siggned because of the delta parameter
 	int maxPathDepth;
 	unsigned int shadowRayCount;
@@ -72,9 +68,11 @@ public:
 
 	vector<Material *> materials; // All materials
 	map<string, size_t> materialIndices; // All materials indices
+
 	vector<ExtTriangleMesh *> objects; // All objects
+	vector<TriangleMaterial *> triangleMatirials; // One for each triangle
+
 	vector<TriangleLight *> lights; // One for each light source triangle
-	vector<Material *> triangleMatirials; // One for each triangle
 
 	DataSet *dataSet;
 };

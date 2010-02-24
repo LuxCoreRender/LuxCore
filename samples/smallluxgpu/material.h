@@ -59,21 +59,14 @@ public:
 	bool IsLambertian() const { return true; }
 	bool IsSpecular() const { return false; }
 
-	virtual Spectrum f(const Vector &wi, const Vector &wo) const = 0;
-	virtual Spectrum Sample_f(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const = 0;
+	virtual Spectrum GetKd() const = 0;
 };
 
 class MatteMaterial : public SurfaceMaterial {
 public:
 	MatteMaterial(const Spectrum col) { Kd = col; }
 
-	Spectrum f(const Vector &wi, const Vector &wo) const { return Kd; }
-
-	Spectrum Sample_f(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const {
-		return 0.f;
-	}
+	Spectrum GetKd() const { return Kd; }
 
 private:
 	Spectrum Kd;
