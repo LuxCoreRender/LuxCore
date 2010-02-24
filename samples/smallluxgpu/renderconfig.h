@@ -33,6 +33,8 @@
 // Must be a multiple of 1024 (for AMD CPU device) and 64 (for most GPUs)
 #define RAY_BUFFER_SIZE (65536)
 
+extern string SLG_LABEL;
+
 class RenderingConfig {
 public:
 	RenderingConfig(const bool lowLatency, const string &sceneFileName, const unsigned int w,

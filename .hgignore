@@ -1,4 +1,3 @@
-^config.h
 ^lib/libluxrays.a
 ^bin/*
 syntax: glob

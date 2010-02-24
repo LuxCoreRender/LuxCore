@@ -138,7 +138,7 @@ static void PrintCaptions() {
 	PrintString(GLUT_BITMAP_8_BY_13, config->captionBuffer);
 	// Title
 	glRasterPos2i(4, config->scene->camera->film->GetHeight() - 10);
-	PrintString(GLUT_BITMAP_8_BY_13, "SmallLuxGPU v1.3 (Written by David Bucciarelli)");
+	PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
 }
 
 void displayFunc(void) {
@@ -375,7 +375,7 @@ void InitGlut(int argc, char *argv[], unsigned int width, unsigned int height) {
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutInit(&argc, argv);
 
-	glutCreateWindow("SmallLuxGPU v1.3 (Written by David Bucciarelli)");
+	glutCreateWindow(SLG_LABEL.c_str());
 }
 
 void RunGlut() {
