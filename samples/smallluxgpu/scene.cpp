@@ -30,6 +30,7 @@
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
+#include "trianglemat.h"
 
 using namespace std;
 
@@ -133,8 +134,11 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 				triangleMatirials.push_back(tl);
 			}
 		} else {
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-				triangleMatirials.push_back(mat);
+			SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
+				TriangleSurfMaterial *tm = new TriangleSurfMaterial(surfMat, objects.size() - 1, i, objects);
+				triangleMatirials.push_back(tm);
+			}
 		}
 	}
 

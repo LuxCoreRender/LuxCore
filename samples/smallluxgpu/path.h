@@ -23,7 +23,7 @@
 #define	_PATH_H
 
 #include "smalllux.h"
-#include "light.h"
+#include "trianglemat.h"
 #include "scene.h"
 
 class RenderingConfig;
@@ -67,6 +67,7 @@ public:
 				const RayHit *shadowRayHit = rayBuffer->GetRayHit(currentShadowRayIndex[i]);
 				if (shadowRayHit->index == 0xffffffffu) {
 					// Nothing was hit, light is visible
+					// TODO: FIX !!!
 					radiance += throughput * lightColor[i] / lightPdf[i];
 				}
 			}
@@ -91,15 +92,15 @@ public:
 		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
 
 		// Get the material
-		Material *material = scene->triangleMatirials[currentTriangleIndex];
+		TriangleMaterial *triMat = scene->triangleMatirials[currentTriangleIndex];
 		Normal shadeN = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
 		const Point hitPoint = pathRay(rayHit->t);
 
 		// Check if it is a light source
 		float RdotShadeN = Dot(pathRay.d, shadeN);
-		if (material->IsLightSource()) {
+		if (triMat->GetMaterial()->IsLightSource()) {
 			if (depth == 1) {
-				const TriangleLight *tLight = (TriangleLight *)material;
+				const TriangleLight *tLight = (TriangleLight *)triMat;
 				float lPdf;
 				const Spectrum Le = tLight->Le(scene->objects, pathRay.o, hitPoint, &lPdf);
 				// Using 0.1 instead of 0.0 to cut down fireflies
@@ -144,7 +145,7 @@ public:
 		} else
 			RdotShadeN = -RdotShadeN;
 
-		SurfaceMaterial *surfMat = (SurfaceMaterial *)material;
+		TriangleSurfMaterial *triSurfMat = (TriangleSurfMaterial *)triMat;
 
 		//----------------------------------------------------------------------
 		// Build the shadow rays (if required)
@@ -154,7 +155,7 @@ public:
 		const Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
 
 		tracedShadowRayCount = 0;
-		if (surfMat->IsLambertian()) {
+		if (triSurfMat->GetMaterial()->IsLambertian()) {
 			// Direct light sampling
 
 			// Trace shadow rays
@@ -170,7 +171,8 @@ public:
 						hitPoint, shadeN,
 						sample.GetLazyValue(), sample.GetLazyValue(),
 						&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
-				lightColor[tracedShadowRayCount] *= surfMat->f(wi, shadowRay[tracedShadowRayCount].d) * triInterpCol;
+				// TODO: FIX !!!
+				lightColor[tracedShadowRayCount] *= triSurfMat->f(wi, shadowRay[tracedShadowRayCount].d) * triInterpCol;
 
 				// Scale light pdf for ONE_UNIFORM strategy
 				lightPdf[tracedShadowRayCount] *= lightStrategyPdf;

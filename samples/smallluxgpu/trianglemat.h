@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LIGHT_H
-#define	_LIGHT_H
+#ifndef _TRIANGLEMAT_H
+#define	_TRIANGLEMAT_H
 
 #include "smalllux.h"
 #include "material.h"
@@ -28,7 +28,14 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 
-class TriangleLight : public LightMaterial {
+class TriangleMaterial {
+public:
+	virtual ~TriangleMaterial() { }
+
+	virtual const Material *GetMaterial() const = 0;
+};
+
+class TriangleLight : public TriangleMaterial {
 public:
 	TriangleLight() { }
 
@@ -41,6 +48,8 @@ public:
 		const ExtTriangleMesh *mesh = objs[meshIndex];
 		area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
 	}
+
+	const Material *GetMaterial() const { return lightMaterial; }
 
 	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Point &p, const Point &hitPoint, float *pdf) const {
 		const ExtTriangleMesh *mesh = objs[meshIndex];
@@ -99,5 +108,37 @@ private:
 
 };
 
-#endif	/* _LIGHT_H */
+class TriangleSurfMaterial : public TriangleMaterial {
+public:
+	TriangleSurfMaterial() { }
+
+	TriangleSurfMaterial(const SurfaceMaterial *mat, const unsigned int mshIndex,
+		const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs) {
+		surfMaterial = mat;
+		meshIndex = mshIndex;
+		triIndex = triangleIndex;
+
+		const ExtTriangleMesh *mesh = objs[meshIndex];
+		area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
+	}
+
+	const Material *GetMaterial() const { return surfMaterial; }
+
+	Spectrum f(const Vector &wi, const Vector &wo/*, const Normal &N, float *pdf*/) const {
+		return surfMaterial->GetKd() ;
+	}
+
+	Spectrum Sample_f(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const {
+		return 0.f;
+	}
+
+private:
+	const SurfaceMaterial *surfMaterial;
+	unsigned int meshIndex, triIndex;
+	float area;
+
+};
+
+#endif	/* _TRIANGLEMAT_H */
 
