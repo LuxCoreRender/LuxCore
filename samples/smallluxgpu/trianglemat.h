@@ -81,7 +81,7 @@ public:
 		Point samplePoint;
 		float b0, b1, b2;
 		tri.Sample(mesh->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
-		Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
+		const Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
 
 		Vector wi = samplePoint - p;
 		const float distanceSquared = wi.LengthSquared();
@@ -96,7 +96,7 @@ public:
 		}
 
 		*shadowRay = Ray(p, wi, RAY_EPSILON, distance - RAY_EPSILON);
-		*pdf = distanceSquared / (SampleNdotMinusWi * NdotMinusWi * area);
+		*pdf = distanceSquared / (SampleNdotMinusWi * area);
 
 		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
 	}
@@ -117,26 +117,22 @@ public:
 		surfMaterial = mat;
 		meshIndex = mshIndex;
 		triIndex = triangleIndex;
-
-		const ExtTriangleMesh *mesh = objs[meshIndex];
-		area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
 	}
 
 	const Material *GetMaterial() const { return surfMaterial; }
 
-	Spectrum f(const Vector &wi, const Vector &wo/*, const Normal &N, float *pdf*/) const {
-		return surfMaterial->GetKd() ;
+	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+		return surfMaterial->f(wi, wi, N);
 	}
 
-	Spectrum Sample_f(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const {
-		return 0.f;
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf) const {
+		return surfMaterial->Sample_f(wi, wo, N, u0, u1, u2, pdf);
 	}
 
 private:
 	const SurfaceMaterial *surfMaterial;
 	unsigned int meshIndex, triIndex;
-	float area;
 
 };
 
