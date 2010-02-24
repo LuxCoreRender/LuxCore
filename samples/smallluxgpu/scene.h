@@ -42,8 +42,8 @@ public:
 	~Scene() {
 		delete camera;
 
-		for (std::vector<TriangleMaterial *>::const_iterator tm = triangleMatirials.begin(); tm != triangleMatirials.end(); ++tm)
-			delete *tm;
+		for (std::vector<TriangleLight *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
+			delete *l;
 
 		delete dataSet;
 
@@ -70,7 +70,7 @@ public:
 	map<string, size_t> materialIndices; // All materials indices
 
 	vector<ExtTriangleMesh *> objects; // All objects
-	vector<TriangleMaterial *> triangleMatirials; // One for each triangle
+	vector<Material *> triangleMatirials; // One for each triangle
 
 	vector<TriangleLight *> lights; // One for each light source triangle
 

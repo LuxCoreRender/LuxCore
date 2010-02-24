@@ -100,10 +100,10 @@ public:
 		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
 
 		// Get the material
-		TriangleMaterial *triMat = scene->triangleMatirials[currentTriangleIndex];
+		Material *triMat = scene->triangleMatirials[currentTriangleIndex];
 
 		// Check if it is a light source
-		if (triMat->GetMaterial()->IsLightSource()) {
+		if (triMat->IsLightSource()) {
 			if (depth == 1) {
 				const Point hitPoint = pathRay(rayHit->t);
 
@@ -137,13 +137,13 @@ public:
 		} else
 			RdotShadeN = -RdotShadeN;
 
-		TriangleSurfMaterial *triSurfMat = (TriangleSurfMaterial *)triMat;
+		SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 		const Point hitPoint = pathRay(rayHit->t);
 		const Vector wi = -pathRay.d;
 		const Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
 
 		tracedShadowRayCount = 0;
-		if (triSurfMat->GetMaterial()->IsLambertian()) {
+		if (triSurfMat->IsLambertian()) {
 			// Direct light sampling
 
 			// Trace shadow rays

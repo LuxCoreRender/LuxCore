@@ -28,14 +28,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 
-class TriangleMaterial {
-public:
-	virtual ~TriangleMaterial() { }
-
-	virtual const Material *GetMaterial() const = 0;
-};
-
-class TriangleLight : public TriangleMaterial {
+class TriangleLight : public LightMaterial {
 public:
 	TriangleLight() { }
 
@@ -105,34 +98,6 @@ private:
 	const AreaLightMaterial *lightMaterial;
 	unsigned int meshIndex, triIndex;
 	float area;
-
-};
-
-class TriangleSurfMaterial : public TriangleMaterial {
-public:
-	TriangleSurfMaterial() { }
-
-	TriangleSurfMaterial(const SurfaceMaterial *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs) {
-		surfMaterial = mat;
-		meshIndex = mshIndex;
-		triIndex = triangleIndex;
-	}
-
-	const Material *GetMaterial() const { return surfMaterial; }
-
-	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
-		return surfMaterial->f(wi, wi, N);
-	}
-
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf) const {
-		return surfMaterial->Sample_f(wi, wo, N, u0, u1, u2, pdf);
-	}
-
-private:
-	const SurfaceMaterial *surfMaterial;
-	unsigned int meshIndex, triIndex;
 
 };
 
