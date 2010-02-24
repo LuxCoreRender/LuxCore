@@ -59,17 +59,50 @@ public:
 	bool IsLambertian() const { return true; }
 	bool IsSpecular() const { return false; }
 
-	virtual Spectrum GetKd() const = 0;
+	virtual Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const = 0;
+	virtual Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf) const = 0;
 };
 
 class MatteMaterial : public SurfaceMaterial {
 public:
-	MatteMaterial(const Spectrum col) { Kd = col; }
+	MatteMaterial(const Spectrum col) {
+		Kd = col;
+		KdOverPI = Kd * INV_PI;
+	}
 
-	Spectrum GetKd() const { return Kd; }
+	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+		return KdOverPI;
+	}
+
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf) const {
+		float r1 = 2.f * M_PI * u0;
+		float r2 = u1;
+		float r2s = sqrt(r2);
+		const Vector w(N);
+
+		Vector u;
+		if (fabsf(N.x) > .1f) {
+			const Vector a(0.f, 1.f, 0.f);
+			u = Cross(a, w);
+		} else {
+			const Vector a(1.f, 0.f, 0.f);
+			u = Cross(a, w);
+		}
+		u = Normalize(u);
+
+		Vector v = Cross(w, u);
+
+		(*wo) = Normalize(u * (cosf(r1) * r2s) + v * (sinf(r1) * r2s) + w * sqrtf(1.f - r2));
+
+		*pdf = AbsDot(wi, N) * INV_PI;
+
+		return KdOverPI;
+	}
 
 private:
-	Spectrum Kd;
+	Spectrum Kd, KdOverPI;
 };
 
 #endif	/* _MATERIAL_H */
