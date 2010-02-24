@@ -32,11 +32,15 @@ public:
 	virtual ~Material() { }
 
 	virtual bool IsLightSource() const = 0;
+	virtual bool IsLambertian() const = 0;
+	virtual bool IsSpecular() const = 0;
 };
 
 class LightMaterial : public Material {
 public:
 	bool IsLightSource() const { return true; }
+	bool IsLambertian() const { return false; }
+	bool IsSpecular() const { return false; }
 };
 
 class AreaLightMaterial : public LightMaterial {
@@ -52,8 +56,11 @@ private:
 class SurfaceMaterial : public Material {
 public:
 	bool IsLightSource() const { return false; }
+	bool IsLambertian() const { return true; }
+	bool IsSpecular() const { return false; }
 
-	virtual Spectrum Sample_M(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	virtual Spectrum f(const Vector &wi, const Vector &wo) const = 0;
+	virtual Spectrum Sample_f(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const = 0;
 };
 
@@ -61,7 +68,9 @@ class MatteMaterial : public SurfaceMaterial {
 public:
 	MatteMaterial(const Spectrum col) { Kd = col; }
 
-	Spectrum Sample_M(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	Spectrum f(const Vector &wi, const Vector &wo) const { return Kd; }
+
+	Spectrum Sample_f(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1,  const float u2, float *pdf, Ray *outRay) const {
 		return 0.f;
 	}
