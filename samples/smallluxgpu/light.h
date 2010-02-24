@@ -42,6 +42,28 @@ public:
 		area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
 	}
 
+	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Point &p, const Point &hitPoint, float *pdf) const {
+		const ExtTriangleMesh *mesh = objs[meshIndex];
+		const Triangle &tri = mesh->GetTriangles()[triIndex];
+		Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
+
+		Vector wi = hitPoint - p;
+		const float distanceSquared = wi.LengthSquared();
+		const float distance = sqrtf(distanceSquared);
+		wi /= distance;
+
+		float SampleNdotMinusWi = Dot(sampleN, -wi);
+		if (SampleNdotMinusWi <= 0.f) {
+			*pdf = 0.f;
+			return Spectrum();
+		}
+
+		*pdf = distanceSquared / (SampleNdotMinusWi * area);
+
+		// Return interpolated color
+		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+	}
+
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, float *pdf, Ray *shadowRay) const {
 		const ExtTriangleMesh *mesh = objs[meshIndex];
@@ -61,14 +83,13 @@ public:
 		float NdotMinusWi = Dot(N, wi);
 		if ((SampleNdotMinusWi <= 0.f) || (NdotMinusWi <= 0.f)) {
 			*pdf = 0.f;
-			return Spectrum(0.f, 0.f, 0.f);
+			return Spectrum();
 		}
 
 		*shadowRay = Ray(p, wi, RAY_EPSILON, distance - RAY_EPSILON);
 		*pdf = distanceSquared / (SampleNdotMinusWi * NdotMinusWi * area);
 
-		// Return interpolated color
-		return InterpolateTriColor(tri, mesh->GetColors(), b0, b1, b2) * lightMaterial->GetGain();
+		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
 	}
 
 private:

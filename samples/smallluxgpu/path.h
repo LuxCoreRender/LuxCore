@@ -80,15 +80,40 @@ public:
 			return;
 		}
 
-		// Something was hit
-		const unsigned int currentTriangleIndex = rayHit->index;
-		const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
-		Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
-		Normal shadeN = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
-
 		// Calculate next step
 		depth++;
+
+		// Something was hit
+		const unsigned int currentTriangleIndex = rayHit->index;
+
+		// Get the triangle
+		const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+
+		// Get the material
+		Material *material = scene->triangleMatirials[currentTriangleIndex];
+		Normal shadeN = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+		const Point hitPoint = pathRay(rayHit->t);
+
+		// Check if it is a light source
+		float RdotShadeN = Dot(pathRay.d, shadeN);
+		if (material->IsLightSource()) {
+			if (depth == 1) {
+				const TriangleLight *tLight = (TriangleLight *)material;
+				float lPdf;
+				const Spectrum Le = tLight->Le(scene->objects, pathRay.o, hitPoint, &lPdf);
+				// Using 0.1 instead of 0.0 to cut down fireflies
+
+				if ((lPdf > 0.1f) && !Le.Black())
+					radiance += Le * throughput;
+			}
+
+			// Terminate the path
+			sampleBuffer->SplatSample(&sample, radiance);
+			// Restart the path
+			Init(scene, sampler);
+			return;
+		}
 
 		// Check if I have to stop
 		if (depth >= scene->maxPathDepth) {
@@ -97,9 +122,11 @@ public:
 			// Restart the ray
 			Init(scene, sampler);
 			return;
-		} else if (depth > 2) {
-			// Russian Rulette
-			const float p = min(1.f, triInterpCol.filter() * AbsDot(shadeN, pathRay.d));
+		}
+
+		/*if (depth > 2) {
+			// Russian Roulette
+			const float p = min(1.f, matCol.filter() * AbsDot(shadeN, pathRay.d));
 			if (p > sample.GetLazyValue())
 				throughput /= p;
 			else {
@@ -109,25 +136,7 @@ public:
 				Init(scene, sampler);
 				return;
 			}
-		}
-
-		//--------------------------------------------------------------------------
-		// Build the shadow ray
-		//--------------------------------------------------------------------------
-
-		// Check if it is a light source
-		float RdotShadeN = Dot(pathRay.d, shadeN);
-		if (scene->IsLight(currentTriangleIndex)) {
-			// Check if we are on the right side of the light source
-			if ((depth == 1) && (RdotShadeN < 0.f))
-				radiance += triInterpCol * throughput;
-
-			// Terminate the path
-			sampleBuffer->SplatSample(&sample, radiance);
-			// Restart the path
-			Init(scene, sampler);
-			return;
-		}
+		}*/
 
 		if (RdotShadeN > 0.f) {
 			// Flip shade  normal
@@ -135,35 +144,48 @@ public:
 		} else
 			RdotShadeN = -RdotShadeN;
 
-		throughput *= RdotShadeN * triInterpCol;
+		SurfaceMaterial *surfMat = (SurfaceMaterial *)material;
 
-		// Trace shadow rays
-		const Point hitPoint = pathRay(rayHit->t);
+		//----------------------------------------------------------------------
+		// Build the shadow rays (if required)
+		//----------------------------------------------------------------------
+
+		const Vector wi = -pathRay.d;
+		const Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
 
 		tracedShadowRayCount = 0;
-		const float lightStrategyPdf = static_cast<float>(scene->shadowRayCount) / static_cast<float>(scene->lights.size());
-		for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
-			// Select the light to sample
-			const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
-			const TriangleLight *light = scene->lights[currentLightIndex];
+		if (surfMat->IsLambertian()) {
+			// Direct light sampling
 
-			// Select a point on the surface
-			lightColor[tracedShadowRayCount] = light->Sample_L(
-					scene->objects,
-					hitPoint, shadeN,
-					sample.GetLazyValue(), sample.GetLazyValue(),
-					&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
-			// Scale light pdf for ONE_UNIFORM strategy
-			lightPdf[tracedShadowRayCount] *= lightStrategyPdf;
+			// Trace shadow rays
+			const float lightStrategyPdf = static_cast<float>(scene->shadowRayCount) / static_cast<float>(scene->lights.size());
+			for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
+				// Select the light to sample
+				const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
+				const TriangleLight *light = scene->lights[currentLightIndex];
 
-			// Using 0.1 instead of 0.0 to cut down fireflies
-			if (lightPdf[tracedShadowRayCount] > 0.1f)
-				tracedShadowRayCount++;
+				// Select a point on the light surface
+				lightColor[tracedShadowRayCount] = light->Sample_L(
+						scene->objects,
+						hitPoint, shadeN,
+						sample.GetLazyValue(), sample.GetLazyValue(),
+						&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
+				lightColor[tracedShadowRayCount] *= surfMat->f(wi, shadowRay[tracedShadowRayCount].d) * triInterpCol;
+
+				// Scale light pdf for ONE_UNIFORM strategy
+				lightPdf[tracedShadowRayCount] *= lightStrategyPdf;
+
+				// Using 0.1 instead of 0.0 to cut down fireflies
+				if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
+					tracedShadowRayCount++;
+			}
 		}
 
-		//--------------------------------------------------------------------------
+		//----------------------------------------------------------------------
 		// Build the next vertex path ray
-		//--------------------------------------------------------------------------
+		//----------------------------------------------------------------------
+
+		throughput *= RdotShadeN * triInterpCol;
 
 		// Calculate exit direction
 
