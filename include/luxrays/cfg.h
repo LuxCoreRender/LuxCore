@@ -36,4 +36,8 @@ extern "C" {
 #endif
 #endif
 
+#if defined(WIN32)
+#define isnan(a) _isnan(a)
+#endif
+
 #endif	/* _LUXRAYS_CFG_H */

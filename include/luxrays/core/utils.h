@@ -52,7 +52,7 @@ typedef unsigned int u_int;
 #endif
 
 #ifndef INFINITY
-#define INFINITY (numeric_limits<float>::infinity())
+#define INFINITY (std::numeric_limits<float>::infinity())
 #endif
 
 #ifndef INV_PI
