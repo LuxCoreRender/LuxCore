@@ -199,7 +199,6 @@ public:
 
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
-		specularBounce = true;
 		Vector reflDir = -wi;
 		reflDir = reflDir - (2.f * Dot(N, reflDir)) * Vector(N);
 
@@ -216,33 +215,36 @@ public:
 		if (cos2t < 0.f) {
 			(*wo) = reflDir;
 			*pdf = 1.f;
+			specularBounce = true;
 
 			return Krefl;
 		}
 
-		const float kk = (into ? 1 : -1) * (ddn * nnt + sqrt(cos2t));
+		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
 		const Vector nkk = kk * Vector(N);
 		const Vector transDir = Normalize(nnt * (-wi) - nkk);
 
 		const float a = nt - nc;
 		const float b = nt + nc;
 		const float R0 = a * a / (b * b);
-		const float c = 1 - (into ? -ddn : Dot(transDir, N));
+		const float c = 1.f - (into ? -ddn : Dot(transDir, N));
 
-		const float Re = R0 + (1 - R0) * c * c * c * c * c;
+		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
 		const float Tr = 1.f - Re;
 		const float P = .25f + .5f * Re;
-		const float RP = Re / P;
-		const float TP = Tr / (1.f - P);
+		const float RP = P / Re;
+		const float TP = (1.f - P) / Tr;
 
 		if (u0 < P) {
 			(*wo) = reflDir;
-			*pdf = 1.f / RP;
+			*pdf = RP;
+			specularBounce = true;
 
 			return Krefl;
 		} else {
 			(*wo) = transDir;
-			*pdf = 1.f / TP;
+			*pdf = TP;
+			specularBounce = false;
 
 			return Krefrct;
 		}
