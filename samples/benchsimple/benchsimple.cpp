@@ -21,6 +21,7 @@
 
 #include <cstdlib>
 #include <queue>
+#include <iostream>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
