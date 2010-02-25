@@ -278,9 +278,9 @@ void OpenCLIntersectionDevice::Start() {
 	}
 #elif defined (WIN32)
 	{
-		const HANDLE tid = (HANDLE) renderThread->native_handle();
+		const HANDLE tid = (HANDLE) intersectionThread->native_handle();
 		if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to ray intersection thread priority" << endl;
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to ray intersection thread priority" << std::endl;
 	}
 #endif
 }

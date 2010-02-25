@@ -113,7 +113,9 @@ static int BatchMode(double stopTime) {
 }
 
 int main(int argc, char *argv[]) {
+#if defined(__GNUC__)
 	set_terminate(SLGTerminate);
+#endif
 
 	try {
 		std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
