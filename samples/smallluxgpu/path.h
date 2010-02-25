@@ -119,8 +119,8 @@ public:
 				const TriangleLight *tLight = (TriangleLight *)triMat;
 				float lPdf;
 				const Spectrum Le = tLight->Le(scene->objects, pathRay.o, hitPoint, &lPdf);
-				// Using 0.1 instead of 0.0 to cut down fireflies
 
+				// Using 0.1 instead of 0.0 to cut down fireflies
 				if ((lPdf > 0.1f) && !Le.Black())
 					radiance += Le * throughput;
 			}
@@ -136,15 +136,18 @@ public:
 		// Build the shadow rays (if required)
 		//----------------------------------------------------------------------
 
-		Normal shadeN = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
-		float RdotShadeN = Dot(pathRay.d, shadeN);
+		const Normal N = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+		Normal shadeN;
+		float RdotShadeN = Dot(pathRay.d, N);
 
 		// Flip shade  normal if required
 		if (RdotShadeN > 0.f) {
 			// Flip shade  normal
-			shadeN = -shadeN;
-		} else
+			shadeN = -N;
+		} else {
+			shadeN = N;
 			RdotShadeN = -RdotShadeN;
+		}
 
 		SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 		const Point hitPoint = pathRay(rayHit->t);
@@ -187,7 +190,7 @@ public:
 
 		float fPdf;
 		Vector wo;
-		const Spectrum f = triSurfMat->Sample_f(wi, &wo, shadeN,
+		const Spectrum f = triSurfMat->Sample_f(wi, &wo, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 			&fPdf, specularBounce) * triInterpCol;
 

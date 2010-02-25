@@ -59,8 +59,8 @@ public:
 
 	virtual Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const = 0;
 	virtual Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf,
-		bool &specularBounce) const = 0;
+		const Normal &shadeN, const float u0, const float u1,  const float u2,
+		float *pdf,	bool &specularBounce) const = 0;
 };
 
 class MatteMaterial : public SurfaceMaterial {
@@ -78,15 +78,15 @@ public:
 		return KdOverPI;
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		float r1 = 2.f * M_PI * u0;
 		float r2 = u1;
 		float r2s = sqrt(r2);
-		const Vector w(N);
+		const Vector w(shadeN);
 
 		Vector u;
-		if (fabsf(N.x) > .1f) {
+		if (fabsf(shadeN.x) > .1f) {
 			const Vector a(0.f, 1.f, 0.f);
 			u = Cross(a, w);
 		} else {
@@ -100,7 +100,7 @@ public:
 		(*wo) = Normalize(u * (cosf(r1) * r2s) + v * (sinf(r1) * r2s) + w * sqrtf(1.f - r2));
 
 		specularBounce = false;
-		*pdf = AbsDot(wi, N) * INV_PI;
+		*pdf = AbsDot(wi, shadeN) * INV_PI;
 
 		return KdOverPI;
 	}
@@ -124,10 +124,10 @@ public:
 		throw std::runtime_error("Internal error, called MirrorMaterial::f()");
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		const Vector dir = -wi;
-		(*wo) = dir - (2.f * Dot(N, dir)) * Vector(N);
+		(*wo) = dir - (2.f * Dot(shadeN, dir)) * Vector(shadeN);
 
 		specularBounce = true;
 		*pdf = 1.f;
@@ -159,17 +159,17 @@ public:
 		return matte.f(wi, wo, N);
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		const float comp = u2 * totFilter;
 
 		if (comp > matteFilter) {
-			const Spectrum f = mirror.Sample_f(wi, wo, N, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = mirror.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
 			*pdf *= mirrorPdf;
 
 			return f;
 		} else {
-			const Spectrum f = matte.Sample_f(wi, wo, N, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = matte.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
 			*pdf *= mattePdf;
 
 			return f;
@@ -180,6 +180,80 @@ private:
 	MatteMaterial matte;
 	MirrorMaterial mirror;
 	float matteFilter, mirrorFilter, totFilter, mattePdf, mirrorPdf;
+};
+
+class GlassMaterial : public SurfaceMaterial {
+public:
+	GlassMaterial(const Spectrum &refl, const Spectrum &refrct, const float iorFact) {
+		Krefl = refl;
+		Krefrct = refrct;
+		ior = iorFact;
+	}
+
+	bool IsLambertian() const { return false; }
+	bool IsSpecular() const { return true; }
+
+	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+		throw std::runtime_error("Internal error, called GlassMaterial::f()");
+	}
+
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		specularBounce = true;
+		Vector reflDir = -wi;
+		reflDir = reflDir - (2.f * Dot(N, reflDir)) * Vector(N);
+
+		// Ray from outside going in ?
+		const bool into = (Dot(N, shadeN) > 0);
+
+		const float nc = 1.f;
+		const float nt = ior;
+		const float nnt = into ? (nc / nt) : (nt / nc);
+		const float ddn = Dot(-wi, shadeN);
+		const float cos2t = 1.f - nnt * nnt * (1.f - ddn * ddn);
+
+		// Total internal reflection
+		if (cos2t < 0.f) {
+			(*wo) = reflDir;
+			*pdf = 1.f;
+
+			return Krefl;
+		}
+
+		const float kk = (into ? 1 : -1) * (ddn * nnt + sqrt(cos2t));
+		const Vector nkk = kk * Vector(N);
+		const Vector transDir = Normalize(nnt * (-wi) - nkk);
+
+		const float a = nt - nc;
+		const float b = nt + nc;
+		const float R0 = a * a / (b * b);
+		const float c = 1 - (into ? -ddn : Dot(transDir, N));
+
+		const float Re = R0 + (1 - R0) * c * c * c * c * c;
+		const float Tr = 1.f - Re;
+		const float P = .25f + .5f * Re;
+		const float RP = Re / P;
+		const float TP = Tr / (1.f - P);
+
+		if (u0 < P) {
+			(*wo) = reflDir;
+			*pdf = 1.f / RP;
+
+			return Krefl;
+		} else {
+			(*wo) = transDir;
+			*pdf = 1.f / TP;
+
+			return Krefrct;
+		}
+	}
+
+	const Spectrum &GetKrefl() const { return Krefl; }
+	const Spectrum &GetKrefrct() const { return Krefrct; }
+
+private:
+	Spectrum Krefl, Krefrct;
+	float ior;
 };
 
 #endif	/* _MATERIAL_H */
