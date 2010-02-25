@@ -80,7 +80,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
 			if (vf.size() != 3)
 				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
-			Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+			const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
 
 			MatteMaterial *mat = new MatteMaterial(col);
 			materialIndices[matName] = materials.size();
@@ -89,7 +89,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
 			if (vf.size() != 3)
 				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
-			Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
+			const Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 
 			AreaLightMaterial *mat = new AreaLightMaterial(gain);
 			materialIndices[matName] = materials.size();
@@ -98,9 +98,19 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
 			if (vf.size() != 3)
 				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
-			Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+			const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
 
 			MirrorMaterial *mat = new MirrorMaterial(col);
+			materialIndices[matName] = materials.size();
+			materials.push_back(mat);
+		}  else if (matType == "mattemirror") {
+			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
+			if (vf.size() != 6)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
+			const Spectrum Kd(vf.at(0), vf.at(1), vf.at(2));
+			const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
+
+			MatteMirrorMaterial *mat = new MatteMirrorMaterial(Kd, Kr);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else

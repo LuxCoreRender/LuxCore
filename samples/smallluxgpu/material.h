@@ -65,7 +65,7 @@ public:
 
 class MatteMaterial : public SurfaceMaterial {
 public:
-	MatteMaterial(const Spectrum col) {
+	MatteMaterial(const Spectrum &col) {
 		Kd = col;
 		KdOverPI = Kd * INV_PI;
 	}
@@ -105,13 +105,15 @@ public:
 		return KdOverPI;
 	}
 
+	const Spectrum &GetKd() const { return Kd; }
+
 private:
 	Spectrum Kd, KdOverPI;
 };
 
 class MirrorMaterial : public SurfaceMaterial {
 public:
-	MirrorMaterial(const Spectrum refl) {
+	MirrorMaterial(const Spectrum &refl) {
 		Kr = refl;
 	}
 
@@ -133,8 +135,51 @@ public:
 		return Kr;
 	}
 
+	const Spectrum &GetKr() const { return Kr; }
+
 private:
 	Spectrum Kr;
+};
+
+class MatteMirrorMaterial : public SurfaceMaterial {
+public:
+	MatteMirrorMaterial(const Spectrum &col, const Spectrum refl) : matte(col), mirror (refl) {
+		matteFilter = matte.GetKd().Filter();
+		mirrorFilter = mirror.GetKr().Filter();
+		totFilter = matteFilter + mirrorFilter;
+
+		mattePdf = matteFilter / totFilter;
+		mirrorPdf = mirrorFilter / totFilter;
+	}
+
+	bool IsLambertian() const { return true; }
+	bool IsSpecular() const { return true; }
+
+	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+		return matte.f(wi, wo, N);
+	}
+
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float comp = u2 * totFilter;
+
+		if (comp > matteFilter) {
+			const Spectrum f = mirror.Sample_f(wi, wo, N, u0, u1, u2, pdf, specularBounce);
+			*pdf *= mirrorPdf;
+
+			return f;
+		} else {
+			const Spectrum f = matte.Sample_f(wi, wo, N, u0, u1, u2, pdf, specularBounce);
+			*pdf *= mattePdf;
+
+			return f;
+		}
+	}
+
+private:
+	MatteMaterial matte;
+	MirrorMaterial mirror;
+	float matteFilter, mirrorFilter, totFilter, mattePdf, mirrorPdf;
 };
 
 #endif	/* _MATERIAL_H */
