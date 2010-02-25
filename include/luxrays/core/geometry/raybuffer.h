@@ -24,6 +24,7 @@
 #define _LUXRAYS_RAYBUFFER_H
 
 #include <deque>
+#include <vector>
 #include <cmath>
 #include <limits>
 
