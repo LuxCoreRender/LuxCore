@@ -56,8 +56,6 @@ private:
 class SurfaceMaterial : public Material {
 public:
 	bool IsLightSource() const { return false; }
-	bool IsLambertian() const { return true; }
-	bool IsSpecular() const { return false; }
 
 	virtual Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const = 0;
 	virtual Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
@@ -70,6 +68,10 @@ public:
 		Kd = col;
 		KdOverPI = Kd * INV_PI;
 	}
+
+	bool IsLambertian() const { return true; }
+	bool IsSpecular() const { return false; }
+
 
 	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
 		return KdOverPI;
@@ -103,6 +105,33 @@ public:
 
 private:
 	Spectrum Kd, KdOverPI;
+};
+
+class MirrorMaterial : public SurfaceMaterial {
+public:
+	MirrorMaterial(const Spectrum refl) {
+		Kr = refl;
+	}
+
+	bool IsLambertian() const { return false; }
+	bool IsSpecular() const { return true; }
+
+	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+		throw std::runtime_error("Internal error, called MirrorMaterial::f()");
+	}
+
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+		const float u0, const float u1,  const float u2, float *pdf) const {
+		const Vector dir = -wi;
+		(*wo) = dir - (2.f * Dot(N, dir)) * Vector(N);
+
+		*pdf = 1.f;
+
+		return Kr;
+	}
+
+private:
+	Spectrum Kr;
 };
 
 #endif	/* _MATERIAL_H */

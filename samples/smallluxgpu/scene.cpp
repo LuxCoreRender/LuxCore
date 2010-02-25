@@ -94,6 +94,15 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			AreaLightMaterial *mat = new AreaLightMaterial(gain);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
+		} else if (matType == "mirror") {
+			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
+			if (vf.size() != 3)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
+			Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+
+			MirrorMaterial *mat = new MirrorMaterial(col);
+			materialIndices[matName] = materials.size();
+			materials.push_back(mat);
 		} else
 			throw runtime_error("Unknown material type " + matType);
 	}
