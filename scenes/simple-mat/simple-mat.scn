@@ -1,5 +1,5 @@
 scene.camera.lookat = 5.951 -7.663 6.017 0.0 0.0 1.0
-scene.materials.matte.redmatte = 0.75 0.0 0.0
+scene.materials.mirror.redmatte = 0.75 0.75 0.75
 scene.materials.matte.greenmatte = 0.0 0.75 0.0
 scene.materials.matte.whitematte = 0.75 0.75 0.75
 scene.materials.light.whitelight = 120.0 120.0 120.0
