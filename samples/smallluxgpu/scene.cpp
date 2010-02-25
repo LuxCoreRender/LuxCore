@@ -103,7 +103,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			MirrorMaterial *mat = new MirrorMaterial(col);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
-		}  else if (matType == "mattemirror") {
+		} else if (matType == "mattemirror") {
 			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
 			if (vf.size() != 6)
 				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
@@ -111,6 +111,16 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
 
 			MatteMirrorMaterial *mat = new MatteMirrorMaterial(Kd, Kr);
+			materialIndices[matName] = materials.size();
+			materials.push_back(mat);
+		} else if (matType == "glass") {
+			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
+			if (vf.size() != 7)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName);
+			const Spectrum Krfl(vf.at(0), vf.at(1), vf.at(2));
+			const Spectrum Ktrn(vf.at(3), vf.at(4), vf.at(5));
+
+			GlassMaterial *mat = new GlassMaterial(Krfl, Ktrn, vf.at(6));
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else
