@@ -1,0 +1,9 @@
+scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
+scene.materials.mirror.shell = 0.75 0.75 0.75
+scene.materials.matte.whitematte = 0.75 0.75 0.75
+scene.materials.light.whitelight = 20.0 20.0 20.0
+scene.objects.whitematte.room = scenes/luxball/room.ply
+scene.objects.whitematte.luxinner = scenes/luxball/luxball-inner.ply
+scene.objects.shell.luxshell = scenes/luxball/luxball-shell.ply
+scene.objects.whitelight.l1 = scenes/luxball/luxball-light1.ply
+scene.objects.whitelight.l2 = scenes/luxball/luxball-light2.ply

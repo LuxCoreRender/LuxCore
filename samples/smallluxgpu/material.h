@@ -59,7 +59,8 @@ public:
 
 	virtual Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const = 0;
 	virtual Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf) const = 0;
+		const float u0, const float u1,  const float u2, float *pdf,
+		bool &specularBounce) const = 0;
 };
 
 class MatteMaterial : public SurfaceMaterial {
@@ -78,7 +79,7 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf) const {
+		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		float r1 = 2.f * M_PI * u0;
 		float r2 = u1;
 		float r2s = sqrt(r2);
@@ -98,6 +99,7 @@ public:
 
 		(*wo) = Normalize(u * (cosf(r1) * r2s) + v * (sinf(r1) * r2s) + w * sqrtf(1.f - r2));
 
+		specularBounce = false;
 		*pdf = AbsDot(wi, N) * INV_PI;
 
 		return KdOverPI;
@@ -121,10 +123,11 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
-		const float u0, const float u1,  const float u2, float *pdf) const {
+		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		const Vector dir = -wi;
 		(*wo) = dir - (2.f * Dot(N, dir)) * Vector(N);
 
+		specularBounce = true;
 		*pdf = 1.f;
 
 		return Kr;

@@ -48,7 +48,16 @@ public:
 		delete[] currentShadowRayIndex;
 	}
 
-	void Init(Scene *scene, Sampler *sampler);
+	void Init(Scene *scene, Sampler *sampler) {
+		throughput = Spectrum(1.f, 1.f, 1.f);
+		radiance = Spectrum(0.f, 0.f, 0.f);
+		sampler->GetNextSample(&sample);
+
+		scene->camera->GenerateRay(&sample, &pathRay);
+		state = EYE_VERTEX;
+		depth = 0;
+		specularBounce = true;
+	}
 
 	void FillRayBuffer(RayBuffer *rayBuffer) {
 		currentPathRayIndex = rayBuffer->AddRay(pathRay);
@@ -104,7 +113,7 @@ public:
 
 		// Check if it is a light source
 		if (triMat->IsLightSource()) {
-			if (depth == 1) {
+			if (specularBounce) {
 				const Point hitPoint = pathRay(rayHit->t);
 
 				const TriangleLight *tLight = (TriangleLight *)triMat;
@@ -181,7 +190,7 @@ public:
 		Vector wo;
 		const Spectrum f = triSurfMat->Sample_f(wi, &wo, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
-			&fPdf) * triInterpCol;
+			&fPdf, specularBounce) * triInterpCol;
 
 		const float dp = RdotShadeN / fPdf;
 		/*if (depth > 2) {
@@ -222,6 +231,7 @@ private:
 	unsigned int currentPathRayIndex, *currentShadowRayIndex;
 	unsigned int tracedShadowRayCount;
 	PathState state;
+	bool specularBounce;
 };
 
 class PathIntegrator {

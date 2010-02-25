@@ -125,17 +125,3 @@ void PathIntegrator::AdvancePaths(const RayBuffer *rayBuffer) {
 
 	firstPath = (lastPath + 1) % paths.size();
 }
-
-//------------------------------------------------------------------------------
-// Path class
-//------------------------------------------------------------------------------
-
-void Path::Init(Scene *scene, Sampler *sampler) {
-	throughput = Spectrum(1.f, 1.f, 1.f);
-	radiance = Spectrum(0.f, 0.f, 0.f);
-	sampler->GetNextSample(&sample);
-
-	scene->camera->GenerateRay(&sample, &pathRay);
-	state = EYE_VERTEX;
-	depth = 0;
-}
