@@ -107,12 +107,12 @@ public:
 		return (&r)[i];
 	}
 
-	float filter() const {
+	float Filter() const {
 		return Max<float>(r, Max<float>(g, b));
 	}
 
 	bool Black() const {
-		return (r == 0.f) && (g == 0.f) && (g == 0.f);
+		return (r == 0.f) && (g == 0.f) && (b == 0.f);
 	}
 
 	float r, g, b;

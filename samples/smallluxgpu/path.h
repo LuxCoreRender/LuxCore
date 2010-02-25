@@ -175,7 +175,6 @@ public:
 				// Scale light pdf for ONE_UNIFORM strategy
 				lightPdf[tracedShadowRayCount] *= lightStrategyPdf;
 
-
 				// Using 0.1 instead of 0.0 to cut down fireflies
 				if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
 					tracedShadowRayCount++;
