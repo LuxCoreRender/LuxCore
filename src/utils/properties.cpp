@@ -154,8 +154,10 @@ std::vector<int> Properties::ConvertToIntVector(const std::string &values) {
 	boost::split(strs, values, boost::is_any_of("\t "));
 
 	std::vector<int> ints;
-	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it)
-		ints.push_back(atoi(it->c_str()));
+	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it) {
+		if (it->length() != 0)
+			ints.push_back(atoi(it->c_str()));
+	}
 
 	return ints;
 }
@@ -165,8 +167,10 @@ std::vector<float> Properties::ConvertToFloatVector(const std::string &values) {
 	boost::split(strs, values, boost::is_any_of("\t "));
 
 	std::vector<float> floats;
-	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it)
-		floats.push_back(atof(it->c_str()));
+	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it) {
+		if (it->length() != 0)
+			floats.push_back(atof(it->c_str()));
+	}
 
 	return floats;
 }
