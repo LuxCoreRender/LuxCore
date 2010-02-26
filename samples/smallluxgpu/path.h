@@ -31,7 +31,7 @@ class RenderingConfig;
 class Path {
 public:
 	enum PathState {
-		EYE_VERTEX, NEXT_VERTEX
+		EYE_VERTEX, NEXT_VERTEX, ONLY_SHADOW_RAYS
 	};
 
 	Path(Scene *scene) {
@@ -60,8 +60,10 @@ public:
 	}
 
 	void FillRayBuffer(RayBuffer *rayBuffer) {
-		currentPathRayIndex = rayBuffer->AddRay(pathRay);
-		if (state == NEXT_VERTEX) {
+		if (state != ONLY_SHADOW_RAYS)
+			currentPathRayIndex = rayBuffer->AddRay(pathRay);
+
+		if ((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS)) {
 			for (unsigned int i = 0; i < tracedShadowRayCount; ++i)
 				currentShadowRayIndex[i] = rayBuffer->AddRay(shadowRay[i]);
 		}
@@ -71,7 +73,7 @@ public:
 			SampleBuffer *sampleBuffer) {
 		const RayHit *rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
 
-		if ((state == NEXT_VERTEX) && (tracedShadowRayCount > 0)) {
+		if (((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS)) && (tracedShadowRayCount > 0)) {
 			for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
 				const RayHit *shadowRayHit = rayBuffer->GetRayHit(currentShadowRayIndex[i]);
 				if (shadowRayHit->index == 0xffffffffu) {
@@ -81,22 +83,13 @@ public:
 			}
 		}
 
-		if (rayHit->index == 0xffffffffu) {
-			// Hit nothing, terminate the path
-			sampleBuffer->SplatSample(&sample, radiance);
-			// Restart the path
-			Init(scene, sampler);
-			return;
-		}
-
 		// Calculate next step
 		depth++;
 
-		// Check if I have to stop
-		if (depth >= scene->maxPathDepth) {
-			// Too depth, terminate the path
+		if ((rayHit->index == 0xffffffffu) || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
+			// Hit nothing/only shadow rays/maxdepth, terminate the path
 			sampleBuffer->SplatSample(&sample, radiance);
-			// Restart the ray
+			// Restart the path
 			Init(scene, sampler);
 			return;
 		}
@@ -114,15 +107,10 @@ public:
 		// Check if it is a light source
 		if (triMat->IsLightSource()) {
 			if (specularBounce) {
-				const Point hitPoint = pathRay(rayHit->t);
-
 				const TriangleLight *tLight = (TriangleLight *)triMat;
-				float lPdf;
-				const Spectrum Le = tLight->Le(scene->objects, pathRay.o, hitPoint, &lPdf);
+				const Spectrum Le = tLight->Le(scene->objects, -pathRay.d);
 
-				// Using 0.1 instead of 0.0 to cut down fireflies
-				if ((lPdf > 0.1f) && !Le.Black())
-					radiance += Le * throughput;
+				radiance += Le * throughput;
 			}
 
 			// Terminate the path
@@ -193,21 +181,40 @@ public:
 		const Spectrum f = triSurfMat->Sample_f(wi, &wo, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 			&fPdf, specularBounce) * triInterpCol;
-
-		const float dp = RdotShadeN / fPdf;
-		/*if (depth > 2) {
-			// Russian Roulette
-			const float p = Min(1.f, f.filter() * AbsDot(shadeN, pathRay.d));
-			if (p > sample.GetLazyValue())
-				throughput /= p;
+		if (f.Black()) {
+			if (tracedShadowRayCount > 0)
+				state = ONLY_SHADOW_RAYS;
 			else {
 				// Terminate the path
 				sampleBuffer->SplatSample(&sample, radiance);
 				// Restart the path
 				Init(scene, sampler);
+			}
+
+			return;
+		}
+
+		const float dp = RdotShadeN / fPdf;
+		if (depth > scene->rrDepth) {
+			// Russian Roulette
+			const float p = Min(1.f, f.Filter() * dp);
+
+			if (p >= sample.GetLazyValue())
+				throughput /= p;
+			else {
+				// Check if terminate the path or I have still to trace shadow rays
+				if (tracedShadowRayCount > 0)
+					state = ONLY_SHADOW_RAYS;
+				else {
+					// Terminate the path
+					sampleBuffer->SplatSample(&sample, radiance);
+					// Restart the path
+					Init(scene, sampler);
+				}
+
 				return;
 			}
-		}*/
+		}
 
 		throughput *= dp;
 		throughput *= f;
