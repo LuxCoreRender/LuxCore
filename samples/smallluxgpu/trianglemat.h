@@ -44,25 +44,14 @@ public:
 
 	const Material *GetMaterial() const { return lightMaterial; }
 
-	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Point &p, const Point &hitPoint, float *pdf) const {
+	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Vector &wo) const {
 		const ExtTriangleMesh *mesh = objs[meshIndex];
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 		Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
 
-		Vector wi = hitPoint - p;
-		const float distanceSquared = wi.LengthSquared();
-		const float distance = sqrtf(distanceSquared);
-		wi /= distance;
-
-		float SampleNdotMinusWi = Dot(sampleN, -wi);
-		if (SampleNdotMinusWi <= 0.f) {
-			*pdf = 0.f;
+		if (Dot(sampleN, wo) <= 0.f)
 			return Spectrum();
-		}
 
-		*pdf = distanceSquared / (SampleNdotMinusWi * area);
-
-		// Return interpolated color
 		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
 	}
 

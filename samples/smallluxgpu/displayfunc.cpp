@@ -83,15 +83,16 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(25, 230);
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	glRasterPos2i(30, 210);
-	sprintf(buf, "[Rendering time: %dsecs][FOV: %.1f][Max path depth: %d][Shadow rays: %d]",
+	sprintf(buf, "[Rendering time: %dsecs][FOV: %.1f][Max path depth: %d][RR Depth: %d]",
 			int(config->scene->camera->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
 			config->scene->maxPathDepth,
-			config->scene->shadowRayCount);
+			config->scene->rrDepth);
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	glRasterPos2i(30, 190);
-	sprintf(buf, "[Screen refresh: %dms][Render threads: %d]",
-			config->screenRefreshInterval, int(config->GetRenderThreads().size()));
+	sprintf(buf, "[Screen refresh: %dms][Render threads: %d][Shadow rays: %d]",
+			config->screenRefreshInterval, int(config->GetRenderThreads().size()),
+			config->scene->shadowRayCount);
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 
 	// Devices

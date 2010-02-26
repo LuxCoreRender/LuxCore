@@ -37,6 +37,7 @@ using namespace std;
 Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film) {
 	maxPathDepth = 3;
 	shadowRayCount = 1;
+	rrDepth = 2;
 
 	cerr << "Reading scene: " << fileName << endl;
 

@@ -63,6 +63,7 @@ public:
 	// Siggned because of the delta parameter
 	int maxPathDepth;
 	unsigned int shadowRayCount;
+	int rrDepth;
 
 	PerspectiveCamera *camera;
 
