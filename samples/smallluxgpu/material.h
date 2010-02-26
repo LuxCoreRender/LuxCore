@@ -113,8 +113,9 @@ private:
 
 class MirrorMaterial : public SurfaceMaterial {
 public:
-	MirrorMaterial(const Spectrum &refl) {
+	MirrorMaterial(const Spectrum &refl, bool reflSpecularBounce) {
 		Kr = refl;
+		reflectionSpecularBounce = reflSpecularBounce;
 	}
 
 	bool IsLambertian() const { return false; }
@@ -129,7 +130,7 @@ public:
 		const Vector dir = -wi;
 		(*wo) = dir - (2.f * Dot(shadeN, dir)) * Vector(shadeN);
 
-		specularBounce = true;
+		specularBounce = reflectionSpecularBounce;
 		*pdf = 1.f;
 
 		return Kr;
@@ -139,11 +140,13 @@ public:
 
 private:
 	Spectrum Kr;
+	bool reflectionSpecularBounce;
 };
 
 class MatteMirrorMaterial : public SurfaceMaterial {
 public:
-	MatteMirrorMaterial(const Spectrum &col, const Spectrum refl) : matte(col), mirror (refl) {
+	MatteMirrorMaterial(const Spectrum &col, const Spectrum refl, bool reflSpecularBounce) :
+		matte(col), mirror (refl, reflSpecularBounce) {
 		matteFilter = matte.GetKd().Filter();
 		mirrorFilter = mirror.GetKr().Filter();
 		totFilter = matteFilter + mirrorFilter;
@@ -184,10 +187,14 @@ private:
 
 class GlassMaterial : public SurfaceMaterial {
 public:
-	GlassMaterial(const Spectrum &refl, const Spectrum &refrct, const float iorFact) {
+	GlassMaterial(const Spectrum &refl, const Spectrum &refrct, const float iorFact,
+			bool reflSpecularBounce, bool transSpecularBounce) {
 		Krefl = refl;
 		Krefrct = refrct;
 		ior = iorFact;
+
+		reflectionSpecularBounce = reflSpecularBounce;
+		transmitionSpecularBounce = transSpecularBounce;
 	}
 
 	bool IsLambertian() const { return false; }
@@ -215,7 +222,7 @@ public:
 		if (cos2t < 0.f) {
 			(*wo) = reflDir;
 			*pdf = 1.f;
-			specularBounce = true;
+			specularBounce = reflectionSpecularBounce;
 
 			return Krefl;
 		}
@@ -232,19 +239,19 @@ public:
 		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
 		const float Tr = 1.f - Re;
 		const float P = .25f + .5f * Re;
-		const float RP = P / Re;
-		const float TP = (1.f - P) / Tr;
 
 		if (u0 < P) {
 			(*wo) = reflDir;
-			*pdf = RP;
-			specularBounce = true;
+
+			*pdf = P / Re;
+			specularBounce = reflectionSpecularBounce;
 
 			return Krefl;
 		} else {
 			(*wo) = transDir;
-			*pdf = TP;
-			specularBounce = false;
+
+			*pdf = (1.f - P) / Tr;
+			specularBounce = transmitionSpecularBounce;
 
 			return Krefrct;
 		}
@@ -256,6 +263,7 @@ public:
 private:
 	Spectrum Krefl, Krefrct;
 	float ior;
+	bool reflectionSpecularBounce, transmitionSpecularBounce;
 };
 
 #endif	/* _MATERIAL_H */
