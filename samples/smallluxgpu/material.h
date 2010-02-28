@@ -32,14 +32,14 @@ public:
 	virtual ~Material() { }
 
 	virtual bool IsLightSource() const = 0;
-	virtual bool IsLambertian() const = 0;
+	virtual bool IsDiffuse() const = 0;
 	virtual bool IsSpecular() const = 0;
 };
 
 class LightMaterial : public Material {
 public:
 	bool IsLightSource() const { return true; }
-	bool IsLambertian() const { return false; }
+	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return false; }
 };
 
@@ -70,7 +70,7 @@ public:
 		KdOverPI = Kd * INV_PI;
 	}
 
-	bool IsLambertian() const { return true; }
+	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return false; }
 
 
@@ -118,7 +118,7 @@ public:
 		reflectionSpecularBounce = reflSpecularBounce;
 	}
 
-	bool IsLambertian() const { return false; }
+	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
 	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
@@ -155,11 +155,11 @@ public:
 		mirrorPdf = mirrorFilter / totFilter;
 	}
 
-	bool IsLambertian() const { return true; }
+	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
 	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
-		return matte.f(wi, wo, N);
+		return matte.f(wi, wo, N) * mattePdf;
 	}
 
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
@@ -183,6 +183,7 @@ private:
 	MatteMaterial matte;
 	MirrorMaterial mirror;
 	float matteFilter, mirrorFilter, totFilter, mattePdf, mirrorPdf;
+	Spectrum fValue;
 };
 
 class GlassMaterial : public SurfaceMaterial {
@@ -197,7 +198,7 @@ public:
 		transmitionSpecularBounce = transSpecularBounce;
 	}
 
-	bool IsLambertian() const { return false; }
+	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
 	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
