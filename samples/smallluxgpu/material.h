@@ -100,7 +100,7 @@ public:
 		(*wo) = Normalize(u * (cosf(r1) * r2s) + v * (sinf(r1) * r2s) + w * sqrtf(1.f - r2));
 
 		specularBounce = false;
-		*pdf = AbsDot(wi, shadeN) * INV_PI;
+		*pdf = Dot(wi, shadeN) * INV_PI;
 
 		return KdOverPI;
 	}
@@ -128,10 +128,11 @@ public:
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		const Vector dir = -wi;
-		(*wo) = dir - (2.f * Dot(shadeN, dir)) * Vector(shadeN);
+		const float dp = Dot(shadeN, dir);
+		(*wo) = dir - (2.f * dp) * Vector(shadeN);
 
 		specularBounce = reflectionSpecularBounce;
-		*pdf = 1.f;
+		*pdf = -dp;
 
 		return Kr;
 	}
@@ -244,6 +245,7 @@ public:
 		if (u0 < P) {
 			(*wo) = reflDir;
 
+			// I don't multiply for Dot(wi, shadeN) in order to avoid fireflies
 			*pdf = P / Re;
 			specularBounce = reflectionSpecularBounce;
 
@@ -251,7 +253,7 @@ public:
 		} else {
 			(*wo) = transDir;
 
-			*pdf = (1.f - P) / Tr;
+			*pdf = -ddn * (1.f - P) / Tr;
 			specularBounce = transmitionSpecularBounce;
 
 			return Krefrct;

@@ -181,7 +181,7 @@ public:
 		const Spectrum f = triSurfMat->Sample_f(wi, &wo, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 			&fPdf, specularBounce) * triInterpCol;
-		if (f.Black()) {
+		if ((fPdf <= 0.0f) || f.Black()) {
 			if (tracedShadowRayCount > 0)
 				state = ONLY_SHADOW_RAYS;
 			else {
