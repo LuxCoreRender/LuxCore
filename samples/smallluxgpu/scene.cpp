@@ -38,6 +38,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	maxPathDepth = 3;
 	shadowRayCount = 1;
 	rrDepth = 2;
+	rrProb = 0.5f;
 
 	cerr << "Reading scene: " << fileName << endl;
 
