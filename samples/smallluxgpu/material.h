@@ -189,14 +189,21 @@ private:
 
 class GlassMaterial : public SurfaceMaterial {
 public:
-	GlassMaterial(const Spectrum &refl, const Spectrum &refrct, const float iorFact,
-			bool reflSpecularBounce, bool transSpecularBounce) {
+	GlassMaterial(const Spectrum &refl, const Spectrum &refrct, const float outsideIorFact,
+			const float iorFact, bool reflSpecularBounce, bool transSpecularBounce) {
 		Krefl = refl;
 		Krefrct = refrct;
+		ousideIor = outsideIorFact;
 		ior = iorFact;
 
 		reflectionSpecularBounce = reflSpecularBounce;
 		transmitionSpecularBounce = transSpecularBounce;
+
+		const float nc = ousideIor;
+		const float nt = ior;
+		const float a = nt - nc;
+		const float b = nt + nc;
+		R0 = a * a / (b * b);
 	}
 
 	bool IsDiffuse() const { return false; }
@@ -214,7 +221,7 @@ public:
 		// Ray from outside going in ?
 		const bool into = (Dot(N, shadeN) > 0);
 
-		const float nc = 1.f;
+		const float nc = ousideIor;
 		const float nt = ior;
 		const float nnt = into ? (nc / nt) : (nt / nc);
 		const float ddn = Dot(-wi, shadeN);
@@ -233,9 +240,6 @@ public:
 		const Vector nkk = kk * Vector(N);
 		const Vector transDir = Normalize(nnt * (-wi) - nkk);
 
-		const float a = nt - nc;
-		const float b = nt + nc;
-		const float R0 = a * a / (b * b);
 		const float c = 1.f - (into ? -ddn : Dot(transDir, N));
 
 		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
@@ -265,7 +269,8 @@ public:
 
 private:
 	Spectrum Krefl, Krefrct;
-	float ior;
+	float ousideIor, ior;
+	float R0;
 	bool reflectionSpecularBounce, transmitionSpecularBounce;
 };
 
