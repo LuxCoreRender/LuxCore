@@ -116,12 +116,12 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			materials.push_back(mat);
 		} else if (matType == "glass") {
 			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 9)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 9 parameters)");
+			if (vf.size() != 10)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 10 parameters)");
 			const Spectrum Krfl(vf.at(0), vf.at(1), vf.at(2));
 			const Spectrum Ktrn(vf.at(3), vf.at(4), vf.at(5));
 
-			GlassMaterial *mat = new GlassMaterial(Krfl, Ktrn, vf.at(6), vf.at(7) != 0.f, vf.at(8) != 0.f);
+			GlassMaterial *mat = new GlassMaterial(Krfl, Ktrn, vf.at(6), vf.at(7), vf.at(8) != 0.f, vf.at(9) != 0.f);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else
