@@ -1,4 +1,5 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
+#scene.materials.matte.shell = 0.0 0.0 0.75
 #scene.materials.mirror.shell = 0.75 0.75 0.75 1
 #scene.materials.mattemirror.shell = 0.0 0.0 0.75 0.05 0.05 0.05 1
 scene.materials.glass.shell = 0.69 0.78 1.0 0.69 0.78 1.0 1.45 1 0

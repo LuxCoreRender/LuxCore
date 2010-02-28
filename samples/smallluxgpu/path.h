@@ -143,7 +143,7 @@ public:
 		const Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
 
 		tracedShadowRayCount = 0;
-		if (triSurfMat->IsLambertian()) {
+		if (triSurfMat->IsDiffuse()) {
 			// Direct light sampling
 
 			// Trace shadow rays
