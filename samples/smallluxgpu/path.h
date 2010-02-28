@@ -194,10 +194,10 @@ public:
 			return;
 		}
 
-		const float dp = RdotShadeN / fPdf;
+		
 		if (depth > scene->rrDepth) {
 			// Russian Roulette
-			const float p = Min(1.f, f.Filter() * dp);
+			const float p = 0.75f;
 
 			if (p >= sample.GetLazyValue())
 				throughput /= p;
@@ -216,6 +216,7 @@ public:
 			}
 		}
 
+		const float dp = RdotShadeN / fPdf;
 		throughput *= dp;
 		throughput *= f;
 

@@ -81,7 +81,8 @@ void RenderingConfig::Init() {
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
 	scene->maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	scene->shadowRayCount = cfg.GetInt("path.shadowrays", 1);
-	scene->rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
+	scene->rrDepth = cfg.GetInt("path.russianroulette.depth", scene->rrDepth);
+	scene->rrProb = cfg.GetInt("path.russianroulette.prob", scene->rrProb);
 	StartAllRenderThreads();
 }
 

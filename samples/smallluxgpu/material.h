@@ -132,9 +132,9 @@ public:
 		(*wo) = dir - (2.f * dp) * Vector(shadeN);
 
 		specularBounce = reflectionSpecularBounce;
-		*pdf = -dp;
+		*pdf = 1.f;
 
-		return Kr;
+		return Kr / (-dp);
 	}
 
 	const Spectrum &GetKr() const { return Kr; }
@@ -233,7 +233,7 @@ public:
 			*pdf = 1.f;
 			specularBounce = reflectionSpecularBounce;
 
-			return Krefl;
+			return Krefl; // / (-ddn);
 		}
 
 		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
@@ -249,18 +249,18 @@ public:
 		if (u0 < P) {
 			(*wo) = reflDir;
 
-			// I don't multiply for Dot(wi, shadeN) in order to avoid fireflies
 			*pdf = P / Re;
 			specularBounce = reflectionSpecularBounce;
 
-			return Krefl;
+			// I don't multiply for Dot(wi, shadeN) in order to avoid fireflies
+			return Krefl; // / (-ddn);
 		} else {
 			(*wo) = transDir;
 
-			*pdf = -ddn * (1.f - P) / Tr;
+			*pdf = (1.f - P) / Tr;
 			specularBounce = transmitionSpecularBounce;
 
-			return Krefrct;
+			return Krefrct / (-ddn);
 		}
 	}
 

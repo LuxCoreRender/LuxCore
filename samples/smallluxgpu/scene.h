@@ -64,6 +64,7 @@ public:
 	int maxPathDepth;
 	unsigned int shadowRayCount;
 	int rrDepth;
+	float rrProb;
 
 	PerspectiveCamera *camera;
 
