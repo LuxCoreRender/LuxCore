@@ -20,7 +20,7 @@
 ###########################################################################
 
 set(SLG_VERSION_MAJOR 1)
-set(SLG_VERSION_MINOR 4beta1)
+set(SLG_VERSION_MINOR 4beta2dev)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -41,5 +41,5 @@ set(SMALLLUXGPU_SRCS
     scene.cpp
     smallluxgpu.cpp)
 
-add_executable(smallluxgpu ${SMALLLUXGPU_SRCS})
-target_link_libraries(smallluxgpu luxrays ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES})
+add_executable(slg ${SMALLLUXGPU_SRCS})
+target_link_libraries(slg luxrays ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES})
