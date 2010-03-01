@@ -25,7 +25,7 @@
 // The configured options and settings for LuxRays
 
 #define LUXRAYS_VERSION_MAJOR "0"
-#define LUXRAYS_VERSION_MINOR "1"
+#define LUXRAYS_VERSION_MINOR "1alpha0dev"
 
 #if defined(__APPLE__)
 #if (__GNUC__ == 3) || (__GNUC__ == 4)

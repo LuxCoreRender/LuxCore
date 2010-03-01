@@ -35,7 +35,7 @@ message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
 # The version number.
 set(LUXRAYS_VERSION_MAJOR 0)
-set(LUXRAYS_VERSION_MINOR 1)
+set(LUXRAYS_VERSION_MINOR 1alpha0dev)
 
 set(LUXRAYS_SOURCE_DIR src)
 set(LUXRAYS_INCLUDE_DIR include)
@@ -167,3 +167,31 @@ add_library(luxrays STATIC ${LUXRAYS_SRCS})
 
 add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/smallluxgpu)
+
+###########################################################################
+#
+# Binary samples directory
+#
+###########################################################################
+
+set(CMAKE_INSTALL_PREFIX .)
+set(LUXRAYS_BIN_SAMPLES_DIR "luxrays-v${LUXRAYS_VERSION_MAJOR}.${LUXRAYS_VERSION_MINOR}")
+
+ADD_CUSTOM_COMMAND(
+    OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}"
+    COMMAND rm -rf ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMAND mkdir ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMAND cp -r scenes ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMAND cp samples/smallluxgpu/bat/*.bat ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMAND cp bin/slg ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMAND cp AUTHORS.txt COPYING.txt ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}")
+
+ADD_CUSTOM_COMMAND(
+    OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}.tgz"
+    COMMAND tar zcvf ${LUXRAYS_BIN_SAMPLES_DIR}.tgz ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMAND rm -rf ${LUXRAYS_BIN_SAMPLES_DIR}
+    DEPENDS ${LUXRAYS_BIN_SAMPLES_DIR}
+    COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
+
+ADD_CUSTOM_TARGET(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
