@@ -39,8 +39,9 @@ using namespace luxrays;
 
 size_t OpenCLIntersectionDevice::RayBufferSize = 65536;
 
-OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const cl::Device &device,
-		const unsigned int index) :	IntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
+OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
+		const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize) :
+		IntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
 	deviceName = device.getInfo<CL_DEVICE_NAME > ().c_str();
 	reportedPermissionError = false;
 	intersectionThread = NULL;
@@ -88,8 +89,11 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const
 
 		bvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << bvhWorkGroupSize);
-		// TODO: hard code the workgroup size to 64
-		bvhWorkGroupSize = 64;
+
+		if (forceWorkGroupSize > 0) {
+			bvhWorkGroupSize = forceWorkGroupSize;
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << bvhWorkGroupSize);
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -120,8 +124,11 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context, const
 
 		qbvhKernel->getWorkGroupInfo<size_t>(device, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << qbvhWorkGroupSize);
-		// TODO: hard code the workgroup size to 64
-		qbvhWorkGroupSize = 64;
+
+		if (forceWorkGroupSize > 0) {
+			qbvhWorkGroupSize = forceWorkGroupSize;
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << qbvhWorkGroupSize);
+		}
 	}
 }
 
