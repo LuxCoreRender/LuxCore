@@ -221,12 +221,18 @@ void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCP
 		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[i];
 
 		if (haveSelectionString) {
-			if (oclDeviceConfig.at(i) == '1')
+			if (oclDeviceConfig.at(i) == '1') {
+				if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)
+					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				selectedDescs.push_back(desc);
+			}
 		} else {
 			if ((useCPUs && desc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU) ||
-					(useGPUs && desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU))
+					(useGPUs && desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
+				if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)
+					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				selectedDescs.push_back(descs[i]);
+			}
 		}
 	}
 

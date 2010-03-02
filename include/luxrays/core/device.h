@@ -171,12 +171,15 @@ public:
 	OpenCLDeviceDescription(const std::string deviceName, const OpenCLDeviceType type,
 		const size_t devIndex, const int deviceComputeUnits, const size_t deviceMaxMemory) :
 		DeviceDescription(deviceName, DEVICE_TYPE_OPENCL), oclType(type), deviceIndex(devIndex),
-		computeUnits(deviceComputeUnits), maxMemory(deviceMaxMemory) { }
+		computeUnits(deviceComputeUnits), maxMemory(deviceMaxMemory), forceWorkGroupSize(0) { }
 
 	OpenCLDeviceType GetOpenCLType() const { return oclType; }
 	size_t GetDeviceIndex() const { return deviceIndex; }
 	int GetComputeUnits() const { return computeUnits; }
 	size_t GetMaxMemory() const { return maxMemory; }
+	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
+
+	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
 
 	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 
@@ -185,11 +188,16 @@ protected:
 	size_t deviceIndex;
 	int computeUnits;
 	size_t maxMemory;
+
+	// The use of this field is not multi-thread safe (i.e. OpenCLDeviceDescription
+	// is shared among all threads)
+	mutable unsigned int forceWorkGroupSize;
 };
 
 class OpenCLIntersectionDevice : public IntersectionDevice {
 public:
-	OpenCLIntersectionDevice(const Context *context, const cl::Device &device, const unsigned int index);
+	OpenCLIntersectionDevice(const Context *context, const cl::Device &device,
+			const unsigned int index, const unsigned int forceWorkGroupSize);
 	~OpenCLIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);
