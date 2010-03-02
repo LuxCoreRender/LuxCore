@@ -240,12 +240,12 @@ void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCP
 		cerr << "No OpenCL device selected" << endl;
 	else {
 		// Allocate devices
-		const size_t gpuRenderThreadCount = ((oclDeviceThreads < 1) || (selectedDescs.size() == 0)) ?
+		const size_t gpuRenderThreadCount = (oclDeviceThreads < 1) ?
 			(2 * selectedDescs.size()) : oclDeviceThreads;
-		if ((oclDeviceThreads == 1) && (selectedDescs.size() == 1)) {
+		if ((gpuRenderThreadCount == 1) && (selectedDescs.size() == 1)) {
 			// Optimize the special case of one render thread and one GPU
 			intersectionGPUDevices =  ctx->AddIntersectionDevices(selectedDescs);
-		} else if ((oclDeviceThreads > 1) && (selectedDescs.size() == 1)) {
+		} else if ((gpuRenderThreadCount > 1) && (selectedDescs.size() == 1)) {
 			// Optimize the special case of many render thread and one GPU
 			intersectionGPUDevices =  ctx->AddVirtualM2OIntersectionDevices(gpuRenderThreadCount, selectedDescs);
 		} else {
