@@ -82,7 +82,7 @@ void VirtualM2OIntersectionDevice::RayBufferRouter(VirtualM2OIntersectionDevice 
 VirtualM2OIntersectionDevice::VirtualM2ODevInstance::VirtualM2ODevInstance(
 	VirtualM2OIntersectionDevice *device, const size_t index) :
 			IntersectionDevice(device->realDevice->GetContext(), DEVICE_TYPE_VIRTUAL, index) {
-	char buf[64];
+	char buf[256];
 	sprintf(buf, "VirtualM2ODevice-%03d-%s", (int)index, device->realDevice->GetName().c_str());
 	deviceName = std::string(buf);
 
@@ -180,7 +180,7 @@ VirtualO2MIntersectionDevice::VirtualO2MIntersectionDevice(std::vector<Intersect
 		const size_t index) : IntersectionDevice(devices[0]->GetContext(), DEVICE_TYPE_VIRTUAL, index) {
 	assert (devices.size() > 0);
 
-	char buf[64];
+	char buf[256];
 	sprintf(buf, "VirtualO2MDevice-%03d", (int)deviceIndex);
 	deviceName = std::string(buf);
 
