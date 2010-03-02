@@ -62,6 +62,10 @@ void Properties::LoadFile(const std::string &fileName) {
 		std::string key(line.substr(0, idx));
 		StringTrim(key);
 		std::string value(line.substr(idx + 1));
+		// Check if the last char is a LF or a CR and remove that (in case of
+		// a DOS file red under Linux/MacOS)
+		if ((value.size() > 0) && ((value[value.size() - 1] == '\n') || (value[value.size() - 1] == '\r')))
+			value.resize(value.size() - 1);
 		StringTrim(value);
 
 		props.erase(key);
