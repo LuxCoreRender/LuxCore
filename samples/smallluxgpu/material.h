@@ -75,7 +75,7 @@ public:
 
 
 	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
-		return KdOverPI;
+			return KdOverPI;
 	}
 
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
