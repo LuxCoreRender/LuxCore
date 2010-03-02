@@ -93,6 +93,8 @@ Context::~Context() {
 	}
 	for (size_t i = 0; i < m2mDevices.size(); ++i)
 		delete m2mDevices[i];
+	for (size_t i = 0; i < m2oDevices.size(); ++i)
+		delete m2oDevices[i];
 }
 
 void Context::SetDataSet(const DataSet *dataSet) {
@@ -190,6 +192,21 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(cons
 	VirtualM2OIntersectionDevice *m2oDevice = new VirtualM2OIntersectionDevice(count, o2mDevice);
 
 	m2mDevices.push_back(m2oDevice);
+	for (unsigned int i = 0; i < count; ++i)
+		devices.push_back(m2oDevice->GetVirtualDevice(i));
+
+	return realDevices;
+}
+
+std::vector<IntersectionDevice *> Context::AddVirtualM2OIntersectionDevices(const unsigned int count,
+		const std::vector<DeviceDescription *> &deviceDesc) {
+	assert (!started);
+	assert (deviceDesc.size() == 1);
+
+	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDesc);
+	VirtualM2OIntersectionDevice *m2oDevice = new VirtualM2OIntersectionDevice(count, realDevices[0]);
+
+	m2oDevices.push_back(m2oDevice);
 	for (unsigned int i = 0; i < count; ++i)
 		devices.push_back(m2oDevice->GetVirtualDevice(i));
 
