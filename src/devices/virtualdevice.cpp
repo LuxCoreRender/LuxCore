@@ -266,6 +266,9 @@ RayBuffer *VirtualO2MIntersectionDevice::PopRayBuffer() {
 
 void VirtualO2MIntersectionDevice::PusherRouter(VirtualO2MIntersectionDevice *virtualDevice) {
 	try {
+		size_t lastIndex = 0;
+		const size_t devCount = virtualDevice->realDevices.size();
+
 		while (!boost::this_thread::interruption_requested()) {
 			RayBuffer *rayBuffer = virtualDevice->todoRayBufferQueue.Pop();
 
@@ -274,15 +277,17 @@ void VirtualO2MIntersectionDevice::PusherRouter(VirtualO2MIntersectionDevice *vi
 // Windows crap ...
 #undef max
 			size_t minQueueSize = std::numeric_limits<size_t>::max();
-			for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
-				const size_t queueSize = virtualDevice->realDevices[i]->GetQueueSize();
+			for (size_t i = 0; i < devCount; ++i) {
+				const size_t indexCheck = (lastIndex + i) % devCount;
+				const size_t queueSize = virtualDevice->realDevices[indexCheck]->GetQueueSize();
 				if (queueSize < minQueueSize) {
-					index = i;
+					index = indexCheck;
 					minQueueSize = queueSize;
 				}
 			}
 
 			virtualDevice->realDevices[index]->PushRayBuffer(rayBuffer);
+			lastIndex = index;
 		}
 	} catch (boost::thread_interrupted) {
 		// Time to exit
