@@ -153,6 +153,17 @@ public:
 		condition.notify_all();
 	}
 
+	RayBuffer *TryPop() {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
+
+		if (queue.size() > 0) {
+			RayBuffer *rayBuffer = queue.front();
+			queue.pop_front();
+			return rayBuffer;
+		} else
+			return NULL;
+	}
+
 	RayBuffer *Pop() {
 		boost::unique_lock<boost::mutex> lock(queueMutex);
 

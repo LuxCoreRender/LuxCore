@@ -230,7 +230,7 @@ protected:
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 
-	void TraceRayBuffer(RayBuffer *rayBuffer);
+	void TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event);
 
 	OpenCLDeviceType oclType;
 	boost::thread *intersectionThread;
