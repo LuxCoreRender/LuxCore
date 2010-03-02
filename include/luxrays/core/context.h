@@ -60,6 +60,8 @@ public:
 	std::vector<IntersectionDevice *> AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
 	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
 		const std::vector<DeviceDescription *> &deviceDesc);
+	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
+		const std::vector<DeviceDescription *> &deviceDesc);
 
 	void SetDataSet(const DataSet *dataSet);
 	void Start();
@@ -90,6 +92,7 @@ private:
 	std::vector<IntersectionDevice *> devices;
 	// Virtual devices
 	std::vector<VirtualM2OIntersectionDevice *> m2mDevices;
+	std::vector<VirtualM2OIntersectionDevice *> m2oDevices;
 
 	bool started;
 };

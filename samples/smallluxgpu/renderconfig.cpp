@@ -239,6 +239,9 @@ void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCP
 		if ((oclDeviceThreads == 1) && (selectedDescs.size() == 1)) {
 			// Optimize the special case of one render thread and one GPU
 			intersectionGPUDevices =  ctx->AddIntersectionDevices(selectedDescs);
+		} else if ((oclDeviceThreads > 1) && (selectedDescs.size() == 1)) {
+			// Optimize the special case of many render thread and one GPU
+			intersectionGPUDevices =  ctx->AddVirtualM2OIntersectionDevices(gpuRenderThreadCount, selectedDescs);
 		} else {
 			// Create and start the virtual devices (only if there is more than one GPUs)
 			intersectionGPUDevices =  ctx->AddVirtualM2MIntersectionDevices(gpuRenderThreadCount, selectedDescs);
