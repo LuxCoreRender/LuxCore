@@ -80,9 +80,9 @@ public:
 
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
-		float r1 = 2.f * M_PI * u0;
-		float r2 = u1;
-		float r2s = sqrt(r2);
+		const float r1 = 2.f * M_PI * u0;
+		const float r2 = u1;
+		const float r2s = sqrt(r2);
 		const Vector w(shadeN);
 
 		Vector u;
@@ -147,7 +147,7 @@ private:
 class MatteMirrorMaterial : public SurfaceMaterial {
 public:
 	MatteMirrorMaterial(const Spectrum &col, const Spectrum refl, bool reflSpecularBounce) :
-		matte(col), mirror (refl, reflSpecularBounce) {
+		matte(col), mirror(refl, reflSpecularBounce) {
 		matteFilter = matte.GetKd().Filter();
 		mirrorFilter = mirror.GetKr().Filter();
 		totFilter = matteFilter + mirrorFilter;
@@ -184,7 +184,6 @@ private:
 	MatteMaterial matte;
 	MirrorMaterial mirror;
 	float matteFilter, mirrorFilter, totFilter, mattePdf, mirrorPdf;
-	Spectrum fValue;
 };
 
 class GlassMaterial : public SurfaceMaterial {
@@ -272,6 +271,109 @@ private:
 	float ousideIor, ior;
 	float R0;
 	bool reflectionSpecularBounce, transmitionSpecularBounce;
+};
+
+class MetalMaterial : public SurfaceMaterial {
+public:
+	MetalMaterial(const Spectrum &refl, const float exp, bool reflSpecularBounce) {
+		Kr = refl;
+		exponent = 1.f / (exp + 1.f);
+		reflectionSpecularBounce = reflSpecularBounce;
+	}
+
+	bool IsDiffuse() const { return false; }
+	bool IsSpecular() const { return true; }
+
+	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+		throw std::runtime_error("Internal error, called MetalMaterial::f()");
+	}
+
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float phi = 2.f * M_PI * u0;
+		const float cosTheta = powf(1.f - u1, exponent);
+		const float sinTheta = sqrtf(1.f - cosTheta * cosTheta);
+		const float x = cosf(phi) * sinTheta;
+		const float y = sinf(phi) * sinTheta;
+		const float z = cosTheta;
+
+		const Vector dir = -wi;
+		const float dp = Dot(shadeN, dir);
+		const Vector w = dir - (2.f * dp) * Vector(shadeN);
+
+		Vector u;
+		if (fabsf(shadeN.x) > .1f) {
+			const Vector a(0.f, 1.f, 0.f);
+			u = Cross(a, w);
+		} else {
+			const Vector a(1.f, 0.f, 0.f);
+			u = Cross(a, w);
+		}
+		u = Normalize(u);
+		Vector v = Cross(w, u);
+
+		(*wo) = x * u + y * v + z * w;
+
+		if (Dot(*wo, shadeN) > 0.f) {
+			specularBounce = reflectionSpecularBounce;
+			*pdf = 1.f;
+
+			return Kr / (-dp);
+		} else {
+			*pdf = 0.f;
+
+			return Spectrum();
+		}
+	}
+
+	const Spectrum &GetKr() const { return Kr; }
+
+private:
+	Spectrum Kr;
+	float exponent;
+	bool reflectionSpecularBounce;
+};
+
+class MatteMetalMaterial : public SurfaceMaterial {
+public:
+	MatteMetalMaterial(const Spectrum &col, const Spectrum refl, const float exp, bool reflSpecularBounce) :
+		matte(col), metal(refl, exp, reflSpecularBounce) {
+		matteFilter = matte.GetKd().Filter();
+		metalFilter = metal.GetKr().Filter();
+		totFilter = matteFilter + metalFilter;
+
+		mattePdf = matteFilter / totFilter;
+		mirrorPdf = metalFilter / totFilter;
+	}
+
+	bool IsDiffuse() const { return true; }
+	bool IsSpecular() const { return true; }
+
+	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+		return matte.f(wi, wo, N) * mattePdf;
+	}
+
+	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float comp = u2 * totFilter;
+
+		if (comp > matteFilter) {
+			const Spectrum f = metal.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			*pdf *= mirrorPdf;
+
+			return f;
+		} else {
+			const Spectrum f = matte.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			*pdf *= mattePdf;
+
+			return f;
+		}
+	}
+
+private:
+	MatteMaterial matte;
+	MetalMaterial metal;
+	float matteFilter, metalFilter, totFilter, mattePdf, mirrorPdf;
 };
 
 #endif	/* _MATERIAL_H */
