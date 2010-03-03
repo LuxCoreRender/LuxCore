@@ -125,6 +125,25 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			GlassMaterial *mat = new GlassMaterial(Krfl, Ktrn, vf.at(6), vf.at(7), vf.at(8) != 0.f, vf.at(9) != 0.f);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
+		} else if (matType == "metal") {
+			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
+			if (vf.size() != 5)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 5 parameters)");
+			const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+
+			MetalMaterial *mat = new MetalMaterial(col, vf.at(3), vf.at(4) != 0.f);
+			materialIndices[matName] = materials.size();
+			materials.push_back(mat);
+		} else if (matType == "mattemetal") {
+			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
+			if (vf.size() != 8)
+				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 8 parameters)");
+			const Spectrum Kd(vf.at(0), vf.at(1), vf.at(2));
+			const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
+
+			MatteMetalMaterial *mat = new MatteMetalMaterial(Kd, Kr, vf.at(6), vf.at(7) != 0.f);
+			materialIndices[matName] = materials.size();
+			materials.push_back(mat);
 		} else
 			throw runtime_error("Unknown material type " + matType);
 	}
