@@ -229,35 +229,34 @@ __kernel void Intersect(
 	nodeStack[0] = 0; // first node to handle: root node
 
 	while (todoNode >= 0) {
-		// Leaves are identified by a negative index
-		if (!QBVHNode_IsLeaf(nodeStack[todoNode])) {
-			__global QBVHNode *node = &nodes[nodeStack[todoNode]];
-			--todoNode;
+		const int nodeData = nodeStack[todoNode];
+		--todoNode;
 
+		// Leaves are identified by a negative index
+		if (!QBVHNode_IsLeaf(nodeData)) {
+			__global QBVHNode *node = &nodes[nodeData];
 			const int4 visit = QBVHNode_BBoxIntersect(node, &ray4, invDir, signs);
 
 			const int4 children = node->children;
-			if (visit.s0)
-				nodeStack[++todoNode] = children.s0;
-			if (visit.s1)
-				nodeStack[++todoNode] = children.s1;
-			if (visit.s2)
-				nodeStack[++todoNode] = children.s2;
 			if (visit.s3)
 				nodeStack[++todoNode] = children.s3;
+			if (visit.s2)
+				nodeStack[++todoNode] = children.s2;
+			if (visit.s1)
+				nodeStack[++todoNode] = children.s1;
+			if (visit.s0)
+				nodeStack[++todoNode] = children.s0;
 		} else {
 			//----------------------
 			// It is a leaf,
 			// all the informations are encoded in the index
-			const int leafData = nodeStack[todoNode];
-			--todoNode;
 
-			if (QBVHNode_IsEmpty(leafData))
+			if (QBVHNode_IsEmpty(nodeData))
 				continue;
 
 			// Perform intersection
-			const unsigned int nbQuadPrimitives = QBVHNode_NbQuadPrimitives(leafData);
-			const unsigned int offset = QBVHNode_FirstQuadIndex(leafData);
+			const unsigned int nbQuadPrimitives = QBVHNode_NbQuadPrimitives(nodeData);
+			const unsigned int offset = QBVHNode_FirstQuadIndex(nodeData);
 
 			for (unsigned int primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber)
 				QuadTriangle_Intersect(&quadTris[primNumber], &ray4, &rayHit);
