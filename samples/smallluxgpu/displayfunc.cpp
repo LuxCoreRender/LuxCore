@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef WIN32
+#if defined(WIN32)
 #define _USE_MATH_DEFINES
 #endif
 #include <math.h>
@@ -386,6 +386,7 @@ void RunGlut() {
 	glutDisplayFunc(displayFunc);
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
+
 	glutTimerFunc(config->screenRefreshInterval, timerFunc, 0);
 
 	glMatrixMode(GL_PROJECTION);
