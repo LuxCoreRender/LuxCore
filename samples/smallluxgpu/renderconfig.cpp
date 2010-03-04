@@ -149,11 +149,11 @@ void RenderingConfig::Init(const bool lowLatency, const string &sceneFileName, c
 	cerr << "Starting "<< renderThreadCount << " render threads" << endl;
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (intersectionAllDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
-			NativeRenderThread *t = new NativeRenderThread(i,
+			NativeRenderThread *t = new NativeRenderThread(i, i / (float)renderThreadCount,
 					(NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, lowLatency);
 			renderThreads.push_back(t);
 		} else {
-			DeviceRenderThread *t = new DeviceRenderThread(i,
+			DeviceRenderThread *t = new DeviceRenderThread(i, i / (float)renderThreadCount,
 					intersectionAllDevices[i], scene, lowLatency);
 			renderThreads.push_back(t);
 		}

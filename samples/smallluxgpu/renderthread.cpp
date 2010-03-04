@@ -40,7 +40,8 @@ RenderThread::~RenderThread() {
 // NativeRenderThread
 //------------------------------------------------------------------------------
 
-NativeRenderThread::NativeRenderThread(unsigned int index, NativeThreadIntersectionDevice *device,
+NativeRenderThread::NativeRenderThread(unsigned int index, const float samplingStart,
+		NativeThreadIntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
 
@@ -52,8 +53,12 @@ NativeRenderThread::NativeRenderThread(unsigned int index, NativeThreadIntersect
 
 	// Ray buffer (small buffers work well with CPU)
 	const size_t rayBufferSize = 1024;
+	const unsigned int startLine = Clamp<unsigned int>(
+		scene->camera->film->GetHeight() * samplingStart,
+			0, scene->camera->film->GetHeight() - 1);
 	sampler = new RandomSampler(lowLatency, threadIndex + 1,
-		scene->camera->film->GetWidth(), scene->camera->film->GetHeight());
+		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
+		startLine);
 
 	pathIntegrator = new PathIntegrator(scene, sampler, sampleBuffer);
 	rayBuffer = new RayBuffer(rayBufferSize);
@@ -131,7 +136,8 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 // DeviceRenderThread
 //------------------------------------------------------------------------------
 
-DeviceRenderThread::DeviceRenderThread(unsigned int index, IntersectionDevice *device,
+DeviceRenderThread::DeviceRenderThread(unsigned int index, const float samplingStart,
+		IntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
 
@@ -144,8 +150,12 @@ DeviceRenderThread::DeviceRenderThread(unsigned int index, IntersectionDevice *d
 	// Ray buffer
 	// TODO: cross check RAY_BUFFER_SIZE with the Intersection device
 	const size_t rayBufferSize = lowLatency ? (RAY_BUFFER_SIZE / 8) : RAY_BUFFER_SIZE;
+	const unsigned int startLine = Clamp<unsigned int>(
+		scene->camera->film->GetHeight() * samplingStart,
+			0, scene->camera->film->GetHeight() - 1);
 	sampler = new RandomSampler(lowLatency, threadIndex + 1,
-		scene->camera->film->GetWidth(), scene->camera->film->GetHeight());
+		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
+		startLine);
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		pathIntegrators[i] = new PathIntegrator(scene, sampler, sampleBuffer);
 		rayBuffers[i] = new RayBuffer(rayBufferSize);
