@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
 			width = atoi(argv[6]);
 			height = atoi(argv[7]);
 		} else if (argc == 5) {
-			config = new RenderingConfig(false, "scenes/luxball.scn", 384, 384, atoi(argv[1]), (atoi(argv[2]) == 1), (atoi(argv[3]) == 1), atoi(argv[4]));
+			config = new RenderingConfig(false, "scenes/luxball/luxball.scn", 640, 480, atoi(argv[1]), (atoi(argv[2]) == 1), (atoi(argv[3]) == 1), atoi(argv[4]));
 			return BatchMode(180.0);
 		} else if (argc == 2) {
 			config = new RenderingConfig(argv[1]);
