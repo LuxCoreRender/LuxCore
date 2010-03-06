@@ -1,0 +1,27 @@
+ply
+format ascii 1.0
+comment Created by Blender3D 248 - www.blender.org, source file: simple.blend
+element vertex 10
+property float x
+property float y
+property float z
+property uchar red
+property uchar green
+property uchar blue
+element face 4
+property list uchar uint vertex_indices
+end_header
+-3.579073 -5.996031 5.279146 255 255 255
+-3.348852 -5.786259 5.863502 255 255 255
+-2.902866 -6.275723 5.863502 255 255 255
+-3.133087 -6.485495 5.279146 255 255 255
+1.478216 -5.454809 5.823303 255 255 255
+2.354369 -5.165656 5.823303 255 255 255
+2.596576 -5.899560 5.319345 255 255 255
+1.478216 -5.454809 5.823303 255 255 255
+2.596576 -5.899560 5.319345 255 255 255
+1.720423 -6.188713 5.319345 255 255 255
+3 0 1 2 
+3 0 2 3 
+3 4 5 6 
+3 7 8 9 
