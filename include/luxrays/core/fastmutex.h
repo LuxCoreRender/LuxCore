@@ -43,7 +43,7 @@ private:
 	CRITICAL_SECTION cs;
 
 	fastmutex(fastmutex const &);
-	fastmutex & operator=(fastmutex const &);
+	fastmutex &operator=(fastmutex const &);
 
 public:
 	fastmutex() {
@@ -72,14 +72,14 @@ public:
 
 	class scoped_lock {
 	private:
-		fastmutex & m_;
+		fastmutex &m_;
 		bool has_lock;
 
 		scoped_lock(scoped_lock const &);
-		scoped_lock & operator=(scoped_lock const &);
+		scoped_lock &operator=(scoped_lock const &);
 
 	public:
-		scoped_lock(fastmutex & m) : m_(m) {
+		scoped_lock(fastmutex &m) : m_(m) {
 			m_.lock();
 			has_lock = true;
 		}
@@ -94,6 +94,8 @@ public:
 				m_.unlock();
 			has_lock = false;
 		}
+
+		friend class fastcondvar;
 	};
 };
 
@@ -102,11 +104,16 @@ private:
 	CONDITION_VARIABLE cvar;
 
 public:
-	fastcondvar() { };
+	fastcondvar() { InitializeConditionVariable(&cvar); };
 	~fastcondvar() { };
 
-	void wait(fastmutex &m) {
-		SleepConditionVariableCS(&cvar, &m.cs, INFINITE);
+	void wait(fastmutex::scoped_lock &l) {
+		SleepConditionVariableCS(&cvar, &l.m_.cs, 250); //INFINITE);
+
+#if defined(WIN32)
+		if (boost::this_thread::interruption_requested())
+			throw boost::thread_interrupted();
+#endif
 	}
 
 	void notify_one() {
