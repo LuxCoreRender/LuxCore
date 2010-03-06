@@ -286,7 +286,7 @@ protected:
 		}
 	}
 
-	boost::mutex radianceMutex;
+	fastmutex radianceMutex;
 	Spectrum *pixelsRadiance;
 	float *pixelWeights;
 
@@ -579,7 +579,7 @@ protected:
 		}
 	}
 
-	boost::mutex radianceMutex;
+	fastmutex radianceMutex;
 	GaussianFilter filter2x2, filter4x4;
 	float *filterTable2x2, *filterTable4x4;
 	Spectrum *pixelsRadiance;
