@@ -47,6 +47,8 @@ typedef unsigned int u_int;
         Unsupported Platform !!!
 #endif
 
+#include "luxrays/core/fastmutex.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif

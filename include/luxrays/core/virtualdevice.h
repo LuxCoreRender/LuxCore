@@ -23,10 +23,8 @@
 #ifndef _LUXRAYS_VIRTUALDEVICE_H
 #define	_LUXRAYS_VIRTUALDEVICE_H
 
-#include <boost/thread/mutex.hpp>
-
 #include "luxrays/luxrays.h"
-#include "device.h"
+#include "luxrays/core/device.h"
 
 namespace luxrays {
 
@@ -77,7 +75,7 @@ private:
 	size_t virtualDeviceCount;
 	IntersectionDevice *realDevice;
 
-	boost::mutex virtualDeviceMutex;
+	fastmutex virtualDeviceMutex;
 	VirtualM2ODevInstance **virtualDeviceInstances;
 
 	boost::thread *routerThread;
