@@ -26,9 +26,9 @@
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 
-#define RAY_EPSILON 1e-4f
-
 namespace luxrays {
+
+extern float RAY_EPSILON;
 
 class  Ray {
 public:
