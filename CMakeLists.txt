@@ -146,6 +146,7 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/core/device.cpp
     ${LUXRAYS_SOURCE_DIR}/core/geometry/bbox.cpp
     ${LUXRAYS_SOURCE_DIR}/core/geometry/matrix4x4.cpp
+	${LUXRAYS_SOURCE_DIR}/core/geometry/ray.cpp
     ${LUXRAYS_SOURCE_DIR}/core/geometry/transform.cpp
     ${LUXRAYS_SOURCE_DIR}/core/trianglemesh.cpp
     ${LUXRAYS_SOURCE_DIR}/devices/opencldevice.cpp

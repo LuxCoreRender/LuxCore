@@ -115,6 +115,11 @@ public:
 	unsigned int v[3];
 };
 
+inline std::ostream & operator<<(std::ostream &os, const Triangle &tri) {
+	os << "Triangle[" << tri.v[0] << ", " << tri.v[1] << ", " << tri.v[2] << "]";
+	return os;
+}
+
 }
 
 #endif	/* _LUXRAYS_TRIANGLE_H */

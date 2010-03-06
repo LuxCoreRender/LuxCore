@@ -115,7 +115,7 @@ inline Vector::Vector(const Normal &n)
 }
 
 inline std::ostream &operator<<(std::ostream &os, const Normal &v) {
-	os << "Normal[" << v.x << ", " << v.y << ", " << "]" << v.z << "]";
+	os << "Normal[" << v.x << ", " << v.y << ", " << v.z << "]";
 	return os;
 }
 
