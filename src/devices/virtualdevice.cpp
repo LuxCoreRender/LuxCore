@@ -96,7 +96,7 @@ VirtualM2OIntersectionDevice::VirtualM2ODevInstance::~VirtualM2ODevInstance() {
 }
 
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::SetDataSet(const DataSet *newDataSet) {
-	fastmutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
 	IntersectionDevice::SetDataSet(newDataSet);
 
 	// Set the real device data set if it is a new one
@@ -105,7 +105,7 @@ void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::SetDataSet(const DataS
 }
 
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Start() {
-	fastmutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
 
 	IntersectionDevice::Start();
 	pendingRayBuffers = 0;
@@ -122,7 +122,7 @@ void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Interrupt() {
 }
 
 void VirtualM2OIntersectionDevice::VirtualM2ODevInstance::Stop() {
-	fastmutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
 
 	// Need to wait for all my pending RayBuffer
 	while (pendingRayBuffers > 0)

@@ -173,7 +173,7 @@ public:
 	}
 
 	virtual void Init(const unsigned int w, unsigned int h) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		if (pixelsRadiance)
 			delete[] pixelsRadiance;
@@ -200,7 +200,7 @@ public:
 	}
 
 	virtual void Reset() {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		for (unsigned int i = 0; i < pixelCount; ++i) {
 			pixelsRadiance[i] = 0.f;
@@ -211,7 +211,7 @@ public:
 	}
 
 	void UpdateScreenBuffer() {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		UpdateScreenBufferImpl();
 	}
@@ -221,7 +221,7 @@ public:
 	}
 
 	void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
 		for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
@@ -231,7 +231,7 @@ public:
 	}
 
 	void SavePPM(const string &fileName) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		// Update pixels
 		UpdateScreenBufferImpl();
@@ -317,7 +317,7 @@ public:
 	}
 
 	void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
 		if (useLargeFilter) {
@@ -406,7 +406,7 @@ public:
 	}
 
 	void Init(const unsigned int w, unsigned int h) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		if (pixelsRadiance)
 			delete[] pixelsRadiance;
@@ -435,7 +435,7 @@ public:
 	}
 
 	void Reset() {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		if (lowLatency) {
 			for (unsigned int i = 0; i < pixelCount; ++i) {
@@ -457,7 +457,7 @@ public:
 	}
 
 	void UpdateScreenBuffer() {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		UpdateScreenBufferImpl();
 	}
@@ -467,7 +467,7 @@ public:
 	}
 
 	virtual void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
 		if (useLargeFilter) {
@@ -482,7 +482,7 @@ public:
 	}
 
 	void SavePPM(const string &fileName) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		// Update pixels
 		UpdateScreenBufferImpl();
@@ -600,7 +600,7 @@ public:
 	}
 
 	void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
-		fastmutex::scoped_lock lock(radianceMutex);
+		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
 		if (useLargeFilter) {

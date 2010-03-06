@@ -133,28 +133,39 @@ public:
 	}
 
 	void Clear() {
-		fastmutex::scoped_lock lock(queueMutex);
+		boost::unique_lock<boost::mutex> lock(queueMutex);
 
 		queue.clear();
 	}
 
 	size_t GetSize() {
-		fastmutex::scoped_lock lock(queueMutex);
+		boost::unique_lock<boost::mutex> lock(queueMutex);
 
 		return queue.size();
 	}
 
 	void Push(RayBuffer *rayBuffer) {
 		{
-			fastmutex::scoped_lock lock(queueMutex);
+			boost::unique_lock<boost::mutex> lock(queueMutex);
 			queue.push_back(rayBuffer);
 		}
 
-		condition.notify_one();
+		condition.notify_all();
+	}
+
+	RayBuffer *TryPop() {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
+
+		if (queue.size() > 0) {
+			RayBuffer *rayBuffer = queue.front();
+			queue.pop_front();
+			return rayBuffer;
+		} else
+			return NULL;
 	}
 
 	RayBuffer *Pop() {
-		fastmutex::scoped_lock lock(queueMutex);
+		boost::unique_lock<boost::mutex> lock(queueMutex);
 
 		while (queue.size() < 1) {
 			// Wait for a new buffer to arrive
@@ -167,8 +178,8 @@ public:
 	}
 
 private:
-	fastmutex queueMutex;
-	fastcondvar condition;
+	boost::mutex queueMutex;
+	boost::condition_variable condition;
 
 	std::deque<RayBuffer *> queue;
 };
