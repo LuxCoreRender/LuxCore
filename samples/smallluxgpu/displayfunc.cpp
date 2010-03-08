@@ -67,7 +67,7 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(60, 350);
 	PrintString(GLUT_BITMAP_8_BY_13, "a, s, d, w or mouse X/Y + mouse button 2 - move camera");
 	glRasterPos2i(60, 330);
-	PrintString(GLUT_BITMAP_8_BY_13, "p - save image.ppm");
+	PrintString(GLUT_BITMAP_8_BY_13, "p/shift+p - save image.ppm/image.png");
 	glRasterPos2i(60, 310);
 	PrintString(GLUT_BITMAP_8_BY_13, "n, m - decrease/increase the minimum screen refresh time");
 	glRasterPos2i(60, 290);
@@ -180,6 +180,10 @@ void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
 			config->scene->camera->film->SavePPM("image.ppm");
+			break;
+		}
+		case 'P': {
+			config->scene->camera->film->SavePNG("image.png");
 			break;
 		}
 		case 27: // Escape key

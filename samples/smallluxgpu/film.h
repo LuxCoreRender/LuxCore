@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <cmath>
 
+#include <png.h>
 #include <boost/thread/mutex.hpp>
 
 #include "smalllux.h"
@@ -137,6 +138,47 @@ public:
 		file.close();
 	}
 
+	virtual void SavePNG(const string &fileName) {
+		const float *pixels = GetScreenBuffer();
+
+		FILE *fp = fopen(fileName.c_str(), "wb");
+
+		png_byte color_type = PNG_COLOR_TYPE_RGB;
+		png_byte bit_depth = 16;
+		png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+		png_infop info_ptr = png_create_info_struct(png_ptr);
+		png_init_io(png_ptr, fp);
+
+		png_set_IHDR(png_ptr, info_ptr, width, height,
+				bit_depth, color_type, PNG_INTERLACE_NONE,
+				PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+		png_write_info(png_ptr, info_ptr);
+
+		std::vector<png_uint_16> row(width * 4);
+
+		for (unsigned int y = 0; y < height; ++y) {
+			int i = 0;
+
+			for (unsigned int x = 0; x < width; ++x) {
+				const int offset = 3 * (x + (height - y - 1) * width);
+
+				png_uint_16 r = static_cast<png_uint_16> (pixels[offset]*255.0f + .5f);
+				png_uint_16 g = static_cast<png_uint_16> (pixels[offset + 1]*255.0f + .5f);
+				png_uint_16 b = static_cast<png_uint_16> (pixels[offset + 2]*255.0f + .5f);
+
+				row[i++] = r;
+				row[i++] = g;
+				row[i++] = b;
+			}
+
+			png_write_row(png_ptr, reinterpret_cast<png_bytep> (&row[0]));
+		}
+
+		png_write_end(png_ptr, NULL);
+		fclose(fp);
+	}
+
 protected:
 	unsigned int width, height;
 	unsigned int pixelCount;
@@ -237,6 +279,15 @@ public:
 		UpdateScreenBufferImpl();
 
 		Film::SavePPM(fileName);
+	}
+
+	void SavePNG(const string &fileName) {
+		boost::mutex::scoped_lock lock(radianceMutex);
+
+		// Update pixels
+		UpdateScreenBufferImpl();
+
+		Film::SavePNG(fileName);
 	}
 
 protected:
@@ -488,6 +539,15 @@ public:
 		UpdateScreenBufferImpl();
 
 		Film::SavePPM(fileName);
+	}
+
+	void SavePNG(const string &fileName) {
+		boost::mutex::scoped_lock lock(radianceMutex);
+
+		// Update pixels
+		UpdateScreenBufferImpl();
+
+		Film::SavePNG(fileName);
 	}
 
 protected:
