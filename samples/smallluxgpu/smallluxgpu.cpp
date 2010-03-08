@@ -100,8 +100,18 @@ static int BatchMode(double stopTime) {
 		std::cerr << buff << std::endl;
 	}
 
-	std::cerr << "Saving image.ppm" << std::endl;
-	config->scene->camera->film->SavePPM("image.ppm");
+	std::string fileName = config->cfg.GetString("image.filename", "image.ppm");
+	std::cerr << "Saving " << fileName << std::endl;
+	if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".png")) {
+		std::cerr << "Using PNG file format" << std::endl;
+		config->scene->camera->film->SavePNG(fileName);
+	} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".ppm")) {
+		std::cerr << "Using PPM file format" << std::endl;
+		config->scene->camera->film->SavePPM(fileName);
+	} else {
+		std::cerr << "Unknown image format extension, using PPM" << std::endl;
+		config->scene->camera->film->SavePPM(fileName);
+	}
 
 	sprintf(buff, "LuxMark index: %.3f", sampleSec / 1000000.0);
 	std::cerr << buff << std::endl;
