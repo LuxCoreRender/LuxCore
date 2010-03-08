@@ -125,11 +125,25 @@ private:
 // NOTE: this class must be thread safe
 class RayBufferQueue {
 public:
+	virtual ~RayBufferQueue() { }
 
-	RayBufferQueue() {
+	virtual void Clear() = 0;
+	virtual size_t GetSizeToDo() = 0;
+	virtual size_t GetSizeDone() = 0;
+
+	virtual void PushToDo(RayBuffer *rayBuffer) = 0;
+	virtual RayBuffer *PopToDo() = 0;
+
+	virtual void PushDone(RayBuffer *rayBuffer) = 0;
+	virtual RayBuffer *PopDone() = 0;
+};
+
+class RayBufferSingleQueue {
+public:
+	RayBufferSingleQueue() {
 	}
 
-	~RayBufferQueue() {
+	~RayBufferSingleQueue() {
 	}
 
 	void Clear() {
@@ -153,17 +167,6 @@ public:
 		condition.notify_all();
 	}
 
-	RayBuffer *TryPop() {
-		boost::unique_lock<boost::mutex> lock(queueMutex);
-
-		if (queue.size() > 0) {
-			RayBuffer *rayBuffer = queue.front();
-			queue.pop_front();
-			return rayBuffer;
-		} else
-			return NULL;
-	}
-
 	RayBuffer *Pop() {
 		boost::unique_lock<boost::mutex> lock(queueMutex);
 
@@ -182,6 +185,31 @@ private:
 	boost::condition_variable condition;
 
 	std::deque<RayBuffer *> queue;
+};
+
+// A one producer, one consumer queue
+class RayBufferQueueO2O : public RayBufferQueue {
+public:
+	RayBufferQueueO2O() { }
+	~RayBufferQueueO2O() { }
+
+	void Clear() {
+		todoQueue.Clear();
+		doneQueue.Clear();
+	}
+
+	size_t GetSizeToDo() { return todoQueue.GetSize(); }
+	size_t GetSizeDone() { return doneQueue.GetSize(); }
+
+	void PushToDo(RayBuffer *rayBuffer) { todoQueue.Push(rayBuffer); }
+	RayBuffer *PopToDo() { return todoQueue.Pop(); }
+
+	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
+	RayBuffer *PopDone() { return doneQueue.Pop(); }
+
+private:
+	RayBufferSingleQueue todoQueue;
+	RayBufferSingleQueue doneQueue;
 };
 
 }
