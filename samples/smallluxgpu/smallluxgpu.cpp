@@ -77,25 +77,33 @@ void SLGTerminate(void) {
 }
 #endif
 
-static int BatchMode(double stopTime) {
+static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double startTime = WallClockTime();
 
 	double sampleSec = 0.0;
 	char buff[512];
+	const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 		double elapsedTime = WallClockTime() - startTime;
-		if (elapsedTime > stopTime)
+
+		unsigned int pass = 0;
+		const vector<RenderThread *> &renderThreads = config->GetRenderThreads();
+		for (size_t i = 0; i < renderThreads.size(); ++i)
+			pass += renderThreads[i]->GetPass();
+
+		if ((stopTime > 0) && (elapsedTime >= stopTime))
+			break;
+		if ((stopSPP > 0) && (pass >= stopSPP))
 			break;
 
 		double raysSec = 0.0;
-		const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
 		for (size_t i = 0; i < interscetionDevices.size(); ++i)
 			raysSec += interscetionDevices[i]->GetPerformance();
 
 		sampleSec = config->scene->camera->film->GetAvgSampleSec();
-		sprintf(buff, "[Elapsed time: %3d/%dsec][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
-				int(elapsedTime), int(stopTime), int(sampleSec/ 1000.0),
+		sprintf(buff, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+				int(elapsedTime), int(stopTime), pass, stopSPP, int(sampleSec/ 1000.0),
 				int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 		std::cerr << buff << std::endl;
 	}
@@ -142,22 +150,23 @@ int main(int argc, char *argv[]) {
 			height = atoi(argv[7]);
 			const bool lowLatencyMode = (atoi(argv[1]) == 1);
 			config = new RenderingConfig(lowLatencyMode, argv[9], width, height, atoi(argv[2]), (atoi(argv[3]) == 1), (atoi(argv[4]) == 1), atoi(argv[5]));
-			return BatchMode(atoi(argv[8]));
+			return BatchMode(atoi(argv[8]), 0);
 		} else if (argc == 9) {
 			width = atoi(argv[6]);
 			height = atoi(argv[7]);
 		} else if (argc == 5) {
 			config = new RenderingConfig(false, "scenes/luxball/luxball.scn", 640, 480, atoi(argv[1]), (atoi(argv[2]) == 1), (atoi(argv[3]) == 1), atoi(argv[4]));
-			return BatchMode(180.0);
+			return BatchMode(180.0, 0);
 		} else if (argc == 2) {
 			config = new RenderingConfig(argv[1]);
 			width = config->cfg.GetInt("image.width", 640);
 			height = config->cfg.GetInt("image.height", 480);
 
 			const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
-			if (halttime > 0) {
+			const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
+			if ((halttime > 0) || (haltspp > 0)) {
 				config->Init();
-				return BatchMode(halttime);
+				return BatchMode(halttime, haltspp);
 			}
 		} else  if (argc == 1) {
 			width = 640;
