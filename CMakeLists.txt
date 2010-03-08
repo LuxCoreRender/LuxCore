@@ -95,11 +95,26 @@ ELSE(APPLE)
 ENDIF(APPLE)
 
 if(Boost_FOUND)
-	message(STATUS "Boost library directory: " ${Boost_LIBRARY_DIRS})
-	message(STATUS "Boost include directory: " ${Boost_INCLUDE_DIRS})
+	message(STATUS "Boost include directory: " "${Boost_INCLUDE_DIRS}")
+	message(STATUS "Boost library directory: " "${Boost_LIBRARY_DIRS}")
 else(Boost_FOUND)
-	message(FATAL_ERROR "Could not find Boost")
+	message(FATAL_ERROR "Could not find Boost Libraries")
 endif(Boost_FOUND)
+
+#############################################################################
+#
+# PNG Libraries
+#
+#############################################################################
+
+find_package(PNG)
+
+if(PNG_FOUND)
+    message(STATUS "PNG include directory: " "${PNG_INCLUDE_DIR}")
+    message(STATUS "PNG libraries: " "${PNG_LIBRARIES}")
+else(PNG_FOUND)
+	message(FATAL_ERROR "Could not find PNG Library")
+endif(PNG_FOUND)
 
 #############################################################################
 #
