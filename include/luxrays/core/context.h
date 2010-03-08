@@ -92,7 +92,7 @@ private:
 	std::vector<IntersectionDevice *> devices;
 	// Virtual devices
 	std::vector<VirtualM2OIntersectionDevice *> m2mDevices;
-	std::vector<VirtualM2OIntersectionDevice *> m2oDevices;
+	std::vector<VirtualM2OHardwareIntersectionDevice *> m2oDevices;
 
 	bool started;
 };

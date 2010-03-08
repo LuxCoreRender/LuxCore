@@ -43,6 +43,7 @@ class RayBuffer;
 class RayHit;
 class TriangleMesh;
 class VirtualM2OIntersectionDevice;
+class VirtualM2OHardwareIntersectionDevice;
 class VirtualO2MIntersectionDevice;
 }
 
