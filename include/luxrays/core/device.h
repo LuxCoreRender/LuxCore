@@ -154,7 +154,7 @@ protected:
 	static void AddDevices(std::vector<DeviceDescription *> &descriptions);
 
 private:
-	RayBufferQueue doneRayBufferQueue;
+	RayBufferSingleQueue doneRayBufferQueue;
 };
 
 //------------------------------------------------------------------------------
@@ -206,7 +206,7 @@ public:
 	void Stop();
 
 	RayBuffer *NewRayBuffer();
-	size_t GetQueueSize() { return todoRayBufferQueue.GetSize(); }
+	size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
 
@@ -255,8 +255,7 @@ private:
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 
-	RayBufferQueue todoRayBufferQueue;
-	RayBufferQueue doneRayBufferQueue;
+	RayBufferQueueO2O rayBufferQueue;
 
 	bool reportedPermissionError;
 };

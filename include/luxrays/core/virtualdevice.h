@@ -69,7 +69,7 @@ private:
 		VirtualM2OIntersectionDevice *virtualDevice;
 
 		size_t pendingRayBuffers;
-		RayBufferQueue doneRayBufferQueue;
+		RayBufferSingleQueue doneRayBufferQueue;
 	};
 
 	static void RayBufferRouter(VirtualM2OIntersectionDevice *virtualDevice);
@@ -114,8 +114,8 @@ private:
 
 	std::vector<IntersectionDevice *> realDevices;
 
-	RayBufferQueue todoRayBufferQueue;
-	RayBufferQueue doneRayBufferQueue;
+	RayBufferSingleQueue todoRayBufferQueue;
+	RayBufferSingleQueue doneRayBufferQueue;
 
 	boost::thread *pusherThread;
 	std::vector<boost::thread *> popperThread;
