@@ -131,11 +131,11 @@ public:
 	virtual size_t GetSizeToDo() = 0;
 	virtual size_t GetSizeDone() = 0;
 
-	virtual void PushToDo(RayBuffer *rayBuffer) = 0;
+	virtual void PushToDo(RayBuffer *rayBuffer, const unsigned int index) = 0;
 	virtual RayBuffer *PopToDo() = 0;
 
 	virtual void PushDone(RayBuffer *rayBuffer) = 0;
-	virtual RayBuffer *PopDone() = 0;
+	virtual RayBuffer *PopDone(const unsigned int index = 0) = 0;
 };
 
 class RayBufferSingleQueue {
@@ -180,6 +180,40 @@ public:
 		return rayBuffer;
 	}
 
+	void Push(RayBuffer *rayBuffer, const unsigned int queueIndex) {
+		{
+			boost::unique_lock<boost::mutex> lock(queueMutex);
+			rayBuffer->PushUserData(queueIndex);
+			queue.push_back(rayBuffer);
+		}
+
+		condition.notify_all();
+	}
+
+	RayBuffer *Pop(const unsigned int queueIndex) {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
+
+		for (;;) {
+			for (size_t i = 0; i < queue.size(); ++i) {
+				// Check if it matches the requested queueIndex
+				if (queue[i]->GetUserData() == queueIndex) {
+					RayBuffer *rayBuffer = queue[i];
+					queue.erase(queue.begin() + i);
+					rayBuffer->PopUserData();
+
+					return rayBuffer;
+				}
+			}
+
+			// Wait for a new buffer to arrive
+			condition.wait(lock);
+		}
+
+		RayBuffer *rayBuffer = queue.front();
+		queue.pop_front();
+		return rayBuffer;
+	}
+
 private:
 	boost::mutex queueMutex;
 	boost::condition_variable condition;
@@ -201,11 +235,36 @@ public:
 	size_t GetSizeToDo() { return todoQueue.GetSize(); }
 	size_t GetSizeDone() { return doneQueue.GetSize(); }
 
-	void PushToDo(RayBuffer *rayBuffer) { todoQueue.Push(rayBuffer); }
+	void PushToDo(RayBuffer *rayBuffer, const unsigned int queueIndex) { todoQueue.Push(rayBuffer); }
 	RayBuffer *PopToDo() { return todoQueue.Pop(); }
 
 	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
-	RayBuffer *PopDone() { return doneQueue.Pop(); }
+	RayBuffer *PopDone(const unsigned int queueIndex) { return doneQueue.Pop(); }
+
+private:
+	RayBufferSingleQueue todoQueue;
+	RayBufferSingleQueue doneQueue;
+};
+
+// A many producer, one consumer queue
+class RayBufferQueueM2O : public RayBufferQueue {
+public:
+	RayBufferQueueM2O() { }
+	~RayBufferQueueM2O() { }
+
+	void Clear() {
+		todoQueue.Clear();
+		doneQueue.Clear();
+	}
+
+	size_t GetSizeToDo() { return todoQueue.GetSize(); }
+	size_t GetSizeDone() { return doneQueue.GetSize(); }
+
+	void PushToDo(RayBuffer *rayBuffer, const unsigned int queueIndex) { todoQueue.Push(rayBuffer, queueIndex); }
+	RayBuffer *PopToDo() { return todoQueue.Pop(); }
+
+	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
+	RayBuffer *PopDone(const unsigned int queueIndex) { return doneQueue.Pop(queueIndex); }
 
 private:
 	RayBufferSingleQueue todoQueue;

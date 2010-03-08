@@ -46,7 +46,7 @@ public:
 private:
 	class VirtualM2ODevInstance : public IntersectionDevice {
 	public:
-		VirtualM2ODevInstance(VirtualM2OIntersectionDevice * device, const size_t index);
+		VirtualM2ODevInstance(VirtualM2OIntersectionDevice *device, const size_t index);
 		~VirtualM2ODevInstance();
 
 		RayBuffer *NewRayBuffer();
@@ -121,7 +121,55 @@ private:
 	std::vector<boost::thread *> popperThread;
 };
 
+//------------------------------------------------------------------------------
+// Virtual Many to One hardware device
+//------------------------------------------------------------------------------
+
+class VirtualM2OHardwareIntersectionDevice {
+public:
+	VirtualM2OHardwareIntersectionDevice(const size_t count, HardwareIntersectionDevice *device);
+	~VirtualM2OHardwareIntersectionDevice();
+
+	IntersectionDevice *GetVirtualDevice(size_t index);
+
+	static size_t RayBufferSize;
+
+private:
+	class VirtualM2ODevHInstance : public IntersectionDevice {
+	public:
+		VirtualM2ODevHInstance(VirtualM2OHardwareIntersectionDevice *device, const size_t index);
+		~VirtualM2ODevHInstance();
+
+		RayBuffer *NewRayBuffer();
+		void PushRayBuffer(RayBuffer *rayBuffer);
+		RayBuffer *PopRayBuffer();
+		size_t GetQueueSize() { return virtualDevice->realDevice->GetQueueSize(); }
+
+		void PushRayBufferDone(RayBuffer *rayBuffer);
+
+		double GetLoad() const { return virtualDevice->realDevice->GetLoad(); }
+
+	protected:
+		void SetDataSet(const DataSet *newDataSet);
+		void Start();
+		void Interrupt();
+		void Stop();
+
+	private:
+		size_t instanceIndex;
+		VirtualM2OHardwareIntersectionDevice *virtualDevice;
+
+		size_t pendingRayBuffers;
+	};
+
+	size_t virtualDeviceCount;
+	HardwareIntersectionDevice *realDevice;
+	RayBufferQueueM2O rayBufferQueue;
+
+	boost::mutex virtualDeviceMutex;
+	VirtualM2ODevHInstance **virtualDeviceInstances;
+};
+
 }
 
 #endif	/* _LUXRAYS_VIRTUALDEVICE_H */
-
