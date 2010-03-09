@@ -67,7 +67,7 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(60, 350);
 	PrintString(GLUT_BITMAP_8_BY_13, "a, s, d, w or mouse X/Y + mouse button 2 - move camera");
 	glRasterPos2i(60, 330);
-	PrintString(GLUT_BITMAP_8_BY_13, "p/shift+p - save image.png/image.ppm");
+	PrintString(GLUT_BITMAP_8_BY_13, "p - save image.png (or to image.filename property value)");
 	glRasterPos2i(60, 310);
 	PrintString(GLUT_BITMAP_8_BY_13, "n, m - decrease/increase the minimum screen refresh time");
 	glRasterPos2i(60, 290);
@@ -178,12 +178,19 @@ void reshapeFunc(int newWidth, int newHeight) {
 #define ROTATE_STEP 4.f
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
-		case 'P': {
-			config->scene->camera->film->SavePPM("image.ppm");
-			break;
-		}
 		case 'p': {
-			config->scene->camera->film->SavePNG("image.png");
+			std::string fileName = config->cfg.GetString("image.filename", "image.png");
+			std::cerr << "Saving " << fileName << std::endl;
+			if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".png")) {
+				std::cerr << "Using PNG file format" << std::endl;
+				config->scene->camera->film->SavePNG(fileName);
+			} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".ppm")) {
+				std::cerr << "Using PPM file format" << std::endl;
+				config->scene->camera->film->SavePPM(fileName);
+			} else {
+				std::cerr << "Unknown image format extension, using PNG" << std::endl;
+				config->scene->camera->film->SavePNG(fileName);
+			}
 			break;
 		}
 		case 27: // Escape key
