@@ -87,8 +87,6 @@ public:
 	virtual double GetLoad() const = 0;
 
 	friend class Context;
-	friend class VirtualM2OIntersectionDevice;
-	friend class VirtualO2MIntersectionDevice;
 	friend class VirtualM2OHardwareIntersectionDevice;
 	friend class VirtualM2MHardwareIntersectionDevice;
 
