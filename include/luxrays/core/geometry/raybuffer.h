@@ -139,6 +139,8 @@ public:
 
 	virtual void PushToDo(RayBuffer *rayBuffer, const unsigned int index) = 0;
 	virtual RayBuffer *PopToDo() = 0;
+	// Pop up to 3 buffers out of a queue
+	virtual void Pop3xToDo(RayBuffer **rayBuffer0, RayBuffer **rayBuffer1, RayBuffer **rayBuffer2) = 0;
 
 	virtual void PushDone(RayBuffer *rayBuffer) = 0;
 	virtual RayBuffer *PopDone(const unsigned int index = 0) = 0;
@@ -186,6 +188,37 @@ public:
 		RayBuffer *rayBuffer = queue.front();
 		queue.pop_front();
 		return rayBuffer;
+	}
+
+	void Pop3x(RayBuffer **rayBuffer0, RayBuffer **rayBuffer1, RayBuffer **rayBuffer2) {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
+
+		while (queue.size() < 1) {
+			// Wait for a new buffer to arrive
+			condition.wait(lock);
+		}
+
+		switch (queue.size()) {
+			default:
+			case 3:
+				*rayBuffer0 = queue[0];
+				*rayBuffer1 = queue[1];
+				*rayBuffer2 = queue[2];
+				queue.erase(queue.begin(), queue.begin() + 3);
+				break;
+			case 2:
+				*rayBuffer0 = queue[0];
+				*rayBuffer1 = queue[1];
+				*rayBuffer2 = NULL;
+				queue.erase(queue.begin(), queue.begin() + 2);
+				break;
+			case 1:
+				*rayBuffer0 = queue[0];
+				*rayBuffer1 = NULL;
+				*rayBuffer2 = NULL;
+				queue.pop_front();
+				break;
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -279,6 +312,9 @@ public:
 
 	void PushToDo(RayBuffer *rayBuffer, const unsigned int queueIndex) { todoQueue.Push(rayBuffer); }
 	RayBuffer *PopToDo() { return todoQueue.Pop(); }
+	void Pop3xToDo(RayBuffer **rayBuffer0, RayBuffer **rayBuffer1, RayBuffer **rayBuffer2) {
+		todoQueue.Pop3x(rayBuffer0, rayBuffer1, rayBuffer2);
+	}
 
 	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
 	RayBuffer *PopDone(const unsigned int queueIndex) { return doneQueue.Pop(); }
@@ -304,6 +340,9 @@ public:
 
 	void PushToDo(RayBuffer *rayBuffer, const unsigned int queueIndex) { todoQueue.Push(rayBuffer, queueIndex); }
 	RayBuffer *PopToDo() { return todoQueue.Pop(); }
+	void Pop3xToDo(RayBuffer **rayBuffer0, RayBuffer **rayBuffer1, RayBuffer **rayBuffer2) {
+		todoQueue.Pop3x(rayBuffer0, rayBuffer1, rayBuffer2);
+	}
 
 	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
 	RayBuffer *PopDone(const unsigned int queueIndex) { return doneQueue.Pop(queueIndex); }
@@ -335,6 +374,9 @@ public:
 		queueToDoCounters[queueIndex]++;
 	}
 	RayBuffer *PopToDo() { return todoQueue.Pop(); }
+	void Pop3xToDo(RayBuffer **rayBuffer0, RayBuffer **rayBuffer1, RayBuffer **rayBuffer2) {
+		todoQueue.Pop3x(rayBuffer0, rayBuffer1, rayBuffer2);
+	}
 
 	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
 	RayBuffer *PopDone(const unsigned int queueIndex) {
