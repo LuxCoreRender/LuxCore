@@ -87,8 +87,8 @@ public:
 	virtual double GetLoad() const = 0;
 
 	friend class Context;
-	friend class VirtualM2OIntersectionDevice;
-	friend class VirtualO2MIntersectionDevice;
+	friend class VirtualM2OHardwareIntersectionDevice;
+	friend class VirtualM2MHardwareIntersectionDevice;
 
 protected:
 	IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index);
@@ -109,6 +109,18 @@ protected:
 	double statsStartTime, statsTotalRayCount, statsDeviceIdleTime, statsDeviceTotalTime;
 
 	bool started;
+};
+
+class HardwareIntersectionDevice : public IntersectionDevice {
+protected:
+	HardwareIntersectionDevice(const Context *context, const DeviceType type, const unsigned int index) :
+		IntersectionDevice(context, type, index) { }
+	virtual ~HardwareIntersectionDevice() { }
+
+	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue) = 0;
+
+	friend class VirtualM2OHardwareIntersectionDevice;
+	friend class VirtualM2MHardwareIntersectionDevice;
 };
 
 //------------------------------------------------------------------------------
@@ -154,7 +166,7 @@ protected:
 	static void AddDevices(std::vector<DeviceDescription *> &descriptions);
 
 private:
-	RayBufferQueue doneRayBufferQueue;
+	RayBufferSingleQueue doneRayBufferQueue;
 };
 
 //------------------------------------------------------------------------------
@@ -194,7 +206,7 @@ protected:
 	mutable unsigned int forceWorkGroupSize;
 };
 
-class OpenCLIntersectionDevice : public IntersectionDevice {
+class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
 public:
 	OpenCLIntersectionDevice(const Context *context, const cl::Device &device,
 			const unsigned int index, const unsigned int forceWorkGroupSize);
@@ -206,7 +218,7 @@ public:
 	void Stop();
 
 	RayBuffer *NewRayBuffer();
-	size_t GetQueueSize() { return todoRayBufferQueue.GetSize(); }
+	size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
 
@@ -221,6 +233,8 @@ public:
 	static size_t RayBufferSize;
 
 protected:
+	void SetExternalRayBufferQueue(RayBufferQueue *queue);
+
 	static std::string GetDeviceType(const cl_int type);
 	static std::string GetDeviceType(const OpenCLDeviceType type);
 	static OpenCLDeviceType GetOCLDeviceType(const cl_int type);
@@ -255,10 +269,10 @@ private:
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 
-	RayBufferQueue todoRayBufferQueue;
-	RayBufferQueue doneRayBufferQueue;
+	RayBufferQueueO2O rayBufferQueue;
+	RayBufferQueue *externalRayBufferQueue;
 
-	bool reportedPermissionError;
+	bool reportedPermissionError, externalQueue;
 };
 
 }

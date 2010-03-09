@@ -41,13 +41,14 @@ size_t OpenCLIntersectionDevice::RayBufferSize = 65536;
 
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
 		const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize) :
-		IntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
+		HardwareIntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
 	deviceName = device.getInfo<CL_DEVICE_NAME > ().c_str();
 	reportedPermissionError = false;
 	intersectionThread = NULL;
 	oclType = GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE >());
 	bvhBuff = NULL;
 	qbvhBuff = NULL;
+	externalQueue = false;
 
 	// Allocate a context with the selected device
 	VECTOR_CLASS<cl::Device> devices;
@@ -157,20 +158,29 @@ OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 	delete oclContext;
 }
 
+void OpenCLIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue) {
+	assert (!started);
+
+	externalRayBufferQueue = queue;
+	externalQueue = true;
+}
+
 RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
 	return new RayBuffer(RayBufferSize);
 }
 
 void OpenCLIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
 	assert (started);
+	assert (!externalQueue);
 
-	todoRayBufferQueue.Push(rayBuffer);
+	rayBufferQueue.PushToDo(rayBuffer, 0);
 }
 
 RayBuffer *OpenCLIntersectionDevice::PopRayBuffer() {
 	assert (started);
+	assert (!externalQueue);
 
-	return doneRayBufferQueue.Pop();
+	return rayBufferQueue.PopDone(0);
 }
 
 void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
@@ -305,8 +315,8 @@ void OpenCLIntersectionDevice::Stop() {
 	delete intersectionThread;
 	intersectionThread = NULL;
 
-	todoRayBufferQueue.Clear();
-	doneRayBufferQueue.Clear();
+	if (!externalQueue)
+		rayBufferQueue.Clear();
 }
 
 void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event) {
@@ -348,12 +358,15 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 	LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread started");
 
 	try {
+		RayBufferQueue *queue = renderDevice->externalRayBufferQueue ?
+			renderDevice->externalRayBufferQueue : &(renderDevice->rayBufferQueue);
+
 		while (!boost::this_thread::interruption_requested()) {
-			size_t availableBuffs = renderDevice->todoRayBufferQueue.GetSize();
+			const size_t availableBuffs = queue->GetSizeToDo();
 			if (availableBuffs <= 1) {
 				// Only one ray buffer to trace available
 				const double t1 = WallClockTime();
-				RayBuffer *rayBuffer = renderDevice->todoRayBufferQueue.Pop();
+				RayBuffer *rayBuffer = queue->PopToDo();
 				renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
 
 				cl::Event event;
@@ -361,7 +374,7 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 
 				event.wait();
 				renderDevice->statsTotalRayCount += rayBuffer->GetRayCount();
-				renderDevice->doneRayBufferQueue.Push(rayBuffer);
+				queue->PushDone(rayBuffer);
 
 				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
 			} else if (availableBuffs == 2) {
@@ -369,14 +382,14 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 
 				// Trace A ray buffer
 				const double t1 = WallClockTime();
-				RayBuffer *rayBufferA = renderDevice->todoRayBufferQueue.Pop();
+				RayBuffer *rayBufferA = queue->PopToDo();
 				renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
 				cl::Event eventA;
 				renderDevice->TraceRayBuffer(rayBufferA, &eventA);
 
 				// Trace B ray buffer
 				const double t2 = WallClockTime();
-				RayBuffer *rayBufferB = renderDevice->todoRayBufferQueue.Pop();
+				RayBuffer *rayBufferB = queue->PopToDo();
 				renderDevice->statsDeviceIdleTime += WallClockTime() - t2;
 				cl::Event eventB;
 				renderDevice->TraceRayBuffer(rayBufferB, &eventB);
@@ -384,12 +397,12 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 				// Pop A ray buffer
 				eventA.wait();
 				renderDevice->statsTotalRayCount += rayBufferA->GetRayCount();
-				renderDevice->doneRayBufferQueue.Push(rayBufferA);
+				queue->PushDone(rayBufferA);
 
 				// Pop B ray buffer
 				eventB.wait();
 				renderDevice->statsTotalRayCount += rayBufferB->GetRayCount();
-				renderDevice->doneRayBufferQueue.Push(rayBufferB);
+				queue->PushDone(rayBufferB);
 
 				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
 			} else {
@@ -397,21 +410,21 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 
 				// Trace A ray buffer
 				const double t1 = WallClockTime();
-				RayBuffer *rayBufferA = renderDevice->todoRayBufferQueue.Pop();
+				RayBuffer *rayBufferA = queue->PopToDo();
 				renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
 				cl::Event eventA;
 				renderDevice->TraceRayBuffer(rayBufferA, &eventA);
 
 				// Trace B ray buffer
 				const double t2 = WallClockTime();
-				RayBuffer *rayBufferB = renderDevice->todoRayBufferQueue.Pop();
+				RayBuffer *rayBufferB = queue->PopToDo();
 				renderDevice->statsDeviceIdleTime += WallClockTime() - t2;
 				cl::Event eventB;
 				renderDevice->TraceRayBuffer(rayBufferB, &eventB);
 
 				// Trace C ray buffer
 				const double t3 = WallClockTime();
-				RayBuffer *rayBufferC = renderDevice->todoRayBufferQueue.Pop();
+				RayBuffer *rayBufferC = queue->PopToDo();
 				renderDevice->statsDeviceIdleTime += WallClockTime() - t3;
 				cl::Event eventC;
 				renderDevice->TraceRayBuffer(rayBufferC, &eventC);
@@ -419,17 +432,17 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 				// Pop A ray buffer
 				eventA.wait();
 				renderDevice->statsTotalRayCount += rayBufferA->GetRayCount();
-				renderDevice->doneRayBufferQueue.Push(rayBufferA);
+				queue->PushDone(rayBufferA);
 
 				// Pop B ray buffer
 				eventB.wait();
 				renderDevice->statsTotalRayCount += rayBufferB->GetRayCount();
-				renderDevice->doneRayBufferQueue.Push(rayBufferB);
+				queue->PushDone(rayBufferB);
 
 				// Pop C ray buffer
 				eventC.wait();
 				renderDevice->statsTotalRayCount += rayBufferC->GetRayCount();
-				renderDevice->doneRayBufferQueue.Push(rayBufferC);
+				queue->PushDone(rayBufferC);
 
 				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
 			}
