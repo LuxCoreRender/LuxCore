@@ -361,91 +361,86 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 		RayBufferQueue *queue = renderDevice->externalRayBufferQueue ?
 			renderDevice->externalRayBufferQueue : &(renderDevice->rayBufferQueue);
 
+		RayBuffer *rayBuffer0, *rayBuffer1, *rayBuffer2;
 		while (!boost::this_thread::interruption_requested()) {
-			/*const size_t availableBuffs = queue->GetSizeToDo();
-			if (availableBuffs <= 1) {*/
-				// Only one ray buffer to trace available
-				const double t1 = WallClockTime();
-				RayBuffer *rayBuffer = queue->PopToDo();
-				renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
+			const double t1 = WallClockTime();
+			queue->Pop3xToDo(&rayBuffer0, &rayBuffer1, &rayBuffer2);
+			renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
+			const unsigned int count = (rayBuffer0 ? 1 : 0) + (rayBuffer1 ? 1 : 0) + (rayBuffer2 ? 1 : 0);
 
-				cl::Event event;
-				renderDevice->TraceRayBuffer(rayBuffer, &event);
+			switch(count) {
+				case 1: {
+					// Only one ray buffer to trace available
+					cl::Event event;
+					renderDevice->TraceRayBuffer(rayBuffer0, &event);
 
-				event.wait();
-				renderDevice->statsTotalRayCount += rayBuffer->GetRayCount();
-				queue->PushDone(rayBuffer);
+					event.wait();
+					renderDevice->statsTotalRayCount += rayBuffer0->GetRayCount();
+					queue->PushDone(rayBuffer0);
 
-				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
-			/*} else if (availableBuffs == 2) {
-				// At least 2 ray buffers to trace
+					renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
+					break;
+				}
+				case 2: {
+					// At least 2 ray buffers to trace
 
-				// Trace A ray buffer
-				const double t1 = WallClockTime();
-				RayBuffer *rayBufferA = queue->PopToDo();
-				renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
-				cl::Event eventA;
-				renderDevice->TraceRayBuffer(rayBufferA, &eventA);
+					// Trace 0 ray buffer
+					cl::Event event0;
+					renderDevice->TraceRayBuffer(rayBuffer0, &event0);
 
-				// Trace B ray buffer
-				const double t2 = WallClockTime();
-				RayBuffer *rayBufferB = queue->PopToDo();
-				renderDevice->statsDeviceIdleTime += WallClockTime() - t2;
-				cl::Event eventB;
-				renderDevice->TraceRayBuffer(rayBufferB, &eventB);
+					// Trace 1 ray buffer
+					cl::Event event1;
+					renderDevice->TraceRayBuffer(rayBuffer1, &event1);
 
-				// Pop A ray buffer
-				eventA.wait();
-				renderDevice->statsTotalRayCount += rayBufferA->GetRayCount();
-				queue->PushDone(rayBufferA);
+					// Pop 0 ray buffer
+					event0.wait();
+					renderDevice->statsTotalRayCount += rayBuffer0->GetRayCount();
+					queue->PushDone(rayBuffer0);
 
-				// Pop B ray buffer
-				eventB.wait();
-				renderDevice->statsTotalRayCount += rayBufferB->GetRayCount();
-				queue->PushDone(rayBufferB);
+					// Pop 1 ray buffer
+					event1.wait();
+					renderDevice->statsTotalRayCount += rayBuffer1->GetRayCount();
+					queue->PushDone(rayBuffer1);
 
-				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
-			} else {
-				// At least 3 ray buffers to trace
+					renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
+					break;
+				}
+				case 3: {
+					// At least 3 ray buffers to trace
 
-				// Trace A ray buffer
-				const double t1 = WallClockTime();
-				RayBuffer *rayBufferA = queue->PopToDo();
-				renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
-				cl::Event eventA;
-				renderDevice->TraceRayBuffer(rayBufferA, &eventA);
+					// Trace 0 ray buffer
+					cl::Event event0;
+					renderDevice->TraceRayBuffer(rayBuffer0, &event0);
 
-				// Trace B ray buffer
-				const double t2 = WallClockTime();
-				RayBuffer *rayBufferB = queue->PopToDo();
-				renderDevice->statsDeviceIdleTime += WallClockTime() - t2;
-				cl::Event eventB;
-				renderDevice->TraceRayBuffer(rayBufferB, &eventB);
+					// Trace 1 ray buffer
+					cl::Event event1;
+					renderDevice->TraceRayBuffer(rayBuffer1, &event1);
 
-				// Trace C ray buffer
-				const double t3 = WallClockTime();
-				RayBuffer *rayBufferC = queue->PopToDo();
-				renderDevice->statsDeviceIdleTime += WallClockTime() - t3;
-				cl::Event eventC;
-				renderDevice->TraceRayBuffer(rayBufferC, &eventC);
+					// Trace 2 ray buffer
+					cl::Event event2;
+					renderDevice->TraceRayBuffer(rayBuffer2, &event2);
 
-				// Pop A ray buffer
-				eventA.wait();
-				renderDevice->statsTotalRayCount += rayBufferA->GetRayCount();
-				queue->PushDone(rayBufferA);
+					// Pop 0 ray buffer
+					event0.wait();
+					renderDevice->statsTotalRayCount += rayBuffer0->GetRayCount();
+					queue->PushDone(rayBuffer0);
 
-				// Pop B ray buffer
-				eventB.wait();
-				renderDevice->statsTotalRayCount += rayBufferB->GetRayCount();
-				queue->PushDone(rayBufferB);
+					// Pop 1 ray buffer
+					event1.wait();
+					renderDevice->statsTotalRayCount += rayBuffer1->GetRayCount();
+					queue->PushDone(rayBuffer1);
 
-				// Pop C ray buffer
-				eventC.wait();
-				renderDevice->statsTotalRayCount += rayBufferC->GetRayCount();
-				queue->PushDone(rayBufferC);
+					// Pop 2 ray buffer
+					event2.wait();
+					renderDevice->statsTotalRayCount += rayBuffer2->GetRayCount();
+					queue->PushDone(rayBuffer2);
 
-				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
-			}*/
+					renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
+					break;
+				}
+				default:
+					assert (false);
+			}
 		}
 
 		LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread halted");
