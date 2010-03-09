@@ -427,3 +427,129 @@ RayBuffer *VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::PopRayB
 
 	return rayBuffer;
 }
+
+//------------------------------------------------------------------------------
+// Virtual Many To Many Hardware Device
+//------------------------------------------------------------------------------
+
+size_t VirtualM2MHardwareIntersectionDevice::RayBufferSize = OpenCLIntersectionDevice::RayBufferSize;
+
+VirtualM2MHardwareIntersectionDevice::VirtualM2MHardwareIntersectionDevice(const size_t count,
+		const std::vector<HardwareIntersectionDevice *> &devices) : rayBufferQueue(count) {
+	assert (count > 0);
+	assert (devices.size() > 0);
+
+	// Set the queue for all hardware device
+	realDevices = devices;
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realDevices[i]->SetExternalRayBufferQueue(&rayBufferQueue);
+
+	virtualDeviceCount = count;
+	virtualDeviceInstances = new VirtualM2MDevHInstance *[virtualDeviceCount];
+	for (size_t i = 0; i < virtualDeviceCount; ++i)
+		virtualDeviceInstances[i] = new VirtualM2MDevHInstance(this, i);
+}
+
+VirtualM2MHardwareIntersectionDevice::~VirtualM2MHardwareIntersectionDevice() {
+	for (size_t i = 0; i < virtualDeviceCount; ++i)
+		delete virtualDeviceInstances[i];
+	delete virtualDeviceInstances;
+}
+
+IntersectionDevice *VirtualM2MHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
+	return virtualDeviceInstances[index];
+}
+
+//------------------------------------------------------------------------------
+// VirtualM2MDevHInstance class
+//------------------------------------------------------------------------------
+
+VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::VirtualM2MDevHInstance(
+	VirtualM2MHardwareIntersectionDevice *device, const size_t index) :
+			IntersectionDevice(device->realDevices[0]->GetContext(), DEVICE_TYPE_VIRTUAL, index) {
+	char buf[256];
+	sprintf(buf, "VirtualM2MHDevice-%03d", (int)index);
+	deviceName = std::string(buf);
+
+	instanceIndex = index;
+	virtualDevice = device;
+}
+
+VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::~VirtualM2MDevHInstance() {
+	if (started)
+		Stop();
+}
+
+void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::SetDataSet(const DataSet *newDataSet) {
+	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+	IntersectionDevice::SetDataSet(newDataSet);
+
+	// Set the real devices data set if it is a new one
+	for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
+		if (virtualDevice->realDevices[i]->GetDataSet() != newDataSet)
+			virtualDevice->realDevices[i]->SetDataSet(newDataSet);
+	}
+}
+
+void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Start() {
+	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+
+	IntersectionDevice::Start();
+	pendingRayBuffers = 0;
+
+	// Start the real devices if required
+	for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
+		if (!virtualDevice->realDevices[i]->IsRunning()) {
+			LR_LOG(deviceContext, "[VirtualM2MHDevice::" << deviceName << "] Starting real device: " << i);
+			virtualDevice->realDevices[i]->Start();
+		}
+	}
+
+}
+
+void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Interrupt() {
+}
+
+void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Stop() {
+	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+
+	// Need to wait for all my pending RayBuffer
+	while (pendingRayBuffers > 0)
+		PopRayBuffer();
+
+	// Check if I'm the last one running
+	bool lastOne = true;
+	for (size_t i = 0; i < virtualDevice->virtualDeviceCount; ++i) {
+		if ((i != instanceIndex) && (virtualDevice->virtualDeviceInstances[i]->IsRunning())) {
+			lastOne = false;
+			break;
+		}
+	}
+
+	if (lastOne) {
+		for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
+			LR_LOG(deviceContext, "[VirtualM2ODevice::" << deviceName << "] Stopping real device: " << i);
+			virtualDevice->realDevices[i]->Stop();
+		}
+	}
+
+	IntersectionDevice::Stop();
+}
+
+RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::NewRayBuffer() {
+	return new RayBuffer(RayBufferSize);
+}
+
+void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PushRayBuffer(RayBuffer *rayBuffer) {
+	virtualDevice->rayBufferQueue.PushToDo(rayBuffer, instanceIndex);
+	++pendingRayBuffers;
+}
+
+RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PopRayBuffer() {
+	RayBuffer *rayBuffer = virtualDevice->rayBufferQueue.PopDone(instanceIndex);
+	--pendingRayBuffers;
+
+	statsTotalRayCount += rayBuffer->GetRayCount();
+
+	return rayBuffer;
+}

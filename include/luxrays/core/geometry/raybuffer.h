@@ -56,6 +56,12 @@ public:
 		return userData.back();
 	}
 
+	size_t GetUserData(const size_t index) {
+		assert (index < userData.size());
+
+		return userData[userData.size() - index - 1];
+	}
+
 	size_t PopUserData() {
 		size_t data = userData.back();
 		userData.pop_back();
@@ -158,6 +164,8 @@ public:
 		return queue.size();
 	}
 
+	//--------------------------------------------------------------------------
+
 	void Push(RayBuffer *rayBuffer) {
 		{
 			boost::unique_lock<boost::mutex> lock(queueMutex);
@@ -179,6 +187,8 @@ public:
 		queue.pop_front();
 		return rayBuffer;
 	}
+
+	//--------------------------------------------------------------------------
 
 	void Push(RayBuffer *rayBuffer, const unsigned int queueIndex) {
 		{
@@ -208,10 +218,42 @@ public:
 			// Wait for a new buffer to arrive
 			condition.wait(lock);
 		}
+	}
 
-		RayBuffer *rayBuffer = queue.front();
-		queue.pop_front();
-		return rayBuffer;
+	//--------------------------------------------------------------------------
+
+	void Push(RayBuffer *rayBuffer, const unsigned int queueIndex, const unsigned int queueProgressive) {
+		{
+			boost::unique_lock<boost::mutex> lock(queueMutex);
+
+			rayBuffer->PushUserData(queueProgressive);
+			rayBuffer->PushUserData(queueIndex);
+			queue.push_back(rayBuffer);
+		}
+
+		condition.notify_all();
+	}
+
+	RayBuffer *Pop(const unsigned int queueIndex, const unsigned int queueProgressive) {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
+
+		for (;;) {
+			for (size_t i = 0; i < queue.size(); ++i) {
+				// Check if it matches the requested queueIndex and queueProgressive
+				if ((queue[i]->GetUserData(0) == queueIndex) &&
+					(queue[i]->GetUserData(1) == queueProgressive)) {
+					RayBuffer *rayBuffer = queue[i];
+					queue.erase(queue.begin() + i);
+					rayBuffer->PopUserData();
+					rayBuffer->PopUserData();
+
+					return rayBuffer;
+				}
+			}
+
+			// Wait for a new buffer to arrive
+			condition.wait(lock);
+		}
 	}
 
 private:
@@ -246,7 +288,7 @@ private:
 	RayBufferSingleQueue doneQueue;
 };
 
-// A many producer, one consumer queue
+// A many producers, one consumer queue
 class RayBufferQueueM2O : public RayBufferQueue {
 public:
 	RayBufferQueueM2O() { }
@@ -267,6 +309,40 @@ public:
 	RayBuffer *PopDone(const unsigned int queueIndex) { return doneQueue.Pop(queueIndex); }
 
 private:
+	RayBufferSingleQueue todoQueue;
+	RayBufferSingleQueue doneQueue;
+};
+
+// A many producers, many consumers queue
+class RayBufferQueueM2M : public RayBufferQueue {
+public:
+	RayBufferQueueM2M(const unsigned int consumersCount) {
+		queueToDoCounters.resize(consumersCount, 0);
+		queueDoneCounters.resize(consumersCount, 0);
+	}
+	~RayBufferQueueM2M() { }
+
+	void Clear() {
+		todoQueue.Clear();
+		doneQueue.Clear();
+	}
+
+	size_t GetSizeToDo() { return todoQueue.GetSize(); }
+	size_t GetSizeDone() { return doneQueue.GetSize(); }
+
+	void PushToDo(RayBuffer *rayBuffer, const unsigned int queueIndex) {
+		todoQueue.Push(rayBuffer, queueIndex, queueToDoCounters[queueIndex]++);
+	}
+	RayBuffer *PopToDo() { return todoQueue.Pop(); }
+
+	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
+	RayBuffer *PopDone(const unsigned int queueIndex) {
+		return doneQueue.Pop(queueIndex, queueDoneCounters[queueIndex]++);
+	}
+
+private:
+	std::vector<unsigned int> queueToDoCounters;
+	std::vector<unsigned int> queueDoneCounters;
 	RayBufferSingleQueue todoQueue;
 	RayBufferSingleQueue doneQueue;
 };

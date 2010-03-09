@@ -43,8 +43,9 @@ class RayBuffer;
 class RayHit;
 class TriangleMesh;
 class VirtualM2OIntersectionDevice;
-class VirtualM2OHardwareIntersectionDevice;
 class VirtualO2MIntersectionDevice;
+class VirtualM2OHardwareIntersectionDevice;
+class VirtualM2MHardwareIntersectionDevice;
 }
 
 #endif	/* _LUXRAYS_H */
