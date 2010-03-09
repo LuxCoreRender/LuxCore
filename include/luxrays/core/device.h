@@ -88,8 +88,9 @@ public:
 
 	friend class Context;
 	friend class VirtualM2OIntersectionDevice;
-	friend class VirtualM2OHardwareIntersectionDevice;
 	friend class VirtualO2MIntersectionDevice;
+	friend class VirtualM2OHardwareIntersectionDevice;
+	friend class VirtualM2MHardwareIntersectionDevice;
 
 protected:
 	IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index);
@@ -121,6 +122,7 @@ protected:
 	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue) = 0;
 
 	friend class VirtualM2OHardwareIntersectionDevice;
+	friend class VirtualM2MHardwareIntersectionDevice;
 };
 
 //------------------------------------------------------------------------------
