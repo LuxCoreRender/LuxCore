@@ -93,7 +93,6 @@ void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::Start() {
 		LR_LOG(deviceContext, "[VirtualM2ODevice::" << deviceName << "] Starting real device");
 		virtualDevice->realDevice->Start();
 	}
-
 }
 
 void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::Interrupt() {
