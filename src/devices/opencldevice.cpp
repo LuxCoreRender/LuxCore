@@ -362,8 +362,8 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 			renderDevice->externalRayBufferQueue : &(renderDevice->rayBufferQueue);
 
 		while (!boost::this_thread::interruption_requested()) {
-			const size_t availableBuffs = queue->GetSizeToDo();
-			if (availableBuffs <= 1) {
+			/*const size_t availableBuffs = queue->GetSizeToDo();
+			if (availableBuffs <= 1) {*/
 				// Only one ray buffer to trace available
 				const double t1 = WallClockTime();
 				RayBuffer *rayBuffer = queue->PopToDo();
@@ -377,7 +377,7 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 				queue->PushDone(rayBuffer);
 
 				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
-			} else if (availableBuffs == 2) {
+			/*} else if (availableBuffs == 2) {
 				// At least 2 ray buffers to trace
 
 				// Trace A ray buffer
@@ -445,7 +445,7 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 				queue->PushDone(rayBufferC);
 
 				renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
-			}
+			}*/
 		}
 
 		LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread halted");

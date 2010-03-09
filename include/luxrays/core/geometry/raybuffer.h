@@ -331,13 +331,17 @@ public:
 	size_t GetSizeDone() { return doneQueue.GetSize(); }
 
 	void PushToDo(RayBuffer *rayBuffer, const unsigned int queueIndex) {
-		todoQueue.Push(rayBuffer, queueIndex, queueToDoCounters[queueIndex]++);
+		todoQueue.Push(rayBuffer, queueIndex, queueToDoCounters[queueIndex]);
+		queueToDoCounters[queueIndex]++;
 	}
 	RayBuffer *PopToDo() { return todoQueue.Pop(); }
 
 	void PushDone(RayBuffer *rayBuffer) { doneQueue.Push(rayBuffer); }
 	RayBuffer *PopDone(const unsigned int queueIndex) {
-		return doneQueue.Pop(queueIndex, queueDoneCounters[queueIndex]++);
+		RayBuffer *rb = doneQueue.Pop(queueIndex, queueDoneCounters[queueIndex]);
+		queueDoneCounters[queueIndex]++;
+
+		return rb;
 	}
 
 private:
