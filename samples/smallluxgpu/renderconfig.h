@@ -51,7 +51,8 @@ public:
 	void Init(const bool lowLatency, const string &sceneFileName, const unsigned int w,
 		const unsigned int h, const unsigned int nativeThreadCount,
 		const bool useCPUs, const bool useGPUs,
-		const unsigned int forceGPUWorkSize, const unsigned int filmType,
+		const unsigned int forceGPUWorkSize,
+		const unsigned int filmType, const string *filmFile = NULL,
 		const unsigned int oclPlatformIndex = 0,
 		const unsigned int oclDeviceThreads = 0, const string &oclDeviceConfig = "");
 

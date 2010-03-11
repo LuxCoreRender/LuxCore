@@ -54,7 +54,7 @@ protected:
 
 class NativeRenderThread : public RenderThread {
 public:
-	NativeRenderThread(unsigned int index,  const float samplingStart,
+	NativeRenderThread(unsigned int index, unsigned long seedBase, const float samplingStart,
 			NativeThreadIntersectionDevice *device, Scene *scn,
 			const bool lowLatency);
 	~NativeRenderThread();
@@ -82,8 +82,8 @@ private:
 
 class DeviceRenderThread : public RenderThread {
 public:
-	DeviceRenderThread(unsigned int index,  const float samplingStart,
-			IntersectionDevice *device, Scene *scn,
+	DeviceRenderThread(unsigned int index,  unsigned long seedBase,
+			const float samplingStart, IntersectionDevice *device, Scene *scn,
 			const bool lowLatency);
 	~DeviceRenderThread();
 

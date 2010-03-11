@@ -166,13 +166,17 @@ void displayFunc(void) {
 }
 
 void reshapeFunc(int newWidth, int newHeight) {
-	glViewport(0, 0, newWidth, newHeight);
-	glLoadIdentity();
-	glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
+	// Check if width or height are really changed
+	if ((newWidth != (int)config->scene->camera->film->GetWidth()) ||
+			(newHeight != (int)config->scene->camera->film->GetHeight())) {
+		glViewport(0, 0, newWidth, newHeight);
+		glLoadIdentity();
+		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
 
-	config->ReInit(true, newWidth, newHeight);
+		config->ReInit(true, newWidth, newHeight);
 
-	glutPostRedisplay();
+		glutPostRedisplay();
+	}
 }
 
 #define MOVE_STEP 0.5f
@@ -194,11 +198,16 @@ void keyFunc(unsigned char key, int x, int y) {
 			}
 			break;
 		}
-		case 27: // Escape key
+		case 27: { // Escape key
+			// Check if I have to save the film
+			const string filmName = config->cfg.GetString("screen.file", "");
+			if (filmName != "")
+				config->scene->camera->film->SaveFilm(filmName);
 			delete config;
 			cerr << "Done." << endl;
 			exit(EXIT_SUCCESS);
 			break;
+		}
 		case ' ': // Restart rendering
 			config->ReInit(true, config->scene->camera->film->GetWidth(), config->scene->camera->film->GetHeight());
 			break;

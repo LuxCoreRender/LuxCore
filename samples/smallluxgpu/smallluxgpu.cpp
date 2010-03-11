@@ -121,6 +121,11 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		config->scene->camera->film->SavePNG(fileName);
 	}
 
+	// Check if I have to save the film
+	const string filmName = config->cfg.GetString("screen.file", "");
+	if (filmName != "")
+		config->scene->camera->film->SaveFilm(filmName);
+
 	sprintf(buff, "LuxMark index: %.3f", sampleSec / 1000000.0);
 	std::cerr << buff << std::endl;
 
