@@ -36,6 +36,7 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 	currentDataSet = NULL;
 	started = false;
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Platform info
 	VECTOR_CLASS<cl::Platform> platforms;
 	cl::Platform::get(&platforms);
@@ -54,17 +55,22 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 		else
 			oclPlatform = platforms[openclPlatformIndex];
 	}
+#endif
 
 	// Get the list of devices available on the platform
 	NativeThreadIntersectionDevice::AddDevices(deviceDescriptions);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	OpenCLIntersectionDevice::AddDevices(oclPlatform, OCL_DEVICE_TYPE_ALL, deviceDescriptions);
+#endif
 
 	// Print device info
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
 		if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
 			LR_LOG(this, "Device " << i << " NativeThread name: " <<
 					deviceDescriptions[i]->GetName());
-		} else if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) {
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		else if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
 			LR_LOG(this, "Device " << i << " OpenCL name: " <<
 					desc->GetName());
@@ -75,7 +81,9 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 					desc->GetComputeUnits());
 			LR_LOG(this, "Device " << i << " OpenCL max allocable memory: " <<
 					desc->GetMaxMemory() / (1024 * 1024) << "MBytes");
-		} else
+		}
+#endif
+		else
 			assert (false);
 	}
 }
@@ -146,9 +154,11 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(const std::
 
 	LR_LOG(this, "Creating " << deviceDesc.size() << " intersection device(s)");
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Get the list of devices available on the platform
 	VECTOR_CLASS<cl::Device> oclDevices;
 	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
+#endif
 
 	std::vector<IntersectionDevice *> newDevices;
 	for (size_t i = 0; i < deviceDesc.size(); ++i) {
@@ -160,12 +170,16 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(const std::
 			// Nathive thread devices
 			const NativeThreadDeviceDescription *ntvDeviceDesc = (const NativeThreadDeviceDescription *)deviceDesc[i];
 			device = new NativeThreadIntersectionDevice(this, ntvDeviceDesc->GetThreadIndex(), i);
-		} else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			// OpenCL devices
 			const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)deviceDesc[i];
 			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->GetDeviceIndex()],
 					i, oclDeviceDesc->GetForceWorkGroupSize());
-		} else
+		}
+#endif
+		else
 			assert (false);
 
 		newDevices.push_back(device);

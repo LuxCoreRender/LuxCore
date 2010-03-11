@@ -27,6 +27,8 @@
 #define LUXRAYS_VERSION_MAJOR "0"
 #define LUXRAYS_VERSION_MINOR "1alpha0dev"
 
+/* #undef LUXRAYS_DISABLE_OPENCL */
+
 #if defined(__APPLE__)
 #if (__GNUC__ == 3) || (__GNUC__ == 4)
 extern "C" {

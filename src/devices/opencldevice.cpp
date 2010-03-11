@@ -19,8 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <cstdio>
-
 #include "luxrays/core/device.h"
 #include "luxrays/core/context.h"
 #include "luxrays/kernels/kernels.h"
@@ -37,7 +35,9 @@ using namespace luxrays;
 // OpenCL IntersectionDevice
 //------------------------------------------------------------------------------
 
-size_t OpenCLIntersectionDevice::RayBufferSize = 65536;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+size_t OpenCLIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
 
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
 		const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize) :
@@ -75,7 +75,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
 			buildDevice.push_back(device);
 			program.build(buildDevice, "-I.");
 		} catch (cl::Error err) {
-			cl::string strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
 
 			throw err;
@@ -110,7 +110,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
 			buildDevice.push_back(device);
 			program.build(buildDevice, "-I.");
 		} catch (cl::Error err) {
-			cl::string strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compilation error:\n" << strError.c_str());
 
 			throw err;
@@ -532,3 +532,5 @@ void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,
 			++i;
 	}
 }
+
+#endif

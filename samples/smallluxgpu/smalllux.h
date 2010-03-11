@@ -36,16 +36,6 @@
 	Unsupported Platform !!!
 #endif
 
-#define __CL_ENABLE_EXCEPTIONS
-#define __NO_STD_VECTOR
-#define __NO_STD_STRING
-
-#if defined(__APPLE__)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
-
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/core/utils.h"

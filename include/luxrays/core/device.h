@@ -25,16 +25,6 @@
 #include <string>
 #include <cstdlib>
 
-#define __CL_ENABLE_EXCEPTIONS
-#define __NO_STD_VECTOR
-#define __NO_STD_STRING
-
-#if defined(__APPLE__)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
-
 #include <boost/thread/thread.hpp>
 
 #include "luxrays/luxrays.h"
@@ -173,6 +163,10 @@ private:
 // OpenCL devices
 //------------------------------------------------------------------------------
 
+#define OPENCL_RAYBUFFER_SIZE 65536
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 typedef enum {
 	OCL_DEVICE_TYPE_ALL, OCL_DEVICE_TYPE_DEFAULT, OCL_DEVICE_TYPE_CPU,
 			OCL_DEVICE_TYPE_GPU, OCL_DEVICE_TYPE_UNKNOWN
@@ -274,6 +268,8 @@ private:
 
 	bool reportedPermissionError, externalQueue;
 };
+
+#endif
 
 }
 
