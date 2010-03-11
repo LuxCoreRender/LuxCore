@@ -35,10 +35,12 @@ public:
 	};
 
 	Path(Scene *scene) {
-		lightPdf = new float[scene->shadowRayCount];
-		lightColor = new Spectrum[scene->shadowRayCount];
-		shadowRay = new Ray[scene->shadowRayCount];
-		currentShadowRayIndex = new unsigned int[scene->shadowRayCount];
+		unsigned int shadowRayCount = GetMaxShadowRaysCount(scene);
+
+		lightPdf = new float[shadowRayCount];
+		lightColor = new Spectrum[shadowRayCount];
+		shadowRay = new Ray[shadowRayCount];
+		currentShadowRayIndex = new unsigned int[shadowRayCount];
 	}
 
 	~Path() {
@@ -146,33 +148,78 @@ public:
 		if (triSurfMat->IsDiffuse()) {
 			// Direct light sampling: trace shadow rays
 
-			// ONE UNFORM direct sampling light strategy
-			const Spectrum lightTroughtput = throughput * triInterpCol * RdotShadeN;
+			switch (scene->lightStrategy) {
+				case ALL_UNIFORM: {
+					// ALL UNIFORM direct sampling light strategy
+					const Spectrum lightTroughtput = throughput * triInterpCol * RdotShadeN;
 
-			for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
-				// Select the light to sample
-				const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
-				const TriangleLight *light = scene->lights[currentLightIndex];
+					for (unsigned int j = 0; j < scene->lights.size(); ++j) {
+						// Select the light to sample
+						const TriangleLight *light = scene->lights[j];
 
-				// Select a point on the light surface
-				lightColor[tracedShadowRayCount] = light->Sample_L(
-						scene->objects, hitPoint, shadeN,
-						sample.GetLazyValue(), sample.GetLazyValue(),
-						&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
+						//const unsigned int oldTracedShadowRayCount = tracedShadowRayCount;
+						for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
+							// Select a point on the light surface
+							lightColor[tracedShadowRayCount] = light->Sample_L(
+									scene->objects, hitPoint, shadeN,
+									sample.GetLazyValue(), sample.GetLazyValue(),
+									&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
-				lightColor[tracedShadowRayCount] *=  lightTroughtput *
-						triSurfMat->f(wi, shadowRay[tracedShadowRayCount].d, shadeN);
+							lightColor[tracedShadowRayCount] *=  lightTroughtput *
+									triSurfMat->f(wi, shadowRay[tracedShadowRayCount].d, shadeN);
 
-				// Using 0.1 instead of 0.0 to cut down fireflies
-				if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
-					tracedShadowRayCount++;
-			}
+							// Scale light pdf for ALL_UNIFORM strategy
+							lightPdf[tracedShadowRayCount] *= scene->shadowRayCount;
 
-			// Update the light pdf according the number of shadow ray traced
-			const float lightStrategyPdf = static_cast<float>(tracedShadowRayCount) / static_cast<float>(scene->lights.size());
-			for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
-				// Scale light pdf for ONE_UNIFORM strategy
-				lightPdf[i] *= lightStrategyPdf;
+							// Using 0.1 instead of 0.0 to cut down fireflies
+							if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
+								tracedShadowRayCount++;
+						}
+
+						// Update the light pdf according the number of shadow ray traced
+						/*const float lightStrategyPdf = static_cast<float>(tracedShadowRayCount - oldTracedShadowRayCount);
+						for (unsigned int i = oldTracedShadowRayCount; i < tracedShadowRayCount; ++i) {
+							// Scale light pdf for ALL_UNIFORM strategy
+							lightPdf[i] *= lightStrategyPdf;
+						}*/
+					}
+
+					break;
+				}
+				case ONE_UNIFORM: {
+					// ONE UNIFORM direct sampling light strategy
+					const Spectrum lightTroughtput = throughput * triInterpCol * RdotShadeN;
+
+					for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
+						// Select the light to sample
+						const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
+						const TriangleLight *light = scene->lights[currentLightIndex];
+
+						// Select a point on the light surface
+						lightColor[tracedShadowRayCount] = light->Sample_L(
+								scene->objects, hitPoint, shadeN,
+								sample.GetLazyValue(), sample.GetLazyValue(),
+								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
+
+						lightColor[tracedShadowRayCount] *=  lightTroughtput *
+								triSurfMat->f(wi, shadowRay[tracedShadowRayCount].d, shadeN);
+
+						// Using 0.1 instead of 0.0 to cut down fireflies
+						if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
+							tracedShadowRayCount++;
+					}
+
+					// Update the light pdf according the number of shadow ray traced
+					const float lightStrategyPdf = static_cast<float>(tracedShadowRayCount) / static_cast<float>(scene->lights.size());
+					for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
+						// Scale light pdf for ONE_UNIFORM strategy
+						lightPdf[i] *= lightStrategyPdf;
+					}
+
+					break;
+				}
+				default:
+					assert (false);
 			}
 		}
 
@@ -227,6 +274,18 @@ public:
 		pathRay.o = hitPoint;
 		pathRay.d = wo;
 		state = NEXT_VERTEX;
+	}
+
+	static unsigned int GetMaxShadowRaysCount(const Scene *scene) {
+		switch (scene->lightStrategy) {
+			case ALL_UNIFORM:
+				return scene->lights.size() * scene->shadowRayCount;
+				break;
+			case ONE_UNIFORM:
+				return scene->shadowRayCount;
+			default:
+				throw runtime_error("Internal error in Path::GetMaxShadowRaysCount()");
+		}
 	}
 
 private:

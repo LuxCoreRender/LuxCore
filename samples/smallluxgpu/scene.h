@@ -36,6 +36,10 @@
 
 using namespace std;
 
+typedef enum {
+	ONE_UNIFORM, ALL_UNIFORM
+} DirectLightStrategy;
+
 class Scene {
 public:
 	Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film);
@@ -62,6 +66,7 @@ public:
 
 	// Siggned because of the delta parameter
 	int maxPathDepth;
+	DirectLightStrategy lightStrategy;
 	unsigned int shadowRayCount;
 	int rrDepth;
 	float rrProb;

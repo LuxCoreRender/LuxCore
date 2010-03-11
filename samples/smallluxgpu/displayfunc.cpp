@@ -92,7 +92,8 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(30, 190);
 	sprintf(buf, "[Screen refresh: %dms][Render threads: %d][Shadow rays: %d]",
 			config->screenRefreshInterval, int(config->GetRenderThreads().size()),
-			config->scene->shadowRayCount);
+			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
+				(config->scene->shadowRayCount * (int)config->scene->lights.size()));
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 
 	// Devices

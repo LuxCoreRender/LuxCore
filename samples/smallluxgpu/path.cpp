@@ -69,8 +69,8 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 		firstPath = 0;
 	}
 
-	const size_t maxRaysPerPath = scene->shadowRayCount + 1;
-
+	// Worst case: shadow rays count + 1 path ray
+	const unsigned int maxRaysPerPath = Path::GetMaxShadowRaysCount(scene) + 1;
 	bool allPathDone = true;
 	lastPath = firstPath;
 	for (;;) {
