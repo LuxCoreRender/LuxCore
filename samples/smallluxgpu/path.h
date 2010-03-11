@@ -144,11 +144,11 @@ public:
 
 		tracedShadowRayCount = 0;
 		if (triSurfMat->IsDiffuse()) {
-			// Direct light sampling
+			// Direct light sampling: trace shadow rays
 
-			// Trace shadow rays
-			const float lightStrategyPdf = static_cast<float>(scene->shadowRayCount) / static_cast<float>(scene->lights.size());
+			// ONE UNFORM direct sampling light strategy
 			const Spectrum lightTroughtput = throughput * triInterpCol * RdotShadeN;
+
 			for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 				// Select the light to sample
 				const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
@@ -163,12 +163,16 @@ public:
 				lightColor[tracedShadowRayCount] *=  lightTroughtput *
 						triSurfMat->f(wi, shadowRay[tracedShadowRayCount].d, shadeN);
 
-				// Scale light pdf for ONE_UNIFORM strategy
-				lightPdf[tracedShadowRayCount] *= lightStrategyPdf;
-
 				// Using 0.1 instead of 0.0 to cut down fireflies
 				if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
 					tracedShadowRayCount++;
+			}
+
+			// Update the light pdf according the number of shadow ray traced
+			const float lightStrategyPdf = static_cast<float>(tracedShadowRayCount) / static_cast<float>(scene->lights.size());
+			for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
+				// Scale light pdf for ONE_UNIFORM strategy
+				lightPdf[i] *= lightStrategyPdf;
 			}
 		}
 
