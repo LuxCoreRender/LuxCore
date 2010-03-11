@@ -190,11 +190,14 @@ int main(int argc, char *argv[]) {
 			exit(-1);
 
 		RunGlut();
-	} catch (cl::Error err) {
-		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
 	} catch (std::runtime_error err) {
 		std::cerr << "ERROR: " << err.what() << std::endl;
 	}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	catch (cl::Error err) {
+		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
+	}
+#endif
 
 	return EXIT_SUCCESS;
 }

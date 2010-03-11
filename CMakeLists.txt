@@ -62,13 +62,17 @@ include_directories("${LUXRAYS_INCLUDE_DIR}" "${LUXRAYS_SOURCE_DIR}")
 #
 #############################################################################
 
-find_path(OCL_INCLUDE_PATH NAMES CL/cl.hpp OpenCL/cl.hpp PATHS /home/david/src/ati-stream-sdk-v2.0-lnx64/include)
-find_library(OCL_LIBRARY OpenCL /home/david/src/ati-stream-sdk-v2.01-lnx64/lib/x86_64)
+if (LUXRAYS_DISABLE_OPENCL)
+    set(OCL_LIBRARY "")
+else(LUXRAYS_DISABLE_OPENCL)
+    find_path(OCL_INCLUDE_PATH NAMES CL/cl.hpp OpenCL/cl.hpp PATHS /home/david/src/ati-stream-sdk-v2.0-lnx64/include)
+    find_library(OCL_LIBRARY OpenCL /home/david/src/ati-stream-sdk-v2.01-lnx64/lib/x86_64)
 
-message(STATUS "OpenCL include directory: " ${OCL_INCLUDE_PATH})
-message(STATUS "OpenCL library directory: " ${OCL_LIBRARY})
+    message(STATUS "OpenCL include directory: " ${OCL_INCLUDE_PATH})
+    message(STATUS "OpenCL library directory: " ${OCL_LIBRARY})
 
-include_directories("${OCL_INCLUDE_PATH}")
+    include_directories("${OCL_INCLUDE_PATH}")
+endif(LUXRAYS_DISABLE_OPENCL)
 
 #############################################################################
 #
@@ -88,11 +92,11 @@ message(STATUS "GLUT include directory: " ${GLUT_INCLUDE_DIR})
 #
 #############################################################################
 
-IF(APPLE) # typical boostlibs from luxrender
+if(APPLE) # typical boostlibs from luxrender
 	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39)
-ELSE(APPLE)
+else(APPLE)
 	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
-ENDIF(APPLE)
+endif(APPLE)
 
 if(Boost_FOUND)
 	message(STATUS "Boost include directory: " "${Boost_INCLUDE_DIRS}")

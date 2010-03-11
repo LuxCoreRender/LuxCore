@@ -224,6 +224,7 @@ void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCP
 	}
 
 	std::vector<DeviceDescription *> selectedDescs;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	for (size_t i = 0; i < descs.size(); ++i) {
 		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[i];
 
@@ -242,6 +243,7 @@ void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCP
 			}
 		}
 	}
+#endif
 
 	if (selectedDescs.size() == 0)
 		cerr << "No OpenCL device selected" << endl;

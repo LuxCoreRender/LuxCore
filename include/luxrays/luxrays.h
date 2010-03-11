@@ -23,6 +23,19 @@
 #define	_LUXRAYS_H
 
 #include "luxrays/cfg.h"
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+#define __CL_ENABLE_EXCEPTIONS
+
+#if defined(__APPLE__)
+#include <OpenCL/cl.hpp>
+#else
+#include <CL/cl.hpp>
+#endif
+
+#endif // LUXRAYS_DISABLE_OPENCL
+
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/vector_normal.h"

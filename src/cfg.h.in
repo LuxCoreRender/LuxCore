@@ -27,6 +27,8 @@
 #define LUXRAYS_VERSION_MAJOR "@LUXRAYS_VERSION_MAJOR@"
 #define LUXRAYS_VERSION_MINOR "@LUXRAYS_VERSION_MINOR@"
 
+#cmakedefine LUXRAYS_DISABLE_OPENCL
+
 #if defined(__APPLE__)
 #if (__GNUC__ == 3) || (__GNUC__ == 4)
 extern "C" {

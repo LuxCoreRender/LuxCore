@@ -19,8 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <cstdio>
-
 #include "luxrays/core/device.h"
 #include "luxrays/core/context.h"
 #include "luxrays/kernels/kernels.h"
@@ -41,11 +39,13 @@ void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescri
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
 		if ((cpuIndex == -1) && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD))
 			cpuIndex = i;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if ((gpuIndex == -1) && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) &&
 				(((OpenCLDeviceDescription *)deviceDescriptions[i])->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
 			gpuIndex = i;
 			break;
 		}
+#endif
 	}
 
 	if (gpuIndex != -1) {

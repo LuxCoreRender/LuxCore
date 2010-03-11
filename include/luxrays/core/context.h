@@ -26,16 +26,6 @@
 #include <sstream>
 #include <ostream>
 
-#define __CL_ENABLE_EXCEPTIONS
-#define __NO_STD_VECTOR
-#define __NO_STD_STRING
-
-#if defined(__APPLE__)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/dataset.h"
 
@@ -77,8 +67,10 @@ public:
 	friend class OpenCLIntersectionDevice;
 
 protected:
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// OpenCL items
 	cl::Platform oclPlatform;
+#endif
 
 private:
 	std::vector<IntersectionDevice *> CreateIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);

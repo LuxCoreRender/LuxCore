@@ -127,9 +127,12 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 		cerr << "[NativeRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (boost::thread_interrupted) {
 		cerr << "[NativeRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
-	} catch (cl::Error err) {
+	}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	catch (cl::Error err) {
 		cerr << "[NativeRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
 	}
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -241,7 +244,10 @@ void DeviceRenderThread::RenderThreadImpl(DeviceRenderThread *renderThread) {
 		cerr << "[DeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (boost::thread_interrupted) {
 		cerr << "[DeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
-	} catch (cl::Error err) {
+	}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	catch (cl::Error err) {
 		cerr << "[DeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
 	}
+#endif
 }
