@@ -64,6 +64,7 @@ void RenderingConfig::Init() {
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) == 1);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
 	const unsigned int filmType = cfg.GetInt("screen.type",3 );
+	const string filmName = cfg.GetString("screen.file", "");
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
@@ -72,7 +73,7 @@ void RenderingConfig::Init() {
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
 
 	Init(lowLatency, sceneFileName, w, h, nativeThreadCount,
-		useCPUs, useGPUs, forceGPUWorkSize, filmType,
+		useCPUs, useGPUs, forceGPUWorkSize, filmType, (filmName == "") ? NULL : &filmName,
 		oclPlatformIndex, oclDeviceThreads, oclDeviceConfig);
 
 	StopAllRenderThreads();
@@ -96,7 +97,8 @@ void RenderingConfig::Init() {
 void RenderingConfig::Init(const bool lowLatency, const string &sceneFileName, const unsigned int w,
 	const unsigned int h, const unsigned int nativeThreadCount,
 	const bool useCPUs, const bool useGPUs,
-	const unsigned int forceGPUWorkSize, const unsigned int filmType,
+	const unsigned int forceGPUWorkSize,
+	const unsigned int filmType, const string *filmFile,
 	const unsigned int oclPlatformIndex,
 	const unsigned int oclDeviceThreads, const string &oclDeviceConfig) {
 
@@ -109,19 +111,19 @@ void RenderingConfig::Init(const bool lowLatency, const string &sceneFileName, c
 	switch (filmType) {
 		case 0:
 			cerr << "Film type: StandardFilm" << endl;
-			film = new StandardFilm(lowLatency, w, h);
+			film = new StandardFilm(lowLatency, w, h, filmFile);
 			break;
 		case 1:
 			cerr << "Film type: BluredStandardFilm" << endl;
-			film = new BluredStandardFilm(lowLatency, w, h);
+			film = new BluredStandardFilm(lowLatency, w, h, filmFile);
 			break;
 		case 2:
 			cerr << "Film type: GaussianFilm" << endl;
-			film = new GaussianFilm(lowLatency, w, h);
+			film = new GaussianFilm(lowLatency, w, h, filmFile);
 			break;
 		case 3:
 			cerr << "Film type: FastGaussianFilm" << endl;
-			film = new FastGaussianFilm(lowLatency, w, h);
+			film = new FastGaussianFilm(lowLatency, w, h, filmFile);
 			break;
 		default:
 			throw runtime_error("Requested an unknown film type");
@@ -151,16 +153,18 @@ void RenderingConfig::Init(const bool lowLatency, const string &sceneFileName, c
 
 	intersectionAllDevices = ctx->GetIntersectionDevices();
 
+	const unsigned long seedBase = (unsigned long)(WallClockTime() / 1000.0);
+
 	// Create and start render threads
 	size_t renderThreadCount = intersectionAllDevices.size();
 	cerr << "Starting "<< renderThreadCount << " render threads" << endl;
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (intersectionAllDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
-			NativeRenderThread *t = new NativeRenderThread(i, i / (float)renderThreadCount,
+			NativeRenderThread *t = new NativeRenderThread(i, seedBase, i / (float)renderThreadCount,
 					(NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, lowLatency);
 			renderThreads.push_back(t);
 		} else {
-			DeviceRenderThread *t = new DeviceRenderThread(i, i / (float)renderThreadCount,
+			DeviceRenderThread *t = new DeviceRenderThread(i, seedBase, i / (float)renderThreadCount,
 					intersectionAllDevices[i], scene, lowLatency);
 			renderThreads.push_back(t);
 		}

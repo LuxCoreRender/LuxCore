@@ -63,7 +63,7 @@ private:
 
 class Film {
 public:
-	Film(const bool lowLatencyMode, const unsigned int w, unsigned int h) {
+	Film(const bool lowLatencyMode, const unsigned int w, const unsigned int h) {
 		lowLatency = lowLatencyMode;
 
 		Init(w, h);
@@ -79,6 +79,66 @@ public:
 		statsTotalSampleCount = 0;
 		statsAvgSampleSec = 0.0;
 		statsStartSampleTime = WallClockTime();
+	}
+
+	void LoadFilm(const string &filmFile) {
+		ifstream file;
+		file.open(filmFile.c_str(), ios::in | ios::binary);
+
+		// Check if the file exists
+		if (file.is_open()) {
+			file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
+
+			cerr << "Loading film file: " << filmFile << endl;
+
+			const Spectrum *pixelsRadiance = GetPixelRadiance();
+			const float *pixelWeights = GetPixelWeigth();
+
+			unsigned int tag;
+			file.read((char *)&tag, sizeof(unsigned int));
+			if (tag != (('S' << 24) | ('L' << 16) | ('G' << 8) | '0'))
+				throw runtime_error("Unknown film file format");
+
+			unsigned int w;
+			file.read((char *)&w, sizeof(unsigned int));
+			if (w != width)
+				throw runtime_error("Film file width doesn't match internal width");
+
+			unsigned int h;
+			file.read((char *)&h, sizeof(unsigned int));
+			if (h != height)
+				throw runtime_error("Film file height doesn't match internal height");
+
+			for (unsigned int i = 0; i < pixelCount; ++i) {
+				file.read((char *)&pixelsRadiance[i], sizeof(Spectrum));
+				file.read((char *)&pixelWeights[i], sizeof(float));
+			}
+			file.close();
+		} else
+			cerr << "Film file doesn't exist: " << filmFile << endl;
+	}
+
+	void SaveFilm(const string &filmFile) {
+		cerr << "Saving film file: " << filmFile << endl;
+
+		const Spectrum *pixelsRadiance = GetPixelRadiance();
+		const float *pixelWeights = GetPixelWeigth();
+
+		ofstream file;
+		file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
+		file.open(filmFile.c_str(), ios::out | ios::binary);
+
+		const unsigned int tag = ('S' << 24) | ('L' << 16) | ('G' << 8) | '0';
+		file.write((char *)&tag, sizeof(unsigned int));
+		file.write((char *)&width, sizeof(unsigned int));
+		file.write((char *)&height, sizeof(unsigned int));
+
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			file.write((char *)&pixelsRadiance[i], sizeof(Spectrum));
+			file.write((char *)&pixelWeights[i], sizeof(float));
+		}
+
+		file.close();
 	}
 
 	void StartSampleTime() {
@@ -163,9 +223,9 @@ public:
 			for (unsigned int x = 0; x < width; ++x) {
 				const int offset = 3 * (x + (height - y - 1) * width);
 
-				png_uint_16 r = static_cast<png_uint_16> (pixels[offset]*255.0f + .5f);
-				png_uint_16 g = static_cast<png_uint_16> (pixels[offset + 1]*255.0f + .5f);
-				png_uint_16 b = static_cast<png_uint_16> (pixels[offset + 2]*255.0f + .5f);
+				png_uint_16 r = static_cast<png_uint_16>(pixels[offset]*255.0f + .5f);
+				png_uint_16 g = static_cast<png_uint_16>(pixels[offset + 1]*255.0f + .5f);
+				png_uint_16 b = static_cast<png_uint_16>(pixels[offset + 2]*255.0f + .5f);
 
 				row[i++] = r;
 				row[i++] = g;
@@ -180,6 +240,9 @@ public:
 	}
 
 protected:
+	virtual Spectrum *GetPixelRadiance() = 0;
+	virtual float *GetPixelWeigth() = 0;
+
 	unsigned int width, height;
 	unsigned int pixelCount;
 
@@ -194,8 +257,9 @@ protected:
 
 class StandardFilm : public Film {
 public:
-	StandardFilm(const bool lowLatencyMode, const unsigned int w, unsigned int h) :
-		Film(lowLatencyMode, w, h) {
+	StandardFilm(const bool lowLatencyMode,
+			const unsigned int w, const unsigned int h,
+			const string *filmFile) : Film(lowLatencyMode, w, h) {
 		pixelsRadiance = NULL;
 		pixelWeights = NULL;
 		pixels = NULL;
@@ -203,6 +267,10 @@ public:
 		InitGammaTable();
 
 		Init(w, h);
+
+		// Check if I have to continue a film saved to a file
+		if (filmFile != NULL)
+			LoadFilm(*filmFile);
 	}
 
 	virtual ~StandardFilm() {
@@ -291,7 +359,8 @@ public:
 	}
 
 protected:
-	float gammaTable[GAMMA_TABLE_SIZE];
+	Spectrum *GetPixelRadiance() { return pixelsRadiance; }
+	float *GetPixelWeigth()  { return pixelWeights; }
 
 	void InitGammaTable() {
 		float x = 0.f;
@@ -321,8 +390,7 @@ protected:
 	}
 
 	void UpdateScreenBufferImpl() {
-		unsigned int count = width * height;
-		for (unsigned int i = 0, j = 0; i < count; ++i) {
+		for (unsigned int i = 0, j = 0; i < pixelCount; ++i) {
 			const float weight = pixelWeights[i];
 
 			if (weight == 0.f)
@@ -337,6 +405,8 @@ protected:
 		}
 	}
 
+	float gammaTable[GAMMA_TABLE_SIZE];
+
 	boost::mutex radianceMutex;
 	Spectrum *pixelsRadiance;
 	float *pixelWeights;
@@ -346,8 +416,9 @@ protected:
 
 class BluredStandardFilm : public StandardFilm {
 public:
-	BluredStandardFilm(const bool lowLatencyMode, const unsigned int w, unsigned int h) :
-		StandardFilm(lowLatencyMode, w, h) {
+	BluredStandardFilm(const bool lowLatencyMode,
+			const unsigned int w, const unsigned int h,
+			const string *filmFile) : StandardFilm(lowLatencyMode, w, h, filmFile) {
 	}
 
 	~BluredStandardFilm() {
@@ -356,14 +427,14 @@ public:
 	void Init(const unsigned int w, unsigned int h) {
 		StandardFilm::Init(w, h);
 
-		// Out of the lock but doesn't matter, Init(0 is called in single thread anyway
+		// Out of the lock but doesn't matter, Init() is called in single thread anyway
 		useLargeFilter = lowLatency;
 	}
 
 	void Reset() {
 		StandardFilm::Reset();
 
-		// Out of the lock but doesn't matter, Init(0 is called in single thread anyway
+		// Out of the lock but doesn't matter, Init() is called in single thread anyway
 		useLargeFilter = lowLatency;
 	}
 
@@ -412,7 +483,9 @@ private:
 
 class GaussianFilm : public Film {
 public:
-	GaussianFilm(const bool lowLatencyMode, const unsigned int w, unsigned int h) :
+	GaussianFilm(const bool lowLatencyMode,
+			const unsigned int w, unsigned int h,
+			const string *filmFile) :
 		Film(lowLatencyMode, w, h),  filter2x2(2.f, 2.f, 2.f),  filter4x4(4.f, 4.f, 0.05f) {
 		pixelsRadiance = NULL;
 		pixelWeights = NULL;
@@ -442,6 +515,10 @@ public:
 		InitGammaTable();
 
 		Init(w, h);
+
+		// Check if I have to continue a film saved to a file
+		if (filmFile != NULL)
+			LoadFilm(*filmFile);
 	}
 
 	virtual ~GaussianFilm() {
@@ -551,7 +628,8 @@ public:
 	}
 
 protected:
-	float gammaTable[GAMMA_TABLE_SIZE];
+	Spectrum *GetPixelRadiance() { return pixelsRadiance; }
+	float *GetPixelWeigth()  { return pixelWeights; }
 
 	void InitGammaTable() {
 		float x = 0.f;
@@ -639,6 +717,8 @@ protected:
 		}
 	}
 
+	float gammaTable[GAMMA_TABLE_SIZE];
+
 	boost::mutex radianceMutex;
 	GaussianFilter filter2x2, filter4x4;
 	float *filterTable2x2, *filterTable4x4;
@@ -652,8 +732,8 @@ protected:
 
 class FastGaussianFilm : public GaussianFilm {
 public:
-	FastGaussianFilm(const bool lowLatencyMode, const unsigned int w, unsigned int h) :
-		GaussianFilm(lowLatencyMode, w, h) {
+	FastGaussianFilm(const bool lowLatencyMode, const unsigned int w, unsigned int h,
+			const string *filmFile) : GaussianFilm(lowLatencyMode, w, h, filmFile) {
 	}
 
 	~FastGaussianFilm() {

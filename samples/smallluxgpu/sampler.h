@@ -66,7 +66,7 @@ private:
 
 class RandomSampler : public Sampler {
 public:
-	RandomSampler(const bool lowLat, unsigned int startSeed,
+	RandomSampler(const bool lowLat, unsigned long startSeed,
 			const unsigned width, const unsigned height, const unsigned startLine = 0) :
 		seed(startSeed), screenStartLine(startLine), lowLatency(lowLat) {
 		rndGen = new RandomGenerator();
@@ -188,7 +188,7 @@ public:
 
 private:
 	RandomGenerator *rndGen;
-	unsigned int seed;
+	unsigned long seed;
 	unsigned int screenWidth, screenHeight, screenStartLine;
 	unsigned int currentSampleScreenX, currentSampleScreenY, currentSubSampleIndex;
 	unsigned int pass;

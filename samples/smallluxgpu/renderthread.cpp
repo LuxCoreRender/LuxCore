@@ -40,8 +40,8 @@ RenderThread::~RenderThread() {
 // NativeRenderThread
 //------------------------------------------------------------------------------
 
-NativeRenderThread::NativeRenderThread(unsigned int index, const float samplingStart,
-		NativeThreadIntersectionDevice *device,
+NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long seedBase,
+		const float samplingStart, NativeThreadIntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
 
@@ -56,7 +56,7 @@ NativeRenderThread::NativeRenderThread(unsigned int index, const float samplingS
 	const unsigned int startLine = Clamp<unsigned int>(
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
-	sampler = new RandomSampler(lowLatency, threadIndex + 1,
+	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
 		startLine);
 
@@ -139,8 +139,8 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 // DeviceRenderThread
 //------------------------------------------------------------------------------
 
-DeviceRenderThread::DeviceRenderThread(unsigned int index, const float samplingStart,
-		IntersectionDevice *device,
+DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned long seedBase,
+		const float samplingStart, IntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
 
@@ -156,7 +156,7 @@ DeviceRenderThread::DeviceRenderThread(unsigned int index, const float samplingS
 	const unsigned int startLine = Clamp<unsigned int>(
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
-	sampler = new RandomSampler(lowLatency, threadIndex + 1,
+	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
 		startLine);
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
