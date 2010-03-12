@@ -38,6 +38,7 @@
 
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/normal.h"
+#include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/vector_normal.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/ray.h"

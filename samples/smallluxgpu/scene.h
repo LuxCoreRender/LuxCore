@@ -33,6 +33,7 @@
 
 #include "luxrays/core/context.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
+#include "texmap.h"
 
 using namespace std;
 
@@ -74,10 +75,12 @@ public:
 	PerspectiveCamera *camera;
 
 	vector<Material *> materials; // All materials
+	TextureMapCache texMapCache; // Texture maps
 	map<string, size_t> materialIndices; // All materials indices
 
 	vector<ExtTriangleMesh *> objects; // All objects
-	vector<Material *> triangleMatirials; // One for each triangle
+	vector<Material *> triangleMaterials; // One for each triangle
+	vector<TextureMap *> triangleTexMaps; // One for each triangle
 
 	vector<TriangleLight *> lights; // One for each light source triangle
 

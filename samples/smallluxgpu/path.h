@@ -104,7 +104,7 @@ public:
 		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
 
 		// Get the material
-		Material *triMat = scene->triangleMatirials[currentTriangleIndex];
+		Material *triMat = scene->triangleMaterials[currentTriangleIndex];
 
 		// Check if it is a light source
 		if (triMat->IsLightSource()) {

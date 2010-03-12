@@ -34,22 +34,24 @@ namespace luxrays {
 
 class ExtTriangleMesh : public TriangleMesh {
 public:
-	// NOTE: deleting meshVertices, meshIndices, meshNormals and meshColors is up to the application
 	ExtTriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, Spectrum *meshColors = NULL) :
+			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, Spectrum *meshColors = NULL, UV *meshUV = NULL) :
 			TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
 		normals = meshNormals;
 		colors = meshColors;
+		uvs = meshUV;
 	};
 	~ExtTriangleMesh() { };
 	virtual void Delete() {
 		TriangleMesh::Delete();
 		delete[] normals;
 		delete[] colors;
+		delete[] uvs;
 	}
 
 	Normal *GetNormal() const { return normals; }
 	Spectrum *GetColors() const { return colors; }
+	UV *GetUVs() const { return uvs; }
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName);
 	static ExtTriangleMesh *Merge(
@@ -66,6 +68,7 @@ public:
 private:
 	Normal *normals;
 	Spectrum *colors;
+	UV *uvs;
 };
 
 inline Normal InterpolateTriNormal(const Triangle &tri, const Normal *normals, const float b1, const float b2) {
@@ -80,6 +83,11 @@ inline Spectrum InterpolateTriColor(const Triangle &tri, const Spectrum *colors,
 inline Spectrum InterpolateTriColor(const Triangle &tri, const Spectrum *colors, const float b1, const float b2) {
 	const float b0 = 1.f - b1 - b2;
 	return b0 * colors[tri.v[0]] + b1 * colors[tri.v[1]] + b2 * colors[tri.v[2]];
+}
+
+inline UV InterpolateTriUV(const Triangle &tri, const UV *uvs, const float b1, const float b2) {
+	const float b0 = 1.f - b1 - b2;
+	return b0 * uvs[tri.v[0]] + b1 * uvs[tri.v[1]] + b2 * uvs[tri.v[2]];
 }
 
 }

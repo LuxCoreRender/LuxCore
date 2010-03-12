@@ -118,6 +118,15 @@ float Properties::GetFloat(const std::string propName, const float defaultValue)
 		return atof(s.c_str());
 }
 
+std::vector<std::string> Properties::GetStringVector(const std::string propName, const std::string &defaultValue) const {
+	std::string s = GetString(propName, "");
+
+	if (s.compare("") == 0)
+		return ConvertToStringVector(defaultValue);
+	else
+		return ConvertToStringVector(s);
+}
+
 std::vector<int> Properties::GetIntVector(const std::string propName, const std::string &defaultValue) const {
 	std::string s = GetString(propName, "");
 
@@ -151,6 +160,19 @@ std::string Properties::ExtractField(const std::string &value, const size_t inde
 	}
 
 	return "";
+}
+
+std::vector<std::string>  Properties::ConvertToStringVector(const std::string &values) {
+	std::vector<std::string> strs;
+	boost::split(strs, values, boost::is_any_of("|"));
+
+	std::vector<std::string> strs2;
+	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it) {
+		if (it->length() != 0)
+			strs2.push_back(*it);
+	}
+
+	return strs2;
 }
 
 std::vector<int> Properties::ConvertToIntVector(const std::string &values) {
