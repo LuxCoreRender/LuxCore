@@ -159,7 +159,8 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 
 	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
 		const string &key = *objKey;
-		const string plyFileName = scnProp.GetString(key, "scene.scn");
+		const vector<string> args = scnProp.GetStringVector(key, "");
+		const string plyFileName = args.at(0);
 		cerr << "PLY objects file name: " << plyFileName << endl;
 
 		ExtTriangleMesh *meshObject = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);
@@ -182,12 +183,26 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 				TriangleLight *tl = new TriangleLight(light, objects.size() - 1, i, objects);
 				lights.push_back(tl);
-				triangleMatirials.push_back(tl);
+				triangleMaterials.push_back(tl);
 			}
 		} else {
 			SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-				triangleMatirials.push_back(surfMat);
+				triangleMaterials.push_back(surfMat);
+		}
+
+		// Check if there is a texture map associated to the object
+		if (args.size() > 1) {
+			// Check if the object has UV coords
+			if (meshObject->GetUVs() == NULL)
+				throw runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
+
+			TextureMap *tm = texMapCache.GetTextureMap(args.at(1));
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+				triangleTexMaps.push_back(tm);
+		} else {
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+				triangleTexMaps.push_back(NULL);
 		}
 	}
 

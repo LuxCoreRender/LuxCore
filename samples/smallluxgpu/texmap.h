@@ -19,41 +19,32 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_PROPERTIES_H
-#define	_LUXRAYS_PROPERTIES_H
+#ifndef _TEXMAP_H
+#define	_TEXMAP_H
 
-#include <map>
+#include "smalllux.h"
 
-namespace luxrays {
+using namespace std;
 
-class Properties {
+class TextureMap {
 public:
-	Properties() { }
-	Properties(const std::string &fileName);
-	~Properties() { }
-
-	void LoadFile(const std::string &fileName);
-
-	std::vector<std::string> GetAllKeys() const;
-	std::vector<std::string> GetAllKeys(const std::string prefix) const;
-
-	std::string GetString(const std::string propName, const std::string defaultValue) const;
-	int GetInt(const std::string propName, const int defaultValue) const;
-	float GetFloat(const std::string propName, const float defaultValue) const;
-
-	std::vector<std::string> GetStringVector(const std::string propName, const std::string &defaultValue) const;
-	std::vector<int> GetIntVector(const std::string propName, const std::string &defaultValue) const;
-	std::vector<float> GetFloatVector(const std::string propName, const std::string &defaultValue) const;
-
-	static std::string ExtractField(const std::string &value, const size_t index);
-	static std::vector<std::string> ConvertToStringVector(const std::string &values);
-	static std::vector<int> ConvertToIntVector(const std::string &values);
-	static std::vector<float> ConvertToFloatVector(const std::string &values);
+	TextureMap(const string &fileName);
+	~TextureMap();
 
 private:
-	std::map<std::string, std::string> props;
+	unsigned int width, height;
+	Spectrum *pixels;
 };
 
-}
+class TextureMapCache {
+public:
+	TextureMapCache();
+	~TextureMapCache();
 
-#endif	/* _LUXRAYS_PROPERTIES_H */
+	TextureMap *GetTextureMap(const string &fileName);
+
+private:
+	std::map<std::string, TextureMap *> maps;
+};
+
+#endif	/* _TEXMAP_H */
