@@ -31,7 +31,33 @@ public:
 	TextureMap(const string &fileName);
 	~TextureMap();
 
+	const Spectrum GetColor(const UV &uv) const {
+		const float s = uv.u * width - 0.5f;
+		const float t = uv.v * height - 0.5f;
+
+		const int s0 = Floor2Int(s);
+		const int t0 = Floor2Int(t);
+
+		const float ds = s - s0;
+		const float dt = t - t0;
+
+		const float ids = 1.f - ds;
+		const float idt = 1.f - dt;
+
+		return ids * idt * GetTexel(s0, t0) +
+				ids * dt * GetTexel(s0, t0 + 1) +
+				ds * idt * GetTexel(s0 + 1, t0) +
+				ds * dt * GetTexel(s0 + 1, t0 + 1);
+	}
+
 private:
+	const Spectrum &GetTexel(const unsigned int s, const unsigned int t) const {
+		const unsigned int u = Mod(s, width);
+		const unsigned int v = Mod(t, height);
+
+		return pixels[v * width + u];
+	}
+
 	unsigned int width, height;
 	Spectrum *pixels;
 };

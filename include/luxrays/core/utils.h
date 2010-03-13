@@ -92,6 +92,17 @@ template<class T> inline void Swap(T &a, T &b) {
 	b = tmp;
 }
 
+template<class T> inline T Mod(T a, T b) {
+	if (b == 0)
+		b = 1;
+
+	a %= b;
+	if (a < 0)
+		a += b;
+
+	return a;
+}
+
 inline float Radians(float deg) {
 	return (M_PI / 180.f) * deg;
 }
