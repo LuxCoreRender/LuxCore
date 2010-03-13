@@ -50,7 +50,7 @@ TextureMap::TextureMap(const string &fileName) {
 	width = info->width;
 	height = info->height;
 	cerr << "Texture map size: " << width << "x" << height << " (" <<
-			width * height / 1024 << "Kbytes)" << endl;
+			width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
 
 	if (info->color_type != PNG_COLOR_TYPE_RGB)
 		throw runtime_error("Texture map PNG file must be in RGB format");
