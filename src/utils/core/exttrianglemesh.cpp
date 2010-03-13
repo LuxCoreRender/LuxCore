@@ -18,6 +18,7 @@
  *                                                                         *
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
+#include <iostream>
 
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/plymesh/rply.h"
@@ -31,7 +32,7 @@ static int VertexCB(p_ply_argument argument) {
 	void *userData = NULL;
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
-	Point* p = *static_cast<Point **> (userData);
+	Point *p = *static_cast<Point **> (userData);
 
 	long vertIndex;
 	ply_get_argument_element(argument, NULL, &vertIndex);
@@ -56,7 +57,7 @@ static int NormalCB(p_ply_argument argument) {
 
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
-	Normal* n = *static_cast<Normal **> (userData);
+	Normal *n = *static_cast<Normal **> (userData);
 
 	long normIndex;
 	ply_get_argument_element(argument, NULL, &normIndex);
@@ -73,13 +74,14 @@ static int NormalCB(p_ply_argument argument) {
 
 	return 1;
 }
+
 // rply color callback
 static int ColorCB(p_ply_argument argument) {
 	long userIndex = 0;
 	void *userData = NULL;
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
-	Spectrum* c = *static_cast<Spectrum **> (userData);
+	Spectrum *c = *static_cast<Spectrum **> (userData);
 
 	long colIndex;
 	ply_get_argument_element(argument, NULL, &colIndex);
@@ -93,6 +95,27 @@ static int ColorCB(p_ply_argument argument) {
 	else if (userIndex == 2)
 		c[colIndex].b =
 			static_cast<float>(ply_get_argument_value(argument) / 255.0);
+
+	return 1;
+}
+
+// rply uv callback
+static int UVCB(p_ply_argument argument) {
+	long userIndex = 0;
+	void *userData = NULL;
+	ply_get_argument_user_data(argument, &userData, &userIndex);
+
+	UV *uv = *static_cast<UV **> (userData);
+
+	long uvIndex;
+	ply_get_argument_element(argument, NULL, &uvIndex);
+
+	if (userIndex == 0)
+		uv[uvIndex].u =
+			static_cast<float>(ply_get_argument_value(argument));
+	else if (userIndex == 1)
+		uv[uvIndex].v =
+			static_cast<float>(ply_get_argument_value(argument));
 
 	return 1;
 }
@@ -171,10 +194,18 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 		throw std::runtime_error(ss.str());
 	}
 
+	UV *uv;
+	long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
+	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
+
 	p = new Point[plyNbVerts];
 	vi = new Triangle[plyNbTris];
 	c = new Spectrum[plyNbColors];
 	n = new Normal[plyNbVerts];
+	if (plyNbUVs == 0)
+		uv = NULL;
+	else
+		uv = new UV[plyNbUVs];
 
 	if (!ply_read(plyfile)) {
 		std::stringstream ss;
@@ -184,6 +215,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 		delete[] vi;
 		delete[] c;
 		delete[] n;
+		delete[] uv;
 
 		throw std::runtime_error(ss.str());
 	}
@@ -196,6 +228,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 	Triangle *triangles = vi;
 	Normal *vertNormals = n;
 	Spectrum *vertColors = c;
+	UV *vertUV = uv;
 
 	// It looks like normals exported by Blender are bugged
 	for (unsigned int i = 0; i < vertexCount; ++i)
@@ -236,7 +269,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 		}
 	}*/
 
-	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertColors);
+	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertColors, vertUV);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::Merge(
