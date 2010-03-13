@@ -5,6 +5,7 @@ scene.materials.glass.glass = 0.35 0.35 0.35  1.0 1.0 1.0  1.0 1.5  1 1
 scene.materials.matte.whitematte = 0.75 0.75 0.75
 scene.materials.light.whitelight = 120.0 120.0 120.0
 scene.objects.whitematte.back = scenes/simple-mat/simple-mat-back.ply
+scene.objects.whitematte.back2 = scenes/simple-mat/simple-mat-back2.ply|scenes/simple-mat/image.png
 scene.objects.redmirror.c1 = scenes/simple-mat/simple-mat-cube1.ply
 scene.objects.greenmm.c2 = scenes/simple-mat/simple-mat-cube2.ply
 scene.objects.glass.s1 = scenes/simple-mat/sphere.ply

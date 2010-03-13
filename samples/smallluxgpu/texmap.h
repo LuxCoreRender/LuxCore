@@ -19,41 +19,58 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_PROPERTIES_H
-#define	_LUXRAYS_PROPERTIES_H
+#ifndef _TEXMAP_H
+#define	_TEXMAP_H
 
-#include <map>
+#include "smalllux.h"
 
-namespace luxrays {
+using namespace std;
 
-class Properties {
+class TextureMap {
 public:
-	Properties() { }
-	Properties(const std::string &fileName);
-	~Properties() { }
+	TextureMap(const string &fileName);
+	~TextureMap();
 
-	void LoadFile(const std::string &fileName);
+	const Spectrum GetColor(const UV &uv) const {
+		const float s = uv.u * width - 0.5f;
+		const float t = uv.v * height - 0.5f;
 
-	std::vector<std::string> GetAllKeys() const;
-	std::vector<std::string> GetAllKeys(const std::string prefix) const;
+		const int s0 = Floor2Int(s);
+		const int t0 = Floor2Int(t);
 
-	std::string GetString(const std::string propName, const std::string defaultValue) const;
-	int GetInt(const std::string propName, const int defaultValue) const;
-	float GetFloat(const std::string propName, const float defaultValue) const;
+		const float ds = s - s0;
+		const float dt = t - t0;
 
-	std::vector<std::string> GetStringVector(const std::string propName, const std::string &defaultValue) const;
-	std::vector<int> GetIntVector(const std::string propName, const std::string &defaultValue) const;
-	std::vector<float> GetFloatVector(const std::string propName, const std::string &defaultValue) const;
+		const float ids = 1.f - ds;
+		const float idt = 1.f - dt;
 
-	static std::string ExtractField(const std::string &value, const size_t index);
-	static std::vector<std::string> ConvertToStringVector(const std::string &values);
-	static std::vector<int> ConvertToIntVector(const std::string &values);
-	static std::vector<float> ConvertToFloatVector(const std::string &values);
+		return ids * idt * GetTexel(s0, t0) +
+				ids * dt * GetTexel(s0, t0 + 1) +
+				ds * idt * GetTexel(s0 + 1, t0) +
+				ds * dt * GetTexel(s0 + 1, t0 + 1);
+	}
 
 private:
-	std::map<std::string, std::string> props;
+	const Spectrum &GetTexel(const unsigned int s, const unsigned int t) const {
+		const unsigned int u = Mod(s, width);
+		const unsigned int v = Mod(t, height);
+
+		return pixels[v * width + u];
+	}
+
+	unsigned int width, height;
+	Spectrum *pixels;
 };
 
-}
+class TextureMapCache {
+public:
+	TextureMapCache();
+	~TextureMapCache();
 
-#endif	/* _LUXRAYS_PROPERTIES_H */
+	TextureMap *GetTextureMap(const string &fileName);
+
+private:
+	std::map<std::string, TextureMap *> maps;
+};
+
+#endif	/* _TEXMAP_H */

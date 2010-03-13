@@ -83,8 +83,10 @@ endif(LUXRAYS_DISABLE_OPENCL)
 find_package(GLUT)
 find_package(OpenGL)
 
-message(STATUS "OpenGL include directory: " ${OPENGL_INCLUDE_DIR})
-message(STATUS "GLUT include directory: " ${GLUT_INCLUDE_DIR})
+message(STATUS "OpenGL include directory: " "${OPENGL_INCLUDE_DIR}")
+message(STATUS "OpenGL library: " "${OPENGL_LIBRARY}")
+message(STATUS "GLUT include directory: " "${GLUT_INCLUDE_DIR}")
+message(STATUS "GLUT library: " "${GLUT_LIBRARY}")
 
 #############################################################################
 #

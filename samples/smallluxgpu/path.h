@@ -104,7 +104,7 @@ public:
 		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
 
 		// Get the material
-		Material *triMat = scene->triangleMatirials[currentTriangleIndex];
+		Material *triMat = scene->triangleMaterials[currentTriangleIndex];
 
 		// Check if it is a light source
 		if (triMat->IsLightSource()) {
@@ -142,7 +142,15 @@ public:
 		SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 		const Point hitPoint = pathRay(rayHit->t);
 		const Vector wi = -pathRay.d;
-		const Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
+
+		Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
+		// Check if there is an assigned texture map
+		TextureMap *tm = scene->triangleTexMaps[currentTriangleIndex];
+		if (tm)	{
+			// Apply texture mapping
+			const UV uv = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+			triInterpCol *= tm->GetColor(uv);
+		}
 
 		tracedShadowRayCount = 0;
 		if (triSurfMat->IsDiffuse()) {
