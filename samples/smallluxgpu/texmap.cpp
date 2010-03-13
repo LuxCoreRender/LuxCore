@@ -49,7 +49,8 @@ TextureMap::TextureMap(const string &fileName) {
 
 	width = info->width;
 	height = info->height;
-	cerr << "Texture map size: " << width << "x" << height << endl;
+	cerr << "Texture map size: " << width << "x" << height << " (" <<
+			width * height / 1024 << "Kbytes)" << endl;
 
 	if (info->color_type != PNG_COLOR_TYPE_RGB)
 		throw runtime_error("Texture map PNG file must be in RGB format");
@@ -71,19 +72,19 @@ TextureMap::TextureMap(const string &fileName) {
 			size_t idx = width * y + x;
 			const png_byte *ptr = &(row[x * 3]);
 
-			pixels[idx++].r = ptr[0] / 255.0f;
-			pixels[idx++].g = ptr[1] / 255.0f;
+			pixels[idx].r = ptr[0] / 255.0f;
+			pixels[idx].g = ptr[1] / 255.0f;
 			pixels[idx].b = ptr[2] / 255.0f;
 		}
 	}
 
 	for (unsigned int y = 0; y < height; y++)
 		delete[] byteImage[y];
-	delete byteImage;
+	delete[] byteImage;
 }
 
 TextureMap::~TextureMap() {
-	delete pixels;
+	delete[] pixels;
 }
 
 TextureMapCache::TextureMapCache() {
