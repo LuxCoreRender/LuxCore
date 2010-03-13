@@ -188,19 +188,16 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 	ply_set_read_cb(plyfile, "vertex", "green", ColorCB, &c, 1);
 	ply_set_read_cb(plyfile, "vertex", "blue", ColorCB, &c, 2);
 
-	if ((plyNbColors <= 0) || ((plyNbColors > 0) && (plyNbColors != plyNbVerts))) {
-		std::stringstream ss;
-		ss << "Wrong count of colors in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
-	}
-
 	UV *uv;
 	long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
 	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
 
 	p = new Point[plyNbVerts];
 	vi = new Triangle[plyNbTris];
-	c = new Spectrum[plyNbColors];
+	if (plyNbColors == 0)
+		c = NULL;
+	else
+		c = new Spectrum[plyNbVerts];
 	n = new Normal[plyNbVerts];
 	if (plyNbUVs == 0)
 		uv = NULL;

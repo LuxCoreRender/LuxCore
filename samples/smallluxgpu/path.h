@@ -143,7 +143,13 @@ public:
 		const Point hitPoint = pathRay(rayHit->t);
 		const Vector wi = -pathRay.d;
 
-		Spectrum triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
+		Spectrum triInterpCol;
+		const Spectrum *colors = mesh->GetColors();
+		if (colors)
+			triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
+		else
+			triInterpCol = Spectrum(1.f, 1.f, 1.f);
+
 		// Check if there is an assigned texture map
 		TextureMap *tm = scene->triangleTexMaps[currentTriangleIndex];
 		if (tm)	{

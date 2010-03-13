@@ -55,7 +55,11 @@ private:
 		const unsigned int u = Mod(s, width);
 		const unsigned int v = Mod(t, height);
 
-		return pixels[v * width + u];
+		const unsigned index = v * width + u;
+		assert (index >= 0);
+		assert (index < width * height);
+
+		return pixels[index];
 	}
 
 	unsigned int width, height;
