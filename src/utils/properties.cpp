@@ -35,6 +35,12 @@ Properties::Properties(const std::string &fileName) {
 	LoadFile(fileName);
 }
 
+void Properties::Load(const Properties &p) {
+	std::vector<std::string> keys = p.GetAllKeys();
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it)
+		SetString(*it, p.GetString(*it, ""));
+}
+
 void Properties::LoadFile(const std::string &fileName) {
 	std::ifstream file(fileName.c_str(), std::ios::in);
 	char buf[512];
@@ -68,8 +74,7 @@ void Properties::LoadFile(const std::string &fileName) {
 			value.resize(value.size() - 1);
 		StringTrim(value);
 
-		props.erase(key);
-		props.insert(std::make_pair(key, std::string(value)));
+		props[key] = value;
 	}
 }
 
@@ -143,6 +148,10 @@ std::vector<float> Properties::GetFloatVector(const std::string propName, const 
 		return ConvertToFloatVector(defaultValue);
 	else
 		return ConvertToFloatVector(s);
+}
+
+void Properties::SetString(const std::string &propName, const std::string &value) {
+	props[propName] = value;
 }
 
 std::string Properties::ExtractField(const std::string &value, const size_t index) {

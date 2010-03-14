@@ -32,6 +32,7 @@ public:
 	Properties(const std::string &fileName);
 	~Properties() { }
 
+	void Load(const Properties &prop);
 	void LoadFile(const std::string &fileName);
 
 	std::vector<std::string> GetAllKeys() const;
@@ -44,6 +45,8 @@ public:
 	std::vector<std::string> GetStringVector(const std::string propName, const std::string &defaultValue) const;
 	std::vector<int> GetIntVector(const std::string propName, const std::string &defaultValue) const;
 	std::vector<float> GetFloatVector(const std::string propName, const std::string &defaultValue) const;
+
+	void SetString(const std::string &propName, const std::string &value);
 
 	static std::string ExtractField(const std::string &value, const size_t index);
 	static std::vector<std::string> ConvertToStringVector(const std::string &values);
