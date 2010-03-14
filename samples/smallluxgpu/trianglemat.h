@@ -52,7 +52,11 @@ public:
 		if (Dot(sampleN, wo) <= 0.f)
 			return Spectrum();
 
-		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+		const Spectrum *colors = mesh->GetColors();
+		if (colors)
+			return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+		else
+			return lightMaterial->GetGain(); // Light sources are supposed to have flat color
 	}
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
@@ -80,7 +84,11 @@ public:
 		*shadowRay = Ray(p, wi, RAY_EPSILON, distance - RAY_EPSILON);
 		*pdf = distanceSquared / (SampleNdotMinusWi * area);
 
-		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+		const Spectrum *colors = mesh->GetColors();
+		if (colors)
+			return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+		else
+			return lightMaterial->GetGain(); // Light sources are supposed to have flat color
 	}
 
 private:
