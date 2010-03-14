@@ -37,24 +37,12 @@ extern string SLG_LABEL;
 
 class RenderingConfig {
 public:
-	RenderingConfig(const bool lowLatency, const string &sceneFileName, const unsigned int w,
-		const unsigned int h, const unsigned int nativeThreadCount,
-		const bool useCPUs, const bool useGPUs,
-		const unsigned int forceGPUWorkSize);
-
+	RenderingConfig() { }
 	RenderingConfig(const string &fileName);
 
 	~RenderingConfig();
 
 	void Init();
-
-	void Init(const bool lowLatency, const string &sceneFileName, const unsigned int w,
-		const unsigned int h, const unsigned int nativeThreadCount,
-		const bool useCPUs, const bool useGPUs,
-		const unsigned int forceGPUWorkSize,
-		const unsigned int filmType, const string *filmFile = NULL,
-		const unsigned int oclPlatformIndex = 0,
-		const unsigned int oclDeviceThreads = 0, const string &oclDeviceConfig = "");
 
 	void ReInit(const bool reallocBuffers, const unsigned int w = 0, unsigned int h = 0);
 

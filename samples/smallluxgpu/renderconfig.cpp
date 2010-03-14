@@ -23,16 +23,6 @@
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
-RenderingConfig::RenderingConfig(const bool lowLatency, const string &sceneFileName, const unsigned int w,
-	const unsigned int h, const unsigned int nativeThreadCount,
-	const bool useCPUs, const bool useGPUs,
-	const unsigned int forceGPUWorkSize) {
-	screenRefreshInterval = 100;
-
-	Init(lowLatency, sceneFileName, w, h, nativeThreadCount, useCPUs, useGPUs,
-		forceGPUWorkSize, 3);
-}
-
 RenderingConfig::RenderingConfig(const string &fileName) {
 	cerr << "Reading configuration file: " << fileName << endl;
 	cfg.LoadFile(fileName);
@@ -56,7 +46,7 @@ RenderingConfig::~RenderingConfig() {
 
 void RenderingConfig::Init() {
 	const bool lowLatency = cfg.GetInt("opencl.latency.mode", 1);
-	const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball.scn");
+	const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
 	const unsigned int w = cfg.GetInt("image.width", 640);
 	const unsigned int h = cfg.GetInt("image.height", 480);
 	const unsigned int nativeThreadCount = cfg.GetInt("opencl.nativethread.count", 2);
@@ -65,47 +55,18 @@ void RenderingConfig::Init() {
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
 	const unsigned int filmType = cfg.GetInt("screen.type",3 );
 	const string filmName = cfg.GetString("screen.file", "");
+	const string *filmFile = (filmName == "") ? NULL : &filmName;
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
 	luxrays::RAY_EPSILON = cfg.GetFloat("scene.epsilon", luxrays::RAY_EPSILON);
 
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
-
-	Init(lowLatency, sceneFileName, w, h, nativeThreadCount,
-		useCPUs, useGPUs, forceGPUWorkSize, filmType, (filmName == "") ? NULL : &filmName,
-		oclPlatformIndex, oclDeviceThreads, oclDeviceConfig);
-
-	StopAllRenderThreads();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->ClearPaths();
-
-	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
-	scene->camera->Update();
-	scene->maxPathDepth = cfg.GetInt("path.maxdepth", 3);
-	int strat = cfg.GetInt("path.lightstrategy", 0);
-	if (strat == 0)
-		scene->lightStrategy = ONE_UNIFORM;
-	else
-		scene->lightStrategy = ALL_UNIFORM;
-	scene->shadowRayCount = cfg.GetInt("path.shadowrays", 1);
-	scene->rrDepth = cfg.GetInt("path.russianroulette.depth", scene->rrDepth);
-	scene->rrProb = cfg.GetInt("path.russianroulette.prob", scene->rrProb);
-	StartAllRenderThreads();
-}
-
-void RenderingConfig::Init(const bool lowLatency, const string &sceneFileName, const unsigned int w,
-	const unsigned int h, const unsigned int nativeThreadCount,
-	const bool useCPUs, const bool useGPUs,
-	const unsigned int forceGPUWorkSize,
-	const unsigned int filmType, const string *filmFile,
-	const unsigned int oclPlatformIndex,
-	const unsigned int oclDeviceThreads, const string &oclDeviceConfig) {
+	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
 
 	captionBuffer[0] = '\0';
 
 	// Create LuxRays context
-	ctx = new Context(DebugHandler ,oclPlatformIndex);
+	ctx = new Context(DebugHandler, oclPlatformIndex);
 
 	// Create the scene
 	switch (filmType) {
@@ -129,6 +90,18 @@ void RenderingConfig::Init(const bool lowLatency, const string &sceneFileName, c
 			throw runtime_error("Requested an unknown film type");
 	}
 	scene = new Scene(ctx, lowLatency, sceneFileName, film);
+
+	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
+	scene->camera->Update();
+	scene->maxPathDepth = cfg.GetInt("path.maxdepth", 3);
+	int strat = cfg.GetInt("path.lightstrategy", 0);
+	if (strat == 0)
+		scene->lightStrategy = ONE_UNIFORM;
+	else
+		scene->lightStrategy = ALL_UNIFORM;
+	scene->shadowRayCount = cfg.GetInt("path.shadowrays", 1);
+	scene->rrDepth = cfg.GetInt("path.russianroulette.depth", scene->rrDepth);
+	scene->rrProb = cfg.GetInt("path.russianroulette.prob", scene->rrProb);
 
 	// Start OpenCL devices
 	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclDeviceConfig);

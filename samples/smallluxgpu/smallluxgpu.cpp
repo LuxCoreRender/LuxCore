@@ -141,60 +141,98 @@ int main(int argc, char *argv[]) {
 #endif
 
 	try {
-		std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
-		std::cerr << "Usage (benchmark mode): " << argv[0] << " <native thread count> <use CPU device (0 or 1)> <use GPU device (0 or 1)> <GPU workgroup size (0=default value or anything > 0)>" << std::endl;
-		std::cerr << "Usage (interactive mode): " << argv[0] << " <low latency mode enabled (0 or 1)> <native thread count> <use CPU device (0 or 1)> <use GPU device (0 or 1)> <GPU workgroup size (0=default value or anything > 0)> <window width> <window height> <scene file>" << std::endl;
-		std::cerr << "Usage (batch mode): " << argv[0] << " <low latency mode enabled (0 or 1)> <native thread count> <use CPU device (0 or 1)> <use GPU device (0 or 1)> <GPU workgroup size (0=default value or anything > 0)> <window width> <window height> <halt time in secs> <scene file>" << std::endl;
-		std::cerr << "Usage (with configuration file mode): " << argv[0] << " <configuration file name>" << std::endl;
+		std::cerr << "Usage: " << argv[0] << " [options] [configuration file]" << std::endl <<
+				" -o [configuration file]" << std::endl <<
+				" -f [scene file]" << std::endl <<
+				" -w [window width]" << std::endl <<
+				" -e [window height]" << std::endl <<
+				" -g <disable OpenCL GPU device>" << std::endl <<
+				" -p <enable OpenCL CPU device>" << std::endl <<
+				" -n [native thread count]" << std::endl <<
+				" -l <enable low latency mode>" << std::endl <<
+				" -s [GPU workgroup size]" << std::endl <<
+				" -t [halt time in secs]" << std::endl <<
+				" -D [property name] [property value]" << std::endl <<
+				" -h <display this help and exit>" << std::endl;
 
-		// It is important to initialize OpenGL before OpenCL
-		unsigned int width;
-		unsigned int height;
-		if (argc == 10) {
-			width = atoi(argv[6]);
-			height = atoi(argv[7]);
-			const bool lowLatencyMode = (atoi(argv[1]) == 1);
-			config = new RenderingConfig(lowLatencyMode, argv[9], width, height, atoi(argv[2]), (atoi(argv[3]) == 1), (atoi(argv[4]) == 1), atoi(argv[5]));
-			return BatchMode(atoi(argv[8]), 0);
-		} else if (argc == 9) {
-			width = atoi(argv[6]);
-			height = atoi(argv[7]);
-		} else if (argc == 5) {
-			config = new RenderingConfig(false, "scenes/luxball/luxball.scn", 640, 480, atoi(argv[1]), (atoi(argv[2]) == 1), (atoi(argv[3]) == 1), atoi(argv[4]));
-			return BatchMode(180.0, 0);
-		} else if (argc == 2) {
-			config = new RenderingConfig(argv[1]);
-			width = config->cfg.GetInt("image.width", 640);
-			height = config->cfg.GetInt("image.height", 480);
+		bool batchMode = false;
+		Properties cmdLineProp;
+		for (int i = 1; i < argc; i++) {
+			if (argv[i][0] == '-') {
+				// I should check for out of range array index...
 
-			const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
-			const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
-			if ((halttime > 0) || (haltspp > 0)) {
-				config->Init();
-				return BatchMode(halttime, haltspp);
+				if (argv[i][1] == 'h') exit(EXIT_SUCCESS);
+
+				else if (argv[i][1] == 'o') {
+					if (config)
+						throw std::runtime_error("Used multiple configuration files");
+
+					config = new RenderingConfig(argv[++i]);
+				}
+
+				else if (argv[i][1] == 'e') cmdLineProp.SetString("image.height", argv[++i]);
+
+				else if (argv[i][1] == 'w') cmdLineProp.SetString("image.width", argv[++i]);
+
+				else if (argv[i][1] == 'f') cmdLineProp.SetString("scene.file", argv[++i]);
+
+				else if (argv[i][1] == 'p') cmdLineProp.SetString("opencl.cpu.use", "1");
+
+				else if (argv[i][1] == 'g') cmdLineProp.SetString("opencl.gpu.use", "0");
+
+				else if (argv[i][1] == 'l') cmdLineProp.SetString("opencl.latency.mode", "1");
+
+				else if (argv[i][1] == 'n') cmdLineProp.SetString("opencl.nativethread.count", argv[++i]);
+
+				else if (argv[i][1] == 's') cmdLineProp.SetString("opencl.gpu.workgroup.size", argv[++i]);
+
+				else if (argv[i][1] == 't') cmdLineProp.SetString("batch.halttime", argv[++i]);
+
+				else if (argv[i][1] == 'D') {
+					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);
+					i += 2;
+				}
+
+				else {
+					std::cerr << "Invalid option: " << argv[i] << std::endl;
+					exit(EXIT_FAILURE);
+				}
+			} else {
+				std::string s = argv[i];
+				if ((s.length() >= 4) && (s.substr(s.length() - 4) == ".cfg")) {
+					if (config)
+						throw std::runtime_error("Used multiple configuration files");
+					config = new RenderingConfig(s);
+				} else
+					throw std::runtime_error("Unknow file extension: " + s);
 			}
-		} else  if (argc == 1) {
-			width = 640;
-			height = 480;
-		} else
-			exit(-1);
+		}
 
-		InitGlut(argc, argv, width, height);
+		if (!config)
+			config = new RenderingConfig("scenes/luxball/render-fast.cfg");
 
-		if (argc == 9) {
-			const bool lowLatencyMode = (atoi(argv[1]) == 1);
-			config = new RenderingConfig(lowLatencyMode, argv[8], width, height, atoi(argv[2]), (atoi(argv[3]) == 1), (atoi(argv[4]) == 1), atoi(argv[5]));
+		config->cfg.Load(cmdLineProp);
 
-			if (!lowLatencyMode)
-				config->screenRefreshInterval = 2000;
-		} else if (argc == 2) {
-			config->Init();
-		} else if (argc == 1)
-			config = new RenderingConfig(true, "scenes/simple.scn", width, height, boost::thread::hardware_concurrency(), false, true, 0);
+		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
+		const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
+		if ((halttime > 0) || (haltspp > 0))
+			batchMode = true;
 		else
-			exit(-1);
+			batchMode = false;
 
-		RunGlut();
+		if (batchMode) {
+			config->Init();
+			return BatchMode(halttime, haltspp);
+		} else {
+			// It is important to initialize OpenGL before OpenCL
+			unsigned int width = config->cfg.GetInt("image.width", 640);
+			unsigned int height = config->cfg.GetInt("image.height", 480);
+
+			InitGlut(argc, argv, width, height);
+
+			config->Init();
+			RunGlut();
+		}
 	} catch (std::runtime_error err) {
 		std::cerr << "ERROR: " << err.what() << std::endl;
 	}
