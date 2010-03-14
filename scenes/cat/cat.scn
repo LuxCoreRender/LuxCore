@@ -1,5 +1,5 @@
 scene.camera.lookat = 2.296051 -4.236989 2.681252 -2.15708 4.261834 -0.136483
-scene.materials.metal.egyptcat =  0.65 0.65 0.65 90 1
+scene.materials.mattemetal.egyptcat = 0.35 0.35 0.35 0.65 0.65 0.65 90 1
 scene.objects.egyptcat.egyptcat = scenes/cat/egyptcat.ply|scenes/cat/EgyptCat.png
 scene.materials.matte.mag_ground =  1.0 0.850417 0.545883
 scene.objects.mag_ground.mag_ground = scenes/cat/mag_ground.ply
