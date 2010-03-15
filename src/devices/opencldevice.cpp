@@ -48,7 +48,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
 	oclType = GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE >());
 	bvhBuff = NULL;
 	qbvhBuff = NULL;
-	externalQueue = false;
+	externalRayBufferQueue = NULL;
 
 	// Allocate a context with the selected device
 	VECTOR_CLASS<cl::Device> devices;
@@ -162,7 +162,6 @@ void OpenCLIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue) 
 	assert (!started);
 
 	externalRayBufferQueue = queue;
-	externalQueue = true;
 }
 
 RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
@@ -171,14 +170,14 @@ RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
 
 void OpenCLIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
 	assert (started);
-	assert (!externalQueue);
+	assert (!externalRayBufferQueue);
 
 	rayBufferQueue.PushToDo(rayBuffer, 0);
 }
 
 RayBuffer *OpenCLIntersectionDevice::PopRayBuffer() {
 	assert (started);
-	assert (!externalQueue);
+	assert (!externalRayBufferQueue);
 
 	return rayBufferQueue.PopDone(0);
 }
@@ -315,7 +314,7 @@ void OpenCLIntersectionDevice::Stop() {
 	delete intersectionThread;
 	intersectionThread = NULL;
 
-	if (!externalQueue)
+	if (!externalRayBufferQueue)
 		rayBufferQueue.Clear();
 }
 

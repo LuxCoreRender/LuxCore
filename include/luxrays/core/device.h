@@ -266,7 +266,7 @@ private:
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
 
-	bool reportedPermissionError, externalQueue;
+	bool reportedPermissionError;
 };
 
 #endif
