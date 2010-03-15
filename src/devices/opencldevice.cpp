@@ -25,10 +25,6 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/accelerators/qbvhaccel.h"
 
-#if defined (__linux__)
-#include <pthread.h>
-#endif
-
 using namespace luxrays;
 
 //------------------------------------------------------------------------------
@@ -275,30 +271,12 @@ void OpenCLIntersectionDevice::Start() {
 	// Create the thread for the rendering
 	intersectionThread = new boost::thread(boost::bind(OpenCLIntersectionDevice::IntersectionThread, this));
 
-	// Set rayIntersectionThread priority
-#if defined (__linux__) || defined (__APPLE__)
-	{
-		const pthread_t tid = (pthread_t) intersectionThread->native_handle();
-
-		int policy = SCHED_FIFO;
-		int sysMaxPriority = sched_get_priority_max(policy);
-
-		struct sched_param param;
-		param.sched_priority = sysMaxPriority;
-
-		int ret = pthread_setschedparam(tid, policy, &param);
-		if (ret && !reportedPermissionError) {
-			/*LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to set ray intersection thread priority, error: " <<
-					ret << " (you probably need root/administrator permission to set thread SCHED_FIFO priority)");*/
-		}
+	// Set intersectionThread priority
+	bool res = SetThreadRRPriority(intersectionThread);
+	if (res && !reportedPermissionError) {
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
+		reportedPermissionError = true;
 	}
-#elif defined (WIN32)
-	{
-		const HANDLE tid = (HANDLE) intersectionThread->native_handle();
-		if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to ray intersection thread priority");
-	}
-#endif
 }
 
 void OpenCLIntersectionDevice::Interrupt() {
@@ -361,6 +339,7 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 			renderDevice->externalRayBufferQueue : &(renderDevice->rayBufferQueue);
 
 		RayBuffer *rayBuffer0, *rayBuffer1, *rayBuffer2;
+		const double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
 			const double t1 = WallClockTime();
 			queue->Pop3xToDo(&rayBuffer0, &rayBuffer1, &rayBuffer2);
@@ -377,7 +356,7 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 					renderDevice->statsTotalRayCount += rayBuffer0->GetRayCount();
 					queue->PushDone(rayBuffer0);
 
-					renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
+					renderDevice->statsDeviceTotalTime = WallClockTime() - startTime;
 					break;
 				}
 				case 2: {
@@ -401,7 +380,7 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 					renderDevice->statsTotalRayCount += rayBuffer1->GetRayCount();
 					queue->PushDone(rayBuffer1);
 
-					renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
+					renderDevice->statsDeviceTotalTime = WallClockTime() - startTime;
 					break;
 				}
 				case 3: {
@@ -434,7 +413,7 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 					renderDevice->statsTotalRayCount += rayBuffer2->GetRayCount();
 					queue->PushDone(rayBuffer2);
 
-					renderDevice->statsDeviceTotalTime += WallClockTime() - t1;
+					renderDevice->statsDeviceTotalTime = WallClockTime() - startTime;
 					break;
 				}
 				default:

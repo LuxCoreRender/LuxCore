@@ -106,6 +106,8 @@ private:
 	SampleBuffer *sampleBuffer;
 
 	boost::thread *renderThread;
+
+	bool reportedPermissionError;
 };
 
 #endif	/* _RENDERTHREAD_H */

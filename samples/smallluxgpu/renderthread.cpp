@@ -143,6 +143,7 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 		const float samplingStart, IntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
+	reportedPermissionError = false;
 
 	// Allocate buffers
 
@@ -194,6 +195,13 @@ void DeviceRenderThread::Start() {
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(DeviceRenderThread::RenderThreadImpl, this));
+
+	// Set renderThread priority
+	bool res = SetThreadRRPriority(renderThread);
+	if (res && !reportedPermissionError) {
+		cerr << "[NativeRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
+		reportedPermissionError = true;
+	}
 }
 
 void DeviceRenderThread::Interrupt() {

@@ -23,10 +23,6 @@
 #include "luxrays/core/context.h"
 #include "luxrays/kernels/kernels.h"
 
-#if defined (__linux__)
-#include <pthread.h>
-#endif
-
 namespace luxrays {
 
 //------------------------------------------------------------------------------
