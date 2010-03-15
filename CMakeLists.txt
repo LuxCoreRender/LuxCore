@@ -95,9 +95,9 @@ message(STATUS "GLUT library: " "${GLUT_LIBRARY}")
 #############################################################################
 
 if(APPLE) # typical boostlibs from luxrender
-	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39)
+	find_package(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39)
 else(APPLE)
-	FIND_PACKAGE(Boost 1.39.0 REQUIRED COMPONENTS thread)
+	find_package(Boost 1.39.0 REQUIRED COMPONENTS thread)
 endif(APPLE)
 
 if(Boost_FOUND)
@@ -121,6 +121,37 @@ if(PNG_FOUND)
 else(PNG_FOUND)
 	message(FATAL_ERROR "Could not find PNG Library")
 endif(PNG_FOUND)
+
+#############################################################################
+#
+# EXR Libraries
+#
+#############################################################################
+
+find_path(OPENEXR_INCLUDE_DIR
+        ImfXdr.h
+        PATHS
+        /usr/local/include/OpenEXR
+        /usr/include/OpenEXR
+        /sw/include/OpenEXR
+        /opt/local/include/OpenEXR
+        /opt/csw/include/OpenEXR
+        /opt/include/OpenEXR
+)
+
+if(OPENEXR_INCLUDE_DIR)
+    message(STATUS "OpenEXR include directory: " "${OPENEXR_INCLUDE_DIR}")
+else(OPENEXR_INCLUDE_DIR)
+	message(FATAL_ERROR "Could not find OpenEXR Library")
+endif(OPENEXR_INCLUDE_DIR)
+
+include_directories("${OPENEXR_INCLUDE_DIR}")
+
+if(APPLE)
+   SET(OPENEXR_LIBRARIES Half IlmImf Iex Imath IlmThread)
+else(APPLE)
+   SET(OPENEXR_LIBRARIES Half IlmImf Iex Imath)
+endif(APPLE)
 
 #############################################################################
 #
