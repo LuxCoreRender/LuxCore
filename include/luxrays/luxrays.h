@@ -22,6 +22,8 @@
 #ifndef _LUXRAYS_H
 #define	_LUXRAYS_H
 
+#include <iostream>
+
 #include "luxrays/cfg.h"
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

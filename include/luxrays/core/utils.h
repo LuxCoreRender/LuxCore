@@ -24,6 +24,12 @@
 
 #include <cmath>
 
+#if defined (__linux__)
+#include <pthread.h>
+#endif
+
+#include <boost/thread.hpp>
+
 #if defined(__APPLE__) // OSX adaptions Jens Verwiebe
 #  define memalign(a,b) valloc(b)
 #include <string>
@@ -172,6 +178,29 @@ inline void StringTrim(std::string &str) {
 		pos = str.find_first_not_of(' ');
 		if (pos != std::string::npos) str.erase(0, pos);
 	} else str.erase(str.begin(), str.end());
+}
+
+inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
+#if defined (__linux__) || defined (__APPLE__)
+	{
+		const pthread_t tid = (pthread_t)thread->native_handle();
+
+		int policy = SCHED_FIFO;
+		int sysMinPriority = sched_get_priority_min(policy);
+		struct sched_param param;
+		param.sched_priority = sysMinPriority + pri;
+
+		return pthread_setschedparam(tid, policy, &param);
+	}
+#elif defined (WIN32)
+	{
+		const HANDLE tid = (HANDLE) intersectionThread->native_handle();
+		if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
+			return false;
+		else
+			return true;
+	}
+#endif
 }
 
 //------------------------------------------------------------------------------
