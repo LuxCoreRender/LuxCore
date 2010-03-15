@@ -192,6 +192,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".ppm")) {
 				std::cerr << "Using PPM file format" << std::endl;
 				config->scene->camera->film->SavePPM(fileName);
+			} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".exr")) {
+				std::cerr << "Using EXR file format" << std::endl;
+				config->scene->camera->film->SaveEXR(fileName);
 			} else {
 				std::cerr << "Unknown image format extension, using PNG" << std::endl;
 				config->scene->camera->film->SavePNG(fileName);

@@ -25,6 +25,10 @@
 #include <cstddef>
 #include <cmath>
 
+#include <ImfInputFile.h>
+#include <ImfOutputFile.h>
+#include <ImfChannelList.h>
+#include <ImfFrameBuffer.h>
 #include <png.h>
 #include <boost/thread/mutex.hpp>
 
@@ -239,6 +243,42 @@ public:
 		fclose(fp);
 	}
 
+	virtual void SaveEXR(const string &fileName) {
+		Imf::Header header(width, height);
+		header.compression() = Imf::ZIP_COMPRESSION;
+		header.channels().insert("R", Imf::Channel(Imf::FLOAT));
+		header.channels().insert("G", Imf::Channel(Imf::FLOAT));
+		header.channels().insert("B", Imf::Channel(Imf::FLOAT));
+
+		Spectrum *rgb = new Spectrum[width * height];
+		const Spectrum *radiance = GetPixelRadiance();
+		const float *weights = GetPixelWeigth();
+		for (unsigned int y = 0; y < height; ++y) {
+			for (unsigned int x = 0; x < width; ++x) {
+				const unsigned int ridx = (height - y - 1) * width + x;
+				const unsigned int idx = y * width + x;
+				const float weight = weights[ridx];
+
+				if (weight == 0.f)
+					rgb[idx] = Spectrum();
+				else
+					rgb[idx] = radiance[ridx] / weight;
+			}
+		}
+
+		Imf::FrameBuffer fb;
+		float *frgb = (float *)&rgb[0];
+		fb.insert("R", Imf::Slice(Imf::FLOAT, (char *)(frgb), sizeof(Spectrum), width * sizeof(Spectrum)));
+		fb.insert("G", Imf::Slice(Imf::FLOAT, (char *)(frgb) + sizeof(float), sizeof(Spectrum), width * sizeof(Spectrum)));
+		fb.insert("B", Imf::Slice(Imf::FLOAT, (char *)(frgb) + 2 * sizeof(float), sizeof(Spectrum), width * sizeof(Spectrum)));
+
+		Imf::OutputFile file(fileName.c_str(), header);
+		file.setFrameBuffer(fb);
+		file.writePixels(height);
+
+		delete[] rgb;
+	}
+
 protected:
 	virtual Spectrum *GetPixelRadiance() = 0;
 	virtual float *GetPixelWeigth() = 0;
@@ -356,6 +396,12 @@ public:
 		UpdateScreenBufferImpl();
 
 		Film::SavePNG(fileName);
+	}
+
+	void SaveEXR(const string &fileName) {
+		boost::mutex::scoped_lock lock(radianceMutex);
+
+		Film::SaveEXR(fileName);
 	}
 
 protected:
@@ -625,6 +671,12 @@ public:
 		UpdateScreenBufferImpl();
 
 		Film::SavePNG(fileName);
+	}
+
+	void SaveEXR(const string &fileName) {
+		boost::mutex::scoped_lock lock(radianceMutex);
+
+		Film::SaveEXR(fileName);
 	}
 
 protected:
