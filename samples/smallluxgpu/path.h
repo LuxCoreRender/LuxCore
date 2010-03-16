@@ -23,7 +23,7 @@
 #define	_PATH_H
 
 #include "smalllux.h"
-#include "trianglemat.h"
+#include "light.h"
 #include "scene.h"
 
 class RenderingConfig;
@@ -88,7 +88,13 @@ public:
 		// Calculate next step
 		depth++;
 
-		if ((rayHit->index == 0xffffffffu) || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
+		const bool missed = (rayHit->index == 0xffffffffu);
+		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
+			if (missed && scene->infiniteLight) {
+				// Add the light emitted by the infinite light
+				radiance += scene->infiniteLight->Le(pathRay) * throughput;
+			}
+
 			// Hit nothing/only shadow rays/maxdepth, terminate the path
 			sampleBuffer->SplatSample(&sample, radiance);
 			// Restart the path
@@ -159,7 +165,7 @@ public:
 		}
 
 		tracedShadowRayCount = 0;
-		if (triSurfMat->IsDiffuse()) {
+		if (triSurfMat->IsDiffuse() && (scene->lights.size() > 0)) {
 			// Direct light sampling: trace shadow rays
 
 			switch (scene->lightStrategy) {
@@ -169,9 +175,8 @@ public:
 
 					for (unsigned int j = 0; j < scene->lights.size(); ++j) {
 						// Select the light to sample
-						const TriangleLight *light = scene->lights[j];
+						const TriangleLight *light = (TriangleLight *)scene->lights[j];
 
-						//const unsigned int oldTracedShadowRayCount = tracedShadowRayCount;
 						for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 							// Select a point on the light surface
 							lightColor[tracedShadowRayCount] = light->Sample_L(
@@ -189,13 +194,6 @@ public:
 							if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
 								tracedShadowRayCount++;
 						}
-
-						// Update the light pdf according the number of shadow ray traced
-						/*const float lightStrategyPdf = static_cast<float>(tracedShadowRayCount - oldTracedShadowRayCount);
-						for (unsigned int i = oldTracedShadowRayCount; i < tracedShadowRayCount; ++i) {
-							// Scale light pdf for ALL_UNIFORM strategy
-							lightPdf[i] *= lightStrategyPdf;
-						}*/
 					}
 
 					break;
@@ -207,7 +205,7 @@ public:
 					for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 						// Select the light to sample
 						const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
-						const TriangleLight *light = scene->lights[currentLightIndex];
+						const TriangleLight *light = (TriangleLight *)scene->lights[currentLightIndex];
 
 						// Select a point on the light surface
 						lightColor[tracedShadowRayCount] = light->Sample_L(

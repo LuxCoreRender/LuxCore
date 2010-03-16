@@ -65,6 +65,10 @@ typedef unsigned int u_int;
 #define INV_PI  0.31830988618379067154f
 #endif
 
+#ifndef INV_TWOPI
+#define INV_TWOPI  0.15915494309189533577f
+#endif
+
 namespace luxrays {
 
 inline double WallClockTime() {
@@ -194,7 +198,7 @@ inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
 	}
 #elif defined (WIN32)
 	{
-		const HANDLE tid = (HANDLE) thread->native_handle();
+		const HANDLE tid = (HANDLE)thread->native_handle();
 		if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
 			return false;
 		else
