@@ -45,7 +45,7 @@ public:
 
 class AreaLightMaterial : public LightMaterial {
 public:
-	AreaLightMaterial(const Spectrum col) { gain = col; }
+	AreaLightMaterial(const Spectrum &col) { gain = col; }
 
 	const Spectrum &GetGain() const { return gain; }
 
@@ -73,9 +73,8 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return false; }
 
-
 	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
-			return KdOverPI;
+		return KdOverPI;
 	}
 
 	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,

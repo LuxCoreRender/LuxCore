@@ -30,7 +30,6 @@
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
-#include "trianglemat.h"
 
 using namespace std;
 
@@ -206,6 +205,17 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		}
 	}
 
+	// Check if there is an infinitelight source defined
+	const string ilName = scnProp.GetString("scene.infinitelight.file", "");
+	if (ilName.size() > 0) {
+		infiniteLight = new InfiniteLight(ilName);
+
+		vector<float> vf = scnProp.GetFloatVector("scene.infinitelight.gain", "1.0 1.0 1.0");
+		if (vf.size() != 3)
+			throw runtime_error("Syntax error in scene.infinitelight.gain (required 3 parameters)");
+		infiniteLight->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
+	}
+
 	//--------------------------------------------------------------------------
 	// Create the DataSet
 	//--------------------------------------------------------------------------
@@ -217,4 +227,20 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		dataSet->Add(*obj);
 
 	dataSet->Preprocess();
+}
+
+Scene::~Scene() {
+	delete camera;
+
+	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
+		delete *l;
+
+	delete dataSet;
+
+	for (std::vector<ExtTriangleMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj) {
+		(*obj)->Delete();
+		delete *obj;
+	}
+
+	delete infiniteLight;
 }

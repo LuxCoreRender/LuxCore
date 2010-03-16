@@ -22,5 +22,6 @@ A special thanks goes to:
 - Rikb for soruce patches;
 - Nate Robins for glut32.dll;
 - Diego Nehab for PLY reading/writing library;
+- http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDr maps;
 
 This software is release under GPL License (see COPYING.txt file).

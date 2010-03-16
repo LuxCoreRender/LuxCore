@@ -25,7 +25,6 @@
 #include <cstddef>
 #include <cmath>
 
-#include <ImfInputFile.h>
 #include <ImfOutputFile.h>
 #include <ImfChannelList.h>
 #include <ImfFrameBuffer.h>

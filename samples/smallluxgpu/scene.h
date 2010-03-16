@@ -28,7 +28,7 @@
 
 #include "smalllux.h"
 #include "camera.h"
-#include "trianglemat.h"
+#include "light.h"
 #include "material.h"
 
 #include "luxrays/core/context.h"
@@ -44,19 +44,7 @@ typedef enum {
 class Scene {
 public:
 	Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film);
-	~Scene() {
-		delete camera;
-
-		for (std::vector<TriangleLight *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
-			delete *l;
-
-		delete dataSet;
-
-		for (std::vector<ExtTriangleMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj) {
-			(*obj)->Delete();
-			delete *obj;
-		}
-	}
+	~Scene();
 
 	unsigned int SampleLights(const float u) const {
 		// One Uniform light strategy
@@ -82,7 +70,8 @@ public:
 	vector<Material *> triangleMaterials; // One for each triangle
 	vector<TextureMap *> triangleTexMaps; // One for each triangle
 
-	vector<TriangleLight *> lights; // One for each light source triangle
+	vector<LightSource *> lights; // One for each light source
+	InfiniteLight *infiniteLight;
 
 	DataSet *dataSet;
 };
