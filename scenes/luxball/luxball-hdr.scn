@@ -15,4 +15,4 @@ scene.objects.shell.luxshell = scenes/luxball/luxball-shell.ply
 #scene.objects.whitelight.l2 = scenes/luxball/luxball-light2.ply
 #scene.infinitelight.file = scenes/simple-mat/sky.exr
 scene.infinitelight.file = scenes/simple-mat/arch.exr
-scene.infinitelight.gain = 1.0 1.0 1.0
+scene.infinitelight.gain = 3.0 3.0 3.0
