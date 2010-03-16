@@ -194,7 +194,7 @@ inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
 	}
 #elif defined (WIN32)
 	{
-		const HANDLE tid = (HANDLE) intersectionThread->native_handle();
+		const HANDLE tid = (HANDLE) thread->native_handle();
 		if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
 			return false;
 		else
