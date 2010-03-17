@@ -208,7 +208,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	// Check if there is an infinitelight source defined
 	const string ilName = scnProp.GetString("scene.infinitelight.file", "");
 	if (ilName.size() > 0) {
-		infiniteLight = new InfiniteLight(ilName);
+		infiniteLight = new InfiniteLight(texMapCache.GetTextureMap(ilName));
 
 		vector<float> vf = scnProp.GetFloatVector("scene.infinitelight.gain", "1.0 1.0 1.0");
 		if (vf.size() != 3)

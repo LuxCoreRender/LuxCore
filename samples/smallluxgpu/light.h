@@ -22,15 +22,13 @@
 #ifndef _LIGHT_H
 #define	_LIGHT_H
 
-#include <ImfRgbaFile.h>
-#include <ImfArray.h>
-#include <ImathBox.h>
-
 #include "smalllux.h"
 #include "material.h"
+#include "texmap.h"
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
+
 
 class LightSource {
 public:
@@ -42,46 +40,21 @@ public:
 
 class InfiniteLight : public LightSource {
 public:
-	InfiniteLight(const string &hdrFileName) {
-		// Read the EXR file
-		cerr << "Reading HDR light map: " << hdrFileName << endl;
-		Imf::RgbaInputFile file(hdrFileName.c_str());
-
-		Imath::Box2i dw = file.dataWindow();
-		width = dw.max.x - dw.min.x + 1;
-		height = dw.max.y - dw.min.y + 1;
-
-		Imf::Array2D<Imf::Rgba> pixels;
-		pixels.resizeErase(height, width);
-		file.setFrameBuffer(&pixels[0][0] - dw.min.x - dw.min.y * width, 1, width);
-		file.readPixels(dw.min.y, dw.max.y);
-
-		cerr << "HDR light map size: " << width << "x" << height << " (" << width * height *sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
-		texels = new Spectrum[width * height];
-		for (unsigned int y = 0; y < height; ++y) {
-			for (unsigned int x = 0; x < width; ++x) {
-				const unsigned int idx = y * width + x;
-				texels[idx].r = pixels[y][x].r;
-				texels[idx].g = pixels[y][x].g;
-				texels[idx].b = pixels[y][x].b;
-			}
-		}
+	InfiniteLight(TextureMap *tx) {
+		tex = tx;
 	}
 
-	void SetGain(const Spectrum &gain) {
-		if ((gain.r == 1.f) && (gain.g == 1.f) && (gain.b == 1.f))
-			return;
+	~InfiniteLight() { }
 
-		for (unsigned int i = 0; i < width * height; ++i)
-			texels[i] *= gain;
+	void SetGain(const Spectrum &gain) {
+		tex->Scale(gain);
 	}
 
 	Spectrum Le(const Ray &ray) const {
 		const float theta = SphericalTheta(ray.d);
-        const float u = SphericalPhi(ray.d) * INV_TWOPI;
-        const float v = theta * INV_PI;
+        const UV uv(SphericalPhi(ray.d) * INV_TWOPI, theta * INV_PI);
 
-		return Interpolate(u, v);
+		return tex->GetColor(uv);
 	}
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
@@ -91,38 +64,7 @@ public:
 	}
 
 private:
-	Spectrum Interpolate(const float u, const float v) const {
-		const float s = u * width - 0.5f;
-		const float t = v * height - 0.5f;
-
-		const int s0 = Floor2Int(s);
-		const int t0 = Floor2Int(t);
-
-		const float ds = s - s0;
-		const float dt = t - t0;
-
-		const float ids = 1.f - ds;
-		const float idt = 1.f - dt;
-
-		return ids * idt * GetTexel(s0, t0) +
-				ids * dt * GetTexel(s0, t0 + 1) +
-				ds * idt * GetTexel(s0 + 1, t0) +
-				ds * dt * GetTexel(s0 + 1, t0 + 1);
-	}
-
-	const Spectrum &GetTexel(const unsigned int s, const unsigned int t) const {
-		const unsigned int u = Mod(s, width);
-		const unsigned int v = Mod(t, height);
-
-		const unsigned index = v * width + u;
-		assert (index >= 0);
-		assert (index < width * height);
-
-		return texels[index];
-	}
-
-	unsigned int width, height;
-	Spectrum *texels;
+	TextureMap *tex;
 };
 
 class TriangleLight : public LightSource, public LightMaterial {
