@@ -55,7 +55,8 @@ public:
 		radiance = Spectrum(0.f, 0.f, 0.f);
 		sampler->GetNextSample(&sample);
 
-		scene->camera->GenerateRay(&sample, &pathRay);
+		scene->camera->GenerateRay(&sample, &pathRay,
+			sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample));
 		state = EYE_VERTEX;
 		depth = 0;
 		specularBounce = true;
