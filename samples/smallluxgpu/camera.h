@@ -27,10 +27,52 @@
 #include "film.h"
 #include "luxrays/core/geometry/transform.h"
 
+inline void ConcentricSampleDisk(float u1, float u2, float *dx, float *dy) {
+	float r, theta;
+	// Map uniform random numbers to $[-1,1]^2$
+	float sx = 2.f * u1 - 1.f;
+	float sy = 2.f * u2 - 1.f;
+	// Map square to $(r,\theta)$
+	// Handle degeneracy at the origin
+	if (sx == 0.f && sy == 0.f) {
+		*dx = 0.f;
+		*dy = 0.f;
+		return;
+	}
+	if (sx >= -sy) {
+		if (sx > sy) {
+			// Handle first region of disk
+			r = sx;
+			if (sy > 0.f)
+				theta = sy / r;
+			else
+				theta = 8.0f + sy / r;
+		} else {
+			// Handle second region of disk
+			r = sy;
+			theta = 2.0f - sx / r;
+		}
+	} else {
+		if (sx <= sy) {
+			// Handle third region of disk
+			r = -sx;
+			theta = 4.0f - sy / r;
+		} else {
+			// Handle fourth region of disk
+			r = -sy;
+			theta = 6.0f + sx / r;
+		}
+	}
+	theta *= M_PI / 4.f;
+	*dx = r * cosf(theta);
+	*dy = r * sinf(theta);
+}
+
 class PerspectiveCamera {
 public:
 	PerspectiveCamera(const bool lowLatency, const Point &o, const Point &t, Film *flm) :
-		orig(o), target(t), up(0.f, 0.f, 1.f), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f) {
+		orig(o), target(t), up(0.f, 0.f, 1.f), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
+		lensRadius(0.f), focalDistance(10.f) {
 		film = flm;
 
 		Update();
@@ -124,13 +166,36 @@ public:
 		RasterToCamera = CameraToScreen.GetInverse() * ScreenToRaster.GetInverse();
 	}
 
-	void GenerateRay(Sample *sample, Ray *ray) const {
+	void GenerateRay(Sample *sample, Ray *ray, const float u1, const float u2) const {
         Point Pras(sample->screenX, film->GetHeight() - sample->screenY - 1.f, 0);
         Point Pcamera;
         RasterToCamera(Pras, &Pcamera);
 
         ray->o = Pcamera;
         ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
+
+		// Modify ray for depth of field
+		if (lensRadius > 0.f) {
+			// Sample point on lens
+			Point lenP, lenPCamera;
+			ConcentricSampleDisk(u1, u2, &(lenPCamera.x), &(lenPCamera.y));
+
+			lenPCamera.x *= lensRadius;
+			lenPCamera.y *= lensRadius;
+			lenPCamera.z = 0;
+			CameraToWorld(lenPCamera, &lenP);
+			float lensU = lenPCamera.x;
+			float lensV = lenPCamera.y;
+
+			// Compute point on plane of focus
+			float ft = (focalDistance - clipHither) / ray->d.z;
+			Point Pfocus = (*ray)(ft);
+			// Update ray for effect of lens
+			ray->o.x += lensU * (focalDistance - clipHither) / focalDistance;
+			ray->o.y += lensV * (focalDistance - clipHither) / focalDistance;
+			ray->d = Pfocus - ray->o;
+		}
+
         ray->d = Normalize(ray->d);
         ray->mint = RAY_EPSILON;
         ray->maxt = (clipYon - clipHither) / ray->d.z;
@@ -142,7 +207,7 @@ public:
 	// User defined values
 	Point orig, target;
 	Vector up;
-	float fieldOfView, clipHither, clipYon;
+	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
 private:
 	// Calculated values

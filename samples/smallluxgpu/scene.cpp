@@ -59,6 +59,15 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 
 	camera = new PerspectiveCamera(lowLatency, o, t, film);
 
+	vf = scnProp.GetFloatVector("scene.camera.up", "0.0 0.0 0.1");
+	if (vf.size() != 3)
+		throw runtime_error("Syntax error in scene.camera.up parameter");
+	camera->up = Vector(vf.at(0), vf.at(1), vf.at(2));
+
+	camera->lensRadius = scnProp.GetFloat("scene.camera.lensradius", 0.f);
+	camera->focalDistance = scnProp.GetFloat("scene.camera.focaldistance", 10.f);
+	camera->Update();
+
 	//--------------------------------------------------------------------------
 	// Read all materials
 	//--------------------------------------------------------------------------
