@@ -19,6 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 #include <iostream>
+#include <cstring>
 
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/plymesh/rply.h"
