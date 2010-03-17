@@ -29,8 +29,8 @@
 
 class PerspectiveCamera {
 public:
-	PerspectiveCamera(const bool lowLatency, const Point &o, const Point &t,
-			Film *flm) : orig(o), target(t), fieldOfView(45.f) {
+	PerspectiveCamera(const bool lowLatency, const Point &o, const Point &t, Film *flm) :
+		orig(o), target(t), up(0.f, 0.f, 1.f), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f) {
 		film = flm;
 
 		Update();
@@ -87,40 +87,67 @@ public:
 	}
 
 	void Update() {
+		// Used to move trnslate the camera
 		dir = target - orig;
 		dir = Normalize(dir);
 
-		const Vector up(0.f, 0.f, 1.f);
-
-		const float k = Radians(fieldOfView);
 		x = Cross(dir, up);
 		x = Normalize(x);
-		x *= film->GetWidth() * k / film->GetHeight();
 
 		y = Cross(x, dir);
 		y = Normalize(y);
-		y *= k;
+
+		// Used to generate rays
+		Transform WorldToCamera = LookAt(orig, target, up);
+		CameraToWorld = WorldToCamera.GetInverse();
+
+		Transform CameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
+
+		const float frame =  float(film->GetWidth()) / float(film->GetHeight());
+		float screen[4];
+		if (frame > 1.f) {
+			screen[0] = -frame;
+			screen[1] = frame;
+			screen[2] = -1.f;
+			screen[3] = 1.f;
+		} else {
+			screen[0] = -1.f;
+			screen[1] = 1.f;
+			screen[2] = -1.f / frame;
+			screen[3] = 1.f / frame;
+		}
+		Transform ScreenToRaster =
+				Scale(float(film->GetWidth()), float(film->GetHeight()), 1.f) *
+				Scale(1.f / (screen[1] - screen[0]), 1.f / (screen[2] - screen[3]), 1.f) *
+				::Translate(Vector(-screen[0], -screen[3], 0.f));
+
+		RasterToCamera = CameraToScreen.GetInverse() * ScreenToRaster.GetInverse();
 	}
 
 	void GenerateRay(Sample *sample, Ray *ray) const {
-		const float cx = sample->screenX / film->GetWidth() - .5f;
-		const float cy = sample->screenY / film->GetHeight() - .5f;
-		Vector rdir = x * cx + y * cy + dir;
-		Point rorig = orig;
-		rorig += rdir * 0.1f;
-		rdir = Normalize(rdir);
+        Point Pras(sample->screenX, film->GetHeight() - sample->screenY - 1.f, 0);
+        Point Pcamera;
+        RasterToCamera(Pras, &Pcamera);
 
-		*ray = Ray(rorig, rdir);
+        ray->o = Pcamera;
+        ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
+        ray->d = Normalize(ray->d);
+        ray->mint = RAY_EPSILON;
+        ray->maxt = (clipYon - clipHither) / ray->d.z;
+
+        CameraToWorld(*ray, ray);
 	}
 
 	Film *film;
-	/* User defined values */
+	// User defined values
 	Point orig, target;
-	float fieldOfView;
+	Vector up;
+	float fieldOfView, clipHither, clipYon;
 
 private:
-	/* Calculated values */
+	// Calculated values
 	Vector dir, x, y;
+	Transform RasterToCamera, CameraToWorld;
 };
 
 #endif	/* _CAMERA_H */
