@@ -236,14 +236,13 @@ int main(int argc, char *argv[]) {
 			config->Init();
 			RunGlut();
 		}
-	} catch (std::runtime_error err) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	} catch (cl::Error err) {
+		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
+#endif
+	} catch (std::exception err) {
 		std::cerr << "ERROR: " << err.what() << std::endl;
 	}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	catch (cl::Error err) {
-		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
-	}
-#endif
 
 	return EXIT_SUCCESS;
 }
