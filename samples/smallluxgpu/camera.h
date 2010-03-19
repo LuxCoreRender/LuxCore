@@ -147,7 +147,7 @@ public:
 
 		const float frame =  float(film->GetWidth()) / float(film->GetHeight());
 		float screen[4];
-		if (frame > 1.f) {
+		if (frame < 1.f) {
 			screen[0] = -frame;
 			screen[1] = frame;
 			screen[2] = -1.f;
