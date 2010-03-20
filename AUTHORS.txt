@@ -1,5 +1,5 @@
 Authors:
 
 BUCCIARELLI David <davibu.at.interfree.it>
-VERWIEBE Jens <>
 DUCHARME Alain <>
+VERWIEBE Jens <>

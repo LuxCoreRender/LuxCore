@@ -229,7 +229,7 @@ add_subdirectory(samples/smallluxgpu)
 
 set(CMAKE_INSTALL_PREFIX .)
 #set(LUXRAYS_BIN_SAMPLES_DIR "luxrays-v${LUXRAYS_VERSION_MAJOR}.${LUXRAYS_VERSION_MINOR}")
-set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.4beta2")
+set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.4beta3")
 
 ADD_CUSTOM_COMMAND(
     OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}"
@@ -238,6 +238,8 @@ ADD_CUSTOM_COMMAND(
     COMMAND cp -r scenes ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMAND cp samples/smallluxgpu/bat/*.bat ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMAND cp samples/smallluxgpu/exe/*.* ${LUXRAYS_BIN_SAMPLES_DIR}
+	COMMAND mkdir ${LUXRAYS_BIN_SAMPLES_DIR}/blender
+    COMMAND cp samples/smallluxgpu/blender/*.py ${LUXRAYS_BIN_SAMPLES_DIR}/blender
     COMMAND cp bin/slg ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}")

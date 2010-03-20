@@ -23,5 +23,8 @@ A special thanks goes to:
 - Nate Robins for glut32.dll;
 - Diego Nehab for PLY reading/writing library;
 - http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;
+- libPNG authors http://www.libpng.org;
+- zlib authors http://www.zlib.net/;
+- OpenEXr authors http://www.openexr.com/;
 
 This software is release under GPL License (see COPYING.txt file).
