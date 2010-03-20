@@ -42,16 +42,20 @@ def slg_properties():
       description="Name of SmallLuxGPU scene to create",
       default="testscene", maxlen=1024)
   
-  BoolProperty(attr="slg_vuvs", name="UVs",
-      description="Export vertex uv information (if available and texture is assigned)",
+  BoolProperty(attr="slg_export", name="PLY",
+      description="Export ply files (uncheck only if scene has already been exported)",
       default=True)
           
-  BoolProperty(attr="slg_vcolors", name="Colors",
-      description="Export vertex color information (only if present)",
+  BoolProperty(attr="slg_vuvs", name="UVs",
+      description="Export optional vertex uv information (if available and texture is assigned)",
+      default=True)
+          
+  BoolProperty(attr="slg_vcolors", name="VCs",
+      description="Export optional vertex color information (only if present)",
       default=False)
           
-  BoolProperty(attr="slg_vnormals", name="Normals",
-      description="Export vertex normal information",
+  BoolProperty(attr="slg_vnormals", name="VNs",
+      description="Export optional vertex normal information",
       default=False)
           
   BoolProperty(attr="slg_low_latency", name="Low Latency",
@@ -147,7 +151,7 @@ def slg_properties():
       description="SmallLuxGPU camera lens radius for depth of field",
       default=0.015, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-  # Use some of the existing ones
+  # Use some of the existing panels
   import properties_render
   properties_render.RENDER_PT_render.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
   properties_render.RENDER_PT_layers.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
@@ -195,12 +199,15 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.prop(scene, "slg_scenename", text="Scene Name:")
     split = layout.split(percentage=0.25)
     col = split.column()
-    col.label(text="Vertex:")
+    col.prop(scene, "slg_export")
     col = split.column()
-    col.prop(scene, "slg_vuvs")    
+    col.active = scene.slg_export    
+    col.prop(scene, "slg_vuvs")
     col = split.column()
-    col.prop(scene, "slg_vcolors")    
+    col.active = scene.slg_export    
+    col.prop(scene, "slg_vcolors")
     col = split.column()
+    col.active = scene.slg_export
     col.prop(scene, "slg_vnormals")
     split = layout.split()
     col = split.column()
@@ -262,7 +269,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
   bl_idname = 'SMALLLUXGPU_RENDER'
   bl_label = "SmallLuxGPU"
   
-  def _slgexport(self, scene, uv_flag, vc_flag, vn_flag, basepath, basename):
+  def _slgexport(self, scene, uv_flag, vc_flag, vn_flag, export, basepath, basename):
     from Mathutils import Vector
     from itertools import zip_longest
 
@@ -288,82 +295,86 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     addv = False
     # Force an update to object matrices when rendering animations
     scene.set_frame(scene.current_frame)
-    for obj in scene.objects:
-      if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT'] and scene.visible_layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
-        print('SLGBP ===> Object: {}'.format(obj.name))
-        # Create render mesh
-        try:
-          print("SLGBP    Create render mesh: {}".format(obj.name))
-          mesh = obj.create_mesh(True, 'RENDER')
-        except:
-          pass
-        else:
-          print("SLGBP    Xform render mesh: {}".format(obj.name))
-          mesh.transform(obj.matrix)
-          # Make copy of verts for fast direct index access (mesh.verts was very slow)
-          if vn_flag:
-            v = [tuple(vert.co)+tuple(vert.normal) for vert in mesh.verts]
+    sdir = '{}/scenes/{}'.format(basepath,basename)
+    if export:
+      # Delete existing ply files
+      [os.remove('{}/{}'.format(sdir,file)) for file in os.listdir(sdir) if file.endswith('.ply')]
+      for obj in scene.objects:
+        if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT'] and scene.visible_layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
+          print('SLGBP ===> Object: {}'.format(obj.name))
+          # Create render mesh
+          try:
+            print("SLGBP    Create render mesh: {}".format(obj.name))
+            mesh = obj.create_mesh(True, 'RENDER')
+          except:
+            pass
           else:
-            v = [tuple(vert.co) for vert in mesh.verts]
-          vcd = []
-          if vc_flag and mesh.active_vertex_color:
-            vcd = mesh.active_vertex_color.data
-          uvd = []
-          if uv_flag and mesh.active_uv_texture:
-            uvd = mesh.active_uv_texture.data
-          # Correlate obj mat slots with global mats
-          objmats = [mats.index(m.material.name) if m.material else 0 for m in obj.material_slots]
-          for face, vc, uv in zip_longest(mesh.faces,vcd,uvd):
-            curmat = objmats[face.material_index] if objmats else nomat 
-            # Get vertex colors, if avail
-            if vc:
-              colors = vc.color1, vc.color2, vc.color3, vc.color4
-              mvc[curmat] = True
-            #Get uvs if there is an image texture attached
-            if mtex[curmat] and uv:
-              uvcos = uv.uv1, uv.uv2, uv.uv3, uv.uv4
-            if not face.smooth:
-              faces[curmat].append((vertnum[curmat], vertnum[curmat]+1, vertnum[curmat]+2))
-              if len(face.verts) == 4:
-                faces[curmat].append((vertnum[curmat], vertnum[curmat]+2, vertnum[curmat]+3))
-            for j, vert in enumerate(face.verts):
-              if vc_flag:
-                if vc:
-                  color[0] = int(255.0*colors[j][0])
-                  color[1] = int(255.0*colors[j][1])
-                  color[2] = int(255.0*colors[j][2])
-                else:
-                  color[0] = color[1] = color[2] = 255
-              if uv_flag and mtex[curmat]:
-                if uv:
-                  uvco[0] = uvcos[j][0]
-                  uvco[1] = 1.0 - uvcos[j][1]
-                else:
-                  uvco[0] = uvco[1] = 0
-              if face.smooth:
-                if (curmat,vert) in sharedverts:
-                  addv = False
-                else:
-                  sharedverts[curmat,vert]=vertnum[curmat]
-                  addv = True
-              else:
-                addv = True
-              if addv:
-                verts[curmat].append(v[vert])
-                if uv_flag and mtex[curmat]:
-                  vert_uvs[curmat].append(tuple(uvco))
+            print("SLGBP    Xform render mesh: {}".format(obj.name))
+            mesh.transform(obj.matrix)
+            # Make copy of verts for fast direct index access (mesh.verts was very slow)
+            if vn_flag:
+              v = [tuple(vert.co)+tuple(vert.normal) for vert in mesh.verts]
+            else:
+              v = [tuple(vert.co) for vert in mesh.verts]
+            vcd = []
+            if vc_flag and mesh.active_vertex_color:
+              vcd = mesh.active_vertex_color.data
+            uvd = []
+            if uv_flag and mesh.active_uv_texture:
+              uvd = mesh.active_uv_texture.data
+            # Correlate obj mat slots with global mats
+            objmats = [mats.index(m.material.name) if m.material else 0 for m in obj.material_slots]
+            for face, vc, uv in zip_longest(mesh.faces,vcd,uvd):
+              curmat = objmats[face.material_index] if objmats else nomat 
+              # Get vertex colors, if avail
+              if vc:
+                colors = vc.color1, vc.color2, vc.color3, vc.color4
+                mvc[curmat] = True
+              #Get uvs if there is an image texture attached
+              if mtex[curmat] and uv:
+                uvcos = uv.uv1, uv.uv2, uv.uv3, uv.uv4
+              if not face.smooth:
+                faces[curmat].append((vertnum[curmat], vertnum[curmat]+1, vertnum[curmat]+2))
+                if len(face.verts) == 4:
+                  faces[curmat].append((vertnum[curmat], vertnum[curmat]+2, vertnum[curmat]+3))
+              for j, vert in enumerate(face.verts):
                 if vc_flag:
-                  vert_vcs[curmat].append(tuple(color))
-                vertnum[curmat] += 1
-            if face.smooth:
-              faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[1]], sharedverts[curmat,face.verts[2]]))
-              if len(face.verts) == 4:
-                faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[2]], sharedverts[curmat,face.verts[3]]))
-        sharedverts = {}
-        # Delete working mesh
-        if not mesh.users:
-          print("SLGBP    delete render mesh: {}".format(obj.name))
-          bpy.data.meshes.remove(mesh)
+                  if vc:
+                    color[0] = int(255.0*colors[j][0])
+                    color[1] = int(255.0*colors[j][1])
+                    color[2] = int(255.0*colors[j][2])
+                  else:
+                    color[0] = color[1] = color[2] = 255
+                if uv_flag and mtex[curmat]:
+                  if uv:
+                    uvco[0] = uvcos[j][0]
+                    uvco[1] = 1.0 - uvcos[j][1]
+                  else:
+                    uvco[0] = uvco[1] = 0
+                if face.smooth:
+                  if (curmat,vert) in sharedverts:
+                    addv = False
+                  else:
+                    sharedverts[curmat,vert]=vertnum[curmat]
+                    addv = True
+                else:
+                  addv = True
+                if addv:
+                  verts[curmat].append(v[vert])
+                  if uv_flag and mtex[curmat]:
+                    vert_uvs[curmat].append(tuple(uvco))
+                  if vc_flag:
+                    vert_vcs[curmat].append(tuple(color))
+                  vertnum[curmat] += 1
+              if face.smooth:
+                faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[1]], sharedverts[curmat,face.verts[2]]))
+                if len(face.verts) == 4:
+                  faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[2]], sharedverts[curmat,face.verts[3]]))
+          sharedverts = {}
+          # Delete working mesh
+          if not mesh.users:
+            print("SLGBP    delete render mesh: {}".format(obj.name))
+            bpy.data.meshes.remove(mesh)
 
     # Get camera and lookat point
     cam = scene.camera   
@@ -372,7 +383,6 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
 
     print("SLGBP ===> Create scene files")
     # Check/create scene directory to hold scene files
-    sdir = '{}/scenes/{}'.format(basepath,basename) 
     if not os.path.exists(sdir):
       os.mkdir(sdir)
 
@@ -393,10 +403,10 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       wle = scene.world.lighting.environment_energy if scene.world.lighting.use_environment_lighting else 1.0
       fscn.write('scene.infinitelight.gain = {} {} {}\n'.format(ff(iltex.factor_red*wle),ff(iltex.factor_green*wle),ff(iltex.factor_blue*wle)))
   
-    # Create one ply per material
+    # Process each material
     for i, mat in enumerate(mats):
-      if verts[i]:
-        mat = mat.replace('.','_')
+      mat = mat.replace('.','_')
+      if verts[i] or (not export and os.path.exists('{}/{}.ply'.format(sdir,mat))):
         print("SLGBP    material: {}".format(mat))
         # Create scn material
         if i == nomat:
@@ -430,44 +440,45 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           if texfname:
             fscn.write('|{}'.format(bpy.utils.expandpath(texfname).replace('\\','/')))
         fscn.write('\n')
-        # Write out PLY
-        fply = open('{}/{}.ply'.format(sdir,mat), 'wb')
-        fply.write(b'ply\n')
-        fply.write(b'format ascii 1.0\n')
-        fply.write(str.encode('comment Created by SmallLuxGPU exporter for Blender 2.5, source file: {}\n'.format((bpy.data.filename.split('/')[-1].split('\\')[-1]))))
-        fply.write(str.encode('element vertex {}\n'.format(vertnum[i])))
-        fply.write(b'property float x\n')
-        fply.write(b'property float y\n')
-        fply.write(b'property float z\n')
-        if vn_flag:
-          fply.write(b'property float nx\n')
-          fply.write(b'property float ny\n')
-          fply.write(b'property float nz\n')
-        if uv_flag and mtex[i]:
-          fply.write(b'property float s\n')
-          fply.write(b'property float t\n')
-        if vc_flag and mvc[i]:
-          fply.write(b'property uchar red\n')
-          fply.write(b'property uchar green\n')
-          fply.write(b'property uchar blue\n')
-        fply.write(str.encode('element face {}\n'.format(len(faces[i]))))
-        fply.write(b'property list uchar uint vertex_indices\n')
-        fply.write(b'end_header\n')
-        # Write out vertices
-        for j, v in enumerate(verts[i]):
+        if export:
+          # Write out PLY
+          fply = open('{}/{}.ply'.format(sdir,mat), 'wb')
+          fply.write(b'ply\n')
+          fply.write(b'format ascii 1.0\n')
+          fply.write(str.encode('comment Created by SmallLuxGPU exporter for Blender 2.5, source file: {}\n'.format((bpy.data.filename.split('/')[-1].split('\\')[-1]))))
+          fply.write(str.encode('element vertex {}\n'.format(vertnum[i])))
+          fply.write(b'property float x\n')
+          fply.write(b'property float y\n')
+          fply.write(b'property float z\n')
           if vn_flag:
-            fply.write(str.encode('{:.6f} {:.6f} {:.6f} {:.6g} {:.6g} {:.6g}'.format(*v)))
-          else:
-            fply.write(str.encode('{:.6f} {:.6f} {:.6f}'.format(*v)))
+            fply.write(b'property float nx\n')
+            fply.write(b'property float ny\n')
+            fply.write(b'property float nz\n')
           if uv_flag and mtex[i]:
-            fply.write(str.encode(' {:.6g} {:.6g}'.format(*vert_uvs[i][j])))
+            fply.write(b'property float s\n')
+            fply.write(b'property float t\n')
           if vc_flag and mvc[i]:
-            fply.write(str.encode(' {} {} {}'.format(*vert_vcs[i][j])))
-          fply.write(b'\n')
-        # Write out faces
-        for f in faces[i]:
-          fply.write(str.encode('3 {} {} {}\n'.format(*f)))
-        fply.close()
+            fply.write(b'property uchar red\n')
+            fply.write(b'property uchar green\n')
+            fply.write(b'property uchar blue\n')
+          fply.write(str.encode('element face {}\n'.format(len(faces[i]))))
+          fply.write(b'property list uchar uint vertex_indices\n')
+          fply.write(b'end_header\n')
+          # Write out vertices
+          for j, v in enumerate(verts[i]):
+            if vn_flag:
+              fply.write(str.encode('{:.6f} {:.6f} {:.6f} {:.6g} {:.6g} {:.6g}'.format(*v)))
+            else:
+              fply.write(str.encode('{:.6f} {:.6f} {:.6f}'.format(*v)))
+            if uv_flag and mtex[i]:
+              fply.write(str.encode(' {:.6g} {:.6g}'.format(*vert_uvs[i][j])))
+            if vc_flag and mvc[i]:
+              fply.write(str.encode(' {} {} {}'.format(*vert_vcs[i][j])))
+            fply.write(b'\n')
+          # Write out faces
+          for f in faces[i]:
+            fply.write(str.encode('3 {} {} {}\n'.format(*f)))
+          fply.close()
     fscn.close()
 
   def render(self, scene):
@@ -519,7 +530,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       error("Invalid scene filename") 
     basename = os.path.splitext(basename)[0]
     
-    self._slgexport(scene, scene.slg_vuvs, scene.slg_vcolors, scene.slg_vnormals, basepath, basename)
+    self._slgexport(scene, scene.slg_vuvs, scene.slg_vcolors, scene.slg_vnormals, scene.slg_export, basepath, basename)
 
     fcfg = open('{}/scenes/{}/render.cfg'.format(basepath,basename), 'w')
     fcfg.write('image.width = {}\n'.format(x))
@@ -548,9 +559,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('path.shadowrays = {}\n'.format(scene.slg_shadowrays))
     fcfg.close()
 
-    cmdline = '{} scenes/{}/render.cfg'.format(exepath,basename)
-    print('SLGBP ===> launch SLG: {}'.format(cmdline))
-    slgproc = subprocess.Popen(cmdline, cwd=basepath, shell=True)
+    print('SLGBP ===> launch SLG: "{}" scenes/{}/render.cfg'.format(exepath,basename))
+    slgproc = subprocess.Popen([exepath,'scenes/{}/render.cfg'.format(basename)], cwd=basepath, shell=True)
     
     if scene.slg_waitrender:
       # Wait for SLG , convert and load image
