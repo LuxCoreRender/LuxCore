@@ -28,6 +28,7 @@ import os
 
 def slg_properties():
   # Add SmallLuxGPU properties
+  # (should be: bpy.types.RenderSettings; doesn't work yet)
   StringProperty = bpy.types.Scene.StringProperty
   FloatProperty = bpy.types.Scene.FloatProperty
   IntProperty = bpy.types.Scene.IntProperty
@@ -147,9 +148,14 @@ def slg_properties():
       default="", maxlen=64)
   
   # Add SLG Camera Lens Radius
-  bpy.types.Camera.FloatProperty(attr="slg_lensradius",name="SLG DOF Lens Radius", 
+  bpy.types.Camera.FloatProperty(attr="slg_lensradius", name="SLG DOF Lens Radius", 
       description="SmallLuxGPU camera lens radius for depth of field",
       default=0.015, min=0, max=10, soft_min=0, soft_max=10, precision=3)
+
+  # Add Material PLY export override
+  bpy.types.Material.BoolProperty(attr="slg_forceply", name="SLG Force PLY Export", 
+      description="SmallLuxGPU - Force export of PLY for this material",
+      default=False)
 
   # Use some of the existing panels
   import properties_render
@@ -175,6 +181,10 @@ def slg_properties():
 def slg_lensradius(self, context):
   if context.scene.render.engine == 'SMALLLUXGPU_RENDER':  
     self.layout.split().column().prop(context.camera, "slg_lensradius", text="SLG Lens Radius")
+
+def slg_forceply(self, context):
+  if context.scene.render.engine == 'SMALLLUXGPU_RENDER':  
+    self.layout.split().column().prop(context.material, "slg_forceply")
 
 class RenderButtonsPanel(bpy.types.Panel):
   bl_space_type = 'PROPERTIES'
@@ -293,13 +303,17 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     color = [0,0,0]
     uvco = [0,0,0]
     addv = False
+    # Get materials with force ply flag
+    mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
     # Force an update to object matrices when rendering animations
     scene.set_frame(scene.current_frame)
     sdir = '{}/scenes/{}'.format(basepath,basename)
-    if export and os.path.exists(sdir):
+    if export or mfp:
       # Delete existing ply files
-      [os.remove('{}/{}'.format(sdir,file)) for file in os.listdir(sdir) if file.endswith('.ply')]
-      for obj in scene.objects:
+      if export and os.path.exists(sdir):
+        any(os.remove('{}/{}'.format(sdir,file)) for file in os.listdir(sdir) if file.endswith('.ply'))
+      objs = [o for o in scene.objects if any(m for m in mfp if m in o.material_slots)] if not export and mfp else scene.objects
+      for obj in objs:
         if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT'] and scene.visible_layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
           print('SLGBP ===> Object: {}'.format(obj.name))
           # Create render mesh
@@ -440,7 +454,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           if texfname:
             fscn.write('|{}'.format(bpy.utils.expandpath(texfname).replace('\\','/')))
         fscn.write('\n')
-        if export:
+        if export or mats[i] in mfp:
           # Write out PLY
           fply = open('{}/{}.ply'.format(sdir,mat), 'wb')
           fply.write(b'ply\n')
@@ -559,7 +573,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('path.shadowrays = {}\n'.format(scene.slg_shadowrays))
     fcfg.close()
 
-    print('SLGBP ===> launch SLG: "{}" scenes/{}/render.cfg'.format(exepath,basename))
+    print('SLGBP ===> launch SLG: {} scenes/{}/render.cfg'.format(exepath,basename))
     slgproc = subprocess.Popen([exepath,'scenes/{}/render.cfg'.format(basename)], cwd=basepath, shell=False)
     
     if scene.slg_waitrender:
@@ -591,12 +605,14 @@ def register():
   slg_properties()
   bpy.types.register(RENDER_PT_slrender_options)
   bpy.types.register(SmallLuxGPURender)
-  bpy.types.DATA_PT_camera.append(slg_lensradius)    
+  bpy.types.DATA_PT_camera.append(slg_lensradius)
+  bpy.types.MATERIAL_PT_diffuse.append(slg_forceply)    
     
 def unregister():
   bpy.types.unregister(RENDER_PT_slrender_options)
   bpy.types.unregister(SmallLuxGPURender)
-  bpy.types.DATA_PT_camera.remove(slg_lensradius)    
+  bpy.types.DATA_PT_camera.remove(slg_lensradius)
+  bpy.types.MATERIAL_PT_diffuse.remove(slg_forceply)    
 
 if __name__ == "__main__":
   register()
