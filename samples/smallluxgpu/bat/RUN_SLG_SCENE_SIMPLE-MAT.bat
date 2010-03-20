@@ -1,3 +1,3 @@
 @echo off
-SLG.exe scenes\simple-mat\render-fast.cfg
+SLG.exe scenes\simple-mat\render-fast-hdr.cfg
 pause
