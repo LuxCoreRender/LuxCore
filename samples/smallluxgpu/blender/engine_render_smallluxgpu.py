@@ -296,7 +296,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     # Force an update to object matrices when rendering animations
     scene.set_frame(scene.current_frame)
     sdir = '{}/scenes/{}'.format(basepath,basename)
-    if export:
+    if export and os.path.exists(sdir):
       # Delete existing ply files
       [os.remove('{}/{}'.format(sdir,file)) for file in os.listdir(sdir) if file.endswith('.ply')]
       for obj in scene.objects:
@@ -560,7 +560,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.close()
 
     print('SLGBP ===> launch SLG: "{}" scenes/{}/render.cfg'.format(exepath,basename))
-    slgproc = subprocess.Popen([exepath,'scenes/{}/render.cfg'.format(basename)], cwd=basepath, shell=True)
+    slgproc = subprocess.Popen([exepath,'scenes/{}/render.cfg'.format(basename)], cwd=basepath, shell=False)
     
     if scene.slg_waitrender:
       # Wait for SLG , convert and load image
