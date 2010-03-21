@@ -173,7 +173,7 @@ public:
 			switch (scene->lightStrategy) {
 				case ALL_UNIFORM: {
 					// ALL UNIFORM direct sampling light strategy
-					const Spectrum lightTroughtput = throughput * surfaceColor * RdotShadeN;
+					const Spectrum lightTroughtput = throughput * surfaceColor;
 
 					for (unsigned int j = 0; j < scene->lights.size(); ++j) {
 						// Select the light to sample
@@ -202,7 +202,7 @@ public:
 				}
 				case ONE_UNIFORM: {
 					// ONE UNIFORM direct sampling light strategy
-					const Spectrum lightTroughtput = throughput * surfaceColor * RdotShadeN;
+					const Spectrum lightTroughtput = throughput * surfaceColor;
 
 					for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 						// Select the light to sample
