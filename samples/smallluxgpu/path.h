@@ -91,9 +91,9 @@ public:
 
 		const bool missed = (rayHit->index == 0xffffffffu);
 		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
-			if (missed && scene->infiniteLight) {
+			if (missed && scene->infiniteLight && specularBounce) {
 				// Add the light emitted by the infinite light
-				radiance += scene->infiniteLight->Le(pathRay) * throughput;
+				radiance += scene->infiniteLight->Le(pathRay.d) * throughput;
 			}
 
 			// Hit nothing/only shadow rays/maxdepth, terminate the path
@@ -116,6 +116,7 @@ public:
 		// Check if it is a light source
 		if (triMat->IsLightSource()) {
 			if (specularBounce) {
+				// Only TriangleLight can be directly hit
 				const TriangleLight *tLight = (TriangleLight *)triMat;
 				const Spectrum Le = tLight->Le(scene->objects, -pathRay.d);
 
@@ -150,19 +151,19 @@ public:
 		const Point hitPoint = pathRay(rayHit->t);
 		const Vector wi = -pathRay.d;
 
-		Spectrum triInterpCol;
+		Spectrum surfaceColor;
 		const Spectrum *colors = mesh->GetColors();
 		if (colors)
-			triInterpCol = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
+			surfaceColor = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
 		else
-			triInterpCol = Spectrum(1.f, 1.f, 1.f);
+			surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
 		// Check if there is an assigned texture map
 		TextureMap *tm = scene->triangleTexMaps[currentTriangleIndex];
 		if (tm)	{
 			// Apply texture mapping
 			const UV uv = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
-			triInterpCol *= tm->GetColor(uv);
+			surfaceColor *= tm->GetColor(uv);
 		}
 
 		tracedShadowRayCount = 0;
@@ -172,11 +173,11 @@ public:
 			switch (scene->lightStrategy) {
 				case ALL_UNIFORM: {
 					// ALL UNIFORM direct sampling light strategy
-					const Spectrum lightTroughtput = throughput * triInterpCol * RdotShadeN;
+					const Spectrum lightTroughtput = throughput * surfaceColor * RdotShadeN;
 
 					for (unsigned int j = 0; j < scene->lights.size(); ++j) {
 						// Select the light to sample
-						const TriangleLight *light = (TriangleLight *)scene->lights[j];
+						const LightSource *light = scene->lights[j];
 
 						for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 							// Select a point on the light surface
@@ -201,12 +202,12 @@ public:
 				}
 				case ONE_UNIFORM: {
 					// ONE UNIFORM direct sampling light strategy
-					const Spectrum lightTroughtput = throughput * triInterpCol * RdotShadeN;
+					const Spectrum lightTroughtput = throughput * surfaceColor * RdotShadeN;
 
 					for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 						// Select the light to sample
 						const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
-						const TriangleLight *light = (TriangleLight *)scene->lights[currentLightIndex];
+						const LightSource *light = scene->lights[currentLightIndex];
 
 						// Select a point on the light surface
 						lightColor[tracedShadowRayCount] = light->Sample_L(
@@ -244,7 +245,7 @@ public:
 		Vector wo;
 		const Spectrum f = triSurfMat->Sample_f(wi, &wo, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
-			&fPdf, specularBounce) * triInterpCol;
+			&fPdf, specularBounce) * surfaceColor;
 		if ((fPdf <= 0.0f) || f.Black()) {
 			if (tracedShadowRayCount > 0)
 				state = ONLY_SHADOW_RAYS;

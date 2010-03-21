@@ -223,6 +223,9 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		if (vf.size() != 3)
 			throw runtime_error("Syntax error in scene.infinitelight.gain (required 3 parameters)");
 		infiniteLight->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
+
+		// Add the infinite light to the list of light sources
+		lights.push_back(infiniteLight);
 	} else
 		infiniteLight = NULL;
 
