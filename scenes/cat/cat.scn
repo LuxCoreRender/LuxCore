@@ -3,5 +3,5 @@ scene.materials.mattemetal.egyptcat = 0.35 0.35 0.35 0.65 0.65 0.65 90 1
 scene.objects.egyptcat.egyptcat = scenes/cat/egyptcat.ply|scenes/cat/EgyptCat.png
 scene.materials.matte.mag_ground =  1.0 0.850417 0.545883
 scene.objects.mag_ground.mag_ground = scenes/cat/mag_ground.ply
-scene.materials.light.mat_light = 2.4 2.4 2.4
+scene.materials.light.mat_light = 1.8 1.8 1.8
 scene.objects.mat_light.mat_light = scenes/cat/mat_light.ply
