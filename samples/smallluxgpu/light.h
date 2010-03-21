@@ -50,17 +50,28 @@ public:
 		tex->Scale(gain);
 	}
 
-	Spectrum Le(const Ray &ray) const {
-		const float theta = SphericalTheta(ray.d);
-        const UV uv(SphericalPhi(ray.d) * INV_TWOPI, theta * INV_PI);
+	Spectrum Le(const Vector &dir) const {
+		const float theta = SphericalTheta(dir);
+        const UV uv(SphericalPhi(dir) * INV_TWOPI, theta * INV_PI);
 
 		return tex->GetColor(uv);
 	}
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, float *pdf, Ray *shadowRay) const {
-		*pdf = 0.f;
-		return Spectrum();
+		Vector wi = CosineSampleHemisphere(u0, u1);
+		*pdf = wi.z * INV_PI;
+
+		Vector v1, v2;
+		CoordinateSystem(Vector(N), &v1, &v2);
+
+		wi = Vector(
+				v1.x * wi.x + v2.x * wi.y + N.x * wi.z,
+				v1.y * wi.x + v2.y * wi.y + N.y * wi.z,
+				v1.z * wi.x + v2.z * wi.y + N.z * wi.z);
+		*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+
+		return Le(wi);
 	}
 
 private:
