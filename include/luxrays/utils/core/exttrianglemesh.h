@@ -40,7 +40,7 @@ public:
 		normals = meshNormals;
 		colors = meshColors;
 		uvs = meshUV;
-	};
+	}
 	~ExtTriangleMesh() { };
 	virtual void Delete() {
 		TriangleMesh::Delete();
