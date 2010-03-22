@@ -73,7 +73,6 @@ public:
 	}
 
 	void SetShift(const float su, const float sv) {
-		cerr<<"======================"<<su<<"="<<sv<<endl;
 		shiftU = su;
 		shiftV = sv;
 	}
@@ -101,7 +100,7 @@ public:
 				Point samplePoint;
 				float b0, b1, b2;
 				tri.Sample(portals->GetVertices(), u1, u2, &samplePoint, &b0, &b1, &b2);
-				const Normal &sampleN = normals[tri.v[0]]; // Light sources are supposed to be flat
+				const Normal &sampleN = normals[tri.v[0]];
 
 				// Check if the portal is visible
 				Vector wi = samplePoint - p;
@@ -141,9 +140,11 @@ public:
 
 private:
 	TextureMap *tex;
+	float shiftU, shiftV;
+
+	// Portals
 	ExtTriangleMesh *portals;
 	vector<float> portalAreas;
-	float shiftU, shiftV;
 };
 
 class TriangleLight : public LightSource, public LightMaterial {
