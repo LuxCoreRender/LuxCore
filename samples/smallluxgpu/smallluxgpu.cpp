@@ -152,7 +152,8 @@ int main(int argc, char *argv[]) {
 				" -g <disable OpenCL GPU device>" << std::endl <<
 				" -p <enable OpenCL CPU device>" << std::endl <<
 				" -n [native thread count]" << std::endl <<
-				" -l <enable low latency mode>" << std::endl <<
+				" -l [set high/low latency mode]" << std::endl <<
+				" -b <enable high latency mode>" << std::endl <<
 				" -s [GPU workgroup size]" << std::endl <<
 				" -t [halt time in secs]" << std::endl <<
 				" -D [property name] [property value]" << std::endl <<
@@ -183,7 +184,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'g') cmdLineProp.SetString("opencl.gpu.use", "0");
 
-				else if (argv[i][1] == 'l') cmdLineProp.SetString("opencl.latency.mode", "1");
+				else if (argv[i][1] == 'l') cmdLineProp.SetString("opencl.latency.mode", argv[++i]);
 
 				else if (argv[i][1] == 'n') cmdLineProp.SetString("opencl.nativethread.count", argv[++i]);
 
