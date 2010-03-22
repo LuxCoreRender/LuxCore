@@ -68,8 +68,8 @@ public:
 		}
 	}
 
-	void SetGain(const Spectrum &gain) {
-		tex->Scale(gain);
+	void SetGain(const Spectrum &g) {
+		gain = g;
 	}
 
 	void SetShift(const float su, const float sv) {
@@ -81,7 +81,7 @@ public:
 		const float theta = SphericalTheta(dir);
         const UV uv(SphericalPhi(dir) * INV_TWOPI + shiftU, theta * INV_PI + shiftV);
 
-		return tex->GetColor(uv);
+		return gain * tex->GetColor(uv);
 	}
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
@@ -141,6 +141,7 @@ public:
 private:
 	TextureMap *tex;
 	float shiftU, shiftV;
+	Spectrum gain;
 
 	// Portals
 	ExtTriangleMesh *portals;
