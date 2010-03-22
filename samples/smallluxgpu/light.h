@@ -89,7 +89,7 @@ public:
 		if (portals) {
 			// Select one of the portals
 			const unsigned int portalCount = portals->GetTotalTriangleCount();
-			unsigned int portalIndex = Min<unsigned int>(Floor2UInt(portalCount * u0), portalCount - 1);
+			unsigned int portalIndex = Min<unsigned int>(Floor2UInt(portalCount * u2), portalCount - 1);
 
 			// Looks for a valid portal
 			const Triangle *tris = portals->GetTriangles();
@@ -99,7 +99,7 @@ public:
 				const Triangle &tri = tris[portalIndex];
 				Point samplePoint;
 				float b0, b1, b2;
-				tri.Sample(portals->GetVertices(), u1, u2, &samplePoint, &b0, &b1, &b2);
+				tri.Sample(portals->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
 				const Normal &sampleN = normals[tri.v[0]];
 
 				// Check if the portal is visible
@@ -111,7 +111,7 @@ public:
 				const float NdotWi = Dot(N, wi);
 				if ((sampleNdotMinusWi > 0.f) && (NdotWi > 0.f)) {
 					*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
-					*pdf = distanceSquared / (sampleNdotMinusWi * portalAreas[portalIndex]);
+					*pdf = distanceSquared / (sampleNdotMinusWi * portalAreas[portalIndex] * portalCount);
 					return Le(wi);
 				}
 
