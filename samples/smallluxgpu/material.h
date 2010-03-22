@@ -57,8 +57,8 @@ class SurfaceMaterial : public Material {
 public:
 	bool IsLightSource() const { return false; }
 
-	virtual Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const = 0;
-	virtual Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N,
+	virtual Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const = 0;
+	virtual Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N,
 		const Normal &shadeN, const float u0, const float u1,  const float u2,
 		float *pdf,	bool &specularBounce) const = 0;
 };
@@ -73,33 +73,25 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return false; }
 
-	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		return KdOverPI;
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
-		const float r1 = 2.f * M_PI * u0;
-		const float r2 = u1;
-		const float r2s = sqrt(r2);
-		const Vector w(shadeN);
+		Vector dir = CosineSampleHemisphere(u0, u1);
+		*pdf = dir.z * INV_PI;
 
-		Vector u;
-		if (fabsf(shadeN.x) > .1f) {
-			const Vector a(0.f, 1.f, 0.f);
-			u = Cross(a, w);
-		} else {
-			const Vector a(1.f, 0.f, 0.f);
-			u = Cross(a, w);
-		}
-		u = Normalize(u);
+		Vector v1, v2;
+		CoordinateSystem(Vector(N), &v1, &v2);
 
-		Vector v = Cross(w, u);
+		dir = Vector(
+				v1.x * dir.x + v2.x * dir.y + N.x * dir.z,
+				v1.y * dir.x + v2.y * dir.y + N.y * dir.z,
+				v1.z * dir.x + v2.z * dir.y + N.z * dir.z);
 
-		(*wo) = Normalize(u * (cosf(r1) * r2s) + v * (sinf(r1) * r2s) + w * sqrtf(1.f - r2));
-
+		(*wi) = dir;
 		specularBounce = false;
-		*pdf = Dot(wi, shadeN) * INV_PI;
 
 		return KdOverPI;
 	}
@@ -120,15 +112,15 @@ public:
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
-	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		throw std::runtime_error("Internal error, called MirrorMaterial::f()");
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
-		const Vector dir = -wi;
+		const Vector dir = -wo;
 		const float dp = Dot(shadeN, dir);
-		(*wo) = dir - (2.f * dp) * Vector(shadeN);
+		(*wi) = dir - (2.f * dp) * Vector(shadeN);
 
 		specularBounce = reflectionSpecularBounce;
 		*pdf = 1.f;
@@ -158,21 +150,21 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
-	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
-		return matte.f(wi, wo, N) * mattePdf;
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
+		return matte.f(wo, wi, N) * mattePdf;
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		const float comp = u2 * totFilter;
 
 		if (comp > matteFilter) {
-			const Spectrum f = mirror.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = mirror.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
 			*pdf *= mirrorPdf;
 
 			return f;
 		} else {
-			const Spectrum f = matte.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
 			*pdf *= mattePdf;
 
 			return f;
@@ -207,13 +199,13 @@ public:
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
-	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		throw std::runtime_error("Internal error, called GlassMaterial::f()");
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
-		Vector reflDir = -wi;
+		Vector reflDir = -wo;
 		reflDir = reflDir - (2.f * Dot(N, reflDir)) * Vector(N);
 
 		// Ray from outside going in ?
@@ -222,12 +214,12 @@ public:
 		const float nc = ousideIor;
 		const float nt = ior;
 		const float nnt = into ? (nc / nt) : (nt / nc);
-		const float ddn = Dot(-wi, shadeN);
+		const float ddn = Dot(-wo, shadeN);
 		const float cos2t = 1.f - nnt * nnt * (1.f - ddn * ddn);
 
 		// Total internal reflection
 		if (cos2t < 0.f) {
-			(*wo) = reflDir;
+			(*wi) = reflDir;
 			*pdf = 1.f;
 			specularBounce = reflectionSpecularBounce;
 
@@ -236,7 +228,7 @@ public:
 
 		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
 		const Vector nkk = kk * Vector(N);
-		const Vector transDir = Normalize(nnt * (-wi) - nkk);
+		const Vector transDir = Normalize(nnt * (-wo) - nkk);
 
 		const float c = 1.f - (into ? -ddn : Dot(transDir, N));
 
@@ -245,7 +237,7 @@ public:
 		const float P = .25f + .5f * Re;
 
 		if (u0 < P) {
-			(*wo) = reflDir;
+			(*wi) = reflDir;
 
 			*pdf = P / Re;
 			specularBounce = reflectionSpecularBounce;
@@ -253,7 +245,7 @@ public:
 			// I don't multiply for Dot(wi, shadeN) in order to avoid fireflies
 			return Krefl; // / (-ddn);
 		} else {
-			(*wo) = transDir;
+			(*wi) = transDir;
 
 			*pdf = (1.f - P) / Tr;
 			specularBounce = transmitionSpecularBounce;
@@ -283,11 +275,11 @@ public:
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
-	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		throw std::runtime_error("Internal error, called MetalMaterial::f()");
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		const float phi = 2.f * M_PI * u0;
 		const float cosTheta = powf(1.f - u1, exponent);
@@ -296,7 +288,7 @@ public:
 		const float y = sinf(phi) * sinTheta;
 		const float z = cosTheta;
 
-		const Vector dir = -wi;
+		const Vector dir = -wo;
 		const float dp = Dot(shadeN, dir);
 		const Vector w = dir - (2.f * dp) * Vector(shadeN);
 
@@ -311,9 +303,9 @@ public:
 		u = Normalize(u);
 		Vector v = Cross(w, u);
 
-		(*wo) = x * u + y * v + z * w;
+		(*wi) = x * u + y * v + z * w;
 
-		if (Dot(*wo, shadeN) > 0.f) {
+		if (Dot(*wi, shadeN) > 0.f) {
 			specularBounce = reflectionSpecularBounce;
 			*pdf = 1.f;
 
@@ -348,21 +340,21 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
-	Spectrum f(const Vector &wi, const Vector &wo, const Normal &N) const {
-		return matte.f(wi, wo, N) * mattePdf;
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
+		return matte.f(wo, wi, N) * mattePdf;
 	}
 
-	Spectrum Sample_f(const Vector &wi, Vector *wo, const Normal &N, const Normal &shadeN,
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
 		const float comp = u2 * totFilter;
 
 		if (comp > matteFilter) {
-			const Spectrum f = metal.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = metal.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
 			*pdf *= mirrorPdf;
 
 			return f;
 		} else {
-			const Spectrum f = matte.Sample_f(wi, wo, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
 			*pdf *= mattePdf;
 
 			return f;
