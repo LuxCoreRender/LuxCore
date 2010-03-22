@@ -149,7 +149,7 @@ public:
 
 		SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 		const Point hitPoint = pathRay(rayHit->t);
-		const Vector wi = -pathRay.d;
+		const Vector wo = -pathRay.d;
 
 		Spectrum surfaceColor;
 		const Spectrum *colors = mesh->GetColors();
@@ -186,14 +186,19 @@ public:
 									sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 									&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
-							lightColor[tracedShadowRayCount] *=  lightTroughtput *
-									triSurfMat->f(wi, shadowRay[tracedShadowRayCount].d, shadeN);
-
 							// Scale light pdf for ALL_UNIFORM strategy
 							lightPdf[tracedShadowRayCount] *= scene->shadowRayCount;
 
-							// Using 0.1 instead of 0.0 to cut down fireflies
-							if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
+							// Using 0.01 instead of 0.0 to cut down fireflies
+							if (lightPdf[tracedShadowRayCount] <= 0.01f)
+								continue;
+
+							const Vector lwi = shadowRay[tracedShadowRayCount].d;
+							lightColor[tracedShadowRayCount] *= lightTroughtput * Dot(shadeN, lwi) *
+									triSurfMat->f(wo, lwi, shadeN);
+
+							// Using 0.01 instead of 0.0 to cut down fireflies
+							if ((lightPdf[tracedShadowRayCount] > 0.01f) && !lightColor[tracedShadowRayCount].Black())
 								tracedShadowRayCount++;
 						}
 					}
@@ -215,11 +220,15 @@ public:
 								sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
-						lightColor[tracedShadowRayCount] *=  lightTroughtput *
-								triSurfMat->f(wi, shadowRay[tracedShadowRayCount].d, shadeN);
+						// Using 0.01 instead of 0.0 to cut down fireflies
+						if (lightPdf[tracedShadowRayCount] <= 0.01f)
+							continue;
 
-						// Using 0.1 instead of 0.0 to cut down fireflies
-						if ((lightPdf[tracedShadowRayCount] > 0.1f) && !lightColor[tracedShadowRayCount].Black())
+						const Vector lwi = shadowRay[tracedShadowRayCount].d;
+						lightColor[tracedShadowRayCount] *= lightTroughtput * Dot(shadeN, lwi) *
+								triSurfMat->f(wo, lwi, shadeN);
+
+						if (!lightColor[tracedShadowRayCount].Black())
 							tracedShadowRayCount++;
 					}
 
@@ -242,12 +251,12 @@ public:
 		//----------------------------------------------------------------------
 
 		float fPdf;
-		Vector wo;
-		const Spectrum f = triSurfMat->Sample_f(wi, &wo, N, shadeN,
+		Vector wi;
+		const Spectrum f = triSurfMat->Sample_f(wo, &wi, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 			&fPdf, specularBounce) * surfaceColor;
-		// Using 0.05 instead of 0.0 to cut down fireflies
-		if ((fPdf <= 0.05f) || f.Black()) {
+		// Using 0.01 instead of 0.0 to cut down fireflies
+		if ((fPdf <= 0.01f) || f.Black()) {
 			if (tracedShadowRayCount > 0)
 				state = ONLY_SHADOW_RAYS;
 			else {
@@ -287,7 +296,7 @@ public:
 		throughput *= f;
 
 		pathRay.o = hitPoint;
-		pathRay.d = wo;
+		pathRay.d = wi;
 		state = NEXT_VERTEX;
 	}
 
