@@ -43,6 +43,8 @@ public:
 	InfiniteLight(TextureMap *tx) {
 		tex = tx;
 		portals = NULL;
+		shiftU = 0.f;
+		shiftV = 0.f;
 	}
 
 	InfiniteLight(Context *ctx, TextureMap *tx, const string &portalFileName) {
@@ -54,6 +56,9 @@ public:
 		const Triangle *tris = portals->GetTriangles();
 		for (unsigned int i = 0; i < portals->GetTotalTriangleCount(); ++i)
 			portalAreas.push_back(tris[i].Area(portals->GetVertices()));
+
+		shiftU = 0.f;
+		shiftV = 0.f;
 	}
 
 	~InfiniteLight() {
@@ -67,9 +72,15 @@ public:
 		tex->Scale(gain);
 	}
 
+	void SetShift(const float su, const float sv) {
+		cerr<<"======================"<<su<<"="<<sv<<endl;
+		shiftU = su;
+		shiftV = sv;
+	}
+
 	Spectrum Le(const Vector &dir) const {
 		const float theta = SphericalTheta(dir);
-        const UV uv(SphericalPhi(dir) * INV_TWOPI, theta * INV_PI);
+        const UV uv(SphericalPhi(dir) * INV_TWOPI + shiftU, theta * INV_PI + shiftV);
 
 		return tex->GetColor(uv);
 	}
@@ -132,6 +143,7 @@ private:
 	TextureMap *tex;
 	ExtTriangleMesh *portals;
 	vector<float> portalAreas;
+	float shiftU, shiftV;
 };
 
 class TriangleLight : public LightSource, public LightMaterial {
