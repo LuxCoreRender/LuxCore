@@ -246,7 +246,8 @@ public:
 		const Spectrum f = triSurfMat->Sample_f(wi, &wo, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 			&fPdf, specularBounce) * surfaceColor;
-		if ((fPdf <= 0.0f) || f.Black()) {
+		// Using 0.05 instead of 0.0 to cut down fireflies
+		if ((fPdf <= 0.05f) || f.Black()) {
 			if (tracedShadowRayCount > 0)
 				state = ONLY_SHADOW_RAYS;
 			else {
