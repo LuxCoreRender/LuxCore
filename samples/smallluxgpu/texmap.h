@@ -32,14 +32,6 @@ public:
 	TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h);
 	~TextureMap();
 
-	void Scale(const Spectrum &scale) {
-		if ((scale.r == 1.f) && (scale.g == 1.f) && (scale.b == 1.f))
-			return;
-
-		for (unsigned int i = 0; i < width * height; ++i)
-			pixels[i] *= scale;
-	}
-
 	const Spectrum GetColor(const UV &uv) const {
 		const float s = uv.u * width - 0.5f;
 		const float t = uv.v * height - 0.5f;
