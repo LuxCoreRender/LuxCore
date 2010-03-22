@@ -254,6 +254,4 @@ Scene::~Scene() {
 		(*obj)->Delete();
 		delete *obj;
 	}
-
-	delete infiniteLight;
 }

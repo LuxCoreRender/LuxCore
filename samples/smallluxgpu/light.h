@@ -42,9 +42,22 @@ class InfiniteLight : public LightSource {
 public:
 	InfiniteLight(TextureMap *tx) {
 		tex = tx;
+		portals = NULL;
 	}
 
-	~InfiniteLight() { }
+	/*InfiniteLight(Context *ctx, TextureMap *tx, const string &portalFileName) {
+		tex = tx;
+
+		// Read portals
+		cerr << "Protal PLY objects file name: " << portalFileName << endl;
+		ExtTriangleMesh *meshObject = ExtTriangleMesh::LoadExtTriangleMesh(ctx, portalFileName);
+	}*/
+
+	~InfiniteLight() {
+		/*if (portals) {
+			
+		}*/
+	}
 
 	void SetGain(const Spectrum &gain) {
 		tex->Scale(gain);
@@ -76,6 +89,7 @@ public:
 
 private:
 	TextureMap *tex;
+	ExtTriangleMesh *portals;
 };
 
 class TriangleLight : public LightSource, public LightMaterial {
