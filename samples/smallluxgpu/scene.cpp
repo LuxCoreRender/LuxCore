@@ -228,6 +228,11 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			throw runtime_error("Syntax error in scene.infinitelight.gain (required 3 parameters)");
 		infiniteLight->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
+		vf = scnProp.GetFloatVector("scene.infinitelight.shift", "0.0 0.0");
+		if (vf.size() != 2)
+			throw runtime_error("Syntax error in scene.infinitelight.shift (required 2 parameters)");
+		infiniteLight->SetShift(vf.at(0), vf.at(1));
+
 		// Add the infinite light to the list of light sources
 		lights.push_back(infiniteLight);
 	} else

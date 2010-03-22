@@ -27,3 +27,4 @@ scene.objects.white_paint.white_paint = scenes/classroom/white_paint.ply
 scene.objects.white_plastic.white_plastic = scenes/classroom/white_plastic.ply
 scene.infinitelight.file = scenes/simple-mat/sky.exr|scenes/classroom/portal.ply
 scene.infinitelight.gain = 10.0 10.0 10.0
+scene.infinitelight.shift = -0.375 0.0
