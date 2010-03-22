@@ -183,7 +183,7 @@ public:
 							// Select a point on the light surface
 							lightColor[tracedShadowRayCount] = light->Sample_L(
 									scene->objects, hitPoint, shadeN,
-									sample.GetLazyValue(), sample.GetLazyValue(),
+									sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 									&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
 							lightColor[tracedShadowRayCount] *=  lightTroughtput *
@@ -212,7 +212,7 @@ public:
 						// Select a point on the light surface
 						lightColor[tracedShadowRayCount] = light->Sample_L(
 								scene->objects, hitPoint, shadeN,
-								sample.GetLazyValue(), sample.GetLazyValue(),
+								sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
 						lightColor[tracedShadowRayCount] *=  lightTroughtput *
