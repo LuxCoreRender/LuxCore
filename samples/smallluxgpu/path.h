@@ -291,7 +291,7 @@ public:
 			}
 		}
 
-		const float dp = RdotShadeN / fPdf;
+		const float dp = AbsDot(shadeN, wi) / fPdf;
 		throughput *= dp;
 		throughput *= f;
 
