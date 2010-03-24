@@ -189,16 +189,15 @@ public:
 							// Scale light pdf for ALL_UNIFORM strategy
 							lightPdf[tracedShadowRayCount] *= scene->shadowRayCount;
 
-							// Using 0.01 instead of 0.0 to cut down fireflies
-							if (lightPdf[tracedShadowRayCount] <= 0.01f)
+							// Using 0.1 instead of 0.0 to cut down fireflies
+							if (lightPdf[tracedShadowRayCount] <= 0.1f)
 								continue;
 
 							const Vector lwi = shadowRay[tracedShadowRayCount].d;
 							lightColor[tracedShadowRayCount] *= lightTroughtput * Dot(shadeN, lwi) *
 									triSurfMat->f(wo, lwi, shadeN);
 
-							// Using 0.01 instead of 0.0 to cut down fireflies
-							if ((lightPdf[tracedShadowRayCount] > 0.01f) && !lightColor[tracedShadowRayCount].Black())
+							if (!lightColor[tracedShadowRayCount].Black())
 								tracedShadowRayCount++;
 						}
 					}
@@ -220,8 +219,8 @@ public:
 								sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
-						// Using 0.01 instead of 0.0 to cut down fireflies
-						if (lightPdf[tracedShadowRayCount] <= 0.01f)
+						// Using 0.1 instead of 0.0 to cut down fireflies
+						if (lightPdf[tracedShadowRayCount] <= 0.1f)
 							continue;
 
 						const Vector lwi = shadowRay[tracedShadowRayCount].d;
@@ -290,7 +289,7 @@ public:
 			}
 		}
 
-		const float dp = AbsDot(shadeN, wi) / fPdf;
+		const float dp = Dot(shadeN, wi) / fPdf;
 		throughput *= dp;
 		throughput *= f;
 
