@@ -125,9 +125,11 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	}
 
 	// Check if I have to save the film
-	const string filmName = config->cfg.GetString("screen.file", "");
-	if (filmName != "")
-		config->scene->camera->film->SaveFilm(filmName);
+	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
+	if (filmNames.size() == 1)
+		config->scene->camera->film->SaveFilm(filmNames[0]);
+	else if (filmNames.size() > 1)
+		config->scene->camera->film->SaveFilm("merged.flm");
 
 	sprintf(buff, "LuxMark index: %.3f", sampleSec / 1000000.0);
 	std::cerr << buff << std::endl;
