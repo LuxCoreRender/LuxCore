@@ -55,6 +55,7 @@ void RenderingConfig::Init() {
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
 	const unsigned int filmType = cfg.GetInt("screen.type",3 );
 	const string filmName = cfg.GetString("screen.file", "");
+	const float gamma = cfg.GetFloat("screen.gamma", 2.2f);
 	const string *filmFile = (filmName == "") ? NULL : &filmName;
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
@@ -89,6 +90,9 @@ void RenderingConfig::Init() {
 		default:
 			throw runtime_error("Requested an unknown film type");
 	}
+	if (gamma != 2.2f)
+		film->InitGammaTable(gamma);
+
 	scene = new Scene(ctx, lowLatency, sceneFileName, film);
 
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
