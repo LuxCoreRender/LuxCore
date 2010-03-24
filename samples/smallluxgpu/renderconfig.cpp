@@ -54,9 +54,8 @@ void RenderingConfig::Init() {
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) == 1);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
 	const unsigned int filmType = cfg.GetInt("screen.type",3 );
-	const string filmName = cfg.GetString("screen.file", "");
+	const vector<string> filmNames = cfg.GetStringVector("screen.file", "");
 	const float gamma = cfg.GetFloat("screen.gamma", 2.2f);
-	const string *filmFile = (filmName == "") ? NULL : &filmName;
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
@@ -73,25 +72,31 @@ void RenderingConfig::Init() {
 	switch (filmType) {
 		case 0:
 			cerr << "Film type: StandardFilm" << endl;
-			film = new StandardFilm(lowLatency, w, h, filmFile);
+			film = new StandardFilm(lowLatency, w, h);
 			break;
 		case 1:
 			cerr << "Film type: BluredStandardFilm" << endl;
-			film = new BluredStandardFilm(lowLatency, w, h, filmFile);
+			film = new BluredStandardFilm(lowLatency, w, h);
 			break;
 		case 2:
 			cerr << "Film type: GaussianFilm" << endl;
-			film = new GaussianFilm(lowLatency, w, h, filmFile);
+			film = new GaussianFilm(lowLatency, w, h);
 			break;
 		case 3:
 			cerr << "Film type: FastGaussianFilm" << endl;
-			film = new FastGaussianFilm(lowLatency, w, h, filmFile);
+			film = new FastGaussianFilm(lowLatency, w, h);
 			break;
 		default:
 			throw runtime_error("Requested an unknown film type");
 	}
 	if (gamma != 2.2f)
 		film->InitGammaTable(gamma);
+
+	// Load film files
+	if (filmNames.size() > 0) {
+		for (size_t i = 0; i < filmNames.size(); ++i)
+			film->AddFilm(filmNames[i]);
+	}
 
 	scene = new Scene(ctx, lowLatency, sceneFileName, film);
 
