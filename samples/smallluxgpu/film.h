@@ -35,6 +35,8 @@
 #include "sampler.h"
 #include "samplebuffer.h"
 
+#define GAMMA_TABLE_SIZE 1024
+
 class GaussianFilter {
 public:
 
@@ -64,11 +66,16 @@ private:
 	}
 };
 
+//------------------------------------------------------------------------------
+// Base class for all Film implementation
+//------------------------------------------------------------------------------
+
 class Film {
 public:
 	Film(const bool lowLatencyMode, const unsigned int w, const unsigned int h) {
 		lowLatency = lowLatencyMode;
 
+		InitGammaTable();
 		Init(w, h);
 	}
 
@@ -82,6 +89,14 @@ public:
 		statsTotalSampleCount = 0;
 		statsAvgSampleSec = 0.0;
 		statsStartSampleTime = WallClockTime();
+	}
+
+	void InitGammaTable(const float gamma = 2.2f) {
+cerr<<"============================================"<<gamma<<endl;
+		float x = 0.f;
+		const float dx = 1.f / GAMMA_TABLE_SIZE;
+		for (int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
+			gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / gamma);
 	}
 
 	void LoadFilm(const string &filmFile) {
@@ -279,6 +294,16 @@ public:
 	}
 
 protected:
+	float Radiance2PixelFloat(const float x) const {
+		// Very slow !
+		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
+
+		const unsigned int index = min<unsigned int>(
+			Floor2UInt(GAMMA_TABLE_SIZE * Clamp(x, 0.f, 1.f)),
+				GAMMA_TABLE_SIZE - 1);
+		return gammaTable[index];
+	}
+
 	virtual Spectrum *GetPixelRadiance() = 0;
 	virtual float *GetPixelWeigth() = 0;
 
@@ -288,10 +313,15 @@ protected:
 	unsigned int statsTotalSampleCount;
 	double statsStartSampleTime, statsAvgSampleSec;
 
+	float gammaTable[GAMMA_TABLE_SIZE];
+
 	bool lowLatency;
 };
 
-#define GAMMA_TABLE_SIZE 1024
+//------------------------------------------------------------------------------
+// Film implementations
+//------------------------------------------------------------------------------
+
 #define FILTER_TABLE_SIZE 16
 
 class StandardFilm : public Film {
@@ -302,8 +332,6 @@ public:
 		pixelsRadiance = NULL;
 		pixelWeights = NULL;
 		pixels = NULL;
-
-		InitGammaTable();
 
 		Init(w, h);
 
@@ -407,23 +435,6 @@ protected:
 	Spectrum *GetPixelRadiance() { return pixelsRadiance; }
 	float *GetPixelWeigth()  { return pixelWeights; }
 
-	void InitGammaTable() {
-		float x = 0.f;
-		const float dx = 1.f / GAMMA_TABLE_SIZE;
-		for (int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
-			gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
-	}
-
-	float Radiance2PixelFloat(const float x) const {
-		// Very slow !
-		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
-
-		const unsigned int index = min<unsigned int>(
-			Floor2UInt(GAMMA_TABLE_SIZE * Clamp(x, 0.f, 1.f)),
-				GAMMA_TABLE_SIZE - 1);
-		return gammaTable[index];
-	}
-
 	void SplatSampleBufferElem(const SampleBufferElem *sampleElem) {
 		int x = (int)sampleElem->screenX;
 		int y = (int)sampleElem->screenY;
@@ -449,8 +460,6 @@ protected:
 			}
 		}
 	}
-
-	float gammaTable[GAMMA_TABLE_SIZE];
 
 	boost::mutex radianceMutex;
 	Spectrum *pixelsRadiance;
@@ -556,8 +565,6 @@ public:
 				*ftp10x10++ = filter4x4.Evaluate(fx, fy);
 			}
 		}
-
-		InitGammaTable();
 
 		Init(w, h);
 
@@ -682,23 +689,6 @@ protected:
 	Spectrum *GetPixelRadiance() { return pixelsRadiance; }
 	float *GetPixelWeigth()  { return pixelWeights; }
 
-	void InitGammaTable() {
-		float x = 0.f;
-		const float dx = 1.f / GAMMA_TABLE_SIZE;
-		for (int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
-			gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
-	}
-
-	float Radiance2PixelFloat(const float x) const {
-		// Very slow !
-		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
-
-		const unsigned int index = min<unsigned int>(
-			Floor2UInt(GAMMA_TABLE_SIZE * Clamp(x, 0.f, 1.f)),
-				GAMMA_TABLE_SIZE - 1);
-		return gammaTable[index];
-	}
-
 	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight = 1.f) {
 		const unsigned int offset = x + y * width;
 
@@ -767,8 +757,6 @@ protected:
 			}
 		}
 	}
-
-	float gammaTable[GAMMA_TABLE_SIZE];
 
 	boost::mutex radianceMutex;
 	GaussianFilter filter2x2, filter4x4;
