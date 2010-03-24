@@ -269,7 +269,6 @@ public:
 			return;
 		}
 
-		
 		if (depth > scene->rrDepth) {
 			// Russian Roulette
 			const float p = 0.75f;

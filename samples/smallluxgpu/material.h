@@ -83,14 +83,15 @@ public:
 		*pdf = dir.z * INV_PI;
 
 		Vector v1, v2;
-		CoordinateSystem(Vector(N), &v1, &v2);
+		CoordinateSystem(Vector(shadeN), &v1, &v2);
 
 		dir = Vector(
-				v1.x * dir.x + v2.x * dir.y + N.x * dir.z,
-				v1.y * dir.x + v2.y * dir.y + N.y * dir.z,
-				v1.z * dir.x + v2.z * dir.y + N.z * dir.z);
+				v1.x * dir.x + v2.x * dir.y + shadeN.x * dir.z,
+				v1.y * dir.x + v2.y * dir.y + shadeN.y * dir.z,
+				v1.z * dir.x + v2.z * dir.y + shadeN.z * dir.z);
 
 		(*wi) = dir;
+
 		specularBounce = false;
 
 		return KdOverPI;
