@@ -41,9 +41,7 @@ public:
 class InfiniteLight : public LightSource {
 public:
 	InfiniteLight(TextureMap *tx);
-	InfiniteLight(Context *ctx, TextureMap *tx, const string &portalFileName);
-
-	~InfiniteLight();
+	virtual ~InfiniteLight() { }
 
 	void SetGain(const Spectrum &g) {
 		gain = g;
@@ -54,22 +52,26 @@ public:
 		shiftV = sv;
 	}
 
-	Spectrum Le(const Vector &dir) const {
-		const float theta = SphericalTheta(dir);
-        const UV uv(SphericalPhi(dir) * INV_TWOPI + shiftU, theta * INV_PI + shiftV);
+	virtual Spectrum Le(const Vector &dir) const;
 
-		return gain * tex->GetColor(uv);
-	}
-
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
 	TextureMap *tex;
 	float shiftU, shiftV;
 	Spectrum gain;
+};
 
-	// Portals
+class InfiniteLightPortal : public InfiniteLight {
+public:
+	InfiniteLightPortal(Context *ctx, TextureMap *tx, const string &portalFileName);
+	~InfiniteLightPortal();
+
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
+
+private:
 	ExtTriangleMesh *portals;
 	vector<float> portalAreas;
 };

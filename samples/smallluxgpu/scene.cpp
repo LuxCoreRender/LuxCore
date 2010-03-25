@@ -217,7 +217,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	if (ilParams.size() > 0) {
 		TextureMap *tex = texMapCache.GetTextureMap(ilParams.at(0));
 		if (ilParams.size() == 2)
-			infiniteLight = new InfiniteLight(ctx, tex, ilParams.at(1));
+			infiniteLight = new InfiniteLightPortal(ctx, tex, ilParams.at(1));
 		else
 			infiniteLight = new InfiniteLight(tex);
 
