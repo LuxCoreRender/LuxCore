@@ -31,8 +31,6 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
 
-using namespace std;
-
 Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film) {
 	maxPathDepth = 3;
 	shadowRayCount = 1;
