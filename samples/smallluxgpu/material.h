@@ -92,6 +92,14 @@ public:
 
 		(*wi) = dir;
 
+		const float dp = Dot(shadeN, *wi);
+		// Using 0.01 instead of 0.0 to cut down fireflies
+		if (dp <= 0.01f) {
+			*pdf = 0.f;
+			return Spectrum();
+		}
+		*pdf /=  dp;
+
 		specularBounce = false;
 
 		return KdOverPI;
@@ -126,7 +134,7 @@ public:
 		specularBounce = reflectionSpecularBounce;
 		*pdf = 1.f;
 
-		return Kr / (-dp);
+		return Kr;
 	}
 
 	const Spectrum &GetKr() const { return Kr; }
@@ -224,7 +232,7 @@ public:
 			*pdf = 1.f;
 			specularBounce = reflectionSpecularBounce;
 
-			return Krefl; // / (-ddn);
+			return Krefl;
 		}
 
 		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
@@ -241,17 +249,26 @@ public:
 			(*wi) = reflDir;
 
 			*pdf = P / Re;
+			if ((Re == 0.f) || (*pdf < 0.01f)) {
+				*pdf = 0.f;
+				return Spectrum();
+			}
+
 			specularBounce = reflectionSpecularBounce;
 
-			// I don't multiply for Dot(wi, shadeN) in order to avoid fireflies
-			return Krefl; // / (-ddn);
+			return Krefl;
 		} else {
 			(*wi) = transDir;
 
 			*pdf = (1.f - P) / Tr;
+			if ((Tr == 0.f) || (*pdf < 0.01f)) {
+				*pdf = 0.f;
+				return Spectrum();
+			}
+
 			specularBounce = transmitionSpecularBounce;
 
-			return Krefrct / (-ddn);
+			return Krefrct;
 		}
 	}
 
@@ -310,7 +327,7 @@ public:
 			specularBounce = reflectionSpecularBounce;
 			*pdf = 1.f;
 
-			return Kr / (-dp);
+			return Kr;
 		} else {
 			*pdf = 0.f;
 
@@ -335,7 +352,7 @@ public:
 		totFilter = matteFilter + metalFilter;
 
 		mattePdf = matteFilter / totFilter;
-		mirrorPdf = metalFilter / totFilter;
+		metalPdf = metalFilter / totFilter;
 	}
 
 	bool IsDiffuse() const { return true; }
@@ -351,7 +368,7 @@ public:
 
 		if (comp > matteFilter) {
 			const Spectrum f = metal.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
-			*pdf *= mirrorPdf;
+			*pdf *= metalPdf;
 
 			return f;
 		} else {
@@ -365,7 +382,7 @@ public:
 private:
 	MatteMaterial matte;
 	MetalMaterial metal;
-	float matteFilter, metalFilter, totFilter, mattePdf, mirrorPdf;
+	float matteFilter, metalFilter, totFilter, mattePdf, metalPdf;
 };
 
 #endif	/* _MATERIAL_H */
