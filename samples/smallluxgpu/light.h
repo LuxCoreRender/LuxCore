@@ -40,33 +40,10 @@ public:
 
 class InfiniteLight : public LightSource {
 public:
-	InfiniteLight(TextureMap *tx) {
-		tex = tx;
-		portals = NULL;
-		shiftU = 0.f;
-		shiftV = 0.f;
-	}
+	InfiniteLight(TextureMap *tx);
+	InfiniteLight(Context *ctx, TextureMap *tx, const string &portalFileName);
 
-	InfiniteLight(Context *ctx, TextureMap *tx, const string &portalFileName) {
-		tex = tx;
-
-		// Read portals
-		cerr << "Portal PLY objects file name: " << portalFileName << endl;
-		portals = ExtTriangleMesh::LoadExtTriangleMesh(ctx, portalFileName);
-		const Triangle *tris = portals->GetTriangles();
-		for (unsigned int i = 0; i < portals->GetTotalTriangleCount(); ++i)
-			portalAreas.push_back(tris[i].Area(portals->GetVertices()));
-
-		shiftU = 0.f;
-		shiftV = 0.f;
-	}
-
-	~InfiniteLight() {
-		if (portals) {
-			portals->Delete();
-			delete portals;
-		}
-	}
+	~InfiniteLight();
 
 	void SetGain(const Spectrum &g) {
 		gain = g;
@@ -85,58 +62,7 @@ public:
 	}
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-		if (portals) {
-			// Select one of the portals
-			const unsigned int portalCount = portals->GetTotalTriangleCount();
-			unsigned int portalIndex = Min<unsigned int>(Floor2UInt(portalCount * u2), portalCount - 1);
-
-			// Looks for a valid portal
-			const Triangle *tris = portals->GetTriangles();
-			const Normal *normals = portals->GetNormal();
-			for (unsigned int i = 0; i < portalCount; ++i) {
-				// Sample the triangle
-				const Triangle &tri = tris[portalIndex];
-				Point samplePoint;
-				float b0, b1, b2;
-				tri.Sample(portals->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
-				const Normal &sampleN = normals[tri.v[0]];
-
-				// Check if the portal is visible
-				Vector wi = samplePoint - p;
-				const float distanceSquared = wi.LengthSquared();
-				wi /= sqrtf(distanceSquared);
-
-				const float sampleNdotMinusWi = Dot(sampleN, -wi);
-				const float NdotWi = Dot(N, wi);
-				if ((sampleNdotMinusWi > 0.f) && (NdotWi > 0.f)) {
-					*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
-					*pdf = distanceSquared / (sampleNdotMinusWi * portalAreas[portalIndex] * portalCount);
-					return Le(wi);
-				}
-
-				if (++portalIndex >= portalCount)
-					portalIndex = 0;
-			}
-
-			*pdf = 0.f;
-			return Spectrum();
-		} else {
-			Vector wi = CosineSampleHemisphere(u0, u1);
-			*pdf = wi.z * INV_PI;
-
-			Vector v1, v2;
-			CoordinateSystem(Vector(N), &v1, &v2);
-
-			wi = Vector(
-					v1.x * wi.x + v2.x * wi.y + N.x * wi.z,
-					v1.y * wi.x + v2.y * wi.y + N.y * wi.z,
-					v1.z * wi.x + v2.z * wi.y + N.z * wi.z);
-			*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
-
-			return Le(wi);
-		}
-	}
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
 	TextureMap *tex;
@@ -151,65 +77,15 @@ private:
 class TriangleLight : public LightSource, public LightMaterial {
 public:
 	TriangleLight() { }
-
 	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs) {
-		lightMaterial = mat;
-		meshIndex = mshIndex;
-		triIndex = triangleIndex;
-
-		const ExtTriangleMesh *mesh = objs[meshIndex];
-		area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
-	}
+		const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs);
 
 	const Material *GetMaterial() const { return lightMaterial; }
 
-	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Vector &wo) const {
-		const ExtTriangleMesh *mesh = objs[meshIndex];
-		const Triangle &tri = mesh->GetTriangles()[triIndex];
-		Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
-
-		if (Dot(sampleN, wo) <= 0.f)
-			return Spectrum();
-
-		const Spectrum *colors = mesh->GetColors();
-		if (colors)
-			return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
-		else
-			return lightMaterial->GetGain(); // Light sources are supposed to have flat color
-	}
+	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Vector &wo) const;
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-		const ExtTriangleMesh *mesh = objs[meshIndex];
-		const Triangle &tri = mesh->GetTriangles()[triIndex];
-
-		Point samplePoint;
-		float b0, b1, b2;
-		tri.Sample(mesh->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
-		const Normal &sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
-
-		Vector wi = samplePoint - p;
-		const float distanceSquared = wi.LengthSquared();
-		const float distance = sqrtf(distanceSquared);
-		wi /= distance;
-
-		const float sampleNdotMinusWi = Dot(sampleN, -wi);
-		const float NdotWi = Dot(N, wi);
-		if ((sampleNdotMinusWi <= 0.f) || (NdotWi <= 0.f)) {
-			*pdf = 0.f;
-			return Spectrum();
-		}
-
-		*shadowRay = Ray(p, wi, RAY_EPSILON, distance - RAY_EPSILON);
-		*pdf = distanceSquared / (sampleNdotMinusWi * area);
-
-		const Spectrum *colors = mesh->GetColors();
-		if (colors)
-			return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
-		else
-			return lightMaterial->GetGain(); // Light sources are supposed to have flat color
-	}
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
 	const AreaLightMaterial *lightMaterial;
