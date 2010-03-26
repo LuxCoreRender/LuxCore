@@ -174,8 +174,8 @@ Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const 
 		UV texUV(uv[0], uv[1]);
 		return gain * tex->GetColor(texUV);
 	} else {
-		// Resort to random sampling of the hemisphere
-		return InfiniteLight::Sample_L(objs, p, N, u0, u1, u2, pdf, shadowRay);
+		*pdf = 0.f;
+		return Spectrum();
 	}
 }
 
