@@ -189,8 +189,7 @@ public:
 							// Scale light pdf for ALL_UNIFORM strategy
 							lightPdf[tracedShadowRayCount] *= scene->shadowRayCount;
 
-							// Using 0.1 instead of 0.0 to cut down fireflies
-							if (lightPdf[tracedShadowRayCount] <= 0.1f)
+							if (lightPdf[tracedShadowRayCount] <= 0.0f)
 								continue;
 
 							const Vector lwi = shadowRay[tracedShadowRayCount].d;
@@ -219,8 +218,7 @@ public:
 								sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
-						// Using 0.1 instead of 0.0 to cut down fireflies
-						if (lightPdf[tracedShadowRayCount] <= 0.1f)
+						if (lightPdf[tracedShadowRayCount] <= 0.0f)
 							continue;
 
 						const Vector lwi = shadowRay[tracedShadowRayCount].d;

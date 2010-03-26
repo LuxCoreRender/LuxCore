@@ -243,6 +243,8 @@ int main(int argc, char *argv[]) {
 	} catch (cl::Error err) {
 		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
 #endif
+	} catch (std::runtime_error err) {
+		std::cerr << "RUNTIME ERROR: " << err.what() << std::endl;
 	} catch (std::exception err) {
 		std::cerr << "ERROR: " << err.what() << std::endl;
 	}

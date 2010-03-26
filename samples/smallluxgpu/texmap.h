@@ -51,6 +51,9 @@ public:
 				ds * dt * GetTexel(s0 + 1, t0 + 1);
 	}
 
+	unsigned int GetWidth() const { return width; }
+	unsigned int GetHeight() const { return height; }
+
 private:
 	const Spectrum &GetTexel(const unsigned int s, const unsigned int t) const {
 		const unsigned int u = Mod(s, width);
