@@ -101,6 +101,11 @@ Spectrum InfiniteLightPortal::Sample_L(const vector<ExtTriangleMesh *> &objs, co
 		if ((sampleNdotMinusWi > 0.f) && (NdotWi > 0.f)) {
 			*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
 			*pdf = distanceSquared / (sampleNdotMinusWi * portalAreas[portalIndex] * portalCount);
+
+			// Using 0.1 instead of 0.0 to cut down fireflies
+			if (*pdf <= 0.1f)
+				continue;
+
 			return Le(wi);
 		}
 
@@ -116,206 +121,63 @@ Spectrum InfiniteLightPortal::Sample_L(const vector<ExtTriangleMesh *> &objs, co
 // InfiniteLight with importance sampling
 //------------------------------------------------------------------------------
 
-static void ComputeStep1dCDF(const float *f, u_int nSteps, float *c, float *cdf) {
-	// Compute integral of step function at $x_i$
-	cdf[0] = 0.f;
-	for (u_int i = 1; i < nSteps + 1; ++i)
-		cdf[i] = cdf[i - 1] + f[i - 1] / nSteps;
-	// Transform step function integral into cdf
-	*c = cdf[nSteps];
-	for (u_int i = 1; i < nSteps + 1; ++i)
-		cdf[i] /= *c;
+InfiniteLightIS::InfiniteLightIS(TextureMap *tx) : InfiniteLight(tx) {
+	uvDistrib = NULL;
 }
 
-// A utility class for sampling from a regularly sampled 1D distribution.
-class Distribution1D {
-public:
-
-	/**
-	 * Creates a 1D distribution for the given function.
-	 * It is assumed that the given function is sampled regularly sampled in
-	 * the interval [0,1] (ex. 0.1, 0.3, 0.5, 0.7, 0.9 for 5 samples).
-	 *
-	 * @param f The values of the function.
-	 * @param n The number of samples.
-	 */
-	Distribution1D(const float *f, u_int n) {
-		func = new float[n];
-		cdf = new float[n + 1];
-		count = n;
-		memcpy(func, f, n * sizeof (float));
-		// funcInt is the sum of all f elements divided by the number
-		// of elements, ie the average value of f over [0;1)
-		ComputeStep1dCDF(func, n, &funcInt, cdf);
-		invFuncInt = 1.f / funcInt;
-		invCount = 1.f / count;
-	}
-
-	~Distribution1D() {
-		delete[] func;
-		delete[] cdf;
-	}
-
-	/**
-	 * Samples from this distribution.
-	 *
-	 * @param u   The random value used to sample.
-	 * @param pdf The pointer to the float where the pdf of the sample
-	 *            should be stored.
-	 * @param off Optional parameter to get the offset of the value
-	 *
-	 * @return The x value of the sample (i.e. the x in f(x)).
-	 */
-	float SampleContinuous(float u, float *pdf, u_int *off = NULL) const {
-		// Find surrounding CDF segments and _offset_
-		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		u_int offset = max<int>(0, ptr - cdf - 1);
-
-		// Compute offset along CDF segment
-		const float du = (u - cdf[offset]) /
-				(cdf[offset + 1] - cdf[offset]);
-
-		// Compute PDF for sampled offset
-		*pdf = func[offset] * invFuncInt;
-
-		// Save offset
-		if (off)
-			*off = offset;
-
-		// Return $x \in [0,1)$ corresponding to sample
-		return (offset + du) * invCount;
-	}
-
-	/**
-	 * Samples from this distribution.
-	 *
-	 * @param u   The random value used to sample.
-	 * @param pdf The pointer to the float where the pdf of the sample
-	 *            should be stored.
-	 * @param du  Optional parameter to get the remaining offset
-	 *
-	 * @return The index of the sampled interval.
-	 */
-	u_int SampleDiscrete(float u, float *pdf, float *du = NULL) const {
-		// Find surrounding CDF segments and _offset_
-		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		u_int offset = max<int>(0, ptr - cdf - 1);
-
-		// Compute offset along CDF segment
-		if (du)
-			*du = (u - cdf[offset]) /
-			(cdf[offset + 1] - cdf[offset]);
-
-		// Compute PDF for sampled offset
-		*pdf = func[offset] * invFuncInt * invCount;
-		return offset;
-	}
-
-	float Pdf(float u) const {
-		return func[Offset(u)] * invFuncInt;
-	}
-
-	float Average() const {
-		return funcInt;
-	}
-
-	u_int Offset(float u) const {
-		return min(count - 1, Floor2UInt(u * count));
-	}
-
-private:
-	// Distribution1D Private Data
-	/*
-	 * The function and its cdf.
-	 */
-	float *func, *cdf;
-	/**
-	 * The function integral (assuming it is regularly sampled with an interval of 1),
-	 * the inverted function integral and the inverted count.
-	 */
-	float funcInt, invFuncInt, invCount;
-	/*
-	 * The number of function values. The number of cdf values is count+1.
-	 */
-	u_int count;
-};
-
-class Distribution2D {
-public:
-	Distribution2D(const float *data, u_int nu, u_int nv) {
-		pConditionalV.reserve(nv);
-		// Compute conditional sampling distribution for $\tilde{v}$
-		for (u_int v = 0; v < nv; ++v)
-			pConditionalV.push_back(new Distribution1D(data + v * nu, nu));
-		// Compute marginal sampling distribution $p[\tilde{v}]$
-		vector<float> marginalFunc;
-		marginalFunc.reserve(nv);
-		for (u_int v = 0; v < nv; ++v)
-			marginalFunc.push_back(pConditionalV[v]->Average());
-		pMarginal = new Distribution1D(&marginalFunc[0], nv);
-	}
-
-	~Distribution2D() {
-		delete pMarginal;
-		for (u_int i = 0; i < pConditionalV.size(); ++i)
-			delete pConditionalV[i];
-	}
-
-	void SampleContinuous(float u0, float u1, float uv[2],
-			float *pdf) const {
-		float pdfs[2];
-		u_int v;
-		uv[1] = pMarginal->SampleContinuous(u1, &pdfs[1], &v);
-		uv[0] = pConditionalV[v]->SampleContinuous(u0, &pdfs[0]);
-		*pdf = pdfs[0] * pdfs[1];
-	}
-
-	void SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const {
-		float pdfs[2];
-		uv[1] = pMarginal->SampleDiscrete(u1, &pdf[1]);
-		uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdf[0]);
-		*pdf = pdfs[0] * pdfs[1];
-	}
-
-	float Pdf(float u, float v) const {
-		return pConditionalV[pMarginal->Offset(v)]->Pdf(u) *
-				pMarginal->Pdf(v);
-	}
-
-	float Average() const {
-		return pMarginal->Average();
-	}
-private:
-	// Distribution2D Private Data
-	vector<Distribution1D *> pConditionalV;
-	Distribution1D *pMarginal;
-};
-
-/*InfiniteLight::InfiniteLight(TextureMap *tx) {
-	tex = tx;
-	portals = NULL;
-	shiftU = 0.f;
-	shiftV = 0.f;
-
+void InfiniteLightIS::Preprocess() {
 	// Build the importance map
-	const float nu = tex->GetWidth() / 2;
-	const float nv = tex->GetHeight() / 2;
+
+	// Cale down the texture map
+	const unsigned int nu = tex->GetWidth() / 2;
+	const unsigned int nv = tex->GetHeight() / 2;
+	cerr << "Building importance sampling map for InfiniteLightIS: "<< nu << "x" << nv << endl;
 
 	float *img = new float[nu * nv];
 	UV uv;
-	for (unsigned int x = 0; x < nu; ++x) {
-		uv.u = (x + .5f) / nu;
+	for (unsigned int v = 0; v < nv; ++v) {
+		uv.v = (v + .5f) / nv + shiftV;
 
-		for (u_int y = 0; y < nv; ++y) {
-			uv.v = (y + .5f) / nv;
+		for (unsigned int u = 0; u < nu; ++u) {
+			uv.u = (u + .5f) / nu + shiftV;
 
-			img[y + x * nv] = tex->GetColor(uv).Filter();
+			float pdf;
+			LatLongMappingMap(uv.u, uv.v, NULL, &pdf);
+
+			if (pdf > 0.f)
+				img[u + v * nu] = tex->GetColor(uv).Filter() / pdf;
+			else
+				img[u + v * nu] = 0.f;
 		}
 	}
 
 	uvDistrib = new Distribution2D(img, nu, nv);
 	delete[] img;
-}*/
+}
+
+Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
+	float uv[2];
+	uvDistrib->SampleContinuous(u0, u1, uv, pdf);
+
+	// Convert sample point to direction on the unit sphere
+	const float phi = uv[0] * 2.f * M_PI;
+	const float theta = uv[1] * M_PI;
+	const float costheta = cosf(theta);
+	const float sintheta = sinf(theta);
+	const Vector wi = SphericalDirection(sintheta, costheta, phi);
+
+	if (Dot(wi, N) > 0.f) {
+		*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+		*pdf /= (2.f * M_PI * M_PI * sintheta);
+
+		UV texUV(uv[0], uv[1]);
+		return gain * tex->GetColor(texUV);
+	} else {
+		*pdf = 0.f;
+		return Spectrum();
+	}
+}
 
 //------------------------------------------------------------------------------
 // Triangle Area Light
@@ -370,6 +232,12 @@ Spectrum TriangleLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Po
 
 	*shadowRay = Ray(p, wi, RAY_EPSILON, distance - RAY_EPSILON);
 	*pdf = distanceSquared / (sampleNdotMinusWi * area);
+
+	// Using 0.1 instead of 0.0 to cut down fireflies
+	if (*pdf <= 0.1f) {
+		*pdf = 0.f;
+		return Spectrum();
+	}
 
 	const Spectrum *colors = mesh->GetColors();
 	if (colors)

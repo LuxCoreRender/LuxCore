@@ -219,7 +219,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		if (ilParams.size() == 2)
 			infiniteLight = new InfiniteLightPortal(ctx, tex, ilParams.at(1));
 		else
-			infiniteLight = new InfiniteLight(tex);
+			infiniteLight = new InfiniteLightIS(tex);
 
 		vector<float> vf = scnProp.GetFloatVector("scene.infinitelight.gain", "1.0 1.0 1.0");
 		if (vf.size() != 3)
@@ -230,6 +230,8 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		if (vf.size() != 2)
 			throw runtime_error("Syntax error in scene.infinitelight.shift (required 2 parameters)");
 		infiniteLight->SetShift(vf.at(0), vf.at(1));
+
+		infiniteLight->Preprocess();
 
 		// Add the infinite light to the list of light sources
 		lights.push_back(infiniteLight);
