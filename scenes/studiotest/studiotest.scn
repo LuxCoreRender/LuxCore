@@ -1,12 +1,13 @@
 scene.camera.lookat = -4.647589 -0.639827 3.469284 4.150244 0.305232 -1.189577
 #scene.infinitelight.file = scenes/studiotest/test-light2.png
-#scene.infinitelight.gain = 4.5 4.5 4.5
+#scene.infinitelight.gain = 10 10 10
 #scene.infinitelight.file = scenes/studiotest/test-light.png
 #scene.infinitelight.gain = 50.0 50.0 50.0
 scene.infinitelight.file = scenes/studiotest/studiolights.exr
 scene.infinitelight.gain = 1.5 1.5 1.5
 scene.infinitelight.shift = 1.0 0.0
-scene.materials.mattemirror.chrome = 0.1 0.1 0.1 0.9 0.9 0.9  1
+scene.materials.mattemirror.chrome = 0.1 0.1 0.1 0.9 0.9 0.9 1
+#scene.materials.matte.chrome = 0.8 0.0 0.0
 scene.objects.chrome.chrome = scenes/studiotest/chrome.ply
 scene.materials.matte.white = 0.8 0.8 0.8
 scene.objects.white.white = scenes/studiotest/white.ply
