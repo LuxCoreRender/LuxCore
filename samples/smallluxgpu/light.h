@@ -25,6 +25,7 @@
 #include "smalllux.h"
 #include "material.h"
 #include "texmap.h"
+#include "mc.h"
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
@@ -52,12 +53,14 @@ public:
 		shiftV = sv;
 	}
 
+	virtual void Preprocess() { }
+
 	virtual Spectrum Le(const Vector &dir) const;
 
 	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
-private:
+protected:
 	TextureMap *tex;
 	float shiftU, shiftV;
 	Spectrum gain;
@@ -74,6 +77,20 @@ public:
 private:
 	ExtTriangleMesh *portals;
 	vector<float> portalAreas;
+};
+
+class InfiniteLightIS : public InfiniteLight {
+public:
+	InfiniteLightIS(TextureMap *tx);
+	~InfiniteLightIS() { delete uvDistrib; }
+
+	void Preprocess();
+
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
+
+private:
+	Distribution2D *uvDistrib;
 };
 
 class TriangleLight : public LightSource, public LightMaterial {

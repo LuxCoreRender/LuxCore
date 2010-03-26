@@ -23,6 +23,7 @@
 #define	_CAMERA_H
 
 #include "smalllux.h"
+#include "mc.h"
 #include "sampler.h"
 #include "film.h"
 #include "luxrays/core/geometry/transform.h"
