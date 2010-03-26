@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "smalllux.h"
+#include "mc.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 
 class Material {
