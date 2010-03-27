@@ -19,8 +19,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 #
-# SmallLuxGPU v1.4 render engine Blender 2.5 plug-in
-# v0.43dev
+# SmallLuxGPU v1.5 render engine Blender 2.5 plug-in
+# v0.51dev
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
@@ -90,10 +90,14 @@ def slg_properties():
       default="0")
   
   EnumProperty(attr="slg_imageformat", name="Image File Format",
-      description="Image file save format, saved with scene files (or Blender intermediary format)", 
+      description="Image file save format, saved with scene files (also Blender intermediary format)", 
       items=(("png", "PNG", "PNG"),
              ("exr", "OpenEXR", "OpenEXR")),
       default="png")
+  
+  FloatProperty(attr="slg_gamma", name="Gamma",
+      description="Gamma correction on screen and for saving PNG file format",
+      default=2.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
   
   IntProperty(attr="slg_tracedepth", name="Max Path Trace Depth",
       description="Maximum path tracing depth",
@@ -254,6 +258,8 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_imageformat")
+    col = split.column()
+    col.prop(scene, "slg_gamma")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_native_threads", text="Native Threads")
@@ -314,7 +320,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         any(os.remove('{}/{}'.format(sdir,file)) for file in os.listdir(sdir) if file.endswith('.ply'))
       objs = [o for o in scene.objects if any(m for m in mfp if m in o.material_slots)] if not export and mfp else scene.objects
       for obj in objs:
-        if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT'] and scene.visible_layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
+        if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT', 'CURVE'] and scene.visible_layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
           print('SLGBP ===> Object: {}'.format(obj.name))
           # Create render mesh
           try:
@@ -337,7 +343,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
             if uv_flag and mesh.active_uv_texture:
               uvd = mesh.active_uv_texture.data
             # Correlate obj mat slots with global mats
-            objmats = [mats.index(m.material.name) if m.material else 0 for m in obj.material_slots]
+            objmats = [mats.index(m.material.name) if m.material else nomat for m in obj.material_slots]
             for face, vc, uv in zip_longest(mesh.faces,vcd,uvd):
               curmat = objmats[face.material_index] if objmats else nomat 
               # Get vertex colors, if avail
@@ -409,13 +415,18 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     if fdist:
       fscn.write('scene.camera.focaldistance = {}\n'.format(ff(fdist)))
       fscn.write('scene.camera.lensradius = {}\n'.format(ff(cam.data.slg_lensradius)))
-    
+
     # Infinite light, if present
-    iltex = next((ts.texture for ts in scene.world.texture_slots if ts and hasattr(ts.texture,'image')), None)
-    if iltex:
-      fscn.write('scene.infinitelight.file = {}\n'.format(bpy.utils.expandpath(iltex.image.filename).replace('\\','/')))
+    ilts = next((ts for ts in scene.world.texture_slots if ts and hasattr(ts.texture,'image')), None)
+    if ilts:
+      fscn.write('scene.infinitelight.file = {}'.format(bpy.utils.expandpath(ilts.texture.image.filename).replace('\\','/')))
+      portal = next((m.name for m in bpy.data.materials if m.shadeless),None)
+      if portal:
+        fscn.write('|scenes/{}/{}.ply'.format(basename,portal.replace('.','_')))
+      fscn.write('\n')
       wle = scene.world.lighting.environment_energy if scene.world.lighting.use_environment_lighting else 1.0
-      fscn.write('scene.infinitelight.gain = {} {} {}\n'.format(ff(iltex.factor_red*wle),ff(iltex.factor_green*wle),ff(iltex.factor_blue*wle)))
+      fscn.write('scene.infinitelight.gain = {} {} {}\n'.format(ff(ilts.texture.factor_red*wle),ff(ilts.texture.factor_green*wle),ff(ilts.texture.factor_blue*wle)))
+      fscn.write('scene.infinitelight.shift = {} {}\n'.format(ff(ilts.offset.x),ff(ilts.offset.y)))
   
     # Process each material
     for i, mat in enumerate(mats):
@@ -427,7 +438,9 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           fscn.write('scene.materials.matte.{} = 0.75 0.75 0.75\n'.format(mat))
         else:
           m = bpy.data.materials[i]
-          if m.emit:
+          if m.shadeless:
+            pass # Portal
+          elif m.emit:
             fscn.write('scene.materials.light.{} = {} {} {}\n'.format(mat,ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2])))
           elif m.transparency and m.alpha < 1:
             fscn.write('scene.materials.glass.{} = {} {} {} {} {} {} 1.0 {} {:b} {:b}\n'.format(mat,ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
@@ -447,13 +460,14 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
                 fscn.write('scene.materials.matte{}.{} = {} {} {} {} {} {} {} {:b}\n'.format(refltype,mat,ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
                     ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
                     gloss,m.raytrace_mirror.depth>0))
-          
-        fscn.write('scene.objects.{}.{} = scenes/{}/{}.ply'.format(mat,mat,basename,mat))
-        if uv_flag and mtex[i]:
-          texfname = next((ts.texture.image.filename for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
-          if texfname:
-            fscn.write('|{}'.format(bpy.utils.expandpath(texfname).replace('\\','/')))
-        fscn.write('\n')
+        
+        if not m.shadeless:   
+          fscn.write('scene.objects.{}.{} = scenes/{}/{}.ply'.format(mat,mat,basename,mat))
+          if uv_flag and mtex[i]:
+            texfname = next((ts.texture.image.filename for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
+            if texfname:
+              fscn.write('|{}'.format(bpy.utils.expandpath(texfname).replace('\\','/')))
+          fscn.write('\n')
         if export or mats[i] in mfp:
           # Write out PLY
           fply = open('{}/{}.ply'.format(sdir,mat), 'wb')
@@ -564,6 +578,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       fcfg.write('opencl.devices.select = {}\n'.format(scene.slg_devices)) 
     fcfg.write('opencl.renderthread.count = {}\n'.format(scene.slg_devices_threads))
     fcfg.write('opencl.gpu.workgroup.size = {}\n'.format(scene.slg_gpu_workgroup_size))
+    fcfg.write('screen.gamma = {:g}\n'.format(scene.slg_gamma))
     fcfg.write('screen.refresh.interval = {}\n'.format(scene.slg_refreshrate))
     fcfg.write('screen.type = {}\n'.format(scene.slg_film_type))
     fcfg.write('path.maxdepth = {}\n'.format(scene.slg_tracedepth))
@@ -579,7 +594,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     if scene.slg_waitrender:
       # Wait for SLG , convert and load image
       if scene.slg_enablebatchmode:
-        self.update_stats("", "SmallLuxGPU: Batch Rendering (see console for progress), please wait...")
+        self.update_stats("", "SmallLuxGPU: Batch Rendering frame# {} (see console for progress), please wait...".format(scene.current_frame))
       else:
         self.update_stats("", "SmallLuxGPU: Waiting... (in SLG window: press 'p' to save image, 'Esc' to exit)")
       # Hold the render results window hostage until SLG returns...
