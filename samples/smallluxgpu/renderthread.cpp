@@ -41,9 +41,10 @@ RenderThread::~RenderThread() {
 //------------------------------------------------------------------------------
 
 NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long seedBase,
-		const float samplingStart, NativeThreadIntersectionDevice *device,
+		const float samplStart, NativeThreadIntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
+	samplingStart = samplStart;
 
 	// Allocate buffers
 
@@ -79,7 +80,10 @@ NativeRenderThread::~NativeRenderThread() {
 void NativeRenderThread::Start() {
 	RenderThread::Start();
 
-	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight());
+	const unsigned int startLine = Clamp<unsigned int>(
+		scene->camera->film->GetHeight() * samplingStart,
+			0, scene->camera->film->GetHeight() - 1);
+	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
 	sampleBuffer->Reset();
 	rayBuffer->Reset();
 	pathIntegrator->ReInit();
@@ -140,9 +144,10 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 //------------------------------------------------------------------------------
 
 DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned long seedBase,
-		const float samplingStart, IntersectionDevice *device,
+		const float samplStart, IntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
+	samplingStart = samplStart;
 	reportedPermissionError = false;
 
 	// Allocate buffers
@@ -184,7 +189,10 @@ DeviceRenderThread::~DeviceRenderThread() {
 void DeviceRenderThread::Start() {
 	RenderThread::Start();
 
-	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight());
+		const unsigned int startLine = Clamp<unsigned int>(
+		scene->camera->film->GetHeight() * samplingStart,
+			0, scene->camera->film->GetHeight() - 1);
+	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
 	sampleBuffer->Reset();
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		rayBuffers[i]->Reset();

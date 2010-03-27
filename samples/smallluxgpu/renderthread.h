@@ -72,6 +72,7 @@ private:
 
 	NativeThreadIntersectionDevice *intersectionDevice;
 
+	float samplingStart;
 	Sampler *sampler;
 	PathIntegrator *pathIntegrator;
 	RayBuffer *rayBuffer;
@@ -100,6 +101,7 @@ private:
 
 	IntersectionDevice *intersectionDevice;
 
+	float samplingStart;
 	Sampler *sampler;
 	PathIntegrator *pathIntegrators[DEVICE_RENDER_BUFFER_COUNT];
 	RayBuffer *rayBuffers[DEVICE_RENDER_BUFFER_COUNT];
