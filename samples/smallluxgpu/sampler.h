@@ -31,7 +31,8 @@ class Sampler {
 public:
 	virtual ~Sampler() { }
 
-	virtual void Init(const unsigned width, const unsigned height) = 0;
+	virtual void Init(const unsigned width, const unsigned height,
+		const unsigned startLine = 0) = 0;
 	virtual unsigned int GetPass() = 0;
 
 	virtual void GetNextSample(Sample *sample) = 0;
@@ -73,16 +74,18 @@ public:
 		seed(startSeed), screenStartLine(startLine), lowLatency(lowLat) {
 		rndGen = new RandomGenerator();
 
-		Init(width, height);
+		Init(width, height, screenStartLine);
 	}
 	~RandomSampler() {
 		delete rndGen;
 	}
 
-	void Init(const unsigned width, const unsigned height) {
+	void Init(const unsigned width, const unsigned height, const unsigned startLine = 0) {
 		rndGen->init(seed);
 		screenWidth = width;
 		screenHeight = height;
+		if (startLine > 0)
+			screenStartLine = startLine;
 		currentSampleScreenX = 0;
 		currentSampleScreenY = screenStartLine;
 		currentSubSampleIndex = 0;
