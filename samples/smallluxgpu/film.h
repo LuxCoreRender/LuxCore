@@ -177,7 +177,7 @@ public:
 
 	virtual const float *GetScreenBuffer() const = 0;
 
-	virtual void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
+	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
 		// Update statistics
 		statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
 	}
@@ -396,14 +396,14 @@ public:
 		return pixels;
 	}
 
-	void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
+	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
 		for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
 			SplatSampleBufferElem(&sbe[i]);
 
-		Film::SplatSampleBuffer(sampleBuffer);
+		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
 	void SavePPM(const string &fileName) {
@@ -478,37 +478,25 @@ public:
 
 	void Init(const unsigned int w, unsigned int h) {
 		StandardFilm::Init(w, h);
-
-		// Out of the lock but doesn't matter, Init() is called in single thread anyway
-		useLargeFilter = lowLatency;
 	}
 
-	void Reset() {
-		StandardFilm::Reset();
-
-		// Out of the lock but doesn't matter, Init() is called in single thread anyway
-		useLargeFilter = lowLatency;
-	}
-
-	void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
+	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
-		if (useLargeFilter) {
-			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
-				BluredSplatSampleBufferElem(&sbe[i]);
-		} else {
+		if (sampler->IsPreviewOver()) {
 			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
 				SplatSampleBufferElem(&sbe[i]);
+		} else {
+			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
+				BluredSplatSampleBufferElem(&sbe[i]);
 		}
 
-		Film::SplatSampleBuffer(sampleBuffer);
+		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
 private:
 	void BluredSplatSampleBufferElem(const SampleBufferElem *sampleElem) {
-		useLargeFilter = (useLargeFilter && (sampleElem->pass < 32));
-
 		const int splatSize = 4;
 
 		// Compute sample's raster extent
@@ -529,8 +517,6 @@ private:
 				pixelWeights[offset] += 0.01f;
 			}
 	}
-
-	bool useLargeFilter;
 };
 
 class GaussianFilm : public Film {
@@ -601,8 +587,6 @@ public:
 			pixels[j++] = 0.f;
 		}
 
-		useLargeFilter = lowLatency;
-
 		Film::Init(w, h);
 	}
 
@@ -623,8 +607,6 @@ public:
 			}
 		}
 
-		useLargeFilter = lowLatency;
-
 		Film::Reset();
 	}
 
@@ -638,19 +620,19 @@ public:
 		return pixels;
 	}
 
-	virtual void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
+	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
-		if (useLargeFilter) {
-			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
-				SplatSampleBufferElem(&sbe[i], filter4x4, filterTable4x4);
-		} else {
+		if (sampler->IsPreviewOver()) {
 			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
 				SplatSampleBufferElem(&sbe[i], filter2x2, filterTable2x2);
+		} else {
+			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
+				SplatSampleBufferElem(&sbe[i], filter4x4, filterTable4x4);
 		}
 
-		Film::SplatSampleBuffer(sampleBuffer);
+		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
 	void SavePPM(const string &fileName) {
@@ -689,8 +671,6 @@ protected:
 	}
 
 	void SplatSampleBufferElem(const SampleBufferElem *sampleElem, const GaussianFilter &filter, const float *filterTable) {
-		useLargeFilter = (useLargeFilter && (sampleElem->pass < 32));
-
 		// Compute sample's raster extent
 		float dImageX = sampleElem->screenX - 0.5f;
 		float dImageY = sampleElem->screenY - 0.5f;
@@ -757,8 +737,6 @@ protected:
 	float *pixelWeights;
 
 	float *pixels;
-
-	bool useLargeFilter;
 };
 
 class FastGaussianFilm : public GaussianFilm {
@@ -770,25 +748,23 @@ public:
 	~FastGaussianFilm() {
 	}
 
-	void SplatSampleBuffer(const SampleBuffer *sampleBuffer) {
+	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
-		if (useLargeFilter) {
-			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
-				FastSplatSampleBufferElem(&sbe[i]);
-		} else {
+		if (sampler->IsPreviewOver()) {
 			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
 				SplatSampleBufferElem(&sbe[i], filter2x2, filterTable2x2);
+		} else {
+			for (size_t i = 0; i < sampleBuffer->GetSampleCount(); ++i)
+				FastSplatSampleBufferElem(&sbe[i]);
 		}
 
-		Film::SplatSampleBuffer(sampleBuffer);
+		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
 private:
 	void FastSplatSampleBufferElem(const SampleBufferElem *sampleElem) {
-		useLargeFilter = (useLargeFilter && (sampleElem->pass < 32));
-
 		const int splatSize = 4;
 
 		// Compute sample's raster extent

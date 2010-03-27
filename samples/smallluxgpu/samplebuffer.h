@@ -29,7 +29,6 @@
 
 typedef struct {
 	float screenX, screenY;
-	unsigned int pass;
 	Spectrum radiance;
 } SampleBufferElem;
 
@@ -43,6 +42,7 @@ public:
 		delete[] samples;
 	}
 
+	Sampler *GetSampler() const { return sampler; }
 	void Reset() { currentFreeSample = 0; };
 	bool IsFull() const { return (currentFreeSample >= size); }
 
@@ -51,7 +51,6 @@ public:
 
 		s->screenX = sample->screenX;
 		s->screenY = sample->screenY;
-		s->pass = sample->pass;
 		s->radiance = radiance;
 	}
 
@@ -60,6 +59,7 @@ public:
 	size_t GetSampleCount() const { return currentFreeSample; }
 
 private:
+	Sampler *sampler;
 	size_t size;
 	size_t currentFreeSample;
 
