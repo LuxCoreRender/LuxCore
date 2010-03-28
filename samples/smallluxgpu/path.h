@@ -91,7 +91,7 @@ public:
 
 		const bool missed = (rayHit->index == 0xffffffffu);
 		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
-			if (missed && scene->infiniteLight && specularBounce) {
+			if (missed && scene->infiniteLight && (scene->useInfiniteLightBruteForce || specularBounce)) {
 				// Add the light emitted by the infinite light
 				radiance += scene->infiniteLight->Le(pathRay.d) * throughput;
 			}

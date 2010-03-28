@@ -39,6 +39,10 @@ public:
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
 };
 
+//------------------------------------------------------------------------------
+// InfiniteLight implementations
+//------------------------------------------------------------------------------
+
 class InfiniteLight : public LightSource {
 public:
 	InfiniteLight(TextureMap *tx);
@@ -64,6 +68,17 @@ protected:
 	TextureMap *tex;
 	float shiftU, shiftV;
 	Spectrum gain;
+};
+
+class InfiniteLightBF : public InfiniteLight {
+public:
+	InfiniteLightBF(TextureMap *tx) : InfiniteLight(tx) { }
+
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
+		*pdf = 0;
+		return Spectrum();
+	}
 };
 
 class InfiniteLightPortal : public InfiniteLight {
@@ -92,6 +107,10 @@ public:
 private:
 	Distribution2D *uvDistrib;
 };
+
+//------------------------------------------------------------------------------
+// TriangleLight implementation
+//------------------------------------------------------------------------------
 
 class TriangleLight : public LightSource, public LightMaterial {
 public:

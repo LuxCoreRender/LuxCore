@@ -216,10 +216,23 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	const vector<string> ilParams = scnProp.GetStringVector("scene.infinitelight.file", "");
 	if (ilParams.size() > 0) {
 		TextureMap *tex = texMapCache.GetTextureMap(ilParams.at(0));
-		if (ilParams.size() == 2)
-			infiniteLight = new InfiniteLightPortal(ctx, tex, ilParams.at(1));
-		else
-			infiniteLight = new InfiniteLightIS(tex);
+
+		// Check if I have to use InfiniteLightBF method
+		if (scnProp.GetInt("scene.infinitelight.usebruteforce", 0)) {
+			cerr << "Using brute force infinite light sampling" << endl;
+			infiniteLight = new InfiniteLightBF(tex);
+			useInfiniteLightBruteForce = true;
+		} else {
+			if (ilParams.size() == 2)
+				infiniteLight = new InfiniteLightPortal(ctx, tex, ilParams.at(1));
+			else
+				infiniteLight = new InfiniteLightIS(tex);
+			
+			// Add the infinite light to the list of light sources
+			lights.push_back(infiniteLight);
+
+			useInfiniteLightBruteForce = false;
+		}
 
 		vector<float> vf = scnProp.GetFloatVector("scene.infinitelight.gain", "1.0 1.0 1.0");
 		if (vf.size() != 3)
@@ -232,11 +245,10 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		infiniteLight->SetShift(vf.at(0), vf.at(1));
 
 		infiniteLight->Preprocess();
-
-		// Add the infinite light to the list of light sources
-		lights.push_back(infiniteLight);
-	} else
+	} else {
 		infiniteLight = NULL;
+		useInfiniteLightBruteForce = false;
+	}
 
 	//--------------------------------------------------------------------------
 	// Create the DataSet
@@ -263,4 +275,7 @@ Scene::~Scene() {
 		(*obj)->Delete();
 		delete *obj;
 	}
+
+	if (useInfiniteLightBruteForce)
+		delete infiniteLight;
 }

@@ -6,6 +6,7 @@ scene.camera.lookat = -4.647589 -0.639827 3.469284 4.150244 0.305232 -1.189577
 scene.infinitelight.file = scenes/studiotest/studiolights.exr
 scene.infinitelight.gain = 1.5 1.5 1.5
 scene.infinitelight.shift = 1.0 0.0
+#scene.infinitelight.usebruteforce = 1
 scene.materials.mattemirror.chrome = 0.1 0.1 0.1 0.9 0.9 0.9 1
 #scene.materials.matte.chrome = 0.8 0.0 0.0
 scene.objects.chrome.chrome = scenes/studiotest/chrome.ply
