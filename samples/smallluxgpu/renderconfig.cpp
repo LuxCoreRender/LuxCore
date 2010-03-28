@@ -110,7 +110,7 @@ void RenderingConfig::Init() {
 		scene->lightStrategy = ALL_UNIFORM;
 	scene->shadowRayCount = cfg.GetInt("path.shadowrays", 1);
 	scene->rrDepth = cfg.GetInt("path.russianroulette.depth", scene->rrDepth);
-	scene->rrProb = cfg.GetInt("path.russianroulette.prob", scene->rrProb);
+	scene->rrProb = cfg.GetFloat("path.russianroulette.prob", scene->rrProb);
 
 	// Start OpenCL devices
 	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclDeviceConfig);

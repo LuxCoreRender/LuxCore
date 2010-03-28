@@ -267,10 +267,8 @@ public:
 
 		if (depth > scene->rrDepth) {
 			// Russian Roulette
-			const float p = 0.75f;
-
-			if (p >= sample.GetLazyValue())
-				throughput /= p;
+			if (scene->rrProb >= sample.GetLazyValue())
+				throughput /= scene->rrProb;
 			else {
 				// Check if terminate the path or I have still to trace shadow rays
 				if (tracedShadowRayCount > 0)
