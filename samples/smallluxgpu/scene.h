@@ -71,9 +71,11 @@ public:
 	vector<TextureMap *> triangleTexMaps; // One for each triangle
 
 	vector<LightSource *> lights; // One for each light source
-	InfiniteLight *infiniteLight;
 
 	DataSet *dataSet;
+
+	InfiniteLight *infiniteLight;
+	bool useInfiniteLightBruteForce;
 };
 
 #endif	/* _SCENE_H */

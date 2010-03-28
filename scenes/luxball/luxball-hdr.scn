@@ -18,3 +18,4 @@ scene.objects.shell.luxshell = scenes/luxball/luxball-shell.ply
 #scene.infinitelight.file = scenes/simple-mat/sky.exr
 scene.infinitelight.file = scenes/simple-mat/arch.exr
 scene.infinitelight.gain = 3.0 3.0 3.0
+scene.infinitelight.usebruteforce = 1
