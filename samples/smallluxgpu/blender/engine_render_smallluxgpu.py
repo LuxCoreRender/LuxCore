@@ -58,7 +58,11 @@ def slg_properties():
   BoolProperty(attr="slg_vnormals", name="VNs",
       description="Export optional vertex normal information",
       default=False)
-          
+
+  BoolProperty(attr="slg_infinitelightbf", name="InfiniteLight BF",
+      description="Enable brute force rendering for InifinteLight light source",
+      default=False)
+
   BoolProperty(attr="slg_low_latency", name="Low Latency",
       description="In low latency mode render is more interactive, otherwise render is faster",
       default=True)
@@ -223,6 +227,9 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col = split.column()
     col.active = scene.slg_export
     col.prop(scene, "slg_vnormals")
+    col = split.column()
+    col.active = scene.slg_export
+    col.prop(scene, "slg_infinitelightbf")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_film_type")
@@ -427,6 +434,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       wle = scene.world.lighting.environment_energy if scene.world.lighting.use_environment_lighting else 1.0
       fscn.write('scene.infinitelight.gain = {} {} {}\n'.format(ff(ilts.texture.factor_red*wle),ff(ilts.texture.factor_green*wle),ff(ilts.texture.factor_blue*wle)))
       fscn.write('scene.infinitelight.shift = {} {}\n'.format(ff(ilts.offset.x),ff(ilts.offset.y)))
+      if scene.slg_infinitelightbf:
+        fscn.write('scene.infinitelight.usebruteforce = 1\n')
   
     # Process each material
     for i, mat in enumerate(mats):
