@@ -125,11 +125,11 @@ def slg_properties():
   
   IntProperty(attr="slg_batchmodetime", name="Batch mode max run time",
       description="Max number of seconds to run in batch mode; 0 = ignore",
-      default=120, min=1, soft_min=1)
+      default=120, min=0, soft_min=0)
   
   IntProperty(attr="slg_batchmodespp", name="Batch mode max samples per pixel",
       description="Max number of samples per pixels in batch mode; 0 = ignore",
-      default=128, min=1, soft_min=1)
+      default=128, min=0, soft_min=0)
   
   BoolProperty(attr="slg_waitrender", name="Wait for SLG",
       description="Wait for render to finish; load image into render results (required for animations)",
