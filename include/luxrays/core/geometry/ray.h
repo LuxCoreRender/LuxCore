@@ -59,9 +59,8 @@ public:
 	mutable float mint, maxt;
 };
 
-inline std::ostream &operator<<(std::ostream &os, Ray &r) {
-	os << "org: " << r.o << "dir: " << r.d << " range [" <<
-		r.mint << "," << r.maxt << "]";
+inline std::ostream &operator<<(std::ostream &os, const Ray &r) {
+	os << "Ray[" << r.o << ", " << r.d << ", " << r.mint << "," << r.maxt << "]";
 	return os;
 }
 

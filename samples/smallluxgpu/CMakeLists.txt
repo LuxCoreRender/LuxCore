@@ -41,7 +41,8 @@ set(SMALLLUXGPU_SRCS
     renderthread.cpp
     scene.cpp
     smallluxgpu.cpp
-    texmap.cpp)
+    texmap.cpp
+	volume.cpp)
 
 add_executable(slg ${SMALLLUXGPU_SRCS})
 target_link_libraries(slg luxrays ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES})

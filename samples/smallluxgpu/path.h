@@ -94,11 +94,25 @@ public:
 		// Calculate next step
 		depth++;
 
-		// Adjust path troughput if partecipating media is present
-		if (scene->volumeIntegrator)
-			throughput *= scene->volumeIntegrator->Transmittance(pathRay);
-
 		const bool missed = (rayHit->index == 0xffffffffu);
+
+		// Adjust path troughput if partecipating media is present
+		if (scene->volumeIntegrator) {
+			Ray volumeRay(pathRay.o, pathRay.d, 0.f, missed ? std::numeric_limits<float>::infinity() : rayHit->t);
+
+			throughput *= scene->volumeIntegrator->Transmittance(volumeRay);
+
+			if (depth == 1) {
+				vector<Ray> volumeRays;
+				vector<unsigned int> currentVolueRayIndex;
+				Spectrum Lv;
+
+				scene->volumeIntegrator->GenerateLiRays(scene, &sample, 9999,
+					volumeRay, volumeRays, currentVolueRayIndex, &Lv);
+				radiance += Lv;
+			}
+		}
+
 		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
 			if (missed && scene->infiniteLight && (scene->useInfiniteLightBruteForce || specularBounce)) {
 				// Add the light emitted by the infinite light
@@ -127,7 +141,11 @@ public:
 			if (specularBounce) {
 				// Only TriangleLight can be directly hit
 				const TriangleLight *tLight = (TriangleLight *)triMat;
-				const Spectrum Le = tLight->Le(scene->objects, -pathRay.d);
+				Spectrum Le = tLight->Le(scene->objects, -pathRay.d);
+
+				// Adjust path troughput if partecipating media is present
+				if (scene->volumeIntegrator)
+					throughput *= scene->volumeIntegrator->Transmittance(pathRay);
 
 				radiance += Le * throughput;
 			}

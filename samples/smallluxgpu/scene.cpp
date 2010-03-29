@@ -275,7 +275,12 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.scattering (required 3 parameters)");
 		const Spectrum scattering(vf.at(0), vf.at(1), vf.at(2));
 
-		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, absorption, scattering);
+		vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.emission", "0.0 0.0 0.0");
+		if (vf.size() != 3)
+			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.emission (required 3 parameters)");
+		const Spectrum emission(vf.at(0), vf.at(1), vf.at(2));
+
+		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, absorption, scattering, emission);
 	} else
 		volumeIntegrator = NULL;
 
