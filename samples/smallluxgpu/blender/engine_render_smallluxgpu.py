@@ -20,7 +20,7 @@
 ###########################################################################
 #
 # SmallLuxGPU v1.5 render engine Blender 2.5 plug-in
-# v0.51dev
+# v0.51
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
@@ -44,7 +44,7 @@ def slg_properties():
       default="testscene", maxlen=1024)
   
   BoolProperty(attr="slg_export", name="PLY",
-      description="Export ply files (uncheck only if scene has already been exported)",
+      description="Export PLY (mesh data) files (uncheck only if scene has already been exported)",
       default=True)
           
   BoolProperty(attr="slg_vuvs", name="UVs",
@@ -158,7 +158,7 @@ def slg_properties():
 
   # Add Material PLY export override
   bpy.types.Material.BoolProperty(attr="slg_forceply", name="SLG Force PLY Export", 
-      description="SmallLuxGPU - Force export of PLY for this material",
+      description="SmallLuxGPU - Force export of PLY (mesh data) related to this material",
       default=False)
 
   # Use some of the existing panels
@@ -430,6 +430,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
   
     # Process each material
     for i, mat in enumerate(mats):
+      portal = False
       mat = mat.replace('.','_')
       if verts[i] or (not export and os.path.exists('{}/{}.ply'.format(sdir,mat))):
         print("SLGBP    material: {}".format(mat))
@@ -439,7 +440,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         else:
           m = bpy.data.materials[i]
           if m.shadeless:
-            pass # Portal
+            portal = True
           elif m.emit:
             fscn.write('scene.materials.light.{} = {} {} {}\n'.format(mat,ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2])))
           elif m.transparency and m.alpha < 1:
@@ -461,7 +462,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
                     ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
                     gloss,m.raytrace_mirror.depth>0))
         
-        if not m.shadeless:   
+        if not portal:   
           fscn.write('scene.objects.{}.{} = scenes/{}/{}.ply'.format(mat,mat,basename,mat))
           if uv_flag and mtex[i]:
             texfname = next((ts.texture.image.filename for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
