@@ -25,6 +25,7 @@
 #include "smalllux.h"
 #include "light.h"
 #include "scene.h"
+#include "volume.h"
 
 class RenderingConfig;
 
@@ -80,6 +81,10 @@ public:
 			for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
 				const RayHit *shadowRayHit = rayBuffer->GetRayHit(currentShadowRayIndex[i]);
 				if (shadowRayHit->index == 0xffffffffu) {
+					// Adjust path troughput if partecipating media is present
+					if (scene->volumeIntegrator)
+						lightColor[i] *= scene->volumeIntegrator->Transmittance(shadowRay[i]);
+
 					// Nothing was hit, light is visible
 					radiance += lightColor[i] / lightPdf[i];
 				}
@@ -88,6 +93,10 @@ public:
 
 		// Calculate next step
 		depth++;
+
+		// Adjust path troughput if partecipating media is present
+		if (scene->volumeIntegrator)
+			throughput *= scene->volumeIntegrator->Transmittance(pathRay);
 
 		const bool missed = (rayHit->index == 0xffffffffu);
 		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {

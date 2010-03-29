@@ -127,6 +127,10 @@ inline Spectrum operator*(float f, const Spectrum &v) {
 	return v * f;
 }
 
+inline Spectrum Exp(const Spectrum &s) {
+	return Spectrum(expf(s.r), expf(s.g), expf(s.b));
+}
+
 }
 
 #endif	/* _LUXRAYS_SPECTRUM_H */

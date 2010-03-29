@@ -22,7 +22,7 @@
 #ifndef _MC_H
 #define	_MC_H
 
-#include "luxrays/luxrays.h"
+#include "smalllux.h"
 
 inline void LatLongMappingMap(float s, float t, Vector *wh, float *pdf) {
 	const float theta = t * M_PI;

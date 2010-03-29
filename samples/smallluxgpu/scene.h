@@ -34,6 +34,7 @@
 #include "luxrays/core/context.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "texmap.h"
+#include "volume.h"
 
 using namespace std;
 
@@ -76,6 +77,8 @@ public:
 
 	InfiniteLight *infiniteLight;
 	bool useInfiniteLightBruteForce;
+
+	VolumeIntegrator *volumeIntegrator;
 };
 
 #endif	/* _SCENE_H */

@@ -212,7 +212,10 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		}
 	}
 
+	//--------------------------------------------------------------------------
 	// Check if there is an infinitelight source defined
+	//--------------------------------------------------------------------------
+
 	const vector<string> ilParams = scnProp.GetStringVector("scene.infinitelight.file", "");
 	if (ilParams.size() > 0) {
 		TextureMap *tex = texMapCache.GetTextureMap(ilParams.at(0));
@@ -251,6 +254,32 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	}
 
 	//--------------------------------------------------------------------------
+	// Check if there is a VolumeIntegrator defined
+	//--------------------------------------------------------------------------
+
+	if (scnProp.GetInt("scene.partecipatingmedia.singlescatering.enable", 0)) {
+		vector<float> vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.bbox", "-10.0 -10.0 -10.0 10.0 10.0 10.0");
+		if (vf.size() != 6)
+			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.bbox (required 6 parameters)");
+		BBox region(Point(vf.at(0), vf.at(1), vf.at(2)), Point(vf.at(3), vf.at(4), vf.at(5)));
+
+		const float stepSize = scnProp.GetFloat("scene.partecipatingmedia.singlescatering.stepsize", 0.5);
+
+		vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.absorption", "0.0 0.0 0.0");
+		if (vf.size() != 3)
+			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.absorption (required 3 parameters)");
+		const Spectrum absorption(vf.at(0), vf.at(1), vf.at(2));
+
+		vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.scattering", "0.0 0.0 0.0");
+		if (vf.size() != 3)
+			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.scattering (required 3 parameters)");
+		const Spectrum scattering(vf.at(0), vf.at(1), vf.at(2));
+
+		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, absorption, scattering);
+	} else
+		volumeIntegrator = NULL;
+
+	//--------------------------------------------------------------------------
 	// Create the DataSet
 	//--------------------------------------------------------------------------
 
@@ -278,4 +307,6 @@ Scene::~Scene() {
 
 	if (useInfiniteLightBruteForce)
 		delete infiniteLight;
+
+	delete volumeIntegrator;
 }
