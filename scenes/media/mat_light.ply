@@ -1,0 +1,16 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: media.blend
+element vertex 4
+property float x
+property float y
+property float z
+element face 2
+property list uchar uint vertex_indices
+end_header
+-29.102560 -5.959271 28.068161
+-27.959745 -4.861319 29.288191
+-26.473574 -6.184479 29.086842
+-27.616388 -7.282432 27.866812
+3 0 1 2
+3 0 2 3

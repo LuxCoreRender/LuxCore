@@ -34,29 +34,30 @@ public:
 	virtual ~VolumeIntegrator() { }
 
 	virtual Spectrum Transmittance(const Ray &ray) const = 0;
-	virtual bool GenerateLiRays(const Scene *scene, Sample *sample, const unsigned int maxVectorSize,
-		const Ray &ray, vector<Ray> &volumeRays, vector<unsigned int> currentVolueRayIndex,
-		Spectrum *Lvolume) const = 0;
+	virtual void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
+		vector<Ray> *volumeRays, vector<Spectrum> *volumeScatteredLight,
+		Spectrum *emittedLight) const = 0;
 };
 
 class SingleScatteringIntegrator : public VolumeIntegrator {
 public:
 	SingleScatteringIntegrator(const BBox &bbox, const float step,
-			Spectrum absorption, Spectrum scattering, Spectrum emission) {
+			Spectrum absorption, Spectrum scattering, Spectrum emission, const float gg) {
 		region = bbox;
 		stepSize = step;
 		sig_a = absorption;
 		sig_s = scattering;
 		lightEmission = emission;
+		g = gg;
 	}
 
 	Spectrum Transmittance(const Ray &ray) const {
 		return Exp(-HomogenousTau(ray));
 	}
 
-	bool GenerateLiRays(const Scene *scene, Sample *sample, const unsigned int maxVectorSize,
-		const Ray &ray, vector<Ray> &volumeRays, vector<unsigned int> currentVolueRayIndex,
-		Spectrum *Lvolume) const;
+	void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
+		vector<Ray> *volumeRays, vector<Spectrum> *volumeScatteredLight,
+		Spectrum *emittedLight) const;
 
 private:
 	Spectrum HomogenousTau(const Ray &ray) const {
@@ -64,11 +65,18 @@ private:
         if (!region.IntersectP(ray, &t0, &t1))
 			return 0.f;
 
-        return Distance(ray(t0), ray(t1)) * (sig_a + sig_s);
+		// I intentionally leave scattering out because it is a lot easier to use
+        return Distance(ray(t0), ray(t1)) * (sig_a /*+ sig_s*/);
+	}
+
+	float PhaseHG(const Vector &w, const Vector &wp, float g) const {
+		float costheta = Dot(w, wp);
+		return 1.f / (4.f * M_PI) * (1.f - g*g) /
+				powf(1.f + g * g - 2.f * g * costheta, 1.5f);
 	}
 
 	BBox region;
-	float stepSize;
+	float stepSize, g;
 	Spectrum sig_a, sig_s, lightEmission;
 };
 
