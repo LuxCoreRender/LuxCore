@@ -82,10 +82,12 @@ public:
 	}
 
 	size_t ReserveRay() {
+		assert (currentFreeRayIndex < size);
 		return currentFreeRayIndex++;
 	}
 
 	size_t AddRay(const Ray &ray) {
+		assert (currentFreeRayIndex < size);
 		rays[currentFreeRayIndex] = ray;
 
 		return currentFreeRayIndex++;

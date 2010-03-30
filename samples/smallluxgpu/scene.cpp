@@ -280,7 +280,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.emission (required 3 parameters)");
 		const Spectrum emission(vf.at(0), vf.at(1), vf.at(2));
 
-		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, absorption, scattering, emission);
+		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, absorption, scattering, emission, 0.f);
 	} else
 		volumeIntegrator = NULL;
 

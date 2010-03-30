@@ -32,7 +32,7 @@ class RenderingConfig;
 class Path {
 public:
 	enum PathState {
-		EYE_VERTEX, NEXT_VERTEX, ONLY_SHADOW_RAYS
+		EYE_VERTEX, EYE_VERTEX_VOLUME_STEP, NEXT_VERTEX, ONLY_SHADOW_RAYS
 	};
 
 	Path(Scene *scene) {
@@ -63,20 +63,65 @@ public:
 		specularBounce = true;
 	}
 
-	void FillRayBuffer(RayBuffer *rayBuffer) {
-		if (state != ONLY_SHADOW_RAYS)
-			currentPathRayIndex = rayBuffer->AddRay(pathRay);
+	bool FillRayBuffer(Scene *scene, RayBuffer *rayBuffer) {
+		const unsigned int leftSpace = rayBuffer->LeftSpace();
+		// Check if the there is enough free space in the RayBuffer
+		if (((state == EYE_VERTEX) && (1 > leftSpace)) ||
+				((state == EYE_VERTEX_VOLUME_STEP) && (volumeRays.size() + 1 > leftSpace)) ||
+				((state == ONLY_SHADOW_RAYS) && (tracedShadowRayCount > leftSpace)) ||
+				((state == NEXT_VERTEX) && (tracedShadowRayCount + 1 > leftSpace)))
+			return false;
 
-		if ((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS)) {
-			for (unsigned int i = 0; i < tracedShadowRayCount; ++i)
-				currentShadowRayIndex[i] = rayBuffer->AddRay(shadowRay[i]);
+		if (state == EYE_VERTEX_VOLUME_STEP) {
+			currentVolumeRayIndex.resize(volumeRays.size());
+			for (unsigned int i = 0; i < volumeRays.size(); ++i)
+				currentVolumeRayIndex[i] = rayBuffer->AddRay(volumeRays[i]);
+		} else {
+			if (state != ONLY_SHADOW_RAYS)
+				currentPathRayIndex = rayBuffer->AddRay(pathRay);
+
+			if ((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS)) {
+				for (unsigned int i = 0; i < tracedShadowRayCount; ++i)
+					currentShadowRayIndex[i] = rayBuffer->AddRay(shadowRay[i]);
+			}
 		}
+
+		return true;
 	}
 
 	void AdvancePath(Scene *scene, Sampler *sampler, const RayBuffer *rayBuffer,
 			SampleBuffer *sampleBuffer) {
-		const RayHit *rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
+		// Select the path ray hit
+		const RayHit *rayHit;
+		if ((state == EYE_VERTEX) && scene->volumeIntegrator) {
+			rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
 
+			Ray volumeRay(pathRay.o, pathRay.d, 0.f, (rayHit->index == 0xffffffffu) ? std::numeric_limits<float>::infinity() : rayHit->t);
+			Spectrum Lve;
+			scene->volumeIntegrator->GenerateLiRays(scene, &sample, volumeRay, &volumeRays, &volumeLightColors, &Lve);
+			radiance += Lve;
+
+			if (volumeRays.size() > 0) {
+				// Do the EYE_VERTEX_VOLUME_STEP
+				state = EYE_VERTEX_VOLUME_STEP;
+				eyeHit = *(rayBuffer->GetRayHit(currentPathRayIndex));
+				return;
+			}
+		} else if (state == EYE_VERTEX_VOLUME_STEP) {
+			// Add scattered light
+			for (unsigned int i = 0; i < volumeRays.size(); ++i) {
+				const RayHit *h = rayBuffer->GetRayHit(currentVolumeRayIndex[i]);
+				if (h->Miss()) {
+					// The light source is visible, add scattered light
+					radiance += throughput * volumeLightColors[i];
+				}
+			}
+
+			rayHit = &eyeHit;
+		} else
+			rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
+
+		// Finish direct light sampling
 		if (((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS)) && (tracedShadowRayCount > 0)) {
 			for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
 				const RayHit *shadowRayHit = rayBuffer->GetRayHit(currentShadowRayIndex[i]);
@@ -101,16 +146,6 @@ public:
 			Ray volumeRay(pathRay.o, pathRay.d, 0.f, missed ? std::numeric_limits<float>::infinity() : rayHit->t);
 
 			throughput *= scene->volumeIntegrator->Transmittance(volumeRay);
-
-			if (depth == 1) {
-				vector<Ray> volumeRays;
-				vector<unsigned int> currentVolueRayIndex;
-				Spectrum Lv;
-
-				scene->volumeIntegrator->GenerateLiRays(scene, &sample, 9999,
-					volumeRay, volumeRays, currentVolueRayIndex, &Lv);
-				radiance += Lv;
-			}
 		}
 
 		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
@@ -209,7 +244,7 @@ public:
 						for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 							// Select a point on the light surface
 							lightColor[tracedShadowRayCount] = light->Sample_L(
-									scene->objects, hitPoint, shadeN,
+									scene->objects, hitPoint, &shadeN,
 									sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 									&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
@@ -241,7 +276,7 @@ public:
 
 						// Select a point on the light surface
 						lightColor[tracedShadowRayCount] = light->Sample_L(
-								scene->objects, hitPoint, shadeN,
+								scene->objects, hitPoint, &shadeN,
 								sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
@@ -318,6 +353,7 @@ public:
 		state = NEXT_VERTEX;
 	}
 
+private:
 	static unsigned int GetMaxShadowRaysCount(const Scene *scene) {
 		switch (scene->lightStrategy) {
 			case ALL_UNIFORM:
@@ -330,7 +366,6 @@ public:
 		}
 	}
 
-private:
 	void CalcNextStep(Scene *scene, Sampler *sampler, const RayBuffer *rayBuffer,
 		SampleBuffer *sampleBuffer);
 
@@ -342,9 +377,17 @@ private:
 	float *lightPdf;
 	Spectrum *lightColor;
 
+	// Used to save eye hit during EYE_VERTEX_VOLUME_STEP
+	RayHit eyeHit;
+
 	Ray pathRay, *shadowRay;
 	unsigned int currentPathRayIndex, *currentShadowRayIndex;
 	unsigned int tracedShadowRayCount;
+
+	vector<Ray> volumeRays;
+	vector<Spectrum> volumeLightColors;
+	vector<unsigned int> currentVolumeRayIndex;
+
 	PathState state;
 	bool specularBounce;
 };

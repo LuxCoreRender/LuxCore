@@ -25,21 +25,17 @@
 using namespace std;
 
 
-bool SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *sample, const unsigned int maxVectorSize,
-		const Ray &ray, vector<Ray> &volumeRays, vector<unsigned int> currentVolueRayIndex,
-		Spectrum *Lvolume) const {
+void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *sample,
+		const Ray &ray, vector<Ray> *volumeRays, vector<Spectrum> *volumeScatteredLight,
+		Spectrum *emittedLight) const {
 	float t0, t1;
-	if (!region.IntersectP(ray, &t0, &t1) || (scene->lights.size() < 1)) {
-		volumeRays.resize(0);
-		return false;
+	if (!region.IntersectP(ray, &t0, &t1)) {
+		volumeRays->resize(0);
+		return;
 	}
 
 	// Prepare for volume integration stepping
 	const unsigned int nSamples = Ceil2Int((t1 - t0) / stepSize);
-
-	// Check if the RayBuffer has enough space for the generated rays
-	if (nSamples > maxVectorSize)
-		return false;
 
 	const float step = (t1 - t0) / nSamples;
 	Spectrum Tr = Spectrum(1.f, 1.f, 1.f);
@@ -48,15 +44,17 @@ bool SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 	const float offset = sample->GetLazyValue();
 	t0 += offset * step;
 
-	volumeRays.resize(0);
-	currentVolueRayIndex.resize(0);
+	volumeRays->resize(0);
+	volumeScatteredLight->resize(0);
 	Point pPrev;
-	Spectrum stepeTau = Exp(-step * (sig_a + sig_s));
+	// I intentionally leave scattering out because it is a lot easier to use
+	Spectrum stepeTau = Exp(-step * (sig_a /*+ sig_s*/));
 	for (unsigned int i = 0; i < nSamples; ++i, t0 += step) {
 		pPrev = p;
 		p = ray(t0);
 		if (i == 0)
-			Tr *= Exp(-offset * (sig_a + sig_s));
+			// I intentionally leave scattering out because it is a lot easier to use
+			Tr *= Exp(-offset * (sig_a /*+ sig_s*/));
 		else
 			Tr *= stepeTau;
 
@@ -69,26 +67,26 @@ bool SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 		}
 
 		Lv += Tr * lightEmission;
-		/*Spectrum ss = sig_s;
-		if (!ss.IsBlack() && scene->lights.size() > 0) {
-			int nLights = scene->lights.size();
-			int ln = min(Floor2Int(lightNum[sampOffset] * nLights),
-						 nLights-1);
-			Light *light = scene->lights[ln];
-			// Add contribution of _light_ due to scattering at _p_
-			float pdf;
-			VisibilityTester vis;
-			Vector wo;
-			LightSample ls(lightComp[sampOffset], lightPos[2*sampOffset],
-						   lightPos[2*sampOffset+1]);
-			Spectrum L = light->Sample_L(p, 0.f, ls, ray.time, &wo, &pdf, &vis);
-			if (!L.IsBlack() && pdf > 0.f && vis.Unoccluded(scene)) {
-				Spectrum Ld = L * vis.Transmittance(scene, renderer, NULL, rng, arena);
-				Lv += Tr * ss * vr->p(p, w, -wo, ray.time) * Ld * float(nLights) / pdf;
-			}
-		}*/
-	}
+		if (!sig_s.Black() && scene->lights.size() > 0) {
+			// Select the light to sample
+			const unsigned int currentLightIndex = scene->SampleLights(sample->GetLazyValue());
+			const LightSource *light = scene->lights[currentLightIndex];
 
-	*Lvolume = Lv * step;
-	return true;
+			// Select a point on the light surface
+			float lightPdf;
+			Ray lightRay;
+			Spectrum lightColor = light->Sample_L(scene->objects, p, NULL,
+					sample->GetLazyValue(), sample->GetLazyValue(), sample->GetLazyValue(),
+					&lightPdf, &lightRay);
+
+			if ((lightPdf > 0.f) && !lightColor.Black()) {
+				volumeRays->push_back(lightRay);
+				volumeScatteredLight->push_back(Tr * sig_s * lightColor * Transmittance(lightRay) *
+					(PhaseHG(-ray.d, -lightRay.d, g) * scene->lights.size() * step / lightPdf));
+				//volumeScatteredLight->push_back(Spectrum(1.f,1.f,1.f));
+			}
+		}
+
+		*emittedLight = Lv * step;
+	}
 }

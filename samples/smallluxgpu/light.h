@@ -35,7 +35,7 @@ class LightSource {
 public:
 	virtual ~LightSource() { }
 
-	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
 };
 
@@ -61,7 +61,7 @@ public:
 
 	virtual Spectrum Le(const Vector &dir) const;
 
-	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 protected:
@@ -86,7 +86,7 @@ public:
 	InfiniteLightPortal(Context *ctx, TextureMap *tx, const string &portalFileName);
 	~InfiniteLightPortal();
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
@@ -101,7 +101,7 @@ public:
 
 	void Preprocess();
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
@@ -122,7 +122,7 @@ public:
 
 	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Vector &wo) const;
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
@@ -133,4 +133,3 @@ private:
 };
 
 #endif	/* _LIGHT_H */
-

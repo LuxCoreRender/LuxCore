@@ -69,14 +69,11 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 		firstPath = 0;
 	}
 
-	// Worst case: shadow rays count + 1 path ray
-	const unsigned int maxRaysPerPath = Path::GetMaxShadowRaysCount(scene) + 1;
 	bool allPathDone = true;
 	lastPath = firstPath;
 	for (;;) {
-		paths[lastPath]->FillRayBuffer(rayBuffer);
-
-		if (rayBuffer->LeftSpace() < maxRaysPerPath) {
+		if (!paths[lastPath]->FillRayBuffer(scene, rayBuffer)) {
+			// Not enough free space in the RayBuffer
 			allPathDone = false;
 			break;
 		}
@@ -93,19 +90,25 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 		// To limit the number of new paths generated at first run
 		const size_t maxNewPaths = rayBuffer->GetSize() >> 3;
 
-		while (rayBuffer->LeftSpace() >= maxRaysPerPath) {
+		for (;;) {
 			newPaths++;
-			if (newPaths > maxNewPaths)
+			if (newPaths > maxNewPaths) {
+				firstPath = 0;
+				lastPath = paths.size() - 1;
 				break;
+			}
 
 			// Add a new path
 			Path *p = new Path(scene);
 			paths.push_back(p);
 			p->Init(scene, sampler);
-			p->FillRayBuffer(rayBuffer);
+			if (!p->FillRayBuffer(scene, rayBuffer)) {
+				firstPath = 0;
+				// -2 because the addition of the last path failed
+				lastPath = paths.size() - 2;
+				break;
+			}
 		}
-
-		lastPath = (firstPath - 1) % paths.size();
 	}
 }
 

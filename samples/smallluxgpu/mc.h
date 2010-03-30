@@ -22,6 +22,8 @@
 #ifndef _MC_H
 #define	_MC_H
 
+#include <string.h>
+
 #include "smalllux.h"
 
 inline void LatLongMappingMap(float s, float t, Vector *wh, float *pdf) {
@@ -76,6 +78,16 @@ inline void ConcentricSampleDisk(const float u1, const float u2, float *dx, floa
 	theta *= M_PI / 4.f;
 	*dx = r * cosf(theta);
 	*dy = r * sinf(theta);
+}
+
+inline Vector UniformSampleSphere(const float u1, const float u2) {
+	float z = 1.f - 2.f * u1;
+	float r = sqrtf(max(0.f, 1.f - z * z));
+	float phi = 2.f * M_PI * u2;
+	float x = r * cosf(phi);
+	float y = r * sinf(phi);
+
+	return Vector(x, y, z);
 }
 
 inline Vector CosineSampleHemisphere(const float u1, const float u2) {

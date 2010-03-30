@@ -38,21 +38,30 @@ Spectrum InfiniteLight::Le(const Vector &dir) const {
 	return gain * tex->GetColor(uv);
 }
 
-Spectrum InfiniteLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+Spectrum InfiniteLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-	Vector wi = CosineSampleHemisphere(u0, u1);
-	*pdf = wi.z * INV_PI;
+	if (N) {
+		Vector wi = CosineSampleHemisphere(u0, u1);
+		*pdf = wi.z * INV_PI;
 
-	Vector v1, v2;
-	CoordinateSystem(Vector(N), &v1, &v2);
+		Vector v1, v2;
+		CoordinateSystem(Vector(*N), &v1, &v2);
 
-	wi = Vector(
-			v1.x * wi.x + v2.x * wi.y + N.x * wi.z,
-			v1.y * wi.x + v2.y * wi.y + N.y * wi.z,
-			v1.z * wi.x + v2.z * wi.y + N.z * wi.z);
-	*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+		wi = Vector(
+				v1.x * wi.x + v2.x * wi.y + N->x * wi.z,
+				v1.y * wi.x + v2.y * wi.y + N->y * wi.z,
+				v1.z * wi.x + v2.z * wi.y + N->z * wi.z);
+		*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
 
-	return Le(wi);
+		return Le(wi);
+	} else {
+		Vector wi = UniformSampleSphere(u0, u1);
+
+		*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+		*pdf = 1.f / (4.f * M_PI);
+
+		return Le(wi);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -74,7 +83,7 @@ InfiniteLightPortal::~InfiniteLightPortal() {
 	delete portals;
 }
 
-Spectrum InfiniteLightPortal::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+Spectrum InfiniteLightPortal::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	// Select one of the portals
 	const unsigned int portalCount = portals->GetTotalTriangleCount();
@@ -97,8 +106,7 @@ Spectrum InfiniteLightPortal::Sample_L(const vector<ExtTriangleMesh *> &objs, co
 		wi /= sqrtf(distanceSquared);
 
 		const float sampleNdotMinusWi = Dot(sampleN, -wi);
-		const float NdotWi = Dot(N, wi);
-		if ((sampleNdotMinusWi > 0.f) && (NdotWi > 0.f)) {
+		if ((sampleNdotMinusWi > 0.f) && (N && Dot(*N, wi) > 0.f)) {
 			*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
 			*pdf = distanceSquared / (sampleNdotMinusWi * portalAreas[portalIndex] * portalCount);
 
@@ -155,7 +163,7 @@ void InfiniteLightIS::Preprocess() {
 	delete[] img;
 }
 
-Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	float uv[2];
 	uvDistrib->SampleContinuous(u0, u1, uv, pdf);
@@ -167,16 +175,16 @@ Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const 
 	const float sintheta = sinf(theta);
 	const Vector wi = SphericalDirection(sintheta, costheta, phi);
 
-	if (Dot(wi, N) > 0.f) {
-		*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
-		*pdf /= (2.f * M_PI * M_PI * sintheta);
-
-		UV texUV(uv[0], uv[1]);
-		return gain * tex->GetColor(texUV);
-	} else {
+	if (N && (Dot(wi, *N) <= 0.f)) {
 		*pdf = 0.f;
 		return Spectrum();
 	}
+
+	*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+	*pdf /= (2.f * M_PI * M_PI * sintheta);
+
+	UV texUV(uv[0], uv[1]);
+	return gain * tex->GetColor(texUV);
 }
 
 //------------------------------------------------------------------------------
@@ -208,7 +216,7 @@ Spectrum TriangleLight::Le(const vector<ExtTriangleMesh *> &objs, const Vector &
 		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
 }
 
-Spectrum TriangleLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+Spectrum TriangleLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	const ExtTriangleMesh *mesh = objs[meshIndex];
 	const Triangle &tri = mesh->GetTriangles()[triIndex];
@@ -224,8 +232,7 @@ Spectrum TriangleLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Po
 	wi /= distance;
 
 	const float sampleNdotMinusWi = Dot(sampleN, -wi);
-	const float NdotWi = Dot(N, wi);
-	if ((sampleNdotMinusWi <= 0.f) || (NdotWi <= 0.f)) {
+	if ((sampleNdotMinusWi <= 0.f) || (N && Dot(*N, wi) <= 0.f)) {
 		*pdf = 0.f;
 		return Spectrum();
 	}
