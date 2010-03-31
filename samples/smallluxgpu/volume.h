@@ -26,8 +26,59 @@
 
 #include "smalllux.h"
 #include "sampler.h"
+#include "luxrays/core/geometry/raybuffer.h"
 
 class Scene;
+class VolumeIntegrator;
+
+class VolumeComputation {
+public:
+	VolumeComputation(VolumeIntegrator *vol) {
+		vi = vol;
+
+		Reset();
+	}
+
+	void AddRays(RayBuffer *rayBuffer) {
+		currentRayIndex.resize(rays.size());
+		for (unsigned int i = 0; i < rays.size(); ++i)
+			currentRayIndex[i] = rayBuffer->AddRay(rays[i]);
+	}
+
+	Spectrum CollectResults(const RayBuffer *rayBuffer) {
+		// Add scattered light
+		Spectrum radiance;
+		for (unsigned int i = 0; i < rays.size(); ++i) {
+			const RayHit *h = rayBuffer->GetRayHit(currentRayIndex[i]);
+			if (h->Miss()) {
+				// The light source is visible, add scattered light
+				radiance += scatteredLight[i];
+			}
+		}
+
+		return radiance;
+	}
+
+	unsigned int GetRayCount() const { return rays.size(); }
+	const Spectrum &GetEmittedLight() const { return emittedLight; }
+
+	friend class SingleScatteringIntegrator;
+
+protected:
+	void Reset() {
+		rays.resize(0);
+		scatteredLight.resize(0);
+		emittedLight = Spectrum();
+	}
+
+	VolumeIntegrator *vi;
+
+	vector<Ray> rays;
+	vector<unsigned int> currentRayIndex;
+	vector<Spectrum> scatteredLight;
+	Spectrum emittedLight;
+
+};
 
 class VolumeIntegrator {
 public:
@@ -35,20 +86,18 @@ public:
 
 	virtual Spectrum Transmittance(const Ray &ray) const = 0;
 	virtual void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
-		vector<Ray> *volumeRays, vector<Spectrum> *volumeScatteredLight,
-		Spectrum *emittedLight) const = 0;
+		VolumeComputation *comp) const = 0;
 };
 
 class SingleScatteringIntegrator : public VolumeIntegrator {
 public:
 	SingleScatteringIntegrator(const BBox &bbox, const float step,
-			Spectrum absorption, Spectrum scattering, Spectrum emission, const float gg) {
+			Spectrum absorption, Spectrum inScattering, Spectrum emission) {
 		region = bbox;
 		stepSize = step;
 		sig_a = absorption;
-		sig_s = scattering;
+		sig_s = inScattering;
 		lightEmission = emission;
-		g = gg;
 	}
 
 	Spectrum Transmittance(const Ray &ray) const {
@@ -56,8 +105,7 @@ public:
 	}
 
 	void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
-		vector<Ray> *volumeRays, vector<Spectrum> *volumeScatteredLight,
-		Spectrum *emittedLight) const;
+		VolumeComputation *comp) const;
 
 private:
 	Spectrum HomogenousTau(const Ray &ray) const {
@@ -69,14 +117,8 @@ private:
         return Distance(ray(t0), ray(t1)) * (sig_a /*+ sig_s*/);
 	}
 
-	float PhaseHG(const Vector &w, const Vector &wp, float g) const {
-		float costheta = Dot(w, wp);
-		return 1.f / (4.f * M_PI) * (1.f - g*g) /
-				powf(1.f + g * g - 2.f * g * costheta, 1.5f);
-	}
-
 	BBox region;
-	float stepSize, g;
+	float stepSize;
 	Spectrum sig_a, sig_s, lightEmission;
 };
 
