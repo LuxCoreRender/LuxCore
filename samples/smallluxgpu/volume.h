@@ -33,22 +33,18 @@ class VolumeIntegrator;
 
 class VolumeComputation {
 public:
-	VolumeComputation(VolumeIntegrator *vol) {
-		vi = vol;
-
-		Reset();
-	}
+	VolumeComputation(VolumeIntegrator *vol);
+	~VolumeComputation();
 
 	void AddRays(RayBuffer *rayBuffer) {
-		currentRayIndex.resize(rays.size());
-		for (unsigned int i = 0; i < rays.size(); ++i)
+		for (unsigned int i = 0; i < rayCount; ++i)
 			currentRayIndex[i] = rayBuffer->AddRay(rays[i]);
 	}
 
 	Spectrum CollectResults(const RayBuffer *rayBuffer) {
 		// Add scattered light
 		Spectrum radiance;
-		for (unsigned int i = 0; i < rays.size(); ++i) {
+		for (unsigned int i = 0; i < rayCount; ++i) {
 			const RayHit *h = rayBuffer->GetRayHit(currentRayIndex[i]);
 			if (h->Miss()) {
 				// The light source is visible, add scattered light
@@ -59,23 +55,21 @@ public:
 		return radiance;
 	}
 
-	unsigned int GetRayCount() const { return rays.size(); }
+	unsigned int GetRayCount() const { return rayCount; }
 	const Spectrum &GetEmittedLight() const { return emittedLight; }
 
 	friend class SingleScatteringIntegrator;
 
 protected:
 	void Reset() {
-		rays.resize(0);
-		scatteredLight.resize(0);
+		rayCount = 0;
 		emittedLight = Spectrum();
 	}
 
-	VolumeIntegrator *vi;
-
-	vector<Ray> rays;
-	vector<unsigned int> currentRayIndex;
-	vector<Spectrum> scatteredLight;
+	unsigned int rayCount;
+	Ray *rays;
+	unsigned int *currentRayIndex;
+	Spectrum *scatteredLight;
 	Spectrum emittedLight;
 
 };
@@ -83,6 +77,9 @@ protected:
 class VolumeIntegrator {
 public:
 	virtual ~VolumeIntegrator() { }
+
+	virtual float GetMaxRayLength() const = 0;
+	virtual float GetStepSize() const = 0;
 
 	virtual Spectrum Transmittance(const Ray &ray) const = 0;
 	virtual void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
@@ -99,6 +96,12 @@ public:
 		sig_s = inScattering;
 		lightEmission = emission;
 	}
+
+	float GetMaxRayLength() const {
+		return Distance(region.pMin, region.pMax);
+	}
+
+	float GetStepSize() const  { return stepSize; }
 
 	Spectrum Transmittance(const Ray &ray) const {
 		return Exp(-HomogenousTau(ray));
