@@ -26,26 +26,28 @@ using namespace std;
 
 
 void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *sample,
-		const Ray &ray, vector<Ray> *volumeRays, vector<Spectrum> *volumeScatteredLight,
-		Spectrum *emittedLight) const {
+		const Ray &ray, VolumeComputation *comp) const {
+	comp->Reset();
+
 	float t0, t1;
 	if (!region.IntersectP(ray, &t0, &t1)) {
-		volumeRays->resize(0);
+		comp->rays.resize(0);
 		return;
 	}
 
 	// Prepare for volume integration stepping
-	const unsigned int nSamples = Ceil2Int((t1 - t0) / stepSize);
+	const float distance = t1 - t0;
+	const unsigned int nSamples = Ceil2Int(distance / stepSize);
 
-	const float step = (t1 - t0) / nSamples;
+	const float step = distance / nSamples;
 	Spectrum Tr = Spectrum(1.f, 1.f, 1.f);
 	Spectrum Lv = Spectrum();
 	Point p = ray(t0);
 	const float offset = sample->GetLazyValue();
 	t0 += offset * step;
 
-	volumeRays->resize(0);
-	volumeScatteredLight->resize(0);
+	comp->rays.resize(0);
+	comp->scatteredLight.resize(0);
 	Point pPrev;
 	// I intentionally leave scattering out because it is a lot easier to use
 	Spectrum stepeTau = Exp(-step * (sig_a /*+ sig_s*/));
@@ -80,13 +82,12 @@ void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 					&lightPdf, &lightRay);
 
 			if ((lightPdf > 0.f) && !lightColor.Black()) {
-				volumeRays->push_back(lightRay);
-				volumeScatteredLight->push_back(Tr * sig_s * lightColor * Transmittance(lightRay) *
-					(PhaseHG(-ray.d, -lightRay.d, g) * scene->lights.size() * step / lightPdf));
-				//volumeScatteredLight->push_back(Spectrum(1.f,1.f,1.f));
+				comp->rays.push_back(lightRay);
+				comp->scatteredLight.push_back(Tr * sig_s * lightColor * Transmittance(lightRay) *
+					(scene->lights.size() * step / (4.f * M_PI * lightPdf)));
 			}
 		}
 
-		*emittedLight = Lv * step;
+		comp->emittedLight = Lv * step;
 	}
 }
