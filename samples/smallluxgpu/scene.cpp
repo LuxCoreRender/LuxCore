@@ -46,9 +46,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	// Read camera position and target
 	//--------------------------------------------------------------------------
 
-	vector<float> vf = scnProp.GetFloatVector("scene.camera.lookat", "10.0 0.0 0.0  0.0 0.0 0.0");
-	if (vf.size() != 6)
-		throw runtime_error("Syntax error in scene.camera.lookat parameter");
+	vector<float> vf = GetParameters(scnProp, "scene.camera.lookat", 6, "10.0 0.0 0.0  0.0 0.0 0.0");
 	Point o(vf.at(0), vf.at(1), vf.at(2));
 	Point t(vf.at(3), vf.at(4), vf.at(5));
 
@@ -57,9 +55,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 
 	camera = new PerspectiveCamera(lowLatency, o, t, film);
 
-	vf = scnProp.GetFloatVector("scene.camera.up", "0.0 0.0 0.1");
-	if (vf.size() != 3)
-		throw runtime_error("Syntax error in scene.camera.up parameter");
+	vf = GetParameters(scnProp, "scene.camera.up", 3, "0.0 0.0 0.1");
 	camera->up = Vector(vf.at(0), vf.at(1), vf.at(2));
 
 	camera->lensRadius = scnProp.GetFloat("scene.camera.lensradius", 0.f);
@@ -86,36 +82,28 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		cerr << "Material definition: " << matName << " [" << matType << "]" << endl;
 
 		if (matType == "matte") {
-			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 3)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 3 parameters)");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 3, "1.0 1.0 1.0");
 			const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
 
 			MatteMaterial *mat = new MatteMaterial(col);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else if (matType == "light") {
-			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 3)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 3 parameters)");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 3, "1.0 1.0 1.0");
 			const Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 
 			AreaLightMaterial *mat = new AreaLightMaterial(gain);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else if (matType == "mirror") {
-			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 4)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 4 parameters)");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 4, "1.0 1.0 1.0 1.0");
 			const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
 
 			MirrorMaterial *mat = new MirrorMaterial(col, vf.at(3) != 0.f);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else if (matType == "mattemirror") {
-			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 7)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 7 parameters)");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 7, "1.0 1.0 1.0 1.0 1.0 1.0 1.0");
 			const Spectrum Kd(vf.at(0), vf.at(1), vf.at(2));
 			const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
 
@@ -123,9 +111,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else if (matType == "glass") {
-			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 10)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 10 parameters)");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 10, "1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.5 1.0 1.0");
 			const Spectrum Krfl(vf.at(0), vf.at(1), vf.at(2));
 			const Spectrum Ktrn(vf.at(3), vf.at(4), vf.at(5));
 
@@ -133,18 +119,14 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else if (matType == "metal") {
-			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 5)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 5 parameters)");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 5, "1.0 1.0 1.0 10.0 1.0");
 			const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
 
 			MetalMaterial *mat = new MetalMaterial(col, vf.at(3), vf.at(4) != 0.f);
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else if (matType == "mattemetal") {
-			vf = scnProp.GetFloatVector("scene.materials." + matType + "." + matName, "");
-			if (vf.size() != 8)
-				throw runtime_error("Syntax error in scene.materials." + matType + "." + matName + " (required 8 parameters)");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 5, "1.0 1.0 1.0 1.0 1.0 1.0 10.0 1.0");
 			const Spectrum Kd(vf.at(0), vf.at(1), vf.at(2));
 			const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
 
@@ -237,14 +219,10 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			useInfiniteLightBruteForce = false;
 		}
 
-		vector<float> vf = scnProp.GetFloatVector("scene.infinitelight.gain", "1.0 1.0 1.0");
-		if (vf.size() != 3)
-			throw runtime_error("Syntax error in scene.infinitelight.gain (required 3 parameters)");
+		vector<float> vf = GetParameters(scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
 		infiniteLight->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
-		vf = scnProp.GetFloatVector("scene.infinitelight.shift", "0.0 0.0");
-		if (vf.size() != 2)
-			throw runtime_error("Syntax error in scene.infinitelight.shift (required 2 parameters)");
+		vf = GetParameters(scnProp, "scene.infinitelight.shift", 2, "0.0 0.0");
 		infiniteLight->SetShift(vf.at(0), vf.at(1));
 
 		infiniteLight->Preprocess();
@@ -258,28 +236,20 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	//--------------------------------------------------------------------------
 
 	if (scnProp.GetInt("scene.partecipatingmedia.singlescatering.enable", 0)) {
-		vector<float> vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.bbox", "-10.0 -10.0 -10.0 10.0 10.0 10.0");
-		if (vf.size() != 6)
-			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.bbox (required 6 parameters)");
+		vector<float> vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.bbox", 6, "-10.0 -10.0 -10.0 10.0 10.0 10.0");
 		BBox region(Point(vf.at(0), vf.at(1), vf.at(2)), Point(vf.at(3), vf.at(4), vf.at(5)));
 
 		const float stepSize = scnProp.GetFloat("scene.partecipatingmedia.singlescatering.stepsize", 0.5);
 
-		vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.absorption", "0.0 0.0 0.0");
-		if (vf.size() != 3)
-			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.absorption (required 3 parameters)");
+		vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.absorption", 3, "0.0 0.0 0.0");
 		const Spectrum absorption(vf.at(0), vf.at(1), vf.at(2));
 
-		vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.scattering", "0.0 0.0 0.0");
-		if (vf.size() != 3)
-			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.scattering (required 3 parameters)");
+		vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.scattering", 3, "0.0 0.0 0.0");
 		const Spectrum scattering(vf.at(0), vf.at(1), vf.at(2));
 		if ((scattering.Filter() > 0.f) && (useInfiniteLightBruteForce))
 			throw runtime_error("Partecipating media scattering is not supported with InfiniteLight brute force");
 
-		vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.emission", "0.0 0.0 0.0");
-		if (vf.size() != 3)
-			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.emission (required 3 parameters)");
+		vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.emission", 3, "0.0 0.0 0.0");
 		const Spectrum emission(vf.at(0), vf.at(1), vf.at(2));
 
 		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, absorption, scattering, emission);
@@ -316,4 +286,16 @@ Scene::~Scene() {
 		delete infiniteLight;
 
 	delete volumeIntegrator;
+}
+
+vector<float> Scene::GetParameters(const Properties &scnProp, const string &paramName,
+		const unsigned int paramCount, const string &defaultValue) const {
+	const vector<float> vf = scnProp.GetFloatVector(paramName, defaultValue);
+	if (vf.size() != paramCount) {
+		stringstream ss;
+		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
+		throw runtime_error(ss.str());
+	}
+
+	return vf;
 }

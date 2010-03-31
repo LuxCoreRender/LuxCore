@@ -30,11 +30,12 @@
 #include "camera.h"
 #include "light.h"
 #include "material.h"
+#include "texmap.h"
+#include "volume.h"
 
 #include "luxrays/core/context.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
-#include "texmap.h"
-#include "volume.h"
+#include "luxrays/utils/properties.h"
 
 using namespace std;
 
@@ -79,6 +80,10 @@ public:
 	bool useInfiniteLightBruteForce;
 
 	VolumeIntegrator *volumeIntegrator;
+
+private:
+	vector<float> GetParameters(const Properties &scnProp, const string &paramName,
+			const unsigned int paramCount, const string &defaultValue) const;
 };
 
 #endif	/* _SCENE_H */
