@@ -24,16 +24,30 @@
 
 using namespace std;
 
+VolumeComputation::VolumeComputation(VolumeIntegrator *vol) {
+	float maxRayLen = vol->GetMaxRayLength();
+	const unsigned int maxSampleCount = Ceil2Int(maxRayLen / vol->GetStepSize()) + 1;
+
+	rays = new Ray[maxSampleCount];
+	currentRayIndex = new unsigned int[maxSampleCount];
+	scatteredLight = new Spectrum[maxSampleCount];
+
+	Reset();
+}
+
+VolumeComputation::~VolumeComputation() {
+	delete rays;
+	delete currentRayIndex;
+	delete scatteredLight;
+}
 
 void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *sample,
 		const Ray &ray, VolumeComputation *comp) const {
 	comp->Reset();
 
 	float t0, t1;
-	if (!region.IntersectP(ray, &t0, &t1)) {
-		comp->rays.resize(0);
+	if (!region.IntersectP(ray, &t0, &t1))
 		return;
-	}
 
 	// Prepare for volume integration stepping
 	const float distance = t1 - t0;
@@ -46,8 +60,6 @@ void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 	const float offset = sample->GetLazyValue();
 	t0 += offset * step;
 
-	comp->rays.resize(0);
-	comp->scatteredLight.resize(0);
 	Point pPrev;
 	// I intentionally leave scattering out because it is a lot easier to use
 	Spectrum stepeTau = Exp(-step * (sig_a /*+ sig_s*/));
@@ -76,15 +88,15 @@ void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 
 			// Select a point on the light surface
 			float lightPdf;
-			Ray lightRay;
 			Spectrum lightColor = light->Sample_L(scene->objects, p, NULL,
 					sample->GetLazyValue(), sample->GetLazyValue(), sample->GetLazyValue(),
-					&lightPdf, &lightRay);
+					&lightPdf, &(comp->rays[comp->rayCount]));
 
 			if ((lightPdf > 0.f) && !lightColor.Black()) {
-				comp->rays.push_back(lightRay);
-				comp->scatteredLight.push_back(Tr * sig_s * lightColor * Transmittance(lightRay) *
-					(scene->lights.size() * step / (4.f * M_PI * lightPdf)));
+				comp->scatteredLight[comp->rayCount] = Tr * sig_s * lightColor *
+						Transmittance(comp->rays[comp->rayCount]) *
+						(scene->lights.size() * step / (4.f * M_PI * lightPdf));
+				comp->rayCount++;
 			}
 		}
 
