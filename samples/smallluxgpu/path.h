@@ -123,10 +123,6 @@ public:
 			for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
 				const RayHit *shadowRayHit = rayBuffer->GetRayHit(currentShadowRayIndex[i]);
 				if (shadowRayHit->index == 0xffffffffu) {
-					// Adjust path troughput if partecipating media is present
-					if (scene->volumeIntegrator)
-						lightColor[i] *= scene->volumeIntegrator->Transmittance(shadowRay[i]);
-
 					// Nothing was hit, light is visible
 					radiance += lightColor[i] / lightPdf[i];
 				}
@@ -137,13 +133,6 @@ public:
 		depth++;
 
 		const bool missed = (rayHit->index == 0xffffffffu);
-
-		// Adjust path troughput if partecipating media is present
-		if (scene->volumeIntegrator) {
-			Ray volumeRay(pathRay.o, pathRay.d, 0.f, missed ? std::numeric_limits<float>::infinity() : rayHit->t);
-
-			throughput *= scene->volumeIntegrator->Transmittance(volumeRay);
-		}
 
 		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
 			if (missed && scene->infiniteLight && (scene->useInfiniteLightBruteForce || specularBounce)) {
@@ -174,10 +163,6 @@ public:
 				// Only TriangleLight can be directly hit
 				const TriangleLight *tLight = (TriangleLight *)triMat;
 				Spectrum Le = tLight->Le(scene->objects, -pathRay.d);
-
-				// Adjust path troughput if partecipating media is present
-				if (scene->volumeIntegrator)
-					throughput *= scene->volumeIntegrator->Transmittance(pathRay);
 
 				radiance += Le * throughput;
 			}

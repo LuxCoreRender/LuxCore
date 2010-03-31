@@ -51,9 +51,7 @@ void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 
 	if (sig_s.Black() || (scene->lights.size() < 1)) {
 		const float distance = t1 - t0;
-		// I intentionally leave scattering out because it is a lot easier to use
-		const Spectrum Tr = Exp(-distance * (sig_a /*+ sig_s*/));
-		comp->emittedLight =  Tr * lightEmission *distance;
+		comp->emittedLight = lightEmission * distance;
 	} else {
 		// Prepare for volume integration stepping
 		const float distance = t1 - t0;
@@ -67,26 +65,11 @@ void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 		t0 += offset * step;
 
 		Point pPrev;
-		// I intentionally leave scattering out because it is a lot easier to use
-		Spectrum stepeTau = Exp(-step * (sig_a /*+ sig_s*/));
 		for (unsigned int i = 0; i < nSamples; ++i, t0 += step) {
 			pPrev = p;
 			p = ray(t0);
-			if (i == 0)
-				// I intentionally leave scattering out because it is a lot easier to use
-				Tr *= Exp(-offset * (sig_a /*+ sig_s*/));
-			else
-				Tr *= stepeTau;
 
-			// Possibly terminate ray marching if transmittance is small
-			if (Tr.Filter() < 1e-3f) {
-				const float continueProb = .5f;
-				if (sample->GetLazyValue() > continueProb)
-					break;
-				Tr /= continueProb;
-			}
-
-			Lv += Tr * lightEmission;
+			Lv += lightEmission;
 			if (!sig_s.Black() && (scene->lights.size() > 0)) {
 				// Select the light to sample
 				const unsigned int currentLightIndex = scene->SampleLights(sample->GetLazyValue());
@@ -100,7 +83,6 @@ void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 
 				if ((lightPdf > 0.f) && !lightColor.Black()) {
 					comp->scatteredLight[comp->rayCount] = Tr * sig_s * lightColor *
-							Transmittance(comp->rays[comp->rayCount]) *
 							(scene->lights.size() * step / (4.f * M_PI * lightPdf));
 					comp->rayCount++;
 				}

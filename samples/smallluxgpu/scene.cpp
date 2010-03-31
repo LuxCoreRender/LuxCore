@@ -241,9 +241,6 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 
 		const float stepSize = scnProp.GetFloat("scene.partecipatingmedia.singlescatering.stepsize", 0.5);
 
-		vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.absorption", 3, "0.0 0.0 0.0");
-		const Spectrum absorption(vf.at(0), vf.at(1), vf.at(2));
-
 		vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.scattering", 3, "0.0 0.0 0.0");
 		const Spectrum scattering(vf.at(0), vf.at(1), vf.at(2));
 		if ((scattering.Filter() > 0.f) && (useInfiniteLightBruteForce))
@@ -252,7 +249,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.emission", 3, "0.0 0.0 0.0");
 		const Spectrum emission(vf.at(0), vf.at(1), vf.at(2));
 
-		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, absorption, scattering, emission);
+		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, scattering, emission);
 	} else
 		volumeIntegrator = NULL;
 

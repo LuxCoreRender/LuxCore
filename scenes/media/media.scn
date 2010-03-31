@@ -6,6 +6,5 @@ scene.objects.mat_white.mat_white = scenes/media/mat_white.ply
 scene.partecipatingmedia.singlescatering.enable = 1
 scene.partecipatingmedia.singlescatering.bbox = -11.0 -11.0 -11.0  11.0 11.0 11.0
 scene.partecipatingmedia.singlescatering.stepsize = 20.0
-scene.partecipatingmedia.singlescatering.absorption = 0.0 0.0 0.0
 scene.partecipatingmedia.singlescatering.scattering = 0.15 0.15 0.15
 #scene.partecipatingmedia.singlescatering.emission = 0.01 0.01 0.01

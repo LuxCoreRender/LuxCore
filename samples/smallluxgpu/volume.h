@@ -81,7 +81,6 @@ public:
 	virtual float GetMaxRayLength() const = 0;
 	virtual float GetStepSize() const = 0;
 
-	virtual Spectrum Transmittance(const Ray &ray) const = 0;
 	virtual void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
 		VolumeComputation *comp) const = 0;
 };
@@ -89,10 +88,9 @@ public:
 class SingleScatteringIntegrator : public VolumeIntegrator {
 public:
 	SingleScatteringIntegrator(const BBox &bbox, const float step,
-			Spectrum absorption, Spectrum inScattering, Spectrum emission) {
+			Spectrum inScattering, Spectrum emission) {
 		region = bbox;
 		stepSize = step;
-		sig_a = absorption;
 		sig_s = inScattering;
 		lightEmission = emission;
 	}
@@ -103,26 +101,13 @@ public:
 
 	float GetStepSize() const  { return stepSize; }
 
-	Spectrum Transmittance(const Ray &ray) const {
-		return Exp(-HomogenousTau(ray));
-	}
-
 	void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
 		VolumeComputation *comp) const;
 
 private:
-	Spectrum HomogenousTau(const Ray &ray) const {
-		float t0, t1;
-        if (!region.IntersectP(ray, &t0, &t1))
-			return 0.f;
-
-		// I intentionally leave scattering out because it is a lot easier to use
-        return Distance(ray(t0), ray(t1)) * (sig_a /*+ sig_s*/);
-	}
-
 	BBox region;
 	float stepSize;
-	Spectrum sig_a, sig_s, lightEmission;
+	Spectrum sig_s, lightEmission;
 };
 
 #endif	/* _VOLUME_H */
