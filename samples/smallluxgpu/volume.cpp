@@ -49,57 +49,64 @@ void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *samp
 	if (!region.IntersectP(ray, &t0, &t1))
 		return;
 
-	// Prepare for volume integration stepping
-	const float distance = t1 - t0;
-	const unsigned int nSamples = Ceil2Int(distance / stepSize);
+	if (sig_s.Black() || (scene->lights.size() < 1)) {
+		const float distance = t1 - t0;
+		// I intentionally leave scattering out because it is a lot easier to use
+		const Spectrum Tr = Exp(-distance * (sig_a /*+ sig_s*/));
+		comp->emittedLight =  Tr * lightEmission *distance;
+	} else {
+		// Prepare for volume integration stepping
+		const float distance = t1 - t0;
+		const unsigned int nSamples = Ceil2Int(distance / stepSize);
 
-	const float step = distance / nSamples;
-	Spectrum Tr = Spectrum(1.f, 1.f, 1.f);
-	Spectrum Lv = Spectrum();
-	Point p = ray(t0);
-	const float offset = sample->GetLazyValue();
-	t0 += offset * step;
+		const float step = distance / nSamples;
+		Spectrum Tr = Spectrum(1.f, 1.f, 1.f);
+		Spectrum Lv = Spectrum();
+		Point p = ray(t0);
+		const float offset = sample->GetLazyValue();
+		t0 += offset * step;
 
-	Point pPrev;
-	// I intentionally leave scattering out because it is a lot easier to use
-	Spectrum stepeTau = Exp(-step * (sig_a /*+ sig_s*/));
-	for (unsigned int i = 0; i < nSamples; ++i, t0 += step) {
-		pPrev = p;
-		p = ray(t0);
-		if (i == 0)
-			// I intentionally leave scattering out because it is a lot easier to use
-			Tr *= Exp(-offset * (sig_a /*+ sig_s*/));
-		else
-			Tr *= stepeTau;
+		Point pPrev;
+		// I intentionally leave scattering out because it is a lot easier to use
+		Spectrum stepeTau = Exp(-step * (sig_a /*+ sig_s*/));
+		for (unsigned int i = 0; i < nSamples; ++i, t0 += step) {
+			pPrev = p;
+			p = ray(t0);
+			if (i == 0)
+				// I intentionally leave scattering out because it is a lot easier to use
+				Tr *= Exp(-offset * (sig_a /*+ sig_s*/));
+			else
+				Tr *= stepeTau;
 
-		// Possibly terminate ray marching if transmittance is small
-		if (Tr.Filter() < 1e-3f) {
-			const float continueProb = .5f;
-			if (sample->GetLazyValue() > continueProb)
-				break;
-			Tr /= continueProb;
-		}
-
-		Lv += Tr * lightEmission;
-		if (!sig_s.Black() && scene->lights.size() > 0) {
-			// Select the light to sample
-			const unsigned int currentLightIndex = scene->SampleLights(sample->GetLazyValue());
-			const LightSource *light = scene->lights[currentLightIndex];
-
-			// Select a point on the light surface
-			float lightPdf;
-			Spectrum lightColor = light->Sample_L(scene->objects, p, NULL,
-					sample->GetLazyValue(), sample->GetLazyValue(), sample->GetLazyValue(),
-					&lightPdf, &(comp->rays[comp->rayCount]));
-
-			if ((lightPdf > 0.f) && !lightColor.Black()) {
-				comp->scatteredLight[comp->rayCount] = Tr * sig_s * lightColor *
-						Transmittance(comp->rays[comp->rayCount]) *
-						(scene->lights.size() * step / (4.f * M_PI * lightPdf));
-				comp->rayCount++;
+			// Possibly terminate ray marching if transmittance is small
+			if (Tr.Filter() < 1e-3f) {
+				const float continueProb = .5f;
+				if (sample->GetLazyValue() > continueProb)
+					break;
+				Tr /= continueProb;
 			}
-		}
 
-		comp->emittedLight = Lv * step;
+			Lv += Tr * lightEmission;
+			if (!sig_s.Black() && (scene->lights.size() > 0)) {
+				// Select the light to sample
+				const unsigned int currentLightIndex = scene->SampleLights(sample->GetLazyValue());
+				const LightSource *light = scene->lights[currentLightIndex];
+
+				// Select a point on the light surface
+				float lightPdf;
+				Spectrum lightColor = light->Sample_L(scene->objects, p, NULL,
+						sample->GetLazyValue(), sample->GetLazyValue(), sample->GetLazyValue(),
+						&lightPdf, &(comp->rays[comp->rayCount]));
+
+				if ((lightPdf > 0.f) && !lightColor.Black()) {
+					comp->scatteredLight[comp->rayCount] = Tr * sig_s * lightColor *
+							Transmittance(comp->rays[comp->rayCount]) *
+							(scene->lights.size() * step / (4.f * M_PI * lightPdf));
+					comp->rayCount++;
+				}
+			}
+
+			comp->emittedLight = Lv * step;
+		}
 	}
 }
