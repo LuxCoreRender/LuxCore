@@ -126,7 +126,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			materialIndices[matName] = materials.size();
 			materials.push_back(mat);
 		} else if (matType == "mattemetal") {
-			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 5, "1.0 1.0 1.0 1.0 1.0 1.0 10.0 1.0");
+			vf = GetParameters(scnProp, "scene.materials." + matType + "." + matName, 8, "1.0 1.0 1.0 1.0 1.0 1.0 10.0 1.0");
 			const Spectrum Kd(vf.at(0), vf.at(1), vf.at(2));
 			const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
 
