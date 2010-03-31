@@ -274,6 +274,8 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		if (vf.size() != 3)
 			throw runtime_error("Syntax error in scene.partecipatingmedia.singlescatering.scattering (required 3 parameters)");
 		const Spectrum scattering(vf.at(0), vf.at(1), vf.at(2));
+		if ((scattering.Filter() > 0.f) && (useInfiniteLightBruteForce))
+			throw runtime_error("Partecipating media scattering is not supported with InfiniteLight brute force");
 
 		vf = scnProp.GetFloatVector("scene.partecipatingmedia.singlescatering.emission", "0.0 0.0 0.0");
 		if (vf.size() != 3)

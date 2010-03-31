@@ -34,5 +34,5 @@ scene.partecipatingmedia.singlescatering.enable = 1
 scene.partecipatingmedia.singlescatering.bbox = -6.521816 -1.891238 -0.975730  0.208195 2.360468 1.024271
 scene.partecipatingmedia.singlescatering.stepsize = 4.0
 scene.partecipatingmedia.singlescatering.absorption = 0.0 0.0 0.0
-scene.partecipatingmedia.singlescatering.scattering = 1.15 1.15 1.15
-#scene.partecipatingmedia.singlescatering.emission = 0.01 0.01 0.01
+#scene.partecipatingmedia.singlescatering.scattering = 1.15 1.15 1.15
+scene.partecipatingmedia.singlescatering.emission = 0.05 0.05 0.05
