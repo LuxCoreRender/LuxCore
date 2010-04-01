@@ -23,6 +23,8 @@
 #define	_LUXRAYS_PROPERTIES_H
 
 #include <map>
+#include <vector>
+#include <string>
 
 namespace luxrays {
 
