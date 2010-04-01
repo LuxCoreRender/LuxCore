@@ -113,12 +113,18 @@ TextureMap::TextureMap(const string &fileName) {
 			delete[] byteImage[y];
 		delete[] byteImage;
 	}
+
+	DuDv.u = 1.f / width;
+	DuDv.v = 1.f / height;
 }
 
 TextureMap::TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h) {
 	pixels = cols;
 	width = w;
 	height = h;
+
+	DuDv.u = 1.f / width;
+	DuDv.v = 1.f / height;
 }
 
 TextureMap::~TextureMap() {

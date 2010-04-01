@@ -178,18 +178,8 @@ public:
 		// Build the shadow rays (if required)
 		//----------------------------------------------------------------------
 
-		const Normal N = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
-		Normal shadeN;
-		float RdotShadeN = Dot(pathRay.d, N);
-
-		// Flip shade  normal if required
-		if (RdotShadeN > 0.f) {
-			// Flip shade  normal
-			shadeN = -N;
-		} else {
-			shadeN = N;
-			RdotShadeN = -RdotShadeN;
-		}
+		// Interpolate face normal
+		Normal N = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
 
 		SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 		const Point hitPoint = pathRay(rayHit->t);
@@ -202,12 +192,54 @@ public:
 		else
 			surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
-		// Check if there is an assigned texture map
+		// Check if I have to apply texture mapping or normal mapping
 		TextureMap *tm = scene->triangleTexMaps[currentTriangleIndex];
-		if (tm)	{
-			// Apply texture mapping
-			const UV uv = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
-			surfaceColor *= tm->GetColor(uv);
+		TextureMap *nm = scene->triangleBumpMaps[currentTriangleIndex];
+		if (tm || nm) {
+			// Interpolate UV coordinates if required
+			const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+
+			// Check if there is an assigned texture map
+			if (tm)	{
+				// Apply texture mapping
+				surfaceColor *= tm->GetColor(triUV);
+			}
+
+			// Check if there is an assigned bump map
+			if (nm) {
+				// Apply bump mapping
+				const UV &dudv = nm->GetDuDv();
+
+				const float b0 = nm->GetColor(triUV).Filter();
+				
+				const UV uvdu(triUV.u + dudv.u, triUV.v);
+				const float bu = nm->GetColor(uvdu).Filter();
+				
+				const UV uvdv(triUV.u, triUV.v + dudv.v);
+				const float bv = nm->GetColor(uvdv).Filter();
+
+				const Vector bump(b0 - bu, b0 - bv, 1.f);
+
+				Vector v1, v2;
+				CoordinateSystem(Vector(N), &v1, &v2);
+				N = Normalize(Normal(
+						v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
+						v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
+						v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
+			}
+		}
+
+		// Flip the normal if required
+		Normal shadeN;
+		float RdotShadeN = Dot(pathRay.d, N);
+
+		// Flip shade  normal if required
+		if (RdotShadeN > 0.f) {
+			// Flip shade  normal
+			shadeN = -N;
+		} else {
+			shadeN = N;
+			RdotShadeN = -RdotShadeN;
 		}
 
 		tracedShadowRayCount = 0;

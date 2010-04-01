@@ -51,6 +51,10 @@ public:
 				ds * dt * GetTexel(s0 + 1, t0 + 1);
 	}
 
+	const UV &GetDuDv() const {
+		return DuDv;
+	}
+
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
 
@@ -68,6 +72,7 @@ private:
 
 	unsigned int width, height;
 	Spectrum *pixels;
+	UV DuDv;
 };
 
 class TextureMapCache {
