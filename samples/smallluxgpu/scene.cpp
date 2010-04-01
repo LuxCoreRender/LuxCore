@@ -143,10 +143,20 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 
 	std::vector<std::string> objKeys = scnProp.GetAllKeys("scene.objects.");
 	if (objKeys.size() == 0)
-		objKeys.push_back("scene.scn");
+		throw runtime_error("Unable to find object definitions");
 
 	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
 		const string &key = *objKey;
+
+		// Check if it is the root of the definition of an object otherwise skip
+		const size_t dot1 = key.find(".", string("scene.objects.").length());
+		if (dot1 == std::string::npos)
+			continue;
+		const size_t dot2 = key.find(".", dot1 + 1);
+		if (dot2 != std::string::npos)
+			continue;
+
+		// Build the object
 		const vector<string> args = scnProp.GetStringVector(key, "");
 		const string plyFileName = args.at(0);
 		cerr << "PLY objects file name: " << plyFileName << endl;
@@ -179,18 +189,46 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 				triangleMaterials.push_back(surfMat);
 		}
 
-		// Check if there is a texture map associated to the object
+		// [old deprecated syntax] Check if there is a texture map associated to the object
 		if (args.size() > 1) {
 			// Check if the object has UV coords
 			if (meshObject->GetUVs() == NULL)
 				throw runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
 			TextureMap *tm = texMapCache.GetTextureMap(args.at(1));
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 				triangleTexMaps.push_back(tm);
+				triangleBumpMaps.push_back(NULL);
+			}
 		} else {
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-				triangleTexMaps.push_back(NULL);
+			// Check for if there is a texture map associated to the object with the new syntax
+			const string texMap = scnProp.GetString(key + ".texmap", "");
+			if (texMap != "") {
+				// Check if the object has UV coords
+				if (meshObject->GetUVs() == NULL)
+					throw runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
+
+				TextureMap *tm = texMapCache.GetTextureMap(texMap);
+				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+					triangleTexMaps.push_back(tm);
+			} else
+				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+					triangleTexMaps.push_back(NULL);
+
+			// Check for if there is a bump map associated to the object
+			const string bumpMap = scnProp.GetString(key + ".bumpmap", "");
+			if (bumpMap != "") {
+				// Check if the object has UV coords
+				if (meshObject->GetUVs() == NULL)
+					throw runtime_error("PLY object " + plyFileName + " is missing UV coordinates for bump mapping");
+
+				TextureMap *tm = texMapCache.GetTextureMap(bumpMap);
+				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+					triangleBumpMaps.push_back(tm);
+			} else
+				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+					triangleBumpMaps.push_back(NULL);
+
 		}
 	}
 
