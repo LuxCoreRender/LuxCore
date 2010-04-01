@@ -3,4 +3,4 @@ scene.materials.light.mat_light = 16. 16. 16.
 scene.materials.matte.mat_white = 0.8 0.8 0.8
 scene.objects.mat_light.mat_light = scenes/bump/mat_light.ply
 scene.objects.mat_white.mat_white = scenes/bump/mat_white.ply
-scene.objects.mat_white.mat_white.bumpmap = /home/david/projects/luxrender-dev/luxrays/scenes/bump/map.png
+scene.objects.mat_white.mat_white.bumpmap = scenes/bump/map.png
