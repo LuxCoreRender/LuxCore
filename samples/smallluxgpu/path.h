@@ -218,7 +218,7 @@ public:
 				const UV uvdv(triUV.u, triUV.v + dudv.v);
 				const float bv = nm->GetColor(uvdv).Filter();
 
-				const Vector bump(b0 - bu, b0 - bv, 1.f);
+				const Vector bump(bu - b0, bv - b0, 1.f);
 
 				Vector v1, v2;
 				CoordinateSystem(Vector(N), &v1, &v2);

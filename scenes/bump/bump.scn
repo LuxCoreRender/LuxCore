@@ -1,6 +1,9 @@
 scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
 scene.materials.light.mat_light = 16. 16. 16.
-scene.materials.matte.mat_white = 0.8 0.8 0.8
 scene.objects.mat_light.mat_light = scenes/bump/mat_light.ply
+scene.materials.matte.mat_red = 0.8 0. 0.008214
+scene.objects.mat_red.mat_red = scenes/bump/mat_red.ply
+scene.objects.mat_red.mat_red.bumpmap = /home/david/projects/luxrender-dev/luxrays/scenes/bump/map2.png
+scene.materials.matte.mat_white = 0.8 0.8 0.8
 scene.objects.mat_white.mat_white = scenes/bump/mat_white.ply
-scene.objects.mat_white.mat_white.bumpmap = scenes/bump/map.png
+scene.objects.mat_white.mat_white.bumpmap = /home/david/projects/luxrender-dev/luxrays/scenes/bump/map.png
