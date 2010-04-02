@@ -20,7 +20,7 @@
 ###########################################################################
 #
 # SmallLuxGPU v1.5 render engine Blender 2.5 plug-in
-# v0.51
+# v0.53
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
@@ -304,7 +304,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     nomat = len(mats)
     mats.append('no_material_assigned')
     curmat = nomat
-    mtex = [any(ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')) for m in bpy.data.materials]
+    mtex = [any(ts for ts in m.texture_slots if ts and (ts.map_colordiff or ts.map_normal) and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')) for m in bpy.data.materials]
     mtex.append(False) # nomat
     verts = [[] for i in range(len(mats))]
     vert_vcs = [[] for i in range(len(mats))]
@@ -472,12 +472,14 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
                     gloss,m.raytrace_mirror.depth>0))
         
         if not portal:   
-          fscn.write('scene.objects.{}.{} = scenes/{}/{}.ply'.format(mat,mat,basename,mat))
+          fscn.write('scene.objects.{}.{} = scenes/{}/{}.ply\n'.format(mat,mat,basename,mat))
           if uv_flag and mtex[i]:
             texfname = next((ts.texture.image.filename for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
             if texfname:
-              fscn.write('|{}'.format(bpy.utils.expandpath(texfname).replace('\\','/')))
-          fscn.write('\n')
+              fscn.write('scene.objects.{}.{}.texmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texfname).replace('\\','/')))
+            texnormfname = next((ts.texture.image.filename for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
+            if texnormfname:
+              fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texnormfname).replace('\\','/')))
         if export or mats[i] in mfp:
           # Write out PLY
           fply = open('{}/{}.ply'.format(sdir,mat), 'wb')
