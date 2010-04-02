@@ -161,7 +161,9 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		const string plyFileName = args.at(0);
 		cerr << "PLY objects file name: " << plyFileName << endl;
 
-		ExtTriangleMesh *meshObject = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName);
+		// Check if I have to calculate normal or not
+		const bool usePlyNormals = (scnProp.GetInt(key + ".useplynormals", 0) != 0);
+		ExtTriangleMesh *meshObject = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName, usePlyNormals);
 		objects.push_back(meshObject);
 
 		// Get the material

@@ -142,7 +142,7 @@ static int FaceCB(p_ply_argument argument) {
 	return 1;
 }
 
-ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::string &fileName) {
+ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::string &fileName, const bool usePlyNormals) {
 	p_ply plyfile = ply_open(fileName.c_str(), NULL);
 	if (!plyfile) {
 		std::stringstream ss;
@@ -178,7 +178,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 	long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
 	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
-	if ((plyNbNormals > 0) && (plyNbNormals != plyNbVerts)) {
+	if (((plyNbNormals > 0) || usePlyNormals) && (plyNbNormals != plyNbVerts)) {
 		std::stringstream ss;
 		ss << "Wrong count of normals in '" << fileName << "'";
 		throw std::runtime_error(ss.str());
@@ -228,44 +228,34 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 	Spectrum *vertColors = c;
 	UV *vertUV = uv;
 
-	// It looks like normals exported by Blender are bugged
-	for (unsigned int i = 0; i < vertexCount; ++i)
-		vertNormals[i] = Normal(0.f, 0.f, 0.f);
-	for (unsigned int i = 0; i < triangleCount; ++i) {
-		const Vector e1 = vertices[triangles[i].v[1]] - vertices[triangles[i].v[0]];
-		const Vector e2 = vertices[triangles[i].v[2]] - vertices[triangles[i].v[0]];
-		const Normal n = Normal(Normalize(Cross(e1, e2)));
-		vertNormals[triangles[i].v[0]] += n;
-		vertNormals[triangles[i].v[1]] += n;
-		vertNormals[triangles[i].v[2]] += n;
-	}
-	int printedWarning = 0;
-	for (unsigned int i = 0; i < vertexCount; ++i) {
-		vertNormals[i] = Normalize(vertNormals[i]);
-		// Check for degenerate triangles/normals, they can freeze the GPU
-		if (isnan(vertNormals[i].x) || isnan(vertNormals[i].y) || isnan(vertNormals[i].z)) {
-			if (printedWarning < 15) {
-				LR_LOG(ctx, "The model contains a degenerate normal (index " << i << ")");
-				++printedWarning;
-			} else if (printedWarning == 15) {
-				LR_LOG(ctx, "The model contains more degenerate normals");
-				++printedWarning;
-			}
-			vertNormals[i] = Normal(0.f, 0.f, 1.f);
-		}
-	}
-
-	/*if (plyNbNormals <= 0) {
-		// Calculate normals
+	if (!usePlyNormals) {
+		// It looks like normals exported by Blender are bugged
+		for (unsigned int i = 0; i < vertexCount; ++i)
+			vertNormals[i] = Normal(0.f, 0.f, 0.f);
 		for (unsigned int i = 0; i < triangleCount; ++i) {
 			const Vector e1 = vertices[triangles[i].v[1]] - vertices[triangles[i].v[0]];
 			const Vector e2 = vertices[triangles[i].v[2]] - vertices[triangles[i].v[0]];
-			const Normal n = Normal(Normalize(Cross(e1, e2)));
-			vertNormals[triangles[i].v[0]] = n;
-			vertNormals[triangles[i].v[1]] = n;
-			vertNormals[triangles[i].v[2]] = n;
+			const Normal N = Normal(Normalize(Cross(e1, e2)));
+			vertNormals[triangles[i].v[0]] += N;
+			vertNormals[triangles[i].v[1]] += N;
+			vertNormals[triangles[i].v[2]] += N;
 		}
-	}*/
+		int printedWarning = 0;
+		for (unsigned int i = 0; i < vertexCount; ++i) {
+			vertNormals[i] = Normalize(vertNormals[i]);
+			// Check for degenerate triangles/normals, they can freeze the GPU
+			if (isnan(vertNormals[i].x) || isnan(vertNormals[i].y) || isnan(vertNormals[i].z)) {
+				if (printedWarning < 15) {
+					LR_LOG(ctx, "The model contains a degenerate normal (index " << i << ")");
+					++printedWarning;
+				} else if (printedWarning == 15) {
+					LR_LOG(ctx, "The model contains more degenerate normals");
+					++printedWarning;
+				}
+				vertNormals[i] = Normal(0.f, 0.f, 1.f);
+			}
+		}
+	}
 
 	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertColors, vertUV);
 }

@@ -9,7 +9,7 @@ and at http://www.luxrender.net/wiki/index.php?title=LuxRays
 SLG (SmallLuxGPU)
 =================
 
-SmallLuxGPU is a LuxRays demo and LxuRender v0.8 "proof of concept". You can find
+SmallLuxGPU is a LuxRays demo and LuxRender v0.8 "proof of concept". You can find
 more information about SLG at http://www.luxrender.net/wiki/index.php?title=LuxRays#SmallLuxGPU_.28SLG.29
 
 Credits
@@ -20,7 +20,7 @@ A special thanks goes to:
 - Alain "Chiaroscuro" Ducharme for Blender 2.5 exporter and several scenes provided;
 - Sladjan "lom" Ristic for several scenes provided;
 - Riku "rikb" Walve for source patches;
-- Livuxman for source patches;
+- David "livuxman" Rodríguez for source patches;
 - Nate Robins for glut32.dll;
 - Diego Nehab for PLY reading/writing library;
 - http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;

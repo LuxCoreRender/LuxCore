@@ -5,4 +5,5 @@ scene.materials.matte.whitematte = 0.75 0.75 0.75
 scene.materials.light.whitelight = 8.0 8.0 8.0
 scene.objects.whitematte.back = scenes/bigmonkey/room.ply
 scene.objects.redmatte.m1 = scenes/bigmonkey/bigmonkey.ply
+#scene.objects.redmatte.m1.useplynormals = 1
 scene.objects.whitelight.l1 = scenes/bigmonkey/bigmonkey-lights.ply

@@ -53,7 +53,7 @@ public:
 	Spectrum *GetColors() const { return colors; }
 	UV *GetUVs() const { return uvs; }
 
-	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName);
+	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName, const bool usePlyNormals = false);
 	static ExtTriangleMesh *Merge(
 		const std::deque<ExtTriangleMesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
