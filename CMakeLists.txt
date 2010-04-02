@@ -94,7 +94,7 @@ message(STATUS "GLUT library: " "${GLUT_LIBRARY}")
 #
 #############################################################################
 
-find_package(Boost 1.42.0 REQUIRED COMPONENTS thread filesystem)
+find_package(Boost 1.42.0 REQUIRED COMPONENTS thread filesystem system)
 
 if(Boost_FOUND)
 	message(STATUS "Boost include directory: " "${Boost_INCLUDE_DIRS}")
