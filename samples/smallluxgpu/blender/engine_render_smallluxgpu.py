@@ -33,9 +33,10 @@ def slg_properties():
   FloatProperty = bpy.types.Scene.FloatProperty
   IntProperty = bpy.types.Scene.IntProperty
   BoolProperty = bpy.types.Scene.BoolProperty
-  EnumProperty = bpy.types.Scene.EnumProperty 
-  
-  StringProperty( attr="slg_path", name="SmallLuxGPU Path",
+  EnumProperty = bpy.types.Scene.EnumProperty
+  FloatVectorProperty = bpy.types.Scene.FloatVectorProperty
+
+  StringProperty(attr="slg_path", name="SmallLuxGPU Path",
       description="Full path to SmallLuxGPU's executable",
       default="", maxlen=1024, subtype="FILE_PATH")
   
@@ -118,7 +119,27 @@ def slg_properties():
   FloatProperty(attr="slg_rrprob", name="Russian Roulette Probability",
       description="Russian roulette probability",
       default=0.75, min=0, max=1, soft_min=0, soft_max=1, precision=3)
-  
+
+  # Participating Media properties
+  BoolProperty(attr="slg_enablepartmedia", name="Participating Media",
+      description="Use single scattering participating media",
+      default=False)
+  FloatProperty(attr="slg_partmedia_stepsize", name="Step Size",
+      description="Set ray marching step size",
+      default=2.0, min=0.01, max=100, soft_min=0.1, soft_max=10, precision=2)
+  FloatProperty(attr="slg_partmedia_rrprob", name="RR prob.",
+      description="Russian Roulette probability",
+      default=0.33, min=0.01, max=1.0, soft_min=0.1, soft_max=0.9, precision=2)
+  FloatVectorProperty(attr="slg_partmedia_emission", name="Emission",
+      description="Media emission",
+      default=(0.0, 0.0, 0.0), min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, subtype="COLOR")
+  FloatVectorProperty(attr="slg_partmedia_scattering", name="Scattering",
+      description="Media scattering",
+      default=(0.0, 0.0, 0.0), min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, subtype="COLOR")
+  FloatVectorProperty(attr="slg_partmedia_bbox", name="Bounding Box",
+      description="Media bounding box",
+      default=(-10.0, -10.0, -10.0, 10.0, 10.0, 10.0), subtype="NONE", size=6)
+
   BoolProperty(attr="slg_enablebatchmode", name="Batch Mode",
       description="Render in background (required for animations)",
       default=False)
@@ -214,7 +235,7 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col = split.column()
     col.label(text="Full path to SmallLuxGPU's executable:")
     col.prop(scene, "slg_path", text="")
-    col.prop(scene, "slg_scenename", text="Scene Name:")
+    col.prop(scene, "slg_scenename", text="Scene Name")
     split = layout.split(percentage=0.25)
     col = split.column()
     col.prop(scene, "slg_export")
@@ -246,6 +267,23 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.prop(scene, "slg_rrdepth", text="RR Depth")
     col = split.column()
     col.prop(scene, "slg_rrprob", text="RR Prob")
+    split = layout.split()
+    col = split.column()
+    col.prop(scene, "slg_enablepartmedia")
+    if scene.slg_enablepartmedia:
+        split = layout.split()
+        col = split.column()
+        col.prop(scene, "slg_partmedia_stepsize", text="Step Size")
+        col = split.column()
+        col.prop(scene, "slg_partmedia_rrprob", text="RR Prob.")
+        split = layout.split()
+        col = split.column(0)
+        col.prop(scene, "slg_partmedia_emission", text="Emission")
+        col = split.column(1)
+        col.prop(scene, "slg_partmedia_scattering", text="Scattering")
+        split = layout.split()
+        col = split.column()
+        col.prop(scene, "slg_partmedia_bbox")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_low_latency")
@@ -436,7 +474,15 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       fscn.write('scene.infinitelight.shift = {} {}\n'.format(ff(ilts.offset.x),ff(ilts.offset.y)))
       if scene.slg_infinitelightbf:
         fscn.write('scene.infinitelight.usebruteforce = 1\n')
-  
+
+    # Participating Media properties
+    if scene.slg_enablepartmedia:
+      fscn.write('scene.partecipatingmedia.singlescatering.enable = 1\n')
+      fscn.write('scene.partecipatingmedia.singlescatering.stepsize = {}\n'.format(scene.slg_partmedia_stepsize))
+      fscn.write('scene.partecipatingmedia.singlescatering.rrprob = {}\n'.format(scene.slg_partmedia_rrprob))
+      fscn.write('scene.partecipatingmedia.singlescatering.emission = {} {} {}\n'.format(scene.slg_partmedia_emission[0], scene.slg_partmedia_emission[1], scene.slg_partmedia_emission[2]))
+      fscn.write('scene.partecipatingmedia.singlescatering.scattering = {} {} {}\n'.format(scene.slg_partmedia_scattering[0], scene.slg_partmedia_scattering[1], scene.slg_partmedia_scattering[2]))
+
     # Process each material
     for i, mat in enumerate(mats):
       portal = False
