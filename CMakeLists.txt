@@ -94,11 +94,7 @@ message(STATUS "GLUT library: " "${GLUT_LIBRARY}")
 #
 #############################################################################
 
-if(APPLE) # typical boostlibs from luxrender
-	find_package(Boost 1.39.0 REQUIRED COMPONENTS thread-xgcc40-mt-1_39 filesystem-xgcc40-mt-1_39)
-else(APPLE)
-	find_package(Boost 1.39.0 REQUIRED COMPONENTS thread filesystem)
-endif(APPLE)
+find_package(Boost 1.42.0 REQUIRED COMPONENTS thread filesystem)
 
 if(Boost_FOUND)
 	message(STATUS "Boost include directory: " "${Boost_INCLUDE_DIRS}")
