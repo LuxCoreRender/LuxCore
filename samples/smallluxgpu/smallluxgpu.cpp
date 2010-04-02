@@ -28,6 +28,7 @@
 #include <stdexcept>
 
 #include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
 
 #include "displayfunc.h"
 #include "renderconfig.h"
@@ -159,6 +160,7 @@ int main(int argc, char *argv[]) {
 				" -s [GPU workgroup size]" << std::endl <<
 				" -t [halt time in secs]" << std::endl <<
 				" -D [property name] [property value]" << std::endl <<
+				" -d [current directory path]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		bool batchMode = false;
@@ -198,6 +200,8 @@ int main(int argc, char *argv[]) {
 					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);
 					i += 2;
 				}
+
+				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
