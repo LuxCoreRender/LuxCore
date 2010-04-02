@@ -80,6 +80,7 @@ public:
 
 	virtual float GetMaxRayLength() const = 0;
 	virtual float GetStepSize() const = 0;
+	virtual float GetRRProbability() const = 0;
 
 	virtual void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
 		VolumeComputation *comp) const = 0;
@@ -87,10 +88,11 @@ public:
 
 class SingleScatteringIntegrator : public VolumeIntegrator {
 public:
-	SingleScatteringIntegrator(const BBox &bbox, const float step,
+	SingleScatteringIntegrator(const BBox &bbox, const float step, const float prob,
 			Spectrum inScattering, Spectrum emission) {
 		region = bbox;
 		stepSize = step;
+		rrProb = prob;
 		sig_s = inScattering;
 		lightEmission = emission;
 	}
@@ -101,12 +103,15 @@ public:
 
 	float GetStepSize() const  { return stepSize; }
 
+	float GetRRProbability() const { return rrProb; }
+
+
 	void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
 		VolumeComputation *comp) const;
 
 private:
 	BBox region;
-	float stepSize;
+	float stepSize, rrProb;
 	Spectrum sig_s, lightEmission;
 };
 
