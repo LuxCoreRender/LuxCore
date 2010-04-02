@@ -289,7 +289,9 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 		vf = GetParameters(scnProp, "scene.partecipatingmedia.singlescatering.emission", 3, "0.0 0.0 0.0");
 		const Spectrum emission(vf.at(0), vf.at(1), vf.at(2));
 
-		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, scattering, emission);
+		const float rrProb = scnProp.GetFloat("scene.partecipatingmedia.singlescatering.rrprob", 0.33f);
+
+		volumeIntegrator = new SingleScatteringIntegrator(region, stepSize, rrProb, scattering, emission);
 	} else
 		volumeIntegrator = NULL;
 
