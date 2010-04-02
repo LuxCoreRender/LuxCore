@@ -100,19 +100,22 @@ public:
 		if ((state == EYE_VERTEX) && scene->volumeIntegrator) {
 			rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
 
-			Ray volumeRay(pathRay.o, pathRay.d, 0.f, (rayHit->index == 0xffffffffu) ? std::numeric_limits<float>::infinity() : rayHit->t);
-			scene->volumeIntegrator->GenerateLiRays(scene, &sample, volumeRay, volumeComp);
-			radiance += volumeComp->GetEmittedLight();
+			// Use Russian Roulette to check if I have to do participating media computation or not
+			if (sample.GetLazyValue() <= scene->volumeIntegrator->GetRRProbability()) {
+				Ray volumeRay(pathRay.o, pathRay.d, 0.f, (rayHit->index == 0xffffffffu) ? std::numeric_limits<float>::infinity() : rayHit->t);
+				scene->volumeIntegrator->GenerateLiRays(scene, &sample, volumeRay, volumeComp);
+				radiance += volumeComp->GetEmittedLight();
 
-			if (volumeComp->GetRayCount() > 0) {
-				// Do the EYE_VERTEX_VOLUME_STEP
-				state = EYE_VERTEX_VOLUME_STEP;
-				eyeHit = *(rayBuffer->GetRayHit(currentPathRayIndex));
-				return;
+				if (volumeComp->GetRayCount() > 0) {
+					// Do the EYE_VERTEX_VOLUME_STEP
+					state = EYE_VERTEX_VOLUME_STEP;
+					eyeHit = *(rayBuffer->GetRayHit(currentPathRayIndex));
+					return;
+				}
 			}
 		} else if (state == EYE_VERTEX_VOLUME_STEP) {
 			// Add scattered light
-			radiance += throughput * volumeComp->CollectResults(rayBuffer);
+			radiance += throughput * volumeComp->CollectResults(rayBuffer) / scene->volumeIntegrator->GetRRProbability();
 
 			rayHit = &eyeHit;
 		} else
