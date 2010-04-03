@@ -462,18 +462,19 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       fscn.write('scene.camera.lensradius = {}\n'.format(ff(cam.data.slg_lensradius)))
 
     # Infinite light, if present
-    ilts = next((ts for ts in scene.world.texture_slots if ts and hasattr(ts.texture,'image')), None)
-    if ilts:
-      fscn.write('scene.infinitelight.file = {}'.format(bpy.utils.expandpath(ilts.texture.image.filename).replace('\\','/')))
-      portal = next((m.name for m in bpy.data.materials if m.shadeless),None)
-      if portal:
-        fscn.write('|scenes/{}/{}.ply'.format(basename,portal.replace('.','_')))
-      fscn.write('\n')
-      wle = scene.world.lighting.environment_energy if scene.world.lighting.use_environment_lighting else 1.0
-      fscn.write('scene.infinitelight.gain = {} {} {}\n'.format(ff(ilts.texture.factor_red*wle),ff(ilts.texture.factor_green*wle),ff(ilts.texture.factor_blue*wle)))
-      fscn.write('scene.infinitelight.shift = {} {}\n'.format(ff(ilts.offset.x),ff(ilts.offset.y)))
-      if scene.slg_infinitelightbf:
-        fscn.write('scene.infinitelight.usebruteforce = 1\n')
+    if scene.world:
+      ilts = next((ts for ts in scene.world.texture_slots if ts and hasattr(ts.texture,'image')), None)
+      if ilts:
+        fscn.write('scene.infinitelight.file = {}'.format(bpy.utils.expandpath(ilts.texture.image.filename).replace('\\','/')))
+        portal = next((m.name for m in bpy.data.materials if m.shadeless),None)
+        if portal:
+          fscn.write('|scenes/{}/{}.ply'.format(basename,portal.replace('.','_')))
+        fscn.write('\n')
+        wle = scene.world.lighting.environment_energy if scene.world.lighting.use_environment_lighting else 1.0
+        fscn.write('scene.infinitelight.gain = {} {} {}\n'.format(ff(ilts.texture.factor_red*wle),ff(ilts.texture.factor_green*wle),ff(ilts.texture.factor_blue*wle)))
+        fscn.write('scene.infinitelight.shift = {} {}\n'.format(ff(ilts.offset.x),ff(ilts.offset.y)))
+        if scene.slg_infinitelightbf:
+          fscn.write('scene.infinitelight.usebruteforce = 1\n')
 
     # Participating Media properties
     if scene.slg_enablepartmedia:
@@ -583,7 +584,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     self.update_stats("", "SmallLuxGPU: Exporting scene, please wait...")
 
     # Make sure we have lights in our scene
-    if not any(m.users and m.emit for m in bpy.data.materials) and not any(ts and hasattr(ts.texture,'image') for ts in scene.world.texture_slots):
+    if not any(m.users and m.emit for m in bpy.data.materials) and (scene.world and (not any(ts and hasattr(ts.texture,'image') for ts in scene.world.texture_slots))):
       error("No emitters or world image texture in scene!  SLG requires at least one light source!")
 
     # Get resolution

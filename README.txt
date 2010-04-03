@@ -20,10 +20,11 @@ A special thanks goes to:
 - Alain "Chiaroscuro" Ducharme for Blender 2.5 exporter and several scenes provided;
 - Sladjan "lom" Ristic for several scenes provided;
 - Riku "rikb" Walve for source patches;
-- David "livuxman" Rodríguez for source patches;
+- David "livuxman" Rodrï¿½guez for source patches;
 - Nate Robins for glut32.dll;
 - Diego Nehab for PLY reading/writing library;
 - http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;
+- http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm for Cornell Blender scene;
 - libPNG authors http://www.libpng.org;
 - zlib authors http://www.zlib.net/;
 - OpenEXR authors http://www.openexr.com/;
