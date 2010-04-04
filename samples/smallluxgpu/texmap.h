@@ -51,6 +51,28 @@ public:
 				ds * dt * GetTexel(s0 + 1, t0 + 1);
 	}
 
+	const bool HasAlpha() const { return alpha != NULL; }
+	float GetAlpha(const UV &uv) const {
+		assert (alpha != NULL);
+
+		const float s = uv.u * width - 0.5f;
+		const float t = uv.v * height - 0.5f;
+
+		const int s0 = Floor2Int(s);
+		const int t0 = Floor2Int(t);
+
+		const float ds = s - s0;
+		const float dt = t - t0;
+
+		const float ids = 1.f - ds;
+		const float idt = 1.f - dt;
+
+		return ids * idt * GetAlphaTexel(s0, t0) +
+				ids * dt * GetAlphaTexel(s0, t0 + 1) +
+				ds * idt * GetAlphaTexel(s0 + 1, t0) +
+				ds * dt * GetAlphaTexel(s0 + 1, t0 + 1);
+	}
+
 	const UV &GetDuDv() const {
 		return DuDv;
 	}
@@ -70,8 +92,20 @@ private:
 		return pixels[index];
 	}
 
+	const float &GetAlphaTexel(const unsigned int s, const unsigned int t) const {
+		const unsigned int u = Mod(s, width);
+		const unsigned int v = Mod(t, height);
+
+		const unsigned index = v * width + u;
+		assert (index >= 0);
+		assert (index < width * height);
+
+		return alpha[index];
+	}
+
 	unsigned int width, height;
 	Spectrum *pixels;
+	float *alpha;
 	UV DuDv;
 };
 

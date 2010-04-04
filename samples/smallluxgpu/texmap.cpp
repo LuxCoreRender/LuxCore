@@ -56,6 +56,7 @@ TextureMap::TextureMap(const string &fileName) {
 				pixels[idx].b = img[y][x].b;
 			}
 		}
+		alpha = NULL;
 	} else {
 		// Load the png file
 		cerr << "Reading PNG texture map: " << fileName << endl;
@@ -80,38 +81,76 @@ TextureMap::TextureMap(const string &fileName) {
 
 		width = info->width;
 		height = info->height;
-		cerr << "PNG texture map size: " << width << "x" << height << " (" <<
-				width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
 
-		if (info->color_type != PNG_COLOR_TYPE_RGB)
-			throw runtime_error("Texture map PNG file must be in RGB format");
+		if (info->color_type == PNG_COLOR_TYPE_RGB) {
+			// RGB PNG file
+			cerr << "PNG RGB texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
 
-		png_read_update_info(png, info);
+			png_read_update_info(png, info);
 
-		png_bytep *byteImage = new png_bytep[sizeof(png_bytep) * height];
-		for (unsigned int y = 0; y < height; y++)
-			byteImage[y] = new png_byte[info->rowbytes];
+			png_bytep *byteImage = new png_bytep[sizeof(png_bytep) * height];
+			for (unsigned int y = 0; y < height; y++)
+				byteImage[y] = new png_byte[info->rowbytes];
 
-		png_read_image(png, byteImage);
-		fclose(file);
+			png_read_image(png, byteImage);
+			fclose(file);
 
-		pixels = new Spectrum[width * height];
-		for (unsigned int y = 0; y < height; y++) {
-			const png_byte *row = byteImage[y];
+			pixels = new Spectrum[width * height];
+			for (unsigned int y = 0; y < height; y++) {
+				const png_byte *row = byteImage[y];
 
-			for (unsigned int x = 0; x < width; x++) {
-				size_t idx = width * y + x;
-				const png_byte *ptr = &(row[x * 3]);
+				for (unsigned int x = 0; x < width; x++) {
+					size_t idx = width * y + x;
+					const png_byte *ptr = &(row[x * 3]);
 
-				pixels[idx].r = ptr[0] / 255.0f;
-				pixels[idx].g = ptr[1] / 255.0f;
-				pixels[idx].b = ptr[2] / 255.0f;
+					pixels[idx].r = ptr[0] / 255.f;
+					pixels[idx].g = ptr[1] / 255.f;
+					pixels[idx].b = ptr[2] / 255.f;
+				}
 			}
-		}
+			
+			for (unsigned int y = 0; y < height; y++)
+				delete[] byteImage[y];
+			delete[] byteImage;
 
-		for (unsigned int y = 0; y < height; y++)
-			delete[] byteImage[y];
-		delete[] byteImage;
+			alpha = NULL;
+		} else if (info->color_type == PNG_COLOR_TYPE_RGBA) {
+			// RGBA PNG file
+			cerr << "PNG RGBA texture map size: " << width << "x" << height << " (" <<
+					width * height * (sizeof(Spectrum) + sizeof(float)) / 1024 << "Kbytes)" << endl;
+
+			png_read_update_info(png, info);
+
+			png_bytep *byteImage = new png_bytep[sizeof(png_bytep) * height];
+			for (unsigned int y = 0; y < height; y++)
+				byteImage[y] = new png_byte[info->rowbytes];
+
+			png_read_image(png, byteImage);
+			fclose(file);
+
+			const unsigned int pixelCount = width * height;
+			pixels = new Spectrum[pixelCount];
+			alpha = new float[pixelCount];
+			for (unsigned int y = 0; y < height; y++) {
+				const png_byte *row = byteImage[y];
+
+				for (unsigned int x = 0; x < width; x++) {
+					size_t idx = width * y + x;
+					const png_byte *ptr = &(row[x * 4]);
+
+					pixels[idx].r = ptr[0] / 255.f;
+					pixels[idx].g = ptr[1] / 255.f;
+					pixels[idx].b = ptr[2] / 255.f;
+					alpha [idx] = ptr[3] / 255.f;
+				}
+			}
+
+			for (unsigned int y = 0; y < height; y++)
+				delete[] byteImage[y];
+			delete[] byteImage;
+		} else
+			throw runtime_error("Texture map PNG file must be in RGB format");
 	}
 
 	DuDv.u = 1.f / width;
@@ -120,6 +159,7 @@ TextureMap::TextureMap(const string &fileName) {
 
 TextureMap::TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h) {
 	pixels = cols;
+	alpha = NULL;
 	width = w;
 	height = h;
 
@@ -129,6 +169,7 @@ TextureMap::TextureMap(Spectrum *cols, const unsigned int w, const unsigned int 
 
 TextureMap::~TextureMap() {
 	delete[] pixels;
+	delete[] alpha;
 }
 
 TextureMapCache::TextureMapCache() {
