@@ -211,21 +211,11 @@ public:
 				if (tm->HasAlpha()) {
 					const float alpha = tm->GetAlpha(triUV);
 
-					if (alpha == 0.0f) {
-						// Totally transparent
-						pathRay.o = pathRay(rayHit->t + RAY_EPSILON);
+					if ((alpha == 0.0f) || ((alpha < 1.f) && (sample.GetLazyValue() > alpha))) {
+						pathRay = Ray(pathRay(rayHit->t + RAY_EPSILON), pathRay.d);
 						state = NEXT_VERTEX;
 						tracedShadowRayCount = 0;
 						return;
-					} else if (alpha < 1.f) {
-						// Partially transparent
-						if (sample.GetLazyValue() > alpha) {
-							// Go throught
-							pathRay = Ray(pathRay(rayHit->t + RAY_EPSILON), pathRay.d);
-							state = NEXT_VERTEX;
-							tracedShadowRayCount = 0;
-							return;
-						}
 					}
 				}
 			}
