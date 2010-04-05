@@ -397,11 +397,18 @@ void timerFunc(int value) {
 }
 
 void InitGlut(int argc, char *argv[], unsigned int width, unsigned int height) {
-	glutInitWindowSize(width, height);
-	glutInitWindowPosition(0, 0);
-	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutInit(&argc, argv);
 
+	glutInitWindowSize(width, height);
+	// Center the window
+	unsigned int scrWidth = glutGet(GLUT_SCREEN_WIDTH);
+	unsigned int scrHeight = glutGet(GLUT_SCREEN_HEIGHT);
+	if ((scrWidth + 50 < width) || (scrHeight + 50 < height))
+		glutInitWindowPosition(0, 0);
+	else
+		glutInitWindowPosition((scrWidth - width) / 2, (scrHeight - height) / 2);
+
+	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutCreateWindow(SLG_LABEL.c_str());
 }
 
