@@ -357,7 +357,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     # Get materials with force ply flag
     mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
     # Force an update to object matrices when rendering animations
-    scene.set_frame(scene.current_frame)
+    scene.set_frame(scene.frame_current)
     sdir = '{}/scenes/{}'.format(basepath,basename)
     if export or mfp:
       # Delete existing ply files
@@ -653,7 +653,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     if scene.slg_waitrender:
       # Wait for SLG , convert and load image
       if scene.slg_enablebatchmode:
-        self.update_stats("", "SmallLuxGPU: Batch Rendering frame# {} (see console for progress), please wait...".format(scene.current_frame))
+        self.update_stats("", "SmallLuxGPU: Batch Rendering frame# {} (see console for progress), please wait...".format(scene.frame_current))
       else:
         self.update_stats("", "SmallLuxGPU: Waiting... (in SLG window: press 'p' to save image, 'Esc' to exit)")
       # Hold the render results window hostage until SLG returns...
