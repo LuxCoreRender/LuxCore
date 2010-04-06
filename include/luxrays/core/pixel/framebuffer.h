@@ -19,51 +19,76 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SAMPLEBUFFER_H
-#define	_SAMPLEBUFFER_H
+#ifndef _FRAMEBUFFER_H
+#define	_FRAMEBUFFER_H
 
-#include "smalllux.h"
-#include "sampler.h"
+#include "luxrays/core/pixel/spectrum.h"
 
-#define SAMPLE_BUFFER_SIZE (4096)
+namespace luxrays {
 
 typedef struct {
-	float screenX, screenY;
 	Spectrum radiance;
-} SampleBufferElem;
+	float weight;
+} SamplePixel;
 
-class SampleBuffer {
+class SampleFrameBuffer {
 public:
-	SampleBuffer(size_t bufferSize) : size(bufferSize) {
-		samples = new SampleBufferElem[size];
+	SampleFrameBuffer(const unsigned int w, const unsigned int h) {
+		width = w;
+		height = h;
+		pixels = new SamplePixel[width * height];
+
 		Reset();
 	}
-	~SampleBuffer() {
-		delete[] samples;
+	~SampleFrameBuffer() {
+		delete[] pixels;
 	}
 
-	Sampler *GetSampler() const { return sampler; }
-	void Reset() { currentFreeSample = 0; };
-	bool IsFull() const { return (currentFreeSample >= size); }
-
-	void SplatSample(const Sample *sample, const Spectrum &radiance) {
-		SampleBufferElem *s = &samples[currentFreeSample++];
-
-		s->screenX = sample->screenX;
-		s->screenY = sample->screenY;
-		s->radiance = radiance;
-	}
-
-	SampleBufferElem *GetSampleBuffer() const { return samples; }
-
-	size_t GetSampleCount() const { return currentFreeSample; }
+	void Reset() {
+		for (unsigned int i = 0; i < width * height; ++i) {
+			pixels[i].radiance.r = 0.f;
+			pixels[i].radiance.g = 0.f;
+			pixels[i].radiance.b = 0.f;
+			pixels[i].weight = 0.f;
+		}
+	};
 
 private:
-	Sampler *sampler;
-	size_t size;
-	size_t currentFreeSample;
+	const unsigned int width, height;
 
-	SampleBufferElem *samples;
+	SamplePixel *pixels;
 };
 
-#endif	/* _SAMPLEBUFFER_H */
+typedef Spectrum Pixel;
+
+class FrameBuffer {
+public:
+	FrameBuffer(const unsigned int w, const unsigned int h) {
+		width = w;
+		height = h;
+		pixels = new SamplePixel[width * height];
+
+		Reset();
+	}
+	~FrameBuffer() {
+		delete[] pixels;
+	}
+
+	void Reset() {
+		for (unsigned int i = 0; i < width * height; ++i) {
+			pixels[i].r = 0.f;
+			pixels[i].g = 0.f;
+			pixels[i].b = 0.f;
+		}
+	};
+
+private:
+	const unsigned int width, height;
+
+	Pixel *pixels;
+};
+
+}
+
+#endif	/* _FRAMEBUFFER_H */
+

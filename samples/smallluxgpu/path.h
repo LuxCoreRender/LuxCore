@@ -144,7 +144,7 @@ public:
 			}
 
 			// Hit nothing/only shadow rays/maxdepth, terminate the path
-			sampleBuffer->SplatSample(&sample, radiance);
+			sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 			// Restart the path
 			Init(scene, sampler);
 			return;
@@ -171,7 +171,7 @@ public:
 			}
 
 			// Terminate the path
-			sampleBuffer->SplatSample(&sample, radiance);
+			sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 			// Restart the path
 			Init(scene, sampler);
 			return;
@@ -348,7 +348,7 @@ public:
 				state = ONLY_SHADOW_RAYS;
 			else {
 				// Terminate the path
-				sampleBuffer->SplatSample(&sample, radiance);
+				sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 				// Restart the path
 				Init(scene, sampler);
 			}
@@ -366,7 +366,7 @@ public:
 					state = ONLY_SHADOW_RAYS;
 				else {
 					// Terminate the path
-					sampleBuffer->SplatSample(&sample, radiance);
+					sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 					// Restart the path
 					Init(scene, sampler);
 				}
