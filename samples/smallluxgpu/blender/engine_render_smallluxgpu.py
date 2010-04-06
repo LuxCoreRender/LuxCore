@@ -370,7 +370,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           # Create render mesh
           try:
             print("SLGBP    Create render mesh: {}".format(obj.name))
-            mesh = obj.create_mesh(True, 'RENDER')
+            mesh = obj.create_mesh(scene, True, 'RENDER')
           except:
             pass
           else:
