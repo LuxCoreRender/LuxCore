@@ -25,6 +25,8 @@
 
 #include <ostream>
 
+#include "luxrays/core/utils.h"
+
 namespace luxrays {
 
 class Spectrum {

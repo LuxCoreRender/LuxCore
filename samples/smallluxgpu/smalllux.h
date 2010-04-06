@@ -37,7 +37,6 @@
 #endif
 
 #include "luxrays/luxrays.h"
-#include "luxrays/utils/core/spectrum.h"
 #include "luxrays/core/utils.h"
 
 #include "slgcfg.h"
