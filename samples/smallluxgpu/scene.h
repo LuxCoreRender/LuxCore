@@ -72,6 +72,7 @@ public:
 	vector<Material *> triangleMaterials; // One for each triangle
 	vector<TexMapInstance *> triangleTexMaps; // One for each triangle
 	vector<BumpMapInstance *> triangleBumpMaps; // One for each triangle
+	vector<NormalMapInstance *> triangleNormalMaps; // One for each triangle
 
 	vector<LightSource *> lights; // One for each light source
 

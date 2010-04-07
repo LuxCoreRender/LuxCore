@@ -180,6 +180,8 @@ TextureMapCache::~TextureMapCache() {
 		delete texInstances[i];
 	for (size_t i = 0; i < bumpInstances.size(); ++i)
 		delete bumpInstances[i];
+	for (size_t i = 0; i < normalInstances.size(); ++i)
+		delete normalInstances[i];
 
 	for (std::map<std::string, TextureMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
 		delete it->second;
@@ -216,4 +218,12 @@ BumpMapInstance *TextureMapCache::GetBumpMapInstance(const string &fileName, con
 	bumpInstances.push_back(bm);
 
 	return bm;
+}
+
+NormalMapInstance *TextureMapCache::GetNormalMapInstance(const string &fileName) {
+	TextureMap *tm = GetTextureMap(fileName);
+	NormalMapInstance *nm = new NormalMapInstance(tm);
+	normalInstances.push_back(nm);
+
+	return nm;
 }

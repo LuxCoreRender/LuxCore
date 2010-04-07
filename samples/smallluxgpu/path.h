@@ -198,7 +198,8 @@ public:
 		// Check if I have to apply texture mapping or normal mapping
 		TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
 		BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
-		if (tm || bm) {
+		NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
+		if (tm || bm || nm) {
 			// Interpolate UV coordinates if required
 			const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
 
@@ -222,29 +223,47 @@ public:
 				}
 			}
 
-			// Check if there is an assigned bump map
-			if (bm) {
-				// Apply bump mapping
-				const TextureMap *map = bm->GetTexMap();
-				const UV &dudv = map->GetDuDv();
+			// Check if there is an assigned bump/normal map
+			if (bm || nm) {
+				if (nm) {
+					// Apply normal mapping
+					const Spectrum color = nm->GetTexMap()->GetColor(triUV);
 
-				const float b0 = map->GetColor(triUV).Filter();
-				
-				const UV uvdu(triUV.u + dudv.u, triUV.v);
-				const float bu = map->GetColor(uvdu).Filter();
-				
-				const UV uvdv(triUV.u, triUV.v + dudv.v);
-				const float bv = map->GetColor(uvdv).Filter();
+					const float x = 2.0 * (color.r - 0.5);
+					const float y = 2.0 * (color.g - 0.5);
+					const float z = 2.0 * (color.b - 0.5);
 
-				const float scale = bm->GetScale();
-				const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
+					Vector v1, v2;
+					CoordinateSystem(Vector(N), &v1, &v2);
+					N = Normalize(Normal(
+							v1.x * x + v2.x * y + N.x * z,
+							v1.y * x + v2.y * y + N.y * z,
+							v1.z * x + v2.z * y + N.z * z));
+				}
 
-				Vector v1, v2;
-				CoordinateSystem(Vector(N), &v1, &v2);
-				N = Normalize(Normal(
-						v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
-						v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
-						v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
+				if (bm) {
+					// Apply bump mapping
+					const TextureMap *map = bm->GetTexMap();
+					const UV &dudv = map->GetDuDv();
+
+					const float b0 = map->GetColor(triUV).Filter();
+
+					const UV uvdu(triUV.u + dudv.u, triUV.v);
+					const float bu = map->GetColor(uvdu).Filter();
+
+					const UV uvdv(triUV.u, triUV.v + dudv.v);
+					const float bv = map->GetColor(uvdv).Filter();
+
+					const float scale = bm->GetScale();
+					const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
+
+					Vector v1, v2;
+					CoordinateSystem(Vector(N), &v1, &v2);
+					N = Normalize(Normal(
+							v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
+							v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
+							v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
+				}
 			}
 		}
 

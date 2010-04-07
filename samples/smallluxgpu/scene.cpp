@@ -201,6 +201,7 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 				triangleTexMaps.push_back(tm);
 				triangleBumpMaps.push_back(NULL);
+				triangleNormalMaps.push_back(NULL);
 			}
 		} else {
 			// Check for if there is a texture map associated to the object with the new syntax
@@ -233,6 +234,19 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
 					triangleBumpMaps.push_back(NULL);
 
+			// Check for if there is a normal map associated to the object
+			const string normalMap = scnProp.GetString(key + ".normalmap", "");
+			if (normalMap != "") {
+				// Check if the object has UV coords
+				if (meshObject->GetUVs() == NULL)
+					throw runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
+
+				NormalMapInstance *nm = texMapCache.GetNormalMapInstance(normalMap);
+				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+					triangleNormalMaps.push_back(nm);
+			} else
+				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+					triangleNormalMaps.push_back(NULL);
 		}
 	}
 
