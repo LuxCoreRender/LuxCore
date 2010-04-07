@@ -39,6 +39,10 @@ def slg_properties():
   StringProperty(attr="slg_path", name="SmallLuxGPU Path",
       description="Full path to SmallLuxGPU's executable",
       default="", maxlen=1024, subtype="FILE_PATH")
+
+  StringProperty(attr="slg_scene_path", name="Export scene path",
+      description="Full path to directory where the exported scene is created",
+      default="", maxlen=1024, subtype="FILE_PATH")
   
   StringProperty(attr="slg_scenename", name="Scene Name",
       description="Name of SmallLuxGPU scene to create",
@@ -235,6 +239,8 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col = split.column()
     col.label(text="Full path to SmallLuxGPU's executable:")
     col.prop(scene, "slg_path", text="")
+    col.label(text="Full path where the scene is exported:")
+    col.prop(scene, "slg_scene_path", text="")
     col.prop(scene, "slg_scenename", text="Scene Name")
     split = layout.split(percentage=0.25)
     col = split.column()
@@ -358,7 +364,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
     # Force an update to object matrices when rendering animations
     scene.set_frame(scene.frame_current)
-    sdir = '{}/scenes/{}'.format(basepath,basename)
+    sdir = '{}/{}'.format(basepath,basename)
     if export or mfp:
       # Delete existing ply files
       if export and os.path.exists(sdir):
@@ -470,7 +476,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         fscn.write('scene.infinitelight.file = {}'.format(bpy.utils.expandpath(ilts.texture.image.filename).replace('\\','/')))
         portal = next((m.name for m in bpy.data.materials if m.shadeless),None)
         if portal:
-          fscn.write('|scenes/{}/{}.ply'.format(basename,portal.replace('.','_')))
+          fscn.write('|{}/{}/{}.ply'.format(basepath,basename,portal.replace('.','_')))
         fscn.write('\n')
         wle = scene.world.lighting.environment_energy if scene.world.lighting.use_environment_lighting else 1.0
         fscn.write('scene.infinitelight.gain = {} {} {}\n'.format(ff(ilts.texture.factor_red*wle),ff(ilts.texture.factor_green*wle),ff(ilts.texture.factor_blue*wle)))
@@ -521,7 +527,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
                     gloss,m.raytrace_mirror.depth>0))
         
         if not portal:   
-          fscn.write('scene.objects.{}.{} = scenes/{}/{}.ply\n'.format(mat,mat,basename,mat))
+          fscn.write('scene.objects.{}.{} = {}/{}/{}.ply\n'.format(mat,mat,basepath,basename,mat))
           if uv_flag and mtex[i]:
             texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
             if texmap:
@@ -597,19 +603,17 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
 
     # Path where SmallLuxGPU is located
     if os.path.isdir(scene.slg_path):
-      basepath = scene.slg_path
-      if scene.slg_path.endswith('/') or scene.slg_path.endswith('\\'):  
-        basepath = os.path.dirname(scene.slg_path)
       exepath = basepath+'/slg'
     elif os.path.isfile(scene.slg_path):
-      basepath = os.path.dirname(scene.slg_path)
       exepath = scene.slg_path 
     else:
       error("Full path to SmallLuxGPU executable required")
     if not os.path.exists(exepath):
-      error("Cannot find SLG executable at specified path") 
-    if not os.path.exists(basepath+'/scenes'):
-      error("Cannot find scenes directory below specified SLG path") 
+      error("Cannot find SLG executable at specified path")
+
+    basepath = scene.slg_scene_path
+    if not os.path.exists(basepath):
+      error("Cannot find scenes directory") 
 
     # Get scene name
     basename = scene.slg_scenename
@@ -622,13 +626,13 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     
     self._slgexport(scene, scene.slg_vuvs, scene.slg_vcolors, scene.slg_vnormals, scene.slg_export, basepath, basename)
 
-    fcfg = open('{}/scenes/{}/render.cfg'.format(basepath,basename), 'w')
+    fcfg = open('{}/{}/render.cfg'.format(basepath,basename), 'w')
     fcfg.write('image.width = {}\n'.format(x))
     fcfg.write('image.height = {}\n'.format(y))
-    fcfg.write('image.filename = scenes/{}/{}.{}\n'.format(basename,basename,scene.slg_imageformat))
+    fcfg.write('image.filename = {}/{}/{}.{}\n'.format(basepath,basename,basename,scene.slg_imageformat))
     fcfg.write('batch.halttime = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmodetime))
     fcfg.write('batch.haltspp = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmodespp))      
-    fcfg.write('scene.file = scenes/{}/{}.scn\n'.format(basename,basename))
+    fcfg.write('scene.file = {}/{}/{}.scn\n'.format(basepath,basename,basename))
     fcfg.write('scene.fieldofview = {:g}\n'.format(scene.camera.data.angle*180.0/3.1415926536))
     fcfg.write('scene.epsilon = {:g}\n'.format(scene.unit_settings.scale_length*0.0001))
     fcfg.write('opencl.latency.mode = {:b}\n'.format(scene.slg_low_latency))
@@ -650,8 +654,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('path.shadowrays = {}\n'.format(scene.slg_shadowrays))
     fcfg.close()
 
-    print('SLGBP ===> launch SLG: {} scenes/{}/render.cfg'.format(exepath,basename))
-    slgproc = subprocess.Popen([exepath,'scenes/{}/render.cfg'.format(basename)], cwd=basepath, shell=False)
+    print('SLGBP ===> launch SLG: {} {}/{}/render.cfg'.format(exepath,basepath,basename))
+    slgproc = subprocess.Popen([exepath,'{}/{}/render.cfg'.format(basepath,basename)], cwd=basepath, shell=False)
     
     if scene.slg_waitrender:
       # Wait for SLG , convert and load image
@@ -664,8 +668,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         if slgproc.poll() != None:
           result = self.begin_result(0, 0, x, y)
           try:
-            print('SLGBP ===> load image from file: {}/scenes/{}/{}.{}'.format(basepath,basename,basename,scene.slg_imageformat))
-            result.layers[0].load_from_file('{}/scenes/{}/{}.{}'.format(basepath,basename,basename,scene.slg_imageformat))
+            print('SLGBP ===> load image from file: {}/{}/{}.{}'.format(basepath,basename,basename,scene.slg_imageformat))
+            result.layers[0].load_from_file('{}/{}/{}.{}'.format(basepath,basename,basename,scene.slg_imageformat))
           except:
             pass
           self.end_result(result)
