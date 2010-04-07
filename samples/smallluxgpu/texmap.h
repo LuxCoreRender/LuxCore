@@ -132,6 +132,16 @@ private:
 	const float scale;
 };
 
+class NormalMapInstance {
+public:
+	NormalMapInstance(const TextureMap *tm) : texMap(tm) { }
+
+	const TextureMap *GetTexMap() const { return texMap; }
+
+private:
+	const TextureMap *texMap;
+};
+
 class TextureMapCache {
 public:
 	TextureMapCache();
@@ -139,6 +149,7 @@ public:
 
 	TexMapInstance *GetTexMapInstance(const string &fileName);
 	BumpMapInstance *GetBumpMapInstance(const string &fileName, const float scale);
+	NormalMapInstance *GetNormalMapInstance(const string &fileName);
 
 private:
 	TextureMap *GetTextureMap(const string &fileName);
@@ -146,6 +157,7 @@ private:
 	map<string, TextureMap *> maps;
 	vector<TexMapInstance *> texInstances;
 	vector<BumpMapInstance *> bumpInstances;
+	vector<NormalMapInstance *> normalInstances;
 };
 
 #endif	/* _TEXMAP_H */
