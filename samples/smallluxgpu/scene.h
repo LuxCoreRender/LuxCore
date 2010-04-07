@@ -70,8 +70,8 @@ public:
 
 	vector<ExtTriangleMesh *> objects; // All objects
 	vector<Material *> triangleMaterials; // One for each triangle
-	vector<TextureMap *> triangleTexMaps; // One for each triangle
-	vector<TextureMap *> triangleBumpMaps; // One for each triangle
+	vector<TexMapInstance *> triangleTexMaps; // One for each triangle
+	vector<BumpMapInstance *> triangleBumpMaps; // One for each triangle
 
 	vector<LightSource *> lights; // One for each light source
 

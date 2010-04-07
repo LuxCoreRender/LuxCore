@@ -25,7 +25,7 @@
 // InfiniteLight
 //------------------------------------------------------------------------------
 
-InfiniteLight::InfiniteLight(TextureMap *tx) {
+InfiniteLight::InfiniteLight(TexMapInstance *tx) {
 	tex = tx;
 	shiftU = 0.f;
 	shiftV = 0.f;
@@ -35,7 +35,7 @@ Spectrum InfiniteLight::Le(const Vector &dir) const {
 	const float theta = SphericalTheta(dir);
 	const UV uv(SphericalPhi(dir) * INV_TWOPI + shiftU, theta * INV_PI + shiftV);
 
-	return gain * tex->GetColor(uv);
+	return gain * tex->GetTexMap()->GetColor(uv);
 }
 
 Spectrum InfiniteLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
@@ -68,7 +68,7 @@ Spectrum InfiniteLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Po
 // InfiniteLight with portals
 //------------------------------------------------------------------------------
 
-InfiniteLightPortal::InfiniteLightPortal(Context *ctx, TextureMap *tx, const string &portalFileName) :
+InfiniteLightPortal::InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const string &portalFileName) :
 	InfiniteLight(tx) {
 	// Read portals
 	cerr << "Portal PLY objects file name: " << portalFileName << endl;
@@ -129,7 +129,7 @@ Spectrum InfiniteLightPortal::Sample_L(const vector<ExtTriangleMesh *> &objs, co
 // InfiniteLight with importance sampling
 //------------------------------------------------------------------------------
 
-InfiniteLightIS::InfiniteLightIS(TextureMap *tx) : InfiniteLight(tx) {
+InfiniteLightIS::InfiniteLightIS(TexMapInstance *tx) : InfiniteLight(tx) {
 	uvDistrib = NULL;
 }
 
@@ -137,8 +137,9 @@ void InfiniteLightIS::Preprocess() {
 	// Build the importance map
 
 	// Cale down the texture map
-	const unsigned int nu = tex->GetWidth() / 2;
-	const unsigned int nv = tex->GetHeight() / 2;
+	const TextureMap *tm = tex->GetTexMap();
+	const unsigned int nu = tm->GetWidth() / 2;
+	const unsigned int nv = tm->GetHeight() / 2;
 	cerr << "Building importance sampling map for InfiniteLightIS: "<< nu << "x" << nv << endl;
 
 	float *img = new float[nu * nv];
@@ -153,7 +154,7 @@ void InfiniteLightIS::Preprocess() {
 			LatLongMappingMap(uv.u, uv.v, NULL, &pdf);
 
 			if (pdf > 0.f)
-				img[u + v * nu] = tex->GetColor(uv).Filter() / pdf;
+				img[u + v * nu] = tm->GetColor(uv).Filter() / pdf;
 			else
 				img[u + v * nu] = 0.f;
 		}
@@ -184,7 +185,7 @@ Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const 
 	*pdf /= (2.f * M_PI * M_PI * sintheta);
 
 	UV texUV(uv[0], uv[1]);
-	return gain * tex->GetColor(texUV);
+	return gain * tex->GetTexMap()->GetColor(texUV);
 }
 
 //------------------------------------------------------------------------------

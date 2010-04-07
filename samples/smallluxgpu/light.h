@@ -45,7 +45,7 @@ public:
 
 class InfiniteLight : public LightSource {
 public:
-	InfiniteLight(TextureMap *tx);
+	InfiniteLight(TexMapInstance *tx);
 	virtual ~InfiniteLight() { }
 
 	void SetGain(const Spectrum &g) {
@@ -65,14 +65,14 @@ public:
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 protected:
-	TextureMap *tex;
+	TexMapInstance *tex;
 	float shiftU, shiftV;
 	Spectrum gain;
 };
 
 class InfiniteLightBF : public InfiniteLight {
 public:
-	InfiniteLightBF(TextureMap *tx) : InfiniteLight(tx) { }
+	InfiniteLightBF(TexMapInstance *tx) : InfiniteLight(tx) { }
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
@@ -83,7 +83,7 @@ public:
 
 class InfiniteLightPortal : public InfiniteLight {
 public:
-	InfiniteLightPortal(Context *ctx, TextureMap *tx, const string &portalFileName);
+	InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const string &portalFileName);
 	~InfiniteLightPortal();
 
 	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
@@ -96,7 +96,7 @@ private:
 
 class InfiniteLightIS : public InfiniteLight {
 public:
-	InfiniteLightIS(TextureMap *tx);
+	InfiniteLightIS(TexMapInstance *tx);
 	~InfiniteLightIS() { delete uvDistrib; }
 
 	void Preprocess();

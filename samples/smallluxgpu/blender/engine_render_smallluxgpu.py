@@ -370,7 +370,9 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           # Create render mesh
           try:
             print("SLGBP    Create render mesh: {}".format(obj.name))
-            mesh = obj.create_mesh(scene, True, 'RENDER')
+            # Change reverted until when newer Blender binaries are available for Linux
+            #mesh = obj.create_mesh(scene, True, 'RENDER')
+            mesh = obj.create_mesh(True, 'RENDER')
           except:
             pass
           else:
@@ -521,12 +523,13 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         if not portal:   
           fscn.write('scene.objects.{}.{} = scenes/{}/{}.ply\n'.format(mat,mat,basename,mat))
           if uv_flag and mtex[i]:
-            texfname = next((ts.texture.image.filename for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
-            if texfname:
-              fscn.write('scene.objects.{}.{}.texmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texfname).replace('\\','/')))
-            texnormfname = next((ts.texture.image.filename for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
-            if texnormfname:
-              fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texnormfname).replace('\\','/')))
+            texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
+            if texmap:
+              fscn.write('scene.objects.{}.{}.texmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texmap.texture.image.filename).replace('\\','/')))
+            texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
+            if texbump:
+              fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
+              fscn.write('scene.objects.{}.{}.bumpmap.scale = {}\n'.format(mat,mat,texbump.normal_factor))
         if export or mats[i] in mfp:
           # Write out PLY
           fply = open('{}/{}.ply'.format(sdir,mat), 'wb')

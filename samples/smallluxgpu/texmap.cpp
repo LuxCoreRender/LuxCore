@@ -176,6 +176,11 @@ TextureMapCache::TextureMapCache() {
 }
 
 TextureMapCache::~TextureMapCache() {
+	for (size_t i = 0; i < texInstances.size(); ++i)
+		delete texInstances[i];
+	for (size_t i = 0; i < bumpInstances.size(); ++i)
+		delete bumpInstances[i];
+
 	for (std::map<std::string, TextureMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
 		delete it->second;
 }
@@ -195,4 +200,20 @@ TextureMap *TextureMapCache::GetTextureMap(const string &fileName) {
 		cerr << "Cached texture map: " << fileName << endl;
 		return it->second;
 	}
+}
+
+TexMapInstance *TextureMapCache::GetTexMapInstance(const string &fileName) {
+	TextureMap *tm = GetTextureMap(fileName);
+	TexMapInstance *texm = new TexMapInstance(tm);
+	texInstances.push_back(texm);
+
+	return texm;
+}
+
+BumpMapInstance *TextureMapCache::GetBumpMapInstance(const string &fileName, const float scale) {
+	TextureMap *tm = GetTextureMap(fileName);
+	BumpMapInstance *bm = new BumpMapInstance(tm, scale);
+	bumpInstances.push_back(bm);
+
+	return bm;
 }

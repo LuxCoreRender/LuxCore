@@ -196,20 +196,22 @@ public:
 			surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
 		// Check if I have to apply texture mapping or normal mapping
-		TextureMap *tm = scene->triangleTexMaps[currentTriangleIndex];
-		TextureMap *nm = scene->triangleBumpMaps[currentTriangleIndex];
-		if (tm || nm) {
+		TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
+		BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
+		if (tm || bm) {
 			// Interpolate UV coordinates if required
 			const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
 
 			// Check if there is an assigned texture map
 			if (tm)	{
+				const TextureMap *map = tm->GetTexMap();
+
 				// Apply texture mapping
-				surfaceColor *= tm->GetColor(triUV);
+				surfaceColor *= map->GetColor(triUV);
 
 				// Check if the texture map has an alpha channel
-				if (tm->HasAlpha()) {
-					const float alpha = tm->GetAlpha(triUV);
+				if (map->HasAlpha()) {
+					const float alpha = map->GetAlpha(triUV);
 
 					if ((alpha == 0.0f) || ((alpha < 1.f) && (sample.GetLazyValue() > alpha))) {
 						pathRay = Ray(pathRay(rayHit->t + RAY_EPSILON), pathRay.d);
@@ -221,19 +223,21 @@ public:
 			}
 
 			// Check if there is an assigned bump map
-			if (nm) {
+			if (bm) {
 				// Apply bump mapping
-				const UV &dudv = nm->GetDuDv();
+				const TextureMap *map = bm->GetTexMap();
+				const UV &dudv = map->GetDuDv();
 
-				const float b0 = nm->GetColor(triUV).Filter();
+				const float b0 = map->GetColor(triUV).Filter();
 				
 				const UV uvdu(triUV.u + dudv.u, triUV.v);
-				const float bu = nm->GetColor(uvdu).Filter();
+				const float bu = map->GetColor(uvdu).Filter();
 				
 				const UV uvdv(triUV.u, triUV.v + dudv.v);
-				const float bv = nm->GetColor(uvdv).Filter();
+				const float bv = map->GetColor(uvdv).Filter();
 
-				const Vector bump(bu - b0, bv - b0, 1.f);
+				const float scale = bm->GetScale();
+				const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
 
 				Vector v1, v2;
 				CoordinateSystem(Vector(N), &v1, &v2);

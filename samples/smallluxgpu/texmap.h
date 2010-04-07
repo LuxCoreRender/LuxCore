@@ -109,15 +109,43 @@ private:
 	UV DuDv;
 };
 
+class TexMapInstance {
+public:
+	TexMapInstance(const TextureMap *tm) : texMap(tm) { }
+
+	const TextureMap *GetTexMap() const { return texMap; }
+
+private:
+	const TextureMap *texMap;
+};
+
+class BumpMapInstance {
+public:
+	BumpMapInstance(const TextureMap *tm, const float valueScale) :
+		texMap(tm), scale(valueScale) { }
+
+	const TextureMap *GetTexMap() const { return texMap; }
+	float GetScale() const { return scale; }
+
+private:
+	const TextureMap *texMap;
+	const float scale;
+};
+
 class TextureMapCache {
 public:
 	TextureMapCache();
 	~TextureMapCache();
 
-	TextureMap *GetTextureMap(const string &fileName);
+	TexMapInstance *GetTexMapInstance(const string &fileName);
+	BumpMapInstance *GetBumpMapInstance(const string &fileName, const float scale);
 
 private:
-	std::map<std::string, TextureMap *> maps;
+	TextureMap *GetTextureMap(const string &fileName);
+
+	map<string, TextureMap *> maps;
+	vector<TexMapInstance *> texInstances;
+	vector<BumpMapInstance *> bumpInstances;
 };
 
 #endif	/* _TEXMAP_H */
