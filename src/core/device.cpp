@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/context.h"
 #include "luxrays/kernels/kernels.h"
 
@@ -84,13 +84,35 @@ std::string DeviceDescription::GetDeviceType(const DeviceType type) {
 }
 
 //------------------------------------------------------------------------------
+// Device
+//------------------------------------------------------------------------------
+
+Device::Device(const Context *context, const DeviceType type, const unsigned int index) :
+	deviceContext(context), deviceType(type) {
+	deviceIndex = index;
+	started = false;
+}
+
+Device::~Device() {
+}
+
+void Device::Start() {
+	assert (!started);
+
+	started = true;
+}
+
+void Device::Stop() {
+	assert (started);
+	started = false;
+}
+
+//------------------------------------------------------------------------------
 // IntersectionDevice
 //------------------------------------------------------------------------------
 
 IntersectionDevice::IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index) :
-	deviceContext(context), deviceType(type) {
-	deviceIndex = index;
-	started = false;
+	Device(context, type, index) {
 	dataSet = NULL;
 }
 
@@ -106,19 +128,14 @@ void IntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 }
 
 void IntersectionDevice::Start() {
-	assert (!started);
 	assert (dataSet != NULL);
+
+	Device::Start();
 
 	statsStartTime = WallClockTime();
 	statsTotalRayCount = 0.0;
 	statsDeviceIdleTime = 0.0;
 	statsDeviceTotalTime = 0.0;
-	started = true;
-}
-
-void IntersectionDevice::Stop() {
-	assert (started);
-	started = false;
 }
 
 }

@@ -19,45 +19,53 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_H
-#define	_LUXRAYS_H
+#ifndef _SAMPLEBUFFER_H
+#define	_SAMPLEBUFFER_H
 
-#include <iostream>
+#include "luxrays/core/pixel/spectrum.h"
 
-#include "luxrays/cfg.h"
+namespace luxrays {
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#define SAMPLE_BUFFER_SIZE (4096)
 
-#define __CL_ENABLE_EXCEPTIONS
+typedef struct {
+	float screenX, screenY;
+	Spectrum radiance;
+} SampleBufferElem;
 
-#if defined(__APPLE__)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
+class SampleBuffer {
+public:
+	SampleBuffer(size_t bufferSize) : size(bufferSize) {
+		samples = new SampleBufferElem[size];
+		Reset();
+	}
+	~SampleBuffer() {
+		delete[] samples;
+	}
 
-#endif // LUXRAYS_DISABLE_OPENCL
+	void Reset() { currentFreeSample = 0; };
+	bool IsFull() const { return (currentFreeSample >= size); }
 
-#include "luxrays/core/geometry/vector.h"
-#include "luxrays/core/geometry/normal.h"
-#include "luxrays/core/geometry/uv.h"
-#include "luxrays/core/geometry/vector_normal.h"
-#include "luxrays/core/geometry/point.h"
-#include "luxrays/core/geometry/ray.h"
-#include "luxrays/core/geometry/raybuffer.h"
-#include "luxrays/core/geometry/bbox.h"
-#include "luxrays/core/geometry/triangle.h"
-#include "luxrays/core/pixel/samplebuffer.h"
+	void SplatSample(const float scrX, const float scrY, const Spectrum &radiance) {
+		SampleBufferElem *s = &samples[currentFreeSample++];
 
-namespace luxrays
-{
-class Accelerator;
-class Context;
-class DataSet;
-class IntersectionDevice;
-class TriangleMesh;
-class VirtualM2OHardwareIntersectionDevice;
-class VirtualM2MHardwareIntersectionDevice;
+		s->screenX = scrX;
+		s->screenY = scrY;
+		s->radiance = radiance;
+	}
+
+	SampleBufferElem *GetSampleBuffer() const { return samples; }
+
+	size_t GetSampleCount() const { return currentFreeSample; }
+
+private:
+	size_t size;
+	size_t currentFreeSample;
+
+	SampleBufferElem *samples;
+};
+
 }
 
-#endif	/* _LUXRAYS_H */
+#endif	/* _SAMPLEBUFFER_H */
+
