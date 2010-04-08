@@ -19,74 +19,66 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _FRAMEBUFFER_H
-#define	_FRAMEBUFFER_H
+#include <cstdio>
 
-#include "luxrays/core/pixel/spectrum.h"
+#include "luxrays/core/pixeldevice.h"
+#include "luxrays/core/context.h"
 
-namespace luxrays {
+using namespace luxrays;
 
-typedef struct {
-	Spectrum radiance;
-	float weight;
-} SamplePixel;
+//------------------------------------------------------------------------------
+// Native CPU PixelDevice
+//------------------------------------------------------------------------------
 
-class SampleFrameBuffer {
-public:
-	SampleFrameBuffer(const unsigned int w, const unsigned int h)
-		: width(w), height(h) {
-		pixels = new SamplePixel[width * height];
+size_t NativePixelDevice::SampleBufferSize = 512;
 
-		Reset();
-	}
-	~SampleFrameBuffer() {
-		delete[] pixels;
-	}
+NativePixelDevice::NativePixelDevice(const Context *context,
+		const size_t threadIndex, const unsigned int devIndex) :
+			PixelDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
+	char buf[64];
+	sprintf(buf, "NativeThread-%03d", (int)threadIndex);
+	deviceName = std::string(buf);
 
-	void Reset() {
-		for (unsigned int i = 0; i < width * height; ++i) {
-			pixels[i].radiance.r = 0.f;
-			pixels[i].radiance.g = 0.f;
-			pixels[i].radiance.b = 0.f;
-			pixels[i].weight = 0.f;
-		}
-	};
-
-private:
-	const unsigned int width, height;
-
-	SamplePixel *pixels;
-};
-
-typedef Spectrum Pixel;
-
-class FrameBuffer {
-public:
-	FrameBuffer(const unsigned int w, const unsigned int h)
-			: width(w), height(h) {
-		pixels = new Pixel[width * height];
-
-		Reset();
-	}
-	~FrameBuffer() {
-		delete[] pixels;
-	}
-
-	void Reset() {
-		for (unsigned int i = 0; i < width * height; ++i) {
-			pixels[i].r = 0.f;
-			pixels[i].g = 0.f;
-			pixels[i].b = 0.f;
-		}
-	};
-
-private:
-	const unsigned int width, height;
-
-	Pixel *pixels;
-};
-
+	sampleFrameBuffer = NULL;
+	frameBuffer = NULL;
 }
 
-#endif	/* _FRAMEBUFFER_H */
+NativePixelDevice::~NativePixelDevice() {
+	if (started)
+		PixelDevice::Stop();
 
+	delete sampleFrameBuffer;
+	delete frameBuffer;
+}
+
+void NativePixelDevice::Init(const unsigned int w, const unsigned int h) {
+	PixelDevice::Init(w, h);
+
+	delete sampleFrameBuffer;
+	delete frameBuffer;
+
+	sampleFrameBuffer = new SampleFrameBuffer(width, height);
+	sampleFrameBuffer->Reset();
+
+	frameBuffer = new FrameBuffer(width, height);
+}
+
+void NativePixelDevice::Start() {
+	PixelDevice::Start();
+}
+
+void NativePixelDevice::Interrupt() {
+	assert (started);
+}
+
+void NativePixelDevice::Stop() {
+	PixelDevice::Stop();
+}
+
+SampleBuffer *NativePixelDevice::NewSampleBuffer() {
+	return new SampleBuffer(SampleBufferSize);
+}
+
+void NativePixelDevice::PushSampleBuffer(SampleBuffer *sampleBuffer) {
+	assert (started);
+}

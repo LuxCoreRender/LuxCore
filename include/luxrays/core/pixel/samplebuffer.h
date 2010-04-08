@@ -68,4 +68,3 @@ private:
 }
 
 #endif	/* _SAMPLEBUFFER_H */
-

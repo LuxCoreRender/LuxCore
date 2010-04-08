@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/core/pixeldevice.h"
 #include "luxrays/core/context.h"
 #include "luxrays/kernels/kernels.h"
 
@@ -136,6 +137,24 @@ void IntersectionDevice::Start() {
 	statsTotalRayCount = 0.0;
 	statsDeviceIdleTime = 0.0;
 	statsDeviceTotalTime = 0.0;
+}
+
+//------------------------------------------------------------------------------
+// PixelDevice
+//------------------------------------------------------------------------------
+
+PixelDevice::PixelDevice(const Context *context, const DeviceType type, const unsigned int index) :
+	Device(context, type, index) {
+}
+
+PixelDevice::~PixelDevice() {
+}
+
+void PixelDevice::Init(const unsigned int w, const unsigned int h) {
+	assert (!started);
+
+	width = w;
+	height = h;
 }
 
 }

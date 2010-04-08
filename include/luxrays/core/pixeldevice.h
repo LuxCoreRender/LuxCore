@@ -30,50 +30,49 @@ namespace luxrays {
 
 class PixelDevice : public Device {
 public:
+	virtual void Init(const unsigned int w, const unsigned int h);
 
-	SampleBuffer *NewSampleBuffer() { return new SampleBuffer(); };
-	void PushSampleBuffer(SampleBuffer *sampleBuffer) = 0;
+	virtual SampleBuffer *NewSampleBuffer() = 0;
+	virtual void PushSampleBuffer(SampleBuffer *sampleBuffer) = 0;
 
-	friend class Context;
+	virtual const FrameBuffer *GetFrameBuffer() const = 0;
 
 protected:
 	PixelDevice(const Context *context, const DeviceType type, const unsigned int index);
 	virtual ~PixelDevice();
+
+	unsigned int width, height;
 };
 
 //------------------------------------------------------------------------------
-// Native CPU devices
+// Native CPU device
 //------------------------------------------------------------------------------
 
-/*class NativePixelDevice : public PixelDevice {
+class NativePixelDevice : public PixelDevice {
 public:
-	NativePixelDevice(const Context *context, const unsigned int devIndex);
+	NativePixelDevice(const Context *context, const size_t threadIndex,
+			const unsigned int devIndex);
 	~NativePixelDevice();
 
-	void SetDataSet(const DataSet *newDataSet);
+	void Init(const unsigned int w, const unsigned int h);
+
 	void Start();
 	void Interrupt();
 	void Stop();
 
-	RayBuffer *NewRayBuffer();
-	size_t GetQueueSize() { return 0; }
-	void PushRayBuffer(RayBuffer *rayBuffer);
-	RayBuffer *PopRayBuffer();
+	SampleBuffer *NewSampleBuffer();
+	void PushSampleBuffer(SampleBuffer *sampleBuffer);
 
-	double GetLoad() const {
-		return 1.0;
-	}
+	const FrameBuffer *GetFrameBuffer() const;
 
-	static size_t RayBufferSize;
+	static size_t SampleBufferSize;
 
 	friend class Context;
 
-protected:
-	static void AddDevices(std::vector<DeviceDescription *> &descriptions);
-
 private:
-	RayBufferSingleQueue doneRayBufferQueue;
-};*/
+	SampleFrameBuffer *sampleFrameBuffer;
+	FrameBuffer *frameBuffer;
+};
 
 }
 
