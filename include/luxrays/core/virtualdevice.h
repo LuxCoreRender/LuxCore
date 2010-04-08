@@ -26,7 +26,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
 
 namespace luxrays {
 

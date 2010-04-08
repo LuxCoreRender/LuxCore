@@ -33,7 +33,7 @@
 
 #include "smalllux.h"
 #include "sampler.h"
-#include "samplebuffer.h"
+#include "luxrays/core/pixel/samplebuffer.h"
 
 #define GAMMA_TABLE_SIZE 1024
 

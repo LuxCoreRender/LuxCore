@@ -19,45 +19,62 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_H
-#define	_LUXRAYS_H
+#ifndef _LUXRAYS_PIXELDEVICE_H
+#define	_LUXRAYS_PIXELDEVICE_H
 
-#include <iostream>
+#include "luxrays/luxrays.h"
+#include "luxrays/core/device.h"
+#include "luxrays/core/pixel/framebuffer.h"
 
-#include "luxrays/cfg.h"
+namespace luxrays {
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+class PixelDevice : public Device {
+public:
 
-#define __CL_ENABLE_EXCEPTIONS
+	SampleBuffer *NewSampleBuffer() { return new SampleBuffer(); };
+	void PushSampleBuffer(SampleBuffer *sampleBuffer) = 0;
 
-#if defined(__APPLE__)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
+	friend class Context;
 
-#endif // LUXRAYS_DISABLE_OPENCL
+protected:
+	PixelDevice(const Context *context, const DeviceType type, const unsigned int index);
+	virtual ~PixelDevice();
+};
 
-#include "luxrays/core/geometry/vector.h"
-#include "luxrays/core/geometry/normal.h"
-#include "luxrays/core/geometry/uv.h"
-#include "luxrays/core/geometry/vector_normal.h"
-#include "luxrays/core/geometry/point.h"
-#include "luxrays/core/geometry/ray.h"
-#include "luxrays/core/geometry/raybuffer.h"
-#include "luxrays/core/geometry/bbox.h"
-#include "luxrays/core/geometry/triangle.h"
-#include "luxrays/core/pixel/samplebuffer.h"
+//------------------------------------------------------------------------------
+// Native CPU devices
+//------------------------------------------------------------------------------
 
-namespace luxrays
-{
-class Accelerator;
-class Context;
-class DataSet;
-class IntersectionDevice;
-class TriangleMesh;
-class VirtualM2OHardwareIntersectionDevice;
-class VirtualM2MHardwareIntersectionDevice;
+/*class NativePixelDevice : public PixelDevice {
+public:
+	NativePixelDevice(const Context *context, const unsigned int devIndex);
+	~NativePixelDevice();
+
+	void SetDataSet(const DataSet *newDataSet);
+	void Start();
+	void Interrupt();
+	void Stop();
+
+	RayBuffer *NewRayBuffer();
+	size_t GetQueueSize() { return 0; }
+	void PushRayBuffer(RayBuffer *rayBuffer);
+	RayBuffer *PopRayBuffer();
+
+	double GetLoad() const {
+		return 1.0;
+	}
+
+	static size_t RayBufferSize;
+
+	friend class Context;
+
+protected:
+	static void AddDevices(std::vector<DeviceDescription *> &descriptions);
+
+private:
+	RayBufferSingleQueue doneRayBufferQueue;
+};*/
+
 }
 
-#endif	/* _LUXRAYS_H */
+#endif	/* _LUXRAYS_PIXELDEVICE_H */

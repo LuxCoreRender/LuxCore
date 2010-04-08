@@ -22,7 +22,6 @@
 #include <cstring>
 
 #include "renderthread.h"
-#include "samplebuffer.h"
 #include "renderconfig.h"
 #include "path.h"
 

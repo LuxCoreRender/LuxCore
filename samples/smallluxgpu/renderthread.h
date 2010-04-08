@@ -25,7 +25,7 @@
 #include "smalllux.h"
 #include "scene.h"
 #include "path.h"
-#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
 
 #include <boost/thread/thread.hpp>
 
