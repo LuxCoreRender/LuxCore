@@ -109,8 +109,16 @@ void RenderingConfig::Init() {
 	else
 		scene->lightStrategy = ALL_UNIFORM;
 	scene->shadowRayCount = cfg.GetInt("path.shadowrays", 1);
+
+	// Russian Roulette parameters
+	int rrStrat = cfg.GetInt("path.russianroulette.strategy", 1);
+	if (rrStrat == 0)
+		scene->rrStrategy = PROBABILITY;
+	else
+		scene->rrStrategy = IMPORTANCE;
 	scene->rrDepth = cfg.GetInt("path.russianroulette.depth", scene->rrDepth);
 	scene->rrProb = cfg.GetFloat("path.russianroulette.prob", scene->rrProb);
+	scene->rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", scene->rrImportanceCap);
 
 	// Start OpenCL devices
 	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclDeviceConfig);

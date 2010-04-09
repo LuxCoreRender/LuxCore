@@ -379,26 +379,52 @@ public:
 			return;
 		}
 
+		throughput *= f / fPdf;
+
 		if (depth > scene->rrDepth) {
 			// Russian Roulette
-			if (scene->rrProb >= sample.GetLazyValue())
-				throughput /= scene->rrProb;
-			else {
-				// Check if terminate the path or I have still to trace shadow rays
-				if (tracedShadowRayCount > 0)
-					state = ONLY_SHADOW_RAYS;
-				else {
-					// Terminate the path
-					sampleBuffer->SplatSample(&sample, radiance);
-					// Restart the path
-					Init(scene, sampler);
-				}
+			switch (scene->rrStrategy) {
+				case PROBABILITY: {
+					if (scene->rrProb >= sample.GetLazyValue())
+						throughput /= scene->rrProb;
+					else {
+						// Check if terminate the path or I have still to trace shadow rays
+						if (tracedShadowRayCount > 0)
+							state = ONLY_SHADOW_RAYS;
+						else {
+							// Terminate the path
+							sampleBuffer->SplatSample(&sample, radiance);
+							// Restart the path
+							Init(scene, sampler);
+						}
 
-				return;
+						return;
+					}
+					break;
+				}
+				case IMPORTANCE: {
+					const float prob = Max(throughput.Filter(),scene->rrImportanceCap);
+					if (prob >= sample.GetLazyValue())
+						throughput /= prob;
+					else {
+						// Check if terminate the path or I have still to trace shadow rays
+						if (tracedShadowRayCount > 0)
+							state = ONLY_SHADOW_RAYS;
+						else {
+							// Terminate the path
+							sampleBuffer->SplatSample(&sample, radiance);
+							// Restart the path
+							Init(scene, sampler);
+						}
+
+						return;
+					}
+					break;
+				}
+				default:
+					assert (false);
 			}
 		}
-
-		throughput *= f / fPdf;
 
 		pathRay.o = hitPoint;
 		pathRay.d = wi;

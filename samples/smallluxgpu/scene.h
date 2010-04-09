@@ -43,6 +43,10 @@ typedef enum {
 	ONE_UNIFORM, ALL_UNIFORM
 } DirectLightStrategy;
 
+typedef enum {
+	PROBABILITY, IMPORTANCE
+} RussianRouletteStrategy;
+
 class Scene {
 public:
 	Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film);
@@ -59,8 +63,11 @@ public:
 	int maxPathDepth;
 	DirectLightStrategy lightStrategy;
 	unsigned int shadowRayCount;
+
+	RussianRouletteStrategy rrStrategy;
 	int rrDepth;
-	float rrProb;
+	float rrProb; // Used by PROBABILITY strategy
+	float rrImportanceCap; // Used by IMPORTANCE strategy
 
 	PerspectiveCamera *camera;
 
