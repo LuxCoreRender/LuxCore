@@ -1,0 +1,9 @@
+scene.camera.lookat = -2.78 -8. 2.73 -2.78 2. 2.730003
+scene.materials.matte.Khaki = 1. 0.824176 0.549451
+scene.objects.Khaki.Khaki = scenes/cornell/Khaki.ply
+scene.materials.matte.HalveRed = 0.70003 0. 0.
+scene.objects.HalveRed.HalveRed = scenes/cornell/HalveRed.ply
+scene.materials.matte.DarkGreen = 0. 0.4 0.
+scene.objects.DarkGreen.DarkGreen = scenes/cornell/DarkGreen.ply
+scene.materials.light.Grey = 10. 10. 10.
+scene.objects.Grey.Grey = scenes/cornell/Grey.ply
