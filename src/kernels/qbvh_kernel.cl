@@ -69,22 +69,25 @@ typedef struct {
 #define QBVHNode_NbQuadPrimitives(index) ((unsigned int)(((index >> 27) & 0xf) + 1))
 #define QBVHNode_FirstQuadIndex(index) (index & 0x07ffffff)
 
+// Using invDir0/invDir1/invDir2 and sign0/sign1/sign2 instead of an
+// array because I dont' trust OpenCL compiler =)
 static int4 QBVHNode_BBoxIntersect(__global QBVHNode *node, const QuadRay *ray4,
-		const float4 invDir[3], const int sign[3]) {
+		const float4 invDir0, const float4 invDir1, const float4 invDir2,
+		const int sign0, const int sign1, const int sign2) {
 	float4 tMin = ray4->mint;
 	float4 tMax = ray4->maxt;
 
 	// X coordinate
-	tMin = max(tMin, (node->bboxes[sign[0]][0] - ray4->ox) * invDir[0]);
-	tMax = min(tMax, (node->bboxes[1 - sign[0]][0] - ray4->ox) * invDir[0]);
+	tMin = max(tMin, (node->bboxes[sign0][0] - ray4->ox) * invDir0);
+	tMax = min(tMax, (node->bboxes[1 - sign0][0] - ray4->ox) * invDir0);
 
 	// Y coordinate
-	tMin = max(tMin, (node->bboxes[sign[1]][1] - ray4->oy) * invDir[1]);
-	tMax = min(tMax, (node->bboxes[1 - sign[1]][1] - ray4->oy) * invDir[1]);
+	tMin = max(tMin, (node->bboxes[sign1][1] - ray4->oy) * invDir1);
+	tMax = min(tMax, (node->bboxes[1 - sign1][1] - ray4->oy) * invDir1);
 
 	// Z coordinate
-	tMin = max(tMin, (node->bboxes[sign[2]][2] - ray4->oz) * invDir[2]);
-	tMax = min(tMax, (node->bboxes[1 - sign[2]][2] - ray4->oz) * invDir[2]);
+	tMin = max(tMin, (node->bboxes[sign2][2] - ray4->oz) * invDir2);
+	tMax = min(tMax, (node->bboxes[1 - sign2][2] - ray4->oz) * invDir2);
 
 	//return the visit flags
 	return  (tMax >= tMin);
@@ -184,7 +187,8 @@ __kernel void Intersect(
 		__global RayHit *rayHits,
 		__global QBVHNode *nodes,
 		__global QuadTiangle *quadTris,
-		const unsigned int rayCount) {
+		const unsigned int rayCount,
+		__local int *nodeStacks) {
 	// Select the ray to check
 	const int gid = get_global_id(0);
 	if (gid >= rayCount)
@@ -209,15 +213,13 @@ __kernel void Intersect(
 			ray4.maxt = (float4)data1.w;
 	}
 
-	float4 invDir[3];
-	invDir[0] = (float4)(1.f / ray4.dx.s0);
-	invDir[1] = (float4)(1.f / ray4.dy.s0);
-	invDir[2] = (float4)(1.f / ray4.dz.s0);
+	const float4 invDir0 = (float4)(1.f / ray4.dx.s0);
+	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
+	const float4 invDir2 = (float4)(1.f / ray4.dz.s0);
 
-	int signs[3];
-	signs[0] = (ray4.dx.s0 < 0.f);
-	signs[1] = (ray4.dy.s0 < 0.f);
-	signs[2] = (ray4.dz.s0 < 0.f);
+	const int signs0 = (ray4.dx.s0 < 0.f);
+	const int signs1 = (ray4.dy.s0 < 0.f);
+	const int signs2 = (ray4.dz.s0 < 0.f);
 
 	RayHit rayHit;
 	rayHit.index = 0xffffffffu;
@@ -225,7 +227,7 @@ __kernel void Intersect(
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
-	int nodeStack[24];
+	__local int *nodeStack = &nodeStacks[24 * get_local_id(0)];
 	nodeStack[0] = 0; // first node to handle: root node
 
 	while (todoNode >= 0) {
@@ -235,7 +237,9 @@ __kernel void Intersect(
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
 			__global QBVHNode *node = &nodes[nodeData];
-			const int4 visit = QBVHNode_BBoxIntersect(node, &ray4, invDir, signs);
+			const int4 visit = QBVHNode_BBoxIntersect(node, &ray4,
+				invDir0, invDir1, invDir2,
+				signs0, signs1, signs2);
 
 			const int4 children = node->children;
 			if (visit.s3)
