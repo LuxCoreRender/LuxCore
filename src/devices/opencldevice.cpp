@@ -258,6 +258,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			qbvhKernel->setArg(1, *hitsBuff);
 			qbvhKernel->setArg(2, *qbvhBuff);
 			qbvhKernel->setArg(3, *qbvhTrisBuff);
+			qbvhKernel->setArg(5, 24 * qbvhWorkGroupSize * sizeof(cl_int), NULL);
 			break;
 		}
 		default:

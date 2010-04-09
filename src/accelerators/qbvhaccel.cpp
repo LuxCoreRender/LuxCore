@@ -389,7 +389,6 @@ bool QBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			QBVHNode &node = nodes[nodeStack[todoNode]];
 			--todoNode;
 
-
 			// It is quite strange but checking here for empty nodes sloaws down the rendering
 			const int32_t visit = node.BBoxIntersect(ray4, invDir, signs);
 
