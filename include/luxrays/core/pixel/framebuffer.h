@@ -52,6 +52,8 @@ public:
 		}
 	};
 
+	SamplePixel *GetPixels() { return pixels; }
+
 private:
 	const unsigned int width, height;
 
@@ -79,6 +81,8 @@ public:
 			pixels[i].b = 0.f;
 		}
 	};
+
+	Pixel *GetPixels() const { return pixels; }
 
 private:
 	const unsigned int width, height;

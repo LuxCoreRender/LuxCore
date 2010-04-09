@@ -36,11 +36,13 @@ NativePixelDevice::NativePixelDevice(const Context *context,
 		const size_t threadIndex, const unsigned int devIndex) :
 			PixelDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
 	char buf[64];
-	sprintf(buf, "NativeThread-%03d", (int)threadIndex);
+	sprintf(buf, "NativePixelThread-%03d", (int)threadIndex);
 	deviceName = std::string(buf);
 
 	sampleFrameBuffer = NULL;
 	frameBuffer = NULL;
+
+	SetGamma();
 }
 
 NativePixelDevice::~NativePixelDevice() {
@@ -63,6 +65,17 @@ void NativePixelDevice::Init(const unsigned int w, const unsigned int h) {
 	frameBuffer = new FrameBuffer(width, height);
 }
 
+void NativePixelDevice::Reset() {
+	sampleFrameBuffer->Reset();
+}
+
+void NativePixelDevice::SetGamma(const float gamma ) {
+	float x = 0.f;
+	const float dx = 1.f / GammaTableSize;
+	for (unsigned int i = 0; i < GammaTableSize; ++i, x += dx)
+		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / gamma);
+}
+
 void NativePixelDevice::Start() {
 	PixelDevice::Start();
 }
@@ -79,6 +92,38 @@ SampleBuffer *NativePixelDevice::NewSampleBuffer() {
 	return new SampleBuffer(SampleBufferSize);
 }
 
-void NativePixelDevice::PushSampleBuffer(SampleBuffer *sampleBuffer) {
+void NativePixelDevice::PushSampleBuffer(const SampleBuffer *sampleBuffer) {
 	assert (started);
+
+	const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
+	SamplePixel *sp = sampleFrameBuffer->GetPixels();
+	for (unsigned int i = 0; i < sampleBuffer->GetSampleCount(); ++i) {
+		const SampleBufferElem *sampleElem = &sbe[i];
+		int x = (int)sampleElem->screenX;
+		int y = (int)sampleElem->screenY;
+
+		unsigned int offset = x + y * width;
+		AtomicAdd(&sp[offset].radiance.r, sampleElem->radiance.r);
+		AtomicAdd(&sp[offset].radiance.g, sampleElem->radiance.g);
+		AtomicAdd(&sp[offset].radiance.b, sampleElem->radiance.b);
+		AtomicAdd(&sp[offset].weight, 1.f);
+	}
+}
+
+void NativePixelDevice::UpdateFrameBuffer() {
+	const SamplePixel *sp = sampleFrameBuffer->GetPixels();
+	Pixel *p = frameBuffer->GetPixels();
+	for (unsigned int i = 0, j = 0; i < width * height; ++i) {
+		const float weight = sp[i].weight;
+
+		if (weight == 0.f)
+			j++;
+		else {
+			const float invWeight = 1.f / weight;
+
+			p[j].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
+			p[j].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
+			p[j++].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
+		}
+	}
 }
