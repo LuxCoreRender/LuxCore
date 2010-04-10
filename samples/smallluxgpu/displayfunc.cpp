@@ -266,10 +266,16 @@ void keyFunc(unsigned char key, int x, int y) {
 			config->ReInit(false);
 			break;
 		case 'n':
-			config->screenRefreshInterval = max(50u, config->screenRefreshInterval - 50);
+			if (config->screenRefreshInterval > 1000)
+				config->screenRefreshInterval = max(1000u, config->screenRefreshInterval - 1000);
+			else
+				config->screenRefreshInterval = max(50u, config->screenRefreshInterval - 50);
 			break;
 		case 'm':
-			config->screenRefreshInterval += 50;
+			if (config->screenRefreshInterval >= 1000)
+				config->screenRefreshInterval += 1000;
+			else
+				config->screenRefreshInterval += 50;
 			break;
 		case 'i':
 			config->SetShadowRays(-1);

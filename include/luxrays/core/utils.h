@@ -199,10 +199,15 @@ inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
 #elif defined (WIN32)
 	{
 		const HANDLE tid = (HANDLE)thread->native_handle();
-		if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
+		if (!SetPriorityClass(tid, HIGH_PRIORITY_CLASS))
 			return false;
 		else
 			return true;
+
+		/*if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
+			return false;
+		else
+			return true;*/
 	}
 #endif
 }
