@@ -197,6 +197,23 @@ public:
 		return statsAvgSampleSec;
 	}
 
+	virtual void Save(const string &fileName) {
+		std::cerr << "Saving " << fileName << std::endl;
+		if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".png")) {
+			std::cerr << "Using PNG file format" << std::endl;
+			SavePNG(fileName);
+		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".ppm")) {
+			std::cerr << "Using PPM file format" << std::endl;
+			SavePPM(fileName);
+		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".exr")) {
+			std::cerr << "Using EXR file format" << std::endl;
+			SaveEXR(fileName);
+		} else {
+			std::cerr << "Unknown image format extension, using PNG" << std::endl;
+			SavePNG(fileName);
+		}
+	}
+
 	virtual void SavePPM(const string &fileName) {
 		const float *pixels = GetScreenBuffer();
 

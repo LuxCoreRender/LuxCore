@@ -111,20 +111,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	}
 
 	std::string fileName = config->cfg.GetString("image.filename", "image.png");
-	std::cerr << "Saving " << fileName << std::endl;
-	if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".png")) {
-		std::cerr << "Using PNG file format" << std::endl;
-		config->scene->camera->film->SavePNG(fileName);
-	} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".ppm")) {
-		std::cerr << "Using PPM file format" << std::endl;
-		config->scene->camera->film->SavePPM(fileName);
-	} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".exr")) {
-		std::cerr << "Using EXR file format" << std::endl;
-		config->scene->camera->film->SaveEXR(fileName);
-	} else {
-		std::cerr << "Unknown image format extension, using PNG" << std::endl;
-		config->scene->camera->film->SavePNG(fileName);
-	}
+	config->scene->camera->film->Save(fileName);
 
 	// Check if I have to save the film
 	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
