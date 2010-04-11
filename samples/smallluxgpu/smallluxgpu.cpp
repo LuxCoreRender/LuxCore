@@ -147,13 +147,13 @@ int main(int argc, char *argv[]) {
 				" -b <enable high latency mode>" << std::endl <<
 				" -s [GPU workgroup size]" << std::endl <<
 				" -t [halt time in secs]" << std::endl <<
-				" -T <start the telnet server" << std::endl <<
+				" -T <disable the telnet server" << std::endl <<
 				" -D [property name] [property value]" << std::endl <<
 				" -d [current directory path]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		bool batchMode = false;
-		bool telnetServerEnabled = false;
+		bool telnetServerEnabled = true;
 		Properties cmdLineProp;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 't') cmdLineProp.SetString("batch.halttime", argv[++i]);
 
-				else if (argv[i][1] == 'T') telnetServerEnabled = true;
+				else if (argv[i][1] == 'T') telnetServerEnabled = false;
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);

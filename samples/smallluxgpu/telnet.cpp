@@ -82,13 +82,18 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "help - this help\n";
 						respStream << "help.get - print the list of get supported properties\n";
 						respStream << "help.set - print the list of set supported properties\n";
-						respStream << "image.save - save the renderingimage\n";
+						respStream << "image.reset - reset the rendering image (requires render.stop)\n";
+						respStream << "image.save - save the rendering image\n";
 						respStream << "render.start - start the rendering\n";
 						respStream << "render.stop - stop the rendering\n";
 						respStream << "set <property name> <values>- set the value of a (supported) property\n";
 						respStream << "OK\n";
 					    boost::asio::write(socket, response);
 					} else if (command == "get") {
+						//------------------------------------------------------
+						// Get property
+						//------------------------------------------------------
+
 						// Get the name of the property to recover
 						string property;
 						commandStream >> property;
@@ -124,8 +129,17 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						boost::asio::streambuf response;
 						std::ostream respStream(&response);
 						respStream << "image.filename\n";
+						respStream << "scene.camera.lookat (requires render.stop)\n";
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
+					} else if (command == "image.reset") {
+						if (state == STOP) {
+							telnetServer->config->scene->camera->film->Reset();
+							boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+						} else {
+							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+							cerr << "[Telnet server] Wrong state" << endl;
+						}
 					} else if (command == "image.save") {
 						std::string fileName = telnetServer->config->cfg.GetString("image.filename", "image.png");
 						telnetServer->config->scene->camera->film->Save(fileName);
@@ -141,6 +155,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						state = STOP;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "set") {
+						//------------------------------------------------------
+						// Set property
+						//------------------------------------------------------
+
 						// Get the name of the property to set
 						string property;
 						commandStream >> property;
@@ -154,6 +172,25 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							telnetServer->config->cfg.SetString("image.filename", fileName);
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.lookat") {
+							// Check if we are in the right state
+							if (state == STOP) {
+								Point o, t;
+								commandStream >> o.x;
+								commandStream >> o.y;
+								commandStream >> o.z;
+								commandStream >> t.x;
+								commandStream >> t.y;
+								commandStream >> t.z;
+
+								telnetServer->config->scene->camera->orig = o;
+								telnetServer->config->scene->camera->target = t;
+								telnetServer->config->scene->camera->Update();
+								boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Wrong state: " << property << endl;
+							}
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 							cerr << "[Telnet server] Unknown property: " << property << endl;
