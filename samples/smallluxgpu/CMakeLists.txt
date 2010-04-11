@@ -41,6 +41,7 @@ set(SMALLLUXGPU_SRCS
     renderthread.cpp
     scene.cpp
     smallluxgpu.cpp
+	telnet.cpp
     texmap.cpp
 	volume.cpp)
 

@@ -22,6 +22,8 @@
 #ifndef _RENDERCONFIG_H
 #define	_RENDERCONFIG_H
 
+#include <boost/thread/mutex.hpp>
+
 #include "scene.h"
 #include "renderthread.h"
 #include "displayfunc.h"
@@ -43,11 +45,10 @@ public:
 	~RenderingConfig();
 
 	void Init();
-
+	void StartAllRenderThreads();
+	void StopAllRenderThreads();
 	void ReInit(const bool reallocBuffers, const unsigned int w = 0, unsigned int h = 0);
-
 	void SetMaxPathDepth(const int delta);
-
 	void SetShadowRays(const int delta);
 
 	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
@@ -62,17 +63,18 @@ public:
 	Film *film;
 
 private:
+	void StartAllRenderThreadsLockless();
+	void StopAllRenderThreadsLockless();
+
 	void SetUpOpenCLDevices(const bool lowLatency, const bool useCPUs, const bool useGPUs,
 		const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig);
 
 	void SetUpNativeDevices(const unsigned int nativeThreadCount);
 
-	void StartAllRenderThreads();
-
-	void StopAllRenderThreads();
-
+	boost::mutex cfgMutex;
 	Context *ctx;
 
+	bool renderThreadsStarted;
 	vector<RenderThread *> renderThreads;
 
 	vector<IntersectionDevice *> intersectionGPUDevices;
