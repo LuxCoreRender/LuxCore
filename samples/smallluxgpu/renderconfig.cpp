@@ -31,10 +31,12 @@ RenderingConfig::RenderingConfig(const string &fileName) {
 	vector<string> keys = cfg.GetAllKeys();
 	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
 		cerr << "  " << *i << " = " << cfg.GetString(*i, "") << endl;
+
+	renderThreadsStarted = false;
 }
 
 RenderingConfig::~RenderingConfig() {
-	StopAllRenderThreads();
+	StopAllRenderThreadsLockless();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
@@ -45,6 +47,8 @@ RenderingConfig::~RenderingConfig() {
 }
 
 void RenderingConfig::Init() {
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
+
 	const bool lowLatency = cfg.GetInt("opencl.latency.mode", 1);
 	const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
 	const unsigned int w = cfg.GetInt("image.width", 640);
@@ -161,12 +165,16 @@ void RenderingConfig::Init() {
 	}
 
 	film->StartSampleTime();
-	StartAllRenderThreads();
+	StartAllRenderThreadsLockless();
 }
 
 void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, unsigned int h) {
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
+
+	bool wasRunning = renderThreadsStarted;
 	// First stop all devices
-	StopAllRenderThreads();
+	if (wasRunning)
+		StopAllRenderThreadsLockless();
 
 	// Check if I have to reallocate buffers
 	if (reallocBuffers)
@@ -176,30 +184,41 @@ void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, un
 	scene->camera->Update();
 
 	// Restart all devices
-	StartAllRenderThreads();
+	if (wasRunning)
+		StartAllRenderThreadsLockless();
 }
 
 void RenderingConfig::SetMaxPathDepth(const int delta) {
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
+
+	bool wasRunning = renderThreadsStarted;
 	// First stop all devices
-	StopAllRenderThreads();
+	if (wasRunning)
+		StopAllRenderThreadsLockless();
 
 	film->Reset();
 	scene->maxPathDepth = max<unsigned int>(2, scene->maxPathDepth + delta);
 
 	// Restart all devices
-	StartAllRenderThreads();
+	if (wasRunning)
+		StartAllRenderThreadsLockless();
 }
 
 void RenderingConfig::SetShadowRays(const int delta) {
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
+
+	bool wasRunning = renderThreadsStarted;
 	// First stop all devices
-	StopAllRenderThreads();
+	if (wasRunning)
+		StopAllRenderThreadsLockless();
 
 	scene->shadowRayCount = max<unsigned int>(1, scene->shadowRayCount + delta);
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->ClearPaths();
 
 	// Restart all devices
-	StartAllRenderThreads();
+	if (wasRunning)
+		StartAllRenderThreadsLockless();
 }
 
 void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCPUs, const bool useGPUs,
@@ -290,18 +309,38 @@ void RenderingConfig::SetUpNativeDevices(const unsigned int nativeThreadCount) {
 }
 
 void RenderingConfig::StartAllRenderThreads() {
-	ctx->Start();
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
+	StartAllRenderThreadsLockless();
 }
 
 void RenderingConfig::StopAllRenderThreads() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	ctx->Interrupt();
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
-	ctx->Stop();
+	StopAllRenderThreadsLockless();
+}
+
+void RenderingConfig::StartAllRenderThreadsLockless() {
+	if (!renderThreadsStarted) {
+		ctx->Start();
+
+		for (size_t i = 0; i < renderThreads.size(); ++i)
+			renderThreads[i]->Start();
+
+		renderThreadsStarted = true;
+	}
+}
+
+void RenderingConfig::StopAllRenderThreadsLockless() {
+	if (renderThreadsStarted) {
+		for (size_t i = 0; i < renderThreads.size(); ++i)
+			renderThreads[i]->Interrupt();
+		ctx->Interrupt();
+
+		for (size_t i = 0; i < renderThreads.size(); ++i)
+			renderThreads[i]->Stop();
+		ctx->Stop();
+
+		renderThreadsStarted = false;
+	}
 }

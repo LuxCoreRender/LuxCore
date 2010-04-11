@@ -57,6 +57,7 @@ public:
 	void Start();
 	void Interrupt();
 	void Stop();
+	bool IsRunning() const { return started; }
 
 	bool HasDebugHandler() const { return debugHandler != NULL; }
 	void PrintDebugMsg(const char *msg) const {

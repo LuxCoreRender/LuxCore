@@ -33,6 +33,7 @@
 #include "displayfunc.h"
 #include "renderconfig.h"
 #include "path.h"
+#include "telnet.h"
 #include "luxrays/core/device.h"
 
 #if defined(__GNUC__)
@@ -159,11 +160,13 @@ int main(int argc, char *argv[]) {
 				" -b <enable high latency mode>" << std::endl <<
 				" -s [GPU workgroup size]" << std::endl <<
 				" -t [halt time in secs]" << std::endl <<
+				" -T <start the telnet server" << std::endl <<
 				" -D [property name] [property value]" << std::endl <<
 				" -d [current directory path]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		bool batchMode = false;
+		bool telnetServerEnabled = false;
 		Properties cmdLineProp;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
@@ -195,6 +198,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 's') cmdLineProp.SetString("opencl.gpu.workgroup.size", argv[++i]);
 
 				else if (argv[i][1] == 't') cmdLineProp.SetString("batch.halttime", argv[++i]);
+
+				else if (argv[i][1] == 'T') telnetServerEnabled = true;
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);
@@ -241,7 +246,12 @@ int main(int argc, char *argv[]) {
 			InitGlut(argc, argv, width, height);
 
 			config->Init();
-			RunGlut();
+
+			if (telnetServerEnabled) {
+				TelnetServer telnetServer(18081, config);
+				RunGlut();
+			} else
+				RunGlut();
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
