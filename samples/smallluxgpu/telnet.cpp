@@ -80,8 +80,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "exit - close the connection\n";
 						respStream << "get <property name> - return the value of a (supported) property\n";
 						respStream << "help - this help\n";
-						respStream << "renderstart - start the rendering\n";
-						respStream << "renderstop - stop the rendering\n";
+						respStream << "help.get - print the list of get supported properties\n";
+						respStream << "help.set - print the list of set supported properties\n";
+						respStream << "image.save - save the renderingimage\n";
+						respStream << "render.start - start the rendering\n";
+						respStream << "render.stop - stop the rendering\n";
+						respStream << "set <property name> <values>- set the value of a (supported) property\n";
 						respStream << "OK\n";
 					    boost::asio::write(socket, response);
 					} else if (command == "get") {
@@ -99,20 +103,61 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									<< t.x << " " << t.y << " " << t.z << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
+						} else if (property == "image.filename") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							respStream << telnetServer->config->cfg.GetString("image.filename", "image.png") << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 							cerr << "[Telnet server] Unknown property: " << property << endl;
 						}
-					} else if (command == "renderstop") {
-						if (state == RUN)
-							telnetServer->config->StopAllRenderThreads();
-						state = STOP;
-						boost::asio::write(socket, boost::asio::buffer("OK\n", 6));
-					} else if (command == "renderstart") {
+					} else if (command == "help.get") {
+						boost::asio::streambuf response;
+						std::ostream respStream(&response);
+						respStream << "image.filename\n";
+						respStream << "scene.camera.lookat\n";
+						respStream << "OK\n";
+						boost::asio::write(socket, response);
+					} else if (command == "help.set") {
+						boost::asio::streambuf response;
+						std::ostream respStream(&response);
+						respStream << "image.filename\n";
+						respStream << "OK\n";
+						boost::asio::write(socket, response);
+					} else if (command == "image.save") {
+						std::string fileName = telnetServer->config->cfg.GetString("image.filename", "image.png");
+						telnetServer->config->scene->camera->film->Save(fileName);
+						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+					} else if (command == "render.start") {
 						if (state == STOP)
 							telnetServer->config->StartAllRenderThreads();
 						state = RUN;
-						boost::asio::write(socket, boost::asio::buffer("OK\n", 6));
+						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+					} else if (command == "render.stop") {
+						if (state == RUN)
+							telnetServer->config->StopAllRenderThreads();
+						state = STOP;
+						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+					} else if (command == "set") {
+						// Get the name of the property to set
+						string property;
+						commandStream >> property;
+
+						// Check if is one of the supported properties
+						if (property == "image.filename") {
+							// Get the image file name
+							string fileName;
+							commandStream >> fileName;
+
+							telnetServer->config->cfg.SetString("image.filename", fileName);
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
+						} else {
+							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+							cerr << "[Telnet server] Unknown property: " << property << endl;
+						}
 					} else {
 						boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 						cerr << "[Telnet server] Unknown command" << endl;
