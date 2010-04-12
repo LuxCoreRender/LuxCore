@@ -70,8 +70,10 @@ private:
 class RandomSampler : public Sampler {
 public:
 	RandomSampler(const bool lowLat, unsigned long startSeed,
-			const unsigned width, const unsigned height, const unsigned startLine = 0) :
-		seed(startSeed), screenStartLine(startLine), lowLatency(lowLat) {
+			const unsigned width, const unsigned height, const unsigned int spp,
+			const unsigned startLine = 0) :
+		seed(startSeed), samplePerPixel(spp), samplePerPixel2(spp * spp),
+		screenStartLine(startLine), lowLatency(lowLat) {
 		rndGen = new RandomGenerator();
 
 		Init(width, height, screenStartLine);
@@ -98,7 +100,10 @@ public:
 	void GetNextSample(Sample *sample) {
 		 if (!lowLatency || (pass >= 64)) {
 			// In order to improve ray coherency
-			 GetNextSample4x4(sample);
+			 if (samplePerPixel == 1)
+				GetNextSample1x1(sample);
+			 else
+				 GetNextSampleNxN(sample);
 		} else if (previewOver || (pass >= 32)) {
 			GetNextSample1x1(sample);
 		} else {
@@ -122,15 +127,15 @@ private:
 			previewOver = true;
 	}
 
-	void GetNextSample4x4(Sample *sample) {
-		const unsigned int stepX = currentSubSampleIndex % 4;
-		const unsigned int stepY = currentSubSampleIndex / 4;
+	void GetNextSampleNxN(Sample *sample) {
+		const unsigned int stepX = currentSubSampleIndex % samplePerPixel;
+		const unsigned int stepY = currentSubSampleIndex / samplePerPixel;
 
 		unsigned int scrX = currentSampleScreenX;
 		unsigned int scrY = currentSampleScreenY;
 
 		currentSubSampleIndex++;
-		if (currentSubSampleIndex == 16) {
+		if (currentSubSampleIndex == samplePerPixel2) {
 			currentSubSampleIndex = 0;
 			currentSampleScreenX++;
 			if (currentSampleScreenX  >= screenWidth) {
@@ -139,13 +144,13 @@ private:
 
 				if (currentSampleScreenY >= screenHeight) {
 					currentSampleScreenY = 0;
-					pass += 16;
+					pass += samplePerPixel2;
 				}
 			}
 		}
 
-		const float r1 = (stepX + rndGen->floatValue()) / 4.f - .5f;
-		const float r2 = (stepY + rndGen->floatValue()) / 4.f - .5f;
+		const float r1 = (stepX + rndGen->floatValue()) / samplePerPixel - .5f;
+		const float r2 = (stepY + rndGen->floatValue()) / samplePerPixel - .5f;
 
 		sample->Init(this,
 				scrX + r1, scrY + r2,
@@ -215,8 +220,10 @@ private:
 
 
 	RandomGenerator *rndGen;
-	unsigned long seed;
+	const unsigned long seed;
+	const unsigned int samplePerPixel, samplePerPixel2;
 	unsigned int screenWidth, screenHeight, screenStartLine;
+
 	unsigned int currentSampleScreenX, currentSampleScreenY, currentSubSampleIndex;
 	unsigned int pass;
 	double startTime;

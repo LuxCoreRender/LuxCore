@@ -20,7 +20,7 @@
 ###########################################################################
 #
 # SmallLuxGPU v1.5 render engine Blender 2.5 plug-in
-# v0.53
+# v0.54
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
@@ -97,7 +97,20 @@ def slg_properties():
       items=(("0", "ONE_UNIFORM", "ONE_UNIFORM"),
              ("1", "ALL_UNIFORM", "ALL_UNIFORM")),
       default="0")
-  
+
+  EnumProperty(attr="slg_sampleperpixel", name="Sample per pixel",
+      description="Select the desired number of samples per pixel for each pass",
+      items=(("1", "1x1", "1x1"),
+             ("2", "2x2", "2x2"),
+             ("3", "3x3", "3x3"),
+             ("4", "4x4", "4x4"),
+             ("5", "5x5", "5x5"),
+             ("6", "6x6", "6x6"),
+             ("7", "7x7", "7x7"),
+             ("8", "8x8", "8x8"),
+             ("9", "9x9", "9x9")),
+      default="4")
+
   EnumProperty(attr="slg_imageformat", name="Image File Format",
       description="Image file save format, saved with scene files (also Blender intermediary format)", 
       items=(("png", "PNG", "PNG"),
@@ -265,6 +278,9 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.prop(scene, "slg_lightstrategy")
     split = layout.split()
     col = split.column()
+    col.prop(scene, "slg_sampleperpixel")
+    split = layout.split()
+    col = split.column()
     col.prop(scene, "slg_tracedepth", text="Depth")
     col = split.column()
     col.prop(scene, "slg_shadowrays", text="Shadow")
@@ -376,9 +392,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           # Create render mesh
           try:
             print("SLGBP    Create render mesh: {}".format(obj.name))
-            # Change reverted until when newer Blender binaries are available for Linux
-            #mesh = obj.create_mesh(scene, True, 'RENDER')
-            mesh = obj.create_mesh(True, 'RENDER')
+            mesh = obj.create_mesh(scene, True, 'RENDER')
           except:
             pass
           else:
@@ -652,6 +666,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('path.russianroulette.prob = {}\n'.format(scene.slg_rrprob))
     fcfg.write('path.lightstrategy = {}\n'.format(scene.slg_lightstrategy))
     fcfg.write('path.shadowrays = {}\n'.format(scene.slg_shadowrays))
+    fcfg.write('sampler.spp = {}\n'.format(scene.slg_sampleperpixel))
     fcfg.close()
 
     print('SLGBP ===> launch SLG: {} {}/{}/render.cfg'.format(exepath,basepath,basename))

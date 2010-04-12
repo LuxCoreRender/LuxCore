@@ -63,6 +63,7 @@ void RenderingConfig::Init() {
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
+	const unsigned int samplePerPixel = max(1, cfg.GetInt("sampler.spp", 4));
 	luxrays::RAY_EPSILON = cfg.GetFloat("scene.epsilon", luxrays::RAY_EPSILON);
 
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
@@ -155,11 +156,11 @@ void RenderingConfig::Init() {
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (intersectionAllDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
 			NativeRenderThread *t = new NativeRenderThread(i, seedBase, i / (float)renderThreadCount,
-					(NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, lowLatency);
+					samplePerPixel, (NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, lowLatency);
 			renderThreads.push_back(t);
 		} else {
 			DeviceRenderThread *t = new DeviceRenderThread(i, seedBase, i / (float)renderThreadCount,
-					intersectionAllDevices[i], scene, lowLatency);
+					samplePerPixel, intersectionAllDevices[i], scene, lowLatency);
 			renderThreads.push_back(t);
 		}
 	}
