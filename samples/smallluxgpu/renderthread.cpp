@@ -41,7 +41,8 @@ RenderThread::~RenderThread() {
 //------------------------------------------------------------------------------
 
 NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long seedBase,
-		const float samplStart, NativeThreadIntersectionDevice *device,
+		const float samplStart, const unsigned int samplePerPixel,
+		NativeThreadIntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
@@ -59,7 +60,7 @@ NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long 
 			0, scene->camera->film->GetHeight() - 1);
 	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
-		startLine);
+		samplePerPixel, startLine);
 
 	pathIntegrator = new PathIntegrator(scene, sampler, sampleBuffer);
 	rayBuffer = new RayBuffer(rayBufferSize);
@@ -144,7 +145,7 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 //------------------------------------------------------------------------------
 
 DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned long seedBase,
-		const float samplStart, IntersectionDevice *device,
+		const float samplStart,  const unsigned int samplePerPixel, IntersectionDevice *device,
 		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
@@ -164,7 +165,7 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 			0, scene->camera->film->GetHeight() - 1);
 	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
-		startLine);
+		samplePerPixel, startLine);
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		pathIntegrators[i] = new PathIntegrator(scene, sampler, sampleBuffer);
 		rayBuffers[i] = new RayBuffer(rayBufferSize);
