@@ -128,14 +128,24 @@ def slg_properties():
   IntProperty(attr="slg_shadowrays", name="Shadow Rays",
       description="Shadow rays",
       default=1, min=1, max=1024, soft_min=1, soft_max=1024)
-  
+
+  EnumProperty(attr="slg_rrstrategy", name="Russian Roulette Strategy",
+      description="Select the desired russian roulette strategy",
+      items=(("0", "Probability", "Probability"),
+             ("1", "Importance", "Importance")),
+      default="1")
+
   IntProperty(attr="slg_rrdepth", name="Russian Roulette Depth",
       description="Russian roulette depth",
       default=5, min=1, max=1024, soft_min=1, soft_max=1024)
-  
+
   FloatProperty(attr="slg_rrprob", name="Russian Roulette Probability",
       description="Russian roulette probability",
       default=0.75, min=0, max=1, soft_min=0, soft_max=1, precision=3)
+
+  FloatProperty(attr="slg_rrcap", name="Russian Roulette Importance Cap",
+      description="Russian roulette importance cap",
+      default=0.25, min=0.01, max=0.99, soft_min=0.1, soft_max=0.9, precision=3)
 
   # Participating Media properties
   BoolProperty(attr="slg_enablepartmedia", name="Participating Media",
@@ -268,7 +278,6 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.active = scene.slg_export
     col.prop(scene, "slg_vnormals")
     col = split.column()
-    col.active = scene.slg_export
     col.prop(scene, "slg_infinitelightbf")
     split = layout.split()
     col = split.column()
@@ -278,17 +287,23 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.prop(scene, "slg_lightstrategy")
     split = layout.split()
     col = split.column()
-    col.prop(scene, "slg_sampleperpixel")
-    split = layout.split()
-    col = split.column()
     col.prop(scene, "slg_tracedepth", text="Depth")
     col = split.column()
     col.prop(scene, "slg_shadowrays", text="Shadow")
     split = layout.split()
     col = split.column()
+    col.prop(scene, "slg_sampleperpixel")
+    split = layout.split()
+    col = split.column()
+    col.prop(scene, "slg_rrstrategy")
+    split = layout.split()
+    col = split.column()
     col.prop(scene, "slg_rrdepth", text="RR Depth")
     col = split.column()
-    col.prop(scene, "slg_rrprob", text="RR Prob")
+    if scene.slg_rrstrategy == "0":
+        col.prop(scene, "slg_rrprob", text="RR Prob")
+    else:
+        col.prop(scene, "slg_rrcap", text="RR Cap")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_enablepartmedia")
@@ -663,7 +678,12 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('screen.type = {}\n'.format(scene.slg_film_type))
     fcfg.write('path.maxdepth = {}\n'.format(scene.slg_tracedepth))
     fcfg.write('path.russianroulette.depth = {}\n'.format(scene.slg_rrdepth))
-    fcfg.write('path.russianroulette.prob = {}\n'.format(scene.slg_rrprob))
+    if scene.slg_rrstrategy == "0":
+        fcfg.write('path.russianroulette.strategy = 0\n')
+        fcfg.write('path.russianroulette.prob = {}\n'.format(scene.slg_rrprob))
+    else:
+        fcfg.write('path.russianroulette.strategy = 1\n')
+        fcfg.write('path.russianroulette.cap = {}\n'.format(scene.slg_rrcap))
     fcfg.write('path.lightstrategy = {}\n'.format(scene.slg_lightstrategy))
     fcfg.write('path.shadowrays = {}\n'.format(scene.slg_shadowrays))
     fcfg.write('sampler.spp = {}\n'.format(scene.slg_sampleperpixel))
