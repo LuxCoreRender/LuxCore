@@ -368,7 +368,9 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
   bl_label = "SmallLuxGPU"
   
   def _slgexport(self, scene, uv_flag, vc_flag, vn_flag, export, basepath, basename):
-    from mathutils import Vector
+    # Depends on Blender version used
+    from Mathutils import Vector
+    #from mathutils import Vector
     from itertools import zip_longest
 
     ff = lambda f:format(f,'.6f').rstrip('0')
@@ -563,8 +565,11 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
               fscn.write('scene.objects.{}.{}.texmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texmap.texture.image.filename).replace('\\','/')))
             texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
             if texbump:
-              fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
-              fscn.write('scene.objects.{}.{}.bumpmap.scale = {}\n'.format(mat,mat,texbump.normal_factor))
+              if texbump.texture.normal_map:
+                fscn.write('scene.objects.{}.{}.normalmap =\ {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
+              else:
+                fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
+                fscn.write('scene.objects.{}.{}.bumpmap.scale = {}\n'.format(mat,mat,texbump.normal_factor))
         if export or mats[i] in mfp:
           # Write out PLY
           fply = open('{}/{}.ply'.format(sdir,mat), 'wb')
