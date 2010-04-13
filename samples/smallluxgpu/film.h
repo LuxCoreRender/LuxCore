@@ -25,10 +25,7 @@
 #include <cstddef>
 #include <cmath>
 
-#include <ImfOutputFile.h>
-#include <ImfChannelList.h>
-#include <ImfFrameBuffer.h>
-#include <png.h>
+#include <FreeImage.h>
 #include <boost/thread/mutex.hpp>
 
 #include "smalllux.h"
@@ -199,119 +196,77 @@ public:
 
 	virtual void Save(const string &fileName) {
 		std::cerr << "Saving " << fileName << std::endl;
-		if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".png")) {
-			std::cerr << "Using PNG file format" << std::endl;
-			SavePNG(fileName);
-		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".ppm")) {
-			std::cerr << "Using PPM file format" << std::endl;
-			SavePPM(fileName);
-		} else if ((fileName.length() >= 4) && (fileName.substr(fileName.length()-4) == ".exr")) {
-			std::cerr << "Using EXR file format" << std::endl;
-			SaveEXR(fileName);
-		} else {
-			std::cerr << "Unknown image format extension, using PNG" << std::endl;
-			SavePNG(fileName);
-		}
-	}
 
-	virtual void SavePPM(const string &fileName) {
-		const float *pixels = GetScreenBuffer();
 
-		ofstream file;
-		file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
-		file.open(fileName.c_str(), ios::out);
+		FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fileName.c_str());
+		if (fif != FIF_UNKNOWN) {
+			if ((fif == FIF_HDR) || (fif == FIF_EXR)) {
+				FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
 
-		file << "P3\n" << width << " " << height << "\n255\n";
+				if (dib) {
+					unsigned int pitch = FreeImage_GetPitch(dib);
+					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+					const Spectrum *radiance = GetPixelRadiance();
+					const float *weights = GetPixelWeigth();
 
-		for (unsigned int y = 0; y < height; ++y) {
-			for (unsigned int x = 0; x < width; ++x) {
-				const int offset = 3 * (x + (height - y - 1) * width);
-				const int r = (int)(pixels[offset] * 255.f + .5f);
-				const int g = (int)(pixels[offset + 1] * 255.f + .5f);
-				const int b = (int)(pixels[offset + 2] * 255.f + .5f);
+					for (unsigned int y = 0; y < height; ++y) {
+						FIRGBF *pixel = (FIRGBF *)bits;
+						for (unsigned int x = 0; x < width; ++x) {
+							const unsigned int ridx = y * width + x;
+							const float weight = weights[ridx];
 
-				file << r << " " << g << " " << b << " ";
+							if (weight == 0.f) {
+								pixel[x].red = 0.f;
+								pixel[x].green = 0.f;
+								pixel[x].blue = 0.f;
+							} else {
+								pixel[x].red = radiance[ridx].r / weight;
+								pixel[x].green =  radiance[ridx].g / weight;
+								pixel[x].blue =  radiance[ridx].b / weight;
+							}
+						}
+
+						// Next line
+						bits += pitch;
+					}
+
+					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+						cerr << "Failed image save: " << fileName << endl;
+
+					FreeImage_Unload(dib);
+				} else
+					cerr << "Unable to allocate FreeImage HDR image: " << fileName << endl;
+			} else {
+				FIBITMAP *dib = FreeImage_Allocate(width, height, 24);
+
+				if (dib) {
+					unsigned int pitch = FreeImage_GetPitch(dib);
+					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+					const float *pixels = GetScreenBuffer();
+
+					for (unsigned int y = 0; y < height; ++y) {
+						BYTE *pixel = (BYTE *)bits;
+						for (unsigned int x = 0; x < width; ++x) {
+							const int offset = 3 * (x + y * width);
+							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
+							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
+							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
+							pixel += 3;
+						}
+
+						// Next line
+						bits += pitch;
+					}
+
+					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+						cerr << "Failed image save: " << fileName << endl;
+
+					FreeImage_Unload(dib);
+				} else
+					cerr << "Unable to allocate FreeImage image: " << fileName << endl;
 			}
-		}
-
-		file.close();
-	}
-
-	virtual void SavePNG(const string &fileName) {
-		const float *pixels = GetScreenBuffer();
-
-		FILE *fp = fopen(fileName.c_str(), "wb");
-
-		png_byte color_type = PNG_COLOR_TYPE_RGB;
-		png_byte bit_depth = 16;
-		png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-		png_infop info_ptr = png_create_info_struct(png_ptr);
-		png_init_io(png_ptr, fp);
-
-		png_set_IHDR(png_ptr, info_ptr, width, height,
-				bit_depth, color_type, PNG_INTERLACE_NONE,
-				PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-		png_write_info(png_ptr, info_ptr);
-
-		std::vector<png_uint_16> row(width * 4);
-
-		for (unsigned int y = 0; y < height; ++y) {
-			int i = 0;
-
-			for (unsigned int x = 0; x < width; ++x) {
-				const int offset = 3 * (x + (height - y - 1) * width);
-
-				png_uint_16 r = static_cast<png_uint_16>(pixels[offset]*255.0f + .5f);
-				png_uint_16 g = static_cast<png_uint_16>(pixels[offset + 1]*255.0f + .5f);
-				png_uint_16 b = static_cast<png_uint_16>(pixels[offset + 2]*255.0f + .5f);
-
-				row[i++] = r;
-				row[i++] = g;
-				row[i++] = b;
-			}
-
-			png_write_row(png_ptr, reinterpret_cast<png_bytep> (&row[0]));
-		}
-
-		png_write_end(png_ptr, NULL);
-		fclose(fp);
-	}
-
-	virtual void SaveEXR(const string &fileName) {
-		Imf::Header header(width, height);
-		header.compression() = Imf::ZIP_COMPRESSION;
-		header.channels().insert("R", Imf::Channel(Imf::FLOAT));
-		header.channels().insert("G", Imf::Channel(Imf::FLOAT));
-		header.channels().insert("B", Imf::Channel(Imf::FLOAT));
-
-		Spectrum *rgb = new Spectrum[width * height];
-		const Spectrum *radiance = GetPixelRadiance();
-		const float *weights = GetPixelWeigth();
-		for (unsigned int y = 0; y < height; ++y) {
-			for (unsigned int x = 0; x < width; ++x) {
-				const unsigned int ridx = (height - y - 1) * width + x;
-				const unsigned int idx = y * width + x;
-				const float weight = weights[ridx];
-
-				if (weight == 0.f)
-					rgb[idx] = Spectrum();
-				else
-					rgb[idx] = radiance[ridx] / weight;
-			}
-		}
-
-		Imf::FrameBuffer fb;
-		float *frgb = (float *)&rgb[0];
-		fb.insert("R", Imf::Slice(Imf::FLOAT, (char *)(frgb), sizeof(Spectrum), width * sizeof(Spectrum)));
-		fb.insert("G", Imf::Slice(Imf::FLOAT, (char *)(frgb) + sizeof(float), sizeof(Spectrum), width * sizeof(Spectrum)));
-		fb.insert("B", Imf::Slice(Imf::FLOAT, (char *)(frgb) + 2 * sizeof(float), sizeof(Spectrum), width * sizeof(Spectrum)));
-
-		Imf::OutputFile file(fileName.c_str(), header);
-		file.setFrameBuffer(fb);
-		file.writePixels(height);
-
-		delete[] rgb;
+		} else
+			cerr << "Image type unknown: " << fileName << endl;
 	}
 
 protected:
@@ -423,28 +378,13 @@ public:
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
-	void SavePPM(const string &fileName) {
+	void Save(const string &fileName) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		// Update pixels
 		UpdateScreenBufferImpl();
 
-		Film::SavePPM(fileName);
-	}
-
-	void SavePNG(const string &fileName) {
-		boost::mutex::scoped_lock lock(radianceMutex);
-
-		// Update pixels
-		UpdateScreenBufferImpl();
-
-		Film::SavePNG(fileName);
-	}
-
-	void SaveEXR(const string &fileName) {
-		boost::mutex::scoped_lock lock(radianceMutex);
-
-		Film::SaveEXR(fileName);
+		Film::Save(fileName);
 	}
 
 protected:
@@ -652,28 +592,13 @@ public:
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
-	void SavePPM(const string &fileName) {
+	void Save(const string &fileName) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		// Update pixels
 		UpdateScreenBufferImpl();
 
-		Film::SavePPM(fileName);
-	}
-
-	void SavePNG(const string &fileName) {
-		boost::mutex::scoped_lock lock(radianceMutex);
-
-		// Update pixels
-		UpdateScreenBufferImpl();
-
-		Film::SavePNG(fileName);
-	}
-
-	void SaveEXR(const string &fileName) {
-		boost::mutex::scoped_lock lock(radianceMutex);
-
-		Film::SaveEXR(fileName);
+		Film::Save(fileName);
 	}
 
 protected:

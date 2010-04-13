@@ -28,5 +28,6 @@ A special thanks goes to:
 - libPNG authors http://www.libpng.org;
 - zlib authors http://www.zlib.net/;
 - OpenEXR authors http://www.openexr.com/;
+- FreeImage open source image library. See http://freeimage.sourceforge.net for details.
 
 This software is release under GPL License (see COPYING.txt file).

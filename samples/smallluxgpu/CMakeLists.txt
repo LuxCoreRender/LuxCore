@@ -46,4 +46,4 @@ set(SMALLLUXGPU_SRCS
 	volume.cpp)
 
 add_executable(slg ${SMALLLUXGPU_SRCS})
-target_link_libraries(slg luxrays ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${PNG_LIBRARIES} ${OPENEXR_LIBRARIES})
+target_link_libraries(slg luxrays ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${GLUT_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
