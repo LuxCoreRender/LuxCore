@@ -566,7 +566,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
             texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
             if texbump:
               if texbump.texture.normal_map:
-                fscn.write('scene.objects.{}.{}.normalmap =\ {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
+                fscn.write('scene.objects.{}.{}.normalmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
               else:
                 fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
                 fscn.write('scene.objects.{}.{}.bumpmap.scale = {}\n'.format(mat,mat,texbump.normal_factor))
