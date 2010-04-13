@@ -30,6 +30,8 @@
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 
+#include <FreeImage.h>
+
 #include "displayfunc.h"
 #include "renderconfig.h"
 #include "path.h"
@@ -78,6 +80,15 @@ void SLGTerminate(void) {
 	free(strings);
 }
 #endif
+
+void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
+	printf("\n*** ");
+	if(fif != FIF_UNKNOWN)
+		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
+
+	printf("%s", message);
+	printf(" ***\n");
+}
 
 static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double startTime = WallClockTime();
@@ -151,6 +162,10 @@ int main(int argc, char *argv[]) {
 				" -D [property name] [property value]" << std::endl <<
 				" -d [current directory path]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
+
+		// Initialize FreeImage Library
+		FreeImage_Initialise(TRUE);
+		FreeImage_SetOutputMessage(FreeImageErrorHandler);
 
 		bool batchMode = false;
 		bool telnetServerEnabled = true;

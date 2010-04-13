@@ -19,139 +19,97 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <ImfRgbaFile.h>
-#include <ImfArray.h>
-#include <ImathBox.h>
-
-#include <png.h>
+#include <FreeImage.h>
 
 #include "texmap.h"
 
 using namespace std;
 
 TextureMap::TextureMap(const string &fileName) {
-	// Check if it is a EXR or PNG texture
-	if ((fileName.length() >= 4) && (fileName.substr(fileName.length() - 4) == ".exr")) {
-		// Read the EXR file
-		cerr << "Reading HDR texture map: " << fileName << endl;
-		Imf::RgbaInputFile file(fileName.c_str());
+	cerr << "Reading texture map: " << fileName << endl;
 
-		Imath::Box2i dw = file.dataWindow();
-		width = dw.max.x - dw.min.x + 1;
-		height = dw.max.y - dw.min.y + 1;
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(fileName.c_str(), 0);
+	if(fif == FIF_UNKNOWN)
+		fif = FreeImage_GetFIFFromFilename(fileName.c_str());
 
-		Imf::Array2D<Imf::Rgba> img;
-		img.resizeErase(height, width);
-		file.setFrameBuffer(&img[0][0] - dw.min.x - dw.min.y * width, 1, width);
-		file.readPixels(dw.min.y, dw.max.y);
+	if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
+		FIBITMAP *dib = FreeImage_Load(fif, fileName.c_str(), 0);
 
-		cerr << "HDR texture map size: " << width << "x" << height << " (" << width * height *sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
-		pixels = new Spectrum[width * height];
-		for (unsigned int y = 0; y < height; ++y) {
-			for (unsigned int x = 0; x < width; ++x) {
-				const unsigned int idx = y * width + x;
+		if (!dib)
+			throw runtime_error("Unable to read texture map: " + fileName);
 
-				pixels[idx].r = img[y][x].r;
-				pixels[idx].g = img[y][x].g;
-				pixels[idx].b = img[y][x].b;
-			}
-		}
-		alpha = NULL;
-	} else {
-		// Load the png file
-		cerr << "Reading PNG texture map: " << fileName << endl;
+		width = FreeImage_GetWidth(dib);
+		height = FreeImage_GetHeight(dib);
 
-		png_byte header[8];
-		FILE *file = fopen(fileName.c_str(), "rb");
-		if (!file)
-			throw runtime_error("Unable to open texture map file: " + fileName);
+		unsigned int pitch = FreeImage_GetPitch(dib);
+		FREE_IMAGE_TYPE imageType = FreeImage_GetImageType(dib);
+		unsigned int bpp = FreeImage_GetBPP(dib);
+		BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 
-		if (!fread(header, 1, 8, file))
-			throw runtime_error("Error reading the texture map file: " + fileName);
-		if (png_sig_cmp(header, 0, 8))
-			throw runtime_error("Texture map file isn't in PNG format: " + fileName);
-
-		png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-		png_infop info = png_create_info_struct(png);
-
-		png_init_io(png, file);
-		png_set_sig_bytes(png, 8);
-
-		png_read_info(png, info);
-
-		width = info->width;
-		height = info->height;
-
-		if (info->color_type == PNG_COLOR_TYPE_RGB) {
-			// RGB PNG file
-			cerr << "PNG RGB texture map size: " << width << "x" << height << " (" <<
+		if ((imageType == FIT_RGBF) && (bpp == 96)) {
+			cerr << "HDR RGB texture map size: " << width << "x" << height << " (" <<
 					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
-
-			png_read_update_info(png, info);
-
-			png_bytep *byteImage = new png_bytep[sizeof(png_bytep) * height];
-			for (unsigned int y = 0; y < height; y++)
-				byteImage[y] = new png_byte[info->rowbytes];
-
-			png_read_image(png, byteImage);
-			fclose(file);
-
 			pixels = new Spectrum[width * height];
-			for (unsigned int y = 0; y < height; y++) {
-				const png_byte *row = byteImage[y];
-
-				for (unsigned int x = 0; x < width; x++) {
-					size_t idx = width * y + x;
-					const png_byte *ptr = &(row[x * 3]);
-
-					pixels[idx].r = ptr[0] / 255.f;
-					pixels[idx].g = ptr[1] / 255.f;
-					pixels[idx].b = ptr[2] / 255.f;
-				}
-			}
-			
-			for (unsigned int y = 0; y < height; y++)
-				delete[] byteImage[y];
-			delete[] byteImage;
-
 			alpha = NULL;
-		} else if (info->color_type == PNG_COLOR_TYPE_RGBA) {
-			// RGBA PNG file
-			cerr << "PNG RGBA texture map size: " << width << "x" << height << " (" <<
+
+			for (unsigned int y = 0; y < height; ++y) {
+				FIRGBF *pixel = (FIRGBF *)bits;
+				for (unsigned int x = 0; x < width; ++x) {
+					const unsigned int offset = x + (height - y - 1) * width;
+					pixels[offset].r = pixel[x].red;
+					pixels[offset].g = pixel[x].green;
+					pixels[offset].b = pixel[x].blue;
+				}
+
+				// Next line
+				bits += pitch;
+			}
+		} else if ((imageType == FIT_BITMAP) && (bpp == 32)) {
+			cerr << "RGBA texture map size: " << width << "x" << height << " (" <<
 					width * height * (sizeof(Spectrum) + sizeof(float)) / 1024 << "Kbytes)" << endl;
-
-			png_read_update_info(png, info);
-
-			png_bytep *byteImage = new png_bytep[sizeof(png_bytep) * height];
-			for (unsigned int y = 0; y < height; y++)
-				byteImage[y] = new png_byte[info->rowbytes];
-
-			png_read_image(png, byteImage);
-			fclose(file);
-
 			const unsigned int pixelCount = width * height;
 			pixels = new Spectrum[pixelCount];
 			alpha = new float[pixelCount];
-			for (unsigned int y = 0; y < height; y++) {
-				const png_byte *row = byteImage[y];
 
-				for (unsigned int x = 0; x < width; x++) {
-					size_t idx = width * y + x;
-					const png_byte *ptr = &(row[x * 4]);
-
-					pixels[idx].r = ptr[0] / 255.f;
-					pixels[idx].g = ptr[1] / 255.f;
-					pixels[idx].b = ptr[2] / 255.f;
-					alpha [idx] = ptr[3] / 255.f;
+			for (unsigned int y = 0; y < height; ++y) {
+				BYTE *pixel = (BYTE *)bits;
+				for (unsigned int x = 0; x < width; ++x) {
+					const unsigned int offset = x + (height - y - 1) * width;
+					pixels[offset].r = pixel[FI_RGBA_RED] / 255.f;
+					pixels[offset].g = pixel[FI_RGBA_GREEN] / 255.f;
+					pixels[offset].b = pixel[FI_RGBA_BLUE] / 255.f;
+					alpha[offset] = pixel[FI_RGBA_ALPHA] / 255.f;
+					pixel += 4;
 				}
-			}
 
-			for (unsigned int y = 0; y < height; y++)
-				delete[] byteImage[y];
-			delete[] byteImage;
+				// Next line
+				bits += pitch;
+			}
+		} else if (FreeImage_GetBPP(dib) == 24) {
+			cerr << "RGB texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
+			pixels = new Spectrum[width * height];
+			alpha = NULL;
+
+			for (unsigned int y = 0; y < height; ++y) {
+				BYTE *pixel = (BYTE *)bits;
+				for (unsigned int x = 0; x < width; ++x) {
+					const unsigned int offest = x + (height - y - 1) * width;
+					pixels[offest].r = pixel[FI_RGBA_RED] / 255.f;
+					pixels[offest].g = pixel[FI_RGBA_GREEN] / 255.f;
+					pixels[offest].b = pixel[FI_RGBA_BLUE] / 255.f;
+					pixel += 3;
+				}
+
+				// Next line
+				bits += pitch;
+			}
 		} else
-			throw runtime_error("Texture map PNG file must be in RGB format");
-	}
+			throw runtime_error("Unsupported bitmap depth in a texture map: " + fileName);
+
+		FreeImage_Unload(dib);
+	} else
+		throw runtime_error("Unknown image file format: " + fileName);
 
 	DuDv.u = 1.f / width;
 	DuDv.v = 1.f / height;
