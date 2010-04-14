@@ -25,7 +25,12 @@
 #include <cstddef>
 #include <cmath>
 
+#if defined (WIN32)
+#include <windows.h>
+#endif
+
 #include <FreeImage.h>
+
 #include <boost/thread/mutex.hpp>
 
 #include "smalllux.h"

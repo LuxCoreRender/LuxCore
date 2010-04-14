@@ -30,8 +30,7 @@
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 
-#include <FreeImage.h>
-
+#include "smalllux.h"
 #include "displayfunc.h"
 #include "renderconfig.h"
 #include "path.h"
