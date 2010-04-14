@@ -32,7 +32,8 @@ class RenderingConfig;
 class Path {
 public:
 	enum PathState {
-		EYE_VERTEX, EYE_VERTEX_VOLUME_STEP, NEXT_VERTEX, ONLY_SHADOW_RAYS
+		EYE_VERTEX, EYE_VERTEX_VOLUME_STEP, NEXT_VERTEX, ONLY_SHADOW_RAYS,
+		TRANSPARENT_SHADOW_RAYS_STEP, TRANSPARENT_ONLY_SHADOW_RAYS_STEP
 	};
 
 	Path(Scene *scene) {
@@ -75,19 +76,23 @@ public:
 		if (((state == EYE_VERTEX) && (1 > leftSpace)) ||
 				((state == EYE_VERTEX_VOLUME_STEP) && (volumeComp->GetRayCount() + 1 > leftSpace)) ||
 				((state == ONLY_SHADOW_RAYS) && (tracedShadowRayCount > leftSpace)) ||
+				((state == TRANSPARENT_SHADOW_RAYS_STEP) && (tracedShadowRayCount > leftSpace)) ||
+				((state == TRANSPARENT_ONLY_SHADOW_RAYS_STEP) && (tracedShadowRayCount > leftSpace)) ||
 				((state == NEXT_VERTEX) && (tracedShadowRayCount + 1 > leftSpace)))
 			return false;
 
 		if (state == EYE_VERTEX_VOLUME_STEP) {
 			volumeComp->AddRays(rayBuffer);
-		} else {
-			if (state != ONLY_SHADOW_RAYS)
-				currentPathRayIndex = rayBuffer->AddRay(pathRay);
+			return true;
+		}
 
-			if ((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS)) {
-				for (unsigned int i = 0; i < tracedShadowRayCount; ++i)
-					currentShadowRayIndex[i] = rayBuffer->AddRay(shadowRay[i]);
-			}
+		if ((state == EYE_VERTEX) || (state == NEXT_VERTEX))
+			currentPathRayIndex = rayBuffer->AddRay(pathRay);
+
+		if ((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS) ||
+				(state == TRANSPARENT_SHADOW_RAYS_STEP) || (state == TRANSPARENT_ONLY_SHADOW_RAYS_STEP)) {
+			for (unsigned int i = 0; i < tracedShadowRayCount; ++i)
+				currentShadowRayIndex[i] = rayBuffer->AddRay(shadowRay[i]);
 		}
 
 		return true;
@@ -95,49 +100,140 @@ public:
 
 	void AdvancePath(Scene *scene, Sampler *sampler, const RayBuffer *rayBuffer,
 			SampleBuffer *sampleBuffer) {
+		//----------------------------------------------------------------------
 		// Select the path ray hit
-		const RayHit *rayHit;
-		if ((state == EYE_VERTEX) && scene->volumeIntegrator) {
-			rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
+		//----------------------------------------------------------------------
 
-			// Use Russian Roulette to check if I have to do participating media computation or not
-			if (sample.GetLazyValue() <= scene->volumeIntegrator->GetRRProbability()) {
-				Ray volumeRay(pathRay.o, pathRay.d, 0.f, (rayHit->index == 0xffffffffu) ? std::numeric_limits<float>::infinity() : rayHit->t);
-				scene->volumeIntegrator->GenerateLiRays(scene, &sample, volumeRay, volumeComp);
-				radiance += volumeComp->GetEmittedLight();
+		const RayHit *rayHit = NULL;
+		switch (state) {
+			case EYE_VERTEX:
+				if (scene->volumeIntegrator) {
+					rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
 
-				if (volumeComp->GetRayCount() > 0) {
-					// Do the EYE_VERTEX_VOLUME_STEP
-					state = EYE_VERTEX_VOLUME_STEP;
-					eyeHit = *(rayBuffer->GetRayHit(currentPathRayIndex));
-					return;
-				}
-			}
-		} else if (state == EYE_VERTEX_VOLUME_STEP) {
-			// Add scattered light
-			radiance += throughput * volumeComp->CollectResults(rayBuffer) / scene->volumeIntegrator->GetRRProbability();
+					// Use Russian Roulette to check if I have to do participating media computation or not
+					if (sample.GetLazyValue() <= scene->volumeIntegrator->GetRRProbability()) {
+						Ray volumeRay(pathRay.o, pathRay.d, 0.f, (rayHit->index == 0xffffffffu) ? std::numeric_limits<float>::infinity() : rayHit->t);
+						scene->volumeIntegrator->GenerateLiRays(scene, &sample, volumeRay, volumeComp);
+						radiance += volumeComp->GetEmittedLight();
 
-			rayHit = &eyeHit;
-		} else
-			rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
+						if (volumeComp->GetRayCount() > 0) {
+							// Do the EYE_VERTEX_VOLUME_STEP
+							state = EYE_VERTEX_VOLUME_STEP;
+							eyeHit = *(rayBuffer->GetRayHit(currentPathRayIndex));
+							return;
+						}
+					}
+				} else
+					rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
+				break;
+			case NEXT_VERTEX:
+				rayHit = rayBuffer->GetRayHit(currentPathRayIndex);
+				break;
+			case EYE_VERTEX_VOLUME_STEP:
+				// Add scattered light
+				radiance += throughput * volumeComp->CollectResults(rayBuffer) / scene->volumeIntegrator->GetRRProbability();
 
+				rayHit = &eyeHit;
+				break;
+			case TRANSPARENT_SHADOW_RAYS_STEP:
+				rayHit = &eyeHit;
+				break;
+			case TRANSPARENT_ONLY_SHADOW_RAYS_STEP:
+			case ONLY_SHADOW_RAYS:
+				// Nothing
+				break;
+			default:
+				assert (false);
+				break;
+		}
+
+		//----------------------------------------------------------------------
 		// Finish direct light sampling
-		if (((state == NEXT_VERTEX) || (state == ONLY_SHADOW_RAYS)) && (tracedShadowRayCount > 0)) {
+		//----------------------------------------------------------------------
+
+		if (((state == NEXT_VERTEX) ||
+				(state == ONLY_SHADOW_RAYS) ||
+				(state == TRANSPARENT_SHADOW_RAYS_STEP) ||
+				(state == TRANSPARENT_ONLY_SHADOW_RAYS_STEP)) &&
+				(tracedShadowRayCount > 0)) {
+			unsigned int leftShadowRaysToTrace = 0;
 			for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
 				const RayHit *shadowRayHit = rayBuffer->GetRayHit(currentShadowRayIndex[i]);
-				if (shadowRayHit->index == 0xffffffffu) {
+				if (shadowRayHit->Miss()) {
 					// Nothing was hit, light is visible
 					radiance += lightColor[i] / lightPdf[i];
+				} else {
+					// Something was hit check if it is transparent
+					const unsigned int currentShadowTriangleIndex = shadowRayHit->index;
+					Material *triMat = scene->triangleMaterials[currentShadowTriangleIndex];
+
+					if (triMat->IsShadowTransparent()) {
+						// It is shadow transparent, I need to continue to trace the ray
+						shadowRay[leftShadowRaysToTrace] = Ray(
+								shadowRay[i](shadowRayHit->t),
+								shadowRay[i].d,
+								shadowRay[i].mint,
+								shadowRay[i].maxt - shadowRayHit->t);
+
+						lightColor[leftShadowRaysToTrace] = lightColor[i] * triMat->GetSahdowTransparency();
+						lightPdf[leftShadowRaysToTrace] = lightPdf[i];
+						leftShadowRaysToTrace++;
+					} else {
+						// Check if there is a texture with alpha
+						TexMapInstance *tm = scene->triangleTexMaps[currentShadowTriangleIndex];
+
+						if (tm) {
+							const TextureMap *map = tm->GetTexMap();
+
+							if (map->HasAlpha()) {
+								const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentShadowTriangleIndex)];
+								const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentShadowTriangleIndex)];
+								const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), shadowRayHit->b1, shadowRayHit->b2);
+
+								const float alpha = map->GetAlpha(triUV);
+
+								if (alpha < 1.f) {
+									// It is shadow transparent, I need to continue to trace the ray
+									shadowRay[leftShadowRaysToTrace] = Ray(
+											shadowRay[i](shadowRayHit->t),
+											shadowRay[i].d,
+											shadowRay[i].mint,
+											shadowRay[i].maxt - shadowRayHit->t);
+
+									lightColor[leftShadowRaysToTrace] = lightColor[i] * alpha;
+									lightPdf[leftShadowRaysToTrace] = lightPdf[i];
+									leftShadowRaysToTrace++;
+								}
+							}
+						}
+					}
 				}
+			}
+
+			if (leftShadowRaysToTrace > 0) {
+				tracedShadowRayCount = leftShadowRaysToTrace;
+				 if ((state == ONLY_SHADOW_RAYS) || (state == TRANSPARENT_ONLY_SHADOW_RAYS_STEP))
+					state = TRANSPARENT_ONLY_SHADOW_RAYS_STEP;
+				 else {
+					 eyeHit = *rayHit;
+					 state = TRANSPARENT_SHADOW_RAYS_STEP;
+				 }
+
+				 return;
 			}
 		}
 
+		//----------------------------------------------------------------------
 		// Calculate next step
+		//----------------------------------------------------------------------
+
 		depth++;
 
-		const bool missed = (rayHit->index == 0xffffffffu);
-
-		if (missed || (state == ONLY_SHADOW_RAYS) || (depth >= scene->maxPathDepth)) {
+		const bool missed = rayHit ? rayHit->Miss() : false;
+		if (missed ||
+				(state == ONLY_SHADOW_RAYS) ||
+				(state == TRANSPARENT_ONLY_SHADOW_RAYS_STEP) ||
+				(depth >= scene->maxPathDepth)) {
 			if (missed && scene->infiniteLight && (scene->useInfiniteLightBruteForce || specularBounce)) {
 				// Add the light emitted by the infinite light
 				radiance += scene->infiniteLight->Le(pathRay.d) * throughput;
@@ -215,7 +311,7 @@ public:
 					const float alpha = map->GetAlpha(triUV);
 
 					if ((alpha == 0.0f) || ((alpha < 1.f) && (sample.GetLazyValue() > alpha))) {
-						pathRay = Ray(pathRay(rayHit->t + RAY_EPSILON), pathRay.d);
+						pathRay = Ray(pathRay(rayHit->t), pathRay.d);
 						state = NEXT_VERTEX;
 						tracedShadowRayCount = 0;
 						return;

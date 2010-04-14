@@ -35,6 +35,11 @@ public:
 	virtual bool IsLightSource() const = 0;
 	virtual bool IsDiffuse() const = 0;
 	virtual bool IsSpecular() const = 0;
+	virtual bool IsShadowTransparent() const { return false; }
+
+	virtual Spectrum GetSahdowTransparency() const {
+		throw std::runtime_error("Internal error, called Material::GetSahdowTransparency()");
+	}
 };
 
 class LightMaterial : public Material {
@@ -384,6 +389,77 @@ private:
 	MatteMaterial matte;
 	MetalMaterial metal;
 	float matteFilter, metalFilter, totFilter, mattePdf, metalPdf;
+};
+
+class ArchGlassMaterial : public SurfaceMaterial {
+public:
+	ArchGlassMaterial(const Spectrum &refl, const Spectrum &refrct,
+			bool reflSpecularBounce, bool transSpecularBounce) {
+		Krefl = refl;
+		Ktrans = refrct;
+
+		reflectionSpecularBounce = reflSpecularBounce;
+		transmitionSpecularBounce = transSpecularBounce;
+
+		reflFilter = Krefl.Filter();
+		transFilter = Ktrans.Filter();
+		totFilter = reflFilter + transFilter;
+
+		reflPdf = reflFilter / totFilter;
+		transPdf = transFilter / totFilter;
+	}
+
+	bool IsDiffuse() const { return false; }
+	bool IsSpecular() const { return true; }
+	bool IsShadowTransparent() const { return true; }
+
+	Spectrum GetSahdowTransparency() const {
+		return Ktrans;
+	}
+
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
+		throw std::runtime_error("Internal error, called ArchGlassMaterial::f()");
+	}
+
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
+		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		// Ray from outside going in ?
+		const bool into = (Dot(N, shadeN) > 0);
+
+		if (!into) {
+			// No internal reflections
+			(*wi) = -wo;
+			*pdf = 1.f;
+			specularBounce = reflectionSpecularBounce;
+
+			return Ktrans;
+		} else {
+			// RR to choose if reflect the ray or go trough the glass
+			const float comp = u0 * totFilter;
+			if (comp > transFilter) {
+				const Vector mwo = -wo;
+				(*wi) = mwo - (2.f * Dot(N, mwo)) * Vector(N);
+				*pdf = reflPdf;
+				specularBounce = reflectionSpecularBounce;
+
+				return Krefl;
+			} else {
+				(*wi) = -wo;
+				*pdf = transPdf;
+				specularBounce = transmitionSpecularBounce;
+
+				return Ktrans;
+			}
+		}
+	}
+
+	const Spectrum &GetKrefl() const { return Krefl; }
+	const Spectrum &GetKrefrct() const { return Ktrans; }
+
+private:
+	Spectrum Krefl, Ktrans;
+	float reflFilter, transFilter, totFilter, reflPdf, transPdf;
+	bool reflectionSpecularBounce, transmitionSpecularBounce;
 };
 
 #endif	/* _MATERIAL_H */
