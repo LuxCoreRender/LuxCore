@@ -19,6 +19,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if defined (WIN32)
+#include <windows.h>
+#endif
+
 #include <FreeImage.h>
 
 #include "texmap.h"
@@ -46,8 +50,26 @@ TextureMap::TextureMap(const string &fileName) {
 		unsigned int bpp = FreeImage_GetBPP(dib);
 		BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 
-		if ((imageType == FIT_RGBF) && (bpp == 96)) {
-			cerr << "HDR RGB texture map size: " << width << "x" << height << " (" <<
+		if ((imageType == FIT_RGBAF) && (bpp == 128)) {
+			cerr << "HDR RGB (128bit) texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
+			pixels = new Spectrum[width * height];
+			alpha = NULL;
+
+			for (unsigned int y = 0; y < height; ++y) {
+				FIRGBAF *pixel = (FIRGBAF *)bits;
+				for (unsigned int x = 0; x < width; ++x) {
+					const unsigned int offset = x + (height - y - 1) * width;
+					pixels[offset].r = pixel[x].red;
+					pixels[offset].g = pixel[x].green;
+					pixels[offset].b = pixel[x].blue;
+				}
+
+				// Next line
+				bits += pitch;
+			}
+		} else if ((imageType == FIT_RGBF) && (bpp == 96)) {
+			cerr << "HDR RGB (96bit) texture map size: " << width << "x" << height << " (" <<
 					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
 			pixels = new Spectrum[width * height];
 			alpha = NULL;
@@ -85,7 +107,7 @@ TextureMap::TextureMap(const string &fileName) {
 				// Next line
 				bits += pitch;
 			}
-		} else if (FreeImage_GetBPP(dib) == 24) {
+		} else if (bpp == 24) {
 			cerr << "RGB texture map size: " << width << "x" << height << " (" <<
 					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
 			pixels = new Spectrum[width * height];
