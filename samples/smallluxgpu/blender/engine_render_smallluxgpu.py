@@ -539,7 +539,13 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           elif m.emit:
             fscn.write('scene.materials.light.{} = {} {} {}\n'.format(mat,ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2])))
           elif m.transparency and m.alpha < 1:
-            fscn.write('scene.materials.glass.{} = {} {} {} {} {} {} 1.0 {} {:b} {:b}\n'.format(mat,ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
+            if m.raytrace_transparency.ior == 1.0:
+              fscn.write('scene.materials.archglass.{} = {} {} {} {} {} {} {:b} {:b}\n'.format(mat,ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
+                ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
+                ff((1.0-m.alpha)*m.diffuse_color[0]),ff((1.0-m.alpha)*m.diffuse_color[1]),ff((1.0-m.alpha)*m.diffuse_color[2]),
+                m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0))
+            else:
+              fscn.write('scene.materials.glass.{} = {} {} {} {} {} {} 1.0 {} {:b} {:b}\n'.format(mat,ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
                 ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
                 ff((1.0-m.alpha)*m.diffuse_color[0]),ff((1.0-m.alpha)*m.diffuse_color[1]),ff((1.0-m.alpha)*m.diffuse_color[2]),
                 ff(m.raytrace_transparency.ior),m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0))
