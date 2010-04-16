@@ -49,7 +49,7 @@ public:
 	void SplatSample(const Sample *sample, const Spectrum &radiance) {
 		// Safety check
 		if (radiance.IsNaN())
-			cerr << "Internal error: NaN in SampleBuffer::SplatSample()\n";
+			cerr << "Internal error: NaN in SampleBuffer::SplatSample()" << endl;
 		else {
 			SampleBufferElem *s = &samples[currentFreeSample++];
 
