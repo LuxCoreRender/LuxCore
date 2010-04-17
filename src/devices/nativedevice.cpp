@@ -59,6 +59,8 @@ void NativeThreadIntersectionDevice::Interrupt() {
 
 void NativeThreadIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
+
+	doneRayBufferQueue.Clear();
 }
 
 RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
@@ -66,6 +68,12 @@ RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
 }
 
 void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
+	Intersect(rayBuffer);
+
+	doneRayBufferQueue.Push(rayBuffer);
+}
+
+void NativeThreadIntersectionDevice::Intersect(RayBuffer *rayBuffer) {
 	assert (started);
 
 	const double t1 = WallClockTime();
@@ -79,7 +87,6 @@ void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
 		dataSet->Intersect(&rb[i], &hb[i]);
 	}
 
-	doneRayBufferQueue.Push(rayBuffer);
 	const double t2 = WallClockTime();
 
 	statsTotalRayCount += rayCount;

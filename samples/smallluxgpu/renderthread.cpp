@@ -124,8 +124,7 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 		while (!boost::this_thread::interruption_requested()) {
 			rayBuffer->Reset();
 			pathIntegrator->FillRayBuffer(rayBuffer);
-			intersectionDevice->PushRayBuffer(rayBuffer);
-			rayBuffer = intersectionDevice->PopRayBuffer();
+			intersectionDevice->Intersect(rayBuffer);
 			pathIntegrator->AdvancePaths(rayBuffer);
 		}
 
