@@ -38,7 +38,7 @@ message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
 # The version number.
 set(LUXRAYS_VERSION_MAJOR 0)
-set(LUXRAYS_VERSION_MINOR 1alpha4dev)
+set(LUXRAYS_VERSION_MINOR 1alpha5dev)
 
 set(LUXRAYS_SOURCE_DIR src)
 set(LUXRAYS_INCLUDE_DIR include)
