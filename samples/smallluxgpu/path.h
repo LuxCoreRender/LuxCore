@@ -200,7 +200,7 @@ public:
 											shadowRay[i].mint,
 											shadowRay[i].maxt - shadowRayHit->t);
 
-									lightColor[leftShadowRaysToTrace] = lightColor[i] * alpha;
+									lightColor[leftShadowRaysToTrace] = lightColor[i] * (1.f - alpha);
 									lightPdf[leftShadowRaysToTrace] = lightPdf[i];
 									leftShadowRaysToTrace++;
 								}

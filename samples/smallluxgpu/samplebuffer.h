@@ -47,11 +47,16 @@ public:
 	bool IsFull() const { return (currentFreeSample >= size); }
 
 	void SplatSample(const Sample *sample, const Spectrum &radiance) {
-		SampleBufferElem *s = &samples[currentFreeSample++];
+		// Safety check
+		if (radiance.IsNaN())
+			cerr << "Internal error: NaN in SampleBuffer::SplatSample()" << endl;
+		else {
+			SampleBufferElem *s = &samples[currentFreeSample++];
 
-		s->screenX = sample->screenX;
-		s->screenY = sample->screenY;
-		s->radiance = radiance;
+			s->screenX = sample->screenX;
+			s->screenY = sample->screenY;
+			s->radiance = radiance;
+		}
 	}
 
 	SampleBufferElem *GetSampleBuffer() const { return samples; }
