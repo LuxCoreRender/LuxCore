@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ###########################################################################
 #   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 #
 #                                                                         #
@@ -369,8 +370,11 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
   
   def _slgexport(self, scene, uv_flag, vc_flag, vn_flag, export, basepath, basename):
     # Depends on Blender version used
-    from Mathutils import Vector
-    #from mathutils import Vector
+    try:
+        from Mathutils import Vector
+    except ImportError:
+        from mathutils import Vector
+ 
     from itertools import zip_longest
 
     ff = lambda f:format(f,'.6f').rstrip('0')
