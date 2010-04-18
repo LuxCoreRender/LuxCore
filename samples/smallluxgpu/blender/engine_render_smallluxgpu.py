@@ -374,7 +374,6 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         from Mathutils import Vector
     except ImportError:
         from mathutils import Vector
- 
     from itertools import zip_longest
 
     ff = lambda f:format(f,'.6f').rstrip('0')
