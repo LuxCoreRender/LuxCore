@@ -174,11 +174,12 @@ set(LUXRAYS_SRCS
 	${LUXRAYS_SOURCE_DIR}/core/geometry/ray.cpp
     ${LUXRAYS_SOURCE_DIR}/core/geometry/transform.cpp
     ${LUXRAYS_SOURCE_DIR}/core/trianglemesh.cpp
-    ${LUXRAYS_SOURCE_DIR}/devices/opencldevice.cpp
-    ${LUXRAYS_SOURCE_DIR}/devices/nativedevice.cpp
-    ${LUXRAYS_SOURCE_DIR}/devices/virtualdevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/idevices/opencldevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/idevices/nativedevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/idevices/virtualdevice.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/pdevices/nativedevice.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/core/exttrianglemesh.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/plymesh/rply.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/properties.cpp)

@@ -35,7 +35,8 @@
 
 #include "smalllux.h"
 #include "sampler.h"
-#include "samplebuffer.h"
+#include "luxrays/core/pixel/samplebuffer.h"
+#include "luxrays/core/pixeldevice.h"
 
 #define GAMMA_TABLE_SIZE 1024
 
@@ -87,6 +88,7 @@ public:
 		width = w;
 		height = h;
 		cerr << "Film size " << width << "x" << height << endl;
+		pixelCount = w * h;
 
 		statsTotalSampleCount = 0;
 		statsAvgSampleSec = 0.0;
@@ -96,7 +98,7 @@ public:
 	void InitGammaTable(const float gamma = 2.2f) {
 		float x = 0.f;
 		const float dx = 1.f / GAMMA_TABLE_SIZE;
-		for (int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
+		for (unsigned int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
 			gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / gamma);
 	}
 
@@ -728,6 +730,49 @@ private:
 			for (u_int x = static_cast<u_int>(max<int>(x0, 0)); x <= static_cast<u_int>(min<int>(x1, width - 1)); ++x)
 				SplatRadiance(sampleElem->radiance, x, y, 0.01f);
 	}
+};
+
+class TestFilm : public Film {
+public:
+	TestFilm(const bool lowLatencyMode, const unsigned int w,
+			const unsigned int h) : Film(lowLatencyMode, w, h) {
+		pixelDevice = new NativePixelDevice(NULL, 0, 0);
+
+		pixelDevice->Init(w, h);
+	}
+
+	virtual ~TestFilm() {
+		delete pixelDevice;
+	}
+
+	virtual void Init(const unsigned int w, unsigned int h) {
+		pixelDevice->Init(w, h);
+		Film::Init(w, h);
+	}
+
+	virtual void Reset() {
+		pixelDevice->Reset();
+		Film::Reset();
+	}
+
+	void UpdateScreenBuffer() {
+		pixelDevice->UpdateFrameBuffer();
+	}
+
+	const float *GetScreenBuffer() const {
+		return (const float *)pixelDevice->GetFrameBuffer()->GetPixels();
+	}
+
+	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+		pixelDevice->PushSampleBuffer(sampleBuffer);
+		Film::SplatSampleBuffer(sampler, sampleBuffer);
+	}
+
+protected:
+	Spectrum *GetPixelRadiance() { return NULL; }
+	float *GetPixelWeigth()  { return NULL; }
+
+	NativePixelDevice *pixelDevice;
 };
 
 #endif	/* _FILM_H */

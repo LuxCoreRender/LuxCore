@@ -53,6 +53,8 @@ public:
 	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
 		const std::vector<DeviceDescription *> &deviceDescs);
 
+	//std::vector<PixelDevice *> AddPixelDevices(const std::vector<DeviceDescription *> &deviceDesc);
+
 	void SetDataSet(const DataSet *dataSet);
 	void Start();
 	void Interrupt();
