@@ -93,11 +93,16 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double startTime = WallClockTime();
 
 	double sampleSec = 0.0;
+	double lastTimeSave = startTime;
+	const double periodiceSaveTime = config->cfg.GetFloat("batch.periodicsave", 0.f);
+	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
+	const string fileName = config->cfg.GetString("image.filename", "image.png");
 	char buff[512];
 	const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
-		double elapsedTime = WallClockTime() - startTime;
+		const double now = WallClockTime();
+		const double elapsedTime =now - startTime;
 
 		unsigned int pass = 0;
 		const vector<RenderThread *> &renderThreads = config->GetRenderThreads();
@@ -109,6 +114,22 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		if ((stopSPP > 0) && (pass >= stopSPP))
 			break;
 
+		// Check if periodic save is enabled
+		if (periodiceSaveTime > 0.) {
+			if (now - lastTimeSave > periodiceSaveTime) {
+				// Time to save the image and film
+				config->scene->camera->film->UpdateScreenBuffer();
+				config->scene->camera->film->Save(fileName);
+
+				if (filmNames.size() == 1)
+					config->scene->camera->film->SaveFilm(filmNames[0]);
+				else if (filmNames.size() > 1)
+					config->scene->camera->film->SaveFilm("merged.flm");
+
+				lastTimeSave = WallClockTime();
+			}
+		}
+
 		double raysSec = 0.0;
 		for (size_t i = 0; i < interscetionDevices.size(); ++i)
 			raysSec += interscetionDevices[i]->GetPerformance();
@@ -117,24 +138,24 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		sprintf(buff, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
 				int(elapsedTime), int(stopTime), pass, stopSPP, int(sampleSec/ 1000.0),
 				int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-		std::cerr << buff << std::endl;
+		cerr << buff << endl;
 	}
 
-	std::string fileName = config->cfg.GetString("image.filename", "image.png");
+	// Save the rendered image
+	config->scene->camera->film->UpdateScreenBuffer();
 	config->scene->camera->film->Save(fileName);
 
 	// Check if I have to save the film
-	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
 	if (filmNames.size() == 1)
 		config->scene->camera->film->SaveFilm(filmNames[0]);
 	else if (filmNames.size() > 1)
 		config->scene->camera->film->SaveFilm("merged.flm");
 
 	sprintf(buff, "LuxMark index: %.3f", sampleSec / 1000000.0);
-	std::cerr << buff << std::endl;
+	cerr << buff << endl;
 
 	delete config;
-	std::cerr << "Done." << std::endl;
+	cerr << "Done." << endl;
 
 	return EXIT_SUCCESS;
 }
@@ -145,22 +166,22 @@ int main(int argc, char *argv[]) {
 #endif
 
 	try {
-		std::cerr << "Usage: " << argv[0] << " [options] [configuration file]" << std::endl <<
-				" -o [configuration file]" << std::endl <<
-				" -f [scene file]" << std::endl <<
-				" -w [window width]" << std::endl <<
-				" -e [window height]" << std::endl <<
-				" -g <disable OpenCL GPU device>" << std::endl <<
-				" -p <enable OpenCL CPU device>" << std::endl <<
-				" -n [native thread count]" << std::endl <<
-				" -l [set high/low latency mode]" << std::endl <<
-				" -b <enable high latency mode>" << std::endl <<
-				" -s [GPU workgroup size]" << std::endl <<
-				" -t [halt time in secs]" << std::endl <<
-				" -T <disable the telnet server" << std::endl <<
-				" -D [property name] [property value]" << std::endl <<
-				" -d [current directory path]" << std::endl <<
-				" -h <display this help and exit>" << std::endl;
+		cerr << "Usage: " << argv[0] << " [options] [configuration file]" << endl <<
+				" -o [configuration file]" << endl <<
+				" -f [scene file]" << endl <<
+				" -w [window width]" << endl <<
+				" -e [window height]" << endl <<
+				" -g <disable OpenCL GPU device>" << endl <<
+				" -p <enable OpenCL CPU device>" << endl <<
+				" -n [native thread count]" << endl <<
+				" -l [set high/low latency mode]" << endl <<
+				" -b <enable high latency mode>" << endl <<
+				" -s [GPU workgroup size]" << endl <<
+				" -t [halt time in secs]" << endl <<
+				" -T <disable the telnet server" << endl <<
+				" -D [property name] [property value]" << endl <<
+				" -d [current directory path]" << endl <<
+				" -h <display this help and exit>" << endl;
 
 		// Initialize FreeImage Library
 		FreeImage_Initialise(TRUE);
@@ -177,7 +198,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'o') {
 					if (config)
-						throw std::runtime_error("Used multiple configuration files");
+						throw runtime_error("Used multiple configuration files");
 
 					config = new RenderingConfig(argv[++i]);
 				}
@@ -210,17 +231,17 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
 				else {
-					std::cerr << "Invalid option: " << argv[i] << std::endl;
+					cerr << "Invalid option: " << argv[i] << endl;
 					exit(EXIT_FAILURE);
 				}
 			} else {
-				std::string s = argv[i];
+				string s = argv[i];
 				if ((s.length() >= 4) && (s.substr(s.length() - 4) == ".cfg")) {
 					if (config)
-						throw std::runtime_error("Used multiple configuration files");
+						throw runtime_error("Used multiple configuration files");
 					config = new RenderingConfig(s);
 				} else
-					throw std::runtime_error("Unknow file extension: " + s);
+					throw runtime_error("Unknow file extension: " + s);
 			}
 		}
 
@@ -256,12 +277,12 @@ int main(int argc, char *argv[]) {
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
-		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
+		cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << endl;
 #endif
-	} catch (std::runtime_error err) {
-		std::cerr << "RUNTIME ERROR: " << err.what() << std::endl;
-	} catch (std::exception err) {
-		std::cerr << "ERROR: " << err.what() << std::endl;
+	} catch (runtime_error err) {
+		cerr << "RUNTIME ERROR: " << err.what() << endl;
+	} catch (exception err) {
+		cerr << "ERROR: " << err.what() << endl;
 	}
 
 	return EXIT_SUCCESS;

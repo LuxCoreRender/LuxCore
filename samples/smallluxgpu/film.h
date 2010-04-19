@@ -200,8 +200,7 @@ public:
 	}
 
 	virtual void Save(const string &fileName) {
-		std::cerr << "Saving " << fileName << std::endl;
-
+		cerr << "Saving " << fileName << endl;
 
 		FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fileName.c_str());
 		if (fif != FIF_UNKNOWN) {

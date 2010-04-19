@@ -37,7 +37,7 @@ RenderingConfig *config;
 static int printHelp = 1;
 
 void DebugHandler(const char *msg) {
-	std::cerr << "[LuxRays] " << msg << std::endl;
+	cerr << "[LuxRays] " << msg << endl;
 }
 
 static void PrintString(void *font, const char *string) {
@@ -184,7 +184,8 @@ void reshapeFunc(int newWidth, int newHeight) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			std::string fileName = config->cfg.GetString("image.filename", "image.png");
+			string fileName = config->cfg.GetString("image.filename", "image.png");
+			config->scene->camera->film->UpdateScreenBuffer();
 			config->scene->camera->film->Save(fileName);
 			break;
 		}
