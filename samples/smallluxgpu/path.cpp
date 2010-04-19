@@ -27,10 +27,11 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "luxrays/core/pixel/samplebuffer.h"
+
 #include "smalllux.h"
 #include "path.h"
 #include "renderconfig.h"
-#include "samplebuffer.h"
 #include "displayfunc.h"
 
 PathIntegrator::PathIntegrator(Scene *s, Sampler *samp, SampleBuffer *sb) :

@@ -19,45 +19,78 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_H
-#define	_LUXRAYS_H
+#ifndef _FRAMEBUFFER_H
+#define	_FRAMEBUFFER_H
 
-#include <iostream>
+#include "luxrays/core/pixel/spectrum.h"
 
-#include "luxrays/cfg.h"
+namespace luxrays {
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+typedef struct {
+	Spectrum radiance;
+	float weight;
+} SamplePixel;
 
-#define __CL_ENABLE_EXCEPTIONS
+class SampleFrameBuffer {
+public:
+	SampleFrameBuffer(const unsigned int w, const unsigned int h)
+		: width(w), height(h) {
+		pixels = new SamplePixel[width * height];
 
-#if defined(__APPLE__)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
+		Reset();
+	}
+	~SampleFrameBuffer() {
+		delete[] pixels;
+	}
 
-#endif // LUXRAYS_DISABLE_OPENCL
+	void Reset() {
+		for (unsigned int i = 0; i < width * height; ++i) {
+			pixels[i].radiance.r = 0.f;
+			pixels[i].radiance.g = 0.f;
+			pixels[i].radiance.b = 0.f;
+			pixels[i].weight = 0.f;
+		}
+	};
 
-#include "luxrays/core/geometry/vector.h"
-#include "luxrays/core/geometry/normal.h"
-#include "luxrays/core/geometry/uv.h"
-#include "luxrays/core/geometry/vector_normal.h"
-#include "luxrays/core/geometry/point.h"
-#include "luxrays/core/geometry/ray.h"
-#include "luxrays/core/geometry/raybuffer.h"
-#include "luxrays/core/geometry/bbox.h"
-#include "luxrays/core/geometry/triangle.h"
-#include "luxrays/core/pixel/samplebuffer.h"
+	SamplePixel *GetPixels() { return pixels; }
 
-namespace luxrays
-{
-class Accelerator;
-class Context;
-class DataSet;
-class IntersectionDevice;
-class TriangleMesh;
-class VirtualM2OHardwareIntersectionDevice;
-class VirtualM2MHardwareIntersectionDevice;
+private:
+	const unsigned int width, height;
+
+	SamplePixel *pixels;
+};
+
+typedef Spectrum Pixel;
+
+class FrameBuffer {
+public:
+	FrameBuffer(const unsigned int w, const unsigned int h)
+			: width(w), height(h) {
+		pixels = new Pixel[width * height];
+
+		Reset();
+	}
+	~FrameBuffer() {
+		delete[] pixels;
+	}
+
+	void Reset() {
+		for (unsigned int i = 0; i < width * height; ++i) {
+			pixels[i].r = 0.f;
+			pixels[i].g = 0.f;
+			pixels[i].b = 0.f;
+		}
+	};
+
+	Pixel *GetPixels() const { return pixels; }
+
+private:
+	const unsigned int width, height;
+
+	Pixel *pixels;
+};
+
 }
 
-#endif	/* _LUXRAYS_H */
+#endif	/* _FRAMEBUFFER_H */
+

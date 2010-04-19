@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/context.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/accelerators/bvhaccel.h"

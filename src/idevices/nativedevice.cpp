@@ -21,7 +21,7 @@
 
 #include <cstdio>
 
-#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/context.h"
 
 using namespace luxrays;
