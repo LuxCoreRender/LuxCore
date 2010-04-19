@@ -42,7 +42,6 @@
 
 class GaussianFilter {
 public:
-
 	GaussianFilter(float xw, float yw, float a) : xWidth(xw), yWidth(yw),
 	invXWidth(1.f / xw), invYWidth(1.f / yw) {
 		alpha = a;
@@ -735,7 +734,8 @@ private:
 class TestFilm : public Film {
 public:
 	TestFilm(const bool lowLatencyMode, const unsigned int w,
-			const unsigned int h) : Film(lowLatencyMode, w, h) {
+			const unsigned int h, FilterType filter = FILTER_GAUSSIAN) : Film(lowLatencyMode, w, h) {
+		filterType = filter;
 		pixelDevice = new NativePixelDevice(NULL, 0, 0);
 
 		pixelDevice->Init(w, h);
@@ -764,7 +764,11 @@ public:
 	}
 
 	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
-		pixelDevice->PushSampleBuffer(sampleBuffer);
+		if (sampler->IsPreviewOver())
+			pixelDevice->AddSampleBuffer(filterType, sampleBuffer);
+		else
+			pixelDevice->AddSampleBuffer(FILTER_PREVIEW, sampleBuffer);
+
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
@@ -773,6 +777,7 @@ protected:
 	float *GetPixelWeigth()  { return NULL; }
 
 	NativePixelDevice *pixelDevice;
+	FilterType filterType;
 };
 
 #endif	/* _FILM_H */
