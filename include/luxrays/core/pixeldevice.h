@@ -30,6 +30,10 @@
 
 namespace luxrays {
 
+typedef enum {
+	FILTER_NONE, FILTER_PREVIEW, FILTER_GAUSSIAN
+} FilterType;
+
 class PixelDevice : public Device {
 public:
 	virtual void Init(const unsigned int w, const unsigned int h);
@@ -37,7 +41,7 @@ public:
 	virtual void SetGamma(const float gamma = 2.2f) = 0;
 
 	virtual SampleBuffer *NewSampleBuffer() = 0;
-	virtual void PushSampleBuffer(const SampleBuffer *sampleBuffer) = 0;
+	virtual void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) = 0;
 
 	virtual void UpdateFrameBuffer() = 0;
 	virtual const FrameBuffer *GetFrameBuffer() const = 0;
@@ -68,7 +72,7 @@ public:
 	void Stop();
 
 	SampleBuffer *NewSampleBuffer();
-	void PushSampleBuffer(const SampleBuffer *sampleBuffer);
+	void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer);
 
 	void UpdateFrameBuffer();
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
@@ -79,6 +83,28 @@ public:
 
 private:
 	static const unsigned int GammaTableSize = 1024;
+	static const unsigned int FilterTableSize = 16;
+
+	static const float Gaussian2x2_xWidth = 2.f;
+	static const float Gaussian2x2_yWidth = 2.f;
+	static const float Gaussian2x2_invXWidth = 1.f / 2.f;
+	static const float Gaussian2x2_invYWidth = 1.f / 2.f;
+
+	static float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
+
+	void SplatPreview(const SampleBufferElem *sampleElem);
+	void SplatGaussian2x2(const SampleBufferElem *sampleElem);
+
+	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight = 1.f) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+
+		AtomicAdd(&(sp->radiance.r), weight * radiance.r);
+		AtomicAdd(&(sp->radiance.g), weight * radiance.g);
+		AtomicAdd(&(sp->radiance.b), weight * radiance.b);
+
+		AtomicAdd(&(sp->weight), weight);
+	}
 
 	void AtomicAdd(float *val, const float delta) {
 		union bits {
