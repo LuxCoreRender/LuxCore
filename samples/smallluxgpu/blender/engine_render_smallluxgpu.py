@@ -179,6 +179,10 @@ def slg_properties():
   IntProperty(attr="slg_batchmodespp", name="Batch mode max samples per pixel",
       description="Max number of samples per pixels in batch mode; 0 = ignore",
       default=128, min=0, soft_min=0)
+
+  IntProperty(attr="slg_batchmode_periodicsave", name="Batch mode periodic image save",
+      description="Interval in second between image save in batch mode; 0 = ignore",
+      default=0, min=0, soft_min=0)
   
   BoolProperty(attr="slg_waitrender", name="Wait for SLG",
       description="Wait for render to finish; load image into render results (required for animations)",
@@ -338,6 +342,9 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
       col.prop(scene, "slg_batchmodetime", text="Seconds")
       col = split.column()
       col.prop(scene, "slg_batchmodespp", text="Samples")
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_batchmode_periodicsave", text="Periodic save interval")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_imageformat")
@@ -674,7 +681,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('image.height = {}\n'.format(y))
     fcfg.write('image.filename = {}/{}/{}.{}\n'.format(basepath,basename,basename,scene.slg_imageformat))
     fcfg.write('batch.halttime = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmodetime))
-    fcfg.write('batch.haltspp = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmodespp))      
+    fcfg.write('batch.haltspp = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmodespp))
+    fcfg.write('batch.periodicsave = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmode_periodicsave))
     fcfg.write('scene.file = {}/{}/{}.scn\n'.format(basepath,basename,basename))
     fcfg.write('scene.fieldofview = {:g}\n'.format(scene.camera.data.angle*180.0/3.1415926536))
     fcfg.write('scene.epsilon = {:g}\n'.format(scene.unit_settings.scale_length*0.0001))
