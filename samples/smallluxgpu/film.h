@@ -731,19 +731,21 @@ private:
 	}
 };
 
-class TestFilm : public Film {
+class LuxRaysFilm : public Film {
 public:
-	TestFilm(const bool lowLatencyMode, const unsigned int w,
+	LuxRaysFilm(Context *context, const bool lowLatencyMode, const unsigned int w,
 			const unsigned int h, FilterType filter = FILTER_GAUSSIAN) : Film(lowLatencyMode, w, h) {
+		ctx = context;
 		filterType = filter;
-		pixelDevice = new NativePixelDevice(NULL, 0, 0);
 
+		std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
+		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
+		descs.resize(1);
+		pixelDevice = ctx->AddPixelDevices(descs)[0];
 		pixelDevice->Init(w, h);
 	}
 
-	virtual ~TestFilm() {
-		delete pixelDevice;
-	}
+	virtual ~LuxRaysFilm() { }
 
 	virtual void Init(const unsigned int w, unsigned int h) {
 		pixelDevice->Init(w, h);
@@ -776,7 +778,8 @@ protected:
 	Spectrum *GetPixelRadiance() { return NULL; }
 	float *GetPixelWeigth()  { return NULL; }
 
-	NativePixelDevice *pixelDevice;
+	Context *ctx;
+	PixelDevice *pixelDevice;
 	FilterType filterType;
 };
 

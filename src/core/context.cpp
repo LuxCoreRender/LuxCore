@@ -28,6 +28,7 @@
 #include "luxrays/core/context.h"
 #include "luxrays/core/device.h"
 #include "luxrays/core/virtualdevice.h"
+#include "luxrays/core/pixeldevice.h"
 
 using namespace luxrays;
 
@@ -94,15 +95,18 @@ Context::~Context() {
 
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
-	for (size_t i = 0; i < devices.size(); ++i) {
+	for (size_t i = 0; i < idevices.size(); ++i) {
 		// Virtual devices are deleted below
-		if (devices[i]->GetType() != DEVICE_TYPE_VIRTUAL)
-			delete devices[i];
+		if (idevices[i]->GetType() != DEVICE_TYPE_VIRTUAL)
+			delete idevices[i];
 	}
 	for (size_t i = 0; i < m2mDevices.size(); ++i)
 		delete m2mDevices[i];
 	for (size_t i = 0; i < m2oDevices.size(); ++i)
 		delete m2oDevices[i];
+
+	for (size_t i = 0; i < pdevices.size(); ++i)
+		delete pdevices[i];
 }
 
 void Context::SetDataSet(const DataSet *dataSet) {
@@ -112,15 +116,17 @@ void Context::SetDataSet(const DataSet *dataSet) {
 
 	currentDataSet = dataSet;
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->SetDataSet(currentDataSet);
+	for (size_t i = 0; i < idevices.size(); ++i)
+		idevices[i]->SetDataSet(currentDataSet);
 }
 
 void Context::Start() {
 	assert (!started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Start();
+	for (size_t i = 0; i < idevices.size(); ++i)
+		idevices[i]->Start();
+	for (size_t i = 0; i < pdevices.size(); ++i)
+		pdevices[i]->Start();
 
 	started = true;
 }
@@ -128,15 +134,20 @@ void Context::Start() {
 void Context::Interrupt() {
 	assert (started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Interrupt();
+	for (size_t i = 0; i < idevices.size(); ++i)
+		idevices[i]->Interrupt();
+	for (size_t i = 0; i < pdevices.size(); ++i)
+		pdevices[i]->Interrupt();
+
 }
 
 void Context::Stop() {
 	assert (started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Stop();
+	for (size_t i = 0; i < idevices.size(); ++i)
+		idevices[i]->Stop();
+	for (size_t i = 0; i < pdevices.size(); ++i)
+		pdevices[i]->Stop();
 
 	started = false;
 }
@@ -146,7 +157,11 @@ const std::vector<DeviceDescription *> &Context::GetAvailableDeviceDescriptions(
 }
 
 const std::vector<IntersectionDevice *> &Context::GetIntersectionDevices() const {
-	return devices;
+	return idevices;
+}
+
+const std::vector<PixelDevice *> &Context::GetPixelDevices() const {
+	return pdevices;
 }
 
 std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
@@ -193,7 +208,7 @@ std::vector<IntersectionDevice *> Context::AddIntersectionDevices(const std::vec
 
 	std::vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc);
 	for (size_t i = 0; i < newDevices.size(); ++i)
-		devices.push_back(newDevices[i]);
+		idevices.push_back(newDevices[i]);
 
 	return newDevices;
 }
@@ -218,7 +233,7 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(cons
 
 	m2mDevices.push_back(m2mDevice);
 	for (unsigned int i = 0; i < count; ++i)
-		devices.push_back(m2mDevice->GetVirtualDevice(i));
+		idevices.push_back(m2mDevice->GetVirtualDevice(i));
 
 	return realDevices;
 }
@@ -237,7 +252,56 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2OIntersectionDevices(cons
 
 	m2oDevices.push_back(m2oDevice);
 	for (unsigned int i = 0; i < count; ++i)
-		devices.push_back(m2oDevice->GetVirtualDevice(i));
+		idevices.push_back(m2oDevice->GetVirtualDevice(i));
 
 	return realDevices;
+}
+
+std::vector<PixelDevice *> Context::CreatePixelDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+	assert (!started);
+
+	LR_LOG(this, "Creating " << deviceDesc.size() << " pixel device(s)");
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Get the list of devices available on the platform
+	VECTOR_CLASS<cl::Device> oclDevices;
+	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
+#endif
+
+	std::vector<PixelDevice *> newDevices;
+	for (size_t i = 0; i < deviceDesc.size(); ++i) {
+		LR_LOG(this, "Allocating pixel device " << i << ": " << deviceDesc[i]->GetName() <<
+				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
+
+		PixelDevice *device;
+		if (deviceDesc[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
+			// Nathive thread devices
+			const NativeThreadDeviceDescription *ntvDeviceDesc = (const NativeThreadDeviceDescription *)deviceDesc[i];
+			device = new NativePixelDevice(this, ntvDeviceDesc->GetThreadIndex(), i);
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		/*else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
+			// OpenCL devices
+			const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)deviceDesc[i];
+			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->GetDeviceIndex()],
+					i, oclDeviceDesc->GetForceWorkGroupSize());
+		}*/
+#endif
+		else
+			assert (false);
+
+		newDevices.push_back(device);
+	}
+
+	return newDevices;
+}
+
+std::vector<PixelDevice *> Context::AddPixelDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+	assert (!started);
+
+	std::vector<PixelDevice *> newDevices = CreatePixelDevices(deviceDesc);
+	for (size_t i = 0; i < newDevices.size(); ++i)
+		pdevices.push_back(newDevices[i]);
+
+	return newDevices;
 }

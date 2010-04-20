@@ -46,6 +46,8 @@ public:
 	virtual void UpdateFrameBuffer() = 0;
 	virtual const FrameBuffer *GetFrameBuffer() const = 0;
 
+	friend class Context;
+
 protected:
 	PixelDevice(const Context *context, const DeviceType type, const unsigned int index);
 	virtual ~PixelDevice();
