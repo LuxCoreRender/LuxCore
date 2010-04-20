@@ -83,7 +83,7 @@ public:
 
 	virtual ~Film() { }
 
-	virtual void Init(const unsigned int w, unsigned int h) {
+	virtual void Init(const unsigned int w, const unsigned int h) {
 		width = w;
 		height = h;
 		cerr << "Film size " << width << "x" << height << endl;
@@ -111,8 +111,7 @@ public:
 
 			cerr << "Loading film file: " << filmFile << endl;
 
-			Spectrum *pixelsRadiance = GetPixelRadiance();
-			float *pixelWeights = GetPixelWeigth();
+			SampleFrameBuffer sbe(width, height);
 
 			unsigned int tag;
 			file.read((char *)&tag, sizeof(unsigned int));
@@ -135,10 +134,11 @@ public:
 				file.read((char *)&spectrum, sizeof(Spectrum));
 				file.read((char *)&weight, sizeof(float));
 
-				pixelsRadiance[i] += spectrum;
-				pixelWeights[i] += weight;
+				sbe.SetPixel(i, spectrum, weight);
 			}
 			file.close();
+
+			AddSampleFrameBuffer(&sbe);
 		} else
 			cerr << "Film file doesn't exist: " << filmFile << endl;
 	}
@@ -146,8 +146,7 @@ public:
 	void SaveFilm(const string &filmFile) {
 		cerr << "Saving film file: " << filmFile << endl;
 
-		const Spectrum *pixelsRadiance = GetPixelRadiance();
-		const float *pixelWeights = GetPixelWeigth();
+		const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
 
 		ofstream file;
 		file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
@@ -159,8 +158,10 @@ public:
 		file.write((char *)&height, sizeof(unsigned int));
 
 		for (unsigned int i = 0; i < pixelCount; ++i) {
-			file.write((char *)&pixelsRadiance[i], sizeof(Spectrum));
-			file.write((char *)&pixelWeights[i], sizeof(float));
+			const SamplePixel *sp = sbe->GetPixel(i);
+
+			file.write((char *)&(sp->radiance), sizeof(Spectrum));
+			file.write((char *)&(sp->weight), sizeof(float));
 		}
 
 		file.close();
@@ -177,7 +178,6 @@ public:
 	}
 
 	virtual void UpdateScreenBuffer() = 0;
-
 	virtual const float *GetScreenBuffer() const = 0;
 
 	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
@@ -200,7 +200,10 @@ public:
 		return statsAvgSampleSec;
 	}
 
-	virtual void Save(const string &fileName) {
+	virtual void Save(const string &fileName) = 0;
+
+protected:
+	void SaveImpl(const string &fileName) {
 		std::cerr << "Saving " << fileName << std::endl;
 
 
@@ -212,23 +215,23 @@ public:
 				if (dib) {
 					unsigned int pitch = FreeImage_GetPitch(dib);
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-					const Spectrum *radiance = GetPixelRadiance();
-					const float *weights = GetPixelWeigth();
+					const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
 
 					for (unsigned int y = 0; y < height; ++y) {
 						FIRGBF *pixel = (FIRGBF *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
 							const unsigned int ridx = y * width + x;
-							const float weight = weights[ridx];
+							const SamplePixel *sp = sbe->GetPixel(ridx);
+							const float weight = sp->weight;
 
 							if (weight == 0.f) {
 								pixel[x].red = 0.f;
 								pixel[x].green = 0.f;
 								pixel[x].blue = 0.f;
 							} else {
-								pixel[x].red = radiance[ridx].r / weight;
-								pixel[x].green =  radiance[ridx].g / weight;
-								pixel[x].blue =  radiance[ridx].b / weight;
+								pixel[x].red = sp->radiance.r / weight;
+								pixel[x].green =  sp->radiance.g / weight;
+								pixel[x].blue =  sp->radiance.b / weight;
 							}
 						}
 
@@ -275,7 +278,6 @@ public:
 			cerr << "Image type unknown: " << fileName << endl;
 	}
 
-protected:
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
 		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
@@ -286,8 +288,12 @@ protected:
 		return gammaTable[index];
 	}
 
-	virtual Spectrum *GetPixelRadiance() = 0;
-	virtual float *GetPixelWeigth() = 0;
+	Spectrum Radiance2Pixel(const Spectrum& c) const {
+		return Spectrum(Radiance2PixelFloat(c.r), Radiance2PixelFloat(c.g), Radiance2PixelFloat(c.b));
+	}
+
+	virtual const SampleFrameBuffer *GetSampleFrameBuffer() = 0;
+	virtual void AddSampleFrameBuffer(const SampleFrameBuffer *sfb) = 0;
 
 	unsigned int width, height;
 	unsigned int pixelCount;
@@ -310,45 +316,33 @@ class StandardFilm : public Film {
 public:
 	StandardFilm(const bool lowLatencyMode, const unsigned int w,
 			const unsigned int h) : Film(lowLatencyMode, w, h) {
-		pixelsRadiance = NULL;
-		pixelWeights = NULL;
-		pixels = NULL;
+		sampleFrameBuffer = NULL;
+		frameBuffer = NULL;
 
 		Init(w, h);
 	}
 
 	virtual ~StandardFilm() {
-		if (pixelsRadiance)
-			delete[] pixelsRadiance;
-		if (pixelWeights)
-			delete[] pixelWeights;
-		if (pixels)
-			delete[] pixels;
+		if (sampleFrameBuffer)
+			delete sampleFrameBuffer;
+		if (frameBuffer)
+			delete frameBuffer;
 	}
 
-	virtual void Init(const unsigned int w, unsigned int h) {
+	virtual void Init(const unsigned int w, const unsigned int h) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
-		if (pixelsRadiance)
-			delete[] pixelsRadiance;
-		if (pixelWeights)
-			delete[] pixelWeights;
-		if (pixels)
-			delete[] pixels;
+		if (sampleFrameBuffer)
+			delete sampleFrameBuffer;
+		if (frameBuffer)
+			delete frameBuffer;
 
 		pixelCount = w * h;
 
-		pixelsRadiance = new Spectrum[pixelCount];
-		pixels = new float[pixelCount * 3];
-		pixelWeights = new float[pixelCount];
-
-		for (unsigned int i = 0, j = 0; i < pixelCount; ++i) {
-			pixelsRadiance[i] = 0.f;
-			pixelWeights[i] = 0.f;
-			pixels[j++] = 0.f;
-			pixels[j++] = 0.f;
-			pixels[j++] = 0.f;
-		}
+		sampleFrameBuffer = new SampleFrameBuffer(w, h);
+		sampleFrameBuffer->Reset();
+		frameBuffer = new FrameBuffer(w, h);
+		frameBuffer->Reset();
 
 		Film::Init(w, h);
 	}
@@ -356,10 +350,7 @@ public:
 	virtual void Reset() {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
-		for (unsigned int i = 0; i < pixelCount; ++i) {
-			pixelsRadiance[i] = 0.f;
-			pixelWeights[i] = 0.f;
-		}
+		sampleFrameBuffer->Reset();
 
 		Film::Reset();
 	}
@@ -371,10 +362,10 @@ public:
 	}
 
 	const float *GetScreenBuffer() const {
-		return pixels;
+		return (const float *)frameBuffer->GetPixels();
 	}
 
-	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
@@ -390,44 +381,39 @@ public:
 		// Update pixels
 		UpdateScreenBufferImpl();
 
-		Film::Save(fileName);
+		SaveImpl(fileName);
 	}
 
 protected:
-	Spectrum *GetPixelRadiance() { return pixelsRadiance; }
-	float *GetPixelWeigth()  { return pixelWeights; }
-
 	void SplatSampleBufferElem(const SampleBufferElem *sampleElem) {
-		int x = (int)sampleElem->screenX;
-		int y = (int)sampleElem->screenY;
-
-		const unsigned int offset = x + y * width;
-
-		pixelsRadiance[offset] += sampleElem->radiance;
-		pixelWeights[offset] += 1.f;
+		sampleFrameBuffer->AddPixel((unsigned int)sampleElem->screenX, (unsigned int)sampleElem->screenY,
+				sampleElem->radiance, 1.f);
 	}
 
-	void UpdateScreenBufferImpl() {
-		for (unsigned int i = 0, j = 0; i < pixelCount; ++i) {
-			const float weight = pixelWeights[i];
+	virtual void UpdateScreenBufferImpl() {
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			const SamplePixel *sp = sampleFrameBuffer->GetPixel(i);
+			const float weight = sp->weight;
 
-			if (weight == 0.f)
-				j +=3;
-			else {
-				const float invWeight = 1.f / weight;
+			if (weight > 0.f)
+				frameBuffer->SetPixel(i, Radiance2Pixel(sp->radiance / weight));
+		}
+	}
 
-				pixels[j++] = Radiance2PixelFloat(pixelsRadiance[i].r * invWeight);
-				pixels[j++] = Radiance2PixelFloat(pixelsRadiance[i].g * invWeight);
-				pixels[j++] = Radiance2PixelFloat(pixelsRadiance[i].b * invWeight);
-			}
+	const SampleFrameBuffer *GetSampleFrameBuffer() {
+		return sampleFrameBuffer;
+	}
+
+	void AddSampleFrameBuffer(const SampleFrameBuffer *sfb) {
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			const SamplePixel *sp = sfb->GetPixel(i);
+			sampleFrameBuffer->AddPixel(i, sp->radiance, sp->weight);
 		}
 	}
 
 	boost::mutex radianceMutex;
-	Spectrum *pixelsRadiance;
-	float *pixelWeights;
-
-	float *pixels;
+	SampleFrameBuffer *sampleFrameBuffer;
+	FrameBuffer *frameBuffer;
 };
 
 class BluredStandardFilm : public StandardFilm {
@@ -437,10 +423,6 @@ public:
 	}
 
 	~BluredStandardFilm() {
-	}
-
-	void Init(const unsigned int w, unsigned int h) {
-		StandardFilm::Init(w, h);
 	}
 
 	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
@@ -473,23 +455,15 @@ private:
 			return;
 
 		for (u_int y = static_cast<u_int>(max<int>(y0, 0)); y <= static_cast<u_int>(min<int>(y1, height - 1)); ++y)
-			for (u_int x = static_cast<u_int>(max<int>(x0, 0)); x <= static_cast<u_int>(min<int>(x1, width - 1)); ++x) {
-				const unsigned int offset = x + y * width;
-
-				pixelsRadiance[offset] += 0.01f * sampleElem->radiance;
-				pixelWeights[offset] += 0.01f;
-			}
+			for (u_int x = static_cast<u_int>(max<int>(x0, 0)); x <= static_cast<u_int>(min<int>(x1, width - 1)); ++x)
+				sampleFrameBuffer->AddPixel(x, y, 0.01f * sampleElem->radiance,  0.01f);
 	}
 };
 
-class GaussianFilm : public Film {
+class GaussianFilm : public StandardFilm {
 public:
-	GaussianFilm(const bool lowLatencyMode, const unsigned int w, unsigned int h) :
-		Film(lowLatencyMode, w, h),  filter2x2(2.f, 2.f, 2.f),  filter4x4(4.f, 4.f, 0.05f) {
-		pixelsRadiance = NULL;
-		pixelWeights = NULL;
-		pixels = NULL;
-
+	GaussianFilm(const bool lowLatencyMode, const unsigned int w, const unsigned int h) :
+		StandardFilm(lowLatencyMode, w, h),  filter2x2(2.f, 2.f, 2.f),  filter4x4(4.f, 4.f, 0.05f) {
         // Precompute filter weight table
 		filterTable2x2 = new float[FILTER_TABLE_SIZE * FILTER_TABLE_SIZE];
 		float *ftp2x2 = filterTable2x2;
@@ -510,47 +484,11 @@ public:
 				*ftp10x10++ = filter4x4.Evaluate(fx, fy);
 			}
 		}
-
-		Init(w, h);
 	}
 
 	virtual ~GaussianFilm() {
-		if (pixelsRadiance)
-			delete[] pixelsRadiance;
-		if (pixelWeights)
-			delete[] pixelWeights;
-		if (pixels)
-			delete[] pixels;
-
 		delete[] filterTable2x2;
 		delete[] filterTable4x4;
-	}
-
-	void Init(const unsigned int w, unsigned int h) {
-		boost::mutex::scoped_lock lock(radianceMutex);
-
-		if (pixelsRadiance)
-			delete[] pixelsRadiance;
-		if (pixelWeights)
-			delete[] pixelWeights;
-		if (pixels)
-			delete[] pixels;
-
-		pixelCount = w * h;
-
-		pixelsRadiance = new Spectrum[pixelCount];
-		pixels = new float[pixelCount * 3];
-		pixelWeights = new float[pixelCount];
-
-		for (unsigned int i = 0, j = 0; i < pixelCount; ++i) {
-			pixelsRadiance[i] = 0.f;
-			pixelWeights[i] = 0.f;
-			pixels[j++] = 0.f;
-			pixels[j++] = 0.f;
-			pixels[j++] = 0.f;
-		}
-
-		Film::Init(w, h);
 	}
 
 	void Reset() {
@@ -558,29 +496,16 @@ public:
 
 		if (lowLatency) {
 			for (unsigned int i = 0; i < pixelCount; ++i) {
-				if (pixelWeights[i] != 0.0f) {
-					pixelsRadiance[i] /= 100.0f * pixelWeights[i];
-					pixelWeights[i] = 0.01f;
-				}
+				const SamplePixel *sp = sampleFrameBuffer->GetPixel(i);
+				const float weight = sp->weight;
+
+				if (weight > 0.f)
+					sampleFrameBuffer->SetPixel(i, sp->radiance / (100.0f * weight), 0.01f);
 			}
-		} else {
-			for (unsigned int i = 0; i < pixelCount; ++i) {
-				pixelsRadiance[i] = 0.f;
-				pixelWeights[i] = 0.f;
-			}
-		}
+		} else
+			sampleFrameBuffer->Reset();
 
 		Film::Reset();
-	}
-
-	void UpdateScreenBuffer() {
-		boost::mutex::scoped_lock lock(radianceMutex);
-
-		UpdateScreenBufferImpl();
-	}
-
-	const float *GetScreenBuffer() const {
-		return pixels;
 	}
 
 	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
@@ -598,26 +523,7 @@ public:
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
-	void Save(const string &fileName) {
-		boost::mutex::scoped_lock lock(radianceMutex);
-
-		// Update pixels
-		UpdateScreenBufferImpl();
-
-		Film::Save(fileName);
-	}
-
 protected:
-	Spectrum *GetPixelRadiance() { return pixelsRadiance; }
-	float *GetPixelWeigth()  { return pixelWeights; }
-
-	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight = 1.f) {
-		const unsigned int offset = x + y * width;
-
-		pixelsRadiance[offset] += weight * radiance;
-		pixelWeights[offset] += weight;
-	}
-
 	void SplatSampleBufferElem(const SampleBufferElem *sampleElem, const GaussianFilter &filter, const float *filterTable) {
 		// Compute sample's raster extent
 		float dImageX = sampleElem->screenX - 0.5f;
@@ -655,36 +561,26 @@ protected:
 			for (u_int x = static_cast<u_int>(max<int>(x0, 0)); x <= static_cast<u_int>(min<int>(x1, width - 1)); ++x) {
 				const int offset = ify[y - y0] * FILTER_TABLE_SIZE + ifx[x - x0];
 				const float filterWt = filterTable[offset] * filterNorm;
-				SplatRadiance(sampleElem->radiance, x, y, filterWt);
+
+				sampleFrameBuffer->AddPixel(x, y, sampleElem->radiance * filterWt, filterWt);
 			}
 		}
 	}
 
-	void UpdateScreenBufferImpl() {
-		for (unsigned int i = 0, j = 0; i < pixelCount; ++i) {
-			const float weight = pixelWeights[i];
+	virtual void UpdateScreenBufferImpl() {
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			const SamplePixel *sp = sampleFrameBuffer->GetPixel(i);
+			const float weight = sp->weight;
 
-			if (weight == 0.f) {
-				pixels[j++] = 0.f;
-				pixels[j++] = 0.f;
-				pixels[j++] = 0.f;
-			} else {
-				const float invWeight = 1.f / weight;
-
-				pixels[j++] = Radiance2PixelFloat(pixelsRadiance[i].r * invWeight);
-				pixels[j++] = Radiance2PixelFloat(pixelsRadiance[i].g * invWeight);
-				pixels[j++] = Radiance2PixelFloat(pixelsRadiance[i].b * invWeight);
-			}
+			if (weight == 0.f)
+				frameBuffer->SetPixel(i, Spectrum());
+			else
+				frameBuffer->SetPixel(i, Radiance2Pixel(sp->radiance / weight));
 		}
 	}
 
-	boost::mutex radianceMutex;
 	GaussianFilter filter2x2, filter4x4;
 	float *filterTable2x2, *filterTable4x4;
-	Spectrum *pixelsRadiance;
-	float *pixelWeights;
-
-	float *pixels;
 };
 
 class FastGaussianFilm : public GaussianFilm {
@@ -727,7 +623,7 @@ private:
 
 		for (u_int y = static_cast<u_int>(max<int>(y0, 0)); y <= static_cast<u_int>(min<int>(y1, height - 1)); ++y)
 			for (u_int x = static_cast<u_int>(max<int>(x0, 0)); x <= static_cast<u_int>(min<int>(x1, width - 1)); ++x)
-				SplatRadiance(sampleElem->radiance, x, y, 0.01f);
+				sampleFrameBuffer->AddPixel(x, y, sampleElem->radiance * 0.01f, 0.01f);
 	}
 };
 
@@ -774,9 +670,20 @@ public:
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
+	void Save(const string &fileName) {
+		// Update pixels
+		pixelDevice->UpdateFrameBuffer();
+		SaveImpl(fileName);
+	}
+
 protected:
-	Spectrum *GetPixelRadiance() { return NULL; }
-	float *GetPixelWeigth()  { return NULL; }
+	const SampleFrameBuffer *GetSampleFrameBuffer() {
+		return pixelDevice->GetSampleFrameBuffer();
+	}
+
+	void AddSampleFrameBuffer(const SampleFrameBuffer *sfb) {
+		pixelDevice->Merge(sfb);
+	}
 
 	Context *ctx;
 	PixelDevice *pixelDevice;

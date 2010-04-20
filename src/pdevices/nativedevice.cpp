@@ -205,17 +205,31 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 void NativePixelDevice::UpdateFrameBuffer() {
 	const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 	Pixel *p = frameBuffer->GetPixels();
-	for (unsigned int i = 0, j = 0; i < width * height; ++i) {
+	for (unsigned int i = 0; i < width * height; ++i) {
 		const float weight = sp[i].weight;
 
-		if (weight == 0.f)
-			j++;
-		else {
+		if (weight > 0.f) {
 			const float invWeight = 1.f / weight;
 
-			p[j].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
-			p[j].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
-			p[j++].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
+			p[i].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
+			p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
+			p[i].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
 		}
 	}
+}
+
+void NativePixelDevice::Merge(const SampleFrameBuffer *sfb) {
+	for (unsigned int i = 0; i < width * height; ++i) {
+		SamplePixel *sp = sfb->GetPixel(i);
+		SamplePixel *spbase = sampleFrameBuffer->GetPixel(i);
+
+		AtomicAdd(&(spbase->radiance.r), sp->radiance.r);
+		AtomicAdd(&(spbase->radiance.g), sp->radiance.g);
+		AtomicAdd(&(spbase->radiance.b), sp->radiance.b);
+		AtomicAdd(&(spbase->weight), sp->weight);
+	}
+}
+
+const SampleFrameBuffer *NativePixelDevice::GetSampleFrameBuffer() const {
+	return sampleFrameBuffer;
 }

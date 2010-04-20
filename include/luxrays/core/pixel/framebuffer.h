@@ -52,7 +52,61 @@ public:
 		}
 	};
 
-	SamplePixel *GetPixels() { return pixels; }
+	SamplePixel *GetPixels() const { return pixels; }
+
+	void AddPixel(const unsigned int x, const unsigned int y, const Spectrum& r, const float w) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		SamplePixel *pixel = &pixels[x + y * width];
+		pixel->radiance += r;
+		pixel->weight += w;
+	}
+
+	void AddPixel(const unsigned int index, const Spectrum& r, const float w) {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		pixels[index].radiance += r;
+		pixels[index].weight += w;
+	}
+
+	void SetPixel(const unsigned int x, const unsigned int y, const Spectrum& r, const float w) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		SamplePixel *pixel = &pixels[x + y * width];
+		pixel->radiance = r;
+		pixel->weight = w;
+	}
+
+	void SetPixel(const unsigned int index, const Spectrum& r, const float w) {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		pixels[index].radiance = r;
+		pixels[index].weight = w;
+	}
+
+	SamplePixel *GetPixel(const unsigned int x, const unsigned int y) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		return &pixels[x + y * width];
+	}
+
+	SamplePixel *GetPixel(const unsigned int index) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		return &pixels[index];
+	}
 
 private:
 	const unsigned int width, height;
@@ -83,6 +137,38 @@ public:
 	};
 
 	Pixel *GetPixels() const { return pixels; }
+
+	void SetPixel(const unsigned int x, const unsigned int y, const Spectrum& r) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		pixels[x + y * width] = r;
+	}
+
+	void SetPixel(const unsigned int index, const Spectrum& r) {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		pixels[index] = r;
+	}
+
+	Pixel *GetPixel(const unsigned int x, const unsigned int y) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		return &pixels[x + y * width];
+	}
+
+	Pixel *GetPixel(const unsigned int index) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		return &pixels[index];
+	}
 
 private:
 	const unsigned int width, height;
