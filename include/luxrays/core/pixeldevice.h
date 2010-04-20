@@ -43,6 +43,9 @@ public:
 	virtual SampleBuffer *NewSampleBuffer() = 0;
 	virtual void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) = 0;
 
+	virtual void Merge(const SampleFrameBuffer *sfb) = 0;
+	virtual const SampleFrameBuffer *GetSampleFrameBuffer() const = 0;
+
 	virtual void UpdateFrameBuffer() = 0;
 	virtual const FrameBuffer *GetFrameBuffer() const = 0;
 
@@ -75,6 +78,9 @@ public:
 
 	SampleBuffer *NewSampleBuffer();
 	void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer);
+
+	void Merge(const SampleFrameBuffer *sfb);
+	const SampleFrameBuffer *GetSampleFrameBuffer() const;
 
 	void UpdateFrameBuffer();
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
