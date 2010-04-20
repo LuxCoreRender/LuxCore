@@ -91,6 +91,10 @@ void RenderingConfig::Init() {
 			cerr << "Film type: FastGaussianFilm" << endl;
 			film = new FastGaussianFilm(lowLatency, w, h);
 			break;
+		case 4:
+			cerr << "Film type: LuxRaysFilm" << endl;
+			film = new LuxRaysFilm(ctx, lowLatency, w, h);
+			break;
 		default:
 			throw runtime_error("Requested an unknown film type");
 	}

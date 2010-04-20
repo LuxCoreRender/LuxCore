@@ -46,12 +46,15 @@ public:
 	const std::vector<DeviceDescription *> &GetAvailableDeviceDescriptions() const;
 	const std::vector<IntersectionDevice *> &GetIntersectionDevices() const;
 	const std::vector<IntersectionDevice *> &GetIntersectionDevices(DeviceDescription type) const;
+	const std::vector<PixelDevice *> &GetPixelDevices() const;
 
 	std::vector<IntersectionDevice *> AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
 	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
 		const std::vector<DeviceDescription *> &deviceDescs);
 	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
 		const std::vector<DeviceDescription *> &deviceDescs);
+
+	std::vector<PixelDevice *> AddPixelDevices(const std::vector<DeviceDescription *> &deviceDesc);
 
 	void SetDataSet(const DataSet *dataSet);
 	void Start();
@@ -75,17 +78,21 @@ protected:
 
 private:
 	std::vector<IntersectionDevice *> CreateIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
+	std::vector<PixelDevice *> CreatePixelDevices(const std::vector<DeviceDescription *> &deviceDesc);
 
 	LuxRaysDebugHandler debugHandler;
 
 	const DataSet *currentDataSet;
 	std::vector<DeviceDescription *> deviceDescriptions;
 
-	// All devices
-	std::vector<IntersectionDevice *> devices;
-	// Virtual devices
+	// All intersection devices (including virtual)
+	std::vector<IntersectionDevice *> idevices;
+	// Virtual intersection devices
 	std::vector<VirtualM2MHardwareIntersectionDevice *> m2mDevices;
 	std::vector<VirtualM2OHardwareIntersectionDevice *> m2oDevices;
+
+	// All pixel devices
+	std::vector<PixelDevice *> pdevices;
 
 	bool started;
 };
