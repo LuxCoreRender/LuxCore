@@ -118,6 +118,10 @@ void RenderingConfig::Init() {
 	else
 		scene->lightStrategy = ALL_UNIFORM;
 	scene->shadowRayCount = cfg.GetInt("path.shadowrays", 1);
+	if (cfg.GetInt("path.onlysamplespecular", 0) == 0)
+		scene->onlySampleSpecular = false;
+	else
+		scene->onlySampleSpecular = true;
 
 	// Russian Roulette parameters
 	int rrStrat = cfg.GetInt("path.russianroulette.strategy", 1);
@@ -220,6 +224,22 @@ void RenderingConfig::SetShadowRays(const int delta) {
 	scene->shadowRayCount = max<unsigned int>(1, scene->shadowRayCount + delta);
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->ClearPaths();
+
+	// Restart all devices
+	if (wasRunning)
+		StartAllRenderThreadsLockless();
+}
+
+void RenderingConfig::SetOnlySampleSpecular(const bool v) {
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
+
+	bool wasRunning = renderThreadsStarted;
+	// First stop all devices
+	if (wasRunning)
+		StopAllRenderThreadsLockless();
+
+	film->Reset();
+	scene->onlySampleSpecular = v;
 
 	// Restart all devices
 	if (wasRunning)

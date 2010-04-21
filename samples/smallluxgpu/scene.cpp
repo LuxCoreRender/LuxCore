@@ -33,6 +33,7 @@
 
 Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film) {
 	maxPathDepth = 3;
+	onlySampleSpecular = false;
 
 	shadowRayCount = 1;
 	lightStrategy = ONE_UNIFORM;

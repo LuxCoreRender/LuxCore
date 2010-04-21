@@ -66,7 +66,7 @@ public:
 	virtual Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const = 0;
 	virtual Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N,
 		const Normal &shadeN, const float u0, const float u1,  const float u2,
-		float *pdf,	bool &specularBounce) const = 0;
+		const bool onlySpecular, float *pdf,	bool &specularBounce) const = 0;
 };
 
 class MatteMaterial : public SurfaceMaterial {
@@ -84,7 +84,13 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
+		if (onlySpecular) {
+			*pdf = 0.f;
+			return Spectrum();
+		}
+
 		Vector dir = CosineSampleHemisphere(u0, u1);
 		*pdf = dir.z * INV_PI;
 
@@ -132,7 +138,8 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
 		const Vector dir = -wo;
 		const float dp = Dot(shadeN, dir);
 		(*wi) = dir - (2.f * dp) * Vector(shadeN);
@@ -170,16 +177,17 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
 		const float comp = u2 * totFilter;
 
-		if (comp > matteFilter) {
-			const Spectrum f = mirror.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
+		if (onlySpecular || (comp > matteFilter)) {
+			const Spectrum f = mirror.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
 			*pdf *= mirrorPdf;
 
 			return f;
 		} else {
-			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
 			*pdf *= mattePdf;
 
 			return f;
@@ -219,7 +227,8 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
 		Vector reflDir = -wo;
 		reflDir = reflDir - (2.f * Dot(N, reflDir)) * Vector(N);
 
@@ -304,7 +313,8 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
 		const float phi = 2.f * M_PI * u0;
 		const float cosTheta = powf(1.f - u1, exponent);
 		const float sinTheta = sqrtf(1.f - cosTheta * cosTheta);
@@ -369,16 +379,17 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
 		const float comp = u2 * totFilter;
 
-		if (comp > matteFilter) {
-			const Spectrum f = metal.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
+		if (onlySpecular || (comp > matteFilter)) {
+			const Spectrum f = metal.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
 			*pdf *= metalPdf;
 
 			return f;
 		} else {
-			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, pdf, specularBounce);
+			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
 			*pdf *= mattePdf;
 
 			return f;
@@ -422,7 +433,8 @@ public:
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, float *pdf, bool &specularBounce) const {
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
 		// Ray from outside going in ?
 		const bool into = (Dot(N, shadeN) > 0);
 

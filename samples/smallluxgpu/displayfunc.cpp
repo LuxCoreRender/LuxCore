@@ -60,40 +60,43 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_9_BY_15, "Help & Settings & Devices");
 
 	// Help
-	glRasterPos2i(60, 390);
+	glRasterPos2i(60, 395);
 	PrintString(GLUT_BITMAP_8_BY_13, "h - toggle Help");
-	glRasterPos2i(60, 370);
+	glRasterPos2i(60, 380);
 	PrintString(GLUT_BITMAP_8_BY_13, "arrow Keys or mouse X/Y + mouse button 0 - rotate camera");
-	glRasterPos2i(60, 350);
+	glRasterPos2i(60, 365);
 	PrintString(GLUT_BITMAP_8_BY_13, "a, s, d, w or mouse X/Y + mouse button 2 - move camera");
-	glRasterPos2i(60, 330);
+	glRasterPos2i(60, 350);
 	PrintString(GLUT_BITMAP_8_BY_13, "p - save image.png (or to image.filename property value)");
-	glRasterPos2i(60, 310);
+	glRasterPos2i(60, 335);
 	PrintString(GLUT_BITMAP_8_BY_13, "n, m - decrease/increase the minimum screen refresh time");
-	glRasterPos2i(60, 290);
+	glRasterPos2i(60, 320);
 	PrintString(GLUT_BITMAP_8_BY_13, "v, b - decrease/increase the max. path depth");
-	glRasterPos2i(60, 270);
+	glRasterPos2i(60, 305);
 	PrintString(GLUT_BITMAP_8_BY_13, "x, c - decrease/increase the field of view");
-	glRasterPos2i(60, 250);
+	glRasterPos2i(60, 290);
 	PrintString(GLUT_BITMAP_8_BY_13, "i, o - decrease/increase the shadow ray count");
+	glRasterPos2i(60, 275);
+	PrintString(GLUT_BITMAP_8_BY_13, "u - toggle path tracing/direct lighting rendering");
 
 	// Settings
 	char buf[512];
 	glColor3f(0.5f, 1.0f, 0.f);
-	glRasterPos2i(25, 230);
+	glRasterPos2i(25, 255);
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
-	glRasterPos2i(30, 210);
+	glRasterPos2i(30, 240);
 	sprintf(buf, "[Rendering time: %dsecs][FOV: %.1f][Max path depth: %d][RR Depth: %d]",
 			int(config->scene->camera->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
 			config->scene->maxPathDepth,
 			config->scene->rrDepth);
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
-	glRasterPos2i(30, 190);
-	sprintf(buf, "[Screen refresh: %dms][Render threads: %d][Shadow rays: %d]",
+	glRasterPos2i(30, 225);
+	sprintf(buf, "[Screen refresh: %dms][Render threads: %d][Shadow rays: %d][Mode: %s]",
 			config->screenRefreshInterval, int(config->GetRenderThreads().size()),
 			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
-				(config->scene->shadowRayCount * (int)config->scene->lights.size()));
+				(config->scene->shadowRayCount * (int)config->scene->lights.size()),
+			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 
 	// Devices
@@ -279,6 +282,10 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'o':
 			config->SetShadowRays(+1);
+			config->ReInit(false);
+			break;
+		case 'u':
+			config->SetOnlySampleSpecular(!config->scene->onlySampleSpecular);
 			config->ReInit(false);
 			break;
 		default:

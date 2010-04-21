@@ -461,7 +461,7 @@ public:
 		Vector wi;
 		const Spectrum f = triSurfMat->Sample_f(wo, &wi, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
-			&fPdf, specularBounce) * surfaceColor;
+			scene->onlySampleSpecular, &fPdf, specularBounce) * surfaceColor;
 		if ((fPdf <= 0.f) || f.Black()) {
 			if (tracedShadowRayCount > 0)
 				state = ONLY_SHADOW_RAYS;
