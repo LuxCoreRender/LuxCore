@@ -221,6 +221,7 @@ void RenderingConfig::SetShadowRays(const int delta) {
 	if (wasRunning)
 		StopAllRenderThreadsLockless();
 
+	film->Reset();
 	scene->shadowRayCount = max<unsigned int>(1, scene->shadowRayCount + delta);
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->ClearPaths();

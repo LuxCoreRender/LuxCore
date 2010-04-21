@@ -258,11 +258,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'v':
 			config->SetMaxPathDepth(-1);
-			config->ReInit(false);
 			break;
 		case 'b':
 			config->SetMaxPathDepth(+1);
-			config->ReInit(false);
 			break;
 		case 'n':
 			if (config->screenRefreshInterval > 1000)
@@ -278,15 +276,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'i':
 			config->SetShadowRays(-1);
-			config->ReInit(false);
 			break;
 		case 'o':
 			config->SetShadowRays(+1);
-			config->ReInit(false);
 			break;
 		case 'u':
 			config->SetOnlySampleSpecular(!config->scene->onlySampleSpecular);
-			config->ReInit(false);
 			break;
 		default:
 			break;
