@@ -135,16 +135,24 @@ OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 		Stop();
 
 	if (dataSet) {
+		deviceDesc->usedMemory -= raysBuff->getInfo<CL_MEM_SIZE>();
 		delete raysBuff;
+		deviceDesc->usedMemory -= hitsBuff->getInfo<CL_MEM_SIZE>();
 		delete hitsBuff;
 
 		if (bvhBuff) {
+			deviceDesc->usedMemory -= vertsBuff->getInfo<CL_MEM_SIZE>();
 			delete vertsBuff;
+			deviceDesc->usedMemory -= trisBuff->getInfo<CL_MEM_SIZE>();
 			delete trisBuff;
+			deviceDesc->usedMemory -= bvhBuff->getInfo<CL_MEM_SIZE>();
 			delete bvhBuff;
 		}
+
 		if (qbvhBuff) {
+			deviceDesc->usedMemory -= qbvhBuff->getInfo<CL_MEM_SIZE>();
 			delete qbvhBuff;
+			deviceDesc->usedMemory -= qbvhTrisBuff->getInfo<CL_MEM_SIZE>();
 			delete qbvhTrisBuff;
 		}
 	}
@@ -182,17 +190,24 @@ RayBuffer *OpenCLIntersectionDevice::PopRayBuffer() {
 void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	// Check if I have to free something from previous DataSet
 	if (dataSet) {
+		deviceDesc->usedMemory -= raysBuff->getInfo<CL_MEM_SIZE>();
 		delete raysBuff;
+		deviceDesc->usedMemory -= hitsBuff->getInfo<CL_MEM_SIZE>();
 		delete hitsBuff;
 
 		if (bvhBuff) {
+			deviceDesc->usedMemory -= vertsBuff->getInfo<CL_MEM_SIZE>();
 			delete vertsBuff;
+			deviceDesc->usedMemory -= trisBuff->getInfo<CL_MEM_SIZE>();
 			delete trisBuff;
+			deviceDesc->usedMemory -= bvhBuff->getInfo<CL_MEM_SIZE>();
 			delete bvhBuff;
 		}
 
 		if (qbvhBuff) {
+			deviceDesc->usedMemory -= qbvhBuff->getInfo<CL_MEM_SIZE>();
 			delete qbvhBuff;
+			deviceDesc->usedMemory -= qbvhTrisBuff->getInfo<CL_MEM_SIZE>();
 			delete qbvhTrisBuff;
 		}
 	}
