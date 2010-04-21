@@ -89,7 +89,7 @@ static int4 QBVHNode_BBoxIntersect(__global QBVHNode *node, const QuadRay *ray4,
 	tMin = max(tMin, (node->bboxes[sign2][2] - ray4->oz) * invDir2);
 	tMax = min(tMax, (node->bboxes[1 - sign2][2] - ray4->oz) * invDir2);
 
-	//return the visit flags
+	// Return the visit flags
 	return  (tMax >= tMin);
 }
 
@@ -237,27 +237,22 @@ __kernel void Intersect(
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
 			__global QBVHNode *node = &nodes[nodeData];
-			const int4 visit = QBVHNode_BBoxIntersect(node, &ray4,
+			int4 visit = QBVHNode_BBoxIntersect(node, &ray4,
 				invDir0, invDir1, invDir2,
 				signs0, signs1, signs2);
 
 			const int4 children = node->children;
-			if (visit.s3)
-				nodeStack[++todoNode] = children.s3;
-			if (visit.s2)
-				nodeStack[++todoNode] = children.s2;
-			if (visit.s1)
-				nodeStack[++todoNode] = children.s1;
-			if (visit.s0)
-				nodeStack[++todoNode] = children.s0;
+
+			// For some reason doing logic operations with int4 is very slow
+			nodeStack[todoNode + 1] = children.s3;
+			todoNode += (visit.s3 && !QBVHNode_IsEmpty(children.s3)) ? 1 : 0;
+			nodeStack[todoNode + 1] = children.s2;
+			todoNode += (visit.s2 && !QBVHNode_IsEmpty(children.s2)) ? 1 : 0;
+			nodeStack[todoNode + 1] = children.s1;
+			todoNode += (visit.s1 && !QBVHNode_IsEmpty(children.s1)) ? 1 : 0;
+			nodeStack[todoNode + 1] = children.s0;
+			todoNode += (visit.s0 && !QBVHNode_IsEmpty(children.s0)) ? 1 : 0;
 		} else {
-			//----------------------
-			// It is a leaf,
-			// all the informations are encoded in the index
-
-			if (QBVHNode_IsEmpty(nodeData))
-				continue;
-
 			// Perform intersection
 			const unsigned int nbQuadPrimitives = QBVHNode_NbQuadPrimitives(nodeData);
 			const unsigned int offset = QBVHNode_FirstQuadIndex(nodeData);
