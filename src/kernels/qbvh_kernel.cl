@@ -73,21 +73,21 @@ typedef struct {
 // array because I dont' trust OpenCL compiler =)
 static int4 QBVHNode_BBoxIntersect(__global QBVHNode *node, const QuadRay *ray4,
 		const float4 invDir0, const float4 invDir1, const float4 invDir2,
-		const int sign0, const int sign1, const int sign2) {
+		const int signs0, const int signs1, const int signs2) {
 	float4 tMin = ray4->mint;
 	float4 tMax = ray4->maxt;
 
 	// X coordinate
-	tMin = max(tMin, (node->bboxes[sign0][0] - ray4->ox) * invDir0);
-	tMax = min(tMax, (node->bboxes[1 - sign0][0] - ray4->ox) * invDir0);
+	tMin = max(tMin, (node->bboxes[signs0][0] - ray4->ox) * invDir0);
+	tMax = min(tMax, (node->bboxes[1 - signs0][0] - ray4->ox) * invDir0);
 
 	// Y coordinate
-	tMin = max(tMin, (node->bboxes[sign1][1] - ray4->oy) * invDir1);
-	tMax = min(tMax, (node->bboxes[1 - sign1][1] - ray4->oy) * invDir1);
+	tMin = max(tMin, (node->bboxes[signs1][1] - ray4->oy) * invDir1);
+	tMax = min(tMax, (node->bboxes[1 - signs1][1] - ray4->oy) * invDir1);
 
 	// Z coordinate
-	tMin = max(tMin, (node->bboxes[sign2][2] - ray4->oz) * invDir2);
-	tMax = min(tMax, (node->bboxes[1 - sign2][2] - ray4->oz) * invDir2);
+	tMin = max(tMin, (node->bboxes[signs2][2] - ray4->oz) * invDir2);
+	tMax = min(tMax, (node->bboxes[1 - signs2][2] - ray4->oz) * invDir2);
 
 	// Return the visit flags
 	return  (tMax >= tMin);
@@ -237,7 +237,7 @@ __kernel void Intersect(
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
 			__global QBVHNode *node = &nodes[nodeData];
-			int4 visit = QBVHNode_BBoxIntersect(node, &ray4,
+			const int4 visit = QBVHNode_BBoxIntersect(node, &ray4,
 				invDir0, invDir1, invDir2,
 				signs0, signs1, signs2);
 

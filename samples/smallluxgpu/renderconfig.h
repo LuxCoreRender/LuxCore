@@ -50,6 +50,7 @@ public:
 	void ReInit(const bool reallocBuffers, const unsigned int w = 0, unsigned int h = 0);
 	void SetMaxPathDepth(const int delta);
 	void SetShadowRays(const int delta);
+	void SetOnlySampleSpecular(const bool v);
 
 	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
 	const vector<RenderThread *> &GetRenderThreads() { return renderThreads; }

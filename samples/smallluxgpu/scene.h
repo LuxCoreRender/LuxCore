@@ -59,8 +59,9 @@ public:
 		return lightIndex;
 	}
 
-	// Siggned because of the delta parameter
+	// Signed because of the delta parameter
 	int maxPathDepth;
+	bool onlySampleSpecular;
 	DirectLightStrategy lightStrategy;
 	unsigned int shadowRayCount;
 
