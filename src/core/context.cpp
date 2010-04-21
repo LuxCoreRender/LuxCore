@@ -164,7 +164,7 @@ const std::vector<PixelDevice *> &Context::GetPixelDevices() const {
 	return pdevices;
 }
 
-std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
 	LR_LOG(this, "Creating " << deviceDesc.size() << " intersection device(s)");
@@ -189,8 +189,8 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(const std::
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			// OpenCL devices
-			const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->GetDeviceIndex()],
+			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
+			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, oclDevices[oclDeviceDesc->GetDeviceIndex()],
 					i, oclDeviceDesc->GetForceWorkGroupSize());
 		}
 #endif
@@ -203,7 +203,7 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(const std::
 	return newDevices;
 }
 
-std::vector<IntersectionDevice *> Context::AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+std::vector<IntersectionDevice *> Context::AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
 	std::vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc);
@@ -214,7 +214,7 @@ std::vector<IntersectionDevice *> Context::AddIntersectionDevices(const std::vec
 }
 
 std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(const unsigned int count,
-		const std::vector<DeviceDescription *> &deviceDescs) {
+		std::vector<DeviceDescription *> &deviceDescs) {
 	assert (!started);
 	assert (deviceDescs.size() > 0);
 
@@ -239,7 +239,7 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(cons
 }
 
 std::vector<IntersectionDevice *> Context::AddVirtualM2OIntersectionDevices(const unsigned int count,
-		const std::vector<DeviceDescription *> &deviceDescs) {
+		std::vector<DeviceDescription *> &deviceDescs) {
 	assert (!started);
 	assert (deviceDescs.size() == 1);
 
@@ -257,7 +257,7 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2OIntersectionDevices(cons
 	return realDevices;
 }
 
-std::vector<PixelDevice *> Context::CreatePixelDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+std::vector<PixelDevice *> Context::CreatePixelDevices(std::vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
 	LR_LOG(this, "Creating " << deviceDesc.size() << " pixel device(s)");
@@ -296,7 +296,7 @@ std::vector<PixelDevice *> Context::CreatePixelDevices(const std::vector<DeviceD
 	return newDevices;
 }
 
-std::vector<PixelDevice *> Context::AddPixelDevices(const std::vector<DeviceDescription *> &deviceDesc) {
+std::vector<PixelDevice *> Context::AddPixelDevices(std::vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
 	std::vector<PixelDevice *> newDevices = CreatePixelDevices(deviceDesc);

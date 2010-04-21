@@ -118,6 +118,14 @@ static void PrintHelpAndSettings() {
 		glRasterPos2i(30, offset);
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
 
+		// Check if it is an OpenCL device
+		if (devices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+			const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)devices[i])->GetDeviceDesc();
+			sprintf(buff, "[Mem: %dM/%dM]", int(desc->GetUsedMemory() / (1024 * 1024)),
+					int(desc->GetMaxMemory() / (1024 * 1024)));
+			PrintString(GLUT_BITMAP_8_BY_13, buff);
+		}
+
 		offset += 15;
 	}
 

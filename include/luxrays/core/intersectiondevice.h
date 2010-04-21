@@ -116,8 +116,8 @@ private:
 
 class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
 public:
-	OpenCLIntersectionDevice(const Context *context, const cl::Device &device,
-			const unsigned int index, const unsigned int forceWorkGroupSize);
+	OpenCLIntersectionDevice(const Context *context, OpenCLDeviceDescription *desc,
+			const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize);
 	~OpenCLIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);
@@ -130,7 +130,7 @@ public:
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
 
-	OpenCLDeviceType GetOpenCLType() const { return oclType; }
+	const OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
 
 	double GetLoad() const {
 		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
@@ -154,7 +154,7 @@ private:
 
 	void TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event);
 
-	OpenCLDeviceType oclType;
+	OpenCLDeviceDescription *deviceDesc;
 	boost::thread *intersectionThread;
 
 	// OpenCL items

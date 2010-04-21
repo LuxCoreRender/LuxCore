@@ -48,13 +48,13 @@ public:
 	const std::vector<IntersectionDevice *> &GetIntersectionDevices(DeviceDescription type) const;
 	const std::vector<PixelDevice *> &GetPixelDevices() const;
 
-	std::vector<IntersectionDevice *> AddIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
+	std::vector<IntersectionDevice *> AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc);
 	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
-		const std::vector<DeviceDescription *> &deviceDescs);
+		std::vector<DeviceDescription *> &deviceDescs);
 	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
-		const std::vector<DeviceDescription *> &deviceDescs);
+		std::vector<DeviceDescription *> &deviceDescs);
 
-	std::vector<PixelDevice *> AddPixelDevices(const std::vector<DeviceDescription *> &deviceDesc);
+	std::vector<PixelDevice *> AddPixelDevices(std::vector<DeviceDescription *> &deviceDesc);
 
 	void SetDataSet(const DataSet *dataSet);
 	void Start();
@@ -77,8 +77,8 @@ protected:
 #endif
 
 private:
-	std::vector<IntersectionDevice *> CreateIntersectionDevices(const std::vector<DeviceDescription *> &deviceDesc);
-	std::vector<PixelDevice *> CreatePixelDevices(const std::vector<DeviceDescription *> &deviceDesc);
+	std::vector<IntersectionDevice *> CreateIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc);
+	std::vector<PixelDevice *> CreatePixelDevices(std::vector<DeviceDescription *> &deviceDesc);
 
 	LuxRaysDebugHandler debugHandler;
 
