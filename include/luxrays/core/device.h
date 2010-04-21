@@ -103,6 +103,8 @@ protected:
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+class OpenCLIntersectionDevice;
+
 typedef enum {
 	OCL_DEVICE_TYPE_ALL, OCL_DEVICE_TYPE_DEFAULT, OCL_DEVICE_TYPE_CPU,
 			OCL_DEVICE_TYPE_GPU, OCL_DEVICE_TYPE_UNKNOWN
@@ -113,23 +115,27 @@ public:
 	OpenCLDeviceDescription(const std::string deviceName, const OpenCLDeviceType type,
 		const size_t devIndex, const int deviceComputeUnits, const size_t deviceMaxMemory) :
 		DeviceDescription(deviceName, DEVICE_TYPE_OPENCL), oclType(type), deviceIndex(devIndex),
-		computeUnits(deviceComputeUnits), maxMemory(deviceMaxMemory), forceWorkGroupSize(0) { }
+		computeUnits(deviceComputeUnits), maxMemory(deviceMaxMemory), usedMemory(0),
+		forceWorkGroupSize(0) { }
 
 	OpenCLDeviceType GetOpenCLType() const { return oclType; }
 	size_t GetDeviceIndex() const { return deviceIndex; }
 	int GetComputeUnits() const { return computeUnits; }
 	size_t GetMaxMemory() const { return maxMemory; }
+	size_t GetUsedMemory() const { return usedMemory; }
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 
 	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
 
 	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 
+	friend class OpenCLIntersectionDevice;
+
 protected:
 	OpenCLDeviceType oclType;
 	size_t deviceIndex;
 	int computeUnits;
-	size_t maxMemory;
+	size_t maxMemory, usedMemory;
 
 	// The use of this field is not multi-thread safe (i.e. OpenCLDeviceDescription
 	// is shared among all threads)

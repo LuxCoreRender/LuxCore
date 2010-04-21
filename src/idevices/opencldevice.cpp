@@ -36,12 +36,13 @@ using namespace luxrays;
 size_t OpenCLIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
 
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
+		OpenCLDeviceDescription *desc,
 		const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize) :
 		HardwareIntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
+	deviceDesc = desc;
 	deviceName = device.getInfo<CL_DEVICE_NAME > ().c_str();
 	reportedPermissionError = false;
 	intersectionThread = NULL;
-	oclType = GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE >());
 	bvhBuff = NULL;
 	qbvhBuff = NULL;
 	externalRayBufferQueue = NULL;
@@ -203,10 +204,13 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	raysBuff = new cl::Buffer(*oclContext,
 			CL_MEM_READ_ONLY,
 			sizeof(Ray) * RayBufferSize);
+	deviceDesc->usedMemory += raysBuff->getInfo<CL_MEM_SIZE>();
+
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Ray hits buffer size: " << (sizeof(RayHit) * RayBufferSize / 1024) << "Kbytes");
 	hitsBuff = new cl::Buffer(*oclContext,
 			CL_MEM_WRITE_ONLY,
 			sizeof(RayHit) * RayBufferSize);
+	deviceDesc->usedMemory += hitsBuff->getInfo<CL_MEM_SIZE>();
 
 	switch (dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH: {
@@ -215,12 +219,14 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(Point) * dataSet->GetTotalVertexCount(),
 					dataSet->GetTriangleMesh()->GetVertices());
+			deviceDesc->usedMemory += vertsBuff->getInfo<CL_MEM_SIZE>();
 
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Triangle indices buffer size: " << (sizeof(Triangle) * dataSet->GetTotalTriangleCount() / 1024) << "Kbytes");
 			trisBuff = new cl::Buffer(*oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(Triangle) * dataSet->GetTotalTriangleCount(),
 					dataSet->GetTriangleMesh()->GetTriangles());
+			deviceDesc->usedMemory += trisBuff->getInfo<CL_MEM_SIZE>();
 
 			const BVHAccel *bvh = (BVHAccel *)dataSet->GetAccelerator();
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " BVH buffer size: " << (sizeof(BVHAccelArrayNode) * bvh->nNodes / 1024) << "Kbytes");
@@ -228,6 +234,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(BVHAccelArrayNode) * bvh->nNodes,
 					bvh->bvhTree);
+			deviceDesc->usedMemory += bvhBuff->getInfo<CL_MEM_SIZE>();
 
 			// Set Arguments
 			bvhKernel->setArg(0, *raysBuff);
@@ -246,12 +253,14 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(QBVHNode) * qbvh->nNodes,
 					qbvh->nodes);
+			deviceDesc->usedMemory += qbvhBuff->getInfo<CL_MEM_SIZE>();
 
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QuadTriangle buffer size: " << (sizeof(QuadTriangle) * qbvh->nQuads / 1024) << "Kbytes");
 			qbvhTrisBuff = new cl::Buffer(*oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(QuadTriangle) * qbvh->nQuads,
 					qbvh->prims);
+			deviceDesc->usedMemory += qbvhTrisBuff->getInfo<CL_MEM_SIZE>();
 
 			// Set Arguments
 			qbvhKernel->setArg(0, *raysBuff);
