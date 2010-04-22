@@ -125,6 +125,51 @@ include_directories("${FREEIMAGE_INCLUDE_PATH}")
 
 #############################################################################
 #
+# LuxRays Docs
+#
+#############################################################################
+
+find_package(Doxygen)
+
+if(DOXYGEN_FOUND)
+        message(STATUS "Found Doxygen and generating LuxRays documentation")
+
+        # Generate doxygen.template
+        set(DOXYGEN_LUXRAYS_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/doxygen/luxrays.template)
+        configure_file(
+          "${DOXYGEN_LUXRAYS_TEMPLATE}.in"
+          "${DOXYGEN_LUXRAYS_TEMPLATE}"
+          )
+
+        set(DOXYGEN_LUXRAYS_INPUT ${CMAKE_CURRENT_BINARY_DIR}/doxygen-luxrays.conf)
+        set(DOXYGEN_LUXRAYS_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/doc/luxrays)
+        set(DOXYGEN_LUXRAYS_OUTPUT ${DOXYGEN_OUTPUT_DIR}/html/index.html)
+
+        message(STATUS "Doxygen LuxRays output:" ${DOXYGEN_LUXRAYS_OUTPUT})
+
+        if(DOXYGEN_DOT_FOUND)
+                message(STATUS "Found dot")
+                set(DOXYGEN_DOT_CONF "HAVE_DOT = YES")
+        endif(DOXYGEN_DOT_FOUND)
+
+        add_custom_command(
+            OUTPUT ${DOXYGEN_LUXRAYS_OUTPUT}
+            # Creating custom doxygen-luxrays.conf
+            COMMAND cp ${DOXYGEN_LUXRAYS_TEMPLATE} ${DOXYGEN_LUXRAYS_INPUT}
+            COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/include  ${CMAKE_CURRENT_SOURCE_DIR}/src >> ${DOXYGEN_LUXRAYS_INPUT}
+            COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_LUXRAYS_OUTPUT_DIR} >> ${DOXYGEN_LUXRAYS_INPUT}
+            COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_LUXRAYS_INPUT}
+            # Launch doxygen
+            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_LUXRAYS_INPUT}
+            DEPENDS ${DOXYGEN_LUXRAYS_TEMPLATE}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+
+        add_custom_target(apidoc_luxray ALL DEPENDS ${DOXYGEN_LUXRAYS_OUTPUT})
+ENDIF (DOXYGEN_FOUND)
+
+#############################################################################
+#
 # Compiler flags
 #
 #############################################################################
@@ -205,7 +250,7 @@ set(CMAKE_INSTALL_PREFIX .)
 #set(LUXRAYS_BIN_SAMPLES_DIR "luxrays-v${LUXRAYS_VERSION_MAJOR}.${LUXRAYS_VERSION_MINOR}")
 set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.5beta2")
 
-ADD_CUSTOM_COMMAND(
+add_custom_command(
     OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}"
     COMMAND rm -rf ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMAND mkdir ${LUXRAYS_BIN_SAMPLES_DIR}
@@ -218,11 +263,11 @@ ADD_CUSTOM_COMMAND(
     COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}")
 
-ADD_CUSTOM_COMMAND(
+add_custom_command(
     OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}.tgz"
     COMMAND tar zcvf ${LUXRAYS_BIN_SAMPLES_DIR}.tgz ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMAND rm -rf ${LUXRAYS_BIN_SAMPLES_DIR}
     DEPENDS ${LUXRAYS_BIN_SAMPLES_DIR}
     COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
 
-ADD_CUSTOM_TARGET(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
+add_custom_target(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")

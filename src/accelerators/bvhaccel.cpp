@@ -40,7 +40,7 @@ using namespace luxrays;
 // BVHAccel Method Definitions
 
 BVHAccel::BVHAccel(const Context *context,
-		const unsigned triangleCount, const Triangle *p, const Point *v,
+		const unsigned int triangleCount, const Triangle *p, const Point *v,
 		const unsigned int treetype, const int csamples, const int icost,
 		const int tcost, const float ebonus) :
 		costSamples(csamples), isectCost(icost), traversalCost(tcost), emptyBonus(ebonus),
