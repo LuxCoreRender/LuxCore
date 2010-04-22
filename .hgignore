@@ -1,8 +1,14 @@
 ^lib/libluxrays.a
+^doxygen-luxrays.conf
+^doxygen/luxrays.template
+^doxygen-slg.conf
+^doxygen/slg.template
 ^bin/*
+^doc/*
 syntax: glob
 *~
 *CMakeFiles
 *CMakeCache.txt
 *Makefile
 *cmake_install.cmake
+
