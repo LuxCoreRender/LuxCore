@@ -85,6 +85,12 @@ def slg_properties():
       description="Number of OpenCL devices threads",
       default=2, min=0, max=1024, soft_min=0, soft_max=1024)
   
+  EnumProperty(attr="slg_rendering_type", name="Rendering Type",
+      description="Select the desired rendering type",
+      items=(("0", "Path", "Path tracing"),
+             ("1", "Direct", "Direct lighting only")),
+      default="0")
+
   EnumProperty(attr="slg_film_type", name="Film Type",
       description="Select the desired film type",
       items=(("0", "Standard", "Standard Film version"),
@@ -284,6 +290,9 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.prop(scene, "slg_vnormals")
     col = split.column()
     col.prop(scene, "slg_infinitelightbf")
+    split = layout.split()
+    col = split.column()
+    col.prop(scene, "slg_rendering_type")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_film_type")
@@ -698,6 +707,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('screen.gamma = {:g}\n'.format(scene.slg_gamma))
     fcfg.write('screen.refresh.interval = {}\n'.format(scene.slg_refreshrate))
     fcfg.write('screen.type = {}\n'.format(scene.slg_film_type))
+    fcfg.write('path.onlysamplespecular = {}\n'.format(scene.slg_rendering_type))
     fcfg.write('path.maxdepth = {}\n'.format(scene.slg_tracedepth))
     fcfg.write('path.russianroulette.depth = {}\n'.format(scene.slg_rrdepth))
     if scene.slg_rrstrategy == "0":
