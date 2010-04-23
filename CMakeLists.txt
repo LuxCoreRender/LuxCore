@@ -186,11 +186,10 @@ SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp COM
 
 ###########################################################################
 #
-# LuxRays Library
+# Generate LuxRays kernel files
 #
 ###########################################################################
 
-# Generate kernel file
 add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
@@ -207,6 +206,36 @@ add_custom_command(
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl
    )
+add_custom_command(
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_Pixel_Reset = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cl
+   )
+add_custom_command(
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_Pixel_AddSampleBuffer = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cl
+   )
+add_custom_command(
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_Pixel_UpdateFrameBuffer = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cl
+   )
+
+###########################################################################
+#
+# LuxRays Library
+#
+###########################################################################
 
 set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/accelerators/bvhaccel.cpp
@@ -224,6 +253,9 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/idevices/virtualdevice.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/pdevices/nativedevice.cpp
     ${LUXRAYS_SOURCE_DIR}/pdevices/opencldevice.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/core/exttrianglemesh.cpp

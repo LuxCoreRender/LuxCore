@@ -53,6 +53,7 @@ public:
 	void SetOnlySampleSpecular(const bool v);
 
 	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
+	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }
 	const vector<RenderThread *> &GetRenderThreads() { return renderThreads; }
 
 	Properties cfg;

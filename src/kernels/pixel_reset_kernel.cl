@@ -19,22 +19,21 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+typedef struct {
+	float r, g, b;
+} Spectrum;
 
-#include <string>
+typedef struct {
+	Spectrum radiance;
+	float weight;
+} SamplePixel;
 
-namespace luxrays {
+__kernel void PixelReset(__global SamplePixel *sampleFrameBuffer) {
+	const unsigned int offset = get_global_id(0) + get_global_id(1) * get_global_size(0);
 
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-
-// Pixel kernels
-extern std::string KernelSource_Pixel_Reset;
-extern std::string KernelSource_Pixel_AddSampleBuffer;
-extern std::string KernelSource_Pixel_UpdateFrameBuffer;
-
+	__global SamplePixel *sp = &sampleFrameBuffer[offset];
+	sp->radiance.r = 0.f;
+	sp->radiance.g = 0.f;
+	sp->radiance.b = 0.f;
+	sp->weight = 0.f;
 }
-
-#endif	/* _LUXRAYS_KERNELS_H */

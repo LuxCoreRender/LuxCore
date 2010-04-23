@@ -26,8 +26,6 @@
 
 namespace luxrays {
 
-#define SAMPLE_BUFFER_SIZE (4096)
-
 typedef struct {
 	float screenX, screenY;
 	Spectrum radiance;
@@ -57,6 +55,7 @@ public:
 	SampleBufferElem *GetSampleBuffer() const { return samples; }
 
 	size_t GetSampleCount() const { return currentFreeSample; }
+	size_t GetSize() const { return size; }
 
 private:
 	size_t size;

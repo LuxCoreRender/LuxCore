@@ -23,6 +23,7 @@
 #define	_LUXRAYS_PIXELDEVICE_H
 
 #include <boost/interprocess/detail/atomic.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/device.h"
@@ -152,10 +153,12 @@ private:
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#define OPENCL_SAMPLEBUFFER_SIZE 65536
+
 class OpenCLPixelDevice : public PixelDevice {
 public:
 	OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize);
+			const unsigned int index, const unsigned int forceWorkGroupSize);
 	~OpenCLPixelDevice();
 
 	void Init(const unsigned int w, const unsigned int h);
@@ -175,19 +178,54 @@ public:
 	void UpdateFrameBuffer();
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
 
+	const OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	unsigned int GetFreeDevBufferCount() const {
+		unsigned long freeCount = 0;
+		for (unsigned int i = 0; i < SampleBufferCount; ++i) {
+			if (!(sampleBuffEvent[i]()) || (sampleBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() == CL_COMPLETE))
+				++freeCount;
+		}
+
+		return freeCount;
+	}
+	unsigned int GetTotalDevBufferCount() const { return SampleBufferCount; }
+
 	static size_t SampleBufferSize;
 
 	friend class Context;
 
 private:
+	static const unsigned int GammaTableSize = 1024;
+	static const unsigned int SampleBufferCount = 8;
+
+	OpenCLDeviceDescription *deviceDesc;
 	SampleFrameBuffer *sampleFrameBuffer;
 	FrameBuffer *frameBuffer;
 
-	cl::Kernel *resetKernel;
-	size_t workGroupSize;
+	boost::mutex splatMutex;
 
-	/*cl::Buffer *sampleFrameBuff;
-	cl::Buffer *sampleBuff;*/
+	// OpenCL items
+	cl::CommandQueue *oclQueue;
+
+	// Kernels
+	cl::Kernel *resetKernel;
+	size_t resetWorkGroupSize;
+
+	cl::Kernel *addSampleBufferKernel;
+	size_t addSampleBufferWorkGroupSize;
+
+	cl::Kernel *updateFrameBufferKernel;
+	size_t updateFrameBufferWorkGroupSize;
+
+	// Buffers
+	cl::Buffer *sampleFrameBuff;
+	cl::Buffer *frameBuff;
+
+	cl::Buffer *sampleBuff[SampleBufferCount];
+	cl::Event sampleBuffEvent[SampleBufferCount];
+
+	cl::Buffer *gammaTableBuff;
+	float gammaTable[GammaTableSize];
 };
 
 #endif
