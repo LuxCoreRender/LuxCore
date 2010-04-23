@@ -10,7 +10,7 @@ SLG (SmallLuxGPU)
 =================
 
 SmallLuxGPU is a LuxRays demo and LuxRender v0.8 "proof of concept". You can find
-more information about SLG at http://www.luxrender.net/wiki/index.php?title=LuxRays#SmallLuxGPU_.28SLG.29
+more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
 
 Credits
 =======
@@ -26,8 +26,8 @@ A special thanks goes to:
 - http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;
 - http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm for Cornell Blender scene;
 - libPNG authors http://www.libpng.org;
-- zlib authors http://www.zlib.net/;
-- OpenEXR authors http://www.openexr.com/;
+- zlib authors http://www.zlib.net/ (not used anymore);
+- OpenEXR authors http://www.openexr.com/ (not used anymore);
 - FreeImage open source image library. See http://freeimage.sourceforge.net for details.
 
 This software is release under GPL License (see COPYING.txt file).

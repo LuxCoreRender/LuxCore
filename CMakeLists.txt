@@ -165,7 +165,7 @@ if(DOXYGEN_FOUND)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
 
-        add_custom_target(apidoc_luxray ALL DEPENDS ${DOXYGEN_LUXRAYS_OUTPUT})
+        add_custom_target(apidoc_luxrays DEPENDS ${DOXYGEN_LUXRAYS_OUTPUT})
 ENDIF (DOXYGEN_FOUND)
 
 #############################################################################
@@ -225,6 +225,7 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/pdevices/nativedevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/pdevices/opencldevice.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/core/exttrianglemesh.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/plymesh/rply.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/properties.cpp)

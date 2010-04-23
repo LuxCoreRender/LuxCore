@@ -39,6 +39,7 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Platform info
+	cl::Platform oclPlatform;
 	VECTOR_CLASS<cl::Platform> platforms;
 	cl::Platform::get(&platforms);
 	for (size_t i = 0; i < platforms.size(); ++i)
@@ -59,9 +60,9 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 #endif
 
 	// Get the list of devices available on the platform
-	NativeThreadIntersectionDevice::AddDevices(deviceDescriptions);
+	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	OpenCLIntersectionDevice::AddDevices(oclPlatform, OCL_DEVICE_TYPE_ALL, deviceDescriptions);
+	OpenCLDeviceDescription::AddDeviceDescs(oclPlatform, OCL_DEVICE_TYPE_ALL, deviceDescriptions);
 #endif
 
 	// Print device info
@@ -77,7 +78,7 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 					desc->GetName());
 
 			LR_LOG(this, "Device " << i << " OpenCL type: " <<
-					OpenCLIntersectionDevice::GetDeviceType(desc->GetOpenCLType()));
+					OpenCLDeviceDescription::GetDeviceType(desc->GetOpenCLType()));
 			LR_LOG(this, "Device " << i << " OpenCL units: " <<
 					desc->GetComputeUnits());
 			LR_LOG(this, "Device " << i << " OpenCL max allocable memory: " <<
@@ -93,8 +94,6 @@ Context::~Context() {
 	if (started)
 		Stop();
 
-	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
-		delete deviceDescriptions[i];
 	for (size_t i = 0; i < idevices.size(); ++i) {
 		// Virtual devices are deleted below
 		if (idevices[i]->GetType() != DEVICE_TYPE_VIRTUAL)
@@ -107,6 +106,9 @@ Context::~Context() {
 
 	for (size_t i = 0; i < pdevices.size(); ++i)
 		delete pdevices[i];
+
+	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
+		delete deviceDescriptions[i];
 }
 
 void Context::SetDataSet(const DataSet *dataSet) {
@@ -169,12 +171,6 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(std::vector
 
 	LR_LOG(this, "Creating " << deviceDesc.size() << " intersection device(s)");
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Get the list of devices available on the platform
-	VECTOR_CLASS<cl::Device> oclDevices;
-	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
-#endif
-
 	std::vector<IntersectionDevice *> newDevices;
 	for (size_t i = 0; i < deviceDesc.size(); ++i) {
 		LR_LOG(this, "Allocating intersection device " << i << ": " << deviceDesc[i]->GetName() <<
@@ -190,8 +186,8 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(std::vector
 		else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, oclDevices[oclDeviceDesc->GetDeviceIndex()],
-					i, oclDeviceDesc->GetForceWorkGroupSize());
+			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, i,
+					oclDeviceDesc->GetForceWorkGroupSize());
 		}
 #endif
 		else
@@ -261,12 +257,6 @@ std::vector<PixelDevice *> Context::CreatePixelDevices(std::vector<DeviceDescrip
 	assert (!started);
 
 	LR_LOG(this, "Creating " << deviceDesc.size() << " pixel device(s)");
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Get the list of devices available on the platform
-	VECTOR_CLASS<cl::Device> oclDevices;
-	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
-#endif
 
 	std::vector<PixelDevice *> newDevices;
 	for (size_t i = 0; i < deviceDesc.size(); ++i) {

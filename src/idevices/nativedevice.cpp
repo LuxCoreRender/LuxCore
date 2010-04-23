@@ -36,7 +36,7 @@ NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(const Context *co
 		const size_t threadIndex, const unsigned int devIndex) :
 			IntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
 	char buf[64];
-	sprintf(buf, "NativeThread-%03d", (int)threadIndex);
+	sprintf(buf, "NativeIntersectThread-%03d", (int)threadIndex);
 	deviceName = std::string(buf);
 }
 
@@ -97,17 +97,4 @@ RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer() {
 	assert (started);
 
 	return doneRayBufferQueue.Pop();
-}
-
-void NativeThreadIntersectionDevice::AddDevices(std::vector<DeviceDescription *> &descriptions) {
-	unsigned int count = boost::thread::hardware_concurrency();
-
-	// Build the descriptions
-	char buf[64];
-	for (size_t i = 0; i < count; ++i) {
-		sprintf(buf, "NativeThread-%03d", (int)i);
-		std::string deviceName = std::string(buf);
-
-		descriptions.push_back(new NativeThreadDeviceDescription(deviceName, i));
-	}
 }

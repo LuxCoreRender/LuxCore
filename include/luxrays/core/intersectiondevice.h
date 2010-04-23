@@ -99,9 +99,6 @@ public:
 
 	friend class Context;
 
-protected:
-	static void AddDevices(std::vector<DeviceDescription *> &descriptions);
-
 private:
 	RayBufferSingleQueue doneRayBufferQueue;
 };
@@ -117,7 +114,7 @@ private:
 class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
 public:
 	OpenCLIntersectionDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize);
+			const unsigned int index, const unsigned int forceWorkGroupSize);
 	~OpenCLIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);
@@ -143,12 +140,6 @@ public:
 protected:
 	void SetExternalRayBufferQueue(RayBufferQueue *queue);
 
-	static std::string GetDeviceType(const cl_int type);
-	static std::string GetDeviceType(const OpenCLDeviceType type);
-	static OpenCLDeviceType GetOCLDeviceType(const cl_int type);
-	static void AddDevices(const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
-		std::vector<DeviceDescription *> &descriptions);
-
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 
@@ -158,7 +149,6 @@ private:
 	boost::thread *intersectionThread;
 
 	// OpenCL items
-	cl::Context *oclContext;
 	cl::CommandQueue *oclQueue;
 
 	// BVH fields
