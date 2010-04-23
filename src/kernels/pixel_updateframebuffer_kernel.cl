@@ -19,22 +19,54 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+typedef struct {
+	float r, g, b;
+} Spectrum;
 
-#include <string>
+typedef struct {
+	Spectrum radiance;
+	float weight;
+} SamplePixel;
 
-namespace luxrays {
+typedef Spectrum Pixel;
 
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-
-// Pixel kernels
-extern std::string KernelSource_Pixel_Reset;
-extern std::string KernelSource_Pixel_AddSampleBuffer;
-extern std::string KernelSource_Pixel_UpdateFrameBuffer;
-
+static float Clamp(float val, float low, float high) {
+	return (val > low) ? ((val < high) ? val : high) : low;
 }
 
-#endif	/* _LUXRAYS_KERNELS_H */
+static unsigned int Floor2UInt(float val) {
+	return (val > 0.f) ? ((unsigned int)floor(val)) : 0;
+}
+
+static float Radiance2PixelFloat(
+		const float x,
+		const unsigned int gammaTableSize,
+		__global float *gammaTable) {
+	//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
+
+	const unsigned int index = min(
+		Floor2UInt(gammaTableSize * Clamp(x, 0.f, 1.f)),
+			gammaTableSize - 1);
+	return gammaTable[index];
+}
+
+__kernel void PixelUpdateFrameBuffer(
+	const unsigned int width,
+	const unsigned int height,
+	__global SamplePixel *sampleFrameBuffer,
+	__global Pixel *frameBuffer,
+	const unsigned int gammaTableSize,
+	__global float *gammaTable) {
+	const unsigned int offset = get_global_id(0) + get_global_id(1) * get_global_size(0);
+	__global SamplePixel *sp = &sampleFrameBuffer[offset];
+	__global Pixel *p = &frameBuffer[offset];
+
+	const float weight = sp->weight;
+	if (weight == 0.f)
+		return;
+
+	const float invWeight = 1.f / weight;
+	p->r = Radiance2PixelFloat(sp->radiance.r * invWeight, gammaTableSize, gammaTable);
+	p->g = Radiance2PixelFloat(sp->radiance.g * invWeight, gammaTableSize, gammaTable);
+	p->b = Radiance2PixelFloat(sp->radiance.b * invWeight, gammaTableSize, gammaTable);
+}

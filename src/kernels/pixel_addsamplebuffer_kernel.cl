@@ -19,22 +19,38 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+typedef struct {
+	float r, g, b;
+} Spectrum;
 
-#include <string>
+typedef struct {
+	Spectrum radiance;
+	float weight;
+} SamplePixel;
 
-namespace luxrays {
+typedef struct {
+	float screenX, screenY;
+	Spectrum radiance;
+} SampleBufferElem;
 
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
+__kernel void PixelAddSampleBuffer(
+	const unsigned int width,
+	const unsigned int height,
+	__global SamplePixel *sampleFrameBuffer,
+	const unsigned int sampleCount,
+	__global SampleBufferElem *sampleBuff) {
+	const unsigned int index = get_global_id(0);
+	if (index >= sampleCount)
+		return;
 
-// Pixel kernels
-extern std::string KernelSource_Pixel_Reset;
-extern std::string KernelSource_Pixel_AddSampleBuffer;
-extern std::string KernelSource_Pixel_UpdateFrameBuffer;
+	// Just a test: IT IS NOT CORRECT
+	__global SampleBufferElem *sampleElem = &sampleBuff[index];
 
+	const unsigned int x = (unsigned int)sampleElem->screenX;
+	const unsigned int y = (unsigned int)sampleElem->screenY;
+	const unsigned int offset = x + y * width;
+	sampleFrameBuffer[offset].radiance.r += sampleElem->radiance.r;
+	sampleFrameBuffer[offset].radiance.g += sampleElem->radiance.g;
+	sampleFrameBuffer[offset].radiance.b += sampleElem->radiance.b;
+	sampleFrameBuffer[offset].weight += 1.f;
 }
-
-#endif	/* _LUXRAYS_KERNELS_H */

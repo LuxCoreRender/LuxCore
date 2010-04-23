@@ -49,8 +49,7 @@ NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long 
 	// Allocate buffers
 
 	// Sample buffer
-	const size_t sampleBufferSize = lowLatency ? (SAMPLE_BUFFER_SIZE / 4) : SAMPLE_BUFFER_SIZE;
-	sampleBuffer = new SampleBuffer(sampleBufferSize);
+	sampleBuffer = new SampleBuffer(OPENCL_SAMPLEBUFFER_SIZE);
 
 	// Ray buffer (small buffers work well with CPU)
 	const size_t rayBufferSize = 1024;
@@ -152,8 +151,8 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 	// Allocate buffers
 
 	// Sample buffer
-	const size_t sampleBufferSize = lowLatency ? (SAMPLE_BUFFER_SIZE / 4) : SAMPLE_BUFFER_SIZE;
-	sampleBuffer = new SampleBuffer(sampleBufferSize);
+	// TODO: cross check OPENCL_SAMPLEBUFFER_SIZE with the Pixel device
+	sampleBuffer = new SampleBuffer(OPENCL_SAMPLEBUFFER_SIZE);
 
 	// Ray buffer
 	// TODO: cross check RAY_BUFFER_SIZE with the Intersection device

@@ -143,6 +143,7 @@ public:
 
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
+	friend class OpenCLPixelDevice;
 
 protected:
 	static std::string GetDeviceType(const cl_int type);
@@ -151,7 +152,7 @@ protected:
 	static void AddDeviceDescs(const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
 		std::vector<DeviceDescription *> &descriptions);
 
-	cl::Context *GetOCLContext() {
+	cl::Context &GetOCLContext() {
 		if (!oclContext) {
 			// Allocate a context with the selected device
 			VECTOR_CLASS<cl::Device> devices;
@@ -164,7 +165,7 @@ protected:
 			oclContext = new cl::Context(devices, cps);
 		}
 
-		return oclContext;
+		return *oclContext;
 	}
 
 	cl::Device &GetOCLDevice() {

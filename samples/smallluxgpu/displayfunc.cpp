@@ -85,46 +85,67 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(25, 255);
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	glRasterPos2i(30, 240);
-	sprintf(buf, "[Rendering time: %dsecs][FOV: %.1f][Max path depth: %d][RR Depth: %d]",
+	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d]",
 			int(config->scene->camera->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
 			config->scene->maxPathDepth,
 			config->scene->rrDepth);
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	glRasterPos2i(30, 225);
-	sprintf(buf, "[Screen refresh: %dms][Render threads: %d][Shadow rays: %d][Mode: %s]",
+	sprintf(buf, "[Screen refresh %dms][Render threads %d][Shadow rays %d][Mode %s]",
 			config->screenRefreshInterval, int(config->GetRenderThreads().size()),
 			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
 				(config->scene->shadowRayCount * (int)config->scene->lights.size()),
 			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 
-	// Devices
-	const vector<IntersectionDevice *> devices = config->GetIntersectionDevices();
-	double minPerf = devices[0]->GetPerformance();
-	double totalPerf = devices[0]->GetPerformance();
-	for (size_t i = 1; i < devices.size(); ++i) {
-		minPerf = min(minPerf, devices[i]->GetPerformance());
-		totalPerf += devices[i]->GetPerformance();
+	// Pixel Device
+	char buff[512];
+	glColor3f(1.0f, 0.25f, 0.f);
+	glRasterPos2i(25, 210);
+	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
+	const vector<PixelDevice *> pdevices = config->GetPixelDevices();
+	if (pdevices.size() > 0) {
+		sprintf(buff, "[%s]", pdevices[0]->GetName().c_str());
+		PrintString(GLUT_BITMAP_8_BY_13, buff);
+
+		if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
+			const OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
+			const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
+			sprintf(buff, "[Mem %dM/%dM][Free buffers %.1f%%]", int(desc->GetUsedMemory() / (1024 * 1024)),
+					int(desc->GetMaxMemory() / (1024 * 1024)),
+					100.f * dev->GetFreeDevBufferCount() / (float)dev->GetTotalDevBufferCount());
+			PrintString(GLUT_BITMAP_8_BY_13, buff);
+		}
+	} else
+		PrintString(GLUT_BITMAP_8_BY_13, "Not used");
+
+
+	// Intersection devices
+	const vector<IntersectionDevice *> idevices = config->GetIntersectionDevices();
+	double minPerf = idevices[0]->GetPerformance();
+	double totalPerf = idevices[0]->GetPerformance();
+	for (size_t i = 1; i < idevices.size(); ++i) {
+		minPerf = min(minPerf, idevices[i]->GetPerformance());
+		totalPerf += idevices[i]->GetPerformance();
 	}
 
 	glColor3f(1.0f, 0.5f, 0.f);
 	int offset = 45;
-	char buff[512];
-	for (size_t i = 0; i < devices.size(); ++i) {
+	for (size_t i = 0; i < idevices.size(); ++i) {
 		sprintf(buff, "[%s][Rays/sec % 3dK][Load %.1f%%][Prf Idx %.2f][Wrkld %.1f%%]",
-				devices[i]->GetName().c_str(),
-				int(devices[i]->GetPerformance() / 1000.0),
-				100.0 * devices[i]->GetLoad(),
-				devices[i]->GetPerformance() / minPerf,
-				100.0 * devices[i]->GetPerformance() / totalPerf);
+				idevices[i]->GetName().c_str(),
+				int(idevices[i]->GetPerformance() / 1000.0),
+				100.0 * idevices[i]->GetLoad(),
+				idevices[i]->GetPerformance() / minPerf,
+				100.0 * idevices[i]->GetPerformance() / totalPerf);
 		glRasterPos2i(30, offset);
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
 
 		// Check if it is an OpenCL device
-		if (devices[i]->GetType() == DEVICE_TYPE_OPENCL) {
-			const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)devices[i])->GetDeviceDesc();
-			sprintf(buff, "[Mem: %dM/%dM]", int(desc->GetUsedMemory() / (1024 * 1024)),
+		if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+			const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
+			sprintf(buff, "[Mem %dM/%dM]", int(desc->GetUsedMemory() / (1024 * 1024)),
 					int(desc->GetMaxMemory() / (1024 * 1024)));
 			PrintString(GLUT_BITMAP_8_BY_13, buff);
 		}

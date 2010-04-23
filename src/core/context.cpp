@@ -270,12 +270,11 @@ std::vector<PixelDevice *> Context::CreatePixelDevices(std::vector<DeviceDescrip
 			device = new NativePixelDevice(this, ntvDeviceDesc->GetThreadIndex(), i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		/*else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
+		else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			// OpenCL devices
-			const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLIntersectionDevice(this, oclDevices[oclDeviceDesc->GetDeviceIndex()],
-					i, oclDeviceDesc->GetForceWorkGroupSize());
-		}*/
+			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
+			device = new OpenCLPixelDevice(this, oclDeviceDesc, i, oclDeviceDesc->GetForceWorkGroupSize());
+		}
 #endif
 		else
 			assert (false);
