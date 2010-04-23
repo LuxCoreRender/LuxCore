@@ -72,7 +72,6 @@ protected:
 	virtual void Interrupt() = 0;
 	virtual void Stop();
 
-
 	const Context *deviceContext;
 	DeviceType deviceType;
 	unsigned int deviceIndex;
@@ -93,7 +92,11 @@ public:
 
 	size_t GetThreadIndex() const { return threadIndex; };
 
+	friend class Context;
+
 protected:
+	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+
 	size_t threadIndex;
 };
 
@@ -112,11 +115,20 @@ typedef enum {
 
 class OpenCLDeviceDescription : public DeviceDescription {
 public:
-	OpenCLDeviceDescription(const std::string deviceName, const OpenCLDeviceType type,
-		const size_t devIndex, const int deviceComputeUnits, const size_t deviceMaxMemory) :
-		DeviceDescription(deviceName, DEVICE_TYPE_OPENCL), oclType(type), deviceIndex(devIndex),
-		computeUnits(deviceComputeUnits), maxMemory(deviceMaxMemory), usedMemory(0),
-		forceWorkGroupSize(0) { }
+	OpenCLDeviceDescription(cl::Device &device, const size_t devIndex) :
+		DeviceDescription(device.getInfo<CL_DEVICE_NAME>().c_str(), DEVICE_TYPE_OPENCL),
+		oclType(GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE>())),
+		deviceIndex(devIndex),
+		computeUnits(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()),
+		maxMemory(device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>()),
+		usedMemory(0),
+		forceWorkGroupSize(0),
+		oclDevice(device),
+		oclContext(NULL) { }
+
+	~OpenCLDeviceDescription() {
+		delete oclContext;
+	}
 
 	OpenCLDeviceType GetOpenCLType() const { return oclType; }
 	size_t GetDeviceIndex() const { return deviceIndex; }
@@ -129,9 +141,36 @@ public:
 
 	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 
+	friend class Context;
 	friend class OpenCLIntersectionDevice;
 
 protected:
+	static std::string GetDeviceType(const cl_int type);
+	static std::string GetDeviceType(const OpenCLDeviceType type);
+	static OpenCLDeviceType GetOCLDeviceType(const cl_int type);
+	static void AddDeviceDescs(const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
+		std::vector<DeviceDescription *> &descriptions);
+
+	cl::Context *GetOCLContext() {
+		if (!oclContext) {
+			// Allocate a context with the selected device
+			VECTOR_CLASS<cl::Device> devices;
+			devices.push_back(oclDevice);
+			cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
+			cl_context_properties cps[3] = {
+				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(), 0
+			};
+
+			oclContext = new cl::Context(devices, cps);
+		}
+
+		return oclContext;
+	}
+
+	cl::Device &GetOCLDevice() {
+		return oclDevice;
+	}
+
 	OpenCLDeviceType oclType;
 	size_t deviceIndex;
 	int computeUnits;
@@ -140,6 +179,10 @@ protected:
 	// The use of this field is not multi-thread safe (i.e. OpenCLDeviceDescription
 	// is shared among all threads)
 	mutable unsigned int forceWorkGroupSize;
+
+private:
+	cl::Device oclDevice;
+	mutable cl::Context *oclContext;
 };
 
 #endif

@@ -70,12 +70,6 @@ public:
 
 	friend class OpenCLIntersectionDevice;
 
-protected:
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	// OpenCL items
-	cl::Platform oclPlatform;
-#endif
-
 private:
 	std::vector<IntersectionDevice *> CreateIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc);
 	std::vector<PixelDevice *> CreatePixelDevices(std::vector<DeviceDescription *> &deviceDesc);

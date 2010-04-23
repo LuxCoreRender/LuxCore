@@ -71,7 +71,7 @@ if(DOXYGEN_FOUND)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../..
         )
 
-        add_custom_target(apidoc_slg ALL DEPENDS ${DOXYGEN_SLG_OUTPUT})
+        add_custom_target(apidoc_slg DEPENDS ${DOXYGEN_SLG_OUTPUT})
 endif(DOXYGEN_FOUND)
 
 #############################################################################

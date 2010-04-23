@@ -37,24 +37,18 @@ size_t OpenCLIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
 
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
 		OpenCLDeviceDescription *desc,
-		const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize) :
+		const unsigned int index, const unsigned int forceWorkGroupSize) :
 		HardwareIntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
 	deviceDesc = desc;
-	deviceName = device.getInfo<CL_DEVICE_NAME > ().c_str();
+	deviceName = (desc->GetName() +"Intersect").c_str();
 	reportedPermissionError = false;
 	intersectionThread = NULL;
 	bvhBuff = NULL;
 	qbvhBuff = NULL;
 	externalRayBufferQueue = NULL;
 
-	// Allocate a context with the selected device
-	VECTOR_CLASS<cl::Device> devices;
-	devices.push_back(device);
-	cl_context_properties cps[3] = {
-		CL_CONTEXT_PLATFORM, (cl_context_properties)context->oclPlatform(), 0
-	};
-
-	oclContext = new cl::Context(devices, cps);
+	cl::Context *oclContext = deviceDesc->GetOCLContext();
+	cl::Device &device = deviceDesc->GetOCLDevice();
 
 	// Allocate the queue for this device
 	oclQueue = new cl::CommandQueue(*oclContext, device);
@@ -160,7 +154,6 @@ OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 	delete bvhKernel;
 	delete qbvhKernel;
 	delete oclQueue;
-	delete oclContext;
 }
 
 void OpenCLIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue) {
@@ -213,6 +206,8 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	}
 
 	IntersectionDevice::SetDataSet(newDataSet);
+
+	cl::Context *oclContext = deviceDesc->GetOCLContext();
 
 	// Allocate OpenCL buffers
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Rays buffer size: " << (sizeof(Ray) * RayBufferSize / 1024) << "Kbytes");
@@ -451,88 +446,6 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 		LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread halted");
 	} catch (cl::Error err) {
 		LR_LOG(renderDevice->deviceContext, "[OpenCL device::" << renderDevice->deviceName << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")");
-	}
-}
-
-std::string OpenCLIntersectionDevice::GetDeviceType(const cl_int type) {
-	switch (type) {
-		case CL_DEVICE_TYPE_ALL:
-			return "TYPE_ALL";
-		case CL_DEVICE_TYPE_DEFAULT:
-			return "TYPE_DEFAULT";
-		case CL_DEVICE_TYPE_CPU:
-			return "TYPE_CPU";
-		case CL_DEVICE_TYPE_GPU:
-			return "TYPE_GPU";
-		default:
-			return "TYPE_UNKNOWN";
-	}
-}
-
-std::string OpenCLIntersectionDevice::GetDeviceType(const OpenCLDeviceType type) {
-	switch (type) {
-		case OCL_DEVICE_TYPE_ALL:
-			return "ALL";
-		case OCL_DEVICE_TYPE_DEFAULT:
-			return "DEFAULT";
-		case OCL_DEVICE_TYPE_CPU:
-			return "CPU";
-		case OCL_DEVICE_TYPE_GPU:
-			return "GPU";
-		default:
-			return "UNKNOWN";
-	}
-}
-
-OpenCLDeviceType OpenCLIntersectionDevice::GetOCLDeviceType(const cl_int type) {
-	switch (type) {
-		case CL_DEVICE_TYPE_ALL:
-			return OCL_DEVICE_TYPE_ALL;
-		case CL_DEVICE_TYPE_DEFAULT:
-			return OCL_DEVICE_TYPE_DEFAULT;
-		case CL_DEVICE_TYPE_CPU:
-			return OCL_DEVICE_TYPE_CPU;
-		case CL_DEVICE_TYPE_GPU:
-			return OCL_DEVICE_TYPE_GPU;
-		default:
-			return OCL_DEVICE_TYPE_UNKNOWN;
-	}
-}
-
-void OpenCLIntersectionDevice::AddDevices(
-	const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
-	std::vector<DeviceDescription *> &descriptions) {
-	// Get the list of devices available on the platform
-	VECTOR_CLASS<cl::Device> oclDevices;
-	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
-
-	// Build the descriptions
-	for (size_t i = 0; i < oclDevices.size(); ++i) {
-		OpenCLDeviceType type = GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE >());
-
-		if ((filter == OCL_DEVICE_TYPE_ALL) || (filter == type)) {
-			OpenCLDeviceDescription *desc = new OpenCLDeviceDescription(
-				oclDevices[i].getInfo<CL_DEVICE_NAME >().c_str(), type, i,
-				oclDevices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>(),
-				oclDevices[i].getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>());
-			descriptions.push_back(desc);
-		}
-	}
-}
-
-void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,
-		std::vector<DeviceDescription *> &deviceDescriptions) {
-	if (type == OCL_DEVICE_TYPE_ALL)
-		return;
-
-	size_t i = 0;
-	while (i < deviceDescriptions.size()) {
-		if ((deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) &&
-				(((OpenCLDeviceDescription *)deviceDescriptions[i])->GetOpenCLType() != type)) {
-			// Remove the device from the list
-			deviceDescriptions.erase(deviceDescriptions.begin() + i);
-		} else
-			++i;
 	}
 }
 

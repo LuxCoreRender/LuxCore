@@ -109,6 +109,110 @@ void Device::Stop() {
 }
 
 //------------------------------------------------------------------------------
+// Native Device Description
+//------------------------------------------------------------------------------
+
+void NativeThreadDeviceDescription::AddDeviceDescs(std::vector<DeviceDescription *> &descriptions) {
+	unsigned int count = boost::thread::hardware_concurrency();
+
+	// Build the descriptions
+	char buf[64];
+	for (size_t i = 0; i < count; ++i) {
+		sprintf(buf, "NativeThread-%03d", (int)i);
+		std::string deviceName = std::string(buf);
+
+		descriptions.push_back(new NativeThreadDeviceDescription(deviceName, i));
+	}
+}
+
+//------------------------------------------------------------------------------
+// OpenCL Device Description
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+std::string OpenCLDeviceDescription::GetDeviceType(const cl_int type) {
+	switch (type) {
+		case CL_DEVICE_TYPE_ALL:
+			return "TYPE_ALL";
+		case CL_DEVICE_TYPE_DEFAULT:
+			return "TYPE_DEFAULT";
+		case CL_DEVICE_TYPE_CPU:
+			return "TYPE_CPU";
+		case CL_DEVICE_TYPE_GPU:
+			return "TYPE_GPU";
+		default:
+			return "TYPE_UNKNOWN";
+	}
+}
+
+std::string OpenCLDeviceDescription::GetDeviceType(const OpenCLDeviceType type) {
+	switch (type) {
+		case OCL_DEVICE_TYPE_ALL:
+			return "ALL";
+		case OCL_DEVICE_TYPE_DEFAULT:
+			return "DEFAULT";
+		case OCL_DEVICE_TYPE_CPU:
+			return "CPU";
+		case OCL_DEVICE_TYPE_GPU:
+			return "GPU";
+		default:
+			return "UNKNOWN";
+	}
+}
+
+OpenCLDeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_int type) {
+	switch (type) {
+		case CL_DEVICE_TYPE_ALL:
+			return OCL_DEVICE_TYPE_ALL;
+		case CL_DEVICE_TYPE_DEFAULT:
+			return OCL_DEVICE_TYPE_DEFAULT;
+		case CL_DEVICE_TYPE_CPU:
+			return OCL_DEVICE_TYPE_CPU;
+		case CL_DEVICE_TYPE_GPU:
+			return OCL_DEVICE_TYPE_GPU;
+		default:
+			return OCL_DEVICE_TYPE_UNKNOWN;
+	}
+}
+
+void OpenCLDeviceDescription::AddDeviceDescs(
+	const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
+	std::vector<DeviceDescription *> &descriptions) {
+	// Get the list of devices available on the platform
+	VECTOR_CLASS<cl::Device> oclDevices;
+	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
+
+	// Build the descriptions
+	for (size_t i = 0; i < oclDevices.size(); ++i) {
+		OpenCLDeviceType type = GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>());
+
+		if ((filter == OCL_DEVICE_TYPE_ALL) || (filter == type)) {
+			OpenCLDeviceDescription *desc = new OpenCLDeviceDescription(oclDevices[i], i);
+			descriptions.push_back(desc);
+		}
+	}
+}
+
+void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,
+		std::vector<DeviceDescription *> &deviceDescriptions) {
+	if (type == OCL_DEVICE_TYPE_ALL)
+		return;
+
+	size_t i = 0;
+	while (i < deviceDescriptions.size()) {
+		if ((deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) &&
+				(((OpenCLDeviceDescription *)deviceDescriptions[i])->GetOpenCLType() != type)) {
+			// Remove the device from the list
+			deviceDescriptions.erase(deviceDescriptions.begin() + i);
+		} else
+			++i;
+	}
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // IntersectionDevice
 //------------------------------------------------------------------------------
 

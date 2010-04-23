@@ -146,6 +146,52 @@ private:
 	FrameBuffer *frameBuffer;
 };
 
+//------------------------------------------------------------------------------
+// OpenCL device
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+class OpenCLPixelDevice : public PixelDevice {
+public:
+	OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
+			const cl::Device &device, const unsigned int index, const unsigned int forceWorkGroupSize);
+	~OpenCLPixelDevice();
+
+	void Init(const unsigned int w, const unsigned int h);
+	void Reset();
+	void SetGamma(const float gamma = 2.2f);
+
+	void Start();
+	void Interrupt();
+	void Stop();
+
+	SampleBuffer *NewSampleBuffer();
+	void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer);
+
+	void Merge(const SampleFrameBuffer *sfb);
+	const SampleFrameBuffer *GetSampleFrameBuffer() const;
+
+	void UpdateFrameBuffer();
+	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
+
+	static size_t SampleBufferSize;
+
+	friend class Context;
+
+private:
+	SampleFrameBuffer *sampleFrameBuffer;
+	FrameBuffer *frameBuffer;
+
+	cl::Kernel *resetKernel;
+	size_t workGroupSize;
+
+	/*cl::Buffer *sampleFrameBuff;
+	cl::Buffer *sampleBuff;*/
+};
+
+#endif
+
 }
 
 #endif	/* _LUXRAYS_PIXELDEVICE_H */

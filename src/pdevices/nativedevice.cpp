@@ -86,7 +86,7 @@ void NativePixelDevice::Reset() {
 	sampleFrameBuffer->Reset();
 }
 
-void NativePixelDevice::SetGamma(const float gamma ) {
+void NativePixelDevice::SetGamma(const float gamma) {
 	float x = 0.f;
 	const float dx = 1.f / GammaTableSize;
 	for (unsigned int i = 0; i < GammaTableSize; ++i, x += dx)
