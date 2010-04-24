@@ -33,8 +33,9 @@ extern std::string KernelSource_QBVH;
 // Pixel kernels
 extern std::string KernelSource_Pixel_ClearFB;
 extern std::string KernelSource_Pixel_ClearSampleFB;
-extern std::string KernelSource_Pixel_AddSampleBuffer;
 extern std::string KernelSource_Pixel_UpdateFrameBuffer;
+extern std::string KernelSource_Pixel_AddSampleBuffer;
+extern std::string KernelSource_Pixel_AddSampleBufferPreview;
 
 }
 
