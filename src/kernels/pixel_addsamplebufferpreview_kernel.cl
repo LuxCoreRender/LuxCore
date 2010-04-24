@@ -51,7 +51,15 @@ void AtomicAdd(__global float *val, const float delta) {
 	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
 }
 
-__kernel void PixelAddSampleBuffer(
+static int Ceil2Int(const float val) {
+	return (int)ceil(val);
+}
+
+static int Floor2Int(const float val) {
+	return (int)floor(val);
+}
+
+__kernel void PixelAddSampleBufferPreview(
 	const unsigned int width,
 	const unsigned int height,
 	__global SamplePixel *sampleFrameBuffer,
@@ -61,13 +69,38 @@ __kernel void PixelAddSampleBuffer(
 	if (index >= sampleCount)
 		return;
 
+	const int splatSize = 3;
 	__global SampleBufferElem *sampleElem = &sampleBuff[index];
-	const unsigned int x = (unsigned int)sampleElem->screenX;
-	const unsigned int y = (unsigned int)sampleElem->screenY;
-	const unsigned int offset = x + y * width;
+	const float dImageX = sampleElem->screenX - 0.5f;
+	const float dImageY = sampleElem->screenY - 0.5f;
+	int x0 = Ceil2Int(dImageX - splatSize);
+	int x1 = Floor2Int(dImageX + splatSize);
+	int y0 = Ceil2Int(dImageY - splatSize);
+	int y1 = Floor2Int(dImageY + splatSize);
+	if (x1 < x0 || y1 < y0 || x1 < 0 || y1 < 0)
+		return;
 
-	AtomicAdd(&sampleFrameBuffer[offset].radiance.r, sampleElem->radiance.r);
-	AtomicAdd(&sampleFrameBuffer[offset].radiance.g, sampleElem->radiance.g);
-	AtomicAdd(&sampleFrameBuffer[offset].radiance.b, sampleElem->radiance.b);
-	AtomicAdd(&sampleFrameBuffer[offset].weight, 1.f);
+	x0 = max(x0, 0);
+	x1 = min(x1, (int)width - 1);
+	y0 = max(y0, 0);
+	y1 = min(y1, (int)height - 1);
+
+	for (int y = y0; y <= y1; ++y) {
+		for (int x = x0; x <= x1; ++x) {
+			const unsigned int offset = x + y * width;
+			__global SamplePixel *sp = &(sampleFrameBuffer[offset]);
+
+			/*AtomicAdd(&(sp->radiance.r), 0.01f * sampleElem->radiance.r);
+			AtomicAdd(&(sp->radiance.g), 0.01f * sampleElem->radiance.g);
+			AtomicAdd(&(sp->radiance.b), 0.01f * sampleElem->radiance.b);
+
+			AtomicAdd(&(sp->weight), 0.01f);*/
+
+			sp->radiance.r += 0.01f * sampleElem->radiance.r;
+			sp->radiance.g += 0.01f * sampleElem->radiance.g;
+			sp->radiance.b += 0.01f * sampleElem->radiance.b;
+
+			sp->weight += 0.01f;
+		}
+	}
 }

@@ -219,6 +219,8 @@ private:
 
 	cl::Kernel *addSampleBufferKernel;
 	size_t addSampleBufferWorkGroupSize;
+	cl::Kernel *addSampleBufferPreviewKernel;
+	size_t addSampleBufferPreviewWorkGroupSize;
 
 	cl::Kernel *updateFrameBufferKernel;
 	size_t updateFrameBufferWorkGroupSize;
