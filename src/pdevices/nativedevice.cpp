@@ -77,13 +77,18 @@ void NativePixelDevice::Init(const unsigned int w, const unsigned int h) {
 	delete frameBuffer;
 
 	sampleFrameBuffer = new SampleFrameBuffer(width, height);
-	sampleFrameBuffer->Reset();
+	sampleFrameBuffer->Clear();
 
 	frameBuffer = new FrameBuffer(width, height);
+	frameBuffer->Clear();
 }
 
-void NativePixelDevice::Reset() {
-	sampleFrameBuffer->Reset();
+void NativePixelDevice::ClearSampleFrameBuffer() {
+	sampleFrameBuffer->Clear();
+}
+
+void NativePixelDevice::ClearFrameBuffer() {
+	frameBuffer->Clear();
 }
 
 void NativePixelDevice::SetGamma(const float gamma) {

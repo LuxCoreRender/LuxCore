@@ -23,17 +23,13 @@ typedef struct {
 	float r, g, b;
 } Spectrum;
 
-typedef struct {
-	Spectrum radiance;
-	float weight;
-} SamplePixel;
+typedef Spectrum Pixel;
 
-__kernel void PixelReset(__global SamplePixel *sampleFrameBuffer) {
+__kernel void PixelClearFB(__global Pixel *frameBuffer) {
 	const unsigned int offset = get_global_id(0) + get_global_id(1) * get_global_size(0);
 
-	__global SamplePixel *sp = &sampleFrameBuffer[offset];
-	sp->radiance.r = 0.f;
-	sp->radiance.g = 0.f;
-	sp->radiance.b = 0.f;
-	sp->weight = 0.f;
+	__global Pixel *p = &frameBuffer[offset];
+	p->r = 0.f;
+	p->g = 0.f;
+	p->b = 0.f;
 }

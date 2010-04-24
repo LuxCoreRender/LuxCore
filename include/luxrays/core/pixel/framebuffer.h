@@ -37,13 +37,13 @@ public:
 		: width(w), height(h) {
 		pixels = new SamplePixel[width * height];
 
-		Reset();
+		Clear();
 	}
 	~SampleFrameBuffer() {
 		delete[] pixels;
 	}
 
-	void Reset() {
+	void Clear() {
 		for (unsigned int i = 0; i < width * height; ++i) {
 			pixels[i].radiance.r = 0.f;
 			pixels[i].radiance.g = 0.f;
@@ -122,13 +122,13 @@ public:
 			: width(w), height(h) {
 		pixels = new Pixel[width * height];
 
-		Reset();
+		Clear();
 	}
 	~FrameBuffer() {
 		delete[] pixels;
 	}
 
-	void Reset() {
+	void Clear() {
 		for (unsigned int i = 0; i < width * height; ++i) {
 			pixels[i].r = 0.f;
 			pixels[i].g = 0.f;
