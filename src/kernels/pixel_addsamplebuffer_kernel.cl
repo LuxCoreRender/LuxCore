@@ -19,6 +19,24 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+
+void AtomicAdd(__global float *val, const float delta) {
+	union {
+		float f;
+		unsigned int i;
+	} oldVal;
+	union {
+		float f;
+		unsigned int i;
+	} newVal;
+
+	do {
+		oldVal.f = *val;
+		newVal.f = oldVal.f + delta;
+	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
+}
+
 typedef struct {
 	float r, g, b;
 } Spectrum;
@@ -43,14 +61,13 @@ __kernel void PixelAddSampleBuffer(
 	if (index >= sampleCount)
 		return;
 
-	// Just a test: IT IS NOT CORRECT
 	__global SampleBufferElem *sampleElem = &sampleBuff[index];
-
 	const unsigned int x = (unsigned int)sampleElem->screenX;
 	const unsigned int y = (unsigned int)sampleElem->screenY;
 	const unsigned int offset = x + y * width;
-	sampleFrameBuffer[offset].radiance.r += sampleElem->radiance.r;
-	sampleFrameBuffer[offset].radiance.g += sampleElem->radiance.g;
-	sampleFrameBuffer[offset].radiance.b += sampleElem->radiance.b;
-	sampleFrameBuffer[offset].weight += 1.f;
+
+	AtomicAdd(&sampleFrameBuffer[offset].radiance.r, sampleElem->radiance.r);
+	AtomicAdd(&sampleFrameBuffer[offset].radiance.g, sampleElem->radiance.g);
+	AtomicAdd(&sampleFrameBuffer[offset].radiance.b, sampleElem->radiance.b);
+	AtomicAdd(&sampleFrameBuffer[offset].weight, 1.f);
 }
