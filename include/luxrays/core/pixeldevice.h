@@ -38,7 +38,8 @@ typedef enum {
 class PixelDevice : public Device {
 public:
 	virtual void Init(const unsigned int w, const unsigned int h);
-	virtual void Reset() = 0;
+	virtual void ClearFrameBuffer() = 0;
+	virtual void ClearSampleFrameBuffer() = 0;
 	virtual void SetGamma(const float gamma = 2.2f) = 0;
 
 	virtual SampleBuffer *NewSampleBuffer() = 0;
@@ -70,7 +71,8 @@ public:
 	~NativePixelDevice();
 
 	void Init(const unsigned int w, const unsigned int h);
-	void Reset();
+	void ClearFrameBuffer();
+	void ClearSampleFrameBuffer();
 	void SetGamma(const float gamma = 2.2f);
 
 	void Start();
@@ -162,7 +164,8 @@ public:
 	~OpenCLPixelDevice();
 
 	void Init(const unsigned int w, const unsigned int h);
-	void Reset();
+	void ClearFrameBuffer();
+	void ClearSampleFrameBuffer();
 	void SetGamma(const float gamma = 2.2f);
 
 	void Start();
@@ -208,8 +211,11 @@ private:
 	cl::CommandQueue *oclQueue;
 
 	// Kernels
-	cl::Kernel *resetKernel;
-	size_t resetWorkGroupSize;
+	cl::Kernel *clearFBKernel;
+	size_t clearFBWorkGroupSize;
+
+	cl::Kernel *clearSampleFBKernel;
+	size_t clearSampleFBWorkGroupSize;
 
 	cl::Kernel *addSampleBufferKernel;
 	size_t addSampleBufferWorkGroupSize;

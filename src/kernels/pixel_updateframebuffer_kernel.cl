@@ -62,14 +62,11 @@ __kernel void PixelUpdateFrameBuffer(
 	__global Pixel *p = &frameBuffer[offset];
 
 	const float weight = sp->weight;
-	if (weight == 0.f) {
-		p->r = 0.f;
-		p->g = 0.f;
-		p->b = 0.f;
-	} else {
-		const float invWeight = 1.f / weight;
-		p->r = Radiance2PixelFloat(sp->radiance.r * invWeight, gammaTableSize, gammaTable);
-		p->g = Radiance2PixelFloat(sp->radiance.g * invWeight, gammaTableSize, gammaTable);
-		p->b = Radiance2PixelFloat(sp->radiance.b * invWeight, gammaTableSize, gammaTable);
-	}
+	if (weight == 0.f)
+		return;
+
+	const float invWeight = 1.f / weight;
+	p->r = Radiance2PixelFloat(sp->radiance.r * invWeight, gammaTableSize, gammaTable);
+	p->g = Radiance2PixelFloat(sp->radiance.g * invWeight, gammaTableSize, gammaTable);
+	p->b = Radiance2PixelFloat(sp->radiance.b * invWeight, gammaTableSize, gammaTable);
 }

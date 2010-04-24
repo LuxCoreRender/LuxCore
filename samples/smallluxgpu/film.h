@@ -339,9 +339,9 @@ public:
 		pixelCount = w * h;
 
 		sampleFrameBuffer = new SampleFrameBuffer(w, h);
-		sampleFrameBuffer->Reset();
+		sampleFrameBuffer->Clear();
 		frameBuffer = new FrameBuffer(w, h);
-		frameBuffer->Reset();
+		frameBuffer->Clear();
 
 		Film::Init(w, h);
 	}
@@ -349,7 +349,7 @@ public:
 	virtual void Reset() {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
-		sampleFrameBuffer->Reset();
+		sampleFrameBuffer->Clear();
 
 		Film::Reset();
 	}
@@ -502,7 +502,7 @@ public:
 					sampleFrameBuffer->SetPixel(i, sp->radiance / (100.0f * weight), 0.01f);
 			}
 		} else
-			sampleFrameBuffer->Reset();
+			sampleFrameBuffer->Clear();
 
 		Film::Reset();
 	}
@@ -654,7 +654,7 @@ public:
 	}
 
 	virtual void Reset() {
-		pixelDevice->Reset();
+		pixelDevice->ClearSampleFrameBuffer();
 		Film::Reset();
 	}
 

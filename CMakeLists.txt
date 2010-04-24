@@ -207,12 +207,20 @@ add_custom_command(
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl
    )
 add_custom_command(
-   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
-   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
-   COMMAND echo "std::string luxrays::KernelSource_Pixel_Reset = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
-   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
-   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cl
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_Pixel_ClearFB = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cl
+   )
+add_custom_command(
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_Pixel_ClearSampleFB = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cl
    )
 add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
@@ -254,7 +262,8 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
-    ${LUXRAYS_SOURCE_DIR}/kernels/pixel_reset_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/pdevices/nativedevice.cpp
     ${LUXRAYS_SOURCE_DIR}/pdevices/opencldevice.cpp
