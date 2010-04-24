@@ -94,7 +94,7 @@ public:
 		statsStartSampleTime = WallClockTime();
 	}
 
-	void InitGammaTable(const float gamma = 2.2f) {
+	virtual void InitGammaTable(const float gamma = 2.2f) {
 		float x = 0.f;
 		const float dx = 1.f / GAMMA_TABLE_SIZE;
 		for (unsigned int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
@@ -647,6 +647,10 @@ public:
 	virtual void Init(const unsigned int w, unsigned int h) {
 		pixelDevice->Init(w, h);
 		Film::Init(w, h);
+	}
+
+	virtual void InitGammaTable(const float gamma = 2.2f) {
+		pixelDevice->SetGamma(gamma);
 	}
 
 	virtual void Reset() {
