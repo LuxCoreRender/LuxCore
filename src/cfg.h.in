@@ -32,7 +32,7 @@
 #if defined(__APPLE__)
 #if (__GNUC__ == 3) || (__GNUC__ == 4)
 extern "C" {
-	int isinf(double);
+	int isinf(float);
 	int isnan(double);
 }
 #endif
