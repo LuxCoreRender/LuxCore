@@ -99,12 +99,14 @@ public:
 
 	void GetNextSample(Sample *sample) {
 		 if (!lowLatency || (pass >= 64)) {
+			 previewOver = true;
 			// In order to improve ray coherency
 			 if (samplePerPixel == 1)
 				GetNextSample1x1(sample);
 			 else
-				 GetNextSampleNxN(sample);
+				GetNextSampleNxN(sample);
 		} else if (previewOver || (pass >= 32)) {
+			previewOver = true;
 			GetNextSample1x1(sample);
 		} else {
 			// In order to update the screen faster for the first 16 passes
