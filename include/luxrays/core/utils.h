@@ -37,6 +37,16 @@ typedef unsigned int u_int;
 #endif
 
 #if defined(__APPLE__)
+#if (__GNUC__ == 3) || (__GNUC__ == 4)
+extern "C" {
+	int isinf(float);
+	int isnan(double);
+	int isnanf(float);
+}
+#endif
+#endif
+
+#if defined(__APPLE__)
 #include <malloc/malloc.h>
 #else
 #include <malloc.h>
