@@ -117,6 +117,10 @@ public:
 		return (r == 0.f) && (g == 0.f) && (b == 0.f);
 	}
 
+	bool IsNaN() const {
+		return isnanf(r) || isnanf(g) || isnanf(b);
+	}
+
 	float r, g, b;
 };
 
