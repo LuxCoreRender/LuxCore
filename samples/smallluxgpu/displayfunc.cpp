@@ -106,15 +106,17 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
 	const vector<PixelDevice *> pdevices = config->GetPixelDevices();
 	if (pdevices.size() > 0) {
-		sprintf(buff, "[%s]", pdevices[0]->GetName().c_str());
+		sprintf(buff, "[%s][Samples/sec % 3dK]", pdevices[0]->GetName().c_str(),
+				int(pdevices[0]->GetPerformance() / 1000.0));
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
 
 		if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
 			const OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
 			const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
-			sprintf(buff, "[Mem %dM/%dM][Free buffers %.1f%%]", int(desc->GetUsedMemory() / (1024 * 1024)),
+			sprintf(buff, "[Mem %dM/%dM][Free buffers %d/%d]",
+					int(desc->GetUsedMemory() / (1024 * 1024)),
 					int(desc->GetMaxMemory() / (1024 * 1024)),
-					100.f * dev->GetFreeDevBufferCount() / (float)dev->GetTotalDevBufferCount());
+					int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
 			PrintString(GLUT_BITMAP_8_BY_13, buff);
 		}
 	} else

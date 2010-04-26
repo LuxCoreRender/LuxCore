@@ -175,6 +175,7 @@ void NativePixelDevice::SplatGaussian2x2(const SampleBufferElem *sampleElem) {
 void NativePixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) {
 	assert (started);
 
+	const double t = WallClockTime();
 	switch (type) {
 		case FILTER_GAUSSIAN: {
 			const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
@@ -203,6 +204,9 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 			assert (false);
 			break;
 	}
+	// TOFIX: the stats code is not thread safe
+	statsTotalSampleTime += WallClockTime() - t;
+	statsTotalSamplesCount += sampleBuffer->GetSampleCount();
 }
 
 void NativePixelDevice::UpdateFrameBuffer() {

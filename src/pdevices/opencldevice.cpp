@@ -64,7 +64,7 @@ OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescrip
 	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 
 	// Allocate the queue for this device
-	oclQueue = new cl::CommandQueue(oclContext, oclDevice);
+	oclQueue = new cl::CommandQueue(oclContext, oclDevice, CL_QUEUE_PROFILING_ENABLE);
 
 	//--------------------------------------------------------------------------
 	// PixelReset kernel
@@ -441,6 +441,13 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 		// This should never happen, just wait for one
 		index = rand() % SampleBufferCount;
 		sampleBuffEvent[index].wait();
+	}
+
+	// Colelct the statistics
+	if (sampleBuffEvent[index]()) {
+		statsTotalSampleTime += (sampleBuffEvent[index].getProfilingInfo<CL_PROFILING_COMMAND_END>() -
+			sampleBuffEvent[index].getProfilingInfo<CL_PROFILING_COMMAND_START>()) * 10e-9;
+		statsTotalSamplesCount += SampleBufferSize;
 	}
 
 	// Download the buffer to the GPU

@@ -261,4 +261,9 @@ void PixelDevice::Init(const unsigned int w, const unsigned int h) {
 	height = h;
 }
 
+void PixelDevice::Start() {
+	statsTotalSampleTime = 0.0;
+	statsTotalSamplesCount = 0.0;
+}
+
 }
