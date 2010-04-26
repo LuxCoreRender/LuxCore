@@ -634,9 +634,9 @@ public:
 		filterType = filter;
 
 		vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-		//DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-		DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
-		OpenCLDeviceDescription::Filter(OCL_DEVICE_TYPE_GPU, descs);
+		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
+		//DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
+		//OpenCLDeviceDescription::Filter(OCL_DEVICE_TYPE_GPU, descs);
 		descs.resize(1);
 		pixelDevice = ctx->AddPixelDevices(descs)[0];
 		pixelDevice->Init(w, h);
