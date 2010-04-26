@@ -187,16 +187,23 @@ public:
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
 
 	const OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-	unsigned int GetFreeDevBufferCount() const {
-		unsigned long freeCount = 0;
-		for (unsigned int i = 0; i < SampleBufferCount; ++i) {
-			if (!(sampleBuffEvent[i]()) || (sampleBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() == CL_COMPLETE))
+
+	unsigned int GetFreeDevBufferCount() {
+		boost::mutex::scoped_lock lock(splatMutex);
+
+		unsigned int freeCount = 0;
+		for (unsigned int i = 0; i < sampleBuffersUsed.size(); ++i) {
+			if (!sampleBuffersUsed[i] && (!(sampleBufferBuffEvent[i]()) || (sampleBufferBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() == CL_COMPLETE)))
 				++freeCount;
 		}
 
 		return freeCount;
 	}
-	unsigned int GetTotalDevBufferCount() const { return SampleBufferCount; }
+	unsigned int GetTotalDevBufferCount() {
+		boost::mutex::scoped_lock lock(splatMutex);
+
+		return sampleBufferBuff.size();
+	}
 
 	static size_t SampleBufferSize;
 
@@ -205,7 +212,6 @@ public:
 private:
 	static const unsigned int GammaTableSize = 1024;
 	static const unsigned int FilterTableSize = 16;
-	static const unsigned int SampleBufferCount = 6;
 
 	OpenCLDeviceDescription *deviceDesc;
 	SampleFrameBuffer *sampleFrameBuffer;
@@ -237,8 +243,10 @@ private:
 	cl::Buffer *sampleFrameBuff;
 	cl::Buffer *frameBuff;
 
-	cl::Buffer *sampleBuff[SampleBufferCount];
-	cl::Event sampleBuffEvent[SampleBufferCount];
+	std::vector<cl::Buffer *>sampleBufferBuff;
+	std::vector<cl::Event> sampleBufferBuffEvent;
+	std::vector<SampleBuffer *> sampleBuffers;
+	std::vector<bool> sampleBuffersUsed;
 
 	cl::Buffer *gammaTableBuff;
 	cl::Buffer *filterTableBuff;
