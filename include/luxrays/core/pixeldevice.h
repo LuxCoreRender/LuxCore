@@ -51,13 +51,20 @@ public:
 	virtual void UpdateFrameBuffer() = 0;
 	virtual const FrameBuffer *GetFrameBuffer() const = 0;
 
+	double GetPerformance() const {
+		return (statsTotalSampleTime == 0.0) ?	1.0 : (statsTotalSamplesCount / statsTotalSampleTime);
+	}
+
 	friend class Context;
 
 protected:
 	PixelDevice(const Context *context, const DeviceType type, const unsigned int index);
 	virtual ~PixelDevice();
 
+	virtual void Start();
+
 	unsigned int width, height;
+	double statsTotalSampleTime, statsTotalSamplesCount;
 };
 
 //------------------------------------------------------------------------------
