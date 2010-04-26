@@ -423,7 +423,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         any(os.remove('{}/{}'.format(sdir,file)) for file in os.listdir(sdir) if file.endswith('.ply'))
       objs = [o for o in scene.objects if any(m for m in mfp if m in o.material_slots)] if not export and mfp else scene.objects
       for obj in objs:
-        if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT', 'CURVE'] and scene.visible_layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
+        if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT', 'CURVE'] and scene.layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
           print('SLGBP ===> Object: {}'.format(obj.name))
           # Create render mesh
           try:
