@@ -96,10 +96,16 @@ private:
 	static const unsigned int GammaTableSize = 1024;
 	static const unsigned int FilterTableSize = 16;
 
+	/* Not supported by VisualC++
 	static const float Gaussian2x2_xWidth = 2.f;
 	static const float Gaussian2x2_yWidth = 2.f;
 	static const float Gaussian2x2_invXWidth = 1.f / 2.f;
-	static const float Gaussian2x2_invYWidth = 1.f / 2.f;
+	static const float Gaussian2x2_invYWidth = 1.f / 2.f;*/
+
+#define Gaussian2x2_xWidth 2.f
+#define Gaussian2x2_yWidth 2.f
+#define Gaussian2x2_invXWidth (1.f / 2.f)
+#define Gaussian2x2_invYWidth (1.f / 2.f)
 
 	static float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
 

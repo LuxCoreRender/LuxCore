@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
 				" -b <enable high latency mode>" << endl <<
 				" -s [GPU workgroup size]" << endl <<
 				" -t [halt time in secs]" << endl <<
-				" -T <disable the telnet server" << endl <<
+				" -T <enable the telnet server" << endl <<
 				" -D [property name] [property value]" << endl <<
 				" -d [current directory path]" << endl <<
 				" -h <display this help and exit>" << endl;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
 		FreeImage_SetOutputMessage(FreeImageErrorHandler);
 
 		bool batchMode = false;
-		bool telnetServerEnabled = true;
+		bool telnetServerEnabled = false;
 		Properties cmdLineProp;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
@@ -221,7 +221,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 't') cmdLineProp.SetString("batch.halttime", argv[++i]);
 
-				else if (argv[i][1] == 'T') telnetServerEnabled = false;
+				else if (argv[i][1] == 'T') telnetServerEnabled = true;
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);
