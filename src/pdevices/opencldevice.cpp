@@ -404,9 +404,8 @@ void OpenCLPixelDevice::Start() {
 }
 
 void OpenCLPixelDevice::Interrupt() {
-	assert (started);
-
 	boost::mutex::scoped_lock lock(splatMutex);
+	assert (started);
 }
 
 void OpenCLPixelDevice::Stop() {
@@ -420,9 +419,8 @@ SampleBuffer *OpenCLPixelDevice::NewSampleBuffer() {
 }
 
 void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) {
-	assert (started);
-
 	boost::mutex::scoped_lock lock(splatMutex);
+	assert (started);
 
 	// Look for a free SampleBuffer
 	unsigned int index = SampleBufferCount;
@@ -531,6 +529,7 @@ void OpenCLPixelDevice::UpdateFrameBuffer() {
 }
 
 void OpenCLPixelDevice::Merge(const SampleFrameBuffer *sfb) {
+	// TODO
 }
 
 const SampleFrameBuffer *OpenCLPixelDevice::GetSampleFrameBuffer() const {

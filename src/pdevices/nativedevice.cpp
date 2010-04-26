@@ -97,14 +97,17 @@ void NativePixelDevice::SetGamma(const float gamma) {
 }
 
 void NativePixelDevice::Start() {
+	boost::mutex::scoped_lock lock(splatMutex);
 	PixelDevice::Start();
 }
 
 void NativePixelDevice::Interrupt() {
+	boost::mutex::scoped_lock lock(splatMutex);
 	assert (started);
 }
 
 void NativePixelDevice::Stop() {
+	boost::mutex::scoped_lock lock(splatMutex);
 	PixelDevice::Stop();
 }
 
@@ -173,6 +176,7 @@ void NativePixelDevice::SplatGaussian2x2(const SampleBufferElem *sampleElem) {
 }
 
 void NativePixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) {
+	boost::mutex::scoped_lock lock(splatMutex);
 	assert (started);
 
 	const double t = WallClockTime();
@@ -204,12 +208,13 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 			assert (false);
 			break;
 	}
-	// TOFIX: the stats code is not thread safe
 	statsTotalSampleTime += WallClockTime() - t;
 	statsTotalSamplesCount += sampleBuffer->GetSampleCount();
 }
 
 void NativePixelDevice::UpdateFrameBuffer() {
+	boost::mutex::scoped_lock lock(splatMutex);
+
 	const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 	Pixel *p = frameBuffer->GetPixels();
 	for (unsigned int i = 0; i < width * height; ++i) {
@@ -226,14 +231,14 @@ void NativePixelDevice::UpdateFrameBuffer() {
 }
 
 void NativePixelDevice::Merge(const SampleFrameBuffer *sfb) {
+	boost::mutex::scoped_lock lock(splatMutex);
+
 	for (unsigned int i = 0; i < width * height; ++i) {
 		SamplePixel *sp = sfb->GetPixel(i);
 		SamplePixel *spbase = sampleFrameBuffer->GetPixel(i);
 
-		AtomicAdd(&(spbase->radiance.r), sp->radiance.r);
-		AtomicAdd(&(spbase->radiance.g), sp->radiance.g);
-		AtomicAdd(&(spbase->radiance.b), sp->radiance.b);
-		AtomicAdd(&(spbase->weight), sp->weight);
+		spbase->radiance += sp->radiance;
+		spbase->weight += sp->weight;
 	}
 }
 

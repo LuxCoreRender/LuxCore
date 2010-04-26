@@ -22,7 +22,6 @@
 #ifndef _LUXRAYS_PIXELDEVICE_H
 #define	_LUXRAYS_PIXELDEVICE_H
 
-#include <boost/interprocess/detail/atomic.hpp>
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
@@ -121,27 +120,8 @@ private:
 		const unsigned int offset = x + y * width;
 		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
 
-		AtomicAdd(&(sp->radiance.r), weight * radiance.r);
-		AtomicAdd(&(sp->radiance.g), weight * radiance.g);
-		AtomicAdd(&(sp->radiance.b), weight * radiance.b);
-
-		AtomicAdd(&(sp->weight), weight);
-	}
-
-	void AtomicAdd(float *val, const float delta) {
-		union bits {
-			float f;
-			boost::uint32_t i;
-		};
-
-		bits oldVal, newVal;
-		do {
-#if (defined(__i386__) || defined(__amd64__))
-	        __asm__ __volatile__ ("pause\n");
-#endif
-			oldVal.f = *val;
-			newVal.f = oldVal.f + delta;
-		} while (boost::interprocess::detail::atomic_cas32(((boost::uint32_t *)val), newVal.i, oldVal.i) != oldVal.i);
+		sp->radiance += weight * radiance;
+		sp->weight += weight;
 	}
 
 	float Radiance2PixelFloat(const float x) const {
@@ -154,6 +134,7 @@ private:
 		return gammaTable[index];
 	}
 
+	boost::mutex splatMutex;
 	SampleFrameBuffer *sampleFrameBuffer;
 	FrameBuffer *frameBuffer;
 
