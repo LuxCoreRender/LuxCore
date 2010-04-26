@@ -81,6 +81,7 @@ void NativePixelDevice::AllocateSampleBuffers(const unsigned int count) {
 	for (size_t i = 0; i < sampleBuffers.size(); ++i)
 		delete sampleBuffers[i];
 
+	// Allocate new one
 	sampleBuffers.resize(count);
 	sampleBuffersUsed.resize(count, false);
 	for (size_t i = 0; i < sampleBuffers.size(); ++i)
