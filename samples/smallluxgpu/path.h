@@ -565,7 +565,7 @@ private:
 
 class PathIntegrator {
 public:
-	PathIntegrator(Scene *s, Sampler *samp, SampleBuffer *sb);
+	PathIntegrator(Scene *s, Sampler *samp);
 	~PathIntegrator();
 
 	void ReInit();

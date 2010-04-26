@@ -36,12 +36,15 @@ typedef enum {
 
 class PixelDevice : public Device {
 public:
+	virtual void AllocateSampleBuffers(const unsigned int count) = 0;
+
 	virtual void Init(const unsigned int w, const unsigned int h);
 	virtual void ClearFrameBuffer() = 0;
 	virtual void ClearSampleFrameBuffer() = 0;
 	virtual void SetGamma(const float gamma = 2.2f) = 0;
 
-	virtual SampleBuffer *NewSampleBuffer() = 0;
+	virtual SampleBuffer *GetFreeSampleBuffer() = 0;
+	virtual void FreeSampleBuffer(const SampleBuffer *sampleBuffer) = 0;
 	virtual void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) = 0;
 
 	virtual void Merge(const SampleFrameBuffer *sfb) = 0;
@@ -76,6 +79,8 @@ public:
 			const unsigned int devIndex);
 	~NativePixelDevice();
 
+	void AllocateSampleBuffers(const unsigned int count);
+
 	void Init(const unsigned int w, const unsigned int h);
 	void ClearFrameBuffer();
 	void ClearSampleFrameBuffer();
@@ -85,7 +90,8 @@ public:
 	void Interrupt();
 	void Stop();
 
-	SampleBuffer *NewSampleBuffer();
+	SampleBuffer *GetFreeSampleBuffer();
+	void FreeSampleBuffer(const SampleBuffer *sampleBuffer);
 	void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer);
 
 	void Merge(const SampleFrameBuffer *sfb);
@@ -138,6 +144,9 @@ private:
 	SampleFrameBuffer *sampleFrameBuffer;
 	FrameBuffer *frameBuffer;
 
+	std::vector<SampleBuffer *> sampleBuffers;
+	std::vector<bool> sampleBuffersUsed;
+
 	float gammaTable[GammaTableSize];
 	float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
 };
@@ -156,6 +165,8 @@ public:
 			const unsigned int index, const unsigned int forceWorkGroupSize);
 	~OpenCLPixelDevice();
 
+	void AllocateSampleBuffers(const unsigned int count);
+
 	void Init(const unsigned int w, const unsigned int h);
 	void ClearFrameBuffer();
 	void ClearSampleFrameBuffer();
@@ -165,7 +176,8 @@ public:
 	void Interrupt();
 	void Stop();
 
-	SampleBuffer *NewSampleBuffer();
+	SampleBuffer *GetFreeSampleBuffer();
+	void FreeSampleBuffer(const SampleBuffer *sampleBuffer);
 	void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer);
 
 	void Merge(const SampleFrameBuffer *sfb);

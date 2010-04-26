@@ -34,13 +34,16 @@
 #include "renderconfig.h"
 #include "displayfunc.h"
 
-PathIntegrator::PathIntegrator(Scene *s, Sampler *samp, SampleBuffer *sb) :
-	sampler(samp), scene(s), sampleBuffer(sb) {
+PathIntegrator::PathIntegrator(Scene *s, Sampler *samp) :
+	sampler(samp), scene(s) {
+	sampleBuffer = scene->camera->film->GetFreeSampleBuffer();
 	statsRenderingStart = WallClockTime();
 	statsTotalSampleCount = 0;
 }
 
 PathIntegrator::~PathIntegrator() {
+	scene->camera->film->FreeSampleBuffer(sampleBuffer);
+
 	for (size_t i = 0; i < paths.size(); ++i)
 		delete paths[i];
 }
@@ -49,6 +52,7 @@ void PathIntegrator::ReInit() {
 	for (size_t i = 0; i < paths.size(); ++i)
 		paths[i]->Init(scene, sampler);
 	firstPath = 0;
+	sampleBuffer->Reset();
 
 	statsRenderingStart = WallClockTime();
 	statsTotalSampleCount = 0;
@@ -123,7 +127,7 @@ void PathIntegrator::AdvancePaths(const RayBuffer *rayBuffer) {
 
 			// Splat all samples on the film
 			scene->camera->film->SplatSampleBuffer(sampler, sampleBuffer);
-			sampleBuffer->Reset();
+			sampleBuffer = scene->camera->film->GetFreeSampleBuffer();
 		}
 	}
 

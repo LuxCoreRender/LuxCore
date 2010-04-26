@@ -325,6 +325,10 @@ OpenCLPixelDevice::~OpenCLPixelDevice() {
 	delete oclQueue;
 }
 
+void OpenCLPixelDevice::AllocateSampleBuffers(const unsigned int count) {
+	// TODO
+}
+
 void OpenCLPixelDevice::Init(const unsigned int w, const unsigned int h) {
 	PixelDevice::Init(w, h);
 
@@ -414,8 +418,13 @@ void OpenCLPixelDevice::Stop() {
 	PixelDevice::Stop();
 }
 
-SampleBuffer *OpenCLPixelDevice::NewSampleBuffer() {
-	return new SampleBuffer(SampleBufferSize);
+SampleBuffer *OpenCLPixelDevice::GetFreeSampleBuffer() {
+	// TODO
+	return NULL;
+}
+
+void OpenCLPixelDevice::FreeSampleBuffer(const SampleBuffer *sampleBuffer) {
+	// TODO
 }
 
 void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) {

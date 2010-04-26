@@ -48,9 +48,6 @@ NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long 
 
 	// Allocate buffers
 
-	// Sample buffer
-	sampleBuffer = new SampleBuffer(OPENCL_SAMPLEBUFFER_SIZE);
-
 	// Ray buffer (small buffers work well with CPU)
 	const size_t rayBufferSize = 1024;
 	const unsigned int startLine = Clamp<unsigned int>(
@@ -60,7 +57,7 @@ NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long 
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
 		samplePerPixel, startLine);
 
-	pathIntegrator = new PathIntegrator(scene, sampler, sampleBuffer);
+	pathIntegrator = new PathIntegrator(scene, sampler);
 	rayBuffer = new RayBuffer(rayBufferSize);
 
 	renderThread = NULL;
@@ -73,7 +70,6 @@ NativeRenderThread::~NativeRenderThread() {
 	delete rayBuffer;
 	delete pathIntegrator;
 	delete sampler;
-	delete sampleBuffer;
 }
 
 void NativeRenderThread::Start() {
@@ -83,7 +79,6 @@ void NativeRenderThread::Start() {
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
 	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
-	sampleBuffer->Reset();
 	rayBuffer->Reset();
 	pathIntegrator->ReInit();
 
@@ -150,10 +145,6 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 
 	// Allocate buffers
 
-	// Sample buffer
-	// TODO: cross check OPENCL_SAMPLEBUFFER_SIZE with the Pixel device
-	sampleBuffer = new SampleBuffer(OPENCL_SAMPLEBUFFER_SIZE);
-
 	// Ray buffer
 	// TODO: cross check RAY_BUFFER_SIZE with the Intersection device
 	const size_t rayBufferSize = lowLatency ? (RAY_BUFFER_SIZE / 8) : RAY_BUFFER_SIZE;
@@ -164,7 +155,7 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
 		samplePerPixel, startLine);
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
-		pathIntegrators[i] = new PathIntegrator(scene, sampler, sampleBuffer);
+		pathIntegrators[i] = new PathIntegrator(scene, sampler);
 		rayBuffers[i] = new RayBuffer(rayBufferSize);
 		rayBuffers[i]->PushUserData(i);
 	}
@@ -181,7 +172,6 @@ DeviceRenderThread::~DeviceRenderThread() {
 		delete pathIntegrators[i];
 	}
 	delete sampler;
-	delete sampleBuffer;
 }
 
 void DeviceRenderThread::Start() {
@@ -191,7 +181,6 @@ void DeviceRenderThread::Start() {
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
 	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
-	sampleBuffer->Reset();
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		rayBuffers[i]->Reset();
 		rayBuffers[i]->ResetUserData();
