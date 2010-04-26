@@ -64,6 +64,8 @@ public:
 
 	virtual bool IsRunning() const { return started; };
 
+	friend class Context;
+
 protected:
 	Device(const Context *context, const DeviceType type, const unsigned int index);
 	virtual ~Device();

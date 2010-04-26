@@ -644,7 +644,7 @@ public:
 
 	virtual ~LuxRaysFilm() { }
 
-	virtual void Init(const unsigned int w, unsigned int h) {
+	virtual void Init(const unsigned int w, const unsigned int h) {
 		pixelDevice->Init(w, h);
 		Film::Init(w, h);
 	}
