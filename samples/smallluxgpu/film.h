@@ -180,7 +180,9 @@ public:
 	virtual void UpdateScreenBuffer() = 0;
 	virtual const float *GetScreenBuffer() const = 0;
 
-	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+	virtual SampleBuffer *GetFreeSampleBuffer() = 0;
+	virtual void FreeSampleBuffer(SampleBuffer *sampleBuffer) = 0;
+	virtual void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
 		// Update statistics
 		statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
 	}
@@ -317,15 +319,20 @@ public:
 			const unsigned int h) : Film(lowLatencyMode, w, h) {
 		sampleFrameBuffer = NULL;
 		frameBuffer = NULL;
+		freeSampleBuffers.resize(0);
+		usedSampleBuffers.resize(0);
 
 		Init(w, h);
 	}
 
 	virtual ~StandardFilm() {
-		if (sampleFrameBuffer)
-			delete sampleFrameBuffer;
-		if (frameBuffer)
-			delete frameBuffer;
+		for (size_t i = 0; i < freeSampleBuffers.size(); ++i)
+			delete freeSampleBuffers[i];
+		for (size_t i = 0; i < usedSampleBuffers.size(); ++i)
+			delete usedSampleBuffers[i];
+
+		delete sampleFrameBuffer;
+		delete frameBuffer;
 	}
 
 	virtual void Init(const unsigned int w, const unsigned int h) {
@@ -364,7 +371,31 @@ public:
 		return (const float *)frameBuffer->GetPixels();
 	}
 
-	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+	SampleBuffer *GetFreeSampleBuffer() {
+		boost::mutex::scoped_lock lock(radianceMutex);
+
+		if (freeSampleBuffers.size() > 0) {
+			SampleBuffer *sb = freeSampleBuffers.back();
+			freeSampleBuffers.pop_back();
+			usedSampleBuffers.push_back(sb);
+			sb->Reset();
+
+			return sb;
+		} else {
+			SampleBuffer *sb = new SampleBuffer(4096);
+			usedSampleBuffers.push_back(sb);
+
+			return sb;
+		}
+	}
+
+	void FreeSampleBuffer(SampleBuffer *sampleBuffer) {
+		boost::mutex::scoped_lock lock(radianceMutex);
+
+		FreeSampleBufferImpl(sampleBuffer);
+	}
+
+	void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
@@ -372,6 +403,8 @@ public:
 			SplatSampleBufferElem(&sbe[i]);
 
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
+
+		FreeSampleBufferImpl(sampleBuffer);
 	}
 
 	void Save(const string &fileName) {
@@ -384,6 +417,18 @@ public:
 	}
 
 protected:
+	void FreeSampleBufferImpl(SampleBuffer *sampleBuffer) {
+		for (vector<SampleBuffer *>::iterator i = usedSampleBuffers.begin(); i < usedSampleBuffers.end(); ++i) {
+			if (*i == sampleBuffer) {
+				usedSampleBuffers.erase(i);
+				freeSampleBuffers.push_back(sampleBuffer);
+				return;
+			}
+		}
+
+		throw std::runtime_error("Internal error: unable to find the SampleBuffer in StandardFilm::FreeSampleBufferImpl()");
+	}
+
 	void SplatSampleBufferElem(const SampleBufferElem *sampleElem) {
 		sampleFrameBuffer->AddPixel((unsigned int)sampleElem->screenX, (unsigned int)sampleElem->screenY,
 				sampleElem->radiance, 1.f);
@@ -413,6 +458,9 @@ protected:
 	boost::mutex radianceMutex;
 	SampleFrameBuffer *sampleFrameBuffer;
 	FrameBuffer *frameBuffer;
+
+	vector<SampleBuffer *> freeSampleBuffers;
+	vector<SampleBuffer *> usedSampleBuffers;
 };
 
 class BluredStandardFilm : public StandardFilm {
@@ -424,7 +472,7 @@ public:
 	~BluredStandardFilm() {
 	}
 
-	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+	void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
@@ -437,6 +485,7 @@ public:
 		}
 
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
+		FreeSampleBufferImpl(sampleBuffer);
 	}
 
 private:
@@ -507,7 +556,7 @@ public:
 		Film::Reset();
 	}
 
-	virtual void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+	virtual void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
@@ -520,6 +569,7 @@ public:
 		}
 
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
+		FreeSampleBufferImpl(sampleBuffer);
 	}
 
 protected:
@@ -591,7 +641,7 @@ public:
 	~FastGaussianFilm() {
 	}
 
-	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+	void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
 		const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
@@ -604,6 +654,7 @@ public:
 		}
 
 		Film::SplatSampleBuffer(sampler, sampleBuffer);
+		FreeSampleBufferImpl(sampleBuffer);
 	}
 
 private:
@@ -639,6 +690,7 @@ public:
 		//OpenCLDeviceDescription::Filter(OCL_DEVICE_TYPE_GPU, descs);
 		descs.resize(1);
 		pixelDevice = ctx->AddPixelDevices(descs)[0];
+		pixelDevice->AllocateSampleBuffers(16);
 		pixelDevice->Init(w, h);
 	}
 
@@ -666,13 +718,21 @@ public:
 		return (const float *)pixelDevice->GetFrameBuffer()->GetPixels();
 	}
 
-	void SplatSampleBuffer(const Sampler *sampler, const SampleBuffer *sampleBuffer) {
+	SampleBuffer *GetFreeSampleBuffer() {
+		return pixelDevice->GetFreeSampleBuffer();
+	}
+
+	void FreeSampleBuffer(SampleBuffer *sampleBuffer) {
+		pixelDevice->FreeSampleBuffer(sampleBuffer);
+	}
+
+	void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
+		Film::SplatSampleBuffer(sampler, sampleBuffer);
+
 		if (sampler->IsPreviewOver())
 			pixelDevice->AddSampleBuffer(filterType, sampleBuffer);
 		else
 			pixelDevice->AddSampleBuffer(FILTER_PREVIEW, sampleBuffer);
-
-		Film::SplatSampleBuffer(sampler, sampleBuffer);
 	}
 
 	void Save(const string &fileName) {

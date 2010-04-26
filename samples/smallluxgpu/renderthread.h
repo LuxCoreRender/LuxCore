@@ -76,7 +76,6 @@ private:
 	Sampler *sampler;
 	PathIntegrator *pathIntegrator;
 	RayBuffer *rayBuffer;
-	SampleBuffer *sampleBuffer;
 
 	boost::thread *renderThread;
 };
@@ -106,7 +105,6 @@ private:
 	Sampler *sampler;
 	PathIntegrator *pathIntegrators[DEVICE_RENDER_BUFFER_COUNT];
 	RayBuffer *rayBuffers[DEVICE_RENDER_BUFFER_COUNT];
-	SampleBuffer *sampleBuffer;
 
 	boost::thread *renderThread;
 
