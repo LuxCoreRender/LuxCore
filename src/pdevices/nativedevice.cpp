@@ -32,8 +32,6 @@ using namespace luxrays;
 
 size_t NativePixelDevice::SampleBufferSize = 512;
 
-float NativePixelDevice::Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
-
 NativePixelDevice::NativePixelDevice(const Context *context,
 		const size_t threadIndex, const unsigned int devIndex) :
 			PixelDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {

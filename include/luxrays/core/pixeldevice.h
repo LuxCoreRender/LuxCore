@@ -107,8 +107,6 @@ private:
 #define Gaussian2x2_invXWidth (1.f / 2.f)
 #define Gaussian2x2_invYWidth (1.f / 2.f)
 
-	static float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
-
 	void SplatPreview(const SampleBufferElem *sampleElem);
 	void SplatGaussian2x2(const SampleBufferElem *sampleElem);
 
@@ -149,10 +147,11 @@ private:
 		return gammaTable[index];
 	}
 
-	float gammaTable[GammaTableSize];
-
 	SampleFrameBuffer *sampleFrameBuffer;
 	FrameBuffer *frameBuffer;
+
+	float gammaTable[GammaTableSize];
+	float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
 };
 
 //------------------------------------------------------------------------------
@@ -205,7 +204,8 @@ public:
 
 private:
 	static const unsigned int GammaTableSize = 1024;
-	static const unsigned int SampleBufferCount = 8;
+	static const unsigned int FilterTableSize = 16;
+	static const unsigned int SampleBufferCount = 6;
 
 	OpenCLDeviceDescription *deviceDesc;
 	SampleFrameBuffer *sampleFrameBuffer;
@@ -227,6 +227,8 @@ private:
 	size_t addSampleBufferWorkGroupSize;
 	cl::Kernel *addSampleBufferPreviewKernel;
 	size_t addSampleBufferPreviewWorkGroupSize;
+	cl::Kernel *addSampleBufferGaussian2x2Kernel;
+	size_t addSampleBufferGaussian2x2WorkGroupSize;
 
 	cl::Kernel *updateFrameBufferKernel;
 	size_t updateFrameBufferWorkGroupSize;
@@ -239,7 +241,10 @@ private:
 	cl::Event sampleBuffEvent[SampleBufferCount];
 
 	cl::Buffer *gammaTableBuff;
+	cl::Buffer *filterTableBuff;
+
 	float gammaTable[GammaTableSize];
+	float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
 };
 
 #endif

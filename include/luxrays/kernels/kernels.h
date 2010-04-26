@@ -36,6 +36,7 @@ extern std::string KernelSource_Pixel_ClearSampleFB;
 extern std::string KernelSource_Pixel_UpdateFrameBuffer;
 extern std::string KernelSource_Pixel_AddSampleBuffer;
 extern std::string KernelSource_Pixel_AddSampleBufferPreview;
+extern std::string KernelSource_Pixel_AddSampleBufferGaussian2x2;
 
 }
 
