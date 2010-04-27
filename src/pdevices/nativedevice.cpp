@@ -83,9 +83,11 @@ void NativePixelDevice::AllocateSampleBuffers(const unsigned int count) {
 
 	// Allocate new one
 	sampleBuffers.resize(count);
-	sampleBuffersUsed.resize(count, false);
-	for (size_t i = 0; i < sampleBuffers.size(); ++i)
+	sampleBuffersUsed.resize(count);
+	for (size_t i = 0; i < sampleBuffers.size(); ++i) {
+		sampleBuffersUsed[i] = false;
 		sampleBuffers[i] = new SampleBuffer(SampleBufferSize);
+	}
 }
 
 void NativePixelDevice::Init(const unsigned int w, const unsigned int h) {

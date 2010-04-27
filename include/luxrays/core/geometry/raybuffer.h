@@ -27,6 +27,7 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <algorithm>
 
 #include "luxrays/core/geometry/ray.h"
 
@@ -358,8 +359,10 @@ private:
 class RayBufferQueueM2M : public RayBufferQueue {
 public:
 	RayBufferQueueM2M(const unsigned int consumersCount) {
-		queueToDoCounters.resize(consumersCount, 0);
+		queueToDoCounters.resize(consumersCount);
+		std::fill(queueToDoCounters.begin(), queueToDoCounters.end(), 0);
 		queueDoneCounters.resize(consumersCount, 0);
+		std::fill(queueDoneCounters.begin(), queueDoneCounters.end(), 0);
 	}
 	~RayBufferQueueM2M() { }
 
