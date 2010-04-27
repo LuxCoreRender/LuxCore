@@ -502,7 +502,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     # Get camera and lookat point
     cam = scene.camera   
     trackto = next((constraint for constraint in cam.constraints if constraint.name == 'TrackTo'), None)
-    target = trackto.target.location if trackto else cam.matrix * Vector(0,0,-10)
+    target = trackto.target.location if trackto else cam.matrix * Vector([0, 0, -10])
 
     print("SLGBP ===> Create scene files")
     # Check/create scene directory to hold scene files
