@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include <cstdio>
+#include <algorithm>
 
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/core/pixeldevice.h"
@@ -335,7 +336,8 @@ void OpenCLPixelDevice::AllocateSampleBuffers(const unsigned int count) {
 	sampleBufferBuff.resize(count);
 	sampleBufferBuffEvent.resize(count);
 	sampleBuffers.resize(count);
-	sampleBuffersUsed.resize(count, false);
+	sampleBuffersUsed.resize(count);
+	std::fill(sampleBuffersUsed.begin(), sampleBuffersUsed.end(), false);
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " SampleBuffer buffer size: " << (sizeof(SampleBufferElem) * SampleBufferSize / 1024) << "Kbytes (*" << count <<")");
 
@@ -473,7 +475,7 @@ SampleBuffer *OpenCLPixelDevice::GetFreeSampleBuffer() {
 
 	// This should never happen, just wait for one
 	for (size_t i = 0; i < sampleBufferBuff.size(); ++i) {
-		if (sampleBufferBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() != CL_COMPLETE) {
+		if (!sampleBuffersUsed[i] && (sampleBufferBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() != CL_COMPLETE)) {
 			sampleBufferBuffEvent[i].wait();
 			sampleBuffersUsed[i] = true;
 			sampleBuffers[i]->Reset();
@@ -526,7 +528,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 	// Run the kernel
 	sampleBufferBuffEvent[index] = cl::Event();
 	switch (type) {
-		case FILTER_GAUSSIAN: {
+		case FILTER_GAUSSIAN: /*{
 			addSampleBufferGaussian2x2Kernel->setArg(0, width);
 			addSampleBufferGaussian2x2Kernel->setArg(1, height);
 			addSampleBufferGaussian2x2Kernel->setArg(2, *sampleFrameBuff);
@@ -541,8 +543,8 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(addSampleBufferGaussian2x2WorkGroupSize),
 				NULL, &(sampleBufferBuffEvent[index]));
 			break;
-		}
-		case FILTER_PREVIEW: {
+		}*/
+		case FILTER_PREVIEW: /*{
 			addSampleBufferPreviewKernel->setArg(0, width);
 			addSampleBufferPreviewKernel->setArg(1, height);
 			addSampleBufferPreviewKernel->setArg(2, *sampleFrameBuff);
@@ -553,7 +555,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(addSampleBufferPreviewWorkGroupSize),
 				NULL, &(sampleBufferBuffEvent[index]));
 			break;
-		}
+		}*/
 		case FILTER_NONE: {
 			addSampleBufferKernel->setArg(0, width);
 			addSampleBufferKernel->setArg(1, height);
