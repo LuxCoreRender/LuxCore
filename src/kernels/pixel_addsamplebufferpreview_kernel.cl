@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+// NOTE: this kernel assume samples do not overlap
 
 typedef struct {
 	float r, g, b;
@@ -35,28 +35,18 @@ typedef struct {
 	Spectrum radiance;
 } SampleBufferElem;
 
-void AtomicAdd(__global float *val, const float delta) {
-	union {
-		float f;
-		unsigned int i;
-	} oldVal;
-	union {
-		float f;
-		unsigned int i;
-	} newVal;
-
-	do {
-		oldVal.f = *val;
-		newVal.f = oldVal.f + delta;
-	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
-}
-
 static int Ceil2Int(const float val) {
 	return (int)ceil(val);
 }
 
 static int Floor2Int(const float val) {
 	return (int)floor(val);
+}
+
+static void AddSample(__global SamplePixel *sp, const float4 sample) {
+    float4 weight = (float4)(sample.w, sample.w, sample.w, 1.f);
+    __global float4 *p = (__global float4 *)sp;
+    *p += weight * sample;
 }
 
 __kernel void PixelAddSampleBufferPreview(
@@ -69,16 +59,17 @@ __kernel void PixelAddSampleBufferPreview(
 	if (index >= sampleCount)
 		return;
 
-	const int splatSize = 3;
+	const float splatSize = 2.0f;
 	__global SampleBufferElem *sampleElem = &sampleBuff[index];
+
 	const float dImageX = sampleElem->screenX - 0.5f;
 	const float dImageY = sampleElem->screenY - 0.5f;
+    const float4 sample = (float4)(sampleElem->radiance.r, sampleElem->radiance.g, sampleElem->radiance.b, 0.01f);
+
 	int x0 = Ceil2Int(dImageX - splatSize);
 	int x1 = Floor2Int(dImageX + splatSize);
 	int y0 = Ceil2Int(dImageY - splatSize);
 	int y1 = Floor2Int(dImageY + splatSize);
-	if (x1 < x0 || y1 < y0 || x1 < 0 || y1 < 0)
-		return;
 
 	x0 = max(x0, 0);
 	x1 = min(x1, (int)width - 1);
@@ -86,21 +77,9 @@ __kernel void PixelAddSampleBufferPreview(
 	y1 = min(y1, (int)height - 1);
 
 	for (int y = y0; y <= y1; ++y) {
-		for (int x = x0; x <= x1; ++x) {
-			const unsigned int offset = x + y * width;
-			__global SamplePixel *sp = &(sampleFrameBuffer[offset]);
+        const unsigned int offset = y * width;
 
-			/*AtomicAdd(&(sp->radiance.r), 0.01f * sampleElem->radiance.r);
-			AtomicAdd(&(sp->radiance.g), 0.01f * sampleElem->radiance.g);
-			AtomicAdd(&(sp->radiance.b), 0.01f * sampleElem->radiance.b);
-
-			AtomicAdd(&(sp->weight), 0.01f);*/
-
-			sp->radiance.r += 0.01f * sampleElem->radiance.r;
-			sp->radiance.g += 0.01f * sampleElem->radiance.g;
-			sp->radiance.b += 0.01f * sampleElem->radiance.b;
-
-			sp->weight += 0.01f;
-		}
+		for (int x = x0; x <= x1; ++x)
+            AddSample(&sampleFrameBuffer[offset + x], sample);
 	}
 }

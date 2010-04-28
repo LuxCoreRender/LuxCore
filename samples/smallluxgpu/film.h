@@ -690,7 +690,7 @@ public:
 		OpenCLDeviceDescription::Filter(OCL_DEVICE_TYPE_GPU, descs);
 		descs.resize(1);
 		pixelDevice = ctx->AddPixelDevices(descs)[0];
-		pixelDevice->AllocateSampleBuffers(16);
+		pixelDevice->AllocateSampleBuffers(32);
 		pixelDevice->Init(w, h);
 	}
 

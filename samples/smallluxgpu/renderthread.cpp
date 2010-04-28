@@ -53,9 +53,12 @@ NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long 
 	const unsigned int startLine = Clamp<unsigned int>(
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
+
 	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
 		samplePerPixel, startLine);
+	/*sampler = new RandomNoOverlapSampler(lowLatency, seedBase + threadIndex + 1,
+		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);*/
 
 	pathIntegrator = new PathIntegrator(scene, sampler);
 	rayBuffer = new RayBuffer(rayBufferSize);
@@ -151,9 +154,13 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 	const unsigned int startLine = Clamp<unsigned int>(
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
+
 	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
 		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
 		samplePerPixel, startLine);
+	/*sampler = new RandomNoOverlapSampler(lowLatency, seedBase + threadIndex + 1,
+		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);*/
+
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		pathIntegrators[i] = new PathIntegrator(scene, sampler);
 		rayBuffers[i] = new RayBuffer(rayBufferSize);

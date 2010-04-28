@@ -174,11 +174,12 @@ int main(int argc, char *argv[]) {
 				" -g <disable OpenCL GPU device>" << endl <<
 				" -p <enable OpenCL CPU device>" << endl <<
 				" -n [native thread count]" << endl <<
+				" -r [gpu thread count]" << endl <<
 				" -l [set high/low latency mode]" << endl <<
 				" -b <enable high latency mode>" << endl <<
 				" -s [GPU workgroup size]" << endl <<
 				" -t [halt time in secs]" << endl <<
-				" -T <enable the telnet server" << endl <<
+				" -T <enable the telnet server>" << endl <<
 				" -D [property name] [property value]" << endl <<
 				" -d [current directory path]" << endl <<
 				" -h <display this help and exit>" << endl;
@@ -216,6 +217,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'l') cmdLineProp.SetString("opencl.latency.mode", argv[++i]);
 
 				else if (argv[i][1] == 'n') cmdLineProp.SetString("opencl.nativethread.count", argv[++i]);
+
+				else if (argv[i][1] == 'r') cmdLineProp.SetString("opencl.renderthread.count", argv[++i]);
 
 				else if (argv[i][1] == 's') cmdLineProp.SetString("opencl.gpu.workgroup.size", argv[++i]);
 
