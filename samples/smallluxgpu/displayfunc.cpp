@@ -113,7 +113,7 @@ static void PrintHelpAndSettings() {
 		if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
 			OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
 			const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
-			sprintf(buff, "[Mem %dM/%dM][Free buffers %d/%d]",
+			sprintf(buff, "[Mem %dM/%dM][Free buffers % 2d/%d]",
 					int(desc->GetUsedMemory() / (1024 * 1024)),
 					int(desc->GetMaxMemory() / (1024 * 1024)),
 					int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));

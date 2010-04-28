@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+// NOTE: this kernel assume samples do not overlap
 
 #define Gaussian2x2_xWidth 2.f
 #define Gaussian2x2_yWidth 2.f
@@ -40,28 +40,18 @@ typedef struct {
 	Spectrum radiance;
 } SampleBufferElem;
 
-void AtomicAdd(__global float *val, const float delta) {
-	union {
-		float f;
-		unsigned int i;
-	} oldVal;
-	union {
-		float f;
-		unsigned int i;
-	} newVal;
-
-	do {
-		oldVal.f = *val;
-		newVal.f = oldVal.f + delta;
-	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
-}
-
 static int Ceil2Int(const float val) {
 	return (int)ceil(val);
 }
 
 static int Floor2Int(const float val) {
 	return (int)floor(val);
+}
+
+static void AddSample(__global SamplePixel *sp, const float4 sample) {
+    float4 weight = (float4)(sample.w, sample.w, sample.w, 1.f);
+    __global float4 *p = (__global float4 *)sp;
+    *p += weight * sample;
 }
 
 __kernel void PixelAddSampleBufferGaussian2x2(
@@ -78,6 +68,8 @@ __kernel void PixelAddSampleBufferGaussian2x2(
 		return;
 
 	__global SampleBufferElem *sampleElem = &sampleBuff[index];
+    const float4 sample = (float4)(sampleElem->radiance.r, sampleElem->radiance.g, sampleElem->radiance.b, 1.f);
+
 	const float dImageX = sampleElem->screenX - 0.5f;
 	const float dImageY = sampleElem->screenY - 0.5f;
 	const int x0 = Ceil2Int(dImageX - Gaussian2x2_xWidth);
@@ -116,19 +108,15 @@ __kernel void PixelAddSampleBufferGaussian2x2(
 	const int fy0 = max(y0, 0);
 	const int fy1 = min(y1, (int)height - 1);
 
-	for (int y = fy0; y <= fy1; ++y) {
+
+    for (int y = fy0; y <= fy1; ++y) {
+        const unsigned int offset = y * width;
+
 		for (int x = fx0; x <= fx1; ++x) {
             const int tabOffset = ify[y - y0] * FilterTableSize + ifx[x - x0];
-			const float filterWt = Gaussian2x2_filterTable[tabOffset] * filterNorm;
+			sample.w = Gaussian2x2_filterTable[tabOffset] * filterNorm;
 
-			const unsigned int offset = x + y * width;
-			__global SamplePixel *sp = &(sampleFrameBuffer[offset]);
-
-			AtomicAdd(&(sp->radiance.r), filterWt * sampleElem->radiance.r);
-			AtomicAdd(&(sp->radiance.g), filterWt * sampleElem->radiance.g);
-			AtomicAdd(&(sp->radiance.b), filterWt * sampleElem->radiance.b);
-
-			AtomicAdd(&(sp->weight), filterWt);
-		}
+            AddSample(&sampleFrameBuffer[offset + x], sample);
+        }
 	}
 }
