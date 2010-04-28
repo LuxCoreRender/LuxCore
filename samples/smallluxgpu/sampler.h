@@ -232,4 +232,102 @@ private:
 	bool lowLatency, previewOver;
 };
 
+class RandomNoOverlapSampler : public Sampler {
+public:
+	RandomNoOverlapSampler(const bool lowLat, unsigned long startSeed,
+			const unsigned width, const unsigned height, const unsigned int spp,
+			const unsigned startLine = 0) :
+		seed(startSeed),
+		screenStartLine(startLine), lowLatency(lowLat) {
+		rndGen = new RandomGenerator();
+
+		Init(width, height, screenStartLine);
+	}
+	~RandomNoOverlapSampler() {
+		delete rndGen;
+	}
+
+	void Init(const unsigned width, const unsigned height, const unsigned startLine = 0) {
+		rndGen->init(seed);
+		screenWidth = width;
+		screenHeight = height;
+		if (startLine > 0)
+			screenStartLine = startLine;
+		currentSampleScreenX = 0;
+		currentSampleScreenY = screenStartLine;
+		currentSubSampleIndex = 0;
+		pass = 0;
+
+		previewOver = !lowLatency;
+		startTime = WallClockTime();
+	}
+
+	void GetNextSample(Sample *sample) {
+		if (pass >= 32)
+			previewOver = true;
+		else
+			CheckPreviewOver();
+
+		GetNextSampleNoOverlap(sample);
+	}
+
+	float GetLazyValue(Sample *sample) {
+		return rndGen->floatValue();
+	}
+
+	unsigned int GetPass() { return (pass >> 2); }
+	bool IsLowLatency() const { return lowLatency; }
+	bool IsPreviewOver() const { return previewOver; }
+
+private:
+	void CheckPreviewOver() {
+		if (WallClockTime() - startTime > 2.0)
+			previewOver = true;
+	}
+
+	void GetNextSampleNoOverlap(Sample *sample) {
+		unsigned int scrX, scrY;
+		for (;;) {
+			unsigned int stepX = pass % 4;
+			unsigned int stepY = (pass / 4) % 4;
+
+			scrX = currentSampleScreenX * 4 + stepX;
+			scrY = currentSampleScreenY * 4 + stepY;
+
+			currentSampleScreenX++;
+			if (currentSampleScreenX * 4 >= screenWidth) {
+				currentSampleScreenX = 0;
+				currentSampleScreenY++;
+
+				if (currentSampleScreenY * 4 >= screenHeight) {
+					currentSampleScreenY = 0;
+					pass++;
+				}
+			}
+
+			// Check if we are inside the screen
+			if ((scrX < screenWidth) && (scrY < screenHeight)) {
+				// Ok, it is a valid sample
+				break;
+			}
+		}
+
+		const float r1 = rndGen->floatValue() - .5f;
+		const float r2 = rndGen->floatValue() - .5f;
+
+		sample->Init(this,
+				scrX + r1, scrY + r2,
+				pass);
+	}
+
+	RandomGenerator *rndGen;
+	const unsigned long seed;
+
+	unsigned int screenWidth, screenHeight, screenStartLine;
+	unsigned int currentSampleScreenX, currentSampleScreenY, currentSubSampleIndex;
+	unsigned int pass;
+	double startTime;
+	bool lowLatency, previewOver;
+};
+
 #endif	/* _SAMPLER_H */
