@@ -46,6 +46,11 @@ extern "C" {
 #endif
 #endif
 
+#if defined(WIN32)
+#include <float.h>
+#define isnanf(a) _isnan(a)
+#endif
+
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #else

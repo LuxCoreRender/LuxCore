@@ -33,7 +33,7 @@ using namespace luxrays;
 size_t NativeThreadIntersectionDevice::RayBufferSize = 512;
 
 NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(const Context *context,
-		const size_t threadIndex, const unsigned int devIndex) :
+		const unsigned int threadIndex, const unsigned int devIndex) :
 			IntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
 	char buf[64];
 	sprintf(buf, "NativeIntersectThread-%03d", (int)threadIndex);

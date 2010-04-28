@@ -65,6 +65,8 @@ public:
 	virtual bool IsRunning() const { return started; };
 
 	friend class Context;
+	friend class VirtualM2OHardwareIntersectionDevice;
+	friend class VirtualM2MHardwareIntersectionDevice;
 
 protected:
 	Device(const Context *context, const DeviceType type, const unsigned int index);

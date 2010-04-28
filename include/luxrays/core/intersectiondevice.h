@@ -75,7 +75,7 @@ protected:
 
 class NativeThreadIntersectionDevice : public IntersectionDevice {
 public:
-	NativeThreadIntersectionDevice(const Context *context, const size_t threadIndex,
+	NativeThreadIntersectionDevice(const Context *context, const unsigned int threadIndex,
 			const unsigned int devIndex);
 	~NativeThreadIntersectionDevice();
 

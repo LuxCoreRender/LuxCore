@@ -75,7 +75,7 @@ protected:
 
 class NativePixelDevice : public PixelDevice {
 public:
-	NativePixelDevice(const Context *context, const size_t threadIndex,
+	NativePixelDevice(const Context *context, const unsigned int threadIndex,
 			const unsigned int devIndex);
 	~NativePixelDevice();
 
