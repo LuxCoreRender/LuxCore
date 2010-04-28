@@ -272,9 +272,9 @@ set(LUXRAYS_SRCS
 	${LUXRAYS_SOURCE_DIR}/core/geometry/ray.cpp
     ${LUXRAYS_SOURCE_DIR}/core/geometry/transform.cpp
     ${LUXRAYS_SOURCE_DIR}/core/trianglemesh.cpp
-    ${LUXRAYS_SOURCE_DIR}/idevices/opencldevice.cpp
-    ${LUXRAYS_SOURCE_DIR}/idevices/nativedevice.cpp
-    ${LUXRAYS_SOURCE_DIR}/idevices/virtualdevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/idevices/openclidevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/idevices/nativeidevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/idevices/virtualidevice.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
@@ -283,8 +283,8 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
-    ${LUXRAYS_SOURCE_DIR}/pdevices/nativedevice.cpp
-    ${LUXRAYS_SOURCE_DIR}/pdevices/opencldevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/pdevices/nativepdevice.cpp
+    ${LUXRAYS_SOURCE_DIR}/pdevices/openclpdevice.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/core/exttrianglemesh.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/plymesh/rply.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/properties.cpp)
