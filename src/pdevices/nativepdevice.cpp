@@ -33,7 +33,7 @@ using namespace luxrays;
 size_t NativePixelDevice::SampleBufferSize = 4096;
 
 NativePixelDevice::NativePixelDevice(const Context *context,
-		const size_t threadIndex, const unsigned int devIndex) :
+		const unsigned int threadIndex, const unsigned int devIndex) :
 			PixelDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
 	char buf[64];
 	sprintf(buf, "NativePixelThread-%03d", (int)threadIndex);
