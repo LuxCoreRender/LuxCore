@@ -54,11 +54,13 @@ NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long 
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
 
-	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
-		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
-		samplePerPixel, startLine);
-	/*sampler = new RandomNoOverlapSampler(lowLatency, seedBase + threadIndex + 1,
-		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);*/
+	if (scene->camera->film->GetType() == 4)
+		sampler = new RandomNoOverlapSampler(lowLatency, seedBase + threadIndex + 1,
+			scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
+	else
+		sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
+				scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
+				samplePerPixel, startLine);
 
 	pathIntegrator = new PathIntegrator(scene, sampler);
 	rayBuffer = new RayBuffer(rayBufferSize);
@@ -155,11 +157,13 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 		scene->camera->film->GetHeight() * samplingStart,
 			0, scene->camera->film->GetHeight() - 1);
 
-	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
-		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
-		samplePerPixel, startLine);
-	/*sampler = new RandomNoOverlapSampler(lowLatency, seedBase + threadIndex + 1,
-		scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);*/
+	if (scene->camera->film->GetType() == 4)
+		sampler = new RandomNoOverlapSampler(lowLatency, seedBase + threadIndex + 1,
+				scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
+	else
+		sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
+				scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
+				samplePerPixel, startLine);
 
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		pathIntegrators[i] = new PathIntegrator(scene, sampler);

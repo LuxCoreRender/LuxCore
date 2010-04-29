@@ -83,6 +83,8 @@ public:
 
 	virtual ~Film() { }
 
+	virtual int GetType() const = 0;
+
 	virtual void Init(const unsigned int w, const unsigned int h) {
 		width = w;
 		height = h;
@@ -200,6 +202,9 @@ public:
 				(1.0 - k) * statsAvgSampleSec;
 
 		return statsAvgSampleSec;
+
+		/*const double elapsedTime = WallClockTime() - statsStartSampleTime;
+		return statsTotalSampleCount / elapsedTime;*/
 	}
 
 	virtual void Save(const string &fileName) = 0;
@@ -334,6 +339,8 @@ public:
 		delete sampleFrameBuffer;
 		delete frameBuffer;
 	}
+
+	virtual int GetType() const { return 0; }
 
 	virtual void Init(const unsigned int w, const unsigned int h) {
 		boost::mutex::scoped_lock lock(radianceMutex);
@@ -472,6 +479,8 @@ public:
 	~BluredStandardFilm() {
 	}
 
+	virtual int GetType() const { return 1; }
+
 	void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
@@ -538,6 +547,8 @@ public:
 		delete[] filterTable2x2;
 		delete[] filterTable4x4;
 	}
+
+	virtual int GetType() const { return 2; }
 
 	void Reset() {
 		boost::mutex::scoped_lock lock(radianceMutex);
@@ -641,6 +652,8 @@ public:
 	~FastGaussianFilm() {
 	}
 
+	virtual int GetType() const { return 3; }
+
 	void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
 		boost::mutex::scoped_lock lock(radianceMutex);
 
@@ -680,21 +693,20 @@ private:
 class LuxRaysFilm : public Film {
 public:
 	LuxRaysFilm(Context *context, const bool lowLatencyMode, const unsigned int w,
-			const unsigned int h, FilterType filter = FILTER_GAUSSIAN) : Film(lowLatencyMode, w, h) {
+			const unsigned int h, DeviceDescription *deviceDesc, FilterType filter = FILTER_GAUSSIAN) : Film(lowLatencyMode, w, h) {
 		ctx = context;
 		filterType = filter;
 
-		vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-		//DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-		DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
-		OpenCLDeviceDescription::Filter(OCL_DEVICE_TYPE_GPU, descs);
-		descs.resize(1);
+		vector<DeviceDescription *> descs;
+		descs.push_back(deviceDesc);
 		pixelDevice = ctx->AddPixelDevices(descs)[0];
-		pixelDevice->AllocateSampleBuffers(32);
+		pixelDevice->AllocateSampleBuffers(16);
 		pixelDevice->Init(w, h);
 	}
 
 	virtual ~LuxRaysFilm() { }
+
+	virtual int GetType() const { return 4; }
 
 	virtual void Init(const unsigned int w, const unsigned int h) {
 		pixelDevice->Init(w, h);
