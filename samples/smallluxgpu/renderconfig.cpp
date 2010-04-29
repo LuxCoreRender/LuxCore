@@ -57,11 +57,12 @@ void RenderingConfig::Init() {
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 0) == 1);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) == 1);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const unsigned int filmType = cfg.GetInt("screen.type",3 );
+	const unsigned int filmType = cfg.GetInt("screen.type", 3);
 	const vector<string> filmNames = cfg.GetStringVector("screen.file", "");
 	const float gamma = cfg.GetFloat("screen.gamma", 2.2f);
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
-	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
+	const string oclIntersectionDeviceConfig = cfg.GetString("opencl.devices.select", "");
+	const int oclPixelDeviceConfig = cfg.GetInt("opencl.pixeldevice.select", -1);
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
 	const unsigned int samplePerPixel = max(1, cfg.GetInt("sampler.spp", 4));
 	luxrays::RAY_EPSILON = cfg.GetFloat("scene.epsilon", luxrays::RAY_EPSILON);
@@ -91,10 +92,19 @@ void RenderingConfig::Init() {
 			cerr << "Film type: FastGaussianFilm" << endl;
 			film = new FastGaussianFilm(lowLatency, w, h);
 			break;
-		case 4:
+		case 4: {
 			cerr << "Film type: LuxRaysFilm" << endl;
-			film = new LuxRaysFilm(ctx, lowLatency, w, h);
+			
+			std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
+			if (oclPixelDeviceConfig == -1) {
+				DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
+				film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[0]);
+			} else {
+				DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
+				film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[oclPixelDeviceConfig]);
+			}
 			break;
+		}
 		default:
 			throw runtime_error("Requested an unknown film type");
 	}
@@ -134,7 +144,7 @@ void RenderingConfig::Init() {
 	scene->rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", scene->rrImportanceCap);
 
 	// Start OpenCL devices
-	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclDeviceConfig);
+	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclIntersectionDeviceConfig);
 
 	// Start Native threads
 	SetUpNativeDevices(nativeThreadCount);

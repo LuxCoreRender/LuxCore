@@ -577,25 +577,33 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 }
 
 void OpenCLPixelDevice::UpdateFrameBuffer() {
-	boost::mutex::scoped_lock lock(splatMutex);
+	cl::Event event;
 
-	// Run the kernel
-	updateFrameBufferKernel->setArg(0, width);
-	updateFrameBufferKernel->setArg(1, height);
-	updateFrameBufferKernel->setArg(2, *sampleFrameBuff);
-	updateFrameBufferKernel->setArg(3, *frameBuff);
-	updateFrameBufferKernel->setArg(4, GammaTableSize);
-	updateFrameBufferKernel->setArg(5, *gammaTableBuff);
+	{
+		boost::mutex::scoped_lock lock(splatMutex);
 
-	oclQueue->enqueueNDRangeKernel(*updateFrameBufferKernel, cl::NullRange,
-			cl::NDRange(width, height), cl::NDRange(8, 8));
+		// Run the kernel
+		updateFrameBufferKernel->setArg(0, width);
+		updateFrameBufferKernel->setArg(1, height);
+		updateFrameBufferKernel->setArg(2, *sampleFrameBuff);
+		updateFrameBufferKernel->setArg(3, *frameBuff);
+		updateFrameBufferKernel->setArg(4, GammaTableSize);
+		updateFrameBufferKernel->setArg(5, *gammaTableBuff);
 
-	oclQueue->enqueueReadBuffer(
-			*frameBuff,
-			CL_TRUE,
-			0,
-			sizeof(Pixel) * width * height,
-			frameBuffer->GetPixels());
+		oclQueue->enqueueNDRangeKernel(*updateFrameBufferKernel, cl::NullRange,
+				cl::NDRange(width, height), cl::NDRange(8, 8));
+
+		oclQueue->enqueueReadBuffer(
+				*frameBuff,
+				CL_FALSE,
+				0,
+				sizeof(Pixel) * width * height,
+				frameBuffer->GetPixels(),
+				NULL,
+				&event);
+	}
+
+	event.wait();
 }
 
 void OpenCLPixelDevice::Merge(const SampleFrameBuffer *sfb) {
