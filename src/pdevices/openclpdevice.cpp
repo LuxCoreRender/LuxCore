@@ -35,7 +35,7 @@ using namespace luxrays;
 size_t OpenCLPixelDevice::SampleBufferSize = OPENCL_SAMPLEBUFFER_SIZE;
 
 OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
-		const unsigned int index, const unsigned int forceWorkGroupSize) :
+		const unsigned int index) :
 		PixelDevice(context, DEVICE_TYPE_OPENCL, index) {
 	deviceDesc  = desc;
 	deviceName = (desc->GetName() +"Pixel").c_str();
@@ -71,191 +71,12 @@ OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescrip
 	// PixelReset kernel
 	//--------------------------------------------------------------------------
 
-	{
-		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_Pixel_ClearFB.c_str(), KernelSource_Pixel_ClearFB.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-I.");
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_ClearFB compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
-
-		clearFBKernel = new cl::Kernel(program, "PixelClearFB");
-		clearFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &clearFBWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_ClearFB kernel work group size: " << clearFBWorkGroupSize);
-		cl_ulong memSize;
-		clearFBKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_ClearFB kernel memory footprint: " << memSize);
-
-		clearFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &clearFBWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << clearFBWorkGroupSize);
-
-		if (forceWorkGroupSize > 0) {
-			clearFBWorkGroupSize = forceWorkGroupSize;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << clearFBWorkGroupSize);
-		}
-	}
-
-	{
-		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_Pixel_ClearSampleFB.c_str(), KernelSource_Pixel_ClearSampleFB.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-I.");
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_ClearSampleFB compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
-
-		clearSampleFBKernel = new cl::Kernel(program, "PixelClearSampleFB");
-		clearSampleFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &clearSampleFBWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_ClearSampleFB kernel work group size: " << clearSampleFBWorkGroupSize);
-		cl_ulong memSize;
-		clearSampleFBKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_ClearSampleFB kernel memory footprint: " << memSize);
-
-		clearSampleFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &clearSampleFBWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << clearSampleFBWorkGroupSize);
-
-		if (forceWorkGroupSize > 0) {
-			clearSampleFBWorkGroupSize = forceWorkGroupSize;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << clearSampleFBWorkGroupSize);
-		}
-	}
-
-	{
-		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_Pixel_AddSampleBuffer.c_str(), KernelSource_Pixel_AddSampleBuffer.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-I.");
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBuffer compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
-
-		addSampleBufferKernel = new cl::Kernel(program, "PixelAddSampleBuffer");
-		addSampleBufferKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &addSampleBufferWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBuffer kernel work group size: " << addSampleBufferWorkGroupSize);
-		cl_ulong memSize;
-		addSampleBufferKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBuffer kernel memory footprint: " << memSize);
-
-		addSampleBufferKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &addSampleBufferWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << addSampleBufferWorkGroupSize);
-
-		if (forceWorkGroupSize > 0) {
-			addSampleBufferWorkGroupSize = forceWorkGroupSize;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << addSampleBufferWorkGroupSize);
-		}
-	}
-
-	{
-		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_Pixel_AddSampleBufferPreview.c_str(), KernelSource_Pixel_AddSampleBufferPreview.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-I.");
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBufferPreview compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
-
-		addSampleBufferPreviewKernel = new cl::Kernel(program, "PixelAddSampleBufferPreview");
-		addSampleBufferPreviewKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &addSampleBufferPreviewWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBufferPreview kernel work group size: " << addSampleBufferPreviewWorkGroupSize);
-		cl_ulong memSize;
-		addSampleBufferPreviewKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBufferPreview kernel memory footprint: " << memSize);
-
-		addSampleBufferPreviewKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &addSampleBufferPreviewWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << addSampleBufferPreviewWorkGroupSize);
-
-		if (forceWorkGroupSize > 0) {
-			addSampleBufferPreviewWorkGroupSize = forceWorkGroupSize;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << addSampleBufferPreviewWorkGroupSize);
-		}
-	}
-
-	{
-		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_Pixel_AddSampleBufferGaussian2x2.c_str(), KernelSource_Pixel_AddSampleBufferGaussian2x2.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-I.");
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBufferGaussian2x2 compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
-
-		addSampleBufferGaussian2x2Kernel = new cl::Kernel(program, "PixelAddSampleBufferGaussian2x2");
-		addSampleBufferGaussian2x2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &addSampleBufferGaussian2x2WorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBufferGaussian2x2 kernel work group size: " << addSampleBufferGaussian2x2WorkGroupSize);
-		cl_ulong memSize;
-		addSampleBufferGaussian2x2Kernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBufferGaussian2x2 kernel memory footprint: " << memSize);
-
-		addSampleBufferGaussian2x2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &addSampleBufferGaussian2x2WorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << addSampleBufferGaussian2x2WorkGroupSize);
-
-		if (forceWorkGroupSize > 0) {
-			addSampleBufferGaussian2x2WorkGroupSize = forceWorkGroupSize;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << addSampleBufferGaussian2x2WorkGroupSize);
-		}
-	}
-
-	{
-		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_Pixel_UpdateFrameBuffer.c_str(), KernelSource_Pixel_UpdateFrameBuffer.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-I.");
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_AddSampleBuffer compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
-
-		updateFrameBufferKernel = new cl::Kernel(program, "PixelUpdateFrameBuffer");
-		updateFrameBufferKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updateFrameBufferWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_UpdateBuffer kernel work group size: " << updateFrameBufferWorkGroupSize);
-		cl_ulong memSize;
-		updateFrameBufferKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Pixel_UpdateBuffer kernel memory footprint: " << memSize);
-
-		updateFrameBufferKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updateFrameBufferWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Suggested work group size: " << updateFrameBufferWorkGroupSize);
-
-		if (forceWorkGroupSize > 0) {
-			updateFrameBufferWorkGroupSize = forceWorkGroupSize;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Forced work group size: " << updateFrameBufferWorkGroupSize);
-		}
-	}
+	CompileKernel(oclContext, oclDevice, KernelSource_Pixel_ClearFB, "PixelClearFB", &clearFBKernel);
+	CompileKernel(oclContext, oclDevice, KernelSource_Pixel_ClearSampleFB, "PixelClearSampleFB", &clearSampleFBKernel);
+	CompileKernel(oclContext, oclDevice, KernelSource_Pixel_AddSampleBuffer, "PixelAddSampleBuffer", &addSampleBufferKernel);
+	CompileKernel(oclContext, oclDevice, KernelSource_Pixel_AddSampleBufferPreview, "PixelAddSampleBufferPreview", &addSampleBufferPreviewKernel);
+	CompileKernel(oclContext, oclDevice, KernelSource_Pixel_AddSampleBufferGaussian2x2, "PixelAddSampleBufferGaussian2x2", &addSampleBufferGaussian2x2Kernel);
+	CompileKernel(oclContext, oclDevice, KernelSource_Pixel_UpdateFrameBuffer, "PixelUpdateFrameBuffer", &updateFrameBufferKernel);
 
 	//--------------------------------------------------------------------------
 	// Allocate OpenCL SampleBuffers
@@ -322,6 +143,25 @@ OpenCLPixelDevice::~OpenCLPixelDevice() {
 	delete addSampleBufferGaussian2x2Kernel;
 	delete updateFrameBufferKernel;
 	delete oclQueue;
+}
+
+void OpenCLPixelDevice::CompileKernel(cl::Context &ctx, cl::Device &device, const std::string &src,
+		const char *kernelName, cl::Kernel **kernel) {
+	// Compile sources
+	cl::Program::Sources source(1, std::make_pair(src.c_str(), src.length()));
+	cl::Program program = cl::Program(ctx, source);
+	try {
+		VECTOR_CLASS<cl::Device> buildDevice;
+		buildDevice.push_back(device);
+		program.build(buildDevice, "-I.");
+	} catch (cl::Error err) {
+		cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] " << kernelName << " compilation error:\n" << strError.c_str());
+
+		throw err;
+	}
+
+	*kernel = new cl::Kernel(program, kernelName);
 }
 
 void OpenCLPixelDevice::AllocateSampleBuffers(const unsigned int count) {
@@ -401,13 +241,13 @@ void OpenCLPixelDevice::Init(const unsigned int w, const unsigned int h) {
 void OpenCLPixelDevice::ClearSampleFrameBuffer() {
 	clearSampleFBKernel->setArg(0, *sampleFrameBuff);
 	oclQueue->enqueueNDRangeKernel(*clearSampleFBKernel, cl::NullRange,
-			cl::NDRange(width, height), cl::NDRange(8, 8));
+			cl::NDRange(width, height), cl::NDRange(16, 16));
 }
 
 void OpenCLPixelDevice::ClearFrameBuffer() {
 	clearFBKernel->setArg(0, *frameBuff);
 	oclQueue->enqueueNDRangeKernel(*clearFBKernel, cl::NullRange,
-			cl::NDRange(width, height), cl::NDRange(8, 8));
+			cl::NDRange(width, height), cl::NDRange(16, 16));
 }
 
 void OpenCLPixelDevice::SetGamma(const float gamma) {
@@ -536,11 +376,11 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 			addSampleBufferGaussian2x2Kernel->setArg(4, *(sampleBufferBuff[index]));
 			addSampleBufferGaussian2x2Kernel->setArg(5, FilterTableSize);
 			addSampleBufferGaussian2x2Kernel->setArg(6, *filterTableBuff);
-			addSampleBufferGaussian2x2Kernel->setArg(7, 16 * addSampleBufferGaussian2x2WorkGroupSize * sizeof(cl_float), NULL);
-			addSampleBufferGaussian2x2Kernel->setArg(8, 16 * addSampleBufferGaussian2x2WorkGroupSize * sizeof(cl_float), NULL);
+			addSampleBufferGaussian2x2Kernel->setArg(7, 16 * 256 * sizeof(cl_float), NULL);
+			addSampleBufferGaussian2x2Kernel->setArg(8, 16 * 256 * sizeof(cl_float), NULL);
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferGaussian2x2Kernel, cl::NullRange,
-				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(addSampleBufferGaussian2x2WorkGroupSize),
+				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
 				NULL, &(sampleBufferBuffEvent[index]));
 			break;
 		}
@@ -552,7 +392,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 			addSampleBufferPreviewKernel->setArg(4, *(sampleBufferBuff[index]));
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferPreviewKernel, cl::NullRange,
-				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(addSampleBufferPreviewWorkGroupSize),
+				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
 				NULL, &(sampleBufferBuffEvent[index]));
 			break;
 		}
@@ -564,7 +404,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 			addSampleBufferKernel->setArg(4, *(sampleBufferBuff[index]));
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferKernel, cl::NullRange,
-				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(addSampleBufferWorkGroupSize),
+				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
 				NULL, &(sampleBufferBuffEvent[index]));
 			break;
 		}
@@ -591,7 +431,7 @@ void OpenCLPixelDevice::UpdateFrameBuffer() {
 		updateFrameBufferKernel->setArg(5, *gammaTableBuff);
 
 		oclQueue->enqueueNDRangeKernel(*updateFrameBufferKernel, cl::NullRange,
-				cl::NDRange(width, height), cl::NDRange(8, 8));
+				cl::NDRange(width, height), cl::NDRange(16, 16));
 
 		oclQueue->enqueueReadBuffer(
 				*frameBuff,
