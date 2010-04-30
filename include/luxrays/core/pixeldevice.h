@@ -162,7 +162,7 @@ private:
 class OpenCLPixelDevice : public PixelDevice {
 public:
 	OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const unsigned int index, const unsigned int forceWorkGroupSize);
+			const unsigned int index);
 	~OpenCLPixelDevice();
 
 	void AllocateSampleBuffers(const unsigned int count);
@@ -213,6 +213,9 @@ private:
 	static const unsigned int GammaTableSize = 1024;
 	static const unsigned int FilterTableSize = 16;
 
+	void CompileKernel(cl::Context &ctx, cl::Device &device, const std::string &src,
+		const char *kernelName, cl::Kernel **kernel);
+
 	OpenCLDeviceDescription *deviceDesc;
 	SampleFrameBuffer *sampleFrameBuffer;
 	FrameBuffer *frameBuffer;
@@ -227,17 +230,10 @@ private:
 	size_t clearFBWorkGroupSize;
 
 	cl::Kernel *clearSampleFBKernel;
-	size_t clearSampleFBWorkGroupSize;
-
 	cl::Kernel *addSampleBufferKernel;
-	size_t addSampleBufferWorkGroupSize;
 	cl::Kernel *addSampleBufferPreviewKernel;
-	size_t addSampleBufferPreviewWorkGroupSize;
 	cl::Kernel *addSampleBufferGaussian2x2Kernel;
-	size_t addSampleBufferGaussian2x2WorkGroupSize;
-
 	cl::Kernel *updateFrameBufferKernel;
-	size_t updateFrameBufferWorkGroupSize;
 
 	// Buffers
 	cl::Buffer *sampleFrameBuff;

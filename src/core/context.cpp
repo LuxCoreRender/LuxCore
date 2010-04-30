@@ -273,7 +273,7 @@ std::vector<PixelDevice *> Context::CreatePixelDevices(std::vector<DeviceDescrip
 		else if (deviceDesc[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLPixelDevice(this, oclDeviceDesc, i, oclDeviceDesc->GetForceWorkGroupSize());
+			device = new OpenCLPixelDevice(this, oclDeviceDesc, i);
 		}
 #endif
 		else
