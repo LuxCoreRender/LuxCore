@@ -44,8 +44,8 @@ public:
 	virtual void SetGamma(const float gamma = 2.2f) = 0;
 
 	virtual SampleBuffer *GetFreeSampleBuffer() = 0;
-	virtual void FreeSampleBuffer(const SampleBuffer *sampleBuffer) = 0;
-	virtual void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) = 0;
+	virtual void FreeSampleBuffer(SampleBuffer *sampleBuffer) = 0;
+	virtual void AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer) = 0;
 
 	virtual void Merge(const SampleFrameBuffer *sfb) = 0;
 	virtual const SampleFrameBuffer *GetSampleFrameBuffer() const = 0;
@@ -91,8 +91,8 @@ public:
 	void Stop();
 
 	SampleBuffer *GetFreeSampleBuffer();
-	void FreeSampleBuffer(const SampleBuffer *sampleBuffer);
-	void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer);
+	void FreeSampleBuffer(SampleBuffer *sampleBuffer);
+	void AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer);
 
 	void Merge(const SampleFrameBuffer *sfb);
 	const SampleFrameBuffer *GetSampleFrameBuffer() const;
@@ -157,7 +157,25 @@ private:
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#define OPENCL_SAMPLEBUFFER_SIZE 65536
+class OpenCLPixelDevice;
+
+class OpenCLSampleBuffer : public SampleBuffer {
+public:
+	OpenCLSampleBuffer(OpenCLPixelDevice *dev, const size_t bufferSize);
+	~OpenCLSampleBuffer();
+
+	void Write() const;
+	void Wait() const;
+	void CollectStats() const;
+
+	cl::Buffer *GetOCLBuffer() { return oclBuffer; }
+	cl::Event *GetOCLEvent() { return &oclEvent; }
+
+private:
+	OpenCLPixelDevice *device;
+	cl::Buffer *oclBuffer;
+	cl::Event oclEvent;
+};
 
 class OpenCLPixelDevice : public PixelDevice {
 public:
@@ -177,8 +195,8 @@ public:
 	void Stop();
 
 	SampleBuffer *GetFreeSampleBuffer();
-	void FreeSampleBuffer(const SampleBuffer *sampleBuffer);
-	void AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer);
+	void FreeSampleBuffer(SampleBuffer *sampleBuffer);
+	void AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer);
 
 	void Merge(const SampleFrameBuffer *sfb);
 	const SampleFrameBuffer *GetSampleFrameBuffer() const;
@@ -191,23 +209,18 @@ public:
 	unsigned int GetFreeDevBufferCount() {
 		boost::mutex::scoped_lock lock(splatMutex);
 
-		unsigned int freeCount = 0;
-		for (unsigned int i = 0; i < sampleBuffersUsed.size(); ++i) {
-			if (!sampleBuffersUsed[i] && (!(sampleBufferBuffEvent[i]()) || (sampleBufferBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() == CL_COMPLETE)))
-				++freeCount;
-		}
-
-		return freeCount;
+		return freeSampleBuffers.size();
 	}
 	unsigned int GetTotalDevBufferCount() {
 		boost::mutex::scoped_lock lock(splatMutex);
 
-		return sampleBufferBuff.size();
+		return sampleBuffers.size();
 	}
 
 	static size_t SampleBufferSize;
 
 	friend class Context;
+	friend class OpenCLSampleBuffer;
 
 private:
 	static const unsigned int GammaTableSize = 1024;
@@ -239,10 +252,8 @@ private:
 	cl::Buffer *sampleFrameBuff;
 	cl::Buffer *frameBuff;
 
-	std::vector<cl::Buffer *>sampleBufferBuff;
-	std::vector<cl::Event> sampleBufferBuffEvent;
-	std::vector<SampleBuffer *> sampleBuffers;
-	std::vector<bool> sampleBuffersUsed;
+	std::vector<OpenCLSampleBuffer *> sampleBuffers;
+	std::deque<OpenCLSampleBuffer *> freeSampleBuffers;
 
 	cl::Buffer *gammaTableBuff;
 	cl::Buffer *filterTableBuff;

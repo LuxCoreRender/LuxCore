@@ -148,7 +148,7 @@ SampleBuffer *NativePixelDevice::GetFreeSampleBuffer() {
 	throw std::runtime_error("Internal error: out of SampleBuffer in NativePixelDevice::GetFreeSampleBuffer()");
 }
 
-void NativePixelDevice::FreeSampleBuffer(const SampleBuffer *sampleBuffer) {
+void NativePixelDevice::FreeSampleBuffer(SampleBuffer *sampleBuffer) {
 	boost::mutex::scoped_lock lock(splatMutex);
 
 	for (size_t i = 0; i < sampleBuffers.size(); ++i) {
@@ -221,7 +221,7 @@ void NativePixelDevice::SplatGaussian2x2(const SampleBufferElem *sampleElem) {
 	}
 }
 
-void NativePixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) {
+void NativePixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer) {
 	boost::mutex::scoped_lock lock(splatMutex);
 	assert (started);
 
