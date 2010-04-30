@@ -60,7 +60,7 @@ NativePixelDevice::NativePixelDevice(const Context *context,
 	}
 
 	sampleBuffers.resize(0);
-	sampleBuffersUsed.resize(0);
+	freeSampleBuffers.resize(0);
 }
 
 NativePixelDevice::~NativePixelDevice() {
@@ -72,22 +72,6 @@ NativePixelDevice::~NativePixelDevice() {
 
 	for (size_t i = 0; i < sampleBuffers.size(); ++i)
 		delete sampleBuffers[i];
-}
-
-void NativePixelDevice::AllocateSampleBuffers(const unsigned int count) {
-	assert (!started);
-
-	// Free existing buffers
-	for (size_t i = 0; i < sampleBuffers.size(); ++i)
-		delete sampleBuffers[i];
-
-	// Allocate new one
-	sampleBuffers.resize(count);
-	sampleBuffersUsed.resize(count);
-	for (size_t i = 0; i < sampleBuffers.size(); ++i) {
-		sampleBuffersUsed[i] = false;
-		sampleBuffers[i] = new SampleBuffer(SampleBufferSize);
-	}
 }
 
 void NativePixelDevice::Init(const unsigned int w, const unsigned int h) {
@@ -137,28 +121,26 @@ SampleBuffer *NativePixelDevice::GetFreeSampleBuffer() {
 	boost::mutex::scoped_lock lock(splatMutex);
 
 	// Look for a free buffer
-	for (size_t i = 0; i < sampleBuffersUsed.size(); ++i) {
-		if (!sampleBuffersUsed[i]) {
-			sampleBuffersUsed[i] = true;
-			sampleBuffers[i]->Reset();
-			return sampleBuffers[i];
-		}
-	}
+	if (freeSampleBuffers.size() > 0) {
+		SampleBuffer *sb = freeSampleBuffers.front();
+		freeSampleBuffers.pop_front();
 
-	throw std::runtime_error("Internal error: out of SampleBuffer in NativePixelDevice::GetFreeSampleBuffer()");
+		sb->Reset();
+		return sb;
+	} else {
+		// Need to allocate a new buffer
+		SampleBuffer *sb = new SampleBuffer(SampleBufferSize);
+
+		sampleBuffers.push_back(sb);
+
+		return sb;
+	}
 }
 
 void NativePixelDevice::FreeSampleBuffer(SampleBuffer *sampleBuffer) {
 	boost::mutex::scoped_lock lock(splatMutex);
 
-	for (size_t i = 0; i < sampleBuffers.size(); ++i) {
-		if (sampleBuffers[i] == sampleBuffer) {
-			sampleBuffersUsed[i] = false;
-			return;
-		}
-	}
-
-	throw std::runtime_error("Internal error: unable to find the SampleBuffer in NativePixelDevice::FreeSampleBuffer()");
+	freeSampleBuffers.push_back(sampleBuffer);
 }
 
 void NativePixelDevice::SplatPreview(const SampleBufferElem *sampleElem) {
@@ -257,13 +239,7 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 	statsTotalSampleTime += WallClockTime() - t;
 	statsTotalSamplesCount += sampleBuffer->GetSampleCount();
 
-	// Free the sample buffer
-	for (size_t i = 0; i < sampleBuffers.size(); ++i) {
-		if (sampleBuffers[i] == sampleBuffer) {
-			sampleBuffersUsed[i] = false;
-			return;
-		}
-	}
+	freeSampleBuffers.push_back(sampleBuffer);
 }
 
 void NativePixelDevice::UpdateFrameBuffer() {

@@ -46,7 +46,7 @@ OpenCLSampleBuffer::~OpenCLSampleBuffer() {
 }
 
 void OpenCLSampleBuffer::Write() const {
-	assert (GetSampleCount() < OpenCLSampleBuffer::SampleBufferSize);
+	assert (GetSampleCount() <= OpenCLPixelDevice::SampleBufferSize);
 
 	// Download the buffer to the GPU
 	device->oclQueue->enqueueWriteBuffer(
@@ -199,25 +199,6 @@ void OpenCLPixelDevice::CompileKernel(cl::Context &ctx, cl::Device &device, cons
 	*kernel = new cl::Kernel(program, kernelName);
 }
 
-void OpenCLPixelDevice::AllocateSampleBuffers(const unsigned int count) {
-	// Free existing buffers
-	for (size_t i = 0; i < sampleBuffers.size(); ++i)
-		delete sampleBuffers[i];
-
-	// Allocate new one
-	sampleBuffers.resize(0);
-	freeSampleBuffers.resize(0);
-
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " SampleBuffer buffer size: " << (sizeof(SampleBufferElem) * SampleBufferSize / 1024) << "Kbytes (*" << count <<")");
-
-	for (unsigned int i = 0; i < count; ++i) {
-		OpenCLSampleBuffer *osb = new OpenCLSampleBuffer(this, SampleBufferSize);
-
-		sampleBuffers.push_back(osb);
-		freeSampleBuffers.push_back(osb);
-	}
-}
-
 void OpenCLPixelDevice::Init(const unsigned int w, const unsigned int h) {
 	PixelDevice::Init(w, h);
 
@@ -312,7 +293,7 @@ SampleBuffer *OpenCLPixelDevice::GetFreeSampleBuffer() {
 	boost::mutex::scoped_lock lock(splatMutex);
 
 	// Look for a free buffer
-	if (freeSampleBuffers.size() > 0) {
+	if (freeSampleBuffers.size() > 3) {
 		OpenCLSampleBuffer *osb = freeSampleBuffers.front();
 		freeSampleBuffers.pop_front();
 
@@ -320,10 +301,21 @@ SampleBuffer *OpenCLPixelDevice::GetFreeSampleBuffer() {
 		osb->CollectStats();
 		osb->Reset();
 		return osb;
-	}
+	} else {
+		// Need to allocate a more buffers
+		for (int i = 0; i < 5; ++i) {
+			OpenCLSampleBuffer *osb = new OpenCLSampleBuffer(this, SampleBufferSize);
+			sampleBuffers.push_back(osb);
+			freeSampleBuffers.push_back(osb);
+		}
 
-	// Huston, we have a problem...
-	throw std::runtime_error("Internal error in OpenCLPixelDevice::GetFreeSampleBuffer()");
+		OpenCLSampleBuffer *osb = new OpenCLSampleBuffer(this, SampleBufferSize);
+		sampleBuffers.push_back(osb);
+
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " SampleBuffer buffer size: " << (sizeof(SampleBufferElem) * SampleBufferSize / 1024) << "Kbytes (*" << sampleBuffers.size() <<")");
+
+		return osb;
+	}
 }
 
 void OpenCLPixelDevice::FreeSampleBuffer(SampleBuffer *sampleBuffer) {

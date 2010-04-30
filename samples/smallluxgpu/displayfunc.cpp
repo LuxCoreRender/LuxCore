@@ -118,6 +118,11 @@ static void PrintHelpAndSettings() {
 					int(desc->GetMaxMemory() / (1024 * 1024)),
 					int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
 			PrintString(GLUT_BITMAP_8_BY_13, buff);
+		} else if (pdevices[0]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
+			NativePixelDevice *dev = (NativePixelDevice *)pdevices[0];
+			sprintf(buff, "[Free buffers % 2d/%d]",
+					int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
+			PrintString(GLUT_BITMAP_8_BY_13, buff);
 		}
 	} else
 		PrintString(GLUT_BITMAP_8_BY_13, "Not used");
