@@ -36,9 +36,8 @@ typedef struct {
 } SampleBufferElem;
 
 static void AddSample(__global SamplePixel *sp, const float4 sample) {
-    float4 weight = (float4)(0.01f, 0.01f, 0.01f, 1.f);
     __global float4 *p = (__global float4 *)sp;
-    *p += weight * sample;
+    *p += sample;
 }
 
 __kernel void PixelAddSampleBuffer(
@@ -54,7 +53,7 @@ __kernel void PixelAddSampleBuffer(
 	__global SampleBufferElem *sampleElem = &sampleBuff[index];
 	const unsigned int x = (unsigned int)sampleElem->screenX;
 	const unsigned int y = (unsigned int)sampleElem->screenY;
-    const float4 sample = (float4)(sampleElem->radiance.r, sampleElem->radiance.g, sampleElem->radiance.b, 0.01f);
+    const float4 sample = (float4)(sampleElem->radiance.r, sampleElem->radiance.g, sampleElem->radiance.b, 1.f);
 
     AddSample(&sampleFrameBuffer[x + y * width], sample);
 }

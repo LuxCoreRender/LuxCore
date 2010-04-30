@@ -32,7 +32,47 @@ using namespace luxrays;
 // OpenCL PixelDevice
 //------------------------------------------------------------------------------
 
-size_t OpenCLPixelDevice::SampleBufferSize = OPENCL_SAMPLEBUFFER_SIZE;
+OpenCLSampleBuffer::OpenCLSampleBuffer(OpenCLPixelDevice *dev, const size_t bufferSize) : SampleBuffer(bufferSize) {
+	device = dev;
+	oclBuffer = new cl::Buffer(device->deviceDesc->GetOCLContext(),
+		CL_MEM_READ_ONLY,
+		sizeof(SampleBufferElem) * OpenCLPixelDevice::SampleBufferSize);
+	device->deviceDesc->usedMemory += oclBuffer->getInfo<CL_MEM_SIZE>();
+}
+
+OpenCLSampleBuffer::~OpenCLSampleBuffer() {
+	device->deviceDesc->usedMemory -= oclBuffer->getInfo<CL_MEM_SIZE>();
+	delete oclBuffer;
+}
+
+void OpenCLSampleBuffer::Write() const {
+	assert (GetSampleCount() < OpenCLSampleBuffer::SampleBufferSize);
+
+	// Download the buffer to the GPU
+	device->oclQueue->enqueueWriteBuffer(
+			*oclBuffer,
+			CL_FALSE,
+			0,
+			sizeof(SampleBufferElem) * GetSampleCount(),
+			GetSampleBuffer());
+}
+
+void OpenCLSampleBuffer::Wait() const {
+	if (oclEvent())
+		oclEvent.wait();
+}
+
+void OpenCLSampleBuffer::CollectStats() const {
+	if (oclEvent()) {
+		device->statsTotalSampleTime += (oclEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>() -
+				oclEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>()) * 10e-9;
+		device->statsTotalSamplesCount += GetSampleCount();
+	}
+}
+
+//------------------------------------------------------------------------------
+
+size_t OpenCLPixelDevice::SampleBufferSize = 65536;
 
 OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
 		const unsigned int index) :
@@ -82,10 +122,8 @@ OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescrip
 	// Allocate OpenCL SampleBuffers
 	//--------------------------------------------------------------------------
 
-	sampleBufferBuff.resize(0);
-	sampleBufferBuffEvent.resize(0);
 	sampleBuffers.resize(0);
-	sampleBuffersUsed.resize(0);
+	freeSampleBuffers.resize(0);
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " GammaTable buffer size: " << (sizeof(float) * GammaTableSize / 1024) << "Kbytes");
 	gammaTableBuff = new cl::Buffer(oclContext,
@@ -114,11 +152,8 @@ OpenCLPixelDevice::~OpenCLPixelDevice() {
 	delete sampleFrameBuffer;
 	delete frameBuffer;
 
-	for (size_t i = 0; i < sampleBufferBuff.size(); ++i) {
-		deviceDesc->usedMemory += sampleBufferBuff[i]->getInfo<CL_MEM_SIZE>();
-		delete sampleBufferBuff[i];
+	for (size_t i = 0; i < sampleBuffers.size(); ++i)
 		delete sampleBuffers[i];
-	}
 
 	if (sampleFrameBuff) {
 		deviceDesc->usedMemory -= sampleFrameBuff->getInfo<CL_MEM_SIZE>();
@@ -166,29 +201,20 @@ void OpenCLPixelDevice::CompileKernel(cl::Context &ctx, cl::Device &device, cons
 
 void OpenCLPixelDevice::AllocateSampleBuffers(const unsigned int count) {
 	// Free existing buffers
-	for (size_t i = 0; i < sampleBufferBuff.size(); ++i) {
-		deviceDesc->usedMemory += sampleBufferBuff[i]->getInfo<CL_MEM_SIZE>();
-		delete sampleBufferBuff[i];
+	for (size_t i = 0; i < sampleBuffers.size(); ++i)
 		delete sampleBuffers[i];
-	}
 
 	// Allocate new one
-	sampleBufferBuff.resize(count);
-	sampleBufferBuffEvent.resize(count);
-	sampleBuffers.resize(count);
-	sampleBuffersUsed.resize(count);
-	std::fill(sampleBuffersUsed.begin(), sampleBuffersUsed.end(), false);
+	sampleBuffers.resize(0);
+	freeSampleBuffers.resize(0);
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " SampleBuffer buffer size: " << (sizeof(SampleBufferElem) * SampleBufferSize / 1024) << "Kbytes (*" << count <<")");
 
-	cl::Context &oclContext = deviceDesc->GetOCLContext();
-	for (size_t i = 0; i < sampleBufferBuff.size(); ++i) {
-		sampleBufferBuff[i] = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY,
-				sizeof(SampleBufferElem) * SampleBufferSize);
-		deviceDesc->usedMemory += sampleBufferBuff[i]->getInfo<CL_MEM_SIZE>();
+	for (unsigned int i = 0; i < count; ++i) {
+		OpenCLSampleBuffer *osb = new OpenCLSampleBuffer(this, SampleBufferSize);
 
-		sampleBuffers[i] = new SampleBuffer(SampleBufferSize);
+		sampleBuffers.push_back(osb);
+		freeSampleBuffers.push_back(osb);
 	}
 }
 
@@ -196,7 +222,7 @@ void OpenCLPixelDevice::Init(const unsigned int w, const unsigned int h) {
 	PixelDevice::Init(w, h);
 
 	//--------------------------------------------------------------------------
-	// Free old buffers
+	// Free old frame buffers
 	//--------------------------------------------------------------------------
 
 	delete sampleFrameBuffer;
@@ -213,7 +239,7 @@ void OpenCLPixelDevice::Init(const unsigned int w, const unsigned int h) {
 	}
 
 	//--------------------------------------------------------------------------
-	// Allocate new buffers
+	// Allocate new frame buffers
 	//--------------------------------------------------------------------------
 
 	sampleFrameBuffer = new SampleFrameBuffer(width, height);
@@ -278,6 +304,7 @@ void OpenCLPixelDevice::Interrupt() {
 void OpenCLPixelDevice::Stop() {
 	boost::mutex::scoped_lock lock(splatMutex);
 
+	oclQueue->finish();
 	PixelDevice::Stop();
 }
 
@@ -285,95 +312,44 @@ SampleBuffer *OpenCLPixelDevice::GetFreeSampleBuffer() {
 	boost::mutex::scoped_lock lock(splatMutex);
 
 	// Look for a free buffer
-	for (size_t i = 0; i < sampleBufferBuff.size(); ++i) {
-		if (sampleBuffersUsed[i])
-			continue;
+	if (freeSampleBuffers.size() > 0) {
+		OpenCLSampleBuffer *osb = freeSampleBuffers.front();
+		freeSampleBuffers.pop_front();
 
-		if (!(sampleBufferBuffEvent[i]())) {
-			// Ok, found new buffer
-			sampleBuffersUsed[i] = true;
-			sampleBuffers[i]->Reset();
-			return sampleBuffers[i];
-		}
-
-		if (sampleBufferBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() == CL_COMPLETE) {
-			// Ok, found a completed buffer
-
-			// Collect statistics
-			statsTotalSampleTime += (sampleBufferBuffEvent[i].getProfilingInfo<CL_PROFILING_COMMAND_END>() -
-					sampleBufferBuffEvent[i].getProfilingInfo<CL_PROFILING_COMMAND_START>()) * 10e-9;
-			statsTotalSamplesCount += SampleBufferSize;
-
-			sampleBuffersUsed[i] = true;
-			sampleBuffers[i]->Reset();
-			return sampleBuffers[i];
-		}
+		osb->Wait();
+		osb->CollectStats();
+		osb->Reset();
+		return osb;
 	}
 
 	// Huston, we have a problem...
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "]" << " Unable to find a free SampleBuffer");
-
-	// This should never happen, just wait for one
-	for (size_t i = 0; i < sampleBufferBuff.size(); ++i) {
-		if (!sampleBuffersUsed[i] && (sampleBufferBuffEvent[i].getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() != CL_COMPLETE)) {
-			sampleBufferBuffEvent[i].wait();
-			sampleBuffersUsed[i] = true;
-			sampleBuffers[i]->Reset();
-			return sampleBuffers[i];
-		}
-	}
-
 	throw std::runtime_error("Internal error in OpenCLPixelDevice::GetFreeSampleBuffer()");
 }
 
-void OpenCLPixelDevice::FreeSampleBuffer(const SampleBuffer *sampleBuffer) {
+void OpenCLPixelDevice::FreeSampleBuffer(SampleBuffer *sampleBuffer) {
 	boost::mutex::scoped_lock lock(splatMutex);
 
-	for (size_t i = 0; i < sampleBuffers.size(); ++i) {
-		if (sampleBuffers[i] == sampleBuffer) {
-			sampleBuffersUsed[i] = false;
-			return;
-		}
-	}
-
-	throw std::runtime_error("Internal error: unable to find the SampleBuffer in OpenCLPixelDevice::FreeSampleBuffer()");
+	freeSampleBuffers.push_back((OpenCLSampleBuffer *)sampleBuffer);
 }
 
-void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffer *sampleBuffer) {
+void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer) {
 	boost::mutex::scoped_lock lock(splatMutex);
 	assert (started);
 
-	// Look for the index of the SampleBuffer
-	size_t index = sampleBuffers.size();
-	for (size_t i = 0; i < sampleBuffers.size(); ++i) {
-		if (sampleBuffer == sampleBuffers[i]) {
-			// Ok, found
-			index = i;
-			break;
-		}
-	}
-
-	if (index == sampleBuffers.size())
-		throw std::runtime_error("Internal error: unable to find the SampleBuffer in OpenCLPixelDevice::AddSampleBuffer()");
+	OpenCLSampleBuffer *osb = (OpenCLSampleBuffer *)sampleBuffer;
 
 	// Download the buffer to the GPU
-	assert (sampleBuffer->GetSampleCount() < SampleBufferSize);
-	oclQueue->enqueueWriteBuffer(
-			*(sampleBufferBuff[index]),
-			CL_FALSE,
-			0,
-			sizeof(SampleBufferElem) * sampleBuffer->GetSampleCount(),
-			sampleBuffer->GetSampleBuffer());
+	osb->Write();
 
 	// Run the kernel
-	sampleBufferBuffEvent[index] = cl::Event();
+	*(osb->GetOCLEvent()) = cl::Event();
 	switch (type) {
 		case FILTER_GAUSSIAN: {
 			addSampleBufferGaussian2x2Kernel->setArg(0, width);
 			addSampleBufferGaussian2x2Kernel->setArg(1, height);
 			addSampleBufferGaussian2x2Kernel->setArg(2, *sampleFrameBuff);
-			addSampleBufferGaussian2x2Kernel->setArg(3, (unsigned int)sampleBuffer->GetSampleCount());
-			addSampleBufferGaussian2x2Kernel->setArg(4, *(sampleBufferBuff[index]));
+			addSampleBufferGaussian2x2Kernel->setArg(3, (unsigned int)osb->GetSampleCount());
+			addSampleBufferGaussian2x2Kernel->setArg(4, *(osb->GetOCLBuffer()));
 			addSampleBufferGaussian2x2Kernel->setArg(5, FilterTableSize);
 			addSampleBufferGaussian2x2Kernel->setArg(6, *filterTableBuff);
 			addSampleBufferGaussian2x2Kernel->setArg(7, 16 * 256 * sizeof(cl_float), NULL);
@@ -381,31 +357,31 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferGaussian2x2Kernel, cl::NullRange,
 				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
-				NULL, &(sampleBufferBuffEvent[index]));
+				NULL, osb->GetOCLEvent());
 			break;
 		}
 		case FILTER_PREVIEW: {
 			addSampleBufferPreviewKernel->setArg(0, width);
 			addSampleBufferPreviewKernel->setArg(1, height);
 			addSampleBufferPreviewKernel->setArg(2, *sampleFrameBuff);
-			addSampleBufferPreviewKernel->setArg(3, (unsigned int)sampleBuffer->GetSampleCount());
-			addSampleBufferPreviewKernel->setArg(4, *(sampleBufferBuff[index]));
+			addSampleBufferPreviewKernel->setArg(3, (unsigned int)osb->GetSampleCount());
+			addSampleBufferPreviewKernel->setArg(4, *(osb->GetOCLBuffer()));
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferPreviewKernel, cl::NullRange,
 				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
-				NULL, &(sampleBufferBuffEvent[index]));
+				NULL, osb->GetOCLEvent());
 			break;
 		}
 		case FILTER_NONE: {
 			addSampleBufferKernel->setArg(0, width);
 			addSampleBufferKernel->setArg(1, height);
 			addSampleBufferKernel->setArg(2, *sampleFrameBuff);
-			addSampleBufferKernel->setArg(3, (unsigned int)sampleBuffer->GetSampleCount());
-			addSampleBufferKernel->setArg(4, *(sampleBufferBuff[index]));
+			addSampleBufferKernel->setArg(3, (unsigned int)osb->GetSampleCount());
+			addSampleBufferKernel->setArg(4, *(osb->GetOCLBuffer()));
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferKernel, cl::NullRange,
-				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
-				NULL, &(sampleBufferBuffEvent[index]));
+				cl::NDRange(osb->GetSize()), cl::NDRange(256),
+				NULL, osb->GetOCLEvent());
 			break;
 		}
 		default:
@@ -413,7 +389,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, const SampleBuffe
 			break;
 	}
 
-	sampleBuffersUsed[index] = false;
+	freeSampleBuffers.push_back(osb);
 }
 
 void OpenCLPixelDevice::UpdateFrameBuffer() {

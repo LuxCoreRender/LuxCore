@@ -148,6 +148,7 @@ public:
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
 	friend class OpenCLPixelDevice;
+	friend class OpenCLSampleBuffer;
 
 protected:
 	static std::string GetDeviceType(const cl_int type);

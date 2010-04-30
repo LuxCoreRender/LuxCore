@@ -33,11 +33,11 @@ typedef struct {
 
 class SampleBuffer {
 public:
-	SampleBuffer(size_t bufferSize) : size(bufferSize) {
+	SampleBuffer(const size_t bufferSize) : size(bufferSize) {
 		samples = new SampleBufferElem[size];
 		Reset();
 	}
-	~SampleBuffer() {
+	virtual ~SampleBuffer() {
 		delete[] samples;
 	}
 
