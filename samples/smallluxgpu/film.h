@@ -700,7 +700,6 @@ public:
 		vector<DeviceDescription *> descs;
 		descs.push_back(deviceDesc);
 		pixelDevice = ctx->AddPixelDevices(descs)[0];
-		pixelDevice->AllocateSampleBuffers(16);
 		pixelDevice->Init(w, h);
 	}
 

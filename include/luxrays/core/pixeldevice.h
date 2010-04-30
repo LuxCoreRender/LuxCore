@@ -36,8 +36,6 @@ typedef enum {
 
 class PixelDevice : public Device {
 public:
-	virtual void AllocateSampleBuffers(const unsigned int count) = 0;
-
 	virtual void Init(const unsigned int w, const unsigned int h);
 	virtual void ClearFrameBuffer() = 0;
 	virtual void ClearSampleFrameBuffer() = 0;
@@ -79,8 +77,6 @@ public:
 			const unsigned int devIndex);
 	~NativePixelDevice();
 
-	void AllocateSampleBuffers(const unsigned int count);
-
 	void Init(const unsigned int w, const unsigned int h);
 	void ClearFrameBuffer();
 	void ClearSampleFrameBuffer();
@@ -99,6 +95,17 @@ public:
 
 	void UpdateFrameBuffer();
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
+
+	unsigned int GetFreeDevBufferCount() {
+		boost::mutex::scoped_lock lock(splatMutex);
+
+		return freeSampleBuffers.size();
+	}
+	unsigned int GetTotalDevBufferCount() {
+		boost::mutex::scoped_lock lock(splatMutex);
+
+		return sampleBuffers.size();
+	}
 
 	static size_t SampleBufferSize;
 
@@ -145,7 +152,7 @@ private:
 	FrameBuffer *frameBuffer;
 
 	std::vector<SampleBuffer *> sampleBuffers;
-	std::vector<bool> sampleBuffersUsed;
+	std::deque<SampleBuffer *> freeSampleBuffers;
 
 	float gammaTable[GammaTableSize];
 	float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
@@ -182,8 +189,6 @@ public:
 	OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
 			const unsigned int index);
 	~OpenCLPixelDevice();
-
-	void AllocateSampleBuffers(const unsigned int count);
 
 	void Init(const unsigned int w, const unsigned int h);
 	void ClearFrameBuffer();
