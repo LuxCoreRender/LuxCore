@@ -93,8 +93,6 @@ static int4 QBVHNode_BBoxIntersect(__global QBVHNode *node, const QuadRay *ray4,
 }
 
 static void QuadTriangle_Intersect(const __global QuadTiangle *qt, QuadRay *ray4, RayHit *rayHit) {
-	const float4 zero = (float4)0.f;
-
 	//--------------------------------------------------------------------------
 	// Calc. b1 coordinate
 
@@ -137,33 +135,36 @@ static void QuadTriangle_Intersect(const __global QuadTiangle *qt, QuadRay *ray4
 
 	const float4 t = ((edge2x * s2x) + (edge2y * s2y) + (edge2z * s2z)) / divisor;
 
-	// The '&&' operator is still bugged in the ATI compiler
-	const int4 test = (divisor != zero) &
-		(b0 >= zero) & (b1 >= zero) & (b2 >= zero) &
-		(t > ray4->mint) & (t < ray4->maxt);
-
 	unsigned int hit = 4;
 	float _b1, _b2;
 	float maxt = ray4->maxt.s0;
-	if (test.s0 && (t.s0 < maxt)) {
+	if ((divisor.s0 != 0.f) &&
+		(b0.s0 >= 0.f) && (b1.s0 >= 0.f) && (b2.s0 >= 0.f) &&
+		(t.s0 > ray4->mint.s0) && (t.s0 < maxt)) {
 		hit = 0;
 		maxt = t.s0;
 		_b1 = b1.s0;
 		_b2 = b2.s0;
 	}
-	if (test.s1 && (t.s1 < maxt)) {
+	if ((divisor.s1 != 0.f) &&
+		(b0.s1 >= 0.f) && (b1.s1 >= 0.f) && (b2.s1 >= 0.f) &&
+		(t.s1 > ray4->mint.s0) && (t.s1 < maxt)) {
 		hit = 1;
 		maxt = t.s1;
 		_b1 = b1.s1;
 		_b2 = b2.s1;
 	}
-	if (test.s2 && (t.s2 < maxt)) {
+	if ((divisor.s2 != 0.f) &&
+		(b0.s2 >= 0.f) && (b1.s2 >= 0.f) && (b2.s2 >= 0.f) &&
+		(t.s2 > ray4->mint.s0) && (t.s2 < maxt)) {
 		hit = 2;
 		maxt = t.s2;
 		_b1 = b1.s2;
 		_b2 = b2.s2;
 	}
-	if (test.s3 && (t.s3 < maxt)) {
+	if ((divisor.s3 != 0.f) &&
+		(b0.s3 >= 0.f) && (b1.s3 >= 0.f) && (b2.s3 >= 0.f) &&
+		(t.s3 > ray4->mint.s0) && (t.s3 < maxt)) {
 		hit = 3;
 		maxt = t.s3;
 		_b1 = b1.s3;
