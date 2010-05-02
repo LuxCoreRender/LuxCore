@@ -301,6 +301,40 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	}
 
 	//--------------------------------------------------------------------------
+	// Check if there is a SkyLight defined
+	//--------------------------------------------------------------------------
+
+	const vector<string> silParams = scnProp.GetStringVector("scene.skylight.dir", "");
+	if (silParams.size() > 0) {
+		vector<float> sdir = GetParameters(scnProp, "scene.skylight.dir", 3, "");
+		if (sdir.size() == 3) {
+			const float turb = scnProp.GetFloat("scene.skylight.turbidity", 2.2f);
+			vector<float> gain = GetParameters(scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
+			infiniteLight = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+			infiniteLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+			useInfiniteLightBruteForce = true;
+			//lights.push_back(infiniteLight);
+		}
+	}
+	
+	//--------------------------------------------------------------------------
+	// Check if there is a SunLight defined
+	//--------------------------------------------------------------------------
+
+	const vector<string> sulParams = scnProp.GetStringVector("scene.sunlight.dir", "");
+	if (sulParams.size() > 0) {
+		vector<float> sdir = GetParameters(scnProp, "scene.sunlight.dir", 3, "0.0 -1.0 0.0");
+		if (sdir.size() == 3) {
+			const float turb = scnProp.GetFloat("scene.sunlight.turbidity", 2.2f);
+			const float relSize = scnProp.GetFloat("scene.sunlight.relsize", 1.0f);
+			vector<float> gain = GetParameters(scnProp, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
+			SunLight *sunLight = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+			sunLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+			lights.push_back(sunLight);
+		}
+	}
+
+	//--------------------------------------------------------------------------
 	// Check if there is a VolumeIntegrator defined
 	//--------------------------------------------------------------------------
 

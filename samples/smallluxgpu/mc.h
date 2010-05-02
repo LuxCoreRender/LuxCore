@@ -26,6 +26,10 @@
 
 #include "smalllux.h"
 
+template<class T> inline T Lerp(float t, T v1, T v2) {
+	return (1.f - t) * v1 + t * v2;
+}
+
 inline void LatLongMappingMap(float s, float t, Vector *wh, float *pdf) {
 	const float theta = t * M_PI;
 	const float sinTheta = sinf(theta);
@@ -96,6 +100,26 @@ inline Vector CosineSampleHemisphere(const float u1, const float u2) {
 	ret.z = sqrtf(max(0.f, 1.f - ret.x * ret.x - ret.y * ret.y));
 
 	return ret;
+}
+
+inline Vector UniformSampleCone(float u1, float u2, float costhetamax) {
+	float costheta = Lerp(u1, costhetamax, 1.f);
+	float sintheta = sqrtf(1.f - costheta*costheta);
+	float phi = u2 * 2.f * M_PI;
+	return Vector(cosf(phi) * sintheta,
+	              sinf(phi) * sintheta,
+		          costheta);
+}
+
+inline Vector UniformSampleCone(float u1, float u2, float costhetamax,const Vector &x, const Vector &y, const Vector &z) {
+	float costheta = Lerp(u1, costhetamax, 1.f);
+	float sintheta = sqrtf(1.f - costheta*costheta);
+	float phi = u2 * 2.f * M_PI;
+	return cosf(phi) * sintheta * x + sinf(phi) * sintheta * y + costheta * z;
+}
+
+inline float UniformConePdf(float costhetamax) {
+	return 1.f / (2.f * M_PI * (1.f - costhetamax));
 }
 
 inline void ComputeStep1dCDF(const float *f, u_int nSteps, float *c, float *cdf) {

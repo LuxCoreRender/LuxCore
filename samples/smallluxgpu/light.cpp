@@ -20,6 +20,235 @@
  ***************************************************************************/
 
 #include "light.h"
+#include "data/sun_spect.h"
+
+//------------------------------------------------------------------------------
+// SkyLight
+//------------------------------------------------------------------------------
+
+#define min(a,b) (((a)<(b))?(a):(b))
+
+float PerezBase(const float lam[6], float theta, float gamma) {
+	return (1.f + lam[1] * expf(lam[2] / cosf(theta))) *
+		(1.f + lam[3] * expf(lam[4] * gamma)  + lam[5] * cosf(gamma) * cosf(gamma));
+}
+
+inline float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
+	const float cospsi = sinf(thetav) * sinf(theta) * cosf(phi - phiv) + cosf(thetav) * cosf(theta);
+	if (cospsi >= 1.f)
+		return 0.f;
+	if (cospsi <= -1.f)
+		return M_PI;
+	return acosf(cospsi);
+}
+
+void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
+	float X, Z;
+	
+	if (y != 0.0)
+		X = (x / y) * Y;
+	else
+		X = 0.0;
+	
+	if (y != 0.0 && Y != 0.0)
+		Z = (1.0 - x - y) / y * Y;
+	else
+		Z = 0.0;
+
+	// Assuming sRGB (D65 illuminant)
+	s->r =  3.2410 * X - 1.5374 * Y - 0.4986 * Z;
+	s->g = -0.9692 * X + 1.8760 * Y + 0.0416 * Z;
+	s->b =  0.0556 * X - 0.2040 * Y + 1.0570 * Z;
+}
+
+SkyLight::SkyLight(float turb, const Vector &sd) : InfiniteLight(NULL) {
+	turbidity = turb;
+	sundir = Normalize(sd);
+	gain = Spectrum(1.0f, 1.0f, 1.0f);
+	
+	thetaS = SphericalTheta(sundir);
+	phiS = SphericalPhi(sundir);
+
+	float aconst = 1.0f;
+	float bconst = 1.0f;
+	float cconst = 1.0f;
+	float dconst = 1.0f;
+	float econst = 1.0f;
+	
+	float theta2 = thetaS*thetaS;
+	float theta3 = theta2*thetaS;
+	float T = turb;
+	float T2 = turb*turb;
+
+	float chi = (4.f / 9.f - T / 120.f) * (M_PI - 2.0f * thetaS);
+	zenith_Y = (4.0453f * T - 4.9710f) * tan(chi) - 0.2155f * T + 2.4192f;
+	zenith_Y *= 0.06;
+
+	zenith_x =
+	(0.00166f * theta3 - 0.00375f * theta2 + 0.00209f * thetaS) * T2 +
+	(-0.02903f * theta3 + 0.06377f * theta2 - 0.03202f * thetaS + 0.00394f) * T +
+	(0.11693f * theta3 - 0.21196f * theta2 + 0.06052f * thetaS + 0.25886f);
+
+	zenith_y =
+	(0.00275f * theta3 - 0.00610f * theta2 + 0.00317f * thetaS) * T2 +
+	(-0.04214f * theta3 + 0.08970f * theta2 - 0.04153f * thetaS  + 0.00516f) * T +
+	(0.15346f * theta3 - 0.26756f * theta2 + 0.06670f * thetaS  + 0.26688f);
+
+	perez_Y[1] = (0.1787f * T  - 1.4630f) * aconst;
+	perez_Y[2] = (-0.3554f * T  + 0.4275f) * bconst;
+	perez_Y[3] = (-0.0227f * T  + 5.3251f) * cconst;
+	perez_Y[4] = (0.1206f * T  - 2.5771f) * dconst;
+	perez_Y[5] = (-0.0670f * T  + 0.3703f) * econst;
+
+	perez_x[1] = (-0.0193f * T  - 0.2592f) * aconst;
+	perez_x[2] = (-0.0665f * T  + 0.0008f) * bconst;
+	perez_x[3] = (-0.0004f * T  + 0.2125f) * cconst;
+	perez_x[4] = (-0.0641f * T  - 0.8989f) * dconst;
+	perez_x[5] = (-0.0033f * T  + 0.0452f) * econst;
+
+	perez_y[1] = (-0.0167f * T  - 0.2608f) * aconst;
+	perez_y[2] = (-0.0950f * T  + 0.0092f) * bconst;
+	perez_y[3] = (-0.0079f * T  + 0.2102f) * cconst;
+	perez_y[4] = (-0.0441f * T  - 1.6537f) * dconst;
+	perez_y[5] = (-0.0109f * T  + 0.0529f) * econst;
+
+	zenith_Y /= PerezBase(perez_Y, 0, thetaS);
+	zenith_x /= PerezBase(perez_x, 0, thetaS);
+	zenith_y /= PerezBase(perez_y, 0, thetaS);
+}
+
+Spectrum SkyLight::Le(const Vector &dir) const {
+	const float theta = SphericalTheta(dir);
+	const float phi = SphericalPhi(dir);
+
+	Spectrum s;
+	GetSkySpectralRadiance(theta, phi, &s);
+
+	return gain * s;
+}
+
+void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const
+{
+	// add bottom half of hemisphere with horizon colour
+	const float theta_fin = min(theta,(M_PI * 0.5f) - 0.001f);
+	const float gamma = RiAngleBetween(theta,phi,thetaS,phiS);
+
+	// Compute xyY values
+	const float x = zenith_x * PerezBase(perez_x, theta_fin, gamma);
+	const float y = zenith_y * PerezBase(perez_y, theta_fin, gamma);
+	const float Y = zenith_Y * PerezBase(perez_Y, theta_fin, gamma);
+
+	ChromaticityToSpectrum(Y, x, y, spect);
+}
+
+SunLight::SunLight(float turb, float relSize, const Vector &sd) : LightSource() {
+	turbidity = turb;
+	sundir = Normalize(sd);
+	gain = Spectrum(1.0f, 1.0f, 1.0f);
+	
+	CoordinateSystem(sundir, &x, &y);
+
+	// Values from NASA Solar System Exploration page
+	// http://solarsystem.nasa.gov/planets/profile.cfm?Object=Sun&Display=Facts&System=Metric
+	const float sunRadius = 695500.f;
+	const float sunMeanDistance = 149600000.f;
+
+	if (relSize * sunRadius <= sunMeanDistance) {
+		sin2ThetaMax = relSize * sunRadius / sunMeanDistance;
+		sin2ThetaMax *= sin2ThetaMax;
+		cosThetaMax = sqrtf(1.f - sin2ThetaMax);
+	} else {
+		cosThetaMax = 0.f;
+		sin2ThetaMax = 1.f;
+	}
+
+	Vector wh = Normalize(sundir);
+	phiS = SphericalPhi(wh);
+	thetaS = SphericalTheta(wh);
+
+	// NOTE - lordcrc - sun_k_oWavelengths contains 64 elements, while sun_k_oAmplitudes contains 65?!?
+	IrregularSPD k_oCurve(sun_k_oWavelengths, sun_k_oAmplitudes, 64);
+	IrregularSPD k_gCurve(sun_k_gWavelengths, sun_k_gAmplitudes, 4);
+	IrregularSPD k_waCurve(sun_k_waWavelengths, sun_k_waAmplitudes, 13);
+
+	RegularSPD solCurve(sun_solAmplitudes, 380, 750, 38);  // every 5 nm
+
+	float beta = 0.04608365822050f * turbidity - 0.04586025928522f;
+	float tauR, tauA, tauO, tauG, tauWA;
+
+	float m = 1.f / (cosf(thetaS) + 0.00094f * powf(1.6386f - thetaS, 
+		-1.253f));  // Relative Optical Mass
+
+	int i;
+	float lambda;
+	// NOTE - lordcrc - SPD stores data internally, no need for Ldata to stick around
+	float Ldata[91];
+	for(i = 0, lambda = 350.f; i < 91; ++i, lambda += 5.f) {
+			// Rayleigh Scattering
+		tauR = expf( -m * 0.008735f * powf(lambda / 1000.f, -4.08f));
+			// Aerosol (water + dust) attenuation
+			// beta - amount of aerosols present
+			// alpha - ratio of small to large particle sizes. (0:4,usually 1.3)
+		const float alpha = 1.3f;
+		tauA = expf(-m * beta * powf(lambda / 1000.f, -alpha));  // lambda should be in um
+			// Attenuation due to ozone absorption
+			// lOzone - amount of ozone in cm(NTP)
+		const float lOzone = .35f;
+		tauO = expf(-m * k_oCurve.sample(lambda) * lOzone);
+			// Attenuation due to mixed gases absorption
+		tauG = expf(-1.41f * k_gCurve.sample(lambda) * m / powf(1.f +
+			118.93f * k_gCurve.sample(lambda) * m, 0.45f));
+			// Attenuation due to water vapor absorbtion
+			// w - precipitable water vapor in centimeters (standard = 2)
+		const float w = 2.0f;
+		tauWA = expf(-0.2385f * k_waCurve.sample(lambda) * w * m /
+		powf(1.f + 20.07f * k_waCurve.sample(lambda) * w * m, 0.45f));
+
+		Ldata[i] = (solCurve.sample(lambda) *
+			tauR * tauA * tauO * tauG * tauWA);
+	}
+
+	RegularSPD LSPD(Ldata, 350,800,91);
+	suncolor = LSPD.ToRGB() / 1000000000.0f;
+}
+
+void SunLight::SetGain(const Spectrum &g) {
+	gain = g;
+	suncolor *= gain;
+}
+
+Spectrum SunLight::Le(const Vector &dir) const {
+	if(cosThetaMax < 1.f && Dot(dir,-sundir) > cosThetaMax) {
+		return suncolor;
+	}
+	else {
+		return Spectrum();
+	}
+}
+
+Spectrum SunLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
+	
+	float d1, d2;
+	float worldRadius = 100.0f;
+
+	if (N && (cosThetaMax < 1.f && Dot(*N,-sundir) > cosThetaMax)) {
+		*pdf = 0.0f;
+		return Spectrum();
+	}
+	
+	ConcentricSampleDisk(u1, u2, &d1, &d2);
+
+	Vector op = (d1 * x + d2 * y) + worldRadius * sundir;
+	
+	Vector wi = UniformSampleCone(u1, u2, cosThetaMax, x, y, sundir);
+
+	*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+
+	*pdf = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+
+	return suncolor;
+}
 
 //------------------------------------------------------------------------------
 // InfiniteLight
