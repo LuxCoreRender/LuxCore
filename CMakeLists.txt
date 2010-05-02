@@ -174,7 +174,7 @@ ENDIF (DOXYGEN_FOUND)
 #
 #############################################################################
 
-set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fPIC -O0 -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -msse -msse2 -msse3 -mssse3 -fPIC -O0 -g")
 # NOTE: QBVH can not be compiled with -O3 because of a GCC bug
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
 # The QBVH accelerator needs to be compiled with much reduced optimizations

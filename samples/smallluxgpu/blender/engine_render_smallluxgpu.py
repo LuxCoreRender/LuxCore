@@ -25,6 +25,7 @@
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
+import mathutils
 import os
 
 def slg_properties():
@@ -241,10 +242,32 @@ def slg_properties():
   properties_material.MATERIAL_PT_mirror.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
   del properties_material
   
+  import properties_texture
+  for member in dir(properties_texture):
+    subclass = getattr(properties_texture, member)
+    try:
+      subclass.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
+    except:
+      pass
+  del properties_texture
+  
+  import properties_data_camera
+  for member in dir(properties_data_camera):
+    subclass = getattr(properties_data_camera, member)
+    try:
+      subclass.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
+    except:
+      pass
+  del properties_data_camera
+  
   import properties_world
   properties_world.WORLD_PT_environment_lighting.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
   del properties_world
-  
+
+  import properties_data_lamp
+  properties_data_lamp.DATA_PT_sunsky.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
+  del properties_data_lamp
+
 def slg_lensradius(self, context):
   if context.scene.render.engine == 'SMALLLUXGPU_RENDER':  
     self.layout.split().column().prop(context.camera, "slg_lensradius", text="SLG Lens Radius")
@@ -384,7 +407,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
   bl_idname = 'SMALLLUXGPU_RENDER'
   bl_label = "SmallLuxGPU"
   
-  def _slgexport(self, scene, uv_flag, vc_flag, vn_flag, export, basepath, basename):
+  def _slgexport(self, scene, uv_flag, vc_flag, vn_flag, export, basepath, basename, suns, envmap):
     # Depends on Blender version used
     try:
         from Mathutils import Vector
@@ -534,6 +557,23 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         if scene.slg_infinitelightbf:
           fscn.write('scene.infinitelight.usebruteforce = 1\n')
 
+    # Sun lamp
+    if suns:
+      # We only support one visible sun lamp
+      sun = suns[0].data.sky
+      matrix = suns[0].matrix
+      # If envmap is also defined, only sun component is exported
+      invmatrix = mathutils.Matrix(matrix).invert()
+      # invmatrix[0][2], invmatrix[1][2], invmatrix[2][2]))
+      if not envmap and sun.use_atmosphere:
+        fscn.write('scene.skylight.dir = {} {} {}\n'.format(ff(invmatrix[0][2]),ff(invmatrix[1][2]),ff(invmatrix[2][2])))
+        fscn.write('scene.skylight.turbidity = {}\n'.format(ff(sun.atmosphere_turbidity)))
+        fscn.write('scene.skylight.gain = {} {} {}\n'.format(ff(sun.sun_intensity),ff(sun.sun_intensity),ff(sun.sun_intensity)))
+      if sun.use_sky:
+        fscn.write('scene.sunlight.dir = {} {} {}\n'.format(ff(invmatrix[0][2]),ff(invmatrix[1][2]),ff(invmatrix[2][2])))
+        fscn.write('scene.sunlight.turbidity = {}\n'.format(ff(sun.atmosphere_turbidity)))
+        fscn.write('scene.sunlight.gain = {} {} {}\n'.format(ff(sun.sun_brightness),ff(sun.sun_brightness),ff(sun.sun_brightness)))
+    
     # Participating Media properties
     if scene.slg_enablepartmedia:
       fscn.write('scene.partecipatingmedia.singlescatering.enable = 1\n')
@@ -652,8 +692,12 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     self.update_stats("", "SmallLuxGPU: Exporting scene, please wait...")
 
     # Make sure we have lights in our scene
-    if not any(m.users and m.emit for m in bpy.data.materials) and (scene.world and (not any(ts and hasattr(ts.texture,'image') for ts in scene.world.texture_slots))):
-      error("No emitters or world image texture in scene!  SLG requires at least one light source!")
+    suns = [f for f in scene.objects if f.type=="LAMP" and f.data and f.data.type=="SUN" and scene.layers[next((i for i in range(len(f.layers)) if f.layers[i]))] and (f.data.sky.use_sky or f.data.sky.use_atmosphere)]
+    envmap = (scene.world and any(ts and hasattr(ts.texture,'image') for ts in scene.world.texture_slots))
+    emitters = any(m.users and m.emit for m in bpy.data.materials)
+    
+    if not suns and not emitters and not envmap:
+      error("No sun-lamp, emitters or world image texture in scene!  SLG requires at least one light source!")
 
     # Get resolution
     r = scene.render
@@ -683,7 +727,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       error("Invalid scene filename") 
     basename = os.path.splitext(basename)[0]
     
-    self._slgexport(scene, scene.slg_vuvs, scene.slg_vcolors, scene.slg_vnormals, scene.slg_export, basepath, basename)
+    self._slgexport(scene, scene.slg_vuvs, scene.slg_vcolors, scene.slg_vnormals, scene.slg_export, basepath, basename, suns, envmap)
 
     fcfg = open('{}/{}/render.cfg'.format(basepath,basename), 'w')
     fcfg.write('image.width = {}\n'.format(x))

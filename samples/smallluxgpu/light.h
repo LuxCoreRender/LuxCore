@@ -26,10 +26,10 @@
 #include "material.h"
 #include "texmap.h"
 #include "mc.h"
+#include "spd.h"
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
-
 
 class LightSource {
 public:
@@ -48,7 +48,7 @@ public:
 	InfiniteLight(TexMapInstance *tx);
 	virtual ~InfiniteLight() { }
 
-	void SetGain(const Spectrum &g) {
+	virtual void SetGain(const Spectrum &g) {
 		gain = g;
 	}
 
@@ -106,6 +106,50 @@ public:
 
 private:
 	Distribution2D *uvDistrib;
+};
+
+//------------------------------------------------------------------------------
+// Sunsky implementation
+//------------------------------------------------------------------------------
+
+class SkyLight : public InfiniteLight {
+public:
+	SkyLight(float turbidity, const Vector &sundir);
+	virtual ~SkyLight() { }
+
+	virtual Spectrum Le(const Vector &dir) const;
+	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
+
+protected:
+	Vector sundir;
+	float turbidity;
+	float thetaS;
+	float phiS;
+	float zenith_Y, zenith_x, zenith_y;
+	float perez_Y[6], perez_x[6], perez_y[6];
+};
+
+class SunLight : public LightSource {
+public:
+	SunLight(float turbidity, float relSize, const Vector &sundir);
+	virtual ~SunLight() { }
+
+	Spectrum Le(const Vector &dir) const;
+
+	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
+
+	void SetGain(const Spectrum &g);
+
+protected:
+	Vector sundir;
+	Spectrum gain;
+	float turbidity;
+	// XY Vectors for cone sampling
+	Vector x, y;
+	float thetaS, phiS, V;
+	float cosThetaMax, sin2ThetaMax;
+	Spectrum suncolor;
 };
 
 //------------------------------------------------------------------------------
