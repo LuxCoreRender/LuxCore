@@ -135,36 +135,36 @@ static void QuadTriangle_Intersect(const __global QuadTiangle *qt, QuadRay *ray4
 
 	const float4 t = ((edge2x * s2x) + (edge2y * s2y) + (edge2z * s2z)) / divisor;
 
+    // The '&&' operator is still bugged in the ATI compiler
+    const float4 zero = (float4)0.f;
+    const int4 test4a = (divisor != zero);
+    const int4 test4b = (b0 >= zero);
+    const int4 test4c = (b1 >= zero);
+    const int4 test4d = (b2 >= zero);
+    const int4 test4e = (t > ray4->mint);
+
 	unsigned int hit = 4;
 	float _b1, _b2;
 	float maxt = ray4->maxt.s0;
-	if ((divisor.s0 != 0.f) &&
-		(b0.s0 >= 0.f) && (b1.s0 >= 0.f) && (b2.s0 >= 0.f) &&
-		(t.s0 > ray4->mint.s0) && (t.s0 < maxt)) {
+	if (test4a.s0 && test4b.s0 && test4c.s0 && test4d.s0 && test4e.s0 && (t.s0 < maxt)) {
 		hit = 0;
 		maxt = t.s0;
 		_b1 = b1.s0;
 		_b2 = b2.s0;
 	}
-	if ((divisor.s1 != 0.f) &&
-		(b0.s1 >= 0.f) && (b1.s1 >= 0.f) && (b2.s1 >= 0.f) &&
-		(t.s1 > ray4->mint.s0) && (t.s1 < maxt)) {
+	if (test4a.s1 && test4b.s1 && test4c.s1 && test4d.s1 && test4e.s1 && (t.s1 < maxt)) {
 		hit = 1;
 		maxt = t.s1;
 		_b1 = b1.s1;
 		_b2 = b2.s1;
 	}
-	if ((divisor.s2 != 0.f) &&
-		(b0.s2 >= 0.f) && (b1.s2 >= 0.f) && (b2.s2 >= 0.f) &&
-		(t.s2 > ray4->mint.s0) && (t.s2 < maxt)) {
+	if (test4a.s2 && test4b.s2 && test4c.s2 && test4d.s2 && test4e.s2 && (t.s2 < maxt)) {
 		hit = 2;
 		maxt = t.s2;
 		_b1 = b1.s2;
 		_b2 = b2.s2;
 	}
-	if ((divisor.s3 != 0.f) &&
-		(b0.s3 >= 0.f) && (b1.s3 >= 0.f) && (b2.s3 >= 0.f) &&
-		(t.s3 > ray4->mint.s0) && (t.s3 < maxt)) {
+	if (test4a.s3 && test4b.s3 && test4c.s3 && test4d.s3 && test4e.s3  && (t.s3 < maxt)) {
 		hit = 3;
 		maxt = t.s3;
 		_b1 = b1.s3;
