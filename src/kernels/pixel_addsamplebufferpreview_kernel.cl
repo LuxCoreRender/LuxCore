@@ -49,7 +49,7 @@ static void AddSample(__global SamplePixel *sp, const float4 sample) {
     *p += weight * sample;
 }
 
-__kernel void PixelAddSampleBufferPreview(
+__kernel __attribute__((reqd_work_group_size(64, 1, 1))) void PixelAddSampleBufferPreview(
 	const unsigned int width,
 	const unsigned int height,
 	__global SamplePixel *sampleFrameBuffer,

@@ -28,8 +28,17 @@ typedef struct {
 	float weight;
 } SamplePixel;
 
-__kernel void PixelClearSampleFB(__global SamplePixel *sampleFrameBuffer) {
-	const unsigned int offset = get_global_id(0) + get_global_id(1) * get_global_size(0);
+__kernel __attribute__((reqd_work_group_size(8, 8, 1))) void PixelClearSampleFB(
+	const unsigned int width,
+	const unsigned int height,
+    __global SamplePixel *sampleFrameBuffer) {
+    const unsigned int px = get_global_id(0);
+    if(px >= width)
+        return;
+    const unsigned int py = get_global_id(1);
+    if(py >= height)
+        return;
+	const unsigned int offset = px + py * width;
 
 	__global SamplePixel *sp = &sampleFrameBuffer[offset];
 	sp->radiance.r = 0.f;

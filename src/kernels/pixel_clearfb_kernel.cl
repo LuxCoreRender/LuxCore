@@ -25,8 +25,17 @@ typedef struct {
 
 typedef Spectrum Pixel;
 
-__kernel void PixelClearFB(__global Pixel *frameBuffer) {
-	const unsigned int offset = get_global_id(0) + get_global_id(1) * get_global_size(0);
+__kernel __attribute__((reqd_work_group_size(8, 8, 1))) void PixelClearFB(
+	const unsigned int width,
+	const unsigned int height,
+    __global Pixel *frameBuffer) {
+    const unsigned int px = get_global_id(0);
+    if(px >= width)
+        return;
+    const unsigned int py = get_global_id(1);
+    if(py >= height)
+        return;
+	const unsigned int offset = px + py * width;
 
 	__global Pixel *p = &frameBuffer[offset];
 	p->r = 0.f;

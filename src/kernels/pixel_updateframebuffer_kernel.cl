@@ -50,14 +50,21 @@ static float Radiance2PixelFloat(
 	return gammaTable[index];
 }
 
-__kernel void PixelUpdateFrameBuffer(
+__kernel __attribute__((reqd_work_group_size(8, 8, 1))) void PixelUpdateFrameBuffer(
 	const unsigned int width,
 	const unsigned int height,
 	__global SamplePixel *sampleFrameBuffer,
 	__global Pixel *frameBuffer,
 	const unsigned int gammaTableSize,
 	__global float *gammaTable) {
-	const unsigned int offset = get_global_id(0) + get_global_id(1) * get_global_size(0);
+    const unsigned int px = get_global_id(0);
+    if(px >= width)
+        return;
+    const unsigned int py = get_global_id(1);
+    if(py >= height)
+        return;
+	const unsigned int offset = px + py * width;
+
 	__global SamplePixel *sp = &sampleFrameBuffer[offset];
 	__global Pixel *p = &frameBuffer[offset];
 

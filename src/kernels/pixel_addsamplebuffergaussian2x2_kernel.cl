@@ -54,7 +54,7 @@ static void AddSample(__global SamplePixel *sp, const float4 sample) {
     *p += weight * sample;
 }
 
-__kernel void PixelAddSampleBufferGaussian2x2(
+__kernel __attribute__((reqd_work_group_size(64, 1, 1))) void PixelAddSampleBufferGaussian2x2(
 	const unsigned int width,
 	const unsigned int height,
 	__global SamplePixel *sampleFrameBuffer,
@@ -107,7 +107,6 @@ __kernel void PixelAddSampleBufferGaussian2x2(
 	const int fx1 = min(x1, (int)width - 1);
 	const int fy0 = max(y0, 0);
 	const int fy1 = min(y1, (int)height - 1);
-
 
     for (int y = fy0; y <= fy1; ++y) {
         const unsigned int offset = y * width;

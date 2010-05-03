@@ -188,6 +188,14 @@ template <class T> inline std::string ToString(const T& t) {
 	std::stringstream ss;
 	ss << t;
 	return ss.str();
+	}
+
+inline unsigned int RoundUp(const unsigned int a, const unsigned int b) {
+	const unsigned int r = a % b;
+	if (r == 0)
+		return a;
+	else
+		return a + b - r;
 }
 
 inline void StringTrim(std::string &str) {

@@ -42,7 +42,7 @@ std::string luxrays::KernelSource_Pixel_AddSampleBuffer =
 "    *p += sample;\n"
 "}\n"
 "\n"
-"__kernel void PixelAddSampleBuffer(\n"
+"__kernel __attribute__((reqd_work_group_size(64, 1, 1))) void PixelAddSampleBuffer(\n"
 "	const unsigned int width,\n"
 "	const unsigned int height,\n"
 "	__global SamplePixel *sampleFrameBuffer,\n"
