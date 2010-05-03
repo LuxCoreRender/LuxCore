@@ -51,7 +51,7 @@ std::string luxrays::KernelSource_Pixel_AddSampleBufferPreview =
 "    *p += weight * sample;\n"
 "}\n"
 "\n"
-"__kernel void PixelAddSampleBufferPreview(\n"
+"__kernel __attribute__((reqd_work_group_size(64, 1, 1))) void PixelAddSampleBufferPreview(\n"
 "	const unsigned int width,\n"
 "	const unsigned int height,\n"
 "	__global SamplePixel *sampleFrameBuffer,\n"

@@ -246,15 +246,19 @@ void OpenCLPixelDevice::Init(const unsigned int w, const unsigned int h) {
 }
 
 void OpenCLPixelDevice::ClearSampleFrameBuffer() {
-	clearSampleFBKernel->setArg(0, *sampleFrameBuff);
+	clearSampleFBKernel->setArg(0, width);
+	clearSampleFBKernel->setArg(1, height);
+	clearSampleFBKernel->setArg(2, *sampleFrameBuff);
 	oclQueue->enqueueNDRangeKernel(*clearSampleFBKernel, cl::NullRange,
-			cl::NDRange(width, height), cl::NDRange(16, 16));
+			cl::NDRange(RoundUp(width, 8), RoundUp(height, 8)), cl::NDRange(8, 8));
 }
 
 void OpenCLPixelDevice::ClearFrameBuffer() {
-	clearFBKernel->setArg(0, *frameBuff);
+	clearFBKernel->setArg(0, width);
+	clearFBKernel->setArg(1, height);
+	clearFBKernel->setArg(2, *frameBuff);
 	oclQueue->enqueueNDRangeKernel(*clearFBKernel, cl::NullRange,
-			cl::NDRange(width, height), cl::NDRange(16, 16));
+			cl::NDRange(RoundUp(width, 8), RoundUp(height, 8)), cl::NDRange(8, 8));
 }
 
 void OpenCLPixelDevice::SetGamma(const float gamma) {
@@ -344,11 +348,11 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 			addSampleBufferGaussian2x2Kernel->setArg(4, *(osb->GetOCLBuffer()));
 			addSampleBufferGaussian2x2Kernel->setArg(5, FilterTableSize);
 			addSampleBufferGaussian2x2Kernel->setArg(6, *filterTableBuff);
-			addSampleBufferGaussian2x2Kernel->setArg(7, 16 * 256 * sizeof(cl_float), NULL);
-			addSampleBufferGaussian2x2Kernel->setArg(8, 16 * 256 * sizeof(cl_float), NULL);
+			addSampleBufferGaussian2x2Kernel->setArg(7, 16 * 64 * sizeof(cl_float), NULL);
+			addSampleBufferGaussian2x2Kernel->setArg(8, 16 * 64 * sizeof(cl_float), NULL);
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferGaussian2x2Kernel, cl::NullRange,
-				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
+				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(64),
 				NULL, osb->GetOCLEvent());
 			break;
 		}
@@ -360,7 +364,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 			addSampleBufferPreviewKernel->setArg(4, *(osb->GetOCLBuffer()));
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferPreviewKernel, cl::NullRange,
-				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(256),
+				cl::NDRange(sampleBuffer->GetSize()), cl::NDRange(64),
 				NULL, osb->GetOCLEvent());
 			break;
 		}
@@ -372,7 +376,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 			addSampleBufferKernel->setArg(4, *(osb->GetOCLBuffer()));
 
 			oclQueue->enqueueNDRangeKernel(*addSampleBufferKernel, cl::NullRange,
-				cl::NDRange(osb->GetSize()), cl::NDRange(256),
+				cl::NDRange(osb->GetSize()), cl::NDRange(64),
 				NULL, osb->GetOCLEvent());
 			break;
 		}
@@ -399,7 +403,7 @@ void OpenCLPixelDevice::UpdateFrameBuffer() {
 		updateFrameBufferKernel->setArg(5, *gammaTableBuff);
 
 		oclQueue->enqueueNDRangeKernel(*updateFrameBufferKernel, cl::NullRange,
-				cl::NDRange(width, height), cl::NDRange(16, 16));
+				cl::NDRange(RoundUp(width, 8), RoundUp(height, 8)), cl::NDRange(8, 8));
 
 		oclQueue->enqueueReadBuffer(
 				*frameBuff,
