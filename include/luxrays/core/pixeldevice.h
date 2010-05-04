@@ -118,13 +118,13 @@ private:
 	/* Not supported by VisualC++
 	static const float Gaussian2x2_xWidth = 2.f;
 	static const float Gaussian2x2_yWidth = 2.f;
-	static const float Gaussian2x2_invXWidth = 1.f / 2.f;
-	static const float Gaussian2x2_invYWidth = 1.f / 2.f;*/
+	static const float Gaussian2x2_invXWidth = 1.f / Gaussian2x2_yWidth;
+	static const float Gaussian2x2_invYWidth = 1.f / Gaussian2x2_yWidth;*/
 
 #define Gaussian2x2_xWidth 2.f
 #define Gaussian2x2_yWidth 2.f
-#define Gaussian2x2_invXWidth (1.f / 2.f)
-#define Gaussian2x2_invYWidth (1.f / 2.f)
+#define Gaussian2x2_invXWidth (1.f / Gaussian2x2_xWidth)
+#define Gaussian2x2_invYWidth (1.f / Gaussian2x2_yWidth)
 
 	void SplatPreview(const SampleBufferElem *sampleElem);
 	void SplatGaussian2x2(const SampleBufferElem *sampleElem);
