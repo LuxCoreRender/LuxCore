@@ -30,23 +30,24 @@ typedef struct {
 
 typedef Spectrum Pixel;
 
+#define GAMMA_TABLE_SIZE 1024u
+
 static float Clamp(float val, float low, float high) {
 	return (val > low) ? ((val < high) ? val : high) : low;
 }
 
-static unsigned int Floor2UInt(float val) {
+static unsigned int Floor2UInt(const float val) {
 	return (val > 0.f) ? ((unsigned int)floor(val)) : 0;
 }
 
 static float Radiance2PixelFloat(
 		const float x,
-		const unsigned int gammaTableSize,
-		__global float *gammaTable) {
+		__constant float *gammaTable) {
 	//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
 
 	const unsigned int index = min(
-		Floor2UInt(gammaTableSize * Clamp(x, 0.f, 1.f)),
-			gammaTableSize - 1);
+		Floor2UInt(GAMMA_TABLE_SIZE * Clamp(x, 0.f, 1.f)),
+			GAMMA_TABLE_SIZE - 1u);
 	return gammaTable[index];
 }
 
@@ -55,8 +56,7 @@ __kernel __attribute__((reqd_work_group_size(8, 8, 1))) void PixelUpdateFrameBuf
 	const unsigned int height,
 	__global SamplePixel *sampleFrameBuffer,
 	__global Pixel *frameBuffer,
-	const unsigned int gammaTableSize,
-	__global float *gammaTable) {
+	__constant __attribute__((max_constant_size(sizeof(float) * GAMMA_TABLE_SIZE))) float *gammaTable) {
     const unsigned int px = get_global_id(0);
     if(px >= width)
         return;
@@ -73,7 +73,7 @@ __kernel __attribute__((reqd_work_group_size(8, 8, 1))) void PixelUpdateFrameBuf
 		return;
 
 	const float invWeight = 1.f / weight;
-	p->r = Radiance2PixelFloat(sp->radiance.r * invWeight, gammaTableSize, gammaTable);
-	p->g = Radiance2PixelFloat(sp->radiance.g * invWeight, gammaTableSize, gammaTable);
-	p->b = Radiance2PixelFloat(sp->radiance.b * invWeight, gammaTableSize, gammaTable);
+	p->r = Radiance2PixelFloat(sp->radiance.r * invWeight, gammaTable);
+	p->g = Radiance2PixelFloat(sp->radiance.g * invWeight, gammaTable);
+	p->b = Radiance2PixelFloat(sp->radiance.b * invWeight, gammaTable);
 }

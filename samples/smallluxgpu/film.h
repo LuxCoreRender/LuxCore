@@ -196,15 +196,15 @@ public:
 		return WallClockTime() - statsStartSampleTime;
 	}
 	double GetAvgSampleSec() {
-		const double elapsedTime = WallClockTime() - statsStartSampleTime;
+		/*const double elapsedTime = WallClockTime() - statsStartSampleTime;
 		const double k = (elapsedTime < 10.0) ? 1.0 : (1.0 / (2.5 * elapsedTime));
 		statsAvgSampleSec = k * statsTotalSampleCount / elapsedTime +
 				(1.0 - k) * statsAvgSampleSec;
 
-		return statsAvgSampleSec;
+		return statsAvgSampleSec;*/
 
-		/*const double elapsedTime = WallClockTime() - statsStartSampleTime;
-		return statsTotalSampleCount / elapsedTime;*/
+		const double elapsedTime = WallClockTime() - statsStartSampleTime;
+		return statsTotalSampleCount / elapsedTime;
 	}
 
 	virtual void Save(const string &fileName) = 0;

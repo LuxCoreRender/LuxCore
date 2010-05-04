@@ -21,10 +21,11 @@
 
 // NOTE: this kernel assume samples do not overlap
 
+#define FILTER_TABLE_SIZE 16
 #define Gaussian2x2_xWidth 2.f
 #define Gaussian2x2_yWidth 2.f
-#define Gaussian2x2_invXWidth (1.f / 2.f)
-#define Gaussian2x2_invYWidth (1.f / 2.f)
+#define Gaussian2x2_invXWidth (1.f / Gaussian2x2_xWidth)
+#define Gaussian2x2_invYWidth (1.f / Gaussian2x2_invXWidth)
 
 typedef struct {
 	float r, g, b;
@@ -60,9 +61,7 @@ __kernel __attribute__((reqd_work_group_size(64, 1, 1))) void PixelAddSampleBuff
 	__global SamplePixel *sampleFrameBuffer,
 	const unsigned int sampleCount,
 	__global SampleBufferElem *sampleBuff,
-	const unsigned int FilterTableSize,
-    __global float *Gaussian2x2_filterTable,
-	__local int *ifxBuff, __local int *ifyBuff) {
+    __constant __attribute__((max_constant_size(sizeof(float) * FILTER_TABLE_SIZE * FILTER_TABLE_SIZE))) float *Gaussian2x2_filterTable) {
 	const unsigned int index = get_global_id(0);
 	if (index >= sampleCount)
 		return;
@@ -80,24 +79,26 @@ __kernel __attribute__((reqd_work_group_size(64, 1, 1))) void PixelAddSampleBuff
 		return;
 
 	// Loop over filter support and add sample to pixel arrays
-	__local int *ifx = &(ifxBuff[16 * get_local_id(0)]);
+    __local int ifxBuff[FILTER_TABLE_SIZE * 64];
+	__local int *ifx = &(ifxBuff[FILTER_TABLE_SIZE * get_local_id(0)]);
 	for (int x = x0; x <= x1; ++x) {
 		const float fx = fabs((x - dImageX) *
-				Gaussian2x2_invXWidth * FilterTableSize);
-		ifx[x - x0] = min(Floor2Int(fx), (int)FilterTableSize - 1);
+				Gaussian2x2_invXWidth * FILTER_TABLE_SIZE);
+		ifx[x - x0] = min(Floor2Int(fx), (int)FILTER_TABLE_SIZE - 1);
 	}
 
-	__local int *ify = &(ifyBuff[16 * get_local_id(0)]);
+    __local int ifyBuff[FILTER_TABLE_SIZE * 64];
+	__local int *ify = &(ifyBuff[FILTER_TABLE_SIZE * get_local_id(0)]);
 	for (int y = y0; y <= y1; ++y) {
 		const float fy = fabs((y - dImageY) *
-				Gaussian2x2_invYWidth * FilterTableSize);
-		ify[y - y0] = min(Floor2Int(fy), (int)FilterTableSize - 1);
+				Gaussian2x2_invYWidth * FILTER_TABLE_SIZE);
+		ify[y - y0] = min(Floor2Int(fy), (int)FILTER_TABLE_SIZE - 1);
 	}
 
 	float filterNorm = 0.f;
 	for (int y = y0; y <= y1; ++y) {
 		for (int x = x0; x <= x1; ++x) {
-			const int offset = ify[y - y0] * FilterTableSize + ifx[x - x0];
+			const int offset = ify[y - y0] * FILTER_TABLE_SIZE + ifx[x - x0];
 			filterNorm += Gaussian2x2_filterTable[offset];
 		}
 	}
@@ -112,7 +113,7 @@ __kernel __attribute__((reqd_work_group_size(64, 1, 1))) void PixelAddSampleBuff
         const unsigned int offset = y * width;
 
 		for (int x = fx0; x <= fx1; ++x) {
-            const int tabOffset = ify[y - y0] * FilterTableSize + ifx[x - x0];
+            const int tabOffset = ify[y - y0] * FILTER_TABLE_SIZE + ifx[x - x0];
 			sample.w = Gaussian2x2_filterTable[tabOffset] * filterNorm;
 
             AddSample(&sampleFrameBuffer[offset + x], sample);
