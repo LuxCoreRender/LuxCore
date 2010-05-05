@@ -242,28 +242,93 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 	freeSampleBuffers.push_back(sampleBuffer);
 }
 
-void NativePixelDevice::UpdateFrameBuffer() {
+void NativePixelDevice::UpdateFrameBuffer(const ToneMapType type) {
 	boost::mutex::scoped_lock lock(splatMutex);
 
-	const SamplePixel *sp = sampleFrameBuffer->GetPixels();
-	Pixel *p = frameBuffer->GetPixels();
-	for (unsigned int i = 0; i < width * height; ++i) {
-		const float weight = sp[i].weight;
+	switch (type) {
+		case TONEMAP_LINEAR: {
+			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
+			Pixel *p = frameBuffer->GetPixels();
+			const unsigned int pixelCount = width * height;
+			for (unsigned int i = 0; i < pixelCount; ++i) {
+				const float weight = sp[i].weight;
 
-		if (weight > 0.f) {
-			const float invWeight = 1.f / weight;
+				if (weight > 0.f) {
+					const float invWeight = 1.f / weight;
 
-			p[i].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
-			p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
-			p[i].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
+					p[i].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
+					p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
+					p[i].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
+				}
+			}
+			break;
 		}
+		case TONEMAP_REINHARD02: {
+			const float alpha = .1f;
+			const float preScale = 1.f;
+			const float postScale = 1.2f;
+			const float burn = 3.75f;
+
+			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
+			Pixel *p = frameBuffer->GetPixels();
+			const unsigned int pixelCount = width * height;
+
+			// Use the frame buffer as temporary storage and calculate the avarage luminance
+			float Ywa = 0.f;
+			for (unsigned int i = 0; i < pixelCount; ++i) {
+				const float weight = sp[i].weight;
+
+				if (weight > 0.f) {
+					const float invWeight = 1.f / weight;
+
+					Spectrum rgb = sp[i].radiance * invWeight;
+
+					// Convert to XYZ color space
+					p[i].r = 0.412453f * rgb.r + 0.357580f * rgb.g + 0.180423f * rgb.b;
+					p[i].g = 0.212671f * rgb.r + 0.715160f * rgb.g + 0.072169f * rgb.b;
+					p[i].b = 0.019334f * rgb.r + 0.119193f * rgb.g + 0.950227f * rgb.b;
+
+					Ywa += p[i].g;
+				}
+			}
+			Ywa /= pixelCount;
+
+			// Avoid division by zero
+			if (Ywa == 0.f)
+				Ywa = 1.f;
+
+			const float Yw = preScale * alpha * burn;
+			const float invY2 = 1.f / (Yw * Yw);
+			const float pScale = postScale * preScale * alpha / Ywa;
+
+			for (unsigned int i = 0; i < pixelCount; ++i) {
+				Spectrum xyz = p[i];
+
+				const float ys = xyz.g;
+				xyz *= pScale * (1.f + ys * invY2) / (1.f + ys);
+
+				// Convert back to RGB color space
+				p[i].r =  3.240479f * xyz.r - 1.537150f * xyz.g - 0.498535f * xyz.b;
+				p[i].g = -0.969256f * xyz.r + 1.875991f * xyz.g + 0.041556f * xyz.b;
+				p[i].b =  0.055648f * xyz.r - 0.204043f * xyz.g + 1.057311f * xyz.b;
+
+				p[i].r = Radiance2PixelFloat(p[i].r);
+				p[i].g = Radiance2PixelFloat(p[i].g);
+				p[i].b = Radiance2PixelFloat(p[i].b);
+			}
+			break;
+		}
+		default:
+			assert (false);
+			break;
 	}
 }
 
 void NativePixelDevice::Merge(const SampleFrameBuffer *sfb) {
 	boost::mutex::scoped_lock lock(splatMutex);
 
-	for (unsigned int i = 0; i < width * height; ++i) {
+	const unsigned int pixelCount = width * height;
+	for (unsigned int i = 0; i < pixelCount; ++i) {
 		SamplePixel *sp = sfb->GetPixel(i);
 		SamplePixel *spbase = sampleFrameBuffer->GetPixel(i);
 
