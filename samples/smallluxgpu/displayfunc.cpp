@@ -106,8 +106,8 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
 	const vector<PixelDevice *> pdevices = config->GetPixelDevices();
 	if (pdevices.size() > 0) {
-		sprintf(buff, "[%s][Samples/sec % 3dK]", pdevices[0]->GetName().c_str(),
-				int(pdevices[0]->GetPerformance() / 1000.0));
+		sprintf(buff, "[%s][Samples/sec % 3.2fM]", pdevices[0]->GetName().c_str(),
+				pdevices[0]->GetPerformance() / 1000000.0);
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
 
 		if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {

@@ -65,7 +65,7 @@ void OpenCLSampleBuffer::Wait() const {
 void OpenCLSampleBuffer::CollectStats() const {
 	if (oclEvent()) {
 		device->statsTotalSampleTime += (oclEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>() -
-				oclEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>()) * 10e-9;
+				oclEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>()) * 1e-9;
 		device->statsTotalSamplesCount += GetSampleCount();
 	}
 }
