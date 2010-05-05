@@ -99,7 +99,6 @@ Device::~Device() {
 
 void Device::Start() {
 	assert (!started);
-
 	started = true;
 }
 
@@ -262,6 +261,8 @@ void PixelDevice::Init(const unsigned int w, const unsigned int h) {
 }
 
 void PixelDevice::Start() {
+	Device::Start();
+
 	statsTotalSampleTime = 0.0;
 	statsTotalSamplesCount = 0.0;
 }
