@@ -29,7 +29,7 @@
 #include "luxrays/utils/core/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
-#define TRIANGLE_COUNT 100
+#define TRIANGLE_COUNT 500
 #define SPACE_SIZE 1000.f
 
 void DebugHandler(const char *msg) {
@@ -37,7 +37,7 @@ void DebugHandler(const char *msg) {
 }
 
 int main(int argc, char** argv) {
-	std::cerr << "LuxRays Simple Benchmark v" << LUXRAYS_VERSION_MAJOR << "." << LUXRAYS_VERSION_MINOR << std::endl;
+	std::cerr << "LuxRays Simple IntersectionDevice Benchmark v" << LUXRAYS_VERSION_MAJOR << "." << LUXRAYS_VERSION_MINOR << std::endl;
 	std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
 
 	//--------------------------------------------------------------------------
@@ -62,8 +62,8 @@ int main(int argc, char** argv) {
 	deviceDescs.resize(1);
 
 	std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
-	ctx->AddIntersectionDevices(deviceDescs);
-	luxrays::IntersectionDevice *device = ctx->GetIntersectionDevices() [0];
+	std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(deviceDescs);
+	luxrays::IntersectionDevice *device = devices[0];
 
 	//--------------------------------------------------------------------------
 	// Build the data set
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
 	// Run the benchmark
 	//--------------------------------------------------------------------------
 
-	std::cerr << "Running the benchmark for 30 seconds..." << std::endl;
+	std::cerr << "Running the benchmark for 15 seconds..." << std::endl;
 
 	double tStart = luxrays::WallClockTime();
 	double tLastCheck = tStart;
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
 			// Check if it is time to stop
 			const double tNow = luxrays::WallClockTime();
 			if (tNow - tLastCheck > 1.0) {
-				if (tNow - tStart > 30.0) {
+				if (tNow - tStart > 15.0) {
 					done = true;
 					break;
 				}
@@ -186,9 +186,14 @@ int main(int argc, char** argv) {
 	std::cerr << "Test ray buffer size: " << todoRayBuffers.front()->GetRayCount() << std::endl;
 	double raySec = (bufferDone * todoRayBuffers.front()->GetRayCount()) / tTime;
 	if (raySec < 10000.0)
-		std::cerr << "Test performance: " << int(raySec) <<" ray/sec" << std::endl;
+		std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
+				raySec <<" sample/sec" << std::endl;
+	else if (raySec < 1000000.0)
+		std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
+				(raySec / 1000.0) <<"K ray/sec" << std::endl;
 	else
-		std::cerr << "Test performance: " << int(raySec / 1000.0) <<"K ray/sec" << std::endl;
+		std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
+				(raySec / 1000000.0) <<"M ray/sec" << std::endl;
 
 	//--------------------------------------------------------------------------
 	// Free everything
