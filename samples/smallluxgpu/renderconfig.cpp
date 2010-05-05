@@ -57,8 +57,6 @@ void RenderingConfig::Init() {
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 0) == 1);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) == 1);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const vector<string> filmNames = cfg.GetStringVector("screen.file", "");
-	const float gamma = cfg.GetFloat("screen.gamma", 2.2f);
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
 	const string oclIntersectionDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const int oclPixelDeviceConfig = cfg.GetInt("opencl.pixeldevice.select", -1);
@@ -73,24 +71,42 @@ void RenderingConfig::Init() {
 	// Create LuxRays context
 	ctx = new Context(DebugHandler, oclPlatformIndex);
 
-	// Create the scene			
+	// Create the Film
+	const int ifilterType = cfg.GetInt("film.filter.type", 1);
+	FilterType filterType;
+	if (ifilterType == 0)
+		filterType = FILTER_NONE;
+	else
+		filterType = FILTER_GAUSSIAN;
+
+	const int itoneMapType = cfg.GetInt("film.tonemap.type", 0);
+	ToneMapType toneMapType;
+	if (itoneMapType == 0)
+		toneMapType = TONEMAP_LINEAR;
+	else
+		toneMapType = TONEMAP_LINEAR;
+
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
 	if (oclPixelDeviceConfig == -1) {
 		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[0]);
+		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[0], filterType, toneMapType);
 	} else {
 		DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
-		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[oclPixelDeviceConfig]);
+		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[oclPixelDeviceConfig], filterType, toneMapType);
 	}
+
+	const float gamma = cfg.GetFloat("film.gamma", 2.2f);
 	if (gamma != 2.2f)
 		film->InitGammaTable(gamma);
 
 	// Load film files
+	const vector<string> filmNames = cfg.GetStringVector("film.file", "");
 	if (filmNames.size() > 0) {
 		for (size_t i = 0; i < filmNames.size(); ++i)
 			film->AddFilm(filmNames[i]);
 	}
 
+	// Create the Scene
 	scene = new Scene(ctx, lowLatency, sceneFileName, film);
 
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);

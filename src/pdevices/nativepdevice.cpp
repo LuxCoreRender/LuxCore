@@ -312,6 +312,7 @@ void NativePixelDevice::UpdateFrameBuffer(const ToneMapType type) {
 				p[i].g = -0.969256f * xyz.r + 1.875991f * xyz.g + 0.041556f * xyz.b;
 				p[i].b =  0.055648f * xyz.r - 0.204043f * xyz.g + 1.057311f * xyz.b;
 
+				// Gamma correction
 				p[i].r = Radiance2PixelFloat(p[i].r);
 				p[i].g = Radiance2PixelFloat(p[i].g);
 				p[i].b = Radiance2PixelFloat(p[i].b);
