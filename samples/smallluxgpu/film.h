@@ -289,9 +289,11 @@ protected:
 class LuxRaysFilm : public Film {
 public:
 	LuxRaysFilm(Context *context, const bool lowLatencyMode, const unsigned int w,
-			const unsigned int h, DeviceDescription *deviceDesc, FilterType filter = FILTER_GAUSSIAN) : Film(lowLatencyMode, w, h) {
+			const unsigned int h, DeviceDescription *deviceDesc,
+			FilterType filter, ToneMapType tonemap) : Film(lowLatencyMode, w, h) {
 		ctx = context;
 		filterType = filter;
+		toneMapType = tonemap;
 
 		vector<DeviceDescription *> descs;
 		descs.push_back(deviceDesc);
@@ -358,6 +360,7 @@ protected:
 	Context *ctx;
 	PixelDevice *pixelDevice;
 	FilterType filterType;
+	ToneMapType toneMapType;
 };
 
 #endif	/* _FILM_H */

@@ -92,14 +92,22 @@ def slg_properties():
              ("1", "Direct", "Direct lighting only")),
       default="0")
 
-  EnumProperty(attr="slg_film_type", name="Film Type",
-      description="Select the desired film type",
-      items=(("0", "Standard", "Standard Film version"),
-             ("1", "Blurred preview", "Film with blurred preview"),
-             ("2", "Gaussian filter", "Film with Gaussian filter"),
-             ("3", "Gaussian filter with fast preview", "Film with Gaussian filter with fast preview")),
-      default="3")
-  
+  EnumProperty(attr="slg_film_filter_type", name="Film Filter Type",
+      description="Select the desired film filter type",
+      items=(("0", "None", "No filter"),
+             ("1", "Gaussian", "Gaussian filter")),
+      default="1")
+
+  EnumProperty(attr="slg_film_tonemap_type", name="Film Tonemap Type",
+      description="Select the desired film tonemap type",
+      items=(("0", "Linear", "Linear tonemapping"),
+             ("1", "Reinhard02", "Reinhard '02 tonemapping")),
+      default="0")
+
+  FloatProperty(attr="slg_film_gamma", name="Gamma",
+      description="Gamma correction on screen and for saving no HDR file format",
+      default=2.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
+
   EnumProperty(attr="slg_lightstrategy", name="Light Strategy",
       description="Select the desired light strategy",
       items=(("0", "ONE_UNIFORM", "ONE_UNIFORM"),
@@ -122,13 +130,10 @@ def slg_properties():
   EnumProperty(attr="slg_imageformat", name="Image File Format",
       description="Image file save format, saved with scene files (also Blender intermediary format)", 
       items=(("png", "PNG", "PNG"),
-             ("exr", "OpenEXR", "OpenEXR")),
+             ("exr", "OpenEXR", "OpenEXR"),
+             ("jpg", "JPG", "JPG")),
       default="png")
-  
-  FloatProperty(attr="slg_gamma", name="Gamma",
-      description="Gamma correction on screen and for saving PNG file format",
-      default=2.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
-  
+
   IntProperty(attr="slg_tracedepth", name="Max Path Trace Depth",
       description="Maximum path tracing depth",
       default=3, min=1, max=1024, soft_min=1, soft_max=1024)
@@ -318,7 +323,15 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.prop(scene, "slg_rendering_type")
     split = layout.split()
     col = split.column()
-    col.prop(scene, "slg_film_type")
+    col.prop(scene, "slg_film_filter_type")
+    split = layout.split()
+    col = split.column()
+    col.prop(scene, "slg_film_tonemap_type")
+    split = layout.split()
+    col = split.column()
+    col.prop(scene, "slg_imageformat")
+    col = split.column()
+    col.prop(scene, "slg_film_gamma")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_lightstrategy")
@@ -377,11 +390,6 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
       split = layout.split()
       col = split.column()
       col.prop(scene, "slg_batchmode_periodicsave", text="Periodic save interval")
-    split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_imageformat")
-    col = split.column()
-    col.prop(scene, "slg_gamma")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_native_threads", text="Native Threads")
@@ -748,9 +756,10 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       fcfg.write('opencl.devices.select = {}\n'.format(scene.slg_devices)) 
     fcfg.write('opencl.renderthread.count = {}\n'.format(scene.slg_devices_threads))
     fcfg.write('opencl.gpu.workgroup.size = {}\n'.format(scene.slg_gpu_workgroup_size))
-    fcfg.write('screen.gamma = {:g}\n'.format(scene.slg_gamma))
+    fcfg.write('film.gamma = {:g}\n'.format(scene.slg_film_gamma))
+    fcfg.write('film.filter.type = {}\n'.format(scene.slg_film_filter_type))
+    fcfg.write('film.tonemap.type = {}\n'.format(scene.slg_film_tonemap_type))
     fcfg.write('screen.refresh.interval = {}\n'.format(scene.slg_refreshrate))
-    fcfg.write('screen.type = {}\n'.format(scene.slg_film_type))
     fcfg.write('path.onlysamplespecular = {}\n'.format(scene.slg_rendering_type))
     fcfg.write('path.maxdepth = {}\n'.format(scene.slg_tracedepth))
     fcfg.write('path.russianroulette.depth = {}\n'.format(scene.slg_rrdepth))
