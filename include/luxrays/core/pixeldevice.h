@@ -31,6 +31,10 @@
 namespace luxrays {
 
 typedef enum {
+	TONEMAP_LINEAR, TONEMAP_REINHARD02
+} ToneMapType;
+
+typedef enum {
 	FILTER_NONE, FILTER_PREVIEW, FILTER_GAUSSIAN
 } FilterType;
 
@@ -48,7 +52,7 @@ public:
 	virtual void Merge(const SampleFrameBuffer *sfb) = 0;
 	virtual const SampleFrameBuffer *GetSampleFrameBuffer() const = 0;
 
-	virtual void UpdateFrameBuffer() = 0;
+	virtual void UpdateFrameBuffer(const ToneMapType type) = 0;
 	virtual const FrameBuffer *GetFrameBuffer() const = 0;
 
 	double GetPerformance() const {
@@ -93,7 +97,7 @@ public:
 	void Merge(const SampleFrameBuffer *sfb);
 	const SampleFrameBuffer *GetSampleFrameBuffer() const;
 
-	void UpdateFrameBuffer();
+	void UpdateFrameBuffer(const ToneMapType type);
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
 
 	unsigned int GetFreeDevBufferCount() {
@@ -206,7 +210,7 @@ public:
 	void Merge(const SampleFrameBuffer *sfb);
 	const SampleFrameBuffer *GetSampleFrameBuffer() const;
 
-	void UpdateFrameBuffer();
+	void UpdateFrameBuffer(const ToneMapType type);
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
 
 	const OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }

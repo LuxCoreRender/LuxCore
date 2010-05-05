@@ -121,6 +121,16 @@ public:
 		return isnanf(r) || isnanf(g) || isnanf(b);
 	}
 
+	float Y() const {
+		return 0.212671f * r + 0.715160f * g + 0.072169f * b;
+	}
+
+	void Clamp() {
+		luxrays::Clamp(r, 0.f, 1.f);
+		luxrays::Clamp(g, 0.f, 1.f);
+		luxrays::Clamp(b, 0.f, 1.f);
+	}
+
 	float r, g, b;
 };
 
