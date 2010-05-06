@@ -51,6 +51,7 @@ public:
 	void SetMaxPathDepth(const int delta);
 	void SetShadowRays(const int delta);
 	void SetOnlySampleSpecular(const bool v);
+	void SetMotionBlur(const bool v);
 
 	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
 	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }

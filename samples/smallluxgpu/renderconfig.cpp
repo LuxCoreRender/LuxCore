@@ -107,7 +107,7 @@ void RenderingConfig::Init() {
 	}
 
 	// Create the Scene
-	scene = new Scene(ctx, lowLatency, sceneFileName, film);
+	scene = new Scene(ctx, sceneFileName, film);
 
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
 	scene->camera->Update();
@@ -240,7 +240,30 @@ void RenderingConfig::SetOnlySampleSpecular(const bool v) {
 		StopAllRenderThreadsLockless();
 
 	film->Reset();
-	scene->onlySampleSpecular = v;
+	config->scene->camera->motionBlur = v;
+
+	// Restart all devices
+	if (wasRunning)
+		StartAllRenderThreadsLockless();
+}
+
+void RenderingConfig::SetMotionBlur(const bool v) {
+	boost::unique_lock<boost::mutex> lock(cfgMutex);
+
+	bool wasRunning = renderThreadsStarted;
+	// First stop all devices
+	if (wasRunning)
+		StopAllRenderThreadsLockless();
+
+	film->Reset();
+	PerspectiveCamera *camera = scene->camera;
+	camera->motionBlur = v;
+	if (camera->motionBlur) {
+		camera->mbOrig = camera->orig;
+		camera->mbTarget = camera->target;
+		camera->mbUp = camera->up;
+	}
+	camera->Update();
 
 	// Restart all devices
 	if (wasRunning)

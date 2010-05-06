@@ -31,7 +31,7 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
 
-Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *film) {
+Scene::Scene(Context *ctx, const string &fileName, Film *film) {
 	maxPathDepth = 3;
 	onlySampleSpecular = false;
 
