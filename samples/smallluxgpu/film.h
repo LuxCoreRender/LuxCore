@@ -318,7 +318,7 @@ public:
 	}
 
 	void UpdateScreenBuffer() {
-		pixelDevice->UpdateFrameBuffer(TONEMAP_LINEAR);
+		pixelDevice->UpdateFrameBuffer(toneMapType);
 	}
 
 	const float *GetScreenBuffer() const {
@@ -344,7 +344,7 @@ public:
 
 	void Save(const string &fileName) {
 		// Update pixels
-		pixelDevice->UpdateFrameBuffer(TONEMAP_LINEAR);
+		pixelDevice->UpdateFrameBuffer(toneMapType);
 		SaveImpl(fileName);
 	}
 

@@ -48,11 +48,23 @@ static void PrintString(void *font, const char *string) {
 		glutBitmapCharacter(font, string[i]);
 }
 
+static void PrintHelpString(const unsigned int x, const unsigned int y, const char *key, const char *msg) {
+	glColor3f(1.0f, 0.f, 0.f);
+	glRasterPos2i(x, y);
+	PrintString(GLUT_BITMAP_8_BY_13, key);
+
+	glColor3f(1.f, 1.f, 1.f);
+	// To update raster color
+	glRasterPos2i(x + glutBitmapLength(GLUT_BITMAP_8_BY_13, (unsigned char *)key), y);
+	PrintString(GLUT_BITMAP_8_BY_13, " - ");
+	PrintString(GLUT_BITMAP_8_BY_13, msg);
+}
+
 static void PrintHelpAndSettings() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.5f);
-	glRecti(20, 40, 620, 440);
+	glRecti(10, 40, 630, 440);
 	glDisable(GL_BLEND);
 
 	glColor3f(1.f, 1.f, 1.f);
@@ -60,49 +72,47 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_9_BY_15, "Help & Settings & Devices");
 
 	// Help
-	glRasterPos2i(60, 395);
-	PrintString(GLUT_BITMAP_8_BY_13, "h - toggle Help");
-	glRasterPos2i(60, 380);
-	PrintString(GLUT_BITMAP_8_BY_13, "arrow Keys or mouse X/Y + mouse button 0 - rotate camera");
-	glRasterPos2i(60, 365);
-	PrintString(GLUT_BITMAP_8_BY_13, "a, s, d, w or mouse X/Y + mouse button 2 - move camera");
-	glRasterPos2i(60, 350);
-	PrintString(GLUT_BITMAP_8_BY_13, "p - save image.png (or to image.filename property value)");
-	glRasterPos2i(60, 335);
-	PrintString(GLUT_BITMAP_8_BY_13, "n, m - decrease/increase the minimum screen refresh time");
-	glRasterPos2i(60, 320);
-	PrintString(GLUT_BITMAP_8_BY_13, "v, b - decrease/increase the max. path depth");
-	glRasterPos2i(60, 305);
-	PrintString(GLUT_BITMAP_8_BY_13, "x, c - decrease/increase the field of view");
-	glRasterPos2i(60, 290);
-	PrintString(GLUT_BITMAP_8_BY_13, "i, o - decrease/increase the shadow ray count");
-	glRasterPos2i(60, 275);
-	PrintString(GLUT_BITMAP_8_BY_13, "u - toggle path tracing/direct lighting rendering");
+	PrintHelpString(15, 395, "h", "toggle Help");
+	PrintHelpString(15, 380, "arrow Keys or mouse X/Y + mouse button 0", "rotate camera");
+	PrintHelpString(15, 365, "a, s, d, w or mouse X/Y + mouse button 2", "move camera");
+	PrintHelpString(15, 350, "p", "save image.png (or to image.filename property value)");
+	PrintHelpString(15, 335, "u", "toggle path/direct lighting rendering");
+	PrintHelpString(15, 320, "n, m", "dec./inc. the screen refresh");
+	PrintHelpString(320, 320, "v, b", "dec./inc. the max. path depth");
+	PrintHelpString(15, 305, "x, c", "dec./inc. the field of view");
+	PrintHelpString(320, 305, "i, o", "dec./inc. the shadow ray count");
+	PrintHelpString(15, 290, "y", "toggle camera mottion blur");
 
 	// Settings
 	char buf[512];
 	glColor3f(0.5f, 1.0f, 0.f);
-	glRasterPos2i(25, 255);
+	glRasterPos2i(15, 270);
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
-	glRasterPos2i(30, 240);
-	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d]",
+	glRasterPos2i(20, 255);
+	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d][Motion Blur %s]",
 			int(config->scene->camera->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
 			config->scene->maxPathDepth,
-			config->scene->rrDepth);
+			config->scene->rrDepth,
+			config->scene->camera->motionBlur ? "YES" : "NO");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
-	glRasterPos2i(30, 225);
+	glRasterPos2i(20, 240);
 	sprintf(buf, "[Screen refresh %dms][Render threads %d][Shadow rays %d][Mode %s]",
 			config->screenRefreshInterval, int(config->GetRenderThreads().size()),
 			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
 				(config->scene->shadowRayCount * (int)config->scene->lights.size()),
 			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
+	glRasterPos2i(20, 225);
+	sprintf(buf, "[Camera motion blur %s]",
+			config->scene->camera->motionBlur ? "YES" : "NO");
+	PrintString(GLUT_BITMAP_8_BY_13, buf);
+	glRasterPos2i(20, 225);
 
 	// Pixel Device
 	char buff[512];
 	glColor3f(1.0f, 0.25f, 0.f);
-	glRasterPos2i(25, 210);
+	glRasterPos2i(15, 210);
 	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
 	const vector<PixelDevice *> pdevices = config->GetPixelDevices();
 	if (pdevices.size() > 0) {
@@ -146,7 +156,7 @@ static void PrintHelpAndSettings() {
 				100.0 * idevices[i]->GetLoad(),
 				idevices[i]->GetPerformance() / minPerf,
 				100.0 * idevices[i]->GetPerformance() / totalPerf);
-		glRasterPos2i(30, offset);
+		glRasterPos2i(20, offset);
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
 
 		// Check if it is an OpenCL device
@@ -160,7 +170,7 @@ static void PrintHelpAndSettings() {
 		offset += 15;
 	}
 
-	glRasterPos2i(25, offset);
+	glRasterPos2i(15, offset);
 	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 }
 
@@ -310,6 +320,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'u':
 			config->SetOnlySampleSpecular(!config->scene->onlySampleSpecular);
+			break;
+		case 'y':
+			config->SetMotionBlur(!config->scene->camera->motionBlur);
 			break;
 		default:
 			break;
