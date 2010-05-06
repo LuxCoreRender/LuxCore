@@ -81,7 +81,7 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(320, 320, "v, b", "dec./inc. the max. path depth");
 	PrintHelpString(15, 305, "x, c", "dec./inc. the field of view");
 	PrintHelpString(320, 305, "i, o", "dec./inc. the shadow ray count");
-	PrintHelpString(15, 290, "y", "toggle camera mottion blur");
+	PrintHelpString(15, 290, "y", "toggle camera motion blur");
 	PrintHelpString(320, 290, "t", "toggle tonemapping");
 
 	// Settings
@@ -113,7 +113,9 @@ static void PrintHelpAndSettings() {
 	// Pixel Device
 	char buff[512];
 	glColor3f(1.0f, 0.25f, 0.f);
-	glRasterPos2i(15, 210);
+	const vector<IntersectionDevice *> idevices = config->GetIntersectionDevices();
+	const unsigned int center = Min<unsigned int>((225 + ((idevices.size() + 1) * 15) + 45) / 2, 210);
+	glRasterPos2i(15, center);
 	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
 	const vector<PixelDevice *> pdevices = config->GetPixelDevices();
 	if (pdevices.size() > 0) {
@@ -140,7 +142,6 @@ static void PrintHelpAndSettings() {
 
 
 	// Intersection devices
-	const vector<IntersectionDevice *> idevices = config->GetIntersectionDevices();
 	double minPerf = idevices[0]->GetPerformance();
 	double totalPerf = idevices[0]->GetPerformance();
 	for (size_t i = 1; i < idevices.size(); ++i) {
