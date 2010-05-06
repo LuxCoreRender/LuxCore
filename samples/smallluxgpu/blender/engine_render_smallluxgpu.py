@@ -712,6 +712,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     x = int(r.resolution_x*r.resolution_percentage*0.01)
     y = int(r.resolution_y*r.resolution_percentage*0.01)
 
+    basepath = scene.slg_scene_path
+
     # Path where SmallLuxGPU is located
     if os.path.isdir(scene.slg_path):
       exepath = basepath+'/slg'
@@ -722,7 +724,6 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     if not os.path.exists(exepath):
       error("Cannot find SLG executable at specified path")
 
-    basepath = scene.slg_scene_path
     if not os.path.exists(basepath):
       error("Cannot find scenes directory") 
 

@@ -30,10 +30,11 @@
 
 class PerspectiveCamera {
 public:
-	PerspectiveCamera(const bool lowLatency, const Point &o, const Point &t, Film *flm) :
-		orig(o), target(t), up(0.f, 0.f, 1.f), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
+	PerspectiveCamera(const Point &o, const Point &t, const Vector &u, Film *flm) :
+		orig(o), target(t), up(u), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
 		lensRadius(0.f), focalDistance(10.f) {
 		film = flm;
+		motionBlur = false;
 
 		Update();
 	}
@@ -62,6 +63,11 @@ public:
 	}
 
 	void Translate(const Vector &t) {
+		if (motionBlur) {
+			mbOrig = orig;
+			mbTarget = target;
+		}
+
 		orig += t;
 		target += t;
 	}
@@ -83,6 +89,11 @@ public:
 	}
 
 	void Rotate(const float angle, const Vector &axis) {
+		if (motionBlur) {
+			mbOrig = orig;
+			mbTarget = target;
+		}
+
 		Vector p = target - orig;
 		Transform t = ::Rotate(angle, axis);
 		target = orig + t(p);
@@ -100,8 +111,15 @@ public:
 		y = Normalize(y);
 
 		// Used to generate rays
-		Transform WorldToCamera = LookAt(orig, target, up);
-		CameraToWorld = WorldToCamera.GetInverse();
+
+		if (motionBlur) {
+			mbDeltaOrig = mbOrig - orig;
+			mbDeltaTarget = mbTarget - target;
+			mbDeltaUp = mbUp - up;
+		} else {
+			Transform WorldToCamera = LookAt(orig, target, up);
+			CameraToWorld = WorldToCamera.GetInverse();
+		}
 
 		Transform CameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
 
@@ -127,6 +145,19 @@ public:
 	}
 
 	void GenerateRay(Sample *sample, Ray *ray, const float u1, const float u2) const {
+		Transform c2w;
+		if (motionBlur) {
+			const float k = sample->GetLazyValue();
+			const Point sampledOrig = orig + mbDeltaOrig * k;
+			const Point sampledTarget = target + mbDeltaTarget * k;
+			const Vector sampledUp = Normalize(up + mbDeltaUp * k);
+
+			// Build the CameraToWorld transformation
+			Transform WorldToCamera = LookAt(sampledOrig, sampledTarget, sampledUp);
+			c2w = WorldToCamera.GetInverse();
+		} else
+			c2w = CameraToWorld;
+
         Point Pras(sample->screenX, film->GetHeight() - sample->screenY - 1.f, 0);
         Point Pcamera;
         RasterToCamera(Pras, &Pcamera);
@@ -143,7 +174,7 @@ public:
 			lenPCamera.x *= lensRadius;
 			lenPCamera.y *= lensRadius;
 			lenPCamera.z = 0;
-			CameraToWorld(lenPCamera, &lenP);
+			c2w(lenPCamera, &lenP);
 			float lensU = lenPCamera.x;
 			float lensV = lenPCamera.y;
 
@@ -160,7 +191,7 @@ public:
         ray->mint = RAY_EPSILON;
         ray->maxt = (clipYon - clipHither) / ray->d.z;
 
-        CameraToWorld(*ray, ray);
+        c2w(*ray, ray);
 	}
 
 	Film *film;
@@ -169,10 +200,17 @@ public:
 	Vector up;
 	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
+	// For camera motion blur
+	bool motionBlur;
+	Point mbOrig, mbTarget;
+	Vector mbUp;
+
 private:
 	// Calculated values
 	Vector dir, x, y;
 	Transform RasterToCamera, CameraToWorld;
+
+	Vector mbDeltaOrig, mbDeltaTarget, mbDeltaUp;
 };
 
 #endif	/* _CAMERA_H */

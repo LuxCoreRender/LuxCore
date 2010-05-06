@@ -58,13 +58,25 @@ Scene::Scene(Context *ctx, const bool lowLatency, const string &fileName, Film *
 	cerr << "Camera postion: " << o << endl;
 	cerr << "Camera target: " << t << endl;
 
-	camera = new PerspectiveCamera(lowLatency, o, t, film);
-
 	vf = GetParameters(scnProp, "scene.camera.up", 3, "0.0 0.0 0.1");
-	camera->up = Vector(vf.at(0), vf.at(1), vf.at(2));
+	const Vector up(vf.at(0), vf.at(1), vf.at(2));
+	camera = new PerspectiveCamera(o, t, up, film);
 
 	camera->lensRadius = scnProp.GetFloat("scene.camera.lensradius", 0.f);
 	camera->focalDistance = scnProp.GetFloat("scene.camera.focaldistance", 10.f);
+
+	// Check if camera motion blur is enabled
+	if (scnProp.GetInt("scene.camera.motionblur.enable", 0)) {
+		camera->motionBlur = true;
+
+		vf = GetParameters(scnProp, "scene.camera.motionblur.lookat", 6, "10.0 1.0 0.0  0.0 1.0 0.0");
+		camera->mbOrig = Point(vf.at(0), vf.at(1), vf.at(2));
+		camera->mbTarget = Point(vf.at(3), vf.at(4), vf.at(5));
+
+		vf = GetParameters(scnProp, "scene.camera.motionblur.up", 3, "0.0 0.0 0.1");
+		camera->mbUp = Vector(vf.at(0), vf.at(1), vf.at(2));
+	}
+
 	camera->Update();
 
 	//--------------------------------------------------------------------------

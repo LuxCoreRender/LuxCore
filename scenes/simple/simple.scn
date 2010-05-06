@@ -1,4 +1,6 @@
 scene.camera.lookat = 5.951 -7.663 6.017 0.0 0.0 1.0
+#scene.camera.motionblur.enable = 1
+#scene.camera.motionblur.lookat = 5.951 -7.663 6.017 1.0 0.0 1.0
 scene.materials.matte.whitematte = 0.75 0.75 0.75
 scene.materials.light.whitelight = 120.0 120.0 120.0
 scene.objects.whitematte.all = scenes/simple/simple.ply
