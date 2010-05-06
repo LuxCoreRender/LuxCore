@@ -46,8 +46,12 @@
 
 class Film {
 public:
-	Film(const bool lowLatencyMode, const unsigned int w, const unsigned int h) {
+	Film(const bool lowLatencyMode, const unsigned int w, const unsigned int h,
+			FilterType filter, ToneMapType tonemap) {
 		lowLatency = lowLatencyMode;
+		filterType = filter;
+		toneMapType = tonemap;
+
 
 		InitGammaTable();
 		Init(w, h);
@@ -71,6 +75,11 @@ public:
 		const float dx = 1.f / GAMMA_TABLE_SIZE;
 		for (unsigned int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
 			gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / gamma);
+	}
+
+	ToneMapType GetToneMapType() const { return toneMapType; }
+	void SetToneMapType(const ToneMapType type) {
+		toneMapType = type;
 	}
 
 	void AddFilm(const string &filmFile) {
@@ -279,6 +288,8 @@ protected:
 
 	float gammaTable[GAMMA_TABLE_SIZE];
 
+	FilterType filterType;
+	ToneMapType toneMapType;
 	bool lowLatency;
 };
 
@@ -290,10 +301,8 @@ class LuxRaysFilm : public Film {
 public:
 	LuxRaysFilm(Context *context, const bool lowLatencyMode, const unsigned int w,
 			const unsigned int h, DeviceDescription *deviceDesc,
-			FilterType filter, ToneMapType tonemap) : Film(lowLatencyMode, w, h) {
+			FilterType filter, ToneMapType tonemap) : Film(lowLatencyMode, w, h, filter, tonemap) {
 		ctx = context;
-		filterType = filter;
-		toneMapType = tonemap;
 
 		vector<DeviceDescription *> descs;
 		descs.push_back(deviceDesc);
@@ -359,8 +368,6 @@ protected:
 
 	Context *ctx;
 	PixelDevice *pixelDevice;
-	FilterType filterType;
-	ToneMapType toneMapType;
 };
 
 #endif	/* _FILM_H */

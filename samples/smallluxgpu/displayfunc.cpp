@@ -82,6 +82,7 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, 305, "x, c", "dec./inc. the field of view");
 	PrintHelpString(320, 305, "i, o", "dec./inc. the shadow ray count");
 	PrintHelpString(15, 290, "y", "toggle camera mottion blur");
+	PrintHelpString(320, 290, "t", "toggle tonemapping");
 
 	// Settings
 	char buf[512];
@@ -89,12 +90,11 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(15, 270);
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	glRasterPos2i(20, 255);
-	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d][Motion Blur %s]",
+	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d]",
 			int(config->scene->camera->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
 			config->scene->maxPathDepth,
-			config->scene->rrDepth,
-			config->scene->camera->motionBlur ? "YES" : "NO");
+			config->scene->rrDepth);
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	glRasterPos2i(20, 240);
 	sprintf(buf, "[Screen refresh %dms][Render threads %d][Shadow rays %d][Mode %s]",
@@ -104,8 +104,9 @@ static void PrintHelpAndSettings() {
 			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	glRasterPos2i(20, 225);
-	sprintf(buf, "[Camera motion blur %s]",
-			config->scene->camera->motionBlur ? "YES" : "NO");
+	sprintf(buf, "[Camera motion blur %s][Tonemapping %s]",
+			config->scene->camera->motionBlur ? "YES" : "NO",
+			(config->scene->camera->film->GetToneMapType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	glRasterPos2i(20, 225);
 
@@ -323,6 +324,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'y':
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
+			break;
+		case 't':
+			if (config->scene->camera->film->GetToneMapType() == TONEMAP_LINEAR)
+				config->scene->camera->film->SetToneMapType(TONEMAP_REINHARD02);
+			else
+				config->scene->camera->film->SetToneMapType(TONEMAP_LINEAR);
 			break;
 		default:
 			break;
