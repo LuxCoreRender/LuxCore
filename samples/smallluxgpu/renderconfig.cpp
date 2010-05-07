@@ -240,7 +240,7 @@ void RenderingConfig::SetOnlySampleSpecular(const bool v) {
 		StopAllRenderThreadsLockless();
 
 	film->Reset();
-	config->scene->camera->motionBlur = v;
+	scene->onlySampleSpecular = v;
 
 	// Restart all devices
 	if (wasRunning)
