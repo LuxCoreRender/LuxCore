@@ -73,7 +73,6 @@ static void PrintHelpAndSettings() {
 
 	// Help
 	PrintHelpString(15, 395, "h", "toggle Help");
-	//PrintHelpString(320, 395, "~", "console");
 	PrintHelpString(15, 380, "arrow Keys or mouse X/Y + mouse button 0", "rotate camera");
 	PrintHelpString(15, 365, "a, s, d, w or mouse X/Y + mouse button 1", "move camera");
 	PrintHelpString(15, 350, "p", "save image.png (or to image.filename property value)");

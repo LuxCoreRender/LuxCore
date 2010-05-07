@@ -94,6 +94,9 @@ void RenderingConfig::Init() {
 		film->SetToneMapParams(params);
 	} else {
 		Reinhard02ToneMapParams params;
+		params.preScale = cfg.GetFloat("film.tonemap.reinahard02.prescale", params.preScale);
+		params.postScale = cfg.GetFloat("film.tonemap.reinahard02.postscale", params.postScale);
+		params.burn = cfg.GetFloat("film.tonemap.reinahard02.burn", params.burn);
 		film->SetToneMapParams(params);
 	}
 

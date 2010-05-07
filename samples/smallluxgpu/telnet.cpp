@@ -99,7 +99,61 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						commandStream >> property;
 
 						// Check if is one of the supported properties
-						if (property == "scene.camera.lookat") {
+						if (property == "film.tonemap.linear.scale") {
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								LinearToneMapParams *params = (LinearToneMapParams *)telnetServer->config->film->GetToneMapParams();
+								respStream << params->scale << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_LINEAR" << endl;
+							}
+						} else if (property == "film.tonemap.reinhard02.burn") {
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								Reinhard02ToneMapParams *params = (Reinhard02ToneMapParams *)telnetServer->config->film->GetToneMapParams();
+								respStream << params->burn << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+							}
+						} else if (property == "film.tonemap.reinhard02.postscale") {
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								Reinhard02ToneMapParams *params = (Reinhard02ToneMapParams *)telnetServer->config->film->GetToneMapParams();
+								respStream << params->postScale << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+							}
+						} else if (property == "film.tonemap.reinhard02.prescale") {
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								Reinhard02ToneMapParams *params = (Reinhard02ToneMapParams *)telnetServer->config->film->GetToneMapParams();
+								respStream << params->preScale << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+							}
+						} else if (property == "film.tonemap.type") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							respStream << telnetServer->config->film->GetToneMapParams()->GetType() << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.lookat") {
 							boost::asio::streambuf response;
 							std::ostream respStream(&response);
 							const Point &o = telnetServer->config->scene->camera->orig;
@@ -121,6 +175,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 					} else if (command == "help.get") {
 						boost::asio::streambuf response;
 						std::ostream respStream(&response);
+						respStream << "film.tonemap.linear.scale\n";
+						respStream << "film.tonemap.reinhard02.burn\n";
+						respStream << "film.tonemap.reinhard02.postscale\n";
+						respStream << "film.tonemap.reinhard02.prescale\n";
+						respStream << "film.tonemap.type\n";
 						respStream << "image.filename\n";
 						respStream << "scene.camera.lookat\n";
 						respStream << "OK\n";
@@ -128,6 +187,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 					} else if (command == "help.set") {
 						boost::asio::streambuf response;
 						std::ostream respStream(&response);
+						respStream << "film.tonemap.linear.scale\n";
+						respStream << "film.tonemap.reinhard02.burn\n";
+						respStream << "film.tonemap.reinhard02.postscale\n";
+						respStream << "film.tonemap.reinhard02.prescale\n";
+						respStream << "film.tonemap.type\n";
 						respStream << "image.filename\n";
 						respStream << "scene.camera.lookat (requires render.stop)\n";
 						respStream << "OK\n";
@@ -164,7 +228,88 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						commandStream >> property;
 
 						// Check if is one of the supported properties
-						if (property == "image.filename") {
+						if (property == "film.tonemap.linear.scale") {
+							float k;
+							commandStream >> k;
+
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								LinearToneMapParams *params = (LinearToneMapParams *)telnetServer->config->film->GetToneMapParams()->Copy();
+								params->scale = k;
+								telnetServer->config->film->SetToneMapParams(*params);
+								delete params;
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+							}
+						} else if (property == "film.tonemap.reinhard02.burn") {
+							float k;
+							commandStream >> k;
+
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								Reinhard02ToneMapParams *params = (Reinhard02ToneMapParams *)telnetServer->config->film->GetToneMapParams()->Copy();
+								params->burn = k;
+								telnetServer->config->film->SetToneMapParams(*params);
+								delete params;
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+							}
+						} else if (property == "film.tonemap.reinhard02.postscale") {
+							float k;
+							commandStream >> k;
+
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								Reinhard02ToneMapParams *params = (Reinhard02ToneMapParams *)telnetServer->config->film->GetToneMapParams()->Copy();
+								params->postScale = k;
+								telnetServer->config->film->SetToneMapParams(*params);
+								delete params;
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+							}
+						} else if (property == "film.tonemap.reinhard02.prescale") {
+							float k;
+							commandStream >> k;
+
+							if (telnetServer->config->film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
+								boost::asio::streambuf response;
+								std::ostream respStream(&response);
+								Reinhard02ToneMapParams *params = (Reinhard02ToneMapParams *)telnetServer->config->film->GetToneMapParams()->Copy();
+								params->preScale = k;
+								telnetServer->config->film->SetToneMapParams(*params);
+								delete params;
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+							}
+						} else if (property == "film.tonemap.type") {
+							int type;
+							commandStream >> type;
+							if (type == 0) {
+								LinearToneMapParams params;
+								telnetServer->config->scene->camera->film->SetToneMapParams(params);
+							} else {
+								Reinhard02ToneMapParams params;
+								telnetServer->config->scene->camera->film->SetToneMapParams(params);
+							}
+
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
+						} else if (property == "image.filename") {
 							// Get the image file name
 							string fileName;
 							commandStream >> fileName;
