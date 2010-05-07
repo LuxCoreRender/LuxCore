@@ -218,12 +218,10 @@ void SunLight::SetGain(const Spectrum &g) {
 }
 
 Spectrum SunLight::Le(const Vector &dir) const {
-	if(cosThetaMax < 1.f && Dot(dir,-sundir) > cosThetaMax) {
+	if(cosThetaMax < 1.f && Dot(dir,-sundir) > cosThetaMax)
 		return suncolor;
-	}
-	else {
+	else
 		return Spectrum();
-	}
 }
 
 Spectrum SunLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
@@ -232,14 +230,14 @@ Spectrum SunLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &
 	float d1, d2;
 	float worldRadius = 100.0f;
 
-	if (N && (cosThetaMax < 1.f && Dot(*N,-sundir) > cosThetaMax)) {
+	if (N && Dot(*N,-sundir) > 0.0f) {
 		*pdf = 0.0f;
 		return Spectrum();
 	}
-	
+
 	ConcentricSampleDisk(u1, u2, &d1, &d2);
 
-	Vector op = (d1 * x + d2 * y) + worldRadius * sundir;
+	//Vector op = (d1 * x + d2 * y) + worldRadius * sundir;
 	
 	Vector wi = UniformSampleCone(u1, u2, cosThetaMax, x, y, sundir);
 
