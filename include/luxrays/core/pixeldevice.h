@@ -30,13 +30,55 @@
 
 namespace luxrays {
 
+//------------------------------------------------------------------------------
+// Tonemapping
+//------------------------------------------------------------------------------
+
 typedef enum {
 	TONEMAP_LINEAR, TONEMAP_REINHARD02
 } ToneMapType;
 
+class ToneMapParams {
+public:
+	virtual ToneMapType GetType() const = 0;
+};
+
+class LinearToneMapParams : public ToneMapParams {
+public:
+	LinearToneMapParams(const float s = 1.f) {
+		scale = s;
+	}
+
+	ToneMapType GetType() const { return TONEMAP_LINEAR; }
+
+	float scale;
+};
+
+class Reinhard02ToneMapParams : public ToneMapParams {
+public:
+	Reinhard02ToneMapParams(const float preS = 1.f, const float postS = 1.2f,
+			const float b = 3.75f) {
+		preScale = preS;
+		postScale = postS;
+		burn = b;
+	}
+
+	ToneMapType GetType() const { return TONEMAP_REINHARD02; }
+
+	float preScale, postScale, burn;
+};
+
+//------------------------------------------------------------------------------
+// Filtering
+//------------------------------------------------------------------------------
+
 typedef enum {
 	FILTER_NONE, FILTER_PREVIEW, FILTER_GAUSSIAN
 } FilterType;
+
+//------------------------------------------------------------------------------
+// Pixel Device
+//------------------------------------------------------------------------------
 
 class PixelDevice : public Device {
 public:
@@ -52,7 +94,7 @@ public:
 	virtual void Merge(const SampleFrameBuffer *sfb) = 0;
 	virtual const SampleFrameBuffer *GetSampleFrameBuffer() const = 0;
 
-	virtual void UpdateFrameBuffer(const ToneMapType type) = 0;
+	virtual void UpdateFrameBuffer(const ToneMapParams &params) = 0;
 	virtual const FrameBuffer *GetFrameBuffer() const = 0;
 
 	double GetPerformance() const {
@@ -97,7 +139,7 @@ public:
 	void Merge(const SampleFrameBuffer *sfb);
 	const SampleFrameBuffer *GetSampleFrameBuffer() const;
 
-	void UpdateFrameBuffer(const ToneMapType type);
+	void UpdateFrameBuffer(const ToneMapParams &params);
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
 
 	unsigned int GetFreeDevBufferCount() {
@@ -210,7 +252,7 @@ public:
 	void Merge(const SampleFrameBuffer *sfb);
 	const SampleFrameBuffer *GetSampleFrameBuffer() const;
 
-	void UpdateFrameBuffer(const ToneMapType type);
+	void UpdateFrameBuffer(const ToneMapParams &params);
 	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
 
 	const OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }

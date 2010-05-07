@@ -46,18 +46,18 @@
 
 class Film {
 public:
-	Film(const bool lowLatencyMode, const unsigned int w, const unsigned int h,
-			FilterType filter, ToneMapType tonemap) {
+	Film(const bool lowLatencyMode, const unsigned int w, const unsigned int h) {
 		lowLatency = lowLatencyMode;
-		filterType = filter;
-		toneMapType = tonemap;
-
+		filterType = FILTER_GAUSSIAN;
+		toneMapParams = new LinearToneMapParams();
 
 		InitGammaTable();
 		Init(w, h);
 	}
 
-	virtual ~Film() { }
+	virtual ~Film() {
+		delete toneMapParams;
+	}
 
 	virtual void Init(const unsigned int w, const unsigned int h) {
 		width = w;
@@ -77,9 +77,27 @@ public:
 			gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / gamma);
 	}
 
-	ToneMapType GetToneMapType() const { return toneMapType; }
-	void SetToneMapType(const ToneMapType type) {
-		toneMapType = type;
+	void SetFilterType(const FilterType filter) {
+		filterType = filter;
+	}
+
+	const ToneMapParams *GetToneMapParams() const { return toneMapParams; }
+	void SetToneMapParams(const ToneMapParams &params) {
+		delete toneMapParams;
+
+		switch (params.GetType()) {
+			case TONEMAP_LINEAR:
+				toneMapParams = new LinearToneMapParams();
+				*toneMapParams = params;
+				break;
+			case TONEMAP_REINHARD02:
+				toneMapParams = new Reinhard02ToneMapParams();
+				*toneMapParams = params;
+				break;
+			default:
+				assert (false);
+				break;
+		}
 	}
 
 	void AddFilm(const string &filmFile) {
@@ -289,7 +307,7 @@ protected:
 	float gammaTable[GAMMA_TABLE_SIZE];
 
 	FilterType filterType;
-	ToneMapType toneMapType;
+	ToneMapParams *toneMapParams;
 	bool lowLatency;
 };
 
@@ -300,8 +318,7 @@ protected:
 class LuxRaysFilm : public Film {
 public:
 	LuxRaysFilm(Context *context, const bool lowLatencyMode, const unsigned int w,
-			const unsigned int h, DeviceDescription *deviceDesc,
-			FilterType filter, ToneMapType tonemap) : Film(lowLatencyMode, w, h, filter, tonemap) {
+			const unsigned int h, DeviceDescription *deviceDesc) : Film(lowLatencyMode, w, h) {
 		ctx = context;
 
 		vector<DeviceDescription *> descs;
@@ -327,7 +344,7 @@ public:
 	}
 
 	void UpdateScreenBuffer() {
-		pixelDevice->UpdateFrameBuffer(toneMapType);
+		pixelDevice->UpdateFrameBuffer(*toneMapParams);
 	}
 
 	const float *GetScreenBuffer() const {
@@ -353,7 +370,7 @@ public:
 
 	void Save(const string &fileName) {
 		// Update pixels
-		pixelDevice->UpdateFrameBuffer(toneMapType);
+		pixelDevice->UpdateFrameBuffer(*toneMapParams);
 		SaveImpl(fileName);
 	}
 
