@@ -85,19 +85,7 @@ public:
 	void SetToneMapParams(const ToneMapParams &params) {
 		delete toneMapParams;
 
-		switch (params.GetType()) {
-			case TONEMAP_LINEAR:
-				toneMapParams = new LinearToneMapParams();
-				*toneMapParams = params;
-				break;
-			case TONEMAP_REINHARD02:
-				toneMapParams = new Reinhard02ToneMapParams();
-				*toneMapParams = params;
-				break;
-			default:
-				assert (false);
-				break;
-		}
+		toneMapParams = params.Copy();
 	}
 
 	void AddFilm(const string &filmFile) {

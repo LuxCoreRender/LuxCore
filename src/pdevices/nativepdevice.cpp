@@ -247,6 +247,7 @@ void NativePixelDevice::UpdateFrameBuffer(const ToneMapParams &params) {
 
 	switch (params.GetType()) {
 		case TONEMAP_LINEAR: {
+			const LinearToneMapParams &tm = (LinearToneMapParams &)params;
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
@@ -254,7 +255,7 @@ void NativePixelDevice::UpdateFrameBuffer(const ToneMapParams &params) {
 				const float weight = sp[i].weight;
 
 				if (weight > 0.f) {
-					const float invWeight = 1.f / weight;
+					const float invWeight = tm.scale / weight;
 
 					p[i].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
 					p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
@@ -264,10 +265,12 @@ void NativePixelDevice::UpdateFrameBuffer(const ToneMapParams &params) {
 			break;
 		}
 		case TONEMAP_REINHARD02: {
+			const Reinhard02ToneMapParams &tm = (Reinhard02ToneMapParams &)params;
+
 			const float alpha = .1f;
-			const float preScale = 1.f;
-			const float postScale = 1.2f;
-			const float burn = 3.75f;
+			const float preScale = tm.preScale;
+			const float postScale = tm.postScale;
+			const float burn = tm.burn;
 
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();

@@ -41,14 +41,25 @@ static int glutMenuToneMap = -1;
 static void CreateGlutMenu();
 
 void menuTonemapFunc(int value) {
-	if (config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+	const ToneMapParams *params = config->scene->camera->film->GetToneMapParams();
+	if (params->GetType() == TONEMAP_LINEAR) {
 		switch (value) {
 			case 1: {
 				// Toggle tonemap type
 				Reinhard02ToneMapParams params;
 				config->scene->camera->film->SetToneMapParams(params);
-				// Update the menu
-				CreateGlutMenu();
+				break;
+			}
+			case 2: {
+				LinearToneMapParams tm = *((LinearToneMapParams *)params);
+				tm.scale = Max(tm.scale - .1f, .1f);
+				config->scene->camera->film->SetToneMapParams(tm);
+				break;
+			}
+			case 3: {
+				LinearToneMapParams tm = *((LinearToneMapParams *)params);
+				tm.scale += .1f;
+				config->scene->camera->film->SetToneMapParams(tm);
 				break;
 			}
 			default:
@@ -60,14 +71,51 @@ void menuTonemapFunc(int value) {
 				// Toggle tonemap type
 				LinearToneMapParams params;
 				config->scene->camera->film->SetToneMapParams(params);
-				// Update the menu
-				CreateGlutMenu();
+				break;
+			}
+			case 2: {
+				Reinhard02ToneMapParams tm = *((Reinhard02ToneMapParams *)params);
+				tm.preScale = Max(tm.preScale - .1f, .1f);
+				config->scene->camera->film->SetToneMapParams(tm);
+				break;
+			}
+			case 3: {
+				Reinhard02ToneMapParams tm = *((Reinhard02ToneMapParams *)params);
+				tm.preScale += .1f;
+				config->scene->camera->film->SetToneMapParams(tm);
+				break;
+			}
+			case 4: {
+				Reinhard02ToneMapParams tm = *((Reinhard02ToneMapParams *)params);
+				tm.postScale = Max(tm.postScale - .1f, .1f);
+				config->scene->camera->film->SetToneMapParams(tm);
+				break;
+			}
+			case 5: {
+				Reinhard02ToneMapParams tm = *((Reinhard02ToneMapParams *)params);
+				tm.postScale += .1f;
+				config->scene->camera->film->SetToneMapParams(tm);
+				break;
+			}
+			case 6: {
+				Reinhard02ToneMapParams tm = *((Reinhard02ToneMapParams *)params);
+				tm.burn = Max(tm.burn - .25f, .25f);
+				config->scene->camera->film->SetToneMapParams(tm);
+				break;
+			}
+			case 7: {
+				Reinhard02ToneMapParams tm = *((Reinhard02ToneMapParams *)params);
+				tm.burn += .25f;
+				config->scene->camera->film->SetToneMapParams(tm);
 				break;
 			}
 			default:
 				break;
 		}
 	}
+
+	// Update the menu
+	CreateGlutMenu();
 }
 
 void menuFunc(int value) {
@@ -76,12 +124,34 @@ void menuFunc(int value) {
 static void CreateGlutMenuToneMap() {
 	glutMenuToneMap = glutCreateMenu(menuTonemapFunc);
 	glutSetMenu(glutMenuToneMap);
-	if (config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+	const ToneMapParams *params = config->scene->camera->film->GetToneMapParams();
+	if (params->GetType() == TONEMAP_LINEAR) {
 		glutAddMenuEntry("[LINEAR]", 0);
 		glutAddMenuEntry("Change to REINHARD02", 1);
+		const LinearToneMapParams *tm = (LinearToneMapParams *)params;
+		char buf[128];
+		sprintf(buf, "Scale [%.2f -> %.2f]", tm->scale, tm->scale - .1f);
+		glutAddMenuEntry(buf, 2);
+		sprintf(buf, "Scale [%.2f -> %.2f]", tm->scale, tm->scale + .1f);
+		glutAddMenuEntry(buf, 3);
+
 	} else {
 		glutAddMenuEntry("[REINHARD02]", 0);
 		glutAddMenuEntry("Change to LINEAR", 1);
+		const Reinhard02ToneMapParams *tm = (Reinhard02ToneMapParams *)params;
+		char buf[128];
+		sprintf(buf, "Pre-Scale [%.2f -> %.2f]", tm->preScale, tm->preScale - .1f);
+		glutAddMenuEntry(buf, 2);
+		sprintf(buf, "Pre-Scale [%.2f -> %.2f]", tm->preScale, tm->preScale + .1f);
+		glutAddMenuEntry(buf, 3);
+		sprintf(buf, "Post-Scale [%.2f -> %.2f]", tm->postScale, tm->postScale - .1f);
+		glutAddMenuEntry(buf, 4);
+		sprintf(buf, "Post-Scale [%.2f -> %.2f]", tm->postScale, tm->postScale + .1f);
+		glutAddMenuEntry(buf, 5);
+		sprintf(buf, "Burn [%.2f -> %.2f]", tm->burn, tm->burn - .25f);
+		glutAddMenuEntry(buf, 6);
+		sprintf(buf, "Burn [%.2f -> %.2f]", tm->burn, tm->burn + .25f);
+		glutAddMenuEntry(buf, 7);
 	}
 }
 
@@ -148,7 +218,6 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, 305, "x, c", "dec./inc. the field of view");
 	PrintHelpString(320, 305, "i, o", "dec./inc. the shadow ray count");
 	PrintHelpString(15, 290, "y", "toggle camera motion blur");
-	PrintHelpString(320, 290, "t", "toggle tonemapping");
 
 	// Settings
 	char buf[512];
@@ -391,21 +460,6 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'y':
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
-			break;
-		case 't':
-			if (config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
-				LinearToneMapParams params;
-				config->scene->camera->film->SetToneMapParams(params);
-				// Update the menu
-				CreateGlutMenu();
-			} else {
-				LinearToneMapParams params;
-				config->scene->camera->film->SetToneMapParams(params);
-				// Update the menu
-				CreateGlutMenu();
-			}
-			// Update the menu
-			CreateGlutMenu();
 			break;
 		default:
 			break;

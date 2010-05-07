@@ -90,6 +90,7 @@ void RenderingConfig::Init() {
 	const int toneMapType = cfg.GetInt("film.tonemap.type", 0);
 	if (toneMapType == 0) {
 		LinearToneMapParams params;
+		params.scale = cfg.GetFloat("film.tonemap.linear.scale", params.scale);
 		film->SetToneMapParams(params);
 	} else {
 		Reinhard02ToneMapParams params;
