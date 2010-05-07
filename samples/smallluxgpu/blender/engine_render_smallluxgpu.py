@@ -70,6 +70,10 @@ def slg_properties():
       description="Enable brute force rendering for InifinteLight light source",
       default=False)
 
+  BoolProperty(attr="slg_cameramotionblur", name="Camera Motion Blur",
+      description="Enable camera motion blur",
+      default=False)
+
   BoolProperty(attr="slg_low_latency", name="Low Latency",
       description="In low latency mode render is more interactive, otherwise render is faster",
       default=True)
@@ -316,8 +320,11 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col = split.column()
     col.active = scene.slg_export
     col.prop(scene, "slg_vnormals")
+    split = layout.split()
     col = split.column()
     col.prop(scene, "slg_infinitelightbf")
+    col = split.column()
+    col.prop(scene, "slg_cameramotionblur")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_rendering_type")
@@ -543,6 +550,11 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     # Create SLG scene file
     fscn = open('{}/{}.scn'.format(sdir,basename),'w')
     fscn.write('scene.camera.lookat = {} {} {} {} {} {}\n'.format(ff(cam.location.x),ff(cam.location.y),ff(cam.location.z),ff(target[0]),ff(target[1]),ff(target[2])))
+    if scene.slg_cameramotionblur:
+        fscn.write('scene.camera.motionblur.enable = 1\n')
+        scene.set_frame(scene.frame_current - 1)
+        fscn.write('scene.camera.motionblur.lookat = {} {} {} {} {} {}\n'.format(ff(scene.camera.location.x),ff(scene.camera.location.y),ff(scene.camera.location.z),ff(target[0]),ff(target[1]),ff(target[2])))
+        scene.set_frame(scene.frame_current + 1)
 
     # DOF    
     fdist = (cam.location-cam.data.dof_object.location).magnitude if cam.data.dof_object else cam.data.dof_distance
