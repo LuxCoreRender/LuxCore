@@ -242,10 +242,10 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 	freeSampleBuffers.push_back(sampleBuffer);
 }
 
-void NativePixelDevice::UpdateFrameBuffer(const ToneMapType type) {
+void NativePixelDevice::UpdateFrameBuffer(const ToneMapParams &params) {
 	boost::mutex::scoped_lock lock(splatMutex);
 
-	switch (type) {
+	switch (params.GetType()) {
 		case TONEMAP_LINEAR: {
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();

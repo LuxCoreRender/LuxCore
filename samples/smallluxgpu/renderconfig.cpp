@@ -72,27 +72,28 @@ void RenderingConfig::Init() {
 	ctx = new Context(DebugHandler, oclPlatformIndex);
 
 	// Create the Film
-	const int ifilterType = cfg.GetInt("film.filter.type", 1);
-	FilterType filterType;
-	if (ifilterType == 0)
-		filterType = FILTER_NONE;
-	else
-		filterType = FILTER_GAUSSIAN;
-
-	const int itoneMapType = cfg.GetInt("film.tonemap.type", 0);
-	ToneMapType toneMapType;
-	if (itoneMapType == 0)
-		toneMapType = TONEMAP_LINEAR;
-	else
-		toneMapType = TONEMAP_LINEAR;
-
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
 	if (oclPixelDeviceConfig == -1) {
 		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[0], filterType, toneMapType);
+		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[0]);
 	} else {
 		DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
-		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[oclPixelDeviceConfig], filterType, toneMapType);
+		film = new LuxRaysFilm(ctx, lowLatency, w, h, descs[oclPixelDeviceConfig]);
+	}
+
+	const int filterType = cfg.GetInt("film.filter.type", 1);
+	if (filterType == 0)
+		film->SetFilterType(FILTER_NONE);
+	else
+		film->SetFilterType(FILTER_GAUSSIAN);
+
+	const int toneMapType = cfg.GetInt("film.tonemap.type", 0);
+	if (toneMapType == 0) {
+		LinearToneMapParams params;
+		film->SetToneMapParams(params);
+	} else {
+		Reinhard02ToneMapParams params;
+		film->SetToneMapParams(params);
 	}
 
 	const float gamma = cfg.GetFloat("film.gamma", 2.2f);

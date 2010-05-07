@@ -385,7 +385,7 @@ void OpenCLPixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 	freeSampleBuffers.push_back(osb);
 }
 
-void OpenCLPixelDevice::UpdateFrameBuffer(const ToneMapType type) {
+void OpenCLPixelDevice::UpdateFrameBuffer(const ToneMapParams &params) {
 	cl::Event event;
 
 	{

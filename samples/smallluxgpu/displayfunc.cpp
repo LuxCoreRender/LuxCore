@@ -35,6 +35,71 @@
 RenderingConfig *config;
 
 static int printHelp = 1;
+static int glutMenu = -1;
+static int glutMenuToneMap = -1;
+
+static void CreateGlutMenu();
+
+void menuTonemapFunc(int value) {
+	if (config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+		switch (value) {
+			case 1: {
+				// Toggle tonemap type
+				Reinhard02ToneMapParams params;
+				config->scene->camera->film->SetToneMapParams(params);
+				// Update the menu
+				CreateGlutMenu();
+				break;
+			}
+			default:
+				break;
+		}
+	} else {
+		switch (value) {
+			case 1: {
+				// Toggle tonemap type
+				LinearToneMapParams params;
+				config->scene->camera->film->SetToneMapParams(params);
+				// Update the menu
+				CreateGlutMenu();
+				break;
+			}
+			default:
+				break;
+		}
+	}
+}
+
+void menuFunc(int value) {
+}
+
+static void CreateGlutMenuToneMap() {
+	glutMenuToneMap = glutCreateMenu(menuTonemapFunc);
+	glutSetMenu(glutMenuToneMap);
+	if (config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+		glutAddMenuEntry("[LINEAR]", 0);
+		glutAddMenuEntry("Change to REINHARD02", 1);
+	} else {
+		glutAddMenuEntry("[REINHARD02]", 0);
+		glutAddMenuEntry("Change to LINEAR", 1);
+	}
+}
+
+static void CreateGlutMenu() {
+	if (glutMenu != -1) {
+		glutDetachMenu(GLUT_RIGHT_BUTTON);
+		glutDestroyMenu(glutMenuToneMap);
+		glutDestroyMenu(glutMenu);
+	}
+
+	CreateGlutMenuToneMap();
+
+	glutMenu = glutCreateMenu(menuFunc);
+	glutSetMenu(glutMenu);
+	glutAddSubMenu("Tone mapping", glutMenuToneMap);
+
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+}
 
 void DebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
@@ -73,8 +138,9 @@ static void PrintHelpAndSettings() {
 
 	// Help
 	PrintHelpString(15, 395, "h", "toggle Help");
+	PrintHelpString(320, 395, "mouse button 2", "Popup menu");
 	PrintHelpString(15, 380, "arrow Keys or mouse X/Y + mouse button 0", "rotate camera");
-	PrintHelpString(15, 365, "a, s, d, w or mouse X/Y + mouse button 2", "move camera");
+	PrintHelpString(15, 365, "a, s, d, w or mouse X/Y + mouse button 1", "move camera");
 	PrintHelpString(15, 350, "p", "save image.png (or to image.filename property value)");
 	PrintHelpString(15, 335, "u", "toggle path/direct lighting rendering");
 	PrintHelpString(15, 320, "n, m", "dec./inc. the screen refresh");
@@ -106,7 +172,7 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(20, 225);
 	sprintf(buf, "[Camera motion blur %s][Tonemapping %s]",
 			config->scene->camera->motionBlur ? "YES" : "NO",
-			(config->scene->camera->film->GetToneMapType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
+			(config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	glRasterPos2i(20, 225);
 
@@ -327,10 +393,19 @@ void keyFunc(unsigned char key, int x, int y) {
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
 			break;
 		case 't':
-			if (config->scene->camera->film->GetToneMapType() == TONEMAP_LINEAR)
-				config->scene->camera->film->SetToneMapType(TONEMAP_REINHARD02);
-			else
-				config->scene->camera->film->SetToneMapType(TONEMAP_LINEAR);
+			if (config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+				LinearToneMapParams params;
+				config->scene->camera->film->SetToneMapParams(params);
+				// Update the menu
+				CreateGlutMenu();
+			} else {
+				LinearToneMapParams params;
+				config->scene->camera->film->SetToneMapParams(params);
+				// Update the menu
+				CreateGlutMenu();
+			}
+			// Update the menu
+			CreateGlutMenu();
 			break;
 		default:
 			break;
@@ -365,7 +440,7 @@ void specialFunc(int key, int x, int y) {
 }
 
 static int mouseButton0 = 0;
-static int mouseButton2 = 0;
+static int mouseButton1 = 0;
 static int mouseGrabLastX = 0;
 static int mouseGrabLastY = 0;
 static double lastMouseUpdate = 0.0;
@@ -380,14 +455,14 @@ static void mouseFunc(int button, int state, int x, int y) {
 		} else if (state == GLUT_UP) {
 			mouseButton0 = 0;
 		}
-	} else if (button == 2) {
+	} else if (button == 1) {
 		if (state == GLUT_DOWN) {
 			// Record start position
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
-			mouseButton2 = 1;
+			mouseButton1 = 1;
 		} else if (state == GLUT_UP) {
-			mouseButton2 = 0;
+			mouseButton1 = 0;
 		}
 	}
 }
@@ -409,7 +484,7 @@ static void motionFunc(int x, int y) {
 			displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
-	} else if (mouseButton2) {
+	} else if (mouseButton1) {
 		// Check elapsed time since last update
 		if (WallClockTime() - lastMouseUpdate > 0.2) {
 			const int distX = x - mouseGrabLastX;
@@ -480,6 +555,8 @@ void RunGlut() {
 	glLoadIdentity();
 	glOrtho(0.f, config->scene->camera->film->GetWidth() - 1.f,
 			0.f, config->scene->camera->film->GetHeight() - 1.f, -1.f, 1.f);
+
+	CreateGlutMenu();
 
 	glutMainLoop();
 }
