@@ -41,6 +41,7 @@ typedef enum {
 class ToneMapParams {
 public:
 	virtual ToneMapType GetType() const = 0;
+	virtual ToneMapParams *Copy() const = 0;
 };
 
 class LinearToneMapParams : public ToneMapParams {
@@ -50,6 +51,10 @@ public:
 	}
 
 	ToneMapType GetType() const { return TONEMAP_LINEAR; }
+
+	ToneMapParams *Copy() const {
+		return new LinearToneMapParams(scale);
+	}
 
 	float scale;
 };
@@ -64,6 +69,10 @@ public:
 	}
 
 	ToneMapType GetType() const { return TONEMAP_REINHARD02; }
+
+	ToneMapParams *Copy() const {
+		return new Reinhard02ToneMapParams(preScale, postScale, burn);
+	}
 
 	float preScale, postScale, burn;
 };
