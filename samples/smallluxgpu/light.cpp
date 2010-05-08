@@ -26,8 +26,6 @@
 // SkyLight
 //------------------------------------------------------------------------------
 
-#define min(a,b) (((a)<(b))?(a):(b))
-
 float PerezBase(const float lam[6], float theta, float gamma) {
 	return (1.f + lam[1] * expf(lam[2] / cosf(theta))) *
 		(1.f + lam[3] * expf(lam[4] * gamma)  + lam[5] * cosf(gamma) * cosf(gamma));
@@ -130,7 +128,7 @@ Spectrum SkyLight::Le(const Vector &dir) const {
 void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const
 {
 	// add bottom half of hemisphere with horizon colour
-	const float theta_fin = min(theta,(M_PI * 0.5f) - 0.001f);
+	const float theta_fin = Min<float>(theta, (M_PI * 0.5f) - 0.001f);
 	const float gamma = RiAngleBetween(theta,phi,thetaS,phiS);
 
 	// Compute xyY values
