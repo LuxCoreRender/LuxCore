@@ -553,7 +553,9 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     if scene.slg_cameramotionblur:
         fscn.write('scene.camera.motionblur.enable = 1\n')
         scene.set_frame(scene.frame_current - 1)
-        fscn.write('scene.camera.motionblur.lookat = {} {} {} {} {} {}\n'.format(ff(scene.camera.location.x),ff(scene.camera.location.y),ff(scene.camera.location.z),ff(target[0]),ff(target[1]),ff(target[2])))
+        tracktoBlur = next((constraint for constraint in scene.camera.constraints if constraint.name == 'TrackTo'), None)
+        targetBlur = trackto.target.location if tracktoBlur else scene.camera.matrix * Vector([0, 0, -10])
+        fscn.write('scene.camera.motionblur.lookat = {} {} {} {} {} {}\n'.format(ff(scene.camera.location.x),ff(scene.camera.location.y),ff(scene.camera.location.z),ff(targetBlur[0]),ff(targetBlur[1]),ff(targetBlur[2])))
         scene.set_frame(scene.frame_current + 1)
 
     # DOF    
