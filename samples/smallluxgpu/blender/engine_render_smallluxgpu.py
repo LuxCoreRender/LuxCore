@@ -550,12 +550,16 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     # Create SLG scene file
     fscn = open('{}/{}.scn'.format(sdir,basename),'w')
     fscn.write('scene.camera.lookat = {} {} {} {} {} {}\n'.format(ff(cam.location.x),ff(cam.location.y),ff(cam.location.z),ff(target[0]),ff(target[1]),ff(target[2])))
+    camup = cam.matrix.rotation_part() * Vector((0,1,0))
+    fscn.write('scene.camera.up = {} {} {}\n'.format(ff(camup.x),ff(camup.y),ff(camup.z)))
     if scene.slg_cameramotionblur:
         fscn.write('scene.camera.motionblur.enable = 1\n')
         scene.set_frame(scene.frame_current - 1)
         tracktoBlur = next((constraint for constraint in scene.camera.constraints if constraint.name == 'TrackTo'), None)
         targetBlur = trackto.target.location if tracktoBlur else scene.camera.matrix * Vector([0, 0, -10])
+        camupBlur = cam.matrix.rotation_part() * Vector((0,1,0))
         fscn.write('scene.camera.motionblur.lookat = {} {} {} {} {} {}\n'.format(ff(scene.camera.location.x),ff(scene.camera.location.y),ff(scene.camera.location.z),ff(targetBlur[0]),ff(targetBlur[1]),ff(targetBlur[2])))
+        fscn.write('scene.camera.motionblur.up = {} {} {}\n'.format(ff(camupBlur.x),ff(camupBlur.y),ff(camupBlur.z)))
         scene.set_frame(scene.frame_current + 1)
 
     # DOF    
