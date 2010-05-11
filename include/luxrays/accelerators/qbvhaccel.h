@@ -163,7 +163,6 @@ public:
 		return true;
 	}
 
-private:
 	__m128 origx, origy, origz;
 	__m128 edge1x, edge1y, edge1z;
 	__m128 edge2x, edge2y, edge2z;
