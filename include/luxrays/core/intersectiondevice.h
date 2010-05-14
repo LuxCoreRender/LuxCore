@@ -170,8 +170,8 @@ private:
 	cl::Kernel *qbvhImageKernel;
 	size_t qbvhImageWorkGroupSize;
 
-	cl::Image2D *qbvhImageBuffPartFloat, *qbvhImageBuffPartInt;
-	cl::Image2D *qbvhTrisImageBuffPartFloat, *qbvhTrisImageBuffPartInt;
+	cl::Image2D *qbvhImageBuff;
+	cl::Image2D *qbvhTrisImageBuff;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;

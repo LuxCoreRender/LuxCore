@@ -58,10 +58,8 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(const Context *context,
 	qbvhBuff = NULL;
 	qbvhTrisBuff = NULL;
 
-	qbvhImageBuffPartFloat = NULL;
-	qbvhImageBuffPartInt = NULL;
-	qbvhTrisImageBuffPartFloat = NULL;
-	qbvhTrisImageBuffPartInt = NULL;
+	qbvhImageBuff = NULL;
+	qbvhTrisImageBuff = NULL;
 
 	externalRayBufferQueue = NULL;
 
@@ -195,14 +193,10 @@ OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 
 		if (qbvhBuff) {
 			if (qbvhUseImage) {
-				deviceDesc->usedMemory -= qbvhImageBuffPartFloat->getInfo<CL_MEM_SIZE>();
-				delete qbvhImageBuffPartFloat;
-				deviceDesc->usedMemory -= qbvhImageBuffPartInt->getInfo<CL_MEM_SIZE>();
-				delete qbvhImageBuffPartInt;
-				deviceDesc->usedMemory -= qbvhTrisImageBuffPartFloat->getInfo<CL_MEM_SIZE>();
-				delete qbvhTrisImageBuffPartFloat;
-				deviceDesc->usedMemory -= qbvhTrisImageBuffPartInt->getInfo<CL_MEM_SIZE>();
-				delete qbvhTrisImageBuffPartInt;
+				deviceDesc->usedMemory -= qbvhImageBuff->getInfo<CL_MEM_SIZE>();
+				delete qbvhImageBuff;
+				deviceDesc->usedMemory -= qbvhTrisImageBuff->getInfo<CL_MEM_SIZE>();
+				delete qbvhTrisImageBuff;
 			} else {
 				deviceDesc->usedMemory -= qbvhBuff->getInfo<CL_MEM_SIZE>();
 				delete qbvhBuff;
@@ -261,14 +255,10 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 		if (qbvhBuff) {
 			if (qbvhUseImage) {
-				deviceDesc->usedMemory -= qbvhImageBuffPartFloat->getInfo<CL_MEM_SIZE>();
-				delete qbvhImageBuffPartFloat;
-				deviceDesc->usedMemory -= qbvhImageBuffPartInt->getInfo<CL_MEM_SIZE>();
-				delete qbvhImageBuffPartInt;
-				deviceDesc->usedMemory -= qbvhTrisImageBuffPartFloat->getInfo<CL_MEM_SIZE>();
-				delete qbvhTrisImageBuffPartFloat;
-				deviceDesc->usedMemory -= qbvhTrisImageBuffPartInt->getInfo<CL_MEM_SIZE>();
-				delete qbvhTrisImageBuffPartInt;
+				deviceDesc->usedMemory -= qbvhImageBuff->getInfo<CL_MEM_SIZE>();
+				delete qbvhImageBuff;
+				deviceDesc->usedMemory -= qbvhTrisImageBuff->getInfo<CL_MEM_SIZE>();
+				delete qbvhTrisImageBuff;
 			} else {
 				deviceDesc->usedMemory -= qbvhBuff->getInfo<CL_MEM_SIZE>();
 				delete qbvhBuff;
@@ -335,111 +325,37 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				// Calculate the required image size for the storage
 
 				{
-					// 6 pixels required for the storage of a QBVH node BBoxes
-					const size_t pixelRequired = qbvh->nNodes * 6;
-					const size_t width = RoundUp<size_t>(sqrt(pixelRequired), 6);
+					// 7 pixels required for the storage of a QBVH node
+					const size_t pixelRequired = qbvh->nNodes * 7;
+					const size_t width = RoundUp<size_t>(sqrt(pixelRequired), 7);
 					const size_t height = pixelRequired / width + (((pixelRequired % width) == 0) ? 0 : 1);
 
-					__m128 *bboxes = new __m128[width * height * 6];
-					for (size_t i = 0; i < qbvh->nNodes; ++i) {
-						bboxes[i * 6 + 0] = qbvh->nodes[i].bboxes[0][0];
-						bboxes[i * 6 + 1] = qbvh->nodes[i].bboxes[0][1];
-						bboxes[i * 6 + 2] = qbvh->nodes[i].bboxes[0][2];
-						bboxes[i * 6 + 3] = qbvh->nodes[i].bboxes[1][0];
-						bboxes[i * 6 + 4] = qbvh->nodes[i].bboxes[1][1];
-						bboxes[i * 6 + 5] = qbvh->nodes[i].bboxes[1][2];
-					}
-
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH node image buffer size Part1: " << width << "x" << height);
-					qbvhImageBuffPartFloat = new cl::Image2D(oclContext,
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH node image buffer size: " << width << "x" << height);
+					qbvhImageBuff = new cl::Image2D(oclContext,
 							CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							cl::ImageFormat(CL_RGBA, CL_FLOAT), width, height, 0, bboxes);
-					deviceDesc->usedMemory += qbvhImageBuffPartFloat->getInfo<CL_MEM_SIZE>();
-
-					delete bboxes;
+							cl::ImageFormat(CL_RGBA, CL_SIGNED_INT32), width, height, 0, qbvh->nodes);
+					deviceDesc->usedMemory += qbvhImageBuff->getInfo<CL_MEM_SIZE>();
 				}
 
 				{
-					// 1 pixels required for the storage of a QBVH node childrens
-					const size_t pixelRequired = qbvh->nNodes * 1;
-					const size_t width = sqrt(pixelRequired);
+					// 10 pixels required for the storage of QBVH Triangles
+					const size_t pixelRequired = qbvh->nQuads * 10;
+					const size_t width = RoundUp<size_t>(sqrt(pixelRequired), 10);
 					const size_t height = pixelRequired / width + (((pixelRequired % width) == 0) ? 0 : 1);
 
-					int *childrens = new int[width * height * 4];
-					for (size_t i = 0; i < qbvh->nNodes; ++i) {
-						childrens[i * 4 + 0] = qbvh->nodes[i].children[0];
-						childrens[i * 4 + 1] = qbvh->nodes[i].children[1];
-						childrens[i * 4 + 2] = qbvh->nodes[i].children[2];
-						childrens[i * 4 + 3] = qbvh->nodes[i].children[3];
-					}
-
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH node image buffer size Part2: " << width << "x" << height);
-					qbvhImageBuffPartInt = new cl::Image2D(oclContext,
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH triangle image buffer size: " << width << "x" << height);
+					qbvhTrisImageBuff = new cl::Image2D(oclContext,
 							CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							cl::ImageFormat(CL_RGBA, CL_SIGNED_INT32), width, height, 0, childrens);
-					deviceDesc->usedMemory += qbvhImageBuffPartInt->getInfo<CL_MEM_SIZE>();
-					delete childrens;
-				}
-
-				{
-					// 9 pixels required for the storage of QBVH Triangles
-					const size_t pixelRequired = qbvh->nQuads * 9;
-					const size_t width = RoundUp<size_t>(sqrt(pixelRequired), 9);
-					const size_t height = pixelRequired / width + (((pixelRequired % width) == 0) ? 0 : 1);
-
-					__m128 *tris = new __m128[width * height * 9];
-					for (size_t i = 0; i < qbvh->nQuads; ++i) {
-						tris[i * 9 + 0] = qbvh->prims[i].origx;
-						tris[i * 9 + 1] = qbvh->prims[i].origy;
-						tris[i * 9 + 2] = qbvh->prims[i].origz;
-						tris[i * 9 + 3] = qbvh->prims[i].edge1x;
-						tris[i * 9 + 4] = qbvh->prims[i].edge1y;
-						tris[i * 9 + 5] = qbvh->prims[i].edge1z;
-						tris[i * 9 + 6] = qbvh->prims[i].edge2x;
-						tris[i * 9 + 7] = qbvh->prims[i].edge2y;
-						tris[i * 9 + 8] = qbvh->prims[i].edge2z;
-					}
-
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH triangle image buffer size Part1: " << width << "x" << height);
-					qbvhTrisImageBuffPartFloat = new cl::Image2D(oclContext,
-							CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							cl::ImageFormat(CL_RGBA, CL_FLOAT), width, height, 0, tris);
-					deviceDesc->usedMemory += qbvhTrisImageBuffPartFloat->getInfo<CL_MEM_SIZE>();
-
-					delete tris;
-				}
-
-				{
-					// 1 pixels required for the storage of QBVH Triangle indices
-					const size_t pixelRequired = qbvh->nQuads * 1;
-					const size_t width = sqrt(pixelRequired);
-					const size_t height = pixelRequired / width + (((pixelRequired % width) == 0) ? 0 : 1);
-
-					unsigned int *trisIdx = new unsigned int[width * height * 4];
-					for (size_t i = 0; i < qbvh->nQuads; ++i) {
-						trisIdx[i * 4 + 0] = qbvh->prims[i].primitives[0];
-						trisIdx[i * 4 + 1] = qbvh->prims[i].primitives[1];
-						trisIdx[i * 4 + 2] = qbvh->prims[i].primitives[2];
-						trisIdx[i * 4 + 3] = qbvh->prims[i].primitives[3];
-					}
-
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH triangle image buffer size Part2: " << width << "x" << height);
-					qbvhTrisImageBuffPartInt = new cl::Image2D(oclContext,
-							CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), width, height, 0, trisIdx);
-					deviceDesc->usedMemory += qbvhTrisImageBuffPartInt->getInfo<CL_MEM_SIZE>();
-
-					delete trisIdx;
+							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), width, height, 0, qbvh->prims);
+					deviceDesc->usedMemory += qbvhTrisImageBuff->getInfo<CL_MEM_SIZE>();
 				}
 
 				// Set arguments
 				qbvhImageKernel->setArg(0, *raysBuff);
 				qbvhImageKernel->setArg(1, *hitsBuff);
-				qbvhImageKernel->setArg(2, *qbvhImageBuffPartFloat);
-				qbvhImageKernel->setArg(3, *qbvhImageBuffPartInt);
-				qbvhImageKernel->setArg(4, *qbvhTrisImageBuffPartFloat);
-				qbvhImageKernel->setArg(5, *qbvhTrisImageBuffPartInt);
-				qbvhImageKernel->setArg(7, 24 * qbvhImageWorkGroupSize * sizeof(cl_int), NULL);
+				qbvhImageKernel->setArg(2, *qbvhImageBuff);
+				qbvhImageKernel->setArg(3, *qbvhTrisImageBuff);
+				qbvhImageKernel->setArg(5, 24 * qbvhImageWorkGroupSize * sizeof(cl_int), NULL);
 			} else {
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH buffer size: " << (sizeof(QBVHNode) * qbvh->nNodes / 1024) << "Kbytes");
 				qbvhBuff = new cl::Buffer(oclContext,
@@ -518,7 +434,7 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 		}
 		case ACCEL_QBVH: {
 			if (qbvhUseImage) {
-				qbvhImageKernel->setArg(6, (unsigned int)rayBuffer->GetRayCount());
+				qbvhImageKernel->setArg(4, (unsigned int)rayBuffer->GetRayCount());
 				oclQueue->enqueueNDRangeKernel(*qbvhImageKernel, cl::NullRange,
 					cl::NDRange(rayBuffer->GetSize()), cl::NDRange(qbvhImageWorkGroupSize));
 			} else {
