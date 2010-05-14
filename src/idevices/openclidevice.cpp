@@ -324,29 +324,69 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			if (qbvhUseImage) {
 				// Calculate the required image size for the storage
 
-				{
-					// 7 pixels required for the storage of a QBVH node
-					const size_t pixelRequired = qbvh->nNodes * 7;
-					const size_t width = RoundUp<size_t>(sqrt(pixelRequired), 7);
-					const size_t height = pixelRequired / width + (((pixelRequired % width) == 0) ? 0 : 1);
+				// 7 pixels required for the storage of a QBVH node
+				const size_t nodeImagePixelRequired = qbvh->nNodes * 7;
+				const size_t nodeImageWidth = Min<size_t>(RoundUp<size_t>(sqrt(nodeImagePixelRequired), 7),  0x7fff);
+				const size_t nodeImageHeight = nodeImagePixelRequired / nodeImageWidth + (((nodeImagePixelRequired % nodeImageWidth) == 0) ? 0 : 1);
+				// TODO: check image size
+				assert (nodeImageWidth < 0x7fff * 7);
+				assert (nodeImageHeight < 0xffff);
 
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH node image buffer size: " << width << "x" << height);
+				// 10 pixels required for the storage of QBVH Triangles
+				const size_t leafPixelRequired = qbvh->nQuads * 10;
+				const size_t leafImageWidth = Min<size_t>(RoundUp<size_t>(sqrt(leafPixelRequired), 10), 32760);
+				const size_t leafImageHeight = leafPixelRequired / leafImageWidth + (((leafPixelRequired % leafImageWidth) == 0) ? 0 : 1);
+				// TODO: check image size
+				assert (nodeImageWidth < 0x7ff * 10);
+				assert (nodeImageHeight < 0xffff);
+
+				{
+					// Convert node indices to image coordinates
+					unsigned int *inodes = new unsigned int[nodeImageWidth * nodeImageHeight * 7 * 4];
+					for (size_t i = 0; i < qbvh->nNodes; ++i) {
+						unsigned int *pnodes = (unsigned int *)&qbvh->nodes[i];
+						const size_t offset = i * 7 * 4;
+
+						for (size_t j = 0; j < 6 * 4; ++j)
+							inodes[offset + j] = pnodes[j];
+
+						for (size_t j = 0; j < 4; ++j) {
+							int index = qbvh->nodes[i].children[j];
+
+							 if (QBVHNode::IsEmpty(index)) {
+								inodes[offset + 6 * 4 + j] = index;
+							} else if (QBVHNode::IsLeaf(index)) {
+								int32_t count = QBVHNode::FirstQuadIndex(index) * 10;
+								// "/ 10" in order to not waste bits
+								const unsigned short x = (count % leafImageWidth) / 10;
+								const unsigned short y = count / leafImageWidth;
+								((int32_t *)inodes)[offset + 6 * 4 + j] =  0x80000000 |
+										(((static_cast<int32_t>(QBVHNode::NbQuadPrimitives(index)) - 1) & 0xf) << 27) |
+										(static_cast<int32_t>((x << 16) | y) & 0x07ffffff);
+							} else {
+								index *= 7;
+								// "/ 7" in order to not waste bits
+								const unsigned short x = (index % nodeImageWidth) / 7;
+								const unsigned short y = index / nodeImageWidth;
+								inodes[offset + 6 * 4 + j] = (x << 16) | y;
+							}
+						}
+					}
+
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH node image buffer size: " << nodeImageWidth << "x" << nodeImageHeight);
 					qbvhImageBuff = new cl::Image2D(oclContext,
 							CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							cl::ImageFormat(CL_RGBA, CL_SIGNED_INT32), width, height, 0, qbvh->nodes);
+							cl::ImageFormat(CL_RGBA, CL_SIGNED_INT32), nodeImageWidth, nodeImageHeight, 0, inodes);
 					deviceDesc->usedMemory += qbvhImageBuff->getInfo<CL_MEM_SIZE>();
+
+					delete inodes;
 				}
 
 				{
-					// 10 pixels required for the storage of QBVH Triangles
-					const size_t pixelRequired = qbvh->nQuads * 10;
-					const size_t width = RoundUp<size_t>(sqrt(pixelRequired), 10);
-					const size_t height = pixelRequired / width + (((pixelRequired % width) == 0) ? 0 : 1);
-
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH triangle image buffer size: " << width << "x" << height);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH triangle image buffer size: " << leafImageWidth << "x" << leafImageHeight);
 					qbvhTrisImageBuff = new cl::Image2D(oclContext,
 							CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), width, height, 0, qbvh->prims);
+							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), leafImageWidth, leafImageHeight, 0, qbvh->prims);
 					deviceDesc->usedMemory += qbvhTrisImageBuff->getInfo<CL_MEM_SIZE>();
 				}
 

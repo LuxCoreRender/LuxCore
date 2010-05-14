@@ -198,6 +198,17 @@ template <class T> inline T RoundUp(const T a, const T b) {
 		return a + b - r;
 }
 
+template <class T> inline T RoundUpPow2(T v) {
+        v--;
+        v |= v >> 1;
+        v |= v >> 2;
+        v |= v >> 4;
+        v |= v >> 8;
+        v |= v >> 16;
+
+        return v+1;
+}
+
 inline void StringTrim(std::string &str) {
 	std::string::size_type pos = str.find_last_not_of(' ');
 	if (pos != std::string::npos) {

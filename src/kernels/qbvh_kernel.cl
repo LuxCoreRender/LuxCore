@@ -236,7 +236,6 @@ __kernel void Intersect(
 	nodeStack[0] = 0; // first node to handle: root node
 
 #ifdef USE_IMAGE_STORAGE
-    const int nodesImageWidth = get_image_width(nodes);
     const int quadTrisImageWidth = get_image_width(quadTris);
 
     const int bboxes_minXIndex = (signs0 * 3);
@@ -257,10 +256,8 @@ __kernel void Intersect(
 		if (!QBVHNode_IsLeaf(nodeData)) {
 #ifdef USE_IMAGE_STORAGE
             // Read the node information from the image storage
-            // TODO: optimize with power of 2 width
-            const int pixCount = nodeData * 7;
-            const int inx = pixCount % nodesImageWidth;
-            const int iny = pixCount / nodesImageWidth;
+            const ushort inx = (nodeData >> 16) * 7;
+            const ushort iny = (nodeData & 0xffff);
             const float4 bboxes_minX = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minXIndex, iny)));
             const float4 bboxes_maxX = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_maxXIndex, iny)));
             const float4 bboxes_minY = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minYIndex, iny)));
@@ -276,7 +273,6 @@ __kernel void Intersect(
                 &ray4,
 				invDir0, invDir1, invDir2,
 				signs0, signs1, signs2);
-
 #else
 			__global QBVHNode *node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
@@ -290,7 +286,7 @@ __kernel void Intersect(
 			const int4 children = node->children;
 #endif
 
-			// For some reason doing logic operations with int4 is very slow
+			// For some reason doing logic operations with int4 are very slow
 			nodeStack[todoNode + 1] = children.s3;
 			todoNode += (visit.s3 && !QBVHNode_IsEmpty(children.s3)) ? 1 : 0;
 			nodeStack[todoNode + 1] = children.s2;
@@ -304,22 +300,28 @@ __kernel void Intersect(
 			const uint nbQuadPrimitives = QBVHNode_NbQuadPrimitives(nodeData);
 			const uint offset = QBVHNode_FirstQuadIndex(nodeData);
 
+#ifdef USE_IMAGE_STORAGE
+            ushort inx = (offset >> 16) * 10;
+            ushort iny = (offset & 0xffff);
+#endif
+
 			for (uint primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber) {
 #ifdef USE_IMAGE_STORAGE
-                const int pixCount = primNumber * 10;
-                // TODO: optimize with power of 2 width
-                const int inx = pixCount % quadTrisImageWidth;
-                const int iny = pixCount / quadTrisImageWidth;
-                const float4 origx = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx, iny)));
-                const float4 origy = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 1, iny)));
-                const float4 origz = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 2, iny)));
-                const float4 edge1x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 3, iny)));
-                const float4 edge1y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 4, iny)));
-                const float4 edge1z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 5, iny)));
-                const float4 edge2x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 6, iny)));
-                const float4 edge2y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 7, iny)));
-                const float4 edge2z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 8, iny)));
-                const uint4 primitives = read_imageui(quadTris, imageSampler, (int2)(inx + 9, iny));
+                const float4 origx = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 origy = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 origz = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 edge1x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 edge1y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 edge1z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 edge2x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 edge2y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const float4 edge2z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
+                const uint4 primitives = read_imageui(quadTris, imageSampler, (int2)(inx++, iny));
+
+                if (inx >= quadTrisImageWidth) {
+                    inx = 0;
+                    iny++;
+                }
 #else
                 __global QuadTiangle *quadTri = &quadTris[primNumber];
                 const float4 origx = quadTri->origx;
