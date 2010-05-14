@@ -68,10 +68,6 @@ typedef struct {
 #define QBVHNode_NbQuadPrimitives(index) ((uint)(((index >> 27) & 0xf) + 1))
 #define QBVHNode_FirstQuadIndex(index) (index & 0x07ffffff)
 
-#ifdef USE_IMAGE_STORAGE
-__constant sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-#endif
-
 // Using invDir0/invDir1/invDir2 and sign0/sign1/sign2 instead of an
 // array because I dont' trust OpenCL compiler =)
 static int4 QBVHNode_BBoxIntersect(
@@ -190,10 +186,8 @@ __kernel void Intersect(
 		__global Ray *rays,
 		__global RayHit *rayHits,
 #ifdef USE_IMAGE_STORAGE
-        __read_only image2d_t nodesFloat,
-        __read_only image2d_t nodesInt,
-        __read_only image2d_t quadTrisFloat,
-        __read_only image2d_t quadTrisInt,
+        __read_only image2d_t nodes,
+        __read_only image2d_t quadTris,
 #else
 		__global QBVHNode *nodes,
 		__global QuadTiangle *quadTris,
@@ -242,10 +236,8 @@ __kernel void Intersect(
 	nodeStack[0] = 0; // first node to handle: root node
 
 #ifdef USE_IMAGE_STORAGE
-    const int nodesFloatWidth = get_image_width(nodesFloat);
-    const int nodesIntWidth = get_image_width(nodesInt);
-    const int quadTrisFloatWidth = get_image_width(quadTrisFloat);
-    const int quadTrisIntWidth = get_image_width(quadTrisInt);
+    const int nodesImageWidth = get_image_width(nodes);
+    const int quadTrisImageWidth = get_image_width(quadTris);
 
     const int bboxes_minXIndex = (signs0 * 3);
     const int bboxes_maxXIndex = ((1 - signs0) * 3);
@@ -253,6 +245,8 @@ __kernel void Intersect(
     const int bboxes_maxYIndex = ((1 - signs1) * 3) + 1;
     const int bboxes_minZIndex = (signs2 * 3) + 2;
     const int bboxes_maxZIndex = ((1 - signs2) * 3) + 2;
+
+    const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 #endif
 
 	while (todoNode >= 0) {
@@ -262,16 +256,18 @@ __kernel void Intersect(
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
 #ifdef USE_IMAGE_STORAGE
-            // Read the bounding boxes from the image storage
-            const int pixCount = nodeData * 6;
-            const int inx = pixCount % nodesFloatWidth;
-            const int iny = pixCount / nodesFloatWidth;
-            const float4 bboxes_minX = read_imagef(nodesFloat, imageSampler, (int2)(inx + bboxes_minXIndex, iny));
-            const float4 bboxes_maxX = read_imagef(nodesFloat, imageSampler, (int2)(inx + bboxes_maxXIndex, iny));
-            const float4 bboxes_minY = read_imagef(nodesFloat, imageSampler, (int2)(inx + bboxes_minYIndex, iny));
-            const float4 bboxes_maxY = read_imagef(nodesFloat, imageSampler, (int2)(inx + bboxes_maxYIndex, iny));
-            const float4 bboxes_minZ = read_imagef(nodesFloat, imageSampler, (int2)(inx + bboxes_minZIndex, iny));
-            const float4 bboxes_maxZ = read_imagef(nodesFloat, imageSampler, (int2)(inx + bboxes_maxZIndex, iny));
+            // Read the node information from the image storage
+            // TODO: optimize with power of 2 width
+            const int pixCount = nodeData * 7;
+            const int inx = pixCount % nodesImageWidth;
+            const int iny = pixCount / nodesImageWidth;
+            const float4 bboxes_minX = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minXIndex, iny)));
+            const float4 bboxes_maxX = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_maxXIndex, iny)));
+            const float4 bboxes_minY = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minYIndex, iny)));
+            const float4 bboxes_maxY = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_maxYIndex, iny)));
+            const float4 bboxes_minZ = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minZIndex, iny)));
+            const float4 bboxes_maxZ = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_maxZIndex, iny)));
+            const int4 children = read_imagei(nodes, imageSampler, (int2)(inx + 6, iny));
 
 			const int4 visit = QBVHNode_BBoxIntersect(
                 bboxes_minX, bboxes_maxX,
@@ -281,7 +277,6 @@ __kernel void Intersect(
 				invDir0, invDir1, invDir2,
 				signs0, signs1, signs2);
 
-			const int4 children = read_imagei(nodesInt, imageSampler, (int2)(nodeData % nodesIntWidth, nodeData / nodesIntWidth));
 #else
 			__global QBVHNode *node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
@@ -311,20 +306,20 @@ __kernel void Intersect(
 
 			for (uint primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber) {
 #ifdef USE_IMAGE_STORAGE
-                const int pixCount = primNumber * 9;
-                const int inx = pixCount % quadTrisFloatWidth;
-                const int iny = pixCount / quadTrisFloatWidth;
-                const float4 origx = read_imagef(quadTrisFloat, imageSampler, (int2)(inx, iny));
-                const float4 origy = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 1, iny));
-                const float4 origz = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 2, iny));
-                const float4 edge1x = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 3, iny));
-                const float4 edge1y = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 4, iny));
-                const float4 edge1z = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 5, iny));
-                const float4 edge2x = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 6, iny));
-                const float4 edge2y = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 7, iny));
-                const float4 edge2z = read_imagef(quadTrisFloat, imageSampler, (int2)(inx + 8, iny));
-
-                const uint4 primitives = read_imageui(quadTrisInt, imageSampler, (int2)(primNumber % quadTrisIntWidth, primNumber / quadTrisIntWidth));
+                const int pixCount = primNumber * 10;
+                // TODO: optimize with power of 2 width
+                const int inx = pixCount % quadTrisImageWidth;
+                const int iny = pixCount / quadTrisImageWidth;
+                const float4 origx = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx, iny)));
+                const float4 origy = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 1, iny)));
+                const float4 origz = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 2, iny)));
+                const float4 edge1x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 3, iny)));
+                const float4 edge1y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 4, iny)));
+                const float4 edge1z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 5, iny)));
+                const float4 edge2x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 6, iny)));
+                const float4 edge2y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 7, iny)));
+                const float4 edge2z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx + 8, iny)));
+                const uint4 primitives = read_imageui(quadTris, imageSampler, (int2)(inx + 9, iny));
 #else
                 __global QuadTiangle *quadTri = &quadTris[primNumber];
                 const float4 origx = quadTri->origx;
