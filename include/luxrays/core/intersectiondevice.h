@@ -144,6 +144,7 @@ private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 
 	void TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event);
+	void FreeDataSetBuffers();
 
 	OpenCLDeviceDescription *deviceDesc;
 	boost::thread *intersectionThread;
