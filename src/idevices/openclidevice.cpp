@@ -142,7 +142,8 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 			}
 		}
 
-		{
+		// Compile QBVH+image storage kernel only if image support is available
+		if (deviceDesc->HasImageSupport()) {
 			cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
 			cl::Program program = cl::Program(oclContext, source);
 			try {
@@ -171,6 +172,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhImageWorkGroupSize);
 			}
 		}
+
 	}
 }
 
@@ -304,12 +306,12 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 			// 7 pixels required for the storage of a QBVH node
 			const size_t nodeImagePixelRequired = qbvh->nNodes * 7;
-			const size_t nodeImageWidth = Min<size_t>(RoundUp<size_t>(sqrt(nodeImagePixelRequired), 7),  0x7fff);
+			const size_t nodeImageWidth = Min<size_t>(RoundUp<size_t>(sqrtf(nodeImagePixelRequired), 7),  0x7fff);
 			const size_t nodeImageHeight = nodeImagePixelRequired / nodeImageWidth + (((nodeImagePixelRequired % nodeImageWidth) == 0) ? 0 : 1);
 
 			// 10 pixels required for the storage of QBVH Triangles
 			const size_t leafPixelRequired = qbvh->nQuads * 10;
-			const size_t leafImageWidth = Min<size_t>(RoundUp<size_t>(sqrt(leafPixelRequired), 10), 32760);
+			const size_t leafImageWidth = Min<size_t>(RoundUp<size_t>(sqrtf(leafPixelRequired), 10), 32760);
 			const size_t leafImageHeight = leafPixelRequired / leafImageWidth + (((leafPixelRequired % leafImageWidth) == 0) ? 0 : 1);
 
 			// Check if I can use image to store the data set
