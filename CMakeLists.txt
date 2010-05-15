@@ -38,7 +38,7 @@ message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
 # The version number.
 set(LUXRAYS_VERSION_MAJOR 0)
-set(LUXRAYS_VERSION_MINOR 1alpha7dev)
+set(LUXRAYS_VERSION_MINOR 1alpha8dev)
 
 set(LUXRAYS_SOURCE_DIR src)
 set(LUXRAYS_INCLUDE_DIR include)
@@ -309,7 +309,7 @@ add_subdirectory(samples/benchpixel)
 
 set(CMAKE_INSTALL_PREFIX .)
 #set(LUXRAYS_BIN_SAMPLES_DIR "luxrays-v${LUXRAYS_VERSION_MAJOR}.${LUXRAYS_VERSION_MINOR}")
-set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.5beta3")
+set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.5beta4")
 
 add_custom_command(
     OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}"

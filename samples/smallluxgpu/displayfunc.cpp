@@ -49,14 +49,14 @@ static void PrintString(void *font, const char *string) {
 }
 
 static void PrintHelpString(const unsigned int x, const unsigned int y, const char *key, const char *msg) {
-	glColor3f(1.0f, 0.f, 0.f);
+	glColor3f(0.9f, 0.9f, 0.5f);
 	glRasterPos2i(x, y);
 	PrintString(GLUT_BITMAP_8_BY_13, key);
 
 	glColor3f(1.f, 1.f, 1.f);
 	// To update raster color
 	glRasterPos2i(x + glutBitmapLength(GLUT_BITMAP_8_BY_13, (unsigned char *)key), y);
-	PrintString(GLUT_BITMAP_8_BY_13, " - ");
+	PrintString(GLUT_BITMAP_8_BY_13, ": ");
 	PrintString(GLUT_BITMAP_8_BY_13, msg);
 }
 
@@ -64,82 +64,94 @@ static void PrintHelpAndSettings() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.5f);
-	glRecti(10, 40, 630, 440);
+	glRecti(10, 40, config->scene->camera->film->GetWidth() - 10, config->scene->camera->film->GetHeight() - 40);
 	glDisable(GL_BLEND);
 
 	glColor3f(1.f, 1.f, 1.f);
-	glRasterPos2i(320 - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices") / 2, 420);
+	int fontOffset = config->scene->camera->film->GetHeight() - 40 - 20;
+	glRasterPos2i((config->scene->camera->film->GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
 	PrintString(GLUT_BITMAP_9_BY_15, "Help & Settings & Devices");
 
 	// Help
-	PrintHelpString(15, 395, "h", "toggle Help");
-	PrintHelpString(15, 380, "arrow Keys or mouse X/Y + mouse button 0", "rotate camera");
-	PrintHelpString(15, 365, "a, s, d, w or mouse X/Y + mouse button 1", "move camera");
-	PrintHelpString(15, 350, "p", "save image.png (or to image.filename property value)");
-	PrintHelpString(15, 335, "u", "toggle path/direct lighting rendering");
-	PrintHelpString(15, 320, "n, m", "dec./inc. the screen refresh");
-	PrintHelpString(320, 320, "v, b", "dec./inc. the max. path depth");
-	PrintHelpString(15, 305, "x, c", "dec./inc. the field of view");
-	PrintHelpString(320, 305, "i, o", "dec./inc. the shadow ray count");
-	PrintHelpString(15, 290, "y", "toggle camera motion blur");
-	PrintHelpString(320, 290, "t", "toggle tonemapping");
+	fontOffset -= 25;
+	PrintHelpString(15, fontOffset, "h", "toggle Help");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "arrow Keys or mouse X/Y + mouse button 0", "rotate camera");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "a, s, d, w or mouse X/Y + mouse button 1", "move camera");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "p", "save image.png (or to image.filename property value)");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "u", "toggle path/direct lighting rendering");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "n, m", "dec./inc. the screen refresh");
+	PrintHelpString(320, fontOffset, "v, b", "dec./inc. the max. path depth");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "x, c", "dec./inc. the field of view");
+	PrintHelpString(320, fontOffset, "i, o", "dec./inc. the shadow ray count");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "y", "toggle camera motion blur");
+	PrintHelpString(320, fontOffset, "t", "toggle tonemapping");
+	fontOffset -= 15;
 
 	// Settings
 	char buf[512];
 	glColor3f(0.5f, 1.0f, 0.f);
-	glRasterPos2i(15, 270);
+	fontOffset -= 15;
+	glRasterPos2i(15, fontOffset);
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
-	glRasterPos2i(20, 255);
+	fontOffset -= 15;
+	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d]",
 			int(config->scene->camera->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
 			config->scene->maxPathDepth,
 			config->scene->rrDepth);
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
-	glRasterPos2i(20, 240);
+	fontOffset -= 15;
+	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Screen refresh %dms][Render threads %d][Shadow rays %d][Mode %s]",
 			config->screenRefreshInterval, int(config->GetRenderThreads().size()),
 			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
 				(config->scene->shadowRayCount * (int)config->scene->lights.size()),
 			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
-	glRasterPos2i(20, 225);
+	fontOffset -= 15;
+	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Camera motion blur %s][Tonemapping %s]",
 			config->scene->camera->motionBlur ? "YES" : "NO",
 			(config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
-	glRasterPos2i(20, 225);
+	fontOffset -= 15;
+	glRasterPos2i(20, fontOffset);
 
 	// Pixel Device
 	char buff[512];
 	glColor3f(1.0f, 0.25f, 0.f);
 	const vector<IntersectionDevice *> idevices = config->GetIntersectionDevices();
-	const unsigned int center = Min<unsigned int>((225 + ((idevices.size() + 1) * 15) + 45) / 2, 210);
-	glRasterPos2i(15, center);
+	fontOffset -= 15;
+	glRasterPos2i(15, fontOffset);
 	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
 	const vector<PixelDevice *> pdevices = config->GetPixelDevices();
-	if (pdevices.size() > 0) {
-		sprintf(buff, "[%s][Samples/sec % 3.2fM]", pdevices[0]->GetName().c_str(),
-				pdevices[0]->GetPerformance() / 1000000.0);
+	assert (pdevices.size() > 0);
+	sprintf(buff, "[%s][Samples/sec % 3.2fM]", pdevices[0]->GetName().c_str(),
+			pdevices[0]->GetPerformance() / 1000000.0);
+	PrintString(GLUT_BITMAP_8_BY_13, buff);
+
+	if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
+		OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
+		const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
+		sprintf(buff, "[Mem %dM/%dM][Free buffers % 2d/%d]",
+				int(desc->GetUsedMemory() / (1024 * 1024)),
+				int(desc->GetMaxMemory() / (1024 * 1024)),
+				int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
-
-		if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
-			OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
-			const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
-			sprintf(buff, "[Mem %dM/%dM][Free buffers % 2d/%d]",
-					int(desc->GetUsedMemory() / (1024 * 1024)),
-					int(desc->GetMaxMemory() / (1024 * 1024)),
-					int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
-			PrintString(GLUT_BITMAP_8_BY_13, buff);
-		} else if (pdevices[0]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
-			NativePixelDevice *dev = (NativePixelDevice *)pdevices[0];
-			sprintf(buff, "[Free buffers % 2d/%d]",
-					int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
-			PrintString(GLUT_BITMAP_8_BY_13, buff);
-		}
-	} else
-		PrintString(GLUT_BITMAP_8_BY_13, "Not used");
-
+	} else if (pdevices[0]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
+		NativePixelDevice *dev = (NativePixelDevice *)pdevices[0];
+		sprintf(buff, "[Free buffers % 2d/%d]",
+				int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
+		PrintString(GLUT_BITMAP_8_BY_13, buff);
+	}
 
 	// Intersection devices
 	double minPerf = idevices[0]->GetPerformance();
@@ -206,7 +218,8 @@ void displayFunc(void) {
 	if (printHelp) {
 		glPushMatrix();
 		glLoadIdentity();
-		glOrtho(-0.5, 639.5, -0.5, 479.5, -1.0, 1.0);
+		glOrtho(-0.5f, config->scene->camera->film->GetWidth() - 0.5f,
+				-0.5, config->scene->camera->film->GetHeight() -0.5f, -1.0, 1.0);
 
 		PrintHelpAndSettings();
 

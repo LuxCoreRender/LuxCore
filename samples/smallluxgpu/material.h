@@ -250,7 +250,7 @@ public:
 			return Krefl;
 		}
 
-		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
+		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrtf(cos2t));
 		const Vector nkk = kk * Vector(N);
 		const Vector transDir = Normalize(nnt * (-wo) - nkk);
 
