@@ -141,6 +141,10 @@ public:
 	size_t GetUsedMemory() const { return usedMemory; }
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 
+	bool HasImageSupport() const { return oclDevice.getInfo<CL_DEVICE_IMAGE_SUPPORT>(); }
+	size_t GetImage2DMaxWidth() const { return oclDevice.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(); }
+	size_t GetImage2DMaxHeight() const { return oclDevice.getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>(); }
+
 	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
 
 	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);

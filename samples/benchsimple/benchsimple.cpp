@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
 					break;
 				}
 
-				std::cerr << int(tNow - tStart) << "/30secs" << std::endl;
+				std::cerr << int(tNow - tStart) << "/15secs" << std::endl;
 				tLastCheck = tNow;
 			}
 		}

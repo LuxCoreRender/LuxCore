@@ -258,13 +258,13 @@ __kernel void Intersect(
             // Read the node information from the image storage
             const ushort inx = (nodeData >> 16) * 7;
             const ushort iny = (nodeData & 0xffff);
-            const float4 bboxes_minX = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minXIndex, iny)));
-            const float4 bboxes_maxX = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_maxXIndex, iny)));
-            const float4 bboxes_minY = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minYIndex, iny)));
-            const float4 bboxes_maxY = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_maxYIndex, iny)));
-            const float4 bboxes_minZ = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_minZIndex, iny)));
-            const float4 bboxes_maxZ = as_float4(read_imagei(nodes, imageSampler, (int2)(inx + bboxes_maxZIndex, iny)));
-            const int4 children = read_imagei(nodes, imageSampler, (int2)(inx + 6, iny));
+            const float4 bboxes_minX = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minXIndex, iny)));
+            const float4 bboxes_maxX = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxXIndex, iny)));
+            const float4 bboxes_minY = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minYIndex, iny)));
+            const float4 bboxes_maxY = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxYIndex, iny)));
+            const float4 bboxes_minZ = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minZIndex, iny)));
+            const float4 bboxes_maxZ = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxZIndex, iny)));
+            const int4 children = as_int4(read_imageui(nodes, imageSampler, (int2)(inx + 6, iny)));
 
 			const int4 visit = QBVHNode_BBoxIntersect(
                 bboxes_minX, bboxes_maxX,
