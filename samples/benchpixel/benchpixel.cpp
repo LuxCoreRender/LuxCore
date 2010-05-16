@@ -92,6 +92,12 @@ static void RunAddSampleBench(luxrays::PixelDevice *device, const luxrays::Filte
 int main(int argc, char** argv) {
 	std::cerr << "LuxRays Simple PixelDevice Benchmark v" << LUXRAYS_VERSION_MAJOR << "." << LUXRAYS_VERSION_MINOR << std::endl;
 	std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
+	std::cerr << "Usage (select native device): " << argv[0] << " -1" << std::endl;
+	std::cerr << "Usage (select opencl device): " << argv[0] << " <OpenCL device index>" << std::endl;
+
+	int devIndex = -1;
+	if (argc > 1)
+		devIndex = atoi(argv[1]);
 
 	//--------------------------------------------------------------------------
 	// Create the context
@@ -101,20 +107,35 @@ int main(int argc, char** argv) {
 
 	// Looks for the first GPU device
 	std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
-	luxrays::DeviceDescription::FilterOne(deviceDescs);
 
-	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
-
-	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
-	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
+	if (argc > 1) {
+		const int devIndex = atoi(argv[1]);
+		if (devIndex == -1) {
+			// Use native device
+			luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+		} else {
+			// Use selected device
+			luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
+			if ((devIndex < 0) || (devIndex >= int(deviceDescs.size()))) {
+				std::cerr << "Wrong OpenCL device index" << std::endl;
+				return (EXIT_FAILURE);
+			}
+			luxrays::DeviceDescription *device = deviceDescs[devIndex];
+			deviceDescs.resize(1);
+			deviceDescs[0] = device;
+		}
+	} else {
+		// Use default device
+		luxrays::DeviceDescription::FilterOne(deviceDescs);
+	}
 
 	if (deviceDescs.size() < 1) {
-		std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
+		std::cerr << "Unable to find a GPU or CPU pixel device" << std::endl;
 		return (EXIT_FAILURE);
 	}
 	deviceDescs.resize(1);
 
-	std::cerr << "Selected pixel device: " << deviceDescs[0]->GetName();
+	std::cerr << "Selected pixel device: " << deviceDescs[0]->GetName() << std::endl;
 	std::vector<luxrays::PixelDevice *> devices = ctx->AddPixelDevices(deviceDescs);
 	luxrays::PixelDevice *device = devices[0];
 	device->Init(WIDTH, HEIGHT);
