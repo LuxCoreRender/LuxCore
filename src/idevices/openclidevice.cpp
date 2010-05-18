@@ -390,10 +390,15 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				}
 
 				{
+					unsigned int *iprims = new unsigned int[leafImageWidth * leafImageHeight * 10 * 4];
+					memcpy(iprims, qbvh->prims, sizeof(QuadTriangle) * qbvh->nQuads);
+
 					qbvhTrisImageBuff = new cl::Image2D(oclContext,
 							CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), leafImageWidth, leafImageHeight, 0, qbvh->prims);
+							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), leafImageWidth, leafImageHeight, 0, iprims);
 					deviceDesc->usedMemory += qbvhTrisImageBuff->getInfo<CL_MEM_SIZE>();
+
+					delete iprims;
 				}
 
 				// Set arguments
