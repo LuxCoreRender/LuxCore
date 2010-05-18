@@ -94,6 +94,7 @@ QBVHAccel::QBVHAccel(const Context *context,
 
 	LR_LOG(context, "QBVH completed with " << nNodes << "/" << maxNodes << " nodes");
 	LR_LOG(context, "Total QBVH memory usage: " << nNodes * sizeof(QBVHNode) / 1024 << "Kbytes");
+	LR_LOG(context, "Total QBVH QuadTriangle count: " << nQuads);
 
 	// Release temporary memory
 	delete[] primsBboxes;
