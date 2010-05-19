@@ -27,6 +27,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/device.h"
 #include "luxrays/core/pixel/framebuffer.h"
+#include "luxrays/core/pixel/filter.h"
 
 namespace luxrays {
 
@@ -183,6 +184,7 @@ private:
 
 	void SplatPreview(const SampleBufferElem *sampleElem);
 	void SplatGaussian2x2(const SampleBufferElem *sampleElem);
+	void SplatFiltered(const SampleBufferElem *sampleElem);
 
 	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight = 1.f) {
 		const unsigned int offset = x + y * width;
@@ -211,6 +213,9 @@ private:
 
 	float gammaTable[GammaTableSize];
 	float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
+
+	Filter *filter;
+	FilterLUTs *filterLUTs;
 };
 
 //------------------------------------------------------------------------------

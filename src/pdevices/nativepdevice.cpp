@@ -61,6 +61,9 @@ NativePixelDevice::NativePixelDevice(const Context *context,
 
 	sampleBuffers.resize(0);
 	freeSampleBuffers.resize(0);
+
+	filter = new GaussianFilter(2.f, 2.f, 2.f);
+	filterLUTs = new FilterLUTs(*filter, 4);
 }
 
 NativePixelDevice::~NativePixelDevice() {
@@ -72,6 +75,9 @@ NativePixelDevice::~NativePixelDevice() {
 
 	for (size_t i = 0; i < sampleBuffers.size(); ++i)
 		delete sampleBuffers[i];
+
+	delete filterLUTs;
+	delete filter;
 }
 
 void NativePixelDevice::Init(const unsigned int w, const unsigned int h) {
@@ -161,6 +167,40 @@ void NativePixelDevice::SplatPreview(const SampleBufferElem *sampleElem) {
 			SplatRadiance(sampleElem->radiance, x, y, 0.01f);
 }
 
+void NativePixelDevice::SplatFiltered(const SampleBufferElem *sampleElem) {
+	// Compute sample's raster extent
+	const float dImageX = sampleElem->screenX - 0.5f;
+	const float dImageY = sampleElem->screenY - 0.5f;
+	const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleElem->screenX), dImageY - floorf(sampleElem->screenY));
+	const float *lut = filterLUT->GetLUT();
+
+	const int x0 = Ceil2Int(dImageX - filter->xWidth);
+	const int x1 = x0 + filterLUT->GetWidth();
+	const int y0 = Ceil2Int(dImageY - filter->yWidth);
+	const int y1 = y0 + filterLUT->GetHeight();
+
+	for (int iy = y0; iy < y1; ++iy) {
+		for (int ix = x0; ix < x1; ++ix) {
+			const float filterWt = *lut++;
+if (isnan(filterWt)) {
+std::cout<<"===========================================\n";
+std::cout<<sampleElem->screenX<<"x"<<sampleElem->screenY<<"\n";
+std::cout<<dImageX<<"x"<<dImageY<<"\n";
+std::cout<<ix<<"x"<<iy<<"\n";
+std::cout<<ix-x0<<"x"<<iy-y0<<"\n";
+std::cout<<x0<<","<<x1<<"x"<<y0<<","<<y1<<"\n";
+std::cout<<*filterLUT<<"\n";
+std::cout<<"===========================================\n";
+}
+
+			if ((ix < 0) || (ix >= int(width)) || (iy < 0) || (iy >= int(height)))
+				continue;
+
+			SplatRadiance(sampleElem->radiance, ix, iy, filterWt);
+		}
+	}
+}
+
 void NativePixelDevice::SplatGaussian2x2(const SampleBufferElem *sampleElem) {
 	// Compute sample's raster extent
 	float dImageX = sampleElem->screenX - 0.5f;
@@ -212,7 +252,8 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 		case FILTER_GAUSSIAN: {
 			const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
 			for (unsigned int i = 0; i < sampleBuffer->GetSampleCount(); ++i)
-				SplatGaussian2x2(&sbe[i]);
+				//SplatGaussian2x2(&sbe[i]);
+				SplatFiltered(&sbe[i]);
 			break;
 		}
 		case FILTER_PREVIEW: {
