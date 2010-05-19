@@ -169,7 +169,6 @@ public:
 
 private:
 	static const unsigned int GammaTableSize = 1024;
-	static const unsigned int FilterTableSize = 16;
 
 	void SplatPreview(const SampleBufferElem *sampleElem);
 	void SplatFiltered(const SampleBufferElem *sampleElem);
