@@ -87,14 +87,14 @@ OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescrip
 
 	// Initialize Gaussian2x2_filterTable
 	const float alpha = 2.f;
-	const float expX = expf(-alpha * Gaussian2x2_xWidth * Gaussian2x2_xWidth);
-	const float expY = expf(-alpha * Gaussian2x2_yWidth * Gaussian2x2_yWidth);
+	const float expX = expf(-alpha * 2.f * 2.f);
+	const float expY = expf(-alpha * 2.f * 2.f);
 
 	float *ftp2x2 = Gaussian2x2_filterTable;
 	for (u_int y = 0; y < FilterTableSize; ++y) {
-		const float fy = (static_cast<float>(y) + .5f) * Gaussian2x2_yWidth / FilterTableSize;
+		const float fy = (static_cast<float>(y) + .5f) * 2.f / FilterTableSize;
 		for (u_int x = 0; x < FilterTableSize; ++x) {
-			const float fx = (static_cast<float>(x) + .5f) * Gaussian2x2_xWidth / FilterTableSize;
+			const float fx = (static_cast<float>(x) + .5f) * 2.f / FilterTableSize;
 			*ftp2x2++ = Max<float>(0.f, expf(-alpha * fx * fx) - expX) *
 					Max<float>(0.f, expf(-alpha * fy * fy) - expY);
 		}

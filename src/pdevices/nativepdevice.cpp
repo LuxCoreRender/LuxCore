@@ -44,25 +44,11 @@ NativePixelDevice::NativePixelDevice(const Context *context,
 
 	SetGamma();
 
-	// Initialize Gaussian2x2_filterTable
-	const float alpha = 2.f;
-	const float expX = expf(-alpha * Gaussian2x2_xWidth * Gaussian2x2_xWidth);
-	const float expY = expf(-alpha * Gaussian2x2_yWidth * Gaussian2x2_yWidth);
-
-	float *ftp2x2 = Gaussian2x2_filterTable;
-	for (u_int y = 0; y < FilterTableSize; ++y) {
-		const float fy = (static_cast<float>(y) + .5f) * Gaussian2x2_yWidth / FilterTableSize;
-		for (u_int x = 0; x < FilterTableSize; ++x) {
-			const float fx = (static_cast<float>(x) + .5f) * Gaussian2x2_xWidth / FilterTableSize;
-			*ftp2x2++ = Max<float>(0.f, expf(-alpha * fx * fx) - expX) *
-					Max<float>(0.f, expf(-alpha * fy * fy) - expY);
-		}
-	}
-
 	sampleBuffers.resize(0);
 	freeSampleBuffers.resize(0);
 
-	filter = new GaussianFilter(2.f, 2.f, 2.f);
+	// Initialize Filter LUTs
+	filter = new GaussianFilter(1.5f, 1.5f, 2.f);
 	filterLUTs = new FilterLUTs(*filter, 4);
 }
 
@@ -182,63 +168,11 @@ void NativePixelDevice::SplatFiltered(const SampleBufferElem *sampleElem) {
 	for (int iy = y0; iy < y1; ++iy) {
 		for (int ix = x0; ix < x1; ++ix) {
 			const float filterWt = *lut++;
-if (isnan(filterWt)) {
-std::cout<<"===========================================\n";
-std::cout<<sampleElem->screenX<<"x"<<sampleElem->screenY<<"\n";
-std::cout<<dImageX<<"x"<<dImageY<<"\n";
-std::cout<<ix<<"x"<<iy<<"\n";
-std::cout<<ix-x0<<"x"<<iy-y0<<"\n";
-std::cout<<x0<<","<<x1<<"x"<<y0<<","<<y1<<"\n";
-std::cout<<*filterLUT<<"\n";
-std::cout<<"===========================================\n";
-}
 
 			if ((ix < 0) || (ix >= int(width)) || (iy < 0) || (iy >= int(height)))
 				continue;
 
 			SplatRadiance(sampleElem->radiance, ix, iy, filterWt);
-		}
-	}
-}
-
-void NativePixelDevice::SplatGaussian2x2(const SampleBufferElem *sampleElem) {
-	// Compute sample's raster extent
-	float dImageX = sampleElem->screenX - 0.5f;
-	float dImageY = sampleElem->screenY - 0.5f;
-	int x0 = Ceil2Int(dImageX - Gaussian2x2_xWidth);
-	int x1 = Floor2Int(dImageX + Gaussian2x2_xWidth);
-	int y0 = Ceil2Int(dImageY - Gaussian2x2_yWidth);
-	int y1 = Floor2Int(dImageY + Gaussian2x2_yWidth);
-	if (x1 < x0 || y1 < y0 || x1 < 0 || y1 < 0)
-		return;
-	// Loop over filter support and add sample to pixel arrays
-	int ifx[32];
-	for (int x = x0; x <= x1; ++x) {
-		float fx = fabsf((x - dImageX) *
-				Gaussian2x2_invXWidth * FilterTableSize);
-		ifx[x - x0] = Min<int>(Floor2Int(fx), FilterTableSize - 1);
-	}
-
-	int ify[32];
-	for (int y = y0; y <= y1; ++y) {
-		float fy = fabsf((y - dImageY) *
-				Gaussian2x2_invYWidth * FilterTableSize);
-		ify[y - y0] = Min<int>(Floor2Int(fy), FilterTableSize - 1);
-	}
-	float filterNorm = 0.f;
-	for (int y = y0; y <= y1; ++y) {
-		for (int x = x0; x <= x1; ++x) {
-			const int offset = ify[y - y0] * FilterTableSize + ifx[x - x0];
-			filterNorm += Gaussian2x2_filterTable[offset];
-		}
-	}
-	filterNorm = 1.f / filterNorm;
-
-	for (u_int y = static_cast<u_int>(Max<int>(y0, 0)); y <= static_cast<u_int>(Min<int>(y1, height - 1)); ++y) {
-		for (u_int x = static_cast<u_int>(Max<int>(x0, 0)); x <= static_cast<u_int>(Min<int>(x1, width - 1)); ++x) {
-			const int offset = ify[y - y0] * FilterTableSize + ifx[x - x0];
-			const float filterWt = Gaussian2x2_filterTable[offset] * filterNorm;
-			SplatRadiance(sampleElem->radiance, x, y, filterWt);
 		}
 	}
 }
@@ -252,7 +186,6 @@ void NativePixelDevice::AddSampleBuffer(const FilterType type, SampleBuffer *sam
 		case FILTER_GAUSSIAN: {
 			const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
 			for (unsigned int i = 0; i < sampleBuffer->GetSampleCount(); ++i)
-				//SplatGaussian2x2(&sbe[i]);
 				SplatFiltered(&sbe[i]);
 			break;
 		}
