@@ -171,19 +171,7 @@ private:
 	static const unsigned int GammaTableSize = 1024;
 	static const unsigned int FilterTableSize = 16;
 
-	/* Not supported by VisualC++
-	static const float Gaussian2x2_xWidth = 2.f;
-	static const float Gaussian2x2_yWidth = 2.f;
-	static const float Gaussian2x2_invXWidth = 1.f / Gaussian2x2_yWidth;
-	static const float Gaussian2x2_invYWidth = 1.f / Gaussian2x2_yWidth;*/
-
-#define Gaussian2x2_xWidth 2.f
-#define Gaussian2x2_yWidth 2.f
-#define Gaussian2x2_invXWidth (1.f / Gaussian2x2_xWidth)
-#define Gaussian2x2_invYWidth (1.f / Gaussian2x2_yWidth)
-
 	void SplatPreview(const SampleBufferElem *sampleElem);
-	void SplatGaussian2x2(const SampleBufferElem *sampleElem);
 	void SplatFiltered(const SampleBufferElem *sampleElem);
 
 	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight = 1.f) {
@@ -212,7 +200,6 @@ private:
 	std::deque<SampleBuffer *> freeSampleBuffers;
 
 	float gammaTable[GammaTableSize];
-	float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
 
 	Filter *filter;
 	FilterLUTs *filterLUTs;
