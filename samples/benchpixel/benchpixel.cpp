@@ -146,10 +146,10 @@ int main(int argc, char** argv) {
 	// Run the benchmark
 	//--------------------------------------------------------------------------
 
-	std::cerr << "AddSample[FILTER_NONE] Benchmark" << std::endl;
+	/*std::cerr << "AddSample[FILTER_NONE] Benchmark" << std::endl;
 	RunAddSampleBench(device, luxrays::FILTER_NONE);
 	std::cerr << "AddSample[FILTER_PREVIEW] Benchmark" << std::endl;
-	RunAddSampleBench(device, luxrays::FILTER_PREVIEW);
+	RunAddSampleBench(device, luxrays::FILTER_PREVIEW);*/
 	std::cerr << "AddSample[FILTER_GAUSSIAN] Benchmark" << std::endl;
 	RunAddSampleBench(device, luxrays::FILTER_GAUSSIAN);
 

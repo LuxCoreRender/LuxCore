@@ -166,10 +166,16 @@ void NativePixelDevice::SplatFiltered(const SampleBufferElem *sampleElem) {
 	const int y1 = y0 + filterLUT->GetHeight();
 
 	for (int iy = y0; iy < y1; ++iy) {
+		if (iy < 0) {
+			lut += filterLUT->GetWidth();
+			continue;
+		} else if(iy >= int(height))
+			break;
+
 		for (int ix = x0; ix < x1; ++ix) {
 			const float filterWt = *lut++;
 
-			if ((ix < 0) || (ix >= int(width)) || (iy < 0) || (iy >= int(height)))
+			if ((ix < 0) || (ix >= int(width)))
 				continue;
 
 			SplatRadiance(sampleElem->radiance, ix, iy, filterWt);
