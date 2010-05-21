@@ -96,6 +96,14 @@ def slg_properties():
              ("1", "Direct", "Direct lighting only")),
       default="0")
 
+  EnumProperty(attr="slg_accelerator_type", name="Accelerator Type",
+      description="Select the desired ray tracing accelerator type",
+      items=(("-1", "Default", "Default"),
+             ("0", "BVH", "Bounding Volume Hierarchy"),
+             ("1", "QBVH", "Quad-Bounding Volume Hierarchy"),
+             ("2", "QBVH (image storage disabled)", "Quad-Bounding Volume Hierarchy with disabled image storage")),
+      default="-1")
+
   EnumProperty(attr="slg_film_filter_type", name="Film Filter Type",
       description="Select the desired film filter type",
       items=(("0", "None", "No filter"),
@@ -328,6 +336,9 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_rendering_type")
+    split = layout.split()
+    col = split.column()
+    col.prop(scene, "slg_accelerator_type")
     split = layout.split()
     col = split.column()
     col.prop(scene, "slg_film_filter_type")
@@ -791,6 +802,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('path.lightstrategy = {}\n'.format(scene.slg_lightstrategy))
     fcfg.write('path.shadowrays = {}\n'.format(scene.slg_shadowrays))
     fcfg.write('sampler.spp = {}\n'.format(scene.slg_sampleperpixel))
+    fcfg.write('accelerator.type = {}\n'.format(scene.slg_accelerator_type))
     fcfg.close()
 
     print('SLGBP ===> launch SLG: {} {}/{}/render.cfg'.format(exepath,basepath,basename))

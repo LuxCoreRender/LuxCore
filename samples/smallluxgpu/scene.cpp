@@ -31,7 +31,7 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
 
-Scene::Scene(Context *ctx, const string &fileName, Film *film) {
+Scene::Scene(Context *ctx, const string &fileName, Film *film, const int accelType) {
 	maxPathDepth = 3;
 	onlySampleSpecular = false;
 
@@ -375,6 +375,23 @@ Scene::Scene(Context *ctx, const string &fileName, Film *film) {
 	//--------------------------------------------------------------------------
 
 	dataSet = new DataSet(ctx);
+
+	// Check the type of accelerator to use
+	switch (accelType) {
+		case -1:
+			// Use default settings
+			break;
+		case 0:
+			dataSet->SetAcceleratorType(ACCEL_BVH);
+			break;
+		case 1:
+		case 2:
+			dataSet->SetAcceleratorType(ACCEL_QBVH);
+			break;
+		default:
+			throw runtime_error("Unknown accelerator.type");
+			break;
+	}
 
 	// Add all objects
 	for (std::vector<ExtTriangleMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)

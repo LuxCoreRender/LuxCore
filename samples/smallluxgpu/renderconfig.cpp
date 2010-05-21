@@ -112,7 +112,8 @@ void RenderingConfig::Init() {
 	}
 
 	// Create the Scene
-	scene = new Scene(ctx, sceneFileName, film);
+	const int accelType = cfg.GetInt("accelerator.type", -1);
+	scene = new Scene(ctx, sceneFileName, film, accelType);
 
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
 	scene->camera->Update();
@@ -155,6 +156,13 @@ void RenderingConfig::Init() {
 	if (intersectionCPUDevices.size() > 0)
 		copy(intersectionCPUDevices.begin(), intersectionCPUDevices.end(),
 				intersectionCPUGPUDevices.begin() + intersectionGPUDevices.size());
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Check if I have to disable image storage
+	const bool frocedDisableImageStorage = (accelType == 2);
+	for (size_t i = 0; i < intersectionGPUDevices.size(); ++i)
+		((OpenCLIntersectionDevice *)intersectionGPUDevices[i])->SetQBVHDisableImageStorage(frocedDisableImageStorage);
+#endif
 
 	// Set the Luxrays SataSet
 	ctx->SetDataSet(scene->dataSet);
