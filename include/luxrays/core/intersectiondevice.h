@@ -133,6 +133,11 @@ public:
 		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
 	}
 
+	// OpenCL Device specific methods
+	void SetQBVHDisableImageStorage(const bool v) {
+		qbvhDisableImageStorage = v;
+	}
+
 	friend class Context;
 
 	static size_t RayBufferSize;
@@ -180,7 +185,7 @@ private:
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
 
-	bool reportedPermissionError, qbvhUseImage;
+	bool reportedPermissionError, qbvhUseImage, qbvhDisableImageStorage;
 };
 
 #endif

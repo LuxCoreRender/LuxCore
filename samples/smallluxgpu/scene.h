@@ -49,7 +49,7 @@ typedef enum {
 
 class Scene {
 public:
-	Scene(Context *ctx, const string &fileName, Film *film);
+	Scene(Context *ctx, const string &fileName, Film *film, const int accelType);
 	~Scene();
 
 	unsigned int SampleLights(const float u) const {

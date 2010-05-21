@@ -45,6 +45,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	deviceName = (desc->GetName() +"Intersect").c_str();
 	reportedPermissionError = false;
 	qbvhUseImage = false;
+	qbvhDisableImageStorage = false;
 	intersectionThread = NULL;
 
 	bvhKernel = NULL;
@@ -315,30 +316,35 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			const size_t leafImageHeight = leafPixelRequired / leafImageWidth + (((leafPixelRequired % leafImageWidth) == 0) ? 0 : 1);
 
 			// Check if I can use image to store the data set
-			if (deviceDesc->HasImageSupport()) {
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image support is available");
-
-				// Check if the scene is small enough to be stored inside an image
-				const size_t maxWidth = deviceDesc->GetImage2DMaxWidth();
-				const size_t maxHeight = deviceDesc->GetImage2DMaxHeight();
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL max. image buffer size: " << maxWidth << "x" << maxHeight);
-
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH node image buffer size: " << nodeImageWidth << "x" << nodeImageHeight);
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH triangle image buffer size: " << leafImageWidth << "x" << leafImageHeight);
-
-				if ((nodeImageWidth > maxWidth) ||
-						(nodeImageHeight > maxHeight) ||
-						(leafImageWidth > maxWidth) ||
-						(leafImageHeight > maxHeight)) {
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image max. image size supported is too small");
-					qbvhUseImage = false;
-				} else {
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Enabled QBVH scene storage inside image");
-					qbvhUseImage = true;
-				}
-			} else {
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image support is not available");
+			if (qbvhDisableImageStorage) {
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Disable forced for QBVH scene storage inside image");
 				qbvhUseImage = false;
+			} else {
+				if (deviceDesc->HasImageSupport()) {
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image support is available");
+
+					// Check if the scene is small enough to be stored inside an image
+					const size_t maxWidth = deviceDesc->GetImage2DMaxWidth();
+					const size_t maxHeight = deviceDesc->GetImage2DMaxHeight();
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL max. image buffer size: " << maxWidth << "x" << maxHeight);
+
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH node image buffer size: " << nodeImageWidth << "x" << nodeImageHeight);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH triangle image buffer size: " << leafImageWidth << "x" << leafImageHeight);
+
+					if ((nodeImageWidth > maxWidth) ||
+							(nodeImageHeight > maxHeight) ||
+							(leafImageWidth > maxWidth) ||
+							(leafImageHeight > maxHeight)) {
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image max. image size supported is too small");
+						qbvhUseImage = false;
+					} else {
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Enabled QBVH scene storage inside image");
+						qbvhUseImage = true;
+					}
+				} else {
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image support is not available");
+					qbvhUseImage = false;
+				}
 			}
 
 			if (qbvhUseImage) {
