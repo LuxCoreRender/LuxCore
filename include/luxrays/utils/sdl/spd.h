@@ -19,17 +19,22 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
-#include "mc.h"
+/* SPD classes are from luxrender */
+
+#ifndef _LUXRAYS_SDL_SPD_H
+#define	_LUXRAYS_SDL_SPD_H
+
+#include <cstddef>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/utils/sdl/mc.h"
 
-/* SPD classes are from luxrender */
+namespace luxrays { namespace sdl {
 
 class SPD {
 public:
-	SPD() { 
-		nSamples = 0U; 
+	SPD() {
+		nSamples = 0U;
 		lambdaMin = lambdaMax = delta = invDelta = 0.f;
 		samples = NULL;
 	}
@@ -42,14 +47,14 @@ public:
 
 		// interpolate the two closest samples linearly
 		const float x = (lambda - lambdaMin) * invDelta;
-		const u_int b0 = Floor2UInt(x);
-		const u_int b1 = min(b0 + 1, nSamples - 1);
+		const unsigned int b0 = Floor2UInt(x);
+		const unsigned int b1 = Min(b0 + 1, nSamples - 1);
 		const float dx = x - b0;
 		return Lerp(dx, samples[b0], samples[b1]);
 	}
 
-	inline void sample(u_int n, const float lambda[], float *p) const {
-		for (u_int i = 0; i < n; ++i) {
+	inline void sample(unsigned int n, const float lambda[], float *p) const {
+		for (unsigned int i = 0; i < n; ++i) {
 			if (nSamples <= 1 || lambda[i] < lambdaMin ||
 				lambda[i] > lambdaMax) {
 				p[i] = 0.f;
@@ -58,8 +63,8 @@ public:
 
 			// interpolate the two closest samples linearly
 			const float x = (lambda[i] - lambdaMin) * invDelta;
-			const u_int b0 = Floor2UInt(x);
-			const u_int b1 = min(b0 + 1, nSamples - 1);
+			const unsigned int b0 = Floor2UInt(x);
+			const unsigned int b1 = Min(b0 + 1, nSamples - 1);
 			const float dx = x - b0;
 			p[i] = Lerp(dx, samples[b0], samples[b1]);
 		}
@@ -67,7 +72,7 @@ public:
 
 	float Y() const;
 	float Filter() const;
-	void AllocateSamples(u_int n);
+	void AllocateSamples(unsigned int n);
 	void FreeSamples();
 	void Normalize();
 	void Clamp();
@@ -76,7 +81,7 @@ public:
 	Spectrum ToRGB();
 
 protected:
-	u_int nSamples;
+	unsigned int nSamples;
 	float lambdaMin, lambdaMax;
 	float delta, invDelta;
 	float *samples;
@@ -93,14 +98,14 @@ public:
 	//  lambdaMin  wavelength (nm) of first sample
 	//  lambdaMax  wavelength (nm) of last sample
 	//  n          number of samples
-	RegularSPD(const float* const s, float lMin, float lMax, u_int n) : SPD() {
+	RegularSPD(const float* const s, float lMin, float lMax, unsigned int n) : SPD() {
 		init(lMin, lMax, s, n);
 	}
 
 	virtual ~RegularSPD() {}
 
 protected:
-	void init(float lMin, float lMax, const float* const s, u_int n);
+	void init(float lMin, float lMax, const float* const s, unsigned int n);
 };
 
 // only use spline for regular data
@@ -121,18 +126,20 @@ public:
 	//  n             number of samples
 	//  resolution    resampling resolution (in nm)
 	IrregularSPD(const float* const wavelengths, const float* const samples,
-		u_int n, float resolution = 5, SPDResamplingMethod resamplignMethod = Linear);
+		unsigned int n, float resolution = 5, SPDResamplingMethod resamplignMethod = Linear);
 
 	virtual ~IrregularSPD() {}
 
 protected:
-	  void init(float lMin, float lMax, const float* const s, u_int n);
+	  void init(float lMin, float lMax, const float* const s, unsigned int n);
 
 private:
 	// computes data for natural spline interpolation
 	// from Numerical Recipes in C
 	void calc_spline_data(const float* const wavelengths,
-	const float* const amplitudes, u_int n, float *spline_data);
+	const float* const amplitudes, unsigned int n, float *spline_data);
 };
 
+} }
 
+#endif	/* _LUXRAYS_SDL_SPD_H */

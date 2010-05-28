@@ -20,7 +20,7 @@
  ***************************************************************************/
 
 #include "volume.h"
-#include "scene.h"
+#include "slgscene.h"
 
 using namespace std;
 
@@ -41,7 +41,7 @@ VolumeComputation::~VolumeComputation() {
 	delete scatteredLight;
 }
 
-void SingleScatteringIntegrator::GenerateLiRays(const Scene *scene, Sample *sample,
+void SingleScatteringIntegrator::GenerateLiRays(const SLGScene *scene, Sample *sample,
 		const Ray &ray, VolumeComputation *comp) const {
 	comp->Reset();
 

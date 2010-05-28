@@ -19,10 +19,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef LUXRAYS_SUN_SPECT_H
-#define LUXRAYS_SUN_SPECT_H
+namespace luxrays { namespace sdl {
 
-// -------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 /* All data lifted from MI */
 /* Units are either [] or cm^-1. refer when in doubt MI */
@@ -265,4 +264,4 @@ static float sun_solAmplitudes[38] = {
     1.1850E09
 };*/
 
-#endif // LUXRAYS_SUN_SPECT_H
+} }

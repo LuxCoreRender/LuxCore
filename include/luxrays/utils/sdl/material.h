@@ -19,14 +19,15 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _MATERIAL_H
-#define	_MATERIAL_H
+#ifndef _LUXRAYS_SDL_MATERIAL_H
+#define	_LUXRAYS_SDL_MATERIAL_H
 
 #include <vector>
 
-#include "smalllux.h"
-#include "mc.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
+#include "luxrays/utils/sdl/mc.h"
+
+namespace luxrays { namespace sdl {
 
 class Material {
 public:
@@ -474,4 +475,6 @@ private:
 	bool reflectionSpecularBounce, transmitionSpecularBounce;
 };
 
-#endif	/* _MATERIAL_H */
+} }
+
+#endif	/* _LUXRAYS_SDL_MATERIAL_H */

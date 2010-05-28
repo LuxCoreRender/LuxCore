@@ -27,17 +27,15 @@
 #include <fstream>
 
 #include "smalllux.h"
-#include "camera.h"
-#include "light.h"
-#include "material.h"
-#include "texmap.h"
 #include "volume.h"
+#include "film.h"
 
 #include "luxrays/core/context.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
-#include "luxrays/utils/properties.h"
+#include "luxrays/utils/sdl/scene.h"
 
 using namespace std;
+using namespace luxrays::sdl;
 
 typedef enum {
 	ONE_UNIFORM, ALL_UNIFORM
@@ -47,10 +45,10 @@ typedef enum {
 	PROBABILITY, IMPORTANCE
 } RussianRouletteStrategy;
 
-class Scene {
+class SLGScene : public Scene {
 public:
-	Scene(Context *ctx, const string &fileName, Film *film, const int accelType);
-	~Scene();
+	SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType);
+	~SLGScene();
 
 	unsigned int SampleLights(const float u) const {
 		// One Uniform light strategy
@@ -70,30 +68,7 @@ public:
 	float rrProb; // Used by PROBABILITY strategy
 	float rrImportanceCap; // Used by IMPORTANCE strategy
 
-	PerspectiveCamera *camera;
-
-	vector<Material *> materials; // All materials
-	TextureMapCache texMapCache; // Texture maps
-	map<string, size_t> materialIndices; // All materials indices
-
-	vector<ExtTriangleMesh *> objects; // All objects
-	vector<Material *> triangleMaterials; // One for each triangle
-	vector<TexMapInstance *> triangleTexMaps; // One for each triangle
-	vector<BumpMapInstance *> triangleBumpMaps; // One for each triangle
-	vector<NormalMapInstance *> triangleNormalMaps; // One for each triangle
-
-	vector<LightSource *> lights; // One for each light source
-
-	DataSet *dataSet;
-
-	InfiniteLight *infiniteLight;
-	bool useInfiniteLightBruteForce;
-
 	VolumeIntegrator *volumeIntegrator;
-
-private:
-	vector<float> GetParameters(const Properties &scnProp, const string &paramName,
-			const unsigned int paramCount, const string &defaultValue) const;
 };
 
 #endif	/* _SCENE_H */

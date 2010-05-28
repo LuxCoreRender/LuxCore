@@ -19,16 +19,20 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _TEXMAP_H
-#define	_TEXMAP_H
+#ifndef _LUXRAYS_SDL_TEXMAP_H
+#define	_LUXRAYS_SDL_TEXMAP_H
 
-#include "smalllux.h"
+#include <string>
+#include <vector>
+#include <map>
 
-using namespace std;
+#include "luxrays/core/context.h"
+
+namespace luxrays { namespace sdl {
 
 class TextureMap {
 public:
-	TextureMap(const string &fileName);
+	TextureMap(Context *ctx, const std::string &fileName);
 	TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h);
 	~TextureMap();
 
@@ -144,20 +148,23 @@ private:
 
 class TextureMapCache {
 public:
-	TextureMapCache();
+	TextureMapCache(Context *context);
 	~TextureMapCache();
 
-	TexMapInstance *GetTexMapInstance(const string &fileName);
-	BumpMapInstance *GetBumpMapInstance(const string &fileName, const float scale);
-	NormalMapInstance *GetNormalMapInstance(const string &fileName);
+	TexMapInstance *GetTexMapInstance(const std::string &fileName);
+	BumpMapInstance *GetBumpMapInstance(const std::string &fileName, const float scale);
+	NormalMapInstance *GetNormalMapInstance(const std::string &fileName);
 
 private:
-	TextureMap *GetTextureMap(const string &fileName);
+	TextureMap *GetTextureMap(const std::string &fileName);
 
-	map<string, TextureMap *> maps;
-	vector<TexMapInstance *> texInstances;
-	vector<BumpMapInstance *> bumpInstances;
-	vector<NormalMapInstance *> normalInstances;
+	Context *ctx;
+	std::map<std::string, TextureMap *> maps;
+	std::vector<TexMapInstance *> texInstances;
+	std::vector<BumpMapInstance *> bumpInstances;
+	std::vector<NormalMapInstance *> normalInstances;
 };
 
-#endif	/* _TEXMAP_H */
+} }
+
+#endif	/* _LUXRAYS_SDL_TEXMAP_H */

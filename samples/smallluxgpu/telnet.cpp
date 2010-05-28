@@ -198,7 +198,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						boost::asio::write(socket, response);
 					} else if (command == "image.reset") {
 						if (state == STOP) {
-							telnetServer->config->scene->camera->film->Reset();
+							telnetServer->config->film->Reset();
 							boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
@@ -206,7 +206,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						}
 					} else if (command == "image.save") {
 						std::string fileName = telnetServer->config->cfg.GetString("image.filename", "image.png");
-						telnetServer->config->scene->camera->film->Save(fileName);
+						telnetServer->config->film->Save(fileName);
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "render.start") {
 						if (state == STOP)
@@ -301,10 +301,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							commandStream >> type;
 							if (type == 0) {
 								LinearToneMapParams params;
-								telnetServer->config->scene->camera->film->SetToneMapParams(params);
+								telnetServer->config->film->SetToneMapParams(params);
 							} else {
 								Reinhard02ToneMapParams params;
-								telnetServer->config->scene->camera->film->SetToneMapParams(params);
+								telnetServer->config->film->SetToneMapParams(params);
 							}
 
 							respStream << "OK\n";
@@ -330,7 +330,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 								telnetServer->config->scene->camera->orig = o;
 								telnetServer->config->scene->camera->target = t;
-								telnetServer->config->scene->camera->Update();
+								telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
+										telnetServer->config->film->GetHeight());
 								boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));

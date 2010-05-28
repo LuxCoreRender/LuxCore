@@ -34,15 +34,15 @@
 #include "renderconfig.h"
 #include "displayfunc.h"
 
-PathIntegrator::PathIntegrator(Scene *s, Sampler *samp) :
-	sampler(samp), scene(s) {
-	sampleBuffer = scene->camera->film->GetFreeSampleBuffer();
+PathIntegrator::PathIntegrator(SLGScene *s, Film *f, Sampler *samp) :
+	scene(s), film(f), sampler(samp) {
+	sampleBuffer = film->GetFreeSampleBuffer();
 	statsRenderingStart = WallClockTime();
 	statsTotalSampleCount = 0;
 }
 
 PathIntegrator::~PathIntegrator() {
-	scene->camera->film->FreeSampleBuffer(sampleBuffer);
+	film->FreeSampleBuffer(sampleBuffer);
 
 	for (size_t i = 0; i < paths.size(); ++i)
 		delete paths[i];
@@ -50,7 +50,7 @@ PathIntegrator::~PathIntegrator() {
 
 void PathIntegrator::ReInit() {
 	for (size_t i = 0; i < paths.size(); ++i)
-		paths[i]->Init(scene, sampler);
+		paths[i]->Init(scene, film, sampler);
 	firstPath = 0;
 	sampleBuffer->Reset();
 
@@ -69,8 +69,8 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 		// Need at least 2 paths
 		paths.push_back(new Path(scene));
 		paths.push_back(new Path(scene));
-		paths[0]->Init(scene, sampler);
-		paths[1]->Init(scene, sampler);
+		paths[0]->Init(scene, film, sampler);
+		paths[1]->Init(scene, film, sampler);
 		firstPath = 0;
 	}
 
@@ -106,7 +106,7 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 			// Add a new path
 			Path *p = new Path(scene);
 			paths.push_back(p);
-			p->Init(scene, sampler);
+			p->Init(scene, film, sampler);
 			if (!p->FillRayBuffer(scene, rayBuffer)) {
 				firstPath = 0;
 				// -2 because the addition of the last path failed
@@ -119,15 +119,15 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 
 void PathIntegrator::AdvancePaths(const RayBuffer *rayBuffer) {
 	for (int i = firstPath; i != lastPath; i = (i + 1) % paths.size()) {
-		paths[i]->AdvancePath(scene, sampler, rayBuffer, sampleBuffer);
+		paths[i]->AdvancePath(scene, film, sampler, rayBuffer, sampleBuffer);
 
 		// Check if the sample buffer is full
 		if (sampleBuffer->IsFull()) {
 			statsTotalSampleCount += sampleBuffer->GetSampleCount();
 
 			// Splat all samples on the film
-			scene->camera->film->SplatSampleBuffer(sampler, sampleBuffer);
-			sampleBuffer = scene->camera->film->GetFreeSampleBuffer();
+			film->SplatSampleBuffer(sampler, sampleBuffer);
+			sampleBuffer = film->GetFreeSampleBuffer();
 		}
 	}
 

@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include "renderconfig.h"
+#include "film.h"
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
@@ -113,10 +114,10 @@ void RenderingConfig::Init() {
 
 	// Create the Scene
 	const int accelType = cfg.GetInt("accelerator.type", -1);
-	scene = new Scene(ctx, sceneFileName, film, accelType);
+	scene = new SLGScene(ctx, sceneFileName, film, accelType);
 
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
-	scene->camera->Update();
+	scene->camera->Update(film->GetWidth(), film->GetHeight());
 	scene->maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	int strat = cfg.GetInt("path.lightstrategy", 0);
 	if (strat == 0)
@@ -177,11 +178,11 @@ void RenderingConfig::Init() {
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (intersectionAllDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
 			NativeRenderThread *t = new NativeRenderThread(i, seedBase, i / (float)renderThreadCount,
-					samplePerPixel, (NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, lowLatency);
+					samplePerPixel, (NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, film, lowLatency);
 			renderThreads.push_back(t);
 		} else {
 			DeviceRenderThread *t = new DeviceRenderThread(i, seedBase, i / (float)renderThreadCount,
-					samplePerPixel, intersectionAllDevices[i], scene, lowLatency);
+					samplePerPixel, intersectionAllDevices[i], scene, film, lowLatency);
 			renderThreads.push_back(t);
 		}
 	}
@@ -203,7 +204,7 @@ void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, un
 		film->Init(w, h);
 	else
 		film->Reset();
-	scene->camera->Update();
+	scene->camera->Update(film->GetWidth(), film->GetHeight());
 
 	// Restart all devices
 	if (wasRunning)
@@ -276,7 +277,7 @@ void RenderingConfig::SetMotionBlur(const bool v) {
 		camera->mbTarget = camera->target;
 		camera->mbUp = camera->up;
 	}
-	camera->Update();
+	camera->Update(film->GetWidth(), film->GetHeight());
 
 	// Restart all devices
 	if (wasRunning)

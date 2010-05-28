@@ -23,8 +23,7 @@
 #define	_PATH_H
 
 #include "smalllux.h"
-#include "light.h"
-#include "scene.h"
+#include "slgscene.h"
 #include "volume.h"
 
 class RenderingConfig;
@@ -36,7 +35,7 @@ public:
 		TRANSPARENT_SHADOW_RAYS_STEP, TRANSPARENT_ONLY_SHADOW_RAYS_STEP
 	};
 
-	Path(Scene *scene) {
+	Path(SLGScene *scene) {
 		unsigned int shadowRayCount = GetMaxShadowRaysCount(scene);
 
 		lightPdf = new float[shadowRayCount];
@@ -58,19 +57,20 @@ public:
 		delete volumeComp;
 	}
 
-	void Init(Scene *scene, Sampler *sampler) {
+	void Init(SLGScene *scene, Film *film, Sampler *sampler) {
 		throughput = Spectrum(1.f, 1.f, 1.f);
 		radiance = Spectrum(0.f, 0.f, 0.f);
 		sampler->GetNextSample(&sample);
 
-		scene->camera->GenerateRay(&sample, &pathRay,
-			sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample));
+		scene->camera->GenerateRay(
+			sample.screenX, sample.screenY, film->GetWidth(), film->GetHeight(), &pathRay,
+			sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample));
 		state = EYE_VERTEX;
 		depth = 0;
 		specularBounce = true;
 	}
 
-	bool FillRayBuffer(Scene *scene, RayBuffer *rayBuffer) {
+	bool FillRayBuffer(SLGScene *scene, RayBuffer *rayBuffer) {
 		const unsigned int leftSpace = rayBuffer->LeftSpace();
 		// Check if the there is enough free space in the RayBuffer
 		if (((state == EYE_VERTEX) && (1 > leftSpace)) ||
@@ -98,7 +98,7 @@ public:
 		return true;
 	}
 
-	void AdvancePath(Scene *scene, Sampler *sampler, const RayBuffer *rayBuffer,
+	void AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayBuffer *rayBuffer,
 			SampleBuffer *sampleBuffer) {
 		//----------------------------------------------------------------------
 		// Select the path ray hit
@@ -242,7 +242,7 @@ public:
 			// Hit nothing/only shadow rays/maxdepth, terminate the path
 			sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 			// Restart the path
-			Init(scene, sampler);
+			Init(scene, film, sampler);
 			return;
 		}
 
@@ -269,7 +269,7 @@ public:
 			// Terminate the path
 			sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 			// Restart the path
-			Init(scene, sampler);
+			Init(scene, film, sampler);
 			return;
 		}
 
@@ -469,7 +469,7 @@ public:
 				// Terminate the path
 				sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 				// Restart the path
-				Init(scene, sampler);
+				Init(scene, film, sampler);
 			}
 
 			return;
@@ -491,7 +491,7 @@ public:
 							// Terminate the path
 							sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 							// Restart the path
-							Init(scene, sampler);
+							Init(scene, film, sampler);
 						}
 
 						return;
@@ -510,7 +510,7 @@ public:
 							// Terminate the path
 							sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 							// Restart the path
-							Init(scene, sampler);
+							Init(scene, film, sampler);
 						}
 
 						return;
@@ -528,7 +528,7 @@ public:
 	}
 
 private:
-	static unsigned int GetMaxShadowRaysCount(const Scene *scene) {
+	static unsigned int GetMaxShadowRaysCount(const SLGScene *scene) {
 		switch (scene->lightStrategy) {
 			case ALL_UNIFORM:
 				return scene->lights.size() * scene->shadowRayCount;
@@ -540,7 +540,7 @@ private:
 		}
 	}
 
-	void CalcNextStep(Scene *scene, Sampler *sampler, const RayBuffer *rayBuffer,
+	void CalcNextStep(SLGScene *scene, Sampler *sampler, const RayBuffer *rayBuffer,
 		SampleBuffer *sampleBuffer);
 
 	Sample sample;
@@ -565,7 +565,7 @@ private:
 
 class PathIntegrator {
 public:
-	PathIntegrator(Scene *s, Sampler *samp);
+	PathIntegrator(SLGScene *s, Film *f, Sampler *samp);
 	~PathIntegrator();
 
 	void ReInit();
@@ -580,8 +580,10 @@ public:
 	double statsTotalSampleCount;
 
 private:
+	SLGScene *scene;
+	Film *film;
 	Sampler *sampler;
-	Scene *scene;
+
 	SampleBuffer *sampleBuffer;
 	int firstPath, lastPath;
 	vector<Path *> paths;

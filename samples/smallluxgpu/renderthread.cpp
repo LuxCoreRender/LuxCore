@@ -26,9 +26,10 @@
 #include "path.h"
 
 
-RenderThread::RenderThread(unsigned int index, Scene *scn) {
+RenderThread::RenderThread(unsigned int index, SLGScene *scn, Film *f) {
 	threadIndex = index;
 	scene = scn;
+	film = f;
 	started = false;
 }
 
@@ -42,7 +43,7 @@ RenderThread::~RenderThread() {
 NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long seedBase,
 		const float samplStart, const unsigned int samplePerPixel,
 		NativeThreadIntersectionDevice *device,
-		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
+		SLGScene *scn, Film *f, const bool lowLatency) : RenderThread(index, scn, f) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
 
@@ -51,14 +52,14 @@ NativeRenderThread::NativeRenderThread(unsigned int index,  const unsigned long 
 	// Ray buffer (small buffers work well with CPU)
 	const size_t rayBufferSize = 1024;
 	const unsigned int startLine = Clamp<unsigned int>(
-		scene->camera->film->GetHeight() * samplingStart,
-			0, scene->camera->film->GetHeight() - 1);
+		film->GetHeight() * samplingStart,
+			0, film->GetHeight() - 1);
 
 	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
-			scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
+			film->GetWidth(), film->GetHeight(),
 			samplePerPixel, startLine);
 
-	pathIntegrator = new PathIntegrator(scene, sampler);
+	pathIntegrator = new PathIntegrator(scene, film, sampler);
 	rayBuffer = new RayBuffer(rayBufferSize);
 
 	renderThread = NULL;
@@ -77,9 +78,9 @@ void NativeRenderThread::Start() {
 	RenderThread::Start();
 
 	const unsigned int startLine = Clamp<unsigned int>(
-		scene->camera->film->GetHeight() * samplingStart,
-			0, scene->camera->film->GetHeight() - 1);
-	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
+		film->GetHeight() * samplingStart,
+			0, film->GetHeight() - 1);
+	sampler->Init(film->GetWidth(), film->GetHeight(), startLine);
 	rayBuffer->Reset();
 	pathIntegrator->ReInit();
 
@@ -139,7 +140,7 @@ void NativeRenderThread::RenderThreadImpl(NativeRenderThread *renderThread) {
 
 DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned long seedBase,
 		const float samplStart,  const unsigned int samplePerPixel, IntersectionDevice *device,
-		Scene *scn, const bool lowLatency) : RenderThread(index, scn) {
+		SLGScene *scn, Film *f, const bool lowLatency) : RenderThread(index, scn, f) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
 	reportedPermissionError = false;
@@ -150,15 +151,15 @@ DeviceRenderThread::DeviceRenderThread(const unsigned int index, const unsigned 
 	// TODO: cross check RAY_BUFFER_SIZE with the Intersection device
 	const size_t rayBufferSize = lowLatency ? (RAY_BUFFER_SIZE / 8) : RAY_BUFFER_SIZE;
 	const unsigned int startLine = Clamp<unsigned int>(
-		scene->camera->film->GetHeight() * samplingStart,
-			0, scene->camera->film->GetHeight() - 1);
+		film->GetHeight() * samplingStart,
+			0, film->GetHeight() - 1);
 
 	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
-			scene->camera->film->GetWidth(), scene->camera->film->GetHeight(),
+			film->GetWidth(), film->GetHeight(),
 			samplePerPixel, startLine);
 
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
-		pathIntegrators[i] = new PathIntegrator(scene, sampler);
+		pathIntegrators[i] = new PathIntegrator(scene, film, sampler);
 		rayBuffers[i] = new RayBuffer(rayBufferSize);
 		rayBuffers[i]->PushUserData(i);
 	}
@@ -181,9 +182,9 @@ void DeviceRenderThread::Start() {
 	RenderThread::Start();
 
 		const unsigned int startLine = Clamp<unsigned int>(
-		scene->camera->film->GetHeight() * samplingStart,
-			0, scene->camera->film->GetHeight() - 1);
-	sampler->Init(scene->camera->film->GetWidth(), scene->camera->film->GetHeight(), startLine);
+		film->GetHeight() * samplingStart,
+			0, film->GetHeight() - 1);
+	sampler->Init(film->GetWidth(), film->GetHeight(), startLine);
 	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		rayBuffers[i]->Reset();
 		rayBuffers[i]->ResetUserData();
