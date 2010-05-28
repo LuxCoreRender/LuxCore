@@ -19,23 +19,21 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LIGHT_H
-#define	_LIGHT_H
-
-#include "smalllux.h"
-#include "material.h"
-#include "texmap.h"
-#include "mc.h"
-#include "spd.h"
+#ifndef _LUXRAYS_SDL_LIGHT_H
+#define	_LUXRAYS_SDL_LIGHT_H
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
+#include "luxrays/utils/sdl/texmap.h"
+#include "luxrays/utils/sdl/material.h"
+
+namespace luxrays { namespace sdl {
 
 class LightSource {
 public:
 	virtual ~LightSource() { }
 
-	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
 };
 
@@ -61,7 +59,7 @@ public:
 
 	virtual Spectrum Le(const Vector &dir) const;
 
-	virtual Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 protected:
@@ -74,7 +72,7 @@ class InfiniteLightBF : public InfiniteLight {
 public:
 	InfiniteLightBF(TexMapInstance *tx) : InfiniteLight(tx) { }
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 		*pdf = 0;
 		return Spectrum();
@@ -83,15 +81,15 @@ public:
 
 class InfiniteLightPortal : public InfiniteLight {
 public:
-	InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const string &portalFileName);
+	InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const std::string &portalFileName);
 	~InfiniteLightPortal();
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
 	ExtTriangleMesh *portals;
-	vector<float> portalAreas;
+	std::vector<float> portalAreas;
 };
 
 class InfiniteLightIS : public InfiniteLight {
@@ -101,7 +99,7 @@ public:
 
 	void Preprocess();
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
@@ -136,7 +134,7 @@ public:
 
 	Spectrum Le(const Vector &dir) const;
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 	void SetGain(const Spectrum &g);
@@ -160,13 +158,13 @@ class TriangleLight : public LightSource, public LightMaterial {
 public:
 	TriangleLight() { }
 	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs);
+		const unsigned int triangleIndex, const std::vector<ExtTriangleMesh *> &objs);
 
 	const Material *GetMaterial() const { return lightMaterial; }
 
-	Spectrum Le(const vector<ExtTriangleMesh *> &objs, const Vector &wo) const;
+	Spectrum Le(const std::vector<ExtTriangleMesh *> &objs, const Vector &wo) const;
 
-	Spectrum Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
@@ -176,4 +174,6 @@ private:
 
 };
 
-#endif	/* _LIGHT_H */
+} }
+
+#endif	/* _LUXRAYS_SDL_LIGHT_H */

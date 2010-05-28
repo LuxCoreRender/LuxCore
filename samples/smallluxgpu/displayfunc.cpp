@@ -64,12 +64,12 @@ static void PrintHelpAndSettings() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.5f);
-	glRecti(10, 40, config->scene->camera->film->GetWidth() - 10, config->scene->camera->film->GetHeight() - 40);
+	glRecti(10, 40, config->film->GetWidth() - 10, config->film->GetHeight() - 40);
 	glDisable(GL_BLEND);
 
 	glColor3f(1.f, 1.f, 1.f);
-	int fontOffset = config->scene->camera->film->GetHeight() - 40 - 20;
-	glRasterPos2i((config->scene->camera->film->GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
+	int fontOffset = config->film->GetHeight() - 40 - 20;
+	glRasterPos2i((config->film->GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
 	PrintString(GLUT_BITMAP_9_BY_15, "Help & Settings & Devices");
 
 	// Help
@@ -103,7 +103,7 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d]",
-			int(config->scene->camera->film->GetTotalTime()),
+			int(config->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
 			config->scene->maxPathDepth,
 			config->scene->rrDepth);
@@ -120,7 +120,7 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Camera motion blur %s][Tonemapping %s]",
 			config->scene->camera->motionBlur ? "YES" : "NO",
-			(config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
+			(config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
@@ -192,9 +192,9 @@ static void PrintCaptions() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.8f);
-	glRecti(0, config->scene->camera->film->GetHeight() - 15,
-			config->scene->camera->film->GetWidth() - 1, config->scene->camera->film->GetHeight() - 1);
-	glRecti(0, 0, config->scene->camera->film->GetWidth() - 1, 18);
+	glRecti(0, config->film->GetHeight() - 15,
+			config->film->GetWidth() - 1, config->film->GetHeight() - 1);
+	glRecti(0, 0, config->film->GetWidth() - 1, 18);
 	glDisable(GL_BLEND);
 
 	// Caption line 0
@@ -202,24 +202,24 @@ static void PrintCaptions() {
 	glRasterPos2i(4, 5);
 	PrintString(GLUT_BITMAP_8_BY_13, config->captionBuffer);
 	// Title
-	glRasterPos2i(4, config->scene->camera->film->GetHeight() - 10);
+	glRasterPos2i(4, config->film->GetHeight() - 10);
 	PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
 }
 
 void displayFunc(void) {
-	config->scene->camera->film->UpdateScreenBuffer();
-	const float *pixels = config->scene->camera->film->GetScreenBuffer();
+	config->film->UpdateScreenBuffer();
+	const float *pixels = config->film->GetScreenBuffer();
 
 	glRasterPos2i(0, 0);
-	glDrawPixels(config->scene->camera->film->GetWidth(), config->scene->camera->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
+	glDrawPixels(config->film->GetWidth(), config->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
 
 	PrintCaptions();
 
 	if (printHelp) {
 		glPushMatrix();
 		glLoadIdentity();
-		glOrtho(-0.5f, config->scene->camera->film->GetWidth() - 0.5f,
-				-0.5, config->scene->camera->film->GetHeight() -0.5f, -1.0, 1.0);
+		glOrtho(-0.5f, config->film->GetWidth() - 0.5f,
+				-0.5, config->film->GetHeight() -0.5f, -1.0, 1.0);
 
 		PrintHelpAndSettings();
 
@@ -231,8 +231,8 @@ void displayFunc(void) {
 
 void reshapeFunc(int newWidth, int newHeight) {
 	// Check if width or height are really changed
-	if ((newWidth != (int)config->scene->camera->film->GetWidth()) ||
-			(newHeight != (int)config->scene->camera->film->GetHeight())) {
+	if ((newWidth != (int)config->film->GetWidth()) ||
+			(newHeight != (int)config->film->GetHeight())) {
 		glViewport(0, 0, newWidth, newHeight);
 		glLoadIdentity();
 		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
@@ -249,24 +249,24 @@ void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
 			string fileName = config->cfg.GetString("image.filename", "image.png");
-			config->scene->camera->film->UpdateScreenBuffer();
-			config->scene->camera->film->Save(fileName);
+			config->film->UpdateScreenBuffer();
+			config->film->Save(fileName);
 			break;
 		}
 		case 27: { // Escape key
 			// Check if I have to save the film
 			const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
 			if (filmNames.size() == 1)
-				config->scene->camera->film->SaveFilm(filmNames[0]);
+				config->film->SaveFilm(filmNames[0]);
 			else if (filmNames.size() > 1)
-				config->scene->camera->film->SaveFilm("merged.flm");
+				config->film->SaveFilm("merged.flm");
 			delete config;
 			cerr << "Done." << endl;
 			exit(EXIT_SUCCESS);
 			break;
 		}
 		case ' ': // Restart rendering
-			config->ReInit(true, config->scene->camera->film->GetWidth(), config->scene->camera->film->GetHeight());
+			config->ReInit(true, config->film->GetWidth(), config->film->GetHeight());
 			break;
 		case 'a': {
 			config->scene->camera->TranslateLeft(MOVE_STEP);
@@ -341,12 +341,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 't':
 			// Toggle tonemap type
-			if (config->scene->camera->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+			if (config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
 				Reinhard02ToneMapParams params;
-				config->scene->camera->film->SetToneMapParams(params);
+				config->film->SetToneMapParams(params);
 			} else {
 				LinearToneMapParams params;
-				config->scene->camera->film->SetToneMapParams(params);
+				config->film->SetToneMapParams(params);
 			}
 			break;
 		default:
@@ -456,7 +456,7 @@ void timerFunc(int value) {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		raysSec += intersectionDevices[i]->GetPerformance();
 
-	const double sampleSec = config->scene->camera->film->GetAvgSampleSec();
+	const double sampleSec = config->film->GetAvgSampleSec();
 
 	sprintf(config->captionBuffer, "[Samples %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
 			pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
@@ -493,10 +493,10 @@ void RunGlut() {
 	glutTimerFunc(config->screenRefreshInterval, timerFunc, 0);
 
 	glMatrixMode(GL_PROJECTION);
-	glViewport(0, 0, config->scene->camera->film->GetWidth(), config->scene->camera->film->GetHeight());
+	glViewport(0, 0, config->film->GetWidth(), config->film->GetHeight());
 	glLoadIdentity();
-	glOrtho(0.f, config->scene->camera->film->GetWidth() - 1.f,
-			0.f, config->scene->camera->film->GetHeight() - 1.f, -1.f, 1.f);
+	glOrtho(0.f, config->film->GetWidth() - 1.f,
+			0.f, config->film->GetHeight() - 1.f, -1.f, 1.f);
 
 	glutMainLoop();
 }

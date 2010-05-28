@@ -19,12 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _MC_H
-#define	_MC_H
+#ifndef _LUXRAYS_SDL_MC_H
+#define	_LUXRAYS_SDL_MC_H
 
-#include <string.h>
+#include "luxrays/luxrays.h"
 
-#include "smalllux.h"
+namespace luxrays { namespace sdl {
 
 template<class T> inline T Lerp(float t, T v1, T v2) {
 	return (1.f - t) * v1 + t * v2;
@@ -86,7 +86,7 @@ inline void ConcentricSampleDisk(const float u1, const float u2, float *dx, floa
 
 inline Vector UniformSampleSphere(const float u1, const float u2) {
 	float z = 1.f - 2.f * u1;
-	float r = sqrtf(max(0.f, 1.f - z * z));
+	float r = sqrtf(Max(0.f, 1.f - z * z));
 	float phi = 2.f * M_PI * u2;
 	float x = r * cosf(phi);
 	float y = r * sinf(phi);
@@ -97,7 +97,7 @@ inline Vector UniformSampleSphere(const float u1, const float u2) {
 inline Vector CosineSampleHemisphere(const float u1, const float u2) {
 	Vector ret;
 	ConcentricSampleDisk(u1, u2, &ret.x, &ret.y);
-	ret.z = sqrtf(max(0.f, 1.f - ret.x * ret.x - ret.y * ret.y));
+	ret.z = sqrtf(Max(0.f, 1.f - ret.x * ret.x - ret.y * ret.y));
 
 	return ret;
 }
@@ -122,14 +122,14 @@ inline float UniformConePdf(float costhetamax) {
 	return 1.f / (2.f * M_PI * (1.f - costhetamax));
 }
 
-inline void ComputeStep1dCDF(const float *f, u_int nSteps, float *c, float *cdf) {
+inline void ComputeStep1dCDF(const float *f, unsigned int nSteps, float *c, float *cdf) {
 	// Compute integral of step function at $x_i$
 	cdf[0] = 0.f;
-	for (u_int i = 1; i < nSteps + 1; ++i)
+	for (unsigned int i = 1; i < nSteps + 1; ++i)
 		cdf[i] = cdf[i - 1] + f[i - 1] / nSteps;
 	// Transform step function integral into cdf
 	*c = cdf[nSteps];
-	for (u_int i = 1; i < nSteps + 1; ++i)
+	for (unsigned int i = 1; i < nSteps + 1; ++i)
 		cdf[i] /= *c;
 }
 
@@ -145,7 +145,7 @@ public:
 	 * @param f The values of the function.
 	 * @param n The number of samples.
 	 */
-	Distribution1D(const float *f, u_int n) {
+	Distribution1D(const float *f, unsigned int n) {
 		func = new float[n];
 		cdf = new float[n + 1];
 		count = n;
@@ -172,10 +172,10 @@ public:
 	 *
 	 * @return The x value of the sample (i.e. the x in f(x)).
 	 */
-	float SampleContinuous(float u, float *pdf, u_int *off = NULL) const {
+	float SampleContinuous(float u, float *pdf, unsigned int *off = NULL) const {
 		// Find surrounding CDF segments and _offset_
 		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		u_int offset = max<int>(0, ptr - cdf - 1);
+		unsigned int offset = Max<int>(0, ptr - cdf - 1);
 
 		// Compute offset along CDF segment
 		const float du = (u - cdf[offset]) /
@@ -202,10 +202,10 @@ public:
 	 *
 	 * @return The index of the sampled interval.
 	 */
-	u_int SampleDiscrete(float u, float *pdf, float *du = NULL) const {
+	unsigned int SampleDiscrete(float u, float *pdf, float *du = NULL) const {
 		// Find surrounding CDF segments and _offset_
 		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		u_int offset = max<int>(0, ptr - cdf - 1);
+		unsigned int offset = Max<int>(0, ptr - cdf - 1);
 
 		// Compute offset along CDF segment
 		if (du)
@@ -225,8 +225,8 @@ public:
 		return funcInt;
 	}
 
-	u_int Offset(float u) const {
-		return min(count - 1, Floor2UInt(u * count));
+	unsigned int Offset(float u) const {
+		return Min(count - 1, Floor2UInt(u * count));
 	}
 
 private:
@@ -243,40 +243,40 @@ private:
 	/*
 	 * The number of function values. The number of cdf values is count+1.
 	 */
-	u_int count;
+	unsigned int count;
 };
 
 class Distribution2D {
 public:
-	Distribution2D(const float *data, u_int nu, u_int nv) {
+	Distribution2D(const float *data, unsigned int nu, unsigned int nv) {
 		pConditionalV.reserve(nv);
 		// Compute conditional sampling distribution for $\tilde{v}$
-		for (u_int v = 0; v < nv; ++v)
+		for (unsigned int v = 0; v < nv; ++v)
 			pConditionalV.push_back(new Distribution1D(data + v * nu, nu));
 		// Compute marginal sampling distribution $p[\tilde{v}]$
-		vector<float> marginalFunc;
+		std::vector<float> marginalFunc;
 		marginalFunc.reserve(nv);
-		for (u_int v = 0; v < nv; ++v)
+		for (unsigned int v = 0; v < nv; ++v)
 			marginalFunc.push_back(pConditionalV[v]->Average());
 		pMarginal = new Distribution1D(&marginalFunc[0], nv);
 	}
 
 	~Distribution2D() {
 		delete pMarginal;
-		for (u_int i = 0; i < pConditionalV.size(); ++i)
+		for (unsigned int i = 0; i < pConditionalV.size(); ++i)
 			delete pConditionalV[i];
 	}
 
 	void SampleContinuous(float u0, float u1, float uv[2],
 			float *pdf) const {
 		float pdfs[2];
-		u_int v;
+		unsigned int v;
 		uv[1] = pMarginal->SampleContinuous(u1, &pdfs[1], &v);
 		uv[0] = pConditionalV[v]->SampleContinuous(u0, &pdfs[0]);
 		*pdf = pdfs[0] * pdfs[1];
 	}
 
-	void SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const {
+	void SampleDiscrete(float u0, float u1, unsigned int uv[2], float *pdf) const {
 		float pdfs[2];
 		uv[1] = pMarginal->SampleDiscrete(u1, &pdf[1]);
 		uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdf[0]);
@@ -294,9 +294,11 @@ public:
 
 private:
 	// Distribution2D Private Data
-	vector<Distribution1D *> pConditionalV;
+	std::vector<Distribution1D *> pConditionalV;
 	Distribution1D *pMarginal;
 };
 
-#endif	/* _MC_H */
+} }
+
+#endif	/* _LUXRAYS_SDL_MC_H */
 

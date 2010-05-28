@@ -23,7 +23,7 @@
 #define	_RENDERTHREAD_H
 
 #include "smalllux.h"
-#include "scene.h"
+#include "slgscene.h"
 #include "path.h"
 #include "luxrays/core/intersectiondevice.h"
 
@@ -35,7 +35,7 @@ using namespace std;
 
 class RenderThread {
 public:
-	RenderThread(unsigned int index, Scene *scn);
+	RenderThread(unsigned int index, SLGScene *scn, Film *f);
 	virtual ~RenderThread();
 
 	virtual void Start() { started = true; }
@@ -47,7 +47,8 @@ public:
 
 protected:
 	unsigned int threadIndex;
-	Scene *scene;
+	SLGScene *scene;
+	Film *film;
 
 	bool started;
 };
@@ -55,8 +56,8 @@ protected:
 class NativeRenderThread : public RenderThread {
 public:
 	NativeRenderThread(unsigned int index, unsigned long seedBase, const float samplingStart,
-			const unsigned int samplePerPixel, NativeThreadIntersectionDevice *device, Scene *scn,
-			const bool lowLatency);
+			const unsigned int samplePerPixel, NativeThreadIntersectionDevice *device, SLGScene *scn,
+			Film *f, const bool lowLatency);
 	~NativeRenderThread();
 
 	void Start();
@@ -84,7 +85,7 @@ class DeviceRenderThread : public RenderThread {
 public:
 	DeviceRenderThread(unsigned int index,  unsigned long seedBase,
 			const float samplingStart, const unsigned int samplePerPixel,
-			IntersectionDevice *device, Scene *scn,
+			IntersectionDevice *device, SLGScene *scn, Film *f,
 			const bool lowLatency);
 	~DeviceRenderThread();
 

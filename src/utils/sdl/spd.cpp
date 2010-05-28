@@ -19,8 +19,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "spd.h"
-#include "data/xyzbasis.h"
+#include "luxrays/utils/sdl/spd.h"
+#include "luxrays/utils/sdl/data/xyzbasis.h"
+
+using namespace luxrays;
+using namespace luxrays::sdl;
 
 void SPD::AllocateSamples(u_int n) {
 	 // Allocate memory for samples
@@ -59,7 +62,7 @@ void SPD::Scale(float s) {
 }
 
 void SPD::Whitepoint(float temp) {
-	vector<float> bbvals;
+	std::vector<float> bbvals;
 
 	// Fill bbvals with BB curve
 	float w = lambdaMin * 1e-9f;
@@ -138,7 +141,7 @@ IrregularSPD::IrregularSPD(const float* const wavelengths, const float* const sa
 
 	u_int sn = Ceil2UInt((lambdaMax - lambdaMin) / resolution) + 1;
 
-	vector<float> sam(sn);
+	std::vector<float> sam(sn);
 
 	if (resamplignMethod == Linear) {
 		u_int k = 0;
@@ -164,7 +167,7 @@ IrregularSPD::IrregularSPD(const float* const wavelengths, const float* const sa
 			}
 		}
 	} else {
-		vector<float> sd(n);
+		std::vector<float> sd(n);
 
 		calc_spline_data(wavelengths, samples, n, &sd[0]);
 
@@ -184,7 +187,7 @@ IrregularSPD::IrregularSPD(const float* const wavelengths, const float* const sa
 			float a = (wavelengths[k+1] - lambda) / h;
 			float b = (lambda - wavelengths[k]) / h;
 
-			sam[i] = max(a*samples[k] + b*samples[k+1]+
+			sam[i] = Max(a*samples[k] + b*samples[k+1]+
 				((a*a*a-a)*sd[k] + (b*b*b-b)*sd[k+1])*(h*h)/6.f, 0.f);
 		}
 	}
@@ -212,7 +215,7 @@ void IrregularSPD::init(float lMin, float lMax, const float* const s, u_int n) {
 void IrregularSPD::calc_spline_data(const float* const wavelengths,
 	const float* const amplitudes, u_int n, float *spline_data)
 {
-	vector<float> u(n - 1);
+	std::vector<float> u(n - 1);
 
 	// natural spline
 	spline_data[0] = u[0] = 0.f;

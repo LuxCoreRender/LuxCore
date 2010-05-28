@@ -24,7 +24,7 @@
 
 #include <boost/thread/mutex.hpp>
 
-#include "scene.h"
+#include "slgscene.h"
 #include "renderthread.h"
 #include "displayfunc.h"
 #include "luxrays/core/context.h"
@@ -62,7 +62,7 @@ public:
 	char captionBuffer[512];
 	unsigned int screenRefreshInterval;
 
-	Scene *scene;
+	SLGScene *scene;
 	Film *film;
 
 private:

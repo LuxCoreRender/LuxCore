@@ -19,11 +19,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+namespace luxrays { namespace sdl {
+
 // 32 bin RGB spectra for smits RGB->RGBColor conversion using D65 whitepoint (for illuminants)
 // generated with matlab by karlvb - added by radiance
-
-#ifndef LUXRAYS_RGBD65_32_H
-#define LUXRAYS_RGBD65_32_H
 
 static const unsigned int illumrgb2spect_bins  = 32;
 static const float illumrgb2spect_start = 380.f;
@@ -149,4 +148,4 @@ static float illumrgb2spect_blue[] =	  { 1.0570490759328752e+00,   1.05384669128
 											1.6624255403475907e-01,   1.6997613960634927e-01,
 											1.5769743995852967e-01,   1.9069090525482305e-01 };
 
-#endif // LUXRAYS_RGBD65_32_H
+} }

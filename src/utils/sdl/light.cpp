@@ -19,8 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "light.h"
-#include "data/sun_spect.h"
+#include "luxrays/utils/sdl/light.h"
+#include "luxrays/utils/sdl/spd.h"
+#include "luxrays/utils/sdl/data/sun_spect.h"
+
+using namespace luxrays;
+using namespace luxrays::sdl;
 
 //------------------------------------------------------------------------------
 // SkyLight
@@ -222,7 +226,7 @@ Spectrum SunLight::Le(const Vector &dir) const {
 		return Spectrum();
 }
 
-Spectrum SunLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+Spectrum SunLight::Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 	const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	
 	float d1, d2;
@@ -263,7 +267,7 @@ Spectrum InfiniteLight::Le(const Vector &dir) const {
 	return gain * tex->GetTexMap()->GetColor(uv);
 }
 
-Spectrum InfiniteLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+Spectrum InfiniteLight::Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	if (N) {
 		Vector wi = CosineSampleHemisphere(u0, u1);
@@ -293,10 +297,10 @@ Spectrum InfiniteLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Po
 // InfiniteLight with portals
 //------------------------------------------------------------------------------
 
-InfiniteLightPortal::InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const string &portalFileName) :
+InfiniteLightPortal::InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const std::string &portalFileName) :
 	InfiniteLight(tx) {
 	// Read portals
-	cerr << "Portal PLY objects file name: " << portalFileName << endl;
+	LR_LOG(ctx, "Portal PLY objects file name: " << portalFileName);
 	portals = ExtTriangleMesh::LoadExtTriangleMesh(ctx, portalFileName);
 	const Triangle *tris = portals->GetTriangles();
 	for (unsigned int i = 0; i < portals->GetTotalTriangleCount(); ++i)
@@ -308,7 +312,7 @@ InfiniteLightPortal::~InfiniteLightPortal() {
 	delete portals;
 }
 
-Spectrum InfiniteLightPortal::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+Spectrum InfiniteLightPortal::Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	// Select one of the portals
 	const unsigned int portalCount = portals->GetTotalTriangleCount();
@@ -365,7 +369,7 @@ void InfiniteLightIS::Preprocess() {
 	const TextureMap *tm = tex->GetTexMap();
 	const unsigned int nu = tm->GetWidth() / 2;
 	const unsigned int nv = tm->GetHeight() / 2;
-	cerr << "Building importance sampling map for InfiniteLightIS: "<< nu << "x" << nv << endl;
+	//cerr << "Building importance sampling map for InfiniteLightIS: "<< nu << "x" << nv << endl;
 
 	float *img = new float[nu * nv];
 	UV uv;
@@ -389,7 +393,7 @@ void InfiniteLightIS::Preprocess() {
 	delete[] img;
 }
 
-Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+Spectrum InfiniteLightIS::Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	float uv[2];
 	uvDistrib->SampleContinuous(u0, u1, uv, pdf);
@@ -418,7 +422,7 @@ Spectrum InfiniteLightIS::Sample_L(const vector<ExtTriangleMesh *> &objs, const 
 //------------------------------------------------------------------------------
 
 TriangleLight::TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const vector<ExtTriangleMesh *> &objs) {
+		const unsigned int triangleIndex, const std::vector<ExtTriangleMesh *> &objs) {
 	lightMaterial = mat;
 	meshIndex = mshIndex;
 	triIndex = triangleIndex;
@@ -427,7 +431,7 @@ TriangleLight::TriangleLight(const AreaLightMaterial *mat, const unsigned int ms
 	area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
 }
 
-Spectrum TriangleLight::Le(const vector<ExtTriangleMesh *> &objs, const Vector &wo) const {
+Spectrum TriangleLight::Le(const std::vector<ExtTriangleMesh *> &objs, const Vector &wo) const {
 	const ExtTriangleMesh *mesh = objs[meshIndex];
 	const Triangle &tri = mesh->GetTriangles()[triIndex];
 	Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
@@ -442,7 +446,7 @@ Spectrum TriangleLight::Le(const vector<ExtTriangleMesh *> &objs, const Vector &
 		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
 }
 
-Spectrum TriangleLight::Sample_L(const vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+Spectrum TriangleLight::Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	const ExtTriangleMesh *mesh = objs[meshIndex];
 	const Triangle &tri = mesh->GetTriangles()[triIndex];

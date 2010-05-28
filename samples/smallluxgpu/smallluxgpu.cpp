@@ -118,13 +118,13 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		if (periodiceSaveTime > 0.) {
 			if (now - lastTimeSave > periodiceSaveTime) {
 				// Time to save the image and film
-				config->scene->camera->film->UpdateScreenBuffer();
-				config->scene->camera->film->Save(fileName);
+				config->film->UpdateScreenBuffer();
+				config->film->Save(fileName);
 
 				if (filmNames.size() == 1)
-					config->scene->camera->film->SaveFilm(filmNames[0]);
+					config->film->SaveFilm(filmNames[0]);
 				else if (filmNames.size() > 1)
-					config->scene->camera->film->SaveFilm("merged.flm");
+					config->film->SaveFilm("merged.flm");
 
 				lastTimeSave = WallClockTime();
 			}
@@ -134,7 +134,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		for (size_t i = 0; i < interscetionDevices.size(); ++i)
 			raysSec += interscetionDevices[i]->GetPerformance();
 
-		sampleSec = config->scene->camera->film->GetAvgSampleSec();
+		sampleSec = config->film->GetAvgSampleSec();
 		sprintf(buff, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
 				int(elapsedTime), int(stopTime), pass, stopSPP, int(sampleSec/ 1000.0),
 				int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
@@ -142,14 +142,14 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	}
 
 	// Save the rendered image
-	config->scene->camera->film->UpdateScreenBuffer();
-	config->scene->camera->film->Save(fileName);
+	config->film->UpdateScreenBuffer();
+	config->film->Save(fileName);
 
 	// Check if I have to save the film
 	if (filmNames.size() == 1)
-		config->scene->camera->film->SaveFilm(filmNames[0]);
+		config->film->SaveFilm(filmNames[0]);
 	else if (filmNames.size() > 1)
-		config->scene->camera->film->SaveFilm("merged.flm");
+		config->film->SaveFilm("merged.flm");
 
 	sprintf(buff, "LuxMark index: %.3f", sampleSec / 1000000.0);
 	cerr << buff << endl;

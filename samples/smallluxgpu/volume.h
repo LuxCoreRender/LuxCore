@@ -28,7 +28,7 @@
 #include "sampler.h"
 #include "luxrays/core/geometry/raybuffer.h"
 
-class Scene;
+class SLGScene;
 class VolumeIntegrator;
 
 class VolumeComputation {
@@ -82,7 +82,7 @@ public:
 	virtual float GetStepSize() const = 0;
 	virtual float GetRRProbability() const = 0;
 
-	virtual void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
+	virtual void GenerateLiRays(const SLGScene *scene, Sample *sample,	const Ray &ray,
 		VolumeComputation *comp) const = 0;
 };
 
@@ -106,7 +106,7 @@ public:
 	float GetRRProbability() const { return rrProb; }
 
 
-	void GenerateLiRays(const Scene *scene, Sample *sample,	const Ray &ray,
+	void GenerateLiRays(const SLGScene *scene, Sample *sample,	const Ray &ray,
 		VolumeComputation *comp) const;
 
 private:

@@ -25,12 +25,14 @@
 
 #include <FreeImage.h>
 
-#include "texmap.h"
+#include "luxrays/core/context.h"
+#include "luxrays/utils/sdl/texmap.h"
 
-using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
 
-TextureMap::TextureMap(const string &fileName) {
-	cerr << "Reading texture map: " << fileName << endl;
+TextureMap::TextureMap(Context *ctx, const std::string &fileName) {
+	LR_LOG(ctx, "Reading texture map: " << fileName);
 
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(fileName.c_str(), 0);
 	if(fif == FIF_UNKNOWN)
@@ -40,7 +42,7 @@ TextureMap::TextureMap(const string &fileName) {
 		FIBITMAP *dib = FreeImage_Load(fif, fileName.c_str(), 0);
 
 		if (!dib)
-			throw runtime_error("Unable to read texture map: " + fileName);
+			throw std::runtime_error("Unable to read texture map: " + fileName);
 
 		width = FreeImage_GetWidth(dib);
 		height = FreeImage_GetHeight(dib);
@@ -51,8 +53,8 @@ TextureMap::TextureMap(const string &fileName) {
 		BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 
 		if ((imageType == FIT_RGBAF) && (bpp == 128)) {
-			cerr << "HDR RGB (128bit) texture map size: " << width << "x" << height << " (" <<
-					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
+			LR_LOG(ctx, "HDR RGB (128bit) texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(Spectrum) / 1024 << "Kbytes)");
 			pixels = new Spectrum[width * height];
 			alpha = NULL;
 
@@ -69,8 +71,8 @@ TextureMap::TextureMap(const string &fileName) {
 				bits += pitch;
 			}
 		} else if ((imageType == FIT_RGBF) && (bpp == 96)) {
-			cerr << "HDR RGB (96bit) texture map size: " << width << "x" << height << " (" <<
-					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
+			LR_LOG(ctx, "HDR RGB (96bit) texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(Spectrum) / 1024 << "Kbytes)");
 			pixels = new Spectrum[width * height];
 			alpha = NULL;
 
@@ -87,8 +89,8 @@ TextureMap::TextureMap(const string &fileName) {
 				bits += pitch;
 			}
 		} else if ((imageType == FIT_BITMAP) && (bpp == 32)) {
-			cerr << "RGBA texture map size: " << width << "x" << height << " (" <<
-					width * height * (sizeof(Spectrum) + sizeof(float)) / 1024 << "Kbytes)" << endl;
+			LR_LOG(ctx, "RGBA texture map size: " << width << "x" << height << " (" <<
+					width * height * (sizeof(Spectrum) + sizeof(float)) / 1024 << "Kbytes)");
 			const unsigned int pixelCount = width * height;
 			pixels = new Spectrum[pixelCount];
 			alpha = new float[pixelCount];
@@ -108,8 +110,8 @@ TextureMap::TextureMap(const string &fileName) {
 				bits += pitch;
 			}
 		} else if (bpp == 24) {
-			cerr << "RGB texture map size: " << width << "x" << height << " (" <<
-					width * height * sizeof(Spectrum) / 1024 << "Kbytes)" << endl;
+			LR_LOG(ctx, "RGB texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(Spectrum) / 1024 << "Kbytes)");
 			pixels = new Spectrum[width * height];
 			alpha = NULL;
 
@@ -127,11 +129,11 @@ TextureMap::TextureMap(const string &fileName) {
 				bits += pitch;
 			}
 		} else
-			throw runtime_error("Unsupported bitmap depth in a texture map: " + fileName);
+			throw std::runtime_error("Unsupported bitmap depth in a texture map: " + fileName);
 
 		FreeImage_Unload(dib);
 	} else
-		throw runtime_error("Unknown image file format: " + fileName);
+		throw std::runtime_error("Unknown image file format: " + fileName);
 
 	DuDv.u = 1.f / width;
 	DuDv.v = 1.f / height;
@@ -152,7 +154,8 @@ TextureMap::~TextureMap() {
 	delete[] alpha;
 }
 
-TextureMapCache::TextureMapCache() {
+TextureMapCache::TextureMapCache(Context *context) {
+	ctx = context;
 }
 
 TextureMapCache::~TextureMapCache() {
@@ -167,24 +170,24 @@ TextureMapCache::~TextureMapCache() {
 		delete it->second;
 }
 
-TextureMap *TextureMapCache::GetTextureMap(const string &fileName) {
+TextureMap *TextureMapCache::GetTextureMap(const std::string &fileName) {
 	// Check if the texture map has been already loaded
 	std::map<std::string, TextureMap *>::const_iterator it = maps.find(fileName);
 
 	if (it == maps.end()) {
 		// I have yet to load the file
 
-		TextureMap *tm = new TextureMap(fileName);
+		TextureMap *tm = new TextureMap(ctx, fileName);
 		maps.insert(std::make_pair(fileName, tm));
 
 		return tm;
 	} else {
-		cerr << "Cached texture map: " << fileName << endl;
+		LR_LOG(ctx, "Cached texture map: " << fileName);
 		return it->second;
 	}
 }
 
-TexMapInstance *TextureMapCache::GetTexMapInstance(const string &fileName) {
+TexMapInstance *TextureMapCache::GetTexMapInstance(const std::string &fileName) {
 	TextureMap *tm = GetTextureMap(fileName);
 	TexMapInstance *texm = new TexMapInstance(tm);
 	texInstances.push_back(texm);
@@ -192,7 +195,7 @@ TexMapInstance *TextureMapCache::GetTexMapInstance(const string &fileName) {
 	return texm;
 }
 
-BumpMapInstance *TextureMapCache::GetBumpMapInstance(const string &fileName, const float scale) {
+BumpMapInstance *TextureMapCache::GetBumpMapInstance(const std::string &fileName, const float scale) {
 	TextureMap *tm = GetTextureMap(fileName);
 	BumpMapInstance *bm = new BumpMapInstance(tm, scale);
 	bumpInstances.push_back(bm);
@@ -200,7 +203,7 @@ BumpMapInstance *TextureMapCache::GetBumpMapInstance(const string &fileName, con
 	return bm;
 }
 
-NormalMapInstance *TextureMapCache::GetNormalMapInstance(const string &fileName) {
+NormalMapInstance *TextureMapCache::GetNormalMapInstance(const std::string &fileName) {
 	TextureMap *tm = GetTextureMap(fileName);
 	NormalMapInstance *nm = new NormalMapInstance(tm);
 	normalInstances.push_back(nm);

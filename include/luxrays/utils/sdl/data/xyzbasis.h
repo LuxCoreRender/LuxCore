@@ -19,11 +19,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+namespace luxrays { namespace sdl {
+
 // XYZ Basis matching functions - 360nm to 830nm @ 1nm
 // Source: PBRT v1.03
-
-#ifndef LUXRAYS_XYZBASIS_H
-#define LUXRAYS_XYZBASIS_H
 
 static const unsigned int CIEstart = 360;
 static const unsigned int CIEend = 830;
@@ -393,4 +392,4 @@ static const float CIE_Z[nCIE] = {
 	  0.0f,  0.0f,  0.0f
 };
 
-#endif // LUXRAYS_XYZBASIS_H
+} }
