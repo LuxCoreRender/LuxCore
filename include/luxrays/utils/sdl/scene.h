@@ -39,7 +39,7 @@ namespace luxrays { namespace sdl {
 
 class Scene {
 public:
-	Scene(Context *ctx, const std::string &fileName, const int accelType);
+	Scene(Context *ctx, const std::string &fileName, const int accelType = -1);
 	~Scene();
 
 	unsigned int SampleLights(const float u) const {
