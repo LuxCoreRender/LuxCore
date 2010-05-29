@@ -181,11 +181,11 @@ DeviceRenderThread::~DeviceRenderThread() {
 void DeviceRenderThread::Start() {
 	RenderThread::Start();
 
-		const unsigned int startLine = Clamp<unsigned int>(
-		film->GetHeight() * samplingStart,
+	const unsigned int startLine = Clamp<unsigned int>(
+			film->GetHeight() * samplingStart,
 			0, film->GetHeight() - 1);
 	sampler->Init(film->GetWidth(), film->GetHeight(), startLine);
-	for(size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
+	for (size_t i = 0; i < DEVICE_RENDER_BUFFER_COUNT; i++) {
 		rayBuffers[i]->Reset();
 		rayBuffers[i]->ResetUserData();
 		rayBuffers[i]->PushUserData(i);

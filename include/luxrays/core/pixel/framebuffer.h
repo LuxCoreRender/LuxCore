@@ -108,6 +108,9 @@ public:
 		return &pixels[index];
 	}
 
+	unsigned int GetWidth() const { return width; }
+	unsigned int GetHeight() const { return height; }
+
 private:
 	const unsigned int width, height;
 
@@ -169,6 +172,9 @@ public:
 
 		return &pixels[index];
 	}
+
+	unsigned int GetWidth() const { return width; }
+	unsigned int GetHeight() const { return height; }
 
 private:
 	const unsigned int width, height;
