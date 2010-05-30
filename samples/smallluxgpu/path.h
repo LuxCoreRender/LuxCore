@@ -254,7 +254,7 @@ public:
 		const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
 
 		// Get the material
-		Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+		const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
 
 		// Check if it is a light source
 		if (triMat->IsLightSource()) {
@@ -280,14 +280,14 @@ public:
 		// Interpolate face normal
 		Normal N = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
 
-		SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
+		const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 		const Point hitPoint = pathRay(rayHit->t);
 		const Vector wo = -pathRay.d;
 
 		Spectrum surfaceColor;
 		const Spectrum *colors = mesh->GetColors();
 		if (colors)
-			surfaceColor = InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2);
+			surfaceColor = InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
 		else
 			surfaceColor = Spectrum(1.f, 1.f, 1.f);
 

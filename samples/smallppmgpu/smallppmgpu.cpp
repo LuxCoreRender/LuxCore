@@ -34,6 +34,7 @@
 #endif
 
 #include <FreeImage.h>
+#include <boost/detail/container_fwd.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/device.h"
@@ -42,11 +43,26 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
 
-struct HitPoint {
+#define MAX_PATH_DEPTH 16
+
+enum EyePathState {
+	TO_TRACE, HIT, MISS, BLACK
+};
+
+struct EyePath {
+	EyePathState state;
+
+	// Eye path information
+	luxrays::Ray ray;
+	luxrays::RayHit rayHit;
+	unsigned int depth;
+	luxrays::Spectrum throughput;
+	luxrays::Spectrum emit;
+
+	// hit point information
 	luxrays::Vector position;
 	luxrays::Vector normal;
-	luxrays::Spectrum brdf;
-	unsigned int pixelIndex;
+	const luxrays::sdl::Material *material;
 
 	float photonRadius2;
 	unsigned int accumPhotonCount;
@@ -188,74 +204,175 @@ int main(int argc, char *argv[]) {
 		luxrays::FrameBuffer frameBuffer(width, height);
 
 		//----------------------------------------------------------------------
-		// Build the HitPoint list
+		// Build the EyePaths list
 		//----------------------------------------------------------------------
 
 		luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
 		luxrays::RandomGenerator rndGen;
 		rndGen.init(7);
 
-		std::vector<HitPoint> hitPoints(pixelCount);
-		unsigned int hitPointIndex = 0;
-		std::cerr << "Building hitPoints list:" << std::endl;
+		std::vector<EyePath> eyePaths(pixelCount);
+		std::list<EyePath *> todoEyePaths;
+
+		// Generate eye rays
+		std::cerr << "Building eye paths rays:" << std::endl;
 		for (unsigned int y = 0; y < height; ++y) {
 			if (y % 25 == 0)
 				std::cerr << "  " << y << "/" << height << std::endl;
 
 			for (unsigned int x = 0; x < width; ++x) {
-				if (rayBuffer->IsFull()) {
-					// Trace the rays
-					device->PushRayBuffer(rayBuffer);
-					rayBuffer = device->PopRayBuffer();
-
-					for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
-						const luxrays::RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
-						if (rayHit->Miss())
-							frameBuffer.SetPixel(hitPointIndex++, luxrays::Spectrum());
-						else {
-							// Something was hit
-							const unsigned int currentTriangleIndex = rayHit->index;
-
-							// Get the triangle
-							const luxrays::ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-							const luxrays::Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
-
-							frameBuffer.SetPixel(hitPointIndex++, InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2));
-						}
-					}
-
-					rayBuffer->Reset();
-				}
-
-				luxrays::Ray eyeRay;
-				scene->camera->GenerateRay(x, y, width, height, &eyeRay,
+				const unsigned int index = x + y * width;
+				EyePath *eyePath = &eyePaths[index];
+				scene->camera->GenerateRay(x, y, width, height, &eyePath->ray,
 						rndGen.floatValue(), rndGen.floatValue(), rndGen.floatValue());
-				rayBuffer->AddRay(eyeRay);
+				eyePath->depth = 0;
+				eyePath->throughput = luxrays::Spectrum(1.f, 1.f, 1.f);
+				eyePath->emit = luxrays::Spectrum(0.f, 0.f, 0.f);
+				eyePath->state = TO_TRACE;
+
+				todoEyePaths.push_back(eyePath);
 			}
 		}
 
-		// Trace all left rays
-		if (rayBuffer->GetRayCount() > 0) {
-			device->PushRayBuffer(rayBuffer);
-			rayBuffer = device->PopRayBuffer();
+		// Iterate trough all eye paths
+		std::cerr << "Building eye paths hit points: " << std::endl;
+		bool done;
+		std::cerr << "  " << todoEyePaths.size() << " eye paths left" << std::endl;
+		double lastPrintTime = luxrays::WallClockTime();
+		while(todoEyePaths.size() > 0) {
+			if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
+				std::cerr << "  " << todoEyePaths.size() << " eye paths left" << std::endl;
+				lastPrintTime = luxrays::WallClockTime();
+			}
 
-			for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
-				const luxrays::RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
-				if (rayHit->Miss())
-					frameBuffer.SetPixel(hitPointIndex++, luxrays::Spectrum());
-				else {
-					// Something was hit
-					const unsigned int currentTriangleIndex = rayHit->index;
+			std::list<EyePath *>::iterator todoEyePathsIterator = todoEyePaths.begin();
+			while (todoEyePathsIterator != todoEyePaths.end()) {
+				EyePath *eyePath = *todoEyePathsIterator;
 
-					// Get the triangle
-					const luxrays::ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-					const luxrays::Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+				assert (eyePath->state == TO_TRACE);
 
-					frameBuffer.SetPixel(hitPointIndex++, InterpolateTriColor(tri, mesh->GetColors(), rayHit->b1, rayHit->b2));
+				// Check if we reached the max path depth
+				if (eyePath->depth > MAX_PATH_DEPTH) {
+					todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+					eyePath->state = BLACK;
+				} else {
+					eyePath->depth++;
+					rayBuffer->AddRay(eyePath->ray);
+					done = false;
+					if (rayBuffer->IsFull())
+						break;
+
+					++todoEyePathsIterator;
 				}
 			}
 
-			rayBuffer->Reset();
+			if (rayBuffer->GetRayCount() > 0) {
+				// Trace the rays
+				device->PushRayBuffer(rayBuffer);
+				rayBuffer = device->PopRayBuffer();
+
+				// Update the paths
+				todoEyePathsIterator = todoEyePaths.begin();
+				for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
+					EyePath *eyePath = *todoEyePathsIterator;
+
+					assert (eyePath->state == TO_TRACE);
+
+					const luxrays::RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
+
+					if (rayHit->Miss()) {
+						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+						eyePath->state = MISS;
+					} else {
+						// Something was hit
+						const luxrays::Point hitPoint = eyePath->ray(rayHit->t);
+						const unsigned int currentTriangleIndex = rayHit->index;
+
+						// Get the triangle
+						const luxrays::ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+						const luxrays::Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+
+						// Get the material
+						const luxrays::sdl::Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+
+						luxrays::Spectrum surfaceColor;
+						const luxrays::Spectrum *colors = mesh->GetColors();
+						if (colors)
+							surfaceColor = luxrays::InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
+						else
+							surfaceColor = luxrays::Spectrum(1.f, 1.f, 1.f);
+
+						if (triMat->IsLightSource()) {
+							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+
+							eyePath->rayHit = *rayHit;
+							eyePath->material = triMat;
+							eyePath->throughput *= surfaceColor;
+
+							const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
+							eyePath->emit = tLight->Le(scene->objects, -eyePath->ray.d);
+							eyePath->state = HIT;
+						} else if (triMat->IsDiffuse()) {
+							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+
+							eyePath->rayHit = *rayHit;
+							eyePath->material = triMat;
+							eyePath->throughput *= surfaceColor;
+							eyePath->state = HIT;
+						} else {
+							// Build the next vertex path ray
+							const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
+
+							// Interpolate face normal
+							luxrays::Normal N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+
+							// Flip the normal if required
+							luxrays::Normal shadeN;
+							if (luxrays::Dot(eyePath->ray.d, N) > 0.f)
+								shadeN = -N;
+							else
+								shadeN = N;
+
+							float fPdf;
+							luxrays::Vector wi;
+							bool specularBounce;
+							const luxrays::Spectrum f = triSurfMat->Sample_f(-eyePath->ray.d, &wi, N, shadeN,
+									rndGen.floatValue(), rndGen.floatValue(), rndGen.floatValue(),
+									true, &fPdf, specularBounce) * surfaceColor;
+							if ((fPdf <= 0.f) || f.Black()) {
+								todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+
+								eyePath->state = BLACK;
+							} else {
+								++todoEyePathsIterator;
+
+								eyePath->throughput *= f / fPdf;
+								eyePath->ray.o = hitPoint;
+								eyePath->ray.d = wi;
+							}
+						}
+					}
+				}
+
+				rayBuffer->Reset();
+			}
+		}
+
+		// DEBUG
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			EyePath *eyePath = &eyePaths[i];
+
+			switch (eyePath->state) {
+				case MISS:
+					frameBuffer.SetPixel(i, luxrays::Spectrum());
+					break;
+				case HIT:
+					frameBuffer.SetPixel(i, eyePath->throughput);
+					break;
+				default:
+					assert (false);
+					break;
+			}
 		}
 
 		//----------------------------------------------------------------------
