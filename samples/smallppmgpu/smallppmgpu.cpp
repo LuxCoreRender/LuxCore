@@ -43,7 +43,7 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
 
-#define MAX_PATH_DEPTH 16
+#define MAX_PATH_DEPTH 32
 
 enum EyePathState {
 	TO_TRACE, HIT, MISS, BLACK
@@ -363,6 +363,7 @@ int main(int argc, char *argv[]) {
 			EyePath *eyePath = &eyePaths[i];
 
 			switch (eyePath->state) {
+				case BLACK:
 				case MISS:
 					frameBuffer.SetPixel(i, luxrays::Spectrum());
 					break;
