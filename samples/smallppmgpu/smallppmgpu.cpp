@@ -43,7 +43,8 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
 
-#define MAX_PATH_DEPTH 32
+#define MAX_EYE_PATH_DEPTH 32
+#define MAX_PHOTON_PATH_DEPTH 16
 
 enum EyePathState {
 	TO_TRACE, HIT, MISS, BLACK
@@ -70,10 +71,19 @@ public:
 	luxrays::Spectrum accumReflectedFlux;
 };
 
+class PhotonPath {
+public:
+	// The ray is stored in the RayBuffer and the index is implicitly stored
+	// in the array of PhotonPath
+	luxrays::Spectrum flux;
+	unsigned int depth;
+};
+
 class HashGrid {
 public:
-	HashGrid(float s, std::vector<std::vector<EyePath *> > *grid) {
+	HashGrid(const float s, const luxrays::BBox bb, std::vector<std::vector<EyePath *> > *grid) {
 		invHashSize = s;
+		gridBBox = bb;
 		hashGrid = grid;
 	}
 
@@ -82,6 +92,7 @@ public:
 	}
 
 	float invHashSize;
+	luxrays::BBox gridBBox;
 	std::vector<std::vector<EyePath *> > *hashGrid;
 };
 
@@ -182,7 +193,7 @@ std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomG
 			assert (eyePath->state == TO_TRACE);
 
 			// Check if we reached the max path depth
-			if (eyePath->depth > MAX_PATH_DEPTH) {
+			if (eyePath->depth > MAX_EYE_PATH_DEPTH) {
 				todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 				eyePath->state = BLACK;
 			} else {
@@ -347,7 +358,7 @@ static HashGrid *BuildHashGrid(
 	}
 	std::cerr << "Done" << std::endl;
 
-	return new HashGrid(hashs, hashGridPtr);
+	return new HashGrid(hashs, hpBBox, hashGridPtr);
 }
 
 int main(int argc, char *argv[]) {
@@ -360,12 +371,14 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		std::cerr << "Usage: " << argv[0] << " [options] [scene file]" << std::endl <<
-				" -w [window width]" << std::endl <<
-				" -e [window height]" << std::endl <<
+				" -w [image width]" << std::endl <<
+				" -e [image height]" << std::endl <<
+				" -n [photon count]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		unsigned int width = 640;
 		unsigned int height = 480;
+		unsigned int photonCount = 100000;
 		std::string sceneFileName = "scenes/simple/simple.scn";
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
@@ -376,6 +389,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'e') height = atoi(argv[++i]);
 
 				else if (argv[i][1] == 'w') width = atoi(argv[++i]);
+
+				else if (argv[i][1] == 'n') photonCount = atoi(argv[++i]);
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
@@ -392,7 +407,7 @@ int main(int argc, char *argv[]) {
 		const unsigned int pixelCount = width * height;
 
 		//--------------------------------------------------------------------------
-		// Create the context
+		// Create the LuxRays context
 		//--------------------------------------------------------------------------
 
 		luxrays::Context *ctx = new luxrays::Context(DebugHandler);
@@ -461,6 +476,46 @@ int main(int argc, char *argv[]) {
 		HashGrid *hashGrid = BuildHashGrid(hitPoints, width, height);
 
 		//----------------------------------------------------------------------
+		// Trace photons
+		//----------------------------------------------------------------------
+
+		std::cerr << "Tracing " << photonCount << " photon paths: " << std::endl;
+
+		// Generate photons from light sources
+		std::vector<PhotonPath> photonPaths(rayBuffer->GetSize());
+		luxrays::Ray *rays = rayBuffer->GetRayBuffer();
+		for (unsigned int i = 0; i < photonPaths.size(); ++i) {
+			// Select one light source
+			const unsigned int lightIndex = scene->SampleLights(rndGen.floatValue());
+			const luxrays::sdl::LightSource *light = scene->lights[lightIndex];
+
+			// Initialize the photon path
+			PhotonPath *photonPath = &photonPaths[i];
+			float pdf;
+			photonPath->flux = light->Sample_L(scene->objects,
+				rndGen.floatValue(), rndGen.floatValue(),
+				rndGen.floatValue(), rndGen.floatValue(),
+				&pdf, &rays[i]);
+			photonPath->flux /= pdf;
+			photonPath->depth = 0;
+		}
+
+		unsigned int photonTraced = 0;
+		std::cerr << "  Traced " << photonTraced / 1000 << "k/" << photonCount / 1000 << "k" << std::endl;
+		const double startTime = luxrays::WallClockTime();
+		double lastPrintTime = startTime;
+		while (photonTraced < photonCount) {
+			const double now = luxrays::WallClockTime();
+			const double dt = now - lastPrintTime;
+			if (dt > 2.0) {
+				std::cerr << "  Traced " << photonTraced / 1000 << "k/" << photonCount / 1000 << "k" << std::endl;
+				lastPrintTime = now;
+			}
+
+			photonTraced++;
+		}
+
+		//----------------------------------------------------------------------
 
 		// DEBUG
 		for (unsigned int i = 0; i < pixelCount; ++i) {
@@ -498,6 +553,7 @@ int main(int argc, char *argv[]) {
 		delete rayBuffer;
 		delete ctx;
 
+		std::cerr << "Done." << std::endl;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
 		std::cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << std::endl;
