@@ -35,6 +35,9 @@ public:
 
 	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
+
+	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
+		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -61,6 +64,10 @@ public:
 
 	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
+		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const {
+		throw std::runtime_error("InfiniteLight::Sample_L(objs, u0, u1, u2, u3, pdf, ray) not yet implemented");
+	}
 
 protected:
 	TexMapInstance *tex;
@@ -136,6 +143,10 @@ public:
 
 	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
+		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const {
+		throw std::runtime_error("SunLight::Sample_L(objs, u0, u1, u2, u3, pdf, ray) not yet implemented");
+	}
 
 	void SetGain(const Spectrum &g);
 
@@ -166,7 +177,8 @@ public:
 
 	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-
+	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
+		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const;
 private:
 	const AreaLightMaterial *lightMaterial;
 	unsigned int meshIndex, triIndex;
