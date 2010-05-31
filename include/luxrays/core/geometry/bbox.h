@@ -99,6 +99,9 @@ public:
 	Point pMin, pMax;
 };
 
+extern BBox Union(const BBox &b, const Point &p);
+extern BBox Union(const BBox &b, const BBox &b2);
+
 inline std::ostream &operator<<(std::ostream &os, const BBox &b) {
 	os << "BBox[" << b.pMin << ", " << b.pMax << "]";
 	return os;
