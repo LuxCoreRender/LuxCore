@@ -62,7 +62,7 @@ public:
 				pt.z >= pMin.z && pt.z <= pMax.z);
 	}
 
-	void Expand(float delta) {
+	void Expand(const float delta) {
 		pMin -= Vector(delta, delta, delta);
 		pMax += Vector(delta, delta, delta);
 	}
