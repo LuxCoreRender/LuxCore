@@ -63,7 +63,7 @@ public:
 
 	// hit point information
 	luxrays::Point position;
-	luxrays::Vector normal;
+	luxrays::Normal normal;
 	const luxrays::sdl::Material *material;
 
 	float photonRadius2;
@@ -243,6 +243,16 @@ std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomG
 					else
 						surfaceColor = luxrays::Spectrum(1.f, 1.f, 1.f);
 
+					// Interpolate face normal
+					luxrays::Normal N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+
+					// Flip the normal if required
+					luxrays::Normal shadeN;
+					if (luxrays::Dot(eyePath->ray.d, N) > 0.f)
+						shadeN = -N;
+					else
+						shadeN = N;
+
 					if (triMat->IsLightSource()) {
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 
@@ -253,6 +263,7 @@ std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomG
 						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
 						eyePath->emit = tLight->Le(scene->objects, -eyePath->ray.d);
 						eyePath->position = hitPoint;
+						eyePath->normal = shadeN;
 						eyePath->state = HIT;
 					} else if (triMat->IsDiffuse()) {
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
@@ -261,20 +272,11 @@ std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomG
 						eyePath->material = triMat;
 						eyePath->throughput *= surfaceColor;
 						eyePath->position = hitPoint;
+						eyePath->normal = shadeN;
 						eyePath->state = HIT;
 					} else {
 						// Build the next vertex path ray
 						const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
-
-						// Interpolate face normal
-						luxrays::Normal N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
-
-						// Flip the normal if required
-						luxrays::Normal shadeN;
-						if (luxrays::Dot(eyePath->ray.d, N) > 0.f)
-							shadeN = -N;
-						else
-							shadeN = N;
 
 						float fPdf;
 						luxrays::Vector wi;
@@ -344,8 +346,8 @@ static HashGrid *BuildHashGrid(
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
 		EyePath *eyePath = hitPoints[i];
 
-		luxrays::Vector bMin = ((eyePath->position - vphotonRadius2) - hpBBox.pMin) * hashs;
-		luxrays::Vector bMax = ((eyePath->position + vphotonRadius2) - hpBBox.pMin) * hashs;
+		const luxrays::Vector bMin = ((eyePath->position - vphotonRadius2) - hpBBox.pMin) * hashs;
+		const luxrays::Vector bMax = ((eyePath->position + vphotonRadius2) - hpBBox.pMin) * hashs;
 
 		for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
 			for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
@@ -361,6 +363,22 @@ static HashGrid *BuildHashGrid(
 	return new HashGrid(hashs, hpBBox, hashGridPtr);
 }
 
+static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator &rndGen,
+	PhotonPath *photonPath, luxrays::Ray *ray) {
+	// Select one light source
+	const unsigned int lightIndex = scene->SampleLights(rndGen.floatValue());
+	const luxrays::sdl::LightSource *light = scene->lights[lightIndex];
+
+	// Initialize the photon path
+	float pdf;
+	photonPath->flux = light->Sample_L(scene->objects,
+		rndGen.floatValue(), rndGen.floatValue(),
+		rndGen.floatValue(), rndGen.floatValue(),
+		&pdf, ray);
+	photonPath->flux /= pdf;
+	photonPath->depth = 0;
+}
+
 int main(int argc, char *argv[]) {
 	std::cerr << "LuxRays SmallPPMGPU v" << LUXRAYS_VERSION_MAJOR << "." << LUXRAYS_VERSION_MINOR << std::endl;
 	std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
@@ -374,11 +392,13 @@ int main(int argc, char *argv[]) {
 				" -w [image width]" << std::endl <<
 				" -e [image height]" << std::endl <<
 				" -n [photon count]" << std::endl <<
+				" -a [photon alpha]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		unsigned int width = 640;
 		unsigned int height = 480;
 		unsigned int photonCount = 100000;
+		float alpha = 0.7;
 		std::string sceneFileName = "scenes/simple/simple.scn";
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
@@ -391,6 +411,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'w') width = atoi(argv[++i]);
 
 				else if (argv[i][1] == 'n') photonCount = atoi(argv[++i]);
+
+				else if (argv[i][1] == 'a') alpha = atof(argv[++i]);
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
@@ -485,23 +507,12 @@ int main(int argc, char *argv[]) {
 		std::vector<PhotonPath> photonPaths(rayBuffer->GetSize());
 		luxrays::Ray *rays = rayBuffer->GetRayBuffer();
 		for (unsigned int i = 0; i < photonPaths.size(); ++i) {
-			// Select one light source
-			const unsigned int lightIndex = scene->SampleLights(rndGen.floatValue());
-			const luxrays::sdl::LightSource *light = scene->lights[lightIndex];
-
-			// Initialize the photon path
-			PhotonPath *photonPath = &photonPaths[i];
-			float pdf;
-			photonPath->flux = light->Sample_L(scene->objects,
-				rndGen.floatValue(), rndGen.floatValue(),
-				rndGen.floatValue(), rndGen.floatValue(),
-				&pdf, &rays[i]);
-			photonPath->flux /= pdf;
-			photonPath->depth = 0;
+			// Note: there is some assumption here about how the rayBuffer->ReserveRay()
+			// work
+			InitPhotonPath(scene, rndGen, &photonPaths[i], &rays[rayBuffer->ReserveRay()]);
 		}
 
 		unsigned int photonTraced = 0;
-		std::cerr << "  Traced " << photonTraced / 1000 << "k/" << photonCount / 1000 << "k" << std::endl;
 		const double startTime = luxrays::WallClockTime();
 		double lastPrintTime = startTime;
 		while (photonTraced < photonCount) {
@@ -512,10 +523,133 @@ int main(int argc, char *argv[]) {
 				lastPrintTime = now;
 			}
 
-			photonTraced++;
+			// Trace the rays
+			device->PushRayBuffer(rayBuffer);
+			rayBuffer = device->PopRayBuffer();
+
+			for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
+				PhotonPath *photonPath = &photonPaths[i];
+				luxrays::Ray *ray = &rayBuffer->GetRayBuffer()[i];
+				const luxrays::RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
+
+				if (rayHit->Miss()) {
+					photonTraced++;
+
+					// Re-initialize the photon path
+					InitPhotonPath(scene, rndGen, photonPath, ray);
+				} else {
+					// Something was hit
+					const luxrays::Point hitPoint = (*ray)(rayHit->t);
+					const unsigned int currentTriangleIndex = rayHit->index;
+
+					// Get the triangle
+					const luxrays::ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+					const luxrays::Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+
+					// Get the material
+					const luxrays::sdl::Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+
+					luxrays::Spectrum surfaceColor;
+					const luxrays::Spectrum *colors = mesh->GetColors();
+					if (colors)
+						surfaceColor = luxrays::InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
+					else
+						surfaceColor = luxrays::Spectrum(1.f, 1.f, 1.f);
+
+					// Interpolate face normal
+					luxrays::Normal N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+
+					// Flip the normal if required
+					luxrays::Normal shadeN;
+					if (luxrays::Dot(ray->d, N) > 0.f)
+						shadeN = -N;
+					else
+						shadeN = N;
+
+					if (triMat->IsLightSource()) {
+						photonTraced++;
+
+						// Re-initialize the photon path
+						InitPhotonPath(scene, rndGen, photonPath, ray);
+					} else if (triMat->IsDiffuse()) {
+						// Look for eye path hit points near the current hit point
+						luxrays::Vector hh = (hitPoint - hashGrid->gridBBox.pMin) * hashGrid->invHashSize;
+						const int ix = abs(int(hh.x));
+						const int iy = abs(int(hh.y));
+						const int iz = abs(int(hh.z));
+
+						std::vector<EyePath *> &eyePaths = (*(hashGrid->hashGrid))[Hash(ix, iy, iz, hashGrid->hashGrid->size())];
+						for (unsigned int j = 0; j < eyePaths.size(); ++j) {
+							EyePath *eyePath = eyePaths[j];
+							luxrays::Vector v = eyePath->position - hitPoint;
+							if ((luxrays::Dot(eyePath->normal, shadeN) > luxrays::RAY_EPSILON) &&
+									(luxrays::Dot(v, v) <=  eyePath->photonRadius2)) {
+								const float g = (eyePath->accumPhotonCount * alpha + alpha) / (eyePath->accumPhotonCount * alpha + 1.f);
+								eyePath->photonRadius2 = eyePath->photonRadius2 * g;
+								eyePath->accumPhotonCount++;
+								eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + eyePath->throughput * photonPath->flux * INV_PI) * g;
+							}
+						}
+
+						// TODO: to finish
+						photonTraced++;
+
+						// Re-initialize the photon path
+						InitPhotonPath(scene, rndGen, photonPath, ray);
+					} else {
+						// Check if we reached the max. depth
+						if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
+							// Build the next vertex path ray
+							const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
+
+							float fPdf;
+							luxrays::Vector wi;
+							bool specularBounce;
+							const luxrays::Spectrum f = triSurfMat->Sample_f(-ray->d, &wi, N, shadeN,
+									rndGen.floatValue(), rndGen.floatValue(), rndGen.floatValue(),
+									true, &fPdf, specularBounce) * surfaceColor;
+							if ((fPdf <= 0.f) || f.Black()) {
+								photonTraced++;
+
+								// Re-initialize the photon path
+								InitPhotonPath(scene, rndGen, photonPath, ray);
+							} else {
+								photonPath->depth++;
+
+								photonPath->flux *= f / fPdf;
+								ray->o = hitPoint;
+								ray->d = wi;
+							}
+						} else {
+							photonTraced++;
+
+							// Re-initialize the photon path
+							InitPhotonPath(scene, rndGen, photonPath, ray);
+						}
+					}
+				}
+			}
 		}
 
 		//----------------------------------------------------------------------
+
+		/*// DEBUG
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			EyePath *eyePath = &eyePaths[i];
+
+			switch (eyePath->state) {
+				case BLACK:
+				case MISS:
+					frameBuffer.SetPixel(i, luxrays::Spectrum());
+					break;
+				case HIT:
+					frameBuffer.SetPixel(i, eyePath->throughput);
+					break;
+				default:
+					assert (false);
+					break;
+			}
+		}*/
 
 		// DEBUG
 		for (unsigned int i = 0; i < pixelCount; ++i) {
@@ -527,7 +661,7 @@ int main(int argc, char *argv[]) {
 					frameBuffer.SetPixel(i, luxrays::Spectrum());
 					break;
 				case HIT:
-					frameBuffer.SetPixel(i, eyePath->throughput);
+					frameBuffer.SetPixel(i, eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * 10.f)));
 					break;
 				default:
 					assert (false);
