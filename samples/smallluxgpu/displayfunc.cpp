@@ -219,7 +219,7 @@ void displayFunc(void) {
 		glPushMatrix();
 		glLoadIdentity();
 		glOrtho(-0.5f, config->film->GetWidth() - 0.5f,
-				-0.5, config->film->GetHeight() -0.5f, -1.0, 1.0);
+				-0.5f, config->film->GetHeight() - 0.5f, -1.f, 1.f);
 
 		PrintHelpAndSettings();
 
@@ -466,7 +466,7 @@ void timerFunc(int value) {
 	glutTimerFunc(config->screenRefreshInterval, timerFunc, 0);
 }
 
-void InitGlut(int argc, char *argv[], unsigned int width, unsigned int height) {
+void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height) {
 	glutInit(&argc, argv);
 
 	glutInitWindowSize(width, height);
