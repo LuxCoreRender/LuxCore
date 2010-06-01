@@ -292,8 +292,7 @@ std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomG
 							++todoEyePathsIterator;
 
 							eyePath->throughput *= f / fPdf;
-							eyePath->ray.o = hitPoint;
-							eyePath->ray.d = wi;
+							eyePath->ray = luxrays::Ray(hitPoint, wi);
 						}
 					}
 				}
@@ -322,12 +321,13 @@ static HashGrid *BuildHashGrid(
 
 	// Calculate initial radius
 	luxrays::Vector ssize = hpBBox.pMax - hpBBox.pMin;
-	float photonRadius2 = ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
+	const float photonRadius = ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
 
 	// Expand the bounding box by used radius
-	hpBBox.Expand(photonRadius2);
+	hpBBox.Expand(photonRadius);
 
 	// Initialize hit points field
+	const float photonRadius2 = photonRadius * photonRadius;
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
 		EyePath *eyePath = hitPoints[i];
 
@@ -336,18 +336,18 @@ static HashGrid *BuildHashGrid(
 		eyePath->accumReflectedFlux = luxrays::Spectrum();
 	}
 
-	const float hashs = 1.f / (photonRadius2 * 2.f);
+	const float hashs = 1.f / (photonRadius * 2.f);
 	const unsigned int hashGridSize = hitPoints.size();
 	std::vector<std::vector<EyePath *> > *hashGridPtr = new std::vector<std::vector<EyePath *> >(hashGridSize);
 	std::vector<std::vector<EyePath *> > &hashGrid = *hashGridPtr;
 
 	std::cerr << "Building hit points hash grid...";
-	const luxrays::Vector vphotonRadius2(photonRadius2, photonRadius2, photonRadius2);
+	const luxrays::Vector vphotonRadius(photonRadius, photonRadius, photonRadius);
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
 		EyePath *eyePath = hitPoints[i];
 
-		const luxrays::Vector bMin = ((eyePath->position - vphotonRadius2) - hpBBox.pMin) * hashs;
-		const luxrays::Vector bMax = ((eyePath->position + vphotonRadius2) - hpBBox.pMin) * hashs;
+		const luxrays::Vector bMin = ((eyePath->position - vphotonRadius) - hpBBox.pMin) * hashs;
+		const luxrays::Vector bMax = ((eyePath->position + vphotonRadius) - hpBBox.pMin) * hashs;
 
 		for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
 			for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
@@ -571,34 +571,30 @@ int main(int argc, char *argv[]) {
 
 						// Re-initialize the photon path
 						InitPhotonPath(scene, rndGen, photonPath, ray);
-					} else if (triMat->IsDiffuse()) {
-						// Look for eye path hit points near the current hit point
-						luxrays::Vector hh = (hitPoint - hashGrid->gridBBox.pMin) * hashGrid->invHashSize;
-						const int ix = abs(int(hh.x));
-						const int iy = abs(int(hh.y));
-						const int iz = abs(int(hh.z));
+					} else {
+						if (triMat->IsDiffuse()) {
+							// Look for eye path hit points near the current hit point
+							luxrays::Vector hh = (hitPoint - hashGrid->gridBBox.pMin) * hashGrid->invHashSize;
+							const int ix = abs(int(hh.x));
+							const int iy = abs(int(hh.y));
+							const int iz = abs(int(hh.z));
 
-						std::vector<EyePath *> &eyePaths = (*(hashGrid->hashGrid))[Hash(ix, iy, iz, hashGrid->hashGrid->size())];
-						for (unsigned int j = 0; j < eyePaths.size(); ++j) {
-							EyePath *eyePath = eyePaths[j];
-							luxrays::Vector v = eyePath->position - hitPoint;
-							if ((luxrays::Dot(eyePath->normal, shadeN) > luxrays::RAY_EPSILON) &&
-									(luxrays::Dot(v, v) <=  eyePath->photonRadius2)) {
-								const float g = (eyePath->accumPhotonCount * alpha + alpha) / (eyePath->accumPhotonCount * alpha + 1.f);
-								eyePath->photonRadius2 = eyePath->photonRadius2 * g;
-								eyePath->accumPhotonCount++;
-								eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + eyePath->throughput * photonPath->flux * INV_PI) * g;
+							std::vector<EyePath *> &eyePaths = (*(hashGrid->hashGrid))[Hash(ix, iy, iz, hashGrid->hashGrid->size())];
+							for (unsigned int j = 0; j < eyePaths.size(); ++j) {
+								EyePath *eyePath = eyePaths[j];
+								luxrays::Vector v = eyePath->position - hitPoint;
+								if ((luxrays::Dot(eyePath->normal, shadeN) > luxrays::RAY_EPSILON) &&
+										(luxrays::Dot(v, v) <=  eyePath->photonRadius2)) {
+									const float g = (eyePath->accumPhotonCount * alpha + alpha) / (eyePath->accumPhotonCount * alpha + 1.f);
+									eyePath->photonRadius2 = eyePath->photonRadius2 * g;
+									eyePath->accumPhotonCount++;
+									eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + eyePath->throughput * photonPath->flux * INV_PI) * g;
+								}
 							}
 						}
 
-						// TODO: to finish
-						photonTraced++;
-
-						// Re-initialize the photon path
-						InitPhotonPath(scene, rndGen, photonPath, ray);
-					} else {
 						// Check if we reached the max. depth
-						if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
+						/*if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
 							// Build the next vertex path ray
 							const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
 
@@ -607,7 +603,7 @@ int main(int argc, char *argv[]) {
 							bool specularBounce;
 							const luxrays::Spectrum f = triSurfMat->Sample_f(-ray->d, &wi, N, shadeN,
 									rndGen.floatValue(), rndGen.floatValue(), rndGen.floatValue(),
-									true, &fPdf, specularBounce) * surfaceColor;
+									false, &fPdf, specularBounce) * surfaceColor;
 							if ((fPdf <= 0.f) || f.Black()) {
 								photonTraced++;
 
@@ -625,7 +621,12 @@ int main(int argc, char *argv[]) {
 
 							// Re-initialize the photon path
 							InitPhotonPath(scene, rndGen, photonPath, ray);
-						}
+						}*/
+
+						photonTraced++;
+
+						// Re-initialize the photon path
+						InitPhotonPath(scene, rndGen, photonPath, ray);
 					}
 				}
 			}
@@ -661,7 +662,7 @@ int main(int argc, char *argv[]) {
 					frameBuffer.SetPixel(i, luxrays::Spectrum());
 					break;
 				case HIT:
-					frameBuffer.SetPixel(i, eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * 10.f)));
+					frameBuffer.SetPixel(i, eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * eyePath->accumPhotonCount * 1000.f)));
 					break;
 				default:
 					assert (false);
