@@ -490,13 +490,16 @@ Spectrum TriangleLight::Sample_L(const std::vector<ExtTriangleMesh *> &objs,
 
 	// Ray origin
 	float b0, b1, b2;
-	tri.Sample(mesh->GetVertices(), u0, u1, &ray->o, &b0, &b1, &b2);
+	Point orig;
+	tri.Sample(mesh->GetVertices(), u0, u1, &orig, &b0, &b1, &b2);
 
 	// Ray direction
 	const Normal &sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
-	ray->d = UniformSampleSphere(u2, u3);
-	if (Dot(ray->d, sampleN) < 0.f)
-		ray->d *= -1.f;
+	Vector dir = UniformSampleSphere(u2, u3);
+	if (Dot(dir, sampleN) < 0.f)
+		dir *= -1.f;
+
+	*ray = Ray(orig, dir);
 
 	*pdf = INV_TWOPI / area;
 
