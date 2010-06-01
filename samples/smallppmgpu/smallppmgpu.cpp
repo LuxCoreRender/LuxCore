@@ -642,6 +642,7 @@ static void DisplayFunc(void) {
 static void KeyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p':
+			UpdateFrameBuffer();
 			SaveFrameBuffer("image.png", *imgFrameBuffer);
 			break;
 		case 27: { // Escape key
@@ -652,6 +653,7 @@ static void KeyFunc(unsigned char key, int x, int y) {
 				renderThread->join();
 				delete renderThread;
 
+				UpdateFrameBuffer();
 				SaveFrameBuffer("image.png", *imgFrameBuffer);
 			}
 
