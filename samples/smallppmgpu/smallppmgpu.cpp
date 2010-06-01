@@ -147,7 +147,35 @@ static void SaveFrameBuffer(const std::string &fileName, const luxrays::FrameBuf
 		std::cerr << "Image type unknown: " << fileName << std::endl;
 }
 
-std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomGenerator &rndGen,
+#define GAMMA_TABLE_SIZE 1024
+
+static float gammaTable[GAMMA_TABLE_SIZE];
+
+static void InitGammaTable(const float gamma = 2.2f) {
+	float x = 0.f;
+	const float dx = 1.f / GAMMA_TABLE_SIZE;
+	for (unsigned int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
+		gammaTable[i] = powf(luxrays::Clamp(x, 0.f, 1.f), 1.f / gamma);
+}
+
+static float Radiance2PixelFloat(const float x) {
+	// Very slow !
+	//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
+
+	const unsigned int index = luxrays::Min<unsigned int>(
+			luxrays::Floor2UInt(GAMMA_TABLE_SIZE * luxrays::Clamp(x, 0.f, 1.f)),
+			GAMMA_TABLE_SIZE - 1);
+	return gammaTable[index];
+}
+
+static luxrays::Spectrum Radiance2Pixel(const luxrays::Spectrum &s) {
+	return luxrays::Spectrum(
+			Radiance2PixelFloat(s.r),
+			Radiance2PixelFloat(s.g),
+			Radiance2PixelFloat(s.b));
+}
+
+static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomGenerator &rndGen,
 	luxrays::IntersectionDevice *device, luxrays::RayBuffer *rayBuffer,
 	const unsigned int width, const unsigned int height) {
 	std::vector<EyePath> *eyePathsPtr = new std::vector<EyePath>(width * height);
@@ -474,6 +502,7 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		luxrays::FrameBuffer frameBuffer(width, height);
+		InitGammaTable();
 
 		//----------------------------------------------------------------------
 		// Build the EyePaths list
@@ -594,7 +623,7 @@ int main(int argc, char *argv[]) {
 						}
 
 						// Check if we reached the max. depth
-						/*if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
+						if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
 							// Build the next vertex path ray
 							const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
 
@@ -621,20 +650,22 @@ int main(int argc, char *argv[]) {
 
 							// Re-initialize the photon path
 							InitPhotonPath(scene, rndGen, photonPath, ray);
-						}*/
+						}
 
-						photonTraced++;
+						// DEBUG
+						/*photonTraced++;
 
 						// Re-initialize the photon path
-						InitPhotonPath(scene, rndGen, photonPath, ray);
+						InitPhotonPath(scene, rndGen, photonPath, ray);*/
 					}
 				}
 			}
 		}
 
 		//----------------------------------------------------------------------
+		// Update the frame buffer
+		//----------------------------------------------------------------------
 
-		/*// DEBUG
 		for (unsigned int i = 0; i < pixelCount; ++i) {
 			EyePath *eyePath = &eyePaths[i];
 
@@ -643,27 +674,11 @@ int main(int argc, char *argv[]) {
 				case MISS:
 					frameBuffer.SetPixel(i, luxrays::Spectrum());
 					break;
-				case HIT:
-					frameBuffer.SetPixel(i, eyePath->throughput);
+				case HIT: {
+					const luxrays::Spectrum c = 0.00001f * eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * eyePath->accumPhotonCount));
+					frameBuffer.SetPixel(i, Radiance2Pixel(c));
 					break;
-				default:
-					assert (false);
-					break;
-			}
-		}*/
-
-		// DEBUG
-		for (unsigned int i = 0; i < pixelCount; ++i) {
-			EyePath *eyePath = &eyePaths[i];
-
-			switch (eyePath->state) {
-				case BLACK:
-				case MISS:
-					frameBuffer.SetPixel(i, luxrays::Spectrum());
-					break;
-				case HIT:
-					frameBuffer.SetPixel(i, eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * eyePath->accumPhotonCount * 1000.f)));
-					break;
+				}
 				default:
 					assert (false);
 					break;
