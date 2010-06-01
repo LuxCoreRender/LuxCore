@@ -36,7 +36,7 @@ class RenderingConfig;
 extern RenderingConfig *config;
 extern void DebugHandler(const char *msg);
 
-extern void InitGlut(int argc, char *argv[], unsigned int width, unsigned int height);
+extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
 extern void RunGlut();
 
 #endif	/* _DISPLAYFUNC_H */
