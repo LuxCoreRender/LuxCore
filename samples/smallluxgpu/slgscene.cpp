@@ -30,7 +30,7 @@
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
-#include "film.h"
+#include "luxrays/utils/film/film.h"
 
 SLGScene::SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType) :
 	Scene(ctx, fileName, accelType) {
