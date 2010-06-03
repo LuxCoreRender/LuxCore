@@ -110,6 +110,7 @@ static std::string SPPMG_LABEL = "LuxRays SmallPPMGPU v" LUXRAYS_VERSION_MAJOR "
 static unsigned int scrRefreshInterval = 2000;
 static unsigned int imgWidth = 640;
 static unsigned int imgHeight = 480;
+static std::string imgFileName = "image.png";
 static luxrays::FrameBuffer *imgFrameBuffer = NULL;
 
 static boost::thread *renderThread = NULL;
@@ -259,7 +260,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 		}
 	}
 
-	// Iterate trough all eye paths
+	// Iterate through all eye paths
 	std::cerr << "Building eye paths hit points: " << std::endl;
 	bool done;
 	std::cerr << "  " << todoEyePaths.size() << " eye paths left" << std::endl;
@@ -630,7 +631,7 @@ static void PrintCaptions() {
 static void DisplayFunc(void) {
 	if (imgFrameBuffer) {
 		glRasterPos2i(0, 0);
-		glDrawPixels(imgWidth, imgWidth, GL_RGB, GL_FLOAT, imgFrameBuffer->GetPixels());
+		glDrawPixels(imgWidth, imgHeight, GL_RGB, GL_FLOAT, imgFrameBuffer->GetPixels());
 
 		PrintCaptions();
 	} else
@@ -643,7 +644,7 @@ static void KeyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p':
 			UpdateFrameBuffer();
-			SaveFrameBuffer("image.png", *imgFrameBuffer);
+			SaveFrameBuffer(imgFileName, *imgFrameBuffer);
 			break;
 		case 27: { // Escape key
 			// Stop photon tracing thread
@@ -654,7 +655,7 @@ static void KeyFunc(unsigned char key, int x, int y) {
 				delete renderThread;
 
 				UpdateFrameBuffer();
-				SaveFrameBuffer("image.png", *imgFrameBuffer);
+				SaveFrameBuffer(imgFileName, *imgFrameBuffer);
 			}
 
 			delete imgFrameBuffer;
@@ -713,7 +714,6 @@ static void RunGlut(const unsigned int width, const unsigned int height) {
 
 int main(int argc, char *argv[]) {
 	std::cerr << SPPMG_LABEL << std::endl;
-	std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
 
 	try {
 		//----------------------------------------------------------------------
@@ -725,6 +725,7 @@ int main(int argc, char *argv[]) {
 				" -e [image height]" << std::endl <<
 				" -a [photon alpha]" << std::endl <<
 				" -r [screen refresh interval]" << std::endl <<
+				" -i [image file name]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		std::string sceneFileName = "scenes/simple/simple.scn";
@@ -742,6 +743,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'a') photonAlpha = atof(argv[++i]);
 
 				else if (argv[i][1] == 'r') scrRefreshInterval = atoi(argv[++i]);
+
+				else if (argv[i][1] == 'i') imgFileName = argv[++i];
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
