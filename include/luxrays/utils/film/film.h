@@ -36,6 +36,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/pixel/samplebuffer.h"
 #include "luxrays/core/pixeldevice.h"
+#include "luxrays/core/pixel/samplebuffer.h"
 
 namespace luxrays { namespace utils {
 
@@ -170,7 +171,7 @@ public:
 
 	virtual SampleBuffer *GetFreeSampleBuffer() = 0;
 	virtual void FreeSampleBuffer(SampleBuffer *sampleBuffer) = 0;
-	virtual void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
+	virtual void SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffer) {
 		// Update statistics
 		statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
 	}
@@ -346,10 +347,10 @@ public:
 		pixelDevice->FreeSampleBuffer(sampleBuffer);
 	}
 
-	void SplatSampleBuffer(const Sampler *sampler, SampleBuffer *sampleBuffer) {
-		Film::SplatSampleBuffer(sampler, sampleBuffer);
+	void SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffer) {
+		Film::SplatSampleBuffer(preview, sampleBuffer);
 
-		if (sampler->IsPreviewOver())
+		if (preview)
 			pixelDevice->AddSampleBuffer(filterType, sampleBuffer);
 		else
 			pixelDevice->AddSampleBuffer(FILTER_PREVIEW, sampleBuffer);

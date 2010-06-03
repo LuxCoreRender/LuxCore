@@ -126,7 +126,7 @@ void PathIntegrator::AdvancePaths(const RayBuffer *rayBuffer) {
 			statsTotalSampleCount += sampleBuffer->GetSampleCount();
 
 			// Splat all samples on the film
-			film->SplatSampleBuffer(sampler, sampleBuffer);
+			film->SplatSampleBuffer(sampler->IsPreviewOver(), sampleBuffer);
 			sampleBuffer = film->GetFreeSampleBuffer();
 		}
 	}
