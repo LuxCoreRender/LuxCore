@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _FILM_H
-#define	_FILM_H
+#ifndef _LUXRAYS_UTILS_FILM_H
+#define	_LUXRAYS_UTILS_FILM_H
 
 #include <cstddef>
 #include <cmath>
@@ -33,10 +33,11 @@
 
 #include <boost/thread/mutex.hpp>
 
-#include "smalllux.h"
-#include "sampler.h"
+#include "luxrays/luxrays.h"
 #include "luxrays/core/pixel/samplebuffer.h"
 #include "luxrays/core/pixeldevice.h"
+
+namespace luxrays { namespace utils {
 
 //------------------------------------------------------------------------------
 // Base class for all Film implementation
@@ -46,8 +47,8 @@
 
 class Film {
 public:
-	Film(const bool lowLatencyMode, const unsigned int w, const unsigned int h) {
-		lowLatency = lowLatencyMode;
+	Film(Context *context, const unsigned int w, const unsigned int h) {
+		ctx = context;
 		filterType = FILTER_GAUSSIAN;
 		toneMapParams = new LinearToneMapParams();
 
@@ -62,7 +63,7 @@ public:
 	virtual void Init(const unsigned int w, const unsigned int h) {
 		width = w;
 		height = h;
-		cerr << "Film size " << width << "x" << height << endl;
+		LR_LOG(ctx, "Film size " << width << "x" << height);
 		pixelCount = w * h;
 
 		statsTotalSampleCount = 0;
@@ -88,32 +89,32 @@ public:
 		toneMapParams = params.Copy();
 	}
 
-	void AddFilm(const string &filmFile) {
-		ifstream file;
-		file.open(filmFile.c_str(), ios::in | ios::binary);
+	void AddFilm(const std::string &filmFile) {
+		std::ifstream file;
+		file.open(filmFile.c_str(), std::ios::in | std::ios::binary);
 
 		// Check if the file exists
 		if (file.is_open()) {
-			file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
+			file.exceptions(std::ifstream::eofbit | std::ifstream::failbit | std::ifstream::badbit);
 
-			cerr << "Loading film file: " << filmFile << endl;
+			LR_LOG(ctx, "Loading film file: " << filmFile);
 
 			SampleFrameBuffer sbe(width, height);
 
 			unsigned int tag;
 			file.read((char *)&tag, sizeof(unsigned int));
 			if (tag != (('S' << 24) | ('L' << 16) | ('G' << 8) | '0'))
-				throw runtime_error("Unknown film file format");
+				throw std::runtime_error("Unknown film file format");
 
 			unsigned int w;
 			file.read((char *)&w, sizeof(unsigned int));
 			if (w != width)
-				throw runtime_error("Film file width doesn't match internal width");
+				throw std::runtime_error("Film file width doesn't match internal width");
 
 			unsigned int h;
 			file.read((char *)&h, sizeof(unsigned int));
 			if (h != height)
-				throw runtime_error("Film file height doesn't match internal height");
+				throw std::runtime_error("Film file height doesn't match internal height");
 
 			Spectrum spectrum;
 			float weight;
@@ -127,17 +128,17 @@ public:
 
 			AddSampleFrameBuffer(&sbe);
 		} else
-			cerr << "Film file doesn't exist: " << filmFile << endl;
+			LR_LOG(ctx, "Film file doesn't exist: " << filmFile);
 	}
 
-	void SaveFilm(const string &filmFile) {
-		cerr << "Saving film file: " << filmFile << endl;
+	void SaveFilm(const std::string &filmFile) {
+		LR_LOG(ctx, "Saving film file: " << filmFile);
 
 		const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
 
-		ofstream file;
-		file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
-		file.open(filmFile.c_str(), ios::out | ios::binary);
+		std::ofstream file;
+		file.exceptions(std::ifstream::eofbit | std::ifstream::failbit | std::ifstream::badbit);
+		file.open(filmFile.c_str(), std::ios::out | std::ios::binary);
 
 		const unsigned int tag = ('S' << 24) | ('L' << 16) | ('G' << 8) | '0';
 		file.write((char *)&tag, sizeof(unsigned int));
@@ -192,11 +193,11 @@ public:
 		return statsTotalSampleCount / elapsedTime;
 	}
 
-	virtual void Save(const string &fileName) = 0;
+	virtual void Save(const std::string &fileName) = 0;
 
 protected:
-	void SaveImpl(const string &fileName) {
-		cerr << "Saving " << fileName << endl;
+	void SaveImpl(const std::string &fileName) {
+		LR_LOG(ctx, "Saving " << fileName);
 
 		FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fileName.c_str());
 		if (fif != FIF_UNKNOWN) {
@@ -231,11 +232,11 @@ protected:
 					}
 
 					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
-						cerr << "Failed image save: " << fileName << endl;
+						LR_LOG(ctx, "Failed image save: " << fileName);
 
 					FreeImage_Unload(dib);
 				} else
-					cerr << "Unable to allocate FreeImage HDR image: " << fileName << endl;
+					LR_LOG(ctx, "Unable to allocate FreeImage HDR image: " << fileName);
 			} else {
 				FIBITMAP *dib = FreeImage_Allocate(width, height, 24);
 
@@ -259,21 +260,21 @@ protected:
 					}
 
 					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
-						cerr << "Failed image save: " << fileName << endl;
+						LR_LOG(ctx, "Failed image save: " << fileName);
 
 					FreeImage_Unload(dib);
 				} else
-					cerr << "Unable to allocate FreeImage image: " << fileName << endl;
+					LR_LOG(ctx, "Unable to allocate FreeImage image: " << fileName);
 			}
 		} else
-			cerr << "Image type unknown: " << fileName << endl;
+			LR_LOG(ctx, "Image type unknown: " << fileName);
 	}
 
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
 		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
 
-		const unsigned int index = min<unsigned int>(
+		const unsigned int index = Min<unsigned int>(
 			Floor2UInt(GAMMA_TABLE_SIZE * Clamp(x, 0.f, 1.f)),
 				GAMMA_TABLE_SIZE - 1);
 		return gammaTable[index];
@@ -286,6 +287,7 @@ protected:
 	virtual const SampleFrameBuffer *GetSampleFrameBuffer() = 0;
 	virtual void AddSampleFrameBuffer(const SampleFrameBuffer *sfb) = 0;
 
+	Context *ctx;
 	unsigned int width, height;
 	unsigned int pixelCount;
 
@@ -296,7 +298,6 @@ protected:
 
 	FilterType filterType;
 	ToneMapParams *toneMapParams;
-	bool lowLatency;
 };
 
 //------------------------------------------------------------------------------
@@ -305,11 +306,9 @@ protected:
 
 class LuxRaysFilm : public Film {
 public:
-	LuxRaysFilm(Context *context, const bool lowLatencyMode, const unsigned int w,
-			const unsigned int h, DeviceDescription *deviceDesc) : Film(lowLatencyMode, w, h) {
-		ctx = context;
-
-		vector<DeviceDescription *> descs;
+	LuxRaysFilm(Context *context, const unsigned int w,
+			const unsigned int h, DeviceDescription *deviceDesc) : Film(context, w, h) {
+		std::vector<DeviceDescription *> descs;
 		descs.push_back(deviceDesc);
 		pixelDevice = ctx->AddPixelDevices(descs)[0];
 		pixelDevice->Init(w, h);
@@ -356,7 +355,7 @@ public:
 			pixelDevice->AddSampleBuffer(FILTER_PREVIEW, sampleBuffer);
 	}
 
-	void Save(const string &fileName) {
+	void Save(const std::string &fileName) {
 		// Update pixels
 		pixelDevice->UpdateFrameBuffer(*toneMapParams);
 		SaveImpl(fileName);
@@ -371,8 +370,9 @@ protected:
 		pixelDevice->Merge(sfb);
 	}
 
-	Context *ctx;
 	PixelDevice *pixelDevice;
 };
 
-#endif	/* _FILM_H */
+} }
+
+#endif	/* _LUXRAYS_FILM_FILM_H */

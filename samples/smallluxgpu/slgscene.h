@@ -28,14 +28,15 @@
 
 #include "smalllux.h"
 #include "volume.h"
-#include "film.h"
 
 #include "luxrays/core/context.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/scene.h"
+#include "luxrays/utils/film/film.h"
 
 using namespace std;
 using namespace luxrays::sdl;
+using namespace luxrays::utils;
 
 typedef enum {
 	ONE_UNIFORM, ALL_UNIFORM

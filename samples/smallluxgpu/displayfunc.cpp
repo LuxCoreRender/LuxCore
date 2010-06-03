@@ -30,7 +30,8 @@
 
 #include "displayfunc.h"
 #include "renderconfig.h"
-#include "film.h"
+
+#include "luxrays/utils/film/film.h"
 
 RenderingConfig *config;
 
