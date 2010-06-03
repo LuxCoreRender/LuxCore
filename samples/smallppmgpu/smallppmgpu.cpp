@@ -50,7 +50,7 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
 
-#define MAX_EYE_PATH_DEPTH 32
+#define MAX_EYE_PATH_DEPTH 16
 #define MAX_PHOTON_PATH_DEPTH 16
 
 enum EyePathState {
@@ -114,6 +114,7 @@ static std::string imgFileName = "image.png";
 static luxrays::FrameBuffer *imgFrameBuffer = NULL;
 
 static boost::thread *renderThread = NULL;
+static unsigned int photonTraced = 0;
 
 static std::vector<EyePath> *eyePathsPtr = NULL;
 
@@ -219,7 +220,7 @@ static void UpdateFrameBuffer() {
 			}
 			case HIT: {
 				const luxrays::Spectrum c = (eyePath->accumPhotonCount == 0) ? luxrays::Spectrum() :
-					(0.000005f * eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * eyePath->accumPhotonCount)));
+					(eyePath->accumReflectedFlux / (M_PI * eyePath->photonRadius2 * photonTraced));
 				imgFrameBuffer->SetPixel(i, Radiance2Pixel(c));
 				break;
 			}
@@ -352,7 +353,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 
 						eyePath->rayHit = *rayHit;
 						eyePath->material = (luxrays::sdl::SurfaceMaterial *)triMat;
-						eyePath->throughput *= surfaceColor * INV_PI;
+						eyePath->throughput *= surfaceColor;
 						eyePath->position = hitPoint;
 						eyePath->normal = shadeN;
 						eyePath->state = HIT;
@@ -457,7 +458,7 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 		rndGen->floatValue(), rndGen->floatValue(),
 		rndGen->floatValue(), rndGen->floatValue(),
 		&pdf, ray);
-	photonPath->flux /= pdf;
+	photonPath->flux *= scene->lights.size() / pdf;
 	photonPath->depth = 0;
 }
 
@@ -476,7 +477,6 @@ static void TracePhotonsThread(luxrays::Context *ctx,
 		InitPhotonPath(scene, rndGen, &photonPaths[i], &rays[rayBuffer->ReserveRay()]);
 	}
 
-	unsigned int photonTraced = 0;
 	const double startTime = luxrays::WallClockTime();
 	double lastPrintTime = startTime;
 	while (!boost::this_thread::interruption_requested()) {
@@ -550,11 +550,11 @@ static void TracePhotonsThread(luxrays::Context *ctx,
 							if ((luxrays::Dot(eyePath->normal, shadeN) > luxrays::RAY_EPSILON) &&
 									(luxrays::Dot(v, v) <=  eyePath->photonRadius2)) {
 								const float g = (eyePath->accumPhotonCount * alpha + alpha) / (eyePath->accumPhotonCount * alpha + 1.f);
-								eyePath->photonRadius2 = eyePath->photonRadius2 * g;
+								eyePath->photonRadius2 *= g;
 								eyePath->accumPhotonCount++;
 
-								luxrays::Spectrum f = eyePath->material->f(-ray->d, -eyePath->ray.d, eyePath->normal);
-								eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + eyePath->throughput * f * photonPath->flux) * g;
+								luxrays::Spectrum f = eyePath->material->f(-eyePath->ray.d, -ray->d, shadeN);
+								eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + photonPath->flux * f * eyePath->throughput) * g;
 							}
 						}
 					}
@@ -727,7 +727,7 @@ int main(int argc, char *argv[]) {
 				" -i [image file name]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
-		std::string sceneFileName = "scenes/simple/simple.scn";
+		std::string sceneFileName = "scenes/cornell/cornell.scn";
 		float photonAlpha = 0.7f;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
