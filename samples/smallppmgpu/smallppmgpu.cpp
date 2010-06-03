@@ -49,6 +49,7 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
+#include "luxrays/utils/film/film.h"
 
 #define MAX_EYE_PATH_DEPTH 16
 #define MAX_PHOTON_PATH_DEPTH 16
@@ -60,6 +61,9 @@ enum EyePathState {
 class EyePath {
 public:
 	EyePathState state;
+
+	// Screen information
+	float scrX, scrY;
 
 	// Eye path information
 	luxrays::Ray ray;
@@ -107,11 +111,16 @@ public:
 
 static std::string SPPMG_LABEL = "LuxRays SmallPPMGPU v" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
+static luxrays::Context *ctx = NULL;
+static luxrays::sdl::Scene *scene = NULL;
+
 static unsigned int scrRefreshInterval = 2000;
+
 static unsigned int imgWidth = 640;
 static unsigned int imgHeight = 480;
 static std::string imgFileName = "image.png";
-static luxrays::FrameBuffer *imgFrameBuffer = NULL;
+static luxrays::utils::Film *film = NULL;
+static luxrays::SampleBuffer *sampleBuffer = NULL;
 
 static boost::thread *renderThread = NULL;
 static unsigned int photonTraced = 0;
@@ -133,101 +142,45 @@ void DebugHandler(const char *msg) {
 	std::cerr << msg << std::endl;
 }
 
-static void SaveFrameBuffer(const std::string &fileName, const luxrays::FrameBuffer &frameBuffer) {
-	if (!imgFrameBuffer)
-		return;
-
-	std::cerr << "Saving " << fileName << std::endl;
-
-	FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fileName.c_str());
-	if (fif != FIF_UNKNOWN) {
-		const unsigned int width = frameBuffer.GetWidth();
-		const unsigned int height = frameBuffer.GetHeight();
-		FIBITMAP *dib = FreeImage_Allocate(width, height, 24);
-
-		if (dib) {
-			unsigned int pitch = FreeImage_GetPitch(dib);
-			BYTE *bits = (BYTE *) FreeImage_GetBits(dib);
-			const float *pixels = (float *)frameBuffer.GetPixels();
-
-			for (unsigned int y = 0; y < height; ++y) {
-				BYTE *pixel = (BYTE *) bits;
-				for (unsigned int x = 0; x < width; ++x) {
-					const int offset = 3 * (x + y * width);
-					pixel[FI_RGBA_RED] = (BYTE) (pixels[offset] * 255.f + .5f);
-					pixel[FI_RGBA_GREEN] = (BYTE) (pixels[offset + 1] * 255.f + .5f);
-					pixel[FI_RGBA_BLUE] = (BYTE) (pixels[offset + 2] * 255.f + .5f);
-					pixel += 3;
-				}
-
-				// Next line
-				bits += pitch;
-			}
-
-			if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
-				std::cerr << "Failed image save: " << fileName << std::endl;
-
-			FreeImage_Unload(dib);
-		} else
-			std::cerr << "Unable to allocate FreeImage image: " << fileName << std::endl;
-	} else
-		std::cerr << "Image type unknown: " << fileName << std::endl;
-}
-
 //------------------------------------------------------------------------------
 
-#define GAMMA_TABLE_SIZE 1024
-
-static float gammaTable[GAMMA_TABLE_SIZE];
-
-static void InitGammaTable(const float gamma = 2.2f) {
-	float x = 0.f;
-	const float dx = 1.f / GAMMA_TABLE_SIZE;
-	for (unsigned int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
-		gammaTable[i] = powf(luxrays::Clamp(x, 0.f, 1.f), 1.f / gamma);
-}
-
-static float Radiance2PixelFloat(const float x) {
-	// Very slow !
-	//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
-
-	const unsigned int index = luxrays::Min<unsigned int>(
-			luxrays::Floor2UInt(GAMMA_TABLE_SIZE * luxrays::Clamp(x, 0.f, 1.f)),
-			GAMMA_TABLE_SIZE - 1);
-	return gammaTable[index];
-}
-
-static luxrays::Spectrum Radiance2Pixel(const luxrays::Spectrum &s) {
-	return luxrays::Spectrum(
-			Radiance2PixelFloat(s.r),
-			Radiance2PixelFloat(s.g),
-			Radiance2PixelFloat(s.b));
-}
-
 static void UpdateFrameBuffer() {
-	if (!imgFrameBuffer)
+	if (!film)
 		return;
 
-	const unsigned int pixelCount = imgWidth * imgHeight;
+	film->Reset();
+
 	std::vector<EyePath> &eyePaths = *eyePathsPtr;
-	for (unsigned int i = 0; i < pixelCount; ++i) {
+	for (unsigned int i = 0; i < eyePaths.size(); ++i) {
 		EyePath *eyePath = &eyePaths[i];
 
 		switch (eyePath->state) {
 			case CONSTANT_COLOR: {
-				imgFrameBuffer->SetPixel(i, Radiance2Pixel(eyePath->constantColor));
+				sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, eyePath->constantColor);
 				break;
 			}
 			case HIT: {
-				const luxrays::Spectrum c = (eyePath->accumPhotonCount == 0) ? luxrays::Spectrum() :
+				const luxrays::Spectrum rad = (eyePath->accumPhotonCount == 0) ? luxrays::Spectrum() :
 					(eyePath->accumReflectedFlux / (M_PI * eyePath->photonRadius2 * photonTraced));
-				imgFrameBuffer->SetPixel(i, Radiance2Pixel(c));
+				sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, rad);
 				break;
 			}
 			default:
 				assert(false);
 				break;
 		}
+
+		if (sampleBuffer->IsFull()) {
+			// Splat all samples on the film
+			film->SplatSampleBuffer(true, sampleBuffer);
+			sampleBuffer = film->GetFreeSampleBuffer();
+		}
+	}
+
+	if (sampleBuffer->GetSampleCount() > 0) {
+		// Splat all samples on the film
+		film->SplatSampleBuffer(true, sampleBuffer);
+		sampleBuffer = film->GetFreeSampleBuffer();
 	}
 }
 
@@ -249,9 +202,12 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 		for (unsigned int x = 0; x < width; ++x) {
 			const unsigned int index = x + y * width;
 			EyePath *eyePath = &eyePaths[index];
-			scene->camera->GenerateRay(x + rndGen->floatValue() - 0.5f, y + rndGen->floatValue() - 0.5f,
-					width, height, &eyePath->ray,
+
+			eyePath->scrX = x + rndGen->floatValue() - 0.5f;
+			eyePath->scrY = y + rndGen->floatValue() - 0.5f;
+			scene->camera->GenerateRay(eyePath->scrX, eyePath->scrY, width, height, &eyePath->ray,
 					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
+
 			eyePath->depth = 0;
 			eyePath->throughput = luxrays::Spectrum(1.f, 1.f, 1.f);
 			eyePath->constantColor = luxrays::Spectrum(0.f, 0.f, 0.f);
@@ -462,8 +418,7 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 	photonPath->depth = 0;
 }
 
-static void TracePhotonsThread(luxrays::Context *ctx,
-	luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
+static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 	luxrays::IntersectionDevice *device, luxrays::RayBuffer *rayBuffer,
 	HashGrid *hashGrid, const float alpha) {
 	std::cerr << "Tracing photon paths: " << std::endl;
@@ -593,14 +548,8 @@ static void TracePhotonsThread(luxrays::Context *ctx,
 		}
 	}
 
-	//----------------------------------------------------------------------
-	// LuxRays Clean up
-	//----------------------------------------------------------------------
-
-	ctx->Stop();
-	delete scene;
 	delete rayBuffer;
-	delete ctx;
+	delete rndGen;
 }
 
 //------------------------------------------------------------------------------
@@ -628,9 +577,10 @@ static void PrintCaptions() {
 }
 
 static void DisplayFunc(void) {
-	if (imgFrameBuffer) {
+	if (film) {
+		film->UpdateScreenBuffer();
 		glRasterPos2i(0, 0);
-		glDrawPixels(imgWidth, imgHeight, GL_RGB, GL_FLOAT, imgFrameBuffer->GetPixels());
+		glDrawPixels(imgWidth, imgHeight, GL_RGB, GL_FLOAT, film->GetScreenBuffer());
 
 		PrintCaptions();
 	} else
@@ -642,8 +592,8 @@ static void DisplayFunc(void) {
 static void KeyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p':
-			UpdateFrameBuffer();
-			SaveFrameBuffer(imgFileName, *imgFrameBuffer);
+			film->UpdateScreenBuffer();
+			film->Save(imgFileName);
 			break;
 		case 27: { // Escape key
 			// Stop photon tracing thread
@@ -652,12 +602,16 @@ static void KeyFunc(unsigned char key, int x, int y) {
 				renderThread->interrupt();
 				renderThread->join();
 				delete renderThread;
-
-				UpdateFrameBuffer();
-				SaveFrameBuffer(imgFileName, *imgFrameBuffer);
 			}
 
-			delete imgFrameBuffer;
+			film->UpdateScreenBuffer();
+			film->Save(imgFileName);
+			film->FreeSampleBuffer(sampleBuffer);
+			delete film;
+
+			ctx->Stop();
+			delete scene;
+			delete ctx;
 
 			std::cerr << "Done." << std::endl;
 			exit(EXIT_SUCCESS);
@@ -769,25 +723,25 @@ int main(int argc, char *argv[]) {
 		// Create the LuxRays context
 		//--------------------------------------------------------------------------
 
-		luxrays::Context *ctx = new luxrays::Context(DebugHandler);
+		ctx = new luxrays::Context(DebugHandler);
 
 		// Looks for the first GPU device
-		std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
-		//luxrays::DeviceDescription::FilterOne(deviceDescs);
+		std::vector<luxrays::DeviceDescription *> interDevDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
+		//luxrays::DeviceDescription::FilterOne(interDevDescs);
 
-		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, interDevDescs);
 
-		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
-		//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_GPU, deviceDescs);
+		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, interDevDescs);
+		//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_GPU, interDevDescs);
 
-		if (deviceDescs.size() < 1) {
+		if (interDevDescs.size() < 1) {
 			std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
 			return (EXIT_FAILURE);
 		}
-		deviceDescs.resize(1);
+		interDevDescs.resize(1);
 
-		std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
-		std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(deviceDescs);
+		std::cerr << "Selected intersection device: " << interDevDescs[0]->GetName();
+		std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(interDevDescs);
 		luxrays::IntersectionDevice *device = devices[0];
 
 		luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
@@ -799,7 +753,7 @@ int main(int argc, char *argv[]) {
 		// Read the scene
 		//----------------------------------------------------------------------
 
-		luxrays::sdl::Scene *scene = new luxrays::sdl::Scene(ctx, sceneFileName);
+		scene = new luxrays::sdl::Scene(ctx, sceneFileName);
 		scene->camera->Update(imgWidth, imgHeight);
 
 		// Set the Luxrays SataSet
@@ -807,11 +761,13 @@ int main(int argc, char *argv[]) {
 		ctx->Start();
 
 		//----------------------------------------------------------------------
-		// Allocate frame buffer
+		// Allocate the Film
 		//----------------------------------------------------------------------
 
-		imgFrameBuffer = new luxrays::FrameBuffer(imgWidth, imgHeight);
-		InitGammaTable();
+		std::vector<luxrays::DeviceDescription *> pixelDevDecs = ctx->GetAvailableDeviceDescriptions();
+		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, pixelDevDecs);
+		film = new luxrays::utils::LuxRaysFilm(ctx, imgWidth, imgHeight, pixelDevDecs[0]);
+		sampleBuffer = film->GetFreeSampleBuffer();
 
 		//----------------------------------------------------------------------
 		// Build the EyePaths list
@@ -839,7 +795,7 @@ int main(int argc, char *argv[]) {
 		// Start photon tracing thread
 		//----------------------------------------------------------------------
 
-		renderThread = new boost::thread(boost::bind(TracePhotonsThread, ctx, scene, rndGen, device, rayBuffer, hashGrid, photonAlpha));
+		renderThread = new boost::thread(boost::bind(TracePhotonsThread, rndGen, device, rayBuffer, hashGrid, photonAlpha));
 
 		//----------------------------------------------------------------------
 		// Start GLUT loop
