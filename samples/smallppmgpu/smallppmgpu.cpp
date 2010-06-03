@@ -54,7 +54,7 @@
 #define MAX_PHOTON_PATH_DEPTH 16
 
 enum EyePathState {
-	TO_TRACE, HIT, MISS, BLACK
+	TO_TRACE, HIT, CONSTANT_COLOR
 };
 
 class EyePath {
@@ -66,12 +66,12 @@ public:
 	luxrays::RayHit rayHit;
 	unsigned int depth;
 	luxrays::Spectrum throughput;
-	luxrays::Spectrum emit;
+	luxrays::Spectrum constantColor;
 
 	// hit point information
 	luxrays::Point position;
 	luxrays::Normal normal;
-	const luxrays::sdl::Material *material;
+	const luxrays::sdl::SurfaceMaterial *material;
 
 	float photonRadius2;
 	unsigned int accumPhotonCount;
@@ -213,13 +213,13 @@ static void UpdateFrameBuffer() {
 		EyePath *eyePath = &eyePaths[i];
 
 		switch (eyePath->state) {
-			case BLACK:
-			case MISS:
-				imgFrameBuffer->SetPixel(i, luxrays::Spectrum());
+			case CONSTANT_COLOR: {
+				imgFrameBuffer->SetPixel(i, Radiance2Pixel(eyePath->constantColor));
 				break;
-			case HIT:
-			{
-				const luxrays::Spectrum c = 0.000005f * eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * eyePath->accumPhotonCount));
+			}
+			case HIT: {
+				const luxrays::Spectrum c = (eyePath->accumPhotonCount == 0) ? luxrays::Spectrum() :
+					(0.000005f * eyePath->accumReflectedFlux * (1.f / (M_PI * eyePath->photonRadius2 * eyePath->accumPhotonCount)));
 				imgFrameBuffer->SetPixel(i, Radiance2Pixel(c));
 				break;
 			}
@@ -253,7 +253,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 			eyePath->depth = 0;
 			eyePath->throughput = luxrays::Spectrum(1.f, 1.f, 1.f);
-			eyePath->emit = luxrays::Spectrum(0.f, 0.f, 0.f);
+			eyePath->constantColor = luxrays::Spectrum(0.f, 0.f, 0.f);
 			eyePath->state = TO_TRACE;
 
 			todoEyePaths.push_back(eyePath);
@@ -280,7 +280,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 			// Check if we reached the max path depth
 			if (eyePath->depth > MAX_EYE_PATH_DEPTH) {
 				todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
-				eyePath->state = BLACK;
+				eyePath->state = CONSTANT_COLOR;
 			} else {
 				eyePath->depth++;
 				rayBuffer->AddRay(eyePath->ray);
@@ -308,7 +308,10 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 
 				if (rayHit->Miss()) {
 					todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
-					eyePath->state = MISS;
+					if (scene->infiniteLight)
+						eyePath->constantColor = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
+
+					eyePath->state = CONSTANT_COLOR;
 				} else {
 					// Something was hit
 					const luxrays::Point hitPoint = eyePath->ray(rayHit->t);
@@ -341,21 +344,15 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 					if (triMat->IsLightSource()) {
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 
-						eyePath->rayHit = *rayHit;
-						eyePath->material = triMat;
-						eyePath->throughput *= surfaceColor;
-
 						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
-						eyePath->emit = tLight->Le(scene->objects, -eyePath->ray.d);
-						eyePath->position = hitPoint;
-						eyePath->normal = shadeN;
-						eyePath->state = HIT;
+						eyePath->constantColor = tLight->Le(scene->objects, -eyePath->ray.d) * eyePath->throughput;
+						eyePath->state = CONSTANT_COLOR;
 					} else if (triMat->IsDiffuse()) {
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 
 						eyePath->rayHit = *rayHit;
-						eyePath->material = triMat;
-						eyePath->throughput *= surfaceColor;
+						eyePath->material = (luxrays::sdl::SurfaceMaterial *)triMat;
+						eyePath->throughput *= surfaceColor * INV_PI;
 						eyePath->position = hitPoint;
 						eyePath->normal = shadeN;
 						eyePath->state = HIT;
@@ -372,7 +369,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 						if ((fPdf <= 0.f) || f.Black()) {
 							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 
-							eyePath->state = BLACK;
+							eyePath->state = CONSTANT_COLOR;
 						} else {
 							++todoEyePathsIterator;
 
@@ -555,7 +552,9 @@ static void TracePhotonsThread(luxrays::Context *ctx,
 								const float g = (eyePath->accumPhotonCount * alpha + alpha) / (eyePath->accumPhotonCount * alpha + 1.f);
 								eyePath->photonRadius2 = eyePath->photonRadius2 * g;
 								eyePath->accumPhotonCount++;
-								eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + eyePath->throughput * photonPath->flux * INV_PI) * g;
+
+								luxrays::Spectrum f = eyePath->material->f(-ray->d, -eyePath->ray.d, eyePath->normal);
+								eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + eyePath->throughput * f * photonPath->flux) * g;
 							}
 						}
 					}
@@ -779,7 +778,7 @@ int main(int argc, char *argv[]) {
 		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
 
 		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
-		//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
+		//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_GPU, deviceDescs);
 
 		if (deviceDescs.size() < 1) {
 			std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
