@@ -57,6 +57,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 
 	camera->lensRadius = scnProp->GetFloat("scene.camera.lensradius", 0.f);
 	camera->focalDistance = scnProp->GetFloat("scene.camera.focaldistance", 10.f);
+	camera->fieldOfView = scnProp->GetFloat("scene.camera.fieldofview", 45.f);
 
 	// Check if camera motion blur is enabled
 	if (scnProp->GetInt("scene.camera.motionblur.enable", 0)) {

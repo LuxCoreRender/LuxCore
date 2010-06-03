@@ -115,8 +115,8 @@ void RenderingConfig::Init() {
 	// Create the Scene
 	const int accelType = cfg.GetInt("accelerator.type", -1);
 	scene = new SLGScene(ctx, sceneFileName, film, accelType);
-
-	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", 45.f);
+	// For compatibility with old scenes
+	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", scene->camera->fieldOfView);
 	scene->camera->Update(film->GetWidth(), film->GetHeight());
 	scene->maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	int strat = cfg.GetInt("path.lightstrategy", 0);

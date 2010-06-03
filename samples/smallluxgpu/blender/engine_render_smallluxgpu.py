@@ -563,6 +563,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fscn.write('scene.camera.lookat = {} {} {} {} {} {}\n'.format(ff(cam.location.x),ff(cam.location.y),ff(cam.location.z),ff(target[0]),ff(target[1]),ff(target[2])))
     camup = cam.matrix.rotation_part() * Vector((0,1,0))
     fscn.write('scene.camera.up = {} {} {}\n'.format(ff(camup.x),ff(camup.y),ff(camup.z)))
+    fscn.write('scene.camera.fieldofview = {:g}\n'.format(cam.data.angle*180.0/3.1415926536))
     if scene.slg_cameramotionblur:
         fscn.write('scene.camera.motionblur.enable = 1\n')
         scene.set_frame(scene.frame_current - 1)
@@ -775,7 +776,6 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('batch.haltspp = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmodespp))
     fcfg.write('batch.periodicsave = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmode_periodicsave))
     fcfg.write('scene.file = {}/{}/{}.scn\n'.format(basepath,basename,basename))
-    fcfg.write('scene.fieldofview = {:g}\n'.format(scene.camera.data.angle*180.0/3.1415926536))
     fcfg.write('scene.epsilon = {:g}\n'.format(scene.unit_settings.scale_length*0.0001))
     fcfg.write('opencl.latency.mode = {:b}\n'.format(scene.slg_low_latency))
     fcfg.write('opencl.nativethread.count = {}\n'.format(scene.slg_native_threads))
