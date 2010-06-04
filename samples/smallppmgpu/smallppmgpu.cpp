@@ -114,6 +114,7 @@ static std::string SPPMG_LABEL = "LuxRays SmallPPMGPU v" LUXRAYS_VERSION_MAJOR "
 static luxrays::Context *ctx = NULL;
 static luxrays::sdl::Scene *scene = NULL;
 
+static double startTime = 0.0;
 static unsigned int scrRefreshInterval = 2000;
 
 static unsigned int imgWidth = 640;
@@ -421,7 +422,7 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 	luxrays::IntersectionDevice *device, luxrays::RayBuffer *rayBuffer,
 	HashGrid *hashGrid, const float alpha) {
-	std::cerr << "Tracing photon paths: " << std::endl;
+	std::cerr << "Tracing photon paths" << std::endl;
 
 	// Generate photons from light sources
 	std::vector<PhotonPath> photonPaths(rayBuffer->GetSize());
@@ -432,16 +433,8 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 		InitPhotonPath(scene, rndGen, &photonPaths[i], &rays[rayBuffer->ReserveRay()]);
 	}
 
-	const double startTime = luxrays::WallClockTime();
-	double lastPrintTime = startTime;
+	startTime = luxrays::WallClockTime();
 	while (!boost::this_thread::interruption_requested()) {
-		const double now = luxrays::WallClockTime();
-		const double dt = now - lastPrintTime;
-		if (dt > 2.0) {
-			std::cerr << "  Traced " << photonTraced / 1000 << "k" << std::endl;
-			lastPrintTime = now;
-		}
-
 		// Trace the rays
 		device->PushRayBuffer(rayBuffer);
 		rayBuffer = device->PopRayBuffer();
@@ -566,14 +559,21 @@ static void PrintCaptions() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.8f);
-	glRecti(0, imgHeight - 15,
-			imgWidth - 1, imgHeight - 1);
+	glRecti(0, imgHeight - 15, imgWidth - 1, imgHeight - 1);
+	glRecti(0, 0, imgWidth - 1, 18);
 	glDisable(GL_BLEND);
 
 	// Title
 	glColor3f(1.f, 1.f, 1.f);
 	glRasterPos2i(4, imgHeight - 10);
 	PrintString(GLUT_BITMAP_8_BY_13, SPPMG_LABEL.c_str());
+
+	// Stats
+	glRasterPos2i(4, 5);
+	char captionBuffer[512];
+	const double photonsSec = photonTraced / (luxrays::WallClockTime() - startTime);
+	sprintf(captionBuffer, "[Photons %.2fM][Avg. photons/sec % 4dK]", float(photonTraced) / 1000000.f, int(photonsSec / 1000.f));
+	PrintString(GLUT_BITMAP_8_BY_13, captionBuffer);
 }
 
 static void DisplayFunc(void) {
