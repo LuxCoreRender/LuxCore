@@ -197,6 +197,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 
 	// Generate eye rays
 	std::cerr << "Building eye paths rays with " << imgSuperSampling << "x" << imgSuperSampling << " super-sampling:" << std::endl;
+	std::cerr << "  0/" << height << std::endl;
 	double lastPrintTime = luxrays::WallClockTime();
 	unsigned int index = 0;
 	const float invImgSuperSampling = 1.f / imgSuperSampling;
@@ -230,11 +231,13 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 	// Iterate through all eye paths
 	std::cerr << "Building eye paths hit points: " << std::endl;
 	bool done;
-	std::cerr << "  " << todoEyePaths.size() << " eye paths left" << std::endl;
 	lastPrintTime = luxrays::WallClockTime();
-	while(todoEyePaths.size() > 0) {
+	// Note: (todoEyePaths.size() > 0) is extremly slow to execute
+	unsigned int todoEyePathCount = width * height * imgSuperSampling * imgSuperSampling;
+	std::cerr << "  " << todoEyePathCount / 1000 << "k eye paths left" << std::endl;
+	while(todoEyePathCount > 0) {
 		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
-			std::cerr << "  " << todoEyePaths.size() / 1000 << "k eye paths left" << std::endl;
+			std::cerr << "  " << todoEyePathCount / 1000 << "k eye paths left" << std::endl;
 			lastPrintTime = luxrays::WallClockTime();
 		}
 
@@ -247,6 +250,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 			// Check if we reached the max path depth
 			if (eyePath->depth > MAX_EYE_PATH_DEPTH) {
 				todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+				--todoEyePathCount;
 				eyePath->state = CONSTANT_COLOR;
 			} else {
 				eyePath->depth++;
@@ -275,6 +279,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 
 				if (rayHit->Miss()) {
 					todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+					--todoEyePathCount;
 					if (scene->infiniteLight)
 						eyePath->constantColor = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
 
@@ -310,12 +315,14 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 
 					if (triMat->IsLightSource()) {
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+						--todoEyePathCount;
 
 						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
 						eyePath->constantColor = tLight->Le(scene->objects, -eyePath->ray.d) * eyePath->throughput;
 						eyePath->state = CONSTANT_COLOR;
 					} else if (triMat->IsDiffuse()) {
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+						--todoEyePathCount;
 
 						eyePath->rayHit = *rayHit;
 						eyePath->material = (luxrays::sdl::SurfaceMaterial *)triMat;
@@ -335,6 +342,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 								true, &fPdf, specularBounce) * surfaceColor;
 						if ((fPdf <= 0.f) || f.Black()) {
 							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+							--todoEyePathCount;
 
 							eyePath->state = CONSTANT_COLOR;
 						} else {
@@ -386,8 +394,9 @@ static HashGrid *BuildHashGrid(
 	}
 
 	const float hashs = 1.f / (photonRadius * 2.f);
-	// TODO: replace 10 with a tunable parameter
-	const unsigned int hashGridSize = 10 * hitPoints.size();
+	// TODO: add a tunable parameter for hashgrid size
+	const unsigned int hashGridSize = hitPoints.size();
+	// TODO: optimize std::vector<std::vector<EyePath *> > type to save memory
 	std::vector<std::vector<EyePath *> > *hashGridPtr = new std::vector<std::vector<EyePath *> >(hashGridSize);
 	std::vector<std::vector<EyePath *> > &hashGrid = *hashGridPtr;
 
