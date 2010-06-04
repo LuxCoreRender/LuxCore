@@ -119,6 +119,7 @@ static unsigned int scrRefreshInterval = 2000;
 
 static unsigned int imgWidth = 640;
 static unsigned int imgHeight = 480;
+static unsigned int imgSuperSampling = 2;
 static std::string imgFileName = "image.png";
 static luxrays::utils::Film *film = NULL;
 static luxrays::SampleBuffer *sampleBuffer = NULL;
@@ -190,31 +191,39 @@ static void UpdateFrameBuffer() {
 static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
 	luxrays::IntersectionDevice *device, luxrays::RayBuffer *rayBuffer,
 	const unsigned int width, const unsigned int height) {
-	std::vector<EyePath> *eyePathsPtr = new std::vector<EyePath>(width * height);
+	std::vector<EyePath> *eyePathsPtr = new std::vector<EyePath>(width * height * imgSuperSampling * imgSuperSampling);
 	std::vector<EyePath> &eyePaths = *eyePathsPtr;
 	std::list<EyePath *> todoEyePaths;
 
 	// Generate eye rays
-	std::cerr << "Building eye paths rays:" << std::endl;
+	std::cerr << "Building eye paths rays with " << imgSuperSampling << "x" << imgSuperSampling << " super-sampling:" << std::endl;
+	double lastPrintTime = luxrays::WallClockTime();
+	unsigned int index = 0;
+	const float invImgSuperSampling = 1.f / imgSuperSampling;
 	for (unsigned int y = 0; y < height; ++y) {
-		if (y % 25 == 0)
+		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
 			std::cerr << "  " << y << "/" << height << std::endl;
+			lastPrintTime = luxrays::WallClockTime();
+		}
 
 		for (unsigned int x = 0; x < width; ++x) {
-			const unsigned int index = x + y * width;
-			EyePath *eyePath = &eyePaths[index];
+			for (unsigned int sy = 0; sy < imgSuperSampling; ++sy) {
+				for (unsigned int sx = 0; sx < imgSuperSampling; ++sx) {
+					EyePath *eyePath = &eyePaths[index++];
 
-			eyePath->scrX = x + rndGen->floatValue() - 0.5f;
-			eyePath->scrY = y + rndGen->floatValue() - 0.5f;
-			scene->camera->GenerateRay(eyePath->scrX, eyePath->scrY, width, height, &eyePath->ray,
-					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
+					eyePath->scrX = x + (sx + rndGen->floatValue()) * invImgSuperSampling - 0.5f;
+					eyePath->scrY = y + (sy + rndGen->floatValue()) * invImgSuperSampling - 0.5f;
+					scene->camera->GenerateRay(eyePath->scrX, eyePath->scrY, width, height, &eyePath->ray,
+							rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
-			eyePath->depth = 0;
-			eyePath->throughput = luxrays::Spectrum(1.f, 1.f, 1.f);
-			eyePath->constantColor = luxrays::Spectrum(0.f, 0.f, 0.f);
-			eyePath->state = TO_TRACE;
+					eyePath->depth = 0;
+					eyePath->throughput = luxrays::Spectrum(1.f, 1.f, 1.f);
+					eyePath->constantColor = luxrays::Spectrum(0.f, 0.f, 0.f);
+					eyePath->state = TO_TRACE;
 
-			todoEyePaths.push_back(eyePath);
+					todoEyePaths.push_back(eyePath);
+				}
+			}
 		}
 	}
 
@@ -222,10 +231,10 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 	std::cerr << "Building eye paths hit points: " << std::endl;
 	bool done;
 	std::cerr << "  " << todoEyePaths.size() << " eye paths left" << std::endl;
-	double lastPrintTime = luxrays::WallClockTime();
+	lastPrintTime = luxrays::WallClockTime();
 	while(todoEyePaths.size() > 0) {
 		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
-			std::cerr << "  " << todoEyePaths.size() << " eye paths left" << std::endl;
+			std::cerr << "  " << todoEyePaths.size() / 1000 << "k eye paths left" << std::endl;
 			lastPrintTime = luxrays::WallClockTime();
 		}
 
@@ -361,7 +370,7 @@ static HashGrid *BuildHashGrid(
 
 	// Calculate initial radius
 	luxrays::Vector ssize = hpBBox.pMax - hpBBox.pMin;
-	const float photonRadius = ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
+	const float photonRadius = ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width * imgSuperSampling + height * imgSuperSampling) / 2.f) * 2.f;
 
 	// Expand the bounding box by used radius
 	hpBBox.Expand(photonRadius);
@@ -377,12 +386,14 @@ static HashGrid *BuildHashGrid(
 	}
 
 	const float hashs = 1.f / (photonRadius * 2.f);
-	const unsigned int hashGridSize = hitPoints.size();
+	// TODO: replace 10 with a tunable parameter
+	const unsigned int hashGridSize = 10 * hitPoints.size();
 	std::vector<std::vector<EyePath *> > *hashGridPtr = new std::vector<std::vector<EyePath *> >(hashGridSize);
 	std::vector<std::vector<EyePath *> > &hashGrid = *hashGridPtr;
 
 	std::cerr << "Building hit points hash grid...";
 	const luxrays::Vector vphotonRadius(photonRadius, photonRadius, photonRadius);
+	unsigned int maxPathCount = 0;
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
 		EyePath *eyePath = hitPoints[i];
 
@@ -394,11 +405,15 @@ static HashGrid *BuildHashGrid(
 				for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ix++) {
 					int hv = Hash(ix, iy, iz, hashGridSize);
 					hashGrid[hv].push_back(eyePath);
+
+					if (hashGrid[hv].size() > maxPathCount)
+						maxPathCount = hashGrid[hv].size();
 				}
 			}
 		}
 	}
 	std::cerr << "Done" << std::endl;
+	std::cerr << "Max path count in a single hash grid entry: " << maxPathCount << std::endl;
 
 	return new HashGrid(hashs, hpBBox, hashGridPtr);
 }
@@ -679,6 +694,7 @@ int main(int argc, char *argv[]) {
 				" -a [photon alpha]" << std::endl <<
 				" -r [screen refresh interval]" << std::endl <<
 				" -i [image file name]" << std::endl <<
+				" -s [super-sampling count]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		std::string sceneFileName = "scenes/cornell/cornell.scn";
@@ -699,6 +715,8 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'i') imgFileName = argv[++i];
 
+				else if (argv[i][1] == 's') imgSuperSampling = luxrays::Max(2, atoi(argv[++i]));
+
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
 					exit(EXIT_FAILURE);
@@ -711,7 +729,6 @@ int main(int argc, char *argv[]) {
 					throw std::runtime_error("Unknow file extension: " + s);
 			}
 		}
-		const unsigned int pixelCount = imgWidth * imgHeight;
 
 		//--------------------------------------------------------------------------
 		// Init GLUT
@@ -782,7 +799,7 @@ int main(int argc, char *argv[]) {
 
 		// Build the list of EyePaths hit points
 		std::vector<EyePath *> hitPoints;
-		for (unsigned int i = 0; i < pixelCount; ++i) {
+		for (unsigned int i = 0; i < eyePaths.size(); ++i) {
 			EyePath *eyePath = &eyePaths[i];
 
 			if (eyePath->state == HIT)
