@@ -678,7 +678,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           fply = open('{}/{}.ply'.format(sdir,mat), 'wb')
           fply.write(b'ply\n')
           fply.write(b'format ascii 1.0\n')
-          fply.write(str.encode('comment Created by SmallLuxGPU exporter for Blender 2.5, source file: {}\n'.format((bpy.data.filename.split('/')[-1].split('\\')[-1]))))
+          fply.write(str.encode('comment Created by SmallLuxGPU exporter for Blender 2.5, source file: {}\n'.format((bpy.data.filepath.split('/')[-1].split('\\')[-1]))))
           fply.write(str.encode('element vertex {}\n'.format(vertnum[i])))
           fply.write(b'property float x\n')
           fply.write(b'property float y\n')
