@@ -1,4 +1,5 @@
 scene.camera.lookat = 7.634103 -4.168197 1.421921 12.037415 4.713311 0.106751
+scene.camera.fieldofview = 90
 scene.materials.matte.black matte = 0.065511 0.065511 0.065511
 scene.objects.black matte.black matte = scenes/kitchen/black matte.ply
 scene.materials.mattemirror.black_glass = 0.02098 0.02098 0.02098 0.25 0.25 0.25  1
