@@ -496,8 +496,11 @@ Spectrum TriangleLight::Sample_L(const std::vector<ExtTriangleMesh *> &objs,
 	// Ray direction
 	const Normal &sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
 	Vector dir = UniformSampleSphere(u2, u3);
-	if (Dot(dir, sampleN) < 0.f)
+	float RdotN = Dot(dir, sampleN);
+	if (RdotN < 0.f) {
 		dir *= -1.f;
+		RdotN = -RdotN;
+	}
 
 	*ray = Ray(orig, dir);
 
@@ -505,7 +508,7 @@ Spectrum TriangleLight::Sample_L(const std::vector<ExtTriangleMesh *> &objs,
 
 	const Spectrum *colors = mesh->GetColors();
 	if (colors)
-		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
 	else
-		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
+		return lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
 }
