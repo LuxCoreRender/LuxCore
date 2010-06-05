@@ -1,0 +1,16 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: psor-cube.blend
+element vertex 4
+property float x
+property float y
+property float z
+element face 2
+property list uchar uint vertex_indices
+end_header
+-102.205353 -117.567970 -12.235133
+102.200638 -117.567970 -12.235133
+102.200638 86.838020 -12.235675
+-102.205353 86.838020 -12.235675
+3 0 1 2
+3 0 2 3
