@@ -188,6 +188,21 @@ static void UpdateFrameBuffer() {
 
 //------------------------------------------------------------------------------
 
+static float RadicalInverse(u_int n, u_int base) {
+	float val = 0.f;
+	const float invBase = 1.f / base;
+	float invBi = invBase;
+	while (n > 0) {
+		// Compute next digit of radical inverse
+		u_int d_i = (n % base);
+		val += d_i * invBi;
+		n /= base;
+		invBi *= invBase;
+	}
+
+	return val;
+}
+
 static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
 	luxrays::IntersectionDevice *device, luxrays::RayBuffer *rayBuffer,
 	const unsigned int width, const unsigned int height) {
@@ -429,15 +444,17 @@ static HashGrid *BuildHashGrid(
 
 static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
 	PhotonPath *photonPath, luxrays::Ray *ray) {
+	// Using radical inverse sequence to sample lights
+
 	// Select one light source
-	const unsigned int lightIndex = scene->SampleLights(rndGen->floatValue());
+	const unsigned int lightIndex = scene->SampleLights(RadicalInverse(photonTraced, 2));
 	const luxrays::sdl::LightSource *light = scene->lights[lightIndex];
 
 	// Initialize the photon path
 	float pdf;
 	photonPath->flux = light->Sample_L(scene->objects,
-		rndGen->floatValue(), rndGen->floatValue(),
-		rndGen->floatValue(), rndGen->floatValue(),
+		RadicalInverse(photonTraced, 3), RadicalInverse(photonTraced, 5),
+		RadicalInverse(photonTraced, 7), RadicalInverse(photonTraced, 11),
 		&pdf, ray);
 	photonPath->flux *= scene->lights.size() / pdf;
 	photonPath->depth = 0;
