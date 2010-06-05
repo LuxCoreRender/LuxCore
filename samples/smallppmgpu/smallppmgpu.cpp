@@ -390,16 +390,6 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
 						eyePath->constantColor = tLight->Le(scene->objects, -eyePath->ray.d) * eyePath->throughput;
 						eyePath->state = CONSTANT_COLOR;
-					} else if (triMat->IsDiffuse()) {
-						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
-						--todoEyePathCount;
-
-						eyePath->rayHit = *rayHit;
-						eyePath->material = (luxrays::sdl::SurfaceMaterial *)triMat;
-						eyePath->throughput *= surfaceColor;
-						eyePath->position = hitPoint;
-						eyePath->normal = shadeN;
-						eyePath->state = HIT;
 					} else {
 						// Build the next vertex path ray
 						const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
@@ -409,17 +399,27 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 						bool specularBounce;
 						const luxrays::Spectrum f = triSurfMat->Sample_f(-eyePath->ray.d, &wi, N, shadeN,
 								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-								true, &fPdf, specularBounce) * surfaceColor;
+								false, &fPdf, specularBounce) * surfaceColor;
 						if ((fPdf <= 0.f) || f.Black()) {
 							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 							--todoEyePathCount;
 
 							eyePath->state = CONSTANT_COLOR;
-						} else {
+						} else if (specularBounce) {
 							++todoEyePathsIterator;
 
 							eyePath->throughput *= f / fPdf;
 							eyePath->ray = luxrays::Ray(hitPoint, wi);
+						} else {
+							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+							--todoEyePathCount;
+
+							eyePath->rayHit = *rayHit;
+							eyePath->material = (luxrays::sdl::SurfaceMaterial *)triMat;
+							eyePath->throughput *= surfaceColor;
+							eyePath->position = hitPoint;
+							eyePath->normal = shadeN;
+							eyePath->state = HIT;
 						}
 					}
 				}
@@ -661,7 +661,16 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 					// Re-initialize the photon path
 					InitPhotonPath(scene, rndGen, photonPath, ray);
 				} else {
-					if (triMat->IsDiffuse()) {
+					const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
+
+					float fPdf;
+					luxrays::Vector wi;
+					bool specularBounce;
+					const luxrays::Spectrum f = triSurfMat->Sample_f(-ray->d, &wi, N, shadeN,
+							rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+							false, &fPdf, specularBounce) * surfaceColor;
+
+					if (!specularBounce) {
 						// Look for eye path hit points near the current hit point
 						luxrays::Vector hh = (hitPoint - hashGrid->gridBBox.pMin) * hashGrid->invHashSize;
 						const int ix = abs(int(hh.x));
@@ -691,14 +700,6 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 					// Check if we reached the max. depth
 					if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
 						// Build the next vertex path ray
-						const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
-
-						float fPdf;
-						luxrays::Vector wi;
-						bool specularBounce;
-						const luxrays::Spectrum f = triSurfMat->Sample_f(-ray->d, &wi, N, shadeN,
-								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-								false, &fPdf, specularBounce) * surfaceColor;
 						if ((fPdf <= 0.f) || f.Black()) {
 							// Re-initialize the photon path
 							InitPhotonPath(scene, rndGen, photonPath, ray);
