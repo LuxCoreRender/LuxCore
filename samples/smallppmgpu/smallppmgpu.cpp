@@ -321,6 +321,76 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 					// Interpolate face normal
 					luxrays::Normal N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
 
+					// Check if I have to apply texture mapping or normal mapping
+					luxrays::sdl::TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
+					luxrays::sdl::BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
+					luxrays::sdl::NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
+					if (tm || bm || nm) {
+						// Interpolate UV coordinates if required
+						const luxrays::UV triUV = luxrays::InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+
+						// Check if there is an assigned texture map
+						if (tm)	{
+							const luxrays::sdl::TextureMap *map = tm->GetTexMap();
+
+							// Apply texture mapping
+							surfaceColor *= map->GetColor(triUV);
+
+							// Check if the texture map has an alpha channel
+							if (map->HasAlpha()) {
+								const float alpha = map->GetAlpha(triUV);
+
+								if ((alpha == 0.0f) || ((alpha < 1.f) && (rndGen->floatValue() > alpha))) {
+									eyePath->ray = luxrays::Ray(hitPoint, eyePath->ray.d);
+									continue;
+								}
+							}
+						}
+
+						// Check if there is an assigned bump/normal map
+						if (bm || nm) {
+							if (nm) {
+								// Apply normal mapping
+								const luxrays::Spectrum color = nm->GetTexMap()->GetColor(triUV);
+
+								const float x = 2.0 * (color.r - 0.5);
+								const float y = 2.0 * (color.g - 0.5);
+								const float z = 2.0 * (color.b - 0.5);
+
+								luxrays::Vector v1, v2;
+								luxrays::CoordinateSystem(luxrays::Vector(N), &v1, &v2);
+								N = luxrays::Normalize(luxrays::Normal(
+										v1.x * x + v2.x * y + N.x * z,
+										v1.y * x + v2.y * y + N.y * z,
+										v1.z * x + v2.z * y + N.z * z));
+							}
+
+							if (bm) {
+								// Apply bump mapping
+								const luxrays::sdl::TextureMap *map = bm->GetTexMap();
+								const luxrays::UV &dudv = map->GetDuDv();
+
+								const float b0 = map->GetColor(triUV).Filter();
+
+								const luxrays::UV uvdu(triUV.u + dudv.u, triUV.v);
+								const float bu = map->GetColor(uvdu).Filter();
+
+								const luxrays::UV uvdv(triUV.u, triUV.v + dudv.v);
+								const float bv = map->GetColor(uvdv).Filter();
+
+								const float scale = bm->GetScale();
+								const luxrays::Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
+
+								luxrays::Vector v1, v2;
+								luxrays::CoordinateSystem(luxrays::Vector(N), &v1, &v2);
+								N = luxrays::Normalize(luxrays::Normal(
+										v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
+										v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
+										v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
+							}
+						}
+					}
+
 					// Flip the normal if required
 					luxrays::Normal shadeN;
 					if (luxrays::Dot(eyePath->ray.d, N) > 0.f)
@@ -516,12 +586,86 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 				// Interpolate face normal
 				luxrays::Normal N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
 
+				// Check if I have to apply texture mapping or normal mapping
+				luxrays::sdl::TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
+				luxrays::sdl::BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
+				luxrays::sdl::NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
+				if (tm || bm || nm) {
+					// Interpolate UV coordinates if required
+					const luxrays::UV triUV = luxrays::InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+
+					// Check if there is an assigned texture map
+					if (tm)	{
+						const luxrays::sdl::TextureMap *map = tm->GetTexMap();
+
+						// Apply texture mapping
+						surfaceColor *= map->GetColor(triUV);
+
+						// Check if the texture map has an alpha channel
+						if (map->HasAlpha()) {
+							const float alpha = map->GetAlpha(triUV);
+
+							if ((alpha == 0.0f) || ((alpha < 1.f) && (rndGen->floatValue() > alpha))) {
+								*ray = luxrays::Ray(hitPoint, ray->d);
+								continue;
+							}
+						}
+					}
+
+					// Check if there is an assigned bump/normal map
+					if (bm || nm) {
+						if (nm) {
+							// Apply normal mapping
+							const luxrays::Spectrum color = nm->GetTexMap()->GetColor(triUV);
+
+							const float x = 2.0 * (color.r - 0.5);
+							const float y = 2.0 * (color.g - 0.5);
+							const float z = 2.0 * (color.b - 0.5);
+
+							luxrays::Vector v1, v2;
+							luxrays::CoordinateSystem(luxrays::Vector(N), &v1, &v2);
+							N = luxrays::Normalize(luxrays::Normal(
+									v1.x * x + v2.x * y + N.x * z,
+									v1.y * x + v2.y * y + N.y * z,
+									v1.z * x + v2.z * y + N.z * z));
+						}
+
+						if (bm) {
+							// Apply bump mapping
+							const luxrays::sdl::TextureMap *map = bm->GetTexMap();
+							const luxrays::UV &dudv = map->GetDuDv();
+
+							const float b0 = map->GetColor(triUV).Filter();
+
+							const luxrays::UV uvdu(triUV.u + dudv.u, triUV.v);
+							const float bu = map->GetColor(uvdu).Filter();
+
+							const luxrays::UV uvdv(triUV.u, triUV.v + dudv.v);
+							const float bv = map->GetColor(uvdv).Filter();
+
+							const float scale = bm->GetScale();
+							const luxrays::Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
+
+							luxrays::Vector v1, v2;
+							luxrays::CoordinateSystem(luxrays::Vector(N), &v1, &v2);
+							N = luxrays::Normalize(luxrays::Normal(
+									v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
+									v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
+									v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
+						}
+					}
+				}
+
 				// Flip the normal if required
 				luxrays::Normal shadeN;
-				if (luxrays::Dot(ray->d, N) > 0.f)
+				float RdotShadeN = luxrays::Dot(ray->d, N);
+				if (RdotShadeN > 0.f) {
+					// Flip shade  normal
 					shadeN = -N;
-				else
+				} else {
 					shadeN = N;
+					RdotShadeN = -RdotShadeN;
+				}
 
 				if (triMat->IsLightSource()) {
 					// Re-initialize the photon path
@@ -546,8 +690,9 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 									eyePath->photonRadius2 *= g;
 									eyePath->accumPhotonCount++;
 
-									luxrays::Spectrum f = eyePath->material->f(-eyePath->ray.d, -ray->d, shadeN);
-									eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + photonPath->flux * f * eyePath->throughput) * g;
+									luxrays::Spectrum flux = photonPath->flux * eyePath->material->f(-eyePath->ray.d, -ray->d, shadeN) *
+											RdotShadeN * eyePath->throughput;
+									eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + flux) * g;
 								}
 							}
 						}
