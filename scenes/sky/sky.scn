@@ -1,0 +1,11 @@
+scene.camera.lookat = 8.51502 -6.443411 1.72403 1.199165 0.311952 0.805705
+scene.skylight.dir = 0.166974 -0.59908 0.783085
+scene.skylight.turbidity = 2.2
+scene.skylight.gain = 1. 1. 1.
+scene.sunlight.dir = 0.166974 -0.59908 0.783085
+scene.sunlight.turbidity = 2.2
+scene.sunlight.gain = 1. 1. 1.
+scene.materials.matte.Matte = 0.40197 0.40197 0.40197
+scene.objects.Matte.Matte = scenes/sky/Matte.ply
+scene.materials.mirror.Mirror = 1. 1. 1.  1
+scene.objects.Mirror.Mirror = scenes/sky/Mirror.ply
