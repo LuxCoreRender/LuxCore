@@ -237,7 +237,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 					eyePath->constantColor = luxrays::Spectrum(0.f, 0.f, 0.f);
 					eyePath->state = TO_TRACE;
 
-					todoEyePaths.push_back(eyePath);
+					todoEyePaths.push_front(eyePath);
 				}
 			}
 		}
@@ -481,14 +481,20 @@ static HashGrid *BuildHashGrid(
 	const float hashs = 1.f / (photonRadius * 2.f);
 	// TODO: add a tunable parameter for hashgrid size
 	const unsigned int hashGridSize = hitPoints.size();
-	// TODO: optimize std::vector<std::vector<EyePath *> > type to save memory
 	std::vector<std::list<EyePath *> *> *hashGridPtr = new std::vector<std::list<EyePath *> *>(hashGridSize);
 	std::vector<std::list<EyePath *> *> &hashGrid = *hashGridPtr;
 
-	std::cerr << "Building hit points hash grid...";
+	std::cerr << "Building hit points hash grid:" << std::endl;
+	std::cerr << "  0k/" << hitPoints.size() / 1000 << "k" <<std::endl;
 	const luxrays::Vector vphotonRadius(photonRadius, photonRadius, photonRadius);
 	unsigned int maxPathCount = 0;
+	double lastPrintTime = luxrays::WallClockTime();
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
+		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
+			std::cerr << "  " << i / 1000 << "k/" << hitPoints.size() / 1000 << "k" <<std::endl;
+			lastPrintTime = luxrays::WallClockTime();
+		}
+
 		EyePath *eyePath = hitPoints[i];
 
 		const luxrays::Vector bMin = ((eyePath->position - vphotonRadius) - hpBBox.pMin) * hashs;
@@ -502,7 +508,7 @@ static HashGrid *BuildHashGrid(
 					if (hashGrid[hv] == NULL)
 						hashGrid[hv] = new std::list<EyePath *>();
 
-					hashGrid[hv]->push_back(eyePath);
+					hashGrid[hv]->push_front(eyePath);
 
 					if (hashGrid[hv]->size() > maxPathCount)
 						maxPathCount = hashGrid[hv]->size();
@@ -510,7 +516,6 @@ static HashGrid *BuildHashGrid(
 			}
 		}
 	}
-	std::cerr << "Done" << std::endl;
 	std::cerr << "Max path count in a single hash grid entry: " << maxPathCount << std::endl;
 
 	return new HashGrid(hashs, hpBBox, hashGridPtr);
