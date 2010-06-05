@@ -441,6 +441,8 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 		&pdf, ray);
 	photonPath->flux *= scene->lights.size() / pdf;
 	photonPath->depth = 0;
+
+	photonTraced++;
 }
 
 static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
@@ -452,8 +454,8 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 	std::vector<PhotonPath> photonPaths(rayBuffer->GetSize());
 	luxrays::Ray *rays = rayBuffer->GetRayBuffer();
 	for (unsigned int i = 0; i < photonPaths.size(); ++i) {
-		// Note: there is some assumption here about how the rayBuffer->ReserveRay()
-		// work
+		// Note: there is some assumption here about how the
+		// rayBuffer->ReserveRay() work
 		InitPhotonPath(scene, rndGen, &photonPaths[i], &rays[rayBuffer->ReserveRay()]);
 	}
 
@@ -469,8 +471,6 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 			const luxrays::RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
 
 			if (rayHit->Miss()) {
-				photonTraced++;
-
 				// Re-initialize the photon path
 				InitPhotonPath(scene, rndGen, photonPath, ray);
 			} else {
@@ -503,8 +503,6 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 					shadeN = N;
 
 				if (triMat->IsLightSource()) {
-					photonTraced++;
-
 					// Re-initialize the photon path
 					InitPhotonPath(scene, rndGen, photonPath, ray);
 				} else {
@@ -543,20 +541,15 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 								false, &fPdf, specularBounce) * surfaceColor;
 						if ((fPdf <= 0.f) || f.Black()) {
-							photonTraced++;
-
 							// Re-initialize the photon path
 							InitPhotonPath(scene, rndGen, photonPath, ray);
 						} else {
 							photonPath->depth++;
 
 							photonPath->flux *= f / fPdf;
-							ray->o = hitPoint;
-							ray->d = wi;
+							*ray = luxrays::Ray(hitPoint, wi);
 						}
 					} else {
-						photonTraced++;
-
 						// Re-initialize the photon path
 						InitPhotonPath(scene, rndGen, photonPath, ray);
 					}
