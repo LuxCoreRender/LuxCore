@@ -545,9 +545,19 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 							InitPhotonPath(scene, rndGen, photonPath, ray);
 						} else {
 							photonPath->depth++;
-
 							photonPath->flux *= f / fPdf;
-							*ray = luxrays::Ray(hitPoint, wi);
+
+							// Russian Roulette
+							const float p = 0.75f;
+							if (photonPath->depth < 3) {
+								*ray = luxrays::Ray(hitPoint, wi);
+							} else if (rndGen->floatValue() < p) {
+								photonPath->flux /= p;
+								*ray = luxrays::Ray(hitPoint, wi);
+							} else {
+								// Re-initialize the photon path
+								InitPhotonPath(scene, rndGen, photonPath, ray);
+							}
 						}
 					} else {
 						// Re-initialize the photon path
