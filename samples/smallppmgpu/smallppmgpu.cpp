@@ -125,7 +125,7 @@ static luxrays::utils::Film *film = NULL;
 static luxrays::SampleBuffer *sampleBuffer = NULL;
 
 static boost::thread *renderThread = NULL;
-static unsigned int photonTraced = 0;
+static unsigned long long photonTraced = 0;
 
 static std::vector<EyePath> *eyePathsPtr = NULL;
 
@@ -162,9 +162,13 @@ static void UpdateFrameBuffer() {
 				break;
 			}
 			case HIT: {
-				const luxrays::Spectrum rad = (eyePath->accumPhotonCount == 0) ? luxrays::Spectrum() :
-					(eyePath->accumReflectedFlux / (M_PI * eyePath->photonRadius2 * photonTraced));
-				sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, rad);
+				if (eyePath->accumPhotonCount == 0)
+					sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, luxrays::Spectrum());
+				else {
+					const double k = 1.0 / (M_PI * eyePath->photonRadius2 * photonTraced);
+					const luxrays::Spectrum rad = eyePath->accumReflectedFlux * k;
+					sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, rad);
+				}
 				break;
 			}
 			default:
@@ -759,7 +763,7 @@ static void PrintCaptions() {
 	glRasterPos2i(4, 5);
 	char captionBuffer[512];
 	const double photonsSec = photonTraced / (luxrays::WallClockTime() - startTime);
-	sprintf(captionBuffer, "[Photons %.2fM][Avg. photons/sec % 4dK]", float(photonTraced) / 1000000.f, int(photonsSec / 1000.f));
+	sprintf(captionBuffer, "[Photons %.2fM][Avg. photons/sec % 4dK]", float(photonTraced / 1000000.0), int(photonsSec / 1000.f));
 	PrintString(GLUT_BITMAP_8_BY_13, captionBuffer);
 }
 
