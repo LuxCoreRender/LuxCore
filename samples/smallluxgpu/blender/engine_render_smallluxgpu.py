@@ -584,7 +584,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     if scene.world:
       ilts = next((ts for ts in scene.world.texture_slots if ts and hasattr(ts.texture,'image')), None)
       if ilts:
-        fscn.write('scene.infinitelight.file = {}'.format(bpy.utils.expandpath(ilts.texture.image.filename).replace('\\','/')))
+        fscn.write('scene.infinitelight.file = {}'.format(bpy.utils.expandpath(ilts.texture.image.filepath).replace('\\','/')))
         portal = next((m.name for m in bpy.data.materials if m.shadeless),None)
         if portal:
           fscn.write('|{}/{}/{}.ply'.format(basepath,basename,portal.replace('.','_')))
@@ -665,13 +665,13 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
           if uv_flag and mtex[i]:
             texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
             if texmap:
-              fscn.write('scene.objects.{}.{}.texmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texmap.texture.image.filename).replace('\\','/')))
+              fscn.write('scene.objects.{}.{}.texmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texmap.texture.image.filepath).replace('\\','/')))
             texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
             if texbump:
               if texbump.texture.normal_map:
-                fscn.write('scene.objects.{}.{}.normalmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
+                fscn.write('scene.objects.{}.{}.normalmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')))
               else:
-                fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filename).replace('\\','/')))
+                fscn.write('scene.objects.{}.{}.bumpmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')))
                 fscn.write('scene.objects.{}.{}.bumpmap.scale = {}\n'.format(mat,mat,texbump.normal_factor))
         if export or mats[i] in mfp:
           # Write out PLY
