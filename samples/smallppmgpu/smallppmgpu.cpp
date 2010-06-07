@@ -476,7 +476,7 @@ static HashGrid *BuildHashGrid(
 	std::cerr << "Building hit points hash grid:" << std::endl;
 	std::cerr << "  0k/" << hitPoints.size() / 1000 << "k" <<std::endl;
 	const luxrays::Vector vphotonRadius(photonRadius, photonRadius, photonRadius);
-	unsigned int maxPathCount = 0;
+	//unsigned int maxPathCount = 0;
 	double lastPrintTime = luxrays::WallClockTime();
 	unsigned long long entryCount = 0;
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
@@ -501,14 +501,24 @@ static HashGrid *BuildHashGrid(
 					hashGrid[hv]->push_front(eyePath);
 					++entryCount;
 
-					if (hashGrid[hv]->size() > maxPathCount)
-						maxPathCount = hashGrid[hv]->size();
+					// hashGrid[hv]->size() is very slow to execute
+					/*if (hashGrid[hv]->size() > maxPathCount)
+						maxPathCount = hashGrid[hv]->size();*/
 				}
 			}
 		}
 	}
-	std::cerr << "Max. path count in a single hash grid entry: " << maxPathCount << std::endl;
+	//std::cerr << "Max. path count in a single hash grid entry: " << maxPathCount << std::endl;
 	std::cerr << "Avg. path count in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
+
+	// HashGrid debug code
+	/*for (unsigned int i = 0; i < hashGridSize; ++i) {
+		if (hashGrid[i]) {
+			if (hashGrid[i]->size() > 10) {
+				std::cerr << "HashGrid[" << i << "].size() = " <<hashGrid[i]->size() << std::endl;
+			}
+		}
+	}*/
 
 	return new HashGrid(hashs, hpBBox, hashGridPtr);
 }
