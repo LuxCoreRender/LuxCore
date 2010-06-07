@@ -762,8 +762,10 @@ static void PrintCaptions() {
 	// Stats
 	glRasterPos2i(4, 5);
 	char captionBuffer[512];
-	const double photonsSec = photonTraced / (luxrays::WallClockTime() - startTime);
-	sprintf(captionBuffer, "[Photons %.2fM][Avg. photons/sec % 4dK]", float(photonTraced / 1000000.0), int(photonsSec / 1000.f));
+	const double elapsedTime = luxrays::WallClockTime() - startTime;
+	const unsigned int kPhotonsSec = photonTraced / (elapsedTime * 1000.f);
+	sprintf(captionBuffer, "[Photons %.2fM][Avg. photons/sec % 4dK][Elapsed time %dsecs]",
+		float(photonTraced / 1000000.0), kPhotonsSec, int(elapsedTime));
 	PrintString(GLUT_BITMAP_8_BY_13, captionBuffer);
 }
 
