@@ -54,26 +54,33 @@
 #define MAX_EYE_PATH_DEPTH 16
 #define MAX_PHOTON_PATH_DEPTH 16
 
-enum EyePathState {
-	TO_TRACE, HIT, CONSTANT_COLOR
-};
-
 class EyePath {
 public:
-	EyePathState state;
-
 	// Screen information
 	float scrX, scrY;
 
 	// Eye path information
 	luxrays::Ray ray;
-	luxrays::RayHit rayHit;
 	unsigned int depth;
 	luxrays::Spectrum throughput;
-	luxrays::Spectrum constantColor;
+};
 
-	// hit point information
+enum HitPointType {
+	SURFACE, CONSTANT_COLOR
+};
+
+class HitPoint {
+public:
+	HitPointType type;
+
+	float scrX, scrY;
+
+	// Used for CONSTANT_COLOR and SURFACE type
+	luxrays::Spectrum throughput;
+
+	// Used for SURFACE type
 	luxrays::Point position;
+	luxrays::Vector wo;
 	luxrays::Normal normal;
 	const luxrays::sdl::SurfaceMaterial *material;
 
@@ -92,9 +99,10 @@ public:
 
 class HashGrid {
 public:
-	HashGrid(const float s, const luxrays::BBox bb, std::vector<std::list<EyePath *> *> *grid) {
-		invHashSize = s;
+	HashGrid(const float gs, const luxrays::BBox bb, unsigned int hs, std::list<HitPoint *> **grid) {
+		invGridSize = gs;
 		gridBBox = bb;
+		hashSize = hs;
 		hashGrid = grid;
 	}
 
@@ -102,9 +110,10 @@ public:
 		delete hashGrid;
 	}
 
-	float invHashSize;
+	float invGridSize;
 	luxrays::BBox gridBBox;
-	std::vector<std::list<EyePath *> *> *hashGrid;
+	unsigned int hashSize;
+	std::list<HitPoint *> **hashGrid;
 };
 
 //------------------------------------------------------------------------------
@@ -127,7 +136,7 @@ static luxrays::SampleBuffer *sampleBuffer = NULL;
 static boost::thread *renderThread = NULL;
 static unsigned long long photonTraced = 0;
 
-static std::vector<EyePath> *eyePathsPtr = NULL;
+static std::vector<HitPoint> *hitPointsPtr = NULL;
 
 //------------------------------------------------------------------------------
 
@@ -152,22 +161,22 @@ static void UpdateFrameBuffer() {
 
 	film->Reset();
 
-	std::vector<EyePath> &eyePaths = *eyePathsPtr;
-	for (unsigned int i = 0; i < eyePaths.size(); ++i) {
-		EyePath *eyePath = &eyePaths[i];
+	std::vector<HitPoint> &hitPoints = *hitPointsPtr;
+	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
+		HitPoint *hp = &hitPoints[i];
 
-		switch (eyePath->state) {
+		switch (hp->type) {
 			case CONSTANT_COLOR: {
-				sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, eyePath->constantColor);
+				sampleBuffer->SplatSample(hp->scrX, hp->scrY, hp->throughput);
 				break;
 			}
-			case HIT: {
-				if (eyePath->accumPhotonCount == 0)
-					sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, luxrays::Spectrum());
+			case SURFACE: {
+				if (hp->accumPhotonCount == 0)
+					sampleBuffer->SplatSample(hp->scrX, hp->scrY, luxrays::Spectrum());
 				else {
-					const double k = 1.0 / (M_PI * eyePath->photonRadius2 * photonTraced);
-					const luxrays::Spectrum rad = eyePath->accumReflectedFlux * k;
-					sampleBuffer->SplatSample(eyePath->scrX, eyePath->scrY, rad);
+					const double k = 1.0 / (M_PI * hp->photonRadius2 * photonTraced);
+					const luxrays::Spectrum rad = hp->accumReflectedFlux * k;
+					sampleBuffer->SplatSample(hp->scrX, hp->scrY, rad);
 				}
 				break;
 			}
@@ -192,18 +201,18 @@ static void UpdateFrameBuffer() {
 
 //------------------------------------------------------------------------------
 
-static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
+static std::vector<HitPoint> *BuildHitPoints(
+	luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
 	luxrays::IntersectionDevice *device, luxrays::RayBuffer *rayBuffer,
 	const unsigned int width, const unsigned int height) {
-	std::vector<EyePath> *eyePathsPtr = new std::vector<EyePath>(width * height * imgSuperSampling * imgSuperSampling);
-	std::vector<EyePath> &eyePaths = *eyePathsPtr;
 	std::list<EyePath *> todoEyePaths;
+	std::vector<HitPoint> *hitPoints = new std::vector<HitPoint>(width * height * imgSuperSampling * imgSuperSampling);
+	unsigned int hitPointsIndex = 0;
 
 	// Generate eye rays
 	std::cerr << "Building eye paths rays with " << imgSuperSampling << "x" << imgSuperSampling << " super-sampling:" << std::endl;
 	std::cerr << "  0/" << height << std::endl;
 	double lastPrintTime = luxrays::WallClockTime();
-	unsigned int index = 0;
 	const float invImgSuperSampling = 1.f / imgSuperSampling;
 	for (unsigned int y = 0; y < height; ++y) {
 		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
@@ -214,7 +223,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 		for (unsigned int x = 0; x < width; ++x) {
 			for (unsigned int sy = 0; sy < imgSuperSampling; ++sy) {
 				for (unsigned int sx = 0; sx < imgSuperSampling; ++sx) {
-					EyePath *eyePath = &eyePaths[index++];
+					EyePath *eyePath = new EyePath();
 
 					eyePath->scrX = x + (sx + rndGen->floatValue()) * invImgSuperSampling - 0.5f;
 					eyePath->scrY = y + (sy + rndGen->floatValue()) * invImgSuperSampling - 0.5f;
@@ -223,8 +232,6 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 
 					eyePath->depth = 0;
 					eyePath->throughput = luxrays::Spectrum(1.f, 1.f, 1.f);
-					eyePath->constantColor = luxrays::Spectrum(0.f, 0.f, 0.f);
-					eyePath->state = TO_TRACE;
 
 					todoEyePaths.push_front(eyePath);
 				}
@@ -249,13 +256,19 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 		while (todoEyePathsIterator != todoEyePaths.end()) {
 			EyePath *eyePath = *todoEyePathsIterator;
 
-			assert (eyePath->state == TO_TRACE);
-
 			// Check if we reached the max path depth
 			if (eyePath->depth > MAX_EYE_PATH_DEPTH) {
+				// Add an hit point
+				HitPoint &hp = (*hitPoints)[hitPointsIndex++];
+				hp.type = CONSTANT_COLOR;
+				hp.scrX = eyePath->scrX;
+				hp.scrY = eyePath->scrY;
+				hp.throughput = luxrays::Spectrum();
+
+				// Free the eye path
+				delete *todoEyePathsIterator;
 				todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 				--todoEyePathCount;
-				eyePath->state = CONSTANT_COLOR;
 			} else {
 				eyePath->depth++;
 				rayBuffer->AddRay(eyePath->ray);
@@ -277,17 +290,23 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 			for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
 				EyePath *eyePath = *todoEyePathsIterator;
 
-				assert (eyePath->state == TO_TRACE);
-
 				const luxrays::RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
 
 				if (rayHit->Miss()) {
+					// Add an hit point
+					HitPoint &hp = (*hitPoints)[hitPointsIndex++];
+					hp.type = CONSTANT_COLOR;
+					hp.scrX = eyePath->scrX;
+					hp.scrY = eyePath->scrY;
+					if (scene->infiniteLight)
+						hp.throughput = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
+					else
+						hp.throughput = luxrays::Spectrum();
+
+					// Free the eye path
+					delete *todoEyePathsIterator;
 					todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 					--todoEyePathCount;
-					if (scene->infiniteLight)
-						eyePath->constantColor = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
-
-					eyePath->state = CONSTANT_COLOR;
 				} else {
 					// Something was hit
 					const luxrays::Point hitPoint = eyePath->ray(rayHit->t);
@@ -388,12 +407,18 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 						shadeN = N;
 
 					if (triMat->IsLightSource()) {
+						// Add an hit point
+						HitPoint &hp = (*hitPoints)[hitPointsIndex++];
+						hp.type = CONSTANT_COLOR;
+						hp.scrX = eyePath->scrX;
+						hp.scrY = eyePath->scrY;
+						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
+						hp.throughput = tLight->Le(scene, -eyePath->ray.d) * eyePath->throughput;
+
+						// Free the eye path
+						delete *todoEyePathsIterator;
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 						--todoEyePathCount;
-
-						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
-						eyePath->constantColor = tLight->Le(scene, -eyePath->ray.d) * eyePath->throughput;
-						eyePath->state = CONSTANT_COLOR;
 					} else {
 						// Build the next vertex path ray
 						const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
@@ -405,25 +430,38 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 								false, &fPdf, specularBounce) * surfaceColor;
 						if ((fPdf <= 0.f) || f.Black()) {
+							// Add an hit point
+							HitPoint &hp = (*hitPoints)[hitPointsIndex++];
+							hp.type = CONSTANT_COLOR;
+							hp.scrX = eyePath->scrX;
+							hp.scrY = eyePath->scrY;
+							hp.throughput = luxrays::Spectrum();
+
+							// Free the eye path
+							delete *todoEyePathsIterator;
 							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 							--todoEyePathCount;
-
-							eyePath->state = CONSTANT_COLOR;
 						} else if (specularBounce) {
 							++todoEyePathsIterator;
 
 							eyePath->throughput *= f / fPdf;
 							eyePath->ray = luxrays::Ray(hitPoint, wi);
 						} else {
+							// Add an hit point
+							HitPoint &hp = (*hitPoints)[hitPointsIndex++];
+							hp.type = SURFACE;
+							hp.scrX = eyePath->scrX;
+							hp.scrY = eyePath->scrY;
+							hp.material = (luxrays::sdl::SurfaceMaterial *)triMat;
+							hp.throughput = eyePath->throughput * surfaceColor;
+							hp.position = hitPoint;
+							hp.wo = -eyePath->ray.d;
+							hp.normal = shadeN;
+
+							// Free the eye path
+							delete *todoEyePathsIterator;
 							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 							--todoEyePathCount;
-
-							eyePath->rayHit = *rayHit;
-							eyePath->material = (luxrays::sdl::SurfaceMaterial *)triMat;
-							eyePath->throughput *= surfaceColor;
-							eyePath->position = hitPoint;
-							eyePath->normal = shadeN;
-							eyePath->state = HIT;
 						}
 					}
 				}
@@ -433,7 +471,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 		}
 	}
 
-	return eyePathsPtr;
+	return hitPoints;
 }
 
 static unsigned int Hash(const int ix, const int iy, const int iz, const unsigned int hashGridSize) {
@@ -441,13 +479,17 @@ static unsigned int Hash(const int ix, const int iy, const int iz, const unsigne
 }
 
 static HashGrid *BuildHashGrid(
-	std::vector<EyePath *> &hitPoints,
+	std::vector<HitPoint> &hitPoints,
 	const unsigned int width, const unsigned int height) {
 	// Calculate hit points bounding box
 	std::cerr << "Building hit points bounding box: ";
 	luxrays::BBox hpBBox;
-	for (unsigned int i = 0; i < hitPoints.size(); ++i)
-		hpBBox = luxrays::Union(hpBBox, hitPoints[i]->position);
+	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
+		HitPoint *hp = &hitPoints[i];
+
+		if (hp->type == SURFACE)
+			hpBBox = luxrays::Union(hpBBox, hitPoints[i].position);
+	}
 	std::cerr << hpBBox << std::endl;
 
 	// Calculate initial radius
@@ -460,18 +502,21 @@ static HashGrid *BuildHashGrid(
 	// Initialize hit points field
 	const float photonRadius2 = photonRadius * photonRadius;
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
-		EyePath *eyePath = hitPoints[i];
+		HitPoint *hp = &hitPoints[i];
 
-		eyePath->photonRadius2 = photonRadius2;
-		eyePath->accumPhotonCount = 0;
-		eyePath->accumReflectedFlux = luxrays::Spectrum();
+		if (hp->type == SURFACE) {
+			hp->photonRadius2 = photonRadius2;
+			hp->accumPhotonCount = 0;
+			hp->accumReflectedFlux = luxrays::Spectrum();
+		}
 	}
 
 	const float hashs = 1.f / (photonRadius * 2.f);
 	// TODO: add a tunable parameter for hashgrid size
 	const unsigned int hashGridSize = hitPoints.size();
-	std::vector<std::list<EyePath *> *> *hashGridPtr = new std::vector<std::list<EyePath *> *>(hashGridSize);
-	std::vector<std::list<EyePath *> *> &hashGrid = *hashGridPtr;
+	std::list<HitPoint *> **hashGrid = new std::list<HitPoint *>*[hashGridSize];
+	for (unsigned int i = 0; i < hashGridSize; ++i)
+		hashGrid[i] = NULL;
 
 	std::cerr << "Building hit points hash grid:" << std::endl;
 	std::cerr << "  0k/" << hitPoints.size() / 1000 << "k" <<std::endl;
@@ -485,24 +530,26 @@ static HashGrid *BuildHashGrid(
 			lastPrintTime = luxrays::WallClockTime();
 		}
 
-		EyePath *eyePath = hitPoints[i];
+		HitPoint *hp = &hitPoints[i];
 
-		const luxrays::Vector bMin = ((eyePath->position - vphotonRadius) - hpBBox.pMin) * hashs;
-		const luxrays::Vector bMax = ((eyePath->position + vphotonRadius) - hpBBox.pMin) * hashs;
+		if (hp->type == SURFACE) {
+			const luxrays::Vector bMin = ((hp->position - vphotonRadius) - hpBBox.pMin) * hashs;
+			const luxrays::Vector bMax = ((hp->position + vphotonRadius) - hpBBox.pMin) * hashs;
 
-		for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
-			for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
-				for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ix++) {
-					int hv = Hash(ix, iy, iz, hashGridSize);
+			for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
+				for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
+					for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ix++) {
+						int hv = Hash(ix, iy, iz, hashGridSize);
 
-					if (hashGrid[hv] == NULL)
-						hashGrid[hv] = new std::list<EyePath *>();
+						if (hashGrid[hv] == NULL)
+							hashGrid[hv] = new std::list<HitPoint *>();
 
-					hashGrid[hv]->push_front(eyePath);
-					++entryCount;
+						hashGrid[hv]->push_front(hp);
+						++entryCount;
 
-					if (hashGrid[hv]->size() > maxPathCount)
-						maxPathCount = hashGrid[hv]->size();
+						if (hashGrid[hv]->size() > maxPathCount)
+							maxPathCount = hashGrid[hv]->size();
+					}
 				}
 			}
 		}
@@ -510,7 +557,7 @@ static HashGrid *BuildHashGrid(
 	std::cerr << "Max. path count in a single hash grid entry: " << maxPathCount << std::endl;
 	std::cerr << "Avg. path count in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
 
-	return new HashGrid(hashs, hpBBox, hashGridPtr);
+	return new HashGrid(hashs, hpBBox, hashGridSize, hashGrid);
 }
 
 static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
@@ -679,27 +726,27 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 
 					if (!specularBounce) {
 						// Look for eye path hit points near the current hit point
-						luxrays::Vector hh = (hitPoint - hashGrid->gridBBox.pMin) * hashGrid->invHashSize;
+						luxrays::Vector hh = (hitPoint - hashGrid->gridBBox.pMin) * hashGrid->invGridSize;
 						const int ix = abs(int(hh.x));
 						const int iy = abs(int(hh.y));
 						const int iz = abs(int(hh.z));
 
-						std::list<EyePath *> *eyePaths = (*(hashGrid->hashGrid))[Hash(ix, iy, iz, hashGrid->hashGrid->size())];
-						if (eyePaths) {
-							std::list<EyePath *>::iterator iter = eyePaths->begin();
-							while (iter != eyePaths->end()) {
-								EyePath *eyePath = *iter++;
-								luxrays::Vector v = eyePath->position - hitPoint;
+						std::list<HitPoint *> *hitPoints = hashGrid->hashGrid[Hash(ix, iy, iz, hashGrid->hashSize)];
+						if (hitPoints) {
+							std::list<HitPoint *>::iterator iter = hitPoints->begin();
+							while (iter != hitPoints->end()) {
+								HitPoint *hp = *iter++;
+								luxrays::Vector v = hp->position - hitPoint;
 								// TODO: use configurable parameter for normal treshold
-								if ((luxrays::Dot(eyePath->normal, shadeN) > 0.5f) &&
-										(luxrays::Dot(v, v) <=  eyePath->photonRadius2)) {
-									const float g = (eyePath->accumPhotonCount * alpha + alpha) / (eyePath->accumPhotonCount * alpha + 1.f);
-									eyePath->photonRadius2 *= g;
-									eyePath->accumPhotonCount++;
+								if ((luxrays::Dot(hp->normal, shadeN) > 0.5f) &&
+										(luxrays::Dot(v, v) <=  hp->photonRadius2)) {
+									const float g = (hp->accumPhotonCount * alpha + alpha) / (hp->accumPhotonCount * alpha + 1.f);
+									hp->photonRadius2 *= g;
+									hp->accumPhotonCount++;
 
-									luxrays::Spectrum flux = photonPath->flux * eyePath->material->f(-eyePath->ray.d, -ray->d, shadeN) *
-											RdotShadeN * eyePath->throughput;
-									eyePath->accumReflectedFlux = (eyePath->accumReflectedFlux + flux) * g;
+									luxrays::Spectrum flux = photonPath->flux * hp->material->f(hp->wo, -ray->d, shadeN) *
+											RdotShadeN * hp->throughput;
+									hp->accumReflectedFlux = (hp->accumReflectedFlux + flux) * g;
 								}
 							}
 						}
@@ -809,6 +856,8 @@ static void KeyFunc(unsigned char key, int x, int y) {
 			ctx->Stop();
 			delete scene;
 			delete ctx;
+
+			delete hitPointsPtr;
 
 			std::cerr << "Done." << std::endl;
 			exit(EXIT_SUCCESS);
@@ -972,23 +1021,13 @@ int main(int argc, char *argv[]) {
 		// Build the EyePaths list
 		//----------------------------------------------------------------------
 
-		eyePathsPtr = BuildEyePaths(scene, rndGen, device, rayBuffer, imgWidth, imgHeight);
-		std::vector<EyePath> &eyePaths = *eyePathsPtr;
+		hitPointsPtr = BuildHitPoints(scene, rndGen, device, rayBuffer, imgWidth, imgHeight);
 
 		//----------------------------------------------------------------------
 		// Build the hash grid of EyePaths hit points
 		//----------------------------------------------------------------------
 
-		// Build the list of EyePaths hit points
-		std::vector<EyePath *> hitPoints;
-		for (unsigned int i = 0; i < eyePaths.size(); ++i) {
-			EyePath *eyePath = &eyePaths[i];
-
-			if (eyePath->state == HIT)
-				hitPoints.push_back(eyePath);
-		}
-
-		HashGrid *hashGrid = BuildHashGrid(hitPoints, imgWidth, imgHeight);
+		HashGrid *hashGrid = BuildHashGrid(*hitPointsPtr, imgWidth, imgHeight);
 
 		//----------------------------------------------------------------------
 		// Start photon tracing thread
