@@ -28,6 +28,14 @@
 
 using namespace luxrays;
 
+BBox TriangleMesh::GetBBox() const {
+	BBox bbox;
+	for (unsigned int i = 0; i < vertCount; ++i)
+		bbox = Union(bbox, vertices[i]);
+
+	return bbox;
+}
+
 TriangleMesh *TriangleMesh::Merge(
 	const std::deque<TriangleMesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,

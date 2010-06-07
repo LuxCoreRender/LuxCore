@@ -392,7 +392,7 @@ static std::vector<EyePath> *BuildEyePaths(luxrays::sdl::Scene *scene, luxrays::
 						--todoEyePathCount;
 
 						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
-						eyePath->constantColor = tLight->Le(scene->objects, -eyePath->ray.d) * eyePath->throughput;
+						eyePath->constantColor = tLight->Le(scene, -eyePath->ray.d) * eyePath->throughput;
 						eyePath->state = CONSTANT_COLOR;
 					} else {
 						// Build the next vertex path ray
@@ -478,6 +478,7 @@ static HashGrid *BuildHashGrid(
 	const luxrays::Vector vphotonRadius(photonRadius, photonRadius, photonRadius);
 	unsigned int maxPathCount = 0;
 	double lastPrintTime = luxrays::WallClockTime();
+	unsigned long long entryCount = 0;
 	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
 		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
 			std::cerr << "  " << i / 1000 << "k/" << hitPoints.size() / 1000 << "k" <<std::endl;
@@ -498,6 +499,7 @@ static HashGrid *BuildHashGrid(
 						hashGrid[hv] = new std::list<EyePath *>();
 
 					hashGrid[hv]->push_front(eyePath);
+					++entryCount;
 
 					if (hashGrid[hv]->size() > maxPathCount)
 						maxPathCount = hashGrid[hv]->size();
@@ -505,7 +507,8 @@ static HashGrid *BuildHashGrid(
 			}
 		}
 	}
-	std::cerr << "Max path count in a single hash grid entry: " << maxPathCount << std::endl;
+	std::cerr << "Max. path count in a single hash grid entry: " << maxPathCount << std::endl;
+	std::cerr << "Avg. path count in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
 
 	return new HashGrid(hashs, hpBBox, hashGridPtr);
 }
@@ -515,16 +518,16 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 	// Using radical inverse sequence to sample lights
 
 	// Select one light source
-	const unsigned int lightIndex = scene->SampleLights(rndGen->floatValue());
-	const luxrays::sdl::LightSource *light = scene->lights[lightIndex];
+	float lpdf;
+	const luxrays::sdl::LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lpdf);
 
 	// Initialize the photon path
 	float pdf;
-	photonPath->flux = light->Sample_L(scene->objects,
+	photonPath->flux = light->Sample_L(scene,
 		rndGen->floatValue(), rndGen->floatValue(),
 		rndGen->floatValue(), rndGen->floatValue(),
 		&pdf, ray);
-	photonPath->flux *= scene->lights.size() / pdf;
+	photonPath->flux /= pdf * lpdf;
 	photonPath->depth = 0;
 
 	photonTraced++;
@@ -687,7 +690,8 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 							while (iter != eyePaths->end()) {
 								EyePath *eyePath = *iter++;
 								luxrays::Vector v = eyePath->position - hitPoint;
-								if ((luxrays::Dot(eyePath->normal, shadeN) > luxrays::RAY_EPSILON) &&
+								// TODO: use configurable parameter for normal treshold
+								if ((luxrays::Dot(eyePath->normal, shadeN) > 0.5f) &&
 										(luxrays::Dot(v, v) <=  eyePath->photonRadius2)) {
 									const float g = (eyePath->accumPhotonCount * alpha + alpha) / (eyePath->accumPhotonCount * alpha + 1.f);
 									eyePath->photonRadius2 *= g;
@@ -945,6 +949,15 @@ int main(int argc, char *argv[]) {
 		rndGen->init(7);
 
 		//----------------------------------------------------------------------
+		// Allocate the Film
+		//----------------------------------------------------------------------
+
+		std::vector<luxrays::DeviceDescription *> pixelDevDecs = ctx->GetAvailableDeviceDescriptions();
+		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, pixelDevDecs);
+		film = new luxrays::utils::LuxRaysFilm(ctx, imgWidth, imgHeight, pixelDevDecs[0]);
+		sampleBuffer = film->GetFreeSampleBuffer();
+
+		//----------------------------------------------------------------------
 		// Read the scene
 		//----------------------------------------------------------------------
 
@@ -954,15 +967,6 @@ int main(int argc, char *argv[]) {
 		// Set the Luxrays SataSet
 		ctx->SetDataSet(scene->dataSet);
 		ctx->Start();
-
-		//----------------------------------------------------------------------
-		// Allocate the Film
-		//----------------------------------------------------------------------
-
-		std::vector<luxrays::DeviceDescription *> pixelDevDecs = ctx->GetAvailableDeviceDescriptions();
-		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, pixelDevDecs);
-		film = new luxrays::utils::LuxRaysFilm(ctx, imgWidth, imgHeight, pixelDevDecs[0]);
-		sampleBuffer = film->GetFreeSampleBuffer();
 
 		//----------------------------------------------------------------------
 		// Build the EyePaths list

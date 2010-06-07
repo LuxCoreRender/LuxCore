@@ -261,7 +261,7 @@ public:
 			if (specularBounce) {
 				// Only TriangleLight can be directly hit
 				const TriangleLight *tLight = (TriangleLight *)triMat;
-				Spectrum Le = tLight->Le(scene->objects, -pathRay.d);
+				Spectrum Le = tLight->Le(scene, -pathRay.d);
 
 				radiance += Le * throughput;
 			}
@@ -392,7 +392,7 @@ public:
 						for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
 							// Select a point on the light surface
 							lightColor[tracedShadowRayCount] = light->Sample_L(
-									scene->objects, hitPoint, &shadeN,
+									scene, hitPoint, &shadeN,
 									sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 									&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
@@ -424,7 +424,7 @@ public:
 
 						// Select a point on the light surface
 						lightColor[tracedShadowRayCount] = light->Sample_L(
-								scene->objects, hitPoint, &shadeN,
+								scene, hitPoint, &shadeN,
 								sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 

@@ -1,4 +1,5 @@
 scene.camera.lookat = 8.51502 -6.443411 1.72403 1.199165 0.311952 0.805705
+scene.camera.fieldofview = 56.145
 scene.skylight.dir = 0.166974 -0.59908 0.783085
 scene.skylight.turbidity = 2.2
 scene.skylight.gain = 1. 1. 1.

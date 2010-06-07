@@ -48,8 +48,15 @@ BBox Union(const BBox &b, const BBox &b2) {
 }
 
 void BBox::BoundingSphere(Point *c, float *rad) const {
-	*c = .5f * pMin + .5f * pMax;
+	*c = .5f * (pMin + pMax);
 	*rad = Inside(*c) ? Distance(*c, pMax) : 0.f;
+}
+
+BSphere BBox::BoundingSphere() const {
+	const Point c = .5f * (pMin + pMax);
+	const float rad = Inside(c) ? Distance(c, pMax) : 0.f;
+
+	return BSphere(c, rad);
 }
 
 // NOTE - lordcrc - BBox::IntersectP relies on IEEE 754 behaviour of infinity and /fp:fast breaks this

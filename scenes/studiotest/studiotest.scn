@@ -1,4 +1,5 @@
 scene.camera.lookat = -4.647589 -0.639827 3.469284 4.150244 0.305232 -1.189577
+scene.camera.fieldofview = 60
 #scene.infinitelight.file = scenes/studiotest/test-light2.png
 #scene.infinitelight.gain = 10 10 10
 #scene.infinitelight.file = scenes/studiotest/test-light.png

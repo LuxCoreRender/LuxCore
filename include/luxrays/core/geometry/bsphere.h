@@ -19,76 +19,37 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_DATASET_H
-#define	_LUXRAYS_DATASET_H
+#ifndef _LUXRAYS_BSPHERE_H
+#define _LUXRAYS_BSPHERE_H
 
-#include <deque>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/acceleretor.h"
-#include "luxrays/core/trianglemesh.h"
+#include "luxrays/core/geometry/vector.h"
+#include "luxrays/core/geometry/point.h"
+#include "luxrays/core/geometry/ray.h"
 
 namespace luxrays {
 
-class DataSet {
+class BSphere {
 public:
-	DataSet(const Context *luxRaysContext);
-	~DataSet();
+	// BBox Public Methods
 
-	TriangleMeshID Add(TriangleMesh *mesh);
-	void Preprocess();
-	bool IsPreprocessed() const { return preprocessed; }
-
-	bool Intersect(const Ray *ray, RayHit *hit) const;
-
-	const TriangleMesh *GetTriangleMesh() const {
-		assert (preprocessed);
-
-		return preprocessedMesh;
+	BSphere() : center(0.f, 0.f, 0.f) {
+		rad = 0.f;
 	}
 
-	const TriangleMeshID GetMeshID(unsigned int index) const { return preprocessedMeshIDs[index]; }
-	const TriangleID GetMeshTriangleID(unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
-
-	void SetAcceleratorType(AcceleratorType type) {
-		accelType = type;
+	BSphere(const Point &c, const float r) : center(c) {
+		rad = r;
 	}
 
-	AcceleratorType GetAcceleratorType() const {
-		return accelType;
-	}
-
-	const Accelerator *GetAccelerator() const {
-		assert (preprocessed);
-
-		return accel;
-	}
-
-	const BBox &GetBBox() const { return bbox; }
-	const BSphere &GetBSphere() const { return bsphere; }
-
-	unsigned int GetTotalVertexCount() const { return totalVertexCount; }
-	unsigned int GetTotalTriangleCount() const { return totalTriangleCount; }
-
-private:
-	const Context *context;
-
-	unsigned int totalVertexCount;
-	unsigned int totalTriangleCount;
-	std::deque<TriangleMesh *> meshes;
-
-	bool preprocessed;
-	TriangleMesh *preprocessedMesh;
-	TriangleMeshID *preprocessedMeshIDs;
-	TriangleID *preprocessedMeshTriangleIDs;
-
-	BBox bbox;
-	BSphere bsphere;
-
-	AcceleratorType accelType;
-	Accelerator *accel;
+	// BSphere Public Data
+	Point center;
+	float rad;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const BSphere &s) {
+	os << "BSphere[" << s.center << ", " << s.rad << "]";
+	return os;
+}
 
 }
 
-#endif	/* _LUXRAYS_DATASET_H */
+#endif	/* _LUXRAYS_BSPHERE_H */

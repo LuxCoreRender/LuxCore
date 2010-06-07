@@ -77,7 +77,7 @@ void SingleScatteringIntegrator::GenerateLiRays(const SLGScene *scene, Sample *s
 
 				// Select a point on the light surface
 				float lightPdf;
-				Spectrum lightColor = light->Sample_L(scene->objects, p, NULL,
+				Spectrum lightColor = light->Sample_L(scene, p, NULL,
 						sample->GetLazyValue(), sample->GetLazyValue(), sample->GetLazyValue(),
 						&lightPdf, &(comp->rays[comp->rayCount]));
 
