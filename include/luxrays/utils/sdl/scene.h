@@ -49,6 +49,27 @@ public:
 		return lightIndex;
 	}
 
+	LightSource *SampleAllLights(const float u, float *pdf) const {
+		if (useInfiniteLightBruteForce && infiniteLight) {
+			const unsigned int lightCount = lights.size() + 1;
+			const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lightCount * u), lights.size());
+
+			*pdf = 1.f / lightCount;
+
+			if (lightIndex == lights.size())
+				return infiniteLight;
+			else
+				return lights[lightIndex];
+		} else {
+			// One Uniform light strategy
+			const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lights.size() * u), lights.size() - 1);
+
+			*pdf = 1.f / lights.size();
+
+			return lights[lightIndex];
+		}
+	}
+
 	PerspectiveCamera *camera;
 
 	std::vector<Material *> materials; // All materials

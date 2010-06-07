@@ -29,6 +29,7 @@
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/accelerators/qbvhaccel.h"
+#include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
 
@@ -62,6 +63,9 @@ TriangleMeshID DataSet::Add(TriangleMesh *mesh) {
 
 	totalVertexCount += mesh->GetTotalVertexCount();
 	totalTriangleCount += mesh->GetTotalTriangleCount();
+
+	bbox = Union(bbox, mesh->GetBBox());
+	bsphere = bbox.BoundingSphere();
 
 	return id;
 }

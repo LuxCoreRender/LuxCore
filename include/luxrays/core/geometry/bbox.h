@@ -25,6 +25,7 @@
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/ray.h"
+#include "luxrays/core/geometry/bsphere.h"
 
 namespace luxrays {
 
@@ -87,6 +88,8 @@ public:
 			return 2;
 	}
 	void BoundingSphere(Point *c, float *rad) const;
+	BSphere BoundingSphere() const;
+
 	bool IntersectP(const Ray &ray,
 			float *hitt0 = NULL,
 			float *hitt1 = NULL) const;

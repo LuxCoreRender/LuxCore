@@ -59,6 +59,8 @@ public:
 	unsigned int GetTotalVertexCount() const { return vertCount; }
 	unsigned int GetTotalTriangleCount() const { return triCount; }
 
+	BBox GetBBox() const;
+
 	static TriangleMesh *Merge(
 		const std::deque<TriangleMesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,

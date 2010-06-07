@@ -29,14 +29,16 @@
 
 namespace luxrays { namespace sdl {
 
+class Scene;
+
 class LightSource {
 public:
 	virtual ~LightSource() { }
 
-	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
 
-	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
+	virtual Spectrum Sample_L(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const = 0;
 };
 
@@ -62,12 +64,10 @@ public:
 
 	virtual Spectrum Le(const Vector &dir) const;
 
-	virtual Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
-		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const {
-		throw std::runtime_error("InfiniteLight::Sample_L(objs, u0, u1, u2, u3, pdf, ray) not yet implemented");
-	}
+	Spectrum Sample_L(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const;
 
 protected:
 	TexMapInstance *tex;
@@ -79,7 +79,7 @@ class InfiniteLightBF : public InfiniteLight {
 public:
 	InfiniteLightBF(TexMapInstance *tx) : InfiniteLight(tx) { }
 
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal &N,
+	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal &N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 		*pdf = 0;
 		return Spectrum();
@@ -91,7 +91,7 @@ public:
 	InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const std::string &portalFileName);
 	~InfiniteLightPortal();
 
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
@@ -106,7 +106,7 @@ public:
 
 	void Preprocess();
 
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 
 private:
@@ -141,13 +141,10 @@ public:
 
 	Spectrum Le(const Vector &dir) const;
 
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
-		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const {
-		throw std::runtime_error("SunLight::Sample_L(objs, u0, u1, u2, u3, pdf, ray) not yet implemented");
-	}
-
+	Spectrum Sample_L(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const;
 	void SetGain(const Spectrum &g);
 
 protected:
@@ -173,11 +170,11 @@ public:
 
 	const Material *GetMaterial() const { return lightMaterial; }
 
-	Spectrum Le(const std::vector<ExtTriangleMesh *> &objs, const Vector &wo) const;
+	Spectrum Le(const Scene *scene, const Vector &wo) const;
 
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs, const Point &p, const Normal *N,
+	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const std::vector<ExtTriangleMesh *> &objs,
+	Spectrum Sample_L(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const;
 private:
 	const AreaLightMaterial *lightMaterial;
