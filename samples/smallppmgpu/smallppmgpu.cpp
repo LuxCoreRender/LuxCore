@@ -214,6 +214,7 @@ public:
 			}
 		}
 		//std::cerr << "Max. hit points in a single hash grid entry: " << maxPathCount << std::endl;
+		std::cerr << "Total hash grid entry: " << entryCount << std::endl;
 		std::cerr << "Avg. hit points in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
 
 		// HashGrid debug code
