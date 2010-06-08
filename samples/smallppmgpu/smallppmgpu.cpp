@@ -65,6 +65,16 @@ public:
 	luxrays::Spectrum throughput;
 };
 
+class PhotonPath {
+public:
+	// The ray is stored in the RayBuffer and the index is implicitly stored
+	// in the array of PhotonPath
+	luxrays::Spectrum flux;
+	unsigned int depth;
+};
+
+//------------------------------------------------------------------------------
+
 enum HitPointType {
 	SURFACE, CONSTANT_COLOR
 };
@@ -89,30 +99,156 @@ public:
 	luxrays::Spectrum accumReflectedFlux;
 };
 
-class PhotonPath {
+class HitPoints {
 public:
-	// The ray is stored in the RayBuffer and the index is implicitly stored
-	// in the array of PhotonPath
-	luxrays::Spectrum flux;
-	unsigned int depth;
+	HitPoints(const luxrays::BBox &bb, std::vector<HitPoint> *hps) {
+		bbox = bb;
+		hitPoints = hps;
+	}
+
+	~HitPoints() {
+		delete hitPoints;
+	}
+
+	HitPoint *GetHitPoint(const unsigned int index) {
+		return &(*hitPoints)[index];
+	}
+
+	const unsigned int GetSize() const {
+		return hitPoints->size();
+	}
+
+	const luxrays::BBox GetBBox() const {
+		return bbox;
+	}
+
+private:
+	luxrays::BBox bbox;
+	std::vector<HitPoint> *hitPoints;
 };
+
+//------------------------------------------------------------------------------
 
 class HashGrid {
 public:
-	HashGrid(const float gs, const luxrays::BBox bb, unsigned int hs, std::list<HitPoint *> **grid) {
-		invGridSize = gs;
-		gridBBox = bb;
-		hashSize = hs;
-		hashGrid = grid;
+	HashGrid(HitPoints *hps) {
+		hitPoints = hps;
+		const unsigned int hitPointsCount = hitPoints->GetSize();
+		const luxrays::BBox &hpBBox = hitPoints->GetBBox();
+
+		// Calculate the size of the grid cell
+		float maxPhotonRadius2 = 0.f;
+		for (unsigned int i = 0; i < hitPointsCount; ++i) {
+			HitPoint *hp = hitPoints->GetHitPoint(i);
+
+			if (hp->type == SURFACE)
+				maxPhotonRadius2 = luxrays::Max(maxPhotonRadius2, hp->photonRadius2);
+		}
+
+		const float cellSize = sqrtf(maxPhotonRadius2) * 2.f;
+		std::cerr << "Hash grid cell size: " << cellSize <<std::endl;
+		invCellSize = 1.f / cellSize;
+
+		// TODO: add a tunable parameter for hashgrid size
+		hashGridSize = hitPointsCount;
+		hashGrid = new std::list<HitPoint *>*[hashGridSize];
+		for (unsigned int i = 0; i < hashGridSize; ++i)
+			hashGrid[i] = NULL;
+
+		std::cerr << "Building hit points hash grid:" << std::endl;
+		std::cerr << "  0k/" << hitPointsCount / 1000 << "k" <<std::endl;
+		//unsigned int maxPathCount = 0;
+		double lastPrintTime = luxrays::WallClockTime();
+		unsigned long long entryCount = 0;
+		for (unsigned int i = 0; i < hitPointsCount; ++i) {
+			if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
+				std::cerr << "  " << i / 1000 << "k/" << hitPointsCount / 1000 << "k" <<std::endl;
+				lastPrintTime = luxrays::WallClockTime();
+			}
+
+			HitPoint *hp = hitPoints->GetHitPoint(i);
+
+			if (hp->type == SURFACE) {
+				const float photonRadius = sqrtf(hp->photonRadius2);
+				const luxrays::Vector rad(photonRadius, photonRadius, photonRadius);
+				const luxrays::Vector bMin = ((hp->position - rad) - hpBBox.pMin) * invCellSize;
+				const luxrays::Vector bMax = ((hp->position + rad) - hpBBox.pMin) * invCellSize;
+
+				for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
+					for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
+						for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ix++) {
+							int hv = Hash(ix, iy, iz);
+
+							if (hashGrid[hv] == NULL)
+								hashGrid[hv] = new std::list<HitPoint *>();
+
+							hashGrid[hv]->push_front(hp);
+							++entryCount;
+
+							// hashGrid[hv]->size() is very slow to execute
+							/*if (hashGrid[hv]->size() > maxPathCount)
+								maxPathCount = hashGrid[hv]->size();*/
+						}
+					}
+				}
+			}
+		}
+		//std::cerr << "Max. path count in a single hash grid entry: " << maxPathCount << std::endl;
+		std::cerr << "Avg. path count in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
+
+		// HashGrid debug code
+		/*for (unsigned int i = 0; i < hashGridSize; ++i) {
+			if (hashGrid[i]) {
+				if (hashGrid[i]->size() > 10) {
+					std::cerr << "HashGrid[" << i << "].size() = " <<hashGrid[i]->size() << std::endl;
+				}
+			}
+		}*/
 	}
 
 	~HashGrid() {
+		for (unsigned int i = 0; i < hashGridSize; ++i)
+			delete hashGrid[i];
 		delete hashGrid;
 	}
 
-	float invGridSize;
-	luxrays::BBox gridBBox;
-	unsigned int hashSize;
+	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+		const luxrays::Vector wi, const luxrays::Spectrum photonFlux) {
+		// Look for eye path hit points near the current hit point
+		luxrays::Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
+		const int ix = abs(int(hh.x));
+		const int iy = abs(int(hh.y));
+		const int iz = abs(int(hh.z));
+
+		std::list<HitPoint *> *hps = hashGrid[Hash(ix, iy, iz)];
+		if (hps) {
+			std::list<HitPoint *>::iterator iter = hps->begin();
+			while (iter != hps->end()) {
+				HitPoint *hp = *iter++;
+				luxrays::Vector v = hp->position - hitPoint;
+				// TODO: use configurable parameter for normal treshold
+				if ((luxrays::Dot(hp->normal, shadeN) > 0.5f) &&
+						(luxrays::Dot(v, v) <=  hp->photonRadius2)) {
+					const float g = (hp->accumPhotonCount * alpha + alpha) / (hp->accumPhotonCount * alpha + 1.f);
+					hp->photonRadius2 *= g;
+					hp->accumPhotonCount++;
+
+					luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, shadeN) *
+							luxrays::AbsDot(shadeN, wi) * hp->throughput;
+					hp->accumReflectedFlux = (hp->accumReflectedFlux + flux) * g;
+				}
+			}
+		}
+	}
+
+private:
+	unsigned int Hash(const int ix, const int iy, const int iz) {
+		return (unsigned int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % hashGridSize;
+	}
+
+	HitPoints *hitPoints;
+	unsigned int hashGridSize;
+	float invCellSize;
 	std::list<HitPoint *> **hashGrid;
 };
 
@@ -136,7 +272,8 @@ static luxrays::SampleBuffer *sampleBuffer = NULL;
 static boost::thread *renderThread = NULL;
 static unsigned long long photonTraced = 0;
 
-static std::vector<HitPoint> *hitPointsPtr = NULL;
+static HitPoints *hitPoints = NULL;
+static HashGrid *hashGrid = NULL;
 
 //------------------------------------------------------------------------------
 
@@ -161,9 +298,8 @@ static void UpdateFrameBuffer() {
 
 	film->Reset();
 
-	std::vector<HitPoint> &hitPoints = *hitPointsPtr;
-	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
-		HitPoint *hp = &hitPoints[i];
+	for (unsigned int i = 0; i < hitPoints->GetSize(); ++i) {
+		HitPoint *hp = hitPoints->GetHitPoint(i);
 
 		switch (hp->type) {
 			case CONSTANT_COLOR: {
@@ -201,7 +337,7 @@ static void UpdateFrameBuffer() {
 
 //------------------------------------------------------------------------------
 
-static std::vector<HitPoint> *BuildHitPoints(
+static HitPoints *BuildHitPoints(
 	luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
 	luxrays::IntersectionDevice *device, luxrays::RayBuffer *rayBuffer,
 	const unsigned int width, const unsigned int height) {
@@ -471,24 +607,14 @@ static std::vector<HitPoint> *BuildHitPoints(
 		}
 	}
 
-	return hitPoints;
-}
-
-static unsigned int Hash(const int ix, const int iy, const int iz, const unsigned int hashGridSize) {
-	return (unsigned int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % hashGridSize;
-}
-
-static HashGrid *BuildHashGrid(
-	std::vector<HitPoint> &hitPoints,
-	const unsigned int width, const unsigned int height) {
 	// Calculate hit points bounding box
 	std::cerr << "Building hit points bounding box: ";
 	luxrays::BBox hpBBox;
-	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
-		HitPoint *hp = &hitPoints[i];
+	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
+		HitPoint *hp = &(*hitPoints)[i];
 
 		if (hp->type == SURFACE)
-			hpBBox = luxrays::Union(hpBBox, hitPoints[i].position);
+			hpBBox = luxrays::Union(hpBBox, hp->position);
 	}
 	std::cerr << hpBBox << std::endl;
 
@@ -501,8 +627,8 @@ static HashGrid *BuildHashGrid(
 
 	// Initialize hit points field
 	const float photonRadius2 = photonRadius * photonRadius;
-	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
-		HitPoint *hp = &hitPoints[i];
+	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
+		HitPoint *hp = &(*hitPoints)[i];
 
 		if (hp->type == SURFACE) {
 			hp->photonRadius2 = photonRadius2;
@@ -511,63 +637,7 @@ static HashGrid *BuildHashGrid(
 		}
 	}
 
-	const float hashs = 1.f / (photonRadius * 2.f);
-	// TODO: add a tunable parameter for hashgrid size
-	const unsigned int hashGridSize = hitPoints.size();
-	std::list<HitPoint *> **hashGrid = new std::list<HitPoint *>*[hashGridSize];
-	for (unsigned int i = 0; i < hashGridSize; ++i)
-		hashGrid[i] = NULL;
-
-	std::cerr << "Building hit points hash grid:" << std::endl;
-	std::cerr << "  0k/" << hitPoints.size() / 1000 << "k" <<std::endl;
-	const luxrays::Vector vphotonRadius(photonRadius, photonRadius, photonRadius);
-	//unsigned int maxPathCount = 0;
-	double lastPrintTime = luxrays::WallClockTime();
-	unsigned long long entryCount = 0;
-	for (unsigned int i = 0; i < hitPoints.size(); ++i) {
-		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
-			std::cerr << "  " << i / 1000 << "k/" << hitPoints.size() / 1000 << "k" <<std::endl;
-			lastPrintTime = luxrays::WallClockTime();
-		}
-
-		HitPoint *hp = &hitPoints[i];
-
-		if (hp->type == SURFACE) {
-			const luxrays::Vector bMin = ((hp->position - vphotonRadius) - hpBBox.pMin) * hashs;
-			const luxrays::Vector bMax = ((hp->position + vphotonRadius) - hpBBox.pMin) * hashs;
-
-			for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
-				for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
-					for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ix++) {
-						int hv = Hash(ix, iy, iz, hashGridSize);
-
-						if (hashGrid[hv] == NULL)
-							hashGrid[hv] = new std::list<HitPoint *>();
-
-						hashGrid[hv]->push_front(hp);
-						++entryCount;
-
-					// hashGrid[hv]->size() is very slow to execute
-					/*if (hashGrid[hv]->size() > maxPathCount)
-						maxPathCount = hashGrid[hv]->size();*/
-					}
-				}
-			}
-		}
-	}
-	//std::cerr << "Max. path count in a single hash grid entry: " << maxPathCount << std::endl;
-	std::cerr << "Avg. path count in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
-
-	// HashGrid debug code
-	/*for (unsigned int i = 0; i < hashGridSize; ++i) {
-		if (hashGrid[i]) {
-			if (hashGrid[i]->size() > 10) {
-				std::cerr << "HashGrid[" << i << "].size() = " <<hashGrid[i]->size() << std::endl;
-			}
-		}
-	}*/
-
-	return new HashGrid(hashs, hpBBox, hashGridSize, hashGrid);
+	return new HitPoints(hpBBox, hitPoints);
 }
 
 static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
@@ -712,14 +782,11 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 
 				// Flip the normal if required
 				luxrays::Normal shadeN;
-				float RdotShadeN = luxrays::Dot(ray->d, N);
-				if (RdotShadeN > 0.f) {
+				if (luxrays::Dot(ray->d, N) > 0.f)
 					// Flip shade  normal
 					shadeN = -N;
-				} else {
+				else
 					shadeN = N;
-					RdotShadeN = -RdotShadeN;
-				}
 
 				if (triMat->IsLightSource()) {
 					// Re-initialize the photon path
@@ -734,33 +801,8 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 							rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 							false, &fPdf, specularBounce) * surfaceColor;
 
-					if (!specularBounce) {
-						// Look for eye path hit points near the current hit point
-						luxrays::Vector hh = (hitPoint - hashGrid->gridBBox.pMin) * hashGrid->invGridSize;
-						const int ix = abs(int(hh.x));
-						const int iy = abs(int(hh.y));
-						const int iz = abs(int(hh.z));
-
-						std::list<HitPoint *> *hitPoints = hashGrid->hashGrid[Hash(ix, iy, iz, hashGrid->hashSize)];
-						if (hitPoints) {
-							std::list<HitPoint *>::iterator iter = hitPoints->begin();
-							while (iter != hitPoints->end()) {
-								HitPoint *hp = *iter++;
-								luxrays::Vector v = hp->position - hitPoint;
-								// TODO: use configurable parameter for normal treshold
-								if ((luxrays::Dot(hp->normal, shadeN) > 0.5f) &&
-										(luxrays::Dot(v, v) <=  hp->photonRadius2)) {
-									const float g = (hp->accumPhotonCount * alpha + alpha) / (hp->accumPhotonCount * alpha + 1.f);
-									hp->photonRadius2 *= g;
-									hp->accumPhotonCount++;
-
-									luxrays::Spectrum flux = photonPath->flux * hp->material->f(hp->wo, -ray->d, shadeN) *
-											RdotShadeN * hp->throughput;
-									hp->accumReflectedFlux = (hp->accumReflectedFlux + flux) * g;
-								}
-							}
-						}
-					}
+					if (!specularBounce)
+						hashGrid->AddFlux(alpha, hitPoint, shadeN, -ray->d, photonPath->flux);
 
 					// Check if we reached the max. depth
 					if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
@@ -867,7 +909,8 @@ static void KeyFunc(unsigned char key, int x, int y) {
 			delete scene;
 			delete ctx;
 
-			delete hitPointsPtr;
+			delete hashGrid;
+			delete hitPoints;
 
 			std::cerr << "Done." << std::endl;
 			exit(EXIT_SUCCESS);
@@ -1031,13 +1074,13 @@ int main(int argc, char *argv[]) {
 		// Build the EyePaths list
 		//----------------------------------------------------------------------
 
-		hitPointsPtr = BuildHitPoints(scene, rndGen, device, rayBuffer, imgWidth, imgHeight);
+		hitPoints = BuildHitPoints(scene, rndGen, device, rayBuffer, imgWidth, imgHeight);
 
 		//----------------------------------------------------------------------
 		// Build the hash grid of EyePaths hit points
 		//----------------------------------------------------------------------
 
-		HashGrid *hashGrid = BuildHashGrid(*hitPointsPtr, imgWidth, imgHeight);
+		hashGrid = new HashGrid(hitPoints);
 
 		//----------------------------------------------------------------------
 		// Start photon tracing thread
