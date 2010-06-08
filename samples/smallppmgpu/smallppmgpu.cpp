@@ -133,6 +133,18 @@ class HashGrid {
 public:
 	HashGrid(HitPoints *hps) {
 		hitPoints = hps;
+		hashGrid = NULL;
+
+		ReHash();
+	}
+
+	~HashGrid() {
+		for (unsigned int i = 0; i < hashGridSize; ++i)
+			delete hashGrid[i];
+		delete hashGrid;
+	}
+
+	void ReHash() {
 		const unsigned int hitPointsCount = hitPoints->GetSize();
 		const luxrays::BBox &hpBBox = hitPoints->GetBBox();
 
@@ -151,9 +163,17 @@ public:
 
 		// TODO: add a tunable parameter for hashgrid size
 		hashGridSize = hitPointsCount;
-		hashGrid = new std::list<HitPoint *>*[hashGridSize];
-		for (unsigned int i = 0; i < hashGridSize; ++i)
-			hashGrid[i] = NULL;
+		if (!hashGrid) {
+			hashGrid = new std::list<HitPoint *>*[hashGridSize];
+
+			for (unsigned int i = 0; i < hashGridSize; ++i)
+				hashGrid[i] = NULL;
+		} else {
+			for (unsigned int i = 0; i < hashGridSize; ++i) {
+				delete hashGrid[i];
+				hashGrid[i] = NULL;
+			}
+		}
 
 		std::cerr << "Building hit points hash grid:" << std::endl;
 		std::cerr << "  0k/" << hitPointsCount / 1000 << "k" <<std::endl;
@@ -185,16 +205,16 @@ public:
 							hashGrid[hv]->push_front(hp);
 							++entryCount;
 
-							// hashGrid[hv]->size() is very slow to execute
-							/*if (hashGrid[hv]->size() > maxPathCount)
+							/*// hashGrid[hv]->size() is very slow to execute
+							if (hashGrid[hv]->size() > maxPathCount)
 								maxPathCount = hashGrid[hv]->size();*/
 						}
 					}
 				}
 			}
 		}
-		//std::cerr << "Max. path count in a single hash grid entry: " << maxPathCount << std::endl;
-		std::cerr << "Avg. path count in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
+		//std::cerr << "Max. hit points in a single hash grid entry: " << maxPathCount << std::endl;
+		std::cerr << "Avg. hit points in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
 
 		// HashGrid debug code
 		/*for (unsigned int i = 0; i < hashGridSize; ++i) {
@@ -204,12 +224,6 @@ public:
 				}
 			}
 		}*/
-	}
-
-	~HashGrid() {
-		for (unsigned int i = 0; i < hashGridSize; ++i)
-			delete hashGrid[i];
-		delete hashGrid;
 	}
 
 	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
@@ -675,6 +689,9 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 	}
 
 	startTime = luxrays::WallClockTime();
+	unsigned long long lastReHash = photonTraced;
+	// TODO: add a parameter to tune rehashing intervals
+	unsigned long long rehashInterval = 1000000;
 	while (!boost::this_thread::interruption_requested()) {
 		// Trace the rays
 		device->PushRayBuffer(rayBuffer);
@@ -832,6 +849,17 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen,
 					}
 				}
 			}
+		}
+
+		// Check if it is time to do an HashGrid re-hash
+		// TODO: add a parameter to tune rehashing intervals
+		if (photonTraced - lastReHash > rehashInterval) {
+			std::cerr << "ReHashing HashGrid" << std::endl;
+			hashGrid->ReHash();
+			lastReHash = photonTraced;
+			rehashInterval *= 2;
+			std::cerr << "ReHash interval: " << rehashInterval << std::endl;
+			std::cerr << "Tracing photon paths" << std::endl;
 		}
 	}
 
