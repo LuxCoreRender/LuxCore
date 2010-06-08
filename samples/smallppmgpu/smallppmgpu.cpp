@@ -591,7 +591,7 @@ static HitPoints *BuildHitPoints(
 							delete *todoEyePathsIterator;
 							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 							--todoEyePathCount;
-						} else if (specularBounce) {
+						} else if (specularBounce || (!triSurfMat->IsDiffuse())) {
 							++todoEyePathsIterator;
 
 							eyePath->throughput *= f / fPdf;
