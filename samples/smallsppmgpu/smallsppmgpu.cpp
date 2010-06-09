@@ -296,7 +296,7 @@ public:
 			const unsigned int count = hp->constantHitsCount + hp->surfaceHitsCount;
 			if (count > 0) {
 				const double k = 1.0 / (M_PI * hp->accumPhotonRadius2 * photonTraced);
-				hp->radiance = (hp->constantHitsCount * hp->accumRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
+				hp->radiance = (hp->accumRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
 			}
 		}
 	}
