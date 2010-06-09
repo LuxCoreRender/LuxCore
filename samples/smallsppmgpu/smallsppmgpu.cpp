@@ -102,7 +102,10 @@ public:
 	luxrays::Spectrum accumReflectedFlux;
 
 	luxrays::Spectrum accumRadiance;
+
 	unsigned int constantHitsCount;
+	unsigned int surfaceHitsCount;
+	luxrays::Spectrum radiance;
 };
 
 static bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
@@ -231,17 +234,16 @@ public:
 		for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
 			HitPoint *hp = &(*hitPoints)[i];
 
-			if (hp->type == SURFACE) {
-				hp->photonCount = 0;
-				hp->reflectedFlux = luxrays::Spectrum();
+			hp->photonCount = 0;
+			hp->reflectedFlux = luxrays::Spectrum();
 
-				hp->accumPhotonRadius2 = photonRadius2;
-				hp->accumPhotonCount = 0;
-				hp->accumReflectedFlux = luxrays::Spectrum();
-			}
+			hp->accumPhotonRadius2 = photonRadius2;
+			hp->accumPhotonCount = 0;
+			hp->accumReflectedFlux = luxrays::Spectrum();
 
 			hp->accumRadiance = luxrays::Spectrum();
 			hp->constantHitsCount = 0;
+			hp->surfaceHitsCount = 0;
 		}
 	}
 
@@ -262,7 +264,7 @@ public:
 		return bbox;
 	}
 
-	void AccumulateFlux() {
+	void AccumulateFlux(const unsigned int photonTraced) {
 		std::cerr << "Accumulate photons flux" << std::endl;
 
 		for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
@@ -275,24 +277,32 @@ public:
 					break;
 				case SURFACE:
 					if ((hp->accumPhotonCount > 0)) {
-						const unsigned int count = hp->photonCount + hp->accumPhotonCount;
-						const float g = alpha * count / (hp->photonCount * alpha + hp->accumPhotonCount);
-						hp->photonCount = count;
+						const unsigned int pcount = hp->photonCount + hp->accumPhotonCount;
+						const float g = alpha * pcount / (hp->photonCount * alpha + hp->accumPhotonCount);
+						hp->photonCount = pcount;
 						hp->reflectedFlux = (hp->reflectedFlux + hp->accumReflectedFlux) * g;
 
 						hp->accumPhotonRadius2 *= g;
 						hp->accumPhotonCount = 0;
 						hp->accumReflectedFlux = luxrays::Spectrum();
 					}
+
+					hp->surfaceHitsCount += 1;
 					break;
 				default:
 					assert (false);
 			}
+
+			const unsigned int count = hp->constantHitsCount + hp->surfaceHitsCount;
+			if (count > 0) {
+				const double k = 1.0 / (M_PI * hp->accumPhotonRadius2 * photonTraced);
+				hp->radiance = (hp->constantHitsCount * hp->accumRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
+			}
 		}
 	}
 
-	void Recast() {
-		AccumulateFlux();
+	void Recast(const unsigned int photonTraced) {
+		AccumulateFlux(photonTraced);
 
 		SetHitPoints();
 	}
@@ -676,32 +686,7 @@ static void UpdateFrameBuffer() {
 		HitPoint *hp = hitPoints->GetHitPoint(i);
 		const float scrX = i % imgWidth;
 		const float scrY = i / imgWidth;
-
-		switch (hp->type) {
-			case CONSTANT_COLOR: {
-				const luxrays::Spectrum rad = (hp->throughput + hp->accumRadiance) / (hp->constantHitsCount + 1);
-				sampleBuffer->SplatSample(scrX, scrY, rad);
-				break;
-			}
-			case SURFACE: {
-				const unsigned count = hp->photonCount + hp->accumPhotonCount;
-				if (count == 0) {
-					const luxrays::Spectrum rad = (hp->constantHitsCount == 0) ? luxrays::Spectrum() : (hp->accumRadiance / hp->constantHitsCount);
-					sampleBuffer->SplatSample(scrX, scrY, rad);
-				} else {
-					const double k = 1.0 / (M_PI * hp->accumPhotonRadius2 * photonTraced);
-					const float g = photonAlpha * count / (hp->photonCount * photonAlpha + hp->accumPhotonCount);
-					const luxrays::Spectrum flux = (hp->reflectedFlux + hp->accumReflectedFlux) * g;
-					const luxrays::Spectrum rad = (flux * k + hp->accumRadiance) / (hp->constantHitsCount + 1);
-
-					sampleBuffer->SplatSample(scrX, scrY, rad);
-				}
-				break;
-			}
-			default:
-				assert(false);
-				break;
-		}
+		sampleBuffer->SplatSample(scrX, scrY, hp->radiance);
 
 		if (sampleBuffer->IsFull()) {
 			// Splat all samples on the film
@@ -828,7 +813,7 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 		// Check if it is time to do an HashGrid re-hash
 		// TODO: add a parameter to tune rehashing intervals
 		if (photonTraced - lastEyePathRecast > stochasticInterval) {
-			hitPoints->Recast();
+			hitPoints->Recast(photonTraced);
 
 			hashGrid->Rehash();
 
