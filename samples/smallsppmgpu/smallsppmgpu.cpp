@@ -100,6 +100,9 @@ public:
 	float accumPhotonRadius2;
 	unsigned int accumPhotonCount;
 	luxrays::Spectrum accumReflectedFlux;
+
+	luxrays::Spectrum accumRadiance;
+	unsigned int constantHitsCount;
 };
 
 static bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
@@ -203,12 +206,12 @@ static bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::Ra
 class HitPoints {
 public:
 	HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
-			luxrays::IntersectionDevice *dev, luxrays::RayBuffer *rb, const float a,
+			luxrays::IntersectionDevice *dev, const float a,
 			const unsigned int w, const unsigned int h) {
 		scene = scn;
 		rndGen = rndg;
 		device = dev;
-		rayBuffer = rb;
+		rayBuffer = device->NewRayBuffer();
 		alpha = a;
 		width = w;
 		height = h;
@@ -236,11 +239,15 @@ public:
 				hp->accumPhotonCount = 0;
 				hp->accumReflectedFlux = luxrays::Spectrum();
 			}
+
+			hp->accumRadiance = luxrays::Spectrum();
+			hp->constantHitsCount = 0;
 		}
 	}
 
 	~HitPoints() {
 		delete hitPoints;
+		delete rayBuffer;
 	}
 
 	HitPoint *GetHitPoint(const unsigned int index) {
@@ -261,20 +268,32 @@ public:
 		for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
 			HitPoint *hp = &(*hitPoints)[i];
 
-			if ((hp->type == SURFACE) && (hp->accumPhotonCount > 0)) {
-				const unsigned int count = hp->photonCount + hp->accumPhotonCount;
-				const float g = alpha * count / (hp->photonCount * alpha + hp->accumPhotonCount);
-				hp->photonCount = count;
-				hp->reflectedFlux = (hp->reflectedFlux + hp->accumReflectedFlux) * g;
+			switch (hp->type) {
+				case CONSTANT_COLOR:
+					hp->accumRadiance += hp->throughput;
+					hp->constantHitsCount += 1;
+					break;
+				case SURFACE:
+					if ((hp->accumPhotonCount > 0)) {
+						const unsigned int count = hp->photonCount + hp->accumPhotonCount;
+						const float g = alpha * count / (hp->photonCount * alpha + hp->accumPhotonCount);
+						hp->photonCount = count;
+						hp->reflectedFlux = (hp->reflectedFlux + hp->accumReflectedFlux) * g;
 
-				hp->accumPhotonRadius2 *= g;
-				hp->accumPhotonCount = 0;
-				hp->accumReflectedFlux = luxrays::Spectrum();
+						hp->accumPhotonRadius2 *= g;
+						hp->accumPhotonCount = 0;
+						hp->accumReflectedFlux = luxrays::Spectrum();
+					}
+					break;
+				default:
+					assert (false);
 			}
 		}
 	}
 
 	void Recast() {
+		AccumulateFlux();
+
 		SetHitPoints();
 	}
 
@@ -659,18 +678,20 @@ static void UpdateFrameBuffer() {
 
 		switch (hp->type) {
 			case CONSTANT_COLOR: {
-				sampleBuffer->SplatSample(scrX, scrY, hp->throughput);
+				const luxrays::Spectrum rad = (hp->throughput + hp->accumRadiance) / (hp->constantHitsCount + 1);
+				sampleBuffer->SplatSample(scrX, scrY, rad);
 				break;
 			}
 			case SURFACE: {
 				const unsigned count = hp->photonCount + hp->accumPhotonCount;
-				if (count == 0)
-					sampleBuffer->SplatSample(scrX, scrY, luxrays::Spectrum());
-				else {
+				if (count == 0) {
+					const luxrays::Spectrum rad = (hp->constantHitsCount == 0) ? luxrays::Spectrum() : (hp->accumRadiance / hp->constantHitsCount);
+					sampleBuffer->SplatSample(scrX, scrY, rad);
+				} else {
 					const double k = 1.0 / (M_PI * hp->accumPhotonRadius2 * photonTraced);
 					const float g = photonAlpha * count / (hp->photonCount * photonAlpha + hp->accumPhotonCount);
 					const luxrays::Spectrum flux = (hp->reflectedFlux + hp->accumReflectedFlux) * g;
-					const luxrays::Spectrum rad = flux * k;
+					const luxrays::Spectrum rad = (flux * k + hp->accumRadiance) / (hp->constantHitsCount + 1);
 
 					sampleBuffer->SplatSample(scrX, scrY, rad);
 				}
@@ -715,9 +736,10 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 	photonTraced++;
 }
 
-static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::IntersectionDevice *device,
-	luxrays::RayBuffer *rayBuffer) {
+static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::IntersectionDevice *device) {
 	std::cerr << "Tracing photon paths" << std::endl;
+
+	luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
 
 	// Generate photons from light sources
 	std::vector<PhotonPath> photonPaths(rayBuffer->GetSize());
@@ -731,7 +753,7 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 	startTime = luxrays::WallClockTime();
 	unsigned long long lastEyePathRecast = photonTraced;
 	// TODO: add a parameter to tune rehashing intervals
-	unsigned long long rehashInterval = 1000000;
+	unsigned long long rehashInterval = 2000000;
 	while (!boost::this_thread::interruption_requested()) {
 		// Trace the rays
 		device->PushRayBuffer(rayBuffer);
@@ -807,7 +829,6 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 		// Check if it is time to do an HashGrid re-hash
 		// TODO: add a parameter to tune rehashing intervals
 		if (photonTraced - lastEyePathRecast > rehashInterval) {
-			hitPoints->AccumulateFlux();
 			hitPoints->Recast();
 
 			hashGrid->Rehash();
@@ -889,10 +910,11 @@ static void KeyFunc(unsigned char key, int x, int y) {
 
 			ctx->Stop();
 			delete scene;
-			delete ctx;
 
 			delete hashGrid;
 			delete hitPoints;
+
+			delete ctx;
 
 			std::cerr << "Done." << std::endl;
 			exit(EXIT_SUCCESS);
@@ -1023,8 +1045,6 @@ int main(int argc, char *argv[]) {
 		std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(interDevDescs);
 		luxrays::IntersectionDevice *device = devices[0];
 
-		luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
-
 		luxrays::RandomGenerator *rndGen = new luxrays::RandomGenerator();
 		rndGen->init(7);
 
@@ -1053,8 +1073,7 @@ int main(int argc, char *argv[]) {
 		// Build the EyePaths list
 		//----------------------------------------------------------------------
 
-		hitPoints = new HitPoints(scene, rndGen, device, rayBuffer,
-			photonAlpha, imgWidth, imgHeight);
+		hitPoints = new HitPoints(scene, rndGen, device, photonAlpha, imgWidth, imgHeight);
 
 		//----------------------------------------------------------------------
 		// Build the hash grid of EyePaths hit points
@@ -1066,7 +1085,7 @@ int main(int argc, char *argv[]) {
 		// Start photon tracing thread
 		//----------------------------------------------------------------------
 
-		renderThread = new boost::thread(boost::bind(TracePhotonsThread, rndGen, device, rayBuffer));
+		renderThread = new boost::thread(boost::bind(TracePhotonsThread, rndGen, device));
 
 		//----------------------------------------------------------------------
 		// Start GLUT loop
