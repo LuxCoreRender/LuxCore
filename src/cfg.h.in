@@ -20,7 +20,7 @@
  ***************************************************************************/
 
 #ifndef _LUXRAYS_CFG_H
-#define	_LUXRAYS_CFG_H
+#define _LUXRAYS_CFG_H
 
 // The configured options and settings for LuxRays
 
