@@ -638,6 +638,7 @@ static unsigned int imgWidth = 640;
 static unsigned int imgHeight = 480;
 static std::string imgFileName = "image.png";
 static float photonAlpha = 0.7f;
+static unsigned int stochasticInterval = 2000000;
 
 static luxrays::utils::Film *film = NULL;
 static luxrays::SampleBuffer *sampleBuffer = NULL;
@@ -752,8 +753,6 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 
 	startTime = luxrays::WallClockTime();
 	unsigned long long lastEyePathRecast = photonTraced;
-	// TODO: add a parameter to tune rehashing intervals
-	unsigned long long rehashInterval = 2000000;
 	while (!boost::this_thread::interruption_requested()) {
 		// Trace the rays
 		device->PushRayBuffer(rayBuffer);
@@ -828,7 +827,7 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 
 		// Check if it is time to do an HashGrid re-hash
 		// TODO: add a parameter to tune rehashing intervals
-		if (photonTraced - lastEyePathRecast > rehashInterval) {
+		if (photonTraced - lastEyePathRecast > stochasticInterval) {
 			hitPoints->Recast();
 
 			hashGrid->Rehash();
@@ -982,6 +981,7 @@ int main(int argc, char *argv[]) {
 				" -a [photon alpha]" << std::endl <<
 				" -r [screen refresh interval]" << std::endl <<
 				" -i [image file name]" << std::endl <<
+				" -s [stochastic photon count refresh]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		std::string sceneFileName = "scenes/cornell/cornell.scn";
@@ -1000,6 +1000,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'r') scrRefreshInterval = atoi(argv[++i]);
 
 				else if (argv[i][1] == 'i') imgFileName = argv[++i];
+
+				else if (argv[i][1] == 's') stochasticInterval = atoi(argv[++i]);
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
