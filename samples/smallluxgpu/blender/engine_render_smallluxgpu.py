@@ -763,7 +763,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
       basename = os.path.basename(scene.slg_scenename)
     basename = basename.split('/')[-1].split('\\')[-1]
     if not basename:
-      error("Invalid scene filename") 
+      error("Invalid scene name") 
     basename = os.path.splitext(basename)[0]
     
     self._slgexport(scene, scene.slg_vuvs, scene.slg_vcolors, scene.slg_vnormals, scene.slg_export, basepath, basename, suns, envmap)
@@ -776,7 +776,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('batch.haltspp = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmodespp))
     fcfg.write('batch.periodicsave = {}\n'.format(scene.slg_enablebatchmode*scene.slg_batchmode_periodicsave))
     fcfg.write('scene.file = {}/{}/{}.scn\n'.format(basepath,basename,basename))
-    fcfg.write('scene.epsilon = {:g}\n'.format(scene.unit_settings.scale_length*0.0001))
+    fcfg.write('scene.epsilon = {:g}\n'.format(0.0001 / scene.unit_settings.scale_length))
     fcfg.write('opencl.latency.mode = {:b}\n'.format(scene.slg_low_latency))
     fcfg.write('opencl.nativethread.count = {}\n'.format(scene.slg_native_threads))
     fcfg.write('opencl.cpu.use = {:b}\n'.format(scene.slg_opencl_cpu))
