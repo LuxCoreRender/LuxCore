@@ -449,7 +449,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     nomat = len(mats)
     mats.append('no_material_assigned')
     curmat = nomat
-    mtex = [any(ts for ts in m.texture_slots if ts and (ts.map_colordiff or ts.map_normal) and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')) for m in bpy.data.materials]
+    mtex = [any(ts for ts in m.texture_slots if ts and (ts.map_colordiff or ts.map_normal) and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath')) for m in bpy.data.materials]
     mtex.append(False) # nomat
     verts = [[] for i in range(len(mats))]
     vert_vcs = [[] for i in range(len(mats))]
@@ -663,10 +663,10 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         if not portal:   
           fscn.write('scene.objects.{}.{} = {}/{}/{}.ply\n'.format(mat,mat,basepath,basename,mat))
           if uv_flag and mtex[i]:
-            texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
+            texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath')), None)
             if texmap:
               fscn.write('scene.objects.{}.{}.texmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texmap.texture.image.filepath).replace('\\','/')))
-            texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filename')), None)
+            texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath')), None)
             if texbump:
               if texbump.texture.normal_map:
                 fscn.write('scene.objects.{}.{}.normalmap = {}\n'.format(mat,mat,bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')))
