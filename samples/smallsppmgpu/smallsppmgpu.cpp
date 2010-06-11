@@ -206,9 +206,11 @@ int main(int argc, char *argv[]) {
 				" -r [screen refresh interval]" << std::endl <<
 				" -i [image file name]" << std::endl <<
 				" -s [stochastic photon count refresh]" << std::endl <<
+				" -k [switch from hashgrid to kdtree]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		std::string sceneFileName = "scenes/luxball/luxball.scn";
+		LookUpAccelType accelType = HASH_GRID;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...
@@ -226,6 +228,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'i') imgFileName = argv[++i];
 
 				else if (argv[i][1] == 's') stochasticInterval = atoi(argv[++i]);
+
+				else if (argv[i][1] == 'k') accelType = KD_TREE;
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
@@ -299,7 +303,7 @@ int main(int argc, char *argv[]) {
 		// Build the EyePaths list
 		//----------------------------------------------------------------------
 
-		hitPoints = new HitPoints(scene, rndGen, device, photonAlpha, imgWidth, imgHeight);
+		hitPoints = new HitPoints(scene, rndGen, device, photonAlpha, imgWidth, imgHeight, accelType);
 
 		//----------------------------------------------------------------------
 		// Start photon tracing thread

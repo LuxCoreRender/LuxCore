@@ -124,7 +124,8 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 
 HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
 		luxrays::IntersectionDevice *dev, const float a,
-		const unsigned int w, const unsigned int h) {
+		const unsigned int w, const unsigned int h,
+		const LookUpAccelType accelType) {
 	scene = scn;
 	rndGen = rndg;
 	device = dev;
@@ -133,6 +134,7 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
 	width = w;
 	height = h;
 	pass = 0;
+	lookUpAccelType = accelType;
 
 	hitPoints = new std::vector<HitPoint>(width * height);
 	SetHitPoints();
@@ -162,7 +164,10 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
 	}
 
 	// Allocate hit points lookup accelerator
-	lookUpAccel = new HashGrid(this);
+	if (lookUpAccelType == HASH_GRID)
+		lookUpAccel = new HashGrid(this);
+	else
+		lookUpAccel = new KdTree(this);
 }
 
 HitPoints::~HitPoints() {
@@ -393,6 +398,8 @@ HitPointsLookUpAccel::HitPointsLookUpAccel() {
 HitPointsLookUpAccel::~HitPointsLookUpAccel() {
 }
 
+//------------------------------------------------------------------------------
+
 HashGrid::HashGrid(HitPoints *hps) {
 	hitPoints = hps;
 	hashGrid = NULL;
@@ -420,7 +427,7 @@ void HashGrid::Refresh() {
 	}
 
 	const float cellSize = sqrtf(maxPhotonRadius2) * 2.f;
-	std::cerr << "Hash grid cell size: " << cellSize <<std::endl;
+	std::cerr << "Hash grid cell size: " << cellSize << std::endl;
 	invCellSize = 1.f / cellSize;
 
 	// TODO: add a tunable parameter for hashgrid size
@@ -490,7 +497,7 @@ void HashGrid::Refresh() {
 }
 
 void HashGrid::AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-	const luxrays::Vector wi, const luxrays::Spectrum photonFlux) {
+	const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
 	// Look for eye path hit points near the current hit point
 	luxrays::Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
 	const int ix = abs(int(hh.x));
@@ -512,5 +519,129 @@ void HashGrid::AddFlux(const float alpha, const luxrays::Point &hitPoint, const 
 						luxrays::AbsDot(shadeN, wi) * hp->throughput;
 			}
 		}
+	}
+}
+
+//------------------------------------------------------------------------------
+
+KdTree::KdTree(HitPoints *hps) {
+	hitPoints = hps;
+	nNodes = hitPoints->GetSize();
+	nextFreeNode = 1;
+	nodes = NULL;
+	nodeData = NULL;
+
+	Refresh();
+}
+
+KdTree::~KdTree() {
+	delete[] nodes;
+	delete[] nodeData;
+}
+
+bool KdTree::CompareNode::operator ()(const HitPoint *d1, const HitPoint *d2) const {
+	return (d1->position[axis] == d2->position[axis]) ? (d1 < d2) :
+			(d1->position[axis] < d2->position[axis]);
+}
+
+void KdTree::RecursiveBuild(const unsigned int nodeNum, const unsigned int start,
+		const unsigned int end, std::vector<HitPoint *> &buildNodes) {
+	assert (nodeNum >= 0);
+	assert (start >= 0);
+	assert (end >= 0);
+	assert (nodeNum < nNodes);
+	assert (start < nNodes);
+	assert (end <= nNodes);
+
+	// Create leaf node of kd-tree if we've reached the bottom
+	if (start + 1 == end) {
+		nodes[nodeNum].initLeaf();
+		nodeData[nodeNum] = buildNodes[start];
+		return;
+	}
+
+	// Choose split direction and partition data
+	// Compute bounds of data from start to end
+	luxrays::BBox bound;
+	for (unsigned int i = start; i < end; ++i)
+		bound = luxrays::Union(bound, buildNodes[i]->position);
+	unsigned int splitAxis = bound.MaximumExtent();
+	unsigned int splitPos = (start + end) / 2;
+
+	std::nth_element(&buildNodes[start], &buildNodes[splitPos],
+		&buildNodes[end - 1], CompareNode(splitAxis));
+
+	// Allocate kd-tree node and continue recursively
+	nodes[nodeNum].init(buildNodes[splitPos]->position[splitAxis], splitAxis);
+	nodeData[nodeNum] = buildNodes[splitPos];
+
+	if (start < splitPos) {
+		nodes[nodeNum].hasLeftChild = 1;
+		unsigned int childNum = nextFreeNode++;
+		RecursiveBuild(childNum, start, splitPos, buildNodes);
+	}
+
+	if (splitPos + 1 < end) {
+		nodes[nodeNum].rightChild = nextFreeNode++;
+		RecursiveBuild(nodes[nodeNum].rightChild, splitPos+1, end, buildNodes);
+	}
+}
+
+void KdTree::Refresh() {
+	delete[] nodes;
+	delete[] nodeData;
+
+	std::cerr << "Building kD-Tree with " << nNodes << " nodes" << std::endl;
+
+	nodes = new KdNode[nNodes];
+	nodeData = new HitPoint*[nNodes];
+	nextFreeNode = 1;
+
+	// Begin the KdTree building process
+	std::vector<HitPoint *> buildNodes;
+	buildNodes.reserve(nNodes);
+	maxDistSquared = 0.f;
+	for (unsigned int i = 0; i < nNodes; ++i)  {
+		buildNodes.push_back(hitPoints->GetHitPoint(i));
+		maxDistSquared = luxrays::Max(maxDistSquared, buildNodes[i]->accumPhotonRadius2);
+	}
+	std::cerr << "kD-Tree search radius: " << sqrtf(maxDistSquared) << std::endl;
+
+	RecursiveBuild(0, 0, nNodes, buildNodes);
+}
+
+void KdTree::AddFluxImpl(const unsigned int nodeNum,
+		const float alpha, const luxrays::Point &p, const luxrays::Normal &shadeN,
+		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+	KdNode *node = &nodes[nodeNum];
+
+	// Process kd-tree node's children
+	int axis = node->splitAxis;
+	if (axis != 3) {
+		float dist = p[axis] - node->splitPos;
+		float dist2 = dist * dist;
+		if (p[axis] <= node->splitPos) {
+			if (node->hasLeftChild)
+				AddFluxImpl(nodeNum + 1, alpha, p, shadeN, wi, photonFlux);
+			if (dist2 < maxDistSquared && node->rightChild < nNodes)
+				AddFluxImpl(node->rightChild, alpha, p, shadeN, wi, photonFlux);
+		} else {
+			if (node->rightChild < nNodes)
+				AddFluxImpl(node->rightChild, alpha, p, shadeN, wi, photonFlux);
+			if (dist2 < maxDistSquared && node->hasLeftChild)
+				AddFluxImpl(nodeNum + 1, alpha, p, shadeN, wi, photonFlux);
+		}
+	}
+
+	// Hand kd-tree node to processing function
+	HitPoint *hp = nodeData[nodeNum];
+	const float dist2 = luxrays::DistanceSquared(hp->position, p);
+	// TODO: use configurable parameter for normal treshold
+	if ((luxrays::Dot(hp->normal, shadeN) > 0.5f) &&
+			(dist2 <=  hp->accumPhotonRadius2)) {
+		hp->accumPhotonCount++;
+
+		hp->accumReflectedFlux += photonFlux * hp->material->f(hp->wo, wi, shadeN) *
+				luxrays::AbsDot(shadeN, wi) * hp->throughput;
 	}
 }

@@ -65,7 +65,7 @@ public:
 	virtual void Refresh() = 0;
 
 	virtual void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector wi, const luxrays::Spectrum photonFlux) = 0;
+		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) = 0;
 };
 
 class HashGrid : public HitPointsLookUpAccel {
@@ -77,7 +77,7 @@ public:
 	void Refresh();
 
 	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector wi, const luxrays::Spectrum photonFlux);
+		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
 
 private:
 	unsigned int Hash(const int ix, const int iy, const int iz) {
@@ -90,12 +90,78 @@ private:
 	std::list<HitPoint *> **hashGrid;
 };
 
+class KdTree : public HitPointsLookUpAccel {
+public:
+	KdTree(HitPoints *hps);
+
+	~KdTree();
+
+	void Refresh();
+
+	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+		AddFluxImpl(0, alpha, hitPoint, shadeN, wi, photonFlux);
+	}
+
+private:
+	struct KdNode {
+		void init(const float p, const unsigned int a) {
+			splitPos = p;
+			splitAxis = a;
+			// Dade - in order to avoid a gcc warning
+			rightChild = 0;
+			rightChild = ~rightChild;
+			hasLeftChild = 0;
+		}
+
+		void initLeaf() {
+			splitAxis = 3;
+			// Dade - in order to avoid a gcc warning
+			rightChild = 0;
+			rightChild = ~rightChild;
+			hasLeftChild = 0;
+		}
+
+		// KdNode Data
+		float splitPos;
+		unsigned int splitAxis : 2;
+		unsigned int hasLeftChild : 1;
+		unsigned int rightChild : 29;
+	};
+
+	struct CompareNode {
+		CompareNode(int a) { axis = a; }
+
+		int axis;
+
+		bool operator()(const HitPoint *d1, const HitPoint *d2) const;
+	};
+
+	void RecursiveBuild(const unsigned int nodeNum, const unsigned int start,
+		const unsigned int end, std::vector<HitPoint *> &buildNodes);
+
+	void AddFluxImpl(const unsigned int nodeNum,
+		const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
+
+	HitPoints *hitPoints;
+
+	KdNode *nodes;
+	HitPoint **nodeData;
+	unsigned int nNodes, nextFreeNode;
+	float maxDistSquared;
+};
+
 //------------------------------------------------------------------------------
 // Eye path hit points
 //------------------------------------------------------------------------------
 
 enum HitPointType {
 	SURFACE, CONSTANT_COLOR
+};
+
+enum LookUpAccelType {
+	HASH_GRID, KD_TREE
 };
 
 class HitPoint {
@@ -133,7 +199,8 @@ class HitPoints {
 public:
 	HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
 			luxrays::IntersectionDevice *dev, const float a,
-			const unsigned int w, const unsigned int h);
+			const unsigned int w, const unsigned int h,
+			const LookUpAccelType accelType);
 	~HitPoints();
 
 	HitPoint *GetHitPoint(const unsigned int index) {
@@ -149,7 +216,7 @@ public:
 	}
 
 	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector wi, const luxrays::Spectrum photonFlux) {
+		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
 		lookUpAccel->AddFlux(alpha, hitPoint, shadeN, wi, photonFlux);
 	}
 
@@ -179,6 +246,7 @@ private:
 
 	luxrays::BBox bbox;
 	std::vector<HitPoint> *hitPoints;
+	LookUpAccelType lookUpAccelType;
 	HitPointsLookUpAccel *lookUpAccel;
 	unsigned int pass;
 };
