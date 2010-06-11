@@ -218,6 +218,7 @@ public:
 		alpha = a;
 		width = w;
 		height = h;
+		pass = 0;
 
 		hitPoints = new std::vector<HitPoint>(width * height);
 		SetHitPoints();
@@ -305,7 +306,11 @@ public:
 		AccumulateFlux(photonTraced);
 
 		SetHitPoints();
+
+		++pass;
 	}
+
+	unsigned int GetPassCount() const { return pass; }
 
 private:
 	void SetHitPoints() {
@@ -496,6 +501,7 @@ private:
 
 	luxrays::BBox bbox;
 	std::vector<HitPoint> *hitPoints;
+	unsigned int pass;
 };
 
 //------------------------------------------------------------------------------
@@ -855,8 +861,9 @@ static void PrintCaptions() {
 	char captionBuffer[512];
 	const double elapsedTime = luxrays::WallClockTime() - startTime;
 	const unsigned int kPhotonsSec = photonTraced / (elapsedTime * 1000.f);
-	sprintf(captionBuffer, "[Photons %.2fM][Avg. photons/sec % 4dK][Elapsed time %dsecs]",
-		float(photonTraced / 1000000.0), kPhotonsSec, int(elapsedTime));
+	const unsigned int pass = (hitPoints) ? hitPoints->GetPassCount() : 0;
+	sprintf(captionBuffer, "[Elapsed time %dsecs][Pass %d][Photons %.2fM][Avg. photons/sec % 4dK]",
+		int(elapsedTime), pass, float(photonTraced / 1000000.0), kPhotonsSec);
 	PrintString(GLUT_BITMAP_8_BY_13, captionBuffer);
 }
 
@@ -970,7 +977,7 @@ int main(int argc, char *argv[]) {
 				" -s [stochastic photon count refresh]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
-		std::string sceneFileName = "scenes/cornell/cornell.scn";
+		std::string sceneFileName = "scenes/luxball/luxball.scn";
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...
