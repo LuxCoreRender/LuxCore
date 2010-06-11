@@ -98,7 +98,6 @@ static void KeyFunc(unsigned char key, int x, int y) {
 			ctx->Stop();
 			delete scene;
 
-			delete hashGrid;
 			delete hitPoints;
 
 			delete ctx;
