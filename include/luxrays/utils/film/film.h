@@ -24,6 +24,10 @@
 
 #include <cstddef>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
 
 #if defined (WIN32)
 #include <windows.h>

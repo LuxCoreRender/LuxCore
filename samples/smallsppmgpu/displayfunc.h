@@ -24,6 +24,10 @@
 
 #include <cmath>
 
+#if defined (WIN32)
+#include <windows.h>
+#endif
+
 // Jens's patch for MacOS
 #if defined(__APPLE__)
 #include <GLut/glut.h>
@@ -31,13 +35,8 @@
 #include <GL/glut.h>
 #endif
 
-class RenderingConfig;
-
-extern RenderingConfig *config;
-extern void DebugHandler(const char *msg);
-
 extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
-extern void RunGlut();
+extern void RunGlut(const unsigned int width, const unsigned int height);
 
 #endif	/* _DISPLAYFUNC_H */
 

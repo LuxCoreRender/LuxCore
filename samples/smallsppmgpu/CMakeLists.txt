@@ -23,5 +23,10 @@ include_directories(${LUXRAYS_INCLUDE_DIR})
 link_directories (${LUXRAYS_LIB_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 
-add_executable(smallsppmgpu smallsppmgpu.cpp)
+set(SMALLSPPMGPU_SRCS
+	displayfunc.cpp
+	hitpoints.cpp
+	smallsppmgpu.cpp)
+
+add_executable(smallsppmgpu ${SMALLSPPMGPU_SRCS})
 target_link_libraries(smallsppmgpu luxrays ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})

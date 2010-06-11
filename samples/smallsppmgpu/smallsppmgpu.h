@@ -19,25 +19,37 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _DISPLAYFUNC_H
-#define	_DISPLAYFUNC_H
+#ifndef _SMALLSPPMGPU_H
+#define	_SMALLSPPMGPU_H
 
-#include <cmath>
+#include <boost/thread.hpp>
 
-// Jens's patch for MacOS
-#if defined(__APPLE__)
-#include <GLut/glut.h>
-#else
-#include <GL/glut.h>
-#endif
+#include "luxrays/luxrays.h"
+#include "luxrays/core/pixel/framebuffer.h"
+#include "luxrays/utils/film/film.h"
 
-class RenderingConfig;
+#include "hitpoints.h"
 
-extern RenderingConfig *config;
-extern void DebugHandler(const char *msg);
+extern std::string SPPMG_LABEL;
 
-extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
-extern void RunGlut();
+extern luxrays::Context *ctx;
+extern luxrays::sdl::Scene *scene;
 
-#endif	/* _DISPLAYFUNC_H */
+extern luxrays::utils::Film *film;
+extern luxrays::SampleBuffer *sampleBuffer;
+extern unsigned int imgWidth;
+extern unsigned int imgHeight;
+extern std::string imgFileName;
 
+extern unsigned int stochasticInterval;
+
+extern double startTime;
+extern unsigned int scrRefreshInterval;
+
+extern boost::thread *renderThread;
+extern unsigned long long photonTraced;
+
+extern HitPoints *hitPoints;
+extern HashGrid *hashGrid;
+
+#endif	/* _SMALLSPPMGPU_H */
