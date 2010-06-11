@@ -94,11 +94,11 @@ public:
 	luxrays::Normal normal;
 	const luxrays::sdl::SurfaceMaterial *material;
 
-	unsigned int photonCount;
+	unsigned long long photonCount;
 	luxrays::Spectrum reflectedFlux;
 
 	float accumPhotonRadius2;
-	unsigned int accumPhotonCount;
+	unsigned long long accumPhotonCount;
 	luxrays::Spectrum accumReflectedFlux;
 
 	luxrays::Spectrum accumRadiance;
@@ -277,7 +277,7 @@ public:
 					break;
 				case SURFACE:
 					if ((hp->accumPhotonCount > 0)) {
-						const unsigned int pcount = hp->photonCount + hp->accumPhotonCount;
+						const unsigned long long pcount = hp->photonCount + hp->accumPhotonCount;
 						const float g = alpha * pcount / (hp->photonCount * alpha + hp->accumPhotonCount);
 						hp->photonCount = pcount;
 						hp->reflectedFlux = (hp->reflectedFlux + hp->accumReflectedFlux) * g;
@@ -489,7 +489,8 @@ private:
 	luxrays::RandomGenerator *rndGen;
 	luxrays::IntersectionDevice *device;
 	luxrays::RayBuffer *rayBuffer;
-	float alpha;
+	// double instead of float because photon counters declared as int 64bit
+	double alpha;
 	unsigned int width;
 	unsigned int height;
 
