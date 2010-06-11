@@ -51,7 +51,6 @@ boost::thread *renderThread = NULL;
 unsigned long long photonTraced = 0;
 
 HitPoints *hitPoints = NULL;
-HashGrid *hashGrid = NULL;
 
 //------------------------------------------------------------------------------
 
@@ -144,7 +143,7 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 							false, &fPdf, specularBounce) * surfaceColor;
 
 					if (!specularBounce)
-						hashGrid->AddFlux(photonAlpha, hitPoint, shadeN, -ray->d, photonPath->flux);
+						hitPoints->AddFlux(photonAlpha, hitPoint, shadeN, -ray->d, photonPath->flux);
 
 					// Check if we reached the max. depth
 					if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
@@ -180,8 +179,6 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 		// TODO: add a parameter to tune rehashing intervals
 		if (photonTraced - lastEyePathRecast > stochasticInterval) {
 			hitPoints->Recast(photonTraced);
-
-			hashGrid->Rehash();
 
 			lastEyePathRecast = photonTraced;
 			std::cerr << "Tracing photon paths" << std::endl;
@@ -303,12 +300,6 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		hitPoints = new HitPoints(scene, rndGen, device, photonAlpha, imgWidth, imgHeight);
-
-		//----------------------------------------------------------------------
-		// Build the hash grid of EyePaths hit points
-		//----------------------------------------------------------------------
-
-		hashGrid = new HashGrid(hitPoints);
 
 		//----------------------------------------------------------------------
 		// Start photon tracing thread

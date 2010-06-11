@@ -50,6 +50,5 @@ extern boost::thread *renderThread;
 extern unsigned long long photonTraced;
 
 extern HitPoints *hitPoints;
-extern HashGrid *hashGrid;
 
 #endif	/* _SMALLSPPMGPU_H */

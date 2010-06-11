@@ -160,9 +160,13 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
 		hp->constantHitsCount = 0;
 		hp->surfaceHitsCount = 0;
 	}
+
+	// Allocate hit points lookup accelerator
+	lookUpAccel = new HashGrid(this);
 }
 
 HitPoints::~HitPoints() {
+	delete lookUpAccel;
 	delete hitPoints;
 	delete rayBuffer;
 }
@@ -383,11 +387,17 @@ void HitPoints::SetHitPoints() {
 
 //------------------------------------------------------------------------------
 
+HitPointsLookUpAccel::HitPointsLookUpAccel() {
+}
+
+HitPointsLookUpAccel::~HitPointsLookUpAccel() {
+}
+
 HashGrid::HashGrid(HitPoints *hps) {
 	hitPoints = hps;
 	hashGrid = NULL;
 
-	Rehash();
+	Refresh();
 }
 
 HashGrid::~HashGrid() {
@@ -396,7 +406,7 @@ HashGrid::~HashGrid() {
 	delete hashGrid;
 }
 
-void HashGrid::Rehash() {
+void HashGrid::Refresh() {
 	const unsigned int hitPointsCount = hitPoints->GetSize();
 	const luxrays::BBox &hpBBox = hitPoints->GetBBox();
 

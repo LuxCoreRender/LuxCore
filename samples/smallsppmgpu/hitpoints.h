@@ -51,6 +51,46 @@ public:
 };
 
 //------------------------------------------------------------------------------
+// Hit points look up accelerators
+//------------------------------------------------------------------------------
+
+class HitPoint;
+class HitPoints;
+
+class HitPointsLookUpAccel {
+public:
+	HitPointsLookUpAccel();
+	virtual ~HitPointsLookUpAccel();
+
+	virtual void Refresh() = 0;
+
+	virtual void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+		const luxrays::Vector wi, const luxrays::Spectrum photonFlux) = 0;
+};
+
+class HashGrid : public HitPointsLookUpAccel {
+public:
+	HashGrid(HitPoints *hps);
+
+	~HashGrid();
+
+	void Refresh();
+
+	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+		const luxrays::Vector wi, const luxrays::Spectrum photonFlux);
+
+private:
+	unsigned int Hash(const int ix, const int iy, const int iz) {
+		return (unsigned int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % hashGridSize;
+	}
+
+	HitPoints *hitPoints;
+	unsigned int hashGridSize;
+	float invCellSize;
+	std::list<HitPoint *> **hashGrid;
+};
+
+//------------------------------------------------------------------------------
 // Eye path hit points
 //------------------------------------------------------------------------------
 
@@ -108,12 +148,17 @@ public:
 		return bbox;
 	}
 
+	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+		const luxrays::Vector wi, const luxrays::Spectrum photonFlux) {
+		lookUpAccel->AddFlux(alpha, hitPoint, shadeN, wi, photonFlux);
+	}
+
 	void AccumulateFlux(const unsigned int photonTraced);
 
 	void Recast(const unsigned int photonTraced) {
 		AccumulateFlux(photonTraced);
-
 		SetHitPoints();
+		lookUpAccel->Refresh();
 
 		++pass;
 	}
@@ -134,31 +179,8 @@ private:
 
 	luxrays::BBox bbox;
 	std::vector<HitPoint> *hitPoints;
+	HitPointsLookUpAccel *lookUpAccel;
 	unsigned int pass;
-};
-
-//------------------------------------------------------------------------------
-
-class HashGrid {
-public:
-	HashGrid(HitPoints *hps);
-
-	~HashGrid();
-
-	void Rehash();
-
-	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector wi, const luxrays::Spectrum photonFlux);
-
-private:
-	unsigned int Hash(const int ix, const int iy, const int iz) {
-		return (unsigned int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % hashGridSize;
-	}
-
-	HitPoints *hitPoints;
-	unsigned int hashGridSize;
-	float invCellSize;
-	std::list<HitPoint *> **hashGrid;
 };
 
 #endif	/* _HITPOINTS_H */
