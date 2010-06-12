@@ -51,13 +51,6 @@ public:
 	SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType);
 	~SLGScene();
 
-	unsigned int SampleLights(const float u) const {
-		// One Uniform light strategy
-		const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lights.size() * u), lights.size() - 1);
-
-		return lightIndex;
-	}
-
 	// Signed because of the delta parameter
 	int maxPathDepth;
 	bool onlySampleSpecular;
