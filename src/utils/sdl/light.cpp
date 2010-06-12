@@ -230,6 +230,11 @@ Spectrum SunLight::Le(const Vector &dir) const {
 
 Spectrum SunLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
 	const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
+	if (N && Dot(*N, -sundir) > 0.0f) {
+		*pdf = 0.0f;
+		return Spectrum();
+	}
+
 	Vector wi = UniformSampleCone(u0, u1, cosThetaMax, x, y, sundir);
 	*shadowRay = Ray(p, wi);
 

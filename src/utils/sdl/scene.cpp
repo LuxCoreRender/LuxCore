@@ -310,14 +310,17 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 
 	const std::vector<std::string> silParams = scnProp->GetStringVector("scene.skylight.dir", "");
 	if (silParams.size() > 0) {
+		if (infiniteLight)
+			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
+
 		std::vector<float> sdir = GetParameters("scene.skylight.dir", 3, "");
-		if (sdir.size() == 3) {
-			const float turb = scnProp->GetFloat("scene.skylight.turbidity", 2.2f);
-			std::vector<float> gain = GetParameters("scene.skylight.gain", 3, "1.0 1.0 1.0");
-			infiniteLight = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-			infiniteLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-			useInfiniteLightBruteForce = true;
-		}
+		const float turb = scnProp->GetFloat("scene.skylight.turbidity", 2.2f);
+		std::vector<float> gain = GetParameters("scene.skylight.gain", 3, "1.0 1.0 1.0");
+
+		infiniteLight = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		infiniteLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+
+		useInfiniteLightBruteForce = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -327,14 +330,14 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 	const std::vector<std::string> sulParams = scnProp->GetStringVector("scene.sunlight.dir", "");
 	if (sulParams.size() > 0) {
 		std::vector<float> sdir = GetParameters("scene.sunlight.dir", 3, "0.0 -1.0 0.0");
-		if (sdir.size() == 3) {
-			const float turb = scnProp->GetFloat("scene.sunlight.turbidity", 2.2f);
-			const float relSize = scnProp->GetFloat("scene.sunlight.relsize", 1.0f);
-			std::vector<float> gain = GetParameters("scene.sunlight.gain", 3, "1.0 1.0 1.0");
-			SunLight *sunLight = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-			sunLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-			lights.push_back(sunLight);
-		}
+		const float turb = scnProp->GetFloat("scene.sunlight.turbidity", 2.2f);
+		const float relSize = scnProp->GetFloat("scene.sunlight.relsize", 1.0f);
+		std::vector<float> gain = GetParameters("scene.sunlight.gain", 3, "1.0 1.0 1.0");
+
+		SunLight *sunLight = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		sunLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+
+		lights.push_back(sunLight);
 	}
 
 	//--------------------------------------------------------------------------
