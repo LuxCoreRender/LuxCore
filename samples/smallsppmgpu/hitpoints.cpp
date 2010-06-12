@@ -122,14 +122,12 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 
 //------------------------------------------------------------------------------
 
-HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
-		luxrays::IntersectionDevice *dev, const float a,
-		const unsigned int w, const unsigned int h,
+HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
+		luxrays::IntersectionDevice *dev, luxrays::RayBuffer *rayBuffer,
+		const float a, const unsigned int w, const unsigned int h,
 		const LookUpAccelType accelType) {
 	scene = scn;
-	rndGen = rndg;
 	device = dev;
-	rayBuffer = device->NewRayBuffer();
 	alpha = a;
 	width = w;
 	height = h;
@@ -137,7 +135,7 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
 	lookUpAccelType = accelType;
 
 	hitPoints = new std::vector<HitPoint>(width * height);
-	SetHitPoints();
+	SetHitPoints(rndGen, rayBuffer);
 
 	// Calculate initial radius
 	luxrays::Vector ssize = bbox.pMax - bbox.pMin;
@@ -173,10 +171,9 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
 HitPoints::~HitPoints() {
 	delete lookUpAccel;
 	delete hitPoints;
-	delete rayBuffer;
 }
 
-void HitPoints::AccumulateFlux(const unsigned int photonTraced) {
+void HitPoints::AccumulateFlux(const unsigned long long photonTraced) {
 	std::cerr << "Accumulate photons flux" << std::endl;
 
 	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
@@ -213,7 +210,7 @@ void HitPoints::AccumulateFlux(const unsigned int photonTraced) {
 	}
 }
 
-void HitPoints::SetHitPoints() {
+void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffer *rayBuffer) {
 	std::list<EyePath *> todoEyePaths;
 
 	// Generate eye rays

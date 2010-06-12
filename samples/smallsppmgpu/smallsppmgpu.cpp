@@ -36,21 +36,25 @@ luxrays::Context *ctx = NULL;
 luxrays::sdl::Scene *scene = NULL;
 
 double startTime = 0.0;
-unsigned int scrRefreshInterval = 2000;
+unsigned int scrRefreshInterval = 1000;
 
 unsigned int imgWidth = 640;
 unsigned int imgHeight = 480;
 std::string imgFileName = "image.png";
 float photonAlpha = 0.7f;
-unsigned int stochasticInterval = 2000000;
+unsigned int stochasticInterval = 10000000;
 
 luxrays::utils::Film *film = NULL;
 luxrays::SampleBuffer *sampleBuffer = NULL;
 
-boost::thread *renderThread = NULL;
-unsigned long long photonTraced = 0;
+std::vector<boost::thread *> renderThreads;
+boost::barrier *barrierStop;
+boost::barrier *barrierStart;
 
+unsigned long long photonTracedTotal = 0;
+unsigned int photonTracedPass = 0;
 HitPoints *hitPoints = NULL;
+LookUpAccelType accelType = HASH_GRID;
 
 //------------------------------------------------------------------------------
 
@@ -84,13 +88,27 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 	photonPath->flux /= pdf * lpdf;
 	photonPath->depth = 0;
 
-	photonTraced++;
+	AtomicInc(&photonTracedPass);
 }
 
-static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::IntersectionDevice *device) {
-	std::cerr << "Tracing photon paths" << std::endl;
+static void TracePhotonsThread(const unsigned threadIndex, luxrays::IntersectionDevice *device) {
+	luxrays::RandomGenerator *rndGen = new luxrays::RandomGenerator();
+	rndGen->init(threadIndex + 1);
 
 	luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
+	luxrays::RayBuffer *rayBufferHitPoints = NULL;
+
+	if (threadIndex == 0) {
+		rayBufferHitPoints = device->NewRayBuffer();
+
+		// Build the EyePaths list
+		hitPoints = new HitPoints(scene, rndGen, device, rayBufferHitPoints, photonAlpha, imgWidth, imgHeight, accelType);
+	}
+
+	// Wait for other threads
+	barrierStart->wait();
+
+	std::cerr << "[TracePhotonsThread-" << threadIndex <<"] Tracing photon paths" << std::endl;
 
 	// Generate photons from light sources
 	std::vector<PhotonPath> photonPaths(rayBuffer->GetSize());
@@ -102,7 +120,6 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 	}
 
 	startTime = luxrays::WallClockTime();
-	unsigned long long lastEyePathRecast = photonTraced;
 	while (!boost::this_thread::interruption_requested()) {
 		// Trace the rays
 		device->PushRayBuffer(rayBuffer);
@@ -175,17 +192,29 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 			}
 		}
 
-		// Check if it is time to do an HashGrid re-hash
+		// Check if it is time to do an eye pass
 		// TODO: add a parameter to tune rehashing intervals
-		if (photonTraced - lastEyePathRecast > stochasticInterval) {
-			hitPoints->Recast(photonTraced);
+		if (photonTracedPass > stochasticInterval) {
+			// Wait for other threads
+			barrierStop->wait();
 
-			lastEyePathRecast = photonTraced;
-			std::cerr << "Tracing photon paths" << std::endl;
+			// The first thread does the eye pass
+			if (threadIndex == 0) {
+				const long long count = photonTracedTotal + photonTracedPass;
+				hitPoints->Recast(rndGen, rayBufferHitPoints, count);
+
+				photonTracedTotal = count;
+				photonTracedPass = 0;
+			}
+
+			// Wait for other threads
+			barrierStart->wait();
+			std::cerr << "[TracePhotonsThread-" << threadIndex <<"] Tracing photon paths" << std::endl;
 		}
 	}
 
 	delete rayBuffer;
+	delete rayBufferHitPoints;
 	delete rndGen;
 }
 
@@ -207,10 +236,11 @@ int main(int argc, char *argv[]) {
 				" -i [image file name]" << std::endl <<
 				" -s [stochastic photon count refresh]" << std::endl <<
 				" -k [switch from hashgrid to kdtree]" << std::endl <<
+				" -t [thread count]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		std::string sceneFileName = "scenes/luxball/luxball.scn";
-		LookUpAccelType accelType = HASH_GRID;
+		unsigned int threadCount = boost::thread::hardware_concurrency();
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...
@@ -230,6 +260,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 's') stochasticInterval = atoi(argv[++i]);
 
 				else if (argv[i][1] == 'k') accelType = KD_TREE;
+
+				else if (argv[i][1] == 't') threadCount = atoi(argv[++i]);
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;
@@ -260,10 +292,10 @@ int main(int argc, char *argv[]) {
 		std::vector<luxrays::DeviceDescription *> interDevDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
 		//luxrays::DeviceDescription::FilterOne(interDevDescs);
 
-		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, interDevDescs);
+		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, interDevDescs);
 
-		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, interDevDescs);
-		//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_GPU, interDevDescs);
+		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, interDevDescs);
+		luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_GPU, interDevDescs);
 
 		if (interDevDescs.size() < 1) {
 			std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
@@ -274,9 +306,6 @@ int main(int argc, char *argv[]) {
 		std::cerr << "Selected intersection device: " << interDevDescs[0]->GetName();
 		std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(interDevDescs);
 		luxrays::IntersectionDevice *device = devices[0];
-
-		luxrays::RandomGenerator *rndGen = new luxrays::RandomGenerator();
-		rndGen->init(7);
 
 		//----------------------------------------------------------------------
 		// Allocate the Film
@@ -300,16 +329,17 @@ int main(int argc, char *argv[]) {
 		ctx->Start();
 
 		//----------------------------------------------------------------------
-		// Build the EyePaths list
-		//----------------------------------------------------------------------
-
-		hitPoints = new HitPoints(scene, rndGen, device, photonAlpha, imgWidth, imgHeight, accelType);
-
-		//----------------------------------------------------------------------
 		// Start photon tracing thread
 		//----------------------------------------------------------------------
 
-		renderThread = new boost::thread(boost::bind(TracePhotonsThread, rndGen, device));
+		// Create synchronization barriers
+		barrierStop = new boost::barrier(threadCount);
+		barrierStart = new boost::barrier(threadCount);
+
+		for (unsigned int i = 0; i < threadCount; ++i) {
+			boost::thread *renderThread = new boost::thread(boost::bind(TracePhotonsThread, i, device));
+			renderThreads.push_back(renderThread);
+		}
 
 		//----------------------------------------------------------------------
 		// Start GLUT loop
