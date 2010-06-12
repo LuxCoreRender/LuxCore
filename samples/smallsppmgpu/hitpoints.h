@@ -28,6 +28,8 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/core/intersectiondevice.h"
 
+#include "lookupaccel.h"
+
 #define MAX_EYE_PATH_DEPTH 16
 #define MAX_PHOTON_PATH_DEPTH 8
 
@@ -48,108 +50,6 @@ public:
 	// in the array of PhotonPath
 	luxrays::Spectrum flux;
 	unsigned int depth;
-};
-
-//------------------------------------------------------------------------------
-// Hit points look up accelerators
-//------------------------------------------------------------------------------
-
-class HitPoint;
-class HitPoints;
-
-class HitPointsLookUpAccel {
-public:
-	HitPointsLookUpAccel();
-	virtual ~HitPointsLookUpAccel();
-
-	virtual void Refresh() = 0;
-
-	virtual void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) = 0;
-};
-
-class HashGrid : public HitPointsLookUpAccel {
-public:
-	HashGrid(HitPoints *hps);
-
-	~HashGrid();
-
-	void Refresh();
-
-	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
-
-private:
-	unsigned int Hash(const int ix, const int iy, const int iz) {
-		return (unsigned int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % hashGridSize;
-	}
-
-	HitPoints *hitPoints;
-	unsigned int hashGridSize;
-	float invCellSize;
-	std::list<HitPoint *> **hashGrid;
-};
-
-class KdTree : public HitPointsLookUpAccel {
-public:
-	KdTree(HitPoints *hps);
-
-	~KdTree();
-
-	void Refresh();
-
-	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
-		AddFluxImpl(0, alpha, hitPoint, shadeN, wi, photonFlux);
-	}
-
-private:
-	struct KdNode {
-		void init(const float p, const unsigned int a) {
-			splitPos = p;
-			splitAxis = a;
-			// Dade - in order to avoid a gcc warning
-			rightChild = 0;
-			rightChild = ~rightChild;
-			hasLeftChild = 0;
-		}
-
-		void initLeaf() {
-			splitAxis = 3;
-			// Dade - in order to avoid a gcc warning
-			rightChild = 0;
-			rightChild = ~rightChild;
-			hasLeftChild = 0;
-		}
-
-		// KdNode Data
-		float splitPos;
-		unsigned int splitAxis : 2;
-		unsigned int hasLeftChild : 1;
-		unsigned int rightChild : 29;
-	};
-
-	struct CompareNode {
-		CompareNode(int a) { axis = a; }
-
-		int axis;
-
-		bool operator()(const HitPoint *d1, const HitPoint *d2) const;
-	};
-
-	void RecursiveBuild(const unsigned int nodeNum, const unsigned int start,
-		const unsigned int end, std::vector<HitPoint *> &buildNodes);
-
-	void AddFluxImpl(const unsigned int nodeNum,
-		const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
-
-	HitPoints *hitPoints;
-
-	KdNode *nodes;
-	HitPoint **nodeData;
-	unsigned int nNodes, nextFreeNode;
-	float maxDistSquared;
 };
 
 //------------------------------------------------------------------------------
