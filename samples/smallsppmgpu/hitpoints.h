@@ -29,7 +29,7 @@
 #include "luxrays/core/intersectiondevice.h"
 
 #define MAX_EYE_PATH_DEPTH 16
-#define MAX_PHOTON_PATH_DEPTH 16
+#define MAX_PHOTON_PATH_DEPTH 8
 
 class EyePath {
 public:
