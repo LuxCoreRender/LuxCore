@@ -97,9 +97,9 @@ extern bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::Ra
 
 class HitPoints {
 public:
-	HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndg,
-			luxrays::IntersectionDevice *dev, const float a,
-			const unsigned int w, const unsigned int h,
+	HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
+			luxrays::IntersectionDevice *dev, luxrays::RayBuffer *rayBuffer,
+			const float a, const unsigned int w, const unsigned int h,
 			const LookUpAccelType accelType);
 	~HitPoints();
 
@@ -120,11 +120,11 @@ public:
 		lookUpAccel->AddFlux(alpha, hitPoint, shadeN, wi, photonFlux);
 	}
 
-	void AccumulateFlux(const unsigned int photonTraced);
+	void AccumulateFlux(const unsigned long long photonTraced);
 
-	void Recast(const unsigned int photonTraced) {
+	void Recast(luxrays::RandomGenerator *rndGen, luxrays::RayBuffer *rayBuffer, const unsigned long long photonTraced) {
 		AccumulateFlux(photonTraced);
-		SetHitPoints();
+		SetHitPoints(rndGen, rayBuffer);
 		lookUpAccel->Refresh();
 
 		++pass;
@@ -133,12 +133,10 @@ public:
 	unsigned int GetPassCount() const { return pass; }
 
 private:
-	void SetHitPoints();
+	void SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffer *rayBuffer);
 
 	luxrays::sdl::Scene *scene;
-	luxrays::RandomGenerator *rndGen;
 	luxrays::IntersectionDevice *device;
-	luxrays::RayBuffer *rayBuffer;
 	// double instead of float because photon counters declared as int 64bit
 	double alpha;
 	unsigned int width;

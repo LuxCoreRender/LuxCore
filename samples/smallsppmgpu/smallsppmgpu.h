@@ -23,6 +23,8 @@
 #define	_SMALLSPPMGPU_H
 
 #include <boost/thread.hpp>
+#include <boost/thread/barrier.hpp>
+#include <boost/interprocess/detail/atomic.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/pixel/framebuffer.h"
@@ -46,9 +48,39 @@ extern unsigned int stochasticInterval;
 extern double startTime;
 extern unsigned int scrRefreshInterval;
 
-extern boost::thread *renderThread;
-extern unsigned long long photonTraced;
+extern std::vector<boost::thread *> renderThreads;
+extern boost::barrier *barrierStop;
+extern boost::barrier *barrierStart;
 
+extern unsigned long long photonTracedTotal;
+extern unsigned int photonTracedPass;
 extern HitPoints *hitPoints;
+
+inline void AtomicAdd(float *val, const float delta) {
+	union bits {
+		float f;
+		boost::uint32_t i;
+
+	};
+
+	bits oldVal, newVal;
+
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
+#endif
+
+		oldVal.f = *val;
+		newVal.f = oldVal.f + delta;
+	} while (boost::interprocess::detail::atomic_cas32(((boost::uint32_t *)val), newVal.i, oldVal.i) != oldVal.i);
+}
+
+inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
+	boost::interprocess::detail::atomic_add32(val, delta);
+}
+
+inline void AtomicInc(unsigned int *val) {
+	boost::interprocess::detail::atomic_inc32(val);
+}
 
 #endif	/* _SMALLSPPMGPU_H */

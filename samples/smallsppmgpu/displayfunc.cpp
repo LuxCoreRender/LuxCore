@@ -55,6 +55,7 @@ static void PrintCaptions() {
 	glRasterPos2i(4, 5);
 	char captionBuffer[512];
 	const double elapsedTime = luxrays::WallClockTime() - startTime;
+	const unsigned long long photonTraced = photonTracedTotal + photonTracedPass;
 	const unsigned int kPhotonsSec = photonTraced / (elapsedTime * 1000.f);
 	const unsigned int pass = (hitPoints) ? hitPoints->GetPassCount() : 0;
 	sprintf(captionBuffer, "[Elapsed time %dsecs][Pass %d][Photons %.2fM][Avg. photons/sec % 4dK]",
@@ -84,10 +85,15 @@ static void KeyFunc(unsigned char key, int x, int y) {
 		case 27: { // Escape key
 			// Stop photon tracing thread
 
-			if (renderThread) {
-				renderThread->interrupt();
-				renderThread->join();
-				delete renderThread;
+			if (renderThreads.size() > 0) {
+				for (unsigned int i = 0; i < renderThreads.size(); ++i)
+					renderThreads[i]->interrupt();
+				for (unsigned int i = 0; i < renderThreads.size(); ++i) {
+					renderThreads[i]->join();
+					delete renderThreads[i];
+				}
+
+				renderThreads.clear();
 			}
 
 			film->UpdateScreenBuffer();
@@ -97,9 +103,7 @@ static void KeyFunc(unsigned char key, int x, int y) {
 
 			ctx->Stop();
 			delete scene;
-
 			delete hitPoints;
-
 			delete ctx;
 
 			std::cerr << "Done." << std::endl;
@@ -113,29 +117,35 @@ static void KeyFunc(unsigned char key, int x, int y) {
 	DisplayFunc();
 }
 
+static unsigned int lastFramBufferPass = 0;
+
 static void UpdateFrameBuffer() {
 	if (!film)
 		return;
 
-	film->Reset();
+	if (hitPoints && (hitPoints->GetPassCount() > lastFramBufferPass)) {
+		film->Reset();
 
-	for (unsigned int i = 0; i < hitPoints->GetSize(); ++i) {
-		HitPoint *hp = hitPoints->GetHitPoint(i);
-		const float scrX = i % imgWidth;
-		const float scrY = i / imgWidth;
-		sampleBuffer->SplatSample(scrX, scrY, hp->radiance);
+		for (unsigned int i = 0; i < hitPoints->GetSize(); ++i) {
+			HitPoint *hp = hitPoints->GetHitPoint(i);
+			const float scrX = i % imgWidth;
+			const float scrY = i / imgWidth;
+			sampleBuffer->SplatSample(scrX, scrY, hp->radiance);
 
-		if (sampleBuffer->IsFull()) {
+			if (sampleBuffer->IsFull()) {
+				// Splat all samples on the film
+				film->SplatSampleBuffer(true, sampleBuffer);
+				sampleBuffer = film->GetFreeSampleBuffer();
+			}
+		}
+
+		if (sampleBuffer->GetSampleCount() > 0) {
 			// Splat all samples on the film
 			film->SplatSampleBuffer(true, sampleBuffer);
 			sampleBuffer = film->GetFreeSampleBuffer();
 		}
-	}
-
-	if (sampleBuffer->GetSampleCount() > 0) {
-		// Splat all samples on the film
-		film->SplatSampleBuffer(true, sampleBuffer);
-		sampleBuffer = film->GetFreeSampleBuffer();
+		
+		lastFramBufferPass = hitPoints->GetPassCount();
 	}
 }
 
