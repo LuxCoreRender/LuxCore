@@ -117,7 +117,7 @@ void HashGrid::Refresh() {
 	}*/
 }
 
-void HashGrid::AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
 	const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
 	// Look for eye path hit points near the current hit point
 	luxrays::Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
@@ -130,15 +130,21 @@ void HashGrid::AddFlux(const float alpha, const luxrays::Point &hitPoint, const 
 		std::list<HitPoint *>::iterator iter = hps->begin();
 		while (iter != hps->end()) {
 			HitPoint *hp = *iter++;
-			luxrays::Vector v = hp->position - hitPoint;
-			// TODO: use configurable parameter for normal treshold
-			if ((luxrays::Dot(hp->normal, shadeN) > luxrays::RAY_EPSILON) &&
-					(luxrays::Dot(v, v) <=  hp->accumPhotonRadius2)) {
-				hp->accumPhotonCount++;
 
-				hp->accumReflectedFlux += photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
-						luxrays::AbsDot(hp->normal, wi) * hp->throughput;
-			}
+			const float dist2 = luxrays::DistanceSquared(hp->position, hitPoint);
+			if ((dist2 >  hp->accumPhotonRadius2))
+				continue;
+
+			const float dot = luxrays::Dot(hp->normal, wi);
+			if (dot <= luxrays::RAY_EPSILON)
+				continue;
+
+			AtomicInc(&hp->accumPhotonCount);
+			luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
+					dot * hp->throughput;
+			AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
+			AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
+			AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
 		}
 	}
 }

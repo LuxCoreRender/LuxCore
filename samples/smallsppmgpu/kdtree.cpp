@@ -108,7 +108,7 @@ void KdTree::Refresh() {
 }
 
 void KdTree::AddFluxImpl(const unsigned int nodeNum,
-		const float alpha, const luxrays::Point &p, const luxrays::Normal &shadeN,
+		const luxrays::Point &p, const luxrays::Normal &shadeN,
 		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
 	KdNode *node = &nodes[nodeNum];
 
@@ -119,26 +119,31 @@ void KdTree::AddFluxImpl(const unsigned int nodeNum,
 		float dist2 = dist * dist;
 		if (p[axis] <= node->splitPos) {
 			if (node->hasLeftChild)
-				AddFluxImpl(nodeNum + 1, alpha, p, shadeN, wi, photonFlux);
+				AddFluxImpl(nodeNum + 1, p, shadeN, wi, photonFlux);
 			if (dist2 < maxDistSquared && node->rightChild < nNodes)
-				AddFluxImpl(node->rightChild, alpha, p, shadeN, wi, photonFlux);
+				AddFluxImpl(node->rightChild, p, shadeN, wi, photonFlux);
 		} else {
 			if (node->rightChild < nNodes)
-				AddFluxImpl(node->rightChild, alpha, p, shadeN, wi, photonFlux);
+				AddFluxImpl(node->rightChild, p, shadeN, wi, photonFlux);
 			if (dist2 < maxDistSquared && node->hasLeftChild)
-				AddFluxImpl(nodeNum + 1, alpha, p, shadeN, wi, photonFlux);
+				AddFluxImpl(nodeNum + 1, p, shadeN, wi, photonFlux);
 		}
 	}
 
 	// Hand kd-tree node to processing function
 	HitPoint *hp = nodeData[nodeNum];
 	const float dist2 = luxrays::DistanceSquared(hp->position, p);
-	// TODO: use configurable parameter for normal treshold
-	if ((luxrays::Dot(hp->normal, shadeN) > luxrays::RAY_EPSILON) &&
-			(dist2 <=  hp->accumPhotonRadius2)) {
-		hp->accumPhotonCount++;
+	if (dist2 > hp->accumPhotonRadius2)
+		return;
 
-		hp->accumReflectedFlux += photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
-				luxrays::AbsDot(hp->normal, wi) * hp->throughput;
-	}
+	const float dot = luxrays::Dot(hp->normal, wi);
+	if (dot <= luxrays::RAY_EPSILON)
+		return;
+
+	AtomicInc(&hp->accumPhotonCount);
+	luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
+			dot * hp->throughput;
+	AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
+	AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
+	AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
 }
