@@ -312,8 +312,10 @@ void HitPoints::SetHitPoints() {
 					luxrays::Spectrum surfaceColor;
 					luxrays::Normal N, shadeN;
 					if (GetHitPointInformation(scene, rndGen, &eyePath->ray, rayHit, hitPoint,
-							surfaceColor, N, shadeN))
+							surfaceColor, N, shadeN)) {
+						++todoEyePathsIterator;
 						continue;
+					}
 
 					// Get the material
 					const unsigned int currentTriangleIndex = rayHit->index;
