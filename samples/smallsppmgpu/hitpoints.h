@@ -81,7 +81,7 @@ public:
 	luxrays::Spectrum reflectedFlux;
 
 	float accumPhotonRadius2;
-	unsigned long long accumPhotonCount;
+	unsigned int accumPhotonCount;
 	luxrays::Spectrum accumReflectedFlux;
 
 	luxrays::Spectrum accumRadiance;
@@ -115,9 +115,9 @@ public:
 		return bbox;
 	}
 
-	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
 		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
-		lookUpAccel->AddFlux(alpha, hitPoint, shadeN, wi, photonFlux);
+		lookUpAccel->AddFlux(hitPoint, shadeN, wi, photonFlux);
 	}
 
 	void AccumulateFlux(const unsigned long long photonTraced);

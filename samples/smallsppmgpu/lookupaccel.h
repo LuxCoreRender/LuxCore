@@ -38,7 +38,7 @@ public:
 
 	virtual void Refresh() = 0;
 
-	virtual void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+	virtual void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
 		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) = 0;
 };
 
@@ -50,7 +50,7 @@ public:
 
 	void Refresh();
 
-	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
 		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
 
 private:
@@ -72,9 +72,9 @@ public:
 
 	void Refresh();
 
-	void AddFlux(const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
 		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
-		AddFluxImpl(0, alpha, hitPoint, shadeN, wi, photonFlux);
+		AddFluxImpl(0, hitPoint, shadeN, wi, photonFlux);
 	}
 
 private:
@@ -115,7 +115,7 @@ private:
 		const unsigned int end, std::vector<HitPoint *> &buildNodes);
 
 	void AddFluxImpl(const unsigned int nodeNum,
-		const float alpha, const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
+		const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
 		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
 
 	HitPoints *hitPoints;

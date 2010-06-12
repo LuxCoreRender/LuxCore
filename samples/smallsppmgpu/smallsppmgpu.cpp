@@ -160,7 +160,7 @@ static void TracePhotonsThread(const unsigned threadIndex, luxrays::Intersection
 							false, &fPdf, specularBounce) * surfaceColor;
 
 					if (!specularBounce)
-						hitPoints->AddFlux(photonAlpha, hitPoint, shadeN, -ray->d, photonPath->flux);
+						hitPoints->AddFlux(hitPoint, shadeN, -ray->d, photonPath->flux);
 
 					// Check if we reached the max. depth
 					if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
