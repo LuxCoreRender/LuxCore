@@ -156,8 +156,8 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 							photonPath->flux *= f / fPdf;
 
 							// Russian Roulette
-							const float p = 0.75f;
-							if (photonPath->depth < 3) {
+							const float p = 0.7f;
+							if ((photonPath->depth < 2) || (specularBounce)) {
 								*ray = luxrays::Ray(hitPoint, wi);
 							} else if (rndGen->floatValue() < p) {
 								photonPath->flux /= p;
