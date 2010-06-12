@@ -513,12 +513,12 @@ void HashGrid::AddFlux(const float alpha, const luxrays::Point &hitPoint, const 
 			HitPoint *hp = *iter++;
 			luxrays::Vector v = hp->position - hitPoint;
 			// TODO: use configurable parameter for normal treshold
-			if ((luxrays::Dot(hp->normal, shadeN) > 0.5f) &&
+			if ((luxrays::Dot(hp->normal, shadeN) > luxrays::RAY_EPSILON) &&
 					(luxrays::Dot(v, v) <=  hp->accumPhotonRadius2)) {
 				hp->accumPhotonCount++;
 
-				hp->accumReflectedFlux += photonFlux * hp->material->f(hp->wo, wi, shadeN) *
-						luxrays::AbsDot(shadeN, wi) * hp->throughput;
+				hp->accumReflectedFlux += photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
+						luxrays::AbsDot(hp->normal, wi) * hp->throughput;
 			}
 		}
 	}
@@ -639,11 +639,11 @@ void KdTree::AddFluxImpl(const unsigned int nodeNum,
 	HitPoint *hp = nodeData[nodeNum];
 	const float dist2 = luxrays::DistanceSquared(hp->position, p);
 	// TODO: use configurable parameter for normal treshold
-	if ((luxrays::Dot(hp->normal, shadeN) > 0.5f) &&
+	if ((luxrays::Dot(hp->normal, shadeN) > luxrays::RAY_EPSILON) &&
 			(dist2 <=  hp->accumPhotonRadius2)) {
 		hp->accumPhotonCount++;
 
-		hp->accumReflectedFlux += photonFlux * hp->material->f(hp->wo, wi, shadeN) *
-				luxrays::AbsDot(shadeN, wi) * hp->throughput;
+		hp->accumReflectedFlux += photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
+				luxrays::AbsDot(hp->normal, wi) * hp->throughput;
 	}
 }
