@@ -25,7 +25,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 
 set(SMALLSPPMGPU_SRCS
 	displayfunc.cpp
+	hashgrid.cpp
 	hitpoints.cpp
+	kdtree.cpp
 	smallsppmgpu.cpp)
 
 add_executable(smallsppmgpu ${SMALLSPPMGPU_SRCS})
