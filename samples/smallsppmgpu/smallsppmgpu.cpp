@@ -103,6 +103,8 @@ static void TracePhotonsThread(const unsigned threadIndex, luxrays::Intersection
 
 		// Build the EyePaths list
 		hitPoints = new HitPoints(scene, rndGen, device, rayBufferHitPoints, photonAlpha, imgWidth, imgHeight, accelType);
+
+		startTime = luxrays::WallClockTime();
 	}
 
 	// Wait for other threads
@@ -119,7 +121,6 @@ static void TracePhotonsThread(const unsigned threadIndex, luxrays::Intersection
 		InitPhotonPath(scene, rndGen, &photonPaths[i], &rays[rayBuffer->ReserveRay()]);
 	}
 
-	startTime = luxrays::WallClockTime();
 	while (!boost::this_thread::interruption_requested()) {
 		// Trace the rays
 		device->PushRayBuffer(rayBuffer);
@@ -292,10 +293,12 @@ int main(int argc, char *argv[]) {
 		std::vector<luxrays::DeviceDescription *> interDevDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
 		//luxrays::DeviceDescription::FilterOne(interDevDescs);
 
-		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, interDevDescs);
-
+#if defined(LUXRAYS_DISABLE_OPENCL)
+		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, interDevDescs);
+#else
 		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, interDevDescs);
 		luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_GPU, interDevDescs);
+#endif
 
 		if (interDevDescs.size() < 1) {
 			std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;

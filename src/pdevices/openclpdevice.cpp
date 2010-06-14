@@ -32,6 +32,8 @@ using namespace luxrays;
 // OpenCL PixelDevice
 //------------------------------------------------------------------------------
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 OpenCLSampleBuffer::OpenCLSampleBuffer(OpenCLPixelDevice *dev, const size_t bufferSize) : SampleBuffer(bufferSize) {
 	device = dev;
 	oclBuffer = new cl::Buffer(device->deviceDesc->GetOCLContext(),
@@ -421,3 +423,5 @@ void OpenCLPixelDevice::Merge(const SampleFrameBuffer *sfb) {
 const SampleFrameBuffer *OpenCLPixelDevice::GetSampleFrameBuffer() const {
 	return sampleFrameBuffer;
 }
+
+#endif

@@ -139,6 +139,7 @@ static void PrintHelpAndSettings() {
 			pdevices[0]->GetPerformance() / 1000000.0);
 	PrintString(GLUT_BITMAP_8_BY_13, buff);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
 		OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
 		const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
@@ -147,7 +148,9 @@ static void PrintHelpAndSettings() {
 				int(desc->GetMaxMemory() / (1024 * 1024)),
 				int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
-	} else if (pdevices[0]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
+	} else
+#endif
+	if (pdevices[0]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
 		NativePixelDevice *dev = (NativePixelDevice *)pdevices[0];
 		sprintf(buff, "[Free buffers % 2d/%d]",
 				int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
@@ -174,6 +177,7 @@ static void PrintHelpAndSettings() {
 		glRasterPos2i(20, offset);
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		// Check if it is an OpenCL device
 		if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
 			const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
@@ -181,6 +185,7 @@ static void PrintHelpAndSettings() {
 					int(desc->GetMaxMemory() / (1024 * 1024)));
 			PrintString(GLUT_BITMAP_8_BY_13, buff);
 		}
+#endif
 
 		offset += 15;
 	}
