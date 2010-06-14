@@ -42,6 +42,8 @@ unsigned int imgWidth = 640;
 unsigned int imgHeight = 480;
 std::string imgFileName = "image.png";
 float photonAlpha = 0.7f;
+unsigned int maxEyePathDepth = 16;
+unsigned int maxPhotonPathDepth = 8;
 unsigned int stochasticInterval = 10000000;
 
 luxrays::utils::Film *film = NULL;
@@ -102,7 +104,8 @@ static void TracePhotonsThread(const unsigned threadIndex, luxrays::Intersection
 		rayBufferHitPoints = device->NewRayBuffer();
 
 		// Build the EyePaths list
-		hitPoints = new HitPoints(scene, rndGen, device, rayBufferHitPoints, photonAlpha, imgWidth, imgHeight, accelType);
+		hitPoints = new HitPoints(scene, rndGen, device, rayBufferHitPoints,
+				photonAlpha, maxEyePathDepth, imgWidth, imgHeight, accelType);
 
 		startTime = luxrays::WallClockTime();
 	}
@@ -164,7 +167,7 @@ static void TracePhotonsThread(const unsigned threadIndex, luxrays::Intersection
 						hitPoints->AddFlux(hitPoint, shadeN, -ray->d, photonPath->flux);
 
 					// Check if we reached the max. depth
-					if (photonPath->depth < MAX_PHOTON_PATH_DEPTH) {
+					if (photonPath->depth < maxPhotonPathDepth) {
 						// Build the next vertex path ray
 						if ((fPdf <= 0.f) || f.Black()) {
 							// Re-initialize the photon path
@@ -238,6 +241,8 @@ int main(int argc, char *argv[]) {
 				" -s [stochastic photon count refresh]" << std::endl <<
 				" -k [switch from hashgrid to kdtree]" << std::endl <<
 				" -t [thread count]" << std::endl <<
+				" -d [max eye path depth]" << std::endl <<
+				" -p [max photon path depth]" << std::endl <<
 				" -h <display this help and exit>" << std::endl;
 
 		std::string sceneFileName = "scenes/luxball/luxball.scn";
@@ -263,6 +268,10 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'k') accelType = KD_TREE;
 
 				else if (argv[i][1] == 't') threadCount = atoi(argv[++i]);
+
+				else if (argv[i][1] == 'd') maxEyePathDepth = atoi(argv[++i]);
+
+				else if (argv[i][1] == 'p') maxPhotonPathDepth = atoi(argv[++i]);
 
 				else {
 					std::cerr << "Invalid option: " << argv[i] << std::endl;

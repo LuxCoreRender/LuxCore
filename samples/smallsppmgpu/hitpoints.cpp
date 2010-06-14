@@ -124,11 +124,13 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 
 HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
 		luxrays::IntersectionDevice *dev, luxrays::RayBuffer *rayBuffer,
-		const float a, const unsigned int w, const unsigned int h,
+		const float a, const unsigned int maxEyeDepth,
+		const unsigned int w, const unsigned int h,
 		const LookUpAccelType accelType) {
 	scene = scn;
 	device = dev;
 	alpha = a;
+	maxEyePathDepth = maxEyeDepth;
 	width = w;
 	height = h;
 	pass = 0;
@@ -257,7 +259,7 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 			EyePath *eyePath = *todoEyePathsIterator;
 
 			// Check if we reached the max path depth
-			if (eyePath->depth > MAX_EYE_PATH_DEPTH) {
+			if (eyePath->depth > maxEyePathDepth) {
 				// Add an hit point
 				HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 				hp.type = CONSTANT_COLOR;
