@@ -30,9 +30,6 @@
 
 #include "lookupaccel.h"
 
-#define MAX_EYE_PATH_DEPTH 16
-#define MAX_PHOTON_PATH_DEPTH 8
-
 class EyePath {
 public:
 	// Screen information
@@ -99,7 +96,8 @@ class HitPoints {
 public:
 	HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
 			luxrays::IntersectionDevice *dev, luxrays::RayBuffer *rayBuffer,
-			const float a, const unsigned int w, const unsigned int h,
+			const float a, const unsigned int maxEyeDepth,
+			const unsigned int w, const unsigned int h,
 			const LookUpAccelType accelType);
 	~HitPoints();
 
@@ -139,6 +137,7 @@ private:
 	luxrays::IntersectionDevice *device;
 	// double instead of float because photon counters declared as int 64bit
 	double alpha;
+	unsigned int maxEyePathDepth;
 	unsigned int width;
 	unsigned int height;
 
