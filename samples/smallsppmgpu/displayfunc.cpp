@@ -54,7 +54,7 @@ static void PrintCaptions() {
 	// Stats
 	glRasterPos2i(4, 5);
 	char captionBuffer[512];
-	const double elapsedTime = luxrays::WallClockTime() - startTime;
+	const double elapsedTime = (startTime == 0.0) ? 0.0 : (luxrays::WallClockTime() - startTime);
 	const unsigned long long photonTraced = photonTracedTotal + photonTracedPass;
 	const unsigned int kPhotonsSec = photonTraced / (elapsedTime * 1000.f);
 	const unsigned int pass = (hitPoints) ? hitPoints->GetPassCount() : 0;
