@@ -801,6 +801,8 @@ void PathDeviceRenderThread::Stop() {
 }
 
 void PathDeviceRenderThread::ClearPaths() {
+	assert (!started);
+
 	for(size_t i = 0; i < PATH_DEVICE_RENDER_BUFFER_COUNT; i++)
 		pathIntegrators[i]->ClearPaths();
 }
@@ -896,6 +898,13 @@ void PathRenderEngine::Stop() {
 		renderThreads[i]->Stop();
 }
 
+void PathRenderEngine::Reset() {
+	assert (!started);
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->ClearPaths();
+}
+
 unsigned int PathRenderEngine::GetPass() const {
 	unsigned int pass = 0;
 
@@ -903,4 +912,8 @@ unsigned int PathRenderEngine::GetPass() const {
 		pass += renderThreads[i]->GetPass();
 
 	return pass;
+}
+
+unsigned int PathRenderEngine::GetThreadCount() const {
+	return renderThreads.size();
 }

@@ -44,7 +44,10 @@ public:
 		started = false;
 	}
 
+	virtual void Reset() = 0;
+
 	virtual unsigned int GetPass() const = 0;
+	virtual unsigned int GetThreadCount() const = 0;
 
 protected:
 	SLGScene *scene;

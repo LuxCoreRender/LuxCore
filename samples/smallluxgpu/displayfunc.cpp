@@ -111,7 +111,11 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Screen refresh %dms]", config->screenRefreshInterval);
+	sprintf(buf, "[Screen refresh %dms][Render threads %d][Shadow rays %d][Mode %s]",
+			config->screenRefreshInterval, int(config->GetRenderEngine()->GetThreadCount()),
+			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
+				(config->scene->shadowRayCount * (int)config->scene->lights.size()),
+			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
@@ -311,12 +315,12 @@ void keyFunc(unsigned char key, int x, int y) {
 					config->scene->camera->fieldOfView + 5.f);
 			config->ReInit(false);
 			break;
-		/*case 'v':
+		case 'v':
 			config->SetMaxPathDepth(-1);
 			break;
 		case 'b':
 			config->SetMaxPathDepth(+1);
-			break;*/
+			break;
 		case 'n':
 			if (config->screenRefreshInterval > 1000)
 				config->screenRefreshInterval = max(1000u, config->screenRefreshInterval - 1000);
@@ -329,7 +333,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			else
 				config->screenRefreshInterval += 50;
 			break;
-		/*case 'i':
+		case 'i':
 			config->SetShadowRays(-1);
 			break;
 		case 'o':
@@ -340,7 +344,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'y':
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
-			break;*/
+			break;
 		case 't':
 			// Toggle tonemap type
 			if (config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
