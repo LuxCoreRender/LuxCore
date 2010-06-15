@@ -325,7 +325,7 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm,
 	photonAlpha = 0.7f;
 	maxEyePathDepth = 16;
 	maxPhotonPathDepth = 8;
-	stochasticInterval = 10000000;
+	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 10000000);
 
 	sampleBuffer = film->GetFreeSampleBuffer();
 
