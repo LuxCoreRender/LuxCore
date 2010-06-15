@@ -140,10 +140,10 @@ void KdTree::AddFluxImpl(const unsigned int nodeNum,
 	if (dot <= luxrays::RAY_EPSILON)
 		return;
 
-	AtomicInc(&hp->accumPhotonCount);
+	luxrays::AtomicInc(&hp->accumPhotonCount);
 	luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
 			dot * hp->throughput;
-	AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
-	AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
-	AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
+	luxrays::AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
+	luxrays::AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
+	luxrays::AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
 }
