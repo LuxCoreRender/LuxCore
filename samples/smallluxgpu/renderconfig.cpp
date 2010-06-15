@@ -142,7 +142,7 @@ void RenderingConfig::Init() {
 	scene->rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", scene->rrImportanceCap);
 
 	// Start OpenCL devices
-	SetUpOpenCLDevices(lowLatency, useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclIntersectionDeviceConfig);
+	SetUpOpenCLDevices(useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclIntersectionDeviceConfig);
 
 	// Start Native threads
 	SetUpNativeDevices(nativeThreadCount);
@@ -198,7 +198,6 @@ void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, un
 		StartAllRenderThreadsLockless();
 }
 
-/*
 void RenderingConfig::SetMaxPathDepth(const int delta) {
 	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
@@ -225,8 +224,7 @@ void RenderingConfig::SetShadowRays(const int delta) {
 
 	film->Reset();
 	scene->shadowRayCount = max<unsigned int>(1, scene->shadowRayCount + delta);
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->ClearPaths();
+	renderEngine->Reset();
 
 	// Restart all devices
 	if (wasRunning)
@@ -271,9 +269,8 @@ void RenderingConfig::SetMotionBlur(const bool v) {
 	if (wasRunning)
 		StartAllRenderThreadsLockless();
 }
-*/
 
-void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCPUs, const bool useGPUs,
+void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 	const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig) {
 
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();

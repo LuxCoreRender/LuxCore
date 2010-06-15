@@ -50,10 +50,10 @@ public:
 	void StopAllRenderThreads();
 	void ReInit(const bool reallocBuffers, const unsigned int w = 0, unsigned int h = 0);
 
-	/*void SetMaxPathDepth(const int delta);
+	void SetMaxPathDepth(const int delta);
 	void SetShadowRays(const int delta);
 	void SetOnlySampleSpecular(const bool v);
-	void SetMotionBlur(const bool v);*/
+	void SetMotionBlur(const bool v);
 
 	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
 	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }
@@ -71,7 +71,7 @@ private:
 	void StartAllRenderThreadsLockless();
 	void StopAllRenderThreadsLockless();
 
-	void SetUpOpenCLDevices(const bool lowLatency, const bool useCPUs, const bool useGPUs,
+	void SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 		const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig);
 
 	void SetUpNativeDevices(const unsigned int nativeThreadCount);

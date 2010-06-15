@@ -247,7 +247,10 @@ public:
 	void Interrupt();
 	void Stop();
 
+	void Reset();
+
 	unsigned int GetPass() const;
+	unsigned int GetThreadCount() const;
 
 private:
 	vector<IntersectionDevice *> intersectionDevices;
