@@ -32,6 +32,7 @@
 #include "renderconfig.h"
 
 #include "luxrays/utils/film/film.h"
+#include "path.h"
 
 RenderingConfig *config;
 
@@ -103,19 +104,10 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Max path depth %d][RR Depth %d]",
+	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Screen refresh %dms][Render threads %d]",
 			int(config->film->GetTotalTime()),
 			config->scene->camera->fieldOfView,
-			config->scene->maxPathDepth,
-			config->scene->rrDepth);
-	PrintString(GLUT_BITMAP_8_BY_13, buf);
-	fontOffset -= 15;
-	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Screen refresh %dms][Render threads %d][Shadow rays %d][Mode %s]",
-			config->screenRefreshInterval, int(config->GetRenderEngine()->GetThreadCount()),
-			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
-				(config->scene->shadowRayCount * (int)config->scene->lights.size()),
-			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
+			config->screenRefreshInterval, int(config->GetRenderEngine()->GetThreadCount()));
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
@@ -125,6 +117,21 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
+
+	// Path renering engine settings
+	if (config->GetRenderEngine()->GetEngineType() == PATH) {
+		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
+
+		sprintf(buf, "[Path RE][Shadow rays %d][Mode %s][Max path depth %d][RR Depth %d]",
+				(pre->lightStrategy == ONE_UNIFORM) ? pre->shadowRayCount :
+					(pre->shadowRayCount * (int)config->scene->lights.size()),
+				pre->onlySampleSpecular ? "DIRECT" : "PATH",
+				pre->maxPathDepth,
+				pre->rrDepth);
+		PrintString(GLUT_BITMAP_8_BY_13, buf);
+		fontOffset -= 15;
+		glRasterPos2i(20, fontOffset);
+	}
 
 	// Pixel Device
 	char buff[512];
@@ -339,9 +346,13 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'o':
 			config->SetShadowRays(+1);
 			break;
-		case 'u':
-			config->SetOnlySampleSpecular(!config->scene->onlySampleSpecular);
+		case 'u': {
+			if (config->GetRenderEngine()->GetEngineType() == PATH) {
+				PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
+				config->SetOnlySampleSpecular(!pre->onlySampleSpecular);
+			}
 			break;
+		}
 		case 'y':
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
 			break;

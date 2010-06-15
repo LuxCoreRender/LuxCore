@@ -38,7 +38,56 @@
 // Path
 //------------------------------------------------------------------------------
 
-bool Path::FillRayBuffer(SLGScene *scene, RayBuffer *rayBuffer) {
+Path::Path(PathRenderEngine *renderEngine) {
+	SLGScene *scene = renderEngine->scene;
+	unsigned int shadowRayCount = GetMaxShadowRaysCount(renderEngine);
+
+	lightPdf = new float[shadowRayCount];
+	lightColor = new Spectrum[shadowRayCount];
+	shadowRay = new Ray[shadowRayCount];
+	currentShadowRayIndex = new unsigned int[shadowRayCount];
+	if (scene->volumeIntegrator)
+		volumeComp = new VolumeComputation(scene->volumeIntegrator);
+	else
+		volumeComp = NULL;
+}
+
+Path::~Path() {
+	delete[] lightPdf;
+	delete[] lightColor;
+	delete[] shadowRay;
+	delete[] currentShadowRayIndex;
+
+	delete volumeComp;
+}
+
+unsigned int Path::GetMaxShadowRaysCount(PathRenderEngine *renderEngine) {
+	switch (renderEngine->lightStrategy) {
+		case ALL_UNIFORM:
+			return renderEngine->scene->lights.size() * renderEngine->shadowRayCount;
+			break;
+		case ONE_UNIFORM:
+			return renderEngine->shadowRayCount;
+		default:
+			throw runtime_error("Internal error in Path::GetMaxShadowRaysCount()");
+	}
+}
+
+void Path::Init(PathRenderEngine *renderEngine, Sampler *sampler) {
+	throughput = Spectrum(1.f, 1.f, 1.f);
+	radiance = Spectrum(0.f, 0.f, 0.f);
+	sampler->GetNextSample(&sample);
+
+	renderEngine->scene->camera->GenerateRay(
+		sample.screenX, sample.screenY,
+		renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), &pathRay,
+		sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample));
+	state = EYE_VERTEX;
+	depth = 0;
+	specularBounce = true;
+}
+
+bool Path::FillRayBuffer(RayBuffer *rayBuffer) {
 	const unsigned int leftSpace = rayBuffer->LeftSpace();
 	// Check if the there is enough free space in the RayBuffer
 	if (((state == EYE_VERTEX) && (1 > leftSpace)) ||
@@ -66,8 +115,10 @@ bool Path::FillRayBuffer(SLGScene *scene, RayBuffer *rayBuffer) {
 	return true;
 }
 
-void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayBuffer *rayBuffer,
+void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const RayBuffer *rayBuffer,
 		SampleBuffer *sampleBuffer) {
+	SLGScene *scene = renderEngine->scene;
+
 	//--------------------------------------------------------------------------
 	// Select the path ray hit
 	//--------------------------------------------------------------------------
@@ -201,7 +252,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 	if (missed ||
 			(state == ONLY_SHADOW_RAYS) ||
 			(state == TRANSPARENT_ONLY_SHADOW_RAYS_STEP) ||
-			(depth >= scene->maxPathDepth)) {
+			(depth >= renderEngine->maxPathDepth)) {
 		if (missed && scene->infiniteLight && (scene->useInfiniteLightBruteForce || specularBounce)) {
 			// Add the light emitted by the infinite light
 			radiance += scene->infiniteLight->Le(pathRay.d) * throughput;
@@ -210,7 +261,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 		// Hit nothing/only shadow rays/maxdepth, terminate the path
 		sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 		// Restart the path
-		Init(scene, film, sampler);
+		Init(renderEngine, sampler);
 		return;
 	}
 
@@ -237,7 +288,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 		// Terminate the path
 		sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 		// Restart the path
-		Init(scene, film, sampler);
+		Init(renderEngine, sampler);
 		return;
 	}
 
@@ -348,7 +399,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 	if (triSurfMat->IsDiffuse() && (scene->lights.size() > 0)) {
 		// Direct light sampling: trace shadow rays
 
-		switch (scene->lightStrategy) {
+		switch (renderEngine->lightStrategy) {
 			case ALL_UNIFORM:
 			{
 				// ALL UNIFORM direct sampling light strategy
@@ -358,7 +409,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 					// Select the light to sample
 					const LightSource *light = scene->lights[j];
 
-					for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
+					for (unsigned int i = 0; i < renderEngine->shadowRayCount; ++i) {
 						// Select a point on the light surface
 						lightColor[tracedShadowRayCount] = light->Sample_L(
 								scene, hitPoint, &shadeN,
@@ -366,7 +417,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 								&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
 						// Scale light pdf for ALL_UNIFORM strategy
-						lightPdf[tracedShadowRayCount] *= scene->shadowRayCount;
+						lightPdf[tracedShadowRayCount] *= renderEngine->shadowRayCount;
 
 						if (lightPdf[tracedShadowRayCount] <= 0.0f)
 							continue;
@@ -387,7 +438,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 				// ONE UNIFORM direct sampling light strategy
 				const Spectrum lightTroughtput = throughput * surfaceColor;
 
-				for (unsigned int i = 0; i < scene->shadowRayCount; ++i) {
+				for (unsigned int i = 0; i < renderEngine->shadowRayCount; ++i) {
 					// Select the light to sample
 					const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
 					const LightSource *light = scene->lights[currentLightIndex];
@@ -431,7 +482,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 	Vector wi;
 	const Spectrum f = triSurfMat->Sample_f(wo, &wi, N, shadeN,
 			sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
-			scene->onlySampleSpecular, &fPdf, specularBounce) * surfaceColor;
+			renderEngine->onlySampleSpecular, &fPdf, specularBounce) * surfaceColor;
 	if ((fPdf <= 0.f) || f.Black()) {
 		if (tracedShadowRayCount > 0)
 			state = ONLY_SHADOW_RAYS;
@@ -439,7 +490,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 			// Terminate the path
 			sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 			// Restart the path
-			Init(scene, film, sampler);
+			Init(renderEngine, sampler);
 		}
 
 		return;
@@ -447,13 +498,13 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 
 	throughput *= f / fPdf;
 
-	if (depth > scene->rrDepth) {
+	if (depth > renderEngine->rrDepth) {
 		// Russian Roulette
-		switch (scene->rrStrategy) {
+		switch (renderEngine->rrStrategy) {
 			case PROBABILITY:
 			{
-				if (scene->rrProb >= sample.GetLazyValue())
-					throughput /= scene->rrProb;
+				if (renderEngine->rrProb >= sample.GetLazyValue())
+					throughput /= renderEngine->rrProb;
 				else {
 					// Check if terminate the path or I have still to trace shadow rays
 					if (tracedShadowRayCount > 0)
@@ -462,7 +513,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 						// Terminate the path
 						sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 						// Restart the path
-						Init(scene, film, sampler);
+						Init(renderEngine, sampler);
 					}
 
 					return;
@@ -471,7 +522,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 			}
 			case IMPORTANCE:
 			{
-				const float prob = Max(throughput.Filter(), scene->rrImportanceCap);
+				const float prob = Max(throughput.Filter(), renderEngine->rrImportanceCap);
 				if (prob >= sample.GetLazyValue())
 					throughput /= prob;
 				else {
@@ -482,7 +533,7 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 						// Terminate the path
 						sampleBuffer->SplatSample(sample.screenX, sample.screenY, radiance);
 						// Restart the path
-						Init(scene, film, sampler);
+						Init(renderEngine, sampler);
 					}
 
 					return;
@@ -503,15 +554,15 @@ void Path::AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayB
 // Path Integrator
 //------------------------------------------------------------------------------
 
-PathIntegrator::PathIntegrator(SLGScene *s, Film *f, Sampler *samp) :
-	scene(s), film(f), sampler(samp) {
-	sampleBuffer = film->GetFreeSampleBuffer();
+PathIntegrator::PathIntegrator(PathRenderEngine *re, Sampler *samp) :
+	renderEngine(re), sampler(samp) {
+	sampleBuffer = renderEngine->film->GetFreeSampleBuffer();
 	statsRenderingStart = WallClockTime();
 	statsTotalSampleCount = 0;
 }
 
 PathIntegrator::~PathIntegrator() {
-	film->FreeSampleBuffer(sampleBuffer);
+	renderEngine->film->FreeSampleBuffer(sampleBuffer);
 
 	for (size_t i = 0; i < paths.size(); ++i)
 		delete paths[i];
@@ -519,7 +570,7 @@ PathIntegrator::~PathIntegrator() {
 
 void PathIntegrator::ReInit() {
 	for (size_t i = 0; i < paths.size(); ++i)
-		paths[i]->Init(scene, film, sampler);
+		paths[i]->Init(renderEngine, sampler);
 	firstPath = 0;
 	sampleBuffer->Reset();
 
@@ -536,17 +587,17 @@ void PathIntegrator::ClearPaths() {
 void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 	if (paths.size() == 0) {
 		// Need at least 2 paths
-		paths.push_back(new Path(scene));
-		paths.push_back(new Path(scene));
-		paths[0]->Init(scene, film, sampler);
-		paths[1]->Init(scene, film, sampler);
+		paths.push_back(new Path(renderEngine));
+		paths.push_back(new Path(renderEngine));
+		paths[0]->Init(renderEngine, sampler);
+		paths[1]->Init(renderEngine, sampler);
 		firstPath = 0;
 	}
 
 	bool allPathDone = true;
 	lastPath = firstPath;
 	for (;;) {
-		if (!paths[lastPath]->FillRayBuffer(scene, rayBuffer)) {
+		if (!paths[lastPath]->FillRayBuffer(rayBuffer)) {
 			// Not enough free space in the RayBuffer
 			allPathDone = false;
 			break;
@@ -573,10 +624,10 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 			}
 
 			// Add a new path
-			Path *p = new Path(scene);
+			Path *p = new Path(renderEngine);
 			paths.push_back(p);
-			p->Init(scene, film, sampler);
-			if (!p->FillRayBuffer(scene, rayBuffer)) {
+			p->Init(renderEngine, sampler);
+			if (!p->FillRayBuffer(rayBuffer)) {
 				firstPath = 0;
 				// -2 because the addition of the last path failed
 				lastPath = paths.size() - 2;
@@ -588,15 +639,15 @@ void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 
 void PathIntegrator::AdvancePaths(const RayBuffer *rayBuffer) {
 	for (int i = firstPath; i != lastPath; i = (i + 1) % paths.size()) {
-		paths[i]->AdvancePath(scene, film, sampler, rayBuffer, sampleBuffer);
+		paths[i]->AdvancePath(renderEngine, sampler, rayBuffer, sampleBuffer);
 
 		// Check if the sample buffer is full
 		if (sampleBuffer->IsFull()) {
 			statsTotalSampleCount += sampleBuffer->GetSampleCount();
 
 			// Splat all samples on the film
-			film->SplatSampleBuffer(sampler->IsPreviewOver(), sampleBuffer);
-			sampleBuffer = film->GetFreeSampleBuffer();
+			renderEngine->film->SplatSampleBuffer(sampler->IsPreviewOver(), sampleBuffer);
+			sampleBuffer = renderEngine->film->GetFreeSampleBuffer();
 		}
 	}
 
@@ -607,10 +658,9 @@ void PathIntegrator::AdvancePaths(const RayBuffer *rayBuffer) {
 // PathRenderThread
 //------------------------------------------------------------------------------
 
-PathRenderThread::PathRenderThread(unsigned int index, SLGScene *scn, Film *f) {
+PathRenderThread::PathRenderThread(unsigned int index, PathRenderEngine *re) {
 	threadIndex = index;
-	scene = scn;
-	film = f;
+	renderEngine = re;
 	started = false;
 }
 
@@ -623,8 +673,7 @@ PathRenderThread::~PathRenderThread() {
 
 PathNativeRenderThread::PathNativeRenderThread(unsigned int index,  const unsigned long seedBase,
 		const float samplStart, const unsigned int samplePerPixel,
-		NativeThreadIntersectionDevice *device,
-		SLGScene *scn, Film *f, const bool lowLatency) : PathRenderThread(index, scn, f) {
+		NativeThreadIntersectionDevice *device, PathRenderEngine *re) : PathRenderThread(index, re) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
 
@@ -633,14 +682,14 @@ PathNativeRenderThread::PathNativeRenderThread(unsigned int index,  const unsign
 	// Ray buffer (small buffers work well with CPU)
 	const size_t rayBufferSize = 1024;
 	const unsigned int startLine = Clamp<unsigned int>(
-		film->GetHeight() * samplingStart,
-			0, film->GetHeight() - 1);
+		renderEngine->film->GetHeight() * samplingStart,
+			0, renderEngine->film->GetHeight() - 1);
 
-	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
-			film->GetWidth(), film->GetHeight(),
+	sampler = new RandomSampler(re->lowLatency, seedBase + threadIndex + 1,
+			renderEngine->film->GetWidth(), renderEngine->film->GetHeight(),
 			samplePerPixel, startLine);
 
-	pathIntegrator = new PathIntegrator(scene, film, sampler);
+	pathIntegrator = new PathIntegrator(renderEngine, sampler);
 	rayBuffer = new RayBuffer(rayBufferSize);
 
 	renderThread = NULL;
@@ -659,9 +708,9 @@ void PathNativeRenderThread::Start() {
 	PathRenderThread::Start();
 
 	const unsigned int startLine = Clamp<unsigned int>(
-		film->GetHeight() * samplingStart,
-			0, film->GetHeight() - 1);
-	sampler->Init(film->GetWidth(), film->GetHeight(), startLine);
+		renderEngine->film->GetHeight() * samplingStart,
+			0, renderEngine->film->GetHeight() - 1);
+	sampler->Init(renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), startLine);
 	rayBuffer->Reset();
 	pathIntegrator->ReInit();
 
@@ -721,7 +770,7 @@ void PathNativeRenderThread::RenderThreadImpl(PathNativeRenderThread *renderThre
 
 PathDeviceRenderThread::PathDeviceRenderThread(const unsigned int index, const unsigned long seedBase,
 		const float samplStart,  const unsigned int samplePerPixel, IntersectionDevice *device,
-		SLGScene *scn, Film *f, const bool lowLatency) : PathRenderThread(index, scn, f) {
+		PathRenderEngine *re) : PathRenderThread(index, re) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
 	reportedPermissionError = false;
@@ -730,17 +779,17 @@ PathDeviceRenderThread::PathDeviceRenderThread(const unsigned int index, const u
 
 	// Ray buffer
 	// TODO: cross check RAY_BUFFER_SIZE with the Intersection device
-	const size_t rayBufferSize = lowLatency ? (RAY_BUFFER_SIZE / 8) : RAY_BUFFER_SIZE;
+	const size_t rayBufferSize = re->lowLatency ? (RAY_BUFFER_SIZE / 8) : RAY_BUFFER_SIZE;
 	const unsigned int startLine = Clamp<unsigned int>(
-		film->GetHeight() * samplingStart,
-			0, film->GetHeight() - 1);
+		renderEngine->film->GetHeight() * samplingStart,
+			0, renderEngine->film->GetHeight() - 1);
 
-	sampler = new RandomSampler(lowLatency, seedBase + threadIndex + 1,
-			film->GetWidth(), film->GetHeight(),
+	sampler = new RandomSampler(re->lowLatency, seedBase + threadIndex + 1,
+			renderEngine->film->GetWidth(), renderEngine->film->GetHeight(),
 			samplePerPixel, startLine);
 
 	for(size_t i = 0; i < PATH_DEVICE_RENDER_BUFFER_COUNT; i++) {
-		pathIntegrators[i] = new PathIntegrator(scene, film, sampler);
+		pathIntegrators[i] = new PathIntegrator(renderEngine, sampler);
 		rayBuffers[i] = new RayBuffer(rayBufferSize);
 		rayBuffers[i]->PushUserData(i);
 	}
@@ -763,9 +812,9 @@ void PathDeviceRenderThread::Start() {
 	PathRenderThread::Start();
 
 	const unsigned int startLine = Clamp<unsigned int>(
-			film->GetHeight() * samplingStart,
-			0, film->GetHeight() - 1);
-	sampler->Init(film->GetWidth(), film->GetHeight(), startLine);
+			renderEngine->film->GetHeight() * samplingStart,
+			0, renderEngine->film->GetHeight() - 1);
+	sampler->Init(renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), startLine);
 	for (size_t i = 0; i < PATH_DEVICE_RENDER_BUFFER_COUNT; i++) {
 		rayBuffers[i]->Reset();
 		rayBuffers[i]->ResetUserData();
@@ -848,8 +897,37 @@ void PathDeviceRenderThread::RenderThreadImpl(PathDeviceRenderThread *renderThre
 
 PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm,
 		vector<IntersectionDevice *> intersectionDev,
-		const bool lowLatency, const unsigned int samplePerPixel) : RenderEngine(scn, flm) {
+		const Properties &cfg) : RenderEngine(scn, flm) {
 	intersectionDevices = intersectionDev;
+
+	samplePerPixel = max(1, cfg.GetInt("path.sampler.spp", cfg.GetInt("sampler.spp", 4)));
+	lowLatency = cfg.GetInt("opencl.latency.mode", 1);
+
+	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
+	int strat = cfg.GetInt("path.lightstrategy", 0);
+	if (strat == 0)
+		lightStrategy = ONE_UNIFORM;
+	else
+		lightStrategy = ALL_UNIFORM;
+	shadowRayCount = cfg.GetInt("path.shadowrays", 1);
+	if (cfg.GetInt("path.onlysamplespecular", 0) == 0)
+		onlySampleSpecular = false;
+	else
+		onlySampleSpecular = true;
+
+	// Russian Roulette parameters
+	int rrStrat = cfg.GetInt("path.russianroulette.strategy", 1);
+	if (rrStrat == 0)
+		rrStrategy = PROBABILITY;
+	else
+		rrStrategy = IMPORTANCE;
+	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
+	rrProb = cfg.GetFloat("path.russianroulette.prob", 0.5f);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+
+	//--------------------------------------------------------------------------
+	// Start rendering threads
+	//--------------------------------------------------------------------------
 
 	const unsigned long seedBase = (unsigned long)(WallClockTime() / 1000.0);
 
@@ -859,11 +937,11 @@ PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm,
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
 			PathNativeRenderThread *t = new PathNativeRenderThread(i, seedBase, i / (float)renderThreadCount,
-					samplePerPixel, (NativeThreadIntersectionDevice *)intersectionDevices[i], scene, film, lowLatency);
+					samplePerPixel, (NativeThreadIntersectionDevice *)intersectionDevices[i], this);
 			renderThreads.push_back(t);
 		} else {
 			PathDeviceRenderThread *t = new PathDeviceRenderThread(i, seedBase, i / (float)renderThreadCount,
-					samplePerPixel, intersectionDevices[i], scene, film, lowLatency);
+					samplePerPixel, intersectionDevices[i], this);
 			renderThreads.push_back(t);
 		}
 	}
