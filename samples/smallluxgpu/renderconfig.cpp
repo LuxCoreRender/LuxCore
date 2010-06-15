@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include "renderconfig.h"
+#include "path.h"
 
 #include "luxrays/utils/film/film.h"
 
@@ -34,15 +35,14 @@ RenderingConfig::RenderingConfig(const string &fileName) {
 	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
 		cerr << "  " << *i << " = " << cfg.GetString(*i, "") << endl;
 
+	renderEngine = NULL;
 	renderThreadsStarted = false;
 }
 
 RenderingConfig::~RenderingConfig() {
 	StopAllRenderThreadsLockless();
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		delete renderThreads[i];
-
+	delete renderEngine;
 	delete ctx;
 	delete scene;
 	delete film;
@@ -171,22 +171,8 @@ void RenderingConfig::Init() {
 
 	intersectionAllDevices = ctx->GetIntersectionDevices();
 
-	const unsigned long seedBase = (unsigned long)(WallClockTime() / 1000.0);
-
-	// Create and start render threads
-	size_t renderThreadCount = intersectionAllDevices.size();
-	cerr << "Starting "<< renderThreadCount << " render threads" << endl;
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		if (intersectionAllDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
-			NativeRenderThread *t = new NativeRenderThread(i, seedBase, i / (float)renderThreadCount,
-					samplePerPixel, (NativeThreadIntersectionDevice *)intersectionAllDevices[i], scene, film, lowLatency);
-			renderThreads.push_back(t);
-		} else {
-			DeviceRenderThread *t = new DeviceRenderThread(i, seedBase, i / (float)renderThreadCount,
-					samplePerPixel, intersectionAllDevices[i], scene, film, lowLatency);
-			renderThreads.push_back(t);
-		}
-	}
+	// Create and start the render engine
+	renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, lowLatency, samplePerPixel);
 
 	film->StartSampleTime();
 	StartAllRenderThreadsLockless();
@@ -212,6 +198,7 @@ void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, un
 		StartAllRenderThreadsLockless();
 }
 
+/*
 void RenderingConfig::SetMaxPathDepth(const int delta) {
 	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
@@ -284,6 +271,7 @@ void RenderingConfig::SetMotionBlur(const bool v) {
 	if (wasRunning)
 		StartAllRenderThreadsLockless();
 }
+*/
 
 void RenderingConfig::SetUpOpenCLDevices(const bool lowLatency, const bool useCPUs, const bool useGPUs,
 	const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig) {
@@ -387,22 +375,17 @@ void RenderingConfig::StopAllRenderThreads() {
 void RenderingConfig::StartAllRenderThreadsLockless() {
 	if (!renderThreadsStarted) {
 		ctx->Start();
-
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			renderThreads[i]->Start();
-
+		renderEngine->Start();
 		renderThreadsStarted = true;
 	}
 }
 
 void RenderingConfig::StopAllRenderThreadsLockless() {
 	if (renderThreadsStarted) {
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			renderThreads[i]->Interrupt();
+		renderEngine->Interrupt();
 		ctx->Interrupt();
 
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			renderThreads[i]->Stop();
+		renderEngine->Stop();
 		ctx->Stop();
 
 		renderThreadsStarted = false;

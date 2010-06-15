@@ -25,8 +25,9 @@
 #include <boost/thread/mutex.hpp>
 
 #include "slgscene.h"
-#include "renderthread.h"
 #include "displayfunc.h"
+#include "renderengine.h"
+
 #include "luxrays/core/context.h"
 #include "luxrays/core/device.h"
 #include "luxrays/core/virtualdevice.h"
@@ -48,14 +49,15 @@ public:
 	void StartAllRenderThreads();
 	void StopAllRenderThreads();
 	void ReInit(const bool reallocBuffers, const unsigned int w = 0, unsigned int h = 0);
-	void SetMaxPathDepth(const int delta);
+
+	/*void SetMaxPathDepth(const int delta);
 	void SetShadowRays(const int delta);
 	void SetOnlySampleSpecular(const bool v);
-	void SetMotionBlur(const bool v);
+	void SetMotionBlur(const bool v);*/
 
 	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
 	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }
-	const vector<RenderThread *> &GetRenderThreads() { return renderThreads; }
+	const RenderEngine *GetRenderEngine() { return renderEngine; }
 
 	Properties cfg;
 
@@ -78,7 +80,8 @@ private:
 	Context *ctx;
 
 	bool renderThreadsStarted;
-	vector<RenderThread *> renderThreads;
+	RenderEngine *renderEngine;
+
 
 	vector<IntersectionDevice *> intersectionGPUDevices;
 	vector<IntersectionDevice *> intersectionCPUDevices;

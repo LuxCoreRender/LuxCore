@@ -88,7 +88,6 @@ set(SMALLLUXGPU_SRCS
 	displayfunc.cpp
 	path.cpp
 	renderconfig.cpp
-	renderthread.cpp
 	slgscene.cpp
 	smallluxgpu.cpp
 	telnet.cpp

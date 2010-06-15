@@ -25,8 +25,6 @@
 #include "smalllux.h"
 #include "renderconfig.h"
 
-using namespace std;
-
 class TelnetServer {
 public:
 	TelnetServer(const unsigned int serverPort, RenderingConfig *renderConfig);

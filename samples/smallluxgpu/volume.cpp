@@ -19,10 +19,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include "smalllux.h"
 #include "volume.h"
 #include "slgscene.h"
-
-using namespace std;
 
 VolumeComputation::VolumeComputation(VolumeIntegrator *vol) {
 	float maxRayLen = vol->GetMaxRayLength();

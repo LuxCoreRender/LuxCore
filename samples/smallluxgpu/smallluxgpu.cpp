@@ -104,10 +104,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		const double now = WallClockTime();
 		const double elapsedTime =now - startTime;
 
-		unsigned int pass = 0;
-		const vector<RenderThread *> &renderThreads = config->GetRenderThreads();
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			pass += renderThreads[i]->GetPass();
+		const unsigned int pass = config->GetRenderEngine()->GetPass();
 
 		if ((stopTime > 0) && (elapsedTime >= stopTime))
 			break;
