@@ -111,11 +111,7 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Screen refresh %dms][Render threads %d][Shadow rays %d][Mode %s]",
-			config->screenRefreshInterval, int(config->GetRenderThreads().size()),
-			(config->scene->lightStrategy == ONE_UNIFORM) ? config->scene->shadowRayCount :
-				(config->scene->shadowRayCount * (int)config->scene->lights.size()),
-			config->scene->onlySampleSpecular ? "DIRECT" : "PATH");
+	sprintf(buf, "[Screen refresh %dms]", config->screenRefreshInterval);
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
@@ -315,12 +311,12 @@ void keyFunc(unsigned char key, int x, int y) {
 					config->scene->camera->fieldOfView + 5.f);
 			config->ReInit(false);
 			break;
-		case 'v':
+		/*case 'v':
 			config->SetMaxPathDepth(-1);
 			break;
 		case 'b':
 			config->SetMaxPathDepth(+1);
-			break;
+			break;*/
 		case 'n':
 			if (config->screenRefreshInterval > 1000)
 				config->screenRefreshInterval = max(1000u, config->screenRefreshInterval - 1000);
@@ -333,7 +329,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			else
 				config->screenRefreshInterval += 50;
 			break;
-		case 'i':
+		/*case 'i':
 			config->SetShadowRays(-1);
 			break;
 		case 'o':
@@ -344,7 +340,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'y':
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
-			break;
+			break;*/
 		case 't':
 			// Toggle tonemap type
 			if (config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
@@ -452,10 +448,7 @@ static void motionFunc(int x, int y) {
 }
 
 void timerFunc(int value) {
-	unsigned int pass = 0;
-	const vector<RenderThread *> &renderThreads = config->GetRenderThreads();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		pass += renderThreads[i]->GetPass();
+	const unsigned int pass = config->GetRenderEngine()->GetPass();
 
 	double raysSec = 0.0;
 	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
@@ -464,7 +457,7 @@ void timerFunc(int value) {
 
 	const double sampleSec = config->film->GetAvgSampleSec();
 
-	sprintf(config->captionBuffer, "[Samples %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+	sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
 			pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 	glutPostRedisplay();

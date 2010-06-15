@@ -22,10 +22,10 @@
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
 
+#include "smalllux.h"
 #include "telnet.h"
 #include "renderconfig.h"
 
-using namespace std;
 using boost::asio::ip::tcp;
 
 TelnetServer::TelnetServer(const unsigned int serverPort, RenderingConfig *renderConfig) : port(serverPort) {
