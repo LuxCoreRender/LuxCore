@@ -23,6 +23,7 @@
 #include "path.h"
 
 #include "luxrays/utils/film/film.h"
+#include "sppm.h"
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
@@ -149,8 +150,13 @@ void RenderingConfig::Init() {
 
 	intersectionAllDevices = ctx->GetIntersectionDevices();
 
+	// Check the kind of render engine to start
+	const int renderEngineType = cfg.GetInt("renderengine.type", 0);
 	// Create and start the render engine
-	renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, cfg);
+	if (renderEngineType == 0)
+		renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, cfg);
+	else
+		renderEngine = new SPPMRenderEngine(scene, film, intersectionAllDevices, cfg);
 
 	film->StartSampleTime();
 	StartAllRenderThreadsLockless();
@@ -373,8 +379,6 @@ void RenderingConfig::StartAllRenderThreadsLockless() {
 void RenderingConfig::StopAllRenderThreadsLockless() {
 	if (renderThreadsStarted) {
 		renderEngine->Interrupt();
-		ctx->Interrupt();
-
 		renderEngine->Stop();
 		ctx->Stop();
 
