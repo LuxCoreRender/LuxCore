@@ -139,12 +139,12 @@ void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &sh
 			if (dot <= luxrays::RAY_EPSILON)
 				continue;
 
-			AtomicInc(&hp->accumPhotonCount);
+			luxrays::AtomicInc(&hp->accumPhotonCount);
 			luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
 					dot * hp->throughput;
-			AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
-			AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
-			AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
+			luxrays::AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
+			luxrays::AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
+			luxrays::AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
 		}
 	}
 }

@@ -90,7 +90,7 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 	photonPath->flux /= pdf * lpdf;
 	photonPath->depth = 0;
 
-	AtomicInc(&photonTracedPass);
+	luxrays::AtomicInc(&photonTracedPass);
 }
 
 static void TracePhotonsThread(const unsigned threadIndex, luxrays::IntersectionDevice *device) {
