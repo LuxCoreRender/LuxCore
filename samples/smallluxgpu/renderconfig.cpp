@@ -63,7 +63,6 @@ void RenderingConfig::Init() {
 	const string oclIntersectionDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const int oclPixelDeviceConfig = cfg.GetInt("opencl.pixeldevice.select", -1);
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
-	const unsigned int samplePerPixel = max(1, cfg.GetInt("sampler.spp", 4));
 	luxrays::RAY_EPSILON = cfg.GetFloat("scene.epsilon", luxrays::RAY_EPSILON);
 
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
@@ -119,27 +118,6 @@ void RenderingConfig::Init() {
 	// For compatibility with old scenes
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", scene->camera->fieldOfView);
 	scene->camera->Update(film->GetWidth(), film->GetHeight());
-	scene->maxPathDepth = cfg.GetInt("path.maxdepth", 3);
-	int strat = cfg.GetInt("path.lightstrategy", 0);
-	if (strat == 0)
-		scene->lightStrategy = ONE_UNIFORM;
-	else
-		scene->lightStrategy = ALL_UNIFORM;
-	scene->shadowRayCount = cfg.GetInt("path.shadowrays", 1);
-	if (cfg.GetInt("path.onlysamplespecular", 0) == 0)
-		scene->onlySampleSpecular = false;
-	else
-		scene->onlySampleSpecular = true;
-
-	// Russian Roulette parameters
-	int rrStrat = cfg.GetInt("path.russianroulette.strategy", 1);
-	if (rrStrat == 0)
-		scene->rrStrategy = PROBABILITY;
-	else
-		scene->rrStrategy = IMPORTANCE;
-	scene->rrDepth = cfg.GetInt("path.russianroulette.depth", scene->rrDepth);
-	scene->rrProb = cfg.GetFloat("path.russianroulette.prob", scene->rrProb);
-	scene->rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", scene->rrImportanceCap);
 
 	// Start OpenCL devices
 	SetUpOpenCLDevices(useCPUs, useGPUs, forceGPUWorkSize, oclDeviceThreads, oclIntersectionDeviceConfig);
@@ -172,7 +150,7 @@ void RenderingConfig::Init() {
 	intersectionAllDevices = ctx->GetIntersectionDevices();
 
 	// Create and start the render engine
-	renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, lowLatency, samplePerPixel);
+	renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, cfg);
 
 	film->StartSampleTime();
 	StartAllRenderThreadsLockless();
@@ -201,50 +179,65 @@ void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, un
 void RenderingConfig::SetMaxPathDepth(const int delta) {
 	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
-	bool wasRunning = renderThreadsStarted;
-	// First stop all devices
-	if (wasRunning)
-		StopAllRenderThreadsLockless();
+	// Check if we are using the Path tracing rendering engine
+	if (renderEngine->GetEngineType() == PATH) {
+		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
 
-	film->Reset();
-	scene->maxPathDepth = max<unsigned int>(2, scene->maxPathDepth + delta);
+		bool wasRunning = renderThreadsStarted;
+		// First stop all devices
+		if (wasRunning)
+			StopAllRenderThreadsLockless();
 
-	// Restart all devices
-	if (wasRunning)
-		StartAllRenderThreadsLockless();
+		film->Reset();
+		pre->maxPathDepth = max<unsigned int>(2, pre->maxPathDepth + delta);
+
+		// Restart all devices
+		if (wasRunning)
+			StartAllRenderThreadsLockless();
+	}
 }
 
 void RenderingConfig::SetShadowRays(const int delta) {
 	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
-	bool wasRunning = renderThreadsStarted;
-	// First stop all devices
-	if (wasRunning)
-		StopAllRenderThreadsLockless();
+	// Check if we are using the Path tracing rendering engine
+	if (renderEngine->GetEngineType() == PATH) {
+		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
 
-	film->Reset();
-	scene->shadowRayCount = max<unsigned int>(1, scene->shadowRayCount + delta);
-	renderEngine->Reset();
+		bool wasRunning = renderThreadsStarted;
+		// First stop all devices
+		if (wasRunning)
+			StopAllRenderThreadsLockless();
 
-	// Restart all devices
-	if (wasRunning)
-		StartAllRenderThreadsLockless();
+		film->Reset();
+		pre->shadowRayCount = max<unsigned int>(1, pre->shadowRayCount + delta);
+		renderEngine->Reset();
+
+		// Restart all devices
+		if (wasRunning)
+			StartAllRenderThreadsLockless();
+	}
 }
 
 void RenderingConfig::SetOnlySampleSpecular(const bool v) {
 	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
-	bool wasRunning = renderThreadsStarted;
-	// First stop all devices
-	if (wasRunning)
-		StopAllRenderThreadsLockless();
+	// Check if we are using the Path tracing rendering engine
+	if (renderEngine->GetEngineType() == PATH) {
+		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
 
-	film->Reset();
-	scene->onlySampleSpecular = v;
+		bool wasRunning = renderThreadsStarted;
+		// First stop all devices
+		if (wasRunning)
+			StopAllRenderThreadsLockless();
 
-	// Restart all devices
-	if (wasRunning)
-		StartAllRenderThreadsLockless();
+		film->Reset();
+		pre->onlySampleSpecular = v;
+
+		// Restart all devices
+		if (wasRunning)
+			StartAllRenderThreadsLockless();
+	}
 }
 
 void RenderingConfig::SetMotionBlur(const bool v) {

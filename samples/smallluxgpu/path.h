@@ -36,6 +36,8 @@ class RenderingConfig;
 // Path
 //------------------------------------------------------------------------------
 
+class PathRenderEngine;
+
 class Path {
 public:
 	enum PathState {
@@ -43,59 +45,19 @@ public:
 		TRANSPARENT_SHADOW_RAYS_STEP, TRANSPARENT_ONLY_SHADOW_RAYS_STEP
 	};
 
-	Path(SLGScene *scene) {
-		unsigned int shadowRayCount = GetMaxShadowRaysCount(scene);
+	Path(PathRenderEngine *renderEngine);
+	~Path();
 
-		lightPdf = new float[shadowRayCount];
-		lightColor = new Spectrum[shadowRayCount];
-		shadowRay = new Ray[shadowRayCount];
-		currentShadowRayIndex = new unsigned int[shadowRayCount];
-		if (scene->volumeIntegrator)
-			volumeComp = new VolumeComputation(scene->volumeIntegrator);
-		else
-			volumeComp = NULL;
-	}
+	void Init(PathRenderEngine *renderEngine, Sampler *sampler);
 
-	~Path() {
-		delete[] lightPdf;
-		delete[] lightColor;
-		delete[] shadowRay;
-		delete[] currentShadowRayIndex;
-
-		delete volumeComp;
-	}
-
-	void Init(SLGScene *scene, Film *film, Sampler *sampler) {
-		throughput = Spectrum(1.f, 1.f, 1.f);
-		radiance = Spectrum(0.f, 0.f, 0.f);
-		sampler->GetNextSample(&sample);
-
-		scene->camera->GenerateRay(
-			sample.screenX, sample.screenY, film->GetWidth(), film->GetHeight(), &pathRay,
-			sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample));
-		state = EYE_VERTEX;
-		depth = 0;
-		specularBounce = true;
-	}
-
-	bool FillRayBuffer(SLGScene *scene, RayBuffer *rayBuffer);
-	void AdvancePath(SLGScene *scene, Film *film, Sampler *sampler, const RayBuffer *rayBuffer,
+	bool FillRayBuffer(RayBuffer *rayBuffer);
+	void AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const RayBuffer *rayBuffer,
 			SampleBuffer *sampleBuffer);
 
 private:
-	static unsigned int GetMaxShadowRaysCount(const SLGScene *scene) {
-		switch (scene->lightStrategy) {
-			case ALL_UNIFORM:
-				return scene->lights.size() * scene->shadowRayCount;
-				break;
-			case ONE_UNIFORM:
-				return scene->shadowRayCount;
-			default:
-				throw runtime_error("Internal error in Path::GetMaxShadowRaysCount()");
-		}
-	}
+	static unsigned int GetMaxShadowRaysCount(PathRenderEngine *renderEngine);
 
-	void CalcNextStep(SLGScene *scene, Sampler *sampler, const RayBuffer *rayBuffer,
+	void CalcNextStep(PathRenderEngine *renderEngine, Sampler *sampler, const RayBuffer *rayBuffer,
 		SampleBuffer *sampleBuffer);
 
 	Sample sample;
@@ -124,7 +86,7 @@ private:
 
 class PathIntegrator {
 public:
-	PathIntegrator(SLGScene *s, Film *f, Sampler *samp);
+	PathIntegrator(PathRenderEngine *renderEngine, Sampler *samp);
 	~PathIntegrator();
 
 	void ReInit();
@@ -139,8 +101,7 @@ public:
 	double statsTotalSampleCount;
 
 private:
-	SLGScene *scene;
-	Film *film;
+	PathRenderEngine *renderEngine;
 	Sampler *sampler;
 
 	SampleBuffer *sampleBuffer;
@@ -156,7 +117,7 @@ private:
 
 class PathRenderThread {
 public:
-	PathRenderThread(unsigned int index, SLGScene *scn, Film *f);
+	PathRenderThread(unsigned int index, PathRenderEngine *re);
 	virtual ~PathRenderThread();
 
 	virtual void Start() { started = true; }
@@ -168,8 +129,7 @@ public:
 
 protected:
 	unsigned int threadIndex;
-	SLGScene *scene;
-	Film *film;
+	PathRenderEngine *renderEngine;
 
 	bool started;
 };
@@ -177,8 +137,7 @@ protected:
 class PathNativeRenderThread : public PathRenderThread {
 public:
 	PathNativeRenderThread(unsigned int index, unsigned long seedBase, const float samplingStart,
-			const unsigned int samplePerPixel, NativeThreadIntersectionDevice *device, SLGScene *scn,
-			Film *f, const bool lowLatency);
+			const unsigned int samplePerPixel, NativeThreadIntersectionDevice *device, PathRenderEngine *re);
 	~PathNativeRenderThread();
 
 	void Start();
@@ -206,8 +165,7 @@ class PathDeviceRenderThread : public PathRenderThread {
 public:
 	PathDeviceRenderThread(unsigned int index,  unsigned long seedBase,
 			const float samplingStart, const unsigned int samplePerPixel,
-			IntersectionDevice *device, SLGScene *scn, Film *f,
-			const bool lowLatency);
+			IntersectionDevice *device, PathRenderEngine *re);
 	~PathDeviceRenderThread();
 
 	void Start();
@@ -240,7 +198,7 @@ private:
 class PathRenderEngine : public RenderEngine {
 public:
 	PathRenderEngine(SLGScene *scn, Film *flm, vector<IntersectionDevice *> intersectionDev,
-		const bool lowLatency, const unsigned int samplePerPixel);
+		const Properties &cfg);
 	virtual ~PathRenderEngine();
 
 	void Start();
@@ -251,6 +209,26 @@ public:
 
 	unsigned int GetPass() const;
 	unsigned int GetThreadCount() const;
+	RenderEngineType GetEngineType() const { return PATH; }
+
+	friend class Path;
+	friend class PathIntegrator;
+	friend class PathNativeRenderThread;
+	friend class PathDeviceRenderThread;
+
+	unsigned int samplePerPixel;
+	bool lowLatency;
+
+	// Signed because of the delta parameter
+	int maxPathDepth;
+	bool onlySampleSpecular;
+	DirectLightStrategy lightStrategy;
+	unsigned int shadowRayCount;
+
+	RussianRouletteStrategy rrStrategy;
+	int rrDepth;
+	float rrProb; // Used by PROBABILITY strategy
+	float rrImportanceCap; // Used by IMPORTANCE strategy
 
 private:
 	vector<IntersectionDevice *> intersectionDevices;

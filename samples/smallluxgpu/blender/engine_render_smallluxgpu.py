@@ -801,7 +801,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         fcfg.write('path.russianroulette.cap = {}\n'.format(scene.slg_rrcap))
     fcfg.write('path.lightstrategy = {}\n'.format(scene.slg_lightstrategy))
     fcfg.write('path.shadowrays = {}\n'.format(scene.slg_shadowrays))
-    fcfg.write('sampler.spp = {}\n'.format(scene.slg_sampleperpixel))
+    fcfg.write('path.sampler.spp = {}\n'.format(scene.slg_sampleperpixel))
     fcfg.write('accelerator.type = {}\n'.format(scene.slg_accelerator_type))
     fcfg.close()
 

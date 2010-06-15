@@ -34,17 +34,6 @@
 
 SLGScene::SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType) :
 	Scene(ctx, fileName, accelType) {
-	maxPathDepth = 3;
-	onlySampleSpecular = false;
-
-	shadowRayCount = 1;
-	lightStrategy = ONE_UNIFORM;
-
-	rrStrategy = PROBABILITY;
-	rrDepth = 2;
-	rrProb = 0.5f;
-	rrImportanceCap = 0.125f;
-
 	camera->Update(film->GetWidth(), film->GetHeight());
 
 	//--------------------------------------------------------------------------

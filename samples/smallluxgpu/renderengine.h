@@ -26,6 +26,10 @@
 
 #include "luxrays/utils/film/film.h"
 
+enum RenderEngineType {
+	PATH, SPPM, WIREFRAME
+};
+
 class RenderEngine {
 public:
 	RenderEngine(SLGScene *scn, Film *flm) {
@@ -48,6 +52,7 @@ public:
 
 	virtual unsigned int GetPass() const = 0;
 	virtual unsigned int GetThreadCount() const = 0;
+	virtual RenderEngineType GetEngineType() const = 0;
 
 protected:
 	SLGScene *scene;

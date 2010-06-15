@@ -47,17 +47,6 @@ public:
 	SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType);
 	~SLGScene();
 
-	// Signed because of the delta parameter
-	int maxPathDepth;
-	bool onlySampleSpecular;
-	DirectLightStrategy lightStrategy;
-	unsigned int shadowRayCount;
-
-	RussianRouletteStrategy rrStrategy;
-	int rrDepth;
-	float rrProb; // Used by PROBABILITY strategy
-	float rrImportanceCap; // Used by IMPORTANCE strategy
-
 	VolumeIntegrator *volumeIntegrator;
 };
 
