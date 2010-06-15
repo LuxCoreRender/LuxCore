@@ -27,7 +27,7 @@
 #include "luxrays/utils/film/film.h"
 
 enum RenderEngineType {
-	PATH, SPPM, WIREFRAME
+	PATH, SPPM, OPENGL_WIREFRAME
 };
 
 class RenderEngine {

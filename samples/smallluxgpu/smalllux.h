@@ -27,6 +27,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <boost/interprocess/detail/atomic.hpp>
+
 #if defined(__linux__) || defined(__APPLE__)
 #include <stddef.h>
 #include <sys/time.h>
@@ -47,5 +49,32 @@ using namespace std;
 using namespace luxrays;
 using namespace luxrays::sdl;
 using namespace luxrays::utils;
+
+inline void AtomicAdd(float *val, const float delta) {
+	union bits {
+		float f;
+		boost::uint32_t i;
+
+	};
+
+	bits oldVal, newVal;
+
+	do {
+#if (defined(__i386__) || defined(__amd64__))
+		__asm__ __volatile__("pause\n");
+#endif
+
+		oldVal.f = *val;
+		newVal.f = oldVal.f + delta;
+	} while (boost::interprocess::detail::atomic_cas32(((boost::uint32_t *)val), newVal.i, oldVal.i) != oldVal.i);
+}
+
+inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
+	boost::interprocess::detail::atomic_add32(((boost::uint32_t *)val), (boost::uint32_t)delta);
+}
+
+inline void AtomicInc(unsigned int *val) {
+	boost::interprocess::detail::atomic_inc32(((boost::uint32_t *)val));
+}
 
 #endif	/* _SMALLLUX_H */

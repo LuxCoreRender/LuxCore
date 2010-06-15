@@ -76,11 +76,11 @@ inline void AtomicAdd(float *val, const float delta) {
 }
 
 inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
-	boost::interprocess::detail::atomic_add32(val, delta);
+	boost::interprocess::detail::atomic_add32(((boost::uint32_t *)val), (boost::uint32_t)delta);
 }
 
 inline void AtomicInc(unsigned int *val) {
-	boost::interprocess::detail::atomic_inc32(val);
+	boost::interprocess::detail::atomic_inc32(((boost::uint32_t *)val));
 }
 
 #endif	/* _SMALLSPPMGPU_H */

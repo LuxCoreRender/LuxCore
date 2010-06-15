@@ -925,14 +925,10 @@ PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm,
 	rrProb = cfg.GetFloat("path.russianroulette.prob", 0.5f);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
 
-	//--------------------------------------------------------------------------
-	// Start rendering threads
-	//--------------------------------------------------------------------------
-
 	const unsigned long seedBase = (unsigned long)(WallClockTime() / 1000.0);
 
 	// Create and start render threads
-	size_t renderThreadCount = intersectionDevices.size();
+	const size_t renderThreadCount = intersectionDevices.size();
 	cerr << "Starting "<< renderThreadCount << " Path render threads" << endl;
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
