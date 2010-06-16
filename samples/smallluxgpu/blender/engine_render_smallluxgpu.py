@@ -81,7 +81,11 @@ def slg_properties():
   IntProperty(attr="slg_refreshrate", name="Screen Refresh Interval",
       description="How often, in milliseconds, the screen refreshes",
       default=250, min=1, soft_min=1)
-  
+
+  IntProperty(attr="slg_sppm_photon_per_pass", name="Photon count per pass",
+      description="How many photon to shot or each pass",
+      default=2500000, min=100, soft_min=100)
+
   IntProperty(attr="slg_native_threads", name="Native Threads",
       description="Number of native CPU threads",
       default=2, min=0, max=1024, soft_min=0, soft_max=1024)
@@ -93,7 +97,8 @@ def slg_properties():
   EnumProperty(attr="slg_rendering_type", name="Rendering Type",
       description="Select the desired rendering type",
       items=(("0", "Path", "Path tracing"),
-             ("1", "Direct", "Direct lighting only")),
+             ("1", "Direct", "Direct lighting only"),
+             ("2", "SPPM", "Stochastic Progressive Photon Mapping")),
       default="0")
 
   EnumProperty(attr="slg_accelerator_type", name="Accelerator Type",
@@ -350,32 +355,33 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
     col.prop(scene, "slg_imageformat")
     col = split.column()
     col.prop(scene, "slg_film_gamma")
-    split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_lightstrategy")
-    split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_tracedepth", text="Depth")
-    col = split.column()
-    col.prop(scene, "slg_shadowrays", text="Shadow")
-    split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_sampleperpixel")
-    split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_rrstrategy")
-    split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_rrdepth", text="RR Depth")
-    col = split.column()
-    if scene.slg_rrstrategy == "0":
-        col.prop(scene, "slg_rrprob", text="RR Prob")
-    else:
-        col.prop(scene, "slg_rrcap", text="RR Cap")
-    split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_enablepartmedia")
-    if scene.slg_enablepartmedia:
+    if scene.slg_rendering_type != '2':
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_lightstrategy")
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_tracedepth", text="Depth")
+      col = split.column()
+      col.prop(scene, "slg_shadowrays", text="Shadow")
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_sampleperpixel")
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_rrstrategy")
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_rrdepth", text="RR Depth")
+      col = split.column()
+      if scene.slg_rrstrategy == "0":
+          col.prop(scene, "slg_rrprob", text="RR Prob")
+      else:
+          col.prop(scene, "slg_rrcap", text="RR Cap")
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_enablepartmedia")
+      if scene.slg_enablepartmedia:
         split = layout.split()
         col = split.column()
         col.prop(scene, "slg_partmedia_stepsize", text="Step Size")
@@ -389,9 +395,15 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
         split = layout.split()
         col = split.column()
         col.prop(scene, "slg_partmedia_bbox")
+        split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_low_latency")
+    else:
+      split = layout.split()
+      col = split.column()
+      col.prop(scene, "slg_sppm_photon_per_pass", text="Photon count per pass")
+
     split = layout.split()
-    col = split.column()
-    col.prop(scene, "slg_low_latency")
     col = split.column()
     col.prop(scene, "slg_refreshrate", text="Refresh")
     split = layout.split()
@@ -790,7 +802,12 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('film.filter.type = {}\n'.format(scene.slg_film_filter_type))
     fcfg.write('film.tonemap.type = {}\n'.format(scene.slg_film_tonemap_type))
     fcfg.write('screen.refresh.interval = {}\n'.format(scene.slg_refreshrate))
-    fcfg.write('path.onlysamplespecular = {}\n'.format(scene.slg_rendering_type))
+    if (scene.slg_rendering_type != '2'):
+      fcfg.write('renderengine.type = 0\n')
+      fcfg.write('path.onlysamplespecular = {}\n'.format(scene.slg_rendering_type))
+    else :
+      fcfg.write('renderengine.type = 1\n')
+      fcfg.write('sppm.stochastic.count = {}\n'.format(scene.slg_sppm_photon_per_pass))
     fcfg.write('path.maxdepth = {}\n'.format(scene.slg_tracedepth))
     fcfg.write('path.russianroulette.depth = {}\n'.format(scene.slg_rrdepth))
     if scene.slg_rrstrategy == "0":
