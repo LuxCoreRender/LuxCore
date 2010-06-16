@@ -33,6 +33,7 @@
 
 #include "luxrays/utils/film/film.h"
 #include "path.h"
+#include "sppm.h"
 
 RenderingConfig *config;
 
@@ -131,7 +132,17 @@ static void PrintHelpAndSettings() {
 		PrintString(GLUT_BITMAP_8_BY_13, buf);
 		fontOffset -= 15;
 		glRasterPos2i(20, fontOffset);
-	}
+	} else if (config->GetRenderEngine()->GetEngineType() == SPPM) {
+		SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+
+		sprintf(buf, "[SPPM RE][Stochastic count %.1fM][Eye depth %d][Photon depth %d]",
+				sre->GetStocasticInterval() / 1000000.f, sre->GetMaxEyePathDepth(),
+				sre->GetMaxPhotonPathDepth());
+		PrintString(GLUT_BITMAP_8_BY_13, buf);
+		fontOffset -= 15;
+		glRasterPos2i(20, fontOffset);
+	} else
+		assert (false);
 
 	// Pixel Device
 	char buff[512];
@@ -214,6 +225,7 @@ static void PrintCaptions() {
 	glColor3f(1.f, 1.f, 1.f);
 	glRasterPos2i(4, 5);
 	PrintString(GLUT_BITMAP_8_BY_13, config->captionBuffer);
+
 	// Title
 	glRasterPos2i(4, config->film->GetHeight() - 10);
 	PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
@@ -470,10 +482,18 @@ void timerFunc(int value) {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		raysSec += intersectionDevices[i]->GetPerformance();
 
-	const double sampleSec = config->film->GetAvgSampleSec();
+	if (config->GetRenderEngine()->GetEngineType() == PATH) {
+		const double sampleSec = config->film->GetAvgSampleSec();
+		sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+				pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+	} else if (config->GetRenderEngine()->GetEngineType() == SPPM) {
+		SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
 
-	sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
-			pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+		sprintf(config->captionBuffer, "[Pass %3d][Photon %.1fM][Avg. photon/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+				pass, sre->GetTotalPhotonCount() / 1000000.0, int(sre->GetTotalPhotonSec() / 1000.0),
+				int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+	} else
+		assert (false);
 
 	glutPostRedisplay();
 
