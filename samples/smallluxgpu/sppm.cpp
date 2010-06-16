@@ -327,6 +327,7 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm,
 	maxPhotonPathDepth = 8;
 	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 10000000);
 
+	startTime = 0.0;
 	hitPoints = NULL;
 	sampleBuffer = film->GetFreeSampleBuffer();
 
@@ -354,6 +355,7 @@ SPPMRenderEngine::~SPPMRenderEngine() {
 void SPPMRenderEngine::Start() {
 	RenderEngine::Start();
 
+	startTime = WallClockTime();
 	photonTracedTotal = 0;
 	photonTracedPass = 0;
 

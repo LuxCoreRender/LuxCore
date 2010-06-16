@@ -103,6 +103,15 @@ public:
 	unsigned int GetThreadCount() const;
 	RenderEngineType GetEngineType() const { return SPPM; }
 
+	unsigned int GetMaxEyePathDepth() const { return maxEyePathDepth; }
+	unsigned int GetMaxPhotonPathDepth() const { return maxPhotonPathDepth; }
+	unsigned int GetStocasticInterval() const { return stochasticInterval; }
+	unsigned long long GetTotalPhotonCount() const { return photonTracedTotal + photonTracedPass; }
+	double GetTotalPhotonSec() const {
+		return (startTime == 0.0) ? 0.0 :
+			(photonTracedTotal + photonTracedPass) / (WallClockTime() - startTime);
+	}
+
 	friend class SPPMDeviceRenderThread;
 
 private:
@@ -113,7 +122,6 @@ private:
 	unsigned int maxPhotonPathDepth;
 	unsigned int stochasticInterval;
 
-
 	vector<IntersectionDevice *> intersectionDevices;
 	vector<SPPMRenderThread *> renderThreads;
 
@@ -121,6 +129,7 @@ private:
 	boost::barrier *barrierStart;
 	boost::barrier *barrierExit;
 
+	double startTime;
 	unsigned long long photonTracedTotal;
 	unsigned int photonTracedPass;
 	HitPoints *hitPoints;
