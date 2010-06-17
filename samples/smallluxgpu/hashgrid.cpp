@@ -137,7 +137,7 @@ void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &sh
 				continue;
 
 			const float dot = luxrays::Dot(hp->normal, wi);
-			if (dot <= luxrays::RAY_EPSILON)
+			if (dot <= 0.0001f)
 				continue;
 
 			AtomicInc(&hp->accumPhotonCount);

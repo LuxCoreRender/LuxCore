@@ -22,36 +22,36 @@
 #include "smalllux.h"
 #include "hitpoints.h"
 
-bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
-		luxrays::Ray *ray, const luxrays::RayHit *rayHit, luxrays::Point &hitPoint,
-		luxrays::Spectrum &surfaceColor, luxrays::Normal &N, luxrays::Normal &shadeN) {
+bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
+		Ray *ray, const RayHit *rayHit, Point &hitPoint,
+		Spectrum &surfaceColor, Normal &N, Normal &shadeN) {
 	hitPoint = (*ray)(rayHit->t);
 	const unsigned int currentTriangleIndex = rayHit->index;
 
 	// Get the triangle
-	const luxrays::ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-	const luxrays::Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+	const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+	const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
 
-	const luxrays::Spectrum *colors = mesh->GetColors();
+	const Spectrum *colors = mesh->GetColors();
 	if (colors)
-		surfaceColor = luxrays::InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
+		surfaceColor = InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
 	else
-		surfaceColor = luxrays::Spectrum(1.f, 1.f, 1.f);
+		surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
 	// Interpolate face normal
-	N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+	N = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
 
 	// Check if I have to apply texture mapping or normal mapping
-	luxrays::sdl::TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
-	luxrays::sdl::BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
-	luxrays::sdl::NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
+	TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
+	BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
+	NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
-		const luxrays::UV triUV = luxrays::InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+		const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
 
 		// Check if there is an assigned texture map
 		if (tm) {
-			const luxrays::sdl::TextureMap *map = tm->GetTexMap();
+			const TextureMap *map = tm->GetTexMap();
 
 			// Apply texture mapping
 			surfaceColor *= map->GetColor(triUV);
@@ -61,7 +61,7 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 				const float alpha = map->GetAlpha(triUV);
 
 				if ((alpha == 0.0f) || ((alpha < 1.f) && (rndGen->floatValue() > alpha))) {
-					*ray = luxrays::Ray(hitPoint, ray->d);
+					*ray = Ray(hitPoint, ray->d);
 					return true;
 				}
 			}
@@ -71,15 +71,15 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 		if (bm || nm) {
 			if (nm) {
 				// Apply normal mapping
-				const luxrays::Spectrum color = nm->GetTexMap()->GetColor(triUV);
+				const Spectrum color = nm->GetTexMap()->GetColor(triUV);
 
 				const float x = 2.0 * (color.r - 0.5);
 				const float y = 2.0 * (color.g - 0.5);
 				const float z = 2.0 * (color.b - 0.5);
 
-				luxrays::Vector v1, v2;
-				luxrays::CoordinateSystem(luxrays::Vector(N), &v1, &v2);
-				N = luxrays::Normalize(luxrays::Normal(
+				Vector v1, v2;
+				CoordinateSystem(Vector(N), &v1, &v2);
+				N = Normalize(Normal(
 						v1.x * x + v2.x * y + N.x * z,
 						v1.y * x + v2.y * y + N.y * z,
 						v1.z * x + v2.z * y + N.z * z));
@@ -87,23 +87,23 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 
 			if (bm) {
 				// Apply bump mapping
-				const luxrays::sdl::TextureMap *map = bm->GetTexMap();
-				const luxrays::UV &dudv = map->GetDuDv();
+				const TextureMap *map = bm->GetTexMap();
+				const UV &dudv = map->GetDuDv();
 
 				const float b0 = map->GetColor(triUV).Filter();
 
-				const luxrays::UV uvdu(triUV.u + dudv.u, triUV.v);
+				const UV uvdu(triUV.u + dudv.u, triUV.v);
 				const float bu = map->GetColor(uvdu).Filter();
 
-				const luxrays::UV uvdv(triUV.u, triUV.v + dudv.v);
+				const UV uvdv(triUV.u, triUV.v + dudv.v);
 				const float bv = map->GetColor(uvdv).Filter();
 
 				const float scale = bm->GetScale();
-				const luxrays::Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
+				const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
 
-				luxrays::Vector v1, v2;
-				luxrays::CoordinateSystem(luxrays::Vector(N), &v1, &v2);
-				N = luxrays::Normalize(luxrays::Normal(
+				Vector v1, v2;
+				CoordinateSystem(Vector(N), &v1, &v2);
+				N = Normalize(Normal(
 						v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
 						v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
 						v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
@@ -112,7 +112,7 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 	}
 
 	// Flip the normal if required
-	if (luxrays::Dot(ray->d, N) > 0.f)
+	if (Dot(ray->d, N) > 0.f)
 		shadeN = -N;
 	else
 		shadeN = N;
@@ -122,8 +122,8 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 
 //------------------------------------------------------------------------------
 
-HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
-		luxrays::IntersectionDevice *dev, luxrays::RayBuffer *rayBuffer,
+HitPoints::HitPoints(Scene *scn, RandomGenerator *rndGen,
+		IntersectionDevice *dev, RayBuffer *rayBuffer,
 		const float a, const unsigned int maxEyeDepth,
 		const unsigned int w, const unsigned int h,
 		const LookUpAccelType accelType) {
@@ -140,7 +140,7 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
 	SetHitPoints(rndGen, rayBuffer);
 
 	// Calculate initial radius
-	luxrays::Vector ssize = bbox.pMax - bbox.pMin;
+	Vector ssize = bbox.pMax - bbox.pMin;
 	const float photonRadius = ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
 
 	// Expand the bounding box by used radius
@@ -152,15 +152,16 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
 		HitPoint *hp = &(*hitPoints)[i];
 
 		hp->photonCount = 0;
-		hp->reflectedFlux = luxrays::Spectrum();
+		hp->reflectedFlux = Spectrum();
 
 		hp->accumPhotonRadius2 = photonRadius2;
 		hp->accumPhotonCount = 0;
-		hp->accumReflectedFlux = luxrays::Spectrum();
+		hp->accumReflectedFlux = Spectrum();
 
-		hp->accumRadiance = luxrays::Spectrum();
+		hp->accumRadiance = Spectrum();
 		hp->constantHitsCount = 0;
 		hp->surfaceHitsCount = 0;
+		hp->radiance = Spectrum();
 	}
 
 	// Allocate hit points lookup accelerator
@@ -204,7 +205,7 @@ void HitPoints::AccumulateFlux(const unsigned long long photonTraced) {
 
 					hp->accumPhotonRadius2 *= g;
 					hp->accumPhotonCount = 0;
-					hp->accumReflectedFlux = luxrays::Spectrum();
+					hp->accumReflectedFlux = Spectrum();
 				}
 
 				hp->surfaceHitsCount += 1;
@@ -221,17 +222,17 @@ void HitPoints::AccumulateFlux(const unsigned long long photonTraced) {
 	}
 }
 
-void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffer *rayBuffer) {
+void HitPoints::SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer) {
 	std::list<EyePath *> todoEyePaths;
 
 	// Generate eye rays
 	std::cerr << "Building eye paths rays:" << std::endl;
 	std::cerr << "  0/" << height << std::endl;
-	double lastPrintTime = luxrays::WallClockTime();
+	double lastPrintTime = WallClockTime();
 	for (unsigned int y = 0; y < height; ++y) {
-		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
+		if (WallClockTime() - lastPrintTime > 2.0) {
 			std::cerr << "  " << y << "/" << height << std::endl;
-			lastPrintTime = luxrays::WallClockTime();
+			lastPrintTime = WallClockTime();
 		}
 
 		for (unsigned int x = 0; x < width; ++x) {
@@ -244,7 +245,7 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 
 			eyePath->pixelIndex = x + y * width;
 			eyePath->depth = 0;
-			eyePath->throughput = luxrays::Spectrum(1.f, 1.f, 1.f);
+			eyePath->throughput = Spectrum(1.f, 1.f, 1.f);
 
 			todoEyePaths.push_front(eyePath);
 		}
@@ -253,14 +254,14 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 	// Iterate through all eye paths
 	std::cerr << "Building eye paths hit points: " << std::endl;
 	bool done;
-	lastPrintTime = luxrays::WallClockTime();
+	lastPrintTime = WallClockTime();
 	// Note: (todoEyePaths.size() > 0) is extremly slow to execute
 	unsigned int todoEyePathCount = width * height;
 	std::cerr << "  " << todoEyePathCount / 1000 << "k eye paths left" << std::endl;
 	while(todoEyePathCount > 0) {
-		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
+		if (WallClockTime() - lastPrintTime > 2.0) {
 			std::cerr << "  " << todoEyePathCount / 1000 << "k eye paths left" << std::endl;
-			lastPrintTime = luxrays::WallClockTime();
+			lastPrintTime = WallClockTime();
 		}
 
 		std::list<EyePath *>::iterator todoEyePathsIterator = todoEyePaths.begin();
@@ -272,8 +273,7 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 				// Add an hit point
 				HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 				hp.type = CONSTANT_COLOR;
-				hp.throughput = luxrays::Spectrum();
-
+				hp.throughput = Spectrum();
 				// Free the eye path
 				delete *todoEyePathsIterator;
 				todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
@@ -299,7 +299,7 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 			for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
 				EyePath *eyePath = *todoEyePathsIterator;
 
-				const luxrays::RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
+				const RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
 
 				if (rayHit->Miss()) {
 					// Add an hit point
@@ -308,7 +308,7 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 					if (scene->infiniteLight)
 						hp.throughput = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
 					else
-						hp.throughput = luxrays::Spectrum();
+						hp.throughput = Spectrum();
 
 					// Free the eye path
 					delete *todoEyePathsIterator;
@@ -316,9 +316,9 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 					--todoEyePathCount;
 				} else {
 					// Something was hit
-					luxrays::Point hitPoint;
-					luxrays::Spectrum surfaceColor;
-					luxrays::Normal N, shadeN;
+					Point hitPoint;
+					Spectrum surfaceColor;
+					Normal N, shadeN;
 					if (GetHitPointInformation(scene, rndGen, &eyePath->ray, rayHit, hitPoint,
 							surfaceColor, N, shadeN)) {
 						++todoEyePathsIterator;
@@ -327,13 +327,13 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 
 					// Get the material
 					const unsigned int currentTriangleIndex = rayHit->index;
-					const luxrays::sdl::Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+					const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
 
 					if (triMat->IsLightSource()) {
 						// Add an hit point
 						HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 						hp.type = CONSTANT_COLOR;
-						const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
+						const TriangleLight *tLight = (TriangleLight *)triMat;
 						hp.throughput = tLight->Le(scene, -eyePath->ray.d) * eyePath->throughput;
 
 						// Free the eye path
@@ -342,12 +342,12 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 						--todoEyePathCount;
 					} else {
 						// Build the next vertex path ray
-						const luxrays::sdl::SurfaceMaterial *triSurfMat = (luxrays::sdl::SurfaceMaterial *)triMat;
+						const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 
 						float fPdf;
-						luxrays::Vector wi;
+						Vector wi;
 						bool specularBounce;
-						const luxrays::Spectrum f = triSurfMat->Sample_f(-eyePath->ray.d, &wi, N, shadeN,
+						const Spectrum f = triSurfMat->Sample_f(-eyePath->ray.d, &wi, N, shadeN,
 								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 								false, &fPdf, specularBounce) * surfaceColor;
 						if ((fPdf <= 0.f) || f.Black()) {
@@ -364,12 +364,12 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 							++todoEyePathsIterator;
 
 							eyePath->throughput *= f / fPdf;
-							eyePath->ray = luxrays::Ray(hitPoint, wi);
+							eyePath->ray = Ray(hitPoint, wi);
 						} else {
 							// Add an hit point
 							HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 							hp.type = SURFACE;
-							hp.material = (luxrays::sdl::SurfaceMaterial *)triMat;
+							hp.material = (SurfaceMaterial *)triMat;
 							hp.throughput = eyePath->throughput * surfaceColor;
 							hp.position = hitPoint;
 							hp.wo = -eyePath->ray.d;
@@ -390,12 +390,12 @@ void HitPoints::SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffe
 
 	// Calculate hit points bounding box
 	std::cerr << "Building hit points bounding box: ";
-	bbox = luxrays::BBox();
+	bbox = BBox();
 	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
 		HitPoint *hp = &(*hitPoints)[i];
 
 		if (hp->type == SURFACE)
-			bbox = luxrays::Union(bbox, hp->position);
+			bbox = Union(bbox, hp->position);
 	}
 	std::cerr << bbox << std::endl;
 }

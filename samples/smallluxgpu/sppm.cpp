@@ -320,7 +320,21 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm,
 		const Properties &cfg) : RenderEngine(scn, flm) {
 	intersectionDevices = intersectionDev;
 
-	accelType = HYBRID_HASH_GRID;
+	const int atype = cfg.GetInt("sppm.lookup.type", 2);
+	switch (atype) {
+		case 0:
+			accelType = HASH_GRID;
+			break;
+		case 1:
+			accelType = KD_TREE;
+			break;
+		case 2:
+			accelType = HYBRID_HASH_GRID;
+			break;
+		default:
+			throw runtime_error("Unknown value for SPPMRenderEngine property sppm.lookup.type");
+	}
+
 	seedBase = (unsigned long)(WallClockTime() / 1000.0);
 	photonAlpha = 0.7f;
 	maxEyePathDepth = 16;

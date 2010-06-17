@@ -30,22 +30,26 @@
 
 #include "lookupaccel.h"
 
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
 class EyePath {
 public:
 	// Screen information
 	unsigned int pixelIndex;
 
 	// Eye path information
-	luxrays::Ray ray;
+	Ray ray;
 	unsigned int depth;
-	luxrays::Spectrum throughput;
+	Spectrum throughput;
 };
 
 class PhotonPath {
 public:
 	// The ray is stored in the RayBuffer and the index is implicitly stored
 	// in the array of PhotonPath
-	luxrays::Spectrum flux;
+	Spectrum flux;
 	unsigned int depth;
 };
 
@@ -62,36 +66,36 @@ public:
 	HitPointType type;
 
 	// Used for CONSTANT_COLOR and SURFACE type
-	luxrays::Spectrum throughput;
+	Spectrum throughput;
 
 	// Used for SURFACE type
-	luxrays::Point position;
-	luxrays::Vector wo;
-	luxrays::Normal normal;
-	const luxrays::sdl::SurfaceMaterial *material;
+	Point position;
+	Vector wo;
+	Normal normal;
+	const sdl::SurfaceMaterial *material;
 
 	unsigned long long photonCount;
-	luxrays::Spectrum reflectedFlux;
+	Spectrum reflectedFlux;
 
 	float accumPhotonRadius2;
 	unsigned int accumPhotonCount;
-	luxrays::Spectrum accumReflectedFlux;
+	Spectrum accumReflectedFlux;
 
-	luxrays::Spectrum accumRadiance;
+	Spectrum accumRadiance;
 
 	unsigned int constantHitsCount;
 	unsigned int surfaceHitsCount;
-	luxrays::Spectrum radiance;
+	Spectrum radiance;
 };
 
-extern bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGenerator *rndGen,
-		luxrays::Ray *ray, const luxrays::RayHit *rayHit, luxrays::Point &hitPoint,
-		luxrays::Spectrum &surfaceColor, luxrays::Normal &N, luxrays::Normal &shadeN);
+extern bool GetHitPointInformation(const sdl::Scene *scene, RandomGenerator *rndGen,
+		Ray *ray, const RayHit *rayHit, Point &hitPoint,
+		Spectrum &surfaceColor, Normal &N, Normal &shadeN);
 
 class HitPoints {
 public:
-	HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
-			luxrays::IntersectionDevice *dev, luxrays::RayBuffer *rayBuffer,
+	HitPoints(sdl::Scene *scn, RandomGenerator *rndGen,
+			IntersectionDevice *dev, RayBuffer *rayBuffer,
 			const float a, const unsigned int maxEyeDepth,
 			const unsigned int w, const unsigned int h,
 			const LookUpAccelType accelType);
@@ -105,18 +109,18 @@ public:
 		return hitPoints->size();
 	}
 
-	const luxrays::BBox GetBBox() const {
+	const BBox GetBBox() const {
 		return bbox;
 	}
 
-	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+	void AddFlux(const Point &hitPoint, const Normal &shadeN,
+		const Vector &wi, const Spectrum &photonFlux) {
 		lookUpAccel->AddFlux(hitPoint, shadeN, wi, photonFlux);
 	}
 
 	void AccumulateFlux(const unsigned long long photonTraced);
 
-	void Recast(luxrays::RandomGenerator *rndGen, luxrays::RayBuffer *rayBuffer, const unsigned long long photonTraced) {
+	void Recast(RandomGenerator *rndGen, RayBuffer *rayBuffer, const unsigned long long photonTraced) {
 		AccumulateFlux(photonTraced);
 		SetHitPoints(rndGen, rayBuffer);
 		lookUpAccel->Refresh();
@@ -127,17 +131,17 @@ public:
 	unsigned int GetPassCount() const { return pass; }
 
 private:
-	void SetHitPoints(luxrays::RandomGenerator *rndGen, luxrays::RayBuffer *rayBuffer);
+	void SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer);
 
-	luxrays::sdl::Scene *scene;
-	luxrays::IntersectionDevice *device;
+	sdl::Scene *scene;
+	IntersectionDevice *device;
 	// double instead of float because photon counters declared as int 64bit
 	double alpha;
 	unsigned int maxEyePathDepth;
 	unsigned int width;
 	unsigned int height;
 
-	luxrays::BBox bbox;
+	BBox bbox;
 	std::vector<HitPoint> *hitPoints;
 	LookUpAccelType lookUpAccelType;
 	HitPointsLookUpAccel *lookUpAccel;

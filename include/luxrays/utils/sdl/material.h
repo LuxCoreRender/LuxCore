@@ -106,8 +106,8 @@ public:
 		(*wi) = dir;
 
 		const float dp = Dot(shadeN, *wi);
-		// Using 0.01 instead of 0.0 to cut down fireflies
-		if (dp <= 0.01f) {
+		// Using 0.0001 instead of 0.0 to cut down fireflies
+		if (dp <= 0.0001f) {
 			*pdf = 0.f;
 			return Spectrum();
 		}
