@@ -108,7 +108,7 @@ void SPPMDeviceRenderThread::Stop() {
 	SPPMRenderThread::Stop();
 }
 
-void SPPMDeviceRenderThread::UpdateFilm(Film *film, HitPoints *hitPoints, SampleBuffer *sampleBuffer) {
+void SPPMDeviceRenderThread::UpdateFilm(Film *film, HitPoints *hitPoints, SampleBuffer *&sampleBuffer) {
 	film->Reset();
 
 	const unsigned int imgWidth = film->GetWidth();
@@ -325,7 +325,7 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm,
 	photonAlpha = 0.7f;
 	maxEyePathDepth = 16;
 	maxPhotonPathDepth = 8;
-	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 10000000);
+	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 5000000);
 
 	startTime = 0.0;
 	hitPoints = NULL;

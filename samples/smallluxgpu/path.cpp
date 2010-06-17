@@ -896,7 +896,7 @@ void PathDeviceRenderThread::RenderThreadImpl(PathDeviceRenderThread *renderThre
 //------------------------------------------------------------------------------
 
 PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm,
-		vector<IntersectionDevice *> intersectionDev,
+		vector<IntersectionDevice *> intersectionDev, const bool onlySpecular,
 		const Properties &cfg) : RenderEngine(scn, flm) {
 	intersectionDevices = intersectionDev;
 
@@ -910,10 +910,7 @@ PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm,
 	else
 		lightStrategy = ALL_UNIFORM;
 	shadowRayCount = cfg.GetInt("path.shadowrays", 1);
-	if (cfg.GetInt("path.onlysamplespecular", 0) == 0)
-		onlySampleSpecular = false;
-	else
-		onlySampleSpecular = true;
+	onlySampleSpecular = onlySpecular;
 
 	// Russian Roulette parameters
 	int rrStrat = cfg.GetInt("path.russianroulette.strategy", 1);

@@ -27,7 +27,7 @@
 #include "luxrays/utils/film/film.h"
 
 enum RenderEngineType {
-	PATH, SPPM, OPENGL_WIREFRAME
+	PATH, SPPM, DIRECTLIGHT, OPENGL_WIREFRAME
 };
 
 class RenderEngine {
@@ -35,6 +35,7 @@ public:
 	RenderEngine(SLGScene *scn, Film *flm) {
 		scene = scn;
 		film = flm;
+		started = false;
 	};
 	virtual ~RenderEngine() { };
 

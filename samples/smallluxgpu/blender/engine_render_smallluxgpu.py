@@ -97,8 +97,8 @@ def slg_properties():
   EnumProperty(attr="slg_rendering_type", name="Rendering Type",
       description="Select the desired rendering type",
       items=(("0", "Path", "Path tracing"),
-             ("1", "Direct", "Direct lighting only"),
-             ("2", "SPPM", "Stochastic Progressive Photon Mapping")),
+             ("2", "Direct", "Direct lighting only"),
+             ("1", "SPPM", "Stochastic Progressive Photon Mapping")),
       default="0")
 
   EnumProperty(attr="slg_accelerator_type", name="Accelerator Type",
@@ -802,12 +802,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     fcfg.write('film.filter.type = {}\n'.format(scene.slg_film_filter_type))
     fcfg.write('film.tonemap.type = {}\n'.format(scene.slg_film_tonemap_type))
     fcfg.write('screen.refresh.interval = {}\n'.format(scene.slg_refreshrate))
-    if (scene.slg_rendering_type != '2'):
-      fcfg.write('renderengine.type = 0\n')
-      fcfg.write('path.onlysamplespecular = {}\n'.format(scene.slg_rendering_type))
-    else :
-      fcfg.write('renderengine.type = 1\n')
-      fcfg.write('sppm.stochastic.count = {}\n'.format(scene.slg_sppm_photon_per_pass))
+    fcfg.write('renderengine.type = {}\n'.format(scene.slg_rendering_type))
+    fcfg.write('sppm.stochastic.count = {}\n'.format(scene.slg_sppm_photon_per_pass))
     fcfg.write('path.maxdepth = {}\n'.format(scene.slg_tracedepth))
     fcfg.write('path.russianroulette.depth = {}\n'.format(scene.slg_rrdepth))
     if scene.slg_rrstrategy == "0":

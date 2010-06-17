@@ -85,16 +85,14 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "p", "save image.png (or to image.filename property value)");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "u", "toggle path/direct lighting rendering");
-	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "n, m", "dec./inc. the screen refresh");
-	PrintHelpString(320, fontOffset, "v, b", "dec./inc. the max. path depth");
-	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "x, c", "dec./inc. the field of view");
-	PrintHelpString(320, fontOffset, "i, o", "dec./inc. the shadow ray count");
-	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "y", "toggle camera motion blur");
 	PrintHelpString(320, fontOffset, "t", "toggle tonemapping");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "n, m", "dec./inc. the screen refresh");
+	PrintHelpString(320, fontOffset, "0", "direct lighting rendering");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "1", "path tracing rendering");
+	PrintHelpString(320, fontOffset, "2", "SPPM rendering");
 	fontOffset -= 15;
 
 	// Settings
@@ -126,30 +124,48 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 
-	// Path renering engine settings
-	if (config->GetRenderEngine()->GetEngineType() == PATH) {
-		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
+	// Renering engine settings
+	switch (config->GetRenderEngine()->GetEngineType()) {
+		case DIRECTLIGHT: {
+			PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
 
-		sprintf(buf, "[Path RE][Shadow rays %d][Mode %s][Max path depth %d][RR Depth %d]",
-				(pre->lightStrategy == ONE_UNIFORM) ? pre->shadowRayCount :
-					(pre->shadowRayCount * (int)config->scene->lights.size()),
-				pre->onlySampleSpecular ? "DIRECT" : "PATH",
-				pre->maxPathDepth,
-				pre->rrDepth);
-		PrintString(GLUT_BITMAP_8_BY_13, buf);
-		fontOffset -= 15;
-		glRasterPos2i(20, fontOffset);
-	} else if (config->GetRenderEngine()->GetEngineType() == SPPM) {
-		SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+			sprintf(buf, "[DirectLight RE][Shadow rays %d][Max path depth %d][RR Depth %d]",
+					(pre->lightStrategy == ONE_UNIFORM) ? pre->shadowRayCount :
+						(pre->shadowRayCount * (int)config->scene->lights.size()),
+					pre->maxPathDepth,
+					pre->rrDepth);
+			PrintString(GLUT_BITMAP_8_BY_13, buf);
+			fontOffset -= 15;
+			glRasterPos2i(20, fontOffset);
+			break;
+		}
+		case PATH: {
+			PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
 
-		sprintf(buf, "[SPPM RE][Stochastic count %.1fM][Eye depth %d][Photon depth %d]",
-				sre->GetStocasticInterval() / 1000000.f, sre->GetMaxEyePathDepth(),
-				sre->GetMaxPhotonPathDepth());
-		PrintString(GLUT_BITMAP_8_BY_13, buf);
-		fontOffset -= 15;
-		glRasterPos2i(20, fontOffset);
-	} else
-		assert (false);
+			sprintf(buf, "[Path RE][Shadow rays %d][Max path depth %d][RR Depth %d]",
+					(pre->lightStrategy == ONE_UNIFORM) ? pre->shadowRayCount :
+						(pre->shadowRayCount * (int)config->scene->lights.size()),
+					pre->maxPathDepth,
+					pre->rrDepth);
+			PrintString(GLUT_BITMAP_8_BY_13, buf);
+			fontOffset -= 15;
+			glRasterPos2i(20, fontOffset);
+			break;
+		}
+		case SPPM: {
+			SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+
+			sprintf(buf, "[SPPM RE][Stochastic count %.1fM][Eye depth %d][Photon depth %d]",
+					sre->GetStocasticInterval() / 1000000.f, sre->GetMaxEyePathDepth(),
+					sre->GetMaxPhotonPathDepth());
+			PrintString(GLUT_BITMAP_8_BY_13, buf);
+			fontOffset -= 15;
+			glRasterPos2i(20, fontOffset);
+			break;
+		}
+		default:
+			assert (false);
+	}
 
 	// Pixel Device
 	char buff[512];
@@ -341,12 +357,6 @@ void keyFunc(unsigned char key, int x, int y) {
 					config->scene->camera->fieldOfView + 5.f);
 			config->ReInit(false);
 			break;
-		case 'v':
-			config->SetMaxPathDepth(-1);
-			break;
-		case 'b':
-			config->SetMaxPathDepth(+1);
-			break;
 		case 'n':
 			if (config->screenRefreshInterval > 1000)
 				config->screenRefreshInterval = max(1000u, config->screenRefreshInterval - 1000);
@@ -359,19 +369,6 @@ void keyFunc(unsigned char key, int x, int y) {
 			else
 				config->screenRefreshInterval += 50;
 			break;
-		case 'i':
-			config->SetShadowRays(-1);
-			break;
-		case 'o':
-			config->SetShadowRays(+1);
-			break;
-		case 'u': {
-			if (config->GetRenderEngine()->GetEngineType() == PATH) {
-				PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
-				config->SetOnlySampleSpecular(!pre->onlySampleSpecular);
-			}
-			break;
-		}
 		case 'y':
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
 			break;
@@ -384,6 +381,15 @@ void keyFunc(unsigned char key, int x, int y) {
 				LinearToneMapParams params;
 				config->film->SetToneMapParams(params);
 			}
+			break;
+		case '0':
+			config->SetRenderingEngineType(DIRECTLIGHT);
+			break;
+		case '1':
+			config->SetRenderingEngineType(PATH);
+			break;
+		case '2':
+			config->SetRenderingEngineType(SPPM);
 			break;
 		default:
 			break;
@@ -489,18 +495,25 @@ void timerFunc(int value) {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		raysSec += intersectionDevices[i]->GetPerformance();
 
-	if (config->GetRenderEngine()->GetEngineType() == PATH) {
-		const double sampleSec = config->film->GetAvgSampleSec();
-		sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
-				pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-	} else if (config->GetRenderEngine()->GetEngineType() == SPPM) {
-		SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+	switch (config->GetRenderEngine()->GetEngineType()) {
+		case DIRECTLIGHT:
+		case PATH: {
+			const double sampleSec = config->film->GetAvgSampleSec();
+			sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			break;
+		}
+		case SPPM: {
+			SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
 
-		sprintf(config->captionBuffer, "[Pass %3d][Photon %.1fM][Avg. photon/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
-				pass, sre->GetTotalPhotonCount() / 1000000.0, int(sre->GetTotalPhotonSec() / 1000.0),
-				int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-	} else
-		assert (false);
+			sprintf(config->captionBuffer, "[Pass %3d][Photon %.1fM][Avg. photon/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, sre->GetTotalPhotonCount() / 1000000.0, int(sre->GetTotalPhotonSec() / 1000.0),
+					int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			break;
+		}
+		default:
+			assert (false);
+	}
 
 	glutPostRedisplay();
 
