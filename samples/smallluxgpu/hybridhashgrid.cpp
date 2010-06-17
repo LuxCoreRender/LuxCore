@@ -201,6 +201,7 @@ HybridHashGrid::HHGKdTree::HHGKdTree(std::list<HitPoint *> *hps, const unsigned 
 	//std::cerr << "kD-Tree search radius: " << sqrtf(maxDistSquared) << std::endl;
 
 	RecursiveBuild(0, 0, nNodes, buildNodes);
+	assert (nNodes == nextFreeNode);
 }
 
 HybridHashGrid::HHGKdTree::~HHGKdTree() {
@@ -238,7 +239,7 @@ void HybridHashGrid::HHGKdTree::RecursiveBuild(const unsigned int nodeNum, const
 	unsigned int splitPos = (start + end) / 2;
 
 	std::nth_element(&buildNodes[start], &buildNodes[splitPos],
-		&buildNodes[end - 1], CompareNode(splitAxis));
+		&buildNodes[end], CompareNode(splitAxis));
 
 	// Allocate kd-tree node and continue recursively
 	nodes[nodeNum].init(buildNodes[splitPos]->position[splitAxis], splitAxis);
@@ -246,13 +247,13 @@ void HybridHashGrid::HHGKdTree::RecursiveBuild(const unsigned int nodeNum, const
 
 	if (start < splitPos) {
 		nodes[nodeNum].hasLeftChild = 1;
-		unsigned int childNum = nextFreeNode++;
+		const unsigned int childNum = nextFreeNode++;
 		RecursiveBuild(childNum, start, splitPos, buildNodes);
 	}
 
 	if (splitPos + 1 < end) {
 		nodes[nodeNum].rightChild = nextFreeNode++;
-		RecursiveBuild(nodes[nodeNum].rightChild, splitPos+1, end, buildNodes);
+		RecursiveBuild(nodes[nodeNum].rightChild, splitPos + 1, end, buildNodes);
 	}
 }
 
@@ -262,20 +263,20 @@ void HybridHashGrid::HHGKdTree::AddFluxImpl(const unsigned int nodeNum,
 	KdNode *node = &nodes[nodeNum];
 
 	// Process kd-tree node's children
-	int axis = node->splitAxis;
+	const int axis = node->splitAxis;
 	if (axis != 3) {
-		float dist = p[axis] - node->splitPos;
-		float dist2 = dist * dist;
+		const float dist = p[axis] - node->splitPos;
+		const float dist2 = dist * dist;
 		if (p[axis] <= node->splitPos) {
 			if (node->hasLeftChild)
 				AddFluxImpl(nodeNum + 1, p, shadeN, wi, photonFlux);
-			if (dist2 < maxDistSquared && node->rightChild < nNodes)
+			if ((dist2 < maxDistSquared) && (node->rightChild < nNodes))
 				AddFluxImpl(node->rightChild, p, shadeN, wi, photonFlux);
 		} else {
+			if ((dist2 < maxDistSquared) && (node->hasLeftChild))
+				AddFluxImpl(nodeNum + 1, p, shadeN, wi, photonFlux);
 			if (node->rightChild < nNodes)
 				AddFluxImpl(node->rightChild, p, shadeN, wi, photonFlux);
-			if (dist2 < maxDistSquared && node->hasLeftChild)
-				AddFluxImpl(nodeNum + 1, p, shadeN, wi, photonFlux);
 		}
 	}
 
@@ -286,7 +287,7 @@ void HybridHashGrid::HHGKdTree::AddFluxImpl(const unsigned int nodeNum,
 		return;
 
 	const float dot = luxrays::Dot(hp->normal, wi);
-	if (dot <= luxrays::RAY_EPSILON)
+	if (dot <= 0.0001f)
 		return;
 
 	AtomicInc(&hp->accumPhotonCount);
