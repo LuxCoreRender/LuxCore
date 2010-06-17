@@ -320,7 +320,7 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm,
 		const Properties &cfg) : RenderEngine(scn, flm) {
 	intersectionDevices = intersectionDev;
 
-	accelType = HASH_GRID;
+	accelType = HYBRID_HASH_GRID;
 	seedBase = (unsigned long)(WallClockTime() / 1000.0);
 	photonAlpha = 0.7f;
 	maxEyePathDepth = 16;

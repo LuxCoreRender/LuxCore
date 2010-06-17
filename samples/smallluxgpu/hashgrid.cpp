@@ -24,15 +24,15 @@
 
 HashGrid::HashGrid(HitPoints *hps) {
 	hitPoints = hps;
-	hashGrid = NULL;
+	grid = NULL;
 
 	Refresh();
 }
 
 HashGrid::~HashGrid() {
-	for (unsigned int i = 0; i < hashGridSize; ++i)
-		delete hashGrid[i];
-	delete hashGrid;
+	for (unsigned int i = 0; i < gridSize; ++i)
+		delete grid[i];
+	delete[] grid;
 }
 
 void HashGrid::Refresh() {
@@ -53,16 +53,16 @@ void HashGrid::Refresh() {
 	invCellSize = 1.f / cellSize;
 
 	// TODO: add a tunable parameter for hashgrid size
-	hashGridSize = hitPointsCount;
-	if (!hashGrid) {
-		hashGrid = new std::list<HitPoint *>*[hashGridSize];
+	gridSize = hitPointsCount;
+	if (!grid) {
+		grid = new std::list<HitPoint *>*[gridSize];
 
-		for (unsigned int i = 0; i < hashGridSize; ++i)
-			hashGrid[i] = NULL;
+		for (unsigned int i = 0; i < gridSize; ++i)
+			grid[i] = NULL;
 	} else {
-		for (unsigned int i = 0; i < hashGridSize; ++i) {
-			delete hashGrid[i];
-			hashGrid[i] = NULL;
+		for (unsigned int i = 0; i < gridSize; ++i) {
+			delete grid[i];
+			grid[i] = NULL;
 		}
 	}
 
@@ -90,15 +90,15 @@ void HashGrid::Refresh() {
 					for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ix++) {
 						int hv = Hash(ix, iy, iz);
 
-						if (hashGrid[hv] == NULL)
-							hashGrid[hv] = new std::list<HitPoint *>();
+						if (grid[hv] == NULL)
+							grid[hv] = new std::list<HitPoint *>();
 
-						hashGrid[hv]->push_front(hp);
+						grid[hv]->push_front(hp);
 						++entryCount;
 
-						/*// hashGrid[hv]->size() is very slow to execute
-						if (hashGrid[hv]->size() > maxPathCount)
-							maxPathCount = hashGrid[hv]->size();*/
+						/*// grid[hv]->size() is very slow to execute
+						if (grid[hv]->size() > maxPathCount)
+							maxPathCount = grid[hv]->size();*/
 					}
 				}
 			}
@@ -106,13 +106,13 @@ void HashGrid::Refresh() {
 	}
 	//std::cerr << "Max. hit points in a single hash grid entry: " << maxPathCount << std::endl;
 	std::cerr << "Total hash grid entry: " << entryCount << std::endl;
-	std::cerr << "Avg. hit points in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
+	std::cerr << "Avg. hit points in a single hash grid entry: " << entryCount / gridSize << std::endl;
 
 	// HashGrid debug code
 	/*for (unsigned int i = 0; i < hashGridSize; ++i) {
-		if (hashGrid[i]) {
-			if (hashGrid[i]->size() > 10) {
-				std::cerr << "HashGrid[" << i << "].size() = " <<hashGrid[i]->size() << std::endl;
+		if (grid[i]) {
+			if (grid[i]->size() > 10) {
+				std::cerr << "HashGrid[" << i << "].size() = " <<grid[i]->size() << std::endl;
 			}
 		}
 	}*/
@@ -126,7 +126,7 @@ void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &sh
 	const int iy = abs(int(hh.y));
 	const int iz = abs(int(hh.z));
 
-	std::list<HitPoint *> *hps = hashGrid[Hash(ix, iy, iz)];
+	std::list<HitPoint *> *hps = grid[Hash(ix, iy, iz)];
 	if (hps) {
 		std::list<HitPoint *>::iterator iter = hps->begin();
 		while (iter != hps->end()) {
