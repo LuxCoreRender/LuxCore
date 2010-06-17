@@ -25,7 +25,7 @@
 HybridHashGrid::HybridHashGrid(HitPoints *hps) {
 	hitPoints = hps;
 	grid = NULL;
-	kdtreeTreshold = 10;
+	kdtreeThreshold = 10;
 
 	Refresh();
 }
@@ -114,7 +114,7 @@ void HybridHashGrid::Refresh() {
 	for (unsigned int i = 0; i < gridSize; ++i) {
 		HashCell *hc = grid[i];
 
-		if (hc && hc->GetSize() > kdtreeTreshold) {
+		if (hc && hc->GetSize() > kdtreeThreshold) {
 			hc->TransformToKdTree();
 			++HHGKdTreeEntries;
 		} else

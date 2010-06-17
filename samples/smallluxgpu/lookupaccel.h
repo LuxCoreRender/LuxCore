@@ -271,7 +271,7 @@ private:
 		};
 	};
 
-	unsigned int kdtreeTreshold;
+	unsigned int kdtreeThreshold;
 	HitPoints *hitPoints;
 	unsigned int gridSize;
 	float invCellSize;
