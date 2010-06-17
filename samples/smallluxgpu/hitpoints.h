@@ -57,10 +57,6 @@ enum HitPointType {
 	SURFACE, CONSTANT_COLOR
 };
 
-enum LookUpAccelType {
-	HASH_GRID, KD_TREE
-};
-
 class HitPoint {
 public:
 	HitPointType type;

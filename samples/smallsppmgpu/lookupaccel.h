@@ -55,11 +55,11 @@ public:
 
 private:
 	unsigned int Hash(const int ix, const int iy, const int iz) {
-		return (unsigned int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % hashGridSize;
+		return (unsigned int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % gridSize;
 	}
 
 	HitPoints *hitPoints;
-	unsigned int hashGridSize;
+	unsigned int gridSize;
 	float invCellSize;
 	std::list<HitPoint *> **hashGrid;
 };

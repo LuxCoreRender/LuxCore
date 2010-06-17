@@ -29,7 +29,7 @@ HashGrid::HashGrid(HitPoints *hps) {
 }
 
 HashGrid::~HashGrid() {
-	for (unsigned int i = 0; i < hashGridSize; ++i)
+	for (unsigned int i = 0; i < gridSize; ++i)
 		delete hashGrid[i];
 	delete hashGrid;
 }
@@ -52,14 +52,14 @@ void HashGrid::Refresh() {
 	invCellSize = 1.f / cellSize;
 
 	// TODO: add a tunable parameter for hashgrid size
-	hashGridSize = hitPointsCount;
+	gridSize = hitPointsCount;
 	if (!hashGrid) {
-		hashGrid = new std::list<HitPoint *>*[hashGridSize];
+		hashGrid = new std::list<HitPoint *>*[gridSize];
 
-		for (unsigned int i = 0; i < hashGridSize; ++i)
+		for (unsigned int i = 0; i < gridSize; ++i)
 			hashGrid[i] = NULL;
 	} else {
-		for (unsigned int i = 0; i < hashGridSize; ++i) {
+		for (unsigned int i = 0; i < gridSize; ++i) {
 			delete hashGrid[i];
 			hashGrid[i] = NULL;
 		}
@@ -105,7 +105,7 @@ void HashGrid::Refresh() {
 	}
 	//std::cerr << "Max. hit points in a single hash grid entry: " << maxPathCount << std::endl;
 	std::cerr << "Total hash grid entry: " << entryCount << std::endl;
-	std::cerr << "Avg. hit points in a single hash grid entry: " << entryCount / hashGridSize << std::endl;
+	std::cerr << "Avg. hit points in a single hash grid entry: " << entryCount / gridSize << std::endl;
 
 	// HashGrid debug code
 	/*for (unsigned int i = 0; i < hashGridSize; ++i) {

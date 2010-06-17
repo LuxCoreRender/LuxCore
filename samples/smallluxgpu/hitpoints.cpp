@@ -164,10 +164,19 @@ HitPoints::HitPoints(luxrays::sdl::Scene *scn, luxrays::RandomGenerator *rndGen,
 	}
 
 	// Allocate hit points lookup accelerator
-	if (lookUpAccelType == HASH_GRID)
-		lookUpAccel = new HashGrid(this);
-	else
-		lookUpAccel = new KdTree(this);
+	switch (lookUpAccelType) {
+		case HASH_GRID:
+			lookUpAccel = new HashGrid(this);
+			break;
+		case KD_TREE:
+			lookUpAccel = new KdTree(this);
+			break;
+		case HYBRID_HASH_GRID:
+			lookUpAccel = new HybridHashGrid(this);
+			break;
+		default:
+			assert (false);
+	}
 }
 
 HitPoints::~HitPoints() {
