@@ -105,8 +105,15 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
+	int renderingTime = 0;
+	if (config->GetRenderEngine()->GetEngineType() == SPPM) {
+		SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+
+		renderingTime = int(sre->GetRenderingTime());
+	} else
+		renderingTime = int(config->film->GetTotalTime());
 	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Screen refresh %dms][Render threads %d]",
-			int(config->film->GetTotalTime()),
+			renderingTime,
 			config->scene->camera->fieldOfView,
 			config->screenRefreshInterval, int(config->GetRenderEngine()->GetThreadCount()));
 	PrintString(GLUT_BITMAP_8_BY_13, buf);

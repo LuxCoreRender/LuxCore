@@ -107,6 +107,7 @@ public:
 	unsigned int GetMaxPhotonPathDepth() const { return maxPhotonPathDepth; }
 	unsigned int GetStocasticInterval() const { return stochasticInterval; }
 	unsigned long long GetTotalPhotonCount() const { return photonTracedTotal + photonTracedPass; }
+	double GetRenderingTime() const { return (startTime == 0.0) ? 0.0 : (WallClockTime() - startTime); }
 	double GetTotalPhotonSec() const {
 		return (startTime == 0.0) ? 0.0 :
 			(photonTracedTotal + photonTracedPass) / (WallClockTime() - startTime);
