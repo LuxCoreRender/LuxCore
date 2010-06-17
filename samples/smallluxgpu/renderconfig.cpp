@@ -44,9 +44,9 @@ RenderingConfig::~RenderingConfig() {
 	StopAllRenderThreadsLockless();
 
 	delete renderEngine;
-	delete ctx;
 	delete scene;
 	delete film;
+	delete ctx;
 }
 
 void RenderingConfig::Init() {
@@ -153,10 +153,19 @@ void RenderingConfig::Init() {
 	// Check the kind of render engine to start
 	const int renderEngineType = cfg.GetInt("renderengine.type", 0);
 	// Create and start the render engine
-	if (renderEngineType == 0)
-		renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, cfg);
-	else
-		renderEngine = new SPPMRenderEngine(scene, film, intersectionAllDevices, cfg);
+	switch (renderEngineType) {
+		case 0:
+			renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, false, cfg);
+			break;
+		case 1:
+			renderEngine = new SPPMRenderEngine(scene, film, intersectionAllDevices, cfg);
+			break;
+		case 2:
+			renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, true, cfg);
+			break;
+		default:
+			assert (false);
+	}
 
 	film->StartSampleTime();
 	StartAllRenderThreadsLockless();
@@ -182,63 +191,31 @@ void RenderingConfig::ReInit(const bool reallocBuffers, const unsigned int w, un
 		StartAllRenderThreadsLockless();
 }
 
-void RenderingConfig::SetMaxPathDepth(const int delta) {
+void RenderingConfig::SetRenderingEngineType(const RenderEngineType type) {
 	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
-	// Check if we are using the Path tracing rendering engine
-	if (renderEngine->GetEngineType() == PATH) {
-		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
-
+	// Check the current rendering engine type is different
+	if (renderEngine->GetEngineType() != type) {
 		bool wasRunning = renderThreadsStarted;
 		// First stop all devices
 		if (wasRunning)
 			StopAllRenderThreadsLockless();
 
+		delete renderEngine;
+		switch (type) {
+			case PATH:
+				renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, false, cfg);
+				break;
+			case SPPM:
+				renderEngine = new SPPMRenderEngine(scene, film, intersectionAllDevices, cfg);
+				break;
+			case DIRECTLIGHT:
+				renderEngine = new PathRenderEngine(scene, film, intersectionAllDevices, true, cfg);
+				break;
+			default:
+				assert (false);
+		}
 		film->Reset();
-		pre->maxPathDepth = max<unsigned int>(2, pre->maxPathDepth + delta);
-
-		// Restart all devices
-		if (wasRunning)
-			StartAllRenderThreadsLockless();
-	}
-}
-
-void RenderingConfig::SetShadowRays(const int delta) {
-	boost::unique_lock<boost::mutex> lock(cfgMutex);
-
-	// Check if we are using the Path tracing rendering engine
-	if (renderEngine->GetEngineType() == PATH) {
-		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
-
-		bool wasRunning = renderThreadsStarted;
-		// First stop all devices
-		if (wasRunning)
-			StopAllRenderThreadsLockless();
-
-		film->Reset();
-		pre->shadowRayCount = max<unsigned int>(1, pre->shadowRayCount + delta);
-		renderEngine->Reset();
-
-		// Restart all devices
-		if (wasRunning)
-			StartAllRenderThreadsLockless();
-	}
-}
-
-void RenderingConfig::SetOnlySampleSpecular(const bool v) {
-	boost::unique_lock<boost::mutex> lock(cfgMutex);
-
-	// Check if we are using the Path tracing rendering engine
-	if (renderEngine->GetEngineType() == PATH) {
-		PathRenderEngine *pre = (PathRenderEngine *)config->GetRenderEngine();
-
-		bool wasRunning = renderThreadsStarted;
-		// First stop all devices
-		if (wasRunning)
-			StopAllRenderThreadsLockless();
-
-		film->Reset();
-		pre->onlySampleSpecular = v;
 
 		// Restart all devices
 		if (wasRunning)

@@ -66,7 +66,7 @@ public:
 	void Stop();
 
 private:
-	static void UpdateFilm(Film *film, HitPoints *hitPoints, SampleBuffer *sampleBuffer);
+	static void UpdateFilm(Film *film, HitPoints *hitPoints, SampleBuffer *&sampleBuffer);
 	static void InitPhotonPath(luxrays::sdl::Scene *scene,
 			luxrays::RandomGenerator *rndGen,
 			PhotonPath *photonPath, luxrays::Ray *ray,

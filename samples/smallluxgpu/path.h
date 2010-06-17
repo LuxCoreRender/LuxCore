@@ -198,7 +198,7 @@ private:
 class PathRenderEngine : public RenderEngine {
 public:
 	PathRenderEngine(SLGScene *scn, Film *flm, vector<IntersectionDevice *> intersectionDev,
-		const Properties &cfg);
+		const bool onlySpecular, const Properties &cfg);
 	virtual ~PathRenderEngine();
 
 	void Start();
@@ -209,7 +209,7 @@ public:
 
 	unsigned int GetPass() const;
 	unsigned int GetThreadCount() const;
-	RenderEngineType GetEngineType() const { return PATH; }
+	RenderEngineType GetEngineType() const { return (onlySampleSpecular) ? DIRECTLIGHT : PATH; }
 
 	friend class Path;
 	friend class PathIntegrator;
