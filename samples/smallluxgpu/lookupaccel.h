@@ -42,6 +42,10 @@ public:
 		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) = 0;
 };
 
+//------------------------------------------------------------------------------
+// HashGrid accelerator
+//------------------------------------------------------------------------------
+
 class HashGrid : public HitPointsLookUpAccel {
 public:
 	HashGrid(HitPoints *hps);
@@ -63,6 +67,10 @@ private:
 	float invCellSize;
 	std::list<HitPoint *> **hashGrid;
 };
+
+//------------------------------------------------------------------------------
+// KdTree accelerator
+//------------------------------------------------------------------------------
 
 class KdTree : public HitPointsLookUpAccel {
 public:
