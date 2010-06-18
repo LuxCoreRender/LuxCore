@@ -25,7 +25,7 @@
 HybridHashGrid::HybridHashGrid(HitPoints *hps) {
 	hitPoints = hps;
 	grid = NULL;
-	kdtreeThreshold = 10;
+	kdtreeThreshold = 8;
 
 	Refresh();
 }
@@ -108,6 +108,26 @@ void HybridHashGrid::Refresh() {
 	std::cerr << "Max. hit points in a single hybrid hash grid entry: " << maxPathCount << std::endl;
 	std::cerr << "Total hash grid entry: " << entryCount << std::endl;
 	std::cerr << "Avg. hit points in a single hybrid hash grid entry: " << entryCount / gridSize << std::endl;
+
+	// DEBUG code
+	/*unsigned int nullCount = 0;
+	for (unsigned int i = 0; i < gridSize; ++i) {
+		HashCell *hc = grid[i];
+
+		if (!hc)
+			++nullCount;
+	}
+	std::cerr << "NULL count: " << nullCount << "/" << gridSize << "(" << 100.0 * nullCount / gridSize << "%)" << std::endl;
+	for (unsigned int j = 1; j <= maxPathCount; ++j) {
+		unsigned int count = 0;
+		for (unsigned int i = 0; i < gridSize; ++i) {
+			HashCell *hc = grid[i];
+
+			if (hc && hc->GetSize() == j)
+				++count;
+		}
+		std::cerr << j << " count: " << count << "/" << gridSize << "(" << 100.0 * count / gridSize << "%)" << std::endl;
+	}*/
 
 	unsigned int HHGKdTreeEntries = 0;
 	unsigned int HHGlistEntries = 0;
@@ -256,6 +276,56 @@ void HybridHashGrid::HHGKdTree::RecursiveBuild(const unsigned int nodeNum, const
 		RecursiveBuild(nodes[nodeNum].rightChild, splitPos + 1, end, buildNodes);
 	}
 }
+
+/*void HybridHashGrid::HHGKdTree::AddFlux(
+	const luxrays::Point &p, const luxrays::Normal &shadeN,
+	const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+	unsigned int nodeNumStack[64];
+	// Start from the first node
+	nodeNumStack[0] = 0;
+	int stackIndex = 0;
+
+	while (stackIndex >= 0) {
+		const unsigned int nodeNum = nodeNumStack[stackIndex--];
+		KdNode *node = &nodes[nodeNum];
+
+		const int axis = node->splitAxis;
+		if (axis != 3) {
+			const float dist = p[axis] - node->splitPos;
+			const float dist2 = dist * dist;
+			if (p[axis] <= node->splitPos) {
+				if ((dist2 < maxDistSquared) && (node->rightChild < nNodes))
+					nodeNumStack[++stackIndex] = node->rightChild;
+				if (node->hasLeftChild)
+					nodeNumStack[++stackIndex] = nodeNum + 1;
+			} else {
+				if (node->rightChild < nNodes)
+					nodeNumStack[++stackIndex] = node->rightChild;
+				if ((dist2 < maxDistSquared) && (node->hasLeftChild))
+					nodeNumStack[++stackIndex] = nodeNum + 1;
+			}
+
+			continue;
+		}
+
+		// Process the leaf
+		HitPoint *hp = nodeData[nodeNum];
+		const float dist2 = luxrays::DistanceSquared(hp->position, p);
+		if (dist2 > hp->accumPhotonRadius2)
+			continue;
+
+		const float dot = luxrays::Dot(hp->normal, wi);
+		if (dot <= 0.0001f)
+			continue;
+
+		AtomicInc(&hp->accumPhotonCount);
+		luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
+				dot * hp->throughput;
+		AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
+		AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
+		AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
+	}
+}*/
 
 void HybridHashGrid::HHGKdTree::AddFluxImpl(const unsigned int nodeNum,
 		const luxrays::Point &p, const luxrays::Normal &shadeN,
