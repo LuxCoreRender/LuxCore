@@ -132,7 +132,7 @@ void KdTree::AddFluxImpl(const unsigned int nodeNum,
 		}
 	}
 
-	// Hand kd-tree node to processing function
+	// Process the leaf
 	HitPoint *hp = nodeData[nodeNum];
 	const float dist2 = luxrays::DistanceSquared(hp->position, p);
 	if (dist2 > hp->accumPhotonRadius2)
