@@ -114,11 +114,14 @@ public:
 	}
 
 	friend class SPPMDeviceRenderThread;
+	friend class HitPoints;
 
 private:
 	unsigned long seedBase;
-	LookUpAccelType accelType;
-	float photonAlpha;
+	LookUpAccelType lookupAccelType;
+	// double instead of float because photon counters declared as int 64bit
+	double photonAlpha;
+	float photonStartRadiusScale;
 	unsigned int maxEyePathDepth;
 	unsigned int maxPhotonPathDepth;
 	unsigned int stochasticInterval;
@@ -137,4 +140,4 @@ private:
 	SampleBuffer *sampleBuffer;
 };
 
-#endif	/* _PATH_H */
+#endif	/* _SPPM_H */
