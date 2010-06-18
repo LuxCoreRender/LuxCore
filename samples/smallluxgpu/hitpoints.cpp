@@ -21,6 +21,7 @@
 
 #include "smalllux.h"
 #include "hitpoints.h"
+#include "sppm.h"
 
 bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 		Ray *ray, const RayHit *rayHit, Point &hitPoint,
@@ -122,26 +123,20 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 
 //------------------------------------------------------------------------------
 
-HitPoints::HitPoints(Scene *scn, RandomGenerator *rndGen,
-		IntersectionDevice *dev, RayBuffer *rayBuffer,
-		const float a, const unsigned int maxEyeDepth,
-		const unsigned int w, const unsigned int h,
-		const LookUpAccelType accelType) {
-	scene = scn;
+HitPoints::HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
+			IntersectionDevice *dev, RayBuffer *rayBuffer) {
+	renderEngine = engine;
 	device = dev;
-	alpha = a;
-	maxEyePathDepth = maxEyeDepth;
-	width = w;
-	height = h;
 	pass = 0;
-	lookUpAccelType = accelType;
 
+	const unsigned int width = renderEngine->film->GetWidth();
+	const unsigned int height = renderEngine->film->GetHeight();
 	hitPoints = new std::vector<HitPoint>(width * height);
 	SetHitPoints(rndGen, rayBuffer);
 
 	// Calculate initial radius
 	Vector ssize = bbox.pMax - bbox.pMin;
-	const float photonRadius = ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
+	const float photonRadius = renderEngine->photonStartRadiusScale * ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
 
 	// Expand the bounding box by used radius
 	bbox.Expand(photonRadius);
@@ -165,7 +160,7 @@ HitPoints::HitPoints(Scene *scn, RandomGenerator *rndGen,
 	}
 
 	// Allocate hit points lookup accelerator
-	switch (lookUpAccelType) {
+	switch (renderEngine->lookupAccelType) {
 		case HASH_GRID:
 			lookUpAccel = new HashGrid(this);
 			break;
@@ -199,6 +194,7 @@ void HitPoints::AccumulateFlux(const unsigned long long photonTraced) {
 			case SURFACE:
 				if ((hp->accumPhotonCount > 0)) {
 					const unsigned long long pcount = hp->photonCount + hp->accumPhotonCount;
+					const double alpha = renderEngine->photonAlpha;
 					const float g = alpha * pcount / (hp->photonCount * alpha + hp->accumPhotonCount);
 					hp->photonCount = pcount;
 					hp->reflectedFlux = (hp->reflectedFlux + hp->accumReflectedFlux) * g;
@@ -224,6 +220,9 @@ void HitPoints::AccumulateFlux(const unsigned long long photonTraced) {
 
 void HitPoints::SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer) {
 	std::list<EyePath *> todoEyePaths;
+	SLGScene *scene = renderEngine->scene;
+	const unsigned int width = renderEngine->film->GetWidth();
+	const unsigned int height = renderEngine->film->GetHeight();
 
 	// Generate eye rays
 	std::cerr << "Building eye paths rays:" << std::endl;
@@ -269,7 +268,7 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer) {
 			EyePath *eyePath = *todoEyePathsIterator;
 
 			// Check if we reached the max path depth
-			if (eyePath->depth > maxEyePathDepth) {
+			if (eyePath->depth > renderEngine->maxEyePathDepth) {
 				// Add an hit point
 				HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 				hp.type = CONSTANT_COLOR;

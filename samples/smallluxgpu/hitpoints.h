@@ -72,7 +72,7 @@ public:
 	Point position;
 	Vector wo;
 	Normal normal;
-	const sdl::SurfaceMaterial *material;
+	const SurfaceMaterial *material;
 
 	unsigned long long photonCount;
 	Spectrum reflectedFlux;
@@ -88,17 +88,16 @@ public:
 	Spectrum radiance;
 };
 
-extern bool GetHitPointInformation(const sdl::Scene *scene, RandomGenerator *rndGen,
+extern bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 		Ray *ray, const RayHit *rayHit, Point &hitPoint,
 		Spectrum &surfaceColor, Normal &N, Normal &shadeN);
 
+class SPPMRenderEngine;
+
 class HitPoints {
 public:
-	HitPoints(sdl::Scene *scn, RandomGenerator *rndGen,
-			IntersectionDevice *dev, RayBuffer *rayBuffer,
-			const float a, const unsigned int maxEyeDepth,
-			const unsigned int w, const unsigned int h,
-			const LookUpAccelType accelType);
+	HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
+			IntersectionDevice *dev, RayBuffer *rayBuffer);
 	~HitPoints();
 
 	HitPoint *GetHitPoint(const unsigned int index) {
@@ -133,17 +132,11 @@ public:
 private:
 	void SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer);
 
-	sdl::Scene *scene;
+	SPPMRenderEngine *renderEngine;
 	IntersectionDevice *device;
-	// double instead of float because photon counters declared as int 64bit
-	double alpha;
-	unsigned int maxEyePathDepth;
-	unsigned int width;
-	unsigned int height;
 
 	BBox bbox;
 	std::vector<HitPoint> *hitPoints;
-	LookUpAccelType lookUpAccelType;
 	HitPointsLookUpAccel *lookUpAccel;
 	unsigned int pass;
 };

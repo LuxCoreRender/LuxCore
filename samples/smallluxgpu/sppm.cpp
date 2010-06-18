@@ -164,12 +164,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 
 	if (renderThread->threadIndex == 0) {
 		// Build the EyePaths list
-		renderEngine->hitPoints = new HitPoints(
-				scene, rndGen, device,
-				rayBufferHitPoints, renderEngine->photonAlpha,
-				renderEngine->maxEyePathDepth,
-				renderEngine->film->GetWidth(), renderEngine->film->GetHeight(),
-				renderEngine->accelType);
+		renderEngine->hitPoints = new HitPoints(renderEngine, rndGen, device, rayBufferHitPoints);
 	}
 
 	HitPoints *hitPoints = NULL;
@@ -323,22 +318,25 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm,
 	const int atype = cfg.GetInt("sppm.lookup.type", 2);
 	switch (atype) {
 		case 0:
-			accelType = HASH_GRID;
+			lookupAccelType = HASH_GRID;
 			break;
 		case 1:
-			accelType = KD_TREE;
+			lookupAccelType = KD_TREE;
 			break;
 		case 2:
-			accelType = HYBRID_HASH_GRID;
+			lookupAccelType = HYBRID_HASH_GRID;
 			break;
 		default:
 			throw runtime_error("Unknown value for SPPMRenderEngine property sppm.lookup.type");
 	}
 
 	seedBase = (unsigned long)(WallClockTime() / 1000.0);
-	photonAlpha = 0.7f;
-	maxEyePathDepth = 16;
-	maxPhotonPathDepth = 8;
+	maxEyePathDepth = Max(2, cfg.GetInt("sppm.eyepath.maxdepth", 16));
+
+	photonAlpha = Clamp(cfg.GetFloat("sppm.photon.alpha", 0.7f), 0.f, 1.f);
+	photonStartRadiusScale = Max(0.f, cfg.GetFloat("sppm.photon.startradiusscale", 1.f));
+	maxPhotonPathDepth = Max(2, cfg.GetInt("sppm.photon.maxdepth", 8));
+
 	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 5000000);
 
 	startTime = 0.0;
