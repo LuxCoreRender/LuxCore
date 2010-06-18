@@ -186,6 +186,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 					&renderEngine->photonTracedPass);
 		}
 
+		double passStartTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
 			// Trace the rays
 			device->PushRayBuffer(rayBuffer);
@@ -264,13 +265,14 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 			}
 
 			// Check if it is time to do an eye pass
-			// TODO: add a parameter to tune rehashing intervals
 			if (renderEngine->photonTracedPass > renderEngine->stochasticInterval) {
 				// Wait for other threads
 				renderEngine->barrierStop->wait();
 
 				// The first thread does the eye pass
 				if (renderThread->threadIndex == 0) {
+					const double t1 = WallClockTime();
+
 					const long long count = renderEngine->photonTracedTotal + renderEngine->photonTracedPass;
 					hitPoints->Recast(rndGen, rayBufferHitPoints, count);
 
@@ -279,6 +281,13 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 
 					renderEngine->photonTracedTotal = count;
 					renderEngine->photonTracedPass = 0;
+
+					const double photonPassTime = t1 - passStartTime;
+					std::cerr << "Photon pass time: " << photonPassTime << "secs" << std::endl;
+					const double eyePassTime = WallClockTime() - t1;
+					std::cerr << "Eye pass time: " << eyePassTime << "secs (" << 100.0 * eyePassTime / (eyePassTime + photonPassTime) << "%)" << std::endl;
+
+					passStartTime = WallClockTime();
 				}
 
 				// Wait for other threads
