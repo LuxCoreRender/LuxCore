@@ -242,6 +242,7 @@ void HybridHashGrid::HHGKdTree::RecursiveBuild(const unsigned int nodeNum, const
 	assert (nodeNum < nNodes);
 	assert (start < nNodes);
 	assert (end <= nNodes);
+	assert (start < end);
 
 	// Create leaf node of kd-tree if we've reached the bottom
 	if (start + 1 == end) {
@@ -258,8 +259,8 @@ void HybridHashGrid::HHGKdTree::RecursiveBuild(const unsigned int nodeNum, const
 	unsigned int splitAxis = bound.MaximumExtent();
 	unsigned int splitPos = (start + end) / 2;
 
-	std::nth_element(&buildNodes[start], &buildNodes[splitPos],
-		&buildNodes[end], CompareNode(splitAxis));
+	std::nth_element(buildNodes.begin() + start, buildNodes.begin() + splitPos,
+		buildNodes.begin() + end, CompareNode(splitAxis));
 
 	// Allocate kd-tree node and continue recursively
 	nodes[nodeNum].init(buildNodes[splitPos]->position[splitAxis], splitAxis);

@@ -66,8 +66,8 @@ void KdTree::RecursiveBuild(const unsigned int nodeNum, const unsigned int start
 	unsigned int splitAxis = bound.MaximumExtent();
 	unsigned int splitPos = (start + end) / 2;
 
-	std::nth_element(&buildNodes[start], &buildNodes[splitPos],
-		&buildNodes[end], CompareNode(splitAxis));
+	std::nth_element(buildNodes.begin() + start, buildNodes.begin() + splitPos,
+		buildNodes.begin() + end, CompareNode(splitAxis));
 
 	// Allocate kd-tree node and continue recursively
 	nodes[nodeNum].init(buildNodes[splitPos]->position[splitAxis], splitAxis);
