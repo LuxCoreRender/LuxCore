@@ -154,6 +154,20 @@ void Properties::SetString(const std::string &propName, const std::string &value
 	props[propName] = value;
 }
 
+std::string Properties::SetString(const std::string &property) {
+	std::vector<std::string> strs;
+	boost::split(strs, property, boost::is_any_of("="));
+
+	if (strs.size() != 2)
+		throw std::runtime_error("Syntax error in property definition");
+
+	StringTrim(strs[0]);
+	StringTrim(strs[1]);
+	SetString(strs[0], strs[1]);
+
+	return strs[0];
+}
+
 std::string Properties::ExtractField(const std::string &value, const size_t index) {
 	char buf[512];
 	memcpy(buf, value.c_str(), value.length() + 1);

@@ -70,6 +70,8 @@ public:
 		}
 	}
 
+	static Material *CreateMaterial(const std::string &propName, const Properties &prop);
+
 	PerspectiveCamera *camera;
 
 	std::vector<Material *> materials; // All materials
@@ -89,8 +91,9 @@ public:
 	DataSet *dataSet;
 
 protected:
-	std::vector<float> GetParameters(const std::string &paramName,
-			const unsigned int paramCount, const std::string &defaultValue) const;
+	static std::vector<float> GetParameters(const Properties &prop,
+		const std::string &paramName, const unsigned int paramCount,
+		const std::string &defaultValue);
 
 	Properties *scnProp;
 };

@@ -41,17 +41,17 @@ SLGScene::SLGScene(Context *ctx, const string &fileName, Film *film, const int a
 	//--------------------------------------------------------------------------
 
 	if (scnProp->GetInt("scene.partecipatingmedia.singlescatering.enable", 0)) {
-		vector<float> vf = GetParameters("scene.partecipatingmedia.singlescatering.bbox", 6, "-10.0 -10.0 -10.0 10.0 10.0 10.0");
+		vector<float> vf = GetParameters(*scnProp, "scene.partecipatingmedia.singlescatering.bbox", 6, "-10.0 -10.0 -10.0 10.0 10.0 10.0");
 		BBox region(Point(vf.at(0), vf.at(1), vf.at(2)), Point(vf.at(3), vf.at(4), vf.at(5)));
 
 		const float stepSize = scnProp->GetFloat("scene.partecipatingmedia.singlescatering.stepsize", 0.5);
 
-		vf = GetParameters("scene.partecipatingmedia.singlescatering.scattering", 3, "0.0 0.0 0.0");
+		vf = GetParameters(*scnProp, "scene.partecipatingmedia.singlescatering.scattering", 3, "0.0 0.0 0.0");
 		const Spectrum scattering(vf.at(0), vf.at(1), vf.at(2));
 		if ((scattering.Filter() > 0.f) && (useInfiniteLightBruteForce))
 			throw runtime_error("Partecipating media scattering is not supported with InfiniteLight brute force");
 
-		vf = GetParameters("scene.partecipatingmedia.singlescatering.emission", 3, "0.0 0.0 0.0");
+		vf = GetParameters(*scnProp, "scene.partecipatingmedia.singlescatering.emission", 3, "0.0 0.0 0.0");
 		const Spectrum emission(vf.at(0), vf.at(1), vf.at(2));
 
 		const float rrProb = scnProp->GetFloat("scene.partecipatingmedia.singlescatering.rrprob", 0.33f);
