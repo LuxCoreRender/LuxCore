@@ -49,6 +49,7 @@ public:
 	std::vector<float> GetFloatVector(const std::string propName, const std::string &defaultValue) const;
 
 	void SetString(const std::string &propName, const std::string &value);
+	std::string SetString(const std::string &property);
 
 	static std::string ExtractField(const std::string &value, const size_t index);
 	static std::vector<std::string> ConvertToStringVector(const std::string &values);
