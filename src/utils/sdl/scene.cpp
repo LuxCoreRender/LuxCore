@@ -86,7 +86,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 			throw std::runtime_error("Syntax error in " + key);
 		const std::string matName = Properties::ExtractField(key, 3);
 		if (matName == "")
-			throw std::runtime_error("Syntax error in " + key);\
+			throw std::runtime_error("Syntax error in " + key);
 		LR_LOG(ctx, "Material definition: " << matName << " [" << matType << "]");
 
 		Material *mat = CreateMaterial(key, *scnProp);

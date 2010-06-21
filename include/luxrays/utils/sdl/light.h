@@ -35,6 +35,8 @@ class LightSource {
 public:
 	virtual ~LightSource() { }
 
+	virtual bool IsAreaLight() const { return false; }
+
 	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
 
@@ -168,6 +170,9 @@ public:
 	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
 		const unsigned int triangleIndex, const std::vector<ExtTriangleMesh *> &objs);
 
+	bool IsAreaLight() const { return true; }
+
+	void SetMaterial(const AreaLightMaterial *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
 
 	Spectrum Le(const Scene *scene, const Vector &wo) const;

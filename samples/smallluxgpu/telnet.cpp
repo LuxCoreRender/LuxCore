@@ -200,7 +200,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "film.tonemap.type\n";
 						respStream << "image.filename\n";
 						respStream << "scene.camera.lookat (requires render.stop)\n";
-						//respStream << "scene.materials.*.* (requires render.stop)\n";
+						respStream << "scene.materials.*.* (requires render.stop)\n";
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
 					} else if (command == "image.reset") {
@@ -249,6 +249,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							getline(commandStream, property, '\n');
 							Properties prop;
 							const string propertyName = prop.SetString(property);
+							cerr << "[Telnet server] Set: " << property << endl;
 
 							// Check if is one of the supported properties
 							if (propertyName == "film.tonemap.linear.scale") {
@@ -335,6 +336,65 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								telnetServer->config->cfg.SetString("image.filename", fileName);
 								respStream << "OK\n";
 								boost::asio::write(socket, response);
+							} else if (propertyName.find("scene.materials.") == 0) {
+								if (state == STOP) {
+									Scene *scene = telnetServer->config->scene;
+
+									// Check if it is the name of a known material
+									const std::string matType = Properties::ExtractField(propertyName, 2);
+									if (matType == "")
+										throw std::runtime_error("Syntax error in " + propertyName);
+									const std::string matName = Properties::ExtractField(propertyName, 3);
+									if (matName == "")
+										throw std::runtime_error("Syntax error in " + propertyName);
+
+									// Look for old material
+									std::map<std::string, size_t>::const_iterator iter = scene->materialIndices.find(matName);
+									if (iter == scene->materialIndices.end())
+										throw std::runtime_error("Unknown material name: " + matName);
+
+									Material *oldMat = scene->materials[iter->second];
+
+									// Create new material
+									Material *newMat = Scene::CreateMaterial(propertyName, prop);
+
+									// Check if both are light sources
+									if (oldMat->IsLightSource()) {
+										if (!newMat->IsLightSource())
+											throw std::runtime_error("New material must be a light source too");
+
+										// Replace old light material with new one
+										scene->materials[iter->second] = newMat;
+										for (unsigned int i = 0; i < scene->triangleMaterials.size(); ++i) {
+											if (scene->triangleMaterials[i] == oldMat)
+												scene->triangleMaterials[i] = newMat;
+										}
+										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+											if (scene->lights[i]->IsAreaLight()) {
+												TriangleLight *tl = (TriangleLight *)scene->lights[i];
+												if (tl->GetMaterial() == (LightMaterial *)oldMat)
+													tl->SetMaterial((AreaLightMaterial *)newMat);
+											}
+										}
+									} else {
+										if (newMat->IsLightSource())
+											throw std::runtime_error("New material must not be a light source too");
+
+										// Replace old material with new one
+										scene->materials[iter->second] = newMat;
+										for (unsigned int i = 0; i < scene->triangleMaterials.size(); ++i) {
+											if (scene->triangleMaterials[i] == oldMat)
+												scene->triangleMaterials[i] = newMat;
+										}
+									}
+
+									delete oldMat;
+
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
 							} else if (propertyName == "scene.camera.lookat") {
 								// Check if we are in the right state
 								if (state == STOP) {
