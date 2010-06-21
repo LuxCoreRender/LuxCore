@@ -109,43 +109,49 @@ void KdTree::Refresh() {
 	assert (nNodes == nextFreeNode);
 }
 
-void KdTree::AddFluxImpl(const unsigned int nodeNum,
-		const luxrays::Point &p, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
-	KdNode *node = &nodes[nodeNum];
+void KdTree::AddFlux(const luxrays::Point &p,
+	const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+	unsigned int nodeNumStack[64];
+	// Start from the first node
+	nodeNumStack[0] = 0;
+	int stackIndex = 0;
 
-	// Process kd-tree node's children
-	const int axis = node->splitAxis;
-	if (axis != 3) {
-		const float dist = p[axis] - node->splitPos;
-		const float dist2 = dist * dist;
-		if (p[axis] <= node->splitPos) {
-			if (node->hasLeftChild)
-				AddFluxImpl(nodeNum + 1, p, shadeN, wi, photonFlux);
-			if ((dist2 < maxDistSquared) && (node->rightChild < nNodes))
-				AddFluxImpl(node->rightChild, p, shadeN, wi, photonFlux);
-		} else {
-			if ((dist2 < maxDistSquared) && (node->hasLeftChild))
-				AddFluxImpl(nodeNum + 1, p, shadeN, wi, photonFlux);
-			if (node->rightChild < nNodes)
-				AddFluxImpl(node->rightChild, p, shadeN, wi, photonFlux);
+	while (stackIndex >= 0) {
+		const unsigned int nodeNum = nodeNumStack[stackIndex--];
+		KdNode *node = &nodes[nodeNum];
+
+		const int axis = node->splitAxis;
+		if (axis != 3) {
+			const float dist = p[axis] - node->splitPos;
+			const float dist2 = dist * dist;
+			if (p[axis] <= node->splitPos) {
+				if ((dist2 < maxDistSquared) && (node->rightChild < nNodes))
+					nodeNumStack[++stackIndex] = node->rightChild;
+				if (node->hasLeftChild)
+					nodeNumStack[++stackIndex] = nodeNum + 1;
+			} else {
+				if (node->rightChild < nNodes)
+					nodeNumStack[++stackIndex] = node->rightChild;
+				if ((dist2 < maxDistSquared) && (node->hasLeftChild))
+					nodeNumStack[++stackIndex] = nodeNum + 1;
+			}
 		}
+
+		// Process the leaf
+		HitPoint *hp = nodeData[nodeNum];
+		const float dist2 = luxrays::DistanceSquared(hp->position, p);
+		if (dist2 > hp->accumPhotonRadius2)
+			continue;
+
+		const float dot = luxrays::Dot(hp->normal, wi);
+		if (dot <= 0.0001f)
+			continue;
+
+		AtomicInc(&hp->accumPhotonCount);
+		luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
+				dot * hp->throughput;
+		AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
+		AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
+		AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
 	}
-
-	// Process the leaf
-	HitPoint *hp = nodeData[nodeNum];
-	const float dist2 = luxrays::DistanceSquared(hp->position, p);
-	if (dist2 > hp->accumPhotonRadius2)
-		return;
-
-	const float dot = luxrays::Dot(hp->normal, wi);
-	if (dot <= 0.0001f)
-		return;
-
-	AtomicInc(&hp->accumPhotonCount);
-	luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
-			dot * hp->throughput;
-	AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
-	AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
-	AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
 }

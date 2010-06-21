@@ -229,7 +229,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 								false, &fPdf, specularBounce) * surfaceColor;
 
 						if (!specularBounce)
-							hitPoints->AddFlux(hitPoint, shadeN, -ray->d, photonPath->flux);
+							hitPoints->AddFlux(hitPoint, -ray->d, photonPath->flux);
 
 						// Check if we reached the max. depth
 						if (photonPath->depth < renderEngine->maxPhotonPathDepth) {

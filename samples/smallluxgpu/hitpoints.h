@@ -112,9 +112,8 @@ public:
 		return bbox;
 	}
 
-	void AddFlux(const Point &hitPoint, const Normal &shadeN,
-		const Vector &wi, const Spectrum &photonFlux) {
-		lookUpAccel->AddFlux(hitPoint, shadeN, wi, photonFlux);
+	void AddFlux(const Point &hitPoint, const Vector &wi, const Spectrum &photonFlux) {
+		lookUpAccel->AddFlux(hitPoint, wi, photonFlux);
 	}
 
 	void AccumulateFlux(const unsigned long long photonTraced);
