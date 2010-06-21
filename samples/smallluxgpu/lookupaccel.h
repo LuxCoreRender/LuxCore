@@ -42,8 +42,8 @@ public:
 
 	virtual void Refresh() = 0;
 
-	virtual void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) = 0;
+	virtual void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
+		const luxrays::Spectrum &photonFlux) = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -58,8 +58,8 @@ public:
 
 	void Refresh();
 
-	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
+	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
+		const luxrays::Spectrum &photonFlux);
 
 private:
 	unsigned int Hash(const int ix, const int iy, const int iz) {
@@ -84,10 +84,8 @@ public:
 
 	void Refresh();
 
-	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
-		AddFluxImpl(0, hitPoint, shadeN, wi, photonFlux);
-	}
+	void AddFlux(const luxrays::Point &hitPoint,  const luxrays::Vector &wi,
+		const luxrays::Spectrum &photonFlux);
 
 private:
 	struct KdNode {
@@ -126,10 +124,6 @@ private:
 	void RecursiveBuild(const unsigned int nodeNum, const unsigned int start,
 		const unsigned int end, std::vector<HitPoint *> &buildNodes);
 
-	void AddFluxImpl(const unsigned int nodeNum,
-		const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
-
 	HitPoints *hitPoints;
 
 	KdNode *nodes;
@@ -150,8 +144,8 @@ public:
 
 	void Refresh();
 
-	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-		const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
+	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
+		const luxrays::Spectrum &photonFlux);
 
 private:
 	unsigned int Hash(const int ix, const int iy, const int iz) {
@@ -163,10 +157,8 @@ private:
 		HHGKdTree(std::list<HitPoint *> *hps, const unsigned int count);
 		~HHGKdTree();
 
-		void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-				const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
-			AddFluxImpl(0, hitPoint, shadeN, wi, photonFlux);
-		}
+		void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
+			const luxrays::Spectrum &photonFlux);
 
 	private:
 		struct KdNode {
@@ -206,10 +198,6 @@ private:
 
 		void RecursiveBuild(const unsigned int nodeNum, const unsigned int start,
 				const unsigned int end, std::vector<HitPoint *> &buildNodes);
-
-		void AddFluxImpl(const unsigned int nodeNum,
-				const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-				const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
 
 		KdNode *nodes;
 		HitPoint **nodeData;
@@ -257,8 +245,8 @@ private:
 			type = KD_TREE;
 		}
 
-		void AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-				const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux);
+		void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
+			const luxrays::Spectrum &photonFlux);
 
 		unsigned int GetSize() const { return size; }
 

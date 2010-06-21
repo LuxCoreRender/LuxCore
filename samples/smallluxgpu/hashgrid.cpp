@@ -118,8 +118,8 @@ void HashGrid::Refresh() {
 	}*/
 }
 
-void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Normal &shadeN,
-	const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
+		const luxrays::Spectrum &photonFlux) {
 	// Look for eye path hit points near the current hit point
 	luxrays::Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
 	const int ix = abs(int(hh.x));
