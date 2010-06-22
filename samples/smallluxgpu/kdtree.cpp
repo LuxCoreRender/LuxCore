@@ -29,7 +29,7 @@ KdTree::KdTree(HitPoints *hps) {
 	nodes = NULL;
 	nodeData = NULL;
 
-	Refresh();
+	RefreshMutex();
 }
 
 KdTree::~KdTree() {
@@ -85,7 +85,7 @@ void KdTree::RecursiveBuild(const unsigned int nodeNum, const unsigned int start
 	}
 }
 
-void KdTree::Refresh() {
+void KdTree::RefreshMutex() {
 	delete[] nodes;
 	delete[] nodeData;
 

@@ -124,15 +124,15 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 //------------------------------------------------------------------------------
 
 HitPoints::HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
-			IntersectionDevice *dev, RayBuffer *rayBuffer) {
+			IntersectionDevice *device, RayBuffer *rayBuffer) {
 	renderEngine = engine;
-	device = dev;
 	pass = 0;
 
 	const unsigned int width = renderEngine->film->GetWidth();
 	const unsigned int height = renderEngine->film->GetHeight();
 	hitPoints = new std::vector<HitPoint>(width * height);
-	SetHitPoints(rndGen, rayBuffer);
+	SetHitPoints(rndGen, device, rayBuffer, 0, 1);
+	UpdateBBox();
 
 	// Calculate initial radius
 	Vector ssize = bbox.pMax - bbox.pMin;
@@ -180,10 +180,17 @@ HitPoints::~HitPoints() {
 	delete hitPoints;
 }
 
-void HitPoints::AccumulateFlux(const unsigned long long photonTraced) {
-	std::cerr << "Accumulate photons flux" << std::endl;
+void HitPoints::AccumulateFlux(const unsigned long long photonTraced,
+		const unsigned int index, const unsigned int count) {
+	// Calculate the index of work this thread has to do
+	const unsigned int workSize = hitPoints->size() / count;
+	const unsigned int first = workSize * index;
+	const unsigned int last = (index == count - 1) ? hitPoints->size() : (first + workSize);
+	assert (first >= 0);
+	assert (last <= hitPoints->size());
 
-	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
+	//std::cerr << "Accumulate photons flux" << std::endl;
+	for (unsigned int i = first; i < last; ++i) {
 		HitPoint *hp = &(*hitPoints)[i];
 
 		switch (hp->type) {
@@ -218,51 +225,47 @@ void HitPoints::AccumulateFlux(const unsigned long long photonTraced) {
 	}
 }
 
-void HitPoints::SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer) {
-	std::list<EyePath *> todoEyePaths;
-	SLGScene *scene = renderEngine->scene;
+void HitPoints::SetHitPoints(RandomGenerator *rndGen,
+		IntersectionDevice *device, RayBuffer *rayBuffer,
+		const unsigned int index, const unsigned int count) {
 	const unsigned int width = renderEngine->film->GetWidth();
 	const unsigned int height = renderEngine->film->GetHeight();
 
+	// Calculate the index of work this thread has to do
+	const unsigned int pixelCount = width * height;
+	const unsigned int workSize = pixelCount / count;
+	const unsigned int first = workSize * index;
+	const unsigned int last = (index == count - 1) ? pixelCount : (first + workSize);
+	assert (first >= 0);
+	assert (last <= pixelCount);
+
+	std::list<EyePath *> todoEyePaths;
+	SLGScene *scene = renderEngine->scene;
+
 	// Generate eye rays
-	std::cerr << "Building eye paths rays:" << std::endl;
-	std::cerr << "  0/" << height << std::endl;
-	double lastPrintTime = WallClockTime();
-	for (unsigned int y = 0; y < height; ++y) {
-		if (WallClockTime() - lastPrintTime > 2.0) {
-			std::cerr << "  " << y << "/" << height << std::endl;
-			lastPrintTime = WallClockTime();
-		}
+	//std::cerr << "Building eye paths rays" << std::endl;
+	for (unsigned int i = first; i < last; ++i) {
+		EyePath *eyePath = new EyePath();
 
-		for (unsigned int x = 0; x < width; ++x) {
-			EyePath *eyePath = new EyePath();
+		const unsigned int x = i % width;
+		const unsigned int y = i / width;
+		const float scrX = x + rndGen->floatValue() - 0.5f;
+		const float scrY = y + rndGen->floatValue() - 0.5f;
+		scene->camera->GenerateRay(scrX, scrY, width, height, &eyePath->ray,
+				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
-			const float scrX = x + rndGen->floatValue() - 0.5f;
-			const float scrY = y + rndGen->floatValue() - 0.5f;
-			scene->camera->GenerateRay(scrX, scrY, width, height, &eyePath->ray,
-					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
+		eyePath->pixelIndex = i;
+		eyePath->depth = 0;
+		eyePath->throughput = Spectrum(1.f, 1.f, 1.f);
 
-			eyePath->pixelIndex = x + y * width;
-			eyePath->depth = 0;
-			eyePath->throughput = Spectrum(1.f, 1.f, 1.f);
-
-			todoEyePaths.push_front(eyePath);
-		}
+		todoEyePaths.push_front(eyePath);
 	}
 
 	// Iterate through all eye paths
-	std::cerr << "Building eye paths hit points: " << std::endl;
-	bool done;
-	lastPrintTime = WallClockTime();
+	//std::cerr << "Building eye paths hit points" << std::endl;
 	// Note: (todoEyePaths.size() > 0) is extremly slow to execute
-	unsigned int todoEyePathCount = width * height;
-	std::cerr << "  " << todoEyePathCount / 1000 << "k eye paths left" << std::endl;
+	unsigned int todoEyePathCount = last - first;
 	while(todoEyePathCount > 0) {
-		if (WallClockTime() - lastPrintTime > 2.0) {
-			std::cerr << "  " << todoEyePathCount / 1000 << "k eye paths left" << std::endl;
-			lastPrintTime = WallClockTime();
-		}
-
 		std::list<EyePath *>::iterator todoEyePathsIterator = todoEyePaths.begin();
 		while (todoEyePathsIterator != todoEyePaths.end()) {
 			EyePath *eyePath = *todoEyePathsIterator;
@@ -280,7 +283,6 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer) {
 			} else {
 				eyePath->depth++;
 				rayBuffer->AddRay(eyePath->ray);
-				done = false;
 				if (rayBuffer->IsFull())
 					break;
 
@@ -386,7 +388,9 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer) {
 			rayBuffer->Reset();
 		}
 	}
+}
 
+void HitPoints::UpdateBBox() {
 	// Calculate hit points bounding box
 	std::cerr << "Building hit points bounding box: ";
 	bbox = BBox();

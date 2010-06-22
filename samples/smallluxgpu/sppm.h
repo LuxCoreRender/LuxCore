@@ -129,8 +129,7 @@ private:
 	vector<IntersectionDevice *> intersectionDevices;
 	vector<SPPMRenderThread *> renderThreads;
 
-	boost::barrier *barrierStop;
-	boost::barrier *barrierStart;
+	boost::barrier *barrier;
 	boost::barrier *barrierExit;
 
 	double startTime;

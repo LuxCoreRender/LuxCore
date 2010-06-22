@@ -27,7 +27,8 @@ HybridHashGrid::HybridHashGrid(HitPoints *hps) {
 	grid = NULL;
 	kdtreeThreshold = 8;
 
-	Refresh();
+	RefreshMutex();
+	RefreshParallel(0, 1);
 }
 
 HybridHashGrid::~HybridHashGrid() {
@@ -36,7 +37,7 @@ HybridHashGrid::~HybridHashGrid() {
 	delete[] grid;
 }
 
-void HybridHashGrid::Refresh() {
+void HybridHashGrid::RefreshMutex() {
 	const unsigned int hitPointsCount = hitPoints->GetSize();
 	const luxrays::BBox &hpBBox = hitPoints->GetBBox();
 
@@ -109,7 +110,7 @@ void HybridHashGrid::Refresh() {
 	std::cerr << "Total hash grid entry: " << entryCount << std::endl;
 	std::cerr << "Avg. hit points in a single hybrid hash grid entry: " << entryCount / gridSize << std::endl;
 
-	// DEBUG code
+	// Debug code
 	/*unsigned int nullCount = 0;
 	for (unsigned int i = 0; i < gridSize; ++i) {
 		HashCell *hc = grid[i];
@@ -128,10 +129,19 @@ void HybridHashGrid::Refresh() {
 		}
 		std::cerr << j << " count: " << count << "/" << gridSize << "(" << 100.0 * count / gridSize << "%)" << std::endl;
 	}*/
+}
+
+void HybridHashGrid::RefreshParallel(const unsigned int index, const unsigned int count) {
+	// Calculate the index of work this thread has to do
+	const unsigned int workSize = gridSize / count;
+	const unsigned int first = workSize * index;
+	const unsigned int last = (index == count - 1) ? gridSize : (first + workSize);
+	assert (first >= 0);
+	assert (last <= gridSize);
 
 	unsigned int HHGKdTreeEntries = 0;
 	unsigned int HHGlistEntries = 0;
-	for (unsigned int i = 0; i < gridSize; ++i) {
+	for (unsigned int i = first; i < last; ++i) {
 		HashCell *hc = grid[i];
 
 		if (hc && hc->GetSize() > kdtreeThreshold) {

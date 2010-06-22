@@ -60,10 +60,7 @@ SPPMDeviceRenderThread::SPPMDeviceRenderThread(const unsigned int index, const u
 	renderThread = NULL;
 
 	rayBuffer = intersectionDevice->NewRayBuffer();
-	if (threadIndex == 0)
-		rayBufferHitPoints = intersectionDevice->NewRayBuffer();
-	else
-		rayBufferHitPoints = NULL;
+	rayBufferHitPoints = intersectionDevice->NewRayBuffer();
 }
 
 SPPMDeviceRenderThread::~SPPMDeviceRenderThread() {
@@ -78,8 +75,7 @@ void SPPMDeviceRenderThread::Start() {
 	SPPMRenderThread::Start();
 
 	rayBuffer->Reset();
-	if (threadIndex == 0)
-		rayBufferHitPoints->Reset();
+	rayBufferHitPoints->Reset();
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(SPPMDeviceRenderThread::RenderThreadImpl, this));
@@ -170,7 +166,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 	HitPoints *hitPoints = NULL;
 	try {
 		// Wait for other threads
-		renderEngine->barrierStart->wait();
+		renderEngine->barrier->wait();
 
 		hitPoints = renderEngine->hitPoints;
 
@@ -267,21 +263,40 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 			// Check if it is time to do an eye pass
 			if (renderEngine->photonTracedPass > renderEngine->stochasticInterval) {
 				// Wait for other threads
-				renderEngine->barrierStop->wait();
+				renderEngine->barrier->wait();
 
-				// The first thread does the eye pass
+				const double t1 = WallClockTime();
+
+				const long long count = renderEngine->photonTracedTotal + renderEngine->photonTracedPass;
+				hitPoints->AccumulateFlux(count, renderThread->threadIndex, renderEngine->renderThreads.size());
+				hitPoints->SetHitPoints(rndGen, device, rayBufferHitPoints, renderThread->threadIndex, renderEngine->renderThreads.size());
+
+				// Wait for other threads
+				renderEngine->barrier->wait();
+
+				// The first thread has to do some special task for the eye pass
 				if (renderThread->threadIndex == 0) {
-					const double t1 = WallClockTime();
-
-					const long long count = renderEngine->photonTracedTotal + renderEngine->photonTracedPass;
-					hitPoints->Recast(rndGen, rayBufferHitPoints, count);
+					// First thread only tasks
+					hitPoints->UpdateBBox();
+					hitPoints->IncPass();
+					hitPoints->RefreshAccelMutex();
 
 					// Update the frame buffer
 					UpdateFilm(renderEngine->film, hitPoints, renderEngine->sampleBuffer);
 
 					renderEngine->photonTracedTotal = count;
 					renderEngine->photonTracedPass = 0;
+				}
 
+				// Wait for other threads
+				renderEngine->barrier->wait();
+
+				hitPoints->RefreshAccelParallel(renderThread->threadIndex, renderEngine->renderThreads.size());
+
+				// Wait for other threads
+				renderEngine->barrier->wait();
+
+				if (renderThread->threadIndex == 0) {
 					const double photonPassTime = t1 - passStartTime;
 					std::cerr << "Photon pass time: " << photonPassTime << "secs" << std::endl;
 					const double eyePassTime = WallClockTime() - t1;
@@ -290,8 +305,6 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 					passStartTime = WallClockTime();
 				}
 
-				// Wait for other threads
-				renderEngine->barrierStart->wait();
 				//std::cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Tracing photon paths" << std::endl;
 			}
 		}
@@ -381,8 +394,7 @@ void SPPMRenderEngine::Start() {
 	photonTracedPass = 0;
 
 	// Create synchronization barriers
-	barrierStop = new boost::barrier(renderThreads.size());
-	barrierStart = new boost::barrier(renderThreads.size());
+	barrier = new boost::barrier(renderThreads.size());
 	barrierExit = new boost::barrier(renderThreads.size());
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
@@ -400,8 +412,7 @@ void SPPMRenderEngine::Stop() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
 
-	delete barrierStop;
-	delete barrierStart;
+	delete barrier;
 	delete barrierExit;
 }
 
