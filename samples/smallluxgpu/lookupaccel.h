@@ -40,7 +40,8 @@ public:
 	HitPointsLookUpAccel() { }
 	virtual ~HitPointsLookUpAccel() { }
 
-	virtual void Refresh() = 0;
+	virtual void RefreshMutex() = 0;
+	virtual void RefreshParallel(const unsigned int index, const unsigned int count) { }
 
 	virtual void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
 		const luxrays::Spectrum &photonFlux) = 0;
@@ -56,7 +57,7 @@ public:
 
 	~HashGrid();
 
-	void Refresh();
+	void RefreshMutex();
 
 	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
 		const luxrays::Spectrum &photonFlux);
@@ -82,7 +83,7 @@ public:
 
 	~KdTree();
 
-	void Refresh();
+	void RefreshMutex();
 
 	void AddFlux(const luxrays::Point &hitPoint,  const luxrays::Vector &wi,
 		const luxrays::Spectrum &photonFlux);
@@ -142,7 +143,8 @@ public:
 
 	~HybridHashGrid();
 
-	void Refresh();
+	void RefreshMutex();
+	void RefreshParallel(const unsigned int index, const unsigned int count);
 
 	void AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
 		const luxrays::Spectrum &photonFlux);

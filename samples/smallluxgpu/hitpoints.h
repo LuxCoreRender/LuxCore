@@ -112,27 +112,30 @@ public:
 		return bbox;
 	}
 
+	void UpdateBBox();
+	unsigned int GetPassCount() const { return pass; }
+	void IncPass() { ++pass; }
+
 	void AddFlux(const Point &hitPoint, const Vector &wi, const Spectrum &photonFlux) {
 		lookUpAccel->AddFlux(hitPoint, wi, photonFlux);
 	}
 
-	void AccumulateFlux(const unsigned long long photonTraced);
+	void AccumulateFlux(const unsigned long long photonTraced,
+			const unsigned int index, const unsigned int count);
+	void SetHitPoints(RandomGenerator *rndGen,
+			IntersectionDevice *device, RayBuffer *rayBuffer,
+			const unsigned int index, const unsigned int count);
 
-	void Recast(RandomGenerator *rndGen, RayBuffer *rayBuffer, const unsigned long long photonTraced) {
-		AccumulateFlux(photonTraced);
-		SetHitPoints(rndGen, rayBuffer);
-		lookUpAccel->Refresh();
-
-		++pass;
+	void RefreshAccelMutex() {
+		lookUpAccel->RefreshMutex();
 	}
 
-	unsigned int GetPassCount() const { return pass; }
+	void RefreshAccelParallel(const unsigned int index, const unsigned int count) {
+		lookUpAccel->RefreshParallel(index, count);
+	}
 
 private:
-	void SetHitPoints(RandomGenerator *rndGen, RayBuffer *rayBuffer);
-
 	SPPMRenderEngine *renderEngine;
-	IntersectionDevice *device;
 
 	BBox bbox;
 	std::vector<HitPoint> *hitPoints;

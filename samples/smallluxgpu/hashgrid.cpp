@@ -26,7 +26,7 @@ HashGrid::HashGrid(HitPoints *hps) {
 	hitPoints = hps;
 	grid = NULL;
 
-	Refresh();
+	RefreshMutex();
 }
 
 HashGrid::~HashGrid() {
@@ -35,7 +35,7 @@ HashGrid::~HashGrid() {
 	delete[] grid;
 }
 
-void HashGrid::Refresh() {
+void HashGrid::RefreshMutex() {
 	const unsigned int hitPointsCount = hitPoints->GetSize();
 	const luxrays::BBox &hpBBox = hitPoints->GetBBox();
 
