@@ -42,14 +42,7 @@ void HybridHashGrid::RefreshMutex() {
 	const luxrays::BBox &hpBBox = hitPoints->GetBBox();
 
 	// Calculate the size of the grid cell
-	float maxPhotonRadius2 = 0.f;
-	for (unsigned int i = 0; i < hitPointsCount; ++i) {
-		HitPoint *hp = hitPoints->GetHitPoint(i);
-
-		if (hp->type == SURFACE)
-			maxPhotonRadius2 = luxrays::Max(maxPhotonRadius2, hp->accumPhotonRadius2);
-	}
-
+	const float maxPhotonRadius2 = hitPoints->GetMaxPhotonRaidus2();
 	const float cellSize = sqrtf(maxPhotonRadius2) * 2.f;
 	std::cerr << "Hybrid hash grid cell size: " << cellSize << std::endl;
 	invCellSize = 1.f / cellSize;
