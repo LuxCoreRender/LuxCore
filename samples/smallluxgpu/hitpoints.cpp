@@ -132,17 +132,28 @@ HitPoints::HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
 	const unsigned int height = renderEngine->film->GetHeight();
 	hitPoints = new std::vector<HitPoint>(width * height);
 	SetHitPoints(rndGen, device, rayBuffer, 0, 1);
-	UpdateBBox();
+
+	// Not using UpdateBBox() because hp->accumPhotonRadius2 is not yet set
+	BBox hpBBox = BBox();
+	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
+		HitPoint *hp = &(*hitPoints)[i];
+
+		if (hp->type == SURFACE)
+			hpBBox = Union(hpBBox, hp->position);
+	}
 
 	// Calculate initial radius
-	Vector ssize = bbox.pMax - bbox.pMin;
+	Vector ssize = hpBBox.pMax - hpBBox.pMin;
 	const float photonRadius = renderEngine->photonStartRadiusScale * ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
+	const float photonRadius2 = photonRadius * photonRadius;
 
 	// Expand the bounding box by used radius
-	bbox.Expand(photonRadius);
+	hpBBox.Expand(photonRadius);
+	// Update hit points information
+	bbox = hpBBox;
+	maxPhotonRaidus2 = photonRadius2;
 
 	// Initialize hit points field
-	const float photonRadius2 = photonRadius * photonRadius;
 	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
 		HitPoint *hp = &(*hitPoints)[i];
 
@@ -390,15 +401,18 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 	}
 }
 
-void HitPoints::UpdateBBox() {
+void HitPoints::UpdatePointsInformation() {
 	// Calculate hit points bounding box
 	std::cerr << "Building hit points bounding box: ";
 	bbox = BBox();
+	maxPhotonRaidus2 = 0.f;
 	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
 		HitPoint *hp = &(*hitPoints)[i];
 
-		if (hp->type == SURFACE)
+		if (hp->type == SURFACE) {
 			bbox = Union(bbox, hp->position);
+			maxPhotonRaidus2 = Max(maxPhotonRaidus2, hp->accumPhotonRadius2);
+		}
 	}
 	std::cerr << bbox << std::endl;
 }

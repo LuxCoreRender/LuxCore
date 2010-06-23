@@ -277,7 +277,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 				// The first thread has to do some special task for the eye pass
 				if (renderThread->threadIndex == 0) {
 					// First thread only tasks
-					hitPoints->UpdateBBox();
+					hitPoints->UpdatePointsInformation();
 					hitPoints->IncPass();
 					hitPoints->RefreshAccelMutex();
 

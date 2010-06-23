@@ -112,7 +112,9 @@ public:
 		return bbox;
 	}
 
-	void UpdateBBox();
+	float GetMaxPhotonRaidus2() const { return maxPhotonRaidus2; }
+
+	void UpdatePointsInformation();
 	unsigned int GetPassCount() const { return pass; }
 	void IncPass() { ++pass; }
 
@@ -137,9 +139,12 @@ public:
 private:
 	SPPMRenderEngine *renderEngine;
 
+	// Hit points information
 	BBox bbox;
+	float maxPhotonRaidus2;
 	std::vector<HitPoint> *hitPoints;
 	HitPointsLookUpAccel *lookUpAccel;
+
 	unsigned int pass;
 };
 
