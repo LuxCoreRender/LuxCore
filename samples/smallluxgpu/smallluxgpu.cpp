@@ -34,6 +34,7 @@
 #include "displayfunc.h"
 #include "renderconfig.h"
 #include "path.h"
+#include "sppm.h"
 #include "telnet.h"
 #include "luxrays/core/device.h"
 
@@ -97,7 +98,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double periodiceSaveTime = config->cfg.GetFloat("batch.periodicsave", 0.f);
 	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
 	const string fileName = config->cfg.GetString("image.filename", "image.png");
-	char buff[512];
+	char buf[512];
 	const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
@@ -131,11 +132,28 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		for (size_t i = 0; i < interscetionDevices.size(); ++i)
 			raysSec += interscetionDevices[i]->GetPerformance();
 
-		sampleSec = config->film->GetAvgSampleSec();
-		sprintf(buff, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
-				int(elapsedTime), int(stopTime), pass, stopSPP, int(sampleSec/ 1000.0),
-				int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-		cerr << buff << endl;
+		switch (config->GetRenderEngine()->GetEngineType()) {
+			case DIRECTLIGHT:
+			case PATH: {
+				sampleSec = config->film->GetAvgSampleSec();
+				sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+						int(elapsedTime), int(stopTime), pass, stopSPP, int(sampleSec/ 1000.0),
+						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+				break;
+			}
+			case SPPM: {
+				SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+
+				sprintf(buf, "[Elapsed time: %3d/%dsec][Pass %3d][Photon %.1fM][Avg. photon/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+						int(elapsedTime), int(stopTime), pass, sre->GetTotalPhotonCount() / 1000000.0, int(sre->GetTotalPhotonSec() / 1000.0),
+						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+				break;
+			}
+			default:
+				assert (false);
+		}
+
+		cerr << buf << endl;
 	}
 
 	// Save the rendered image
@@ -148,8 +166,8 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	else if (filmNames.size() > 1)
 		config->film->SaveFilm("merged.flm");
 
-	sprintf(buff, "LuxMark index: %.3f", sampleSec / 1000000.0);
-	cerr << buff << endl;
+	sprintf(buf, "LuxMark index: %.3f", sampleSec / 1000000.0);
+	cerr << buf << endl;
 
 	delete config;
 	cerr << "Done." << endl;
