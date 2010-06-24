@@ -38,6 +38,7 @@ RenderingConfig::RenderingConfig(const string &fileName) {
 
 	renderEngine = NULL;
 	renderThreadsStarted = false;
+	periodicSaveEnabled = false;
 }
 
 RenderingConfig::~RenderingConfig() {
@@ -65,6 +66,9 @@ void RenderingConfig::Init() {
 	const int oclPixelDeviceConfig = cfg.GetInt("opencl.pixeldevice.select", -1);
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
 	luxrays::RAY_EPSILON = cfg.GetFloat("scene.epsilon", luxrays::RAY_EPSILON);
+	periodiceSaveTime = config->cfg.GetFloat("batch.periodicsave", 0.f);
+	lastPeriodicSave = WallClockTime();
+	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
 
