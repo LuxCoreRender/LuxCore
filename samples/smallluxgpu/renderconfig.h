@@ -57,10 +57,38 @@ public:
 	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }
 	const RenderEngine *GetRenderEngine() { return renderEngine; }
 
+	void SetScreenRefreshInterval(const unsigned int t) {  screenRefreshInterval = t; }
+	unsigned int GetScreenRefreshInterval() const {  return screenRefreshInterval; }
+
+	bool NeedPeriodicSave() {
+		if (periodicSaveEnabled) {
+			const double now = WallClockTime();
+			if (now - lastPeriodicSave > periodiceSaveTime) {
+				lastPeriodicSave = now;
+				return true;
+			} else
+				return false;
+		} else
+			return false;
+	}
+
+	void SaveImage() {
+		const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
+		const string fileName = config->cfg.GetString("image.filename", "image.png");
+
+		// Time to save the image and film
+		config->film->UpdateScreenBuffer();
+		config->film->Save(fileName);
+
+		if (filmNames.size() == 1)
+			config->film->SaveFilm(filmNames[0]);
+		else if (filmNames.size() > 1)
+			config->film->SaveFilm("merged.flm");
+	}
+
 	Properties cfg;
 
 	char captionBuffer[512];
-	unsigned int screenRefreshInterval;
 
 	SLGScene *scene;
 	Film *film;
@@ -86,6 +114,10 @@ private:
 	vector<IntersectionDevice *> intersectionCPUGPUDevices;
 
 	vector<IntersectionDevice *> intersectionAllDevices;
+
+	unsigned int screenRefreshInterval;
+	bool periodicSaveEnabled;
+	double lastPeriodicSave, periodiceSaveTime;
 };
 
 #endif	/* _RENDERCONFIG_H */

@@ -94,10 +94,6 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double startTime = WallClockTime();
 
 	double sampleSec = 0.0;
-	double lastTimeSave = startTime;
-	const double periodiceSaveTime = config->cfg.GetFloat("batch.periodicsave", 0.f);
-	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
-	const string fileName = config->cfg.GetString("image.filename", "image.png");
 	char buf[512];
 	const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
 	for (;;) {
@@ -113,21 +109,12 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 			break;
 
 		// Check if periodic save is enabled
-		if (periodiceSaveTime > 0.) {
-			if (now - lastTimeSave > periodiceSaveTime) {
-				// Time to save the image and film
-				config->film->UpdateScreenBuffer();
-				config->film->Save(fileName);
-
-				if (filmNames.size() == 1)
-					config->film->SaveFilm(filmNames[0]);
-				else if (filmNames.size() > 1)
-					config->film->SaveFilm("merged.flm");
-
-				lastTimeSave = WallClockTime();
-			}
+		if (config->NeedPeriodicSave()) {
+			// Time to save the image and film
+			config->SaveImage();
 		}
 
+		// Print some information about the rendering progress
 		double raysSec = 0.0;
 		for (size_t i = 0; i < interscetionDevices.size(); ++i)
 			raysSec += interscetionDevices[i]->GetPerformance();
@@ -157,14 +144,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	}
 
 	// Save the rendered image
-	config->film->UpdateScreenBuffer();
-	config->film->Save(fileName);
-
-	// Check if I have to save the film
-	if (filmNames.size() == 1)
-		config->film->SaveFilm(filmNames[0]);
-	else if (filmNames.size() > 1)
-		config->film->SaveFilm("merged.flm");
+	config->SaveImage();
 
 	sprintf(buf, "LuxMark index: %.3f", sampleSec / 1000000.0);
 	cerr << buf << endl;

@@ -113,7 +113,7 @@ static void PrintHelpAndSettings() {
 	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Screen refresh %dms][Render threads %d]",
 			renderingTime,
 			config->scene->camera->fieldOfView,
-			config->screenRefreshInterval, int(config->GetRenderEngine()->GetThreadCount()));
+			config->GetScreenRefreshInterval(), int(config->GetRenderEngine()->GetThreadCount()));
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
@@ -296,9 +296,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			string fileName = config->cfg.GetString("image.filename", "image.png");
-			config->film->UpdateScreenBuffer();
-			config->film->Save(fileName);
+			config->SaveImage();
 			break;
 		}
 		case 27: { // Escape key
@@ -357,18 +355,22 @@ void keyFunc(unsigned char key, int x, int y) {
 					config->scene->camera->fieldOfView + 5.f);
 			config->ReInit(false);
 			break;
-		case 'n':
-			if (config->screenRefreshInterval > 1000)
-				config->screenRefreshInterval = max(1000u, config->screenRefreshInterval - 1000);
+		case 'n': {
+			const unsigned int screenRefreshInterval = config->GetScreenRefreshInterval();
+			if (screenRefreshInterval > 1000)
+				config->SetScreenRefreshInterval(max(1000u, screenRefreshInterval - 1000));
 			else
-				config->screenRefreshInterval = max(50u, config->screenRefreshInterval - 50);
+				config->SetScreenRefreshInterval(max(50u, screenRefreshInterval - 50));
 			break;
-		case 'm':
-			if (config->screenRefreshInterval >= 1000)
-				config->screenRefreshInterval += 1000;
+		}
+		case 'm': {
+			const unsigned int screenRefreshInterval = config->GetScreenRefreshInterval();
+			if (screenRefreshInterval >= 1000)
+				config->SetScreenRefreshInterval(screenRefreshInterval + 1000);
 			else
-				config->screenRefreshInterval += 50;
+				config->SetScreenRefreshInterval(screenRefreshInterval + 50);
 			break;
+		}
 		case 'y':
 			config->SetMotionBlur(!config->scene->camera->motionBlur);
 			break;
@@ -515,9 +517,15 @@ void timerFunc(int value) {
 			assert (false);
 	}
 
+	// Check if periodic save is enabled
+	if (config->NeedPeriodicSave()) {
+		// Time to save the image and film
+		config->SaveImage();
+	}
+
 	glutPostRedisplay();
 
-	glutTimerFunc(config->screenRefreshInterval, timerFunc, 0);
+	glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 }
 
 void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height) {
@@ -544,7 +552,7 @@ void RunGlut() {
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
 
-	glutTimerFunc(config->screenRefreshInterval, timerFunc, 0);
+	glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 
 	glMatrixMode(GL_PROJECTION);
 	glViewport(0, 0, config->film->GetWidth(), config->film->GetHeight());
