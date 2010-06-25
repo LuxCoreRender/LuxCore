@@ -175,6 +175,24 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							respStream << up.x << " " << up.y << " " << up.z << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.lensradius") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							respStream << telnetServer->config->scene->camera->lensRadius << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.fieldofview") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							respStream << telnetServer->config->scene->camera->fieldOfView << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.focaldistance") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							respStream << telnetServer->config->scene->camera->focalDistance << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
 						} else if (property == "image.filename") {
 							boost::asio::streambuf response;
 							std::ostream respStream(&response);
@@ -194,6 +212,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "film.tonemap.reinhard02.prescale\n";
 						respStream << "film.tonemap.type\n";
 						respStream << "image.filename\n";
+						respStream << "scene.camera.fieldofview\n";
+						respStream << "scene.camera.focaldistance\n";
+						respStream << "scene.camera.lensradius\n";
 						respStream << "scene.camera.lookat\n";
 						respStream << "scene.camera.up\n";
 						respStream << "OK\n";
@@ -207,6 +228,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "film.tonemap.reinhard02.prescale\n";
 						respStream << "film.tonemap.type\n";
 						respStream << "image.filename\n";
+						respStream << "scene.camera.fieldofview (requires render.stop)\n";
+						respStream << "scene.camera.focaldistance (requires render.stop)\n";
+						respStream << "scene.camera.lensradius (requires render.stop)\n";
 						respStream << "scene.camera.lookat (requires render.stop)\n";
 						respStream << "scene.camera.up (requires render.stop)\n";
 						respStream << "scene.materials.*.* (requires render.stop)\n";
@@ -427,6 +451,39 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									Vector up(vf.at(0), vf.at(1), vf.at(2));
 
 									telnetServer->config->scene->camera->up = Normalize(up);
+									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
+											telnetServer->config->film->GetHeight());
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.camera.lensradius") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									telnetServer->config->scene->camera->lensRadius = prop.GetFloat(propertyName, 0.f);
+									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
+											telnetServer->config->film->GetHeight());
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.camera.fieldofview") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									telnetServer->config->scene->camera->fieldOfView = prop.GetFloat(propertyName, 0.f);
+									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
+											telnetServer->config->film->GetHeight());
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.camera.focaldistance") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									telnetServer->config->scene->camera->focalDistance = prop.GetFloat(propertyName, 0.f);
 									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
 											telnetServer->config->film->GetHeight());
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
