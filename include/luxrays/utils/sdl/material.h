@@ -231,7 +231,7 @@ public:
 		const float u0, const float u1,  const float u2, const bool onlySpecular,
 		float *pdf, bool &specularBounce) const {
 		const Vector rayDir = -wo;
-		const Vector reflDir = rayDir - (2.f * Dot(N, reflDir)) * Vector(N);
+		const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
 
 		// Ray from outside going in ?
 		const bool into = (Dot(N, shadeN) > 0);
