@@ -230,8 +230,8 @@ public:
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, const bool onlySpecular,
 		float *pdf, bool &specularBounce) const {
-		Vector reflDir = -wo;
-		reflDir = reflDir - (2.f * Dot(N, reflDir)) * Vector(N);
+		const Vector rayDir = -wo;
+		const Vector reflDir = rayDir - (2.f * Dot(N, reflDir)) * Vector(N);
 
 		// Ray from outside going in ?
 		const bool into = (Dot(N, shadeN) > 0);
@@ -239,7 +239,7 @@ public:
 		const float nc = ousideIor;
 		const float nt = ior;
 		const float nnt = into ? (nc / nt) : (nt / nc);
-		const float ddn = Dot(-wo, shadeN);
+		const float ddn = Dot(rayDir, shadeN);
 		const float cos2t = 1.f - nnt * nnt * (1.f - ddn * ddn);
 
 		// Total internal reflection
@@ -253,7 +253,7 @@ public:
 
 		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrtf(cos2t));
 		const Vector nkk = kk * Vector(N);
-		const Vector transDir = Normalize(nnt * (-wo) - nkk);
+		const Vector transDir = Normalize(nnt * rayDir - nkk);
 
 		const float c = 1.f - (into ? -ddn : Dot(transDir, N));
 
@@ -261,27 +261,32 @@ public:
 		const float Tr = 1.f - Re;
 		const float P = .25f + .5f * Re;
 
-		if (u0 < P) {
-			(*wi) = reflDir;
-
-			*pdf = P / Re;
-			if ((Re == 0.f) || (*pdf < 0.01f)) {
+		if (Tr == 0.f) {
+			if (Re == 0.f) {
 				*pdf = 0.f;
 				return Spectrum();
-			}
+			} else {
+				(*wi) = reflDir;
+				*pdf = 1.f;
+				specularBounce = reflectionSpecularBounce;
 
+				return Krefl;
+			}
+		} else if (Re == 0.f) {
+			(*wi) = transDir;
+			*pdf = 1.f;
+			specularBounce = transmitionSpecularBounce;
+
+			return Krefrct;
+		} else if (u0 < P) {
+			(*wi) = reflDir;
+			*pdf = P / Re;
 			specularBounce = reflectionSpecularBounce;
 
 			return Krefl;
 		} else {
 			(*wi) = transDir;
-
 			*pdf = (1.f - P) / Tr;
-			if ((Tr == 0.f) || (*pdf < 0.01f)) {
-				*pdf = 0.f;
-				return Spectrum();
-			}
-
 			specularBounce = transmitionSpecularBounce;
 
 			return Krefrct;
