@@ -168,10 +168,26 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									<< t.x << " " << t.y << " " << t.z << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.motionblur.lookat") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							const Point &o = telnetServer->config->scene->camera->mbOrig;
+							const Point &t = telnetServer->config->scene->camera->mbTarget;
+							respStream << o.x << " " << o.y << " " << o.z << " "
+									<< t.x << " " << t.y << " " << t.z << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
 						} else if (property == "scene.camera.up") {
 							boost::asio::streambuf response;
 							std::ostream respStream(&response);
 							const Vector &up = telnetServer->config->scene->camera->up;
+							respStream << up.x << " " << up.y << " " << up.z << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.motionblur.up") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							const Vector &up = telnetServer->config->scene->camera->mbUp;
 							respStream << up.x << " " << up.y << " " << up.z << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
@@ -191,6 +207,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							boost::asio::streambuf response;
 							std::ostream respStream(&response);
 							respStream << telnetServer->config->scene->camera->focalDistance << "\n";
+							respStream << "OK\n";
+							boost::asio::write(socket, response);
+						} else if (property == "scene.camera.motionblur.enable") {
+							boost::asio::streambuf response;
+							std::ostream respStream(&response);
+							respStream << (telnetServer->config->scene->camera->motionBlur ? 1 : 0) << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
 						} else if (property == "image.filename") {
@@ -216,6 +238,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.camera.focaldistance\n";
 						respStream << "scene.camera.lensradius\n";
 						respStream << "scene.camera.lookat\n";
+						respStream << "scene.camera.motionblur.enable\n";
+						respStream << "scene.camera.motionblur.lookat\n";
+						respStream << "scene.camera.motionblur.up\n";
 						respStream << "scene.camera.up\n";
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
@@ -232,6 +257,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.camera.focaldistance (requires render.stop)\n";
 						respStream << "scene.camera.lensradius (requires render.stop)\n";
 						respStream << "scene.camera.lookat (requires render.stop)\n";
+						respStream << "scene.camera.motionblur.enable (requires render.stop)\n";
+						respStream << "scene.camera.motionblur.lookat (requires render.stop)\n";
+						respStream << "scene.camera.motionblur.up (requires render.stop)\n";
 						respStream << "scene.camera.up (requires render.stop)\n";
 						respStream << "scene.materials.*.* (requires render.stop)\n";
 						respStream << "OK\n";
@@ -444,6 +472,22 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 									cerr << "[Telnet server] Wrong state: " << property << endl;
 								}
+							} else if (propertyName == "scene.camera.motionblur.lookat") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									const std::vector<float> vf = prop.GetFloatVector(propertyName, "10.0 1.0 0.0  0.0 1.0 0.0");
+									Point o(vf.at(0), vf.at(1), vf.at(2));
+									Point t(vf.at(3), vf.at(4), vf.at(5));
+
+									telnetServer->config->scene->camera->mbOrig = o;
+									telnetServer->config->scene->camera->mbTarget = t;
+									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
+											telnetServer->config->film->GetHeight());
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
 							} else if (propertyName == "scene.camera.up") {
 								// Check if we are in the right state
 								if (state == STOP) {
@@ -451,6 +495,20 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									Vector up(vf.at(0), vf.at(1), vf.at(2));
 
 									telnetServer->config->scene->camera->up = Normalize(up);
+									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
+											telnetServer->config->film->GetHeight());
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.camera.motionblur.up") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 0.1");
+									Vector up(vf.at(0), vf.at(1), vf.at(2));
+
+									telnetServer->config->scene->camera->mbUp = Normalize(up);
 									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
 											telnetServer->config->film->GetHeight());
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
@@ -484,6 +542,17 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								// Check if we are in the right state
 								if (state == STOP) {
 									telnetServer->config->scene->camera->focalDistance = prop.GetFloat(propertyName, 0.f);
+									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
+											telnetServer->config->film->GetHeight());
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.camera.motionblur.enable") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									telnetServer->config->scene->camera->motionBlur = (prop.GetInt(propertyName, 0) != 0);
 									telnetServer->config->scene->camera->Update(telnetServer->config->film->GetWidth(),
 											telnetServer->config->film->GetHeight());
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
