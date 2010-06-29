@@ -158,17 +158,37 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 	RayBuffer *rayBuffer = renderThread->rayBuffer;
 	RayBuffer *rayBufferHitPoints = renderThread->rayBufferHitPoints;
 
-	if (renderThread->threadIndex == 0) {
-		// Build the EyePaths list
-		renderEngine->hitPoints = new HitPoints(renderEngine, rndGen, device, rayBufferHitPoints);
-	}
-
 	HitPoints *hitPoints = NULL;
 	try {
+		// First eye pass
+		if (renderThread->threadIndex == 0) {
+			// One thread initialize the EyePaths list
+			renderEngine->hitPoints = new HitPoints(renderEngine, rndGen, device, rayBufferHitPoints);
+		}
+
 		// Wait for other threads
 		renderEngine->barrier->wait();
 
 		hitPoints = renderEngine->hitPoints;
+		// Multi-threads calculate hit points
+		hitPoints->SetHitPoints(rndGen, device, rayBufferHitPoints, renderThread->threadIndex, renderEngine->renderThreads.size());
+
+		// Wait for other threads
+		renderEngine->barrier->wait();
+
+		if (renderThread->threadIndex == 0) {
+			// One thread finish the initialization
+			hitPoints->Init();
+		}
+
+		// Wait for other threads
+		renderEngine->barrier->wait();
+
+		// Last step of the initialization
+		hitPoints->RefreshAccelParallel(renderThread->threadIndex, renderEngine->renderThreads.size());
+
+		// Wait for other threads
+		renderEngine->barrier->wait();
 
 		//std::cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Tracing photon paths" << std::endl;
 
