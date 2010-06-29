@@ -68,7 +68,11 @@ SkyLight::SkyLight(float turb, const Vector &sd) : InfiniteLight(NULL) {
 	turbidity = turb;
 	sundir = Normalize(sd);
 	gain = Spectrum(1.0f, 1.0f, 1.0f);
-	
+
+	Init();
+}
+
+void SkyLight::Init() {
 	thetaS = SphericalTheta(sundir);
 	phiS = SphericalPhi(sundir);
 
@@ -77,11 +81,11 @@ SkyLight::SkyLight(float turb, const Vector &sd) : InfiniteLight(NULL) {
 	float cconst = 1.0f;
 	float dconst = 1.0f;
 	float econst = 1.0f;
-	
+
 	float theta2 = thetaS*thetaS;
 	float theta3 = theta2*thetaS;
-	float T = turb;
-	float T2 = turb*turb;
+	float T = turbidity;
+	float T2 = T * T;
 
 	float chi = (4.f / 9.f - T / 120.f) * (M_PI - 2.0f * thetaS);
 	zenith_Y = (4.0453f * T - 4.9710f) * tan(chi) - 0.2155f * T + 2.4192f;
@@ -144,11 +148,16 @@ void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectr
 	ChromaticityToSpectrum(Y, x, y, spect);
 }
 
-SunLight::SunLight(float turb, float relSize, const Vector &sd) : LightSource() {
+SunLight::SunLight(float turb, float size, const Vector &sd) : LightSource() {
 	turbidity = turb;
 	sundir = Normalize(sd);
 	gain = Spectrum(1.0f, 1.0f, 1.0f);
-	
+	relSize = size;
+
+	Init();
+}
+
+void SunLight::Init() {
 	CoordinateSystem(sundir, &x, &y);
 
 	// Values from NASA Solar System Exploration page
