@@ -221,6 +221,96 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							respStream << telnetServer->config->cfg.GetString("image.filename", "image.png") << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
+						} else if (property == "scene.infinitelight.gain") {
+							if (telnetServer->config->scene->infiniteLight &&
+									(telnetServer->config->scene->infiniteLight->GetType() != TYPE_IL_SKY)) {
+								std::ostream respStream(&response);
+								const Spectrum gain = telnetServer->config->scene->infiniteLight->GetGain();
+								respStream << gain.r << " " << gain.g << " " << gain.b << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No InfiniteLight defined: " << property << endl;
+							}
+						} else if (property == "scene.infinitelight.shift") {
+							if (telnetServer->config->scene->infiniteLight &&
+									(telnetServer->config->scene->infiniteLight->GetType() != TYPE_IL_SKY)) {
+								std::ostream respStream(&response);
+								const Spectrum gain = telnetServer->config->scene->infiniteLight->GetGain();
+								respStream << telnetServer->config->scene->infiniteLight->GetShiftU() << " " <<
+										telnetServer->config->scene->infiniteLight->GetShiftV() << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No InfiniteLight defined: " << property << endl;
+							}
+						} else if (property == "scene.skylight.gain") {
+							if (telnetServer->config->scene->infiniteLight &&
+									(telnetServer->config->scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
+								std::ostream respStream(&response);
+								const Spectrum gain = telnetServer->config->scene->infiniteLight->GetGain();
+								respStream << gain.r << " " << gain.g << " " << gain.b << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+							}
+						} else if (property == "scene.skylight.turbidity") {
+							if (telnetServer->config->scene->infiniteLight &&
+									(telnetServer->config->scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
+								SkyLight *sl = (SkyLight *)telnetServer->config->scene->infiniteLight;
+
+								std::ostream respStream(&response);
+								respStream << sl->GetTubidity() << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+							}
+						} else if (property == "scene.sunlight.turbidity") {
+							// Look for the SunLight
+							SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+							if (sl) {
+								std::ostream respStream(&response);
+								respStream << sl->GetTubidity() << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+							}
+						} else if (property == "scene.sunlight.relsize") {
+							// Look for the SunLight
+							SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+							if (sl) {
+								std::ostream respStream(&response);
+								respStream << sl->GetRelSize() << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+							}
+						} else if (property == "scene.sunlight.dir") {
+							// Look for the SunLight
+							SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+							if (sl) {
+								std::ostream respStream(&response);
+								const Vector &dir = sl->GetDir();
+								respStream << dir.x << " " << dir.y << " " << dir.x << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+							}
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 							cerr << "[Telnet server] Unknown property: " << property << endl;
@@ -242,6 +332,13 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.camera.motionblur.lookat\n";
 						respStream << "scene.camera.motionblur.up\n";
 						respStream << "scene.camera.up\n";
+						respStream << "scene.infinitelight.gain\n";
+						respStream << "scene.infinitelight.shift\n";
+						respStream << "scene.skylight.gain\n";
+						respStream << "scene.skylight.turbidity\n";
+						respStream << "scene.sunlight.dir\n";
+						respStream << "scene.sunlight.relsize\n";
+						respStream << "scene.sunlight.turbidity\n";
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
 					} else if (command == "help.set") {
@@ -262,6 +359,13 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.camera.motionblur.up (requires render.stop)\n";
 						respStream << "scene.camera.up (requires render.stop)\n";
 						respStream << "scene.materials.*.* (requires render.stop)\n";
+						respStream << "scene.infinitelight.gain (requires render.stop)\n";
+						respStream << "scene.infinitelight.shift (requires render.stop)\n";
+						respStream << "scene.skylight.gain (requires render.stop)\n";
+						respStream << "scene.skylight.turbidity (requires render.stop)\n";
+						respStream << "scene.sunlight.dir (requires render.stop)\n";
+						respStream << "scene.sunlight.relsize (requires render.stop)\n";
+						respStream << "scene.sunlight.turbidity (requires render.stop)\n";
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
 					} else if (command == "image.reset") {
@@ -397,6 +501,118 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								telnetServer->config->cfg.SetString("image.filename", fileName);
 								respStream << "OK\n";
 								boost::asio::write(socket, response);
+							} else if (propertyName == "scene.infinitelight.gain") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									if (telnetServer->config->scene->infiniteLight &&
+											(telnetServer->config->scene->infiniteLight->GetType() != TYPE_IL_SKY)) {
+										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
+										telnetServer->config->scene->infiniteLight->SetGain(gain);
+										respStream << "OK\n";
+										boost::asio::write(socket, response);
+									} else {
+										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+										cerr << "[Telnet server] No InifinteLight defined: " << property << endl;
+									}
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.infinitelight.shift") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									if (telnetServer->config->scene->infiniteLight &&
+											(telnetServer->config->scene->infiniteLight->GetType() != TYPE_IL_SKY)) {
+										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0");
+										telnetServer->config->scene->infiniteLight->SetShift(vf.at(0), vf.at(1));
+										respStream << "OK\n";
+										boost::asio::write(socket, response);
+									} else {
+										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+										cerr << "[Telnet server] No InifinteLight defined: " << property << endl;
+									}
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.skylight.gain") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									if (telnetServer->config->scene->infiniteLight &&
+											(telnetServer->config->scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
+										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
+										telnetServer->config->scene->infiniteLight->SetGain(gain);
+										respStream << "OK\n";
+										boost::asio::write(socket, response);
+									} else {
+										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+										cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+									}
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.skylight.turbidity") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									if (telnetServer->config->scene->infiniteLight &&
+											(telnetServer->config->scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
+										SkyLight *sl = (SkyLight *)telnetServer->config->scene->infiniteLight;
+										sl->SetTurbidity(prop.GetFloat(propertyName, 2.2f));
+										sl->Init();
+										respStream << "OK\n";
+										boost::asio::write(socket, response);
+									} else {
+										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+										cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+									}
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if (propertyName == "scene.sunlight.turbidity") {
+								// Look for the SunLight
+								SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+								if (sl) {
+									sl->SetTurbidity(prop.GetFloat(propertyName, 2.2f));
+									sl->Init();
+									respStream << "OK\n";
+									boost::asio::write(socket, response);
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								}
+							} else if (propertyName == "scene.sunlight.relsize") {
+								// Look for the SunLight
+								SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+								if (sl) {
+									sl->SetRelSize(prop.GetFloat(propertyName, 1.f));
+									sl->Init();
+									respStream << "OK\n";
+									boost::asio::write(socket, response);
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								}
+							} else if (propertyName == "scene.sunlight.dir") {
+								// Look for the SunLight
+								SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+								if (sl) {
+									const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+									Vector dir(vf.at(0), vf.at(1), vf.at(2));
+									sl->SetDir(dir);
+									sl->Init();
+									respStream << "OK\n";
+									boost::asio::write(socket, response);
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								}
 							} else if (propertyName.find("scene.materials.") == 0) {
 								if (state == STOP) {
 									Scene *scene = telnetServer->config->scene;

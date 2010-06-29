@@ -70,6 +70,17 @@ public:
 		}
 	}
 
+	SunLight *GetSunLight() const {
+		// Look for the SunLight
+		for (unsigned int i = 0; i < lights.size(); ++i) {
+			LightSource *ls = lights[i];
+			if (ls->GetType() == TYPE_SUN)
+				return (SunLight *)ls;
+		}
+
+		return NULL;
+	}
+
 	static Material *CreateMaterial(const std::string &propName, const Properties &prop);
 
 	PerspectiveCamera *camera;

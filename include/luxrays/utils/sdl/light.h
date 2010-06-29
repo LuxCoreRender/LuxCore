@@ -31,9 +31,16 @@ namespace luxrays { namespace sdl {
 
 class Scene;
 
+enum LightSourceType {
+	TYPE_IL_BF, TYPE_IL_PORTAL, TYPE_IL_IS, TYPE_IL_SKY,
+	TYPE_SUN, TYPE_TRIANGLE
+};
+
 class LightSource {
 public:
 	virtual ~LightSource() { }
+
+	virtual LightSourceType GetType() const = 0;
 
 	virtual bool IsAreaLight() const { return false; }
 
@@ -57,10 +64,17 @@ public:
 		gain = g;
 	}
 
+	virtual Spectrum GetGain() const {
+		return gain;
+	}
+
 	void SetShift(const float su, const float sv) {
 		shiftU = su;
 		shiftV = sv;
 	}
+
+	float GetShiftU() const { return shiftU; }
+	float GetShiftV() const { return shiftV; }
 
 	virtual void Preprocess() { }
 
@@ -81,6 +95,8 @@ class InfiniteLightBF : public InfiniteLight {
 public:
 	InfiniteLightBF(TexMapInstance *tx) : InfiniteLight(tx) { }
 
+	LightSourceType GetType() const { return TYPE_IL_BF; }
+
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal &N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 		*pdf = 0;
@@ -92,6 +108,8 @@ class InfiniteLightPortal : public InfiniteLight {
 public:
 	InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const std::string &portalFileName);
 	~InfiniteLightPortal();
+
+	LightSourceType GetType() const { return TYPE_IL_PORTAL; }
 
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
@@ -105,6 +123,8 @@ class InfiniteLightIS : public InfiniteLight {
 public:
 	InfiniteLightIS(TexMapInstance *tx);
 	~InfiniteLightIS() { delete uvDistrib; }
+
+	LightSourceType GetType() const { return TYPE_IL_IS; }
 
 	void Preprocess();
 
@@ -124,6 +144,13 @@ public:
 	SkyLight(float turbidity, const Vector &sundir);
 	virtual ~SkyLight() { }
 
+	void Init();
+
+	LightSourceType GetType() const { return TYPE_IL_SKY; }
+
+	void SetTurbidity(const float t) { turbidity = t; }
+	float GetTubidity() const { return turbidity; }
+
 	virtual Spectrum Le(const Vector &dir) const;
 	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
 
@@ -141,6 +168,19 @@ public:
 	SunLight(float turbidity, float relSize, const Vector &sundir);
 	virtual ~SunLight() { }
 
+	void Init();
+
+	LightSourceType GetType() const { return TYPE_SUN; }
+
+	void SetTurbidity(const float t) { turbidity = t; }
+	float GetTubidity() const { return turbidity; }
+
+	void SetRelSize(const float s) { relSize = s; }
+	float GetRelSize() const { return relSize; }
+
+	const Vector &GetDir() const { return sundir; }
+	void SetDir(const Vector &dir) { sundir = Normalize(dir); }
+
 	Spectrum Le(const Vector &dir) const;
 
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
@@ -153,6 +193,7 @@ protected:
 	Vector sundir;
 	Spectrum gain;
 	float turbidity;
+	float relSize;
 	// XY Vectors for cone sampling
 	Vector x, y;
 	float thetaS, phiS, V;
@@ -169,6 +210,8 @@ public:
 	TriangleLight() { }
 	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
 		const unsigned int triangleIndex, const std::vector<ExtTriangleMesh *> &objs);
+
+	LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
 	bool IsAreaLight() const { return true; }
 
