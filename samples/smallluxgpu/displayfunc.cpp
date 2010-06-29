@@ -94,6 +94,10 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "1", "path tracing rendering");
 	PrintHelpString(320, fontOffset, "2", "SPPM rendering");
 	fontOffset -= 15;
+#if defined(WIN32)
+	PrintHelpString(15, fontOffset, "^", "windows always on top");
+	fontOffset -= 15;
+#endif
 
 	// Settings
 	char buf[512];
@@ -393,6 +397,17 @@ void keyFunc(unsigned char key, int x, int y) {
 		case '2':
 			config->SetRenderingEngineType(SPPM);
 			break;
+		case '^': {
+#if defined(WIN32)
+			HWND hWnd = FindWindow(NULL, SLG_LABEL.c_str());
+			if (GetWindowLongPtr(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
+				SetWindowPos(hWnd, HWND_NOTOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE);
+			else
+				SetWindowPos(hWnd, HWND_TOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE);
+#endif
+			break;
+		}
+
 		default:
 			break;
 	}
