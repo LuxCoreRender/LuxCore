@@ -59,7 +59,11 @@ SPPMDeviceRenderThread::SPPMDeviceRenderThread(const unsigned int index, const u
 
 	renderThread = NULL;
 
-	rayBuffer = intersectionDevice->NewRayBuffer();
+	for (unsigned int i = 0; i < SPPM_DEVICE_RENDER_BUFFER_COUNT; ++i) {
+		rayBuffersList.push_back(intersectionDevice->NewRayBuffer());
+		rayBuffersList[i]->PushUserData(i);
+		photonPathsList.push_back(new std::vector<PhotonPath>(rayBuffersList[i]->GetSize()));
+	}
 	rayBufferHitPoints = intersectionDevice->NewRayBuffer();
 }
 
@@ -67,14 +71,18 @@ SPPMDeviceRenderThread::~SPPMDeviceRenderThread() {
 	if (started)
 		Stop();
 
-	delete rayBuffer;
+	for (unsigned int i = 0; i < SPPM_DEVICE_RENDER_BUFFER_COUNT; ++i) {
+		delete rayBuffersList[i];
+		delete photonPathsList[i];
+	}
 	delete rayBufferHitPoints;
 }
 
 void SPPMDeviceRenderThread::Start() {
 	SPPMRenderThread::Start();
 
-	rayBuffer->Reset();
+	for (unsigned int i = 0; i < SPPM_DEVICE_RENDER_BUFFER_COUNT; ++i)
+		rayBuffersList[i]->Reset();
 	rayBufferHitPoints->Reset();
 
 	// Create the thread for the rendering
@@ -146,6 +154,83 @@ void SPPMDeviceRenderThread::InitPhotonPath(Scene *scene, RandomGenerator *rndGe
 	AtomicInc(photonTracedPass);
 }
 
+void SPPMDeviceRenderThread::AdvancePhotonPaths(
+	SPPMRenderEngine *renderEngine, HitPoints *hitPoints,
+	Scene *scene, RandomGenerator *rndGen,
+	RayBuffer *rayBuffer, std::vector<PhotonPath> &photonPaths) {
+	for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
+		PhotonPath *photonPath = &photonPaths[i];
+		Ray *ray = &rayBuffer->GetRayBuffer()[i];
+		const RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
+
+		if (rayHit->Miss()) {
+			// Re-initialize the photon path
+			InitPhotonPath(scene, rndGen, photonPath, ray,
+					&renderEngine->photonTracedPass);
+		} else {
+			// Something was hit
+			Point hitPoint;
+			Spectrum surfaceColor;
+			Normal N, shadeN;
+			if (GetHitPointInformation(scene, rndGen, ray, rayHit, hitPoint,
+					surfaceColor, N, shadeN))
+				continue;
+
+			// Get the material
+			const unsigned int currentTriangleIndex = rayHit->index;
+			const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+
+			if (triMat->IsLightSource()) {
+				// Re-initialize the photon path
+				InitPhotonPath(scene, rndGen, photonPath, ray,
+						&renderEngine->photonTracedPass);
+			} else {
+				const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
+
+				float fPdf;
+				Vector wi;
+				bool specularBounce;
+				const Spectrum f = triSurfMat->Sample_f(-ray->d, &wi, N, shadeN,
+						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+						false, &fPdf, specularBounce) * surfaceColor;
+
+				if (!specularBounce)
+					hitPoints->AddFlux(hitPoint, -ray->d, photonPath->flux);
+
+				// Check if we reached the max. depth
+				if (photonPath->depth < renderEngine->maxPhotonPathDepth) {
+					// Build the next vertex path ray
+					if ((fPdf <= 0.f) || f.Black()) {
+						// Re-initialize the photon path
+						InitPhotonPath(scene, rndGen, photonPath, ray,
+								&renderEngine->photonTracedPass);
+					} else {
+						photonPath->depth++;
+						photonPath->flux *= f / fPdf;
+
+						// Russian Roulette
+						const float p = 0.7f;
+						if ((photonPath->depth < 2) || (specularBounce)) {
+							*ray = Ray(hitPoint, wi);
+						} else if (rndGen->floatValue() < p) {
+							photonPath->flux /= p;
+							*ray = Ray(hitPoint, wi);
+						} else {
+							// Re-initialize the photon path
+							InitPhotonPath(scene, rndGen, photonPath, ray,
+									&renderEngine->photonTracedPass);
+						}
+					}
+				} else {
+					// Re-initialize the photon path
+					InitPhotonPath(scene, rndGen, photonPath, ray,
+							&renderEngine->photonTracedPass);
+				}
+			}
+		}
+	}
+}
+
 void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThread) {
 	cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
@@ -155,7 +240,6 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 	rndGen->init(renderThread->threadIndex + renderEngine->seedBase + 1);
 
 	IntersectionDevice *device = renderThread->intersectionDevice;
-	RayBuffer *rayBuffer = renderThread->rayBuffer;
 	RayBuffer *rayBufferHitPoints = renderThread->rayBufferHitPoints;
 
 	HitPoints *hitPoints = NULL;
@@ -193,140 +277,101 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 		//std::cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Tracing photon paths" << std::endl;
 
 		// Generate photons from light sources
-		std::vector<PhotonPath> photonPaths(rayBuffer->GetSize());
-		Ray *rays = rayBuffer->GetRayBuffer();
-		for (unsigned int i = 0; i < photonPaths.size(); ++i) {
-			// Note: there is some assumption here about how the
-			// rayBuffer->ReserveRay() work
-			InitPhotonPath(scene, rndGen, &photonPaths[i], &rays[rayBuffer->ReserveRay()],
-					&renderEngine->photonTracedPass);
+		for (unsigned int j = 0; j < SPPM_DEVICE_RENDER_BUFFER_COUNT; ++j) {
+			std::vector<PhotonPath> &photonPaths = *(renderThread->photonPathsList[j]);
+			RayBuffer *rayBuffer =  renderThread->rayBuffersList[j];
+			Ray *rays = rayBuffer->GetRayBuffer();
+
+			for (unsigned int i = 0; i < photonPaths.size(); ++i) {
+				// Note: there is some assumption here about how the
+				// rayBuffer->ReserveRay() work
+				InitPhotonPath(scene, rndGen, &photonPaths[i], &rays[rayBuffer->ReserveRay()],
+						&renderEngine->photonTracedPass);
+			}
 		}
+
+		std::deque<RayBuffer *> todoBuffers;
+		for(unsigned int i = 0; i < SPPM_DEVICE_RENDER_BUFFER_COUNT; i++)
+			todoBuffers.push_back(renderThread->rayBuffersList[i]);
 
 		double passStartTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
-			// Trace the rays
-			device->PushRayBuffer(rayBuffer);
-			rayBuffer = device->PopRayBuffer();
+			for (;;) {
+				// Trace the rays
+				while (todoBuffers.size() > 0) {
+					RayBuffer *rayBuffer = todoBuffers.front();
+					todoBuffers.pop_front();
 
-			for (unsigned int i = 0; i < rayBuffer->GetRayCount(); ++i) {
-				PhotonPath *photonPath = &photonPaths[i];
-				Ray *ray = &rayBuffer->GetRayBuffer()[i];
-				const RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
+					device->PushRayBuffer(rayBuffer);
+				}
 
-				if (rayHit->Miss()) {
-					// Re-initialize the photon path
-					InitPhotonPath(scene, rndGen, photonPath, ray,
-							&renderEngine->photonTracedPass);
-				} else {
-					// Something was hit
-					Point hitPoint;
-					Spectrum surfaceColor;
-					Normal N, shadeN;
-					if (GetHitPointInformation(scene, rndGen, ray, rayHit, hitPoint,
-							surfaceColor, N, shadeN))
-						continue;
+				RayBuffer *rayBuffer = device->PopRayBuffer();
+				std::vector<PhotonPath> &photonPaths = *(renderThread->photonPathsList[rayBuffer->GetUserData()]);
+				AdvancePhotonPaths(renderEngine, hitPoints, scene, rndGen, rayBuffer, photonPaths);
+				todoBuffers.push_back(rayBuffer);
 
-					// Get the material
-					const unsigned int currentTriangleIndex = rayHit->index;
-					const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
-
-					if (triMat->IsLightSource()) {
-						// Re-initialize the photon path
-						InitPhotonPath(scene, rndGen, photonPath, ray,
-								&renderEngine->photonTracedPass);
-					} else {
-						const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
-
-						float fPdf;
-						Vector wi;
-						bool specularBounce;
-						const Spectrum f = triSurfMat->Sample_f(-ray->d, &wi, N, shadeN,
-								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-								false, &fPdf, specularBounce) * surfaceColor;
-
-						if (!specularBounce)
-							hitPoints->AddFlux(hitPoint, -ray->d, photonPath->flux);
-
-						// Check if we reached the max. depth
-						if (photonPath->depth < renderEngine->maxPhotonPathDepth) {
-							// Build the next vertex path ray
-							if ((fPdf <= 0.f) || f.Black()) {
-								// Re-initialize the photon path
-								InitPhotonPath(scene, rndGen, photonPath, ray,
-										&renderEngine->photonTracedPass);
-							} else {
-								photonPath->depth++;
-								photonPath->flux *= f / fPdf;
-
-								// Russian Roulette
-								const float p = 0.7f;
-								if ((photonPath->depth < 2) || (specularBounce)) {
-									*ray = Ray(hitPoint, wi);
-								} else if (rndGen->floatValue() < p) {
-									photonPath->flux /= p;
-									*ray = Ray(hitPoint, wi);
-								} else {
-									// Re-initialize the photon path
-									InitPhotonPath(scene, rndGen, photonPath, ray,
-											&renderEngine->photonTracedPass);
-								}
-							}
-						} else {
-							// Re-initialize the photon path
-							InitPhotonPath(scene, rndGen, photonPath, ray,
-									&renderEngine->photonTracedPass);
-						}
+				// Check if it is time to do an eye pass
+				if ((renderEngine->photonTracedPass > renderEngine->stochasticInterval) ||
+					boost::this_thread::interruption_requested()) {
+					// Ok, time to stop, finish current work
+					const unsigned int pendingBuffers = SPPM_DEVICE_RENDER_BUFFER_COUNT - todoBuffers.size();
+					for(unsigned int i = 0; i < pendingBuffers; i++) {
+						RayBuffer *rayBuffer = device->PopRayBuffer();
+						std::vector<PhotonPath> &photonPaths = *(renderThread->photonPathsList[rayBuffer->GetUserData()]);
+						AdvancePhotonPaths(renderEngine, hitPoints, scene, rndGen, rayBuffer, photonPaths);
+						todoBuffers.push_back(rayBuffer);
 					}
+					break;
 				}
 			}
 
-			// Check if it is time to do an eye pass
-			if (renderEngine->photonTracedPass > renderEngine->stochasticInterval) {
-				// Wait for other threads
-				renderEngine->barrier->wait();
+			if (boost::this_thread::interruption_requested())
+				break;
 
-				const double t1 = WallClockTime();
+			// Wait for other threads
+			renderEngine->barrier->wait();
 
-				const long long count = renderEngine->photonTracedTotal + renderEngine->photonTracedPass;
-				hitPoints->AccumulateFlux(count, renderThread->threadIndex, renderEngine->renderThreads.size());
-				hitPoints->SetHitPoints(rndGen, device, rayBufferHitPoints, renderThread->threadIndex, renderEngine->renderThreads.size());
+			const double t1 = WallClockTime();
 
-				// Wait for other threads
-				renderEngine->barrier->wait();
+			const long long count = renderEngine->photonTracedTotal + renderEngine->photonTracedPass;
+			hitPoints->AccumulateFlux(count, renderThread->threadIndex, renderEngine->renderThreads.size());
+			hitPoints->SetHitPoints(rndGen, device, rayBufferHitPoints, renderThread->threadIndex, renderEngine->renderThreads.size());
 
-				// The first thread has to do some special task for the eye pass
-				if (renderThread->threadIndex == 0) {
-					// First thread only tasks
-					hitPoints->UpdatePointsInformation();
-					hitPoints->IncPass();
-					hitPoints->RefreshAccelMutex();
+			// Wait for other threads
+			renderEngine->barrier->wait();
 
-					// Update the frame buffer
-					UpdateFilm(renderEngine->film, hitPoints, renderEngine->sampleBuffer);
+			// The first thread has to do some special task for the eye pass
+			if (renderThread->threadIndex == 0) {
+				// First thread only tasks
+				hitPoints->UpdatePointsInformation();
+				hitPoints->IncPass();
+				hitPoints->RefreshAccelMutex();
 
-					renderEngine->photonTracedTotal = count;
-					renderEngine->photonTracedPass = 0;
-				}
+				// Update the frame buffer
+				UpdateFilm(renderEngine->film, hitPoints, renderEngine->sampleBuffer);
 
-				// Wait for other threads
-				renderEngine->barrier->wait();
-
-				hitPoints->RefreshAccelParallel(renderThread->threadIndex, renderEngine->renderThreads.size());
-
-				// Wait for other threads
-				renderEngine->barrier->wait();
-
-				if (renderThread->threadIndex == 0) {
-					const double photonPassTime = t1 - passStartTime;
-					std::cerr << "Photon pass time: " << photonPassTime << "secs" << std::endl;
-					const double eyePassTime = WallClockTime() - t1;
-					std::cerr << "Eye pass time: " << eyePassTime << "secs (" << 100.0 * eyePassTime / (eyePassTime + photonPassTime) << "%)" << std::endl;
-
-					passStartTime = WallClockTime();
-				}
-
-				//std::cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Tracing photon paths" << std::endl;
+				renderEngine->photonTracedTotal = count;
+				renderEngine->photonTracedPass = 0;
 			}
+
+			// Wait for other threads
+			renderEngine->barrier->wait();
+
+			hitPoints->RefreshAccelParallel(renderThread->threadIndex, renderEngine->renderThreads.size());
+
+			// Wait for other threads
+			renderEngine->barrier->wait();
+
+			if (renderThread->threadIndex == 0) {
+				const double photonPassTime = t1 - passStartTime;
+				std::cerr << "Photon pass time: " << photonPassTime << "secs" << std::endl;
+				const double eyePassTime = WallClockTime() - t1;
+				std::cerr << "Eye pass time: " << eyePassTime << "secs (" << 100.0 * eyePassTime / (eyePassTime + photonPassTime) << "%)" << std::endl;
+
+				passStartTime = WallClockTime();
+			}
+
+			//std::cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Tracing photon paths" << std::endl;
 		}
 
 		cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
