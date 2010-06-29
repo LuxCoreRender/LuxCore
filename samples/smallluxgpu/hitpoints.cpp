@@ -131,8 +131,9 @@ HitPoints::HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
 	const unsigned int width = renderEngine->film->GetWidth();
 	const unsigned int height = renderEngine->film->GetHeight();
 	hitPoints = new std::vector<HitPoint>(width * height);
-	SetHitPoints(rndGen, device, rayBuffer, 0, 1);
+}
 
+void HitPoints::Init() {
 	// Not using UpdateBBox() because hp->accumPhotonRadius2 is not yet set
 	BBox hpBBox = BBox();
 	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
@@ -144,6 +145,8 @@ HitPoints::HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
 
 	// Calculate initial radius
 	Vector ssize = hpBBox.pMax - hpBBox.pMin;
+	const unsigned int width = renderEngine->film->GetWidth();
+	const unsigned int height = renderEngine->film->GetHeight();
 	const float photonRadius = renderEngine->photonStartRadiusScale * ((ssize.x + ssize.y + ssize.z) / 3.f) / ((width + height) / 2.f) * 2.f;
 	const float photonRadius2 = photonRadius * photonRadius;
 

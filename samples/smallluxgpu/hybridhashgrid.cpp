@@ -28,7 +28,6 @@ HybridHashGrid::HybridHashGrid(HitPoints *hps) {
 	kdtreeThreshold = 8;
 
 	RefreshMutex();
-	RefreshParallel(0, 1);
 }
 
 HybridHashGrid::~HybridHashGrid() {

@@ -100,6 +100,8 @@ public:
 			IntersectionDevice *dev, RayBuffer *rayBuffer);
 	~HitPoints();
 
+	void Init();
+
 	HitPoint *GetHitPoint(const unsigned int index) {
 		return &(*hitPoints)[index];
 	}
