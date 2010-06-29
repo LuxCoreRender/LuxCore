@@ -37,6 +37,8 @@ class RenderingConfig;
 // SPPM render thread
 //------------------------------------------------------------------------------
 
+#define SPPM_DEVICE_RENDER_BUFFER_COUNT 4
+
 class SPPMRenderEngine;
 
 class SPPMRenderThread {
@@ -67,16 +69,20 @@ public:
 
 private:
 	static void UpdateFilm(Film *film, HitPoints *hitPoints, SampleBuffer *&sampleBuffer);
-	static void InitPhotonPath(luxrays::sdl::Scene *scene,
+	static void InitPhotonPath(Scene *scene,
 			luxrays::RandomGenerator *rndGen,
-			PhotonPath *photonPath, luxrays::Ray *ray,
+			PhotonPath *photonPath, Ray *ray,
 			unsigned int *photonTracedPass);
+	static void AdvancePhotonPaths(
+		SPPMRenderEngine *renderEngine, HitPoints *hitPoints,
+		Scene *scene, RandomGenerator *rndGen,
+		RayBuffer *rayBuffer, std::vector<PhotonPath> &photonPaths);
 	static void RenderThreadImpl(SPPMDeviceRenderThread *renderThread);
 
 	IntersectionDevice *intersectionDevice;
-	RayBuffer *rayBuffer;
 	RayBuffer *rayBufferHitPoints;
-
+	std::vector<RayBuffer *> rayBuffersList;
+	std::vector<std::vector<PhotonPath> *> photonPathsList;
 
 	boost::thread *renderThread;
 
