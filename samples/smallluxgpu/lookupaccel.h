@@ -265,6 +265,7 @@ private:
 	HitPoints *hitPoints;
 	unsigned int gridSize;
 	float invCellSize;
+	int maxHashIndexX, maxHashIndexY, maxHashIndexZ;
 	HashCell **grid;
 };
 

@@ -114,6 +114,14 @@ private:
 	int bufid;
 };
 
+template <typename T> inline void Shuffle(T *samp, size_t count, size_t dims, RandomGenerator &rng) {
+	for (size_t i = 0; i < count; ++i) {
+		size_t other = i + (rng.uintValue() % (count - i));
+		for (size_t j = 0; j < dims; ++j)
+			Swap(samp[dims * i + j], samp[dims * other + j]);
+	}
+}
+
 }
 
 #endif	/* _LUXRAYS_RANDOM_H */

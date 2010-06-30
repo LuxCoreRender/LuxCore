@@ -244,7 +244,7 @@ inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
 			return true;*/
 	}
 #endif
-}
+	}
 
 //------------------------------------------------------------------------------
 // Memory
