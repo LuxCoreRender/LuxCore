@@ -247,7 +247,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 		// First eye pass
 		if (renderThread->threadIndex == 0) {
 			// One thread initialize the EyePaths list
-			renderEngine->hitPoints = new HitPoints(renderEngine, rndGen, device, rayBufferHitPoints);
+			renderEngine->hitPoints = new HitPoints(renderEngine);
 		}
 
 		// Wait for other threads

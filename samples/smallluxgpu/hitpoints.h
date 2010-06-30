@@ -96,8 +96,7 @@ class SPPMRenderEngine;
 
 class HitPoints {
 public:
-	HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
-			IntersectionDevice *dev, RayBuffer *rayBuffer);
+	HitPoints(SPPMRenderEngine *engine);
 	~HitPoints();
 
 	void Init();
