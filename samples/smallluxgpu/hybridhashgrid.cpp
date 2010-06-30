@@ -25,7 +25,7 @@
 HybridHashGrid::HybridHashGrid(HitPoints *hps) {
 	hitPoints = hps;
 	grid = NULL;
-	kdtreeThreshold = 8;
+	kdtreeThreshold = 2;
 
 	RefreshMutex();
 }

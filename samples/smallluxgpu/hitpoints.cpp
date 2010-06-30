@@ -123,8 +123,7 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 
 //------------------------------------------------------------------------------
 
-HitPoints::HitPoints(SPPMRenderEngine *engine, RandomGenerator *rndGen,
-			IntersectionDevice *device, RayBuffer *rayBuffer) {
+HitPoints::HitPoints(SPPMRenderEngine *engine) {
 	renderEngine = engine;
 	pass = 0;
 
