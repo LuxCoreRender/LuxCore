@@ -45,6 +45,11 @@ void HybridHashGrid::RefreshMutex() {
 	const float cellSize = sqrtf(maxPhotonRadius2) * 2.f;
 	std::cerr << "Hybrid hash grid cell size: " << cellSize << std::endl;
 	invCellSize = 1.f / cellSize;
+	maxHashIndexX = int((hpBBox.pMax.x - hpBBox.pMin.x) * invCellSize);
+	maxHashIndexY = int((hpBBox.pMax.y - hpBBox.pMin.y) * invCellSize);
+	maxHashIndexZ = int((hpBBox.pMax.z - hpBBox.pMin.z) * invCellSize);
+	std::cerr << "Hybrid hash grid cell count: (" << maxHashIndexX << ", " <<
+			maxHashIndexY << ", " << maxHashIndexZ << ")" << std::endl;
 
 	// TODO: add a tunable parameter for HybridHashGrid size
 	gridSize = hitPointsCount;
@@ -79,9 +84,16 @@ void HybridHashGrid::RefreshMutex() {
 			const luxrays::Vector bMin = ((hp->position - rad) - hpBBox.pMin) * invCellSize;
 			const luxrays::Vector bMax = ((hp->position + rad) - hpBBox.pMin) * invCellSize;
 
-			for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
-				for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
-					for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ix++) {
+			const int ixMin = Clamp<int>(int(bMin.x), 0, maxHashIndexX);
+			const int ixMax = Clamp<int>(int(bMax.x), 0, maxHashIndexX);
+			const int iyMin = Clamp<int>(int(bMin.y), 0, maxHashIndexY);
+			const int iyMax = Clamp<int>(int(bMax.y), 0, maxHashIndexY);
+			const int izMin = Clamp<int>(int(bMin.z), 0, maxHashIndexZ);
+			const int izMax = Clamp<int>(int(bMax.z), 0, maxHashIndexZ);
+
+			for (int iz = izMin; iz <= izMax; iz++) {
+				for (int iy = iyMin; iy <= iyMax; iy++) {
+					for (int ix = ixMin; ix <= ixMax; ix++) {
 						int hv = Hash(ix, iy, iz);
 
 						if (grid[hv] == NULL) {
@@ -158,9 +170,15 @@ void HybridHashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Vect
 		const luxrays::Spectrum &photonFlux) {
 	// Look for eye path hit points near the current hit point
 	luxrays::Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
-	const int ix = abs(int(hh.x));
-	const int iy = abs(int(hh.y));
-	const int iz = abs(int(hh.z));
+	const int ix = int(hh.x);
+	if ((ix < 0) || (ix > maxHashIndexX))
+			return;
+	const int iy = int(hh.y);
+	if ((iy < 0) || (iy > maxHashIndexY))
+			return;
+	const int iz = int(hh.z);
+	if ((iz < 0) || (iz > maxHashIndexZ))
+			return;
 
 	HashCell *hc = grid[Hash(ix, iy, iz)];
 	if (hc)
