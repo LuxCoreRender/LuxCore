@@ -252,8 +252,8 @@ Spectrum SunLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
 	return suncolor;
 }
 
-Spectrum SunLight::Sample_L(const Scene *scene,
-	const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const {
+Spectrum SunLight::Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
 	// Choose point on disk oriented toward infinite light direction
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
 	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
@@ -311,8 +311,8 @@ Spectrum InfiniteLight::Sample_L(const Scene *scene, const Point &p, const Norma
 	}
 }
 
-Spectrum InfiniteLight::Sample_L(const Scene *scene,
-	const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const {
+Spectrum InfiniteLight::Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
 	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
 	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
@@ -390,6 +390,42 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const Point &p, const
 
 	*pdf = 0.f;
 	return Spectrum();
+}
+
+Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const float u0,
+		const float u1, const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
+	// Select one of the portals
+	const unsigned int portalCount = portals->GetTotalTriangleCount();
+	unsigned int portalIndex = Min<unsigned int>(Floor2UInt(portalCount * u4), portalCount - 1);
+
+	// Looks for a valid portal
+	const Triangle *tris = portals->GetTriangles();
+	const Normal *normals = portals->GetNormal();
+
+	// Sample the triangle
+	const Triangle &tri = tris[portalIndex];
+	Point samplePoint;
+	float b0, b1, b2;
+	tri.Sample(portals->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
+	const Normal &sampleN = normals[tri.v[0]];
+
+	Vector wi = UniformSampleSphere(u2, u3);
+	float RdotN = Dot(wi, sampleN);
+	if (RdotN < 0.f) {
+		wi *= -1.f;
+		RdotN = -RdotN;
+	}
+
+	*ray = Ray(samplePoint, wi, RAY_EPSILON, INFINITY);
+	*pdf = INV_TWOPI / (portalAreas[portalIndex] * portalCount);
+
+	// Using 0.01 instead of 0.0 to cut down fireflies
+	if (*pdf <= 0.01f) {
+		*pdf = 0.f;
+		return Spectrum();
+	}
+
+	return Le(wi) * RdotN;
 }
 
 //------------------------------------------------------------------------------
@@ -521,8 +557,8 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Norma
 		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
 }
 
-Spectrum TriangleLight::Sample_L(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const {
+Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
 	const ExtTriangleMesh *mesh = scene->objects[meshIndex];
 	const Triangle &tri = mesh->GetTriangles()[triIndex];
 

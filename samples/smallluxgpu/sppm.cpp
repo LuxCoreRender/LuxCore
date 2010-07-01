@@ -146,7 +146,7 @@ void SPPMDeviceRenderThread::InitPhotonPath(Scene *scene, RandomGenerator *rndGe
 	float pdf;
 	photonPath->flux = light->Sample_L(scene,
 		rndGen->floatValue(), rndGen->floatValue(),
-		rndGen->floatValue(), rndGen->floatValue(),
+		rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 		&pdf, ray);
 	photonPath->flux /= pdf * lpdf;
 	photonPath->depth = 0;
