@@ -47,8 +47,8 @@ public:
 	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
 
-	virtual Spectrum Sample_L(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const = 0;
+	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -82,8 +82,8 @@ public:
 
 	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const;
+	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
 
 protected:
 	TexMapInstance *tex;
@@ -113,6 +113,8 @@ public:
 
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
+	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
 
 private:
 	ExtTriangleMesh *portals;
@@ -185,8 +187,8 @@ public:
 
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const;
+	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
 	void SetGain(const Spectrum &g);
 
 protected:
@@ -223,7 +225,8 @@ public:
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 	Spectrum Sample_L(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3, float *pdf, Ray *ray) const;
+		const float u0, const float u1, const float u2, const float u3,
+		const float u4, float *pdf, Ray *ray) const;
 private:
 	const AreaLightMaterial *lightMaterial;
 	unsigned int meshIndex, triIndex;
