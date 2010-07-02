@@ -205,9 +205,9 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 						const TextureMap *map = tm->GetTexMap();
 
 						if (map->HasAlpha()) {
-							const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentShadowTriangleIndex)];
-							const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentShadowTriangleIndex)];
-							const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), shadowRayHit->b1, shadowRayHit->b2);
+							const ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentShadowTriangleIndex)];
+							const UV triUV = mesh->InterpolateTriUV(scene->dataSet->GetMeshTriangleID(currentShadowTriangleIndex),
+									shadowRayHit->b1, shadowRayHit->b2);
 
 							const float alpha = map->GetAlpha(triUV);
 
@@ -269,8 +269,8 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 	const unsigned int currentTriangleIndex = rayHit->index;
 
 	// Get the triangle
-	const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-	const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+	const ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+	const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
 
 	// Get the material
 	const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
@@ -297,16 +297,15 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 	//--------------------------------------------------------------------------
 
 	// Interpolate face normal
-	Normal N = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+	Normal N = mesh->InterpolateTriNormal(triIndex, rayHit->b1, rayHit->b2);
 
 	const SurfaceMaterial *triSurfMat = (SurfaceMaterial *) triMat;
 	const Point hitPoint = pathRay(rayHit->t);
 	const Vector wo = -pathRay.d;
 
 	Spectrum surfaceColor;
-	const Spectrum *colors = mesh->GetColors();
-	if (colors)
-		surfaceColor = InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
+	if (mesh->HasColors())
+		surfaceColor = mesh->InterpolateTriColor(triIndex, rayHit->b1, rayHit->b2);
 	else
 		surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
@@ -316,7 +315,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 	NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
-		const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+		const UV triUV = mesh->InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2);
 
 		// Check if there is an assigned texture map
 		if (tm) {
@@ -344,9 +343,9 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 				// Apply normal mapping
 				const Spectrum color = nm->GetTexMap()->GetColor(triUV);
 
-				const float x = 2.0 * (color.r - 0.5);
-				const float y = 2.0 * (color.g - 0.5);
-				const float z = 2.0 * (color.b - 0.5);
+				const float x = 2.f * (color.r - 0.5f);
+				const float y = 2.f * (color.g - 0.5f);
+				const float z = 2.f * (color.b - 0.5f);
 
 				Vector v1, v2;
 				CoordinateSystem(Vector(N), &v1, &v2);

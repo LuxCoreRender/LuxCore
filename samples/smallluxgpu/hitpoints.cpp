@@ -30,17 +30,16 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 	const unsigned int currentTriangleIndex = rayHit->index;
 
 	// Get the triangle
-	const ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-	const Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+	const ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+	const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
 
-	const Spectrum *colors = mesh->GetColors();
-	if (colors)
-		surfaceColor = InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
+	if (mesh->HasColors())
+		surfaceColor = mesh->InterpolateTriColor(triIndex, rayHit->b1, rayHit->b2);
 	else
 		surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
 	// Interpolate face normal
-	N = InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+	N = mesh->InterpolateTriNormal(triIndex, rayHit->b1, rayHit->b2);
 
 	// Check if I have to apply texture mapping or normal mapping
 	TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
@@ -48,7 +47,7 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 	NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
-		const UV triUV = InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+		const UV triUV = mesh->InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2);
 
 		// Check if there is an assigned texture map
 		if (tm) {
@@ -74,9 +73,9 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 				// Apply normal mapping
 				const Spectrum color = nm->GetTexMap()->GetColor(triUV);
 
-				const float x = 2.0 * (color.r - 0.5);
-				const float y = 2.0 * (color.g - 0.5);
-				const float z = 2.0 * (color.b - 0.5);
+				const float x = 2.f * (color.r - 0.5f);
+				const float y = 2.f * (color.g - 0.5f);
+				const float z = 2.f * (color.b - 0.5f);
 
 				Vector v1, v2;
 				CoordinateSystem(Vector(N), &v1, &v2);

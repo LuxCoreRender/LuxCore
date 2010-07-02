@@ -30,9 +30,9 @@
 #include "luxrays/utils/sdl/light.h"
 #include "luxrays/utils/sdl/material.h"
 #include "luxrays/utils/sdl/texmap.h"
+#include "luxrays/utils/sdl/extmeshcache.h"
 
 #include "luxrays/core/context.h"
-#include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
 
 namespace luxrays { namespace sdl {
@@ -86,10 +86,11 @@ public:
 	PerspectiveCamera *camera;
 
 	std::vector<Material *> materials; // All materials
+	ExtMeshCache *extMeshCache; // Mesh objects
 	TextureMapCache *texMapCache; // Texture maps
 	std::map<std::string, size_t> materialIndices; // All materials indices
 
-	std::vector<ExtTriangleMesh *> objects; // All objects
+	std::vector<ExtMesh *> objects; // All objects
 	std::vector<Material *> triangleMaterials; // One for each triangle
 	std::vector<TexMapInstance *> triangleTexMaps; // One for each triangle
 	std::vector<BumpMapInstance *> triangleBumpMaps; // One for each triangle

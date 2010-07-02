@@ -29,17 +29,16 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 	const unsigned int currentTriangleIndex = rayHit->index;
 
 	// Get the triangle
-	const luxrays::ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-	const luxrays::Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+	const luxrays::ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+	const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
 
-	const luxrays::Spectrum *colors = mesh->GetColors();
-	if (colors)
-		surfaceColor = luxrays::InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
+	if (mesh->HasColors())
+		surfaceColor = mesh->InterpolateTriColor(triIndex, rayHit->b1, rayHit->b2);
 	else
 		surfaceColor = luxrays::Spectrum(1.f, 1.f, 1.f);
 
 	// Interpolate face normal
-	N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+	N = mesh->InterpolateTriNormal(triIndex, rayHit->b1, rayHit->b2);
 
 	// Check if I have to apply texture mapping or normal mapping
 	luxrays::sdl::TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
@@ -47,7 +46,7 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 	luxrays::sdl::NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
-		const luxrays::UV triUV = luxrays::InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+		const luxrays::UV triUV = mesh->InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2);
 
 		// Check if there is an assigned texture map
 		if (tm) {
@@ -73,9 +72,9 @@ bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::RandomGen
 				// Apply normal mapping
 				const luxrays::Spectrum color = nm->GetTexMap()->GetColor(triUV);
 
-				const float x = 2.0 * (color.r - 0.5);
-				const float y = 2.0 * (color.g - 0.5);
-				const float z = 2.0 * (color.b - 0.5);
+				const float x = 2.f * (color.r - 0.5f);
+				const float y = 2.f * (color.g - 0.5f);
+				const float z = 2.f * (color.b - 0.5f);
 
 				luxrays::Vector v1, v2;
 				luxrays::CoordinateSystem(luxrays::Vector(N), &v1, &v2);
