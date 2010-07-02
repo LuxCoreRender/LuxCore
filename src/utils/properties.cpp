@@ -96,6 +96,15 @@ std::vector<std::string> Properties::GetAllKeys(const std::string prefix) const 
 	return keys;
 }
 
+bool Properties::IsDefined(const std::string propName) const {
+	std::map<std::string, std::string>::const_iterator it = props.find(propName);
+
+	if (it == props.end())
+		return false;
+	else
+		return true;
+}
+
 std::string Properties::GetString(const std::string propName, const std::string defaultValue) const {
 	std::map<std::string, std::string>::const_iterator it = props.find(propName);
 

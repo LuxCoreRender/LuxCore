@@ -42,7 +42,7 @@ enum MeshType {
 class Mesh {
 public:
 	Mesh() { }
-	virtual ~Mesh() { };
+	virtual ~Mesh() { }
 
 	virtual MeshType GetType() const = 0;
 
@@ -121,7 +121,12 @@ public:
 	BBox GetBBox() const {
 		return trans(mesh->GetBBox());
 	}
-	Point GetVertex(const unsigned vertIndex) const { return trans(mesh->GetVertex(vertIndex)); }
+	Point GetVertex(const unsigned int vertIndex) const { return trans(mesh->GetVertex(vertIndex)); }
+	float GetTriangleArea(const unsigned int triIndex) const {
+		const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+		return Triangle::Area(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]));
+	}
 
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 

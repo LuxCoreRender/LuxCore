@@ -18,6 +18,7 @@
  *                                                                         *
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
+
 #include <iostream>
 #include <cstring>
 

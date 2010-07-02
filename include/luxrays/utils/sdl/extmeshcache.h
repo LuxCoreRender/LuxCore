@@ -26,6 +26,7 @@
 #include <vector>
 #include <map>
 
+#include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/context.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 
@@ -37,10 +38,12 @@ public:
 	~ExtMeshCache();
 
 	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals);
+	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals,
+		const Transform &trans);
 
 private:
 	Context *ctx;
-	std::map<std::string, ExtMesh *> maps;
+	std::map<std::string, ExtTriangleMesh *> maps;
 	std::vector<ExtMesh *> meshes;
 };
 
