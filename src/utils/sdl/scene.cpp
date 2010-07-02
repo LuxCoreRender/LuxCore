@@ -118,11 +118,26 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		// Build the object
 		const std::vector<std::string> args = scnProp->GetStringVector(key, "");
 		const std::string plyFileName = args.at(0);
-		LR_LOG(ctx, "PLY objects file name: " << plyFileName);
+		LR_LOG(ctx, "PLY objects [" << *objKey << "] file name: " << plyFileName);
 
 		// Check if I have to calculate normal or not
 		const bool usePlyNormals = (scnProp->GetInt(key + ".useplynormals", 0) != 0);
-		ExtMesh *meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals);
+
+		// Check if I have to use an instance mesh or not
+		ExtMesh *meshObject;
+		if (scnProp->IsDefined(key + ".transformation")) {
+			const std::vector<float> vf = GetParameters(*scnProp, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+			const Matrix4x4 mat(
+					vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+					vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+					vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+					vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+			const Transform trans(mat);
+
+			meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals, trans);
+		} else
+			meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals);
+
 		objects.push_back(meshObject);
 
 		// Get the material

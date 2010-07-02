@@ -34,7 +34,7 @@ namespace luxrays {
 class ExtMesh : public Mesh {
 public:
 	ExtMesh() { }
-	virtual ~ExtMesh() { };
+	virtual ~ExtMesh() { }
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasColors() const = 0;
@@ -51,6 +51,8 @@ public:
 	virtual UV InterpolateTriUV(const unsigned int index, const float b1, const float b2) const = 0;
 
 	virtual void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
+
+	virtual void Delete() = 0;
 };
 
 class ExtTriangleMesh : public ExtMesh {
@@ -84,7 +86,7 @@ public:
 		uvs = meshUV;
 	}
 	~ExtTriangleMesh() { };
-	virtual void Delete() {
+	void Delete() {
 		delete[] vertices;
 		delete[] tris;
 		delete[] normals;
@@ -158,12 +160,18 @@ public:
 
 		trans = t;
 		mesh = m;
-	};
-	virtual ~ExtInstanceTriangleMesh() { };
+	}
+	~ExtInstanceTriangleMesh() { };
+	void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_INSTANCE; }
 
 	Point GetVertex(const unsigned index) const { return trans(mesh->GetVertex(index)); }
+		float GetTriangleArea(const unsigned int triIndex) const {
+		const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+		return Triangle::Area(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]));
+	}
 	unsigned int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	unsigned int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
@@ -175,12 +183,13 @@ public:
 	bool HasColors() const { return mesh->HasColors(); }
 	bool HasUVs() const { return mesh->HasUVs(); }
 
-	Normal GetNormal(const unsigned index) const { return trans(mesh->GetNormal(index)); }
+	Normal GetNormal(const unsigned index) const { return Normalize(trans(mesh->GetNormal(index))); }
+	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return Normalize(trans(GetNormal(triIndex, vertIndex))); }
 	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
 	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }
 
 	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
-		return trans(mesh->InterpolateTriNormal(index, b1, b2));
+		return Normalize(trans(mesh->InterpolateTriNormal(index, b1, b2)));
 	}
 
 	Spectrum InterpolateTriColor(const unsigned int index, const float b0, const float b1, const float b2) const {

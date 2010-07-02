@@ -40,6 +40,7 @@ public:
 	std::vector<std::string> GetAllKeys() const;
 	std::vector<std::string> GetAllKeys(const std::string prefix) const;
 
+	bool IsDefined(const std::string propName) const;
 	std::string GetString(const std::string propName, const std::string defaultValue) const;
 	int GetInt(const std::string propName, const int defaultValue) const;
 	float GetFloat(const std::string propName, const float defaultValue) const;

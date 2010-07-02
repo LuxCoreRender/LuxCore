@@ -30,15 +30,17 @@ ExtMeshCache::ExtMeshCache(Context *context) {
 }
 
 ExtMeshCache::~ExtMeshCache() {
-	for (size_t i = 0; i < meshes.size(); ++i)
+	for (size_t i = 0; i < meshes.size(); ++i) {
+		meshes[i]->Delete();
 		delete meshes[i];
+	}
 }
 
 ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals) {
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
 
 	// Check if the mesh has been already loaded
-	std::map<std::string, ExtMesh *>::const_iterator it = maps.find(key);
+	std::map<std::string, ExtTriangleMesh *>::const_iterator it = maps.find(key);
 
 	if (it == maps.end()) {
 		// I have yet to load the file
@@ -52,4 +54,14 @@ ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePly
 		LR_LOG(ctx, "Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
 		return it->second;
 	}
+}
+
+ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals,
+		const Transform &trans) {
+	ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName, usePlyNormals);
+
+	ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, trans);
+	meshes.push_back(imesh);
+
+	return imesh;
 }

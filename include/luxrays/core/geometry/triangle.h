@@ -112,6 +112,10 @@ public:
 		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 	}
 
+	static float Area(const Point &p0, const Point &p1, const Point &p2) {
+		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
+	}
+
 	unsigned int v[3];
 };
 
