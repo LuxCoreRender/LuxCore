@@ -260,74 +260,10 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertColors, vertUV);
 }
 
-ExtTriangleMesh *ExtTriangleMesh::Merge(
-	const std::deque<ExtTriangleMesh *> &meshes,
-	TriangleMeshID **preprocessedMeshIDs,
-	TriangleID **preprocessedMeshTriangleIDs) {
-	unsigned int totalVertexCount = 0;
-	unsigned int totalTriangleCount = 0;
+BBox ExtTriangleMesh::GetBBox() const {
+	BBox bbox;
+	for (unsigned int i = 0; i < vertCount; ++i)
+		bbox = Union(bbox, vertices[i]);
 
-	for (std::deque<ExtTriangleMesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
-		ExtTriangleMesh *mesh = *m;
-		totalVertexCount += mesh->GetTotalVertexCount();
-		totalTriangleCount += mesh->GetTotalTriangleCount();
-	}
-
-	return Merge(totalVertexCount, totalTriangleCount, meshes, preprocessedMeshIDs, preprocessedMeshTriangleIDs);
-}
-
-ExtTriangleMesh *ExtTriangleMesh::Merge(
-	const unsigned int totalVertexCount,
-	const unsigned int totalTriangleCount,
-	const std::deque<ExtTriangleMesh *> &meshes,
-	TriangleMeshID **preprocessedMeshIDs,
-	TriangleID **preprocessedMeshTriangleIDs) {
-	assert (totalVertexCount > 0);
-	assert (totalTriangleCount > 0);
-	assert (meshes.size() > 0);
-
-	Point *v = new Point[totalVertexCount];
-	Triangle *i = new Triangle[totalTriangleCount];
-	Normal *n = new Normal[totalVertexCount];
-	Spectrum *c = new Spectrum[totalVertexCount];
-
-	if (preprocessedMeshIDs)
-		*preprocessedMeshIDs = new TriangleMeshID[totalTriangleCount];
-	if (preprocessedMeshTriangleIDs)
-		*preprocessedMeshTriangleIDs = new TriangleID[totalTriangleCount];
-
-	unsigned int vIndex = 0;
-	unsigned int iIndex = 0;
-	TriangleMeshID currentID = 0;
-	for (std::deque<ExtTriangleMesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
-		const ExtTriangleMesh *mesh = *m;
-
-		// Copy the mesh vertices, normals and colors
-		memcpy(&v[vIndex], mesh->GetVertices(), sizeof(Point) * mesh->GetTotalVertexCount());
-		memcpy(&n[vIndex], mesh->GetNormal(), sizeof(Normal) * mesh->GetTotalVertexCount());
-		memcpy(&c[vIndex], mesh->GetColors(), sizeof(Spectrum) * mesh->GetTotalVertexCount());
-
-		// Translate mesh indices
-		const Triangle *tris = mesh->GetTriangles();
-		for (unsigned int j = 0; j < mesh->GetTotalTriangleCount(); j++) {
-			i[iIndex].v[0] = tris[j].v[0] + vIndex;
-			i[iIndex].v[1] = tris[j].v[1] + vIndex;
-			i[iIndex].v[2] = tris[j].v[2] + vIndex;
-
-			if (preprocessedMeshIDs)
-				(*preprocessedMeshIDs)[iIndex] = currentID;
-			if (preprocessedMeshTriangleIDs)
-				(*preprocessedMeshTriangleIDs)[iIndex] = j;
-
-			++iIndex;
-		}
-
-		vIndex += mesh->GetTotalVertexCount();
-		if (preprocessedMeshIDs) {
-			// To avoid compiler warning
-			currentID = currentID + 1;
-		}
-	}
-
-	return new ExtTriangleMesh(totalVertexCount, totalTriangleCount, v, i, n, c);
+	return bbox;
 }

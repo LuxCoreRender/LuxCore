@@ -108,17 +108,16 @@ static bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::Ra
 	const unsigned int currentTriangleIndex = rayHit->index;
 
 	// Get the triangle
-	const luxrays::ExtTriangleMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
-	const luxrays::Triangle &tri = mesh->GetTriangles()[scene->dataSet->GetMeshTriangleID(currentTriangleIndex)];
+	const luxrays::ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+	const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
 
-	const luxrays::Spectrum *colors = mesh->GetColors();
-	if (colors)
-		surfaceColor = luxrays::InterpolateTriColor(tri, colors, rayHit->b1, rayHit->b2);
+	if (mesh->HasColors())
+		surfaceColor = mesh->InterpolateTriColor(triIndex, rayHit->b1, rayHit->b2);
 	else
 		surfaceColor = luxrays::Spectrum(1.f, 1.f, 1.f);
 
 	// Interpolate face normal
-	N = luxrays::InterpolateTriNormal(tri, mesh->GetNormal(), rayHit->b1, rayHit->b2);
+	N = mesh->InterpolateTriNormal(triIndex, rayHit->b1, rayHit->b2);
 
 	// Check if I have to apply texture mapping or normal mapping
 	luxrays::sdl::TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
@@ -126,7 +125,7 @@ static bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::Ra
 	luxrays::sdl::NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
-		const luxrays::UV triUV = luxrays::InterpolateTriUV(tri, mesh->GetUVs(), rayHit->b1, rayHit->b2);
+		const luxrays::UV triUV = mesh->InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2);
 
 		// Check if there is an assigned texture map
 		if (tm) {

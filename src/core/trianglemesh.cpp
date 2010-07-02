@@ -25,6 +25,7 @@
 #include <deque>
 
 #include "luxrays/core/trianglemesh.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
 
 using namespace luxrays;
 
@@ -37,16 +38,15 @@ BBox TriangleMesh::GetBBox() const {
 }
 
 TriangleMesh *TriangleMesh::Merge(
-	const std::deque<TriangleMesh *> &meshes,
+	const std::deque<Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
 	unsigned int totalVertexCount = 0;
 	unsigned int totalTriangleCount = 0;
 
-	for (std::deque<TriangleMesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
-		const TriangleMesh *mesh = *m;
-		totalVertexCount += mesh->GetTotalVertexCount();
-		totalTriangleCount += mesh->GetTotalTriangleCount();
+	for (std::deque<Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+		totalVertexCount += (*m)->GetTotalVertexCount();
+		totalTriangleCount += (*m)->GetTotalTriangleCount();
 	}
 
 	return Merge(totalVertexCount, totalTriangleCount, meshes, preprocessedMeshIDs, preprocessedMeshTriangleIDs);
@@ -55,7 +55,7 @@ TriangleMesh *TriangleMesh::Merge(
 TriangleMesh *TriangleMesh::Merge(
 	const unsigned int totalVertexCount,
 	const unsigned int totalTriangleCount,
-	const std::deque<TriangleMesh *> &meshes,
+	const std::deque<Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
 	assert (totalVertexCount > 0);
@@ -73,15 +73,55 @@ TriangleMesh *TriangleMesh::Merge(
 	unsigned int vIndex = 0;
 	unsigned int iIndex = 0;
 	TriangleMeshID currentID = 0;
-	for (std::deque<TriangleMesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
-		const TriangleMesh *mesh = *m;
+	for (std::deque<Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+		const Triangle *tris;
+		switch ((*m)->GetType()) {
+			case TYPE_TRIANGLE: {
+				const TriangleMesh *mesh = (TriangleMesh *)*m;
+				// Copy the mesh vertices
+				memcpy(&v[vIndex], mesh->GetVertices(), sizeof(Point) * mesh->GetTotalVertexCount());
 
-		// Copy the mesh vertices
-		memcpy(&v[vIndex], mesh->GetVertices(), sizeof(Point) * mesh->GetTotalVertexCount());
+				tris = mesh->GetTriangles();
+				break;
+			}
+			case TYPE_TRIANGLE_INSTANCE: {
+				const InstanceTriangleMesh *mesh = (InstanceTriangleMesh *)*m;
+
+				// Copy the mesh vertices
+				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); j++)
+					v[vIndex + j] = mesh->GetVertex(j);
+
+				tris = mesh->GetTriangles();
+				break;
+			}
+			case TYPE_EXT_TRIANGLE: {
+				const ExtTriangleMesh *mesh = (ExtTriangleMesh *)*m;
+
+				// Copy the mesh vertices
+				for (unsigned int j = 0; j <mesh->GetTotalVertexCount(); j++)
+					v[vIndex + j] = mesh->GetVertex(j);
+
+				tris = mesh->GetTriangles();
+				break;
+			}
+			case TYPE_EXT_TRIANGLE_INSTANCE: {
+				const ExtInstanceTriangleMesh *mesh = (ExtInstanceTriangleMesh *)*m;
+
+				// Copy the mesh vertices
+				for (unsigned int j = 0; j <mesh->GetTotalVertexCount(); j++)
+					v[vIndex + j] = mesh->GetVertex(j);
+
+				tris = mesh->GetTriangles();
+				break;
+			}
+			default:
+				assert (false);
+				tris = NULL;
+				break;
+		}
 
 		// Translate mesh indices
-		const Triangle *tris = mesh->GetTriangles();
-		for (unsigned int j = 0; j < mesh->GetTotalTriangleCount(); j++) {
+		for (unsigned int j = 0; j < (*m)->GetTotalTriangleCount(); j++) {
 			i[iIndex].v[0] = tris[j].v[0] + vIndex;
 			i[iIndex].v[1] = tris[j].v[1] + vIndex;
 			i[iIndex].v[2] = tris[j].v[2] + vIndex;
@@ -94,7 +134,7 @@ TriangleMesh *TriangleMesh::Merge(
 			++iIndex;
 		}
 
-		vIndex += mesh->GetTotalVertexCount();
+		vIndex += (*m)->GetTotalVertexCount();
 		if (preprocessedMeshIDs) {
 			// To avoid compiler warning
 			currentID = currentID + 1;

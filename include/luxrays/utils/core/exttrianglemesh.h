@@ -31,63 +31,181 @@
 
 namespace luxrays {
 
-class ExtTriangleMesh : public TriangleMesh {
+class ExtMesh : public Mesh {
 public:
+	ExtMesh() { }
+	virtual ~ExtMesh() { };
+
+	virtual bool HasNormals() const = 0;
+	virtual bool HasColors() const = 0;
+	virtual bool HasUVs() const = 0;
+
+	virtual Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const = 0;
+	virtual Normal GetNormal(const unsigned int vertIndex) const = 0;
+	virtual Spectrum GetColor(const unsigned int vertIndex) const = 0;
+	virtual UV GetUV(const unsigned int vertIndex) const = 0;
+
+	virtual Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const = 0;
+	virtual Spectrum InterpolateTriColor(const unsigned int index, const float b0, const float b1, const float b2) const = 0;
+	virtual Spectrum InterpolateTriColor(const unsigned int index, const float b1, const float b2) const = 0;
+	virtual UV InterpolateTriUV(const unsigned int index, const float b1, const float b2) const = 0;
+
+	virtual void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
+};
+
+class ExtTriangleMesh : public ExtMesh {
+public:
+	ExtTriangleMesh(ExtTriangleMesh *mesh) {
+		assert (mesh != NULL);
+
+		vertCount = mesh->vertCount;
+		triCount = mesh->triCount;
+		vertices = mesh->vertices;
+		tris = mesh->tris;
+
+		normals = mesh->normals;
+		colors = mesh->colors;
+		uvs = mesh->uvs;
+	}
 	ExtTriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, Spectrum *meshColors = NULL, UV *meshUV = NULL) :
-			TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, Spectrum *meshColors = NULL, UV *meshUV = NULL) {
+		assert (meshVertCount > 0);
+		assert (meshTriCount > 0);
+		assert (meshVertices != NULL);
+		assert (meshTris != NULL);
+
+		vertCount = meshVertCount;
+		triCount = meshTriCount;
+		vertices = meshVertices;
+		tris = meshTris;
+
 		normals = meshNormals;
 		colors = meshColors;
 		uvs = meshUV;
 	}
 	~ExtTriangleMesh() { };
 	virtual void Delete() {
-		TriangleMesh::Delete();
+		delete[] vertices;
+		delete[] tris;
 		delete[] normals;
 		delete[] colors;
 		delete[] uvs;
 	}
 
-	Normal *GetNormal() const { return normals; }
-	Spectrum *GetColors() const { return colors; }
-	UV *GetUVs() const { return uvs; }
+	MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
+	unsigned int GetTotalVertexCount() const { return vertCount; }
+	unsigned int GetTotalTriangleCount() const { return triCount; }
+	BBox GetBBox() const;
+
+	bool HasNormals() const { return normals != NULL; }
+	bool HasColors() const { return colors != NULL; }
+	bool HasUVs() const { return uvs != NULL; }
+
+	Point GetVertex(const unsigned int vertIndex) const { return vertices[vertIndex]; }
+	float GetTriangleArea(const unsigned int triIndex) const { return tris[triIndex].Area(vertices); }
+	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return normals[tris[triIndex].v[vertIndex]]; }
+	Normal GetNormal(const unsigned int vertIndex) const { return normals[vertIndex]; }
+	Spectrum GetColor(const unsigned int vertIndex) const { return colors[vertIndex]; }
+	UV GetUV(const unsigned int vertIndex) const { return uvs[vertIndex]; }
+
+	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
+		const Triangle &tri = tris[index];
+		const float b0 = 1.f - b1 - b2;
+		return Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
+	}
+
+	Spectrum InterpolateTriColor(const unsigned int index, const float b0, const float b1, const float b2) const {
+		const Triangle &tri = tris[index];
+		return b0 * colors[tri.v[0]] + b1 * colors[tri.v[1]] + b2 * colors[tri.v[2]];
+	}
+
+	Spectrum InterpolateTriColor(const unsigned int index, const float b1, const float b2) const {
+		const Triangle &tri = tris[index];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * colors[tri.v[0]] + b1 * colors[tri.v[1]] + b2 * colors[tri.v[2]];
+	}
+
+	UV InterpolateTriUV(const unsigned int index, const float b1, const float b2) const {
+		const Triangle &tri = tris[index];
+		const float b0 = 1.f - b1 - b2;
+		return b0 * uvs[tri.v[0]] + b1 * uvs[tri.v[1]] + b2 * uvs[tri.v[2]];
+	}
+
+	void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
+		const Triangle &tri = tris[index];
+		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
+	}
+
+	Point *GetVertices() const { return vertices; }
+	Triangle *GetTriangles() const { return tris; }
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName, const bool usePlyNormals = false);
-	static ExtTriangleMesh *Merge(
-		const std::deque<ExtTriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL,
-		TriangleID **preprocessedMeshTriangleIDs = NULL);
-	static ExtTriangleMesh *Merge(
-		const unsigned int totalVerticesCount,
-		const unsigned int totalIndicesCount,
-		const std::deque<ExtTriangleMesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL,
-		TriangleID **preprocessedMeshTriangleIDs = NULL);
 
 private:
+	unsigned int vertCount;
+	unsigned int triCount;
+	Point *vertices;
+	Triangle *tris;
 	Normal *normals;
 	Spectrum *colors;
 	UV *uvs;
 };
 
-inline Normal InterpolateTriNormal(const Triangle &tri, const Normal *normals, const float b1, const float b2) {
-	const float b0 = 1.f - b1 - b2;
-	return Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
-}
+class ExtInstanceTriangleMesh : public ExtMesh {
+public:
+	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) {
+		assert (mesh != NULL);
 
-inline Spectrum InterpolateTriColor(const Triangle &tri, const Spectrum *colors, const float b0, const float b1, const float b2) {
-	return b0 * colors[tri.v[0]] + b1 * colors[tri.v[1]] + b2 * colors[tri.v[2]];
-}
+		trans = t;
+		mesh = m;
+	};
+	virtual ~ExtInstanceTriangleMesh() { };
 
-inline Spectrum InterpolateTriColor(const Triangle &tri, const Spectrum *colors, const float b1, const float b2) {
-	const float b0 = 1.f - b1 - b2;
-	return b0 * colors[tri.v[0]] + b1 * colors[tri.v[1]] + b2 * colors[tri.v[2]];
-}
+	virtual MeshType GetType() const { return TYPE_TRIANGLE_INSTANCE; }
 
-inline UV InterpolateTriUV(const Triangle &tri, const UV *uvs, const float b1, const float b2) {
-	const float b0 = 1.f - b1 - b2;
-	return b0 * uvs[tri.v[0]] + b1 * uvs[tri.v[1]] + b2 * uvs[tri.v[2]];
-}
+	Point GetVertex(const unsigned index) const { return trans(mesh->GetVertex(index)); }
+	unsigned int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
+	unsigned int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
+
+	BBox GetBBox() const {
+		return trans(mesh->GetBBox());
+	}
+
+	bool HasNormals() const { return mesh->HasNormals(); }
+	bool HasColors() const { return mesh->HasColors(); }
+	bool HasUVs() const { return mesh->HasUVs(); }
+
+	Normal GetNormal(const unsigned index) const { return trans(mesh->GetNormal(index)); }
+	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
+	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }
+
+	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
+		return trans(mesh->InterpolateTriNormal(index, b1, b2));
+	}
+
+	Spectrum InterpolateTriColor(const unsigned int index, const float b0, const float b1, const float b2) const {
+		return mesh->InterpolateTriColor(index, b0, b1, b2);
+	}
+
+	Spectrum InterpolateTriColor(const unsigned int index, const float b1, const float b2) const {
+		return mesh->InterpolateTriColor(index, b1, b2);
+	}
+
+	UV InterpolateTriUV(const unsigned int index, const float b1, const float b2) const {
+		return mesh->InterpolateTriUV(index, b1, b2);
+	}
+
+	void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
+		mesh->Sample(index, u0, u1, p , b0, b1, b2);
+	}
+
+	Point *GetVertices() const { return mesh->GetVertices(); }
+	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
+
+private:
+	Transform trans;
+	ExtTriangleMesh *mesh;
+};
 
 }
 

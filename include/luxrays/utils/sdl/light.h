@@ -211,7 +211,7 @@ class TriangleLight : public LightSource, public LightMaterial {
 public:
 	TriangleLight() { }
 	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const std::vector<ExtTriangleMesh *> &objs);
+		const unsigned int triangleIndex, const std::vector<ExtMesh *> &objs);
 
 	LightSourceType GetType() const { return TYPE_TRIANGLE; }
 

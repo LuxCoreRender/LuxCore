@@ -27,13 +27,34 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/triangle.h"
+#include "geometry/transform.h"
 
 namespace luxrays {
 
 typedef unsigned int TriangleMeshID;
 typedef unsigned int TriangleID;
 
-class TriangleMesh {
+enum MeshType {
+	TYPE_TRIANGLE, TYPE_TRIANGLE_INSTANCE,
+	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE
+};
+
+class Mesh {
+public:
+	Mesh() { }
+	virtual ~Mesh() { };
+
+	virtual MeshType GetType() const = 0;
+
+	virtual unsigned int GetTotalVertexCount() const = 0;
+	virtual unsigned int GetTotalTriangleCount() const = 0;
+
+	virtual BBox GetBBox() const = 0;
+	virtual Point GetVertex(const unsigned int vertIndex) const = 0;
+	virtual float GetTriangleArea(const unsigned int triIndex) const = 0;
+};
+
+class TriangleMesh : public Mesh {
 public:
 	// NOTE: deleting meshVertices and meshIndices is up to the application
 	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
@@ -54,21 +75,25 @@ public:
 		delete[] tris;
 	}
 
-	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
+	virtual MeshType GetType() const { return TYPE_TRIANGLE; }
 	unsigned int GetTotalVertexCount() const { return vertCount; }
 	unsigned int GetTotalTriangleCount() const { return triCount; }
 
 	BBox GetBBox() const;
+	Point GetVertex(const unsigned int vertIndex) const { return vertices[vertIndex]; }
+	float GetTriangleArea(const unsigned int triIndex) const { return tris[triIndex].Area(vertices); }
+
+	Point *GetVertices() const { return vertices; }
+	Triangle *GetTriangles() const { return tris; }
 
 	static TriangleMesh *Merge(
-		const std::deque<TriangleMesh *> &meshes,
+		const std::deque<Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 	static TriangleMesh *Merge(
 		const unsigned int totalVerticesCount,
 		const unsigned int totalIndicesCount,
-		const std::deque<TriangleMesh *> &meshes,
+		const std::deque<Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 
@@ -77,6 +102,32 @@ protected:
 	unsigned int triCount;
 	Point *vertices;
 	Triangle *tris;
+};
+
+class InstanceTriangleMesh : public Mesh {
+public:
+	InstanceTriangleMesh(TriangleMesh *m, const Transform &t) {
+		assert (mesh != NULL);
+
+		trans = t;
+		mesh = m;
+	};
+	virtual ~InstanceTriangleMesh() { };
+
+	virtual MeshType GetType() const { return TYPE_TRIANGLE_INSTANCE; }
+	unsigned int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
+	unsigned int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
+
+	BBox GetBBox() const {
+		return trans(mesh->GetBBox());
+	}
+	Point GetVertex(const unsigned vertIndex) const { return trans(mesh->GetVertex(vertIndex)); }
+
+	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
+
+protected:
+	Transform trans;
+	TriangleMesh *mesh;
 };
 
 }

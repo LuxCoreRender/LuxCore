@@ -34,6 +34,7 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 
 Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
+	extMeshCache = new ExtMeshCache(ctx);
 	texMapCache = new TextureMapCache(ctx);
 
 	LR_LOG(ctx, "Reading scene: " << fileName);
@@ -121,7 +122,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 
 		// Check if I have to calculate normal or not
 		const bool usePlyNormals = (scnProp->GetInt(key + ".useplynormals", 0) != 0);
-		ExtTriangleMesh *meshObject = ExtTriangleMesh::LoadExtTriangleMesh(ctx, plyFileName, usePlyNormals);
+		ExtMesh *meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals);
 		objects.push_back(meshObject);
 
 		// Get the material
@@ -152,7 +153,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		// [old deprecated syntax] Check if there is a texture map associated to the object
 		if (args.size() > 1) {
 			// Check if the object has UV coords
-			if (meshObject->GetUVs() == NULL)
+			if (!meshObject->HasUVs())
 				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
 			TexMapInstance *tm = texMapCache->GetTexMapInstance(args.at(1));
@@ -166,7 +167,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 			const std::string texMap = scnProp->GetString(key + ".texmap", "");
 			if (texMap != "") {
 				// Check if the object has UV coords
-				if (meshObject->GetUVs() == NULL)
+				if (!meshObject->HasUVs())
 					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
 				TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap);
@@ -180,7 +181,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 			const std::string bumpMap = scnProp->GetString(key + ".bumpmap", "");
 			if (bumpMap != "") {
 				// Check if the object has UV coords
-				if (meshObject->GetUVs() == NULL)
+				if (!meshObject->HasUVs())
 					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for bump mapping");
 
 				const float scale = scnProp->GetFloat(key + ".bumpmap.scale", 1.f);
@@ -196,7 +197,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 			const std::string normalMap = scnProp->GetString(key + ".normalmap", "");
 			if (normalMap != "") {
 				// Check if the object has UV coords
-				if (meshObject->GetUVs() == NULL)
+				if (!meshObject->HasUVs())
 					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
 
 				NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap);
@@ -305,7 +306,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 	}
 
 	// Add all objects
-	for (std::vector<ExtTriangleMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
+	for (std::vector<ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
 		dataSet->Add(*obj);
 
 	dataSet->Preprocess();
@@ -321,11 +322,7 @@ Scene::~Scene() {
 
 	delete dataSet;
 
-	for (std::vector<ExtTriangleMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj) {
-		(*obj)->Delete();
-		delete *obj;
-	}
-
+	delete extMeshCache;
 	delete texMapCache;
 	delete scnProp;
 }

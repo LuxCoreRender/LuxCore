@@ -288,6 +288,7 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/utils/core/exttrianglemesh.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/plymesh/rply.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/properties.cpp
+    ${LUXRAYS_SOURCE_DIR}/utils/sdl/extmeshcache.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/light.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/scene.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/spd.cpp

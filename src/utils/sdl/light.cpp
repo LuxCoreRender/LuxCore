@@ -357,15 +357,12 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const Point &p, const
 	unsigned int portalIndex = Min<unsigned int>(Floor2UInt(portalCount * u2), portalCount - 1);
 
 	// Looks for a valid portal
-	const Triangle *tris = portals->GetTriangles();
-	const Normal *normals = portals->GetNormal();
 	for (unsigned int i = 0; i < portalCount; ++i) {
 		// Sample the triangle
-		const Triangle &tri = tris[portalIndex];
 		Point samplePoint;
 		float b0, b1, b2;
-		tri.Sample(portals->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
-		const Normal &sampleN = normals[tri.v[0]];
+		portals->Sample(portalIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+		const Normal sampleN = portals->GetNormal(portalIndex, 0);
 
 		// Check if the portal is visible
 		Vector wi = samplePoint - p;
@@ -398,16 +395,11 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const float u0,
 	const unsigned int portalCount = portals->GetTotalTriangleCount();
 	unsigned int portalIndex = Min<unsigned int>(Floor2UInt(portalCount * u4), portalCount - 1);
 
-	// Looks for a valid portal
-	const Triangle *tris = portals->GetTriangles();
-	const Normal *normals = portals->GetNormal();
-
 	// Sample the triangle
-	const Triangle &tri = tris[portalIndex];
 	Point samplePoint;
 	float b0, b1, b2;
-	tri.Sample(portals->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = normals[tri.v[0]];
+	portals->Sample(portalIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	const Normal &sampleN = portals->GetNormal(portalIndex, 0);
 
 	Vector wi = UniformSampleSphere(u2, u3);
 	float RdotN = Dot(wi, sampleN);
@@ -496,39 +488,36 @@ Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const Point &p, const Nor
 //------------------------------------------------------------------------------
 
 TriangleLight::TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const std::vector<ExtTriangleMesh *> &objs) {
+		const unsigned int triangleIndex, const std::vector<ExtMesh *> &objs) {
 	lightMaterial = mat;
 	meshIndex = mshIndex;
 	triIndex = triangleIndex;
 
-	const ExtTriangleMesh *mesh = objs[meshIndex];
-	area = (mesh->GetTriangles()[triIndex]).Area(mesh->GetVertices());
+	const ExtMesh *mesh = objs[meshIndex];
+	area = mesh->GetTriangleArea(triIndex);
 }
 
 Spectrum TriangleLight::Le(const Scene *scene, const Vector &wo) const {
-	const ExtTriangleMesh *mesh = scene->objects[meshIndex];
-	const Triangle &tri = mesh->GetTriangles()[triIndex];
-	Normal sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
+	const ExtMesh *mesh = scene->objects[meshIndex];
+	Normal sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
 
 	if (Dot(sampleN, wo) <= 0.f)
 		return Spectrum();
 
-	const Spectrum *colors = mesh->GetColors();
-	if (colors)
-		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+	if (mesh->HasColors())
+		return mesh->GetColor(triIndex) * lightMaterial->GetGain(); // Light sources are supposed to have flat color
 	else
 		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
 }
 
 Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-	const ExtTriangleMesh *mesh = scene->objects[meshIndex];
-	const Triangle &tri = mesh->GetTriangles()[triIndex];
+	const ExtMesh *mesh = scene->objects[meshIndex];
 
 	Point samplePoint;
 	float b0, b1, b2;
-	tri.Sample(mesh->GetVertices(), u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
+	mesh->Sample(triIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	const Normal &sampleN = mesh->GetNormal(triIndex, 0);
 
 	Vector wi = samplePoint - p;
 	const float distanceSquared = wi.LengthSquared();
@@ -550,25 +539,23 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Norma
 		return Spectrum();
 	}
 
-	const Spectrum *colors = mesh->GetColors();
-	if (colors)
-		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+	if (mesh->HasColors())
+		return mesh->GetColor(triIndex) * lightMaterial->GetGain(); // Light sources are supposed to have flat color
 	else
 		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
 }
 
 Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float u1,
 		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
-	const ExtTriangleMesh *mesh = scene->objects[meshIndex];
-	const Triangle &tri = mesh->GetTriangles()[triIndex];
+	const ExtMesh *mesh = scene->objects[meshIndex];
 
 	// Ray origin
 	float b0, b1, b2;
 	Point orig;
-	tri.Sample(mesh->GetVertices(), u0, u1, &orig, &b0, &b1, &b2);
+	mesh->Sample(triIndex, u0, u1, &orig, &b0, &b1, &b2);
 
 	// Ray direction
-	const Normal &sampleN = mesh->GetNormal()[tri.v[0]]; // Light sources are supposed to be flat
+	const Normal &sampleN = mesh->GetNormal(triIndex, 0);; // Light sources are supposed to be flat
 	Vector dir = UniformSampleSphere(u2, u3);
 	float RdotN = Dot(dir, sampleN);
 	if (RdotN < 0.f) {
@@ -580,9 +567,8 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float
 
 	*pdf = INV_TWOPI / area;
 
-	const Spectrum *colors = mesh->GetColors();
-	if (colors)
-		return mesh->GetColors()[tri.v[0]] * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
+	if (mesh->HasColors())
+		return mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
 	else
 		return lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
 }
