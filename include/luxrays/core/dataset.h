@@ -41,14 +41,8 @@ public:
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	const TriangleMesh *GetTriangleMesh() const {
-		assert (preprocessed);
-
-		return preprocessedMesh;
-	}
-
-	const TriangleMeshID GetMeshID(unsigned int index) const { return preprocessedMeshIDs[index]; }
-	const TriangleID GetMeshTriangleID(unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
+	const TriangleMeshID GetMeshID(const unsigned int index) const { return accel->GetMeshID(index); }
+	const TriangleID GetMeshTriangleID(const unsigned int index) const { return accel->GetMeshTriangleID(index); }
 
 	void SetAcceleratorType(AcceleratorType type) {
 		accelType = type;
@@ -58,17 +52,20 @@ public:
 		return accelType;
 	}
 
-	const Accelerator *GetAccelerator() const {
-		assert (preprocessed);
-
-		return accel;
-	}
-
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }
 
 	unsigned int GetTotalVertexCount() const { return totalVertexCount; }
 	unsigned int GetTotalTriangleCount() const { return totalTriangleCount; }
+
+	friend class OpenCLIntersectionDevice;
+
+protected:
+	const Accelerator *GetAccelerator() const {
+		assert (preprocessed);
+
+		return accel;
+	}
 
 private:
 	const Context *context;
@@ -78,9 +75,6 @@ private:
 	std::deque<Mesh *> meshes;
 
 	bool preprocessed;
-	TriangleMesh *preprocessedMesh;
-	TriangleMeshID *preprocessedMeshIDs;
-	TriangleID *preprocessedMeshTriangleIDs;
 
 	BBox bbox;
 	BSphere bsphere;

@@ -269,17 +269,18 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	switch (dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH: {
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Vertices buffer size: " << (sizeof(Point) * dataSet->GetTotalVertexCount() / 1024) << "Kbytes");
+			BVHAccel *accel = (BVHAccel *)dataSet->GetAccelerator();
 			vertsBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(Point) * dataSet->GetTotalVertexCount(),
-					dataSet->GetTriangleMesh()->GetVertices());
+					accel->preprocessedMesh->GetVertices());
 			deviceDesc->usedMemory += vertsBuff->getInfo<CL_MEM_SIZE>();
 
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Triangle indices buffer size: " << (sizeof(Triangle) * dataSet->GetTotalTriangleCount() / 1024) << "Kbytes");
 			trisBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(Triangle) * dataSet->GetTotalTriangleCount(),
-					dataSet->GetTriangleMesh()->GetTriangles());
+					accel->preprocessedMesh->GetTriangles());
 			deviceDesc->usedMemory += trisBuff->getInfo<CL_MEM_SIZE>();
 
 			const BVHAccel *bvh = (BVHAccel *)dataSet->GetAccelerator();

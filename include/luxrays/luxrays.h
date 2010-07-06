@@ -55,6 +55,7 @@ class Accelerator;
 class Context;
 class DataSet;
 class IntersectionDevice;
+class Mesh;
 class PixelDevice;
 class TriangleMesh;
 class VirtualM2OHardwareIntersectionDevice;

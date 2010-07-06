@@ -40,18 +40,34 @@ using namespace luxrays;
 // BVHAccel Method Definitions
 
 BVHAccel::BVHAccel(const Context *context,
-		const unsigned int triangleCount, const Triangle *p, const Point *v,
 		const unsigned int treetype, const int csamples, const int icost,
 		const int tcost, const float ebonus) :
-		costSamples(csamples), isectCost(icost), traversalCost(tcost), emptyBonus(ebonus),
-		nPrims(triangleCount), vertices(v), triangles(p) {
+		costSamples(csamples), isectCost(icost), traversalCost(tcost), emptyBonus(ebonus), ctx(context) {
 	// Make sure treeType is 2, 4 or 8
 	if (treetype <= 2) treeType = 2;
 	else if (treetype <= 4) treeType = 4;
 	else treeType = 8;
 
+	initialized = false;
+}
+
+void BVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+		const unsigned int totalTriangleCount) {
+	assert (!initialized);
+
+	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
+			meshes, &preprocessedMeshIDs, &preprocessedMeshTriangleIDs);
+	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
+	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
+
+	LR_LOG(ctx, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
+	LR_LOG(ctx, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");
+
+	const Point *v = preprocessedMesh->GetVertices();
+	const Triangle *p = preprocessedMesh->GetTriangles();
+
 	std::vector<BVHAccelTreeNode *> bvList;
-	for (unsigned int i = 0; i < nPrims; ++i) {
+	for (unsigned int i = 0; i < totalTriangleCount; ++i) {
 		BVHAccelTreeNode *ptr = new BVHAccelTreeNode();
 		ptr->bbox = p[i].WorldBound(v);
 		// NOTE - Ratow - Expand bbox a little to make sure rays collide
@@ -62,23 +78,31 @@ BVHAccel::BVHAccel(const Context *context,
 		bvList.push_back(ptr);
 	}
 
-	LR_LOG(context, "Building Bounding Volume Hierarchy, primitives: " << nPrims);
+	LR_LOG(ctx, "Building Bounding Volume Hierarchy, primitives: " << totalTriangleCount);
 
 	nNodes = 0;
 	BVHAccelTreeNode *rootNode = BuildHierarchy(bvList, 0, bvList.size(), 2);
 
-	LR_LOG(context, "Pre-processing Bounding Volume Hierarchy, total nodes: " << nNodes);
+	LR_LOG(ctx, "Pre-processing Bounding Volume Hierarchy, total nodes: " << nNodes);
 
 	bvhTree = new BVHAccelArrayNode[nNodes];
 	BuildArray(rootNode, 0);
 	FreeHierarchy(rootNode);
 
-	LR_LOG(context, "Total BVH memory usage: " << nNodes * sizeof(BVHAccelArrayNode) / 1024 << "Kbytes");
-	LR_LOG(context, "Finished building Bounding Volume Hierarchy array");
+	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(BVHAccelArrayNode) / 1024 << "Kbytes");
+	LR_LOG(ctx, "Finished building Bounding Volume Hierarchy array");
+
+	initialized = true;
 }
 
 BVHAccel::~BVHAccel() {
-	delete bvhTree;
+	if (initialized) {
+		preprocessedMesh->Delete();
+		delete preprocessedMesh;
+		delete[] preprocessedMeshIDs;
+		delete[] preprocessedMeshTriangleIDs;
+		delete bvhTree;
+	}
 }
 
 void BVHAccel::FreeHierarchy(BVHAccelTreeNode *node) {
@@ -250,12 +274,17 @@ unsigned int BVHAccel::BuildArray(BVHAccelTreeNode *node, unsigned int offset) {
 }
 
 bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
+	assert (initialized);
+
 	unsigned int currentNode = 0; // Root Node
 	unsigned int stopNode = bvhTree[0].skipIndex; // Non-existent
 	bool hit = false;
 	rayHit->t = std::numeric_limits<float>::infinity();
 	rayHit->index = 0xffffffffu;
 	RayHit triangleHit;
+
+	const Point *vertices = preprocessedMesh->GetVertices();
+	const Triangle *triangles = preprocessedMesh->GetTriangles();
 
 	while (currentNode < stopNode) {
 		if (bvhTree[currentNode].bbox.IntersectP(*ray)) {

@@ -352,8 +352,7 @@ public:
 	/**
 	   Normal constructor.
 	*/
-	QBVHAccel(const Context *context, const unsigned int triangleCount,
-			const Triangle *tris, const Point *verts, u_int mp, u_int fst, u_int sf);
+	QBVHAccel(const Context *context, u_int mp, u_int fst, u_int sf);
 
 	/**
 	   to free the memory.
@@ -367,6 +366,10 @@ public:
 	BBox WorldBound() const;   
 
 	AcceleratorType GetType() const { return ACCEL_QBVH; }
+	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+		const unsigned int totalTriangleCount);
+	const TriangleMeshID GetMeshID(const unsigned int index) const { return preprocessedMeshIDs[index]; }
+	const TriangleID GetMeshTriangleID(const unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
 
 	/**
 	   Intersect a ray in world space against the
@@ -375,36 +378,14 @@ public:
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	/**
-	   the actual number of quads
-	*/
-	u_int nQuads;
-
-	/**
-	   The primitive associated with each triangle. indexed by the number of quad
-	   and the number of triangle in the quad (thus, there might be holes).
-	   no need to be a tesselated primitive, the intersection
-	   test will be redone for the nearest triangle found, to
-	   fill the Intersection structure.
-	*/
-	QuadTriangle *prims;
-
-	/**
-	   The nodes of the QBVH.
-	*/
-	QBVHNode *nodes;
-
-	/**
-	   The number of nodes really used.
-	*/
-	u_int nNodes, maxNodes;
+	friend class OpenCLIntersectionDevice;
 
 private:
 	/**
 	   Build the tree that will contain the primitives indexed from start
 	   to end in the primsIndexes array.
 	*/
-	void BuildTree(const Context *context, u_int start, u_int end, u_int *primsIndexes,
+	void BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
 		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex,
 		int depth);
@@ -453,11 +434,28 @@ private:
 		u_int *primsIndexes);
 
 	/**
-	   The number of primitives
+	   the actual number of quads
 	*/
-	u_int nPrims;
-	const Point *vertices;
-	const Triangle *triangles;
+	u_int nQuads;
+
+	/**
+	   The primitive associated with each triangle. indexed by the number of quad
+	   and the number of triangle in the quad (thus, there might be holes).
+	   no need to be a tesselated primitive, the intersection
+	   test will be redone for the nearest triangle found, to
+	   fill the Intersection structure.
+	*/
+	QuadTriangle *prims;
+
+	/**
+	   The nodes of the QBVH.
+	*/
+	QBVHNode *nodes;
+
+	/**
+	   The number of nodes really used.
+	*/
+	u_int nNodes, maxNodes;
 
 	/**
 	   The world bounding box of the QBVH.
@@ -479,6 +477,13 @@ private:
 	   The maximum number of primitives per leaf
 	*/
 	u_int maxPrimsPerLeaf;
+
+	const Context *ctx;
+	TriangleMesh *preprocessedMesh;
+	TriangleMeshID *preprocessedMeshIDs;
+	TriangleID *preprocessedMeshTriangleIDs;
+
+	bool initialized;
 };
 
 }
