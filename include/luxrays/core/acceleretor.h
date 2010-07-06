@@ -23,6 +23,7 @@
 #define	_LUXRAYS_ACCELERETOR_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/trianglemesh.h"
 
 namespace luxrays {
 
@@ -36,6 +37,10 @@ public:
 	virtual ~Accelerator() { }
 
 	virtual AcceleratorType GetType() const = 0;
+
+	virtual void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount, const unsigned int totalTriangleCount) = 0;
+	virtual const TriangleMeshID GetMeshID(const unsigned int index) const = 0;
+	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const = 0;
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
 };

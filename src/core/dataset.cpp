@@ -39,20 +39,13 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
 	preprocessed = false;
-	preprocessedMesh = NULL;
 
 	accelType = ACCEL_QBVH;
 	accel = NULL;
 }
 
 DataSet::~DataSet() {
-	if (preprocessedMesh) {
-		delete accel;
-		preprocessedMesh->Delete();
-		delete preprocessedMesh;
-		delete[] preprocessedMeshIDs;
-		delete[] preprocessedMeshTriangleIDs;
-	}
+	delete accel;
 }
 
 TriangleMeshID DataSet::Add(Mesh *mesh) {
@@ -77,18 +70,6 @@ void DataSet::Preprocess() {
 	LR_LOG(context, "Total vertex count: " << totalVertexCount);
 	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
 
-	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
-			meshes, &preprocessedMeshIDs, &preprocessedMeshTriangleIDs);
-	preprocessed = true;
-	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
-	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
-
-	LR_LOG(context, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
-	LR_LOG(context, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");
-
-	// Free the list of mesh
-	meshes.clear();
-
 	// Build the Acceleretor
 	switch (accelType) {
 		case ACCEL_BVH: {
@@ -98,9 +79,7 @@ void DataSet::Preprocess() {
 			const int travCost = 10;
 			const float emptyBonus = 0.5f;
 
-			accel = new BVHAccel(context,
-					totalTriangleCount, preprocessedMesh->GetTriangles(), preprocessedMesh->GetVertices(),
-					treeType, costSamples, isectCost, travCost, emptyBonus);
+			accel = new BVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
 			break;
 		}
 		case ACCEL_QBVH: {
@@ -109,13 +88,19 @@ void DataSet::Preprocess() {
 			const int skipFactor = 1;
 
 			accel = new QBVHAccel(context,
-					totalTriangleCount, preprocessedMesh->GetTriangles(), preprocessedMesh->GetVertices(),
 					maxPrimsPerLeaf, fullSweepThreshold, skipFactor);
 			break;
 		}
 		default:
 			assert (false);
 	}
+
+	accel->Init(meshes, totalVertexCount, totalTriangleCount);
+
+	// Free the list of mesh
+	meshes.clear();
+
+	preprocessed = true;
 }
 
 bool DataSet::Intersect(const Ray *ray, RayHit *hit) const {

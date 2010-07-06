@@ -47,24 +47,20 @@ class BVHAccel : public Accelerator {
 public:
 	// BVHAccel Public Methods
 	BVHAccel(const Context *context,
-			const unsigned int triangleCount, const Triangle *p, const Point *v,
 			const unsigned int treetype, const int csamples, const int icost,
 			const int tcost, const float ebonus);
 	~BVHAccel();
 
 	AcceleratorType GetType() const { return ACCEL_BVH; }
+	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+		const unsigned int totalTriangleCount);
+	const TriangleMeshID GetMeshID(const unsigned int index) const { return preprocessedMeshIDs[index]; }
+	const TriangleID GetMeshTriangleID(const unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	// BVHAccel Private Data
-	unsigned int treeType;
-	int costSamples, isectCost, traversalCost;
-	float emptyBonus;
-	unsigned int nPrims;
-	const Point *vertices;
-	const Triangle *triangles;
-	unsigned int nNodes;
-	BVHAccelArrayNode *bvhTree;
+
+	friend class OpenCLIntersectionDevice;
 
 private:
 	// BVHAccel Private Methods
@@ -72,6 +68,19 @@ private:
 	void FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int begin, unsigned int end, float *splitValue, unsigned int *bestAxis);
 	unsigned int BuildArray(BVHAccelTreeNode *node, unsigned int offset);
 	void FreeHierarchy(BVHAccelTreeNode *node);
+
+	unsigned int treeType;
+	int costSamples, isectCost, traversalCost;
+	float emptyBonus;
+	unsigned int nNodes;
+	BVHAccelArrayNode *bvhTree;
+
+	const Context *ctx;
+	TriangleMesh *preprocessedMesh;
+	TriangleMeshID *preprocessedMeshIDs;
+	TriangleID *preprocessedMeshTriangleIDs;
+
+	bool initialized;
 };
 
 }
