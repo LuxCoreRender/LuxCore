@@ -60,13 +60,6 @@ public:
 
 	friend class OpenCLIntersectionDevice;
 
-protected:
-	const Accelerator *GetAccelerator() const {
-		assert (preprocessed);
-
-		return accel;
-	}
-
 private:
 	const Context *context;
 

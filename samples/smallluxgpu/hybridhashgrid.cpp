@@ -96,9 +96,8 @@ void HybridHashGrid::RefreshMutex() {
 					for (int ix = ixMin; ix <= ixMax; ix++) {
 						int hv = Hash(ix, iy, iz);
 
-						if (grid[hv] == NULL) {
+						if (grid[hv] == NULL)
 							grid[hv] = new HashCell(LIST);
-						}
 
 						grid[hv]->AddList(hp);
 						++entryCount;

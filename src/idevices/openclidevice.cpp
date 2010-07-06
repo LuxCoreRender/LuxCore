@@ -269,21 +269,20 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	switch (dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH: {
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Vertices buffer size: " << (sizeof(Point) * dataSet->GetTotalVertexCount() / 1024) << "Kbytes");
-			BVHAccel *accel = (BVHAccel *)dataSet->GetAccelerator();
+			const BVHAccel *bvh = (BVHAccel *)dataSet->accel;
 			vertsBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(Point) * dataSet->GetTotalVertexCount(),
-					accel->preprocessedMesh->GetVertices());
+					bvh->preprocessedMesh->GetVertices());
 			deviceDesc->usedMemory += vertsBuff->getInfo<CL_MEM_SIZE>();
 
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Triangle indices buffer size: " << (sizeof(Triangle) * dataSet->GetTotalTriangleCount() / 1024) << "Kbytes");
 			trisBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(Triangle) * dataSet->GetTotalTriangleCount(),
-					accel->preprocessedMesh->GetTriangles());
+					bvh->preprocessedMesh->GetTriangles());
 			deviceDesc->usedMemory += trisBuff->getInfo<CL_MEM_SIZE>();
 
-			const BVHAccel *bvh = (BVHAccel *)dataSet->GetAccelerator();
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH buffer size: " << (sizeof(BVHAccelArrayNode) * bvh->nNodes / 1024) << "Kbytes");
 			bvhBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
@@ -302,7 +301,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			break;
 		}
 		case ACCEL_QBVH: {
-			const QBVHAccel *qbvh = (QBVHAccel *)dataSet->GetAccelerator();
+			const QBVHAccel *qbvh = (QBVHAccel *)dataSet->accel;
 
 			// Calculate the required image size for the storage
 
