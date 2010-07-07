@@ -29,6 +29,7 @@
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/accelerators/qbvhaccel.h"
+#include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
@@ -89,6 +90,13 @@ void DataSet::Preprocess() {
 
 			accel = new QBVHAccel(context,
 					maxPrimsPerLeaf, fullSweepThreshold, skipFactor);
+			break;
+		}
+		case ACCEL_MQBVH: {
+			const int fullSweepThreshold = 4;
+			const int skipFactor = 1;
+
+			accel = new MQBVHAccel(context, fullSweepThreshold, skipFactor);
 			break;
 		}
 		default:

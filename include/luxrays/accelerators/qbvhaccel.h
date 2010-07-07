@@ -342,8 +342,32 @@ public:
 	   of the node.
 	   (the visit array)
 	*/
-	int32_t inline BBoxIntersect(const QuadRay &ray4, const __m128 invDir[3],
-		const int sign[3]) const;
+	inline int32_t BBoxIntersect(const QuadRay &ray4, const __m128 invDir[3],
+		const int sign[3]) const {
+		__m128 tMin = ray4.mint;
+		__m128 tMax = ray4.maxt;
+
+		// X coordinate
+		tMin = _mm_max_ps(tMin, _mm_mul_ps(_mm_sub_ps(bboxes[sign[0]][0],
+				ray4.ox), invDir[0]));
+		tMax = _mm_min_ps(tMax, _mm_mul_ps(_mm_sub_ps(bboxes[1 - sign[0]][0],
+				ray4.ox), invDir[0]));
+
+		// Y coordinate
+		tMin = _mm_max_ps(tMin, _mm_mul_ps(_mm_sub_ps(bboxes[sign[1]][1],
+				ray4.oy), invDir[1]));
+		tMax = _mm_min_ps(tMax, _mm_mul_ps(_mm_sub_ps(bboxes[1 - sign[1]][1],
+				ray4.oy), invDir[1]));
+
+		// Z coordinate
+		tMin = _mm_max_ps(tMin, _mm_mul_ps(_mm_sub_ps(bboxes[sign[2]][2],
+				ray4.oz), invDir[2]));
+		tMax = _mm_min_ps(tMax, _mm_mul_ps(_mm_sub_ps(bboxes[1 - sign[2]][2],
+				ray4.oz), invDir[2]));
+
+		//return the visit flags
+		return _mm_movemask_ps(_mm_cmpge_ps(tMax, tMin));
+	}
 };
 
 /***************************************************/
@@ -358,12 +382,12 @@ public:
 	   to free the memory.
 	*/
 	~QBVHAccel();
-	
+
 	/**
 	   to get the world bbox.
 	   @return
 	*/
-	BBox WorldBound() const;   
+	BBox WorldBound() const { return worldBound; }
 
 	AcceleratorType GetType() const { return ACCEL_QBVH; }
 	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
