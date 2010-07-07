@@ -180,6 +180,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -ms
 # The QBVH accelerator needs to be compiled with much reduced optimizations
 # otherwise gcc produces incorrect code and ruins the render on 64bits machines
 SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
+SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
 
 #OSX-flags by jensverwiebe
 #set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable")
@@ -263,6 +264,7 @@ add_custom_command(
 
 set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/accelerators/bvhaccel.cpp
+    ${LUXRAYS_SOURCE_DIR}/accelerators/mqbvhaccel.cpp
     ${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp
     ${LUXRAYS_SOURCE_DIR}/core/context.cpp
     ${LUXRAYS_SOURCE_DIR}/core/dataset.cpp

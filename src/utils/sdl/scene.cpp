@@ -315,6 +315,9 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		case 2:
 			dataSet->SetAcceleratorType(ACCEL_QBVH);
 			break;
+		case 3:
+			dataSet->SetAcceleratorType(ACCEL_MQBVH);
+			break;
 		default:
 			throw std::runtime_error("Unknown accelerator.type");
 			break;

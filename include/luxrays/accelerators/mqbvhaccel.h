@@ -19,32 +19,65 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_ACCELERETOR_H
-#define	_LUXRAYS_ACCELERETOR_H
+#ifndef _LUXRAYS_MQBVHACCEL_H
+#define	_LUXRAYS_MQBVHACCEL_H
+
+#include <string.h>
+#include <xmmintrin.h>
+#include <boost/cstdint.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/trianglemesh.h"
+#include "luxrays/core/acceleretor.h"
+#include "luxrays/accelerators/qbvhaccel.h"
+
+using boost::int32_t;
 
 namespace luxrays {
 
-typedef enum {
-	ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH
-} AcceleratorType;
-
-class Accelerator {
+class MQBVHAccel  : public Accelerator {
 public:
-	Accelerator() { }
-	virtual ~Accelerator() { }
+	MQBVHAccel(const Context *context, u_int fst, u_int sf);
+	~MQBVHAccel();
 
-	virtual AcceleratorType GetType() const = 0;
+	BBox WorldBound() const;
 
-	virtual void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount, const unsigned int totalTriangleCount) = 0;
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const = 0;
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const = 0;
+	AcceleratorType GetType() const { return ACCEL_QBVH; }
+	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+		const unsigned int totalTriangleCount);
+	const TriangleMeshID GetMeshID(const unsigned int index) const { return 0; }
+	const TriangleID GetMeshTriangleID(const unsigned int index) const { return 0; }
 
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
+	bool Intersect(const Ray *ray, RayHit *hit) const;
+
+	friend class OpenCLIntersectionDevice;
+
+private:
+	void BuildTree(u_int start, u_int end, u_int *primsIndexes,
+		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
+		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex,
+		int depth);
+
+	void CreateLeaf(int32_t parentIndex, int32_t childIndex,
+		u_int start, const BBox &nodeBbox);
+
+	int32_t CreateNode(int32_t parentIndex, int32_t childIndex, const BBox &nodeBbox);
+
+	QBVHNode *nodes;
+	u_int nNodes, maxNodes;
+	BBox worldBound;
+
+	u_int fullSweepThreshold;
+	u_int skipFactor;
+
+	TriangleMesh *preprocessedMesh;
+	InstanceTriangleMesh *instancedPreprocessedMesh;
+	u_int nLeafs;
+	QBVHAccel **leafs;
+
+	const Context *ctx;
+	bool initialized;
 };
 
 }
 
-#endif	/* _LUXRAYS_ACCELERETOR_H */
+#endif	/* _LUXRAYS_MQBVHACCEL_H */

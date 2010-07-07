@@ -437,6 +437,10 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			}
 			break;
 		}
+		case ACCEL_MQBVH: {
+			throw std::runtime_error("MQBVH not yet supported by OpenCL device");
+			break;
+		}
 		default:
 			assert (false);
 	}
@@ -499,6 +503,10 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 				oclQueue->enqueueNDRangeKernel(*qbvhKernel, cl::NullRange,
 					cl::NDRange(rayBuffer->GetSize()), cl::NDRange(qbvhWorkGroupSize));
 			}
+			break;
+		}
+		case ACCEL_MQBVH: {
+			throw std::runtime_error("MQBVH not yet supported by OpenCL device");
 			break;
 		}
 		default:

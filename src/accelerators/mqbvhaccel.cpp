@@ -19,79 +19,113 @@
  *
  ***************************************************************************/
 
-#include "luxrays/accelerators/qbvhaccel.h"
+#include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/core/context.h"
 
 using namespace luxrays;
 
-/***************************************************/
-
-QBVHAccel::QBVHAccel(const Context *context,
-		u_int mp, u_int fst, u_int sf) : fullSweepThreshold(fst),
-		skipFactor(sf), maxPrimsPerLeaf(mp), ctx(context) {
+MQBVHAccel::MQBVHAccel(const Context *context,
+		u_int fst, u_int sf) : fullSweepThreshold(fst),
+		skipFactor(sf), ctx(context) {
 	initialized = false;
 }
 
-QBVHAccel::~QBVHAccel() {
+MQBVHAccel::~MQBVHAccel() {
 	if (initialized) {
-		FreeAligned(prims);
 		FreeAligned(nodes);
 
-		preprocessedMesh->Delete();
-		delete preprocessedMesh;
-		delete[] preprocessedMeshIDs;
-		delete[] preprocessedMeshTriangleIDs;
+		for (unsigned int i = 0; i < nLeafs; ++i)
+			delete leafs[i];
+		delete[] leafs;
+
+		if (preprocessedMesh) {
+			delete instancedPreprocessedMesh;
+			preprocessedMesh->Delete();
+			delete preprocessedMesh;
+		}
 	}
 }
 
-void QBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
 
-	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
-			meshes, &preprocessedMeshIDs, &preprocessedMeshTriangleIDs);
-	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
-	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
+	// Split the list of meshes in instanced/not instanced
+	std::deque<Mesh *> instancedMeshes;
+	std::deque<Mesh *> notInstancedMeshes;
+	unsigned int niTotalVertexCount = 0;
+	unsigned int niTotalTriangleCount = 0;
 
-	LR_LOG(ctx, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
-	LR_LOG(ctx, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");
+	for (std::deque<Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+		switch ((*m)->GetType()) {
+			case TYPE_TRIANGLE:
+			case TYPE_EXT_TRIANGLE:
+				notInstancedMeshes.push_back(*m);
+				niTotalVertexCount += (*m)->GetTotalVertexCount();
+				niTotalTriangleCount += (*m)->GetTotalTriangleCount();
+				break;
+			case TYPE_TRIANGLE_INSTANCE:
+			case TYPE_EXT_TRIANGLE_INSTANCE:
+				instancedMeshes.push_back(*m);
+				break;
+			default:
+				assert (false);
+				break;
+		}
+	}
+
+	LR_LOG(ctx, "Instanced meshes: " << instancedMeshes.size());
+	LR_LOG(ctx, "Not instanced meshes: " << notInstancedMeshes.size());
+
+	// Add all not instances as one single big instanced mesh
+	preprocessedMesh = (notInstancedMeshes.size() > 0) ?
+		TriangleMesh::Merge(niTotalVertexCount, niTotalTriangleCount, notInstancedMeshes) :
+		NULL;
+
+	if (preprocessedMesh) {
+		Transform identity;
+		instancedPreprocessedMesh = new InstanceTriangleMesh(preprocessedMesh, identity);
+		instancedMeshes.push_back(preprocessedMesh);
+	}
+
+	// Build a QBVH for each mesh
+	nLeafs = instancedMeshes.size();
+	leafs = new QBVHAccel*[nLeafs];
+	for (unsigned int i = 0; i < nLeafs; ++i) {
+		leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
+
+		std::deque<Mesh *> m;
+		m.push_back(instancedMeshes[i]);
+		leafs[i]->Init(m, instancedMeshes[i]->GetTotalVertexCount(), instancedMeshes[i]->GetTotalTriangleCount());
+	}
 
 	// Temporary data for building
-	u_int *primsIndexes = new u_int[totalTriangleCount + 3]; // For the case where
+	u_int *primsIndexes = new u_int[nLeafs + 3]; // For the case where
 	// the last quad would begin at the last primitive
 	// (or the second or third last primitive)
 
-	// The number of nodes depends on the number of primitives,
-	// and is bounded by 2 * nPrims - 1.
-	// Even if there will normally have at least 4 primitives per leaf,
-	// it is not always the case => continue to use the normal bounds.
 	nNodes = 0;
-	maxNodes = 1;
-	for (u_int layer = ((totalTriangleCount + maxPrimsPerLeaf - 1) / maxPrimsPerLeaf + 3) / 4; layer != 1; layer = (layer + 3) / 4)
-		maxNodes += layer;
+	maxNodes = 2 * nLeafs - 1;
 	nodes = AllocAligned<QBVHNode>(maxNodes);
 	for (u_int i = 0; i < maxNodes; ++i)
 		nodes[i] = QBVHNode();
 
 	// The arrays that will contain
-	// - the bounding boxes for all triangles
-	// - the centroids for all triangles
-	BBox *primsBboxes = new BBox[totalTriangleCount];
-	Point *primsCentroids = new Point[totalTriangleCount];
+	// - the bounding boxes for all leafs
+	// - the centroids for all leafs
+	BBox *primsBboxes = new BBox[nLeafs];
+	Point *primsCentroids = new Point[nLeafs];
 	// The bouding volume of all the centroids
 	BBox centroidsBbox;
 
-	const Point *verts = preprocessedMesh->GetVertices();
-	const Triangle *triangles = preprocessedMesh->GetTriangles();
-
 	// Fill each base array
-	for (u_int i = 0; i < totalTriangleCount; ++i) {
+	for (u_int i = 0; i < nLeafs; ++i) {
 		// This array will be reorganized during construction.
 		primsIndexes[i] = i;
 
 		// Compute the bounding box for the triangle
-		primsBboxes[i] = triangles[i].WorldBound(verts);
+		primsBboxes[i] = leafs[i]->WorldBound();
 		primsBboxes[i].Expand(RAY_EPSILON);
 		primsCentroids[i] = (primsBboxes[i].pMin + primsBboxes[i].pMax) * .5f;
 
@@ -101,24 +135,18 @@ void QBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVe
 	}
 
 	// Arbitrarily take the last primitive for the last 3
-	primsIndexes[totalTriangleCount] = totalTriangleCount - 1;
-	primsIndexes[totalTriangleCount + 1] = totalTriangleCount - 1;
-	primsIndexes[totalTriangleCount + 2] = totalTriangleCount - 1;
+	primsIndexes[nLeafs] = nLeafs - 1;
+	primsIndexes[nLeafs + 1] = nLeafs - 1;
+	primsIndexes[nLeafs + 2] = nLeafs - 1;
 
 	// Recursively build the tree
-	LR_LOG(ctx, "Building QBVH, primitives: " << totalTriangleCount << ", initial nodes: " << maxNodes);
+	LR_LOG(ctx, "Building MQBVH, leafs: " << nLeafs << ", initial nodes: " << maxNodes);
 
-	nQuads = 0;
-	BuildTree(0, totalTriangleCount, primsIndexes, primsBboxes, primsCentroids,
+	BuildTree(0, nLeafs, primsIndexes, primsBboxes, primsCentroids,
 			worldBound, centroidsBbox, -1, 0, 0);
 
-	prims = AllocAligned<QuadTriangle>(nQuads);
-	nQuads = 0;
-	PreSwizzle(0, primsIndexes);
-
-	LR_LOG(ctx, "QBVH completed with " << nNodes << "/" << maxNodes << " nodes");
-	LR_LOG(ctx, "Total QBVH memory usage: " << nNodes * sizeof(QBVHNode) / 1024 << "Kbytes");
-	LR_LOG(ctx, "Total QBVH QuadTriangle count: " << nQuads);
+	LR_LOG(ctx, "MQBVH completed with " << nNodes << "/" << maxNodes << " nodes");
+	LR_LOG(ctx, "Total MQBVH memory usage: " << nNodes * sizeof(QBVHNode) / 1024 << "Kbytes");
 
 	// Release temporary memory
 	delete[] primsBboxes;
@@ -126,15 +154,13 @@ void QBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVe
 	delete[] primsIndexes;
 }
 
-/***************************************************/
-
-void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
+void MQBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
 		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex, int depth) {
 	// Create a leaf ?
 	//********
-	if (end - start <= maxPrimsPerLeaf) {
-		CreateTempLeaf(parentIndex, childIndex, start, end, nodeBbox);
+	if (end - start == 1) {
+		CreateLeaf(parentIndex, childIndex, start, nodeBbox);
 		return;
 	}
 
@@ -168,19 +194,13 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 	const float k0 = centroidsBbox.pMin[axis];
 	const float k1 = NB_BINS / (centroidsBbox.pMax[axis] - k0);
 
-	// If the bbox is a point, create a leaf, hoping there are not more
-	// than 64 primitives that share the same center.
-	if (k1 == INFINITY) {
-		if (end - start > 64)
-			LR_LOG(ctx, "QBVH unable to handle geometry, too many primitives with the same centroid");
-		CreateTempLeaf(parentIndex, childIndex, start, end, nodeBbox);
-		return;
-	}
+	if (k1 == INFINITY)
+		throw std::runtime_error("MQBVH unable to handle geometry, too many primitives with the same centroid");
 
 	// Create an intermediate node if the depth indicates to do so.
 	// Register the split axis.
 	if (depth % 2 == 0) {
-		currentNode = CreateIntermediateNode(parentIndex, childIndex, nodeBbox);
+		currentNode = CreateNode(parentIndex, childIndex, nodeBbox);
 		leftChildIndex = 0;
 		rightChildIndex = 2;
 	}
@@ -265,7 +285,6 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 	float splitPos = centroidsBbox.pMin[axis] + (minBin + 1) *
 			(centroidsBbox.pMax[axis] - centroidsBbox.pMin[axis]) / NB_BINS;
 
-
 	BBox leftChildBbox, rightChildBbox;
 	BBox leftChildCentroidsBbox, rightChildCentroidsBbox;
 
@@ -280,12 +299,12 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 			++storeIndex;
 
 			// Update the bounding boxes,
-			// this triangle is on the left side
+			// this object is on the left side
 			leftChildBbox = Union(leftChildBbox, primsBboxes[primIndex]);
 			leftChildCentroidsBbox = Union(leftChildCentroidsBbox, primsCentroids[primIndex]);
 		} else {
 			// Update the bounding boxes,
-			// this triangle is on the right side.
+			// this object is on the right side.
 			rightChildBbox = Union(rightChildBbox, primsBboxes[primIndex]);
 			rightChildCentroidsBbox = Union(rightChildCentroidsBbox, primsCentroids[primIndex]);
 		}
@@ -300,10 +319,29 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 			rightChildIndex, depth + 1);
 }
 
-/***************************************************/
+int32_t  MQBVHAccel::CreateNode(int32_t parentIndex, int32_t childIndex,
+	const BBox &nodeBbox) {
+	int32_t index = nNodes++; // increment after assignment
+	if (nNodes >= maxNodes) {
+		QBVHNode *newNodes = AllocAligned<QBVHNode>(2 * maxNodes);
+		memcpy(newNodes, nodes, sizeof(QBVHNode) * maxNodes);
+		for (u_int i = 0; i < maxNodes; ++i)
+			newNodes[maxNodes + i] = QBVHNode();
+		FreeAligned(nodes);
+		nodes = newNodes;
+		maxNodes *= 2;
+	}
 
-void QBVHAccel::CreateTempLeaf(int32_t parentIndex, int32_t childIndex,
-		u_int start, u_int end, const BBox &nodeBbox) {
+	if (parentIndex >= 0) {
+		nodes[parentIndex].children[childIndex] = index;
+		nodes[parentIndex].SetBBox(childIndex, nodeBbox);
+	}
+
+	return index;
+}
+
+void MQBVHAccel::CreateLeaf(int32_t parentIndex, int32_t childIndex,
+		u_int start, const BBox &nodeBbox) {
 	// The leaf is directly encoded in the intermediate node.
 	if (parentIndex < 0) {
 		// The entire tree is a leaf
@@ -311,62 +349,12 @@ void QBVHAccel::CreateTempLeaf(int32_t parentIndex, int32_t childIndex,
 		parentIndex = 0;
 	}
 
-	// Encode the leaf in the original way,
-	// it will be transformed to a preswizzled format in a post-process.
-
-	u_int nbPrimsTotal = end - start;
-
 	QBVHNode &node = nodes[parentIndex];
-
 	node.SetBBox(childIndex, nodeBbox);
-
-
-	// Next multiple of 4, divided by 4
-	u_int quads = (nbPrimsTotal + 3) / 4;
-
-	// Use the same encoding as the final one, but with a different meaning.
-	node.InitializeLeaf(childIndex, quads, start);
-
-	nQuads += quads;
+	node.InitializeLeaf(childIndex, 1, start);
 }
 
-void QBVHAccel::PreSwizzle(int32_t nodeIndex, u_int *primsIndexes) {
-	for (int i = 0; i < 4; ++i) {
-		if (nodes[nodeIndex].ChildIsLeaf(i))
-			CreateSwizzledLeaf(nodeIndex, i, primsIndexes);
-		else
-			PreSwizzle(nodes[nodeIndex].children[i], primsIndexes);
-	}
-}
-
-void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
-		u_int *primsIndexes) {
-	QBVHNode &node = nodes[parentIndex];
-	if (node.LeafIsEmpty(childIndex))
-		return;
-	const u_int startQuad = nQuads;
-	const u_int nbQuads = node.NbQuadsInLeaf(childIndex);
-
-	u_int primOffset = node.FirstQuadIndexForLeaf(childIndex);
-	u_int primNum = nQuads;
-
-	const Point *vertices = preprocessedMesh->GetVertices();
-	const Triangle *triangles = preprocessedMesh->GetTriangles();
-
-	for (u_int q = 0; q < nbQuads; ++q) {
-		new (&prims[primNum]) QuadTriangle(triangles, vertices, primsIndexes[primOffset],
-				primsIndexes[primOffset + 1], primsIndexes[primOffset + 2], primsIndexes[primOffset + 3]);
-
-		++primNum;
-		primOffset += 4;
-	}
-	nQuads += nbQuads;
-	node.InitializeLeaf(childIndex, nbQuads, startQuad);
-}
-
-/***************************************************/
-
-bool QBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
+bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	//------------------------------
 	// Prepare the ray for intersection
 	QuadRay ray4(*ray);
@@ -468,13 +456,8 @@ bool QBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			if (QBVHNode::IsEmpty(leafData))
 				continue;
 
-			// Perform intersection
-			const u_int nbQuadPrimitives = QBVHNode::NbQuadPrimitives(leafData);
-
-			const u_int offset = QBVHNode::FirstQuadIndex(leafData);
-
-			for (u_int primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber)
-				prims[primNumber].Intersect(ray4, *ray, rayHit);
+			QBVHAccel *qbvh = leafs[QBVHNode::FirstQuadIndex(leafData)];
+			qbvh->Intersect(ray, rayHit);
 		}//end of the else
 	}
 
