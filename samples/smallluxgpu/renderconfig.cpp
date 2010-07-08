@@ -159,13 +159,13 @@ void RenderingConfig::Init() {
 	// Create and start the render engine
 	switch (renderEngineType) {
 		case 0:
-			renderEngine = new PathRenderEngine(scene, film, &cfgMutex, intersectionAllDevices, false, cfg);
+			renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, false, cfg);
 			break;
 		case 1:
-			renderEngine = new SPPMRenderEngine(scene, film, &cfgMutex, intersectionAllDevices, cfg);
+			renderEngine = new SPPMRenderEngine(scene, film, &filmMutex, intersectionAllDevices, cfg);
 			break;
 		case 2:
-			renderEngine = new PathRenderEngine(scene, film, &cfgMutex, intersectionAllDevices, true, cfg);
+			renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, true, cfg);
 			break;
 		default:
 			assert (false);
@@ -208,13 +208,13 @@ void RenderingConfig::SetRenderingEngineType(const RenderEngineType type) {
 		delete renderEngine;
 		switch (type) {
 			case PATH:
-				renderEngine = new PathRenderEngine(scene, film, &cfgMutex, intersectionAllDevices, false, cfg);
+				renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, false, cfg);
 				break;
 			case SPPM:
-				renderEngine = new SPPMRenderEngine(scene, film, &cfgMutex, intersectionAllDevices, cfg);
+				renderEngine = new SPPMRenderEngine(scene, film, &filmMutex, intersectionAllDevices, cfg);
 				break;
 			case DIRECTLIGHT:
-				renderEngine = new PathRenderEngine(scene, film, &cfgMutex, intersectionAllDevices, true, cfg);
+				renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, true, cfg);
 				break;
 			default:
 				assert (false);
@@ -368,7 +368,7 @@ void RenderingConfig::StopAllRenderThreadsLockless() {
 }
 
 void RenderingConfig::SaveFilmImage() {
-	boost::unique_lock<boost::mutex> lock(cfgMutex);
+	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	const string fileName = config->cfg.GetString("image.filename", "image.png");
 	config->film->UpdateScreenBuffer();
@@ -387,7 +387,7 @@ void RenderingConfig::SaveFilm() {
 	if (filmNames.size() == 0)
 		return;
 
-	boost::unique_lock<boost::mutex> lock(cfgMutex);
+	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	StopAllRenderThreadsLockless();
 

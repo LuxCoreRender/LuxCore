@@ -237,6 +237,10 @@ void SPPMDeviceRenderThread::AdvancePhotonPaths(
 void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThread) {
 	cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
+	// Disable interruption exception, I'm going to handle interruption on
+	// few fix checkpoints
+	boost::this_thread::disable_interruption di;
+
 	SPPMRenderEngine *renderEngine = renderThread->renderEngine;
 	Scene *scene = renderEngine->scene;
 	RandomGenerator *rndGen = new RandomGenerator();
@@ -328,9 +332,6 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 				}
 			}
 
-			if (boost::this_thread::interruption_requested())
-				break;
-
 			// Wait for other threads
 			renderEngine->barrier->wait();
 
@@ -373,6 +374,9 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 
 				passStartTime = WallClockTime();
 			}
+
+			if (boost::this_thread::interruption_requested())
+				break;
 
 			//std::cerr << "[SPPMDeviceRenderThread::" << renderThread->threadIndex << "] Tracing photon paths" << std::endl;
 		}

@@ -75,13 +75,13 @@ public:
 	void SaveFilmImage();
 	void SaveFilm();
 
-	boost::mutex cfgMutex;
 	Properties cfg;
 
 	char captionBuffer[512];
 
 	SLGScene *scene;
 	Film *film;
+	boost::mutex filmMutex;
 
 private:
 	void StartAllRenderThreadsLockless();
@@ -92,6 +92,7 @@ private:
 
 	void SetUpNativeDevices(const unsigned int nativeThreadCount);
 
+	boost::mutex cfgMutex;
 	Context *ctx;
 
 	bool renderThreadsStarted;
