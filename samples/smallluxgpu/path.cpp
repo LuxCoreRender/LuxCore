@@ -894,9 +894,9 @@ void PathDeviceRenderThread::RenderThreadImpl(PathDeviceRenderThread *renderThre
 // PathRenderEngine
 //------------------------------------------------------------------------------
 
-PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm,
+PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
 		vector<IntersectionDevice *> intersectionDev, const bool onlySpecular,
-		const Properties &cfg) : RenderEngine(scn, flm) {
+		const Properties &cfg) : RenderEngine(scn, flm, filmMutex) {
 	intersectionDevices = intersectionDev;
 
 	samplePerPixel = max(1, cfg.GetInt("path.sampler.spp", cfg.GetInt("sampler.spp", 4)));

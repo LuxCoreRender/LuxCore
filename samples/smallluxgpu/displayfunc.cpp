@@ -300,17 +300,14 @@ void reshapeFunc(int newWidth, int newHeight) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			config->SaveImage();
+			config->SaveFilmImage();
 			break;
 		}
 		case 27: { // Escape key
 			// Check if I have to save the film
-			const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
-			if (filmNames.size() == 1)
-				config->film->SaveFilm(filmNames[0]);
-			else if (filmNames.size() > 1)
-				config->film->SaveFilm("merged.flm");
+			config->SaveFilm();
 			delete config;
+
 			cerr << "Done." << endl;
 			exit(EXIT_SUCCESS);
 			break;
@@ -535,7 +532,7 @@ void timerFunc(int value) {
 	// Check if periodic save is enabled
 	if (config->NeedPeriodicSave()) {
 		// Time to save the image and film
-		config->SaveImage();
+		config->SaveFilmImage();
 	}
 
 	glutPostRedisplay();

@@ -68,7 +68,8 @@ public:
 	void Stop();
 
 private:
-	static void UpdateFilm(Film *film, HitPoints *hitPoints, SampleBuffer *&sampleBuffer);
+	static void UpdateFilm(Film *film, boost::mutex *filmMutex,
+			HitPoints *hitPoints, SampleBuffer *&sampleBuffer);
 	static void InitPhotonPath(Scene *scene,
 			luxrays::RandomGenerator *rndGen,
 			PhotonPath *photonPath, Ray *ray,
@@ -95,8 +96,8 @@ private:
 
 class SPPMRenderEngine : public RenderEngine {
 public:
-	SPPMRenderEngine(SLGScene *scn, Film *flm, vector<IntersectionDevice *> intersectionDev,
-		const Properties &cfg);
+	SPPMRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
+			vector<IntersectionDevice *> intersectionDev, const Properties &cfg);
 	virtual ~SPPMRenderEngine();
 
 	void Start();

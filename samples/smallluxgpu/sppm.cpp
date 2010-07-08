@@ -112,7 +112,10 @@ void SPPMDeviceRenderThread::Stop() {
 	SPPMRenderThread::Stop();
 }
 
-void SPPMDeviceRenderThread::UpdateFilm(Film *film, HitPoints *hitPoints, SampleBuffer *&sampleBuffer) {
+void SPPMDeviceRenderThread::UpdateFilm(Film *film, boost::mutex *filmMutex,
+		HitPoints *hitPoints, SampleBuffer *&sampleBuffer) {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
 	film->Reset();
 
 	const unsigned int imgWidth = film->GetWidth();
@@ -348,7 +351,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 				hitPoints->RefreshAccelMutex();
 
 				// Update the frame buffer
-				UpdateFilm(renderEngine->film, hitPoints, renderEngine->sampleBuffer);
+				UpdateFilm(renderEngine->film, renderEngine->filmMutex, hitPoints, renderEngine->sampleBuffer);
 
 				renderEngine->photonTracedTotal = count;
 				renderEngine->photonTracedPass = 0;
@@ -397,9 +400,8 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 // SPPMRenderEngine
 //------------------------------------------------------------------------------
 
-SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm,
-		vector<IntersectionDevice *> intersectionDev,
-		const Properties &cfg) : RenderEngine(scn, flm) {
+SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
+		vector<IntersectionDevice *> intersectionDev, const Properties &cfg) : RenderEngine(scn, flm, filmMutex) {
 	intersectionDevices = intersectionDev;
 
 	const int atype = cfg.GetInt("sppm.lookup.type", 2);

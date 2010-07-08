@@ -72,20 +72,10 @@ public:
 			return false;
 	}
 
-	void SaveImage() {
-		const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
-		const string fileName = config->cfg.GetString("image.filename", "image.png");
+	void SaveFilmImage();
+	void SaveFilm();
 
-		// Time to save the image and film
-		config->film->UpdateScreenBuffer();
-		config->film->Save(fileName);
-
-		if (filmNames.size() == 1)
-			config->film->SaveFilm(filmNames[0]);
-		else if (filmNames.size() > 1)
-			config->film->SaveFilm("merged.flm");
-	}
-
+	boost::mutex cfgMutex;
 	Properties cfg;
 
 	char captionBuffer[512];
@@ -102,7 +92,6 @@ private:
 
 	void SetUpNativeDevices(const unsigned int nativeThreadCount);
 
-	boost::mutex cfgMutex;
 	Context *ctx;
 
 	bool renderThreadsStarted;
