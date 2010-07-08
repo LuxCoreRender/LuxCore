@@ -111,7 +111,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		// Check if periodic save is enabled
 		if (config->NeedPeriodicSave()) {
 			// Time to save the image and film
-			config->SaveImage();
+			config->SaveFilmImage();
 		}
 
 		// Print some information about the rendering progress
@@ -144,7 +144,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	}
 
 	// Save the rendered image
-	config->SaveImage();
+	config->SaveFilmImage();
 
 	sprintf(buf, "LuxMark index: %.3f", sampleSec / 1000000.0);
 	cerr << buf << endl;

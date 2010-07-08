@@ -32,9 +32,10 @@ enum RenderEngineType {
 
 class RenderEngine {
 public:
-	RenderEngine(SLGScene *scn, Film *flm) {
+	RenderEngine(SLGScene *scn, Film *flm, boost::mutex *flmMutex) {
 		scene = scn;
 		film = flm;
+		filmMutex = flmMutex;
 		started = false;
 	};
 	virtual ~RenderEngine() { };
@@ -58,6 +59,7 @@ public:
 protected:
 	SLGScene *scene;
 	Film *film;
+	boost::mutex *filmMutex;
 
 	bool started;
 };

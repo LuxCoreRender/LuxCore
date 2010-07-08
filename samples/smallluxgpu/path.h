@@ -197,8 +197,9 @@ private:
 
 class PathRenderEngine : public RenderEngine {
 public:
-	PathRenderEngine(SLGScene *scn, Film *flm, vector<IntersectionDevice *> intersectionDev,
-		const bool onlySpecular, const Properties &cfg);
+	PathRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
+			vector<IntersectionDevice *> intersectionDev, const bool onlySpecular,
+			const Properties &cfg);
 	virtual ~PathRenderEngine();
 
 	void Start();
