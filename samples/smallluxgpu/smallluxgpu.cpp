@@ -143,6 +143,9 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 		cerr << buf << endl;
 	}
 
+	// Stop the rendering
+	config->StopAllRenderThreads();
+
 	// Save the rendered image
 	config->SaveFilmImage();
 
