@@ -28,7 +28,7 @@ using namespace luxrays;
 
 MQBVHAccel::MQBVHAccel(const Context *context,
 		u_int fst, u_int sf) : fullSweepThreshold(fst),
-		skipFactor(sf), ctx(context) {
+		skipFactor(sf), accels(MeshPtrCompare), ctx(context) {
 	initialized = false;
 }
 
@@ -40,10 +40,15 @@ MQBVHAccel::~MQBVHAccel() {
 		delete[] meshIDs;
 		delete[] leafsOffset;
 		delete[] leafsInvTransform;
-		for (unsigned int i = 0; i < nLeafs; ++i)
-			delete leafs[i];
 		delete[] leafs;
+
+		for (std::map<Mesh *, QBVHAccel *>::iterator it = accels.begin(); it != accels.end(); it++)
+			delete it->second;
 	}
+}
+
+bool MQBVHAccel::MeshPtrCompare(Mesh *p0, Mesh *p1) {
+	return p0 < p1;
 }
 
 void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
@@ -61,12 +66,12 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 	for (unsigned int i = 0; i < nLeafs; ++i) {
 		LR_LOG(ctx, "Building QBVH for MQBVH leaf: " << i);
 
-		leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
-
 		switch (meshes[i]->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
+				leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
 				leafs[i]->Init(meshes[i]);
+				accels[meshes[i]] = leafs[i];
 
 				leafsInvTransform[i] = NULL;
 				break;
@@ -74,14 +79,37 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 			case TYPE_TRIANGLE_INSTANCE: {
 				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshes[i];
 
-				leafs[i]->Init(itm);
+				// Check if a QBVH has already been created
+				std::map<Mesh *, QBVHAccel *>::iterator it = accels.find(itm->GetTriangleMesh());
+
+				if (it == accels.end()) {
+					// Create a new QBVH
+					leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
+					leafs[i]->Init(itm);
+					accels[itm->GetTriangleMesh()] = leafs[i];
+				} else {
+					LR_LOG(ctx, "Cached QBVH leaf");
+					leafs[i] = it->second;
+				}
+
 				leafsInvTransform[i] = &itm->GetInvTransformation();
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
 				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshes[i];
 
-				leafs[i]->Init(eitm);
+				// Check if a QBVH has already been created
+				std::map<Mesh *, QBVHAccel *>::iterator it = accels.find(eitm->GetExtTriangleMesh());
+				if (it == accels.end()) {
+					// Create a new QBVH
+					leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
+					leafs[i]->Init(eitm);
+					accels[eitm->GetExtTriangleMesh()] = leafs[i];
+				} else {
+					LR_LOG(ctx, "Cached QBVH leaf");
+					leafs[i] = it->second;
+				}
+
 				leafsInvTransform[i] = &eitm->GetInvTransformation();
 				break;
 			}

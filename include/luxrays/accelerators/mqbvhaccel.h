@@ -52,6 +52,8 @@ public:
 	friend class OpenCLIntersectionDevice;
 
 private:
+	static bool MeshPtrCompare(Mesh *, Mesh *);
+
 	void BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
 		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex,
@@ -70,6 +72,7 @@ private:
 	u_int skipFactor;
 
 	u_int nLeafs;
+	std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)> accels;
 	QBVHAccel **leafs;
 	const Transform **leafsInvTransform;
 	unsigned int *leafsOffset;
