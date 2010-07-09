@@ -159,6 +159,7 @@ public:
 		assert (mesh != NULL);
 
 		trans = t;
+		invTrans = t.GetInverse();
 		mesh = m;
 	}
 	~ExtInstanceTriangleMesh() { };
@@ -209,12 +210,13 @@ public:
 	}
 
 	const Transform &GetTransformation() const { return trans; }
+	const Transform &GetInvTransformation() const { return invTrans; }
 	Point *GetVertices() const { return mesh->GetVertices(); }
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
 
 private:
-	Transform trans;
+	Transform trans, invTrans;
 	ExtTriangleMesh *mesh;
 };
 

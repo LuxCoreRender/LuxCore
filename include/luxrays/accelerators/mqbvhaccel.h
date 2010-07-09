@@ -71,7 +71,7 @@ private:
 
 	u_int nLeafs;
 	QBVHAccel **leafs;
-	const Transform **leafsTransform;
+	const Transform **leafsInvTransform;
 	unsigned int *leafsOffset;
 	TriangleMeshID *meshIDs;
 	TriangleID *meshTriangleIDs;

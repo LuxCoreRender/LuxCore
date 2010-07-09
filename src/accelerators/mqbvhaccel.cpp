@@ -39,7 +39,7 @@ MQBVHAccel::~MQBVHAccel() {
 		delete[] meshTriangleIDs;
 		delete[] meshIDs;
 		delete[] leafsOffset;
-		delete[] leafsTransform;
+		delete[] leafsInvTransform;
 		for (unsigned int i = 0; i < nLeafs; ++i)
 			delete leafs[i];
 		delete[] leafs;
@@ -53,7 +53,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 	// Build a QBVH for each mesh
 	nLeafs = meshes.size();
 	leafs = new QBVHAccel*[nLeafs];
-	leafsTransform = new const Transform*[nLeafs];
+	leafsInvTransform = new const Transform*[nLeafs];
 	leafsOffset = new unsigned int[nLeafs];
 	meshIDs = new TriangleMeshID[totalTriangleCount];
 	meshTriangleIDs = new TriangleID[totalTriangleCount];
@@ -70,7 +70,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 				m.push_back(meshes[i]);
 				leafs[i]->Init(m, meshes[i]->GetTotalVertexCount(), meshes[i]->GetTotalTriangleCount());
 
-				leafsTransform[i] = NULL;
+				leafsInvTransform[i] = NULL;
 				break;
 			}
 			case TYPE_TRIANGLE_INSTANCE: {
@@ -80,7 +80,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 				m.push_back(itm->GetTriangleMesh());
 				leafs[i]->Init(m, itm->GetTotalVertexCount(), itm->GetTotalTriangleCount());
 
-				leafsTransform[i] = &itm->GetTransformation();
+				leafsInvTransform[i] = &itm->GetInvTransformation();
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
@@ -90,7 +90,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 				m.push_back(eitm->GetExtTriangleMesh());
 				leafs[i]->Init(m, eitm->GetTotalVertexCount(), eitm->GetTotalTriangleCount());
 
-				leafsTransform[i] = &eitm->GetTransformation();
+				leafsInvTransform[i] = &eitm->GetInvTransformation();
 				break;
 			}
 			default:
@@ -460,8 +460,8 @@ bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			const unsigned int leafIndex = QBVHNode::FirstQuadIndex(leafData);
 			QBVHAccel *qbvh = leafs[leafIndex];
 
-			if (leafsTransform[leafIndex]) {
-				Ray r = leafsTransform[leafIndex]->GetInverse()(*ray);
+			if (leafsInvTransform[leafIndex]) {
+				Ray r = (*leafsInvTransform[leafIndex])(*ray);
 				RayHit rh;
 				rh.SetMiss();
 				if (qbvh->Intersect(&r, &rh)) {
