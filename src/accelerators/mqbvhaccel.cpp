@@ -66,9 +66,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 		switch (meshes[i]->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
-				std::deque<Mesh *> m;
-				m.push_back(meshes[i]);
-				leafs[i]->Init(m, meshes[i]->GetTotalVertexCount(), meshes[i]->GetTotalTriangleCount());
+				leafs[i]->Init(meshes[i]);
 
 				leafsInvTransform[i] = NULL;
 				break;
@@ -76,20 +74,14 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 			case TYPE_TRIANGLE_INSTANCE: {
 				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshes[i];
 
-				std::deque<Mesh *> m;
-				m.push_back(itm->GetTriangleMesh());
-				leafs[i]->Init(m, itm->GetTotalVertexCount(), itm->GetTotalTriangleCount());
-
+				leafs[i]->Init(itm);
 				leafsInvTransform[i] = &itm->GetInvTransformation();
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
 				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshes[i];
 
-				std::deque<Mesh *> m;
-				m.push_back(eitm->GetExtTriangleMesh());
-				leafs[i]->Init(m, eitm->GetTotalVertexCount(), eitm->GetTotalTriangleCount());
-
+				leafs[i]->Init(eitm);
 				leafsInvTransform[i] = &eitm->GetInvTransformation();
 				break;
 			}

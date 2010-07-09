@@ -31,6 +31,10 @@ QBVHAccel::QBVHAccel(const Context *context,
 		u_int mp, u_int fst, u_int sf) : fullSweepThreshold(fst),
 		skipFactor(sf), maxPrimsPerLeaf(mp), ctx(context) {
 	initialized = false;
+	preprocessedMesh = NULL;
+	mesh = NULL;
+	meshIDs = NULL;
+	meshTriangleIDs = NULL;
 }
 
 QBVHAccel::~QBVHAccel() {
@@ -38,24 +42,36 @@ QBVHAccel::~QBVHAccel() {
 		FreeAligned(prims);
 		FreeAligned(nodes);
 
-		preprocessedMesh->Delete();
-		delete preprocessedMesh;
-		delete[] preprocessedMeshIDs;
-		delete[] preprocessedMeshTriangleIDs;
+		if (preprocessedMesh) {
+			preprocessedMesh->Delete();
+			delete preprocessedMesh;
+		}
+		delete[] meshIDs;
+		delete[] meshTriangleIDs;
 	}
 }
+
 
 void QBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
 
-	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
-			meshes, &preprocessedMeshIDs, &preprocessedMeshTriangleIDs);
-	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
-	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
+	TriangleMesh *mesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
+			meshes, &meshIDs, &meshTriangleIDs);
+	assert (mesh->GetTotalVertexCount() == totalVertexCount);
+	assert (mesh->GetTotalTriangleCount() == totalTriangleCount);
 
 	LR_LOG(ctx, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
 	LR_LOG(ctx, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");
+
+	Init(mesh);
+}
+
+void QBVHAccel::Init(const Mesh *m) {
+	assert (!initialized);
+
+	mesh = m;
+	const unsigned int totalTriangleCount = mesh->GetTotalTriangleCount();
 
 	// Temporary data for building
 	u_int *primsIndexes = new u_int[totalTriangleCount + 3]; // For the case where
@@ -82,8 +98,8 @@ void QBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVe
 	// The bouding volume of all the centroids
 	BBox centroidsBbox;
 
-	const Point *verts = preprocessedMesh->GetVertices();
-	const Triangle *triangles = preprocessedMesh->GetTriangles();
+	const Point *verts = mesh->GetVertices();
+	const Triangle *triangles = mesh->GetTriangles();
 
 	// Fill each base array
 	for (u_int i = 0; i < totalTriangleCount; ++i) {
@@ -226,7 +242,6 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		// Surface area
 		vLeft[i] = currentBboxLeft.SurfaceArea();
 
-
 		//-----
 		// Right side
 		// Number of prims
@@ -350,8 +365,8 @@ void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
 	u_int primOffset = node.FirstQuadIndexForLeaf(childIndex);
 	u_int primNum = nQuads;
 
-	const Point *vertices = preprocessedMesh->GetVertices();
-	const Triangle *triangles = preprocessedMesh->GetTriangles();
+	const Point *vertices = mesh->GetVertices();
+	const Triangle *triangles = mesh->GetTriangles();
 
 	for (u_int q = 0; q < nbQuads; ++q) {
 		new (&prims[primNum]) QuadTriangle(triangles, vertices, primsIndexes[primOffset],

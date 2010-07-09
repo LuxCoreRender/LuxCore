@@ -392,8 +392,8 @@ public:
 	AcceleratorType GetType() const { return ACCEL_QBVH; }
 	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
-	const TriangleMeshID GetMeshID(const unsigned int index) const { return preprocessedMeshIDs[index]; }
-	const TriangleID GetMeshTriangleID(const unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
+	const TriangleMeshID GetMeshID(const unsigned int index) const { return meshIDs[index]; }
+	const TriangleID GetMeshTriangleID(const unsigned int index) const { return meshTriangleIDs[index]; }
 
 	/**
 	   Intersect a ray in world space against the
@@ -402,9 +402,13 @@ public:
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
+	friend class MQBVHAccel;
 	friend class OpenCLIntersectionDevice;
 
 private:
+	// A special initialization method used only by MQBVHAccel
+	void Init(const Mesh *m);
+
 	/**
 	   Build the tree that will contain the primitives indexed from start
 	   to end in the primsIndexes array.
@@ -504,8 +508,9 @@ private:
 
 	const Context *ctx;
 	TriangleMesh *preprocessedMesh;
-	TriangleMeshID *preprocessedMeshIDs;
-	TriangleID *preprocessedMeshTriangleIDs;
+	const Mesh *mesh;
+	TriangleMeshID *meshIDs;
+	TriangleID *meshTriangleIDs;
 
 	bool initialized;
 };

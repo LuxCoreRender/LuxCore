@@ -52,6 +52,9 @@ public:
 	virtual BBox GetBBox() const = 0;
 	virtual Point GetVertex(const unsigned int vertIndex) const = 0;
 	virtual float GetTriangleArea(const unsigned int triIndex) const = 0;
+
+	virtual Point *GetVertices() const = 0;
+	virtual Triangle *GetTriangles() const = 0;
 };
 
 class TriangleMesh : public Mesh {
