@@ -128,7 +128,10 @@ public:
 		return Triangle::Area(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]));
 	}
 
+	const Transform &GetTransformation() const { return trans; }
+	Point *GetVertices() const { return mesh->GetVertices(); }
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
+	TriangleMesh *GetTriangleMesh() const { return mesh; };
 
 protected:
 	Transform trans;
