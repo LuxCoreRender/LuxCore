@@ -44,8 +44,8 @@ public:
 	AcceleratorType GetType() const { return ACCEL_QBVH; }
 	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
-	const TriangleMeshID GetMeshID(const unsigned int index) const { return 0; }
-	const TriangleID GetMeshTriangleID(const unsigned int index) const { return 0; }
+	const TriangleMeshID GetMeshID(const unsigned int index) const { return meshIDs[index]; }
+	const TriangleID GetMeshTriangleID(const unsigned int index) const { return meshTriangleIDs[index]; }
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
@@ -69,10 +69,12 @@ private:
 	u_int fullSweepThreshold;
 	u_int skipFactor;
 
-	TriangleMesh *preprocessedMesh;
-	InstanceTriangleMesh *instancedPreprocessedMesh;
 	u_int nLeafs;
 	QBVHAccel **leafs;
+	const Transform **leafsTransform;
+	unsigned int *leafsOffset;
+	TriangleMeshID *meshIDs;
+	TriangleID *meshTriangleIDs;
 
 	const Context *ctx;
 	bool initialized;

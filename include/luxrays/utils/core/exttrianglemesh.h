@@ -208,8 +208,10 @@ public:
 		mesh->Sample(index, u0, u1, p , b0, b1, b2);
 	}
 
+	const Transform &GetTransformation() const { return trans; }
 	Point *GetVertices() const { return mesh->GetVertices(); }
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
+	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
 
 private:
 	Transform trans;

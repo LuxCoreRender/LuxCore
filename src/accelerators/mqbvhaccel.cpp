@@ -22,6 +22,7 @@
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/core/context.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
 
 using namespace luxrays;
 
@@ -35,15 +36,13 @@ MQBVHAccel::~MQBVHAccel() {
 	if (initialized) {
 		FreeAligned(nodes);
 
+		delete[] meshTriangleIDs;
+		delete[] meshIDs;
+		delete[] leafsOffset;
+		delete[] leafsTransform;
 		for (unsigned int i = 0; i < nLeafs; ++i)
 			delete leafs[i];
 		delete[] leafs;
-
-		if (preprocessedMesh) {
-			delete instancedPreprocessedMesh;
-			preprocessedMesh->Delete();
-			delete preprocessedMesh;
-		}
 	}
 }
 
@@ -51,59 +50,66 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
 
-	// Split the list of meshes in instanced/not instanced
-	std::deque<Mesh *> instancedMeshes;
-	std::deque<Mesh *> notInstancedMeshes;
-	unsigned int niTotalVertexCount = 0;
-	unsigned int niTotalTriangleCount = 0;
+	// Build a QBVH for each mesh
+	nLeafs = meshes.size();
+	leafs = new QBVHAccel*[nLeafs];
+	leafsTransform = new const Transform*[nLeafs];
+	leafsOffset = new unsigned int[nLeafs];
+	meshIDs = new TriangleMeshID[totalTriangleCount];
+	meshTriangleIDs = new TriangleID[totalTriangleCount];
+	unsigned int currentOffset = 0;
+	for (unsigned int i = 0; i < nLeafs; ++i) {
+		LR_LOG(ctx, "Building QBVH for MQBVH leaf: " << i);
 
-	for (std::deque<Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
-		switch ((*m)->GetType()) {
+		leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
+
+		switch (meshes[i]->GetType()) {
 			case TYPE_TRIANGLE:
-			case TYPE_EXT_TRIANGLE:
-				notInstancedMeshes.push_back(*m);
-				niTotalVertexCount += (*m)->GetTotalVertexCount();
-				niTotalTriangleCount += (*m)->GetTotalTriangleCount();
+			case TYPE_EXT_TRIANGLE: {
+				std::deque<Mesh *> m;
+				m.push_back(meshes[i]);
+				leafs[i]->Init(m, meshes[i]->GetTotalVertexCount(), meshes[i]->GetTotalTriangleCount());
+
+				leafsTransform[i] = NULL;
 				break;
-			case TYPE_TRIANGLE_INSTANCE:
-			case TYPE_EXT_TRIANGLE_INSTANCE:
-				instancedMeshes.push_back(*m);
+			}
+			case TYPE_TRIANGLE_INSTANCE: {
+				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshes[i];
+
+				std::deque<Mesh *> m;
+				m.push_back(itm->GetTriangleMesh());
+				leafs[i]->Init(m, itm->GetTotalVertexCount(), itm->GetTotalTriangleCount());
+
+				leafsTransform[i] = &itm->GetTransformation();
 				break;
+			}
+			case TYPE_EXT_TRIANGLE_INSTANCE: {
+				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshes[i];
+
+				std::deque<Mesh *> m;
+				m.push_back(eitm->GetExtTriangleMesh());
+				leafs[i]->Init(m, eitm->GetTotalVertexCount(), eitm->GetTotalTriangleCount());
+
+				leafsTransform[i] = &eitm->GetTransformation();
+				break;
+			}
 			default:
 				assert (false);
 				break;
 		}
-	}
 
-	LR_LOG(ctx, "Instanced meshes: " << instancedMeshes.size());
-	LR_LOG(ctx, "Not instanced meshes: " << notInstancedMeshes.size());
+		leafsOffset[i] = currentOffset;
 
-	// Add all not instances as one single big instanced mesh
-	preprocessedMesh = (notInstancedMeshes.size() > 0) ?
-		TriangleMesh::Merge(niTotalVertexCount, niTotalTriangleCount, notInstancedMeshes) :
-		NULL;
+		for (unsigned int j = 0; j < meshes[i]->GetTotalTriangleCount(); ++j) {
+			meshIDs[currentOffset + j] = i;
+			meshTriangleIDs[currentOffset + j] = j;
+		}
 
-	if (preprocessedMesh) {
-		Transform identity;
-		instancedPreprocessedMesh = new InstanceTriangleMesh(preprocessedMesh, identity);
-		instancedMeshes.push_back(preprocessedMesh);
-	}
-
-	// Build a QBVH for each mesh
-	nLeafs = instancedMeshes.size();
-	leafs = new QBVHAccel*[nLeafs];
-	for (unsigned int i = 0; i < nLeafs; ++i) {
-		leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
-
-		std::deque<Mesh *> m;
-		m.push_back(instancedMeshes[i]);
-		leafs[i]->Init(m, instancedMeshes[i]->GetTotalVertexCount(), instancedMeshes[i]->GetTotalTriangleCount());
+		currentOffset += meshes[i]->GetTotalTriangleCount();
 	}
 
 	// Temporary data for building
-	u_int *primsIndexes = new u_int[nLeafs + 3]; // For the case where
-	// the last quad would begin at the last primitive
-	// (or the second or third last primitive)
+	u_int *primsIndexes = new u_int[nLeafs];
 
 	nNodes = 0;
 	maxNodes = 2 * nLeafs - 1;
@@ -125,7 +131,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 		primsIndexes[i] = i;
 
 		// Compute the bounding box for the triangle
-		primsBboxes[i] = leafs[i]->WorldBound();
+		primsBboxes[i] = meshes[i]->GetBBox();
 		primsBboxes[i].Expand(RAY_EPSILON);
 		primsCentroids[i] = (primsBboxes[i].pMin + primsBboxes[i].pMax) * .5f;
 
@@ -133,11 +139,6 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 		worldBound = Union(worldBound, primsBboxes[i]);
 		centroidsBbox = Union(centroidsBbox, primsCentroids[i]);
 	}
-
-	// Arbitrarily take the last primitive for the last 3
-	primsIndexes[nLeafs] = nLeafs - 1;
-	primsIndexes[nLeafs + 1] = nLeafs - 1;
-	primsIndexes[nLeafs + 2] = nLeafs - 1;
 
 	// Recursively build the tree
 	LR_LOG(ctx, "Building MQBVH, leafs: " << nLeafs << ", initial nodes: " << maxNodes);
@@ -160,7 +161,7 @@ void MQBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 	// Create a leaf ?
 	//********
 	if (end - start == 1) {
-		CreateLeaf(parentIndex, childIndex, start, nodeBbox);
+		CreateLeaf(parentIndex, childIndex, primsIndexes[start], nodeBbox);
 		return;
 	}
 
@@ -456,8 +457,31 @@ bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			if (QBVHNode::IsEmpty(leafData))
 				continue;
 
-			QBVHAccel *qbvh = leafs[QBVHNode::FirstQuadIndex(leafData)];
-			qbvh->Intersect(ray, rayHit);
+			const unsigned int leafIndex = QBVHNode::FirstQuadIndex(leafData);
+			QBVHAccel *qbvh = leafs[leafIndex];
+
+			if (leafsTransform[leafIndex]) {
+				Ray r = leafsTransform[leafIndex]->GetInverse()(*ray);
+				RayHit rh;
+				rh.SetMiss();
+				if (qbvh->Intersect(&r, &rh)) {
+					rayHit->t = rh.t;
+					rayHit->b1 = rh.b1;
+					rayHit->b2 = rh.b2;
+					rayHit->index = rh.index + leafsOffset[leafIndex];
+
+					ray->maxt = rh.t;;
+				}
+			} else {
+				RayHit rh;
+				rh.SetMiss();
+				if (qbvh->Intersect(ray, &rh)) {
+					rayHit->t = rh.t;
+					rayHit->b1 = rh.b1;
+					rayHit->b2 = rh.b2;
+					rayHit->index = rh.index + leafsOffset[leafIndex];
+				}
+			}
 		}//end of the else
 	}
 
