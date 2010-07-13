@@ -208,6 +208,14 @@ add_custom_command(
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl
    )
 add_custom_command(
+   OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
+   COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_MQBVH = " >> ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
+   COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
+   MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cl
+   )
+add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_Pixel_ClearFB = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
@@ -278,6 +286,7 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/idevices/nativeidevice.cpp
     ${LUXRAYS_SOURCE_DIR}/idevices/virtualidevice.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+    ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
     ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cpp

@@ -29,6 +29,7 @@ namespace luxrays {
 // Intersection kernels
 extern std::string KernelSource_BVH;
 extern std::string KernelSource_QBVH;
+extern std::string KernelSource_MQBVH;
 
 // Pixel kernels
 extern std::string KernelSource_Pixel_ClearFB;

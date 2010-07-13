@@ -490,7 +490,7 @@ bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 					rayHit->b2 = rh.b2;
 					rayHit->index = rh.index + leafsOffset[leafIndex];
 
-					ray->maxt = rh.t;;
+					ray->maxt = rh.t;
 				}
 			} else {
 				RayHit rh;
