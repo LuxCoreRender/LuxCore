@@ -173,7 +173,9 @@ static void QuadTriangle_Intersect(
 	float maxt = ray4->maxt.s0;
     uint index;
 
-    int4 cond = (divisor != (float4)0.f) && (b0 >= (float4)0.f) && (b1 >= (float4)0.f) && (b2 >= (float4)0.f) && (t > ray4->mint);
+    int4 cond = isnotequal(divisor, (float4)0.f) & isgreaterequal(b0, (float4)0.f) &
+			isgreaterequal(b1, (float4)0.f) & isgreaterequal(b2, (float4)0.f) &
+			isgreater(t, ray4->mint);
 
     const int cond0 = cond.s0 && (t.s0 < maxt);
     maxt = select(maxt, t.s0, cond0);
@@ -204,10 +206,10 @@ static void QuadTriangle_Intersect(
 
 	ray4->maxt = (float4)maxt;
 
-	/*rayHit->t = maxt;
+	rayHit->t = maxt;
 	rayHit->b1 = _b1;
 	rayHit->b2 = _b2;
-	rayHit->index = index;*/
+	rayHit->index = index;
 }
 
 static void LeafIntersect(
