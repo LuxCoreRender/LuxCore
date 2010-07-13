@@ -20,18 +20,18 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 #
-# SmallLuxGPU v1.6 render engine Blender 2.5 plug-in
-# v0.62test
+# SmallLuxGPU v1.6 Blender 2.5 plug-in
+# v0.62dev
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
 import blf
+import mathutils
 import os
 import time
 import threading
 import telnetlib
 from itertools import zip_longest
-from mathutils import Vector
 from subprocess import Popen
 
 # SLG Telnet interface
@@ -67,9 +67,9 @@ ff = lambda f:format(f,'.6f').rstrip('0')
 # SmallLuxGPU Blender Plugin: one instance
 class SLGBP:
     slgpath = spath = sname = sfullpath = image_filename = ''
+    nomatn = 'nomat'
     cfg = {}
     scn = {}
-    scnmats = []
     sun = None
     live = liveanim = False
     LIVECFG, LIVESCN, LIVEMTL, LIVEALL = 1, 2, 4, 7
@@ -152,6 +152,14 @@ class SLGBP:
                 errout("Cannot create SLG scenes directory")
                 return False
 
+        # Get motion blur parameters
+        if scene.slg_cameramotionblur:
+            scene.set_frame(scene.frame_current - 1)
+            SLGBP.camdirBlur = scene.camera.matrix_world * mathutils.Vector((0, 0, -10))
+            SLGBP.camlocBlur = scene.camera.matrix_world.translation_part()
+            SLGBP.camupBlur = scene.camera.matrix_world.rotation_part() * mathutils.Vector((0,1,0))
+            scene.set_frame(scene.frame_current + 1)
+
         return True
 
     # Get SLG .cfg properties
@@ -175,7 +183,7 @@ class SLGBP:
         cfg['image.height'] = format(int(scene.render.resolution_y*scene.render.resolution_percentage*0.01))
         cfg['batch.halttime'] = format(scene.slg_enablebatchmode*scene.slg_batchmodetime)
         cfg['batch.haltspp'] = format(scene.slg_enablebatchmode*scene.slg_batchmodespp)
-        cfg['batch.periodicsave'] = format(scene.slg_enablebatchmode*scene.slg_batchmode_periodicsave)
+        cfg['batch.periodicsave'] = format(scene.slg_batchmode_periodicsave)
         cfg['scene.file'] = '{}/{}/{}.scn'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname)
         cfg['scene.epsilon'] = format(0.0001/scene.unit_settings.scale_length,'g')
         cfg['opencl.latency.mode'] = format(scene.slg_low_latency, 'b')
@@ -211,20 +219,19 @@ class SLGBP:
 
         return cfg
 
-    # Get SLG .scn non-mat properties
+    # Get SLG .scn scene properties
     @classmethod
     def getscn(cls, scene):
         scn = {}
 
-        # Get camera and lookat point
+        # Get camera and lookat direction
         cam = scene.camera
-        trackto = next((constraint for constraint in cam.constraints if constraint.name == 'TrackTo'), None)
-        target = trackto.target.matrix.translation_part() if trackto else cam.matrix * Vector((0, 0, -10))
+        camdir = cam.matrix_world * mathutils.Vector((0, 0, -1))
 
         # Camera.location not always updated, but matrix is
-        camloc = cam.matrix.translation_part()
-        scn['scene.camera.lookat'] = '{} {} {} {} {} {}'.format(ff(camloc.x),ff(camloc.y),ff(camloc.z),ff(target.x),ff(target.y),ff(target.z))
-        camup = cam.matrix.rotation_part() * Vector((0,1,0))
+        camloc = cam.matrix_world.translation_part()
+        scn['scene.camera.lookat'] = '{} {} {} {} {} {}'.format(ff(camloc.x),ff(camloc.y),ff(camloc.z),ff(camdir.x),ff(camdir.y),ff(camdir.z))
+        camup = cam.matrix_world.rotation_part() * mathutils.Vector((0,1,0))
         scn['scene.camera.up'] = '{} {} {}'.format(ff(camup.x),ff(camup.y),ff(camup.z))
 
         scn['scene.camera.fieldofview'] = format(cam.data.angle*180.0/3.1415926536,'g')
@@ -236,17 +243,12 @@ class SLGBP:
                     scn['scene.camera.motionblur.lookat'] = SLGBP.scn['scene.camera.lookat']
                     scn['scene.camera.motionblur.up'] = SLGBP.scn['scene.camera.up']
             else:
-                scene.set_frame(scene.frame_current - 1)
-                tracktoBlur = next((constraint for constraint in scene.camera.constraints if constraint.name == 'TrackTo'), None)
-                targetBlur = trackto.target.matrix.translation_part() if tracktoBlur else scene.camera.matrix * Vector([0, 0, -10])
-                camlocBlur = cam.matrix.translation_part()
-                camupBlur = cam.matrix.rotation_part() * Vector((0,1,0))
-                scn['scene.camera.motionblur.lookat'] = '{} {} {} {} {} {}'.format(ff(camlocBlur.x),ff(camlocBlur.y),ff(camlocBlur.z),ff(targetBlur[0]),ff(targetBlur[1]),ff(targetBlur[2]))
-                scn['scene.camera.motionblur.up'] = '{} {} {}'.format(ff(camupBlur.x),ff(camupBlur.y),ff(camupBlur.z))
-                scene.set_frame(scene.frame_current + 1)
+                scn['scene.camera.motionblur.lookat'] = '{} {} {} {} {} {}'.format(ff(SLGBP.camlocBlur.x),ff(SLGBP.camlocBlur.y),ff(SLGBP.camlocBlur.z),
+                        ff(SLGBP.camdirBlur[0]),ff(SLGBP.camdirBlur[1]),ff(SLGBP.camdirBlur[2]))
+                scn['scene.camera.motionblur.up'] = '{} {} {}'.format(ff(SLGBP.camupBlur.x),ff(SLGBP.camupBlur.y),ff(SLGBP.camupBlur.z))
 
         # DOF
-        fdist = (camloc-cam.data.dof_object.matrix.translation_part()).magnitude if cam.data.dof_object else cam.data.dof_distance
+        fdist = (camloc-cam.data.dof_object.matrix_world.translation_part()).magnitude if cam.data.dof_object else cam.data.dof_distance
         if fdist:
             scn['scene.camera.focaldistance'] = ff(fdist)
             scn['scene.camera.lensradius'] = ff(cam.data.slg_lensradius)
@@ -269,7 +271,7 @@ class SLGBP:
         # Sun lamp
         if SLGBP.sun:
             # We only support one visible sun lamp
-            sundir = SLGBP.sun.matrix.rotation_part() * Vector((0,0,1))
+            sundir = SLGBP.sun.matrix_world.rotation_part() * mathutils.Vector((0,0,1))
             sky = SLGBP.sun.data.sky
             # If envmap is also defined, only sun component is exported
             if not SLGBP.infinitelight and sky.use_atmosphere:
@@ -278,7 +280,8 @@ class SLGBP:
                 scn['scene.skylight.gain'] = '{} {} {}'.format(ff(sky.sun_intensity),ff(sky.sun_intensity),ff(sky.sun_intensity))
             if sky.use_sky:
                 scn['scene.sunlight.dir'] = '{} {} {}'.format(ff(sundir.x),ff(sundir.y),ff(sundir.z))
-                scn['scene.sunlight.turbidity'] = '{}'.format(ff(sky.atmosphere_turbidity))
+                scn['scene.sunlight.turbidity'] = ff(sky.atmosphere_turbidity)
+                scn['scene.sunlight.relsize'] = ff(sky.sun_size)
                 scn['scene.sunlight.gain'] = '{} {} {}'.format(ff(sky.sun_brightness),ff(sky.sun_brightness),ff(sky.sun_brightness))
 
         # Participating Media properties
@@ -294,192 +297,285 @@ class SLGBP:
 
     # Get SLG .scn mat properties
     @classmethod
-    def getmatscn(cls, scene, mat):
+    def getmatscn(cls, scene, m):
         scn = {}
-        portal = False
-        m = None
-        if mat in bpy.data.materials:
-            m = bpy.data.materials[mat]
-            mat = mat.replace('.','_')
-            if m.shadeless:
-                portal = True
-            elif m.emit:
-                matprop = 'scene.materials.light.{}'.format(mat)
-                scn[matprop] = '{} {} {}'.format(ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2]))
-            elif m.transparency:
-                if m.raytrace_transparency.ior == 1.0:
-                    matprop = 'scene.materials.archglass.{}'.format(mat)
-                    scn[matprop] = '{} {} {} {} {} {} {:b} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
-                        ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
-                        ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
-                        m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
-                else:
-                    matprop = 'scene.materials.glass.{}'.format(mat)
-                    scn[matprop] = '{} {} {} {} {} {} 1.0 {} {:b} {:b}'.format(ff(m.mirror_color[0]),ff(m.mirror_color[1]),ff(m.mirror_color[2]),
-                        ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
-                        ff(m.raytrace_transparency.ior),m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
+        matn = m.name.replace('.','_')
+        if m.shadeless:
+            matprop = None
+        elif m.emit:
+            matprop = 'scene.materials.light.{}'.format(matn)
+            scn[matprop] = '{} {} {}'.format(ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2]))
+        elif m.transparency:
+            if m.raytrace_transparency.ior == 1.0:
+                matprop = 'scene.materials.archglass.{}'.format(matn)
+                scn[matprop] = '{} {} {} {} {} {} {:b} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
+                    ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
+                    #ff((1.0-m.alpha)*m.diffuse_color[0]),ff((1.0-m.alpha)*m.diffuse_color[1]),ff((1.0-m.alpha)*m.diffuse_color[2]),  # Doesn't make sense
+                    ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
+                    m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
             else:
-                if not m.raytrace_mirror.enabled or not m.raytrace_mirror.reflect_factor:
-                    matprop = 'scene.materials.matte.{}'.format(mat)
-                    scn[matprop] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
+                matprop = 'scene.materials.glass.{}'.format(matn)
+                scn[matprop] = '{} {} {} {} {} {} 1.0 {} {:b} {:b}'.format(ff(m.mirror_color[0]),ff(m.mirror_color[1]),ff(m.mirror_color[2]),
+                    ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
+                    ff(m.raytrace_transparency.ior),m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
+        else:
+            if not m.raytrace_mirror.enabled or not m.raytrace_mirror.reflect_factor:
+                matprop = 'scene.materials.matte.{}'.format(matn)
+                scn[matprop] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
+            else:
+                refltype = 'metal' if m.raytrace_mirror.gloss_factor < 1 else 'mirror'
+                gloss = ff(pow(10000.0,m.raytrace_mirror.gloss_factor)) if m.raytrace_mirror.gloss_factor < 1 else ''
+                if m.raytrace_mirror.reflect_factor == 1:
+                    matprop = 'scene.materials.{}.{}'.format(refltype,matn)
+                    scn[matprop] = '{} {} {} {} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),
+                        ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),gloss,m.raytrace_mirror.depth>0)
                 else:
-                    refltype = 'metal' if m.raytrace_mirror.gloss_factor < 1 else 'mirror'
-                    gloss = ff(pow(10000.0,m.raytrace_mirror.gloss_factor)) if m.raytrace_mirror.gloss_factor < 1 else ''
-                    if m.raytrace_mirror.reflect_factor == 1:
-                        matprop = 'scene.materials.{}.{}'.format(refltype,mat)
-                        scn[matprop] = '{} {} {} {} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),
-                            ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),gloss,m.raytrace_mirror.depth>0)
-                    else:
-                        matprop = 'scene.materials.matte{}.{}'.format(refltype,mat)
-                        scn[matprop] = '{} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
-                            ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
-                            gloss,m.raytrace_mirror.depth>0)
-        elif mat == 'no_material_assigned':
-            matprop = 'scene.materials.matte.{}'.format(mat)
-            scn[matprop] = '0.75 0.75 0.75'
-
-        if not portal and not SLGBP.live:
-            scn['scene.objects.{}.{}'.format(mat,mat)] = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,mat)
-            if scene.slg_vnormals:
-                scn['scene.objects.{}.{}.useplynormals'.format(mat,mat)] = '1'
-            if scene.slg_vuvs and m:
-                texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
-                if texmap:
-                    scn['scene.objects.{}.{}.texmap'.format(mat,mat)] = bpy.utils.expandpath(texmap.texture.image.filepath).replace('\\','/')
-                texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
-                if texbump:
-                    if texbump.texture.normal_map:
-                        scn['scene.objects.{}.{}.normalmap'.format(mat,mat)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
-                    else:
-                        scn['scene.objects.{}.{}.bumpmap'.format(mat,mat)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
-                        scn['scene.objects.{}.{}.bumpmap.scale'.format(mat,mat)] = ff(texbump.normal_factor)
-
+                    matprop = 'scene.materials.matte{}.{}'.format(refltype,matn)
+                    scn[matprop] = '{} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
+                        ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
+                        gloss,m.raytrace_mirror.depth>0)
         return matprop, scn
 
-    # Export obj/mat .ply files, return materials used in exported scene
+    # Get SLG .scn obj properties
+    @classmethod
+    def getobjscn(cls, scene):
+        ## add object as param if exposed via telnet later...
+        scn = {}
+        for ply in SLGBP.plys:
+            for obj in SLGBP.plys[ply]:
+                plyn = ply.replace('.','_')
+                if type(obj) == tuple:
+                    matn = obj[1].name.replace('.','_') if obj[1] else SLGBP.nomatn
+                    name = obj[0].name.replace('.','_')+plyn
+                    m = obj[1]
+                    if obj[0] in SLGBP.instobjs:
+                        # If used both in instances and in dupligroups at the same time
+                        if obj[0].data in SLGBP.instobjs:
+                            if '{D}' in plyn:
+                                continue
+                            else:
+                                om = obj[0].matrix_world
+                        else:
+                            om = mathutils.Matrix()
+                    else:
+                        om = obj[0].matrix_world
+                    scn['scene.objects.{}.{}.transformation'.format(matn,name)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
+                            ff(om[0][0]),ff(om[0][1]),ff(om[0][2]),ff(om[0][3]),ff(om[1][0]),ff(om[1][1]),ff(om[1][2]),ff(om[1][3]),
+                            ff(om[2][0]),ff(om[2][1]),ff(om[2][2]),ff(om[2][3]),ff(om[3][0]),ff(om[3][1]),ff(om[3][2]),ff(om[3][3]))
+                else:
+                    matn = name = plyn
+                    m = obj
+
+                scn['scene.objects.{}.{}'.format(matn,name)] = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,plyn)
+                if scene.slg_vnormals:
+                    scn['scene.objects.{}.{}.useplynormals'.format(matn,name)] = '1'
+                if scene.slg_vuvs and m:
+                    texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
+                    if texmap:
+                        scn['scene.objects.{}.{}.texmap'.format(matn,name)] = bpy.utils.expandpath(texmap.texture.image.filepath).replace('\\','/')
+                    texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
+                    if texbump:
+                        if texbump.texture.normal_map:
+                            scn['scene.objects.{}.{}.normalmap'.format(matn,name)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
+                        else:
+                            scn['scene.objects.{}.{}.bumpmap'.format(matn,name)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
+                            scn['scene.objects.{}.{}.bumpmap.scale'.format(matn,name)] = ff(texbump.normal_factor)
+        return scn
+
+    # Export obj/mat .ply files
     @classmethod
     def expmatply(cls, scene):
         print('SLGBP ===> Begin export')
-        # Consider all materials
-        mats = [m.name for m in bpy.data.materials]
-        nomat = len(mats)
-        mats.append('no_material_assigned')
+        # Consider all used materials
+        plys = dict([(m.name, [m]) for m in bpy.data.materials if m.users])
+        plymats = [p for p in plys]
+        nomat = len(plymats)
+        plymats.append(SLGBP.nomatn)
+        plys[SLGBP.nomatn] = [None]
         curmat = nomat
-        scnmats = []
-        verts = [[] for i in range(len(mats))]
-        vert_vcs = [[] for i in range(len(mats))]
-        mvc = [False]*len(mats)
-        vert_uvs = [[] for i in range(len(mats))]
-        faces = [[] for i in range(len(mats))]
+        instobjs = {}
+        objs = []
+        rendertypes = ['MESH', 'SURFACE', 'META', 'TEXT', 'CURVE']
+        inscenelayer = lambda o:scene.layers[next((i for i in range(len(o.layers)) if o.layers[i]))]
+        # Get materials with force ply flag
+        mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
+        # Objects to render
+        for obj in scene.objects:
+            if not obj.restrict_render:
+                if obj.type in rendertypes and inscenelayer(obj):
+                    # Mesh instances
+                    if obj.data.users > 1 and not obj.modifiers:
+                        if obj.data in instobjs:
+                            if obj.data.materials:
+                                for i in range(len(obj.data.materials)):
+                                    plys[(obj.data.name+'S'+str(i))].append((obj, obj.material_slots[i].material))
+                            else:
+                                plys[(obj.data.name+SLGBP.nomatn)].append((obj, None))
+                        else:
+                            objs.append(obj.data)
+                            instobjs[obj.data] = len(plymats)
+                            if obj.data.materials:
+                                for i in range(len(obj.data.materials)):
+                                    plyn = (obj.data.name+'S'+str(i))
+                                    plymats.append(plyn)
+                                    plys[plyn] = [(obj, obj.material_slots[i].material)]
+                            else:
+                                plyn = (obj.data.name+SLGBP.nomatn)
+                                plymats.append(plyn)
+                                plys[plyn] = [(obj, None)]
+                    else:
+                        # Collect all non-instance meshes by material
+                        if scene.slg_export or mfp and any(m for m in mfp if m in obj.material_slots):
+                            objs.append(obj)
+                # Dupligroups
+                if obj.dupli_type == 'GROUP' and inscenelayer(obj):
+                    for o in obj.dupli_group.objects:
+                        if o in instobjs:
+                            if o.data.materials:
+                                for i in range(len(o.data.materials)):
+                                    plys[(o.name+'{D}S'+str(i))].append((obj, o.material_slots[i].material))
+                            else:
+                                plys[(o.name+'{D}'+SLGBP.nomatn)].append((obj, None))
+                        elif not o.restrict_render and o.type in rendertypes:
+                            addo = False
+                            if o not in objs:
+                                if scene.slg_export or mfp and any(m for m in mfp if m in o.material_slots):
+                                    objs.append(o)
+                            if inscenelayer(o):
+                                addo = True
+                            instobjs[o] = len(plymats)
+                            if o.data.materials:
+                                for i in range(len(o.data.materials)):
+                                    plyn = (o.name+'{D}S'+str(i))
+                                    plymats.append(plyn)
+                                    plys[plyn] = [(obj, o.material_slots[i].material)]
+                                    if addo:
+                                        plys[plyn].append((o, o.material_slots[i].material))
+                            else:
+                                plyn = (o.name+'{D}'+SLGBP.nomatn)
+                                plymats.append(plyn)
+                                plys[plyn] = [(obj, None)]
+                                if addo:
+                                    plys[plyn].append((o, None))
+
+        verts = [[] for i in range(len(plymats))]
+        vert_vcs = [[] for i in range(len(plymats))]
+        mvc = [False]*len(plymats)
+        vert_uvs = [[] for i in range(len(plymats))]
+        faces = [[] for i in range(len(plymats))]
         sharedverts = {}
-        vertnum = [0]*len(mats)
+        vertnum = [0]*len(plymats)
         color = [0,0,0]
         uvco = [0,0]
         addv = False
-        # Get materials with force ply flag
-        mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
-        # Force an update to object matrices when rendering animations
-        scene.set_frame(scene.frame_current)
-        # Only get mesh data if PLY export of a material has "force ply"
+        # Only get mesh data if PLY export or a material has "force ply"
         if scene.slg_export or mfp:
             # Delete existing ply files
             if scene.slg_export and os.path.exists(SLGBP.sfullpath):
                 any(os.remove('{}/{}'.format(SLGBP.sfullpath,file)) for file in os.listdir(SLGBP.sfullpath) if file.endswith('.ply'))
-            if not scene.slg_export and mfp:
-                objs = [o for o in scene.objects if any(m for m in mfp if m in o.material_slots)]
-            else:
-                objs = scene.objects
             for obj in objs:
-                if not obj.restrict_render and obj.type in ['MESH', 'SURFACE', 'META', 'TEXT', 'CURVE'] and scene.layers[next((i for i in range(len(obj.layers)) if obj.layers[i]))]:
-                    print('SLGBP ===> Object: {}'.format(obj.name))
-                    # Create render mesh
-                    try:
+                print('SLGBP ===> Object: {}'.format(obj.name))
+                # Create render mesh
+                try:
+                    if type(obj) == bpy.types.Object:
                         print("SLGBP        Create render mesh: {}".format(obj.name))
                         mesh = obj.create_mesh(scene, True, 'RENDER')
-                    except:
-                        pass
                     else:
+                        print("SLGBP        Using render mesh: {}".format(obj.name))
+                        mesh = obj
+                except:
+                    pass
+                else:
+                    if type(obj) == bpy.types.Object:
                         print("SLGBP        Xform render mesh: {}".format(obj.name))
-                        mesh.transform(obj.matrix)
-                        # Make copy of verts for fast direct index access (mesh.verts was very slow)
-                        if scene.slg_vnormals:
-                            v = [tuple(vert.co) + tuple(vert.normal) for vert in mesh.verts]
-                        else:
-                            v = [tuple(vert.co) for vert in mesh.verts]
-                        vcd = []
-                        if scene.slg_vcolors and mesh.active_vertex_color:
-                            vcd = mesh.active_vertex_color.data
-                        uvd = []
-                        if scene.slg_vuvs and mesh.active_uv_texture:
-                            uvd = mesh.active_uv_texture.data
-                        # Correlate obj mat slots with global mats
-                        objmats = [mats.index(m.material.name) if m.material else nomat for m in obj.material_slots]
-                        for face, vc, uv in zip_longest(mesh.faces,vcd,uvd):
-                            curmat = objmats[face.material_index] if objmats else nomat
-                            # Get vertex colors, if avail
-                            if vc:
-                                colors = vc.color1, vc.color2, vc.color3, vc.color4
-                                mvc[curmat] = True
-                            # Get uvs if there is an image texture attached
-                            if uv:
-                                uvcos = uv.uv1, uv.uv2, uv.uv3, uv.uv4
-                            if not face.smooth or uv:
-                                faces[curmat].append((vertnum[curmat], vertnum[curmat]+1, vertnum[curmat]+2))
-                                if len(face.verts) == 4:
-                                    faces[curmat].append((vertnum[curmat], vertnum[curmat]+2, vertnum[curmat]+3))
-                            for j, vert in enumerate(face.verts):
-                                if scene.slg_vcolors:
-                                    if vc:
-                                        color[0] = int(255.0*colors[j][0])
-                                        color[1] = int(255.0*colors[j][1])
-                                        color[2] = int(255.0*colors[j][2])
-                                    else:
-                                        color[0] = color[1] = color[2] = 255
-                                if scene.slg_vuvs:
-                                    if uv:
-                                        uvco[0] = uvcos[j][0]
-                                        uvco[1] = 1.0 - uvcos[j][1]
-                                    else:
-                                        uvco[0] = uvco[1] = 0
-                                if face.smooth and not uv:
-                                    if (curmat,vert) in sharedverts:
-                                        addv = False
-                                    else:
-                                        sharedverts[curmat,vert]=vertnum[curmat]
-                                        addv = True
+                        mesh.transform(obj.matrix_world)
+                    # Make copy of verts for fast direct index access (mesh.verts was very slow)
+                    if scene.slg_vnormals:
+                        v = [tuple(vert.co) + tuple(vert.normal) for vert in mesh.verts]
+                    else:
+                        v = [tuple(vert.co) for vert in mesh.verts]
+                    vcd = []
+                    if scene.slg_vcolors and mesh.active_vertex_color:
+                        vcd = mesh.active_vertex_color.data
+                    uvd = []
+                    if scene.slg_vuvs and mesh.active_uv_texture:
+                        uvd = mesh.active_uv_texture.data
+                    if obj in instobjs:
+                        # Correlate obj mat slots with plymat slots
+                        onomat = instobjs[obj]
+                        objmats = [i for i in range(onomat, onomat+len(mesh.materials))]
+                    else:
+                        # Correlate obj mat slots with global mat pool
+                        onomat = nomat
+                        objmats = [plymats.index(ms.material.name) if ms.material else onomat for ms in obj.material_slots]
+                    for face, vc, uv in zip_longest(mesh.faces,vcd,uvd):
+                        curmat = objmats[face.material_index] if objmats else onomat
+                        # Get vertex colors, if avail
+                        if vc:
+                            colors = vc.color1, vc.color2, vc.color3, vc.color4
+                            mvc[curmat] = True
+                        # Get uvs if there is an image texture attached
+                        if uv:
+                            uvcos = uv.uv1, uv.uv2, uv.uv3, uv.uv4
+                        if not face.smooth or uv:
+                            faces[curmat].append((vertnum[curmat], vertnum[curmat]+1, vertnum[curmat]+2))
+                            if len(face.verts) == 4:
+                                faces[curmat].append((vertnum[curmat], vertnum[curmat]+2, vertnum[curmat]+3))
+                        for j, vert in enumerate(face.verts):
+                            if scene.slg_vcolors:
+                                if vc:
+                                    color[0] = int(255.0*colors[j][0])
+                                    color[1] = int(255.0*colors[j][1])
+                                    color[2] = int(255.0*colors[j][2])
                                 else:
-                                    addv = True
-                                if addv:
-                                    if scene.slg_vnormals and not face.smooth:
-                                        verts[curmat].append(v[vert][:3]+tuple(face.normal))
-                                    else:
-                                        verts[curmat].append(v[vert])
-                                    if scene.slg_vuvs:
-                                        vert_uvs[curmat].append(tuple(uvco))
-                                    if scene.slg_vcolors:
-                                        vert_vcs[curmat].append(tuple(color))
-                                    vertnum[curmat] += 1
+                                    color[0] = color[1] = color[2] = 255
+                            if scene.slg_vuvs:
+                                if uv:
+                                    uvco[0] = uvcos[j][0]
+                                    uvco[1] = 1.0 - uvcos[j][1]
+                                else:
+                                    uvco[0] = uvco[1] = 0
                             if face.smooth and not uv:
-                                faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[1]], sharedverts[curmat,face.verts[2]]))
-                                if len(face.verts) == 4:
-                                    faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[2]], sharedverts[curmat,face.verts[3]]))
-                    sharedverts = {}
-                    # Delete working mesh
-                    if not mesh.users:
-                        print("SLGBP        delete render mesh: {}".format(obj.name))
-                        bpy.data.meshes.remove(mesh)
+                                if (curmat,vert) in sharedverts:
+                                    addv = False
+                                else:
+                                    sharedverts[curmat,vert]=vertnum[curmat]
+                                    addv = True
+                            else:
+                                addv = True
+                            if addv:
+                                if scene.slg_vnormals and not face.smooth:
+                                    verts[curmat].append(v[vert][:3]+tuple(face.normal))
+                                else:
+                                    verts[curmat].append(v[vert])
+                                if scene.slg_vuvs:
+                                    vert_uvs[curmat].append(tuple(uvco))
+                                if scene.slg_vcolors:
+                                    vert_vcs[curmat].append(tuple(color))
+                                vertnum[curmat] += 1
+                        if face.smooth and not uv:
+                            faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[1]], sharedverts[curmat,face.verts[2]]))
+                            if len(face.verts) == 4:
+                                faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[2]], sharedverts[curmat,face.verts[3]]))
+                sharedverts = {}
+                # Delete working mesh
+                if not mesh.users:
+                    print("SLGBP        delete render mesh: {}".format(obj.name))
+                    bpy.data.meshes.remove(mesh)
                 if SLGBP.abort:
-                    return []
-        # Process each material
-        for i, mat in enumerate(mats):
-            mat = mat.replace('.','_')
-            # If have mesh using this mat...
-            if verts[i] or (not scene.slg_export and os.path.exists('{}/{}.ply'.format(SLGBP.sfullpath,mat))):
-                scnmats.append(mats[i])
-                if scene.slg_export or mats[i] in mfp:
+                    return
+        # Process each plymat
+        for i, pm in enumerate(plymats):
+            plyn = pm.replace('.','_')
+            # Remove portal materials
+            if type(plys[pm][0]) == bpy.types.Material and plys[pm][0].shadeless:
+                del plys[pm]
+            # If have mesh using this plymat...
+            if verts[i] or (not scene.slg_export and os.path.exists('{}/{}.ply'.format(SLGBP.sfullpath,plyn))):
+                if scene.slg_export or pm in mfp:
                     # Write out PLY
-                    print("SLGBP        material: {}".format(mat))
-                    fply = open('{}/{}.ply'.format(SLGBP.sfullpath,mat), 'wb')
+                    print("SLGBP        writing PLY: {}".format(plyn))
+                    fply = open('{}/{}.ply'.format(SLGBP.sfullpath,plyn), 'wb')
                     fply.write(b'ply\n')
                     fply.write(b'format ascii 1.0\n')
                     fply.write(str.encode('comment Created by SmallLuxGPU exporter for Blender 2.5, source file: {}\n'.format((bpy.data.filepath.split('/')[-1].split('\\')[-1]))))
@@ -516,9 +612,12 @@ class SLGBP:
                     for f in faces[i]:
                         fply.write(str.encode('3 {} {} {}\n'.format(*f)))
                     fply.close()
+            else:
+                del plys[pm]
             if SLGBP.abort:
-                return []
-        return scnmats
+                return
+        SLGBP.plys = plys
+        SLGBP.instobjs = instobjs
 
     # Export SLG scene
     @classmethod
@@ -529,12 +628,15 @@ class SLGBP:
             fcfg.write(k + ' = ' + SLGBP.cfg[k] + '\n')
         fcfg.close()
         SLGBP.scn = SLGBP.getscn(scene)
-        SLGBP.scnmats = SLGBP.expmatply(scene)
+        SLGBP.expmatply(scene)
         SLGBP.matprops = {}
-        for mat in SLGBP.scnmats:
-            matprop, scn = SLGBP.getmatscn(scene, mat)
-            SLGBP.matprops[mat] = matprop
-            SLGBP.scn.update(scn)
+        for m in bpy.data.materials:
+            if m.users:
+                matprop, scn = SLGBP.getmatscn(scene, m)
+                SLGBP.matprops[m.name] = matprop
+                SLGBP.scn.update(scn)
+        SLGBP.scn['scene.materials.matte.'+SLGBP.nomatn] = '0.75 0.75 0.75'
+        SLGBP.scn.update(SLGBP.getobjscn(scene))
         fscn = open('{}/{}/{}.scn'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname), 'w')
         for k in sorted(SLGBP.scn):
             fscn.write(k + ' = ' + SLGBP.scn[k] + '\n')
@@ -552,37 +654,24 @@ class SLGBP:
 
     # Export SLG scene and render it
     @classmethod
-    def exportrun(cls, scene, anim, errout):
-        if anim:
-            scene.set_frame(scene.frame_start)
-        while True:
-            if not SLGBP.init(scene, errout):
-                return
-            SLGBP.msg = 'SLG exporting frame: ' + str(scene.frame_current) + " (ESC to abort)"
-            SLGBP.export(scene)
-            if not SLGBP.abort:
-                SLGBP.msg = 'SLG rendering frame: ' + str(scene.frame_current) + " (ESC to abort)"
-                SLGBP.runslg(scene)
-            if not anim:
-                break
-            SLGBP.slgproc.wait()
-            if SLGBP.abort or scene.frame_current+scene.frame_step > scene.frame_end:
-                break
-            scene.set_frame(scene.frame_current+scene.frame_step)
+    def exportrun(cls, scene):
+        SLGBP.export(scene)
+        if not SLGBP.abort:
+            SLGBP.runslg(scene)
 
     # Update SLG parameters via telnet interface
     @classmethod
     def liveconnect(cls, scene, errout):
         SLGBP.msg = 'Connecting via telnet to SLG... (SLG Live Mode)'
-        scene.set_frame(scene.frame_current) # Refresh screen
+        SLGBP.msgrefresh()
         SLGBP.telnet = SLGTelnet()
         if SLGBP.telnet.connected:
             SLGBP.live = True
             SLGBP.msg = 'SLG Live! (ESC to exit)'
-            scene.set_frame(scene.frame_current) # Refresh screen
+            SLGBP.msgrefresh()
         else:
             SLGBP.msg = 'Unable to connect to SLG via telnet... (SLG Live Mode)'
-            scene.set_frame(scene.frame_current) # Refresh screen
+            SLGBP.msgrefresh()
             errout("Can't connect.  SLG must be running with telnet interface enabled")
 
     @classmethod
@@ -625,21 +714,20 @@ class SLGBP:
                         wasreset = True
             if act & SLGBP.LIVEMTL > 0:
                 if SLGBP.livemat:
-                    mat = SLGBP.livemat.name
+                    matprop, scn = SLGBP.getmatscn(scene, SLGBP.livemat)
+                    if matprop != SLGBP.matprops[SLGBP.livemat.name]:
+                        del SLGBP.scn[SLGBP.matprops[SLGBP.livemat.name]]
+                        SLGBP.matprops[SLGBP.livemat.name] = matprop
                     SLGBP.livemat = None
-                    if mat in SLGBP.scnmats:
-                        matprop, scn = SLGBP.getmatscn(scene, mat)
-                        if matprop != SLGBP.matprops[mat]:
-                            del SLGBP.scn[SLGBP.matprops[mat]]
-                            SLGBP.matprops[mat] = matprop
                 else:
                     scn = {}
-                    for mat in SLGBP.scnmats:
-                        matprop, matscn = SLGBP.getmatscn(scene, mat)
-                        scn.update(matscn)
-                        if matprop != SLGBP.matprops[mat]:
-                            del SLGBP.scn[SLGBP.matprops[mat]]
-                            SLGBP.matprops[mat] = matprop
+                    for m in bpy.data.materials:
+                        if m.users:
+                            matprop, matscn = SLGBP.getmatscn(scene, m)
+                            scn.update(matscn)
+                            if matprop != SLGBP.matprops[m.name]:
+                                del SLGBP.scn[SLGBP.matprops[m.name]]
+                                SLGBP.matprops[m.name] = matprop
                 for k in scn:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
                         wasreset = True
@@ -657,7 +745,7 @@ class SLGBP:
         SLGBP.livetrigger(scene, SLGBP.LIVEALL)
         if scene.slg_cameramotionblur:
             # Make sure first livetrigger takes place
-            time.sleep(0.1)
+            time.sleep(0.25)
         while True:
             scene.set_frame(scene.frame_current+scene.frame_step)
             SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(scene.frame_current) + " (ESC to abort)"
@@ -666,7 +754,7 @@ class SLGBP:
             SLGBP.telnet.send('image.save')
             if not SLGBP.live or scene.frame_current+scene.frame_step > scene.frame_end: break
         SLGBP.msg = 'SLG Live! (ESC to exit)'
-        scene.set_frame(scene.frame_current) # Refresh screen
+        SLGBP.msgrefresh()
         SLGBP.liveanim = False
 
 # Output informational message to main viewport
@@ -674,18 +762,19 @@ def info_callback(context):
     blf.position(0, 75, 30, 0)
     blf.size(0, 14, 72)
     blf.draw(0, SLGBP.msg)
-    if SLGBP.live and not SLGBP.liveanim:
+    if SLGBP.live:
         if SLGBP.slgproc.poll() != None:
             SLGBP.live = False
             SLGBP.abort = True
             return
-        # If frame is unchanged check only base SCN
-        if SLGBP.curframe == context.scene.frame_current:
-            SLGBP.livetrigger(context.scene, SLGBP.LIVESCN)
-        # Else could be frame skip / playback where anything can change
-        else:
-            SLGBP.curframe = context.scene.frame_current
-            SLGBP.livetrigger(context.scene, SLGBP.LIVEALL)
+        if not SLGBP.liveanim:
+            # If frame is unchanged check only base SCN
+            if SLGBP.curframe == context.scene.frame_current:
+                SLGBP.livetrigger(context.scene, SLGBP.LIVESCN)
+            # Else could be frame skip / playback where anything can change
+            else:
+                SLGBP.curframe = context.scene.frame_current
+                SLGBP.livetrigger(context.scene, SLGBP.LIVEALL)
 
 # SLG Render (without Blender render engine) operator
 class SLGRender(bpy.types.Operator):
@@ -699,31 +788,43 @@ class SLGRender(bpy.types.Operator):
         self._iserror = True
         self.report('ERROR', "SLGBP: " + msg)
 
+    def _reset(self, context):
+        SLGBP.thread = None
+        context.region.callback_remove(SLGBP.icb)
+        context.area.tag_redraw()
+        if self.properties.animation:
+            context.scene.render.fps = self._orig_fps
+            context.scene.render.fps_base = self._orig_fps_base
+            if SLGBP.slgproc:
+                if SLGBP.slgproc.poll() == None:
+                    SLGBP.slgproc.terminate()
+
     def modal(self, context, event):
-        if SLGBP.thread:
-            if SLGBP.thread.is_alive():
-                if event.type != 'ESC':
-                    return {'PASS_THROUGH'}
+        if self.properties.animation:
+            if event.type == 'ESC':
                 SLGBP.abort = True
-                if SLGBP.slgproc:
-                    if SLGBP.slgproc.poll() == None:
-                        SLGBP.slgproc.terminate()
-            SLGBP.thread = None
-            context.region.callback_remove(SLGBP.icb)
-            context.scene.set_frame(context.scene.frame_current) # Refresh screen
-            if self._iserror:
+                bpy.ops.screen.animation_play()
+                self._reset(context)
+                self.report('WARNING', "SLG animation render aborted.")
                 return {'CANCELLED'}
-            elif SLGBP.abort:
-                self.report('WARNING', "SLG export aborted.")
-                return {'CANCELLED'}
-            else:
-                self.report('INFO', "SLG export done.")
-                return {'FINISHED'}
+            if event.type == 'TIMER0':
+                SLGBP.slgproc.wait()
+                if not SLGBP.init(context.scene, self._error):
+                    bpy.ops.screen.animation_play()
+                    self._reset(context)
+                    return {'CANCELLED'}
+                SLGBP.exportrun(context.scene)
+                if context.scene.frame_current == context.scene.frame_end:
+                    bpy.ops.screen.animation_play()
+                    self._reset(context)
+                    self.report('INFO', "SLG export done.")
+                    return {'FINISHED'}
         return {'PASS_THROUGH'}
 
-    #def execute(self, context): # Prone to mess up??
     def invoke(self, context, event):
-        # Catch scene errors immediately before start
+        if self.properties.animation and not context.scene.slg_enablebatchmode:
+            self.report('ERROR', "SLGBP: Enable batch mode for animations")
+            return {'CANCELLED'}
         if SLGBP.live:
             self.report('ERROR', "SLGBP: Can't export during SLG live mode")
             return {'CANCELLED'}
@@ -735,16 +836,26 @@ class SLGRender(bpy.types.Operator):
             if SLGBP.slgproc.poll() == None:
                 self.report('ERROR', "SLG is already running")
                 return {'CANCELLED'}
+        if self.properties.animation:
+            context.scene.set_frame(context.scene.frame_start)
         if not SLGBP.init(context.scene, self._error):
             return {'CANCELLED'}
-        context.manager.add_modal_handler(self)
-        SLGBP.msg = ''
-        SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
         self._iserror = False
         SLGBP.abort = False
-        SLGBP.thread = threading.Thread(target=SLGBP.exportrun,args=[context.scene, self.properties.animation, self._error])
-        SLGBP.thread.start()
-        return {'RUNNING_MODAL'}
+        if self.properties.animation:
+            context.manager.add_modal_handler(self)
+            SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
+            SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
+            SLGBP.exportrun(context.scene)
+            self._orig_fps = context.scene.render.fps
+            self._orig_fps_base = context.scene.render.fps_base
+            context.scene.render.fps = 1
+            context.scene.render.fps_base = 5
+            bpy.ops.screen.animation_play()
+            return {'RUNNING_MODAL'}
+        else:
+            SLGBP.exportrun(context.scene)
+        return {'FINISHED'}
 
 # SLG Live operator
 class SLGLive(bpy.types.Operator):
@@ -759,9 +870,9 @@ class SLGLive(bpy.types.Operator):
     def modal(self, context, event):
         if self._iserror or SLGBP.abort or event.type == 'ESC':
             SLGBP.live = False
-            context.region.callback_remove(SLGBP.icb)
-            context.scene.set_frame(context.scene.frame_current)
             SLGBP.telnet.close()
+            context.region.callback_remove(SLGBP.icb)
+            context.area.tag_redraw()
             return {'FINISHED'}
         return {'PASS_THROUGH'}
 
@@ -774,11 +885,15 @@ class SLGLive(bpy.types.Operator):
             if SLGBP.thread.is_alive():
                 self.report('ERROR', "SLGBP is busy")
                 return {'CANCELLED'}
-        # Try to start live regardless of current scene / SLGBP.slgproc
+        if SLGBP.slgproc:
+            if SLGBP.slgproc.poll() != None:
+                self.report('ERROR', "SLG must be running with telnet interface enabled")
+                return {'CANCELLED'}
         self._iserror = False
         context.manager.add_modal_handler(self)
         SLGBP.abort = False
         SLGBP.msg = 'SLG Live!'
+        SLGBP.msgrefresh = context.area.tag_redraw
         SLGBP.curframe = context.scene.frame_current
         SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
         SLGBP.thread = threading.Thread(target=SLGBP.liveconnect,args=[context.scene, self._error])
@@ -837,6 +952,8 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         self.update_stats("", "SmallLuxGPU: Exporting scene, please wait...")
         if not SLGBP.init(scene, self._error):
             return
+        # Force an update to object matrices when rendering animations
+        scene.set_frame(scene.frame_current)
         SLGBP.export(scene)
         SLGBP.runslg(scene)
 
@@ -853,7 +970,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
                     try:
                         print('SLGBP ===> load image from file: ' + SLGBP.image_filename.format(scene.frame_current))
                         result.layers[0].load_from_file(SLGBP.image_filename.format(scene.frame_current))
-                        # Delete SLG's file (Blender can save it's own)
+                        # Delete SLG's file (Blender can save its own)
                         os.remove(SLGBP.image_filename.format(scene.frame_current))
                     except:
                         pass
@@ -893,11 +1010,11 @@ def slg_properties():
         default=True)
 
     BoolProperty(attr="slg_vuvs", name="UVs",
-        description="Export optional vertex uv information (if available and texture is assigned)",
+        description="Export optional vertex uv information (only if assigned)",
         default=True)
 
     BoolProperty(attr="slg_vcolors", name="VCs",
-        description="Export optional vertex color information (only if present)",
+        description="Export optional vertex color information (only if assigned)",
         default=False)
 
     BoolProperty(attr="slg_vnormals", name="VNs",
@@ -968,7 +1085,8 @@ def slg_properties():
         items=(("-1", "Default", "Default"),
                ("0", "BVH", "Bounding Volume Hierarchy"),
                ("1", "QBVH", "Quad-Bounding Volume Hierarchy"),
-               ("2", "QBVH (image storage disabled)", "Quad-Bounding Volume Hierarchy with disabled image storage")),
+               ("2", "QBVH (image storage disabled)", "Quad-Bounding Volume Hierarchy with disabled image storage"),
+               ("3", "MQBVH (instances support)", "Matrix Quad-Bounding Volume Hierarchy")),
         default="-1")
 
     EnumProperty(attr="slg_film_filter_type", name="Film Filter Type",
@@ -1091,8 +1209,8 @@ def slg_properties():
         description="Max number of samples per pixels in batch mode; 0 = ignore",
         default=128, min=0, soft_min=0)
 
-    IntProperty(attr="slg_batchmode_periodicsave", name="Batch mode periodic image save",
-        description="Interval in second between image save in batch mode; 0 = ignore",
+    IntProperty(attr="slg_batchmode_periodicsave", name="Periodic image save",
+        description="Save image periodically (in seconds); 0 = ignore",
         default=0, min=0, soft_min=0)
 
     BoolProperty(attr="slg_waitrender", name="Wait",
@@ -1190,6 +1308,11 @@ def slg_forceply(self, context):
         if SLGBP.live:
             SLGBP.livemat = context.material
             SLGBP.livetrigger(context.scene, SLGBP.LIVEMTL)
+
+def slg_livescn(self, context):
+    if context.scene.render.engine == 'SMALLLUXGPU_RENDER':
+        if SLGBP.live:
+            SLGBP.livetrigger(context.scene, SLGBP.LIVESCN)
 
 # Add (non-render engine) Render to View3D toolbar
 def slg_rendernre(self, context):
@@ -1354,9 +1477,9 @@ class RENDER_PT_slrender_options(RenderButtonsPanel):
             col.prop(scene, "slg_batchmodetime", text="Seconds")
             col = split.column()
             col.prop(scene, "slg_batchmodespp", text="Samples")
-            split = layout.split()
-            col = split.column()
-            col.prop(scene, "slg_batchmode_periodicsave", text="Periodic save interval")
+        split = layout.split()
+        col = split.column()
+        col.prop(scene, "slg_batchmode_periodicsave", text="Periodic save interval")
         split = layout.split()
         col = split.column()
         col.prop(scene, "slg_native_threads", text="Native Threads")
@@ -1390,6 +1513,9 @@ def register():
     bpy.types.register(SmallLuxGPURender)
     bpy.types.DATA_PT_camera.append(slg_lensradius)
     bpy.types.MATERIAL_PT_diffuse.append(slg_forceply)
+    bpy.types.WORLD_PT_environment_lighting.append(slg_livescn)
+    bpy.types.TEXTURE_PT_mapping.append(slg_livescn)
+    bpy.types.DATA_PT_sunsky.append(slg_livescn)
     bpy.types.VIEW3D_HT_header.append(slg_rendernre)
 
 def unregister():
@@ -1401,6 +1527,9 @@ def unregister():
     bpy.types.unregister(SmallLuxGPURender)
     bpy.types.DATA_PT_camera.remove(slg_lensradius)
     bpy.types.MATERIAL_PT_diffuse.remove(slg_forceply)
+    bpy.types.WORLD_PT_environment_lighting.remove(slg_livescn)
+    bpy.types.TEXTURE_PT_mapping.remove(slg_livescn)
+    bpy.types.DATA_PT_sunsky.remove(slg_livescn)
     bpy.types.VIEW3D_HT_header.remove(slg_rendernre)
 
 if __name__ == "__main__":
