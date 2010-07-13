@@ -24,6 +24,7 @@
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/accelerators/qbvhaccel.h"
+#include "luxrays/accelerators/mqbvhaccel.h"
 
 using namespace luxrays;
 
@@ -39,8 +40,9 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
 		const unsigned int index,
-		const unsigned int forceWorkGroupSize) :
+		const unsigned int forceWGSize) :
 		HardwareIntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
+	forceWorkGroupSize = forceWGSize;
 	deviceDesc = desc;
 	deviceName = (desc->GetName() +"Intersect").c_str();
 	reportedPermissionError = false;
@@ -51,6 +53,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	bvhKernel = NULL;
 	qbvhKernel = NULL;
 	qbvhImageKernel = NULL;
+	mqbvhKernel = NULL;
 	oclQueue = NULL;
 
 	bvhBuff = NULL;
@@ -64,117 +67,18 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	qbvhImageBuff = NULL;
 	qbvhTrisImageBuff = NULL;
 
+	mqbvhBuff = NULL;
+	mqbvhTrisBuff = NULL;
+	mqbvhMemMapBuff = NULL;
+	mqbvhInvTransBuff = NULL;
+	mqbvhTrisOffsetBuff = NULL;
+
 	externalRayBufferQueue = NULL;
 
+	// Allocate the queue for this device
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
-
-	// Allocate the queue for this device
 	oclQueue = new cl::CommandQueue(oclContext, oclDevice);
-
-	//--------------------------------------------------------------------------
-	// BVH kernel
-	//--------------------------------------------------------------------------
-
-	{
-		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_BVH.c_str(), KernelSource_BVH.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-I.");
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
-
-		bvhKernel = new cl::Kernel(program, "Intersect");
-		bvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel work group size: " << bvhWorkGroupSize);
-		cl_ulong memSize;
-		bvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel memory footprint: " << memSize);
-
-		bvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << bvhWorkGroupSize);
-
-		if (forceWorkGroupSize > 0) {
-			bvhWorkGroupSize = forceWorkGroupSize;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << bvhWorkGroupSize);
-		}
-	}
-
-	//--------------------------------------------------------------------------
-	// QBVH kernel
-	//--------------------------------------------------------------------------
-
-	{
-		// Compile sources
-		{
-			cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
-			cl::Program program = cl::Program(oclContext, source);
-			try {
-				VECTOR_CLASS<cl::Device> buildDevice;
-				buildDevice.push_back(oclDevice);
-				program.build(buildDevice, "-I.");
-			} catch (cl::Error err) {
-				cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compilation error:\n" << strError.c_str());
-
-				throw err;
-			}
-
-			qbvhKernel = new cl::Kernel(program, "Intersect");
-			qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel work group size: " << qbvhWorkGroupSize);
-			cl_ulong memSize;
-			qbvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel memory footprint: " << memSize);
-
-			qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhWorkGroupSize);
-
-			if (forceWorkGroupSize > 0) {
-				qbvhWorkGroupSize = forceWorkGroupSize;
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhWorkGroupSize);
-			}
-		}
-
-		// Compile QBVH+image storage kernel only if image support is available
-		if (deviceDesc->HasImageSupport()) {
-			cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
-			cl::Program program = cl::Program(oclContext, source);
-			try {
-				VECTOR_CLASS<cl::Device> buildDevice;
-				buildDevice.push_back(oclDevice);
-				program.build(buildDevice, "-I. -DUSE_IMAGE_STORAGE");
-			} catch (cl::Error err) {
-				cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage compilation error:\n" << strError.c_str());
-
-				throw err;
-			}
-
-			qbvhImageKernel = new cl::Kernel(program, "Intersect");
-			qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage kernel work group size: " << qbvhImageWorkGroupSize);
-			cl_ulong memSize;
-			qbvhImageKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage kernel memory footprint: " << memSize);
-
-			qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhImageWorkGroupSize);
-
-			if (forceWorkGroupSize > 0) {
-				qbvhImageWorkGroupSize = forceWorkGroupSize;
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhImageWorkGroupSize);
-			}
-		}
-
-	}
 }
 
 OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
@@ -186,6 +90,7 @@ OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 	delete bvhKernel;
 	delete qbvhKernel;
 	delete qbvhImageKernel;
+	delete mqbvhKernel;
 	delete oclQueue;
 }
 
@@ -243,6 +148,19 @@ void OpenCLIntersectionDevice::FreeDataSetBuffers() {
 				delete qbvhTrisBuff;
 			}
 		}
+
+		if (mqbvhBuff) {
+			deviceDesc->usedMemory -= mqbvhBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhBuff;
+			deviceDesc->usedMemory -= mqbvhTrisBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhTrisBuff;
+			deviceDesc->usedMemory -= mqbvhMemMapBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhMemMapBuff;
+			deviceDesc->usedMemory -= mqbvhInvTransBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhInvTransBuff;
+			deviceDesc->usedMemory -= mqbvhTrisOffsetBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhTrisOffsetBuff;
+		}
 	}
 }
 
@@ -266,8 +184,44 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			sizeof(RayHit) * RayBufferSize);
 	deviceDesc->usedMemory += hitsBuff->getInfo<CL_MEM_SIZE>();
 
+	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 	switch (dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH: {
+			//--------------------------------------------------------------------------
+			// BVH kernel
+			//--------------------------------------------------------------------------
+
+			{
+				// Compile sources
+				cl::Program::Sources source(1, std::make_pair(KernelSource_BVH.c_str(), KernelSource_BVH.length()));
+				cl::Program program = cl::Program(oclContext, source);
+				try {
+					VECTOR_CLASS<cl::Device> buildDevice;
+					buildDevice.push_back(oclDevice);
+					program.build(buildDevice, "-I.");
+				} catch (cl::Error err) {
+					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
+
+					throw err;
+				}
+
+				bvhKernel = new cl::Kernel(program, "Intersect");
+				bvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel work group size: " << bvhWorkGroupSize);
+				cl_ulong memSize;
+				bvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel memory footprint: " << memSize);
+
+				bvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << bvhWorkGroupSize);
+
+				if (forceWorkGroupSize > 0) {
+					bvhWorkGroupSize = forceWorkGroupSize;
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << bvhWorkGroupSize);
+				}
+			}
+
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Vertices buffer size: " << (sizeof(Point) * dataSet->GetTotalVertexCount() / 1024) << "Kbytes");
 			const BVHAccel *bvh = (BVHAccel *)dataSet->accel;
 			vertsBuff = new cl::Buffer(oclContext,
@@ -301,6 +255,74 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			break;
 		}
 		case ACCEL_QBVH: {
+			//--------------------------------------------------------------------------
+			// QBVH kernel
+			//--------------------------------------------------------------------------
+
+			{
+				// Compile sources
+				{
+					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
+					cl::Program program = cl::Program(oclContext, source);
+					try {
+						VECTOR_CLASS<cl::Device> buildDevice;
+						buildDevice.push_back(oclDevice);
+						program.build(buildDevice, "-I.");
+					} catch (cl::Error err) {
+						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compilation error:\n" << strError.c_str());
+
+						throw err;
+					}
+
+					qbvhKernel = new cl::Kernel(program, "Intersect");
+					qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel work group size: " << qbvhWorkGroupSize);
+					cl_ulong memSize;
+					qbvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel memory footprint: " << memSize);
+
+					qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhWorkGroupSize);
+
+					if (forceWorkGroupSize > 0) {
+						qbvhWorkGroupSize = forceWorkGroupSize;
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhWorkGroupSize);
+					}
+				}
+
+				// Compile QBVH+image storage kernel only if image support is available
+				if (deviceDesc->HasImageSupport()) {
+					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
+					cl::Program program = cl::Program(oclContext, source);
+					try {
+						VECTOR_CLASS<cl::Device> buildDevice;
+						buildDevice.push_back(oclDevice);
+						program.build(buildDevice, "-I. -DUSE_IMAGE_STORAGE");
+					} catch (cl::Error err) {
+						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage compilation error:\n" << strError.c_str());
+
+						throw err;
+					}
+
+					qbvhImageKernel = new cl::Kernel(program, "Intersect");
+					qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage kernel work group size: " << qbvhImageWorkGroupSize);
+					cl_ulong memSize;
+					qbvhImageKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage kernel memory footprint: " << memSize);
+
+					qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhImageWorkGroupSize);
+
+					if (forceWorkGroupSize > 0) {
+						qbvhImageWorkGroupSize = forceWorkGroupSize;
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhImageWorkGroupSize);
+					}
+				}
+			}
+
 			const QBVHAccel *qbvh = (QBVHAccel *)dataSet->accel;
 
 			// Calculate the required image size for the storage
@@ -439,6 +461,144 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 		}
 		case ACCEL_MQBVH: {
 			throw std::runtime_error("MQBVH not yet supported by OpenCL device");
+
+			//--------------------------------------------------------------------------
+			// MQBVH kernel
+			//--------------------------------------------------------------------------
+
+			// Compile sources
+			{
+				cl::Program::Sources source(1, std::make_pair(KernelSource_MQBVH.c_str(), KernelSource_MQBVH.length()));
+				cl::Program program = cl::Program(oclContext, source);
+				try {
+					VECTOR_CLASS<cl::Device> buildDevice;
+					buildDevice.push_back(oclDevice);
+					program.build(buildDevice, "-I.");
+				} catch (cl::Error err) {
+					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH compilation error:\n" << strError.c_str());
+
+					throw err;
+				}
+
+				mqbvhKernel = new cl::Kernel(program, "Intersect");
+				mqbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &mqbvhWorkGroupSize);
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH kernel work group size: " << mqbvhWorkGroupSize);
+				cl_ulong memSize;
+				mqbvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH kernel memory footprint: " << memSize);
+
+				mqbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &mqbvhWorkGroupSize);
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << mqbvhWorkGroupSize);
+
+				if (forceWorkGroupSize > 0) {
+					mqbvhWorkGroupSize = forceWorkGroupSize;
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << mqbvhWorkGroupSize);
+				}
+			}
+
+			// NOTE: this code is limited to 32bit address space of the OpenCL device
+			const MQBVHAccel *mqbvh = (MQBVHAccel *)dataSet->accel;
+
+			// Calculate the size of memory to allocate
+			unsigned int totalNodesCount = 0;
+			unsigned int totalTrisCount = 0;
+			unsigned int *memMap = new unsigned int[mqbvh->nLeafs * 2];
+			unsigned int index = 0;
+			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
+				const QBVHAccel *qbvh =it->second;
+
+				memMap[index++] = totalNodesCount;
+				totalNodesCount += qbvh->nNodes;
+				memMap[index++] = totalTrisCount;
+				totalTrisCount += qbvh->nQuads;
+			}
+
+			// Allocate memory for QBVH Leafs
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH buffer size: " << (totalNodesCount * sizeof(QBVHNode) / 1024) << "Kbytes");
+			mqbvhBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY,
+					totalNodesCount * sizeof(QBVHNode));
+			deviceDesc->usedMemory += mqbvhBuff->getInfo<CL_MEM_SIZE>();
+
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH QuadTriangle buffer size: " << (totalTrisCount * sizeof(QuadTriangle) / 1024) << "Kbytes");
+			mqbvhTrisBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY,
+					totalTrisCount * sizeof(QuadTriangle));
+			deviceDesc->usedMemory += mqbvhTrisBuff->getInfo<CL_MEM_SIZE>();
+
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH memory map buffer size: " << (mqbvh->nLeafs * sizeof(unsigned int) * 2 / 1024) << "Kbytes");
+			mqbvhMemMapBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					mqbvh->nLeafs * sizeof(unsigned int) * 2,
+					memMap);
+
+			deviceDesc->usedMemory += mqbvhMemMapBuff->getInfo<CL_MEM_SIZE>();
+			delete memMap;
+
+			// Upload QBVH leafs
+			unsigned int nodesMemOffset = 0;
+			unsigned int trisMemOffset = 0;
+			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
+				const QBVHAccel *qbvh =it->second;
+
+				const unsigned int nodesMemSize = sizeof(QBVHNode) * qbvh->nNodes;
+				oclQueue->enqueueWriteBuffer(
+						*mqbvhBuff,
+						CL_FALSE,
+						nodesMemOffset,
+						nodesMemSize,
+						qbvh->nodes);
+				nodesMemOffset += nodesMemSize;
+
+				const unsigned int trisMemSize = sizeof(QuadTriangle) * qbvh->nQuads;
+				oclQueue->enqueueWriteBuffer(
+						*mqbvhTrisBuff,
+						CL_FALSE,
+						trisMemOffset,
+						trisMemSize,
+						qbvh->prims);
+				trisMemOffset += trisMemSize;
+			}
+
+			// Upload QBVH leafs transformations
+			Matrix4x4 *invTrans = new Matrix4x4[mqbvh->nLeafs];
+			index = 0;
+			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
+				if (mqbvh->leafsInvTransform[index]) {
+					invTrans[index] = mqbvh->leafsInvTransform[index]->GetInverse().GetMatrix();
+					++index;
+				} else
+					invTrans[index++] = Matrix4x4();
+			}
+
+			const size_t invTransMemSize = mqbvh->nLeafs * sizeof(Matrix4x4);
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH inverse transformations buffer size: " << (invTransMemSize / 1024) << "Kbytes");
+			mqbvhInvTransBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					invTransMemSize,
+					invTrans);
+			deviceDesc->usedMemory += mqbvhInvTransBuff->getInfo<CL_MEM_SIZE>();
+			delete invTrans;
+
+			// Upload primitive offsets
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH primitive offsets buffer size: " << (sizeof(unsigned int) * mqbvh->nLeafs / 1024) << "Kbytes");
+			mqbvhTrisOffsetBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(unsigned int) * mqbvh->nLeafs,
+					mqbvh->leafsOffset);
+			deviceDesc->usedMemory += mqbvhTrisOffsetBuff->getInfo<CL_MEM_SIZE>();
+
+			// Set arguments
+			mqbvhKernel->setArg(0, *raysBuff);
+			mqbvhKernel->setArg(1, *hitsBuff);
+			mqbvhKernel->setArg(2, *mqbvhBuff);
+			mqbvhKernel->setArg(3, *mqbvhTrisBuff);
+			mqbvhKernel->setArg(5, 24 * mqbvhWorkGroupSize * sizeof(cl_int), NULL);
+			mqbvhKernel->setArg(6, *mqbvhMemMapBuff);
+			mqbvhKernel->setArg(7, *mqbvhInvTransBuff);
+			mqbvhKernel->setArg(8, *mqbvhTrisOffsetBuff);
+			mqbvhKernel->setArg(9, 24 * mqbvhWorkGroupSize * sizeof(cl_int), NULL);
 			break;
 		}
 		default:
@@ -478,7 +638,7 @@ void OpenCLIntersectionDevice::Stop() {
 }
 
 void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event) {
-	// Download the rays to the GPU
+	// Upload the rays to the GPU
 	oclQueue->enqueueWriteBuffer(
 			*raysBuff,
 			CL_FALSE,
@@ -506,14 +666,16 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 			break;
 		}
 		case ACCEL_MQBVH: {
-			throw std::runtime_error("MQBVH not yet supported by OpenCL device");
+			mqbvhKernel->setArg(4, (unsigned int)rayBuffer->GetRayCount());
+			oclQueue->enqueueNDRangeKernel(*mqbvhKernel, cl::NullRange,
+				cl::NDRange(rayBuffer->GetSize()), cl::NDRange(mqbvhWorkGroupSize));
 			break;
 		}
 		default:
 			assert (false);
 	}
 
-	// Upload the results
+	// Download the results
 	oclQueue->enqueueReadBuffer(
 			*hitsBuff,
 			CL_FALSE,

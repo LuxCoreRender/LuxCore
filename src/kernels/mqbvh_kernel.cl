@@ -61,6 +61,40 @@ typedef struct {
 	int4 children;
 } QBVHNode;
 
+typedef struct {
+    float m[4][4];
+} Matrix4x4;
+
+static void TransformP(Point *ptrans, Point *p, __global Matrix4x4 *m) {
+    const float x = p->x;
+    const float y = p->y;
+    const float z = p->z;
+
+	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z + m->m[0][3];
+	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z + m->m[1][3];
+	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z + m->m[2][3];
+	const float w = m->m[3][0] * x + m->m[3][1] * y + m->m[3][2] * z + m->m[3][3];
+
+    ptrans->x /= w;
+    ptrans->y /= w;
+    ptrans->z /= w;
+}
+
+static void TransformV(Vector *ptrans, Vector *p, __global Matrix4x4 *m) {
+    const float x = p->x;
+    const float y = p->y;
+    const float z = p->z;
+
+	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z + m->m[0][3];
+	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z + m->m[1][3];
+	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z + m->m[2][3];
+	const float w = m->m[3][0] * x + m->m[3][1] * y + m->m[3][2] * z + m->m[3][3];
+
+    ptrans->x /= w;
+    ptrans->y /= w;
+    ptrans->z /= w;
+}
+
 #define emptyLeafNode 0xffffffff
 
 #define QBVHNode_IsLeaf(index) (index < 0)
@@ -170,24 +204,113 @@ static void QuadTriangle_Intersect(
 
 	ray4->maxt = (float4)maxt;
 
-	rayHit->t = maxt;
+	/*rayHit->t = maxt;
 	rayHit->b1 = _b1;
 	rayHit->b2 = _b2;
-	rayHit->index = index;
+	rayHit->index = index;*/
+}
+
+static void LeafIntersect(
+		const Ray *ray,
+		RayHit *rayHit,
+		__global QBVHNode *nodes,
+		__global QuadTiangle *quadTris,
+		__local int *nodeStacks) {
+	// Prepare the ray for intersection
+	QuadRay ray4;
+    ray4.ox = (float4)ray->o.x;
+    ray4.oy = (float4)ray->o.y;
+    ray4.oz = (float4)ray->o.z;
+
+    ray4.dx = (float4)ray->d.x;
+    ray4.dy = (float4)ray->d.y;
+    ray4.dz = (float4)ray->d.z;
+
+    ray4.mint = (float4)ray->mint;
+    ray4.maxt = (float4)ray->maxt;
+
+	const float4 invDir0 = (float4)(1.f / ray4.dx.s0);
+	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
+	const float4 invDir2 = (float4)(1.f / ray4.dz.s0);
+
+	const int signs0 = (ray4.dx.s0 < 0.f);
+	const int signs1 = (ray4.dy.s0 < 0.f);
+	const int signs2 = (ray4.dz.s0 < 0.f);
+
+	rayHit->index = 0xffffffffu;
+
+	//------------------------------
+	// Main loop
+	int todoNode = 0; // the index in the stack
+	__local int *nodeStack = &nodeStacks[24 * get_local_id(0)];
+	nodeStack[0] = 0; // first node to handle: root node
+
+	while (todoNode >= 0) {
+		const int nodeData = nodeStack[todoNode];
+		--todoNode;
+
+		// Leaves are identified by a negative index
+		if (!QBVHNode_IsLeaf(nodeData)) {
+			__global QBVHNode *node = &nodes[nodeData];
+            const int4 visit = QBVHNode_BBoxIntersect(
+                node->bboxes[signs0][0], node->bboxes[1 - signs0][0],
+                node->bboxes[signs1][1], node->bboxes[1 - signs1][1],
+                node->bboxes[signs2][2], node->bboxes[1 - signs2][2],
+                &ray4,
+				invDir0, invDir1, invDir2,
+				signs0, signs1, signs2);
+
+			const int4 children = node->children;
+
+			// For some reason doing logic operations with int4 is very slow
+			nodeStack[todoNode + 1] = children.s3;
+			todoNode += (visit.s3 && !QBVHNode_IsEmpty(children.s3)) ? 1 : 0;
+			nodeStack[todoNode + 1] = children.s2;
+			todoNode += (visit.s2 && !QBVHNode_IsEmpty(children.s2)) ? 1 : 0;
+			nodeStack[todoNode + 1] = children.s1;
+			todoNode += (visit.s1 && !QBVHNode_IsEmpty(children.s1)) ? 1 : 0;
+			nodeStack[todoNode + 1] = children.s0;
+			todoNode += (visit.s0 && !QBVHNode_IsEmpty(children.s0)) ? 1 : 0;
+		} else {
+			// Perform intersection
+			const uint nbQuadPrimitives = 1;//QBVHNode_NbQuadPrimitives(nodeData);
+			const uint offset = QBVHNode_FirstQuadIndex(nodeData);
+
+			for (uint primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber) {
+                __global QuadTiangle *quadTri = &quadTris[primNumber];
+                const float4 origx = quadTri->origx;
+                const float4 origy = quadTri->origy;
+                const float4 origz = quadTri->origz;
+                const float4 edge1x = quadTri->edge1x;
+                const float4 edge1y = quadTri->edge1y;
+                const float4 edge1z = quadTri->edge1z;
+                const float4 edge2x = quadTri->edge2x;
+                const float4 edge2y = quadTri->edge2y;
+                const float4 edge2z = quadTri->edge2z;
+                const uint4 primitives = quadTri->primitives;
+
+				QuadTriangle_Intersect(
+                    origx, origy, origz,
+                    edge1x, edge1y, edge1z,
+                    edge2x, edge2y, edge2z,
+                    primitives,
+                    &ray4, rayHit);
+            }
+		}
+	}
 }
 
 __kernel void Intersect(
 		__global Ray *rays,
 		__global RayHit *rayHits,
-#ifdef USE_IMAGE_STORAGE
-        __read_only image2d_t nodes,
-        __read_only image2d_t quadTris,
-#else
 		__global QBVHNode *nodes,
 		__global QuadTiangle *quadTris,
-#endif
 		const uint rayCount,
-		__local int *nodeStacks) {
+		__local int *leafNodeStacks,
+        __global unsigned int *qbvhMemMap,
+        __global Matrix4x4 *invTrans,
+        __global unsigned int *leafsOffset,
+        __local int *nodeStacks) {
 	// Select the ray to check
 	const int gid = get_global_id(0);
 	if (gid >= rayCount)
@@ -195,10 +318,20 @@ __kernel void Intersect(
 
 	// Prepare the ray for intersection
 	QuadRay ray4;
+    Point rayOrig;
+    Vector rayDir;
 	{
         __global float4 *basePtr =(__global float4 *)&rays[gid];
         float4 data0 = (*basePtr++);
         float4 data1 = (*basePtr);
+
+        rayOrig.x = data0.x;
+        rayOrig.y = data0.y;
+        rayOrig.z = data0.z;
+
+        rayDir.x = data0.w;
+        rayDir.y = data1.x;
+        rayDir.z = data1.y;
 
         ray4.ox = (float4)data0.x;
         ray4.oy = (float4)data0.y;
@@ -229,45 +362,12 @@ __kernel void Intersect(
 	__local int *nodeStack = &nodeStacks[24 * get_local_id(0)];
 	nodeStack[0] = 0; // first node to handle: root node
 
-#ifdef USE_IMAGE_STORAGE
-    const int quadTrisImageWidth = get_image_width(quadTris);
-
-    const int bboxes_minXIndex = (signs0 * 3);
-    const int bboxes_maxXIndex = ((1 - signs0) * 3);
-    const int bboxes_minYIndex = (signs1 * 3) + 1;
-    const int bboxes_maxYIndex = ((1 - signs1) * 3) + 1;
-    const int bboxes_minZIndex = (signs2 * 3) + 2;
-    const int bboxes_maxZIndex = ((1 - signs2) * 3) + 2;
-
-    const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-#endif
-
 	while (todoNode >= 0) {
 		const int nodeData = nodeStack[todoNode];
 		--todoNode;
 
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
-#ifdef USE_IMAGE_STORAGE
-            // Read the node information from the image storage
-            const ushort inx = (nodeData >> 16) * 7;
-            const ushort iny = (nodeData & 0xffff);
-            const float4 bboxes_minX = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minXIndex, iny)));
-            const float4 bboxes_maxX = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxXIndex, iny)));
-            const float4 bboxes_minY = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minYIndex, iny)));
-            const float4 bboxes_maxY = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxYIndex, iny)));
-            const float4 bboxes_minZ = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minZIndex, iny)));
-            const float4 bboxes_maxZ = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_maxZIndex, iny)));
-            const int4 children = as_int4(read_imageui(nodes, imageSampler, (int2)(inx + 6, iny)));
-
-			const int4 visit = QBVHNode_BBoxIntersect(
-                bboxes_minX, bboxes_maxX,
-                bboxes_minY, bboxes_maxY,
-                bboxes_minZ, bboxes_maxZ,
-                &ray4,
-				invDir0, invDir1, invDir2,
-				signs0, signs1, signs2);
-#else
 			__global QBVHNode *node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
                 node->bboxes[signs0][0], node->bboxes[1 - signs0][0],
@@ -278,9 +378,8 @@ __kernel void Intersect(
 				signs0, signs1, signs2);
 
 			const int4 children = node->children;
-#endif
 
-			// For some reason doing logic operations with int4 is very slow
+			// For some reason doing logic operations with int4 are very slow
 			nodeStack[todoNode + 1] = children.s3;
 			todoNode += (visit.s3 && !QBVHNode_IsEmpty(children.s3)) ? 1 : 0;
 			nodeStack[todoNode + 1] = children.s2;
@@ -290,51 +389,31 @@ __kernel void Intersect(
 			nodeStack[todoNode + 1] = children.s0;
 			todoNode += (visit.s0 && !QBVHNode_IsEmpty(children.s0)) ? 1 : 0;
 		} else {
-			// Perform intersection
-			const uint nbQuadPrimitives = QBVHNode_NbQuadPrimitives(nodeData);
-			const uint offset = QBVHNode_FirstQuadIndex(nodeData);
+			// Perform intersection with QBVH leaf
+			const uint leafIndex = QBVHNode_FirstQuadIndex(nodeData);
 
-#ifdef USE_IMAGE_STORAGE
-            ushort inx = (offset >> 16) * 10;
-            ushort iny = (offset & 0xffff);
-#endif
+            Ray tray;
+            TransformP(&tray.o, &rayOrig, &invTrans[leafIndex]);
+            TransformV(&tray.d, &rayDir, &invTrans[leafIndex]);
+            tray.mint = ray4.mint.x;
+            tray.maxt = ray4.maxt.x;
 
-			for (uint primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber) {
-#ifdef USE_IMAGE_STORAGE
-                const float4 origx = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 origy = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 origz = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge1x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge1y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge1z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge2x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge2y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const float4 edge2z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const uint4 primitives = read_imageui(quadTris, imageSampler, (int2)(inx++, iny));
+            const unsigned int memIndex = leafIndex * 2;
+            const unsigned int leafNodeOffset = qbvhMemMap[memIndex];
+            __global QBVHNode *leafNodes = &nodes[leafNodeOffset];
+            const unsigned int leafTriOffset = qbvhMemMap[memIndex + 1];
+            __global QuadTiangle *leafQuadTris = &quadTris[leafTriOffset];
 
-                if (inx >= quadTrisImageWidth) {
-                    inx = 0;
-                    iny++;
-                }
-#else
-                __global QuadTiangle *quadTri = &quadTris[primNumber];
-                const float4 origx = quadTri->origx;
-                const float4 origy = quadTri->origy;
-                const float4 origz = quadTri->origz;
-                const float4 edge1x = quadTri->edge1x;
-                const float4 edge1y = quadTri->edge1y;
-                const float4 edge1z = quadTri->edge1z;
-                const float4 edge2x = quadTri->edge2x;
-                const float4 edge2y = quadTri->edge2y;
-                const float4 edge2z = quadTri->edge2z;
-                const uint4 primitives = quadTri->primitives;
-#endif
-				QuadTriangle_Intersect(
-                    origx, origy, origz,
-                    edge1x, edge1y, edge1z,
-                    edge2x, edge2y, edge2z,
-                    primitives,
-                    &ray4, &rayHit);
+            RayHit tmpRayHit;
+            LeafIntersect(&tray, &tmpRayHit, leafNodes, leafQuadTris, leafNodeStacks);
+
+            if (tmpRayHit.index != 0xffffffffu) {
+                rayHit.t = tmpRayHit.t;
+                rayHit.b1 = tmpRayHit.b1;
+                rayHit.b2 = tmpRayHit.b2;
+                rayHit.index = tmpRayHit.index + leafsOffset[leafIndex];
+
+                ray4.maxt = (float4)tmpRayHit.t;
             }
 		}
 	}

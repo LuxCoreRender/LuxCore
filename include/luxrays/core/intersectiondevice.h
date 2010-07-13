@@ -114,7 +114,7 @@ private:
 class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
 public:
 	OpenCLIntersectionDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const unsigned int index, const unsigned int forceWorkGroupSize);
+			const unsigned int index, const unsigned int forceWGSize);
 	~OpenCLIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);
@@ -151,6 +151,7 @@ private:
 	void TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event);
 	void FreeDataSetBuffers();
 
+	unsigned int forceWorkGroupSize;
 	OpenCLDeviceDescription *deviceDesc;
 	boost::thread *intersectionThread;
 
@@ -178,6 +179,15 @@ private:
 
 	cl::Image2D *qbvhImageBuff;
 	cl::Image2D *qbvhTrisImageBuff;
+
+	// MQBVH fields
+	cl::Kernel *mqbvhKernel;
+	size_t mqbvhWorkGroupSize;
+	cl::Buffer *mqbvhBuff;
+	cl::Buffer *mqbvhTrisBuff;
+	cl::Buffer *mqbvhMemMapBuff;
+	cl::Buffer *mqbvhInvTransBuff;
+	cl::Buffer *mqbvhTrisOffsetBuff;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
