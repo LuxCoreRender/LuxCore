@@ -42,7 +42,7 @@ MQBVHAccel::~MQBVHAccel() {
 		delete[] leafsInvTransform;
 		delete[] leafs;
 
-		for (std::map<Mesh *, QBVHAccel *>::iterator it = accels.begin(); it != accels.end(); it++)
+		for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.begin(); it != accels.end(); it++)
 			delete it->second;
 	}
 }
@@ -80,7 +80,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshes[i];
 
 				// Check if a QBVH has already been created
-				std::map<Mesh *, QBVHAccel *>::iterator it = accels.find(itm->GetTriangleMesh());
+				std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.find(itm->GetTriangleMesh());
 
 				if (it == accels.end()) {
 					// Create a new QBVH
@@ -99,7 +99,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshes[i];
 
 				// Check if a QBVH has already been created
-				std::map<Mesh *, QBVHAccel *>::iterator it = accels.find(eitm->GetExtTriangleMesh());
+				std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.find(eitm->GetExtTriangleMesh());
 				if (it == accels.end()) {
 					// Create a new QBVH
 					leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
