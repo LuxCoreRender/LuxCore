@@ -26,7 +26,7 @@
 
 // Jens's patch for MacOS
 #if defined(__APPLE__)
-#include <GLut/glut.h>
+#include <GLUT/glut.h>
 #else
 #include <GL/glut.h>
 #endif
