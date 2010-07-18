@@ -216,8 +216,7 @@ static void LeafIntersect(
 		const Ray *ray,
 		RayHit *rayHit,
 		__global QBVHNode *nodes,
-		__global QuadTiangle *quadTris,
-		__local int *nodeStacks) {
+		__global QuadTiangle *quadTris) {
 	// Prepare the ray for intersection
 	QuadRay ray4;
     ray4.ox = (float4)ray->o.x;
@@ -244,7 +243,7 @@ static void LeafIntersect(
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
-	__local int *nodeStack = &nodeStacks[24 * get_local_id(0)];
+	int nodeStack[24];
 	nodeStack[0] = 0; // first node to handle: root node
 
 	while (todoNode >= 0) {
@@ -275,7 +274,7 @@ static void LeafIntersect(
 			todoNode += (visit.s0 && !QBVHNode_IsEmpty(children.s0)) ? 1 : 0;
 		} else {
 			// Perform intersection
-			const uint nbQuadPrimitives = 1;//QBVHNode_NbQuadPrimitives(nodeData);
+			const uint nbQuadPrimitives = QBVHNode_NbQuadPrimitives(nodeData);
 			const uint offset = QBVHNode_FirstQuadIndex(nodeData);
 
 			for (uint primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber) {
@@ -306,13 +305,12 @@ __kernel void Intersect(
 		__global Ray *rays,
 		__global RayHit *rayHits,
 		__global QBVHNode *nodes,
-		__global QuadTiangle *quadTris,
 		const uint rayCount,
-		__local int *leafNodeStacks,
         __global unsigned int *qbvhMemMap,
+		__global QBVHNode *leafNodes,
+		__global QuadTiangle *leafQuadTris,
         __global Matrix4x4 *invTrans,
-        __global unsigned int *leafsOffset,
-        __local int *nodeStacks) {
+        __global unsigned int *leafsOffset) {
 	// Select the ray to check
 	const int gid = get_global_id(0);
 	if (gid >= rayCount)
@@ -361,7 +359,7 @@ __kernel void Intersect(
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
-	__local int *nodeStack = &nodeStacks[24 * get_local_id(0)];
+	int nodeStack[24];
 	nodeStack[0] = 0; // first node to handle: root node
 
 	while (todoNode >= 0) {
@@ -395,19 +393,21 @@ __kernel void Intersect(
 			const uint leafIndex = QBVHNode_FirstQuadIndex(nodeData);
 
             Ray tray;
-            TransformP(&tray.o, &rayOrig, &invTrans[leafIndex]);
-            TransformV(&tray.d, &rayDir, &invTrans[leafIndex]);
-            tray.mint = ray4.mint.x;
-            tray.maxt = ray4.maxt.x;
+            //TransformP(&tray.o, &rayOrig, &invTrans[leafIndex]);
+            //TransformV(&tray.d, &rayDir, &invTrans[leafIndex]);
+			tray.o = rayOrig;
+			tray.d = rayDir;
+            tray.mint = ray4.mint.s0;
+            tray.maxt = ray4.maxt.s0;
 
             const unsigned int memIndex = leafIndex * 2;
             const unsigned int leafNodeOffset = qbvhMemMap[memIndex];
-            __global QBVHNode *leafNodes = &nodes[leafNodeOffset];
-            const unsigned int leafTriOffset = qbvhMemMap[memIndex + 1];
-            __global QuadTiangle *leafQuadTris = &quadTris[leafTriOffset];
+            __global QBVHNode *n = &leafNodes[leafNodeOffset];
+            const unsigned int leafQuadTriOffset = qbvhMemMap[memIndex + 1];
+            __global QuadTiangle *qt = &leafQuadTris[leafQuadTriOffset];
 
             RayHit tmpRayHit;
-            LeafIntersect(&tray, &tmpRayHit, leafNodes, leafQuadTris, leafNodeStacks);
+            LeafIntersect(&tray, &tmpRayHit, n, qt);
 
             if (tmpRayHit.index != 0xffffffffu) {
                 rayHit.t = tmpRayHit.t;

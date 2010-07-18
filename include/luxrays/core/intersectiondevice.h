@@ -184,8 +184,9 @@ private:
 	cl::Kernel *mqbvhKernel;
 	size_t mqbvhWorkGroupSize;
 	cl::Buffer *mqbvhBuff;
-	cl::Buffer *mqbvhTrisBuff;
 	cl::Buffer *mqbvhMemMapBuff;
+	cl::Buffer *mqbvhLeafBuff;
+	cl::Buffer *mqbvhLeafQuadTrisBuff;
 	cl::Buffer *mqbvhInvTransBuff;
 	cl::Buffer *mqbvhTrisOffsetBuff;
 

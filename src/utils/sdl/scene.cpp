@@ -118,7 +118,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		// Build the object
 		const std::vector<std::string> args = scnProp->GetStringVector(key, "");
 		const std::string plyFileName = args.at(0);
-		LR_LOG(ctx, "PLY objects [" << *objKey << "] file name: " << plyFileName);
+		LR_LOG(ctx, "PLY object [" << *objKey << "] file name: " << plyFileName);
 
 		// Check if I have to calculate normal or not
 		const bool usePlyNormals = (scnProp->GetInt(key + ".useplynormals", 0) != 0);
@@ -151,7 +151,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		const std::string objName = Properties::ExtractField(key, 3);
 		// Check if it is a light sources
 		if (mat->IsLightSource()) {
-			LR_LOG(ctx, "The " << objName << " objects is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
+			LR_LOG(ctx, "The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
 
 			AreaLightMaterial *light = (AreaLightMaterial *)mat;
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {

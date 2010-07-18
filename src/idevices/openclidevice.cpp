@@ -68,8 +68,9 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	qbvhTrisImageBuff = NULL;
 
 	mqbvhBuff = NULL;
-	mqbvhTrisBuff = NULL;
 	mqbvhMemMapBuff = NULL;
+	mqbvhLeafBuff = NULL;
+	mqbvhLeafQuadTrisBuff = NULL;
 	mqbvhInvTransBuff = NULL;
 	mqbvhTrisOffsetBuff = NULL;
 
@@ -152,10 +153,12 @@ void OpenCLIntersectionDevice::FreeDataSetBuffers() {
 		if (mqbvhBuff) {
 			deviceDesc->usedMemory -= mqbvhBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhBuff;
-			deviceDesc->usedMemory -= mqbvhTrisBuff->getInfo<CL_MEM_SIZE>();
-			delete mqbvhTrisBuff;
 			deviceDesc->usedMemory -= mqbvhMemMapBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhMemMapBuff;
+			deviceDesc->usedMemory -= mqbvhLeafBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhLeafBuff;
+			deviceDesc->usedMemory -= mqbvhLeafQuadTrisBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhLeafQuadTrisBuff;
 			deviceDesc->usedMemory -= mqbvhInvTransBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhInvTransBuff;
 			deviceDesc->usedMemory -= mqbvhTrisOffsetBuff->getInfo<CL_MEM_SIZE>();
@@ -288,6 +291,10 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					if (forceWorkGroupSize > 0) {
 						qbvhWorkGroupSize = forceWorkGroupSize;
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhWorkGroupSize);
+					} else if (qbvhWorkGroupSize > 256) {
+						// Otherwise I will probably run out of local memory
+						qbvhWorkGroupSize = 256;
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Cap work group size to: " << qbvhWorkGroupSize);
 					}
 				}
 
@@ -319,6 +326,10 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					if (forceWorkGroupSize > 0) {
 						qbvhImageWorkGroupSize = forceWorkGroupSize;
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhImageWorkGroupSize);
+					} else if (qbvhWorkGroupSize > 256) {
+						// Otherwise I will probably run out of local memory
+						qbvhWorkGroupSize = 256;
+						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Cap work group size to: " << qbvhWorkGroupSize);
 					}
 				}
 			}
@@ -494,38 +505,50 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				if (forceWorkGroupSize > 0) {
 					mqbvhWorkGroupSize = forceWorkGroupSize;
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << mqbvhWorkGroupSize);
+				} else if (qbvhWorkGroupSize > 256) {
+					// Otherwise I will probably run out of local memory
+					qbvhWorkGroupSize = 256;
+					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Cap work group size to: " << qbvhWorkGroupSize);
 				}
 			}
 
-			// NOTE: this code is limited to 32bit address space of the OpenCL device
+			// TODO: remove the following limitation
+			// NOTE: this code is somewhat limited to 32bit address space of the OpenCL device
 			const MQBVHAccel *mqbvh = (MQBVHAccel *)dataSet->accel;
+
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH buffer size: " << (sizeof(QBVHNode) * mqbvh->nNodes / 1024) << "Kbytes");
+			mqbvhBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(QBVHNode) * mqbvh->nNodes,
+					mqbvh->nodes);
+			deviceDesc->usedMemory += mqbvhBuff->getInfo<CL_MEM_SIZE>();
 
 			// Calculate the size of memory to allocate
 			unsigned int totalNodesCount = 0;
-			unsigned int totalTrisCount = 0;
+			unsigned int totalQuadTrisCount = 0;
 			unsigned int *memMap = new unsigned int[mqbvh->nLeafs * 2];
 			unsigned int index = 0;
 			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
-				const QBVHAccel *qbvh =it->second;
+				const QBVHAccel *qbvh = it->second;
 
 				memMap[index++] = totalNodesCount;
 				totalNodesCount += qbvh->nNodes;
-				memMap[index++] = totalTrisCount;
-				totalTrisCount += qbvh->nQuads;
+				memMap[index++] = totalQuadTrisCount;
+				totalQuadTrisCount += qbvh->nQuads;
 			}
 
 			// Allocate memory for QBVH Leafs
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH buffer size: " << (totalNodesCount * sizeof(QBVHNode) / 1024) << "Kbytes");
-			mqbvhBuff = new cl::Buffer(oclContext,
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH leaf Nodes buffer size: " << (totalNodesCount * sizeof(QBVHNode) / 1024) << "Kbytes");
+			mqbvhLeafBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY,
 					totalNodesCount * sizeof(QBVHNode));
-			deviceDesc->usedMemory += mqbvhBuff->getInfo<CL_MEM_SIZE>();
+			deviceDesc->usedMemory += mqbvhLeafBuff->getInfo<CL_MEM_SIZE>();
 
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH QuadTriangle buffer size: " << (totalTrisCount * sizeof(QuadTriangle) / 1024) << "Kbytes");
-			mqbvhTrisBuff = new cl::Buffer(oclContext,
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH QuadTriangle buffer size: " << (totalQuadTrisCount * sizeof(QuadTriangle) / 1024) << "Kbytes");
+			mqbvhLeafQuadTrisBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY,
-					totalTrisCount * sizeof(QuadTriangle));
-			deviceDesc->usedMemory += mqbvhTrisBuff->getInfo<CL_MEM_SIZE>();
+					totalQuadTrisCount * sizeof(QuadTriangle));
+			deviceDesc->usedMemory += mqbvhLeafQuadTrisBuff->getInfo<CL_MEM_SIZE>();
 
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH memory map buffer size: " << (mqbvh->nLeafs * sizeof(unsigned int) * 2 / 1024) << "Kbytes");
 			mqbvhMemMapBuff = new cl::Buffer(oclContext,
@@ -537,28 +560,28 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			delete memMap;
 
 			// Upload QBVH leafs
-			unsigned int nodesMemOffset = 0;
-			unsigned int trisMemOffset = 0;
+			size_t nodesMemOffset = 0;
+			size_t quadTrisMemOffset = 0;
 			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
-				const QBVHAccel *qbvh =it->second;
+				const QBVHAccel *qbvh = it->second;
 
-				const unsigned int nodesMemSize = sizeof(QBVHNode) * qbvh->nNodes;
+				const size_t nodesMemSize = sizeof(QBVHNode) * qbvh->nNodes;
 				oclQueue->enqueueWriteBuffer(
-						*mqbvhBuff,
+						*mqbvhLeafBuff,
 						CL_FALSE,
 						nodesMemOffset,
 						nodesMemSize,
 						qbvh->nodes);
 				nodesMemOffset += nodesMemSize;
 
-				const unsigned int trisMemSize = sizeof(QuadTriangle) * qbvh->nQuads;
+				const size_t quadTrisMemSize = sizeof(QuadTriangle) * qbvh->nQuads;
 				oclQueue->enqueueWriteBuffer(
-						*mqbvhTrisBuff,
+						*mqbvhLeafQuadTrisBuff,
 						CL_FALSE,
-						trisMemOffset,
-						trisMemSize,
+						quadTrisMemOffset,
+						quadTrisMemSize,
 						qbvh->prims);
-				trisMemOffset += trisMemSize;
+				quadTrisMemOffset += quadTrisMemSize;
 			}
 
 			// Upload QBVH leafs transformations
@@ -593,12 +616,11 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			mqbvhKernel->setArg(0, *raysBuff);
 			mqbvhKernel->setArg(1, *hitsBuff);
 			mqbvhKernel->setArg(2, *mqbvhBuff);
-			mqbvhKernel->setArg(3, *mqbvhTrisBuff);
-			mqbvhKernel->setArg(5, 24 * mqbvhWorkGroupSize * sizeof(cl_int), NULL);
-			mqbvhKernel->setArg(6, *mqbvhMemMapBuff);
+			mqbvhKernel->setArg(4, *mqbvhMemMapBuff);
+			mqbvhKernel->setArg(5, *mqbvhLeafBuff);
+			mqbvhKernel->setArg(6, *mqbvhLeafQuadTrisBuff);
 			mqbvhKernel->setArg(7, *mqbvhInvTransBuff);
 			mqbvhKernel->setArg(8, *mqbvhTrisOffsetBuff);
-			mqbvhKernel->setArg(9, 24 * mqbvhWorkGroupSize * sizeof(cl_int), NULL);
 			break;
 		}
 		default:
@@ -666,7 +688,7 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 			break;
 		}
 		case ACCEL_MQBVH: {
-			mqbvhKernel->setArg(4, (unsigned int)rayBuffer->GetRayCount());
+			mqbvhKernel->setArg(3, (unsigned int)rayBuffer->GetRayCount());
 			oclQueue->enqueueNDRangeKernel(*mqbvhKernel, cl::NullRange,
 				cl::NDRange(rayBuffer->GetSize()), cl::NDRange(mqbvhWorkGroupSize));
 			break;
