@@ -84,6 +84,7 @@ class SLGBP:
     def init(cls, scene, errout):
         # Reset Abort flag
         SLGBP.abort = False
+        SLGBP.warn = ''
 
         # SmallLuxGPU executable path
         if os.path.isdir(scene.slg_path):
@@ -256,9 +257,12 @@ class SLGBP:
         # Infinite light, if present
         if SLGBP.infinitelight:
             scn['scene.infinitelight.file'] = bpy.utils.expandpath(SLGBP.infinitelight.texture.image.filepath).replace('\\','/')
-            portal = next((m.name for m in bpy.data.materials if m.shadeless),None)
+            portal = [m.name for m in bpy.data.materials if m.shadeless]
             if portal:
-                scn['scene.infinitelight.file'] += '|{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,portal.replace('.','_'))
+                scn['scene.infinitelight.file'] += '|{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,portal[0].replace('.','_'))
+                if len(portal) > 1:
+                    SLGBP.warn = 'More than one portal material (Shadeless) defined'
+                    print('WARNING: ' + SLGBP.warn)
             if scene.world.lighting.use_environment_lighting:
                 wle = scene.world.lighting.environment_energy
             else:
@@ -310,7 +314,6 @@ class SLGBP:
                 matprop = 'scene.materials.archglass.{}'.format(matn)
                 scn[matprop] = '{} {} {} {} {} {} {:b} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
                     ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
-                    #ff((1.0-m.alpha)*m.diffuse_color[0]),ff((1.0-m.alpha)*m.diffuse_color[1]),ff((1.0-m.alpha)*m.diffuse_color[2]),  # Doesn't make sense
                     ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
                     m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
             else:
@@ -334,12 +337,14 @@ class SLGBP:
                     scn[matprop] = '{} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
                         ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
                         gloss,m.raytrace_mirror.depth>0)
+                    if m.diffuse_color.v+m.raytrace_mirror.reflect_factor*m.mirror_color.v > 1.0:
+                        SLGBP.warn = m.name + ': diffuse + reflected color greater than 1.0!'
+                        print('WARNING: ' + SLGBP.warn)
         return matprop, scn
 
     # Get SLG .scn obj properties
     @classmethod
     def getobjscn(cls, scene):
-        ## add object as param if exposed via telnet later...
         scn = {}
         for ply in SLGBP.plys:
             for obj in SLGBP.plys[ply]:
@@ -816,8 +821,9 @@ class SLGRender(bpy.types.Operator):
                 SLGBP.exportrun(context.scene)
                 if context.scene.frame_current == context.scene.frame_end:
                     bpy.ops.screen.animation_play()
+                    SLGBP.slgproc.wait()
                     self._reset(context)
-                    self.report('INFO', "SLG export done.")
+                    self.report('INFO', "SLG animation render done.")
                     return {'FINISHED'}
         return {'PASS_THROUGH'}
 
@@ -855,6 +861,10 @@ class SLGRender(bpy.types.Operator):
             return {'RUNNING_MODAL'}
         else:
             SLGBP.exportrun(context.scene)
+            if SLGBP.warn:
+                self.report('WARNING', SLGBP.warn)
+            else:
+                self.report('INFO', "SLG export done.")
         return {'FINISHED'}
 
 # SLG Live operator
@@ -1086,7 +1096,7 @@ def slg_properties():
                ("0", "BVH", "Bounding Volume Hierarchy"),
                ("1", "QBVH", "Quad-Bounding Volume Hierarchy"),
                ("2", "QBVH (image storage disabled)", "Quad-Bounding Volume Hierarchy with disabled image storage"),
-               ("3", "MQBVH (instances support)", "Matrix Quad-Bounding Volume Hierarchy")),
+               ("3", "MQBVH (instances support)", "Multilevel Quad-Bounding Volume Hierarchy")),
         default="-1")
 
     EnumProperty(attr="slg_film_filter_type", name="Film Filter Type",
