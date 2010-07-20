@@ -104,6 +104,8 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 	if (objKeys.size() == 0)
 		throw std::runtime_error("Unable to find object definitions");
 
+	double lastPrint = WallClockTime();
+	unsigned int objCount = 0;
 	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
 		const std::string &key = *objKey;
 
@@ -118,7 +120,13 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		// Build the object
 		const std::vector<std::string> args = scnProp->GetStringVector(key, "");
 		const std::string plyFileName = args.at(0);
-		LR_LOG(ctx, "PLY object [" << *objKey << "] file name: " << plyFileName);
+		const double now = WallClockTime();
+		if (now - lastPrint > 2.0) {
+			LR_LOG(ctx, "PLY object count: " << objCount);
+			lastPrint = now;
+		}
+		++objCount;
+		//LR_LOG(ctx, "PLY object [" << *objKey << "] file name: " << plyFileName);
 
 		// Check if I have to calculate normal or not
 		const bool usePlyNormals = (scnProp->GetInt(key + ".useplynormals", 0) != 0);
@@ -223,6 +231,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 					triangleNormalMaps.push_back(NULL);
 		}
 	}
+	LR_LOG(ctx, "PLY object count: " << objCount);
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinitelight source defined
