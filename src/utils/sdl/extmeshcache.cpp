@@ -51,7 +51,7 @@ ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePly
 
 		return mesh;
 	} else {
-		LR_LOG(ctx, "Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
+		//LR_LOG(ctx, "Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
 		return it->second;
 	}
 }

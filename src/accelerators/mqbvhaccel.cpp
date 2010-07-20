@@ -63,8 +63,13 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 	meshIDs = new TriangleMeshID[totalTriangleCount];
 	meshTriangleIDs = new TriangleID[totalTriangleCount];
 	unsigned int currentOffset = 0;
+	double lastPrint = WallClockTime();
 	for (unsigned int i = 0; i < nLeafs; ++i) {
-		LR_LOG(ctx, "Building QBVH for MQBVH leaf: " << i);
+		const double now = WallClockTime();
+		if (now - lastPrint > 2.0) {
+			LR_LOG(ctx, "Building QBVH for MQBVH leaf: " << i);
+			lastPrint = now;
+		}
 
 		switch (meshes[i]->GetType()) {
 			case TYPE_TRIANGLE:
@@ -88,7 +93,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 					leafs[i]->Init(itm);
 					accels[itm->GetTriangleMesh()] = leafs[i];
 				} else {
-					LR_LOG(ctx, "Cached QBVH leaf");
+					//LR_LOG(ctx, "Cached QBVH leaf");
 					leafs[i] = it->second;
 				}
 
@@ -106,7 +111,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 					leafs[i]->Init(eitm);
 					accels[eitm->GetExtTriangleMesh()] = leafs[i];
 				} else {
-					LR_LOG(ctx, "Cached QBVH leaf");
+					//LR_LOG(ctx, "Cached QBVH leaf");
 					leafs[i] = it->second;
 				}
 
