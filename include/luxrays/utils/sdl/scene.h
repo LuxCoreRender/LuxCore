@@ -91,10 +91,10 @@ public:
 	std::map<std::string, size_t> materialIndices; // All materials indices
 
 	std::vector<ExtMesh *> objects; // All objects
-	std::vector<Material *> triangleMaterials; // One for each triangle
-	std::vector<TexMapInstance *> triangleTexMaps; // One for each triangle
-	std::vector<BumpMapInstance *> triangleBumpMaps; // One for each triangle
-	std::vector<NormalMapInstance *> triangleNormalMaps; // One for each triangle
+	std::vector<Material *> objectMaterials; // One for each object
+	std::vector<TexMapInstance *> objectTexMaps; // One for each object
+	std::vector<BumpMapInstance *> objectBumpMaps; // One for each object
+	std::vector<NormalMapInstance *> objectNormalMaps; // One for each object
 
 	std::vector<LightSource *> lights; // One for each light source
 	InfiniteLight *infiniteLight;

@@ -642,9 +642,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 										// Replace old light material with new one
 										scene->materials[iter->second] = newMat;
-										for (unsigned int i = 0; i < scene->triangleMaterials.size(); ++i) {
-											if (scene->triangleMaterials[i] == oldMat)
-												scene->triangleMaterials[i] = newMat;
+										for (unsigned int i = 0; i < scene->objectMaterials.size(); ++i) {
+											if (scene->objectMaterials[i] == oldMat)
+												scene->objectMaterials[i] = newMat;
 										}
 										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
 											if (scene->lights[i]->IsAreaLight()) {
@@ -659,9 +659,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 										// Replace old material with new one
 										scene->materials[iter->second] = newMat;
-										for (unsigned int i = 0; i < scene->triangleMaterials.size(); ++i) {
-											if (scene->triangleMaterials[i] == oldMat)
-												scene->triangleMaterials[i] = newMat;
+										for (unsigned int i = 0; i < scene->objectMaterials.size(); ++i) {
+											if (scene->objectMaterials[i] == oldMat)
+												scene->objectMaterials[i] = newMat;
 										}
 									}
 

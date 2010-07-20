@@ -148,7 +148,8 @@ static void TracePhotonsThread(const unsigned threadIndex, luxrays::Intersection
 
 				// Get the material
 				const unsigned int currentTriangleIndex = rayHit->index;
-				const luxrays::sdl::Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+				const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
+				const luxrays::sdl::Material *triMat = scene->objectMaterials[currentMeshIndex];
 
 				if (triMat->IsLightSource()) {
 					// Re-initialize the photon path

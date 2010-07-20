@@ -497,19 +497,6 @@ TriangleLight::TriangleLight(const AreaLightMaterial *mat, const unsigned int ms
 	area = mesh->GetTriangleArea(triIndex);
 }
 
-Spectrum TriangleLight::Le(const Scene *scene, const Vector &wo) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-	Normal sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
-
-	if (Dot(sampleN, wo) <= 0.f)
-		return Spectrum();
-
-	if (mesh->HasColors())
-		return mesh->GetColor(triIndex) * lightMaterial->GetGain(); // Light sources are supposed to have flat color
-	else
-		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
-}
-
 Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	const ExtMesh *mesh = scene->objects[meshIndex];

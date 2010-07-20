@@ -162,15 +162,14 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 			LR_LOG(ctx, "The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
 
 			AreaLightMaterial *light = (AreaLightMaterial *)mat;
+			objectMaterials.push_back(mat);
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 				TriangleLight *tl = new TriangleLight(light, objects.size() - 1, i, objects);
 				lights.push_back(tl);
-				triangleMaterials.push_back(tl);
 			}
 		} else {
 			SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-				triangleMaterials.push_back(surfMat);
+			objectMaterials.push_back(surfMat);
 		}
 
 		// [old deprecated syntax] Check if there is a texture map associated to the object
@@ -180,11 +179,9 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
 			TexMapInstance *tm = texMapCache->GetTexMapInstance(args.at(1));
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-				triangleTexMaps.push_back(tm);
-				triangleBumpMaps.push_back(NULL);
-				triangleNormalMaps.push_back(NULL);
-			}
+			objectTexMaps.push_back(tm);
+			objectBumpMaps.push_back(NULL);
+			objectNormalMaps.push_back(NULL);
 		} else {
 			// Check for if there is a texture map associated to the object with the new syntax
 			const std::string texMap = scnProp->GetString(key + ".texmap", "");
@@ -194,11 +191,9 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
 				TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap);
-				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-					triangleTexMaps.push_back(tm);
+				objectTexMaps.push_back(tm);
 			} else
-				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-					triangleTexMaps.push_back(NULL);
+				objectTexMaps.push_back(NULL);
 
 			// Check for if there is a bump map associated to the object
 			const std::string bumpMap = scnProp->GetString(key + ".bumpmap", "");
@@ -210,11 +205,9 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 				const float scale = scnProp->GetFloat(key + ".bumpmap.scale", 1.f);
 
 				BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale);
-				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-					triangleBumpMaps.push_back(bm);
+				objectBumpMaps.push_back(bm);
 			} else
-				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-					triangleBumpMaps.push_back(NULL);
+				objectBumpMaps.push_back(NULL);
 
 			// Check for if there is a normal map associated to the object
 			const std::string normalMap = scnProp->GetString(key + ".normalmap", "");
@@ -224,11 +217,9 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
 
 				NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap);
-				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-					triangleNormalMaps.push_back(nm);
+				objectNormalMaps.push_back(nm);
 			} else
-				for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-					triangleNormalMaps.push_back(NULL);
+				objectNormalMaps.push_back(NULL);
 		}
 	}
 	LR_LOG(ctx, "PLY object count: " << objCount);

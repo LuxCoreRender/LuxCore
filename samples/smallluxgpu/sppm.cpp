@@ -181,7 +181,8 @@ void SPPMDeviceRenderThread::AdvancePhotonPaths(
 
 			// Get the material
 			const unsigned int currentTriangleIndex = rayHit->index;
-			const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+			const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
+			const Material *triMat = scene->objectMaterials[currentMeshIndex];
 
 			if (triMat->IsLightSource()) {
 				// Re-initialize the photon path
