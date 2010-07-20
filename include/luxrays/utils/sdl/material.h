@@ -29,6 +29,8 @@
 
 namespace luxrays { namespace sdl {
 
+class Scene;
+
 class Material {
 public:
 	virtual ~Material() { }
@@ -48,11 +50,25 @@ public:
 	bool IsLightSource() const { return true; }
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return false; }
+
+	virtual Spectrum Le(const ExtMesh *mesh, const unsigned triIndex, const Vector &wo) const = 0;
 };
 
 class AreaLightMaterial : public LightMaterial {
 public:
 	AreaLightMaterial(const Spectrum &col) { gain = col; }
+
+	Spectrum Le(const ExtMesh *mesh, const unsigned triIndex, const Vector &wo) const {
+		Normal sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
+
+		if (Dot(sampleN, wo) <= 0.f)
+			return Spectrum();
+
+		if (mesh->HasColors())
+			return mesh->GetColor(triIndex) * gain; // Light sources are supposed to have flat color
+		else
+			return gain; // Light sources are supposed to have flat color
+	}
 
 	const Spectrum &GetGain() const { return gain; }
 

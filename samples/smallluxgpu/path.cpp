@@ -184,7 +184,8 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 			} else {
 				// Something was hit check if it is transparent
 				const unsigned int currentShadowTriangleIndex = shadowRayHit->index;
-				Material *triMat = scene->triangleMaterials[currentShadowTriangleIndex];
+				const unsigned int currentShadowMeshIndex = scene->dataSet->GetMeshID(currentShadowTriangleIndex);
+				Material *triMat = scene->objectMaterials[currentShadowMeshIndex];
 
 				if (triMat->IsShadowTransparent()) {
 					// It is shadow transparent, I need to continue to trace the ray
@@ -199,13 +200,13 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 					leftShadowRaysToTrace++;
 				} else {
 					// Check if there is a texture with alpha
-					TexMapInstance *tm = scene->triangleTexMaps[currentShadowTriangleIndex];
+					TexMapInstance *tm = scene->objectTexMaps[currentShadowMeshIndex];
 
 					if (tm) {
 						const TextureMap *map = tm->GetTexMap();
 
 						if (map->HasAlpha()) {
-							const ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentShadowTriangleIndex)];
+							const ExtMesh *mesh = scene->objects[currentShadowMeshIndex];
 							const UV triUV = mesh->InterpolateTriUV(scene->dataSet->GetMeshTriangleID(currentShadowTriangleIndex),
 									shadowRayHit->b1, shadowRayHit->b2);
 
@@ -267,20 +268,21 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 
 	// Something was hit
 	const unsigned int currentTriangleIndex = rayHit->index;
+	const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
 
 	// Get the triangle
-	const ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+	const ExtMesh *mesh = scene->objects[currentMeshIndex];
 	const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
 
 	// Get the material
-	const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+	const Material *triMat = scene->objectMaterials[currentMeshIndex];
 
 	// Check if it is a light source
 	if (triMat->IsLightSource()) {
 		if (specularBounce) {
 			// Only TriangleLight can be directly hit
-			const TriangleLight *tLight = (TriangleLight *) triMat;
-			Spectrum Le = tLight->Le(scene, -pathRay.d);
+			const LightMaterial *mLight = (LightMaterial *) triMat;
+			Spectrum Le = mLight->Le(mesh, triIndex, -pathRay.d);
 
 			radiance += Le * throughput;
 		}
@@ -310,9 +312,9 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 		surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
 	// Check if I have to apply texture mapping or normal mapping
-	TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
-	BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
-	NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
+	TexMapInstance *tm = scene->objectTexMaps[currentMeshIndex];
+	BumpMapInstance *bm = scene->objectBumpMaps[currentMeshIndex];
+	NormalMapInstance *nm = scene->objectNormalMaps[currentMeshIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
 		const UV triUV = mesh->InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2);

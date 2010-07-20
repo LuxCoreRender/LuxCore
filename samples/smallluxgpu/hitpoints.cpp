@@ -28,6 +28,7 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 		Spectrum &surfaceColor, Normal &N, Normal &shadeN) {
 	hitPoint = (*ray)(rayHit->t);
 	const unsigned int currentTriangleIndex = rayHit->index;
+	const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
 
 	// Get the triangle
 	const ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
@@ -42,9 +43,9 @@ bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 	N = mesh->InterpolateTriNormal(triIndex, rayHit->b1, rayHit->b2);
 
 	// Check if I have to apply texture mapping or normal mapping
-	TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
-	BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
-	NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
+	TexMapInstance *tm = scene->objectTexMaps[currentMeshIndex];
+	BumpMapInstance *bm = scene->objectBumpMaps[currentMeshIndex];
+	NormalMapInstance *nm = scene->objectNormalMaps[currentMeshIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
 		const UV triUV = mesh->InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2);
@@ -340,14 +341,18 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 
 					// Get the material
 					const unsigned int currentTriangleIndex = rayHit->index;
-					const Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+					const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
+					const Material *triMat = scene->objectMaterials[currentMeshIndex];
 
 					if (triMat->IsLightSource()) {
 						// Add an hit point
 						HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 						hp.type = CONSTANT_COLOR;
-						const TriangleLight *tLight = (TriangleLight *)triMat;
-						hp.throughput = tLight->Le(scene, -eyePath->ray.d) * eyePath->throughput;
+
+						const luxrays::sdl::LightMaterial *mLight = (luxrays::sdl::LightMaterial *)triMat;
+						const luxrays::ExtMesh *mesh = scene->objects[currentMeshIndex];
+						const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
+						hp.throughput = mLight->Le(mesh, triIndex, -eyePath->ray.d) * eyePath->throughput;
 
 						// Free the eye path
 						delete *todoEyePathsIterator;

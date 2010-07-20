@@ -106,9 +106,10 @@ static bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::Ra
 		luxrays::Spectrum &surfaceColor, luxrays::Normal &N, luxrays::Normal &shadeN) {
 	hitPoint = (*ray)(rayHit->t);
 	const unsigned int currentTriangleIndex = rayHit->index;
+	const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
 
 	// Get the triangle
-	const luxrays::ExtMesh *mesh = scene->objects[scene->dataSet->GetMeshID(currentTriangleIndex)];
+	const luxrays::ExtMesh *mesh = scene->objects[currentMeshIndex];
 	const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
 
 	if (mesh->HasColors())
@@ -120,9 +121,9 @@ static bool GetHitPointInformation(const luxrays::sdl::Scene *scene, luxrays::Ra
 	N = mesh->InterpolateTriNormal(triIndex, rayHit->b1, rayHit->b2);
 
 	// Check if I have to apply texture mapping or normal mapping
-	luxrays::sdl::TexMapInstance *tm = scene->triangleTexMaps[currentTriangleIndex];
-	luxrays::sdl::BumpMapInstance *bm = scene->triangleBumpMaps[currentTriangleIndex];
-	luxrays::sdl::NormalMapInstance *nm = scene->triangleNormalMaps[currentTriangleIndex];
+	luxrays::sdl::TexMapInstance *tm = scene->objectTexMaps[currentMeshIndex];
+	luxrays::sdl::BumpMapInstance *bm = scene->objectBumpMaps[currentMeshIndex];
+	luxrays::sdl::NormalMapInstance *nm = scene->objectNormalMaps[currentMeshIndex];
 	if (tm || bm || nm) {
 		// Interpolate UV coordinates if required
 		const luxrays::UV triUV = mesh->InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2);
@@ -316,7 +317,8 @@ public:
 
 						// Get the material
 						const unsigned int currentTriangleIndex = rayHit->index;
-						const luxrays::sdl::Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+						const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
+						const luxrays::sdl::Material *triMat = scene->objectMaterials[currentMeshIndex];
 
 						if (triMat->IsLightSource()) {
 							// Add an hit point
@@ -324,8 +326,11 @@ public:
 							hp.type = CONSTANT_COLOR;
 							hp.scrX = eyePath->scrX;
 							hp.scrY = eyePath->scrY;
-							const luxrays::sdl::TriangleLight *tLight = (luxrays::sdl::TriangleLight *)triMat;
-							hp.throughput = tLight->Le(scene, -eyePath->ray.d) * eyePath->throughput;
+
+							const luxrays::sdl::LightMaterial *mLight = (luxrays::sdl::LightMaterial *)triMat;
+							const luxrays::ExtMesh *mesh = scene->objects[currentMeshIndex];
+							const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
+							hp.throughput = mLight->Le(mesh, triIndex, -eyePath->ray.d) * eyePath->throughput;
 
 							// Free the eye path
 							delete *todoEyePathsIterator;
@@ -718,7 +723,8 @@ static void TracePhotonsThread(luxrays::RandomGenerator *rndGen, luxrays::Inters
 
 				// Get the material
 				const unsigned int currentTriangleIndex = rayHit->index;
-				const luxrays::sdl::Material *triMat = scene->triangleMaterials[currentTriangleIndex];
+				const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
+				const luxrays::sdl::Material *triMat = scene->objectMaterials[currentMeshIndex];
 
 				if (triMat->IsLightSource()) {
 					// Re-initialize the photon path
