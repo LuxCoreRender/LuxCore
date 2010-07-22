@@ -131,7 +131,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 
 				// Use Russian Roulette to check if I have to do participating media computation or not
 				if (sample.GetLazyValue() <= scene->volumeIntegrator->GetRRProbability()) {
-					Ray volumeRay(pathRay.o, pathRay.d, 0.f, (rayHit->index == 0xffffffffu) ? std::numeric_limits<float>::infinity() : rayHit->t);
+					Ray volumeRay(pathRay.o, pathRay.d, 0.f, rayHit->Miss() ? std::numeric_limits<float>::infinity() : rayHit->t);
 					scene->volumeIntegrator->GenerateLiRays(scene, &sample, volumeRay, volumeComp);
 					radiance += volumeComp->GetEmittedLight();
 

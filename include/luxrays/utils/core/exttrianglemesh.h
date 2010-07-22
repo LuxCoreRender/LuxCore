@@ -165,10 +165,10 @@ public:
 	~ExtInstanceTriangleMesh() { };
 	void Delete() {	}
 
-	virtual MeshType GetType() const { return TYPE_TRIANGLE_INSTANCE; }
+	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
 
 	Point GetVertex(const unsigned index) const { return trans(mesh->GetVertex(index)); }
-		float GetTriangleArea(const unsigned int triIndex) const {
+	float GetTriangleArea(const unsigned int triIndex) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
 		return Triangle::Area(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]));
@@ -207,6 +207,7 @@ public:
 
 	void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
 		mesh->Sample(index, u0, u1, p , b0, b1, b2);
+		*p = trans(*p);
 	}
 
 	const Transform &GetTransformation() const { return trans; }
