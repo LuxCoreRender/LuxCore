@@ -213,6 +213,8 @@ public:
 	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
 		const unsigned int triangleIndex, const std::vector<ExtMesh *> &objs);
 
+	bool IsAreaLight() const { return true; }
+
 	LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
 	void SetMaterial(const AreaLightMaterial *mat) { lightMaterial = mat; }
