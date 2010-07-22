@@ -73,8 +73,15 @@ public:
 
 	Matrix4x4 Inverse() const;
 
+	friend std::ostream &operator<<(std::ostream &, const Matrix4x4 &);
+
 	float m[4][4];
 };
+
+inline std::ostream & operator<<(std::ostream &os, const Matrix4x4 &m) {
+	m.Print(os);
+	return os;
+}
 
 }
 

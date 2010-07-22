@@ -471,7 +471,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			break;
 		}
 		case ACCEL_MQBVH: {
-			throw std::runtime_error("MQBVH not yet supported by OpenCL device");
+			//throw std::runtime_error("MQBVH not yet supported by OpenCL device");
 
 			//--------------------------------------------------------------------------
 			// MQBVH kernel
@@ -589,7 +589,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			index = 0;
 			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
 				if (mqbvh->leafsInvTransform[index]) {
-					invTrans[index] = mqbvh->leafsInvTransform[index]->GetInverse().GetMatrix();
+					invTrans[index] = mqbvh->leafsInvTransform[index]->GetMatrix();
 					++index;
 				} else
 					invTrans[index++] = Matrix4x4();

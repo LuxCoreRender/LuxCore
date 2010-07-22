@@ -74,7 +74,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 		switch (meshes[i]->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
-				leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
+				leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
 				leafs[i]->Init(meshes[i]);
 				accels[meshes[i]] = leafs[i];
 
@@ -89,7 +89,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 
 				if (it == accels.end()) {
 					// Create a new QBVH
-					leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
+					leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
 					leafs[i]->Init(itm);
 					accels[itm->GetTriangleMesh()] = leafs[i];
 				} else {
@@ -107,7 +107,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 				std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.find(eitm->GetExtTriangleMesh());
 				if (it == accels.end()) {
 					// Create a new QBVH
-					leafs[i] = new QBVHAccel(ctx, 6, 4 * 4, 1);
+					leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
 					leafs[i]->Init(eitm);
 					accels[eitm->GetExtTriangleMesh()] = leafs[i];
 				} else {

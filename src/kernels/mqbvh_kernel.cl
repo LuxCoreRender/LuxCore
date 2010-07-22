@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
+
 typedef struct {
 	float x, y, z;
 } Point;
@@ -85,14 +87,9 @@ static void TransformV(Vector *ptrans, Vector *p, __global Matrix4x4 *m) {
     const float y = p->y;
     const float z = p->z;
 
-	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z + m->m[0][3];
-	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z + m->m[1][3];
-	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z + m->m[2][3];
-	const float w = m->m[3][0] * x + m->m[3][1] * y + m->m[3][2] * z + m->m[3][3];
-
-    ptrans->x /= w;
-    ptrans->y /= w;
-    ptrans->z /= w;
+	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z;
+	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z;
+	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z;
 }
 
 #define emptyLeafNode 0xffffffff
@@ -393,10 +390,8 @@ __kernel void Intersect(
 			const uint leafIndex = QBVHNode_FirstQuadIndex(nodeData);
 
             Ray tray;
-            //TransformP(&tray.o, &rayOrig, &invTrans[leafIndex]);
-            //TransformV(&tray.d, &rayDir, &invTrans[leafIndex]);
-			tray.o = rayOrig;
-			tray.d = rayDir;
+            TransformP(&tray.o, &rayOrig, &invTrans[leafIndex]);
+            TransformV(&tray.d, &rayDir, &invTrans[leafIndex]);
             tray.mint = ray4.mint.s0;
             tray.maxt = ray4.maxt.s0;
 
