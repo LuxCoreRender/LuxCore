@@ -57,6 +57,8 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 
 	// Build a QBVH for each mesh
 	nLeafs = meshes.size();
+	LR_LOG(ctx, "MQBVH leaf count: " << nLeafs);
+
 	leafs = new QBVHAccel*[nLeafs];
 	leafsInvTransform = new const Transform*[nLeafs];
 	leafsOffset = new unsigned int[nLeafs];

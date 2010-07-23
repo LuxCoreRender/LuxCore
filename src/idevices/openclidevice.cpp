@@ -471,8 +471,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			break;
 		}
 		case ACCEL_MQBVH: {
-			//throw std::runtime_error("MQBVH not yet supported by OpenCL device");
-
 			//--------------------------------------------------------------------------
 			// MQBVH kernel
 			//--------------------------------------------------------------------------
@@ -526,15 +524,23 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			// Calculate the size of memory to allocate
 			unsigned int totalNodesCount = 0;
 			unsigned int totalQuadTrisCount = 0;
-			unsigned int *memMap = new unsigned int[mqbvh->nLeafs * 2];
-			unsigned int index = 0;
+
+			std::map<const QBVHAccel *, unsigned int> indexNodesMap;
+			std::map<const QBVHAccel *, unsigned int> indexQuadTrisMap;
+
 			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
 				const QBVHAccel *qbvh = it->second;
 
-				memMap[index++] = totalNodesCount;
+				indexNodesMap[qbvh] = totalNodesCount;
 				totalNodesCount += qbvh->nNodes;
-				memMap[index++] = totalQuadTrisCount;
+				indexQuadTrisMap[qbvh] = totalQuadTrisCount;
 				totalQuadTrisCount += qbvh->nQuads;
+			}
+
+			unsigned int *memMap = new unsigned int[mqbvh->nLeafs * 2];
+			for (unsigned int i = 0; i < mqbvh->nLeafs; ++i) {
+				memMap[i * 2] = indexNodesMap[mqbvh->leafs[i]];
+				memMap[i * 2 + 1] = indexQuadTrisMap[mqbvh->leafs[i]];
 			}
 
 			// Allocate memory for QBVH Leafs
@@ -586,13 +592,11 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 			// Upload QBVH leafs transformations
 			Matrix4x4 *invTrans = new Matrix4x4[mqbvh->nLeafs];
-			index = 0;
-			for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = mqbvh->accels.begin(); it != mqbvh->accels.end(); it++) {
-				if (mqbvh->leafsInvTransform[index]) {
-					invTrans[index] = mqbvh->leafsInvTransform[index]->GetMatrix();
-					++index;
-				} else
-					invTrans[index++] = Matrix4x4();
+			for (unsigned int i = 0; i < mqbvh->nLeafs; ++i) {
+				if (mqbvh->leafsInvTransform[i])
+					invTrans[i] = mqbvh->leafsInvTransform[i]->GetMatrix();
+				else
+					invTrans[i] = Matrix4x4();
 			}
 
 			const size_t invTransMemSize = mqbvh->nLeafs * sizeof(Matrix4x4);
