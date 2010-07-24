@@ -396,7 +396,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'o': {
 #if defined(WIN32)
-			HWND hWnd = FindWindow(NULL, SLG_LABEL.c_str());
+			std::wstring ws;
+			ws.assign(SLG_LABEL.begin (), SLG_LABEL.end());
+			HWND hWnd = FindWindow(NULL, ws.c_str());
 			if (GetWindowLongPtr(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
 				SetWindowPos(hWnd, HWND_NOTOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE);
 			else
