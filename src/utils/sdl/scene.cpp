@@ -409,6 +409,12 @@ Material *Scene::CreateMaterial(const std::string &propName, const Properties &p
 		const Spectrum Ktrn(vf.at(3), vf.at(4), vf.at(5));
 
 		return new ArchGlassMaterial(Krfl, Ktrn, vf.at(6) != 0.f, vf.at(7) != 0.f);
+	} else if (matType == "alloy") {
+		const std::vector<float> vf = GetParameters(prop, propName, 9, "1.0 1.0 1.0 1.0 1.0 1.0 10.0 0.8 1.0");
+		const Spectrum Kdiff(vf.at(0), vf.at(1), vf.at(2));
+		const Spectrum Krfl(vf.at(3), vf.at(4), vf.at(5));
+
+		return new AlloyMaterial(Kdiff, Krfl, vf.at(6), vf.at(7), vf.at(8) != 0.f);
 	} else
 		throw std::runtime_error("Unknown material type " + matType);
 }

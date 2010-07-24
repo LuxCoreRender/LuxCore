@@ -337,6 +337,24 @@ public:
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
 		const float u0, const float u1,  const float u2, const bool onlySpecular,
 		float *pdf, bool &specularBounce) const {
+		(*wi) = GlossyReflection(wo, exponent, shadeN, u0, u1);
+
+		if (Dot(*wi, shadeN) > 0.f) {
+			specularBounce = reflectionSpecularBounce;
+			*pdf = 1.f;
+
+			return Kr;
+		} else {
+			*pdf = 0.f;
+
+			return Spectrum();
+		}
+	}
+
+	const Spectrum &GetKr() const { return Kr; }
+
+	static Vector GlossyReflection(const Vector &wo, const float exponent,
+		const Normal &shadeN, const float u0, const float u1) {
 		const float phi = 2.f * M_PI * u0;
 		const float cosTheta = powf(1.f - u1, exponent);
 		const float sinTheta = sqrtf(1.f - cosTheta * cosTheta);
@@ -359,21 +377,8 @@ public:
 		u = Normalize(u);
 		Vector v = Cross(w, u);
 
-		(*wi) = x * u + y * v + z * w;
-
-		if (Dot(*wi, shadeN) > 0.f) {
-			specularBounce = reflectionSpecularBounce;
-			*pdf = 1.f;
-
-			return Kr;
-		} else {
-			*pdf = 0.f;
-
-			return Spectrum();
-		}
+		return x * u + y * v + z * w;
 	}
-
-	const Spectrum &GetKr() const { return Kr; }
 
 private:
 	Spectrum Kr;
@@ -494,6 +499,81 @@ private:
 	Spectrum Krefl, Ktrans;
 	float reflFilter, transFilter, totFilter, reflPdf, transPdf;
 	bool reflectionSpecularBounce, transmitionSpecularBounce;
+};
+
+class AlloyMaterial : public SurfaceMaterial {
+public:
+	AlloyMaterial(const Spectrum &col, const Spectrum &refl,
+			const float exp, const float schlickTerm, bool reflSpecularBounce) {
+		Krefl = refl;
+		Kdiff = col;
+		R0 = schlickTerm;
+		exponent = 1.f / (exp + 1.f);
+		
+		reflectionSpecularBounce = reflSpecularBounce;
+	}
+
+	bool IsDiffuse() const { return false; }
+	bool IsSpecular() const { return true; }
+
+	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
+		throw std::runtime_error("Internal error, called AlloyMaterial::f()");
+	}
+
+	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
+		const float u0, const float u1,  const float u2, const bool onlySpecular,
+		float *pdf, bool &specularBounce) const {
+		// Schilick's approximation
+		const float c = 1.f - Dot(wo, shadeN);
+		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+		const float P = .25f + .5f * Re;
+
+		if (onlySpecular || (u2 < P)) {
+			(*wi) = MetalMaterial::GlossyReflection(wo, exponent, shadeN, u0, u1);
+			*pdf = P / Re;
+			specularBounce = reflectionSpecularBounce;
+
+			return Re * Krefl;
+		} else {
+			Vector dir = CosineSampleHemisphere(u0, u1);
+			*pdf = dir.z * INV_PI;
+
+			Vector v1, v2;
+			CoordinateSystem(Vector(shadeN), &v1, &v2);
+
+			dir = Vector(
+					v1.x * dir.x + v2.x * dir.y + shadeN.x * dir.z,
+					v1.y * dir.x + v2.y * dir.y + shadeN.y * dir.z,
+					v1.z * dir.x + v2.z * dir.y + shadeN.z * dir.z);
+
+			(*wi) = dir;
+
+			const float dp = Dot(shadeN, *wi);
+			// Using 0.0001 instead of 0.0 to cut down fireflies
+			if (dp <= 0.0001f) {
+				*pdf = 0.f;
+				return Spectrum();
+			}
+			*pdf /=  dp;
+
+			const float iRe = 1.f - Re;
+			*pdf *= (1.f - P) / iRe;
+			specularBounce = false;
+
+			return iRe * Kdiff;
+
+		}
+	}
+
+	const Spectrum &GetKrefl() const { return Krefl; }
+
+private:
+	Spectrum Krefl;
+	Spectrum Kdiff;
+	float exponent;
+	float R0;
+	bool reflectionSpecularBounce;
 };
 
 } }
