@@ -406,7 +406,7 @@ class SLGBP:
         mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
         # Objects to render
         for obj in scene.objects:
-            if not obj.restrict_render:
+            if not obj.hide_render:
                 if obj.type in rendertypes and inscenelayer(obj):
                     # Mesh instances
                     if obj.data.users > 1 and not obj.modifiers:
@@ -441,7 +441,7 @@ class SLGBP:
                                     plys[(o.name+'{D}S'+str(i))].append((obj, o.material_slots[i].material))
                             else:
                                 plys[(o.name+'{D}'+SLGBP.nomatn)].append((obj, None))
-                        elif not o.restrict_render and o.type in rendertypes:
+                        elif not o.hide_render and o.type in rendertypes:
                             addo = False
                             if o not in objs:
                                 if scene.slg_export or mfp and any(m for m in mfp if m in o.material_slots):
