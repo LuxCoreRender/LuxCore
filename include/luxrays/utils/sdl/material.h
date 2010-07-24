@@ -507,17 +507,24 @@ public:
 			const float exp, const float schlickTerm, bool reflSpecularBounce) {
 		Krefl = refl;
 		Kdiff = col;
+		KdiffOverPI = Kdiff * INV_PI;
 		R0 = schlickTerm;
 		exponent = 1.f / (exp + 1.f);
 		
 		reflectionSpecularBounce = reflSpecularBounce;
 	}
 
-	bool IsDiffuse() const { return false; }
+	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		throw std::runtime_error("Internal error, called AlloyMaterial::f()");
+		// Schilick's approximation
+		const float c = 1.f - Dot(wo, N);
+		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+		const float P = .25f + .5f * Re;
+
+		return KdiffOverPI * (1.f - Re) / (1.f - P);
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
@@ -570,7 +577,7 @@ public:
 
 private:
 	Spectrum Krefl;
-	Spectrum Kdiff;
+	Spectrum Kdiff, KdiffOverPI;
 	float exponent;
 	float R0;
 	bool reflectionSpecularBounce;

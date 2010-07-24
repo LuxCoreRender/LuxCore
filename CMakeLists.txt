@@ -327,7 +327,7 @@ add_subdirectory(samples/smallsppmgpu)
 
 set(CMAKE_INSTALL_PREFIX .)
 #set(LUXRAYS_BIN_SAMPLES_DIR "luxrays-v${LUXRAYS_VERSION_MAJOR}.${LUXRAYS_VERSION_MINOR}")
-set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.6beta1")
+set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.6beta2")
 
 add_custom_command(
     OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}"
