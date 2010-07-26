@@ -270,7 +270,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		if (infiniteLight)
 			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
 
-		std::vector<float> sdir = GetParameters(*scnProp, "scene.skylight.dir", 3, "");
+		std::vector<float> sdir = GetParameters(*scnProp, "scene.skylight.dir", 3, "0.0 0.0 1.0");
 		const float turb = scnProp->GetFloat("scene.skylight.turbidity", 2.2f);
 		std::vector<float> gain = GetParameters(*scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
@@ -286,7 +286,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 
 	const std::vector<std::string> sulParams = scnProp->GetStringVector("scene.sunlight.dir", "");
 	if (sulParams.size() > 0) {
-		std::vector<float> sdir = GetParameters(*scnProp, "scene.sunlight.dir", 3, "0.0 -1.0 0.0");
+		std::vector<float> sdir = GetParameters(*scnProp, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
 		const float turb = scnProp->GetFloat("scene.sunlight.turbidity", 2.2f);
 		const float relSize = scnProp->GetFloat("scene.sunlight.relsize", 1.0f);
 		std::vector<float> gain = GetParameters(*scnProp, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
