@@ -30,6 +30,7 @@
 #include "renderconfig.h"
 
 #include "luxrays/utils/properties.h"
+#include "luxrays/accelerators/mqbvhaccel.h"
 
 using boost::asio::ip::tcp;
 
@@ -87,9 +88,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "help - this help\n";
 						respStream << "help.get - print the list of get supported properties\n";
 						respStream << "help.set - print the list of set supported properties\n";
-						respStream << "material.list - print the list of \n";
 						respStream << "image.reset - reset the rendering image (requires render.stop)\n";
 						respStream << "image.save - save the rendering image\n";
+						respStream << "material.list - print the list of materials\n";
+						respStream << "object.list - print the list of objects\n";
 						respStream << "render.start - start the rendering\n";
 						respStream << "render.stop - stop the rendering\n";
 						respStream << "set <property name> = <values> - set the value of a (supported) property\n";
@@ -375,6 +377,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.materials.*.* (requires render.stop)\n";
 						respStream << "scene.infinitelight.gain (requires render.stop)\n";
 						respStream << "scene.infinitelight.shift (requires render.stop)\n";
+						respStream << "scene.objects.*.*.transformation (requires render.stop)\n";
 						respStream << "scene.skylight.dir (requires render.stop)\n";
 						respStream << "scene.skylight.gain (requires render.stop)\n";
 						respStream << "scene.skylight.turbidity (requires render.stop)\n";
@@ -398,6 +401,19 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						std::map<std::string, size_t>::const_iterator iter =
 								telnetServer->config->scene->materialIndices.begin();
 						while (iter != telnetServer->config->scene->materialIndices.end()) {
+							respStream << (*iter).first << "\n";
+							iter++;
+						}
+
+						respStream << "OK\n";
+						boost::asio::write(socket, response);
+					} else if (command == "object.list") {
+						boost::asio::streambuf response;
+						std::ostream respStream(&response);
+
+						std::map<std::string, size_t>::const_iterator iter =
+								telnetServer->config->scene->objectIndices.begin();
+						while (iter != telnetServer->config->scene->objectIndices.end()) {
 							respStream << (*iter).first << "\n";
 							iter++;
 						}
@@ -701,6 +717,53 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									}
 
 									delete oldMat;
+
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
+								if (state == STOP) {
+									Scene *scene = telnetServer->config->scene;
+
+									// Check if we are using a MQBVH accelerator
+									if (scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH)
+										throw std::runtime_error("Wrong accelerator type");
+
+									// Check if it is the name of a known objects
+									const std::string matType = Properties::ExtractField(propertyName, 2);
+									if (matType == "")
+										throw std::runtime_error("Syntax error in " + propertyName);
+									const std::string objName = Properties::ExtractField(propertyName, 3);
+									if (objName == "")
+										throw std::runtime_error("Syntax error in " + propertyName);
+
+									std::map<std::string, size_t>::const_iterator iter = scene->objectIndices.find(objName);
+									if (iter == scene->objectIndices.end())
+										throw std::runtime_error("Unknown object name: " + objName);
+
+									ExtMesh *obj = scene->objects[iter->second];
+
+									// Check if the object is an instance
+									if (obj->GetType() != TYPE_EXT_TRIANGLE_INSTANCE)
+										throw std::runtime_error("Object must be an instance: " + objName);
+
+									// Read the new transformation
+									const std::vector<float> vf = prop.GetFloatVector(propertyName,
+											"1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+									const Matrix4x4 mat(
+											vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+											vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+											vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+											vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+									const Transform trans(mat);
+
+									ExtInstanceTriangleMesh *iObj = (ExtInstanceTriangleMesh *)obj;
+									iObj->SetTransformation(trans);
+
+									// Update the DataSet
+									telnetServer->config->UpdateSceneDataSet();
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {

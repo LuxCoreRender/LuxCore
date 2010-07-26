@@ -212,6 +212,10 @@ public:
 
 	const Transform &GetTransformation() const { return trans; }
 	const Transform &GetInvTransformation() const { return invTrans; }
+	void SetTransformation(const Transform &t) {
+		trans = t;
+		invTrans = t.GetInverse();
+	}
 	Point *GetVertices() const { return mesh->GetVertices(); }
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };

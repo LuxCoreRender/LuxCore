@@ -42,12 +42,14 @@ public:
 	BBox WorldBound() const;
 
 	AcceleratorType GetType() const { return ACCEL_QBVH; }
-	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+	void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 	const TriangleMeshID GetMeshID(const unsigned int index) const { return meshIDs[index]; }
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return meshTriangleIDs[index]; }
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
+
+	void Update();
 
 	friend class OpenCLIntersectionDevice;
 
@@ -63,6 +65,8 @@ private:
 		u_int start, const BBox &nodeBbox);
 
 	int32_t CreateNode(int32_t parentIndex, int32_t childIndex, const BBox &nodeBbox);
+
+	std::deque<Mesh *> meshList;
 
 	QBVHNode *nodes;
 	u_int nNodes, maxNodes;

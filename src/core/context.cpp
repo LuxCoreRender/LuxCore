@@ -111,7 +111,7 @@ Context::~Context() {
 		delete deviceDescriptions[i];
 }
 
-void Context::SetDataSet(const DataSet *dataSet) {
+void Context::SetDataSet(DataSet *dataSet) {
 	assert (!started);
 	assert (dataSet != NULL);
 	assert (dataSet->IsPreprocessed());
@@ -120,6 +120,20 @@ void Context::SetDataSet(const DataSet *dataSet) {
 
 	for (size_t i = 0; i < idevices.size(); ++i)
 		idevices[i]->SetDataSet(currentDataSet);
+}
+
+void Context::UpdateDataSet() {
+	assert (started);
+
+	if (currentDataSet->GetAcceleratorType() != ACCEL_MQBVH)
+		throw std::runtime_error("Context::UpdateDataSet supported only with MQBVH accelerator");
+
+	// Update the data set
+	currentDataSet->UpdateMeshes();
+
+	// Update all OpenCL devices
+	for (unsigned int i = 0; i < oclDevices.size(); ++i)
+		oclDevices[i]->UpdateDataSet();
 }
 
 void Context::Start() {
@@ -188,6 +202,8 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(std::vector
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
 			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, i,
 					oclDeviceDesc->GetForceWorkGroupSize());
+
+			oclDevices.push_back((OpenCLIntersectionDevice *)device);
 		}
 #endif
 		else

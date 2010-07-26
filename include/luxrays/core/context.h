@@ -37,6 +37,7 @@ typedef void (*LuxRaysDebugHandler)(const char *msg);
 
 class DeviceDescription;
 class OpenCLDeviceDescription;
+class OpenCLIntersectionDevice;
 
 class Context {
 public:
@@ -56,7 +57,9 @@ public:
 
 	std::vector<PixelDevice *> AddPixelDevices(std::vector<DeviceDescription *> &deviceDesc);
 
-	void SetDataSet(const DataSet *dataSet);
+	void SetDataSet(DataSet *dataSet);
+	void UpdateDataSet();
+
 	void Start();
 	void Interrupt();
 	void Stop();
@@ -76,11 +79,13 @@ private:
 
 	LuxRaysDebugHandler debugHandler;
 
-	const DataSet *currentDataSet;
+	DataSet *currentDataSet;
 	std::vector<DeviceDescription *> deviceDescriptions;
 
 	// All intersection devices (including virtual)
 	std::vector<IntersectionDevice *> idevices;
+	// All OpenCL devices
+	std::vector<OpenCLIntersectionDevice *> oclDevices;
 	// Virtual intersection devices
 	std::vector<VirtualM2MHardwareIntersectionDevice *> m2mDevices;
 	std::vector<VirtualM2OHardwareIntersectionDevice *> m2oDevices;

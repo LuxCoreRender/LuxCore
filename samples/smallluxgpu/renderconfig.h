@@ -75,6 +75,8 @@ public:
 	void SaveFilmImage();
 	void SaveFilm();
 
+	void UpdateSceneDataSet() { ctx->UpdateDataSet(); };
+
 	Properties cfg;
 
 	char captionBuffer[512];

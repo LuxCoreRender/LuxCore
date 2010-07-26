@@ -144,6 +144,7 @@ public:
 
 protected:
 	void SetExternalRayBufferQueue(RayBufferQueue *queue);
+	void UpdateDataSet();
 
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);

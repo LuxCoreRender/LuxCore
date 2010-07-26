@@ -58,7 +58,11 @@ public:
 	unsigned int GetTotalVertexCount() const { return totalVertexCount; }
 	unsigned int GetTotalTriangleCount() const { return totalTriangleCount; }
 
+	friend class Context;
 	friend class OpenCLIntersectionDevice;
+
+protected:
+	void UpdateMeshes();
 
 private:
 	const Context *context;
