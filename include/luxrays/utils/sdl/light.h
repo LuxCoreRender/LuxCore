@@ -153,6 +153,9 @@ public:
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
 
+	void SetSunDir(const Vector &dir) { sundir = dir; }
+	const Vector &GetSunDir() const { return sundir; }
+
 	virtual Spectrum Le(const Vector &dir) const;
 	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
 

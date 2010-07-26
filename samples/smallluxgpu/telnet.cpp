@@ -246,7 +246,20 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 								cerr << "[Telnet server] No InfiniteLight defined: " << property << endl;
 							}
-						} else if (property == "scene.skylight.gain") {
+						} else if (property == "scene.skylight.dir") {
+							if (telnetServer->config->scene->infiniteLight &&
+									(telnetServer->config->scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
+								SkyLight *sl = (SkyLight *)telnetServer->config->scene->infiniteLight;
+
+								std::ostream respStream(&response);
+								const Vector &dir = sl->GetSunDir();
+								respStream << dir.x << " " << dir.y << " " << dir.x << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+							}						} else if (property == "scene.skylight.gain") {
 							if (telnetServer->config->scene->infiniteLight &&
 									(telnetServer->config->scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
 								std::ostream respStream(&response);
@@ -334,6 +347,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.camera.up\n";
 						respStream << "scene.infinitelight.gain\n";
 						respStream << "scene.infinitelight.shift\n";
+						respStream << "scene.skylight.dir\n";
 						respStream << "scene.skylight.gain\n";
 						respStream << "scene.skylight.turbidity\n";
 						respStream << "scene.sunlight.dir\n";
@@ -361,6 +375,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.materials.*.* (requires render.stop)\n";
 						respStream << "scene.infinitelight.gain (requires render.stop)\n";
 						respStream << "scene.infinitelight.shift (requires render.stop)\n";
+						respStream << "scene.skylight.dir (requires render.stop)\n";
 						respStream << "scene.skylight.gain (requires render.stop)\n";
 						respStream << "scene.skylight.turbidity (requires render.stop)\n";
 						respStream << "scene.sunlight.dir (requires render.stop)\n";
@@ -536,6 +551,26 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 									cerr << "[Telnet server] Wrong state: " << property << endl;
 								}
+							} else if (propertyName == "scene.skylight.dir") {
+								// Check if we are in the right state
+								if (state == STOP) {
+									if (telnetServer->config->scene->infiniteLight &&
+											(telnetServer->config->scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
+										SkyLight *sl = (SkyLight *)telnetServer->config->scene->infiniteLight;
+										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 1.0");
+										Vector dir(vf.at(0), vf.at(1), vf.at(2));
+										sl->SetSunDir(dir);
+										sl->Init();
+										respStream << "OK\n";
+										boost::asio::write(socket, response);
+									} else {
+										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+										cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+									}
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
 							} else if (propertyName == "scene.skylight.gain") {
 								// Check if we are in the right state
 								if (state == STOP) {
@@ -603,7 +638,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								SunLight *sl = telnetServer->config->scene->GetSunLight();
 
 								if (sl) {
-									const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+									const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 1.0");
 									Vector dir(vf.at(0), vf.at(1), vf.at(2));
 									sl->SetDir(dir);
 									sl->Init();
