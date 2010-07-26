@@ -20,8 +20,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 #
-# SmallLuxGPU v1.6 Blender 2.5 plug-in
-# v0.62dev
+# SmallLuxGPU v1.6beta2 Blender 2.5 plug-in
+# v0.62
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
@@ -87,11 +87,10 @@ class SLGBP:
         SLGBP.warn = ''
 
         # SmallLuxGPU executable path
-        if os.path.isdir(scene.slg_path):
-            SLGBP.slgpath = scene.slg_path + '/slg'
-        elif os.path.isfile(scene.slg_path):
-            SLGBP.slgpath = scene.slg_path
-        else:
+        SLGBP.slgpath = bpy.utils.expandpath(scene.slg_path).replace('\\','/')
+        if os.path.isdir(SLGBP.slgpath):
+            SLGBP.slgpath = SLGBP.slgpath + '/slg'
+        elif not os.path.isfile(SLGBP.slgpath):
             errout("Full path to SmallLuxGPU executable required")
             return False
         if not os.path.exists(SLGBP.slgpath):
@@ -99,7 +98,7 @@ class SLGBP:
             return False
 
         # Scenes files path
-        SLGBP.spath = scene.slg_scene_path.replace('\\','/')
+        SLGBP.spath = bpy.utils.expandpath(scene.slg_scene_path).replace('\\','/')
         if SLGBP.spath.endswith('/'):
             SLGBP.spath = os.path.dirname(SLGBP.spath)
         if not os.path.exists(SLGBP.spath):
@@ -261,7 +260,7 @@ class SLGBP:
             if portal:
                 scn['scene.infinitelight.file'] += '|{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,portal[0].replace('.','_'))
                 if len(portal) > 1:
-                    SLGBP.warn = 'More than one portal material (Shadeless) defined'
+                    SLGBP.warn = 'More than one portal material (Shadeless) defined!'
                     print('WARNING: ' + SLGBP.warn)
             if scene.world.lighting.use_environment_lighting:
                 wle = scene.world.lighting.environment_energy
@@ -326,20 +325,30 @@ class SLGBP:
                 matprop = 'scene.materials.matte.{}'.format(matn)
                 scn[matprop] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
             else:
-                refltype = 'metal' if m.raytrace_mirror.gloss_factor < 1 else 'mirror'
-                gloss = ff(pow(10000.0,m.raytrace_mirror.gloss_factor)) if m.raytrace_mirror.gloss_factor < 1 else ''
-                if m.raytrace_mirror.reflect_factor == 1:
-                    matprop = 'scene.materials.{}.{}'.format(refltype,matn)
-                    scn[matprop] = '{} {} {} {} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),
-                        ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),gloss,m.raytrace_mirror.depth>0)
-                else:
-                    matprop = 'scene.materials.matte{}.{}'.format(refltype,matn)
-                    scn[matprop] = '{} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
+                if m.raytrace_mirror.fresnel > 0:
+                    matprop = 'scene.materials.alloy.{}'.format(matn)
+                    scn[matprop] = '{} {} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
                         ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
-                        gloss,m.raytrace_mirror.depth>0)
-                    if m.diffuse_color.v+m.raytrace_mirror.reflect_factor*m.mirror_color.v > 1.0:
-                        SLGBP.warn = m.name + ': diffuse + reflected color greater than 1.0!'
-                        print('WARNING: ' + SLGBP.warn)
+                        ff(pow(10000.0,m.raytrace_mirror.gloss_factor)),m.raytrace_mirror.fresnel,m.raytrace_mirror.depth>0)
+                else:
+                    if m.raytrace_mirror.gloss_factor < 1:
+                        refltype = 'metal'
+                        gloss = ff(pow(10000.0,m.raytrace_mirror.gloss_factor))
+                    else:
+                        refltype = 'mirror'
+                        gloss = ''
+                    if m.raytrace_mirror.reflect_factor == 1:
+                        matprop = 'scene.materials.{}.{}'.format(refltype,matn)
+                        scn[matprop] = '{} {} {} {} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),
+                            ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),gloss,m.raytrace_mirror.depth>0)
+                    else:
+                        matprop = 'scene.materials.matte{}.{}'.format(refltype,matn)
+                        scn[matprop] = '{} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
+                            ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
+                            gloss,m.raytrace_mirror.depth>0)
+                        if m.diffuse_color.v+m.raytrace_mirror.reflect_factor*m.mirror_color.v > 1.0001:
+                            SLGBP.warn = m.name + ': diffuse + reflected color greater than 1.0!'
+                            print('WARNING: ' + SLGBP.warn)
         return matprop, scn
 
     # Get SLG .scn obj properties
@@ -1009,7 +1018,7 @@ def slg_properties():
 
     StringProperty(attr="slg_scene_path", name="Export scene path",
         description="Full path to directory where the exported scene is created",
-        default="", maxlen=1024, subtype="FILE_PATH")
+        default="", maxlen=1024, subtype="DIR_PATH")
 
     StringProperty(attr="slg_scenename", name="Scene Name",
         description="Name of SmallLuxGPU scene to create",

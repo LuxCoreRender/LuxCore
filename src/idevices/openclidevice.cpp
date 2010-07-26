@@ -561,7 +561,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					mqbvh->nLeafs * sizeof(unsigned int) * 2,
 					memMap);
-
 			deviceDesc->usedMemory += mqbvhMemMapBuff->getInfo<CL_MEM_SIZE>();
 			delete memMap;
 
