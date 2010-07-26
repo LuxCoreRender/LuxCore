@@ -91,6 +91,7 @@ public:
 	std::map<std::string, size_t> materialIndices; // All materials indices
 
 	std::vector<ExtMesh *> objects; // All objects
+	std::map<std::string, size_t> objectIndices; // All object indices
 	std::vector<Material *> objectMaterials; // One for each object
 	std::vector<TexMapInstance *> objectTexMaps; // One for each object
 	std::vector<BumpMapInstance *> objectBumpMaps; // One for each object

@@ -52,7 +52,7 @@ public:
 	~BVHAccel();
 
 	AcceleratorType GetType() const { return ACCEL_BVH; }
-	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+	void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 	const TriangleMeshID GetMeshID(const unsigned int index) const { return preprocessedMeshIDs[index]; }
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }

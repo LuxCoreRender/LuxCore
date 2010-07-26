@@ -111,6 +111,14 @@ void DataSet::Preprocess() {
 	preprocessed = true;
 }
 
+void DataSet::UpdateMeshes() {
+	assert (preprocessed);
+	assert (accelType == ACCEL_MQBVH);
+
+	MQBVHAccel *mqbvh = (MQBVHAccel *)accel;
+	mqbvh->Update();
+}
+
 bool DataSet::Intersect(const Ray *ray, RayHit *hit) const {
 	return accel->Intersect(ray, hit);
 }

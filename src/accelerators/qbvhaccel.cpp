@@ -52,7 +52,7 @@ QBVHAccel::~QBVHAccel() {
 }
 
 
-void QBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+void QBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
 

@@ -117,6 +117,10 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		if (dot2 != std::string::npos)
 			continue;
 
+		const std::string objName = Properties::ExtractField(key, 3);
+		if (objName == "")
+			throw std::runtime_error("Syntax error in " + key);
+
 		// Build the object
 		const std::vector<std::string> args = scnProp->GetStringVector(key, "");
 		const std::string plyFileName = args.at(0);
@@ -126,7 +130,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 			lastPrint = now;
 		}
 		++objCount;
-		//LR_LOG(ctx, "PLY object [" << *objKey << "] file name: " << plyFileName);
+		//LR_LOG(ctx, "PLY object [" << objName << "] file name: " << plyFileName);
 
 		// Check if I have to calculate normal or not
 		const bool usePlyNormals = (scnProp->GetInt(key + ".useplynormals", 0) != 0);
@@ -146,6 +150,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		} else
 			meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals);
 
+		objectIndices[objName] = objects.size();
 		objects.push_back(meshObject);
 
 		// Get the material
@@ -156,7 +161,6 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 			throw std::runtime_error("Unknown material: " + matName);
 		Material *mat = materials[materialIndices[matName]];
 
-		const std::string objName = Properties::ExtractField(key, 3);
 		// Check if it is a light sources
 		if (mat->IsLightSource()) {
 			LR_LOG(ctx, "The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");

@@ -51,12 +51,14 @@ bool MQBVHAccel::MeshPtrCompare(Mesh *p0, Mesh *p1) {
 	return p0 < p1;
 }
 
-void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
 
+	meshList = meshes;
+
 	// Build a QBVH for each mesh
-	nLeafs = meshes.size();
+	nLeafs = meshList.size();
 	LR_LOG(ctx, "MQBVH leaf count: " << nLeafs);
 
 	leafs = new QBVHAccel*[nLeafs];
@@ -73,18 +75,18 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 			lastPrint = now;
 		}
 
-		switch (meshes[i]->GetType()) {
+		switch (meshList[i]->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
 				leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
-				leafs[i]->Init(meshes[i]);
-				accels[meshes[i]] = leafs[i];
+				leafs[i]->Init(meshList[i]);
+				accels[meshList[i]] = leafs[i];
 
 				leafsInvTransform[i] = NULL;
 				break;
 			}
 			case TYPE_TRIANGLE_INSTANCE: {
-				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshes[i];
+				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshList[i];
 
 				// Check if a QBVH has already been created
 				std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.find(itm->GetTriangleMesh());
@@ -103,7 +105,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
-				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshes[i];
+				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshList[i];
 
 				// Check if a QBVH has already been created
 				std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.find(eitm->GetExtTriangleMesh());
@@ -127,20 +129,25 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 
 		leafsOffset[i] = currentOffset;
 
-		for (unsigned int j = 0; j < meshes[i]->GetTotalTriangleCount(); ++j) {
+		for (unsigned int j = 0; j < meshList[i]->GetTotalTriangleCount(); ++j) {
 			meshIDs[currentOffset + j] = i;
 			meshTriangleIDs[currentOffset + j] = j;
 		}
 
-		currentOffset += meshes[i]->GetTotalTriangleCount();
+		currentOffset += meshList[i]->GetTotalTriangleCount();
 	}
 
+	maxNodes = 2 * nLeafs - 1;
+	nodes = AllocAligned<QBVHNode>(maxNodes);
+
+	Update();
+}
+
+void MQBVHAccel::Update() {
 	// Temporary data for building
 	u_int *primsIndexes = new u_int[nLeafs];
 
 	nNodes = 0;
-	maxNodes = 2 * nLeafs - 1;
-	nodes = AllocAligned<QBVHNode>(maxNodes);
 	for (u_int i = 0; i < maxNodes; ++i)
 		nodes[i] = QBVHNode();
 
@@ -158,7 +165,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> meshes, const unsigned int totalV
 		primsIndexes[i] = i;
 
 		// Compute the bounding box for the triangle
-		primsBboxes[i] = meshes[i]->GetBBox();
+		primsBboxes[i] = meshList[i]->GetBBox();
 		primsBboxes[i].Expand(RAY_EPSILON);
 		primsCentroids[i] = (primsBboxes[i].pMin + primsBboxes[i].pMax) * .5f;
 

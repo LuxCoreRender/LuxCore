@@ -624,10 +624,56 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			mqbvhKernel->setArg(6, *mqbvhLeafQuadTrisBuff);
 			mqbvhKernel->setArg(7, *mqbvhInvTransBuff);
 			mqbvhKernel->setArg(8, *mqbvhTrisOffsetBuff);
+
 			break;
 		}
 		default:
 			assert (false);
+	}
+}
+
+void OpenCLIntersectionDevice::UpdateDataSet() {
+	switch (dataSet->GetAcceleratorType()) {
+		case ACCEL_MQBVH: {
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Updating DataSet");
+
+			const MQBVHAccel *mqbvh = (MQBVHAccel *)dataSet->accel;
+
+			// Upload QBVH leafs transformations
+			Matrix4x4 *invTrans = new Matrix4x4[mqbvh->nLeafs];
+			for (unsigned int i = 0; i < mqbvh->nLeafs; ++i) {
+				if (mqbvh->leafsInvTransform[i])
+					invTrans[i] = mqbvh->leafsInvTransform[i]->GetMatrix();
+				else
+					invTrans[i] = Matrix4x4();
+			}
+
+			oclQueue->enqueueWriteBuffer(
+					*mqbvhInvTransBuff,
+					CL_TRUE,
+					0,
+					mqbvh->nLeafs * sizeof(Matrix4x4),
+					invTrans);
+			delete invTrans;
+
+			// Update MQBVH nodes
+			deviceDesc->usedMemory -= mqbvhBuff->getInfo<CL_MEM_SIZE>();
+			delete mqbvhBuff;
+
+			mqbvhBuff = new cl::Buffer(deviceDesc->GetOCLContext(),
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(QBVHNode) * mqbvh->nNodes,
+					mqbvh->nodes);
+			deviceDesc->usedMemory += mqbvhBuff->getInfo<CL_MEM_SIZE>();
+
+			mqbvhKernel->setArg(2, *mqbvhBuff);
+			break;
+		}
+		case ACCEL_BVH:
+		case ACCEL_QBVH:
+		default:
+			assert (false);
+			break;
 	}
 }
 

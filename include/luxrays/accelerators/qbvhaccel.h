@@ -390,7 +390,7 @@ public:
 	BBox WorldBound() const { return worldBound; }
 
 	AcceleratorType GetType() const { return ACCEL_QBVH; }
-	void Init(const std::deque<Mesh *> meshes, const unsigned int totalVertexCount,
+	void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 	const TriangleMeshID GetMeshID(const unsigned int index) const { return meshIDs[index]; }
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return meshTriangleIDs[index]; }
