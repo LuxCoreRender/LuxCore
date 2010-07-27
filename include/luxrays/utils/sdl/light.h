@@ -186,13 +186,15 @@ public:
 	const Vector &GetDir() const { return sundir; }
 	void SetDir(const Vector &dir) { sundir = Normalize(dir); }
 
+	void SetGain(const Spectrum &g);
+	const Spectrum GetGain() const { return gain; }
+
 	Spectrum Le(const Vector &dir) const;
 
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
 		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
-	void SetGain(const Spectrum &g);
 
 protected:
 	Vector sundir;

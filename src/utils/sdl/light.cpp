@@ -222,12 +222,11 @@ void SunLight::Init() {
 
 	RegularSPD LSPD(Ldata, 350,800,91);
 	// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is for compatibility with past scene
-	suncolor = LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
+	suncolor = gain * LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
 }
 
 void SunLight::SetGain(const Spectrum &g) {
 	gain = g;
-	suncolor *= gain;
 }
 
 Spectrum SunLight::Le(const Vector &dir) const {

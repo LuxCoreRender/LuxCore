@@ -278,8 +278,10 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		const float turb = scnProp->GetFloat("scene.skylight.turbidity", 2.2f);
 		std::vector<float> gain = GetParameters(*scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
-		infiniteLight = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		infiniteLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		infiniteLight = sl;
+		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sl->Init();
 
 		useInfiniteLightBruteForce = true;
 	}
@@ -297,6 +299,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 
 		SunLight *sunLight = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sunLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sunLight->Init();
 
 		lights.push_back(sunLight);
 	}

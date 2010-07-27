@@ -326,6 +326,20 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 								cerr << "[Telnet server] No SunLight defined: " << property << endl;
 							}
+						} else if (property == "scene.sunlight.gain") {
+							// Look for the SunLight
+							SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+							if (sl) {
+								std::ostream respStream(&response);
+								const Spectrum &gain = sl->GetGain();
+								respStream << gain.r << " " << gain.g << " " << gain.b << "\n";
+								respStream << "OK\n";
+								boost::asio::write(socket, response);
+							} else {
+								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+							}
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 							cerr << "[Telnet server] Unknown property: " << property << endl;
@@ -353,6 +367,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.skylight.gain\n";
 						respStream << "scene.skylight.turbidity\n";
 						respStream << "scene.sunlight.dir\n";
+						respStream << "scene.sunlight.gain\n";
 						respStream << "scene.sunlight.relsize\n";
 						respStream << "scene.sunlight.turbidity\n";
 						respStream << "OK\n";
@@ -382,6 +397,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.skylight.gain (requires render.stop)\n";
 						respStream << "scene.skylight.turbidity (requires render.stop)\n";
 						respStream << "scene.sunlight.dir (requires render.stop)\n";
+						respStream << "scene.sunlight.gain (requires render.stop)\n";
 						respStream << "scene.sunlight.relsize (requires render.stop)\n";
 						respStream << "scene.sunlight.turbidity (requires render.stop)\n";
 						respStream << "OK\n";
@@ -657,6 +673,21 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 1.0");
 									Vector dir(vf.at(0), vf.at(1), vf.at(2));
 									sl->SetDir(dir);
+									sl->Init();
+									respStream << "OK\n";
+									boost::asio::write(socket, response);
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								}
+							} else if (propertyName == "scene.sunlight.gain") {
+								// Look for the SunLight
+								SunLight *sl = telnetServer->config->scene->GetSunLight();
+
+								if (sl) {
+									const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+									Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
+									sl->SetGain(gain);
 									sl->Init();
 									respStream << "OK\n";
 									boost::asio::write(socket, response);
