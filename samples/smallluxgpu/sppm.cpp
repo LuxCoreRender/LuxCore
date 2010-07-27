@@ -198,7 +198,8 @@ void SPPMDeviceRenderThread::AdvancePhotonPaths(
 						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 						false, &fPdf, specularBounce) * surfaceColor;
 
-				if (!specularBounce)
+				// Skip the first bounce if useDirectLightSampling is enabled
+				if (!specularBounce && (!renderEngine->useDirectLightSampling || (photonPath->depth > 0)))
 					hitPoints->AddFlux(hitPoint, -ray->d, photonPath->flux);
 
 				// Check if we reached the max. depth
@@ -432,6 +433,11 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmM
 	maxPhotonPathDepth = Max(2, cfg.GetInt("sppm.photon.maxdepth", 8));
 
 	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 5000000);
+	useDirectLightSampling = cfg.GetInt("sppm.stochastic.count", 5000000);
+	if (cfg.GetInt("sppm.directlight.enable", 0))
+		useDirectLightSampling = true;
+	else
+		useDirectLightSampling = false;
 
 	startTime = 0.0;
 	hitPoints = NULL;

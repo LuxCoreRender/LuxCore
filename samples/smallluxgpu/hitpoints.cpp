@@ -130,6 +130,12 @@ HitPoints::HitPoints(SPPMRenderEngine *engine) {
 	const unsigned int width = renderEngine->film->GetWidth();
 	const unsigned int height = renderEngine->film->GetHeight();
 	hitPoints = new std::vector<HitPoint>(width * height);
+
+	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
+		HitPoint *hp = &(*hitPoints)[i];
+
+		hp->accumDirectLightRadiance = Spectrum();
+	}
 }
 
 void HitPoints::Init() {
@@ -233,7 +239,10 @@ void HitPoints::AccumulateFlux(const unsigned long long photonTraced,
 		const unsigned int count = hp->constantHitsCount + hp->surfaceHitsCount;
 		if (count > 0) {
 			const double k = 1.0 / (M_PI * hp->accumPhotonRadius2 * photonTraced);
-			hp->radiance = (hp->accumRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
+			if (renderEngine->useDirectLightSampling)
+				hp->radiance = (hp->accumRadiance + hp->accumDirectLightRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
+			else
+				hp->radiance = (hp->accumRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
 		}
 	}
 }
@@ -267,6 +276,7 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 		scene->camera->GenerateRay(scrX, scrY, width, height, &eyePath->ray,
 				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
+		eyePath->state = NEXT_VERTEX;
 		eyePath->pixelIndex = i;
 		eyePath->depth = 0;
 		eyePath->throughput = Spectrum(1.f, 1.f, 1.f);
@@ -315,88 +325,137 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 
 				const RayHit *rayHit = &rayBuffer->GetHitBuffer()[i];
 
-				if (rayHit->Miss()) {
-					// Add an hit point
-					HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
-					hp.type = CONSTANT_COLOR;
-					if (scene->infiniteLight)
-						hp.throughput = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
-					else
-						hp.throughput = Spectrum();
+				if (eyePath->state == DIRECT_LIGHT_SAMPLING) {
+					if (rayHit->Miss()) {
+						// Light source is visible
+						HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
+						hp.accumDirectLightRadiance += eyePath->throughput;
+					}
 
 					// Free the eye path
 					delete *todoEyePathsIterator;
 					todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 					--todoEyePathCount;
 				} else {
-					// Something was hit
-					Point hitPoint;
-					Spectrum surfaceColor;
-					Normal N, shadeN;
-					if (GetHitPointInformation(scene, rndGen, &eyePath->ray, rayHit, hitPoint,
-							surfaceColor, N, shadeN)) {
-						++todoEyePathsIterator;
-						continue;
-					}
-
-					// Get the material
-					const unsigned int currentTriangleIndex = rayHit->index;
-					const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
-					const Material *triMat = scene->objectMaterials[currentMeshIndex];
-
-					if (triMat->IsLightSource()) {
+					if (rayHit->Miss()) {
 						// Add an hit point
 						HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 						hp.type = CONSTANT_COLOR;
-
-						const luxrays::sdl::LightMaterial *mLight = (luxrays::sdl::LightMaterial *)triMat;
-						const luxrays::ExtMesh *mesh = scene->objects[currentMeshIndex];
-						const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
-						hp.throughput = mLight->Le(mesh, triIndex, -eyePath->ray.d) * eyePath->throughput;
+						if (scene->infiniteLight)
+							hp.throughput = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
+						else
+							hp.throughput = Spectrum();
 
 						// Free the eye path
 						delete *todoEyePathsIterator;
 						todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 						--todoEyePathCount;
 					} else {
-						// Build the next vertex path ray
-						const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
+						// Something was hit
+						Point hitPoint;
+						Spectrum surfaceColor;
+						Normal N, shadeN;
+						if (GetHitPointInformation(scene, rndGen, &eyePath->ray, rayHit, hitPoint,
+								surfaceColor, N, shadeN)) {
+							++todoEyePathsIterator;
+							continue;
+						}
 
-						float fPdf;
-						Vector wi;
-						bool specularBounce;
-						const Spectrum f = triSurfMat->Sample_f(-eyePath->ray.d, &wi, N, shadeN,
-								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-								false, &fPdf, specularBounce) * surfaceColor;
-						if ((fPdf <= 0.f) || f.Black()) {
+						// Get the material
+						const unsigned int currentTriangleIndex = rayHit->index;
+						const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
+						const Material *triMat = scene->objectMaterials[currentMeshIndex];
+
+						if (triMat->IsLightSource()) {
 							// Add an hit point
 							HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 							hp.type = CONSTANT_COLOR;
-							hp.throughput = luxrays::Spectrum();
+
+							const luxrays::sdl::LightMaterial *mLight = (luxrays::sdl::LightMaterial *)triMat;
+							const luxrays::ExtMesh *mesh = scene->objects[currentMeshIndex];
+							const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
+							hp.throughput = mLight->Le(mesh, triIndex, -eyePath->ray.d) * eyePath->throughput;
 
 							// Free the eye path
 							delete *todoEyePathsIterator;
 							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
 							--todoEyePathCount;
-						} else if (specularBounce || (!triSurfMat->IsDiffuse())) {
-							++todoEyePathsIterator;
-
-							eyePath->throughput *= f / fPdf;
-							eyePath->ray = Ray(hitPoint, wi);
 						} else {
-							// Add an hit point
-							HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
-							hp.type = SURFACE;
-							hp.material = (SurfaceMaterial *)triMat;
-							hp.throughput = eyePath->throughput * surfaceColor;
-							hp.position = hitPoint;
-							hp.wo = -eyePath->ray.d;
-							hp.normal = shadeN;
+							// Build the next vertex path ray
+							const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
 
-							// Free the eye path
-							delete *todoEyePathsIterator;
-							todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
-							--todoEyePathCount;
+							float fPdf;
+							Vector wi;
+							bool specularBounce;
+							const Spectrum f = triSurfMat->Sample_f(-eyePath->ray.d, &wi, N, shadeN,
+									rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+									false, &fPdf, specularBounce) * surfaceColor;
+							if ((fPdf <= 0.f) || f.Black()) {
+								// Add an hit point
+								HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
+								hp.type = CONSTANT_COLOR;
+								hp.throughput = luxrays::Spectrum();
+
+								// Free the eye path
+								delete *todoEyePathsIterator;
+								todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+								--todoEyePathCount;
+							} else if (specularBounce || (!triSurfMat->IsDiffuse())) {
+								++todoEyePathsIterator;
+
+								eyePath->throughput *= f / fPdf;
+								eyePath->ray = Ray(hitPoint, wi);
+							} else {
+								// Add an hit point
+								HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
+								hp.type = SURFACE;
+								hp.material = (SurfaceMaterial *)triMat;
+								hp.throughput = eyePath->throughput * surfaceColor;
+								hp.position = hitPoint;
+								hp.wo = -eyePath->ray.d;
+								hp.normal = shadeN;
+
+								// Check if direct light sampling is enabled
+								if (renderEngine->useDirectLightSampling) {
+									eyePath->state = DIRECT_LIGHT_SAMPLING;
+
+									// Select the light to sample
+									const unsigned int currentLightIndex = scene->SampleLights(rndGen->floatValue());
+									const LightSource *light = scene->lights[currentLightIndex];
+
+									// Select a point on the light surface
+									float lightPdf;
+									Spectrum lightColor = light->Sample_L(
+											scene, hitPoint, &shadeN,
+											rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+											&lightPdf, &eyePath->ray);
+
+									if (lightPdf <= 0.0f) {
+										// Free the eye path
+										delete *todoEyePathsIterator;
+										todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+										--todoEyePathCount;
+									} else {
+										lightColor *= hp.throughput * Dot(shadeN, eyePath->ray.d) *
+												triSurfMat->f(hp.wo, eyePath->ray.d, shadeN);
+
+										if (lightColor.Black()) {
+											// Free the eye path
+											delete *todoEyePathsIterator;
+											todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+											--todoEyePathCount;
+										} else {
+											++todoEyePathsIterator;
+											eyePath->throughput = lightColor * scene->lights.size() / lightPdf;
+										}
+									}
+								} else {
+									// Free the eye path
+									delete *todoEyePathsIterator;
+									todoEyePathsIterator = todoEyePaths.erase(todoEyePathsIterator);
+									--todoEyePathCount;
+								}
+							}
 						}
 					}
 				}

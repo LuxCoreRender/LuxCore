@@ -132,6 +132,7 @@ private:
 	unsigned int maxEyePathDepth;
 	unsigned int maxPhotonPathDepth;
 	unsigned int stochasticInterval;
+	bool useDirectLightSampling;
 
 	vector<IntersectionDevice *> intersectionDevices;
 	vector<SPPMRenderThread *> renderThreads;
