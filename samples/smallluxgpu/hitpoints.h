@@ -34,8 +34,14 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 using namespace luxrays::utils;
 
+enum EyePathStateType {
+	NEXT_VERTEX, DIRECT_LIGHT_SAMPLING
+};
+
 class EyePath {
 public:
+	EyePathStateType state;
+
 	// Screen information
 	unsigned int pixelIndex;
 
@@ -80,11 +86,14 @@ public:
 	float accumPhotonRadius2;
 	unsigned int accumPhotonCount;
 	Spectrum accumReflectedFlux;
+	// Used only for direct light sampling
+	Spectrum accumDirectLightRadiance;
 
 	Spectrum accumRadiance;
 
 	unsigned int constantHitsCount;
 	unsigned int surfaceHitsCount;
+
 	Spectrum radiance;
 };
 
