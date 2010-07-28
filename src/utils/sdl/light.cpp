@@ -541,7 +541,7 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float
 	mesh->Sample(triIndex, u0, u1, &orig, &b0, &b1, &b2);
 
 	// Ray direction
-	const Normal &sampleN = mesh->GetNormal(triIndex, 0);; // Light sources are supposed to be flat
+	const Normal &sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
 	Vector dir = UniformSampleSphere(u2, u3);
 	float RdotN = Dot(dir, sampleN);
 	if (RdotN < 0.f) {
