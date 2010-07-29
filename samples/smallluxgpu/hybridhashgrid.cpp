@@ -336,8 +336,7 @@ void HybridHashGrid::HHGKdTree::AddFlux(const luxrays::Point &p,
 			continue;
 
 		AtomicInc(&hp->accumPhotonCount);
-		luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
-				dot * hp->throughput;
+		luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) * hp->throughput;
 		AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
 		AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
 		AtomicAdd(&hp->accumReflectedFlux.b, flux.b);

@@ -401,8 +401,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 		// Direct light sampling: trace shadow rays
 
 		switch (renderEngine->lightStrategy) {
-			case ALL_UNIFORM:
-			{
+			case ALL_UNIFORM: {
 				// ALL UNIFORM direct sampling light strategy
 				const Spectrum lightTroughtput = throughput * surfaceColor;
 
@@ -434,8 +433,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 
 				break;
 			}
-			case ONE_UNIFORM:
-			{
+			case ONE_UNIFORM: {
 				// ONE UNIFORM direct sampling light strategy
 				const Spectrum lightTroughtput = throughput * surfaceColor;
 

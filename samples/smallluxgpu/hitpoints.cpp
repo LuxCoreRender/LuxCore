@@ -131,10 +131,22 @@ HitPoints::HitPoints(SPPMRenderEngine *engine) {
 	const unsigned int height = renderEngine->film->GetHeight();
 	hitPoints = new std::vector<HitPoint>(width * height);
 
+		// Initialize hit points field
 	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
 		HitPoint *hp = &(*hitPoints)[i];
 
+		hp->photonCount = 0;
+		hp->reflectedFlux = Spectrum();
+
+		// hp->accumPhotonRadius2 is initialized in the Init() method
+		hp->accumPhotonCount = 0;
+		hp->accumReflectedFlux = Spectrum();
 		hp->accumDirectLightRadiance = Spectrum();
+
+		hp->accumRadiance = Spectrum();
+		hp->constantHitsCount = 0;
+		hp->surfaceHitsCount = 0;
+		hp->radiance = Spectrum();
 	}
 }
 
@@ -165,17 +177,7 @@ void HitPoints::Init() {
 	for (unsigned int i = 0; i < (*hitPoints).size(); ++i) {
 		HitPoint *hp = &(*hitPoints)[i];
 
-		hp->photonCount = 0;
-		hp->reflectedFlux = Spectrum();
-
 		hp->accumPhotonRadius2 = photonRadius2;
-		hp->accumPhotonCount = 0;
-		hp->accumReflectedFlux = Spectrum();
-
-		hp->accumRadiance = Spectrum();
-		hp->constantHitsCount = 0;
-		hp->surfaceHitsCount = 0;
-		hp->radiance = Spectrum();
 	}
 
 	// Allocate hit points lookup accelerator

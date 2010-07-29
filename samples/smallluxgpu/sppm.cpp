@@ -430,7 +430,7 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmM
 
 	photonAlpha = Clamp(cfg.GetFloat("sppm.photon.alpha", 0.7f), 0.f, 1.f);
 	photonStartRadiusScale = Max(0.f, cfg.GetFloat("sppm.photon.startradiusscale", 1.f));
-	maxPhotonPathDepth = Max(2, cfg.GetInt("sppm.photon.maxdepth", 8));
+	maxPhotonPathDepth = Max(0, cfg.GetInt("sppm.photon.maxdepth", 8));
 
 	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 5000000);
 	useDirectLightSampling = cfg.GetInt("sppm.stochastic.count", 5000000);
