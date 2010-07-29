@@ -20,8 +20,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 #
-# SmallLuxGPU v1.6beta2 Blender 2.5 plug-in
-# v0.62
+# SmallLuxGPU v1.6beta3 Blender 2.5 plug-in
+# v0.63dev
 # Source: http://www.luxrender.net/forum/viewforum.php?f=34
 
 import bpy
@@ -72,7 +72,7 @@ class SLGBP:
     scn = {}
     sun = None
     live = liveanim = False
-    LIVECFG, LIVESCN, LIVEMTL, LIVEALL = 1, 2, 4, 7
+    LIVECFG, LIVESCN, LIVEMTL, LIVEOBJ, LIVEALL = 1, 2, 4, 8, 15
     livemat = None
     liveact = 0
     slgproc = thread = None
@@ -380,20 +380,21 @@ class SLGBP:
                     matn = name = plyn
                     m = obj
 
-                scn['scene.objects.{}.{}'.format(matn,name)] = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,plyn)
-                if scene.slg_vnormals:
-                    scn['scene.objects.{}.{}.useplynormals'.format(matn,name)] = '1'
-                if scene.slg_vuvs and m:
-                    texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
-                    if texmap:
-                        scn['scene.objects.{}.{}.texmap'.format(matn,name)] = bpy.utils.expandpath(texmap.texture.image.filepath).replace('\\','/')
-                    texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
-                    if texbump:
-                        if texbump.texture.normal_map:
-                            scn['scene.objects.{}.{}.normalmap'.format(matn,name)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
-                        else:
-                            scn['scene.objects.{}.{}.bumpmap'.format(matn,name)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
-                            scn['scene.objects.{}.{}.bumpmap.scale'.format(matn,name)] = ff(texbump.normal_factor)
+                if not SLGBP.live:
+                    scn['scene.objects.{}.{}'.format(matn,name)] = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,plyn)
+                    if scene.slg_vnormals:
+                        scn['scene.objects.{}.{}.useplynormals'.format(matn,name)] = '1'
+                    if scene.slg_vuvs and m:
+                        texmap = next((ts for ts in m.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
+                        if texmap:
+                            scn['scene.objects.{}.{}.texmap'.format(matn,name)] = bpy.utils.expandpath(texmap.texture.image.filepath).replace('\\','/')
+                        texbump = next((ts for ts in m.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
+                        if texbump:
+                            if texbump.texture.normal_map:
+                                scn['scene.objects.{}.{}.normalmap'.format(matn,name)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
+                            else:
+                                scn['scene.objects.{}.{}.bumpmap'.format(matn,name)] = bpy.utils.expandpath(texbump.texture.image.filepath).replace('\\','/')
+                                scn['scene.objects.{}.{}.bumpmap.scale'.format(matn,name)] = ff(texbump.normal_factor)
         return scn
 
     # Export obj/mat .ply files
@@ -418,7 +419,7 @@ class SLGBP:
             if not obj.hide_render:
                 if obj.type in rendertypes and inscenelayer(obj):
                     # Mesh instances
-                    if obj.data.users > 1 and not obj.modifiers:
+                    if obj.slg_forceinst or (obj.data.users > 1 and not obj.modifiers):
                         if obj.data in instobjs:
                             if obj.data.materials:
                                 for i in range(len(obj.data.materials)):
@@ -745,6 +746,11 @@ class SLGBP:
                 for k in scn:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
                         wasreset = True
+            if act & SLGBP.LIVEOBJ > 0:
+                scn = SLGBP.getobjscn(scene)
+                for k in scn:
+                    if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
+                        wasreset = True
             if wasreset:
                 SLGBP.telnet.send('render.start')
 
@@ -782,9 +788,9 @@ def info_callback(context):
             SLGBP.abort = True
             return
         if not SLGBP.liveanim:
-            # If frame is unchanged check only base SCN
+            # If frame is unchanged check only base SCN and OBJ
             if SLGBP.curframe == context.scene.frame_current:
-                SLGBP.livetrigger(context.scene, SLGBP.LIVESCN)
+                SLGBP.livetrigger(context.scene, SLGBP.LIVESCN|SLGBP.LIVEOBJ)
             # Else could be frame skip / playback where anything can change
             else:
                 SLGBP.curframe = context.scene.frame_current
@@ -1270,6 +1276,11 @@ def slg_properties():
         description="SmallLuxGPU - Force export of PLY (mesh data) related to this material",
         default=False)
 
+    # Add Objet Force Instance
+    bpy.types.Object.BoolProperty(attr="slg_forceinst", name="SLG Force Instance",
+        description="SmallLuxGPU - Force export of instance for this object",
+        default=False)
+
     # Use some of the existing panels
     import properties_render
     properties_render.RENDER_PT_render.COMPAT_ENGINES.add('SMALLLUXGPU_RENDER')
@@ -1327,6 +1338,11 @@ def slg_forceply(self, context):
         if SLGBP.live:
             SLGBP.livemat = context.material
             SLGBP.livetrigger(context.scene, SLGBP.LIVEMTL)
+
+# Add Object Force Instance on Object panel
+def slg_forceinst(self, context):
+    if context.scene.render.engine == 'SMALLLUXGPU_RENDER':
+        self.layout.split().column().prop(context.object, "slg_forceinst")
 
 def slg_livescn(self, context):
     if context.scene.render.engine == 'SMALLLUXGPU_RENDER':
@@ -1532,6 +1548,7 @@ def register():
     bpy.types.register(SmallLuxGPURender)
     bpy.types.DATA_PT_camera.append(slg_lensradius)
     bpy.types.MATERIAL_PT_diffuse.append(slg_forceply)
+    bpy.types.OBJECT_PT_transform.append(slg_forceinst)
     bpy.types.WORLD_PT_environment_lighting.append(slg_livescn)
     bpy.types.TEXTURE_PT_mapping.append(slg_livescn)
     bpy.types.DATA_PT_sunsky.append(slg_livescn)
@@ -1546,6 +1563,7 @@ def unregister():
     bpy.types.unregister(SmallLuxGPURender)
     bpy.types.DATA_PT_camera.remove(slg_lensradius)
     bpy.types.MATERIAL_PT_diffuse.remove(slg_forceply)
+    bpy.types.OBJECT_PT_transform.remove(slg_forceinst)
     bpy.types.WORLD_PT_environment_lighting.remove(slg_livescn)
     bpy.types.TEXTURE_PT_mapping.remove(slg_livescn)
     bpy.types.DATA_PT_sunsky.remove(slg_livescn)
