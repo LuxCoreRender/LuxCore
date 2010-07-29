@@ -231,6 +231,9 @@ public:
 		const float u0, const float u1, const float u2, const float u3,
 		const float u4, float *pdf, Ray *ray) const;
 
+	void Init(const std::vector<ExtMesh *> &objs);
+	unsigned int GetMeshIndex() const { return meshIndex; }
+
 private:
 	const AreaLightMaterial *lightMaterial;
 	unsigned int meshIndex, triIndex;
