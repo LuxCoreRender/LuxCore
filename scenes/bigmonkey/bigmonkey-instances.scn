@@ -25,3 +25,4 @@ scene.objects.redmatte.m9.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0
 scene.objects.redmatte.m10 = scenes/bigmonkey/bigmonkey.ply
 scene.objects.redmatte.m10.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  8.0 2.0 2.0 1.0
 scene.objects.whitelight.l1 = scenes/bigmonkey/bigmonkey-lights.ply
+scene.objects.whitelight.l1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -4.0 0.0 0.0 1.0

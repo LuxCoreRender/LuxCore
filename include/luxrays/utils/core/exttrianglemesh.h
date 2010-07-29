@@ -185,7 +185,7 @@ public:
 	bool HasUVs() const { return mesh->HasUVs(); }
 
 	Normal GetNormal(const unsigned index) const { return Normalize(trans(mesh->GetNormal(index))); }
-	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return Normalize(trans(GetNormal(triIndex, vertIndex))); }
+	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return Normalize(trans(mesh->GetNormal(triIndex, vertIndex))); }
 	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
 	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }
 
