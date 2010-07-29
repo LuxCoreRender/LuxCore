@@ -492,6 +492,10 @@ TriangleLight::TriangleLight(const AreaLightMaterial *mat, const unsigned int ms
 	meshIndex = mshIndex;
 	triIndex = triangleIndex;
 
+	Init(objs);
+}
+
+void TriangleLight::Init(const std::vector<ExtMesh *> &objs) {
 	const ExtMesh *mesh = objs[meshIndex];
 	area = mesh->GetTriangleArea(triIndex);
 }

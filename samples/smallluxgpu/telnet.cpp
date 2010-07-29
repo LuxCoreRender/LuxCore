@@ -774,7 +774,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									if (iter == scene->objectIndices.end())
 										throw std::runtime_error("Unknown object name: " + objName);
 
-									ExtMesh *obj = scene->objects[iter->second];
+									const unsigned int meshIndex = iter->second;
+									ExtMesh *obj = scene->objects[meshIndex];
 
 									// Check if the object is an instance
 									if (obj->GetType() != TYPE_EXT_TRIANGLE_INSTANCE)
@@ -792,6 +793,19 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 									ExtInstanceTriangleMesh *iObj = (ExtInstanceTriangleMesh *)obj;
 									iObj->SetTransformation(trans);
+
+									// Check if it is a light source
+									if (scene->objectMaterials[meshIndex]->IsLightSource()) {
+										// Have to update all light source using this mesh
+										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+											if (scene->lights[i]->GetType() == luxrays::sdl::TYPE_TRIANGLE) {
+												TriangleLight *tl = (TriangleLight *)scene->lights[i];
+
+												if (tl->GetMeshIndex() == meshIndex)
+													tl->Init(scene->objects);
+											}
+										}
+									}
 
 									// Update the DataSet
 									telnetServer->config->UpdateSceneDataSet();
