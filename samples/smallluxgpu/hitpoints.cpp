@@ -422,8 +422,8 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 									eyePath->state = DIRECT_LIGHT_SAMPLING;
 
 									// Select the light to sample
-									const unsigned int currentLightIndex = scene->SampleLights(rndGen->floatValue());
-									const LightSource *light = scene->lights[currentLightIndex];
+									float lightSlectionPdf;
+									const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightSlectionPdf);
 
 									// Select a point on the light surface
 									float lightPdf;
@@ -448,7 +448,7 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 											--todoEyePathCount;
 										} else {
 											++todoEyePathsIterator;
-											eyePath->throughput = lightColor * scene->lights.size() / lightPdf;
+											eyePath->throughput = lightColor / (lightPdf * lightSlectionPdf);
 										}
 									}
 								} else {

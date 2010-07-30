@@ -433,7 +433,6 @@ SPPMRenderEngine::SPPMRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmM
 	maxPhotonPathDepth = Max(0, cfg.GetInt("sppm.photon.maxdepth", 8));
 
 	stochasticInterval = cfg.GetInt("sppm.stochastic.count", 5000000);
-	useDirectLightSampling = cfg.GetInt("sppm.stochastic.count", 5000000);
 	if (cfg.GetInt("sppm.directlight.enable", 0))
 		useDirectLightSampling = true;
 	else
