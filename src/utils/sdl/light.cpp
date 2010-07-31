@@ -325,7 +325,7 @@ Spectrum InfiniteLight::Sample_L(const Scene *scene, const float u0, const float
 	// Compute InfiniteAreaLight ray weight
 	Vector toCenter = Normalize(worldCenter - p1);
 	const float costheta = AbsDot(toCenter, ray->d);
-	*pdf = costheta / (4.f * M_PI * worldRadius * worldRadius);
+	*pdf = costheta / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
 	return Le(-ray->d);
 }
