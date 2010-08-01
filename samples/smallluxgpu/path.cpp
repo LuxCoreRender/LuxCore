@@ -397,7 +397,9 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 	}
 
 	tracedShadowRayCount = 0;
-	if (triSurfMat->IsDiffuse() && (scene->lights.size() > 0)) {
+	const bool skipInfiniteLight = !renderEngine->onlySampleSpecular;
+	const unsigned int lightCount = scene->GetLightCount(skipInfiniteLight);
+	if (triSurfMat->IsDiffuse() && (scene->GetLightCount(skipInfiniteLight) > 0)) {
 		// Direct light sampling: trace shadow rays
 
 		switch (renderEngine->lightStrategy) {
@@ -405,9 +407,9 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 				// ALL UNIFORM direct sampling light strategy
 				const Spectrum lightTroughtput = throughput * surfaceColor;
 
-				for (unsigned int j = 0; j < scene->lights.size(); ++j) {
+				for (unsigned int j = 0; j < lightCount; ++j) {
 					// Select the light to sample
-					const LightSource *light = scene->lights[j];
+					const LightSource *light = scene->GetLight(j, skipInfiniteLight);
 
 					for (unsigned int i = 0; i < renderEngine->shadowRayCount; ++i) {
 						// Select a point on the light surface
@@ -430,7 +432,6 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 							tracedShadowRayCount++;
 					}
 				}
-
 				break;
 			}
 			case ONE_UNIFORM: {
@@ -439,8 +440,9 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 
 				for (unsigned int i = 0; i < renderEngine->shadowRayCount; ++i) {
 					// Select the light to sample
-					const unsigned int currentLightIndex = scene->SampleLights(sample.GetLazyValue());
-					const LightSource *light = scene->lights[currentLightIndex];
+					float lightStrategyPdf;
+					const LightSource *light = scene->SampleAllLights(sample.GetLazyValue(),
+							&lightStrategyPdf, skipInfiniteLight);
 
 					// Select a point on the light surface
 					lightColor[tracedShadowRayCount] = light->Sample_L(
@@ -448,24 +450,18 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 							sample.GetLazyValue(), sample.GetLazyValue(), sample.GetLazyValue(),
 							&lightPdf[tracedShadowRayCount], &shadowRay[tracedShadowRayCount]);
 
-					if (lightPdf[tracedShadowRayCount] <= 0.0f)
+					if (lightPdf[tracedShadowRayCount] <= 0.f)
 						continue;
 
 					const Vector lwi = shadowRay[tracedShadowRayCount].d;
 					lightColor[tracedShadowRayCount] *= lightTroughtput * Dot(shadeN, lwi) *
 							triSurfMat->f(wo, lwi, shadeN);
 
-					if (!lightColor[tracedShadowRayCount].Black())
+					if (!lightColor[tracedShadowRayCount].Black()) {
+						lightPdf[i] *= lightStrategyPdf * renderEngine->shadowRayCount;
 						tracedShadowRayCount++;
+					}
 				}
-
-				// Update the light pdf according the number of shadow ray traced
-				const float lightStrategyPdf = static_cast<float> (tracedShadowRayCount) / static_cast<float> (scene->lights.size());
-				for (unsigned int i = 0; i < tracedShadowRayCount; ++i) {
-					// Scale light pdf for ONE_UNIFORM strategy
-					lightPdf[i] *= lightStrategyPdf;
-				}
-
 				break;
 			}
 			default:
@@ -500,8 +496,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 	if (depth > renderEngine->rrDepth) {
 		// Russian Roulette
 		switch (renderEngine->rrStrategy) {
-			case PROBABILITY:
-			{
+			case PROBABILITY: {
 				if (renderEngine->rrProb >= sample.GetLazyValue())
 					throughput /= renderEngine->rrProb;
 				else {
@@ -519,8 +514,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 				}
 				break;
 			}
-			case IMPORTANCE:
-			{
+			case IMPORTANCE: {
 				const float prob = Max(throughput.Filter(), renderEngine->rrImportanceCap);
 				if (prob >= sample.GetLazyValue())
 					throughput /= prob;
