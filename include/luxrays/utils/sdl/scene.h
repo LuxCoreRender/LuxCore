@@ -42,15 +42,25 @@ public:
 	Scene(Context *ctx, const std::string &fileName, const int accelType = -1);
 	~Scene();
 
-	unsigned int SampleLights(const float u) const {
-		// One Uniform light strategy
-		const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lights.size() * u), lights.size() - 1);
-
-		return lightIndex;
+	unsigned int GetLightCount(bool skipInfiniteLight = false) const {
+		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight)
+			return lights.size() + 1;
+		else
+			return lights.size();
 	}
 
-	LightSource *SampleAllLights(const float u, float *pdf) const {
-		if (useInfiniteLightBruteForce && infiniteLight) {
+	LightSource *GetLight(unsigned int index, bool skipInfiniteLight = false) const {
+		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {
+			if (index == lights.size())
+				return infiniteLight;
+			else
+				return lights[index];
+		} else
+			return lights[index];
+	}
+
+	LightSource *SampleAllLights(const float u, float *pdf, bool skipInfiniteLight = false) const {
+		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {
 			const unsigned int lightCount = lights.size() + 1;
 			const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lightCount * u), lights.size());
 

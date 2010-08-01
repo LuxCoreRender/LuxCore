@@ -238,13 +238,13 @@ void HitPoints::AccumulateFlux(const unsigned long long photonTraced,
 				assert (false);
 		}
 
-		const unsigned int count = hp->constantHitsCount + hp->surfaceHitsCount;
-		if (count > 0) {
+		const unsigned int hitCount = hp->constantHitsCount + hp->surfaceHitsCount;
+		if (hitCount > 0) {
 			const double k = 1.0 / (M_PI * hp->accumPhotonRadius2 * photonTraced);
 			if (renderEngine->useDirectLightSampling)
-				hp->radiance = (hp->accumRadiance + hp->accumDirectLightRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
+				hp->radiance = (hp->accumRadiance + hp->accumDirectLightRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / hitCount;
 			else
-				hp->radiance = (hp->accumRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / count;
+				hp->radiance = (hp->accumRadiance + hp->surfaceHitsCount * hp->reflectedFlux * k) / hitCount;
 		}
 	}
 }

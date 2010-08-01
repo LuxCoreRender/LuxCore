@@ -71,8 +71,8 @@ void SingleScatteringIntegrator::GenerateLiRays(const SLGScene *scene, Sample *s
 			Lv += lightEmission;
 			if (!sig_s.Black() && (scene->lights.size() > 0)) {
 				// Select the light to sample
-				const unsigned int currentLightIndex = scene->SampleLights(sample->GetLazyValue());
-				const LightSource *light = scene->lights[currentLightIndex];
+				float lightStrategyPdf;
+				const LightSource *light = scene->SampleAllLights(sample->GetLazyValue(), &lightStrategyPdf);
 
 				// Select a point on the light surface
 				float lightPdf;
@@ -82,7 +82,7 @@ void SingleScatteringIntegrator::GenerateLiRays(const SLGScene *scene, Sample *s
 
 				if ((lightPdf > 0.f) && !lightColor.Black()) {
 					comp->scatteredLight[comp->rayCount] = Tr * sig_s * lightColor *
-							(scene->lights.size() * step / (4.f * M_PI * lightPdf));
+							(step / (4.f * M_PI * lightPdf * lightStrategyPdf));
 					comp->rayCount++;
 				}
 			}
