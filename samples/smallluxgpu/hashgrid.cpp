@@ -37,7 +37,7 @@ HashGrid::~HashGrid() {
 
 void HashGrid::RefreshMutex() {
 	const unsigned int hitPointsCount = hitPoints->GetSize();
-	const luxrays::BBox &hpBBox = hitPoints->GetBBox();
+	const BBox &hpBBox = hitPoints->GetBBox();
 
 	// Calculate the size of the grid cell
 	const float maxPhotonRadius2 = hitPoints->GetMaxPhotonRaidus2();
@@ -62,21 +62,21 @@ void HashGrid::RefreshMutex() {
 	std::cerr << "Building hit points hash grid:" << std::endl;
 	std::cerr << "  0k/" << hitPointsCount / 1000 << "k" <<std::endl;
 	//unsigned int maxPathCount = 0;
-	double lastPrintTime = luxrays::WallClockTime();
+	double lastPrintTime = WallClockTime();
 	unsigned long long entryCount = 0;
 	for (unsigned int i = 0; i < hitPointsCount; ++i) {
-		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
+		if (WallClockTime() - lastPrintTime > 2.0) {
 			std::cerr << "  " << i / 1000 << "k/" << hitPointsCount / 1000 << "k" <<std::endl;
-			lastPrintTime = luxrays::WallClockTime();
+			lastPrintTime = WallClockTime();
 		}
 
 		HitPoint *hp = hitPoints->GetHitPoint(i);
 
 		if (hp->type == SURFACE) {
 			const float photonRadius = sqrtf(hp->accumPhotonRadius2);
-			const luxrays::Vector rad(photonRadius, photonRadius, photonRadius);
-			const luxrays::Vector bMin = ((hp->position - rad) - hpBBox.pMin) * invCellSize;
-			const luxrays::Vector bMax = ((hp->position + rad) - hpBBox.pMin) * invCellSize;
+			const Vector rad(photonRadius, photonRadius, photonRadius);
+			const Vector bMin = ((hp->position - rad) - hpBBox.pMin) * invCellSize;
+			const Vector bMax = ((hp->position + rad) - hpBBox.pMin) * invCellSize;
 
 			for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); iz++) {
 				for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); iy++) {
@@ -111,10 +111,10 @@ void HashGrid::RefreshMutex() {
 	}*/
 }
 
-void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
-		const luxrays::Spectrum &photonFlux) {
+void HashGrid::AddFlux(const Point &hitPoint, const Vector &wi,
+		const Spectrum &photonFlux) {
 	// Look for eye path hit points near the current hit point
-	luxrays::Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
+	Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
 	const int ix = abs(int(hh.x));
 	const int iy = abs(int(hh.y));
 	const int iz = abs(int(hh.z));
@@ -125,16 +125,16 @@ void HashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi
 		while (iter != hps->end()) {
 			HitPoint *hp = *iter++;
 
-			const float dist2 = luxrays::DistanceSquared(hp->position, hitPoint);
+			const float dist2 = DistanceSquared(hp->position, hitPoint);
 			if ((dist2 >  hp->accumPhotonRadius2))
 				continue;
 
-			const float dot = luxrays::Dot(hp->normal, wi);
+			const float dot = Dot(hp->normal, wi);
 			if (dot <= 0.0001f)
 				continue;
 
 			AtomicInc(&hp->accumPhotonCount);
-			luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) * hp->throughput;
+			Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) * hp->throughput;
 			AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
 			AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
 			AtomicAdd(&hp->accumReflectedFlux.b, flux.b);

@@ -60,9 +60,9 @@ void KdTree::RecursiveBuild(const unsigned int nodeNum, const unsigned int start
 
 	// Choose split direction and partition data
 	// Compute bounds of data from start to end
-	luxrays::BBox bound;
+	BBox bound;
 	for (unsigned int i = start; i < end; ++i)
-		bound = luxrays::Union(bound, buildNodes[i]->position);
+		bound = Union(bound, buildNodes[i]->position);
 	unsigned int splitAxis = bound.MaximumExtent();
 	unsigned int splitPos = (start + end) / 2;
 
@@ -101,7 +101,7 @@ void KdTree::RefreshMutex() {
 	maxDistSquared = 0.f;
 	for (unsigned int i = 0; i < nNodes; ++i)  {
 		buildNodes.push_back(hitPoints->GetHitPoint(i));
-		maxDistSquared = luxrays::Max(maxDistSquared, buildNodes[i]->accumPhotonRadius2);
+		maxDistSquared = Max(maxDistSquared, buildNodes[i]->accumPhotonRadius2);
 	}
 	std::cerr << "kD-Tree search radius: " << sqrtf(maxDistSquared) << std::endl;
 
@@ -109,8 +109,8 @@ void KdTree::RefreshMutex() {
 	assert (nNodes == nextFreeNode);
 }
 
-void KdTree::AddFlux(const luxrays::Point &p,
-	const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+void KdTree::AddFlux(const Point &p,
+	const Vector &wi, const Spectrum &photonFlux) {
 	unsigned int nodeNumStack[64];
 	// Start from the first node
 	nodeNumStack[0] = 0;
@@ -139,16 +139,16 @@ void KdTree::AddFlux(const luxrays::Point &p,
 
 		// Process the leaf
 		HitPoint *hp = nodeData[nodeNum];
-		const float dist2 = luxrays::DistanceSquared(hp->position, p);
+		const float dist2 = DistanceSquared(hp->position, p);
 		if (dist2 > hp->accumPhotonRadius2)
 			continue;
 
-		const float dot = luxrays::Dot(hp->normal, wi);
+		const float dot = Dot(hp->normal, wi);
 		if (dot <= 0.0001f)
 			continue;
 
 		AtomicInc(&hp->accumPhotonCount);
-		luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) * hp->throughput;
+		Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) * hp->throughput;
 		AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
 		AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
 		AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
