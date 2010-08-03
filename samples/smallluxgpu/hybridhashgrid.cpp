@@ -38,7 +38,7 @@ HybridHashGrid::~HybridHashGrid() {
 
 void HybridHashGrid::RefreshMutex() {
 	const unsigned int hitPointsCount = hitPoints->GetSize();
-	const luxrays::BBox &hpBBox = hitPoints->GetBBox();
+	const BBox &hpBBox = hitPoints->GetBBox();
 
 	// Calculate the size of the grid cell
 	const float maxPhotonRadius2 = hitPoints->GetMaxPhotonRaidus2();
@@ -68,21 +68,21 @@ void HybridHashGrid::RefreshMutex() {
 	std::cerr << "Building hit points hybrid hash grid:" << std::endl;
 	std::cerr << "  0k/" << hitPointsCount / 1000 << "k" <<std::endl;
 	unsigned int maxPathCount = 0;
-	double lastPrintTime = luxrays::WallClockTime();
+	double lastPrintTime = WallClockTime();
 	unsigned long long entryCount = 0;
 	for (unsigned int i = 0; i < hitPointsCount; ++i) {
-		if (luxrays::WallClockTime() - lastPrintTime > 2.0) {
+		if (WallClockTime() - lastPrintTime > 2.0) {
 			std::cerr << "  " << i / 1000 << "k/" << hitPointsCount / 1000 << "k" <<std::endl;
-			lastPrintTime = luxrays::WallClockTime();
+			lastPrintTime = WallClockTime();
 		}
 
 		HitPoint *hp = hitPoints->GetHitPoint(i);
 
 		if (hp->type == SURFACE) {
 			const float photonRadius = sqrtf(hp->accumPhotonRadius2);
-			const luxrays::Vector rad(photonRadius, photonRadius, photonRadius);
-			const luxrays::Vector bMin = ((hp->position - rad) - hpBBox.pMin) * invCellSize;
-			const luxrays::Vector bMax = ((hp->position + rad) - hpBBox.pMin) * invCellSize;
+			const Vector rad(photonRadius, photonRadius, photonRadius);
+			const Vector bMin = ((hp->position - rad) - hpBBox.pMin) * invCellSize;
+			const Vector bMax = ((hp->position + rad) - hpBBox.pMin) * invCellSize;
 
 			const int ixMin = Clamp<int>(int(bMin.x), 0, maxHashIndexX);
 			const int ixMax = Clamp<int>(int(bMax.x), 0, maxHashIndexX);
@@ -165,10 +165,10 @@ void HybridHashGrid::RefreshParallel(const unsigned int index, const unsigned in
 	}*/
 }
 
-void HybridHashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
-		const luxrays::Spectrum &photonFlux) {
+void HybridHashGrid::AddFlux(const Point &hitPoint, const Vector &wi,
+		const Spectrum &photonFlux) {
 	// Look for eye path hit points near the current hit point
-	luxrays::Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
+	Vector hh = (hitPoint - hitPoints->GetBBox().pMin) * invCellSize;
 	const int ix = int(hh.x);
 	if ((ix < 0) || (ix > maxHashIndexX))
 			return;
@@ -184,24 +184,24 @@ void HybridHashGrid::AddFlux(const luxrays::Point &hitPoint, const luxrays::Vect
 		hc->AddFlux(hitPoint, wi, photonFlux);
 }
 
-void HybridHashGrid::HashCell::AddFlux(const luxrays::Point &hitPoint, const luxrays::Vector &wi,
-		const luxrays::Spectrum &photonFlux) {
+void HybridHashGrid::HashCell::AddFlux(const Point &hitPoint, const Vector &wi,
+		const Spectrum &photonFlux) {
 	switch (type) {
 		case LIST: {
 			std::list<HitPoint *>::iterator iter = list->begin();
 			while (iter != list->end()) {
 				HitPoint *hp = *iter++;
 
-				const float dist2 = luxrays::DistanceSquared(hp->position, hitPoint);
+				const float dist2 = DistanceSquared(hp->position, hitPoint);
 				if ((dist2 >  hp->accumPhotonRadius2))
 					continue;
 
-				const float dot = luxrays::Dot(hp->normal, wi);
-				if (dot <= luxrays::RAY_EPSILON)
+				const float dot = Dot(hp->normal, wi);
+				if (dot <= RAY_EPSILON)
 					continue;
 
 				AtomicInc(&hp->accumPhotonCount);
-				luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
+				Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) *
 						dot * hp->throughput;
 				AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
 				AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
@@ -235,7 +235,7 @@ HybridHashGrid::HHGKdTree::HHGKdTree(std::list<HitPoint *> *hps, const unsigned 
 	std::list<HitPoint *>::iterator iter = hps->begin();
 	for (unsigned int i = 0; i < nNodes; ++i)  {
 		buildNodes.push_back(*iter++);
-		maxDistSquared = luxrays::Max(maxDistSquared, buildNodes[i]->accumPhotonRadius2);
+		maxDistSquared = Max(maxDistSquared, buildNodes[i]->accumPhotonRadius2);
 	}
 	//std::cerr << "kD-Tree search radius: " << sqrtf(maxDistSquared) << std::endl;
 
@@ -272,9 +272,9 @@ void HybridHashGrid::HHGKdTree::RecursiveBuild(const unsigned int nodeNum, const
 
 	// Choose split direction and partition data
 	// Compute bounds of data from start to end
-	luxrays::BBox bound;
+	BBox bound;
 	for (unsigned int i = start; i < end; ++i)
-		bound = luxrays::Union(bound, buildNodes[i]->position);
+		bound = Union(bound, buildNodes[i]->position);
 	unsigned int splitAxis = bound.MaximumExtent();
 	unsigned int splitPos = (start + end) / 2;
 
@@ -297,8 +297,8 @@ void HybridHashGrid::HHGKdTree::RecursiveBuild(const unsigned int nodeNum, const
 	}
 }
 
-void HybridHashGrid::HHGKdTree::AddFlux(const luxrays::Point &p, 
-	const luxrays::Vector &wi, const luxrays::Spectrum &photonFlux) {
+void HybridHashGrid::HHGKdTree::AddFlux(const Point &p, 
+	const Vector &wi, const Spectrum &photonFlux) {
 	unsigned int nodeNumStack[64];
 	// Start from the first node
 	nodeNumStack[0] = 0;
@@ -327,16 +327,16 @@ void HybridHashGrid::HHGKdTree::AddFlux(const luxrays::Point &p,
 
 		// Process the leaf
 		HitPoint *hp = nodeData[nodeNum];
-		const float dist2 = luxrays::DistanceSquared(hp->position, p);
+		const float dist2 = DistanceSquared(hp->position, p);
 		if (dist2 > hp->accumPhotonRadius2)
 			continue;
 
-		const float dot = luxrays::Dot(hp->normal, wi);
+		const float dot = Dot(hp->normal, wi);
 		if (dot <= 0.0001f)
 			continue;
 
 		AtomicInc(&hp->accumPhotonCount);
-		luxrays::Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) * hp->throughput;
+		Spectrum flux = photonFlux * hp->material->f(hp->wo, wi, hp->normal) * hp->throughput;
 		AtomicAdd(&hp->accumReflectedFlux.r, flux.r);
 		AtomicAdd(&hp->accumReflectedFlux.g, flux.g);
 		AtomicAdd(&hp->accumReflectedFlux.b, flux.b);
