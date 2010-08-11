@@ -20,10 +20,10 @@
  ***************************************************************************/
 
 #include "renderconfig.h"
-#include "path.h"
+#include "path/path.h"
+#include "sppm/sppm.h"
 
 #include "luxrays/utils/film/film.h"
-#include "sppm.h"
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 

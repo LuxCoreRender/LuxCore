@@ -20,8 +20,8 @@
  ***************************************************************************/
 
 #include "smalllux.h"
-#include "hitpoints.h"
-#include "sppm.h"
+#include "sppm/hitpoints.h"
+#include "sppm/sppm.h"
 
 bool GetHitPointInformation(const Scene *scene, RandomGenerator *rndGen,
 		Ray *ray, const RayHit *rayHit, Point &hitPoint,

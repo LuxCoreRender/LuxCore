@@ -25,7 +25,7 @@
 #include "smalllux.h"
 #include "slgscene.h"
 #include "renderengine.h"
-#include "hitpoints.h"
+#include "sppm/hitpoints.h"
 
 #include "luxrays/core/intersectiondevice.h"
 
