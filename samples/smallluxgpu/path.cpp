@@ -458,7 +458,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 							triSurfMat->f(wo, lwi, shadeN);
 
 					if (!lightColor[tracedShadowRayCount].Black()) {
-						lightPdf[i] *= lightStrategyPdf * renderEngine->shadowRayCount;
+						lightPdf[tracedShadowRayCount] *= lightStrategyPdf * renderEngine->shadowRayCount;
 						tracedShadowRayCount++;
 					}
 				}
