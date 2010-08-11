@@ -32,8 +32,8 @@
 #include "renderconfig.h"
 
 #include "luxrays/utils/film/film.h"
-#include "path.h"
-#include "sppm.h"
+#include "path/path.h"
+#include "sppm/sppm.h"
 
 RenderingConfig *config;
 

@@ -81,20 +81,21 @@ endif(DOXYGEN_FOUND)
 #############################################################################
 
 include_directories(${LUXRAYS_INCLUDE_DIR})
+include_directories(".")
 link_directories (${LUXRAYS_LIB_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 
 set(SMALLLUXGPU_SRCS
 	displayfunc.cpp
-    hashgrid.cpp
-    hybridhashgrid.cpp
-    hitpoints.cpp
-    kdtree.cpp
-	path.cpp
+	path/path.cpp
 	renderconfig.cpp
 	slgscene.cpp
 	smallluxgpu.cpp
-    sppm.cpp
+    sppm/hashgrid.cpp
+    sppm/hybridhashgrid.cpp
+    sppm/hitpoints.cpp
+    sppm/kdtree.cpp
+    sppm/sppm.cpp
 	telnet.cpp
 	volume.cpp)
 

@@ -30,7 +30,7 @@
 #include "luxrays/core/pixel/samplebuffer.h"
 
 #include "smalllux.h"
-#include "path.h"
+#include "path/path.h"
 #include "renderconfig.h"
 #include "displayfunc.h"
 

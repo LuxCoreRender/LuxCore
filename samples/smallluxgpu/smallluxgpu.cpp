@@ -33,8 +33,8 @@
 #include "smalllux.h"
 #include "displayfunc.h"
 #include "renderconfig.h"
-#include "path.h"
-#include "sppm.h"
+#include "path/path.h"
+#include "sppm/sppm.h"
 #include "telnet.h"
 #include "luxrays/core/device.h"
 

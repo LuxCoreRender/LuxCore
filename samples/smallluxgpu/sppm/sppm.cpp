@@ -30,10 +30,10 @@
 #include "luxrays/core/pixel/samplebuffer.h"
 
 #include "smalllux.h"
-#include "sppm.h"
+#include "sppm/sppm.h"
 #include "renderconfig.h"
 #include "displayfunc.h"
-#include "hitpoints.h"
+#include "sppm/hitpoints.h"
 
 //------------------------------------------------------------------------------
 // SPPMRenderThread

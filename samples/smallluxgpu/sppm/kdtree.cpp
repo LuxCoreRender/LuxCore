@@ -20,7 +20,7 @@
  ***************************************************************************/
 
 #include "smalllux.h"
-#include "hitpoints.h"
+#include "sppm/hitpoints.h"
 
 KdTree::KdTree(HitPoints *hps) {
 	hitPoints = hps;
