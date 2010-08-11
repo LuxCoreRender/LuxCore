@@ -425,7 +425,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), nodeImageWidth, nodeImageHeight, 0, inodes);
 					deviceDesc->usedMemory += qbvhImageBuff->getInfo<CL_MEM_SIZE>();
 
-					delete inodes;
+					delete[] inodes;
 				}
 
 				{
