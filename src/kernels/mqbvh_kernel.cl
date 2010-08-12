@@ -65,7 +65,7 @@ typedef struct {
     float m[4][4];
 } Matrix4x4;
 
-static void TransformP(Point *ptrans, Point *p, __global Matrix4x4 *m) {
+void TransformP(Point *ptrans, Point *p, __global Matrix4x4 *m) {
     const float x = p->x;
     const float y = p->y;
     const float z = p->z;
@@ -80,7 +80,7 @@ static void TransformP(Point *ptrans, Point *p, __global Matrix4x4 *m) {
     ptrans->z /= w;
 }
 
-static void TransformV(Vector *ptrans, Vector *p, __global Matrix4x4 *m) {
+void TransformV(Vector *ptrans, Vector *p, __global Matrix4x4 *m) {
     const float x = p->x;
     const float y = p->y;
     const float z = p->z;
@@ -99,7 +99,7 @@ static void TransformV(Vector *ptrans, Vector *p, __global Matrix4x4 *m) {
 
 // Using invDir0/invDir1/invDir2 and sign0/sign1/sign2 instead of an
 // array because I dont' trust OpenCL compiler =)
-static int4 QBVHNode_BBoxIntersect(
+int4 QBVHNode_BBoxIntersect(
         const float4 bboxes_minX, const float4 bboxes_maxX,
         const float4 bboxes_minY, const float4 bboxes_maxY,
         const float4 bboxes_minZ, const float4 bboxes_maxZ,
@@ -125,7 +125,7 @@ static int4 QBVHNode_BBoxIntersect(
 	return  (tMax >= tMin);
 }
 
-static void QuadTriangle_Intersect(
+void QuadTriangle_Intersect(
     const float4 origx, const float4 origy, const float4 origz,
     const float4 edge1x, const float4 edge1y, const float4 edge1z,
     const float4 edge2x, const float4 edge2y, const float4 edge2z,
@@ -207,7 +207,7 @@ static void QuadTriangle_Intersect(
 	rayHit->index = index;
 }
 
-static void LeafIntersect(
+void LeafIntersect(
 		const Ray *ray,
 		RayHit *rayHit,
 		__global QBVHNode *nodes,

@@ -41,15 +41,15 @@ typedef struct {
 	Spectrum radiance;
 } SampleBufferElem;
 
-static int Ceil2Int(const float val) {
+int Ceil2Int(const float val) {
 	return (int)ceil(val);
 }
 
-static int Floor2Int(const float val) {
+int Floor2Int(const float val) {
 	return (int)floor(val);
 }
 
-static void AddSample(__global SamplePixel *sp, const float4 sample) {
+void AddSample(__global SamplePixel *sp, const float4 sample) {
     float4 weight = (float4)(sample.w, sample.w, sample.w, 1.f);
     __global float4 *p = (__global float4 *)sp;
     *p += weight * sample;

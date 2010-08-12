@@ -32,15 +32,15 @@ typedef Spectrum Pixel;
 
 #define GAMMA_TABLE_SIZE 1024u
 
-static float Clamp(float val, float low, float high) {
+float Clamp(float val, float low, float high) {
 	return (val > low) ? ((val < high) ? val : high) : low;
 }
 
-static unsigned int Floor2UInt(const float val) {
+unsigned int Floor2UInt(const float val) {
 	return (val > 0.f) ? ((unsigned int)floor(val)) : 0;
 }
 
-static float Radiance2PixelFloat(
+float Radiance2PixelFloat(
 		const float x,
 		__constant float *gammaTable) {
 	//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);

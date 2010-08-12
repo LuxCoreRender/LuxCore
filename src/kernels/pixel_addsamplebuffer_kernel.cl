@@ -35,7 +35,7 @@ typedef struct {
 	Spectrum radiance;
 } SampleBufferElem;
 
-static void AddSample(__global SamplePixel *sp, const float4 sample) {
+void AddSample(__global SamplePixel *sp, const float4 sample) {
     __global float4 *p = (__global float4 *)sp;
     *p += sample;
 }

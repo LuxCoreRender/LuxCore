@@ -70,7 +70,7 @@ typedef struct {
 
 // Using invDir0/invDir1/invDir2 and sign0/sign1/sign2 instead of an
 // array because I dont' trust OpenCL compiler =)
-static int4 QBVHNode_BBoxIntersect(
+int4 QBVHNode_BBoxIntersect(
         const float4 bboxes_minX, const float4 bboxes_maxX,
         const float4 bboxes_minY, const float4 bboxes_maxY,
         const float4 bboxes_minZ, const float4 bboxes_maxZ,
@@ -96,7 +96,7 @@ static int4 QBVHNode_BBoxIntersect(
 	return  (tMax >= tMin);
 }
 
-static void QuadTriangle_Intersect(
+void QuadTriangle_Intersect(
     const float4 origx, const float4 origy, const float4 origz,
     const float4 edge1x, const float4 edge1y, const float4 edge1z,
     const float4 edge2x, const float4 edge2y, const float4 edge2z,

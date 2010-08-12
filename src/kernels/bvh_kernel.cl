@@ -53,7 +53,7 @@ typedef struct {
 	unsigned int skipIndex;
 } BVHAccelArrayNode;
 
-static void TriangleIntersect(
+void TriangleIntersect(
 		const float4 rayOrig,
 		const float4 rayDir,
 		const float minT,
@@ -112,7 +112,7 @@ static void TriangleIntersect(
 	*hitIndex = currentIndex;
 }
 
-static int BBoxIntersectP(
+int BBoxIntersectP(
 		const float4 rayOrig, const float4 invRayDir,
 		const float mint, const float maxt,
 		const float4 pMin, const float4 pMax) {
