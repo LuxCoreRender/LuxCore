@@ -821,7 +821,7 @@ void PathDeviceRenderThread::Start() {
 	// Set renderThread priority
 	bool res = SetThreadRRPriority(renderThread);
 	if (res && !reportedPermissionError) {
-		cerr << "[PathNativeRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
+		cerr << "[PathDeviceRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
 		reportedPermissionError = true;
 	}
 }

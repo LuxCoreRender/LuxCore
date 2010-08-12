@@ -34,6 +34,7 @@
 #include "luxrays/utils/film/film.h"
 #include "path/path.h"
 #include "sppm/sppm.h"
+#include "pathgpu/pathgpu.h"
 
 RenderingConfig *config;
 
@@ -91,8 +92,10 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "n, m", "dec./inc. the screen refresh");
 	PrintHelpString(320, fontOffset, "0", "direct lighting rendering");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "1", "path tracing rendering");
+	PrintHelpString(15, fontOffset, "1", "path CPU/GPU rendering");
 	PrintHelpString(320, fontOffset, "2", "SPPM rendering");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "3", "path tracing GPU rendering");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -167,6 +170,19 @@ static void PrintHelpAndSettings() {
 			glRasterPos2i(20, fontOffset);
 			break;
 		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case PATHGPU: {
+			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+
+			sprintf(buf, "[PathGPU RE]Max path depth %d][RR Depth %d]",
+					pre->maxPathDepth,
+					pre->rrDepth);
+			PrintString(GLUT_BITMAP_8_BY_13, buf);
+			fontOffset -= 15;
+			glRasterPos2i(20, fontOffset);
+			break;
+		}
+#endif
 		default:
 			assert (false);
 	}
@@ -394,6 +410,9 @@ void keyFunc(unsigned char key, int x, int y) {
 		case '2':
 			config->SetRenderingEngineType(SPPM);
 			break;
+		case '3':
+			config->SetRenderingEngineType(PATHGPU);
+			break;
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
@@ -513,6 +532,7 @@ void timerFunc(int value) {
 
 	switch (config->GetRenderEngine()->GetEngineType()) {
 		case DIRECTLIGHT:
+		case PATHGPU:
 		case PATH: {
 			const double sampleSec = config->film->GetAvgSampleSec();
 			sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",

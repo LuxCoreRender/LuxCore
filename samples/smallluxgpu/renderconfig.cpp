@@ -22,6 +22,7 @@
 #include "renderconfig.h"
 #include "path/path.h"
 #include "sppm/sppm.h"
+#include "pathgpu/pathgpu.h"
 
 #include "luxrays/utils/film/film.h"
 
@@ -167,6 +168,9 @@ void RenderingConfig::Init() {
 		case 2:
 			renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, true, cfg);
 			break;
+		case 3:
+			renderEngine = new PathGPURenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
+			break;
 		default:
 			assert (false);
 	}
@@ -215,6 +219,9 @@ void RenderingConfig::SetRenderingEngineType(const RenderEngineType type) {
 				break;
 			case DIRECTLIGHT:
 				renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, true, cfg);
+				break;
+			case PATHGPU:
+				renderEngine = new PathGPURenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
 				break;
 			default:
 				assert (false);
@@ -322,7 +329,6 @@ void RenderingConfig::SetUpNativeDevices(const unsigned int nativeThreadCount) {
 		else
 			selectedDescs.push_back(descs[descs.size() - 1]);
 	}
-
 
 	if (selectedDescs.size() == 0)
 		cerr << "No Native thread device selected" << endl;

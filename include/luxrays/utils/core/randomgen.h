@@ -66,7 +66,6 @@ public:
 	}
 
 private:
-
 	inline unsigned long LCG(const unsigned long n) {
 		return 69069UL * n; // The result is clamped to 32 bits (long)
 	}

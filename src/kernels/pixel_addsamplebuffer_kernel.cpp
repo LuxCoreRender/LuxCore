@@ -37,7 +37,7 @@ std::string luxrays::KernelSource_Pixel_AddSampleBuffer =
 "	Spectrum radiance;\n"
 "} SampleBufferElem;\n"
 "\n"
-"static void AddSample(__global SamplePixel *sp, const float4 sample) {\n"
+"void AddSample(__global SamplePixel *sp, const float4 sample) {\n"
 "    __global float4 *p = (__global float4 *)sp;\n"
 "    *p += sample;\n"
 "}\n"
