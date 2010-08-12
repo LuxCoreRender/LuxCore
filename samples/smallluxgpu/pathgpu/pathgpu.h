@@ -37,6 +37,8 @@ class PathGPURenderEngine;
 // Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
+#define PATHGPU_PATH_COUNT 65536
+
 class PathGPURenderThread {
 public:
 	PathGPURenderThread(unsigned int index, PathGPURenderEngine *re);
@@ -75,6 +77,14 @@ private:
 	static void RenderThreadImpl(PathGPUDeviceRenderThread *renderThread);
 
 	OpenCLIntersectionDevice *intersectionDevice;
+
+	// OpenCL variables
+	cl::Kernel *initKernel;
+	size_t initWorkGroupSize;
+	cl::Kernel *advancePathKernel;
+	size_t advancePathWorkGroupSize;
+	cl::Buffer *raysBuff;
+	cl::Buffer *hitsBuff;
 
 	float samplingStart;
 
