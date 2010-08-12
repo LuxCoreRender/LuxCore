@@ -195,7 +195,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_BVH = " >> ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/bvh_kernel.cl
    )
@@ -203,7 +203,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_QBVH = " >> ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/qbvh_kernel.cl
    )
@@ -211,7 +211,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_MQBVH = " >> ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/mqbvh_kernel.cl
    )
@@ -219,7 +219,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_Pixel_ClearFB = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearfb_kernel.cl
    )
@@ -227,7 +227,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_Pixel_ClearSampleFB = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_clearsamplefb_kernel.cl
    )
@@ -235,7 +235,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_Pixel_UpdateFrameBuffer = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_updateframebuffer_kernel.cl
    )
@@ -243,7 +243,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_Pixel_AddSampleBuffer = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffer_kernel.cl
    )
@@ -251,7 +251,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_Pixel_AddSampleBufferPreview = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebufferpreview_kernel.cl
    )
@@ -259,7 +259,7 @@ add_custom_command(
    OUTPUT ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cpp
    COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_Pixel_AddSampleBufferGaussian2x2 = " >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cpp
-   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >>  ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cpp
+   COMMAND cat ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cpp
    COMMAND echo "\;" >> ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cpp
    MAIN_DEPENDENCY ${LUXRAYS_SOURCE_DIR}/kernels/pixel_addsamplebuffergaussian2x2_kernel.cl
    )

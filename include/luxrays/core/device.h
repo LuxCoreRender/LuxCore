@@ -124,7 +124,7 @@ public:
 		oclType(GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE>())),
 		deviceIndex(devIndex),
 		computeUnits(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()),
-		maxMemory(device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>()),
+		maxMemory(device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>()),
 		usedMemory(0),
 		forceWorkGroupSize(0),
 		oclDevice(device),
@@ -139,6 +139,8 @@ public:
 	int GetComputeUnits() const { return computeUnits; }
 	size_t GetMaxMemory() const { return maxMemory; }
 	size_t GetUsedMemory() const { return usedMemory; }
+	void AllocMemory(size_t s) const { usedMemory += s; }
+	void FreeMemory(size_t s) const { usedMemory -= s; }
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 
 	bool HasImageSupport() const { return oclDevice.getInfo<CL_DEVICE_IMAGE_SUPPORT>(); }
@@ -184,7 +186,8 @@ protected:
 	OpenCLDeviceType oclType;
 	size_t deviceIndex;
 	int computeUnits;
-	size_t maxMemory, usedMemory;
+	size_t maxMemory;
+	mutable size_t usedMemory;
 
 	// The use of this field is not multi-thread safe (i.e. OpenCLDeviceDescription
 	// is shared among all threads)

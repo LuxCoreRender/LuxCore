@@ -74,6 +74,21 @@ if(DOXYGEN_FOUND)
         add_custom_target(apidoc_slg DEPENDS ${DOXYGEN_SLG_OUTPUT})
 endif(DOXYGEN_FOUND)
 
+###########################################################################
+#
+# Generate LuxRays kernel files
+#
+###########################################################################
+
+add_custom_command(
+   OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
+   MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
+   )
+
 #############################################################################
 #
 # SLG binary
@@ -88,6 +103,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 set(SMALLLUXGPU_SRCS
 	displayfunc.cpp
 	path/path.cpp
+	pathgpu/kernels/pathgpu_kernel.cpp
 	pathgpu/pathgpu.cpp
 	renderconfig.cpp
 	slgscene.cpp

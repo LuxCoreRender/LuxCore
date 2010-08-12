@@ -405,7 +405,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 		switch (renderEngine->lightStrategy) {
 			case ALL_UNIFORM: {
 				// ALL UNIFORM direct sampling light strategy
-				const Spectrum lightTroughtput = throughput * surfaceColor;
+				const Spectrum lightThroughtput = throughput * surfaceColor;
 
 				for (unsigned int j = 0; j < lightCount; ++j) {
 					// Select the light to sample
@@ -425,7 +425,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 							continue;
 
 						const Vector lwi = shadowRay[tracedShadowRayCount].d;
-						lightColor[tracedShadowRayCount] *= lightTroughtput * Dot(shadeN, lwi) *
+						lightColor[tracedShadowRayCount] *= lightThroughtput * Dot(shadeN, lwi) *
 								triSurfMat->f(wo, lwi, shadeN);
 
 						if (!lightColor[tracedShadowRayCount].Black())
@@ -436,7 +436,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 			}
 			case ONE_UNIFORM: {
 				// ONE UNIFORM direct sampling light strategy
-				const Spectrum lightTroughtput = throughput * surfaceColor;
+				const Spectrum lightThroughtput = throughput * surfaceColor;
 
 				for (unsigned int i = 0; i < renderEngine->shadowRayCount; ++i) {
 					// Select the light to sample
@@ -454,7 +454,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 						continue;
 
 					const Vector lwi = shadowRay[tracedShadowRayCount].d;
-					lightColor[tracedShadowRayCount] *= lightTroughtput * Dot(shadeN, lwi) *
+					lightColor[tracedShadowRayCount] *= lightThroughtput * Dot(shadeN, lwi) *
 							triSurfMat->f(wo, lwi, shadeN);
 
 					if (!lightColor[tracedShadowRayCount].Black()) {

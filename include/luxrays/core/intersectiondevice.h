@@ -142,6 +142,15 @@ public:
 
 	static size_t RayBufferSize;
 
+	//--------------------------------------------------------------------------
+	// Interface for GPU only applications
+	//--------------------------------------------------------------------------
+
+	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
+	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
+	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
+	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
+
 protected:
 	void SetExternalRayBufferQueue(RayBufferQueue *queue);
 	void UpdateDataSet();

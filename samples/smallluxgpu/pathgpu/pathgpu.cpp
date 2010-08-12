@@ -33,6 +33,7 @@
 
 #include "smalllux.h"
 #include "pathgpu/pathgpu.h"
+#include "pathgpu/kernels/kernels.h"
 #include "renderconfig.h"
 #include "displayfunc.h"
 
@@ -61,6 +62,11 @@ PathGPUDeviceRenderThread::PathGPUDeviceRenderThread(const unsigned int index, c
 	reportedPermissionError = false;
 
 	renderThread = NULL;
+
+	initKernel = NULL;
+	advancePathKernel = NULL;
+	raysBuff = NULL;
+	hitsBuff = NULL;
 }
 
 PathGPUDeviceRenderThread::~PathGPUDeviceRenderThread() {
@@ -71,9 +77,81 @@ PathGPUDeviceRenderThread::~PathGPUDeviceRenderThread() {
 void PathGPUDeviceRenderThread::Start() {
 	PathGPURenderThread::Start();
 
-	/*const unsigned int startLine = Clamp<unsigned int>(
+	const unsigned int startLine = Clamp<unsigned int>(
 			renderEngine->film->GetHeight() * samplingStart,
-			0, renderEngine->film->GetHeight() - 1);*/
+			0, renderEngine->film->GetHeight() - 1);
+
+	// Compile kernels
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
+
+	// Compile sources
+	cl::Program::Sources source(1, std::make_pair(KernelSource_PathGPU.c_str(), KernelSource_PathGPU.length()));
+	cl::Program program = cl::Program(oclContext, source);
+
+	// Set #define symbols
+	stringstream ss;
+	ss << "-I." <<
+			" -D PARAM_STARTLINE=" << startLine <<
+			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
+			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
+			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight()
+			;
+
+	try {
+		VECTOR_CLASS<cl::Device> buildDevice;
+		buildDevice.push_back(oclDevice);
+		program.build(buildDevice, ss.str().c_str());
+	} catch (cl::Error err) {
+		cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
+
+		throw err;
+	}
+
+	initKernel = new cl::Kernel(program, "Init");
+	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
+	cl_ulong memSize;
+	initKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU Init kernel memory footprint: " << memSize << endl;
+
+	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
+
+	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
+	}
+
+	advancePathKernel = new cl::Kernel(program, "AdvancePaths");
+	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathWorkGroupSize << endl;
+	advancePathKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel memory footprint: " << memSize << endl;
+
+	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << advancePathWorkGroupSize << endl;
+
+	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		advancePathWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << advancePathWorkGroupSize << endl;
+	}
+
+	// Allocate buffers
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	raysBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY,
+			sizeof(Ray) * PATHGPU_PATH_COUNT);
+	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	hitsBuff = new cl::Buffer(oclContext,
+			CL_MEM_WRITE_ONLY,
+			sizeof(RayHit) * PATHGPU_PATH_COUNT);
+	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathGPUDeviceRenderThread::RenderThreadImpl, this));
@@ -99,6 +177,15 @@ void PathGPUDeviceRenderThread::Stop() {
 		renderThread = NULL;
 	}
 
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+	deviceDesc->FreeMemory(raysBuff->getInfo<CL_MEM_SIZE>());
+	delete raysBuff;
+	deviceDesc->FreeMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
+	delete hitsBuff;
+
+	delete initKernel;
+	delete advancePathKernel;
+
 	PathGPURenderThread::Stop();
 }
 
@@ -108,6 +195,8 @@ void PathGPUDeviceRenderThread::ClearPaths() {
 
 void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *renderThread) {
 	cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
+
+	// Initialize the path buffer
 
 	try {
 		while (!boost::this_thread::interruption_requested()) {
@@ -146,6 +235,18 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 
 	if (oclIntersectionDevices.size() < 1)
 		throw runtime_error("Unable to find an OpenCL intersection device for PathGPU render engine");
+
+	const unsigned long seedBase = (unsigned long)(WallClockTime() / 1000.0);
+
+	// Create and start render threads
+	const size_t renderThreadCount = oclIntersectionDevices.size();
+	cerr << "Starting "<< renderThreadCount << " PathGPU render threads" << endl;
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		PathGPUDeviceRenderThread *t = new PathGPUDeviceRenderThread(
+				i, seedBase, i / (float)renderThreadCount,
+				samplePerPixel, oclIntersectionDevices[i], this);
+		renderThreads.push_back(t);
+	}
 }
 
 PathGPURenderEngine::~PathGPURenderEngine() {
@@ -153,17 +254,28 @@ PathGPURenderEngine::~PathGPURenderEngine() {
 		Interrupt();
 		Stop();
 	}
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		delete renderThreads[i];
 }
 
 void PathGPURenderEngine::Start() {
 	RenderEngine::Start();
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Start();
 }
 
 void PathGPURenderEngine::Interrupt() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
 }
 
 void PathGPURenderEngine::Stop() {
 	RenderEngine::Stop();
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Stop();
 }
 
 void PathGPURenderEngine::Reset() {
@@ -171,11 +283,16 @@ void PathGPURenderEngine::Reset() {
 }
 
 unsigned int PathGPURenderEngine::GetPass() const {
-	return 0;
+	unsigned int pass = 0;
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		pass += renderThreads[i]->GetPass();
+
+	return pass;
 }
 
 unsigned int PathGPURenderEngine::GetThreadCount() const {
-	return oclIntersectionDevices.size();
+	return renderThreads.size();
 }
 
 #endif
