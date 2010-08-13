@@ -248,8 +248,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			deviceDesc->usedMemory += bvhBuff->getInfo<CL_MEM_SIZE>();
 
 			// Set arguments
-			bvhKernel->setArg(0, *raysBuff);
-			bvhKernel->setArg(1, *hitsBuff);
 			bvhKernel->setArg(2, *vertsBuff);
 			bvhKernel->setArg(3, *trisBuff);
 			bvhKernel->setArg(4, dataSet->GetTotalTriangleCount());
@@ -441,8 +439,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				}
 
 				// Set arguments
-				qbvhImageKernel->setArg(0, *raysBuff);
-				qbvhImageKernel->setArg(1, *hitsBuff);
 				qbvhImageKernel->setArg(2, *qbvhImageBuff);
 				qbvhImageKernel->setArg(3, *qbvhTrisImageBuff);
 				qbvhImageKernel->setArg(5, 24 * qbvhImageWorkGroupSize * sizeof(cl_int), NULL);
@@ -462,8 +458,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				deviceDesc->usedMemory += qbvhTrisBuff->getInfo<CL_MEM_SIZE>();
 
 				// Set arguments
-				qbvhKernel->setArg(0, *raysBuff);
-				qbvhKernel->setArg(1, *hitsBuff);
 				qbvhKernel->setArg(2, *qbvhBuff);
 				qbvhKernel->setArg(3, *qbvhTrisBuff);
 				qbvhKernel->setArg(5, 24 * qbvhWorkGroupSize * sizeof(cl_int), NULL);
@@ -616,15 +610,12 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			deviceDesc->usedMemory += mqbvhTrisOffsetBuff->getInfo<CL_MEM_SIZE>();
 
 			// Set arguments
-			mqbvhKernel->setArg(0, *raysBuff);
-			mqbvhKernel->setArg(1, *hitsBuff);
 			mqbvhKernel->setArg(2, *mqbvhBuff);
 			mqbvhKernel->setArg(4, *mqbvhMemMapBuff);
 			mqbvhKernel->setArg(5, *mqbvhLeafBuff);
 			mqbvhKernel->setArg(6, *mqbvhLeafQuadTrisBuff);
 			mqbvhKernel->setArg(7, *mqbvhInvTransBuff);
 			mqbvhKernel->setArg(8, *mqbvhTrisOffsetBuff);
-
 			break;
 		}
 		default:
@@ -719,6 +710,8 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 
 	switch (dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH: {
+			bvhKernel->setArg(0, *raysBuff);
+			bvhKernel->setArg(1, *hitsBuff);
 			bvhKernel->setArg(7, (unsigned int)rayBuffer->GetRayCount());
 			oclQueue->enqueueNDRangeKernel(*bvhKernel, cl::NullRange,
 				cl::NDRange(rayBuffer->GetSize()), cl::NDRange(bvhWorkGroupSize));
@@ -726,10 +719,14 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 		}
 		case ACCEL_QBVH: {
 			if (qbvhUseImage) {
+				qbvhImageKernel->setArg(0, *raysBuff);
+				qbvhImageKernel->setArg(1, *hitsBuff);
 				qbvhImageKernel->setArg(4, (unsigned int)rayBuffer->GetRayCount());
 				oclQueue->enqueueNDRangeKernel(*qbvhImageKernel, cl::NullRange,
 					cl::NDRange(rayBuffer->GetSize()), cl::NDRange(qbvhImageWorkGroupSize));
 			} else {
+				qbvhKernel->setArg(0, *raysBuff);
+				qbvhKernel->setArg(1, *hitsBuff);
 				qbvhKernel->setArg(4, (unsigned int)rayBuffer->GetRayCount());
 				oclQueue->enqueueNDRangeKernel(*qbvhKernel, cl::NullRange,
 					cl::NDRange(rayBuffer->GetSize()), cl::NDRange(qbvhWorkGroupSize));
@@ -737,6 +734,8 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 			break;
 		}
 		case ACCEL_MQBVH: {
+			mqbvhKernel->setArg(0, *raysBuff);
+			mqbvhKernel->setArg(1, *hitsBuff);
 			mqbvhKernel->setArg(3, (unsigned int)rayBuffer->GetRayCount());
 			oclQueue->enqueueNDRangeKernel(*mqbvhKernel, cl::NullRange,
 				cl::NDRange(rayBuffer->GetSize()), cl::NDRange(mqbvhWorkGroupSize));
@@ -753,6 +752,48 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 			0,
 			sizeof(RayHit) * rayBuffer->GetRayCount(),
 			rayBuffer->GetHitBuffer(), NULL, event);
+}
+
+void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const unsigned int rayCount) {
+	switch (dataSet->GetAcceleratorType()) {
+		case ACCEL_BVH: {
+			bvhKernel->setArg(0, rBuff);
+			bvhKernel->setArg(1, hBuff);
+			bvhKernel->setArg(7, rayCount);
+			oclQueue->enqueueNDRangeKernel(*bvhKernel, cl::NullRange,
+				cl::NDRange(rayCount), cl::NDRange(bvhWorkGroupSize));
+			break;
+		}
+		case ACCEL_QBVH: {
+			if (qbvhUseImage) {
+				qbvhImageKernel->setArg(0, rBuff);
+				qbvhImageKernel->setArg(1, hBuff);
+				qbvhImageKernel->setArg(4, rayCount);
+				oclQueue->enqueueNDRangeKernel(*qbvhImageKernel, cl::NullRange,
+					cl::NDRange(rayCount), cl::NDRange(qbvhImageWorkGroupSize));
+			} else {
+				qbvhKernel->setArg(0, rBuff);
+				qbvhKernel->setArg(1, hBuff);
+				qbvhKernel->setArg(4, rayCount);
+				oclQueue->enqueueNDRangeKernel(*qbvhKernel, cl::NullRange,
+					cl::NDRange(rayCount), cl::NDRange(qbvhWorkGroupSize));
+			}
+			break;
+		}
+		case ACCEL_MQBVH: {
+			mqbvhKernel->setArg(0, rBuff);
+			mqbvhKernel->setArg(1, hBuff);
+			mqbvhKernel->setArg(3, rayCount);
+			oclQueue->enqueueNDRangeKernel(*mqbvhKernel, cl::NullRange,
+				cl::NDRange(rayCount), cl::NDRange(mqbvhWorkGroupSize));
+			break;
+		}
+		default:
+			assert (false);
+	}
+
+	statsTotalRayCount += rayCount;
 }
 
 void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *renderDevice) {

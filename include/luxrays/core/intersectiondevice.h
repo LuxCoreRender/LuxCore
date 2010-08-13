@@ -138,10 +138,6 @@ public:
 		qbvhDisableImageStorage = v;
 	}
 
-	friend class Context;
-
-	static size_t RayBufferSize;
-
 	//--------------------------------------------------------------------------
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
@@ -150,6 +146,11 @@ public:
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
 	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
+	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff, const unsigned int rayCount);
+
+	friend class Context;
+
+	static size_t RayBufferSize;
 
 protected:
 	void SetExternalRayBufferQueue(RayBufferQueue *queue);
