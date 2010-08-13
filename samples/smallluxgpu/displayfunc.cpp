@@ -532,7 +532,6 @@ void timerFunc(int value) {
 
 	switch (config->GetRenderEngine()->GetEngineType()) {
 		case DIRECTLIGHT:
-		case PATHGPU:
 		case PATH: {
 			const double sampleSec = config->film->GetAvgSampleSec();
 			sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
@@ -545,6 +544,16 @@ void timerFunc(int value) {
 			sprintf(config->captionBuffer, "[Pass %3d][Photon %.1fM][Avg. photon/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
 					pass, sre->GetTotalPhotonCount() / 1000000.0, int(sre->GetTotalPhotonSec() / 1000.0),
 					int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			break;
+		}
+		case PATHGPU: {
+			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+
+			sprintf(config->captionBuffer, "[Pass %3d][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+			// Need to update the Film
+			pre->UpdateFilm();
 			break;
 		}
 		default:

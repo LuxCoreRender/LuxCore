@@ -45,9 +45,20 @@ PathGPURenderThread::PathGPURenderThread(unsigned int index, PathGPURenderEngine
 	threadIndex = index;
 	renderEngine = re;
 	started = false;
+	frameBuffer = NULL;
 }
 
 PathGPURenderThread::~PathGPURenderThread() {
+}
+
+void PathGPURenderThread::Start() {
+	started = true;
+	frameBuffer = new PathGPUPixel[renderEngine->film->GetWidth() * renderEngine->film->GetHeight()];
+}
+
+void PathGPURenderThread::Stop() {
+	started = false;
+	delete[] frameBuffer;
 }
 
 //------------------------------------------------------------------------------
@@ -65,13 +76,18 @@ PathGPUDeviceRenderThread::PathGPUDeviceRenderThread(const unsigned int index, c
 
 	initKernel = NULL;
 	advancePathKernel = NULL;
-	raysBuff = NULL;
-	hitsBuff = NULL;
 }
 
 PathGPUDeviceRenderThread::~PathGPUDeviceRenderThread() {
 	if (started)
 		Stop();
+}
+
+static void AppendMatrixDefinition(stringstream &ss, const char *paramName, const Matrix4x4 &m) {
+	for (unsigned int i = 0; i < 4; ++i) {
+		for (unsigned int j = 0; j < 4; ++j)
+			ss << " -D " << paramName << "_" << i << j << "=" << m.m[i][j];
+	}
 }
 
 void PathGPUDeviceRenderThread::Start() {
@@ -95,8 +111,14 @@ void PathGPUDeviceRenderThread::Start() {
 			" -D PARAM_STARTLINE=" << startLine <<
 			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
-			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight()
+			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
+			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON <<
+			" -D PARAM_CLIP_YON=" << renderEngine->scene->camera->GetClipYon() <<
+			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither()
 			;
+	AppendMatrixDefinition(ss, "PARAM_RASTER2CAMERA", renderEngine->scene->camera->GetRasterToCameraMatrix());
+	AppendMatrixDefinition(ss, "PARAM_CAMERA2WORLD", renderEngine->scene->camera->GetCameraToWorldMatrix());
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Defined symbols: " << ss.str() << endl;
 
 	try {
 		VECTOR_CLASS<cl::Device> buildDevice;
@@ -108,6 +130,10 @@ void PathGPUDeviceRenderThread::Start() {
 
 		throw err;
 	}
+
+	//--------------------------------------------------------------------------
+	// Init kernel
+	//--------------------------------------------------------------------------
 
 	initKernel = new cl::Kernel(program, "Init");
 	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
@@ -124,6 +150,28 @@ void PathGPUDeviceRenderThread::Start() {
 		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
 	}
 
+	//--------------------------------------------------------------------------
+	// InitFB kernel
+	//--------------------------------------------------------------------------
+
+	initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
+	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
+	initFBKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel memory footprint: " << memSize << endl;
+
+	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
+
+	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
+	}
+
+	//--------------------------------------------------------------------------
+	// AdvancePaths kernel
+	//--------------------------------------------------------------------------
+
 	advancePathKernel = new cl::Kernel(program, "AdvancePaths");
 	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
 	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathWorkGroupSize << endl;
@@ -138,20 +186,52 @@ void PathGPUDeviceRenderThread::Start() {
 		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << advancePathWorkGroupSize << endl;
 	}
 
+	//--------------------------------------------------------------------------
 	// Allocate buffers
+	//--------------------------------------------------------------------------
+
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
 	raysBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY,
+			CL_MEM_READ_WRITE,
 			sizeof(Ray) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 
 	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
 	hitsBuff = new cl::Buffer(oclContext,
-			CL_MEM_WRITE_ONLY,
+			CL_MEM_READ_WRITE,
 			sizeof(RayHit) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Paths buffer size: " << (sizeof(PathGPU) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	pathsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			sizeof(PathGPU) * PATHGPU_PATH_COUNT);
+	deviceDesc->AllocMemory(pathsBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Paths buffer size: " << (sizeof(PathGPUPixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes" << endl;
+	framebufferBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			sizeof(PathGPUPixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight());
+	deviceDesc->AllocMemory(framebufferBuff->getInfo<CL_MEM_SIZE>());
+
+	// Clear the frame buffer
+	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+	initFBKernel->setArg(0, *framebufferBuff);
+	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
+			cl::NDRange(renderEngine->film->GetWidth() * renderEngine->film->GetHeight()), cl::NDRange(initFBWorkGroupSize));
+
+	// Initialize the path buffer
+	initKernel->setArg(0, *pathsBuff);
+	initKernel->setArg(1, *raysBuff);
+	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
+			cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(initWorkGroupSize));
+
+	advancePathKernel->setArg(0, *pathsBuff);
+	advancePathKernel->setArg(1, *raysBuff);
+	advancePathKernel->setArg(2, *hitsBuff);
+	advancePathKernel->setArg(3, *framebufferBuff);
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathGPUDeviceRenderThread::RenderThreadImpl, this));
@@ -182,8 +262,13 @@ void PathGPUDeviceRenderThread::Stop() {
 	delete raysBuff;
 	deviceDesc->FreeMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 	delete hitsBuff;
+	deviceDesc->FreeMemory(pathsBuff->getInfo<CL_MEM_SIZE>());
+	delete pathsBuff;
+	deviceDesc->FreeMemory(framebufferBuff->getInfo<CL_MEM_SIZE>());
+	delete framebufferBuff;
 
 	delete initKernel;
+	delete initFBKernel;
 	delete advancePathKernel;
 
 	PathGPURenderThread::Stop();
@@ -196,10 +281,35 @@ void PathGPUDeviceRenderThread::ClearPaths() {
 void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *renderThread) {
 	cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
-	// Initialize the path buffer
-
 	try {
+		cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
+		const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
+
 		while (!boost::this_thread::interruption_requested()) {
+			const double startTime = WallClockTime();
+			for(;;) {
+				for (unsigned int i = 0; i < 4; ++i) {
+					// Trace rays
+
+					// Advance paths
+					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathKernel), cl::NullRange,
+						cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathWorkGroupSize));
+				}
+
+				oclQueue.finish();
+				const double elapsedTime = WallClockTime() - startTime;
+
+				if ((elapsedTime > 0.5) || boost::this_thread::interruption_requested())
+					break;
+			}
+
+			// Transfer the frame buffer
+			oclQueue.enqueueReadBuffer(
+				*(renderThread->framebufferBuff),
+				CL_TRUE,
+				0,
+				sizeof(PathGPUPixel) * pixelCount,
+				renderThread->frameBuffer);
 		}
 
 		cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
@@ -224,6 +334,8 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
 	rrProb = cfg.GetFloat("path.russianroulette.prob", 0.5f);
+
+	sampleBuffer = film->GetFreeSampleBuffer();
 
 	// Look for OpenCL devices
 	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
@@ -257,6 +369,8 @@ PathGPURenderEngine::~PathGPURenderEngine() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
+
+	film->FreeSampleBuffer(sampleBuffer);
 }
 
 void PathGPURenderEngine::Start() {
@@ -293,6 +407,42 @@ unsigned int PathGPURenderEngine::GetPass() const {
 
 unsigned int PathGPURenderEngine::GetThreadCount() const {
 	return renderThreads.size();
+}
+
+void PathGPURenderEngine::UpdateFilm() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	film->Reset();
+
+	const unsigned int imgWidth = film->GetWidth();
+	const unsigned int pixelCount = imgWidth * film->GetHeight();
+	for (unsigned int p = 0; p < pixelCount; ++p) {
+		Spectrum c;
+		unsigned int count = 0;
+		for (size_t i = 0; i < renderThreads.size(); ++i) {
+			c += renderThreads[i]->frameBuffer[p].c;
+			count += renderThreads[i]->frameBuffer[p].count;
+		}
+
+		if (count > 0) {
+			const float scrX = p % imgWidth;
+			const float scrY = p / imgWidth;
+			c /= count;
+			sampleBuffer->SplatSample(scrX, scrY, c);
+
+			if (sampleBuffer->IsFull()) {
+				// Splat all samples on the film
+				film->SplatSampleBuffer(true, sampleBuffer);
+				sampleBuffer = film->GetFreeSampleBuffer();
+			}
+		}
+
+		if (sampleBuffer->GetSampleCount() > 0) {
+			// Splat all samples on the film
+			film->SplatSampleBuffer(true, sampleBuffer);
+			sampleBuffer = film->GetFreeSampleBuffer();
+		}
+	}
 }
 
 #endif
