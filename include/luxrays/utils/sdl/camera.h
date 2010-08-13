@@ -192,6 +192,17 @@ public:
         c2w(*ray, ray);
 	}
 
+	const Matrix4x4 GetRasterToCameraMatrix() const {
+		return RasterToCamera.GetMatrix();
+	}
+
+	const Matrix4x4 GetCameraToWorldMatrix() const {
+		return CameraToWorld.GetMatrix();
+	}
+
+	float GetClipYon() const { return clipYon; }
+	float GetClipHither() const { return clipHither; }
+
 	// User defined values
 	Point orig, target;
 	Vector up;

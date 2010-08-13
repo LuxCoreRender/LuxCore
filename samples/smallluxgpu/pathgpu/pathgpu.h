@@ -33,6 +33,16 @@
 
 class PathGPURenderEngine;
 
+typedef struct {
+	Spectrum throughput;
+	unsigned int depth, pixelIndex;
+} PathGPU;
+
+typedef struct {
+	Spectrum c;
+	unsigned int count;
+} PathGPUPixel;
+
 //------------------------------------------------------------------------------
 // Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
@@ -44,16 +54,19 @@ public:
 	PathGPURenderThread(unsigned int index, PathGPURenderEngine *re);
 	virtual ~PathGPURenderThread();
 
-	virtual void Start() { started = true; }
+	virtual void Start();
     virtual void Interrupt() = 0;
-	virtual void Stop() { started = false; }
+	virtual void Stop();
 
 	virtual void ClearPaths() = 0;
 	virtual unsigned int GetPass() const = 0;
 
+	friend class PathGPURenderEngine;
+
 protected:
 	unsigned int threadIndex;
 	PathGPURenderEngine *renderEngine;
+	PathGPUPixel *frameBuffer;
 
 	bool started;
 };
@@ -81,10 +94,15 @@ private:
 	// OpenCL variables
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
+	cl::Kernel *initFBKernel;
+	size_t initFBWorkGroupSize;
 	cl::Kernel *advancePathKernel;
 	size_t advancePathWorkGroupSize;
+
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
+	cl::Buffer *pathsBuff;
+	cl::Buffer *framebufferBuff;
 
 	float samplingStart;
 
@@ -113,6 +131,9 @@ public:
 	unsigned int GetThreadCount() const;
 	RenderEngineType GetEngineType() const { return PATHGPU; }
 
+	void UpdateFilm();
+
+	friend class PathGPURenderThread;
 	friend class PathGPUDeviceRenderThread;
 
 	unsigned int samplePerPixel;
@@ -126,6 +147,7 @@ public:
 private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	vector<PathGPURenderThread *> renderThreads;
+	SampleBuffer *sampleBuffer;
 };
 
 #endif
