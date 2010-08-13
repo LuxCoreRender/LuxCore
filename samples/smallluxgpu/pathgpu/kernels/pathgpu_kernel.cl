@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
+
 // List of symbols defined at compile time:
 //  PARAM_PATH_COUNT
 //  PARAM_IMAGE_WIDTH
@@ -74,9 +76,9 @@ float Dot(Vector *v) {
 
 void Normalize(Vector *v) {
 	const float il = 1.f / Dot(v);
-	v->x = il;
-	v->y = il;
-	v->z = il;
+	v->x *= il;
+	v->y *= il;
+	v->z *= il;
 }
 
 void GenerateRay(
@@ -163,11 +165,20 @@ __kernel void AdvancePaths(
 		return;
 
 	__global Path *path = &paths[gid];
-	const unsigned int pixelIndex = path->pixelIndex;
 
+	__global RayHit *rayHit = &rayHits[gid];
+	const float c = (rayHit->index == 0xffffffffu) ? 0.f : 1.f;
+
+	const unsigned int pixelIndex = path->pixelIndex;
 	__global Pixel *pixel = &frameBuffer[pixelIndex];
-	pixel->c.r += gid / (float)PARAM_PATH_COUNT;
-	pixel->c.g += 0.f;
-	pixel->c.b += 0.f;
+	pixel->c.r += c;
+	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH;
+	pixel->c.g += screenX / PARAM_IMAGE_WIDTH;
+	pixel->c.b += pixel->count / 9999.0f;
 	pixel->count += 1;
+
+	const unsigned int newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+	GenerateRay(newPixelIndex, &rays[gid]);
+
+	path->pixelIndex = newPixelIndex;
 }

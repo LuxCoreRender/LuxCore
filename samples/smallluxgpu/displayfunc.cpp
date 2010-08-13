@@ -174,7 +174,7 @@ static void PrintHelpAndSettings() {
 		case PATHGPU: {
 			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
-			sprintf(buf, "[PathGPU RE]Max path depth %d][RR Depth %d]",
+			sprintf(buf, "[PathGPU RE][Max path depth %d][RR Depth %d]",
 					pre->maxPathDepth,
 					pre->rrDepth);
 			PrintString(GLUT_BITMAP_8_BY_13, buf);
@@ -219,40 +219,85 @@ static void PrintHelpAndSettings() {
 	}
 
 	// Intersection devices
-	double minPerf = idevices[0]->GetPerformance();
-	double totalPerf = idevices[0]->GetPerformance();
-	for (size_t i = 1; i < idevices.size(); ++i) {
-		minPerf = min(minPerf, idevices[i]->GetPerformance());
-		totalPerf += idevices[i]->GetPerformance();
-	}
+	switch (config->GetRenderEngine()->GetEngineType()) {
+		case DIRECTLIGHT:
+		case PATH:
+		case SPPM: {
+			double minPerf = idevices[0]->GetPerformance();
+			double totalPerf = idevices[0]->GetPerformance();
+			for (size_t i = 1; i < idevices.size(); ++i) {
+				minPerf = min(minPerf, idevices[i]->GetPerformance());
+				totalPerf += idevices[i]->GetPerformance();
+			}
 
-	glColor3f(1.0f, 0.5f, 0.f);
-	int offset = 45;
-	for (size_t i = 0; i < idevices.size(); ++i) {
-		sprintf(buff, "[%s][Rays/sec % 3dK][Load %.1f%%][Prf Idx %.2f][Wrkld %.1f%%]",
-				idevices[i]->GetName().c_str(),
-				int(idevices[i]->GetPerformance() / 1000.0),
-				100.0 * idevices[i]->GetLoad(),
-				idevices[i]->GetPerformance() / minPerf,
-				100.0 * idevices[i]->GetPerformance() / totalPerf);
-		glRasterPos2i(20, offset);
-		PrintString(GLUT_BITMAP_8_BY_13, buff);
+			glColor3f(1.0f, 0.5f, 0.f);
+			int offset = 45;
+			for (size_t i = 0; i < idevices.size(); ++i) {
+				sprintf(buff, "[%s][Rays/sec % 3dK][Load %.1f%%][Prf Idx %.2f][Wrkld %.1f%%]",
+						idevices[i]->GetName().c_str(),
+						int(idevices[i]->GetPerformance() / 1000.0),
+						100.0 * idevices[i]->GetLoad(),
+						idevices[i]->GetPerformance() / minPerf,
+						100.0 * idevices[i]->GetPerformance() / totalPerf);
+				glRasterPos2i(20, offset);
+				PrintString(GLUT_BITMAP_8_BY_13, buff);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		// Check if it is an OpenCL device
-		if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
-			const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
-			sprintf(buff, "[Mem %dM/%dM]", int(desc->GetUsedMemory() / (1024 * 1024)),
-					int(desc->GetMaxMemory() / (1024 * 1024)));
-			PrintString(GLUT_BITMAP_8_BY_13, buff);
-		}
+				// Check if it is an OpenCL device
+				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+					const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
+					sprintf(buff, "[Mem %dM/%dM]", int(desc->GetUsedMemory() / (1024 * 1024)),
+							int(desc->GetMaxMemory() / (1024 * 1024)));
+					PrintString(GLUT_BITMAP_8_BY_13, buff);
+				}
 #endif
 
-		offset += 15;
-	}
+				offset += 15;
+			}
 
-	glRasterPos2i(15, offset);
-	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
+			glRasterPos2i(15, offset);
+			PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
+			break;
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case PATHGPU: {
+			double minPerf = idevices[0]->GetPerformance();
+			double totalPerf = idevices[0]->GetPerformance();
+			for (size_t i = 1; i < idevices.size(); ++i) {
+				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+					minPerf = min(minPerf, idevices[i]->GetPerformance());
+					totalPerf += idevices[i]->GetPerformance();
+				}
+			}
+
+			glColor3f(1.0f, 0.5f, 0.f);
+			int offset = 45;
+			for (size_t i = 0; i < idevices.size(); ++i) {
+				// Check if it is an OpenCL device
+				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+					const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
+					sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+							idevices[i]->GetName().c_str(),
+							int(idevices[i]->GetPerformance() / 1000.0),
+							idevices[i]->GetPerformance() / minPerf,
+							100.0 * idevices[i]->GetPerformance() / totalPerf,
+							int(desc->GetUsedMemory() / (1024 * 1024)),
+							int(desc->GetMaxMemory() / (1024 * 1024)));
+					glRasterPos2i(20, offset);
+					PrintString(GLUT_BITMAP_8_BY_13, buff);
+				}
+
+				offset += 15;
+			}
+
+			glRasterPos2i(15, offset);
+			PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
+			break;
+		}
+#endif
+		default:
+			assert (false);
+	}
 }
 
 static void PrintCaptions() {

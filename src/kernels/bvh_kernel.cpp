@@ -21,6 +21,8 @@ std::string luxrays::KernelSource_BVH =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
+"//#pragma OPENCL EXTENSION cl_amd_printf : enable\n"
+"\n"
 "typedef struct {\n"
 "	float x, y, z;\n"
 "} Point;\n"

@@ -210,15 +210,15 @@ void PathGPUDeviceRenderThread::Start() {
 			sizeof(PathGPU) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(pathsBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Paths buffer size: " << (sizeof(PathGPUPixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes" << endl;
-	framebufferBuff = new cl::Buffer(oclContext,
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPUPixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes" << endl;
+	frameBufferBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(PathGPUPixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight());
-	deviceDesc->AllocMemory(framebufferBuff->getInfo<CL_MEM_SIZE>());
+	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
 
 	// Clear the frame buffer
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	initFBKernel->setArg(0, *framebufferBuff);
+	initFBKernel->setArg(0, *frameBufferBuff);
 	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
 			cl::NDRange(renderEngine->film->GetWidth() * renderEngine->film->GetHeight()), cl::NDRange(initFBWorkGroupSize));
 
@@ -231,7 +231,7 @@ void PathGPUDeviceRenderThread::Start() {
 	advancePathKernel->setArg(0, *pathsBuff);
 	advancePathKernel->setArg(1, *raysBuff);
 	advancePathKernel->setArg(2, *hitsBuff);
-	advancePathKernel->setArg(3, *framebufferBuff);
+	advancePathKernel->setArg(3, *frameBufferBuff);
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathGPUDeviceRenderThread::RenderThreadImpl, this));
@@ -264,8 +264,8 @@ void PathGPUDeviceRenderThread::Stop() {
 	delete hitsBuff;
 	deviceDesc->FreeMemory(pathsBuff->getInfo<CL_MEM_SIZE>());
 	delete pathsBuff;
-	deviceDesc->FreeMemory(framebufferBuff->getInfo<CL_MEM_SIZE>());
-	delete framebufferBuff;
+	deviceDesc->FreeMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
+	delete frameBufferBuff;
 
 	delete initKernel;
 	delete initFBKernel;
@@ -285,42 +285,53 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 		cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 		const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
 
+		// -2.0 is a trick to set the first frame buffer refresh after 1 sec
+		double startTime = WallClockTime() - 2.0;
 		while (!boost::this_thread::interruption_requested()) {
-			const double startTime = WallClockTime();
-			for(;;) {
-				for (unsigned int i = 0; i < 4; ++i) {
-					// Trace rays
 
-					// Advance paths
-					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathKernel), cl::NullRange,
-						cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathWorkGroupSize));
-				}
-
-				oclQueue.finish();
-				const double elapsedTime = WallClockTime() - startTime;
-
-				if ((elapsedTime > 0.5) || boost::this_thread::interruption_requested())
-					break;
-			}
-
-			// Transfer the frame buffer
+			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
-				*(renderThread->framebufferBuff),
-				CL_TRUE,
+				*(renderThread->frameBufferBuff),
+				CL_FALSE,
 				0,
 				sizeof(PathGPUPixel) * pixelCount,
 				renderThread->frameBuffer);
+
+			for(unsigned int j = 0;;++j) {
+				cl::Event event;
+				for (unsigned int i = 0; i < 16; ++i) {
+					// Trace rays
+					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
+							*(renderThread->hitsBuff), PATHGPU_PATH_COUNT);
+
+					// Advance paths
+					if (i == 0)
+						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathKernel), cl::NullRange,
+							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathWorkGroupSize), NULL, &event);
+					else
+						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathKernel), cl::NullRange,
+							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathWorkGroupSize));
+				}
+
+				event.wait();
+				const double elapsedTime = WallClockTime() - startTime;
+
+				if(renderThread->threadIndex == 0)
+					cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms" << endl;
+
+				if ((elapsedTime > 3.0) || boost::this_thread::interruption_requested())
+					break;
+			}
+
+			startTime = WallClockTime();
 		}
 
 		cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (boost::thread_interrupted) {
 		cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
-	}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	catch (cl::Error err) {
+	} catch (cl::Error err) {
 		cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
 	}
-#endif
 }
 
 //------------------------------------------------------------------------------

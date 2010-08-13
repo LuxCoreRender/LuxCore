@@ -47,7 +47,7 @@ typedef struct {
 // Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-#define PATHGPU_PATH_COUNT 65536
+#define PATHGPU_PATH_COUNT (8 * 65536)
 
 class PathGPURenderThread {
 public:
@@ -102,7 +102,7 @@ private:
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *pathsBuff;
-	cl::Buffer *framebufferBuff;
+	cl::Buffer *frameBufferBuff;
 
 	float samplingStart;
 
