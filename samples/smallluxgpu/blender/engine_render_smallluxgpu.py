@@ -21,8 +21,18 @@
 ###########################################################################
 #
 # SmallLuxGPU v1.6beta3 Blender 2.5 plug-in
-# v0.63dev
-# Source: http://www.luxrender.net/forum/viewforum.php?f=34
+
+bl_addon_info = {
+    "name": "Render: SmallLuxGPU",
+    "author": "see (SLG) AUTHORS.txt",
+    "version": "0.63dev",
+    "blender": (2, 5, 4),
+    "location": "Info Header (engine dropdown)",
+    "description": "SmallLuxGPU Exporter and Live! mode Plugin",
+    "warning": "",
+    "wiki_url": "http://www.luxrender.net/wiki/index.php?title=Blender_2.5_exporter",
+    "tracker_url": "http://www.luxrender.net/forum/viewforum.php?f=34",
+    "category": "Render"}
 
 import bpy
 import blf
@@ -33,6 +43,7 @@ import threading
 import telnetlib
 from itertools import zip_longest
 from subprocess import Popen
+from math import isnan
 
 # SLG Telnet interface
 class SLGTelnet:
@@ -390,7 +401,10 @@ class SLGBP:
                         for i,p in enumerate(obj[0].particles): # and not SLGBP.live:
                             if p.alive_state == 'ALIVE' and p.is_existing and p.is_visible:
                                 objn = obj[0].id_data.name.replace('.','_')+'{P}'+str(i)+plyn
-                                tm = mathutils.Matrix.Translation(p.location) * p.rotation.to_matrix().to_4x4() * mathutils.Matrix.Scale(p.size,4)
+                                if isnan(p.rotation[0]): # Deal with Blender bug...
+                                    tm = mathutils.Matrix.Translation(p.location) * mathutils.Matrix.Scale(p.size,4)
+                                else: 
+                                    tm = mathutils.Matrix.Translation(p.location) * p.rotation.to_matrix().to_4x4() * mathutils.Matrix.Scale(p.size,4)
                                 objscn(plyn, matn, objn, mat, tm)
                     else:
                         objn = obj[0].name.replace('.','_')+plyn

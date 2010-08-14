@@ -65,6 +65,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 				respStream << "SmallLuxGPU Telnet Server Interface\n";
 				boost::asio::write(socket, response);
 
+				bool havaToUpdateSceneDataSet = false;
 				for (bool exit = false; !exit;) {
 					// Print prompt
 					boost::asio::write(socket, boost::asio::buffer("> ", 2));
@@ -441,14 +442,23 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						telnetServer->config->film->Save(fileName);
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "render.start") {
-						if (state == STOP)
+						if (state == STOP) {
+							// Check if I have to update the LuxRays data set
+							if (havaToUpdateSceneDataSet) {
+								// Update the DataSet
+								telnetServer->config->UpdateSceneDataSet();
+								havaToUpdateSceneDataSet = false;
+							}
+
 							telnetServer->config->StartAllRenderThreads();
+						}
 						state = RUN;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "render.stop") {
 						if (state == RUN)
 							telnetServer->config->StopAllRenderThreads();
 						state = STOP;
+						havaToUpdateSceneDataSet = false;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "set") {
 						//------------------------------------------------------
@@ -807,8 +817,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										}
 									}
 
-									// Update the DataSet
-									telnetServer->config->UpdateSceneDataSet();
+									// Set the flag to Update the DataSet
+									havaToUpdateSceneDataSet = true;
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
