@@ -218,8 +218,7 @@ void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int
 				nodeBounds = Union(nodeBounds, list[i]->bbox);
 
 			Vector d = nodeBounds.pMax - nodeBounds.pMin;
-			float totalSA = (2.f * (d.x * d.y + d.x * d.z + d.y * d.z));
-			float invTotalSA = 1.f / totalSA;
+			const float invTotalSA = 1.f / nodeBounds.SurfaceArea();
 
 			// Sample cost for split at some points
 			float increment = 2 * d[*bestAxis] / (costSamples + 1);
@@ -236,12 +235,8 @@ void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int
 						bbAbove = Union(bbAbove, list[j]->bbox);
 					}
 				}
-				Vector dBelow = bbBelow.pMax - bbBelow.pMin;
-				Vector dAbove = bbAbove.pMax - bbAbove.pMin;
-				float belowSA = 2 * ((dBelow.x * dBelow.y + dBelow.x * dBelow.z + dBelow.y * dBelow.z));
-				float aboveSA = 2 * ((dAbove.x * dAbove.y + dAbove.x * dAbove.z + dAbove.y * dAbove.z));
-				float pBelow = belowSA * invTotalSA;
-				float pAbove = aboveSA * invTotalSA;
+				const float pBelow = bbBelow.SurfaceArea() * invTotalSA;
+				const float pAbove = bbAbove.SurfaceArea() * invTotalSA;
 				float eb = (nAbove == 0 || nBelow == 0) ? emptyBonus : 0.f;
 				float cost = traversalCost + isectCost * (1.f - eb) * (pBelow * nBelow + pAbove * nAbove);
 				// Update best split if this is lowest cost so far

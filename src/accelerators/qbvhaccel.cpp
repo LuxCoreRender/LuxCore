@@ -435,7 +435,6 @@ bool QBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 					nodeStack[++todoNode] = node.children[1];
 					nodeStack[++todoNode] = node.children[2];
 					break;
-
 				case (0x0 | 0x0 | 0x0 | 0x8):
 					nodeStack[++todoNode] = node.children[3];
 					break;

@@ -185,9 +185,12 @@ private:
 		// Very slow !
 		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
 
-		const unsigned int index = Min<unsigned int>(
-			Floor2UInt(GammaTableSize * Clamp(x, 0.f, 1.f)),
-				GammaTableSize - 1);
+		const float indexf = GammaTableSize * Clamp(x, 0.f, 1.f);
+		if (indexf < 0.f)
+			return 0.f;
+
+		const unsigned int index = Min<unsigned int>((unsigned int) indexf, GammaTableSize - 1);
+
 		return gammaTable[index];
 	}
 

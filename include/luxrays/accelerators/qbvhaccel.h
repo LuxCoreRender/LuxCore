@@ -44,9 +44,11 @@ public:
 		ox = _mm_set1_ps(ray.o.x);
 		oy = _mm_set1_ps(ray.o.y);
 		oz = _mm_set1_ps(ray.o.z);
+
 		dx = _mm_set1_ps(ray.d.x);
 		dy = _mm_set1_ps(ray.d.y);
 		dz = _mm_set1_ps(ray.d.z);
+
 		mint = _mm_set1_ps(ray.mint);
 		maxt = _mm_set1_ps(ray.maxt);
 	}
@@ -60,11 +62,6 @@ public:
 } __attribute__ ((aligned(16)));
 #endif
 
-static inline __m128 reciprocal(const __m128 x) {
-	const __m128 y = _mm_rcp_ps(x);
-	return _mm_mul_ps(y, _mm_sub_ps(_mm_set1_ps(2.f), _mm_mul_ps(x, y)));
-}
-
 class QuadTriangle : public Aligned16 {
 public:
 
@@ -73,6 +70,7 @@ public:
 			const unsigned int p2,
 			const unsigned int p3,
 			const unsigned int p4) {
+
 		primitives[0] = p1;
 		primitives[1] = p2;
 		primitives[2] = p3;
@@ -80,12 +78,15 @@ public:
 
 		for (u_int i = 0; i < 4; ++i) {
 			const Triangle *t = &tris[primitives[i]];
+
 			reinterpret_cast<float *> (&origx)[i] = verts[t->v[0]].x;
 			reinterpret_cast<float *> (&origy)[i] = verts[t->v[0]].y;
 			reinterpret_cast<float *> (&origz)[i] = verts[t->v[0]].z;
+
 			reinterpret_cast<float *> (&edge1x)[i] = verts[t->v[1]].x - verts[t->v[0]].x;
 			reinterpret_cast<float *> (&edge1y)[i] = verts[t->v[1]].y - verts[t->v[0]].y;
 			reinterpret_cast<float *> (&edge1z)[i] = verts[t->v[1]].z - verts[t->v[0]].z;
+
 			reinterpret_cast<float *> (&edge2x)[i] = verts[t->v[2]].x - verts[t->v[0]].x;
 			reinterpret_cast<float *> (&edge2y)[i] = verts[t->v[2]].y - verts[t->v[0]].y;
 			reinterpret_cast<float *> (&edge2z)[i] = verts[t->v[2]].z - verts[t->v[0]].z;
@@ -113,13 +114,13 @@ public:
 				_mm_add_ps(_mm_mul_ps(s1y, edge1y),
 				_mm_mul_ps(s1z, edge1z)));
 		__m128 test = _mm_cmpneq_ps(divisor, zero);
-		//		const __m128 inverse = reciprocal(divisor);
+		const __m128 inverse = _mm_div_ps(_mm_set_ps1(1.f), divisor);
 		const __m128 dx = _mm_sub_ps(ray4.ox, origx);
 		const __m128 dy = _mm_sub_ps(ray4.oy, origy);
 		const __m128 dz = _mm_sub_ps(ray4.oz, origz);
-		const __m128 b1 = _mm_div_ps(_mm_add_ps(_mm_mul_ps(dx, s1x),
+		const __m128 b1 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(dx, s1x),
 				_mm_add_ps(_mm_mul_ps(dy, s1y), _mm_mul_ps(dz, s1z))),
-				divisor);
+				inverse);
 		test = _mm_and_ps(test, _mm_cmpge_ps(b1, zero));
 		const __m128 s2x = _mm_sub_ps(_mm_mul_ps(dy, edge1z),
 				_mm_mul_ps(dz, edge1y));
@@ -127,37 +128,41 @@ public:
 				_mm_mul_ps(dx, edge1z));
 		const __m128 s2z = _mm_sub_ps(_mm_mul_ps(dx, edge1y),
 				_mm_mul_ps(dy, edge1x));
-		const __m128 b2 = _mm_div_ps(_mm_add_ps(_mm_mul_ps(ray4.dx, s2x),
+		const __m128 b2 = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(ray4.dx, s2x),
 				_mm_add_ps(_mm_mul_ps(ray4.dy, s2y), _mm_mul_ps(ray4.dz, s2z))),
-				divisor);
+				inverse);
 		const __m128 b0 = _mm_sub_ps(_mm_set1_ps(1.f),
 				_mm_add_ps(b1, b2));
 		test = _mm_and_ps(test, _mm_and_ps(_mm_cmpge_ps(b2, zero),
 				_mm_cmpge_ps(b0, zero)));
-		const __m128 t = _mm_div_ps(_mm_add_ps(_mm_mul_ps(edge2x, s2x),
+		const __m128 t = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(edge2x, s2x),
 				_mm_add_ps(_mm_mul_ps(edge2y, s2y),
-				_mm_mul_ps(edge2z, s2z))), divisor);
+				_mm_mul_ps(edge2z, s2z))), inverse);
 		test = _mm_and_ps(test,
 				_mm_and_ps(_mm_cmpgt_ps(t, ray4.mint),
 				_mm_cmplt_ps(t, ray4.maxt)));
-		u_int hit = 4;
-		for (u_int i = 0; i < 4; ++i) {
-			if (reinterpret_cast<int32_t *> (&test)[i] &&
-					reinterpret_cast<const float *> (&t)[i] < ray.maxt) {
-				hit = i;
-				ray.maxt = reinterpret_cast<const float *> (&t)[i];
+
+		const int testmask = _mm_movemask_ps(test);		
+		if (testmask == 0) return false;
+
+		u_int hit;
+		if ((testmask & (testmask - 1)) == 0) {
+			hit = UIntLog2(testmask);
+			ray.maxt = reinterpret_cast<const float *> (&t)[hit];
+		} else {
+			for (u_int i = 0; i < 4; ++i) {
+				if (reinterpret_cast<const int *> (&test)[i] && reinterpret_cast<const float *> (&t)[i] < ray.maxt) {
+					hit = i;
+					ray.maxt = reinterpret_cast<const float *> (&t)[i];
+				}
 			}
 		}
-		if (hit == 4)
-			return false;
+
 		ray4.maxt = _mm_set1_ps(ray.maxt);
 
-		const float _b1 = reinterpret_cast<const float *> (&b1)[hit];
-		const float _b2 = reinterpret_cast<const float *> (&b2)[hit];
-
 		rayHit->t = ray.maxt;
-		rayHit->b1 = _b1;
-		rayHit->b2 = _b2;
+		rayHit->b1 = reinterpret_cast<const float *> (&b1)[hit];
+		rayHit->b2 = reinterpret_cast<const float *> (&b2)[hit];
 		rayHit->index = primitives[hit];
 
 		return true;
