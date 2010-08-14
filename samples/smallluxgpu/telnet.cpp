@@ -66,6 +66,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 				boost::asio::write(socket, response);
 
 				bool havaToUpdateSceneDataSet = false;
+				bool echoCommandOn = true;
 				for (bool exit = false; !exit;) {
 					// Print prompt
 					boost::asio::write(socket, boost::asio::buffer("> ", 2));
@@ -77,7 +78,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 					std::istream commandStream(&commandBuf);
 					string command;
 					commandStream >> command;
-					cerr << "[Telnet server] Received command: " << command << endl;
+					if (echoCommandOn)
+						cerr << "[Telnet server] Received command: " << command << endl;
 
 					if (command == "exit")
 						exit = true;
@@ -86,6 +88,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						std::ostream respStream(&response);
 						respStream << "exit - close the connection\n";
 						respStream << "get <property name> - return the value of a (supported) property\n";
+						respStream << "echocmd.off\n";
+						respStream << "echocmd.on\n";
 						respStream << "help - this help\n";
 						respStream << "help.get - print the list of get supported properties\n";
 						respStream << "help.set - print the list of set supported properties\n";
@@ -98,6 +102,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "set <property name> = <values> - set the value of a (supported) property\n";
 						respStream << "OK\n";
 					    boost::asio::write(socket, response);
+					} else if (command == "echocmd.off") {
+						echoCommandOn = false;
+						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+					} else if (command == "echocmd.on") {
+						echoCommandOn = true;
+						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "get") {
 						//------------------------------------------------------
 						// Get property
@@ -471,7 +481,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							getline(commandStream, property, '\n');
 							Properties prop;
 							const string propertyName = prop.SetString(property);
-							cerr << "[Telnet server] Set: " << property << endl;
+							if (echoCommandOn)
+								cerr << "[Telnet server] Set: " << property << endl;
 
 							// Check if is one of the supported properties
 							if (propertyName == "film.tonemap.linear.scale") {
