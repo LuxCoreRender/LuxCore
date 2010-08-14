@@ -199,14 +199,21 @@ template <class T> inline T RoundUp(const T a, const T b) {
 }
 
 template <class T> inline T RoundUpPow2(T v) {
-        v--;
-        v |= v >> 1;
-        v |= v >> 2;
-        v |= v >> 4;
-        v |= v >> 8;
-        v |= v >> 16;
+	v--;
 
-        return v+1;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+
+	return v+1;
+}
+
+inline unsigned int UIntLog2(unsigned int value) {
+	unsigned int l = 0;
+	while (value >>= 1) l++;
+	return l;
 }
 
 inline void StringTrim(std::string &str) {
