@@ -94,8 +94,7 @@ static void InitPhotonPath(luxrays::sdl::Scene *scene, luxrays::RandomGenerator 
 }
 
 static void TracePhotonsThread(const unsigned threadIndex, luxrays::IntersectionDevice *device) {
-	luxrays::RandomGenerator *rndGen = new luxrays::RandomGenerator();
-	rndGen->init(threadIndex + 1);
+	luxrays::RandomGenerator *rndGen = new luxrays::RandomGenerator(threadIndex + 1);
 
 	luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
 	luxrays::RayBuffer *rayBufferHitPoints = NULL;

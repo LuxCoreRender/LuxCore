@@ -74,7 +74,7 @@ public:
 			const unsigned startLine = 0) :
 		seed(startSeed), samplePerPixel(spp), samplePerPixel2(spp * spp),
 		screenStartLine(startLine), lowLatency(lowLat) {
-		rndGen = new RandomGenerator();
+		rndGen = new RandomGenerator(seed);
 
 		Init(width, height, screenStartLine);
 	}
@@ -83,7 +83,6 @@ public:
 	}
 
 	void Init(const unsigned width, const unsigned height, const unsigned startLine = 0) {
-		rndGen->init(seed);
 		screenWidth = width;
 		screenHeight = height;
 		if (startLine > 0)

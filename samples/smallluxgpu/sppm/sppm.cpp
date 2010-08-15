@@ -245,8 +245,7 @@ void SPPMDeviceRenderThread::RenderThreadImpl(SPPMDeviceRenderThread *renderThre
 
 	SPPMRenderEngine *renderEngine = renderThread->renderEngine;
 	Scene *scene = renderEngine->scene;
-	RandomGenerator *rndGen = new RandomGenerator();
-	rndGen->init(renderThread->threadIndex + renderEngine->seedBase + 1);
+	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderEngine->seedBase + 1);
 
 	IntersectionDevice *device = renderThread->intersectionDevice;
 	RayBuffer *rayBufferHitPoints = renderThread->rayBufferHitPoints;

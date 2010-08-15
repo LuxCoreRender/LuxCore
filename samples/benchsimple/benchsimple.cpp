@@ -72,11 +72,10 @@ int main(int argc, char** argv) {
 
 	std::cerr << "Creating a " << TRIANGLE_COUNT << " triangle data set" << std::endl;
 
-	luxrays::RandomGenerator rnd;
+	luxrays::RandomGenerator rnd(1u);
 	luxrays::Point *verts = new luxrays::Point[TRIANGLE_COUNT * 3];
 	luxrays::Triangle *tris = new luxrays::Triangle[TRIANGLE_COUNT];
 
-	rnd.init(1u);
 	for (size_t i = 0; i < TRIANGLE_COUNT; ++i) {
 		luxrays::Vector v0(0.1f * rnd.floatValue(), 0.1f * rnd.floatValue(), 0.1f * rnd.floatValue());
 		v0.x += 0.1f * luxrays::Sgn(v0.x);
