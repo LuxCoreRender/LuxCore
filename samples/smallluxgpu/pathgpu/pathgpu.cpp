@@ -53,7 +53,7 @@ PathGPURenderThread::~PathGPURenderThread() {
 
 void PathGPURenderThread::Start() {
 	started = true;
-	frameBuffer = new PathGPUPixel[renderEngine->film->GetWidth() * renderEngine->film->GetHeight()];
+	frameBuffer = new PathGPU::Pixel[renderEngine->film->GetWidth() * renderEngine->film->GetHeight()];
 }
 
 void PathGPURenderThread::Stop() {
@@ -65,11 +65,12 @@ void PathGPURenderThread::Stop() {
 // PathGPUDeviceRenderThread
 //------------------------------------------------------------------------------
 
-PathGPUDeviceRenderThread::PathGPUDeviceRenderThread(const unsigned int index, const unsigned long seedBase,
+PathGPUDeviceRenderThread::PathGPUDeviceRenderThread(const unsigned int index, const unsigned int seedBase,
 		const float samplStart,  const unsigned int samplePerPixel, OpenCLIntersectionDevice *device,
 		PathGPURenderEngine *re) : PathGPURenderThread(index, re) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
+	seed = seedBase + index;
 	reportedPermissionError = false;
 
 	renderThread = NULL;
@@ -114,7 +115,8 @@ void PathGPUDeviceRenderThread::Start() {
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
 			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON <<
 			" -D PARAM_CLIP_YON=" << renderEngine->scene->camera->GetClipYon() <<
-			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither()
+			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither() <<
+			" -D PARAM_SEED=" << seed
 			;
 	AppendMatrixDefinition(ss, "PARAM_RASTER2CAMERA", renderEngine->scene->camera->GetRasterToCameraMatrix());
 	AppendMatrixDefinition(ss, "PARAM_CAMERA2WORLD", renderEngine->scene->camera->GetCameraToWorldMatrix());
@@ -204,17 +206,104 @@ void PathGPUDeviceRenderThread::Start() {
 			sizeof(RayHit) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Paths buffer size: " << (sizeof(PathGPU) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Paths buffer size: " << (sizeof(PathGPU::Path) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
 	pathsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			sizeof(PathGPU) * PATHGPU_PATH_COUNT);
+			sizeof(PathGPU::Path) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(pathsBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPUPixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPU::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes" << endl;
 	frameBufferBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			sizeof(PathGPUPixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight());
+			sizeof(PathGPU::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight());
 	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount() / 1024) << "Kbytes" << endl;
+	meshIDBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount(),
+			(void *)renderEngine->scene->dataSet->GetMeshIDTable());
+	deviceDesc->AllocMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] TriangleIDs buffer size: " << (sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount() / 1024) << "Kbytes" << endl;
+	triIDBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount(),
+			(void *)renderEngine->scene->dataSet->GetMeshTriangleIDTable());
+	deviceDesc->AllocMemory(triIDBuff->getInfo<CL_MEM_SIZE>());
+
+	//--------------------------------------------------------------------------
+	// Translate material definitions
+	//--------------------------------------------------------------------------
+
+	const unsigned int matCount = renderEngine->scene->materials.size();
+	PathGPU::Material *mats = new PathGPU::Material[matCount];
+	for (unsigned int i = 0; i < matCount; ++i) {
+		Material *m = renderEngine->scene->materials[i];
+		PathGPU::Material *gpum = &mats[i];
+
+		switch (m->GetType()) {
+			case MATTE: {
+				MatteMaterial *mm = (MatteMaterial *)m;
+
+				gpum->type = MAT_MATTE;
+				gpum->mat.matte.r = mm->GetKd().r;
+				gpum->mat.matte.g = mm->GetKd().g;
+				gpum->mat.matte.b = mm->GetKd().b;
+				break;
+			}
+			default: {
+				gpum->type = MAT_MATTE;
+				gpum->mat.matte.r = 0.75f;
+				gpum->mat.matte.g = 0.75f;
+				gpum->mat.matte.b = 0.75f;
+				break;
+			}
+		}
+	}
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Materials buffer size: " << (sizeof(PathGPU::Material) * matCount / 1024) << "Kbytes" << endl;
+	materialsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(PathGPU::Material) * matCount,
+			mats);
+	deviceDesc->AllocMemory(materialsBuff->getInfo<CL_MEM_SIZE>());
+
+	delete[] mats;
+
+	//--------------------------------------------------------------------------
+	// Translate mesh material indices
+	//--------------------------------------------------------------------------
+
+	const unsigned int meshCount = renderEngine->scene->objectMaterials.size();
+	unsigned int *meshMats = new unsigned int[meshCount];
+	for (unsigned int i = 0; i < meshCount; ++i) {
+		Material *m = renderEngine->scene->objectMaterials[i];
+
+		// Look for the index
+		unsigned int index = 0;
+		for (unsigned int j = 0; j < matCount; ++j) {
+			if (m == renderEngine->scene->materials[j]) {
+				index = j;
+				break;
+			}
+		}
+
+		meshMats[i] = index;
+	}
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Mesh material index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
+	meshMatsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(unsigned int) * meshCount,
+			meshMats);
+	deviceDesc->AllocMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
+
+	delete[] meshMats;
+
+	//--------------------------------------------------------------------------
+	// Initialize
+	//--------------------------------------------------------------------------
 
 	// Clear the frame buffer
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
@@ -232,6 +321,10 @@ void PathGPUDeviceRenderThread::Start() {
 	advancePathKernel->setArg(1, *raysBuff);
 	advancePathKernel->setArg(2, *hitsBuff);
 	advancePathKernel->setArg(3, *frameBufferBuff);
+	advancePathKernel->setArg(4, *materialsBuff);
+	advancePathKernel->setArg(5, *meshMatsBuff);
+	advancePathKernel->setArg(6, *meshIDBuff);
+	advancePathKernel->setArg(7, *triIDBuff);
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathGPUDeviceRenderThread::RenderThreadImpl, this));
@@ -266,16 +359,20 @@ void PathGPUDeviceRenderThread::Stop() {
 	delete pathsBuff;
 	deviceDesc->FreeMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
 	delete frameBufferBuff;
+	deviceDesc->FreeMemory(materialsBuff->getInfo<CL_MEM_SIZE>());
+	delete materialsBuff;
+	deviceDesc->FreeMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
+	delete meshIDBuff;
+	deviceDesc->FreeMemory(triIDBuff->getInfo<CL_MEM_SIZE>());
+	delete triIDBuff;
+	deviceDesc->FreeMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
+	delete meshMatsBuff;
 
 	delete initKernel;
 	delete initFBKernel;
 	delete advancePathKernel;
 
 	PathGPURenderThread::Stop();
-}
-
-void PathGPUDeviceRenderThread::ClearPaths() {
-	assert (!started);
 }
 
 void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *renderThread) {
@@ -285,15 +382,20 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 		cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 		const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
 
-		// -2.0 is a trick to set the first frame buffer refresh after 1 sec
-		double startTime = WallClockTime() - 2.0;
+		const double refreshInterval = 1.0;
+
+		// -refreshInterval is a trick to set the first frame buffer refresh after 1 sec
+		double startTime = WallClockTime() - (refreshInterval / 2.0);
 		while (!boost::this_thread::interruption_requested()) {
+			if(renderThread->threadIndex == 0)
+					cerr<< "[DEBUG] =================================" << endl;
+
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
 				*(renderThread->frameBufferBuff),
 				CL_FALSE,
 				0,
-				sizeof(PathGPUPixel) * pixelCount,
+				sizeof(PathGPU::Pixel) * pixelCount,
 				renderThread->frameBuffer);
 
 			for(unsigned int j = 0;;++j) {
@@ -319,7 +421,7 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 				if(renderThread->threadIndex == 0)
 					cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms" << endl;
 
-				if ((elapsedTime > 3.0) || boost::this_thread::interruption_requested())
+				if ((elapsedTime > refreshInterval) || boost::this_thread::interruption_requested())
 					break;
 			}
 
@@ -346,6 +448,9 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
 	rrProb = cfg.GetFloat("path.russianroulette.prob", 0.5f);
 
+	startTime = 0.0;
+	samplesCount = 0;
+
 	sampleBuffer = film->GetFreeSampleBuffer();
 
 	// Look for OpenCL devices
@@ -359,7 +464,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 	if (oclIntersectionDevices.size() < 1)
 		throw runtime_error("Unable to find an OpenCL intersection device for PathGPU render engine");
 
-	const unsigned long seedBase = (unsigned long)(WallClockTime() / 1000.0);
+	const unsigned int seedBase = (unsigned long)(WallClockTime() / 1000.0);
 
 	// Create and start render threads
 	const size_t renderThreadCount = oclIntersectionDevices.size();
@@ -387,6 +492,9 @@ PathGPURenderEngine::~PathGPURenderEngine() {
 void PathGPURenderEngine::Start() {
 	RenderEngine::Start();
 
+	samplesCount = 0;
+	startTime = WallClockTime();
+
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
 }
@@ -407,15 +515,6 @@ void PathGPURenderEngine::Reset() {
 	assert (!started);
 }
 
-unsigned int PathGPURenderEngine::GetPass() const {
-	unsigned int pass = 0;
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		pass += renderThreads[i]->GetPass();
-
-	return pass;
-}
-
 unsigned int PathGPURenderEngine::GetThreadCount() const {
 	return renderThreads.size();
 }
@@ -427,6 +526,7 @@ void PathGPURenderEngine::UpdateFilm() {
 
 	const unsigned int imgWidth = film->GetWidth();
 	const unsigned int pixelCount = imgWidth * film->GetHeight();
+	unsigned long long totalCount = 0;
 	for (unsigned int p = 0; p < pixelCount; ++p) {
 		Spectrum c;
 		unsigned int count = 0;
@@ -446,6 +546,8 @@ void PathGPURenderEngine::UpdateFilm() {
 				film->SplatSampleBuffer(true, sampleBuffer);
 				sampleBuffer = film->GetFreeSampleBuffer();
 			}
+
+			totalCount += count;
 		}
 
 		if (sampleBuffer->GetSampleCount() > 0) {
@@ -454,6 +556,12 @@ void PathGPURenderEngine::UpdateFilm() {
 			sampleBuffer = film->GetFreeSampleBuffer();
 		}
 	}
+
+	samplesCount = totalCount;
+}
+
+unsigned int PathGPURenderEngine::GetPass() const {
+	return samplesCount / (film->GetWidth() * film->GetHeight());
 }
 
 #endif

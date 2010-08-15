@@ -194,8 +194,7 @@ public:
 
 		return statsAvgSampleSec;*/
 
-		const double elapsedTime = WallClockTime() - statsStartSampleTime;
-		return statsTotalSampleCount / elapsedTime;
+		return statsTotalSampleCount / GetTotalTime();
 	}
 
 	virtual void Save(const std::string &fileName) = 0;

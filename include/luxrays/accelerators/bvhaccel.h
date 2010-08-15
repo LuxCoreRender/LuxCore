@@ -54,8 +54,11 @@ public:
 	AcceleratorType GetType() const { return ACCEL_BVH; }
 	void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
+
 	const TriangleMeshID GetMeshID(const unsigned int index) const { return preprocessedMeshIDs[index]; }
+	const TriangleMeshID *GetMeshIDTable() const { return preprocessedMeshIDs; }
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
+	const TriangleID *GetMeshTriangleIDTable() const { return preprocessedMeshTriangleIDs; }
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
