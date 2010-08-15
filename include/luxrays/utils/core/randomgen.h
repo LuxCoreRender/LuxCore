@@ -37,20 +37,18 @@ static const float invUI = (1.f / (FLOATMASK + 1UL));
 
 class RandomGenerator {
 public:
-	RandomGenerator() {
+	RandomGenerator(const unsigned long seed) {
 		buf = new unsigned long[RAN_BUFFER_AMOUNT];
 		bufid = RAN_BUFFER_AMOUNT;
+
+		init(seed);
 	}
 
 	~RandomGenerator() {
 		delete[] buf;
 	}
 
-	inline void init(unsigned long tn) {
-		taus113_set(tn);
-	}
-
-	inline unsigned long uintValue() {
+	unsigned long uintValue() {
 		// Repopulate buffer if necessary
 		if (bufid == RAN_BUFFER_AMOUNT) {
 			for (int i = 0; i < RAN_BUFFER_AMOUNT; ++i)
@@ -61,12 +59,16 @@ public:
 		return buf[bufid++];
 	}
 
-	inline float floatValue() {
+	float floatValue() {
 		return (uintValue() & FLOATMASK) * invUI;
 	}
 
 private:
-	inline unsigned long LCG(const unsigned long n) {
+	void init(const unsigned long tn) {
+		taus113_set(tn);
+	}
+
+	unsigned long LCG(const unsigned long n) {
 		return 69069UL * n; // The result is clamped to 32 bits (long)
 	}
 
@@ -92,7 +94,7 @@ private:
 			nobuf_generateUInt();
 	}
 
-	inline unsigned long nobuf_generateUInt() {
+	unsigned long nobuf_generateUInt() {
 		const unsigned long b1 = ((((z1 << 6UL) & MASK) ^ z1) >> 13UL);
 		z1 = ((((z1 & 4294967294UL) << 18UL) & MASK) ^ b1);
 
@@ -113,7 +115,58 @@ private:
 	int bufid;
 };
 
-template <typename T> inline void Shuffle(T *samp, size_t count, size_t dims, RandomGenerator &rng) {
+/*
+   This is a maximally equidistributed combined Tausworthe generator
+   based on code from GNU Scientific Library 1.5 (30 Jun 2004)
+
+    x_n = (s1_n ^ s2_n ^ s3_n)
+
+    s1_{n+1} = (((s1_n & 4294967294) <<12) ^ (((s1_n <<13) ^ s1_n) >>19))
+    s2_{n+1} = (((s2_n & 4294967288) << 4) ^ (((s2_n << 2) ^ s2_n) >>25))
+    s3_{n+1} = (((s3_n & 4294967280) <<17) ^ (((s3_n << 3) ^ s3_n) >>11))
+
+    The period of this generator is about 2^88.
+ */
+
+class TauswortheRandomGenerator {
+public:
+	TauswortheRandomGenerator(const unsigned int seed) {
+		s1 = validSeed(LCG(seed), 1);
+		s2 = validSeed(LCG(s1), 7);
+		s3 = validSeed(LCG(s2), 15);
+
+	}
+	~TauswortheRandomGenerator() { }
+
+	unsigned long uintValue() {
+		s1 = TAUSWORTHE(s1, 13, 19, 4294967294UL, 12);
+		s2 = TAUSWORTHE(s2, 2, 25, 4294967288UL, 4);
+		s3 = TAUSWORTHE(s3, 3, 11, 4294967280UL, 17);
+
+		return (s1 ^ s2 ^ s3);
+	}
+
+	float floatValue() {
+		return (uintValue() & FLOATMASK) * invUI;
+	}
+
+private:
+	unsigned int LCG(const unsigned int x) const { return x * 69069; }
+
+	unsigned int validSeed(const unsigned int x, const unsigned int m) const {
+		return (x < m) ? (x + m) : x;
+	}
+
+	unsigned int TAUSWORTHE(const unsigned int s, const unsigned int a,
+		const unsigned int b, const unsigned int c,
+		const unsigned int d) const {
+		return ((s&c)<<d) ^ (((s << a) ^ s) >> b);
+	}
+
+	unsigned int s1, s2, s3;
+};
+
+template <typename T> void Shuffle(T *samp, size_t count, size_t dims, RandomGenerator &rng) {
 	for (size_t i = 0; i < count; ++i) {
 		size_t other = i + (rng.uintValue() % (count - i));
 		for (size_t j = 0; j < dims; ++j)

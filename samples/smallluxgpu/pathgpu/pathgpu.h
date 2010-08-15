@@ -34,8 +34,13 @@
 class PathGPURenderEngine;
 
 typedef struct {
+	unsigned int s1, s2, s3;
+} PathGPUSeed;
+
+typedef struct {
 	Spectrum throughput;
 	unsigned int depth, pixelIndex;
+	PathGPUSeed seed;
 } PathGPU;
 
 typedef struct {
@@ -47,7 +52,7 @@ typedef struct {
 // Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-#define PATHGPU_PATH_COUNT (8 * 65536)
+#define PATHGPU_PATH_COUNT (2 * 65536)
 
 class PathGPURenderThread {
 public:

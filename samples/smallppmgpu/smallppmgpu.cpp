@@ -996,8 +996,7 @@ int main(int argc, char *argv[]) {
 
 		luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
 
-		luxrays::RandomGenerator *rndGen = new luxrays::RandomGenerator();
-		rndGen->init(7);
+		luxrays::RandomGenerator *rndGen = new luxrays::RandomGenerator(7);
 
 		//----------------------------------------------------------------------
 		// Allocate the Film

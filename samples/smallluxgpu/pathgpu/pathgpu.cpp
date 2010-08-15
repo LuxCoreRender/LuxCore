@@ -288,7 +288,6 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 		// -2.0 is a trick to set the first frame buffer refresh after 1 sec
 		double startTime = WallClockTime() - 2.0;
 		while (!boost::this_thread::interruption_requested()) {
-
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
 				*(renderThread->frameBufferBuff),
@@ -299,7 +298,7 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 
 			for(unsigned int j = 0;;++j) {
 				cl::Event event;
-				for (unsigned int i = 0; i < 16; ++i) {
+				for (unsigned int i = 0; i < 32; ++i) {
 					// Trace rays
 					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
 							*(renderThread->hitsBuff), PATHGPU_PATH_COUNT);
@@ -312,6 +311,7 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathKernel), cl::NullRange,
 							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathWorkGroupSize));
 				}
+				oclQueue.flush();
 
 				event.wait();
 				const double elapsedTime = WallClockTime() - startTime;

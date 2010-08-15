@@ -33,6 +33,8 @@
 //  PARAM_CAMERA2WORLD_IJ (Matrix4x4)
 
 //------------------------------------------------------------------------------
+// Types
+//------------------------------------------------------------------------------
 
 typedef struct {
 	float r, g, b;
@@ -59,14 +61,56 @@ typedef struct {
 } RayHit;
 
 typedef struct {
+	unsigned int s1, s2, s3;
+} Seed;
+
+typedef struct {
 	Spectrum throughput;
 	unsigned int depth, pixelIndex;
+	Seed seed;
 } Path;
 
 typedef struct {
 	Spectrum c;
 	unsigned int count;
 } Pixel;
+
+//------------------------------------------------------------------------------
+// Random number generator
+// maximally equidistributed combined Tausworthe generator
+//------------------------------------------------------------------------------
+
+#define FLOATMASK 0x00ffffffUL
+
+unsigned int TAUSWORTHE(const unsigned int s, const unsigned int a,
+	const unsigned int b, const unsigned int c,
+	const unsigned int d) {
+	return ((s&c)<<d) ^ (((s << a) ^ s) >> b);
+}
+
+unsigned int LCG(const unsigned int x) { return x * 69069; }
+
+unsigned int ValidSeed(const unsigned int x, const unsigned int m) {
+	return (x < m) ? (x + m) : x;
+}
+
+void InitRandomGenerator(const unsigned int seed, Seed *s) {
+	s->s1 = ValidSeed(LCG(seed), 1);
+	s->s2 = ValidSeed(LCG(s->s1), 7);
+	s->s3 = ValidSeed(LCG(s->s2), 15);
+}
+
+unsigned long RndUintValue(Seed *s) {
+	s->s1 = TAUSWORTHE(s->s1, 13, 19, 4294967294UL, 12);
+	s->s2 = TAUSWORTHE(s->s2, 2, 25, 4294967288UL, 4);
+	s->s3 = TAUSWORTHE(s->s3, 3, 11, 4294967280UL, 17);
+
+	return ((s->s1) ^ (s->s2) ^ (s->s3));
+}
+
+float RndFloatValue(Seed *s) {
+	return (RndUintValue(s) & FLOATMASK) * (1.f / (FLOATMASK + 1UL));
+}
 
 //------------------------------------------------------------------------------
 
@@ -81,11 +125,13 @@ void Normalize(Vector *v) {
 	v->z *= il;
 }
 
+//------------------------------------------------------------------------------
+
 void GenerateRay(
 		const unsigned int pixelIndex,
-		__global Ray *ray) {
-	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH; // + random
-	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH; // + random
+		__global Ray *ray, Seed *seed) {
+	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + RndFloatValue(seed) - 0.5f;
+	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + RndFloatValue(seed) - 0.5f;
 	Point Pras;
 	Pras.x = screenX;
 	Pras.y = PARAM_IMAGE_HEIGHT - screenY - 1.f;
@@ -122,6 +168,8 @@ void GenerateRay(
 	ray->maxt = (PARAM_CLIP_YON - PARAM_CLIP_HITHER) / dir.z;
 }
 
+//------------------------------------------------------------------------------
+
 __kernel void Init(
 		__global Path *paths,
 		__global Ray *rays) {
@@ -138,8 +186,17 @@ __kernel void Init(
 	const unsigned int pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = pixelIndex;
 
+	// Initialize random number generator
+	Seed seed;
+	InitRandomGenerator(gid + 1, &seed);
+
 	// Generate the eye ray
-	GenerateRay(pixelIndex, &rays[gid]);
+	GenerateRay(pixelIndex, &rays[gid], &seed);
+
+	// Save the seed
+	path->seed.s1 = seed.s1;
+	path->seed.s2 = seed.s2;
+	path->seed.s3 = seed.s3;
 }
 
 __kernel void InitFrameBuffer(
@@ -166,6 +223,12 @@ __kernel void AdvancePaths(
 
 	__global Path *path = &paths[gid];
 
+	// Read the seed
+	Seed seed;
+	seed.s1 = path->seed.s1;
+	seed.s2 = path->seed.s2;
+	seed.s3 = path->seed.s3;
+
 	__global RayHit *rayHit = &rayHits[gid];
 	const float c = (rayHit->index == 0xffffffffu) ? 0.f : 1.f;
 
@@ -178,7 +241,12 @@ __kernel void AdvancePaths(
 	pixel->count += 1;
 
 	const unsigned int newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-	GenerateRay(newPixelIndex, &rays[gid]);
+	GenerateRay(newPixelIndex, &rays[gid], &seed);
 
 	path->pixelIndex = newPixelIndex;
+
+	// Save the seed
+	path->seed.s1 = seed.s1;
+	path->seed.s2 = seed.s2;
+	path->seed.s3 = seed.s3;
 }
