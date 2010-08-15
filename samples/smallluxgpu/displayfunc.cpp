@@ -111,12 +111,23 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 	int renderingTime = 0;
-	if (config->GetRenderEngine()->GetEngineType() == SPPM) {
-		SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+	switch (config->GetRenderEngine()->GetEngineType()) {
+		case SPPM: {
+			SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
 
-		renderingTime = int(sre->GetRenderingTime());
-	} else
-		renderingTime = int(config->film->GetTotalTime());
+			renderingTime = int(sre->GetRenderingTime());
+			break;
+		}
+		case PATHGPU: {
+			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+
+			renderingTime = int(pre->GetRenderingTime());
+			break;
+		}
+		default:
+			renderingTime = int(config->film->GetTotalTime());
+			break;
+	}
 	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Screen refresh %dms][Render threads %d]",
 			renderingTime,
 			config->scene->camera->fieldOfView,
@@ -594,8 +605,8 @@ void timerFunc(int value) {
 		case PATHGPU: {
 			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
-			sprintf(config->captionBuffer, "[Pass %3d][Avg. rays/sec % 4dK on %.1fK tris]",
-					pass, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 			// Need to update the Film
 			pre->UpdateFilm();

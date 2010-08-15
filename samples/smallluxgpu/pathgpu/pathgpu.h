@@ -33,20 +33,35 @@
 
 class PathGPURenderEngine;
 
+namespace PathGPU {
+
 typedef struct {
 	unsigned int s1, s2, s3;
-} PathGPUSeed;
+} Seed;
 
 typedef struct {
 	Spectrum throughput;
 	unsigned int depth, pixelIndex;
-	PathGPUSeed seed;
-} PathGPU;
+	Seed seed;
+} Path;
 
 typedef struct {
 	Spectrum c;
 	unsigned int count;
-} PathGPUPixel;
+} Pixel;
+
+#define MAT_MATTE 0
+
+typedef struct {
+	unsigned int type;
+	union {
+		struct {
+			float r, g, b;
+		} matte;
+	} mat;
+} Material;
+
+}
 
 //------------------------------------------------------------------------------
 // Path Tracing GPU-only render threads
@@ -63,22 +78,19 @@ public:
     virtual void Interrupt() = 0;
 	virtual void Stop();
 
-	virtual void ClearPaths() = 0;
-	virtual unsigned int GetPass() const = 0;
-
 	friend class PathGPURenderEngine;
 
 protected:
 	unsigned int threadIndex;
 	PathGPURenderEngine *renderEngine;
-	PathGPUPixel *frameBuffer;
+	PathGPU::Pixel *frameBuffer;
 
 	bool started;
 };
 
 class PathGPUDeviceRenderThread : public PathGPURenderThread {
 public:
-	PathGPUDeviceRenderThread(unsigned int index, unsigned long seedBase,
+	PathGPUDeviceRenderThread(const unsigned int index, const unsigned int seedBase,
 			const float samplingStart, const unsigned int samplePerPixel,
 			OpenCLIntersectionDevice *device, PathGPURenderEngine *re);
 	~PathGPUDeviceRenderThread();
@@ -86,10 +98,6 @@ public:
 	void Start();
     void Interrupt();
 	void Stop();
-
-	void ClearPaths();
-
-	unsigned int GetPass() const { return 0; }
 
 private:
 	static void RenderThreadImpl(PathGPUDeviceRenderThread *renderThread);
@@ -108,8 +116,13 @@ private:
 	cl::Buffer *hitsBuff;
 	cl::Buffer *pathsBuff;
 	cl::Buffer *frameBufferBuff;
+	cl::Buffer *materialsBuff;
+	cl::Buffer *meshIDBuff;
+	cl::Buffer *triIDBuff;
+	cl::Buffer *meshMatsBuff;
 
 	float samplingStart;
+	unsigned int seed;
 
 	boost::thread *renderThread;
 
@@ -136,6 +149,13 @@ public:
 	unsigned int GetThreadCount() const;
 	RenderEngineType GetEngineType() const { return PATHGPU; }
 
+	unsigned long long GetSamplesCount() const { return samplesCount; }
+	double GetTotalSamplesSec() const {
+		return (startTime == 0.0) ? 0.0 :
+			samplesCount / (WallClockTime() - startTime);
+	}
+	double GetRenderingTime() const { return (startTime == 0.0) ? 0.0 : (WallClockTime() - startTime); }
+
 	void UpdateFilm();
 
 	friend class PathGPURenderThread;
@@ -153,6 +173,9 @@ private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	vector<PathGPURenderThread *> renderThreads;
 	SampleBuffer *sampleBuffer;
+
+	double startTime;
+	unsigned long long samplesCount;
 };
 
 #endif

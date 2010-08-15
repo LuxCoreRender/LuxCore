@@ -42,7 +42,9 @@ public:
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	const TriangleMeshID GetMeshID(const unsigned int index) const { return accel->GetMeshID(index); }
+	const TriangleMeshID *GetMeshIDTable() const { return accel->GetMeshIDTable(); }
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return accel->GetMeshTriangleID(index); }
+	const TriangleID *GetMeshTriangleIDTable() const { return accel->GetMeshTriangleIDTable(); }
 
 	void SetAcceleratorType(AcceleratorType type) {
 		accelType = type;

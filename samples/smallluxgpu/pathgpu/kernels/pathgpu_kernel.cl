@@ -31,6 +31,7 @@
 //  PARAM_CLIP_YON
 //  PARAM_CLIP_HITHER
 //  PARAM_CAMERA2WORLD_IJ (Matrix4x4)
+//  PARAM_SEED
 
 //------------------------------------------------------------------------------
 // Types
@@ -75,12 +76,23 @@ typedef struct {
 	unsigned int count;
 } Pixel;
 
+#define MAT_MATTE 0
+
+typedef struct {
+	unsigned int type;
+	union {
+		struct {
+			float r, g, b;
+		} matte;
+	} mat;
+} Material;
+
 //------------------------------------------------------------------------------
 // Random number generator
 // maximally equidistributed combined Tausworthe generator
 //------------------------------------------------------------------------------
 
-#define FLOATMASK 0x00ffffffUL
+#define FLOATMASK 0x00ffffffu
 
 unsigned int TAUSWORTHE(const unsigned int s, const unsigned int a,
 	const unsigned int b, const unsigned int c,
@@ -94,7 +106,10 @@ unsigned int ValidSeed(const unsigned int x, const unsigned int m) {
 	return (x < m) ? (x + m) : x;
 }
 
-void InitRandomGenerator(const unsigned int seed, Seed *s) {
+void InitRandomGenerator(unsigned int seed, Seed *s) {
+	// Avoid 0 value
+	seed = (seed == 0) ? (seed + 0xffffffu) : seed;
+
 	s->s1 = ValidSeed(LCG(seed), 1);
 	s->s2 = ValidSeed(LCG(s->s1), 7);
 	s->s3 = ValidSeed(LCG(s->s2), 15);
@@ -188,7 +203,7 @@ __kernel void Init(
 
 	// Initialize random number generator
 	Seed seed;
-	InitRandomGenerator(gid + 1, &seed);
+	InitRandomGenerator(PARAM_SEED + gid, &seed);
 
 	// Generate the eye ray
 	GenerateRay(pixelIndex, &rays[gid], &seed);
@@ -198,6 +213,8 @@ __kernel void Init(
 	path->seed.s2 = seed.s2;
 	path->seed.s3 = seed.s3;
 }
+
+//------------------------------------------------------------------------------
 
 __kernel void InitFrameBuffer(
 		__global Pixel *frameBuffer) {
@@ -212,11 +229,17 @@ __kernel void InitFrameBuffer(
 	p->count = 0;
 }
 
+//------------------------------------------------------------------------------
+
 __kernel void AdvancePaths(
 		__global Path *paths,
 		__global Ray *rays,
 		__global RayHit *rayHits,
-		__global Pixel *frameBuffer) {
+		__global Pixel *frameBuffer,
+		__global Material *mats,
+		__global unsigned int *meshMats,
+		__global unsigned int *meshIDs,
+		__global unsigned int *triIDs) {
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_PATH_COUNT)
 		return;
@@ -230,14 +253,38 @@ __kernel void AdvancePaths(
 	seed.s3 = path->seed.s3;
 
 	__global RayHit *rayHit = &rayHits[gid];
-	const float c = (rayHit->index == 0xffffffffu) ? 0.f : 1.f;
+	const unsigned int currentTriangleIndex = rayHit->index;
+	Spectrum radiance;
+	if (currentTriangleIndex != 0xffffffffu ) {
+		// Something was hit
+
+		const unsigned int meshIndex = meshIDs[currentTriangleIndex];
+		__global Material *mat = &mats[meshMats[meshIndex]];
+
+		switch (mat->type) {
+			case MAT_MATTE:
+				radiance.r = mat->mat.matte.r;
+				radiance.g = mat->mat.matte.g;
+				radiance.b = mat->mat.matte.b;
+				break;
+			default:
+				// Huston, we have a problem...
+				radiance.r = 0.f;
+				radiance.g = 0.f;
+				radiance.b = 0.f;
+				break;
+		}
+	} else {
+		radiance.r = 0.f;
+		radiance.g = 0.f;
+		radiance.b = 0.f;
+	}
 
 	const unsigned int pixelIndex = path->pixelIndex;
 	__global Pixel *pixel = &frameBuffer[pixelIndex];
-	pixel->c.r += c;
-	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH;
-	pixel->c.g += screenX / PARAM_IMAGE_WIDTH;
-	pixel->c.b += pixel->count / 9999.0f;
+	pixel->c.r += radiance.r;
+	pixel->c.g += radiance.g;
+	pixel->c.b += radiance.b;
 	pixel->count += 1;
 
 	const unsigned int newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);

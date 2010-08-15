@@ -31,9 +31,16 @@ namespace luxrays { namespace sdl {
 
 class Scene;
 
+enum MaterialType {
+	MATTE, AREALIGHT, MIRROR, MATTEMIRROR, GLASS, METAL, MATTEMETAL,
+	ARCHGLASS, ALLOY
+};
+
 class Material {
 public:
 	virtual ~Material() { }
+
+	virtual MaterialType GetType() const = 0;
 
 	virtual bool IsLightSource() const = 0;
 	virtual bool IsDiffuse() const = 0;
@@ -57,6 +64,8 @@ public:
 class AreaLightMaterial : public LightMaterial {
 public:
 	AreaLightMaterial(const Spectrum &col) { gain = col; }
+
+	MaterialType GetType() const { return AREALIGHT; }
 
 	Spectrum Le(const ExtMesh *mesh, const unsigned triIndex, const Vector &wo) const {
 		Normal sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
@@ -92,6 +101,8 @@ public:
 		Kd = col;
 		KdOverPI = Kd * INV_PI;
 	}
+
+	MaterialType GetType() const { return MATTE; }
 
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return false; }
@@ -147,6 +158,8 @@ public:
 		reflectionSpecularBounce = reflSpecularBounce;
 	}
 
+	MaterialType GetType() const { return MIRROR; }
+
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
@@ -185,6 +198,8 @@ public:
 		mattePdf = matteFilter / totFilter;
 		mirrorPdf = mirrorFilter / totFilter;
 	}
+
+	MaterialType GetType() const { return MATTEMIRROR; }
 
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
@@ -235,6 +250,8 @@ public:
 		const float b = nt + nc;
 		R0 = a * a / (b * b);
 	}
+
+	MaterialType GetType() const { return GLASS; }
 
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
@@ -327,6 +344,8 @@ public:
 		reflectionSpecularBounce = reflSpecularBounce;
 	}
 
+	MaterialType GetType() const { return METAL; }
+
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
@@ -398,6 +417,8 @@ public:
 		metalPdf = metalFilter / totFilter;
 	}
 
+	MaterialType GetType() const { return MATTEMETAL; }
+
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
@@ -446,6 +467,8 @@ public:
 		reflPdf = reflFilter / totFilter;
 		transPdf = transFilter / totFilter;
 	}
+
+	MaterialType GetType() const { return ARCHGLASS; }
 
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
@@ -513,6 +536,8 @@ public:
 		
 		reflectionSpecularBounce = reflSpecularBounce;
 	}
+
+	MaterialType GetType() const { return ALLOY; }
 
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }

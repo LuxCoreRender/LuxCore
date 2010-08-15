@@ -397,8 +397,11 @@ public:
 	AcceleratorType GetType() const { return ACCEL_QBVH; }
 	void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
+
 	const TriangleMeshID GetMeshID(const unsigned int index) const { return meshIDs[index]; }
+	const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return meshTriangleIDs[index]; }
+	const TriangleID *GetMeshTriangleIDTable() const { return meshTriangleIDs; }
 
 	/**
 	   Intersect a ray in world space against the
