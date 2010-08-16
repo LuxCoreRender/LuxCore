@@ -329,7 +329,8 @@ void PathGPUDeviceRenderThread::Start() {
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
-			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap
+			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap <<
+			" -D PARAM_SAMPLE_PER_PIXEL=" << renderEngine->samplePerPixel
 			;
 
 	if (infiniteLight) {
@@ -571,6 +572,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 		vector<IntersectionDevice *> intersectionDevices, const Properties &cfg) :
 		RenderEngine(scn, flm, filmMutex) {
 	samplePerPixel = max(1, cfg.GetInt("path.sampler.spp", cfg.GetInt("sampler.spp", 4)));
+	samplePerPixel *= samplePerPixel;
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);

@@ -35,6 +35,7 @@
 //  PARAM_MAX_PATH_DEPTH
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
+//  PARAM_SAMPLE_PER_PIXEL
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -96,7 +97,7 @@ typedef struct {
 
 typedef struct {
 	Spectrum throughput;
-	unsigned int depth, pixelIndex;
+	unsigned int depth, pixelIndex, subpixelIndex;
 	Seed seed;
 } Path;
 
@@ -236,6 +237,7 @@ __kernel void Init(
 	path->depth = 0;
 	const unsigned int pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = pixelIndex;
+	path->subpixelIndex = 0;
 
 	// Initialize random number generator
 	Seed seed;
@@ -459,7 +461,17 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	pixel->c.b += radiance->b;
 	pixel->count += 1;
 
-	const unsigned int newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+	const unsigned int subpixelIndex = path->subpixelIndex;
+	unsigned int newPixelIndex;
+	if (subpixelIndex >= PARAM_SAMPLE_PER_PIXEL) {
+		newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+		path->pixelIndex = newPixelIndex;
+		path->subpixelIndex = 0;
+	} else {
+		newPixelIndex = pixelIndex;
+		path->subpixelIndex = subpixelIndex + 1;
+	}
+
 	GenerateRay(newPixelIndex, ray, seed);
 
 	// Re-initialize the path
@@ -467,7 +479,6 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	path->throughput.g = 1.f;
 	path->throughput.b = 1.f;
 	path->depth = 0;
-	path->pixelIndex = newPixelIndex;
 }
 
 __kernel void AdvancePaths(
@@ -559,7 +570,7 @@ __kernel void AdvancePaths(
 		const unsigned int pathDepth = path->depth + 1;
 		const float rrSample = RndFloatValue(&seed);
 		bool terminatePath = (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH) ||
-			((pathDepth > PARAM_RR_DEPTH) && (rrProb >= rrSample));
+			((pathDepth > PARAM_RR_DEPTH) && (rrProb < rrSample));
 
 		const float invRRProb = 1.f / rrProb;
 		throughput.r *= rrProb;
