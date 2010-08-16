@@ -180,6 +180,15 @@ void PathGPUDeviceRenderThread::Start() {
 				gpum->mat.matte.b = mm->GetKd().b;
 				break;
 			}
+			case AREALIGHT: {
+				AreaLightMaterial *alm = (AreaLightMaterial *)m;
+
+				gpum->type = MAT_AREALIGHT;
+				gpum->mat.areaLight.gain_r = alm->GetGain().r;
+				gpum->mat.areaLight.gain_g = alm->GetGain().g;
+				gpum->mat.areaLight.gain_b = alm->GetGain().b;
+				break;
+			}
 			default: {
 				gpum->type = MAT_MATTE;
 				gpum->mat.matte.r = 0.75f;
@@ -647,6 +656,7 @@ unsigned int PathGPURenderEngine::GetThreadCount() const {
 void PathGPURenderEngine::UpdateFilm() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
+	elapsedTime = WallClockTime() - startTime;
 	film->Reset();
 
 	const unsigned int imgWidth = film->GetWidth();

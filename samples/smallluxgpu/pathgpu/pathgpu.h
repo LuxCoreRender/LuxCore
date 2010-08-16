@@ -51,6 +51,7 @@ typedef struct {
 } Pixel;
 
 #define MAT_MATTE 0
+#define MAT_AREALIGHT 1
 
 typedef struct {
 	unsigned int type;
@@ -58,6 +59,9 @@ typedef struct {
 		struct {
 			float r, g, b;
 		} matte;
+		struct {
+			float gain_r, gain_g, gain_b;
+		} areaLight;
 	} mat;
 } Material;
 
@@ -150,10 +154,8 @@ public:
 	unsigned int GetThreadCount() const;
 	RenderEngineType GetEngineType() const { return PATHGPU; }
 
-	unsigned long long GetSamplesCount() const { return samplesCount; }
 	double GetTotalSamplesSec() const {
-		return (startTime == 0.0) ? 0.0 :
-			samplesCount / (WallClockTime() - startTime);
+		return (startTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
 	double GetRenderingTime() const { return (startTime == 0.0) ? 0.0 : (WallClockTime() - startTime); }
 
@@ -176,6 +178,7 @@ private:
 	SampleBuffer *sampleBuffer;
 
 	double startTime;
+	double elapsedTime;
 	unsigned long long samplesCount;
 };
 
