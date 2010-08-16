@@ -36,6 +36,8 @@
 #include "pathgpu/kernels/kernels.h"
 #include "renderconfig.h"
 #include "displayfunc.h"
+#include "luxrays/accelerators/mqbvhaccel.h"
+#include "luxrays/accelerators/bvhaccel.h"
 
 //------------------------------------------------------------------------------
 // PathGPURenderThread
@@ -53,7 +55,15 @@ PathGPURenderThread::~PathGPURenderThread() {
 
 void PathGPURenderThread::Start() {
 	started = true;
-	frameBuffer = new PathGPU::Pixel[renderEngine->film->GetWidth() * renderEngine->film->GetHeight()];
+	const unsigned int pixelCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
+	frameBuffer = new PathGPU::Pixel[pixelCount];
+
+	for (unsigned int i = 0; i < pixelCount; ++i) {
+		frameBuffer[i].c.r = 0.f;
+		frameBuffer[i].c.g = 0.f;
+		frameBuffer[i].c.b = 0.f;
+		frameBuffer[i].count = 0;
+	}
 }
 
 void PathGPURenderThread::Stop() {
@@ -94,6 +104,10 @@ static void AppendMatrixDefinition(stringstream &ss, const char *paramName, cons
 void PathGPUDeviceRenderThread::Start() {
 	PathGPURenderThread::Start();
 
+	// Check the used accelerator type
+	if (renderEngine->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
+		throw runtime_error("ACCEL_MQBVH is not yet supported by PathGPURenderEngine");
+
 	const unsigned int startLine = Clamp<unsigned int>(
 			renderEngine->film->GetHeight() * samplingStart,
 			0, renderEngine->film->GetHeight() - 1);
@@ -131,17 +145,18 @@ void PathGPUDeviceRenderThread::Start() {
 			sizeof(PathGPU::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight());
 	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount() / 1024) << "Kbytes" << endl;
+	const unsigned int trianglesCount = renderEngine->scene->dataSet->GetTotalTriangleCount();
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
 	meshIDBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount(),
+			sizeof(unsigned int) * trianglesCount,
 			(void *)renderEngine->scene->dataSet->GetMeshIDTable());
 	deviceDesc->AllocMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] TriangleIDs buffer size: " << (sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount() / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] TriangleIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
 	triIDBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(unsigned int) * renderEngine->scene->dataSet->GetTotalTriangleCount(),
+			sizeof(unsigned int) * trianglesCount,
 			(void *)renderEngine->scene->dataSet->GetMeshTriangleIDTable());
 	deviceDesc->AllocMemory(triIDBuff->getInfo<CL_MEM_SIZE>());
 
@@ -149,9 +164,9 @@ void PathGPUDeviceRenderThread::Start() {
 	// Translate material definitions
 	//--------------------------------------------------------------------------
 
-	const unsigned int matCount = renderEngine->scene->materials.size();
-	PathGPU::Material *mats = new PathGPU::Material[matCount];
-	for (unsigned int i = 0; i < matCount; ++i) {
+	const unsigned int materialsCount = renderEngine->scene->materials.size();
+	PathGPU::Material *mats = new PathGPU::Material[materialsCount];
+	for (unsigned int i = 0; i < materialsCount; ++i) {
 		Material *m = renderEngine->scene->materials[i];
 		PathGPU::Material *gpum = &mats[i];
 
@@ -175,10 +190,10 @@ void PathGPUDeviceRenderThread::Start() {
 		}
 	}
 
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Materials buffer size: " << (sizeof(PathGPU::Material) * matCount / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Materials buffer size: " << (sizeof(PathGPU::Material) * materialsCount / 1024) << "Kbytes" << endl;
 	materialsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(PathGPU::Material) * matCount,
+			sizeof(PathGPU::Material) * materialsCount,
 			mats);
 	deviceDesc->AllocMemory(materialsBuff->getInfo<CL_MEM_SIZE>());
 
@@ -195,7 +210,7 @@ void PathGPUDeviceRenderThread::Start() {
 
 		// Look for the index
 		unsigned int index = 0;
-		for (unsigned int j = 0; j < matCount; ++j) {
+		for (unsigned int j = 0; j < materialsCount; ++j) {
 			if (m == renderEngine->scene->materials[j]) {
 				index = j;
 				break;
@@ -249,6 +264,51 @@ void PathGPUDeviceRenderThread::Start() {
 		infiniteLightBuff = NULL;
 
 	//--------------------------------------------------------------------------
+	// Translate mesh normals
+	//--------------------------------------------------------------------------
+
+	const unsigned int normalsCount = renderEngine->scene->dataSet->GetTotalVertexCount();
+	Normal *normals = new Normal[normalsCount];
+	unsigned int nIndex = 0;
+	for (unsigned int i = 0; i < renderEngine->scene->objects.size(); ++i) {
+		ExtMesh *mesh = renderEngine->scene->objects[i];
+
+		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
+			normals[nIndex++] = mesh->GetNormal(j);
+	}
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * normalsCount / 1024) << "Kbytes" << endl;
+	normalsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Normal) * normalsCount,
+			normals);
+	deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
+	delete[] normals;
+
+	//--------------------------------------------------------------------------
+	// Translate mesh indices
+	//--------------------------------------------------------------------------
+
+	const TriangleMesh *preprocessedMesh;
+	switch (renderEngine->scene->dataSet->GetAcceleratorType()) {
+		case ACCEL_BVH:
+			preprocessedMesh = ((BVHAccel *)renderEngine->scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
+			break;
+		case ACCEL_QBVH:
+			preprocessedMesh = ((QBVHAccel *)renderEngine->scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
+			break;
+		default:
+			throw runtime_error("ACCEL_MQBVH is not yet supported by PathGPURenderEngine");
+	}
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
+	trianglesBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Triangle) * trianglesCount,
+			(void *)preprocessedMesh->GetTriangles());
+	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+
+	//--------------------------------------------------------------------------
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
@@ -266,7 +326,10 @@ void PathGPUDeviceRenderThread::Start() {
 			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON <<
 			" -D PARAM_CLIP_YON=" << renderEngine->scene->camera->GetClipYon() <<
 			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither() <<
-			" -D PARAM_SEED=" << seed
+			" -D PARAM_SEED=" << seed <<
+			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
+			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
+			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap
 			;
 
 	if (infiniteLight) {
@@ -376,8 +439,10 @@ void PathGPUDeviceRenderThread::Start() {
 	advancePathKernel->setArg(5, *meshMatsBuff);
 	advancePathKernel->setArg(6, *meshIDBuff);
 	advancePathKernel->setArg(7, *triIDBuff);
+	advancePathKernel->setArg(8, *normalsBuff);
+	advancePathKernel->setArg(9, *trianglesBuff);
 	if (infiniteLight)
-		advancePathKernel->setArg(8, *infiniteLightBuff);
+		advancePathKernel->setArg(10, *infiniteLightBuff);
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathGPUDeviceRenderThread::RenderThreadImpl, this));
@@ -420,6 +485,10 @@ void PathGPUDeviceRenderThread::Stop() {
 	delete triIDBuff;
 	deviceDesc->FreeMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
 	delete meshMatsBuff;
+	deviceDesc->FreeMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
+	delete normalsBuff;
+	deviceDesc->FreeMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+	delete trianglesBuff;
 	if (infiniteLightBuff) {
 		deviceDesc->FreeMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
 		delete infiniteLightBuff;
@@ -439,13 +508,14 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 		cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 		const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
 
-		const double refreshInterval = 1.0;
+		//const double refreshInterval = 1.0;
+		const double refreshInterval = 3.0;
 
 		// -refreshInterval is a trick to set the first frame buffer refresh after 1 sec
 		double startTime = WallClockTime() - (refreshInterval / 2.0);
 		while (!boost::this_thread::interruption_requested()) {
 			if(renderThread->threadIndex == 0)
-					cerr<< "[DEBUG] =================================" << endl;
+				cerr<< "[DEBUG] =================================" << endl;
 
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
@@ -503,7 +573,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 	samplePerPixel = max(1, cfg.GetInt("path.sampler.spp", cfg.GetInt("sampler.spp", 4)));
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
-	rrProb = cfg.GetFloat("path.russianroulette.prob", 0.5f);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
 
 	startTime = 0.0;
 	samplesCount = 0;

@@ -62,6 +62,7 @@ public:
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
+	const TriangleMesh *GetPreprocessedMesh() const { return preprocessedMesh; }
 
 	friend class OpenCLIntersectionDevice;
 
