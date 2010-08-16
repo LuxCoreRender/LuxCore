@@ -33,6 +33,28 @@
 //  PARAM_CAMERA2WORLD_IJ (Matrix4x4)
 //  PARAM_SEED
 
+// (optional)
+//  PARAM_HAVE_INFINITELIGHT
+//  PARAM_IL_GAIN_R
+//  PARAM_IL_GAIN_G
+//  PARAM_IL_GAIN_B
+//  PARAM_IL_SHIFT_U
+//  PARAM_IL_SHIFT_V
+//  PARAM_IL_WIDTH
+//  PARAM_IL_HEIGHT
+
+#ifndef M_PI
+#define M_PI M_PI_F
+#endif
+
+#ifndef INV_PI
+#define INV_PI  0.31830988618379067154f
+#endif
+
+#ifndef INV_TWOPI
+#define INV_TWOPI  0.15915494309189533577f
+#endif
+
 //------------------------------------------------------------------------------
 // Types
 //------------------------------------------------------------------------------
@@ -134,7 +156,8 @@ float Dot(Vector *v) {
 }
 
 void Normalize(Vector *v) {
-	const float il = 1.f / Dot(v);
+	const float il = 1.f / sqrt(Dot(v));
+
 	v->x *= il;
 	v->y *= il;
 	v->z *= il;
@@ -231,6 +254,79 @@ __kernel void InitFrameBuffer(
 
 //------------------------------------------------------------------------------
 
+int Mod(int a, int b) {
+	if (b == 0)
+		b = 1;
+
+	a %= b;
+	if (a < 0)
+		a += b;
+
+	return a;
+}
+
+void TexMap_GetTexel(__global Spectrum *pixels, const unsigned int width, const unsigned int height,
+	const int s, const int t, Spectrum *col) {
+	const unsigned int u = Mod(s, width);
+	const unsigned int v = Mod(t, height);
+
+	const unsigned index = v * width + u;
+
+	col->r = pixels[index].r;
+	col->g = pixels[index].g;
+	col->b = pixels[index].b;
+}
+
+void TexMap_GetColor(__global Spectrum *pixels, const unsigned int width, const unsigned int height,
+	const float u, const float v, Spectrum *col) {
+	const float s = u * width - 0.5f;
+	const float t = v * height - 0.5f;
+
+	const int s0 = (int)floor(s);
+	const int t0 = (int)floor(t);
+
+	const float ds = s - s0;
+	const float dt = t - t0;
+
+	const float ids = 1.f - ds;
+	const float idt = 1.f - dt;
+
+	Spectrum c0, c1, c2, c3;
+	TexMap_GetTexel(pixels, width, height, s0, t0, &c0);
+	TexMap_GetTexel(pixels, width, height, s0, t0 + 1, &c1);
+	TexMap_GetTexel(pixels, width, height, s0 + 1, t0, &c2);
+	TexMap_GetTexel(pixels, width, height, s0 + 1, t0 + 1, &c3);
+
+	const float k0 = ids * idt;
+	const float k1 = ids * dt;
+	const float k2 = ds * idt;
+	const float k3 = ds * dt;
+
+	col->r = k0 * c0.r + k1 * c1.r + k2 * c2.r + k3 * c3.r;
+	col->g = k0 * c0.g + k1 * c1.g + k2 * c2.g + k3 * c3.g;
+	col->b = k0 * c0.b + k1 * c1.b + k2 * c2.b + k3 * c3.b;
+}
+
+float SphericalTheta(const Vector *v) {
+	return acos(clamp(v->z, -1.f, 1.f));
+}
+
+float SphericalPhi(const Vector *v) {
+	float p = atan2(v->y, v->x);
+	return (p < 0.f) ? p + 2.f * M_PI : p;
+}
+
+void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector *dir) {
+	const float u = SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;
+	const float v = SphericalTheta(dir) * INV_PI + PARAM_IL_SHIFT_V;
+
+	TexMap_GetColor(infiniteLightMap, PARAM_IL_WIDTH, PARAM_IL_HEIGHT, u, v, le);
+
+	le->r *= PARAM_IL_GAIN_R;
+	le->g *= PARAM_IL_GAIN_G;
+	le->b *= PARAM_IL_GAIN_B;
+}
+
 __kernel void AdvancePaths(
 		__global Path *paths,
 		__global Ray *rays,
@@ -239,7 +335,11 @@ __kernel void AdvancePaths(
 		__global Material *mats,
 		__global unsigned int *meshMats,
 		__global unsigned int *meshIDs,
-		__global unsigned int *triIDs) {
+		__global unsigned int *triIDs
+#if defined(PARAM_HAVE_INFINITELIGHT)
+		, __global Spectrum *infiniteLightMap
+#endif
+		) {
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_PATH_COUNT)
 		return;
@@ -252,6 +352,7 @@ __kernel void AdvancePaths(
 	seed.s2 = path->seed.s2;
 	seed.s3 = path->seed.s3;
 
+	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 	const unsigned int currentTriangleIndex = rayHit->index;
 	Spectrum radiance;
@@ -275,10 +376,26 @@ __kernel void AdvancePaths(
 				break;
 		}
 	} else {
+#if defined(PARAM_HAVE_INFINITELIGHT)
+		Vector rayDir;
+		rayDir.x = ray->d.x;
+		rayDir.y = ray->d.y;
+		rayDir.z = ray->d.z;
+
+		Spectrum Le;
+		InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
+
+		radiance.r = Le.r * path->throughput.r;
+		radiance.g = Le.g * path->throughput.g;
+		radiance.b = Le.b * path->throughput.b;
+#else
 		radiance.r = 0.f;
 		radiance.g = 0.f;
 		radiance.b = 0.f;
+#endif
 	}
+
+	// Add sample to the framebuffer
 
 	const unsigned int pixelIndex = path->pixelIndex;
 	__global Pixel *pixel = &frameBuffer[pixelIndex];
@@ -288,7 +405,7 @@ __kernel void AdvancePaths(
 	pixel->count += 1;
 
 	const unsigned int newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-	GenerateRay(newPixelIndex, &rays[gid], &seed);
+	GenerateRay(newPixelIndex, ray, &seed);
 
 	path->pixelIndex = newPixelIndex;
 

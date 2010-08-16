@@ -76,6 +76,8 @@ public:
 	float GetShiftU() const { return shiftU; }
 	float GetShiftV() const { return shiftV; }
 
+	const TexMapInstance *GetTexture() const { return tex; }
+
 	virtual void Preprocess() { }
 
 	virtual Spectrum Le(const Vector &dir) const;

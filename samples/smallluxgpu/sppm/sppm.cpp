@@ -492,10 +492,6 @@ void SPPMRenderEngine::Stop() {
 	delete barrierExit;
 }
 
-void SPPMRenderEngine::Reset() {
-	assert (!started);
-}
-
 unsigned int SPPMRenderEngine::GetPass() const {
 	return (hitPoints) ? hitPoints->GetPassCount() : 0;
 }

@@ -104,8 +104,6 @@ public:
 	void Interrupt();
 	void Stop();
 
-	void Reset();
-
 	unsigned int GetPass() const;
 	unsigned int GetThreadCount() const;
 	RenderEngineType GetEngineType() const { return SPPM; }

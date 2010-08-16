@@ -571,12 +571,6 @@ void PathIntegrator::ReInit() {
 	statsTotalSampleCount = 0;
 }
 
-void PathIntegrator::ClearPaths() {
-	for (size_t i = 0; i < paths.size(); ++i)
-		delete paths[i];
-	paths.clear();
-}
-
 void PathIntegrator::FillRayBuffer(RayBuffer *rayBuffer) {
 	if (paths.size() == 0) {
 		// Need at least 2 paths
@@ -727,10 +721,6 @@ void PathNativeRenderThread::Stop() {
 	PathRenderThread::Stop();
 }
 
-void PathNativeRenderThread::ClearPaths() {
-	pathIntegrator->ClearPaths();
-}
-
 void PathNativeRenderThread::RenderThreadImpl(PathNativeRenderThread *renderThread) {
 	cerr << "[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
@@ -840,13 +830,6 @@ void PathDeviceRenderThread::Stop() {
 	}
 
 	PathRenderThread::Stop();
-}
-
-void PathDeviceRenderThread::ClearPaths() {
-	assert (!started);
-
-	for(size_t i = 0; i < PATH_DEVICE_RENDER_BUFFER_COUNT; i++)
-		pathIntegrators[i]->ClearPaths();
 }
 
 void PathDeviceRenderThread::RenderThreadImpl(PathDeviceRenderThread *renderThread) {
@@ -960,13 +943,6 @@ void PathRenderEngine::Stop() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
-}
-
-void PathRenderEngine::Reset() {
-	assert (!started);
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->ClearPaths();
 }
 
 unsigned int PathRenderEngine::GetPass() const {

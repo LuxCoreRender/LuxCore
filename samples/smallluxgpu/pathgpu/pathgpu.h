@@ -120,6 +120,7 @@ private:
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *triIDBuff;
 	cl::Buffer *meshMatsBuff;
+	cl::Buffer *infiniteLightBuff;
 
 	float samplingStart;
 	unsigned int seed;
@@ -142,8 +143,6 @@ public:
 	void Start();
 	void Interrupt();
 	void Stop();
-
-	void Reset();
 
 	unsigned int GetPass() const;
 	unsigned int GetThreadCount() const;
