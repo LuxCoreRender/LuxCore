@@ -32,6 +32,9 @@
 //  PARAM_CLIP_HITHER
 //  PARAM_CAMERA2WORLD_IJ (Matrix4x4)
 //  PARAM_SEED
+//  PARAM_MAX_PATH_DEPTH
+//  PARAM_MAX_RR_DEPTH
+//  PARAM_MAX_RR_CAP
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -70,6 +73,10 @@ typedef struct {
 typedef struct {
 	float x, y, z;
 } Vector;
+
+typedef struct {
+	unsigned int v0, v1, v2;
+} Triangle;
 
 typedef struct {
 	Point o;
@@ -151,16 +158,22 @@ float RndFloatValue(Seed *s) {
 
 //------------------------------------------------------------------------------
 
-float Dot(Vector *v) {
-	return v->x * v->x + v->y * v->y + v->z * v->z;
+float Dot(const Vector *v0, const Vector *v1) {
+	return v0->x * v1->x + v0->y * v1->y + v0->z * v1->z;
 }
 
 void Normalize(Vector *v) {
-	const float il = 1.f / sqrt(Dot(v));
+	const float il = 1.f / sqrt(Dot(v, v));
 
 	v->x *= il;
 	v->y *= il;
 	v->z *= il;
+}
+
+void Cross(Vector *v3, const Vector *v1, const Vector *v2) {
+	v3->x = (v1->y * v2->z) - (v1->z * v2->y);
+	v3->y = (v1->z * v2->x) - (v1->x * v2->z),
+	v3->z = (v1->x * v2->y) - (v1->y * v2->x);
 }
 
 //------------------------------------------------------------------------------
@@ -266,7 +279,7 @@ int Mod(int a, int b) {
 }
 
 void TexMap_GetTexel(__global Spectrum *pixels, const unsigned int width, const unsigned int height,
-	const int s, const int t, Spectrum *col) {
+		const int s, const int t, Spectrum *col) {
 	const unsigned int u = Mod(s, width);
 	const unsigned int v = Mod(t, height);
 
@@ -278,7 +291,7 @@ void TexMap_GetTexel(__global Spectrum *pixels, const unsigned int width, const 
 }
 
 void TexMap_GetColor(__global Spectrum *pixels, const unsigned int width, const unsigned int height,
-	const float u, const float v, Spectrum *col) {
+		const float u, const float v, Spectrum *col) {
 	const float s = u * width - 0.5f;
 	const float t = v * height - 0.5f;
 
@@ -316,6 +329,7 @@ float SphericalPhi(const Vector *v) {
 	return (p < 0.f) ? p + 2.f * M_PI : p;
 }
 
+#if defined(PARAM_HAVE_INFINITELIGHT)
 void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector *dir) {
 	const float u = SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;
 	const float v = SphericalTheta(dir) * INV_PI + PARAM_IL_SHIFT_V;
@@ -326,6 +340,135 @@ void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector 
 	le->g *= PARAM_IL_GAIN_G;
 	le->b *= PARAM_IL_GAIN_B;
 }
+#endif
+
+void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,
+		const unsigned int triIndex, const float b1, const float b2, Vector *N) {
+	__global Triangle *tri = &triangles[triIndex];
+
+	const float b0 = 1.f - b1 - b2;
+	N->x = b0 * normals[tri->v0].x + b1 * normals[tri->v1].x + b2 * normals[tri->v2].x;
+	N->y = b0 * normals[tri->v0].y + b1 * normals[tri->v1].y + b2 * normals[tri->v2].y;
+	N->z = b0 * normals[tri->v0].z + b1 * normals[tri->v1].z + b2 * normals[tri->v2].z;
+
+	Normalize(N);
+}
+
+//------------------------------------------------------------------------------
+// Materials
+//------------------------------------------------------------------------------
+
+void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
+	float r, theta;
+	// Map uniform random numbers to $[-1,1]^2$
+	float sx = 2.f * u1 - 1.f;
+	float sy = 2.f * u2 - 1.f;
+	// Map square to $(r,\theta)$
+	// Handle degeneracy at the origin
+	if (sx == 0.f && sy == 0.f) {
+		*dx = 0.f;
+		*dy = 0.f;
+		return;
+	}
+	if (sx >= -sy) {
+		if (sx > sy) {
+			// Handle first region of disk
+			r = sx;
+			if (sy > 0.f)
+				theta = sy / r;
+			else
+				theta = 8.0f + sy / r;
+		} else {
+			// Handle second region of disk
+			r = sy;
+			theta = 2.0f - sx / r;
+		}
+	} else {
+		if (sx <= sy) {
+			// Handle third region of disk
+			r = -sx;
+			theta = 4.0f - sy / r;
+		} else {
+			// Handle fourth region of disk
+			r = -sy;
+			theta = 6.0f + sx / r;
+		}
+	}
+	theta *= M_PI / 4.f;
+	*dx = r * cos(theta);
+	*dy = r * sin(theta);
+}
+
+void CosineSampleHemisphere(Vector *ret, const float u1, const float u2) {
+	ConcentricSampleDisk(u1, u2, &ret->x, &ret->y);
+	ret->z = sqrt(max(0.f, 1.f - ret->x * ret->x - ret->y * ret->y));
+}
+
+void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
+	if (fabs(v1->x) > fabs(v1->y)) {
+		float invLen = 1.f / sqrt(v1->x * v1->x + v1->z * v1->z);
+		v2->x = -v1->z * invLen;
+		v2->y = 0.f;
+		v2->z = v1->x * invLen;
+	} else {
+		float invLen = 1.f / sqrt(v1->y * v1->y + v1->z * v1->z);
+		v2->x = 0.f;
+		v2->y = v1->z * invLen;
+		v2->z = -v1->y * invLen;
+	}
+
+	Cross(v3, v1, v2);
+}
+
+void Matte_Sample_f(__global Material *mat, const Vector *wo, Vector *wi,
+		float *pdf, Spectrum *f, const Vector *shadeN,
+		const float u0, const float u1,  const float u2) {
+	Vector dir;
+	CosineSampleHemisphere(&dir, u0, u1);
+	*pdf = dir.z * INV_PI;
+
+	Vector v1, v2;
+	CoordinateSystem(shadeN, &v1, &v2);
+
+	wi->x = v1.x * dir.x + v2.x * dir.y + shadeN->x * dir.z;
+	wi->y = v1.y * dir.x + v2.y * dir.y + shadeN->y * dir.z;
+	wi->z = v1.z * dir.x + v2.z * dir.y + shadeN->z * dir.z;
+
+	const float dp = Dot(shadeN, wi);
+	// Using 0.0001 instead of 0.0 to cut down fireflies
+	if (dp <= 0.0001f)
+		*pdf = 0.f;
+	else {
+		*pdf /=  dp;
+
+		f->r = mat->mat.matte.r * INV_PI;
+		f->g = mat->mat.matte.g * INV_PI;
+		f->b = mat->mat.matte.b * INV_PI;
+	}
+}
+
+//------------------------------------------------------------------------------
+
+void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance) {
+	// Add sample to the framebuffer
+
+	const unsigned int pixelIndex = path->pixelIndex;
+	__global Pixel *pixel = &frameBuffer[pixelIndex];
+	pixel->c.r += radiance->r;
+	pixel->c.g += radiance->g;
+	pixel->c.b += radiance->b;
+	pixel->count += 1;
+
+	const unsigned int newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+	GenerateRay(newPixelIndex, ray, seed);
+
+	// Re-initialize the path
+	path->throughput.r = 1.f;
+	path->throughput.g = 1.f;
+	path->throughput.b = 1.f;
+	path->depth = 0;
+	path->pixelIndex = newPixelIndex;
+}
 
 __kernel void AdvancePaths(
 		__global Path *paths,
@@ -334,8 +477,10 @@ __kernel void AdvancePaths(
 		__global Pixel *frameBuffer,
 		__global Material *mats,
 		__global unsigned int *meshMats,
-		__global unsigned int *meshIDs,
-		__global unsigned int *triIDs
+		__global unsigned int *meshIDs, // Not used
+		__global unsigned int *triIDs,
+		__global Vector *normals,
+		__global Triangle *triangles
 #if defined(PARAM_HAVE_INFINITELIGHT)
 		, __global Spectrum *infiniteLightMap
 #endif
@@ -353,35 +498,102 @@ __kernel void AdvancePaths(
 	seed.s3 = path->seed.s3;
 
 	__global Ray *ray = &rays[gid];
+	Vector rayDir;
+	rayDir.x = ray->d.x;
+	rayDir.y = ray->d.y;
+	rayDir.z = ray->d.z;
+
+	Spectrum throughput;
+	throughput.r = path->throughput.r;
+	throughput.g = path->throughput.g;
+	throughput.b = path->throughput.b;
+
 	__global RayHit *rayHit = &rayHits[gid];
 	const unsigned int currentTriangleIndex = rayHit->index;
-	Spectrum radiance;
 	if (currentTriangleIndex != 0xffffffffu ) {
 		// Something was hit
+
+		// Interpolate the normal
+		Vector N;
+		Mesh_InterpolateNormal(normals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &N);
+
+		// Flip the normal if required
+		Vector shadeN;
+		float RdotShadeN = Dot(&rayDir, &N);
+
+		const float nFlip = (RdotShadeN > 0.f) ? -1.f : 1.f;
+		shadeN.x = nFlip * N.x;
+		shadeN.y = nFlip * N.y;
+		shadeN.z = nFlip * N.z;
+		RdotShadeN = -nFlip * RdotShadeN;
 
 		const unsigned int meshIndex = meshIDs[currentTriangleIndex];
 		__global Material *mat = &mats[meshMats[meshIndex]];
 
+		const float u0 = RndFloatValue(&seed);
+		const float u1 = RndFloatValue(&seed);
+		const float u2 = RndFloatValue(&seed);
+
+		Vector wo;
+		wo.x = -rayDir.x;
+		wo.y = -rayDir.y;
+		wo.z = -rayDir.z;
+
+		Vector wi;
+		float pdf;
+		Spectrum f;
+
 		switch (mat->type) {
 			case MAT_MATTE:
-				radiance.r = mat->mat.matte.r;
-				radiance.g = mat->mat.matte.g;
-				radiance.b = mat->mat.matte.b;
+				Matte_Sample_f(mat, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2);
 				break;
 			default:
 				// Huston, we have a problem...
-				radiance.r = 0.f;
-				radiance.g = 0.f;
-				radiance.b = 0.f;
+				pdf = 0.f;
 				break;
 		}
-	} else {
-#if defined(PARAM_HAVE_INFINITELIGHT)
-		Vector rayDir;
-		rayDir.x = ray->d.x;
-		rayDir.y = ray->d.y;
-		rayDir.z = ray->d.z;
 
+		// Russian roulette
+		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), PARAM_RR_CAP);
+
+		const unsigned int pathDepth = path->depth + 1;
+		const float rrSample = RndFloatValue(&seed);
+		bool terminatePath = (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH) ||
+			((pathDepth > PARAM_RR_DEPTH) && (rrProb >= rrSample));
+
+		const float invRRProb = 1.f / rrProb;
+		throughput.r *= rrProb;
+		throughput.g *= rrProb;
+		throughput.b *= rrProb;
+
+		if (terminatePath) {
+			Spectrum black;
+			black.r = 0.f;
+			black.g = 0.f;
+			black.b = 0.f;
+			TerminatePath(path, ray, frameBuffer, &seed, &black);
+		} else {
+			const float invPdf = 1.f / pdf;
+			path->throughput.r = throughput.r * f.r * invPdf;
+			path->throughput.g = throughput.g * f.g * invPdf;
+			path->throughput.b = throughput.b * f.b * invPdf;
+
+			// Setup next ray
+			const float t = rayHit->t;
+			ray->o.x = ray->o.x + rayDir.x * t;
+			ray->o.y = ray->o.y + rayDir.y * t;
+			ray->o.z = ray->o.z + rayDir.z * t;
+
+			ray->d.x = wi.x;
+			ray->d.y = wi.y;
+			ray->d.z = wi.z;
+
+			path->depth = pathDepth;
+		}
+	} else {
+		Spectrum radiance;
+
+#if defined(PARAM_HAVE_INFINITELIGHT)
 		Spectrum Le;
 		InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
 
@@ -393,21 +605,9 @@ __kernel void AdvancePaths(
 		radiance.g = 0.f;
 		radiance.b = 0.f;
 #endif
+
+		TerminatePath(path, ray, frameBuffer, &seed, &radiance);
 	}
-
-	// Add sample to the framebuffer
-
-	const unsigned int pixelIndex = path->pixelIndex;
-	__global Pixel *pixel = &frameBuffer[pixelIndex];
-	pixel->c.r += radiance.r;
-	pixel->c.g += radiance.g;
-	pixel->c.b += radiance.b;
-	pixel->count += 1;
-
-	const unsigned int newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-	GenerateRay(newPixelIndex, ray, &seed);
-
-	path->pixelIndex = newPixelIndex;
 
 	// Save the seed
 	path->seed.s1 = seed.s1;

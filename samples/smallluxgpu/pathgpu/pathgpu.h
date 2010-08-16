@@ -121,6 +121,8 @@ private:
 	cl::Buffer *triIDBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
+	cl::Buffer *normalsBuff;
+	cl::Buffer *trianglesBuff;
 
 	float samplingStart;
 	unsigned int seed;
@@ -166,7 +168,7 @@ public:
 	int maxPathDepth;
 
 	int rrDepth;
-	float rrProb;
+	float rrImportanceCap;
 
 private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;

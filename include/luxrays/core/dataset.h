@@ -46,13 +46,9 @@ public:
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return accel->GetMeshTriangleID(index); }
 	const TriangleID *GetMeshTriangleIDTable() const { return accel->GetMeshTriangleIDTable(); }
 
-	void SetAcceleratorType(AcceleratorType type) {
-		accelType = type;
-	}
-
-	AcceleratorType GetAcceleratorType() const {
-		return accelType;
-	}
+	void SetAcceleratorType(AcceleratorType type) { accelType = type; }
+	AcceleratorType GetAcceleratorType() const { return accelType; }
+	const Accelerator *GetAccelerator() const { return accel; }
 
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }
