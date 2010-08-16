@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 
 // List of symbols defined at compile time:
 //  PARAM_PATH_COUNT
@@ -107,6 +108,7 @@ typedef struct {
 } Pixel;
 
 #define MAT_MATTE 0
+#define MAT_AREALIGHT 1
 
 typedef struct {
 	unsigned int type;
@@ -114,6 +116,9 @@ typedef struct {
 		struct {
 			float r, g, b;
 		} matte;
+		struct {
+			float gain_r, gain_g, gain_b;
+		} areaLight;
 	} mat;
 } Material;
 
@@ -158,6 +163,26 @@ float RndFloatValue(Seed *s) {
 }
 
 //------------------------------------------------------------------------------
+
+void AtomicAddF(__global float *val, const float delta) {
+	union {
+		float f;
+		unsigned int i;
+	} oldVal;
+	union {
+		float f;
+		unsigned int i;
+	} newVal;
+
+	do {
+		oldVal.f = *val;
+		newVal.f = oldVal.f + delta;
+	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
+}
+
+void AtomicIncI(__global unsigned int *val) {
+	atomic_inc(val);
+}
 
 float Dot(const Vector *v0, const Vector *v1) {
 	return v0->x * v1->x + v0->y * v1->y + v0->z * v1->z;
@@ -449,6 +474,18 @@ void Matte_Sample_f(__global Material *mat, const Vector *wo, Vector *wi,
 	}
 }
 
+void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spectrum *Le) {
+	if (Dot(N, wo) <= 0.f) {
+		Le->r = 0.f;
+		Le->g = 0.f;
+		Le->b = 0.f;
+	} else {
+		Le->r = mat->mat.areaLight.gain_r;
+		Le->g = mat->mat.areaLight.gain_g;
+		Le->b = mat->mat.areaLight.gain_b;
+	}
+}
+
 //------------------------------------------------------------------------------
 
 void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance) {
@@ -456,6 +493,7 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 
 	const unsigned int pixelIndex = path->pixelIndex;
 	__global Pixel *pixel = &frameBuffer[pixelIndex];
+
 	pixel->c.r += radiance->r;
 	pixel->c.g += radiance->g;
 	pixel->c.b += radiance->b;
@@ -481,7 +519,7 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	path->depth = 0;
 }
 
-__kernel void AdvancePaths(
+__kernel __attribute__((reqd_work_group_size(64, 1, 1))) void AdvancePaths(
 		__global Path *paths,
 		__global Ray *rays,
 		__global RayHit *rayHits,
@@ -554,9 +592,18 @@ __kernel void AdvancePaths(
 		float pdf;
 		Spectrum f;
 
+		Spectrum materialLe;
+		materialLe.r = 0.f;
+		materialLe.g = 0.f;
+		materialLe.b = 0.f;
+		bool areaLightHit = false;
 		switch (mat->type) {
 			case MAT_MATTE:
 				Matte_Sample_f(mat, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2);
+				break;
+			case MAT_AREALIGHT:
+				areaLightHit = true;
+				AreaLight_Le(mat, &N, &wo, &materialLe);
 				break;
 			default:
 				// Huston, we have a problem...
@@ -569,7 +616,7 @@ __kernel void AdvancePaths(
 
 		const unsigned int pathDepth = path->depth + 1;
 		const float rrSample = RndFloatValue(&seed);
-		bool terminatePath = (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH) ||
+		bool terminatePath = areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH) ||
 			((pathDepth > PARAM_RR_DEPTH) && (rrProb < rrSample));
 
 		const float invRRProb = 1.f / rrProb;
@@ -578,11 +625,12 @@ __kernel void AdvancePaths(
 		throughput.b *= rrProb;
 
 		if (terminatePath) {
-			Spectrum black;
-			black.r = 0.f;
-			black.g = 0.f;
-			black.b = 0.f;
-			TerminatePath(path, ray, frameBuffer, &seed, &black);
+			Spectrum radiance;
+			radiance.r = materialLe.r * path->throughput.r;
+			radiance.g = materialLe.g * path->throughput.g;
+			radiance.b = materialLe.b * path->throughput.b;
+
+			TerminatePath(path, ray, frameBuffer, &seed, &radiance);
 		} else {
 			const float invPdf = 1.f / pdf;
 			path->throughput.r = throughput.r * f.r * invPdf;
