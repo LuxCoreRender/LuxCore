@@ -92,7 +92,6 @@ public:
 	void ReInit();
 
 	size_t PathCount() const { return paths.size(); }
-	void ClearPaths();
 
 	void FillRayBuffer(RayBuffer *rayBuffer);
 	void AdvancePaths(const RayBuffer *rayBuffer);
@@ -124,7 +123,6 @@ public:
     virtual void Interrupt() = 0;
 	virtual void Stop() { started = false; }
 
-	virtual void ClearPaths() = 0;
 	virtual unsigned int GetPass() const = 0;
 
 protected:
@@ -143,8 +141,6 @@ public:
 	void Start();
     void Interrupt();
 	void Stop();
-
-	void ClearPaths();
 
 	unsigned int GetPass() const { return sampler->GetPass(); }
 
@@ -171,8 +167,6 @@ public:
 	void Start();
     void Interrupt();
 	void Stop();
-
-	void ClearPaths();
 
 	unsigned int GetPass() const { return sampler->GetPass(); }
 
@@ -205,8 +199,6 @@ public:
 	void Start();
 	void Interrupt();
 	void Stop();
-
-	void Reset();
 
 	unsigned int GetPass() const;
 	unsigned int GetThreadCount() const;

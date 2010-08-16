@@ -83,11 +83,12 @@ public:
 
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
+	const Spectrum *GetPixels() const { return pixels; };
 
 private:
-	const Spectrum &GetTexel(const unsigned int s, const unsigned int t) const {
-		const unsigned int u = Mod(s, width);
-		const unsigned int v = Mod(t, height);
+	const Spectrum &GetTexel(const int s, const int t) const {
+		const unsigned int u = Mod<int>(s, width);
+		const unsigned int v = Mod<int>(t, height);
 
 		const unsigned index = v * width + u;
 		assert (index >= 0);

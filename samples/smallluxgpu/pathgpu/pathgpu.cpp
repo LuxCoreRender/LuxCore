@@ -98,95 +98,8 @@ void PathGPUDeviceRenderThread::Start() {
 			renderEngine->film->GetHeight() * samplingStart,
 			0, renderEngine->film->GetHeight() - 1);
 
-	// Compile kernels
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
-
-	// Compile sources
-	cl::Program::Sources source(1, std::make_pair(KernelSource_PathGPU.c_str(), KernelSource_PathGPU.length()));
-	cl::Program program = cl::Program(oclContext, source);
-
-	// Set #define symbols
-	stringstream ss;
-	ss << "-I." <<
-			" -D PARAM_STARTLINE=" << startLine <<
-			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
-			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
-			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON <<
-			" -D PARAM_CLIP_YON=" << renderEngine->scene->camera->GetClipYon() <<
-			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither() <<
-			" -D PARAM_SEED=" << seed
-			;
-	AppendMatrixDefinition(ss, "PARAM_RASTER2CAMERA", renderEngine->scene->camera->GetRasterToCameraMatrix());
-	AppendMatrixDefinition(ss, "PARAM_CAMERA2WORLD", renderEngine->scene->camera->GetCameraToWorldMatrix());
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Defined symbols: " << ss.str() << endl;
-
-	try {
-		VECTOR_CLASS<cl::Device> buildDevice;
-		buildDevice.push_back(oclDevice);
-		program.build(buildDevice, ss.str().c_str());
-	} catch (cl::Error err) {
-		cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
-
-		throw err;
-	}
-
-	//--------------------------------------------------------------------------
-	// Init kernel
-	//--------------------------------------------------------------------------
-
-	initKernel = new cl::Kernel(program, "Init");
-	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
-	cl_ulong memSize;
-	initKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU Init kernel memory footprint: " << memSize << endl;
-
-	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
-
-	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-		initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
-	}
-
-	//--------------------------------------------------------------------------
-	// InitFB kernel
-	//--------------------------------------------------------------------------
-
-	initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
-	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
-	initFBKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel memory footprint: " << memSize << endl;
-
-	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
-
-	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-		initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
-	}
-
-	//--------------------------------------------------------------------------
-	// AdvancePaths kernel
-	//--------------------------------------------------------------------------
-
-	advancePathKernel = new cl::Kernel(program, "AdvancePaths");
-	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathWorkGroupSize << endl;
-	advancePathKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel memory footprint: " << memSize << endl;
-
-	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
-	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << advancePathWorkGroupSize << endl;
-
-	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-		advancePathWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << advancePathWorkGroupSize << endl;
-	}
 
 	//--------------------------------------------------------------------------
 	// Allocate buffers
@@ -302,6 +215,144 @@ void PathGPUDeviceRenderThread::Start() {
 	delete[] meshMats;
 
 	//--------------------------------------------------------------------------
+	// Check if there is an infinite light source
+	//--------------------------------------------------------------------------
+
+	InfiniteLight *infiniteLight = NULL;
+	if (renderEngine->scene->infiniteLight)
+		infiniteLight = renderEngine->scene->infiniteLight;
+	else {
+		// Look for the infinite light
+
+		for (unsigned int i = 0; i < renderEngine->scene->lights.size(); ++i) {
+			LightSource *l = renderEngine->scene->lights[i];
+
+			if ((l->GetType() == TYPE_IL_BF) || (l->GetType() == TYPE_IL_PORTAL) ||
+					(l->GetType() == TYPE_IL_IS)) {
+				infiniteLight = (InfiniteLight *)l;
+				break;
+			}
+		}
+	}
+
+	if (infiniteLight) {
+		const TextureMap *texMap = infiniteLight->GetTexture()->GetTexMap();
+		const unsigned int pixelCount = texMap->GetWidth() * texMap->GetHeight();
+
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(Spectrum) * pixelCount / 1024) << "Kbytes" << endl;
+		infiniteLightBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(Spectrum) * pixelCount,
+				(void *)texMap->GetPixels());
+		deviceDesc->AllocMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
+	} else
+		infiniteLightBuff = NULL;
+
+	//--------------------------------------------------------------------------
+	// Compile kernels
+	//--------------------------------------------------------------------------
+
+	// Compile sources
+	cl::Program::Sources source(1, std::make_pair(KernelSource_PathGPU.c_str(), KernelSource_PathGPU.length()));
+	cl::Program program = cl::Program(oclContext, source);
+
+	// Set #define symbols
+	stringstream ss;
+	ss << "-I." <<
+			" -D PARAM_STARTLINE=" << startLine <<
+			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
+			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
+			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
+			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON <<
+			" -D PARAM_CLIP_YON=" << renderEngine->scene->camera->GetClipYon() <<
+			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither() <<
+			" -D PARAM_SEED=" << seed
+			;
+
+	if (infiniteLight) {
+		ss <<
+				" -D PARAM_HAVE_INFINITELIGHT=1" <<
+				" -D PARAM_IL_GAIN_R=" << infiniteLight->GetGain().r <<
+				" -D PARAM_IL_GAIN_G=" << infiniteLight->GetGain().g <<
+				" -D PARAM_IL_GAIN_B=" << infiniteLight->GetGain().b <<
+				" -D PARAM_IL_SHIFT_U=" << infiniteLight->GetShiftU() <<
+				" -D PARAM_IL_SHIFT_V=" << infiniteLight->GetShiftV() <<
+				" -D PARAM_IL_WIDTH=" << infiniteLight->GetTexture()->GetTexMap()->GetWidth() <<
+				" -D PARAM_IL_HEIGHT=" << infiniteLight->GetTexture()->GetTexMap()->GetHeight()
+				;
+	}
+
+	AppendMatrixDefinition(ss, "PARAM_RASTER2CAMERA", renderEngine->scene->camera->GetRasterToCameraMatrix());
+	AppendMatrixDefinition(ss, "PARAM_CAMERA2WORLD", renderEngine->scene->camera->GetCameraToWorldMatrix());
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Defined symbols: " << ss.str() << endl;
+
+	try {
+		VECTOR_CLASS<cl::Device> buildDevice;
+		buildDevice.push_back(oclDevice);
+		program.build(buildDevice, ss.str().c_str());
+	} catch (cl::Error err) {
+		cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
+
+		throw err;
+	}
+
+	//--------------------------------------------------------------------------
+	// Init kernel
+	//--------------------------------------------------------------------------
+
+	initKernel = new cl::Kernel(program, "Init");
+	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
+	cl_ulong memSize;
+	initKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU Init kernel memory footprint: " << memSize << endl;
+
+	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
+
+	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
+	}
+
+	//--------------------------------------------------------------------------
+	// InitFB kernel
+	//--------------------------------------------------------------------------
+
+	initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
+	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
+	initFBKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel memory footprint: " << memSize << endl;
+
+	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
+
+	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
+	}
+
+	//--------------------------------------------------------------------------
+	// AdvancePaths kernel
+	//--------------------------------------------------------------------------
+
+	advancePathKernel = new cl::Kernel(program, "AdvancePaths");
+	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathWorkGroupSize << endl;
+	advancePathKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel memory footprint: " << memSize << endl;
+
+	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Suggested work group size: " << advancePathWorkGroupSize << endl;
+
+	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		advancePathWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Forced work group size: " << advancePathWorkGroupSize << endl;
+	}
+
+	//--------------------------------------------------------------------------
 	// Initialize
 	//--------------------------------------------------------------------------
 
@@ -325,6 +376,8 @@ void PathGPUDeviceRenderThread::Start() {
 	advancePathKernel->setArg(5, *meshMatsBuff);
 	advancePathKernel->setArg(6, *meshIDBuff);
 	advancePathKernel->setArg(7, *triIDBuff);
+	if (infiniteLight)
+		advancePathKernel->setArg(8, *infiniteLightBuff);
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathGPUDeviceRenderThread::RenderThreadImpl, this));
@@ -367,6 +420,10 @@ void PathGPUDeviceRenderThread::Stop() {
 	delete triIDBuff;
 	deviceDesc->FreeMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
 	delete meshMatsBuff;
+	if (infiniteLightBuff) {
+		deviceDesc->FreeMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
+		delete infiniteLightBuff;
+	}
 
 	delete initKernel;
 	delete initFBKernel;
@@ -509,10 +566,6 @@ void PathGPURenderEngine::Stop() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
-}
-
-void PathGPURenderEngine::Reset() {
-	assert (!started);
 }
 
 unsigned int PathGPURenderEngine::GetThreadCount() const {
