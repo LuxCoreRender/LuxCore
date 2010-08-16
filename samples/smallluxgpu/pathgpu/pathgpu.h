@@ -41,7 +41,7 @@ typedef struct {
 
 typedef struct {
 	Spectrum throughput;
-	unsigned int depth, pixelIndex;
+	unsigned int depth, pixelIndex, subpixelIndex;
 	Seed seed;
 } Path;
 
