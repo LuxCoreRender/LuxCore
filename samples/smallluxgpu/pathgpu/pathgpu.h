@@ -52,6 +52,7 @@ typedef struct {
 
 #define MAT_MATTE 0
 #define MAT_AREALIGHT 1
+#define MAT_MIRROR 2
 
 typedef struct {
 	unsigned int type;
@@ -62,6 +63,9 @@ typedef struct {
 		struct {
 			float gain_r, gain_g, gain_b;
 		} areaLight;
+		struct {
+			float r, g, b;
+		} mirror;
 	} mat;
 } Material;
 

@@ -189,6 +189,15 @@ void PathGPUDeviceRenderThread::Start() {
 				gpum->mat.areaLight.gain_b = alm->GetGain().b;
 				break;
 			}
+			case MIRROR: {
+				MirrorMaterial *mm = (MirrorMaterial *)m;
+
+				gpum->type = MAT_MIRROR;
+				gpum->mat.mirror.r = mm->GetKr().r;
+				gpum->mat.mirror.g = mm->GetKr().g;
+				gpum->mat.mirror.b = mm->GetKr().b;
+				break;
+			}
 			default: {
 				gpum->type = MAT_MATTE;
 				gpum->mat.matte.r = 0.75f;
