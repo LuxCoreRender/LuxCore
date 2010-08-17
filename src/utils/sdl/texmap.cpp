@@ -182,7 +182,7 @@ TextureMap *TextureMapCache::GetTextureMap(const std::string &fileName) {
 
 		return tm;
 	} else {
-		LR_LOG(ctx, "Cached texture map: " << fileName);
+		//LR_LOG(ctx, "Cached texture map: " << fileName);
 		return it->second;
 	}
 }
