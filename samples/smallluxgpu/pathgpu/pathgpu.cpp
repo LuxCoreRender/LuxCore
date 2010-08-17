@@ -327,8 +327,7 @@ void PathGPUDeviceRenderThread::Start() {
 
 	// Set #define symbols
 	stringstream ss;
-	ss << "-I." <<
-			" -D PARAM_STARTLINE=" << startLine <<
+	ss << 	" -D PARAM_STARTLINE=" << startLine <<
 			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<

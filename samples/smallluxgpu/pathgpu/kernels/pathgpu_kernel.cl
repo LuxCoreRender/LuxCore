@@ -20,7 +20,6 @@
  ***************************************************************************/
 
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 
 // List of symbols defined at compile time:
 //  PARAM_PATH_COUNT
@@ -49,7 +48,7 @@
 //  PARAM_IL_HEIGHT
 
 #ifndef M_PI
-#define M_PI M_PI_F
+#define M_PI 3.14159265358979323846f
 #endif
 
 #ifndef INV_PI
@@ -163,26 +162,6 @@ float RndFloatValue(Seed *s) {
 }
 
 //------------------------------------------------------------------------------
-
-void AtomicAddF(__global float *val, const float delta) {
-	union {
-		float f;
-		unsigned int i;
-	} oldVal;
-	union {
-		float f;
-		unsigned int i;
-	} newVal;
-
-	do {
-		oldVal.f = *val;
-		newVal.f = oldVal.f + delta;
-	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
-}
-
-void AtomicIncI(__global unsigned int *val) {
-	atomic_inc(val);
-}
 
 float Dot(const Vector *v0, const Vector *v1) {
 	return v0->x * v1->x + v0->y * v1->y + v0->z * v1->z;
@@ -494,9 +473,9 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	const unsigned int pixelIndex = path->pixelIndex;
 	__global Pixel *pixel = &frameBuffer[pixelIndex];
 
-	pixel->c.r += radiance->r;
-	pixel->c.g += radiance->g;
-	pixel->c.b += radiance->b;
+	pixel->c.r += isnan(radiance->r) ? 0.f : radiance->r;
+	pixel->c.g += isnan(radiance->g) ? 0.f : radiance->g;
+	pixel->c.b += isnan(radiance->b) ? 0.f : radiance->b;
 	pixel->count += 1;
 
 	const unsigned int subpixelIndex = path->subpixelIndex;
@@ -612,7 +591,7 @@ __kernel __attribute__((reqd_work_group_size(64, 1, 1))) void AdvancePaths(
 		}
 
 		// Russian roulette
-		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), PARAM_RR_CAP);
+		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float)PARAM_RR_CAP);
 
 		const unsigned int pathDepth = path->depth + 1;
 		const float rrSample = RndFloatValue(&seed);
