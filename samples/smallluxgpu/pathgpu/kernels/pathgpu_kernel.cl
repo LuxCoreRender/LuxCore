@@ -108,6 +108,7 @@ typedef struct {
 
 #define MAT_MATTE 0
 #define MAT_AREALIGHT 1
+#define MAT_MIRROR 2
 
 typedef struct {
 	unsigned int type;
@@ -118,6 +119,9 @@ typedef struct {
 		struct {
 			float gain_r, gain_g, gain_b;
 		} areaLight;
+		struct {
+			float r, g, b;
+		} mirror;
 	} mat;
 } Material;
 
@@ -465,6 +469,18 @@ void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spe
 	}
 }
 
+void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
+		float *pdf, Spectrum *f, const Vector *shadeN, const float RdotShadeN) {
+	wi->x = rayDir->x + (2.f * RdotShadeN) * shadeN->x;
+	wi->y = rayDir->y + (2.f * RdotShadeN) * shadeN->y;
+	wi->z = rayDir->z + (2.f * RdotShadeN) * shadeN->z;
+
+	*pdf = 1.f;
+
+	f->r = mat->mat.mirror.r;
+	f->g = mat->mat.mirror.g;
+	f->b = mat->mat.mirror.b;
+}
 //------------------------------------------------------------------------------
 
 void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance) {
@@ -584,6 +600,9 @@ __kernel __attribute__((reqd_work_group_size(64, 1, 1))) void AdvancePaths(
 				areaLightHit = true;
 				AreaLight_Le(mat, &N, &wo, &materialLe);
 				break;
+			case MAT_MIRROR:
+				Mirror_Sample_f(mat, &rayDir, &wi, &pdf, &f, &shadeN, RdotShadeN);
+				break;
 			default:
 				// Huston, we have a problem...
 				pdf = 0.f;
@@ -599,9 +618,9 @@ __kernel __attribute__((reqd_work_group_size(64, 1, 1))) void AdvancePaths(
 			((pathDepth > PARAM_RR_DEPTH) && (rrProb < rrSample));
 
 		const float invRRProb = 1.f / rrProb;
-		throughput.r *= rrProb;
-		throughput.g *= rrProb;
-		throughput.b *= rrProb;
+		throughput.r *= invRRProb;
+		throughput.g *= invRRProb;
+		throughput.b *= invRRProb;
 
 		if (terminatePath) {
 			Spectrum radiance;
