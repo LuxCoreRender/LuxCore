@@ -35,6 +35,7 @@
 #include "renderconfig.h"
 #include "path/path.h"
 #include "sppm/sppm.h"
+#include "pathgpu/pathgpu.h"
 #include "telnet.h"
 #include "luxrays/core/device.h"
 
@@ -93,6 +94,7 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double startTime = WallClockTime();
 
+	double lastFilmUpdate = WallClockTime();
 	double sampleSec = 0.0;
 	char buf[512];
 	const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
@@ -110,6 +112,13 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 
 		// Check if periodic save is enabled
 		if (config->NeedPeriodicSave()) {
+			if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
+				// I need to update the Film
+				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+
+				pre->UpdateFilm();
+			}
+
 			// Time to save the image and film
 			config->SaveFilmImage();
 		}
@@ -136,6 +145,22 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 				break;
 			}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+			case PATHGPU: {
+				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+				sampleSec = pre->GetTotalSamplesSec();
+
+				sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
+						int(elapsedTime), int(stopTime), pass, stopSPP, sampleSec / 1000000.0,
+						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+				if (WallClockTime() - lastFilmUpdate > 5.0) {
+					pre->UpdateFilm();
+					lastFilmUpdate = WallClockTime();
+				}
+				break;
+			}
+#endif
 			default:
 				assert (false);
 		}

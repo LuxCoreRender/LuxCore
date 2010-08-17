@@ -159,7 +159,7 @@ public:
 	RenderEngineType GetEngineType() const { return PATHGPU; }
 
 	double GetTotalSamplesSec() const {
-		return (startTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
+		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
 	double GetRenderingTime() const { return (startTime == 0.0) ? 0.0 : (WallClockTime() - startTime); }
 

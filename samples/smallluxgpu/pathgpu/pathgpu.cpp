@@ -522,9 +522,10 @@ void PathGPUDeviceRenderThread::Stop() {
 void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *renderThread) {
 	cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
+	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
+	const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
+
 	try {
-		cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
-		const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
 
 		//const double refreshInterval = 1.0;
 		const double refreshInterval = 3.0;
@@ -532,8 +533,8 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 		// -refreshInterval is a trick to set the first frame buffer refresh after 1 sec
 		double startTime = WallClockTime() - (refreshInterval / 2.0);
 		while (!boost::this_thread::interruption_requested()) {
-			if(renderThread->threadIndex == 0)
-				cerr<< "[DEBUG] =================================" << endl;
+			//if(renderThread->threadIndex == 0)
+			//	cerr<< "[DEBUG] =================================" << endl;
 
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
@@ -563,8 +564,8 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 				event.wait();
 				const double elapsedTime = WallClockTime() - startTime;
 
-				if(renderThread->threadIndex == 0)
-					cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms" << endl;
+				//if(renderThread->threadIndex == 0)
+				//	cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms" << endl;
 
 				if ((elapsedTime > refreshInterval) || boost::this_thread::interruption_requested())
 					break;
@@ -579,6 +580,13 @@ void PathGPUDeviceRenderThread::RenderThreadImpl(PathGPUDeviceRenderThread *rend
 	} catch (cl::Error err) {
 		cerr << "[PathGPUDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
 	}
+
+	oclQueue.enqueueReadBuffer(
+			*(renderThread->frameBufferBuff),
+			CL_TRUE,
+			0,
+			sizeof(PathGPU::Pixel) * pixelCount,
+			renderThread->frameBuffer);
 }
 
 //------------------------------------------------------------------------------
@@ -640,6 +648,7 @@ void PathGPURenderEngine::Start() {
 
 	samplesCount = 0;
 	startTime = WallClockTime();
+	elapsedTime = 0.0f;
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
@@ -655,6 +664,8 @@ void PathGPURenderEngine::Stop() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
+
+	UpdateFilm();
 }
 
 unsigned int PathGPURenderEngine::GetThreadCount() const {
