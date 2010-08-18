@@ -516,7 +516,7 @@ std::string luxrays::KernelSource_PathGPU =
 "	path->depth = 0;\n"
 "}\n"
 "\n"
-"__kernel __attribute__((reqd_work_group_size(64, 1, 1))) void AdvancePaths(\n"
+"__kernel void AdvancePaths(\n"
 "		__global Path *paths,\n"
 "		__global Ray *rays,\n"
 "		__global RayHit *rayHits,\n"

@@ -514,7 +514,7 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	path->depth = 0;
 }
 
-__kernel __attribute__((reqd_work_group_size(64, 1, 1))) void AdvancePaths(
+__kernel void AdvancePaths(
 		__global Path *paths,
 		__global Ray *rays,
 		__global RayHit *rayHits,
