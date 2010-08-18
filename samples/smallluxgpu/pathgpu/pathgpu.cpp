@@ -288,6 +288,32 @@ void PathGPUDeviceRenderThread::Start() {
 		infiniteLightBuff = NULL;
 
 	//--------------------------------------------------------------------------
+	// Translate mesh colors
+	//--------------------------------------------------------------------------
+
+	const unsigned int colorsCount = renderEngine->scene->dataSet->GetTotalVertexCount();
+	Spectrum *colors = new Spectrum[colorsCount];
+	unsigned int cIndex = 0;
+	for (unsigned int i = 0; i < renderEngine->scene->objects.size(); ++i) {
+		ExtMesh *mesh = renderEngine->scene->objects[i];
+
+		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
+			if (mesh->HasColors())
+				colors[cIndex++] = mesh->GetColor(j);
+			else
+				colors[cIndex++] = Spectrum(1.f, 1.f, 1.f);
+		}
+	}
+
+	cerr << "[PathGPUDeviceRenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * colorsCount / 1024) << "Kbytes" << endl;
+	colorsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Spectrum) * colorsCount,
+			colors);
+	deviceDesc->AllocMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
+	delete[] colors;
+
+	//--------------------------------------------------------------------------
 	// Translate mesh normals
 	//--------------------------------------------------------------------------
 
@@ -466,18 +492,20 @@ void PathGPUDeviceRenderThread::Start() {
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(initWorkGroupSize));
 
-	advancePathKernel->setArg(0, *pathsBuff);
-	advancePathKernel->setArg(1, *raysBuff);
-	advancePathKernel->setArg(2, *hitsBuff);
-	advancePathKernel->setArg(3, *frameBufferBuff);
-	advancePathKernel->setArg(4, *materialsBuff);
-	advancePathKernel->setArg(5, *meshMatsBuff);
-	advancePathKernel->setArg(6, *meshIDBuff);
-	advancePathKernel->setArg(7, *triIDBuff);
-	advancePathKernel->setArg(8, *normalsBuff);
-	advancePathKernel->setArg(9, *trianglesBuff);
+	unsigned int argIndex = 0;
+	advancePathKernel->setArg(argIndex++, *pathsBuff);
+	advancePathKernel->setArg(argIndex++, *raysBuff);
+	advancePathKernel->setArg(argIndex++, *hitsBuff);
+	advancePathKernel->setArg(argIndex++, *frameBufferBuff);
+	advancePathKernel->setArg(argIndex++, *materialsBuff);
+	advancePathKernel->setArg(argIndex++, *meshMatsBuff);
+	advancePathKernel->setArg(argIndex++, *meshIDBuff);
+	advancePathKernel->setArg(argIndex++, *triIDBuff);
+	advancePathKernel->setArg(argIndex++, *colorsBuff);
+	advancePathKernel->setArg(argIndex++, *normalsBuff);
+	advancePathKernel->setArg(argIndex++, *trianglesBuff);
 	if (infiniteLight)
-		advancePathKernel->setArg(10, *infiniteLightBuff);
+		advancePathKernel->setArg(argIndex++, *infiniteLightBuff);
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathGPUDeviceRenderThread::RenderThreadImpl, this));
@@ -520,6 +548,8 @@ void PathGPUDeviceRenderThread::Stop() {
 	delete triIDBuff;
 	deviceDesc->FreeMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
 	delete meshMatsBuff;
+	deviceDesc->FreeMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
+	delete colorsBuff;
 	deviceDesc->FreeMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
 	delete normalsBuff;
 	deviceDesc->FreeMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());

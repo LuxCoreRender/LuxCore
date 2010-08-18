@@ -450,6 +450,16 @@ void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector 
 }
 #endif
 
+void Mesh_InterpolateColor(__global Spectrum *colors, __global Triangle *triangles,
+		const unsigned int triIndex, const float b1, const float b2, Spectrum *C) {
+	__global Triangle *tri = &triangles[triIndex];
+
+	const float b0 = 1.f - b1 - b2;
+	C->r = b0 * colors[tri->v0].r + b1 * colors[tri->v1].r + b2 * colors[tri->v2].r;
+	C->g = b0 * colors[tri->v0].g + b1 * colors[tri->v1].g + b2 * colors[tri->v2].g;
+	C->b = b0 * colors[tri->v0].b + b1 * colors[tri->v1].b + b2 * colors[tri->v2].b;
+}
+
 void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,
 		const unsigned int triIndex, const float b1, const float b2, Vector *N) {
 	__global Triangle *tri = &triangles[triIndex];
@@ -560,7 +570,8 @@ __kernel void AdvancePaths(
 		__global unsigned int *meshMats,
 		__global unsigned int *meshIDs, // Not used
 		__global unsigned int *triIDs,
-		__global Vector *normals,
+		__global Vector *vertColors,
+		__global Vector *vertNormals,
 		__global Triangle *triangles
 #if defined(PARAM_HAVE_INFINITELIGHT)
 		, __global Spectrum *infiniteLightMap
@@ -594,9 +605,16 @@ __kernel void AdvancePaths(
 	if (currentTriangleIndex != 0xffffffffu ) {
 		// Something was hit
 
+		// Interpolate Color
+		Spectrum shadeColor;
+		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &shadeColor);
+		throughput.r *= shadeColor.r;
+		throughput.g *= shadeColor.g;
+		throughput.b *= shadeColor.b;
+
 		// Interpolate the normal
 		Vector N;
-		Mesh_InterpolateNormal(normals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &N);
+		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &N);
 
 		// Flip the normal if required
 		Vector shadeN;

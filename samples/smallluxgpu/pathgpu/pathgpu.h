@@ -131,6 +131,7 @@ private:
 	cl::Buffer *infiniteLightBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;
+	cl::Buffer *colorsBuff;
 
 	float samplingStart;
 	unsigned int seed;
