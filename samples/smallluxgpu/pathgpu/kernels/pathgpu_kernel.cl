@@ -36,6 +36,9 @@
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
 //  PARAM_SAMPLE_PER_PIXEL
+//  PARAM_CAMERA_HAS_DOF
+//  PARAM_CAMERA_LENS_RADIUS
+//  PARAM_CAMERA_FOCAL_DISTANCE
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -185,6 +188,68 @@ void Cross(Vector *v3, const Vector *v1, const Vector *v2) {
 	v3->z = (v1->x * v2->y) - (v1->y * v2->x);
 }
 
+void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
+	float r, theta;
+	// Map uniform random numbers to $[-1,1]^2$
+	float sx = 2.f * u1 - 1.f;
+	float sy = 2.f * u2 - 1.f;
+	// Map square to $(r,\theta)$
+	// Handle degeneracy at the origin
+	if (sx == 0.f && sy == 0.f) {
+		*dx = 0.f;
+		*dy = 0.f;
+		return;
+	}
+	if (sx >= -sy) {
+		if (sx > sy) {
+			// Handle first region of disk
+			r = sx;
+			if (sy > 0.f)
+				theta = sy / r;
+			else
+				theta = 8.0f + sy / r;
+		} else {
+			// Handle second region of disk
+			r = sy;
+			theta = 2.0f - sx / r;
+		}
+	} else {
+		if (sx <= sy) {
+			// Handle third region of disk
+			r = -sx;
+			theta = 4.0f - sy / r;
+		} else {
+			// Handle fourth region of disk
+			r = -sy;
+			theta = 6.0f + sx / r;
+		}
+	}
+	theta *= M_PI / 4.f;
+	*dx = r * cos(theta);
+	*dy = r * sin(theta);
+}
+
+void CosineSampleHemisphere(Vector *ret, const float u1, const float u2) {
+	ConcentricSampleDisk(u1, u2, &ret->x, &ret->y);
+	ret->z = sqrt(max(0.f, 1.f - ret->x * ret->x - ret->y * ret->y));
+}
+
+void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
+	if (fabs(v1->x) > fabs(v1->y)) {
+		float invLen = 1.f / sqrt(v1->x * v1->x + v1->z * v1->z);
+		v2->x = -v1->z * invLen;
+		v2->y = 0.f;
+		v2->z = v1->x * invLen;
+	} else {
+		float invLen = 1.f / sqrt(v1->y * v1->y + v1->z * v1->z);
+		v2->x = 0.f;
+		v2->y = v1->z * invLen;
+		v2->z = -v1->y * invLen;
+	}
+
+	Cross(v3, v1, v2);
+}
+
 //------------------------------------------------------------------------------
 
 void GenerateRay(
@@ -206,25 +271,49 @@ void GenerateRay(
 	Pras.y = PARAM_IMAGE_HEIGHT - screenY - 1.f;
 	Pras.z = 0;
 
-	Point Pcamera;
-	// RasterToCamera(Pras, &Pcamera);
+	Point orig;
+	// RasterToCamera(Pras, &orig);
 	const float iw = 1.f / (PARAM_RASTER2CAMERA_30 * Pras.x + PARAM_RASTER2CAMERA_31 * Pras.y + PARAM_RASTER2CAMERA_32 * Pras.z + PARAM_RASTER2CAMERA_33);
-	Pcamera.x = (PARAM_RASTER2CAMERA_00 * Pras.x + PARAM_RASTER2CAMERA_01 * Pras.y + PARAM_RASTER2CAMERA_02 * Pras.z + PARAM_RASTER2CAMERA_03) * iw;
-	Pcamera.y = (PARAM_RASTER2CAMERA_10 * Pras.x + PARAM_RASTER2CAMERA_11 * Pras.y + PARAM_RASTER2CAMERA_12 * Pras.z + PARAM_RASTER2CAMERA_13) * iw;
-	Pcamera.z = (PARAM_RASTER2CAMERA_20 * Pras.x + PARAM_RASTER2CAMERA_21 * Pras.y + PARAM_RASTER2CAMERA_22 * Pras.z + PARAM_RASTER2CAMERA_23) * iw;
+	orig.x = (PARAM_RASTER2CAMERA_00 * Pras.x + PARAM_RASTER2CAMERA_01 * Pras.y + PARAM_RASTER2CAMERA_02 * Pras.z + PARAM_RASTER2CAMERA_03) * iw;
+	orig.y = (PARAM_RASTER2CAMERA_10 * Pras.x + PARAM_RASTER2CAMERA_11 * Pras.y + PARAM_RASTER2CAMERA_12 * Pras.z + PARAM_RASTER2CAMERA_13) * iw;
+	orig.z = (PARAM_RASTER2CAMERA_20 * Pras.x + PARAM_RASTER2CAMERA_21 * Pras.y + PARAM_RASTER2CAMERA_22 * Pras.z + PARAM_RASTER2CAMERA_23) * iw;
 
 	Vector dir;
-	dir.x = Pcamera.x;
-	dir.y = Pcamera.y;
-	dir.z = Pcamera.z;
+	dir.x = orig.x;
+	dir.y = orig.y;
+	dir.z = orig.z;
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	// Sample point on lens
+	float lensU, lensV;
+	ConcentricSampleDisk(RndFloatValue(seed), RndFloatValue(seed), &lensU, &lensV);
+	lensU *= PARAM_CAMERA_LENS_RADIUS;
+	lensV *= PARAM_CAMERA_LENS_RADIUS;
+
+	// Compute point on plane of focus
+	const float ft = (PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / dir.z;
+	Point Pfocus;
+	Pfocus.x = orig.x + dir.x * ft;
+	Pfocus.y = orig.y + dir.y * ft;
+	Pfocus.z = orig.z + dir.z * ft;
+
+	// Update ray for effect of lens
+	orig.x += lensU * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
+	orig.y += lensV * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
+
+	dir.x = Pfocus.x - orig.x;
+	dir.y = Pfocus.y - orig.y;
+	dir.z = Pfocus.z - orig.z;
+#endif
+
 	Normalize(&dir);
 
 	// CameraToWorld(*ray, ray);
 	Point torig;
-	const float iw2 = 1.f / (PARAM_CAMERA2WORLD_30 * Pcamera.x + PARAM_CAMERA2WORLD_31 * Pcamera.y + PARAM_CAMERA2WORLD_32 * Pcamera.z + PARAM_CAMERA2WORLD_33);
-	torig.x = (PARAM_CAMERA2WORLD_00 * Pcamera.x + PARAM_CAMERA2WORLD_01 * Pcamera.y + PARAM_CAMERA2WORLD_02 * Pcamera.z + PARAM_CAMERA2WORLD_03) * iw2;
-	torig.y = (PARAM_CAMERA2WORLD_10 * Pcamera.x + PARAM_CAMERA2WORLD_11 * Pcamera.y + PARAM_CAMERA2WORLD_12 * Pcamera.z + PARAM_CAMERA2WORLD_13) * iw2;
-	torig.z = (PARAM_CAMERA2WORLD_20 * Pcamera.x + PARAM_CAMERA2WORLD_21 * Pcamera.y + PARAM_CAMERA2WORLD_22 * Pcamera.z + PARAM_CAMERA2WORLD_23) * iw2;
+	const float iw2 = 1.f / (PARAM_CAMERA2WORLD_30 * orig.x + PARAM_CAMERA2WORLD_31 * orig.y + PARAM_CAMERA2WORLD_32 * orig.z + PARAM_CAMERA2WORLD_33);
+	torig.x = (PARAM_CAMERA2WORLD_00 * orig.x + PARAM_CAMERA2WORLD_01 * orig.y + PARAM_CAMERA2WORLD_02 * orig.z + PARAM_CAMERA2WORLD_03) * iw2;
+	torig.y = (PARAM_CAMERA2WORLD_10 * orig.x + PARAM_CAMERA2WORLD_11 * orig.y + PARAM_CAMERA2WORLD_12 * orig.z + PARAM_CAMERA2WORLD_13) * iw2;
+	torig.z = (PARAM_CAMERA2WORLD_20 * orig.x + PARAM_CAMERA2WORLD_21 * orig.y + PARAM_CAMERA2WORLD_22 * orig.z + PARAM_CAMERA2WORLD_23) * iw2;
 
 	Vector tdir;
 	tdir.x = PARAM_CAMERA2WORLD_00 * dir.x + PARAM_CAMERA2WORLD_01 * dir.y + PARAM_CAMERA2WORLD_02 * dir.z;
@@ -377,68 +466,6 @@ void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangl
 // Materials
 //------------------------------------------------------------------------------
 
-void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
-	float r, theta;
-	// Map uniform random numbers to $[-1,1]^2$
-	float sx = 2.f * u1 - 1.f;
-	float sy = 2.f * u2 - 1.f;
-	// Map square to $(r,\theta)$
-	// Handle degeneracy at the origin
-	if (sx == 0.f && sy == 0.f) {
-		*dx = 0.f;
-		*dy = 0.f;
-		return;
-	}
-	if (sx >= -sy) {
-		if (sx > sy) {
-			// Handle first region of disk
-			r = sx;
-			if (sy > 0.f)
-				theta = sy / r;
-			else
-				theta = 8.0f + sy / r;
-		} else {
-			// Handle second region of disk
-			r = sy;
-			theta = 2.0f - sx / r;
-		}
-	} else {
-		if (sx <= sy) {
-			// Handle third region of disk
-			r = -sx;
-			theta = 4.0f - sy / r;
-		} else {
-			// Handle fourth region of disk
-			r = -sy;
-			theta = 6.0f + sx / r;
-		}
-	}
-	theta *= M_PI / 4.f;
-	*dx = r * cos(theta);
-	*dy = r * sin(theta);
-}
-
-void CosineSampleHemisphere(Vector *ret, const float u1, const float u2) {
-	ConcentricSampleDisk(u1, u2, &ret->x, &ret->y);
-	ret->z = sqrt(max(0.f, 1.f - ret->x * ret->x - ret->y * ret->y));
-}
-
-void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
-	if (fabs(v1->x) > fabs(v1->y)) {
-		float invLen = 1.f / sqrt(v1->x * v1->x + v1->z * v1->z);
-		v2->x = -v1->z * invLen;
-		v2->y = 0.f;
-		v2->z = v1->x * invLen;
-	} else {
-		float invLen = 1.f / sqrt(v1->y * v1->y + v1->z * v1->z);
-		v2->x = 0.f;
-		v2->y = v1->z * invLen;
-		v2->z = -v1->y * invLen;
-	}
-
-	Cross(v3, v1, v2);
-}
-
 void Matte_Sample_f(__global Material *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1,  const float u2) {
@@ -490,6 +517,7 @@ void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
 	f->g = mat->mat.mirror.g;
 	f->b = mat->mat.mirror.b;
 }
+
 //------------------------------------------------------------------------------
 
 void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance) {

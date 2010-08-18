@@ -103,7 +103,7 @@ PathGPUDeviceRenderThread::~PathGPUDeviceRenderThread() {
 static void AppendMatrixDefinition(stringstream &ss, const char *paramName, const Matrix4x4 &m) {
 	for (unsigned int i = 0; i < 4; ++i) {
 		for (unsigned int j = 0; j < 4; ++j)
-			ss << " -D " << paramName << "_" << i << j << "=" << m.m[i][j];
+			ss << " -D " << paramName << "_" << i << j << "=" << m.m[i][j] << "f";
 	}
 }
 
@@ -342,28 +342,37 @@ void PathGPUDeviceRenderThread::Start() {
 
 	// Set #define symbols
 	stringstream ss;
-	ss << 	" -D PARAM_STARTLINE=" << startLine <<
+	ss.precision(6);
+	ss << scientific <<
+			" -D PARAM_STARTLINE=" << startLine <<
 			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON <<
-			" -D PARAM_CLIP_YON=" << renderEngine->scene->camera->GetClipYon() <<
-			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither() <<
+			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON << "f" <<
+			" -D PARAM_CLIP_YON=" << renderEngine->scene->camera->GetClipYon() << "f" <<
+			" -D PARAM_CLIP_HITHER=" << renderEngine->scene->camera->GetClipHither() << "f" <<
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
-			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap <<
+			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f" <<
 			" -D PARAM_SAMPLE_PER_PIXEL=" << renderEngine->samplePerPixel
 			;
 
+	if (renderEngine->scene->camera->lensRadius > 0.f) {
+		ss <<
+				" -D PARAM_CAMERA_HAS_DOF"
+				" -D PARAM_CAMERA_LENS_RADIUS=" << renderEngine->scene->camera->lensRadius << "f" <<
+				" -D PARAM_CAMERA_FOCAL_DISTANCE=" << renderEngine->scene->camera->focalDistance << "f";
+	}
+
 	if (infiniteLight) {
 		ss <<
-				" -D PARAM_HAVE_INFINITELIGHT=1" <<
-				" -D PARAM_IL_GAIN_R=" << infiniteLight->GetGain().r <<
-				" -D PARAM_IL_GAIN_G=" << infiniteLight->GetGain().g <<
-				" -D PARAM_IL_GAIN_B=" << infiniteLight->GetGain().b <<
-				" -D PARAM_IL_SHIFT_U=" << infiniteLight->GetShiftU() <<
-				" -D PARAM_IL_SHIFT_V=" << infiniteLight->GetShiftV() <<
+				" -D PARAM_HAVE_INFINITELIGHT" <<
+				" -D PARAM_IL_GAIN_R=" << infiniteLight->GetGain().r << "f" <<
+				" -D PARAM_IL_GAIN_G=" << infiniteLight->GetGain().g << "f" <<
+				" -D PARAM_IL_GAIN_B=" << infiniteLight->GetGain().b << "f" <<
+				" -D PARAM_IL_SHIFT_U=" << infiniteLight->GetShiftU() << "f" <<
+				" -D PARAM_IL_SHIFT_V=" << infiniteLight->GetShiftV() << "f" <<
 				" -D PARAM_IL_WIDTH=" << infiniteLight->GetTexture()->GetTexMap()->GetWidth() <<
 				" -D PARAM_IL_HEIGHT=" << infiniteLight->GetTexture()->GetTexMap()->GetHeight()
 				;
