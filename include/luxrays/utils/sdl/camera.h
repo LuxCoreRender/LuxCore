@@ -166,18 +166,13 @@ public:
 		// Modify ray for depth of field
 		if (lensRadius > 0.f) {
 			// Sample point on lens
-			Point lenP, lenPCamera;
-			ConcentricSampleDisk(u1, u2, &(lenPCamera.x), &(lenPCamera.y));
-
-			lenPCamera.x *= lensRadius;
-			lenPCamera.y *= lensRadius;
-			lenPCamera.z = 0;
-			c2w(lenPCamera, &lenP);
-			float lensU = lenPCamera.x;
-			float lensV = lenPCamera.y;
+			float lensU, lensV;
+			ConcentricSampleDisk(u1, u2, &lensU, &lensV);
+			lensU *= lensRadius;
+			lensV *= lensRadius;
 
 			// Compute point on plane of focus
-			float ft = (focalDistance - clipHither) / ray->d.z;
+			const float ft = (focalDistance - clipHither) / ray->d.z;
 			Point Pfocus = (*ray)(ft);
 			// Update ray for effect of lens
 			ray->o.x += lensU * (focalDistance - clipHither) / focalDistance;
