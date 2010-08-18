@@ -51,11 +51,15 @@ PathGPURenderThread::PathGPURenderThread(unsigned int index, PathGPURenderEngine
 }
 
 PathGPURenderThread::~PathGPURenderThread() {
+	delete[] frameBuffer;
 }
 
 void PathGPURenderThread::Start() {
 	started = true;
 	const unsigned int pixelCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
+
+	// Delete previous allocated frameBuffer
+	delete[] frameBuffer;
 	frameBuffer = new PathGPU::Pixel[pixelCount];
 
 	for (unsigned int i = 0; i < pixelCount; ++i) {
@@ -68,7 +72,9 @@ void PathGPURenderThread::Start() {
 
 void PathGPURenderThread::Stop() {
 	started = false;
-	delete[] frameBuffer;
+
+	// frameBuffer is delete on the destructor to allow image saving after
+	// the rendering is finished
 }
 
 //------------------------------------------------------------------------------
@@ -441,7 +447,9 @@ void PathGPUDeviceRenderThread::Start() {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	initFBKernel->setArg(0, *frameBufferBuff);
 	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
-			cl::NDRange(renderEngine->film->GetWidth() * renderEngine->film->GetHeight()), cl::NDRange(initFBWorkGroupSize));
+			cl::NDRange(RoundUp<unsigned int>(
+				renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), initFBWorkGroupSize)),
+			cl::NDRange(initFBWorkGroupSize));
 
 	// Initialize the path buffer
 	initKernel->setArg(0, *pathsBuff);
