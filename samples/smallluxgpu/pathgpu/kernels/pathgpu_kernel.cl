@@ -190,8 +190,17 @@ void Cross(Vector *v3, const Vector *v1, const Vector *v2) {
 void GenerateRay(
 		const unsigned int pixelIndex,
 		__global Ray *ray, Seed *seed) {
+
+	/*// Gaussina distribution
+	const float rad = filterRadius * sqrt(-log(1.f - RndFloatValue(seed)));
+	const float angle = 2 * M_PI * RndFloatValue(seed);
+
+	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + rad * cos(angle);
+	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + rad * sin(angle);*/
+
 	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + RndFloatValue(seed) - 0.5f;
 	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + RndFloatValue(seed) - 0.5f;
+
 	Point Pras;
 	Pras.x = screenX;
 	Pras.y = PARAM_IMAGE_HEIGHT - screenY - 1.f;
