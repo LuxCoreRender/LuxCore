@@ -427,15 +427,14 @@ __kernel void UpdatePixelBuffer(
 	__global Pixel *p = &frameBuffer[gid];
 
 	const unsigned int count = p->count;
-	const float invCount = 1.f / p->count;
+	if (count > 0) {
+		const float invCount = 1.f / p->count;
 
-	const unsigned int r = Radiance2PixelUInt(p->c.r * invCount);
-	const unsigned int g = Radiance2PixelUInt(p->c.g * invCount);
-	const unsigned int b = Radiance2PixelUInt(p->c.b * invCount);
-	const unsigned int rgba = r | (g << 8) | (b << 16);
-
-
-	pbo[gid] = (count == 0) ? 0 : (rgba);
+		const unsigned int r = Radiance2PixelUInt(p->c.r * invCount);
+		const unsigned int g = Radiance2PixelUInt(p->c.g * invCount);
+		const unsigned int b = Radiance2PixelUInt(p->c.b * invCount);
+		pbo[gid] = r | (g << 8) | (b << 16);
+	}
 }
 
 //------------------------------------------------------------------------------

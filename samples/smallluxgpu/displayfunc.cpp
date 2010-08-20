@@ -52,6 +52,15 @@ void DebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
 }
 
+static void UpdateCameraData() {
+	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop())) {
+		config->scene->camera->Update(config->film->GetWidth(), config->film->GetHeight());
+		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdateCamera();
+	} else
+		config->ReInit(false);
+}
+
 static void PrintString(void *font, const char *string) {
 	int len, i;
 
@@ -384,11 +393,23 @@ void reshapeFunc(int newWidth, int newHeight) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
+			if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
+				// I need to update the Film
+				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+				pre->UpdateFilm();
+			}
+
 			config->SaveFilmImage();
 			break;
 		}
 		case 27: { // Escape key
 			// Check if I have to save the film
+			if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
+				// I need to update the Film
+				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+				pre->UpdateFilm();
+			}
+
 			config->SaveFilm();
 			delete config;
 
@@ -401,31 +422,31 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'a': {
 			config->scene->camera->TranslateLeft(MOVE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		}
 		case 'd': {
 			config->scene->camera->TranslateRight(MOVE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		}
 		case 'w': {
 			config->scene->camera->TranslateForward(MOVE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		}
 		case 's': {
 			config->scene->camera->TranslateBackward(MOVE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		}
 		case 'r':
 			config->scene->camera->Translate(Vector(0.f, 0.f, MOVE_STEP));
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		case 'f':
 			config->scene->camera->Translate(Vector(0.f, 0.f, -MOVE_STEP));
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		case 'h':
 			printHelp = (!printHelp);
@@ -505,19 +526,19 @@ void specialFunc(int key, int x, int y) {
 	switch (key) {
 		case GLUT_KEY_UP:
 			config->scene->camera->RotateUp(ROTATE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		case GLUT_KEY_DOWN:
 			config->scene->camera->RotateDown(ROTATE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		case GLUT_KEY_LEFT:
 			config->scene->camera->RotateLeft(ROTATE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		case GLUT_KEY_RIGHT:
 			config->scene->camera->RotateRight(ROTATE_STEP);
-			config->ReInit(false);
+			UpdateCameraData();
 			break;
 		default:
 			break;
@@ -555,9 +576,12 @@ static void mouseFunc(int button, int state, int x, int y) {
 }
 
 static void motionFunc(int x, int y) {
+	const double minInterval =  (((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))) ? 0.05 : 0.2;
+
 	if (mouseButton0) {
 		// Check elapsed time since last update
-		if (WallClockTime() - lastMouseUpdate > 0.2) {
+		if (WallClockTime() - lastMouseUpdate > minInterval) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
@@ -567,19 +591,13 @@ static void motionFunc(int x, int y) {
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-					(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop())) {
-				config->scene->camera->Update(config->film->GetWidth(), config->film->GetHeight());
-				((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdateCamera();
-			} else
-				config->ReInit(false);
-
+			UpdateCameraData();
 			displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
 	} else if (mouseButton2) {
 		// Check elapsed time since last update
-		if (WallClockTime() - lastMouseUpdate > 0.2) {
+		if (WallClockTime() - lastMouseUpdate > minInterval) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
@@ -589,7 +607,7 @@ static void motionFunc(int x, int y) {
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			config->ReInit(false);
+			UpdateCameraData();
 			displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
@@ -626,7 +644,7 @@ void timerFunc(int value) {
 			sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
 					pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
-			if (!pre->HasOpenGLInterop()) {
+			if (!pre->HasOpenGLInterop() || config->NeedPeriodicSave()) {
 				// Need to update the Film
 				pre->UpdateFilm();
 			}
