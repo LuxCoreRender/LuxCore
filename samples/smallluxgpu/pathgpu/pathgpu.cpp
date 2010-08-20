@@ -561,6 +561,16 @@ void PathGPURenderThread::Stop() {
 		renderThread = NULL;
 	}
 
+	// Transfer of the frame buffer
+	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+	const unsigned int pixelCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
+	oclQueue.enqueueReadBuffer(
+		*frameBufferBuff,
+		CL_TRUE,
+		0,
+		sizeof(PathGPU::Pixel) * pixelCount,
+		frameBuffer);
+
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 	deviceDesc->FreeMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 	delete raysBuff;
@@ -633,29 +643,36 @@ void PathGPURenderThread::InitPixelBuffer() {
 void PathGPURenderThread::UpdatePixelBuffer() {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
-	for (unsigned int i = 0; i < 8; ++i) {
-		// Trace rays
-		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, PATHGPU_PATH_COUNT);
+	const double tStart = WallClockTime();
+	for (;;) {
+		for (unsigned int i = 0; i < 4; ++i) {
+			// Trace rays
+			intersectionDevice->EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, PATHGPU_PATH_COUNT);
 
-		// Advance paths
-		oclQueue.enqueueNDRangeKernel(*advancePathKernel, cl::NullRange,
-			cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(advancePathWorkGroupSize));
+			// Advance paths
+			oclQueue.enqueueNDRangeKernel(*advancePathKernel, cl::NullRange,
+				cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(advancePathWorkGroupSize));
+		}
+
+		// Update PixelBuffer
+		VECTOR_CLASS<cl::Memory> buffs;
+		buffs.push_back(*pboBuff);
+		oclQueue.enqueueAcquireGLObjects(&buffs);
+
+		updatePBKernel->setArg(0, *frameBufferBuff);
+		updatePBKernel->setArg(1, *pboBuff);
+		oclQueue.enqueueNDRangeKernel(*updatePBKernel, cl::NullRange,
+				cl::NDRange(RoundUp<unsigned int>(
+					renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), updatePBWorkGroupSize)),
+				cl::NDRange(updatePBWorkGroupSize));
+
+		oclQueue.enqueueReleaseGLObjects(&buffs);
+		oclQueue.finish();
+
+		// 50ms is the maximum refrash interval for SLG
+		if (WallClockTime() - tStart > 0.05)
+			break;
 	}
-
-	// Update PixelBuffer
-	VECTOR_CLASS<cl::Memory> buffs;
-	buffs.push_back(*pboBuff);
-	oclQueue.enqueueAcquireGLObjects(&buffs);
-
-	updatePBKernel->setArg(0, *frameBufferBuff);
-	updatePBKernel->setArg(1, *pboBuff);
-	oclQueue.enqueueNDRangeKernel(*updatePBKernel, cl::NullRange,
-			cl::NDRange(RoundUp<unsigned int>(
-				renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), updatePBWorkGroupSize)),
-			cl::NDRange(updatePBWorkGroupSize));
-
-	oclQueue.enqueueReleaseGLObjects(&buffs);
-	oclQueue.finish();
 
 	// Draw the image on the screen
 	glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbo);
@@ -868,10 +885,22 @@ void PathGPURenderEngine::UpdateFilm() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
 	elapsedTime = WallClockTime() - startTime;
-	film->Reset();
-
 	const unsigned int imgWidth = film->GetWidth();
 	const unsigned int pixelCount = imgWidth * film->GetHeight();
+
+	if (hasOpenGLInterop && started) {
+		// Transfer of the frame buffer
+		cl::CommandQueue &oclQueue = renderThreads[0]->intersectionDevice->GetOpenCLQueue();
+		oclQueue.enqueueReadBuffer(
+			*(renderThreads[0]->frameBufferBuff),
+			CL_TRUE,
+			0,
+			sizeof(PathGPU::Pixel) * pixelCount,
+			renderThreads[0]->frameBuffer);
+	}
+
+	film->Reset();
+
 	unsigned long long totalCount = 0;
 	for (unsigned int p = 0; p < pixelCount; ++p) {
 		Spectrum c;
