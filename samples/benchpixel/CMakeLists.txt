@@ -24,4 +24,4 @@ link_directories (${LUXRAYS_LIB_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 
 add_executable(benchpixel benchpixel.cpp)
-target_link_libraries(benchpixel luxrays ${OCL_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(benchpixel luxrays ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES})

@@ -398,7 +398,12 @@ class SLGBP:
                     mat = obj[1]
                     matn = mat.name.replace('.','_') if mat else SLGBP.nomatn
                     if type(obj[0]) == bpy.types.ParticleSystem:
-                        for i,p in enumerate(obj[0].particles): # and not SLGBP.live:
+                        if obj[2] != None:
+                            dgos = len(obj[0].settings.dupli_group.objects)
+                        for i,p in enumerate(obj[0].particles):
+                            if not obj[0].settings.whole_group and obj[2] != None:
+                                if obj[2] != i % dgos:
+                                    continue
                             if p.alive_state == 'ALIVE' and p.is_existing and p.is_visible:
                                 objn = obj[0].id_data.name.replace('.','_')+'{P}'+str(i)+plyn
                                 if isnan(p.rotation[0]): # Deal with Blender bug...
@@ -420,7 +425,7 @@ class SLGBP:
                         else:
                             tm = obj[0].matrix_world
                         objscn(plyn, matn, objn, mat, tm)
-                else:
+                elif not SLGBP.live:
                     objscn(plyn, plyn, plyn, obj, None)
         return scn
 
@@ -443,13 +448,13 @@ class SLGBP:
         mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
 
         # Add Dupli Object to ply
-        def dupliobj(so, do):
+        def dupliobj(so, do, n):
             if so in instobjs:
                 if so.data.materials:
                     for i in range(len(so.data.materials)):
-                        plys[(so.name+'{D}S'+str(i))].append((do, so.material_slots[i].material))
+                        plys[(so.name+'{D}S'+str(i))].append((do, so.material_slots[i].material, n))
                 else:
-                    plys[(so.name+'{D}'+SLGBP.nomatn)].append((do, None))
+                    plys[(so.name+'{D}'+SLGBP.nomatn)].append((do, None, n))
             elif not so.hide_render and so.type in rendertypes:
                 addo = False
                 if so not in objs:
@@ -462,15 +467,15 @@ class SLGBP:
                     for i in range(len(so.data.materials)):
                         plyn = (so.name+'{D}S'+str(i))
                         plymats.append(plyn)
-                        plys[plyn] = [(do, so.material_slots[i].material)]
+                        plys[plyn] = [(do, so.material_slots[i].material, n)]
                         if addo:
-                            plys[plyn].append((so, so.material_slots[i].material))
+                            plys[plyn].append((so, so.material_slots[i].material, n))
                 else:
                     plyn = (so.name+'{D}'+SLGBP.nomatn)
                     plymats.append(plyn)
-                    plys[plyn] = [(do, None)]
+                    plys[plyn] = [(do, None, n)]
                     if addo:
-                        plys[plyn].append((so, None))
+                        plys[plyn].append((so, None, n))
 
         # Objects to render
         for obj in scene.objects:
@@ -503,12 +508,18 @@ class SLGBP:
                 # Dupligroups
                 if obj.dupli_type == 'GROUP' and inscenelayer(obj):
                     for so in obj.dupli_group.objects:
-                        dupliobj(so, obj)
-                # Particles : Dupli Object
+                        dupliobj(so, obj, None)
+                # Particle Systems
                 for ps in obj.particle_systems:
-                    if ps.settings.type == 'EMITTER' and ps.settings.ren_as == 'OBJECT' and ps.settings.dupli_object:
-                    # Blender 2.5 Python bug!: incorrect dupli_object returned when multiple particle systems
-                        dupliobj(ps.settings.dupli_object, ps)
+                    if ps.settings.type == 'EMITTER':
+                        # Dupli Object
+                        if ps.settings.ren_as == 'OBJECT' and ps.settings.dupli_object:
+                            # Blender 2.5 Python bug!: incorrect dupli_object returned when multiple particle systems
+                            dupliobj(ps.settings.dupli_object, ps, None)
+                        # Dupli Group
+                        if ps.settings.ren_as == 'GROUP' and ps.settings.dupli_group:
+                            for i,o in enumerate(ps.settings.dupli_group.objects):
+                                dupliobj(o, ps, i)
 
         verts = [[] for i in range(len(plymats))]
         vert_vcs = [[] for i in range(len(plymats))]
@@ -714,15 +725,18 @@ class SLGBP:
     # Update SLG parameters via telnet interface
     @staticmethod
     def liveconnect(scene, errout):
-        SLGBP.msg = 'Connecting via telnet to SLG... (SLG Live Mode)'
+        SLGBP.msg = 'Connecting via telnet to SLG... (SLG Live! Mode)'
         SLGBP.msgrefresh()
         SLGBP.telnet = SLGTelnet()
         if SLGBP.telnet.connected:
             SLGBP.live = True
             SLGBP.msg = 'SLG Live! (ESC to exit)'
             SLGBP.msgrefresh()
+            SLGBP.telnetecho = scene.slg.telnetecho
+            if not SLGBP.telnetecho:
+                SLGBP.telnet.send('echocmd.off')
         else:
-            SLGBP.msg = 'Unable to connect to SLG via telnet... (SLG Live Mode)'
+            SLGBP.msg = 'Unable to connect to SLG via telnet... (SLG Live! Mode)'
             SLGBP.msgrefresh()
             errout("Can't connect.  SLG must be running with telnet interface enabled")
 
@@ -749,6 +763,9 @@ class SLGBP:
             SLGBP.liveact = 0
             wasreset = False
             if act & SLGBP.LIVECFG > 0:
+                if SLGBP.telnetecho != scene.slg.telnetecho:
+                    SLGBP.telnetecho = scene.slg.telnetecho
+                    SLGBP.telnet.send('echocmd.' + 'on' if SLGBP.telnetecho else 'off')
                 cfg = SLGBP.getcfg(scene)
                 # Changing film.tonemap.type resets all tonemap params; must re-initialize
                 forcetm = cmpupd('film.tonemap.type', cfg, SLGBP.cfg, False, False)
@@ -884,7 +901,7 @@ class SLGRender(bpy.types.Operator):
             self.report('ERROR', "SLGBP: Enable batch mode for animations")
             return {'CANCELLED'}
         if SLGBP.live:
-            self.report('ERROR', "SLGBP: Can't export during SLG live mode")
+            self.report('ERROR', "SLGBP: Can't export during SLG Live! mode")
             return {'CANCELLED'}
         if SLGBP.thread:
             if SLGBP.thread.is_alive():
@@ -923,7 +940,7 @@ class SLGRender(bpy.types.Operator):
 class SLGLive(bpy.types.Operator):
     bl_idname = "render.slg_live"
     bl_label = "SLG Live"
-    bl_description = "SLG Live mode"
+    bl_description = "SLG Live! mode"
 
     def _error(self, msg):
         self._iserror = True
@@ -971,7 +988,7 @@ class SLGLive(bpy.types.Operator):
 class SLGLiveUpdate(bpy.types.Operator):
     bl_idname = "render.slg_liveupd"
     bl_label = "SLG Live Update All"
-    bl_description = "SLG Live mode: update all"
+    bl_description = "SLG Live! mode: update all"
 
     @classmethod
     def poll(cls, context):
@@ -986,7 +1003,7 @@ class SLGLiveUpdate(bpy.types.Operator):
 class SLGLiveAnim(bpy.types.Operator):
     bl_idname = "render.slg_liveanim"
     bl_label = "SLG Live Animation Render"
-    bl_description = "SLG Live mode: render animation"
+    bl_description = "SLG Live! mode: render animation"
 
     @classmethod
     def poll(cls, context):
@@ -1012,7 +1029,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
     def render(self, scene):
 
         if SLGBP.live:
-            self._error("SLGBP: Can't render during SLG live mode")
+            self._error("SLGBP: Can't render during SLG Live! mode")
             return
         if SLGBP.thread:
             if SLGBP.thread.is_alive():
@@ -1290,7 +1307,11 @@ def slg_add_properties():
         default=False)
 
     SLGSettings.BoolProperty(attr="enabletelnet", name="Telnet",
-        description="Enable SLG telnet interface to enable live interaction from Blender",
+        description="Enable SLG's telnet interface to allow use of SLG Live! mode",
+        default=False)
+
+    SLGSettings.BoolProperty(attr="telnetecho", name="Echo",
+        description="Enable SLG's telnet echo of commands and informational messages (helps problem solve)",
         default=False)
 
     SLGSettings.BoolProperty(attr="opencl_cpu", name="CPU",
@@ -1569,6 +1590,8 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col.prop(slg, "waitrender")
         col = split.column()
         col.prop(slg, "enabletelnet")
+        col = split.column()
+        col.prop(slg, "telnetecho")
         if slg.enablebatchmode or SLGBP.live:
             split = layout.split()
             col = split.column()

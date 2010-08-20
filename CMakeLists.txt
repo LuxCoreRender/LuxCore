@@ -79,17 +79,20 @@ endif(LUXRAYS_DISABLE_OPENCL)
 
 #############################################################################
 #
-# OpenGL & GLUT Libraries
+# OpenGL, GLUT and GLEW  Libraries
 #
 #############################################################################
 
 find_package(GLUT)
 find_package(OpenGL)
+find_package(GLEW)
 
 message(STATUS "OpenGL include directory: " "${OPENGL_INCLUDE_DIR}")
 message(STATUS "OpenGL library: " "${OPENGL_LIBRARY}")
 message(STATUS "GLUT include directory: " "${GLUT_INCLUDE_DIR}")
 message(STATUS "GLUT library: " "${GLUT_LIBRARY}")
+message(STATUS "GLEW include directory: " "${GLEW_INCLUDE_DIR}")
+message(STATUS "GLEW library: " "${GLEW_LIBRARY}")
 
 #############################################################################
 #
@@ -166,7 +169,7 @@ if(DOXYGEN_FOUND)
         )
 
         add_custom_target(apidoc_luxrays DEPENDS ${DOXYGEN_LUXRAYS_OUTPUT})
-ENDIF (DOXYGEN_FOUND)
+endif(DOXYGEN_FOUND)
 
 #############################################################################
 #

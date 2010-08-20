@@ -46,6 +46,12 @@ typedef struct {
 } Path;
 
 typedef struct {
+	Spectrum throughput;
+	unsigned int depth, pixelIndex;
+	Seed seed;
+} PathLowLatency;
+
+typedef struct {
 	Spectrum c;
 	unsigned int count;
 } Pixel;
@@ -79,36 +85,25 @@ typedef struct {
 
 class PathGPURenderThread {
 public:
-	PathGPURenderThread(unsigned int index, PathGPURenderEngine *re);
-	virtual ~PathGPURenderThread();
-
-	virtual void Start();
-    virtual void Interrupt() = 0;
-	virtual void Stop();
-
-	friend class PathGPURenderEngine;
-
-protected:
-	unsigned int threadIndex;
-	PathGPURenderEngine *renderEngine;
-	PathGPU::Pixel *frameBuffer;
-
-	bool started;
-};
-
-class PathGPUDeviceRenderThread : public PathGPURenderThread {
-public:
-	PathGPUDeviceRenderThread(const unsigned int index, const unsigned int seedBase,
+	PathGPURenderThread(const unsigned int index, const unsigned int seedBase,
 			const float samplingStart, const unsigned int samplePerPixel,
 			OpenCLIntersectionDevice *device, PathGPURenderEngine *re);
-	~PathGPUDeviceRenderThread();
+	~PathGPURenderThread();
 
 	void Start();
     void Interrupt();
 	void Stop();
 
+	// Used for Low Latency mode
+	void UpdateCamera();
+	void UpdatePixelBuffer();
+
+	friend class PathGPURenderEngine;
+
 private:
-	static void RenderThreadImpl(PathGPUDeviceRenderThread *renderThread);
+	static void RenderThreadImpl(PathGPURenderThread *renderThread);
+
+	void InitPixelBuffer();
 
 	OpenCLIntersectionDevice *intersectionDevice;
 
@@ -117,6 +112,8 @@ private:
 	size_t initWorkGroupSize;
 	cl::Kernel *initFBKernel;
 	size_t initFBWorkGroupSize;
+	cl::Kernel *updatePBKernel;
+	size_t updatePBWorkGroupSize;
 	cl::Kernel *advancePathKernel;
 	size_t advancePathWorkGroupSize;
 
@@ -132,13 +129,23 @@ private:
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *colorsBuff;
+	cl::Buffer *cameraBuff;
+
+	// Used only when OpenGL interoperability is enabled and only by the first
+	// thread
+	GLuint pbo;
+	cl::BufferGL *pboBuff;
 
 	float samplingStart;
 	unsigned int seed;
 
 	boost::thread *renderThread;
 
-	bool reportedPermissionError;
+	unsigned int threadIndex;
+	PathGPURenderEngine *renderEngine;
+	PathGPU::Pixel *frameBuffer;
+
+	bool started, reportedPermissionError;
 };
 
 //------------------------------------------------------------------------------
@@ -164,10 +171,14 @@ public:
 	}
 	double GetRenderingTime() const { return (startTime == 0.0) ? 0.0 : (WallClockTime() - startTime); }
 
+	// Used for Low Latency mode
+	bool HasOpenGLInterop() const { return hasOpenGLInterop; }
+	void UpdateCamera() { renderThreads[0]->UpdateCamera(); }
+	void UpdatePixelBuffer() { renderThreads[0]->UpdatePixelBuffer(); }
+
 	void UpdateFilm();
 
 	friend class PathGPURenderThread;
-	friend class PathGPUDeviceRenderThread;
 
 	unsigned int samplePerPixel;
 
@@ -185,6 +196,7 @@ private:
 	double startTime;
 	double elapsedTime;
 	unsigned long long samplesCount;
+	bool hasOpenGLInterop;
 };
 
 #endif

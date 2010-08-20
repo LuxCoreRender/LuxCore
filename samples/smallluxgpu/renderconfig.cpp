@@ -67,7 +67,7 @@ void RenderingConfig::Init() {
 	const int oclPixelDeviceConfig = cfg.GetInt("opencl.pixeldevice.select", -1);
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
 	luxrays::RAY_EPSILON = cfg.GetFloat("scene.epsilon", luxrays::RAY_EPSILON);
-	periodiceSaveTime = config->cfg.GetFloat("batch.periodicsave", 0.f);
+	periodiceSaveTime = cfg.GetFloat("batch.periodicsave", 0.f);
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
@@ -297,9 +297,14 @@ void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 	if (selectedDescs.size() == 0)
 		cerr << "No OpenCL device selected" << endl;
 	else {
+		if (cfg.GetInt("opencl.latency.mode", 1) && (cfg.GetInt("renderengine.type", 0) == 3)) {
+			// Ask for OpenGL interoperability on the first device
+			((OpenCLDeviceDescription *)selectedDescs[0])->EnableOGLInterop();
+		}
+
 		// Allocate devices
 		const size_t gpuRenderThreadCount = (oclDeviceThreads < 1) ?
-			(2 * selectedDescs.size()) : oclDeviceThreads;
+				(2 * selectedDescs.size()) : oclDeviceThreads;
 		if ((gpuRenderThreadCount == 1) && (selectedDescs.size() == 1)) {
 			// Optimize the special case of one render thread and one GPU
 			intersectionGPUDevices =  ctx->AddIntersectionDevices(selectedDescs);
@@ -376,19 +381,19 @@ void RenderingConfig::StopAllRenderThreadsLockless() {
 void RenderingConfig::SaveFilmImage() {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
-	const string fileName = config->cfg.GetString("image.filename", "image.png");
-	config->film->UpdateScreenBuffer();
-	config->film->Save(fileName);
+	const string fileName = cfg.GetString("image.filename", "image.png");
+	film->UpdateScreenBuffer();
+	film->Save(fileName);
 
-	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
+	const vector<string> filmNames = cfg.GetStringVector("screen.file", "");
 	if (filmNames.size() == 1)
-		config->film->SaveFilm(filmNames[0]);
+		film->SaveFilm(filmNames[0]);
 	else if (filmNames.size() > 1)
-		config->film->SaveFilm("merged.flm");
+		film->SaveFilm("merged.flm");
 }
 
 void RenderingConfig::SaveFilm() {
-	const vector<string> filmNames = config->cfg.GetStringVector("screen.file", "");
+	const vector<string> filmNames = cfg.GetStringVector("screen.file", "");
 
 	if (filmNames.size() == 0)
 		return;
@@ -398,9 +403,9 @@ void RenderingConfig::SaveFilm() {
 	StopAllRenderThreadsLockless();
 
 	if (filmNames.size() == 1)
-		config->film->SaveFilm(filmNames[0]);
+		film->SaveFilm(filmNames[0]);
 	else if (filmNames.size() > 1)
-		config->film->SaveFilm("merged.flm");
+		film->SaveFilm("merged.flm");
 
 	StartAllRenderThreadsLockless();
 }

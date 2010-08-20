@@ -39,6 +39,7 @@
 //  PARAM_CAMERA_HAS_DOF
 //  PARAM_CAMERA_LENS_RADIUS
 //  PARAM_CAMERA_FOCAL_DISTANCE
+//  PARAM_LOWLATENCY
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -100,7 +101,11 @@ typedef struct {
 
 typedef struct {
 	Spectrum throughput;
-	unsigned int depth, pixelIndex, subpixelIndex;
+	unsigned int depth, pixelIndex
+#if !defined (PARAM_LOWLATENCY)
+	, subpixelIndex
+#endif
+	;
 	Seed seed;
 } Path;
 
@@ -254,7 +259,11 @@ void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
 
 void GenerateRay(
 		const unsigned int pixelIndex,
-		__global Ray *ray, Seed *seed) {
+		__global Ray *ray, Seed *seed
+#if defined (PARAM_LOWLATENCY)
+		, __global float *cameraData
+#endif
+		) {
 
 	/*// Gaussina distribution
 	const float rad = filterRadius * sqrt(-log(1.f - RndFloatValue(seed)));
@@ -273,10 +282,17 @@ void GenerateRay(
 
 	Point orig;
 	// RasterToCamera(Pras, &orig);
+#if defined (PARAM_LOWLATENCY)
+	const float iw = 1.f / (cameraData[12] * Pras.x + cameraData[13] * Pras.y + cameraData[14] * Pras.z + cameraData[15]);
+	orig.x = (cameraData[0] * Pras.x + cameraData[1] * Pras.y + cameraData[2] * Pras.z + cameraData[3]) * iw;
+	orig.y = (cameraData[4] * Pras.x + cameraData[5] * Pras.y + cameraData[6] * Pras.z + cameraData[7]) * iw;
+	orig.z = (cameraData[8] * Pras.x + cameraData[9] * Pras.y + cameraData[10] * Pras.z + cameraData[11]) * iw;
+#else
 	const float iw = 1.f / (PARAM_RASTER2CAMERA_30 * Pras.x + PARAM_RASTER2CAMERA_31 * Pras.y + PARAM_RASTER2CAMERA_32 * Pras.z + PARAM_RASTER2CAMERA_33);
 	orig.x = (PARAM_RASTER2CAMERA_00 * Pras.x + PARAM_RASTER2CAMERA_01 * Pras.y + PARAM_RASTER2CAMERA_02 * Pras.z + PARAM_RASTER2CAMERA_03) * iw;
 	orig.y = (PARAM_RASTER2CAMERA_10 * Pras.x + PARAM_RASTER2CAMERA_11 * Pras.y + PARAM_RASTER2CAMERA_12 * Pras.z + PARAM_RASTER2CAMERA_13) * iw;
 	orig.z = (PARAM_RASTER2CAMERA_20 * Pras.x + PARAM_RASTER2CAMERA_21 * Pras.y + PARAM_RASTER2CAMERA_22 * Pras.z + PARAM_RASTER2CAMERA_23) * iw;
+#endif
 
 	Vector dir;
 	dir.x = orig.x;
@@ -310,15 +326,28 @@ void GenerateRay(
 
 	// CameraToWorld(*ray, ray);
 	Point torig;
+#if defined (PARAM_LOWLATENCY)
+	const float iw2 = 1.f / (cameraData[16 + 12] * orig.x + cameraData[16 + 13] * orig.y + cameraData[16 + 14] * orig.z + cameraData[16 + 15]);
+	torig.x = (cameraData[16 + 0] * orig.x + cameraData[16 + 1] * orig.y + cameraData[16 + 2] * orig.z + cameraData[16 + 3]) * iw2;
+	torig.y = (cameraData[16 + 4] * orig.x + cameraData[16 + 5] * orig.y + cameraData[16 + 6] * orig.z + cameraData[16 + 7]) * iw2;
+	torig.z = (cameraData[16 + 8] * orig.x + cameraData[16 + 9] * orig.y + cameraData[16 + 12] * orig.z + cameraData[16 + 11]) * iw2;
+#else
 	const float iw2 = 1.f / (PARAM_CAMERA2WORLD_30 * orig.x + PARAM_CAMERA2WORLD_31 * orig.y + PARAM_CAMERA2WORLD_32 * orig.z + PARAM_CAMERA2WORLD_33);
 	torig.x = (PARAM_CAMERA2WORLD_00 * orig.x + PARAM_CAMERA2WORLD_01 * orig.y + PARAM_CAMERA2WORLD_02 * orig.z + PARAM_CAMERA2WORLD_03) * iw2;
 	torig.y = (PARAM_CAMERA2WORLD_10 * orig.x + PARAM_CAMERA2WORLD_11 * orig.y + PARAM_CAMERA2WORLD_12 * orig.z + PARAM_CAMERA2WORLD_13) * iw2;
 	torig.z = (PARAM_CAMERA2WORLD_20 * orig.x + PARAM_CAMERA2WORLD_21 * orig.y + PARAM_CAMERA2WORLD_22 * orig.z + PARAM_CAMERA2WORLD_23) * iw2;
+#endif
 
 	Vector tdir;
+#if defined (PARAM_LOWLATENCY)
+	tdir.x = cameraData[16 + 0] * dir.x + cameraData[16 + 1] * dir.y + cameraData[16 + 2] * dir.z;
+	tdir.y = cameraData[16 + 4] * dir.x + cameraData[16 + 5] * dir.y + cameraData[16 + 6] * dir.z;
+	tdir.z = cameraData[16 + 8] * dir.x + cameraData[16 + 9] * dir.y + cameraData[16 + 10] * dir.z;
+#else
 	tdir.x = PARAM_CAMERA2WORLD_00 * dir.x + PARAM_CAMERA2WORLD_01 * dir.y + PARAM_CAMERA2WORLD_02 * dir.z;
 	tdir.y = PARAM_CAMERA2WORLD_10 * dir.x + PARAM_CAMERA2WORLD_11 * dir.y + PARAM_CAMERA2WORLD_12 * dir.z;
 	tdir.z = PARAM_CAMERA2WORLD_20 * dir.x + PARAM_CAMERA2WORLD_21 * dir.y + PARAM_CAMERA2WORLD_22 * dir.z;
+#endif
 
 	ray->o = torig;
 	ray->d = tdir;
@@ -330,7 +359,11 @@ void GenerateRay(
 
 __kernel void Init(
 		__global Path *paths,
-		__global Ray *rays) {
+		__global Ray *rays
+#if defined (PARAM_LOWLATENCY)
+		, __global float *cameraData
+#endif
+		) {
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_PATH_COUNT)
 		return;
@@ -341,16 +374,23 @@ __kernel void Init(
 	path->throughput.g = 1.f;
 	path->throughput.b = 1.f;
 	path->depth = 0;
+
 	const unsigned int pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = pixelIndex;
+#if !defined (PARAM_LOWLATENCY)
 	path->subpixelIndex = 0;
+#endif
 
 	// Initialize random number generator
 	Seed seed;
 	InitRandomGenerator(PARAM_SEED + gid, &seed);
 
 	// Generate the eye ray
-	GenerateRay(pixelIndex, &rays[gid], &seed);
+	GenerateRay(pixelIndex, &rays[gid], &seed
+#if defined (PARAM_LOWLATENCY)
+		, cameraData
+#endif
+		);
 
 	// Save the seed
 	path->seed.s1 = seed.s1;
@@ -371,6 +411,31 @@ __kernel void InitFrameBuffer(
 	p->c.g = 0.f;
 	p->c.b = 0.f;
 	p->count = 0;
+}
+
+unsigned int Radiance2PixelUInt(const float x) {
+	return (unsigned int)(pow(clamp(x, 0.f, 1.f), 1.f / 2.2f) * 255.f + .5f);
+}
+
+__kernel void UpdatePixelBuffer(
+		__global Pixel *frameBuffer,
+		__global unsigned int *pbo) {
+	const int gid = get_global_id(0);
+	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
+		return;
+
+	__global Pixel *p = &frameBuffer[gid];
+
+	const unsigned int count = p->count;
+	const float invCount = 1.f / p->count;
+
+	const unsigned int r = Radiance2PixelUInt(p->c.r * invCount);
+	const unsigned int g = Radiance2PixelUInt(p->c.g * invCount);
+	const unsigned int b = Radiance2PixelUInt(p->c.b * invCount);
+	const unsigned int rgba = r | (g << 8) | (b << 16);
+
+
+	pbo[gid] = (count == 0) ? 0 : (rgba);
 }
 
 //------------------------------------------------------------------------------
@@ -530,7 +595,11 @@ void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
 
 //------------------------------------------------------------------------------
 
-void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance) {
+void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance
+#if defined (PARAM_LOWLATENCY)
+		, __global float *cameraData
+#endif
+		) {
 	// Add sample to the framebuffer
 
 	const unsigned int pixelIndex = path->pixelIndex;
@@ -541,8 +610,12 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	pixel->c.b += isnan(radiance->b) ? 0.f : radiance->b;
 	pixel->count += 1;
 
-	const unsigned int subpixelIndex = path->subpixelIndex;
 	unsigned int newPixelIndex;
+#if defined (PARAM_LOWLATENCY)
+	newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+	path->pixelIndex = newPixelIndex;
+#else
+	const unsigned int subpixelIndex = path->subpixelIndex;
 	if (subpixelIndex >= PARAM_SAMPLE_PER_PIXEL) {
 		newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 		path->pixelIndex = newPixelIndex;
@@ -551,8 +624,13 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 		newPixelIndex = pixelIndex;
 		path->subpixelIndex = subpixelIndex + 1;
 	}
+#endif
 
-	GenerateRay(newPixelIndex, ray, seed);
+	GenerateRay(newPixelIndex, ray, seed
+#if defined (PARAM_LOWLATENCY)
+		, cameraData
+#endif
+		);
 
 	// Re-initialize the path
 	path->throughput.r = 1.f;
@@ -570,9 +648,12 @@ __kernel void AdvancePaths(
 		__global unsigned int *meshMats,
 		__global unsigned int *meshIDs, // Not used
 		__global unsigned int *triIDs,
-		__global Vector *vertColors,
+		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Triangle *triangles
+#if defined (PARAM_LOWLATENCY)
+		, __global float *cameraData
+#endif
 #if defined(PARAM_HAVE_INFINITELIGHT)
 		, __global Spectrum *infiniteLightMap
 #endif
@@ -683,7 +764,11 @@ __kernel void AdvancePaths(
 			radiance.g = materialLe.g * path->throughput.g;
 			radiance.b = materialLe.b * path->throughput.b;
 
-			TerminatePath(path, ray, frameBuffer, &seed, &radiance);
+			TerminatePath(path, ray, frameBuffer, &seed, &radiance
+#if defined (PARAM_LOWLATENCY)
+				, cameraData
+#endif
+				);
 		} else {
 			const float invPdf = 1.f / pdf;
 			path->throughput.r = throughput.r * f.r * invPdf;
@@ -718,7 +803,11 @@ __kernel void AdvancePaths(
 		radiance.b = 0.f;
 #endif
 
-		TerminatePath(path, ray, frameBuffer, &seed, &radiance);
+		TerminatePath(path, ray, frameBuffer, &seed, &radiance
+#if defined (PARAM_LOWLATENCY)
+				, cameraData
+#endif
+			);
 	}
 
 	// Save the seed

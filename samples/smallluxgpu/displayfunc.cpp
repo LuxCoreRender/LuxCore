@@ -28,6 +28,14 @@
 #endif
 #include <math.h>
 
+#include <GL/glew.h>
+// Jens's patch for MacOS
+#if defined(__APPLE__)
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
 #include "displayfunc.h"
 #include "renderconfig.h"
 
@@ -201,7 +209,6 @@ static void PrintHelpAndSettings() {
 	// Pixel Device
 	char buff[512];
 	glColor3f(1.0f, 0.25f, 0.f);
-	const vector<IntersectionDevice *> idevices = config->GetIntersectionDevices();
 	fontOffset -= 15;
 	glRasterPos2i(15, fontOffset);
 	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
@@ -230,6 +237,7 @@ static void PrintHelpAndSettings() {
 	}
 
 	// Intersection devices
+	const vector<IntersectionDevice *> idevices = config->GetIntersectionDevices();
 	switch (config->GetRenderEngine()->GetEngineType()) {
 		case DIRECTLIGHT:
 		case PATH:
@@ -335,7 +343,11 @@ void displayFunc(void) {
 	const float *pixels = config->film->GetScreenBuffer();
 
 	glRasterPos2i(0, 0);
-	glDrawPixels(config->film->GetWidth(), config->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
+	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdatePixelBuffer();
+	else
+		glDrawPixels(config->film->GetWidth(), config->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
 
 	PrintCaptions();
 
@@ -555,7 +567,13 @@ static void motionFunc(int x, int y) {
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			config->ReInit(false);
+			if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+					(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop())) {
+				config->scene->camera->Update(config->film->GetWidth(), config->film->GetHeight());
+				((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdateCamera();
+			} else
+				config->ReInit(false);
+
 			displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
@@ -608,8 +626,10 @@ void timerFunc(int value) {
 			sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
 					pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
-			// Need to update the Film
-			pre->UpdateFilm();
+			if (!pre->HasOpenGLInterop()) {
+				// Need to update the Film
+				pre->UpdateFilm();
+			}
 			break;
 		}
 		default:
@@ -641,6 +661,13 @@ void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned i
 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutCreateWindow(SLG_LABEL.c_str());
+
+	// Check if OpenGL interoperability will be enabled
+	if (config->cfg.GetInt("opencl.latency.mode", 1) && (config->cfg.GetInt("renderengine.type", 0) == 3)) {
+		glewInit();
+		if (!glewIsSupported("GL_VERSION_2_0 " "GL_ARB_pixel_buffer_object"))
+			throw runtime_error("GL_ARB_pixel_buffer_object is not supported");
+	}
 }
 
 void RunGlut() {
