@@ -19,6 +19,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if !defined(WIN32) && !defined(__APPLE__)
+#include <GL/glx.h>
+#endif
+
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixeldevice.h"
 #include "luxrays/core/context.h"
@@ -191,6 +195,52 @@ void OpenCLDeviceDescription::AddDeviceDescs(
 			descriptions.push_back(desc);
 		}
 	}
+}
+
+cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
+	if (!oclContext) {
+		// Allocate a context with the selected device
+		VECTOR_CLASS<cl::Device> devices;
+		devices.push_back(oclDevice);
+		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
+
+		if (enableOpenGLInterop) {
+#if defined (__APPLE__)
+			CGLContextObj kCGLContext = CGLGetCurrentContext();
+			CGLShareGroupObj kCGLShareGroup = CGLGetShareGroup(kCGLContext);
+			cl_context_properties cps[] = {
+				CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)kCGLShareGroup,
+				0
+			};
+#else
+#ifdef WIN32
+			cl_context_properties cps[] = {
+				CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+				CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(), 0
+				0
+			};
+#else
+			cl_context_properties cps[] = {
+				CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
+				CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
+				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
+				0
+			};
+#endif
+#endif
+
+			oclContext = new cl::Context(devices, cps);
+		} else {
+			cl_context_properties cps[] = {
+				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(), 0
+			};
+
+			oclContext = new cl::Context(devices, cps);
+		}
+	}
+
+	return *oclContext;
 }
 
 void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,

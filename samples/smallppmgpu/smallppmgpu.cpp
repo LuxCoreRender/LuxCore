@@ -33,6 +33,7 @@
 #include <windows.h>
 #endif
 
+#include <GL/glew.h>
 // Jens's patch for MacOS
 #if defined(__APPLE__)
 #include <GLUT/glut.h>

@@ -28,13 +28,6 @@
 #include <windows.h>
 #endif
 
-// Jens's patch for MacOS
-#if defined(__APPLE__)
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
-
 extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
 extern void RunGlut(const unsigned int width, const unsigned int height);
 

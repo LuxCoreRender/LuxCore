@@ -24,19 +24,13 @@
 
 #include <cmath>
 
-// Jens's patch for MacOS
-#if defined(__APPLE__)
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
-
 class RenderingConfig;
 
 extern RenderingConfig *config;
 extern void DebugHandler(const char *msg);
 
 extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
+extern void InitPixelBuffer(const unsigned int width, const unsigned int height);
 extern void RunGlut();
 
 #endif	/* _DISPLAYFUNC_H */

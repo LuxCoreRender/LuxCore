@@ -128,7 +128,8 @@ public:
 		usedMemory(0),
 		forceWorkGroupSize(0),
 		oclDevice(device),
-		oclContext(NULL) { }
+		oclContext(NULL),
+		enableOpenGLInterop(false) { }
 
 	~OpenCLDeviceDescription() {
 		delete oclContext;
@@ -149,6 +150,18 @@ public:
 
 	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
 
+	bool HasOCLContext() const { return (oclContext != NULL); }
+	bool HasOGLInterop() const { return enableOpenGLInterop; }
+	void EnableOGLInterop() const {
+		if (!oclContext || enableOpenGLInterop)
+			enableOpenGLInterop = true;
+		else
+			throw std::runtime_error("It is not possible to enable OpenGL interoperability when the OpenCL context has laready been created");
+	}
+
+	cl::Context &GetOCLContext() const;
+	cl::Device &GetOCLDevice() const { return oclDevice; }
+
 	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 
 	friend class Context;
@@ -163,26 +176,6 @@ protected:
 	static void AddDeviceDescs(const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
 		std::vector<DeviceDescription *> &descriptions);
 
-	cl::Context &GetOCLContext() {
-		if (!oclContext) {
-			// Allocate a context with the selected device
-			VECTOR_CLASS<cl::Device> devices;
-			devices.push_back(oclDevice);
-			cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
-			cl_context_properties cps[3] = {
-				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(), 0
-			};
-
-			oclContext = new cl::Context(devices, cps);
-		}
-
-		return *oclContext;
-	}
-
-	cl::Device &GetOCLDevice() {
-		return oclDevice;
-	}
-
 	OpenCLDeviceType oclType;
 	size_t deviceIndex;
 	int computeUnits;
@@ -194,8 +187,9 @@ protected:
 	mutable unsigned int forceWorkGroupSize;
 
 private:
-	cl::Device oclDevice;
+	mutable cl::Device oclDevice;
 	mutable cl::Context *oclContext;
+	mutable bool enableOpenGLInterop;
 };
 
 #endif
