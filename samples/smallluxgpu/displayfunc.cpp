@@ -300,7 +300,12 @@ static void PrintHelpAndSettings() {
 
 			glColor3f(1.0f, 0.5f, 0.f);
 			int offset = 45;
-			for (size_t i = 0; i < idevices.size(); ++i) {
+			size_t deviceCount = idevices.size();
+			if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+					(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+				deviceCount = 1;
+
+			for (size_t i = 0; i < deviceCount; ++i) {
 				// Check if it is an OpenCL device
 				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
 					const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
@@ -641,8 +646,12 @@ void timerFunc(int value) {
 		case PATHGPU: {
 			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
-			sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
-					pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			if (pre->HasOpenGLInterop())
+				sprintf(config->captionBuffer, "[Avg. rays/sec % 4dK on %.1fK tris]",
+						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			else
+				sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
+						pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 			if (!pre->HasOpenGLInterop() || config->NeedPeriodicSave()) {
 				// Need to update the Film
