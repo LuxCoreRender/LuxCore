@@ -94,7 +94,9 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double startTime = WallClockTime();
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	double lastFilmUpdate = WallClockTime();
+#endif
 	double sampleSec = 0.0;
 	char buf[512];
 	const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
@@ -112,12 +114,14 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 
 		// Check if periodic save is enabled
 		if (config->NeedPeriodicSave()) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
 				// I need to update the Film
 				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
 				pre->UpdateFilm();
 			}
+#endif
 
 			// Time to save the image and film
 			config->SaveFilmImage();

@@ -22,6 +22,8 @@
 #ifndef _LUXRAYS_SDL_MC_H
 #define	_LUXRAYS_SDL_MC_H
 
+#include <string.h>
+
 #include "luxrays/luxrays.h"
 
 namespace luxrays { namespace sdl {
