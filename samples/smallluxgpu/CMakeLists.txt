@@ -61,6 +61,7 @@ if(DOXYGEN_FOUND)
         add_custom_command(
             OUTPUT ${DOXYGEN_SLG_OUTPUT}
             # Creating custom doxygen-slg.conf
+			COMMAND mkdir -p ${DOXYGEN_SLG_OUTPUT_DIR}
             COMMAND cp ${DOXYGEN_SLG_TEMPLATE} ${DOXYGEN_SLG_INPUT}
             COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../samples/smallluxgpu >> ${DOXYGEN_SLG_INPUT}
             COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_SLG_OUTPUT_DIR} >> ${DOXYGEN_SLG_INPUT}
