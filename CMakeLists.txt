@@ -320,7 +320,6 @@ add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/smallluxgpu)
 add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/smallppmgpu)
-add_subdirectory(samples/smallsppmgpu)
 
 ###########################################################################
 #
