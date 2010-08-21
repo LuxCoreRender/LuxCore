@@ -49,8 +49,11 @@
 #include "luxrays/core/geometry/triangle.h"
 #include "luxrays/core/pixel/samplebuffer.h"
 
-namespace luxrays
-{
+/*! \namespace luxrays
+ *
+ * \brief The LuxRays core classes are defined within this namespace.
+ */
+namespace luxrays {
 class Accelerator;
 class Context;
 class DataSet;

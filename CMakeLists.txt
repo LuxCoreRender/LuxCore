@@ -158,6 +158,7 @@ if(DOXYGEN_FOUND)
         add_custom_command(
             OUTPUT ${DOXYGEN_LUXRAYS_OUTPUT}
             # Creating custom doxygen-luxrays.conf
+			COMMAND mkdir -p ${DOXYGEN_LUXRAYS_OUTPUT_DIR}
             COMMAND cp ${DOXYGEN_LUXRAYS_TEMPLATE} ${DOXYGEN_LUXRAYS_INPUT}
             COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/include  ${CMAKE_CURRENT_SOURCE_DIR}/src >> ${DOXYGEN_LUXRAYS_INPUT}
             COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_LUXRAYS_OUTPUT_DIR} >> ${DOXYGEN_LUXRAYS_INPUT}
