@@ -217,7 +217,7 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 			cl_context_properties cps[] = {
 				CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
 				CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(), 0
+				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 				0
 			};
 #else
