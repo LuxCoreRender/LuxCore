@@ -53,11 +53,13 @@ void DebugHandler(const char *msg) {
 }
 
 static void UpdateCameraData() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
 			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop())) {
 		config->scene->camera->Update(config->film->GetWidth(), config->film->GetHeight());
 		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdateCamera();
 	} else
+#endif
 		config->ReInit(false);
 }
 
@@ -135,12 +137,14 @@ static void PrintHelpAndSettings() {
 			renderingTime = int(sre->GetRenderingTime());
 			break;
 		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case PATHGPU: {
 			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
 			renderingTime = int(pre->GetRenderingTime());
 			break;
 		}
+#endif
 		default:
 			renderingTime = int(config->film->GetTotalTime());
 			break;
@@ -357,10 +361,12 @@ void displayFunc(void) {
 	const float *pixels = config->film->GetScreenBuffer();
 
 	glRasterPos2i(0, 0);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
 			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
 		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdatePixelBuffer();
 	else
+#endif
 		glDrawPixels(config->film->GetWidth(), config->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
 
 	PrintCaptions();
@@ -398,23 +404,25 @@ void reshapeFunc(int newWidth, int newHeight) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
 				// I need to update the Film
 				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 				pre->UpdateFilm();
 			}
-
+#endif
 			config->SaveFilmImage();
 			break;
 		}
 		case 27: { // Escape key
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			// Check if I have to save the film
 			if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
 				// I need to update the Film
 				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 				pre->UpdateFilm();
 			}
-
+#endif
 			config->SaveFilm();
 			delete config;
 
@@ -581,8 +589,12 @@ static void mouseFunc(int button, int state, int x, int y) {
 }
 
 static void motionFunc(int x, int y) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	const double minInterval =  (((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
 			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))) ? 0.05 : 0.2;
+#else
+	const double minInterval = 0.2;
+#endif
 
 	if (mouseButton0) {
 		// Check elapsed time since last update
@@ -643,6 +655,7 @@ void timerFunc(int value) {
 					int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 			break;
 		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case PATHGPU: {
 			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
@@ -659,6 +672,7 @@ void timerFunc(int value) {
 			}
 			break;
 		}
+#endif
 		default:
 			assert (false);
 	}

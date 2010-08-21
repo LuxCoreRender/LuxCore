@@ -19,8 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -31,15 +29,18 @@
 
 #include <GL/glew.h>
 
-#include "luxrays/core/pixel/samplebuffer.h"
-
 #include "smalllux.h"
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "pathgpu/pathgpu.h"
 #include "pathgpu/kernels/kernels.h"
 #include "renderconfig.h"
 #include "displayfunc.h"
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
+#include "luxrays/core/pixel/samplebuffer.h"
+
 
 //------------------------------------------------------------------------------
 // PathGPURenderThread

@@ -168,9 +168,11 @@ void RenderingConfig::Init() {
 		case 2:
 			renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, true, cfg);
 			break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case 3:
 			renderEngine = new PathGPURenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
 			break;
+#endif
 		default:
 			assert (false);
 	}
@@ -220,9 +222,11 @@ void RenderingConfig::SetRenderingEngineType(const RenderEngineType type) {
 			case DIRECTLIGHT:
 				renderEngine = new PathRenderEngine(scene, film, &filmMutex, intersectionAllDevices, true, cfg);
 				break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case PATHGPU:
 				renderEngine = new PathGPURenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
 				break;
+#endif
 			default:
 				assert (false);
 		}
@@ -297,10 +301,12 @@ void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 	if (selectedDescs.size() == 0)
 		cerr << "No OpenCL device selected" << endl;
 	else {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		if (cfg.GetInt("opencl.latency.mode", 1) && (cfg.GetInt("renderengine.type", 0) == 3)) {
 			// Ask for OpenGL interoperability on the first device
 			((OpenCLDeviceDescription *)selectedDescs[0])->EnableOGLInterop();
 		}
+#endif
 
 		// Allocate devices
 		const size_t gpuRenderThreadCount = (oclDeviceThreads < 1) ?

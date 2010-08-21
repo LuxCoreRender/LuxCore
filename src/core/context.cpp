@@ -131,9 +131,11 @@ void Context::UpdateDataSet() {
 	// Update the data set
 	currentDataSet->UpdateMeshes();
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Update all OpenCL devices
 	for (unsigned int i = 0; i < oclDevices.size(); ++i)
 		oclDevices[i]->UpdateDataSet();
+#endif
 }
 
 void Context::Start() {
