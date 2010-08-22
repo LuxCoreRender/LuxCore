@@ -182,6 +182,8 @@ public:
 
 	const Spectrum &GetKr() const { return Kr; }
 
+	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
+
 private:
 	Spectrum Kr;
 	bool reflectionSpecularBounce;

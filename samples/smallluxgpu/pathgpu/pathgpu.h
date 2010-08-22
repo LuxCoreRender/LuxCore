@@ -47,9 +47,23 @@ typedef struct {
 
 typedef struct {
 	Spectrum throughput;
+	unsigned int depth, pixelIndex, subpixelIndex;
+	Seed seed;
+	int specularBounce;
+} PathDL;
+
+typedef struct {
+	Spectrum throughput;
 	unsigned int depth, pixelIndex;
 	Seed seed;
 } PathLowLatency;
+
+typedef struct {
+	Spectrum throughput;
+	unsigned int depth, pixelIndex;
+	Seed seed;
+	int specularBounce;
+} PathLowLatencyDL;
 
 typedef struct {
 	Spectrum c;
@@ -71,6 +85,7 @@ typedef struct {
 		} areaLight;
 		struct {
 			float r, g, b;
+			int specularBounce;
 		} mirror;
 	} mat;
 } Material;
