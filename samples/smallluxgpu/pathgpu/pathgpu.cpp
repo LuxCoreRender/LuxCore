@@ -125,7 +125,9 @@ void PathGPURenderThread::Start() {
 			sizeof(RayHit) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
-	const size_t PathGPUSize = (renderEngine->hasOpenGLInterop) ? sizeof(PathGPU::PathLowLatency) : sizeof(PathGPU::Path);
+	const size_t PathGPUSize = (renderEngine->hasOpenGLInterop) ? 
+		sizeof(PathGPU::PathLowLatency) :
+		sizeof(PathGPU::Path);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Paths buffer size: " << (PathGPUSize * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
 	pathsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
@@ -189,6 +191,7 @@ void PathGPURenderThread::Start() {
 				gpum->mat.mirror.r = mm->GetKr().r;
 				gpum->mat.mirror.g = mm->GetKr().g;
 				gpum->mat.mirror.b = mm->GetKr().b;
+				gpum->mat.mirror.specularBounce = mm->HasSpecularBounceEnabled();
 				break;
 			}
 			default: {

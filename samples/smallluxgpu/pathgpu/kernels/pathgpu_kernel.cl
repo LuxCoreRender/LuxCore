@@ -40,6 +40,7 @@
 //  PARAM_CAMERA_LENS_RADIUS
 //  PARAM_CAMERA_FOCAL_DISTANCE
 //  PARAM_LOWLATENCY
+//  PARAM_DIRECT_LIGHT_SAMPLING
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -61,6 +62,14 @@
 
 #ifndef INV_TWOPI
 #define INV_TWOPI  0.15915494309189533577f
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
 #endif
 
 //------------------------------------------------------------------------------
@@ -107,6 +116,9 @@ typedef struct {
 #endif
 	;
 	Seed seed;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	int specularBounce;
+#endif
 } Path;
 
 typedef struct {
@@ -129,6 +141,7 @@ typedef struct {
 		} areaLight;
 		struct {
 			float r, g, b;
+			int specularBounce;
 		} mirror;
 	} mat;
 } Material;
@@ -374,6 +387,9 @@ __kernel void Init(
 	path->throughput.g = 1.f;
 	path->throughput.b = 1.f;
 	path->depth = 0;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	path->specularBounce = TRUE;
+#endif
 
 	const unsigned int pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = pixelIndex;
@@ -542,7 +558,11 @@ void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangl
 
 void Matte_Sample_f(__global Material *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
-		const float u0, const float u1,  const float u2) {
+		const float u0, const float u1,  const float u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global int *specularBounce
+#endif
+		) {
 	Vector dir;
 	CosineSampleHemisphere(&dir, u0, u1);
 	*pdf = dir.z * INV_PI;
@@ -565,6 +585,10 @@ void Matte_Sample_f(__global Material *mat, const Vector *wo, Vector *wi,
 		f->g = mat->mat.matte.g * INV_PI;
 		f->b = mat->mat.matte.b * INV_PI;
 	}
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	*specularBounce = FALSE;
+#endif
 }
 
 void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spectrum *Le) {
@@ -580,7 +604,11 @@ void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spe
 }
 
 void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
-		float *pdf, Spectrum *f, const Vector *shadeN, const float RdotShadeN) {
+		float *pdf, Spectrum *f, const Vector *shadeN, const float RdotShadeN
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global int *specularBounce
+#endif
+		) {
 	wi->x = rayDir->x + (2.f * RdotShadeN) * shadeN->x;
 	wi->y = rayDir->y + (2.f * RdotShadeN) * shadeN->y;
 	wi->z = rayDir->z + (2.f * RdotShadeN) * shadeN->z;
@@ -590,6 +618,10 @@ void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
 	f->r = mat->mat.mirror.r;
 	f->g = mat->mat.mirror.g;
 	f->b = mat->mat.mirror.b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	*specularBounce = mat->mat.mirror.specularBounce;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -636,6 +668,9 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	path->throughput.g = 1.f;
 	path->throughput.b = 1.f;
 	path->depth = 0;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	path->specularBounce = TRUE;
+#endif
 }
 
 __kernel void AdvancePaths(
@@ -729,14 +764,25 @@ __kernel void AdvancePaths(
 		bool areaLightHit = false;
 		switch (mat->type) {
 			case MAT_MATTE:
-				Matte_Sample_f(mat, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2);
+				Matte_Sample_f(mat, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					, &path->specularBounce
+#endif
+					);
 				break;
 			case MAT_AREALIGHT:
 				areaLightHit = true;
-				AreaLight_Le(mat, &N, &wo, &materialLe);
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+				if (path->specularBounce)
+#endif
+					AreaLight_Le(mat, &N, &wo, &materialLe);
 				break;
 			case MAT_MIRROR:
-				Mirror_Sample_f(mat, &rayDir, &wi, &pdf, &f, &shadeN, RdotShadeN);
+				Mirror_Sample_f(mat, &rayDir, &wi, &pdf, &f, &shadeN, RdotShadeN
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					, &path->specularBounce
+#endif
+					);
 				break;
 			default:
 				// Huston, we have a problem...
