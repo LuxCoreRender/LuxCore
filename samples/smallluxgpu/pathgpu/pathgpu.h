@@ -50,6 +50,10 @@ typedef struct {
 	unsigned int depth, pixelIndex, subpixelIndex;
 	Seed seed;
 	int specularBounce;
+	int state;
+	RayHit pathHit;
+	Spectrum lightRadiance;
+	Spectrum radiance;
 } PathDL;
 
 typedef struct {
@@ -63,6 +67,10 @@ typedef struct {
 	unsigned int depth, pixelIndex;
 	Seed seed;
 	int specularBounce;
+	int state;
+	RayHit pathHit;
+	Spectrum lightRadiance;
+	Spectrum radiance;
 } PathLowLatencyDL;
 
 typedef struct {
@@ -89,6 +97,13 @@ typedef struct {
 		} mirror;
 	} mat;
 } Material;
+
+typedef struct {
+	Point v0, v1, v2;
+	Normal normal;
+	float area;
+	float gain_r, gain_g, gain_b;
+} TriangleLight;
 
 }
 
@@ -145,6 +160,7 @@ private:
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *colorsBuff;
 	cl::Buffer *cameraBuff;
+	cl::Buffer *triLightsBuff;
 
 	// Used only when OpenGL interoperability is enabled and only by the first
 	// thread

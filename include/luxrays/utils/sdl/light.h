@@ -235,6 +235,8 @@ public:
 
 	void Init(const std::vector<ExtMesh *> &objs);
 	unsigned int GetMeshIndex() const { return meshIndex; }
+	unsigned int GetTriIndex() const { return triIndex; }
+	float GetArea() const { return area; }
 
 private:
 	const AreaLightMaterial *lightMaterial;
