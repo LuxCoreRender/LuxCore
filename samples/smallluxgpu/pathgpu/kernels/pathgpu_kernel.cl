@@ -41,6 +41,7 @@
 //  PARAM_CAMERA_FOCAL_DISTANCE
 //  PARAM_LOWLATENCY
 //  PARAM_DIRECT_LIGHT_SAMPLING
+//  PARAM_DL_LIGHT_COUNT
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -89,7 +90,7 @@ typedef struct {
 } Vector;
 
 typedef struct {
-	unsigned int v0, v1, v2;
+	uint v0, v1, v2;
 } Triangle;
 
 typedef struct {
@@ -105,12 +106,15 @@ typedef struct {
 } RayHit;
 
 typedef struct {
-	unsigned int s1, s2, s3;
+	uint s1, s2, s3;
 } Seed;
+
+#define PATH_STATE_NEXT_VERTEX 0
+#define PATH_STATE_SAMPLE_LIGHT 1
 
 typedef struct {
 	Spectrum throughput;
-	unsigned int depth, pixelIndex
+	uint depth, pixelIndex
 #if !defined (PARAM_LOWLATENCY)
 	, subpixelIndex
 #endif
@@ -118,12 +122,16 @@ typedef struct {
 	Seed seed;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	int specularBounce;
+	int state;
+	RayHit pathHit;
+	Spectrum lightRadiance;
+	Spectrum radiance;
 #endif
 } Path;
 
 typedef struct {
 	Spectrum c;
-	unsigned int count;
+	uint count;
 } Pixel;
 
 #define MAT_MATTE 0
@@ -131,7 +139,7 @@ typedef struct {
 #define MAT_MIRROR 2
 
 typedef struct {
-	unsigned int type;
+	uint type;
 	union {
 		struct {
 			float r, g, b;
@@ -146,6 +154,13 @@ typedef struct {
 	} mat;
 } Material;
 
+typedef struct {
+	Point v0, v1, v2;
+	Vector normal;
+	float area;
+	float gain_r, gain_g, gain_b;
+} TriangleLight;
+
 //------------------------------------------------------------------------------
 // Random number generator
 // maximally equidistributed combined Tausworthe generator
@@ -153,19 +168,19 @@ typedef struct {
 
 #define FLOATMASK 0x00ffffffu
 
-unsigned int TAUSWORTHE(const unsigned int s, const unsigned int a,
-	const unsigned int b, const unsigned int c,
-	const unsigned int d) {
+uint TAUSWORTHE(const uint s, const uint a,
+	const uint b, const uint c,
+	const uint d) {
 	return ((s&c)<<d) ^ (((s << a) ^ s) >> b);
 }
 
-unsigned int LCG(const unsigned int x) { return x * 69069; }
+uint LCG(const uint x) { return x * 69069; }
 
-unsigned int ValidSeed(const unsigned int x, const unsigned int m) {
+uint ValidSeed(const uint x, const uint m) {
 	return (x < m) ? (x + m) : x;
 }
 
-void InitRandomGenerator(unsigned int seed, Seed *s) {
+void InitRandomGenerator(uint seed, Seed *s) {
 	// Avoid 0 value
 	seed = (seed == 0) ? (seed + 0xffffffu) : seed;
 
@@ -271,7 +286,7 @@ void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
 //------------------------------------------------------------------------------
 
 void GenerateRay(
-		const unsigned int pixelIndex,
+		const uint pixelIndex,
 		__global Ray *ray, Seed *seed
 #if defined (PARAM_LOWLATENCY)
 		, __global float *cameraData
@@ -389,9 +404,13 @@ __kernel void Init(
 	path->depth = 0;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	path->specularBounce = TRUE;
+	path->state = PATH_STATE_NEXT_VERTEX;
+	path->radiance.r = 0.f;
+	path->radiance.g = 0.f;
+	path->radiance.b = 0.f;
 #endif
 
-	const unsigned int pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+	const uint pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = pixelIndex;
 #if !defined (PARAM_LOWLATENCY)
 	path->subpixelIndex = 0;
@@ -429,26 +448,26 @@ __kernel void InitFrameBuffer(
 	p->count = 0;
 }
 
-unsigned int Radiance2PixelUInt(const float x) {
-	return (unsigned int)(pow(clamp(x, 0.f, 1.f), 1.f / 2.2f) * 255.f + .5f);
+uint Radiance2PixelUInt(const float x) {
+	return (uint)(pow(clamp(x, 0.f, 1.f), 1.f / 2.2f) * 255.f + .5f);
 }
 
 __kernel void UpdatePixelBuffer(
 		__global Pixel *frameBuffer,
-		__global unsigned int *pbo) {
+		__global uint *pbo) {
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
 		return;
 
 	__global Pixel *p = &frameBuffer[gid];
 
-	const unsigned int count = p->count;
+	const uint count = p->count;
 	if (count > 0) {
 		const float invCount = 1.f / p->count;
 
-		const unsigned int r = Radiance2PixelUInt(p->c.r * invCount);
-		const unsigned int g = Radiance2PixelUInt(p->c.g * invCount);
-		const unsigned int b = Radiance2PixelUInt(p->c.b * invCount);
+		const uint r = Radiance2PixelUInt(p->c.r * invCount);
+		const uint g = Radiance2PixelUInt(p->c.g * invCount);
+		const uint b = Radiance2PixelUInt(p->c.b * invCount);
 		pbo[gid] = r | (g << 8) | (b << 16);
 	}
 }
@@ -466,10 +485,10 @@ int Mod(int a, int b) {
 	return a;
 }
 
-void TexMap_GetTexel(__global Spectrum *pixels, const unsigned int width, const unsigned int height,
+void TexMap_GetTexel(__global Spectrum *pixels, const uint width, const uint height,
 		const int s, const int t, Spectrum *col) {
-	const unsigned int u = Mod(s, width);
-	const unsigned int v = Mod(t, height);
+	const uint u = Mod(s, width);
+	const uint v = Mod(t, height);
 
 	const unsigned index = v * width + u;
 
@@ -478,7 +497,7 @@ void TexMap_GetTexel(__global Spectrum *pixels, const unsigned int width, const 
 	col->b = pixels[index].b;
 }
 
-void TexMap_GetColor(__global Spectrum *pixels, const unsigned int width, const unsigned int height,
+void TexMap_GetColor(__global Spectrum *pixels, const uint width, const uint height,
 		const float u, const float v, Spectrum *col) {
 	const float s = u * width - 0.5f;
 	const float t = v * height - 0.5f;
@@ -531,7 +550,7 @@ void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector 
 #endif
 
 void Mesh_InterpolateColor(__global Spectrum *colors, __global Triangle *triangles,
-		const unsigned int triIndex, const float b1, const float b2, Spectrum *C) {
+		const uint triIndex, const float b1, const float b2, Spectrum *C) {
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
@@ -541,7 +560,7 @@ void Mesh_InterpolateColor(__global Spectrum *colors, __global Triangle *triangl
 }
 
 void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,
-		const unsigned int triIndex, const float b1, const float b2, Vector *N) {
+		const uint triIndex, const float b1, const float b2, Vector *N) {
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
@@ -558,7 +577,7 @@ void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangl
 
 void Matte_Sample_f(__global Material *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
-		const float u0, const float u1,  const float u2
+		const float u0, const float u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 		, __global int *specularBounce
 #endif
@@ -591,16 +610,27 @@ void Matte_Sample_f(__global Material *mat, const Vector *wo, Vector *wi,
 #endif
 }
 
-void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spectrum *Le) {
-	if (Dot(N, wo) <= 0.f) {
-		Le->r = 0.f;
-		Le->g = 0.f;
-		Le->b = 0.f;
-	} else {
-		Le->r = mat->mat.areaLight.gain_r;
-		Le->g = mat->mat.areaLight.gain_g;
-		Le->b = mat->mat.areaLight.gain_b;
+void Matte_f(__global Material *mat, const Vector *wi,
+		float *pdf, Spectrum *f, const Vector *shadeN) {
+	const float dp = Dot(shadeN, wi);
+	// Using 0.0001 instead of 0.0 to cut down fireflies
+	if (dp <= 0.0001f)
+		*pdf = 0.f;
+	else {
+		*pdf =  1.f / dp;
+
+		f->r = mat->mat.matte.r * INV_PI;
+		f->g = mat->mat.matte.g * INV_PI;
+		f->b = mat->mat.matte.b * INV_PI;
 	}
+}
+
+void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spectrum *Le) {
+	const bool flag = (Dot(N, wo) <= 0.f);
+
+	Le->r = flag ? 0.f : mat->mat.areaLight.gain_r;
+	Le->g = flag ? 0.f : mat->mat.areaLight.gain_g;
+	Le->b = flag ? 0.f : mat->mat.areaLight.gain_b;
 }
 
 void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
@@ -625,6 +655,66 @@ void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
 }
 
 //------------------------------------------------------------------------------
+// Lights
+//------------------------------------------------------------------------------
+
+void SampleTriangleLight(__global TriangleLight *light,	const float u0, const float u1, Point *p) {
+	Point v0, v1, v2;
+	v0 = light->v0;
+	v1 = light->v1;
+	v2 = light->v2;
+
+	// UniformSampleTriangle(u0, u1, b0, b1);
+	const float su1 = sqrt(u0);
+	const float b0 = 1.f - su1;
+	const float b1 = u1 * su1;
+	const float b2 = 1.f - b0 - b1;
+
+	p->x = b0 * v0.x + b1 * v1.x + b2 * v2.x;
+	p->y = b0 * v0.y + b1 * v1.y + b2 * v2.y;
+	p->z = b0 * v0.z + b1 * v1.z + b2 * v2.z;
+}
+
+void TriangleLight_Sample_L(__global TriangleLight *l,
+		const Vector *wo, const Point *hitPoint, const Vector *shadeN,
+		float *pdf, Spectrum *f, Ray *shadowRay,
+		const float u0, const float u1, const float u2) {
+	Point samplePoint;
+	SampleTriangleLight(l, u0, u1, &samplePoint);
+
+	shadowRay->d.x = samplePoint.x - hitPoint->x;
+	shadowRay->d.y = samplePoint.y - hitPoint->y;
+	shadowRay->d.z = samplePoint.z - hitPoint->z;
+	const float distanceSquared = Dot(&shadowRay->d, &shadowRay->d);
+	const float distance = sqrt(distanceSquared);
+	const float invDistance = 1.f / distance;
+	shadowRay->d.x *= invDistance;
+	shadowRay->d.y *= invDistance;
+	shadowRay->d.z *= invDistance;
+
+	Vector sampleN = l->normal;
+	const float sampleNdotMinusWi = -Dot(&sampleN, &shadowRay->d);
+	if ((sampleNdotMinusWi <= 0.f) || (Dot(shadeN, &shadowRay->d) <= 0.f)) {
+		*pdf = 0.f;
+	} else {
+		*pdf = distanceSquared / (sampleNdotMinusWi * l->area);
+
+		// Using 0.1 instead of 0.0 to cut down fireflies
+		if (*pdf <= 0.1f)
+			*pdf = 0.f;
+		else {
+			shadowRay->o = *hitPoint;
+			shadowRay->mint = PARAM_RAY_EPSILON;
+			shadowRay->maxt = distance - PARAM_RAY_EPSILON;
+
+			f->r = l->gain_r;
+			f->g = l->gain_g;
+			f->b = l->gain_b;
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
 
 void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance
 #if defined (PARAM_LOWLATENCY)
@@ -633,7 +723,7 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 		) {
 	// Add sample to the framebuffer
 
-	const unsigned int pixelIndex = path->pixelIndex;
+	const uint pixelIndex = path->pixelIndex;
 	__global Pixel *pixel = &frameBuffer[pixelIndex];
 
 	pixel->c.r += isnan(radiance->r) ? 0.f : radiance->r;
@@ -641,12 +731,12 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	pixel->c.b += isnan(radiance->b) ? 0.f : radiance->b;
 	pixel->count += 1;
 
-	unsigned int newPixelIndex;
+	uint newPixelIndex;
 #if defined (PARAM_LOWLATENCY)
 	newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = newPixelIndex;
 #else
-	const unsigned int subpixelIndex = path->subpixelIndex;
+	const uint subpixelIndex = path->subpixelIndex;
 	if (subpixelIndex >= PARAM_SAMPLE_PER_PIXEL) {
 		newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 		path->pixelIndex = newPixelIndex;
@@ -670,6 +760,10 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	path->depth = 0;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	path->specularBounce = TRUE;
+	path->state = PATH_STATE_NEXT_VERTEX;
+	path->radiance.r = 0.f;
+	path->radiance.g = 0.f;
+	path->radiance.b = 0.f;
 #endif
 }
 
@@ -679,9 +773,9 @@ __kernel void AdvancePaths(
 		__global RayHit *rayHits,
 		__global Pixel *frameBuffer,
 		__global Material *mats,
-		__global unsigned int *meshMats,
-		__global unsigned int *meshIDs, // Not used
-		__global unsigned int *triIDs,
+		__global uint *meshMats,
+		__global uint *meshIDs, // Not used
+		__global uint *triIDs,
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Triangle *triangles
@@ -691,12 +785,61 @@ __kernel void AdvancePaths(
 #if defined(PARAM_HAVE_INFINITELIGHT)
 		, __global Spectrum *infiniteLightMap
 #endif
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global TriangleLight *triLights
+#endif
 		) {
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_PATH_COUNT)
 		return;
 
 	__global Path *path = &paths[gid];
+	__global Ray *ray = &rays[gid];
+	__global RayHit *rayHit = &rayHits[gid];
+	uint currentTriangleIndex = rayHit->index;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	int state = path->state;
+
+	bool traceShadowRay = false;
+	if (state == PATH_STATE_SAMPLE_LIGHT) {
+		if (currentTriangleIndex == 0xffffffffu) {
+			// Nothing was hit, the light is visible
+
+			path->radiance.r += path->lightRadiance.r;
+			path->radiance.g += path->lightRadiance.g;
+			path->radiance.b += path->lightRadiance.b;
+		}
+
+		// Restore the path RayHit
+		rayHit = &path->pathHit;
+		currentTriangleIndex = rayHit->index;
+	} else {
+		// state is PATH_STATE_NEXT_VERTEX
+
+		if (currentTriangleIndex != 0xffffffffu) {
+			// Something was hit
+
+			const uint meshIndex = meshIDs[currentTriangleIndex];
+			__global Material *mat = &mats[meshMats[meshIndex]];
+
+			const bool isDiffuse = (mat->type == MAT_MATTE);
+
+			traceShadowRay = isDiffuse;
+		}
+	}
+#endif
+
+	Vector rayDir;
+	rayDir.x = ray->d.x;
+	rayDir.y = ray->d.y;
+	rayDir.z = ray->d.z;
+
+	Point hitPoint;
+	const float t = rayHit->t;
+	hitPoint.x = ray->o.x + rayDir.x * t;
+	hitPoint.y = ray->o.y + rayDir.y * t;
+	hitPoint.z = ray->o.z + rayDir.z * t;
 
 	// Read the seed
 	Seed seed;
@@ -704,20 +847,79 @@ __kernel void AdvancePaths(
 	seed.s2 = path->seed.s2;
 	seed.s3 = path->seed.s3;
 
-	__global Ray *ray = &rays[gid];
-	Vector rayDir;
-	rayDir.x = ray->d.x;
-	rayDir.y = ray->d.y;
-	rayDir.z = ray->d.z;
-
 	Spectrum throughput;
 	throughput.r = path->throughput.r;
 	throughput.g = path->throughput.g;
 	throughput.b = path->throughput.b;
 
-	__global RayHit *rayHit = &rayHits[gid];
-	const unsigned int currentTriangleIndex = rayHit->index;
-	if (currentTriangleIndex != 0xffffffffu ) {
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	if (traceShadowRay) {
+		// Save current ray hit information
+		path->pathHit.t = t;
+		path->pathHit.b1 = rayHit->b1;
+		path->pathHit.b2 = rayHit->b2;
+		path->pathHit.index = currentTriangleIndex;
+
+		// Select a light source to sample
+		const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+		__global TriangleLight *l = &triLights[lightIndex];
+
+		// Interpolate the normal
+		Vector N;
+		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &N);
+
+		// Flip the normal if required
+		Vector shadeN;
+		const float nFlip = (Dot(&rayDir, &N) > 0.f) ? -1.f : 1.f;
+		shadeN.x = nFlip * N.x;
+		shadeN.y = nFlip * N.y;
+		shadeN.z = nFlip * N.z;
+
+		Vector wo;
+		wo.x = -rayDir.x;
+		wo.y = -rayDir.y;
+		wo.z = -rayDir.z;
+		Spectrum Le;
+		float lightPdf;
+		Ray shadowRay;
+		TriangleLight_Sample_L(l, &wo, &hitPoint, &shadeN, &lightPdf, &Le, &shadowRay,
+			RndFloatValue(&seed), RndFloatValue(&seed), RndFloatValue(&seed));
+
+		if (lightPdf <= 0.f)
+			traceShadowRay = false;
+		else {
+			// Interpolate Color
+			Spectrum shadeColor;
+			Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &shadeColor);
+
+			const uint meshIndex = meshIDs[currentTriangleIndex];
+			__global Material *mat = &mats[meshMats[meshIndex]];
+			float matPdf;
+			Spectrum f;
+			Matte_f(mat, &shadowRay.d, &matPdf, &f, &shadeN);
+
+			if (matPdf <= 0.f)
+				traceShadowRay = false;
+			else {
+				const float dp = Dot(&shadeN, &shadowRay.d);
+				const float invPdf = PARAM_DL_LIGHT_COUNT / (lightPdf * matPdf);
+				path->lightRadiance.r = throughput.r * shadeColor.r * f.r * Le.r * invPdf;
+				path->lightRadiance.g = throughput.g * shadeColor.g * f.g * Le.g * invPdf;
+				path->lightRadiance.b = throughput.b * shadeColor.b * f.b * Le.b * invPdf;
+
+				path->state = PATH_STATE_SAMPLE_LIGHT;
+
+				*ray = shadowRay;
+			}
+		}
+	}
+
+	// To handle the case where the light pdf is 0.0
+	if (!traceShadowRay) {
+
+#endif
+
+	if (currentTriangleIndex != 0xffffffffu) {
 		// Something was hit
 
 		// Interpolate Color
@@ -741,7 +943,7 @@ __kernel void AdvancePaths(
 		shadeN.z = nFlip * N.z;
 		RdotShadeN = -nFlip * RdotShadeN;
 
-		const unsigned int meshIndex = meshIDs[currentTriangleIndex];
+		const uint meshIndex = meshIDs[currentTriangleIndex];
 		__global Material *mat = &mats[meshMats[meshIndex]];
 
 		const float u0 = RndFloatValue(&seed);
@@ -764,7 +966,7 @@ __kernel void AdvancePaths(
 		bool areaLightHit = false;
 		switch (mat->type) {
 			case MAT_MATTE:
-				Matte_Sample_f(mat, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+				Matte_Sample_f(mat, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -793,7 +995,7 @@ __kernel void AdvancePaths(
 		// Russian roulette
 		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float)PARAM_RR_CAP);
 
-		const unsigned int pathDepth = path->depth + 1;
+		const uint pathDepth = path->depth + 1;
 		const float rrSample = RndFloatValue(&seed);
 		bool terminatePath = areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH) ||
 			((pathDepth > PARAM_RR_DEPTH) && (rrProb < rrSample));
@@ -805,9 +1007,15 @@ __kernel void AdvancePaths(
 
 		if (terminatePath) {
 			Spectrum radiance;
-			radiance.r = materialLe.r * path->throughput.r;
-			radiance.g = materialLe.g * path->throughput.g;
-			radiance.b = materialLe.b * path->throughput.b;
+			radiance.r = materialLe.r * throughput.r;
+			radiance.g = materialLe.g * throughput.g;
+			radiance.b = materialLe.b * throughput.b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+			radiance.r += path->radiance.r;
+			radiance.g += path->radiance.g;
+			radiance.b += path->radiance.b;
+#endif
 
 			TerminatePath(path, ray, frameBuffer, &seed, &radiance
 #if defined (PARAM_LOWLATENCY)
@@ -821,16 +1029,15 @@ __kernel void AdvancePaths(
 			path->throughput.b = throughput.b * f.b * invPdf;
 
 			// Setup next ray
-			const float t = rayHit->t;
-			ray->o.x = ray->o.x + rayDir.x * t;
-			ray->o.y = ray->o.y + rayDir.y * t;
-			ray->o.z = ray->o.z + rayDir.z * t;
-
-			ray->d.x = wi.x;
-			ray->d.y = wi.y;
-			ray->d.z = wi.z;
+			ray->o = hitPoint;
+			ray->d = wi;
+			ray->mint = PARAM_RAY_EPSILON;
+			ray->maxt = FLT_MAX;
 
 			path->depth = pathDepth;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+			path->state = PATH_STATE_NEXT_VERTEX;
+#endif
 		}
 	} else {
 		Spectrum radiance;
@@ -839,13 +1046,19 @@ __kernel void AdvancePaths(
 		Spectrum Le;
 		InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
 
-		radiance.r = Le.r * path->throughput.r;
-		radiance.g = Le.g * path->throughput.g;
-		radiance.b = Le.b * path->throughput.b;
+		radiance.r = Le.r * throughput.r;
+		radiance.g = Le.g * throughput.g;
+		radiance.b = Le.b * throughput.b;
 #else
 		radiance.r = 0.f;
 		radiance.g = 0.f;
 		radiance.b = 0.f;
+#endif
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+			radiance.r += path->radiance.r;
+			radiance.g += path->radiance.g;
+			radiance.b += path->radiance.b;
 #endif
 
 		TerminatePath(path, ray, frameBuffer, &seed, &radiance
@@ -854,6 +1067,10 @@ __kernel void AdvancePaths(
 #endif
 			);
 	}
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	}
+#endif
 
 	// Save the seed
 	path->seed.s1 = seed.s1;
