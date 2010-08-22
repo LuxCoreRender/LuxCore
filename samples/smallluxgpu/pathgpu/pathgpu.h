@@ -49,11 +49,14 @@ typedef struct {
 	Spectrum throughput;
 	unsigned int depth, pixelIndex, subpixelIndex;
 	Seed seed;
+
 	int specularBounce;
 	int state;
+
+	Ray pathRay;
 	RayHit pathHit;
 	Spectrum lightRadiance;
-	Spectrum radiance;
+	Spectrum accumRadiance;
 } PathDL;
 
 typedef struct {
@@ -66,11 +69,14 @@ typedef struct {
 	Spectrum throughput;
 	unsigned int depth, pixelIndex;
 	Seed seed;
+
 	int specularBounce;
 	int state;
+
+	Ray pathRay;
 	RayHit pathHit;
 	Spectrum lightRadiance;
-	Spectrum radiance;
+	Spectrum accumRadiance;
 } PathLowLatencyDL;
 
 typedef struct {
@@ -116,8 +122,8 @@ typedef struct {
 class PathGPURenderThread {
 public:
 	PathGPURenderThread(const unsigned int index, const unsigned int seedBase,
-			const float samplingStart, const unsigned int samplePerPixel,
-			OpenCLIntersectionDevice *device, PathGPURenderEngine *re);
+			const float samplingStart, OpenCLIntersectionDevice *device,
+			PathGPURenderEngine *re);
 	~PathGPURenderThread();
 
 	void Start();

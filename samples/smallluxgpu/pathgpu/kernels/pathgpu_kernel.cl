@@ -123,9 +123,11 @@ typedef struct {
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	int specularBounce;
 	int state;
+
+	Ray pathRay;
 	RayHit pathHit;
 	Spectrum lightRadiance;
-	Spectrum radiance;
+	Spectrum accumRadiance;
 #endif
 } Path;
 
@@ -405,9 +407,9 @@ __kernel void Init(
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	path->specularBounce = TRUE;
 	path->state = PATH_STATE_NEXT_VERTEX;
-	path->radiance.r = 0.f;
-	path->radiance.g = 0.f;
-	path->radiance.b = 0.f;
+	path->accumRadiance.r = 0.f;
+	path->accumRadiance.g = 0.f;
+	path->accumRadiance.b = 0.f;
 #endif
 
 	const uint pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
@@ -761,9 +763,9 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	path->specularBounce = TRUE;
 	path->state = PATH_STATE_NEXT_VERTEX;
-	path->radiance.r = 0.f;
-	path->radiance.g = 0.f;
-	path->radiance.b = 0.f;
+	path->accumRadiance.r = 0.f;
+	path->accumRadiance.g = 0.f;
+	path->accumRadiance.b = 0.f;
 #endif
 }
 
@@ -806,14 +808,20 @@ __kernel void AdvancePaths(
 		if (currentTriangleIndex == 0xffffffffu) {
 			// Nothing was hit, the light is visible
 
-			path->radiance.r += path->lightRadiance.r;
-			path->radiance.g += path->lightRadiance.g;
-			path->radiance.b += path->lightRadiance.b;
+			path->accumRadiance.r += path->lightRadiance.r;
+			path->accumRadiance.g += path->lightRadiance.g;
+			path->accumRadiance.b += path->lightRadiance.b;
 		}
 
 		// Restore the path RayHit
 		rayHit = &path->pathHit;
 		currentTriangleIndex = rayHit->index;
+
+		// Restore the path Ray
+		ray->o = path->pathRay.o;
+		ray->d = path->pathRay.d;
+		ray->mint = path->pathRay.mint;
+		ray->maxt = path->pathRay.maxt;
 	} else {
 		// state is PATH_STATE_NEXT_VERTEX
 
@@ -854,11 +862,8 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	if (traceShadowRay) {
-		// Save current ray hit information
-		path->pathHit.t = t;
-		path->pathHit.b1 = rayHit->b1;
-		path->pathHit.b2 = rayHit->b2;
-		path->pathHit.index = currentTriangleIndex;
+		const float hitB1 = rayHit->b1;
+		const float hitB2 = rayHit->b2;
 
 		// Select a light source to sample
 		const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
@@ -866,7 +871,7 @@ __kernel void AdvancePaths(
 
 		// Interpolate the normal
 		Vector N;
-		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &N);
+		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitB1, hitB2, &N);
 
 		// Flip the normal if required
 		Vector shadeN;
@@ -890,7 +895,7 @@ __kernel void AdvancePaths(
 		else {
 			// Interpolate Color
 			Spectrum shadeColor;
-			Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &shadeColor);
+			Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitB1, hitB2, &shadeColor);
 
 			const uint meshIndex = meshIDs[currentTriangleIndex];
 			__global Material *mat = &mats[meshMats[meshIndex]];
@@ -909,6 +914,15 @@ __kernel void AdvancePaths(
 
 				path->state = PATH_STATE_SAMPLE_LIGHT;
 
+				// Save current ray hit information
+				path->pathHit.t = t;
+				path->pathHit.b1 = hitB1;
+				path->pathHit.b2 = hitB2;
+				path->pathHit.index = currentTriangleIndex;
+
+				// Save the current Ray
+				path->pathRay = *ray;
+
 				*ray = shadowRay;
 			}
 		}
@@ -924,14 +938,16 @@ __kernel void AdvancePaths(
 
 		// Interpolate Color
 		Spectrum shadeColor;
-		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &shadeColor);
+		const float hitB1 = rayHit->b1;
+		const float hitB2 = rayHit->b2;
+		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitB1, hitB2, &shadeColor);
 		throughput.r *= shadeColor.r;
 		throughput.g *= shadeColor.g;
 		throughput.b *= shadeColor.b;
 
 		// Interpolate the normal
 		Vector N;
-		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2, &N);
+		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitB1, hitB2, &N);
 
 		// Flip the normal if required
 		Vector shadeN;
@@ -1012,9 +1028,9 @@ __kernel void AdvancePaths(
 			radiance.b = materialLe.b * throughput.b;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-			radiance.r += path->radiance.r;
-			radiance.g += path->radiance.g;
-			radiance.b += path->radiance.b;
+			radiance.r += path->accumRadiance.r;
+			radiance.g += path->accumRadiance.g;
+			radiance.b += path->accumRadiance.b;
 #endif
 
 			TerminatePath(path, ray, frameBuffer, &seed, &radiance
@@ -1056,9 +1072,9 @@ __kernel void AdvancePaths(
 #endif
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-			radiance.r += path->radiance.r;
-			radiance.g += path->radiance.g;
-			radiance.b += path->radiance.b;
+		radiance.r += path->accumRadiance.r;
+		radiance.g += path->accumRadiance.g;
+		radiance.b += path->accumRadiance.b;
 #endif
 
 		TerminatePath(path, ray, frameBuffer, &seed, &radiance

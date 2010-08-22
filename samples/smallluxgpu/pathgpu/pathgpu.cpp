@@ -47,7 +47,7 @@
 //------------------------------------------------------------------------------
 
 PathGPURenderThread::PathGPURenderThread(const unsigned int index, const unsigned int seedBase,
-		const float samplStart,  const unsigned int samplePerPixel, OpenCLIntersectionDevice *device,
+		const float samplStart, OpenCLIntersectionDevice *device,
 		PathGPURenderEngine *re) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
@@ -901,7 +901,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		PathGPURenderThread *t = new PathGPURenderThread(
 				i, seedBase, i / (float)renderThreadCount,
-				samplePerPixel, oclIntersectionDevices[i], this);
+				oclIntersectionDevices[i], this);
 		renderThreads.push_back(t);
 	}
 }
