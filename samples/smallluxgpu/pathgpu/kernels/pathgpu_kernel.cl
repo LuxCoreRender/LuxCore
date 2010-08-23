@@ -529,7 +529,7 @@ __kernel void UpdatePixelBufferBlured(
 
 		if (y < PARAM_IMAGE_HEIGHT - 1) {
 			if (x > 0) AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH - 1], &r, &g, &b, 1.f / 16.f);
-			AccumPixel(&frameBuffer[gid - PARAM_IMAGE_WIDTH], &r, &g, &b, 2.f / 16.f);
+			AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH], &r, &g, &b, 2.f / 16.f);
 			if (x < PARAM_IMAGE_WIDTH - 1) AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH + 1], &r, &g, &b, 1.f / 16.f);
 		}
 
