@@ -364,7 +364,8 @@ void displayFunc(void) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
 			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
-		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdatePixelBuffer(config->GetScreenRefreshInterval());
+		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdatePixelBuffer(
+				Min(config->GetScreenRefreshInterval(), 500u));
 	else
 #endif
 		glDrawPixels(config->film->GetWidth(), config->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
