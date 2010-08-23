@@ -210,7 +210,13 @@ void PathGPURenderThread::Start() {
 	// Translate area lights
 	//--------------------------------------------------------------------------
 
-	const unsigned int areaLightCount = scene->GetLightCount(true);
+	// Count the area lights
+	unsigned int areaLightCount = 0;
+	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+			if (scene->lights[i]->IsAreaLight())
+				++areaLightCount;
+	}
+
 	if (areaLightCount > 0) {
 		PathGPU::TriangleLight *tals = new PathGPU::TriangleLight[areaLightCount];
 
@@ -297,7 +303,10 @@ void PathGPURenderThread::Start() {
 	//--------------------------------------------------------------------------
 
 	InfiniteLight *infiniteLight = NULL;
-	if (scene->infiniteLight)
+	if (scene->infiniteLight && (
+			(scene->infiniteLight->GetType() == TYPE_IL_BF) ||
+			(scene->infiniteLight->GetType() == TYPE_IL_PORTAL) ||
+			(scene->infiniteLight->GetType() == TYPE_IL_IS)))
 		infiniteLight = scene->infiniteLight;
 	else {
 		// Look for the infinite light
@@ -325,6 +334,9 @@ void PathGPURenderThread::Start() {
 		deviceDesc->AllocMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
 	} else
 		infiniteLightBuff = NULL;
+
+	if (!infiniteLight && (areaLightCount == 0))
+		throw runtime_error("There are no light sources supported by PathGPU in the scene (i.e. sun is not yet supported)");
 
 	//--------------------------------------------------------------------------
 	// Translate mesh colors
