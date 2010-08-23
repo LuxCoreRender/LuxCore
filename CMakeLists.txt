@@ -68,7 +68,7 @@ include_directories("${LUXRAYS_INCLUDE_DIR}" "${LUXRAYS_SOURCE_DIR}")
 if(LUXRAYS_DISABLE_OPENCL)
     set(OCL_LIBRARY "")
 else(LUXRAYS_DISABLE_OPENCL)
-    find_path(OCL_INCLUDE_PATH NAMES CL/cl.hpp OpenCL/cl.hpp PATHS /home/david/src/ati-stream-sdk-v2.1-lnx64/include)
+    find_path(OCL_INCLUDE_PATH NAMES CL/cl.hpp OpenCL/cl.hpp PATHS /home/david/src/ati-stream-sdk-v2.1-lnx64/include /usr/local/cuda/include)
     find_library(OCL_LIBRARY OpenCL /home/david/src/ati-stream-sdk-v2.1-lnx64/lib/x86_64)
 
     message(STATUS "OpenCL include directory: " ${OCL_INCLUDE_PATH})
