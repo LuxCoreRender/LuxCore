@@ -140,6 +140,7 @@ private:
 	static void RenderThreadImpl(PathGPURenderThread *renderThread);
 
 	void InitPixelBuffer();
+	void EnqueueInitFrameBufferKernel();
 
 	OpenCLIntersectionDevice *intersectionDevice;
 

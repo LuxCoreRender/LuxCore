@@ -438,7 +438,11 @@ __kernel void Init(
 //------------------------------------------------------------------------------
 
 __kernel void InitFrameBuffer(
-		__global Pixel *frameBuffer) {
+		__global Pixel *frameBuffer
+#if defined(PARAM_LOWLATENCY)
+		, __global uint *pbo
+#endif
+		) {
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
 		return;
@@ -448,8 +452,13 @@ __kernel void InitFrameBuffer(
 	p->c.g = 0.f;
 	p->c.b = 0.f;
 	p->count = 0;
+
+#if defined(PARAM_LOWLATENCY)
+	pbo[gid] = 0;
+#endif
 }
 
+#if defined(PARAM_LOWLATENCY)
 uint Radiance2PixelUInt(const float x) {
 	return (uint)(pow(clamp(x, 0.f, 1.f), 1.f / 2.2f) * 255.f + .5f);
 }
@@ -473,6 +482,7 @@ __kernel void UpdatePixelBuffer(
 		pbo[gid] = r | (g << 8) | (b << 16);
 	}
 }
+#endif
 
 //------------------------------------------------------------------------------
 
