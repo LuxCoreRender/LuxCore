@@ -538,8 +538,24 @@ void PathGPURenderThread::Start() {
 			updatePBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
 			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBWorkGroupSize << endl;
 		}
-	} else
+
+		updatePBBluredKernel = new cl::Kernel(program, "UpdatePixelBufferBlured");
+		updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel work group size: " << updatePBBluredWorkGroupSize << endl;
+		updatePBBluredKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel memory footprint: " << memSize << endl;
+
+		updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBBluredWorkGroupSize << endl;
+
+		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+			updatePBBluredWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBBluredWorkGroupSize << endl;
+		}
+	} else {
 		updatePBKernel = NULL;
+		updatePBBluredKernel = NULL;
+	}
 
 	//--------------------------------------------------------------------------
 	// AdvancePaths kernel
@@ -568,7 +584,7 @@ void PathGPURenderThread::Start() {
 
 	// Clear the frame buffer
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	EnqueueInitFrameBufferKernel();
+	EnqueueInitFrameBufferKernel(true);
 
 	// Initialize the path buffer
 	initKernel->setArg(0, *pathsBuff);
@@ -608,6 +624,8 @@ void PathGPURenderThread::Start() {
 			reportedPermissionError = true;
 		}
 	}
+
+	lastCameraUpdate = WallClockTime();
 }
 
 void PathGPURenderThread::Interrupt() {
@@ -672,6 +690,7 @@ void PathGPURenderThread::Stop() {
 	delete initKernel;
 	delete initFBKernel;
 	delete updatePBKernel;
+	delete updatePBBluredKernel;
 	delete advancePathKernel;
 
 	if (pbo) {
@@ -726,12 +745,21 @@ void PathGPURenderThread::UpdatePixelBuffer(const unsigned int screenRefreshInte
 		buffs.push_back(*pboBuff);
 		oclQueue.enqueueAcquireGLObjects(&buffs);
 
-		updatePBKernel->setArg(0, *frameBufferBuff);
-		updatePBKernel->setArg(1, *pboBuff);
-		oclQueue.enqueueNDRangeKernel(*updatePBKernel, cl::NullRange,
-				cl::NDRange(RoundUp<unsigned int>(
-					renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), updatePBWorkGroupSize)),
-				cl::NDRange(updatePBWorkGroupSize));
+		if (WallClockTime() - lastCameraUpdate < 3.f) {
+			updatePBBluredKernel->setArg(0, *frameBufferBuff);
+			updatePBBluredKernel->setArg(1, *pboBuff);
+			oclQueue.enqueueNDRangeKernel(*updatePBBluredKernel, cl::NullRange,
+					cl::NDRange(RoundUp<unsigned int>(
+						renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), updatePBBluredWorkGroupSize)),
+					cl::NDRange(updatePBBluredWorkGroupSize));
+		} else {
+			updatePBKernel->setArg(0, *frameBufferBuff);
+			updatePBKernel->setArg(1, *pboBuff);
+			oclQueue.enqueueNDRangeKernel(*updatePBKernel, cl::NullRange,
+					cl::NDRange(RoundUp<unsigned int>(
+						renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), updatePBWorkGroupSize)),
+					cl::NDRange(updatePBWorkGroupSize));
+		}
 
 		oclQueue.enqueueReleaseGLObjects(&buffs);
 		oclQueue.finish();
@@ -771,9 +799,11 @@ void PathGPURenderThread::UpdateCamera() {
 		initKernel->setArg(2, *cameraBuff);
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(initWorkGroupSize));
+
+	lastCameraUpdate = WallClockTime();
 }
 
-void PathGPURenderThread::EnqueueInitFrameBufferKernel() {
+void PathGPURenderThread::EnqueueInitFrameBufferKernel(const bool clearPBO) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 	// Clear the frame buffer
@@ -784,7 +814,9 @@ void PathGPURenderThread::EnqueueInitFrameBufferKernel() {
 
 
 		initFBKernel->setArg(0, *frameBufferBuff);
-		initFBKernel->setArg(1, *pboBuff);
+		const int clear = clearPBO ? 1 : 0;
+		initFBKernel->setArg(1, clear);
+		initFBKernel->setArg(2, *pboBuff);
 		oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
 				cl::NDRange(RoundUp<unsigned int>(
 					renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), initFBWorkGroupSize)),
