@@ -706,10 +706,11 @@ void PathGPURenderThread::InitPixelBuffer() {
 	pboBuff = new cl::BufferGL(ctx, CL_MEM_READ_WRITE, pbo);
 }
 
-void PathGPURenderThread::UpdatePixelBuffer() {
+void PathGPURenderThread::UpdatePixelBuffer(const unsigned int screenRefreshInterval) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 	const double tStart = WallClockTime();
+	const double tStop = tStart + screenRefreshInterval / 1000.0;
 	for (;;) {
 		for (unsigned int i = 0; i < 4; ++i) {
 			// Trace rays
@@ -735,8 +736,7 @@ void PathGPURenderThread::UpdatePixelBuffer() {
 		oclQueue.enqueueReleaseGLObjects(&buffs);
 		oclQueue.finish();
 
-		// 50ms is the maximum refrash interval for SLG
-		if (WallClockTime() - tStart > 0.05)
+		if (WallClockTime() > tStop)
 			break;
 	}
 
@@ -922,11 +922,12 @@ void PathGPURenderEngine::Start() {
 	RenderEngine::Start();
 
 	samplesCount = 0;
-	startTime = WallClockTime();
 	elapsedTime = 0.0f;
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
+
+	startTime = WallClockTime();
 }
 
 void PathGPURenderEngine::Interrupt() {

@@ -132,7 +132,7 @@ public:
 
 	// Used for Low Latency mode
 	void UpdateCamera();
-	void UpdatePixelBuffer();
+	void UpdatePixelBuffer(const unsigned int screenRefreshInterval);
 
 	friend class PathGPURenderEngine;
 
@@ -211,7 +211,7 @@ public:
 	// Used for Low Latency mode
 	bool HasOpenGLInterop() const { return hasOpenGLInterop; }
 	void UpdateCamera() { renderThreads[0]->UpdateCamera(); }
-	void UpdatePixelBuffer() { renderThreads[0]->UpdatePixelBuffer(); }
+	void UpdatePixelBuffer(const unsigned int screenRefreshInterval) { renderThreads[0]->UpdatePixelBuffer(screenRefreshInterval); }
 
 	void UpdateFilm();
 

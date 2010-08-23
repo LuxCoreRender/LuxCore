@@ -364,7 +364,7 @@ void displayFunc(void) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
 			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
-		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdatePixelBuffer();
+		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdatePixelBuffer(config->GetScreenRefreshInterval());
 	else
 #endif
 		glDrawPixels(config->film->GetWidth(), config->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
@@ -631,6 +631,28 @@ static void motionFunc(int x, int y) {
 	}
 }
 
+// Used only when OpenGL Interoperability is enabled
+void idleFunc() {
+	assert ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()));
+
+	double raysSec = 0.0;
+	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+
+	sprintf(config->captionBuffer, "[Avg. rays/sec % 4dK on %.1fK tris]",
+			int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+	// Check if periodic save is enabled
+	if (config->NeedPeriodicSave()) {
+		// Time to save the image and film
+		config->SaveFilmImage();
+	}
+
+	glutPostRedisplay();
+}
+
 void timerFunc(int value) {
 	const unsigned int pass = config->GetRenderEngine()->GetPass();
 
@@ -663,7 +685,7 @@ void timerFunc(int value) {
 				sprintf(config->captionBuffer, "[Avg. rays/sec % 4dK on %.1fK tris]",
 						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 			else
-				sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
+				sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
 						pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 			if (!pre->HasOpenGLInterop() || config->NeedPeriodicSave()) {
@@ -719,7 +741,11 @@ void RunGlut() {
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
 
-	glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
+	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+		glutIdleFunc(idleFunc);
+	else
+		glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 
 	glMatrixMode(GL_PROJECTION);
 	glViewport(0, 0, config->film->GetWidth(), config->film->GetHeight());

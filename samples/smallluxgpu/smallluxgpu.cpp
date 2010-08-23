@@ -154,7 +154,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 				sampleSec = pre->GetTotalSamplesSec();
 
-				sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.1fM][Avg. rays/sec % 4dK on %.1fK tris]",
+				sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
 						int(elapsedTime), int(stopTime), pass, stopSPP, sampleSec / 1000000.0,
 						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
