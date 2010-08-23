@@ -531,7 +531,7 @@ std::string luxrays::KernelSource_PathGPU =
 "\n"
 "		if (y < PARAM_IMAGE_HEIGHT - 1) {\n"
 "			if (x > 0) AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH - 1], &r, &g, &b, 1.f / 16.f);\n"
-"			AccumPixel(&frameBuffer[gid - PARAM_IMAGE_WIDTH], &r, &g, &b, 2.f / 16.f);\n"
+"			AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH], &r, &g, &b, 2.f / 16.f);\n"
 "			if (x < PARAM_IMAGE_WIDTH - 1) AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH + 1], &r, &g, &b, 1.f / 16.f);\n"
 "		}\n"
 "\n"
