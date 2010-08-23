@@ -440,6 +440,7 @@ __kernel void Init(
 __kernel void InitFrameBuffer(
 		__global Pixel *frameBuffer
 #if defined(PARAM_LOWLATENCY)
+		, const int clearPBO
 		, __global uint *pbo
 #endif
 		) {
@@ -454,7 +455,8 @@ __kernel void InitFrameBuffer(
 	p->count = 0;
 
 #if defined(PARAM_LOWLATENCY)
-	pbo[gid] = 0;
+	if (clearPBO)
+		pbo[gid] = 0;
 #endif
 }
 
@@ -482,6 +484,62 @@ __kernel void UpdatePixelBuffer(
 		pbo[gid] = r | (g << 8) | (b << 16);
 	}
 }
+
+void AccumPixel(__global Pixel *p, float *r, float *g, float *b, const float k) {
+	const uint count = p->count;
+
+	if (count > 0) {
+		const float invCount = k / p->count;
+
+		*r += p->c.r * invCount;
+		*g += p->c.g * invCount;
+		*b += p->c.b * invCount;
+	}
+}
+
+__kernel void UpdatePixelBufferBlured(
+		__global Pixel *frameBuffer,
+		__global uint *pbo) {
+	const int gid = get_global_id(0);
+	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
+		return;
+
+	__global Pixel *p = &frameBuffer[gid];
+
+	const uint count = p->count;
+	if (count > 0) {
+		// Naive Gaussian Filter (i.e. not using local memory, etc.)
+
+		const unsigned int x = gid % PARAM_IMAGE_WIDTH;
+		const unsigned int y = gid / PARAM_IMAGE_WIDTH;
+
+		float r = 0.f;
+		float g = 0.f;
+		float b = 0.f;
+
+		if (y > 0) {
+			if (x > 0) AccumPixel(&frameBuffer[gid - PARAM_IMAGE_WIDTH - 1], &r, &g, &b, 1.f / 16.f);
+			AccumPixel(&frameBuffer[gid - PARAM_IMAGE_WIDTH], &r, &g, &b, 2.f / 16.f);
+			if (x < PARAM_IMAGE_WIDTH - 1) AccumPixel(&frameBuffer[gid - PARAM_IMAGE_WIDTH + 1], &r, &g, &b, 1.f / 16.f);
+		}
+
+		if (x > 0) AccumPixel(&frameBuffer[gid - 1], &r, &g, &b, 2.f / 16.f);
+		AccumPixel(&frameBuffer[gid], &r, &g, &b, 4.f / 16.f);
+		if (x < PARAM_IMAGE_WIDTH - 1) AccumPixel(&frameBuffer[gid + 1], &r, &g, &b, 2.f / 16.f);
+
+		if (y < PARAM_IMAGE_HEIGHT - 1) {
+			if (x > 0) AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH - 1], &r, &g, &b, 1.f / 16.f);
+			AccumPixel(&frameBuffer[gid - PARAM_IMAGE_WIDTH], &r, &g, &b, 2.f / 16.f);
+			if (x < PARAM_IMAGE_WIDTH - 1) AccumPixel(&frameBuffer[gid + PARAM_IMAGE_WIDTH + 1], &r, &g, &b, 1.f / 16.f);
+		}
+
+		const uint pr = Radiance2PixelUInt(r);
+		const uint pg = Radiance2PixelUInt(g);
+		const uint pb = Radiance2PixelUInt(b);
+		pbo[gid] = pr | (pg << 8) | (pb << 16);
+	}
+}
+
 #endif
 
 //------------------------------------------------------------------------------

@@ -140,7 +140,7 @@ private:
 	static void RenderThreadImpl(PathGPURenderThread *renderThread);
 
 	void InitPixelBuffer();
-	void EnqueueInitFrameBufferKernel();
+	void EnqueueInitFrameBufferKernel(const bool clearPBO = false);
 
 	OpenCLIntersectionDevice *intersectionDevice;
 
@@ -151,6 +151,8 @@ private:
 	size_t initFBWorkGroupSize;
 	cl::Kernel *updatePBKernel;
 	size_t updatePBWorkGroupSize;
+	cl::Kernel *updatePBBluredKernel;
+	size_t updatePBBluredWorkGroupSize;
 	cl::Kernel *advancePathKernel;
 	size_t advancePathWorkGroupSize;
 
@@ -173,6 +175,7 @@ private:
 	// thread
 	GLuint pbo;
 	cl::BufferGL *pboBuff;
+	double lastCameraUpdate;
 
 	float samplingStart;
 	unsigned int seed;
