@@ -705,14 +705,14 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 		if (*pdf <= 0.1f)
 			*pdf = 0.f;
 		else {
-			shadowRay->o = *hitPoint;
-			shadowRay->mint = PARAM_RAY_EPSILON;
-			shadowRay->maxt = distance - PARAM_RAY_EPSILON;
+            shadowRay->o = *hitPoint;
+            shadowRay->mint = PARAM_RAY_EPSILON;
+            shadowRay->maxt = distance - PARAM_RAY_EPSILON;
 
-			f->r = l->gain_r;
-			f->g = l->gain_g;
-			f->b = l->gain_b;
-		}
+            f->r = l->gain_r;
+            f->g = l->gain_g;
+            f->b = l->gain_b;
+        }
 	}
 }
 
@@ -818,10 +818,7 @@ __kernel void AdvancePaths(
 		currentTriangleIndex = rayHit->index;
 
 		// Restore the path Ray
-		ray->o = path->pathRay.o;
-		ray->d = path->pathRay.d;
-		ray->mint = path->pathRay.mint;
-		ray->maxt = path->pathRay.maxt;
+        *ray = path->pathRay;
 	} else {
 		// state is PATH_STATE_NEXT_VERTEX
 
@@ -843,11 +840,19 @@ __kernel void AdvancePaths(
 	rayDir.y = ray->d.y;
 	rayDir.z = ray->d.z;
 
-	Point hitPoint;
 	const float t = rayHit->t;
-	hitPoint.x = ray->o.x + rayDir.x * t;
+    const float hitB1 = rayHit->b1;
+    const float hitB2 = rayHit->b2;
+
+	Point hitPoint;
+    hitPoint.x = ray->o.x + rayDir.x * t;
 	hitPoint.y = ray->o.y + rayDir.y * t;
 	hitPoint.z = ray->o.z + rayDir.z * t;
+
+	Spectrum throughput;
+	throughput.r = path->throughput.r;
+	throughput.g = path->throughput.g;
+	throughput.b = path->throughput.b;
 
 	// Read the seed
 	Seed seed;
@@ -855,16 +860,8 @@ __kernel void AdvancePaths(
 	seed.s2 = path->seed.s2;
 	seed.s3 = path->seed.s3;
 
-	Spectrum throughput;
-	throughput.r = path->throughput.r;
-	throughput.g = path->throughput.g;
-	throughput.b = path->throughput.b;
-
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	if (traceShadowRay) {
-		const float hitB1 = rayHit->b1;
-		const float hitB2 = rayHit->b2;
-
 		// Select a light source to sample
 		const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 		__global TriangleLight *l = &triLights[lightIndex];
@@ -880,6 +877,7 @@ __kernel void AdvancePaths(
 		shadeN.y = nFlip * N.y;
 		shadeN.z = nFlip * N.z;
 
+        // Setup the shadow ray
 		Vector wo;
 		wo.x = -rayDir.x;
 		wo.y = -rayDir.y;
@@ -938,8 +936,6 @@ __kernel void AdvancePaths(
 
 		// Interpolate Color
 		Spectrum shadeColor;
-		const float hitB1 = rayHit->b1;
-		const float hitB2 = rayHit->b2;
 		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitB1, hitB2, &shadeColor);
 		throughput.r *= shadeColor.r;
 		throughput.g *= shadeColor.g;
