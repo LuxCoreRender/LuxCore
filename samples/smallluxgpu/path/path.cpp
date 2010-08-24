@@ -384,17 +384,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 	}
 
 	// Flip the normal if required
-	Normal shadeN;
-	float RdotShadeN = Dot(pathRay.d, N);
-
-	// Flip shade  normal if required
-	if (RdotShadeN > 0.f) {
-		// Flip shade  normal
-		shadeN = -N;
-	} else {
-		shadeN = N;
-		RdotShadeN = -RdotShadeN;
-	}
+	Normal shadeN = (Dot(pathRay.d, N) > 0.f) ? -N : N;
 
 	tracedShadowRayCount = 0;
 	const bool skipInfiniteLight = !renderEngine->onlySampleSpecular;
