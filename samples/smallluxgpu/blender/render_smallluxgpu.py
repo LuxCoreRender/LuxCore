@@ -138,15 +138,15 @@ class SLGBP:
             return False
 
         # Determine output image filename (template)
-        if os.path.exists(os.path.dirname(scene.render.output_path)):
-            if not scene.render.output_path.split('/')[-1].split('\\')[-1]:
-                SLGBP.image_filename = (scene.render.output_path + '{:05d}')
+        if os.path.exists(os.path.dirname(scene.render.filepath)):
+            if not scene.render.filepath.split('/')[-1].split('\\')[-1]:
+                SLGBP.image_filename = (scene.render.filepath + '{:05d}')
             else:
-                i = scene.render.output_path.count('#')
+                i = scene.render.filepath.count('#')
                 if i > 0:
-                    SLGBP.image_filename = scene.render.output_path.replace('#'*i, '{:0'+str(i)+'d}')
+                    SLGBP.image_filename = scene.render.filepath.replace('#'*i, '{:0'+str(i)+'d}')
                 else:
-                    SLGBP.image_filename = scene.render.output_path
+                    SLGBP.image_filename = scene.render.filepath
             if not SLGBP.image_filename.endswith(scene.render.file_extension):
                 # SLG requires extension, force one
                 SLGBP.image_filename += scene.render.file_extension
@@ -268,17 +268,18 @@ class SLGBP:
         # Infinite light, if present
         if SLGBP.infinitelight:
             if not SLGBP.live:
-                scn['scene.infinitelight.file'] = bpy.path.abspath(SLGBP.infinitelight.texture.image.filepath).replace('\\','/')
-                portal = [m.name for m in bpy.data.materials if m.shadeless]
-                if portal:
-                    portalpath = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,portal[0].replace('.','_'))
-                    if os.path.exists(portalpath):
-                        scn['scene.infinitelight.file'] += '|'+portalpath
-                    if len(portal) > 1:
-                        SLGBP.warn = 'More than one portal material (Shadeless) defined!'
-                        print('WARNING: ' + SLGBP.warn)
-            if scene.world.lighting.use_environment_lighting:
-                wle = scene.world.lighting.environment_energy
+                if hasattr(SLGBP.infinitelight.texture.image,'filepath'):
+                    scn['scene.infinitelight.file'] = bpy.path.abspath(SLGBP.infinitelight.texture.image.filepath).replace('\\','/')
+                    portal = [m.name for m in bpy.data.materials if m.use_shadeless]
+                    if portal:
+                        portalpath = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,portal[0].replace('.','_'))
+                        if os.path.exists(portalpath):
+                            scn['scene.infinitelight.file'] += '|'+portalpath
+                        if len(portal) > 1:
+                            SLGBP.warn = 'More than one portal material (Shadeless) defined!'
+                            print('WARNING: ' + SLGBP.warn)
+            if scene.world.light_settings.use_environment_light:
+                wle = scene.world.light_settings.environment_energy
             else:
                 wle = 1.0
             scn['scene.infinitelight.gain'] = '{} {} {}'.format(ff(SLGBP.infinitelight.texture.factor_red*wle),ff(SLGBP.infinitelight.texture.factor_green*wle),ff(SLGBP.infinitelight.texture.factor_blue*wle))
@@ -318,12 +319,12 @@ class SLGBP:
     def getmatscn(scene, m):
         scn = {}
         matn = m.name.replace('.','_')
-        if m.shadeless:
+        if m.use_shadeless:
             matprop = None
         elif m.emit:
             matprop = 'scene.materials.light.{}'.format(matn)
             scn[matprop] = '{} {} {}'.format(ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2]))
-        elif m.transparency:
+        elif m.use_transparency:
             if m.raytrace_transparency.ior == 1.0:
                 matprop = 'scene.materials.archglass.{}'.format(matn)
                 scn[matprop] = '{} {} {} {} {} {} {:b} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
@@ -336,7 +337,7 @@ class SLGBP:
                     ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
                     ff(m.raytrace_transparency.ior),m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
         else:
-            if not m.raytrace_mirror.enabled or not m.raytrace_mirror.reflect_factor:
+            if not m.raytrace_mirror.use or not m.raytrace_mirror.reflect_factor:
                 matprop = 'scene.materials.matte.{}'.format(matn)
                 scn[matprop] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
             else:
@@ -380,12 +381,12 @@ class SLGBP:
                 if scene.slg.vnormals:
                     scn['scene.objects.{}.{}.useplynormals'.format(matn,objn)] = '1'
                 if scene.slg.vuvs and mat:
-                    texmap = next((ts for ts in mat.texture_slots if ts and ts.map_colordiff and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
+                    texmap = next((ts for ts in mat.texture_slots if ts and ts.use_map_color_diffuse and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
                     if texmap:
                         scn['scene.objects.{}.{}.texmap'.format(matn,objn)] = bpy.path.abspath(texmap.texture.image.filepath).replace('\\','/')
-                    texbump = next((ts for ts in mat.texture_slots if ts and ts.map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.enabled), None)
+                    texbump = next((ts for ts in mat.texture_slots if ts and ts.use_map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
                     if texbump:
-                        if texbump.texture.normal_map:
+                        if texbump.texture.use_normal_map:
                             scn['scene.objects.{}.{}.normalmap'.format(matn,objn)] = bpy.path.abspath(texbump.texture.image.filepath).replace('\\','/')
                         else:
                             scn['scene.objects.{}.{}.bumpmap'.format(matn,objn)] = bpy.path.abspath(texbump.texture.image.filepath).replace('\\','/')
@@ -393,40 +394,48 @@ class SLGBP:
 
         for ply in SLGBP.plys:
             plyn = ply.replace('.','_')
-            for obj in SLGBP.plys[ply]:
-                if type(obj) == tuple:
-                    mat = obj[1]
+            slgos = SLGBP.plys[ply]
+            if type(slgos) != tuple:
+                # Non-instanced object meshes grouped by material
+                if not SLGBP.live:
+                    objscn(plyn, plyn, plyn, slgos, None)
+            else:
+                # Instance object
+                so, dms = slgos
+                for do, mat in dms:
                     matn = mat.name.replace('.','_') if mat else SLGBP.nomatn
-                    if type(obj[0]) == bpy.types.ParticleSystem:
-                        if obj[2] != None:
-                            dgos = len(obj[0].settings.dupli_group.objects)
-                        for i,p in enumerate(obj[0].particles):
-                            if not obj[0].settings.whole_group and obj[2] != None:
-                                if obj[2] != i % dgos:
+                    if type(do) == bpy.types.ParticleSystem:
+                        if do.settings.render_type == 'GROUP' and not do.settings.use_whole_group:
+                            gn = next((i for i,o in enumerate(do.settings.dupli_group.objects) if o == so), 0)
+                            ndgos = len(do.settings.dupli_group.objects)
+                        for i,p in enumerate(do.particles):
+                            if do.settings.render_type == 'GROUP' and not do.settings.use_whole_group:
+                                if gn != i % ndgos:
                                     continue
-                            if p.alive_state == 'ALIVE' and p.is_existing and p.is_visible:
-                                objn = obj[0].id_data.name.replace('.','_')+'{P}'+str(i)+plyn
+                            if p.alive_state == 'ALIVE':
+                                objn = do.id_data.name.replace('.','_')+'{P}'+str(i)+plyn
                                 if isnan(p.rotation[0]): # Deal with Blender bug...
-                                    tm = mathutils.Matrix.Translation(p.location) * mathutils.Matrix.Scale(p.size,4)
+                                    rm = mathutils.Matrix()
                                 else: 
-                                    tm = mathutils.Matrix.Translation(p.location) * p.rotation.to_matrix().to_4x4() * mathutils.Matrix.Scale(p.size,4)
+                                    rm = p.rotation.to_matrix().to_4x4()
+                                if do.settings.use_whole_group:
+                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world * mathutils.Matrix.Scale(p.size,4) 
+                                elif do.settings.use_global_dupli:
+                                    tm = mathutils.Matrix.Translation(so.matrix_world.translation_part()) * mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.rotation_part().to_4x4() * mathutils.Matrix.Scale(p.size,4)
+                                else:
+                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.rotation_part().to_4x4() * mathutils.Matrix.Scale(p.size,4)
                                 objscn(plyn, matn, objn, mat, tm)
                     else:
-                        objn = obj[0].name.replace('.','_')+plyn
-                        if obj[0] in SLGBP.instobjs:
-                            # If used both in instances and in dupligroups at the same time
-                            if obj[0].data in SLGBP.instobjs:
-                                if '{D}' in plyn:
-                                    continue
-                                else:
-                                    tm = obj[0].matrix_world
-                            else:
-                                tm = mathutils.Matrix()
+                        objn = do.name.replace('.','_')+plyn
+                        if type(so) == bpy.types.Mesh:
+                            tm = do.matrix_world
                         else:
-                            tm = obj[0].matrix_world
+                            if do.data == so.data:
+                                # Used by both instances and dupligroups at the same time
+                                tm = do.matrix_world
+                            else:
+                                tm = do.matrix_world * so.matrix_world
                         objscn(plyn, matn, objn, mat, tm)
-                elif not SLGBP.live:
-                    objscn(plyn, plyn, plyn, obj, None)
         return scn
 
     # Export obj/mat .ply files
@@ -434,11 +443,11 @@ class SLGBP:
     def expmatply(scene):
         print('SLGBP ===> Begin export')
         # Consider all used materials
-        plys = dict([(m.name, [m]) for m in bpy.data.materials if m.users])
+        plys = dict([(m.name, m) for m in bpy.data.materials if m.users])
         plymats = [p for p in plys]
         nomat = len(plymats)
         plymats.append(SLGBP.nomatn)
-        plys[SLGBP.nomatn] = [None]
+        plys[SLGBP.nomatn] = None
         curmat = nomat
         instobjs = {}
         objs = []
@@ -448,13 +457,13 @@ class SLGBP:
         mfp = [m.name for m in bpy.data.materials if m.slg_forceply]
 
         # Add Dupli Object to ply
-        def dupliobj(so, do, n):
+        def dupliobj(so, do): # source object, duplicate object
             if so in instobjs:
                 if so.data.materials:
                     for i in range(len(so.data.materials)):
-                        plys[(so.name+'{D}S'+str(i))].append((do, so.material_slots[i].material, n))
+                        plys[(so.name+'{D}S'+str(i))][1].append((do, so.material_slots[i].material))
                 else:
-                    plys[(so.name+'{D}'+SLGBP.nomatn)].append((do, None, n))
+                    plys[(so.name+'{D}'+SLGBP.nomatn)][1].append((do, None))
             elif not so.hide_render and so.type in rendertypes:
                 addo = False
                 if so not in objs:
@@ -467,28 +476,28 @@ class SLGBP:
                     for i in range(len(so.data.materials)):
                         plyn = (so.name+'{D}S'+str(i))
                         plymats.append(plyn)
-                        plys[plyn] = [(do, so.material_slots[i].material, n)]
+                        plys[plyn] = (so,[(do, so.material_slots[i].material)])
                         if addo:
-                            plys[plyn].append((so, so.material_slots[i].material, n))
+                            plys[plyn][1].append((so, so.material_slots[i].material))
                 else:
                     plyn = (so.name+'{D}'+SLGBP.nomatn)
                     plymats.append(plyn)
-                    plys[plyn] = [(do, None, n)]
+                    plys[plyn] = (so,[(do, None)])
                     if addo:
-                        plys[plyn].append((so, None, n))
+                        plys[plyn][1].append((so, None))
 
         # Objects to render
         for obj in scene.objects:
             if not obj.hide_render:
-                if obj.type in rendertypes and inscenelayer(obj) and not (obj.particle_systems and not any(ps for ps in obj.particle_systems if ps.settings.emitter)):
+                if obj.type in rendertypes and inscenelayer(obj) and not (obj.particle_systems and not any(ps for ps in obj.particle_systems if ps.settings.use_render_emitter)):
                     # Mesh instances
                     if obj.slg_forceinst or (obj.data.users > 1 and not obj.modifiers):
                         if obj.data in instobjs:
                             if obj.data.materials:
                                 for i in range(len(obj.data.materials)):
-                                    plys[(obj.data.name+'S'+str(i))].append((obj, obj.material_slots[i].material))
+                                    plys[(obj.data.name+'S'+str(i))][1].append((obj, obj.material_slots[i].material))
                             else:
-                                plys[(obj.data.name+SLGBP.nomatn)].append((obj, None))
+                                plys[(obj.data.name+SLGBP.nomatn)][1].append((obj, None))
                         else:
                             objs.append(obj.data)
                             instobjs[obj.data] = len(plymats)
@@ -496,11 +505,11 @@ class SLGBP:
                                 for i in range(len(obj.data.materials)):
                                     plyn = (obj.data.name+'S'+str(i))
                                     plymats.append(plyn)
-                                    plys[plyn] = [(obj, obj.material_slots[i].material)]
+                                    plys[plyn] = (obj.data,[(obj, obj.material_slots[i].material)])
                             else:
                                 plyn = (obj.data.name+SLGBP.nomatn)
                                 plymats.append(plyn)
-                                plys[plyn] = [(obj, None)]
+                                plys[plyn] = (obj.data,[(obj, None)])
                     else:
                         # Collect all non-instance meshes by material
                         if scene.slg.export or mfp and any(m for m in mfp if m in obj.material_slots):
@@ -508,18 +517,18 @@ class SLGBP:
                 # Dupligroups
                 if obj.dupli_type == 'GROUP' and inscenelayer(obj):
                     for so in obj.dupli_group.objects:
-                        dupliobj(so, obj, None)
+                        dupliobj(so, obj)
                 # Particle Systems
                 for ps in obj.particle_systems:
                     if ps.settings.type == 'EMITTER':
                         # Dupli Object
-                        if ps.settings.ren_as == 'OBJECT' and ps.settings.dupli_object:
+                        if ps.settings.render_type == 'OBJECT' and ps.settings.dupli_object:
                             # Blender 2.5 Python bug!: incorrect dupli_object returned when multiple particle systems
-                            dupliobj(ps.settings.dupli_object, ps, None)
+                            dupliobj(ps.settings.dupli_object, ps)
                         # Dupli Group
-                        if ps.settings.ren_as == 'GROUP' and ps.settings.dupli_group:
-                            for i,o in enumerate(ps.settings.dupli_group.objects):
-                                dupliobj(o, ps, i)
+                        if ps.settings.render_type == 'GROUP' and ps.settings.dupli_group:
+                            for o in ps.settings.dupli_group.objects:
+                                dupliobj(o, ps)
 
         verts = [[] for i in range(len(plymats))]
         vert_vcs = [[] for i in range(len(plymats))]
@@ -549,20 +558,20 @@ class SLGBP:
                 except:
                     pass
                 else:
-                    if type(obj) == bpy.types.Object:
+                    if type(obj) == bpy.types.Object and obj not in instobjs:
                         print("SLGBP        Xform render mesh: {}".format(obj.name))
                         mesh.transform(obj.matrix_world)
-                    # Make copy of verts for fast direct index access (mesh.verts was very slow)
+                    # Make copy of verts for fast direct index access (mesh.vertices was very slow)
                     if scene.slg.vnormals:
-                        v = [tuple(vert.co) + tuple(vert.normal) for vert in mesh.verts]
+                        v = [tuple(vert.co) + tuple(vert.normal) for vert in mesh.vertices]
                     else:
-                        v = [tuple(vert.co) for vert in mesh.verts]
+                        v = [tuple(vert.co) for vert in mesh.vertices]
                     vcd = []
-                    if scene.slg.vcolors and mesh.active_vertex_color:
-                        vcd = mesh.active_vertex_color.data
+                    if scene.slg.vcolors and mesh.vertex_colors.active:
+                        vcd = mesh.vertex_colors.active.data
                     uvd = []
-                    if scene.slg.vuvs and mesh.active_uv_texture:
-                        uvd = mesh.active_uv_texture.data
+                    if scene.slg.vuvs and mesh.uv_textures.active:
+                        uvd = mesh.uv_textures.active.data
                     if obj in instobjs:
                         # Correlate obj mat slots with plymat slots
                         onomat = instobjs[obj]
@@ -580,11 +589,11 @@ class SLGBP:
                         # Get uvs if there is an image texture attached
                         if uv:
                             uvcos = uv.uv1, uv.uv2, uv.uv3, uv.uv4
-                        if not face.smooth or uv:
+                        if not face.use_smooth or uv:
                             faces[curmat].append((vertnum[curmat], vertnum[curmat]+1, vertnum[curmat]+2))
-                            if len(face.verts) == 4:
+                            if len(face.vertices) == 4:
                                 faces[curmat].append((vertnum[curmat], vertnum[curmat]+2, vertnum[curmat]+3))
-                        for j, vert in enumerate(face.verts):
+                        for j, vert in enumerate(face.vertices):
                             if scene.slg.vcolors:
                                 if vc:
                                     color[0] = int(255.0*colors[j][0])
@@ -598,7 +607,7 @@ class SLGBP:
                                     uvco[1] = 1.0 - uvcos[j][1]
                                 else:
                                     uvco[0] = uvco[1] = 0
-                            if face.smooth and not uv:
+                            if face.use_smooth and not uv:
                                 if (curmat,vert) in sharedverts:
                                     addv = False
                                 else:
@@ -607,7 +616,7 @@ class SLGBP:
                             else:
                                 addv = True
                             if addv:
-                                if scene.slg.vnormals and not face.smooth:
+                                if scene.slg.vnormals and not face.use_smooth:
                                     verts[curmat].append(v[vert][:3]+tuple(face.normal))
                                 else:
                                     verts[curmat].append(v[vert])
@@ -616,10 +625,10 @@ class SLGBP:
                                 if scene.slg.vcolors:
                                     vert_vcs[curmat].append(tuple(color))
                                 vertnum[curmat] += 1
-                        if face.smooth and not uv:
-                            faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[1]], sharedverts[curmat,face.verts[2]]))
-                            if len(face.verts) == 4:
-                                faces[curmat].append((sharedverts[curmat,face.verts[0]], sharedverts[curmat,face.verts[2]], sharedverts[curmat,face.verts[3]]))
+                        if face.use_smooth and not uv:
+                            faces[curmat].append((sharedverts[curmat,face.vertices[0]], sharedverts[curmat,face.vertices[1]], sharedverts[curmat,face.vertices[2]]))
+                            if len(face.vertices) == 4:
+                                faces[curmat].append((sharedverts[curmat,face.vertices[0]], sharedverts[curmat,face.vertices[2]], sharedverts[curmat,face.vertices[3]]))
                 sharedverts = {}
                 # Delete working mesh
                 if not mesh.users:
@@ -631,7 +640,7 @@ class SLGBP:
         for i, pm in enumerate(plymats):
             plyn = pm.replace('.','_')
             # Remove portal materials
-            if type(plys[pm][0]) == bpy.types.Material and plys[pm][0].shadeless:
+            if type(plys[pm]) == bpy.types.Material and plys[pm].use_shadeless:
                 del plys[pm]
             # If have mesh using this plymat...
             if verts[i] or (not scene.slg.export and os.path.exists('{}/{}.ply'.format(SLGBP.sfullpath,plyn))):
@@ -952,7 +961,7 @@ class SLGLive(bpy.types.Operator):
             SLGBP.telnet.close()
             context.region.callback_remove(SLGBP.icb)
             context.area.tag_redraw()
-            bpy.context.user_preferences.edit.global_undo = self._undo
+            bpy.context.user_preferences.edit.use_global_undo = self._undo
             return {'FINISHED'}
         return {'PASS_THROUGH'}
 
@@ -973,8 +982,8 @@ class SLGLive(bpy.types.Operator):
         self._iserror = False
         context.manager.add_modal_handler(self)
         # Disable global undo as it corrupts all pointers used by SLG Live! mode
-        self._undo = bpy.context.user_preferences.edit.global_undo
-        bpy.context.user_preferences.edit.global_undo = False
+        self._undo = bpy.context.user_preferences.edit.use_global_undo
+        bpy.context.user_preferences.edit.use_global_undo = False
         SLGBP.abort = False
         SLGBP.msg = 'SLG Live!'
         SLGBP.msgrefresh = context.area.tag_redraw
