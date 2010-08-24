@@ -139,6 +139,7 @@ typedef struct {
 #define MAT_MATTE 0
 #define MAT_AREALIGHT 1
 #define MAT_MIRROR 2
+#define MAT_GLASS 3
 
 typedef struct {
 	uint type;
@@ -153,6 +154,13 @@ typedef struct {
 			float r, g, b;
 			int specularBounce;
 		} mirror;
+        struct {
+            float refl_r, refl_g, refl_b;
+            float refrct_r, refrct_g, refrct_b;
+        	float ousideIor, ior;
+            float R0;
+            int reflectionSpecularBounce, transmitionSpecularBounce;
+        } glass;
 	} mat;
 } Material;
 
@@ -695,14 +703,6 @@ void Matte_f(__global Material *mat, const Vector *wi,
 	}
 }
 
-void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spectrum *Le) {
-	const bool flag = (Dot(N, wo) <= 0.f);
-
-	Le->r = flag ? 0.f : mat->mat.areaLight.gain_r;
-	Le->g = flag ? 0.f : mat->mat.areaLight.gain_g;
-	Le->b = flag ? 0.f : mat->mat.areaLight.gain_b;
-}
-
 void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -725,9 +725,118 @@ void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
 #endif
 }
 
+void Glass_Sample_f(__global Material *mat,
+    const Vector *rayDir, Vector *wi, const Vector *N, const Vector *shadeN,
+    const float u0, float *pdf, Spectrum *f
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global int *specularBounce
+#endif
+        ) {
+    Vector reflDir;
+    const float k = 2.f * Dot(N, rayDir);
+    reflDir.x = rayDir->x - k * N->x;
+    reflDir.y = rayDir->y - k * N->y;
+    reflDir.z = rayDir->z - k * N->z;
+
+    // Ray from outside going in ?
+    const bool into = (Dot(N, shadeN) > 0.f);
+
+    const float nc = mat->mat.glass.ousideIor;
+    const float nt = mat->mat.glass.ior;
+    const float nnt = into ? (nc / nt) : (nt / nc);
+    const float ddn = Dot(rayDir, shadeN);
+    const float cos2t = 1.f - nnt * nnt * (1.f - ddn * ddn);
+
+    // Total internal reflection
+    if (cos2t < 0.f) {
+        *wi = reflDir;
+        *pdf = 1.f;
+
+        f->r =  mat->mat.glass.refl_r;
+        f->g =  mat->mat.glass.refl_g;
+        f->b =  mat->mat.glass.refl_b;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+        *specularBounce = mat->mat.glass.reflectionSpecularBounce;
+#endif
+    } else {
+        const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
+        Vector nkk = *N;
+        nkk.x *= kk;
+        nkk.y *= kk;
+        nkk.z *= kk;
+
+        Vector transDir;
+        transDir.x = nnt * rayDir->x - nkk.x;
+        transDir.y = nnt * rayDir->y - nkk.y;
+        transDir.z = nnt * rayDir->z - nkk.z;
+        Normalize(&transDir);
+
+        const float c = 1.f - (into ? -ddn : Dot(&transDir, N));
+
+        const float R0 = mat->mat.glass.R0;
+        const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+        const float Tr = 1.f - Re;
+        const float P = .25f + .5f * Re;
+
+        if (Tr == 0.f) {
+            if (Re == 0.f)
+                *pdf = 0.f;
+            else {
+                *wi = reflDir;
+                *pdf = 1.f;
+
+                f->r =  mat->mat.glass.refl_r;
+                f->g =  mat->mat.glass.refl_g;
+                f->b =  mat->mat.glass.refl_b;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+                *specularBounce = mat->mat.glass.reflectionSpecularBounce;
+#endif
+            }
+        } else if (Re == 0.f) {
+            *wi = transDir;
+            *pdf = 1.f;
+
+            f->r =  mat->mat.glass.refrct_r;
+            f->g =  mat->mat.glass.refrct_g;
+            f->b =  mat->mat.glass.refrct_b;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+            *specularBounce = mat->mat.glass.transmitionSpecularBounce;
+#endif
+        } else if (u0 < P) {
+            *wi = reflDir;
+            *pdf = P / Re;
+
+            f->r =  mat->mat.glass.refl_r;
+            f->g =  mat->mat.glass.refl_g;
+            f->b =  mat->mat.glass.refl_b;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+            *specularBounce = mat->mat.glass.reflectionSpecularBounce;
+#endif
+        } else {
+            *wi = transDir;
+            *pdf = (1.f - P) / Tr;
+
+            f->r =  mat->mat.glass.refrct_r;
+            f->g =  mat->mat.glass.refrct_g;
+            f->b =  mat->mat.glass.refrct_b;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+            *specularBounce = mat->mat.glass.transmitionSpecularBounce;
+#endif
+        }
+    }
+}
+
 //------------------------------------------------------------------------------
 // Lights
 //------------------------------------------------------------------------------
+
+void AreaLight_Le(__global Material *mat, const Vector *wo, const Vector *lightN, Spectrum *Le) {
+	if (Dot(lightN, wo) > 0.f) {
+        Le->r = mat->mat.areaLight.gain_r;
+        Le->g = mat->mat.areaLight.gain_g;
+        Le->b = mat->mat.areaLight.gain_b;
+    }
+}
 
 void SampleTriangleLight(__global TriangleLight *light,	const float u0, const float u1, Point *p) {
 	Point v0, v1, v2;
@@ -921,10 +1030,7 @@ __kernel void AdvancePaths(
 	hitPoint.y = ray->o.y + rayDir.y * hitPointT;
 	hitPoint.z = ray->o.z + rayDir.z * hitPointT;
 
-	Spectrum throughput;
-	throughput.r = path->throughput.r;
-	throughput.g = path->throughput.g;
-	throughput.b = path->throughput.b;
+	Spectrum throughput = path->throughput;
 
     Vector N, shadeN;
     __global Material *hitPointMat;
@@ -1036,9 +1142,12 @@ __kernel void AdvancePaths(
 			case MAT_AREALIGHT:
 				areaLightHit = true;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-				if (path->specularBounce)
+				if (path->specularBounce) {
 #endif
-					AreaLight_Le(hitPointMat, &N, &wo, &materialLe);
+					AreaLight_Le(hitPointMat, &wo, &N, &materialLe);
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+				}
+#endif
 
                 pdf = 1.f;
                 f.r = 1.f;
@@ -1047,6 +1156,14 @@ __kernel void AdvancePaths(
 				break;
 			case MAT_MIRROR:
 				Mirror_Sample_f(hitPointMat, &rayDir, &wi, &pdf, &f, &shadeN
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					, &path->specularBounce
+#endif
+					);
+				break;
+			case MAT_GLASS:
+				Glass_Sample_f(hitPointMat, &rayDir, &wi, &N, &shadeN,
+                    u0, &pdf, &f
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1063,18 +1180,22 @@ __kernel void AdvancePaths(
 		throughput.g *= f.g * invPdf;
 		throughput.b *= f.b * invPdf;
 
-		// Russian roulette
-		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float)PARAM_RR_CAP);
-
 		const uint pathDepth = path->depth + 1;
-		const float rrSample = RndFloatValue(&seed);
-		bool terminatePath = areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH) ||
-			((pathDepth > PARAM_RR_DEPTH) && (rrProb < rrSample));
+		bool terminatePath = areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH);
 
-		const float invRRProb = 1.f / rrProb;
-		throughput.r *= invRRProb;
-		throughput.g *= invRRProb;
-		throughput.b *= invRRProb;
+        // Russian roulette
+        if (!terminatePath && (pathDepth > PARAM_RR_DEPTH)) {
+    		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float)PARAM_RR_CAP);
+    		const float rrSample = RndFloatValue(&seed);
+
+            if (rrProb >= rrSample) {
+                const float invRRProb = 1.f / rrProb;
+                throughput.r *= invRRProb;
+                throughput.g *= invRRProb;
+                throughput.b *= invRRProb;
+            } else
+                terminatePath = true;
+        }
 
 		if (terminatePath) {
 			Spectrum radiance;
