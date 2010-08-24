@@ -704,14 +704,15 @@ void AreaLight_Le(__global Material *mat, const Vector *N, const Vector *wo, Spe
 }
 
 void Mirror_Sample_f(__global Material *mat, const Vector *rayDir, Vector *wi,
-		float *pdf, Spectrum *f, const Vector *shadeN, const float RdotShadeN
+		float *pdf, Spectrum *f, const Vector *shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 		, __global int *specularBounce
 #endif
 		) {
-	wi->x = rayDir->x + (2.f * RdotShadeN) * shadeN->x;
-	wi->y = rayDir->y + (2.f * RdotShadeN) * shadeN->y;
-	wi->z = rayDir->z + (2.f * RdotShadeN) * shadeN->z;
+    const float RdotShadeN = Dot(shadeN, rayDir);
+	wi->x = rayDir->x - (2.f * RdotShadeN) * shadeN->x;
+	wi->y = rayDir->y - (2.f * RdotShadeN) * shadeN->y;
+	wi->z = rayDir->z - (2.f * RdotShadeN) * shadeN->z;
 
 	*pdf = 1.f;
 
@@ -801,6 +802,8 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 	pixel->c.b += isnan(radiance->b) ? 0.f : radiance->b;
 	pixel->count += 1;
 
+    // Re-initialize the path
+
 	uint newPixelIndex;
 #if defined (PARAM_LOWLATENCY)
 	newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
@@ -823,14 +826,14 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 #endif
 		);
 
-	// Re-initialize the path
 	path->throughput.r = 1.f;
 	path->throughput.g = 1.f;
 	path->throughput.b = 1.f;
 	path->depth = 0;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	path->specularBounce = TRUE;
-	path->state = PATH_STATE_NEXT_VERTEX;
+    // Path state is inizialized at the end of AdvancePaths()
+	//path->state = PATH_STATE_NEXT_VERTEX;
 	path->accumRadiance.r = 0.f;
 	path->accumRadiance.g = 0.f;
 	path->accumRadiance.b = 0.f;
@@ -844,7 +847,7 @@ __kernel void AdvancePaths(
 		__global Pixel *frameBuffer,
 		__global Material *mats,
 		__global uint *meshMats,
-		__global uint *meshIDs, // Not used
+		__global uint *meshIDs,
 		__global uint *triIDs,
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
@@ -864,15 +867,20 @@ __kernel void AdvancePaths(
 		return;
 
 	__global Path *path = &paths[gid];
+
+	// Read the seed
+	Seed seed;
+	seed.s1 = path->seed.s1;
+	seed.s2 = path->seed.s2;
+	seed.s3 = path->seed.s3;
+
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 	uint currentTriangleIndex = rayHit->index;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	int state = path->state;
-
-	bool traceShadowRay = false;
-	if (state == PATH_STATE_SAMPLE_LIGHT) {
+	int newState = PATH_STATE_NEXT_VERTEX;
+	if (path->state == PATH_STATE_SAMPLE_LIGHT) {
 		if (currentTriangleIndex == 0xffffffffu) {
 			// Nothing was hit, the light is visible
 
@@ -897,53 +905,57 @@ __kernel void AdvancePaths(
 			__global Material *mat = &mats[meshMats[meshIndex]];
 
 			const bool isDiffuse = (mat->type == MAT_MATTE);
-
-			traceShadowRay = isDiffuse;
+			newState = isDiffuse ? PATH_STATE_SAMPLE_LIGHT : PATH_STATE_NEXT_VERTEX;
 		}
 	}
 #endif
 
-	Vector rayDir;
-	rayDir.x = ray->d.x;
-	rayDir.y = ray->d.y;
-	rayDir.z = ray->d.z;
+	Vector rayDir = ray->d;
 
-	const float t = rayHit->t;
-    const float hitB1 = rayHit->b1;
-    const float hitB2 = rayHit->b2;
+	const float hitPointT = rayHit->t;
+    const float hitPointB1 = rayHit->b1;
+    const float hitPointB2 = rayHit->b2;
 
 	Point hitPoint;
-    hitPoint.x = ray->o.x + rayDir.x * t;
-	hitPoint.y = ray->o.y + rayDir.y * t;
-	hitPoint.z = ray->o.z + rayDir.z * t;
+    hitPoint.x = ray->o.x + rayDir.x * hitPointT;
+	hitPoint.y = ray->o.y + rayDir.y * hitPointT;
+	hitPoint.z = ray->o.z + rayDir.z * hitPointT;
 
 	Spectrum throughput;
 	throughput.r = path->throughput.r;
 	throughput.g = path->throughput.g;
 	throughput.b = path->throughput.b;
 
-	// Read the seed
-	Seed seed;
-	seed.s1 = path->seed.s1;
-	seed.s2 = path->seed.s2;
-	seed.s3 = path->seed.s3;
+    Vector N, shadeN;
+    __global Material *hitPointMat;
+    if (currentTriangleIndex != 0xffffffffu) {
+		// Something was hit
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	if (traceShadowRay) {
-		// Select a light source to sample
-		const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
-		__global TriangleLight *l = &triLights[lightIndex];
+		// Interpolate Color
+        Spectrum shadeColor;
+		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+		throughput.r *= shadeColor.r;
+		throughput.g *= shadeColor.g;
+		throughput.b *= shadeColor.b;
 
 		// Interpolate the normal
-		Vector N;
-		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitB1, hitB2, &N);
+		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
 
 		// Flip the normal if required
-		Vector shadeN;
 		const float nFlip = (Dot(&rayDir, &N) > 0.f) ? -1.f : 1.f;
 		shadeN.x = nFlip * N.x;
 		shadeN.y = nFlip * N.y;
 		shadeN.z = nFlip * N.z;
+
+		const uint meshIndex = meshIDs[currentTriangleIndex];
+		hitPointMat = &mats[meshMats[meshIndex]];
+    }
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	if (newState == PATH_STATE_SAMPLE_LIGHT) {
+		// Select a light source to sample
+		const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+		__global TriangleLight *l = &triLights[lightIndex];
 
         // Setup the shadow ray
 		Vector wo;
@@ -956,34 +968,27 @@ __kernel void AdvancePaths(
 		TriangleLight_Sample_L(l, &wo, &hitPoint, &shadeN, &lightPdf, &Le, &shadowRay,
 			RndFloatValue(&seed), RndFloatValue(&seed), RndFloatValue(&seed));
 
-		if (lightPdf <= 0.f)
-			traceShadowRay = false;
-		else {
-			// Interpolate Color
-			Spectrum shadeColor;
-			Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitB1, hitB2, &shadeColor);
-
-			const uint meshIndex = meshIDs[currentTriangleIndex];
-			__global Material *mat = &mats[meshMats[meshIndex]];
+		if (lightPdf <= 0.f) {
+            // Skip sample light step
+			newState = PATH_STATE_NEXT_VERTEX;
+		} else {
 			float matPdf;
 			Spectrum f;
-			Matte_f(mat, &shadowRay.d, &matPdf, &f, &shadeN);
+			Matte_f(hitPointMat, &shadowRay.d, &matPdf, &f, &shadeN);
 
-			if (matPdf <= 0.f)
-				traceShadowRay = false;
-			else {
-				const float dp = Dot(&shadeN, &shadowRay.d);
+			if (matPdf <= 0.f) {
+                // Skip sample light step
+                newState = PATH_STATE_NEXT_VERTEX;
+			} else {
 				const float invPdf = PARAM_DL_LIGHT_COUNT / (lightPdf * matPdf);
-				path->lightRadiance.r = throughput.r * shadeColor.r * f.r * Le.r * invPdf;
-				path->lightRadiance.g = throughput.g * shadeColor.g * f.g * Le.g * invPdf;
-				path->lightRadiance.b = throughput.b * shadeColor.b * f.b * Le.b * invPdf;
-
-				path->state = PATH_STATE_SAMPLE_LIGHT;
+				path->lightRadiance.r = throughput.r * f.r * Le.r * invPdf;
+				path->lightRadiance.g = throughput.g * f.g * Le.g * invPdf;
+				path->lightRadiance.b = throughput.b * f.b * Le.b * invPdf;
 
 				// Save current ray hit information
-				path->pathHit.t = t;
-				path->pathHit.b1 = hitB1;
-				path->pathHit.b2 = hitB2;
+				path->pathHit.t = hitPointT;
+				path->pathHit.b1 = hitPointB1;
+				path->pathHit.b2 = hitPointB2;
 				path->pathHit.index = currentTriangleIndex;
 
 				// Save the current Ray
@@ -995,36 +1000,12 @@ __kernel void AdvancePaths(
 	}
 
 	// To handle the case where the light pdf is 0.0
-	if (!traceShadowRay) {
+	if (newState == PATH_STATE_NEXT_VERTEX) {
 
 #endif
 
 	if (currentTriangleIndex != 0xffffffffu) {
 		// Something was hit
-
-		// Interpolate Color
-		Spectrum shadeColor;
-		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitB1, hitB2, &shadeColor);
-		throughput.r *= shadeColor.r;
-		throughput.g *= shadeColor.g;
-		throughput.b *= shadeColor.b;
-
-		// Interpolate the normal
-		Vector N;
-		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitB1, hitB2, &N);
-
-		// Flip the normal if required
-		Vector shadeN;
-		float RdotShadeN = Dot(&rayDir, &N);
-
-		const float nFlip = (RdotShadeN > 0.f) ? -1.f : 1.f;
-		shadeN.x = nFlip * N.x;
-		shadeN.y = nFlip * N.y;
-		shadeN.z = nFlip * N.z;
-		RdotShadeN = -nFlip * RdotShadeN;
-
-		const uint meshIndex = meshIDs[currentTriangleIndex];
-		__global Material *mat = &mats[meshMats[meshIndex]];
 
 		const float u0 = RndFloatValue(&seed);
 		const float u1 = RndFloatValue(&seed);
@@ -1044,9 +1025,9 @@ __kernel void AdvancePaths(
 		materialLe.g = 0.f;
 		materialLe.b = 0.f;
 		bool areaLightHit = false;
-		switch (mat->type) {
+		switch (hitPointMat->type) {
 			case MAT_MATTE:
-				Matte_Sample_f(mat, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+				Matte_Sample_f(hitPointMat, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1057,10 +1038,15 @@ __kernel void AdvancePaths(
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				if (path->specularBounce)
 #endif
-					AreaLight_Le(mat, &N, &wo, &materialLe);
+					AreaLight_Le(hitPointMat, &N, &wo, &materialLe);
+
+                pdf = 1.f;
+                f.r = 1.f;
+                f.g = 1.f;
+                f.b = 1.f;
 				break;
 			case MAT_MIRROR:
-				Mirror_Sample_f(mat, &rayDir, &wi, &pdf, &f, &shadeN, RdotShadeN
+				Mirror_Sample_f(hitPointMat, &rayDir, &wi, &pdf, &f, &shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1071,6 +1057,11 @@ __kernel void AdvancePaths(
 				pdf = 0.f;
 				break;
 		}
+
+        const float invPdf = 1.f / pdf;
+        throughput.r *= f.r * invPdf;
+		throughput.g *= f.g * invPdf;
+		throughput.b *= f.b * invPdf;
 
 		// Russian roulette
 		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float)PARAM_RR_CAP);
@@ -1087,9 +1078,9 @@ __kernel void AdvancePaths(
 
 		if (terminatePath) {
 			Spectrum radiance;
-			radiance.r = materialLe.r * throughput.r;
-			radiance.g = materialLe.g * throughput.g;
-			radiance.b = materialLe.b * throughput.b;
+			radiance.r = throughput.r * materialLe.r;
+			radiance.g = throughput.g * materialLe.g;
+			radiance.b = throughput.b * materialLe.b;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 			radiance.r += path->accumRadiance.r;
@@ -1103,10 +1094,7 @@ __kernel void AdvancePaths(
 #endif
 				);
 		} else {
-			const float invPdf = 1.f / pdf;
-			path->throughput.r = throughput.r * f.r * invPdf;
-			path->throughput.g = throughput.g * f.g * invPdf;
-			path->throughput.b = throughput.b * f.b * invPdf;
+			path->throughput = throughput;
 
 			// Setup next ray
 			ray->o = hitPoint;
@@ -1115,9 +1103,6 @@ __kernel void AdvancePaths(
 			ray->maxt = FLT_MAX;
 
 			path->depth = pathDepth;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-			path->state = PATH_STATE_NEXT_VERTEX;
-#endif
 		}
 	} else {
 		Spectrum radiance;
@@ -1126,9 +1111,9 @@ __kernel void AdvancePaths(
 		Spectrum Le;
 		InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
 
-		radiance.r = Le.r * throughput.r;
-		radiance.g = Le.g * throughput.g;
-		radiance.b = Le.b * throughput.b;
+		radiance.r = throughput.r * Le.r;
+		radiance.g = throughput.g * Le.g;
+		radiance.b = throughput.b * Le.b;
 #else
 		radiance.r = 0.f;
 		radiance.g = 0.f;
@@ -1150,6 +1135,8 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	}
+
+    path->state = newState;
 #endif
 
 	// Save the seed
