@@ -92,7 +92,7 @@ public:
 	virtual Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const = 0;
 	virtual Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N,
 		const Normal &shadeN, const float u0, const float u1,  const float u2,
-		const bool onlySpecular, float *pdf,	bool &specularBounce) const = 0;
+		const bool onlySpecular, float *pdf, bool &specularBounce) const = 0;
 };
 
 class MatteMaterial : public SurfaceMaterial {
@@ -269,7 +269,7 @@ public:
 		const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
 
 		// Ray from outside going in ?
-		const bool into = (Dot(N, shadeN) > 0);
+		const bool into = (Dot(N, shadeN) > 0.f);
 
 		const float nc = ousideIor;
 		const float nt = ior;
@@ -330,6 +330,11 @@ public:
 
 	const Spectrum &GetKrefl() const { return Krefl; }
 	const Spectrum &GetKrefrct() const { return Krefrct; }
+	const float GetOutsideIOR() const { return ousideIor; }
+	const float GetIOR() const { return ior; }
+	const float GetR0() const { return R0; }
+	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
+	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
 
 private:
 	Spectrum Krefl, Krefrct;
