@@ -187,6 +187,24 @@ void PathGPURenderThread::Start() {
 				gpum->mat.mirror.specularBounce = mm->HasSpecularBounceEnabled();
 				break;
 			}
+			case GLASS: {
+				GlassMaterial *gm = (GlassMaterial *)m;
+
+				gpum->type = MAT_GLASS;
+				gpum->mat.glass.refl_r = gm->GetKrefl().r;
+				gpum->mat.glass.refl_g = gm->GetKrefl().g;
+				gpum->mat.glass.refl_b = gm->GetKrefl().b;
+
+				gpum->mat.glass.refrct_r = gm->GetKrefrct().r;
+				gpum->mat.glass.refrct_g = gm->GetKrefrct().g;
+				gpum->mat.glass.refrct_b = gm->GetKrefrct().b;
+
+				gpum->mat.glass.ousideIor = gm->GetOutsideIOR();
+				gpum->mat.glass.ior = gm->GetIOR();
+				gpum->mat.glass.reflectionSpecularBounce = gm->HasReflSpecularBounceEnabled();
+				gpum->mat.glass.transmitionSpecularBounce = gm->HasRefrctSpecularBounceEnabled();
+				break;
+			}
 			default: {
 				gpum->type = MAT_MATTE;
 				gpum->mat.matte.r = 0.75f;
@@ -259,13 +277,13 @@ void PathGPURenderThread::Start() {
 	// Allocate path buffer
 	//--------------------------------------------------------------------------
 
-	const size_t PathGPUSize = (renderEngine->hasOpenGLInterop) ?
-		(triLightsBuff ? sizeof(PathGPU::PathLowLatencyDL) : sizeof(PathGPU::PathLowLatencyDL)) :
-		(triLightsBuff ? sizeof(PathGPU::PathDL) : sizeof(PathGPU::PathDL));
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Paths buffer size: " << (PathGPUSize * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	const size_t pathGPUSize = (renderEngine->hasOpenGLInterop) ?
+		(triLightsBuff ? sizeof(PathGPU::PathLowLatencyDL) : sizeof(PathGPU::PathLowLatency)) :
+		(triLightsBuff ? sizeof(PathGPU::PathDL) : sizeof(PathGPU::Path));
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Paths buffer size: " << (pathGPUSize * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
 	pathsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			PathGPUSize * PATHGPU_PATH_COUNT);
+			pathGPUSize * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(pathsBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------

@@ -87,9 +87,10 @@ typedef struct {
 #define MAT_MATTE 0
 #define MAT_AREALIGHT 1
 #define MAT_MIRROR 2
+#define MAT_GLASS 3
 
 typedef struct {
-	unsigned int type;
+	uint type;
 	union {
 		struct {
 			float r, g, b;
@@ -101,6 +102,13 @@ typedef struct {
 			float r, g, b;
 			int specularBounce;
 		} mirror;
+        struct {
+            float refl_r, refl_g, refl_b;
+            float refrct_r, refrct_g, refrct_b;
+        	float ousideIor, ior;
+            float R0;
+            int reflectionSpecularBounce, transmitionSpecularBounce;
+        } glass;
 	} mat;
 } Material;
 
