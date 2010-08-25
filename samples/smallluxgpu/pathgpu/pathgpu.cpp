@@ -226,6 +226,25 @@ void PathGPURenderThread::InitRender() {
 				gpum->mat.glass.transmitionSpecularBounce = gm->HasRefrctSpecularBounceEnabled();
 				break;
 			}
+			case MATTEMIRROR: {
+				MatteMirrorMaterial *mmm = (MatteMirrorMaterial *)m;
+
+				gpum->type = MAT_MATTEMIRROR;
+				gpum->mat.matteMirror.matte.r = mmm->GetMatte().GetKd().r;
+				gpum->mat.matteMirror.matte.g = mmm->GetMatte().GetKd().g;
+				gpum->mat.matteMirror.matte.b = mmm->GetMatte().GetKd().b;
+
+				gpum->mat.matteMirror.mirror.r = mmm->GetMirror().GetKr().r;
+				gpum->mat.matteMirror.mirror.g = mmm->GetMirror().GetKr().g;
+				gpum->mat.matteMirror.mirror.b = mmm->GetMirror().GetKr().b;
+				gpum->mat.matteMirror.mirror.specularBounce = mmm->GetMirror().HasSpecularBounceEnabled();
+
+				gpum->mat.matteMirror.matteFilter = mmm->GetMatteFilter();
+				gpum->mat.matteMirror.totFilter = mmm->GetTotFilter();
+				gpum->mat.matteMirror.mattePdf = mmm->GetMattePdf();
+				gpum->mat.matteMirror.mirrorPdf = mmm->GetMirrorPdf();
+				break;
+			}
 			default: {
 				gpum->type = MAT_MATTE;
 				gpum->mat.matte.r = 0.75f;
@@ -252,8 +271,8 @@ void PathGPURenderThread::InitRender() {
 	// Count the area lights
 	unsigned int areaLightCount = 0;
 	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			if (scene->lights[i]->IsAreaLight())
-				++areaLightCount;
+		if (scene->lights[i]->IsAreaLight())
+			++areaLightCount;
 	}
 
 	if (areaLightCount > 0) {

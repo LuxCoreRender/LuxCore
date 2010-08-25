@@ -194,7 +194,7 @@ public:
 	MatteMirrorMaterial(const Spectrum &col, const Spectrum refl, bool reflSpecularBounce) :
 		matte(col), mirror(refl, reflSpecularBounce) {
 		matteFilter = matte.GetKd().Filter();
-		mirrorFilter = mirror.GetKr().Filter();
+		const float mirrorFilter = mirror.GetKr().Filter();
 		totFilter = matteFilter + mirrorFilter;
 
 		mattePdf = matteFilter / totFilter;
@@ -228,10 +228,17 @@ public:
 		}
 	}
 
+	const MatteMaterial &GetMatte() const { return matte; }
+	const MirrorMaterial &GetMirror() const { return mirror; }
+	float GetMatteFilter() const { return matteFilter; }
+	float GetTotFilter() const { return totFilter; }
+	float GetMattePdf() const { return mattePdf; }
+	float GetMirrorPdf() const { return mirrorPdf; }
+
 private:
 	MatteMaterial matte;
 	MirrorMaterial mirror;
-	float matteFilter, mirrorFilter, totFilter, mattePdf, mirrorPdf;
+	float matteFilter, totFilter, mattePdf, mirrorPdf;
 };
 
 class GlassMaterial : public SurfaceMaterial {

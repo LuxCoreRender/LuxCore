@@ -84,31 +84,54 @@ typedef struct {
 	unsigned int count;
 } Pixel;
 
+
 #define MAT_MATTE 0
 #define MAT_AREALIGHT 1
 #define MAT_MIRROR 2
 #define MAT_GLASS 3
+#define MAT_MATTE_MIRROR 4
+
+#define MAT_MATTE 0
+#define MAT_AREALIGHT 1
+#define MAT_MIRROR 2
+#define MAT_GLASS 3
+#define MAT_MATTEMIRROR 4
+
+typedef struct {
+    float r, g, b;
+} MatteParam;
+
+typedef struct {
+    float gain_r, gain_g, gain_b;
+} AreaLightParam;
+
+typedef struct {
+    float r, g, b;
+    int specularBounce;
+} MirrorParam;
+
+typedef struct {
+    float refl_r, refl_g, refl_b;
+    float refrct_r, refrct_g, refrct_b;
+    float ousideIor, ior;
+    float R0;
+    int reflectionSpecularBounce, transmitionSpecularBounce;
+} GlassParam;
+
+typedef struct {
+	MatteParam matte;
+	MirrorParam mirror;
+	float matteFilter, totFilter, mattePdf, mirrorPdf;
+} MatteMirrorParam;
 
 typedef struct {
 	uint type;
 	union {
-		struct {
-			float r, g, b;
-		} matte;
-		struct {
-			float gain_r, gain_g, gain_b;
-		} areaLight;
-		struct {
-			float r, g, b;
-			int specularBounce;
-		} mirror;
-        struct {
-            float refl_r, refl_g, refl_b;
-            float refrct_r, refrct_g, refrct_b;
-        	float ousideIor, ior;
-            float R0;
-            int reflectionSpecularBounce, transmitionSpecularBounce;
-        } glass;
+		MatteParam matte;
+        AreaLightParam areaLight;
+		MirrorParam mirror;
+        GlassParam glass;
+		MatteMirrorParam matteMirror;
 	} mat;
 } Material;
 
