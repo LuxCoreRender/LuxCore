@@ -53,7 +53,7 @@ PathGPURenderThread::PathGPURenderThread(const unsigned int index, const unsigne
 		PathGPURenderEngine *re) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
-	seed = seedBase + index;
+	seed = seedBase;
 	reportedPermissionError = false;
 
 	renderThread = NULL;
@@ -1034,14 +1034,14 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 		cerr << "PathGPU high bandwidth mode enabled" << endl;
 	}
 
-	const unsigned int seedBase = (unsigned long)(WallClockTime() / 1000.0);
+	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 
 	// Create and start render threads
 	const size_t renderThreadCount = oclIntersectionDevices.size();
 	cerr << "Starting "<< renderThreadCount << " PathGPU render threads" << endl;
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		PathGPURenderThread *t = new PathGPURenderThread(
-				i, seedBase, i / (float)renderThreadCount,
+				i, seedBase + i * PATHGPU_PATH_COUNT, i / (float)renderThreadCount,
 				oclIntersectionDevices[i], this);
 		renderThreads.push_back(t);
 	}
