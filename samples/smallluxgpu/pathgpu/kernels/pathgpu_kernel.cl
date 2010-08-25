@@ -727,7 +727,7 @@ void Matte_f(__global MatteParam *mat, const Vector *wi,
 	if (dp <= 0.0001f)
 		*pdf = 0.f;
 	else {
-		*pdf =  1.f / dp;
+		*pdf = 1.f / dp;
 
 		f->r = mat->r * INV_PI;
 		f->g = mat->g * INV_PI;
@@ -784,9 +784,9 @@ void Glass_Sample_f(__global GlassParam *mat,
         *wi = reflDir;
         *pdf = 1.f;
 
-        f->r =  mat->refl_r;
-        f->g =  mat->refl_g;
-        f->b =  mat->refl_b;
+        f->r = mat->refl_r;
+        f->g = mat->refl_g;
+        f->b = mat->refl_b;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
         *specularBounce = mat->reflectionSpecularBounce;
 #endif
@@ -817,9 +817,9 @@ void Glass_Sample_f(__global GlassParam *mat,
                 *wi = reflDir;
                 *pdf = 1.f;
 
-                f->r =  mat->refl_r;
-                f->g =  mat->refl_g;
-                f->b =  mat->refl_b;
+                f->r = mat->refl_r;
+                f->g = mat->refl_g;
+                f->b = mat->refl_b;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
                 *specularBounce = mat->reflectionSpecularBounce;
 #endif
@@ -828,9 +828,9 @@ void Glass_Sample_f(__global GlassParam *mat,
             *wi = transDir;
             *pdf = 1.f;
 
-            f->r =  mat->refrct_r;
-            f->g =  mat->refrct_g;
-            f->b =  mat->refrct_b;
+            f->r = mat->refrct_r;
+            f->g = mat->refrct_g;
+            f->b = mat->refrct_b;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = mat->transmitionSpecularBounce;
 #endif
@@ -838,9 +838,9 @@ void Glass_Sample_f(__global GlassParam *mat,
             *wi = reflDir;
             *pdf = P / Re;
 
-            f->r =  mat->refl_r;
-            f->g =  mat->refl_g;
-            f->b =  mat->refl_b;
+            f->r = mat->refl_r;
+            f->g = mat->refl_g;
+            f->b = mat->refl_b;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = mat->reflectionSpecularBounce;
 #endif
@@ -848,9 +848,9 @@ void Glass_Sample_f(__global GlassParam *mat,
             *wi = transDir;
             *pdf = (1.f - P) / Tr;
 
-            f->r =  mat->refrct_r;
-            f->g =  mat->refrct_g;
-            f->b =  mat->refrct_b;
+            f->r = mat->refrct_r;
+            f->g = mat->refrct_g;
+            f->b = mat->refrct_b;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = mat->transmitionSpecularBounce;
 #endif
