@@ -426,7 +426,7 @@ public:
 	MatteMetalMaterial(const Spectrum &col, const Spectrum refl, const float exp, bool reflSpecularBounce) :
 		matte(col), metal(refl, exp, reflSpecularBounce) {
 		matteFilter = matte.GetKd().Filter();
-		metalFilter = metal.GetKr().Filter();
+		const float metalFilter = metal.GetKr().Filter();
 		totFilter = matteFilter + metalFilter;
 
 		mattePdf = matteFilter / totFilter;
@@ -459,11 +459,17 @@ public:
 			return f;
 		}
 	}
+	const MatteMaterial &GetMatte() const { return matte; }
+	const MetalMaterial &GetMetal() const { return metal; }
+	float GetMatteFilter() const { return matteFilter; }
+	float GetTotFilter() const { return totFilter; }
+	float GetMattePdf() const { return mattePdf; }
+	float GetMetalPdf() const { return metalPdf; }
 
 private:
 	MatteMaterial matte;
 	MetalMaterial metal;
-	float matteFilter, metalFilter, totFilter, mattePdf, metalPdf;
+	float matteFilter, totFilter, mattePdf, metalPdf;
 };
 
 class ArchGlassMaterial : public SurfaceMaterial {
