@@ -187,7 +187,7 @@ std::string luxrays::KernelSource_PathGPU =
 "} MetalParam;\n"
 "\n"
 "typedef struct {\n"
-"	uint type;\n"
+"	unsigned int type;\n"
 "	union {\n"
 "		MatteParam matte;\n"
 "        AreaLightParam areaLight;\n"

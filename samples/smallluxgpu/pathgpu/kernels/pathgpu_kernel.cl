@@ -185,7 +185,7 @@ typedef struct {
 } MetalParam;
 
 typedef struct {
-	uint type;
+	unsigned int type;
 	union {
 		MatteParam matte;
         AreaLightParam areaLight;
