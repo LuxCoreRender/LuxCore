@@ -151,8 +151,6 @@ private:
 	void InitRender();
 	void EnqueueInitFrameBufferKernel(const bool clearPBO = false);
 
-	boost::mutex threadMutex;
-
 	OpenCLIntersectionDevice *intersectionDevice;
 
 	// OpenCL variables
@@ -243,8 +241,6 @@ public:
 private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	vector<PathGPURenderThread *> renderThreads;
-	boost::barrier *threadBarrier;
-	boost::mutex compileMutex; // Used as work around to not thread-safe ATI compiler
 	SampleBuffer *sampleBuffer;
 
 	double startTime;
