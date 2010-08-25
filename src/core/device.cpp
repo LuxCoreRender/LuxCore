@@ -215,15 +215,15 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 #else
 #ifdef WIN32
 			cl_context_properties cps[] = {
-				CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
-				CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+				CL_GL_CONTEXT_KHR, (intptr_t)wglGetCurrentContext(),
+				CL_WGL_HDC_KHR, (intptr_t)wglGetCurrentDC(),
 				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 				0
 			};
 #else
 			cl_context_properties cps[] = {
-				CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
-				CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
+				CL_GL_CONTEXT_KHR, (intptr_t)glXGetCurrentContext(),
+				CL_GLX_DISPLAY_KHR, (intptr_t)glXGetCurrentDisplay(),
 				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 				0
 			};
