@@ -27,6 +27,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <boost/thread/mutex.hpp>
+
 #include <GL/glew.h>
 
 #include "smalllux.h"
@@ -81,8 +83,30 @@ static void AppendMatrixDefinition(stringstream &ss, const char *paramName, cons
 	}
 }
 
+
 void PathGPURenderThread::Start() {
 	started = true;
+
+	if (renderEngine->hasOpenGLInterop)
+		InitRender();
+	else {
+		// Create the thread for the rendering
+		renderThread = new boost::thread(boost::bind(PathGPURenderThread::RenderThreadImpl, this));
+
+		// Set renderThread priority
+		bool res = SetThreadRRPriority(renderThread);
+		if (res && !reportedPermissionError) {
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
+			reportedPermissionError = true;
+		}
+	}
+
+	lastCameraUpdate = WallClockTime();
+}
+
+void PathGPURenderThread::InitRender() {
+	boost::unique_lock<boost::mutex> lock(threadMutex);
+
 	const unsigned int pixelCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
 
 	// Delete previous allocated frameBuffer
@@ -500,12 +524,18 @@ void PathGPURenderThread::Start() {
 		AppendMatrixDefinition(ss, "PARAM_CAMERA2WORLD", scene->camera->GetCameraToWorldMatrix());
 	}
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << ss.str() << endl;
-
 	try {
+		// Used as work around to not thread-safe ATI compiler
+		boost::unique_lock<boost::mutex> lock(renderEngine->compileMutex);
+
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << ss.str() << endl;
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling kernels " << endl;
+
+		const double t = WallClockTime();
 		VECTOR_CLASS<cl::Device> buildDevice;
 		buildDevice.push_back(oclDevice);
 		program.build(buildDevice, ss.str().c_str());
+		cerr  << "[PathGPURenderThread::" << threadIndex << "] Kernels compilation time: " << setprecision(1) << fixed << WallClockTime() - t << "secs" << endl;
 	} catch (cl::Error err) {
 		cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
@@ -517,12 +547,10 @@ void PathGPURenderThread::Start() {
 	// Init kernel
 	//--------------------------------------------------------------------------
 
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
 	initKernel = new cl::Kernel(program, "Init");
 	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
-	cl_ulong memSize;
-	initKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Init kernel memory footprint: " << memSize << endl;
 
 	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
@@ -539,8 +567,6 @@ void PathGPURenderThread::Start() {
 	initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
 	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
-	initFBKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel memory footprint: " << memSize << endl;
 
 	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
@@ -558,8 +584,6 @@ void PathGPURenderThread::Start() {
 		updatePBKernel = new cl::Kernel(program, "UpdatePixelBuffer");
 		updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
 		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBuffer kernel work group size: " << updatePBWorkGroupSize << endl;
-		updatePBKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBuffer kernel memory footprint: " << memSize << endl;
 
 		updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
 		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBWorkGroupSize << endl;
@@ -572,8 +596,6 @@ void PathGPURenderThread::Start() {
 		updatePBBluredKernel = new cl::Kernel(program, "UpdatePixelBufferBlured");
 		updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
 		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel work group size: " << updatePBBluredWorkGroupSize << endl;
-		updatePBBluredKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel memory footprint: " << memSize << endl;
 
 		updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
 		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBBluredWorkGroupSize << endl;
@@ -594,8 +616,6 @@ void PathGPURenderThread::Start() {
 	advancePathKernel = new cl::Kernel(program, "AdvancePaths");
 	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathWorkGroupSize << endl;
-	advancePathKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel memory footprint: " << memSize << endl;
 
 	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathWorkGroupSize << endl;
@@ -642,28 +662,18 @@ void PathGPURenderThread::Start() {
 		advancePathKernel->setArg(argIndex++, *infiniteLightBuff);
 	if (triLightsBuff)
 		advancePathKernel->setArg(argIndex++, *triLightsBuff);
-
-	if (!renderEngine->hasOpenGLInterop) {
-		// Create the thread for the rendering
-		renderThread = new boost::thread(boost::bind(PathGPURenderThread::RenderThreadImpl, this));
-
-		// Set renderThread priority
-		bool res = SetThreadRRPriority(renderThread);
-		if (res && !reportedPermissionError) {
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
-			reportedPermissionError = true;
-		}
-	}
-
-	lastCameraUpdate = WallClockTime();
 }
 
 void PathGPURenderThread::Interrupt() {
+	boost::unique_lock<boost::mutex> lock(threadMutex);
+
 	if (renderThread)
 		renderThread->interrupt();
 }
 
 void PathGPURenderThread::Stop() {
+	boost::unique_lock<boost::mutex> lock(threadMutex);
+
 	if (renderThread) {
 		renderThread->interrupt();
 		renderThread->join();
@@ -863,6 +873,11 @@ void PathGPURenderThread::EnqueueInitFrameBufferKernel(const bool clearPBO) {
 }
 
 void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
+	cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread intnitialization" << endl;
+
+	renderThread->InitRender();
+	renderThread->renderEngine->threadBarrier->wait();
+
 	cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
@@ -938,6 +953,8 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
 		vector<IntersectionDevice *> intersectionDevices, const Properties &cfg) :
 		RenderEngine(scn, flm, filmMutex) {
+	threadBarrier = NULL;
+
 	samplePerPixel = max(1, cfg.GetInt("path.sampler.spp", cfg.GetInt("sampler.spp", 4)));
 	samplePerPixel *= samplePerPixel;
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
@@ -1009,8 +1026,14 @@ void PathGPURenderEngine::Start() {
 	samplesCount = 0;
 	elapsedTime = 0.0f;
 
+	if (!hasOpenGLInterop)
+		threadBarrier = new boost::barrier(renderThreads.size() + 1);
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
+	if (!hasOpenGLInterop) {
+		// Wait for all threads to be ready
+		threadBarrier->wait();
+	}
 
 	startTime = WallClockTime();
 }
@@ -1025,6 +1048,8 @@ void PathGPURenderEngine::Stop() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
+	delete threadBarrier;
+	threadBarrier = NULL;
 
 	UpdateFilm();
 }

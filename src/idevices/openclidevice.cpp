@@ -212,9 +212,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				bvhKernel = new cl::Kernel(program, "Intersect");
 				bvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel work group size: " << bvhWorkGroupSize);
-				cl_ulong memSize;
-				bvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel memory footprint: " << memSize);
 
 				bvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &bvhWorkGroupSize);
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << bvhWorkGroupSize);
@@ -279,9 +276,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					qbvhKernel = new cl::Kernel(program, "Intersect");
 					qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel work group size: " << qbvhWorkGroupSize);
-					cl_ulong memSize;
-					qbvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel memory footprint: " << memSize);
 
 					qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhWorkGroupSize);
@@ -314,9 +308,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					qbvhImageKernel = new cl::Kernel(program, "Intersect");
 					qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage kernel work group size: " << qbvhImageWorkGroupSize);
-					cl_ulong memSize;
-					qbvhImageKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage kernel memory footprint: " << memSize);
 
 					qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhImageWorkGroupSize);
@@ -487,9 +478,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				mqbvhKernel = new cl::Kernel(program, "Intersect");
 				mqbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &mqbvhWorkGroupSize);
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH kernel work group size: " << mqbvhWorkGroupSize);
-				cl_ulong memSize;
-				mqbvhKernel->getWorkGroupInfo<cl_ulong>(oclDevice, CL_KERNEL_LOCAL_MEM_SIZE, &memSize);
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH kernel memory footprint: " << memSize);
 
 				mqbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &mqbvhWorkGroupSize);
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << mqbvhWorkGroupSize);
