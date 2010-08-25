@@ -84,18 +84,12 @@ typedef struct {
 	unsigned int count;
 } Pixel;
 
-
-#define MAT_MATTE 0
-#define MAT_AREALIGHT 1
-#define MAT_MIRROR 2
-#define MAT_GLASS 3
-#define MAT_MATTE_MIRROR 4
-
 #define MAT_MATTE 0
 #define MAT_AREALIGHT 1
 #define MAT_MIRROR 2
 #define MAT_GLASS 3
 #define MAT_MATTEMIRROR 4
+#define MAT_METAL 5
 
 typedef struct {
     float r, g, b;
@@ -125,6 +119,12 @@ typedef struct {
 } MatteMirrorParam;
 
 typedef struct {
+    float r, g, b;
+    float exponent;
+    int specularBounce;
+} MetalParam;
+
+typedef struct {
 	uint type;
 	union {
 		MatteParam matte;
@@ -132,6 +132,7 @@ typedef struct {
 		MirrorParam mirror;
         GlassParam glass;
 		MatteMirrorParam matteMirror;
+        MetalParam metal;
 	} mat;
 } Material;
 
