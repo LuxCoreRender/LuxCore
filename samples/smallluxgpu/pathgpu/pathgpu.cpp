@@ -173,6 +173,12 @@ void PathGPURenderThread::InitRender() {
 	// Translate material definitions
 	//--------------------------------------------------------------------------
 
+	bool enable_MAT_MATTE = false;
+	bool enable_MAT_AREALIGHT = false;
+	bool enable_MAT_MIRROR = false;
+	bool enable_MAT_GLASS = false;
+	bool enable_MAT_MATTEMIRROR = false;
+	bool enable_MAT_METAL = false;
 	const unsigned int materialsCount = scene->materials.size();
 	PathGPU::Material *mats = new PathGPU::Material[materialsCount];
 	for (unsigned int i = 0; i < materialsCount; ++i) {
@@ -181,6 +187,7 @@ void PathGPURenderThread::InitRender() {
 
 		switch (m->GetType()) {
 			case MATTE: {
+				enable_MAT_MATTE = true;
 				MatteMaterial *mm = (MatteMaterial *)m;
 
 				gpum->type = MAT_MATTE;
@@ -190,6 +197,7 @@ void PathGPURenderThread::InitRender() {
 				break;
 			}
 			case AREALIGHT: {
+				enable_MAT_AREALIGHT = true;
 				AreaLightMaterial *alm = (AreaLightMaterial *)m;
 
 				gpum->type = MAT_AREALIGHT;
@@ -199,6 +207,7 @@ void PathGPURenderThread::InitRender() {
 				break;
 			}
 			case MIRROR: {
+				enable_MAT_MIRROR = true;
 				MirrorMaterial *mm = (MirrorMaterial *)m;
 
 				gpum->type = MAT_MIRROR;
@@ -209,6 +218,7 @@ void PathGPURenderThread::InitRender() {
 				break;
 			}
 			case GLASS: {
+				enable_MAT_GLASS = true;
 				GlassMaterial *gm = (GlassMaterial *)m;
 
 				gpum->type = MAT_GLASS;
@@ -227,6 +237,7 @@ void PathGPURenderThread::InitRender() {
 				break;
 			}
 			case MATTEMIRROR: {
+				enable_MAT_MATTEMIRROR = true;
 				MatteMirrorMaterial *mmm = (MatteMirrorMaterial *)m;
 
 				gpum->type = MAT_MATTEMIRROR;
@@ -246,6 +257,7 @@ void PathGPURenderThread::InitRender() {
 				break;
 			}
 			case METAL: {
+				enable_MAT_METAL = true;
 				MetalMaterial *mm = (MetalMaterial *)m;
 
 				gpum->type = MAT_METAL;
@@ -257,6 +269,7 @@ void PathGPURenderThread::InitRender() {
 				break;
 			}
 			default: {
+				enable_MAT_MATTE = true;
 				gpum->type = MAT_MATTE;
 				gpum->mat.matte.r = 0.75f;
 				gpum->mat.matte.g = 0.75f;
@@ -503,6 +516,19 @@ void PathGPURenderThread::InitRender() {
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f" <<
 			" -D PARAM_SAMPLE_PER_PIXEL=" << renderEngine->samplePerPixel
 			;
+
+	if (enable_MAT_MATTE)
+		ss << " -D PARAM_ENABLE_MAT_MATTE";
+	if (enable_MAT_AREALIGHT)
+		ss << " -D PARAM_ENABLE_MAT_AREALIGHT";
+	if (enable_MAT_MIRROR)
+		ss << " -D PARAM_ENABLE_MAT_MIRROR";
+	if (enable_MAT_GLASS)
+		ss << " -D PARAM_ENABLE_MAT_GLASS";
+	if (enable_MAT_MATTEMIRROR)
+		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
+	if (enable_MAT_METAL)
+		ss << " -D PARAM_ENABLE_MAT_METAL";
 
 	if (scene->camera->lensRadius > 0.f) {
 		ss <<
