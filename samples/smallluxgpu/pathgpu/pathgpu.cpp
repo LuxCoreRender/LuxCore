@@ -83,13 +83,12 @@ static void AppendMatrixDefinition(stringstream &ss, const char *paramName, cons
 	}
 }
 
-
 void PathGPURenderThread::Start() {
 	started = true;
 
-	if (renderEngine->hasOpenGLInterop)
-		InitRender();
-	else {
+	InitRender();
+
+	if (!renderEngine->hasOpenGLInterop) {
 		// Create the thread for the rendering
 		renderThread = new boost::thread(boost::bind(PathGPURenderThread::RenderThreadImpl, this));
 
@@ -105,8 +104,6 @@ void PathGPURenderThread::Start() {
 }
 
 void PathGPURenderThread::InitRender() {
-	boost::unique_lock<boost::mutex> lock(threadMutex);
-
 	const unsigned int pixelCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
 
 	// Delete previous allocated frameBuffer
@@ -525,9 +522,6 @@ void PathGPURenderThread::InitRender() {
 	}
 
 	try {
-		// Used as work around to not thread-safe ATI compiler
-		boost::unique_lock<boost::mutex> lock(renderEngine->compileMutex);
-
 		cerr << "[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << ss.str() << endl;
 		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling kernels " << endl;
 
@@ -665,15 +659,11 @@ void PathGPURenderThread::InitRender() {
 }
 
 void PathGPURenderThread::Interrupt() {
-	boost::unique_lock<boost::mutex> lock(threadMutex);
-
 	if (renderThread)
 		renderThread->interrupt();
 }
 
 void PathGPURenderThread::Stop() {
-	boost::unique_lock<boost::mutex> lock(threadMutex);
-
 	if (renderThread) {
 		renderThread->interrupt();
 		renderThread->join();
@@ -873,11 +863,6 @@ void PathGPURenderThread::EnqueueInitFrameBufferKernel(const bool clearPBO) {
 }
 
 void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
-	cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread intnitialization" << endl;
-
-	renderThread->InitRender();
-	renderThread->renderEngine->threadBarrier->wait();
-
 	cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
@@ -953,8 +938,6 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
 		vector<IntersectionDevice *> intersectionDevices, const Properties &cfg) :
 		RenderEngine(scn, flm, filmMutex) {
-	threadBarrier = NULL;
-
 	samplePerPixel = max(1, cfg.GetInt("path.sampler.spp", cfg.GetInt("sampler.spp", 4)));
 	samplePerPixel *= samplePerPixel;
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
@@ -1026,14 +1009,8 @@ void PathGPURenderEngine::Start() {
 	samplesCount = 0;
 	elapsedTime = 0.0f;
 
-	if (!hasOpenGLInterop)
-		threadBarrier = new boost::barrier(renderThreads.size() + 1);
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
-	if (!hasOpenGLInterop) {
-		// Wait for all threads to be ready
-		threadBarrier->wait();
-	}
 
 	startTime = WallClockTime();
 }
@@ -1048,8 +1025,6 @@ void PathGPURenderEngine::Stop() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
-	delete threadBarrier;
-	threadBarrier = NULL;
 
 	UpdateFilm();
 }
