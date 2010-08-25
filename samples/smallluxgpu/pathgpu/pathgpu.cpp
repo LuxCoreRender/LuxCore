@@ -245,6 +245,17 @@ void PathGPURenderThread::InitRender() {
 				gpum->mat.matteMirror.mirrorPdf = mmm->GetMirrorPdf();
 				break;
 			}
+			case METAL: {
+				MetalMaterial *mm = (MetalMaterial *)m;
+
+				gpum->type = MAT_METAL;
+				gpum->mat.metal.r = mm->GetKr().r;
+				gpum->mat.metal.g = mm->GetKr().g;
+				gpum->mat.metal.b = mm->GetKr().b;
+				gpum->mat.metal.exponent = mm->GetExp();
+				gpum->mat.metal.specularBounce = mm->HasSpecularBounceEnabled();
+				break;
+			}
 			default: {
 				gpum->type = MAT_MATTE;
 				gpum->mat.matte.r = 0.75f;

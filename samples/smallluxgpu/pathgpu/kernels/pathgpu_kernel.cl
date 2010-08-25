@@ -141,6 +141,7 @@ typedef struct {
 #define MAT_MIRROR 2
 #define MAT_GLASS 3
 #define MAT_MATTEMIRROR 4
+#define MAT_METAL 5
 
 typedef struct {
     float r, g, b;
@@ -170,6 +171,12 @@ typedef struct {
 } MatteMirrorParam;
 
 typedef struct {
+    float r, g, b;
+    float exponent;
+    int specularBounce;
+} MetalParam;
+
+typedef struct {
 	uint type;
 	union {
 		MatteParam matte;
@@ -177,6 +184,7 @@ typedef struct {
 		MirrorParam mirror;
         GlassParam glass;
 		MatteMirrorParam matteMirror;
+        MetalParam metal;
 	} mat;
 } Material;
 
@@ -869,6 +877,63 @@ void MatteMirror_Sample_f(__global MatteMirrorParam *mat, const Vector *wo, Vect
 		}
 }
 
+void GlossyReflection(const Vector *wo, Vector *wi, const float exponent,
+		const Vector *shadeN, const float u0, const float u1) {
+    const float phi = 2.f * M_PI * u0;
+    const float cosTheta = pow(1.f - u1, exponent);
+    const float sinTheta = sqrt(1.f - cosTheta * cosTheta);
+    const float x = cos(phi) * sinTheta;
+    const float y = sin(phi) * sinTheta;
+    const float z = cosTheta;
+
+    Vector w;
+    const float RdotShadeN = Dot(shadeN, wo);
+	w.x = (2.f * RdotShadeN) * shadeN->x - wo->x;
+	w.y = (2.f * RdotShadeN) * shadeN->y - wo->y;
+	w.z = (2.f * RdotShadeN) * shadeN->z - wo->z;
+
+    Vector u, a;
+    if (fabs(shadeN->x) > .1f) {
+        a.x = 0.f;
+        a.y = 1.f;
+    } else {
+        a.x = 1.f;
+        a.y = 0.f;
+    }
+    a.z = 0.f;
+    Cross(&u, &a, &w);
+    Normalize(&u);
+    Vector v;
+    Cross(&v, &w, &u);
+
+    wi->x = x * u.x + y * v.x + z * w.x;
+    wi->y = x * u.y + y * v.y + z * w.y;
+    wi->z = x * u.z + y * v.z + z * w.z;
+}
+
+void Metal_Sample_f(__global MetalParam *mat, const Vector *wo, Vector *wi,
+		float *pdf, Spectrum *f, const Vector *shadeN,
+		const float u0, const float u1
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global int *specularBounce
+#endif
+		) {
+        GlossyReflection(wo, wi, mat->exponent, shadeN, u0, u1);
+
+		if (Dot(wi, shadeN) > 0.f) {
+			*pdf = 1.f;
+
+            f->r = mat->r;
+            f->g = mat->g;
+            f->b = mat->b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+            *specularBounce = mat->specularBounce;
+#endif
+		} else
+			*pdf = 0.f;
+}
+
 //------------------------------------------------------------------------------
 // Lights
 //------------------------------------------------------------------------------
@@ -1215,6 +1280,13 @@ __kernel void AdvancePaths(
 				break;
             case MAT_MATTEMIRROR:
                 MatteMirror_Sample_f(&hitPointMat->mat.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					, &path->specularBounce
+#endif
+					);
+                break;
+            case MAT_METAL:
+				Metal_Sample_f(&hitPointMat->mat.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif

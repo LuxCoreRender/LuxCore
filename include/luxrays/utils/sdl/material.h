@@ -385,6 +385,8 @@ public:
 	}
 
 	const Spectrum &GetKr() const { return Kr; }
+	float GetExp() const { return exponent; }
+	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
 	static Vector GlossyReflection(const Vector &wo, const float exponent,
 		const Normal &shadeN, const float u0, const float u1) {
