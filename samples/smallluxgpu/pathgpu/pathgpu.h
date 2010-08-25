@@ -125,6 +125,12 @@ typedef struct {
 } MetalParam;
 
 typedef struct {
+	MatteParam matte;
+	MetalParam metal;
+	float matteFilter, totFilter, mattePdf, metalPdf;
+} MatteMetalParam;
+
+typedef struct {
 	unsigned int type;
 	union {
 		MatteParam matte;
@@ -133,6 +139,7 @@ typedef struct {
         GlassParam glass;
 		MatteMirrorParam matteMirror;
         MetalParam metal;
+        MatteMetalParam matteMetal;
 	} mat;
 } Material;
 

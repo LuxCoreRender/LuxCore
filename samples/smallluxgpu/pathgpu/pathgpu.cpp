@@ -179,6 +179,7 @@ void PathGPURenderThread::InitRender() {
 	bool enable_MAT_GLASS = false;
 	bool enable_MAT_MATTEMIRROR = false;
 	bool enable_MAT_METAL = false;
+	bool enable_MAT_MATTEMETAL = false;
 	const unsigned int materialsCount = scene->materials.size();
 	PathGPU::Material *mats = new PathGPU::Material[materialsCount];
 	for (unsigned int i = 0; i < materialsCount; ++i) {
@@ -266,6 +267,27 @@ void PathGPURenderThread::InitRender() {
 				gpum->mat.metal.b = mm->GetKr().b;
 				gpum->mat.metal.exponent = mm->GetExp();
 				gpum->mat.metal.specularBounce = mm->HasSpecularBounceEnabled();
+				break;
+			}
+			case MATTEMETAL: {
+				enable_MAT_MATTEMETAL = true;
+				MatteMetalMaterial *mmm = (MatteMetalMaterial *)m;
+
+				gpum->type = MATTEMETAL;
+				gpum->mat.matteMetal.matte.r = mmm->GetMatte().GetKd().r;
+				gpum->mat.matteMetal.matte.g = mmm->GetMatte().GetKd().g;
+				gpum->mat.matteMetal.matte.b = mmm->GetMatte().GetKd().b;
+
+				gpum->mat.matteMetal.metal.r = mmm->GetMetal().GetKr().r;
+				gpum->mat.matteMetal.metal.g = mmm->GetMetal().GetKr().g;
+				gpum->mat.matteMetal.metal.b = mmm->GetMetal().GetKr().b;
+				gpum->mat.matteMetal.metal.exponent = mmm->GetMetal().GetExp();
+				gpum->mat.matteMetal.metal.specularBounce = mmm->GetMetal().HasSpecularBounceEnabled();
+
+				gpum->mat.matteMetal.matteFilter = mmm->GetMatteFilter();
+				gpum->mat.matteMetal.totFilter = mmm->GetTotFilter();
+				gpum->mat.matteMetal.mattePdf = mmm->GetMattePdf();
+				gpum->mat.matteMetal.metalPdf = mmm->GetMetalPdf();
 				break;
 			}
 			default: {
@@ -529,7 +551,8 @@ void PathGPURenderThread::InitRender() {
 		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
 	if (enable_MAT_METAL)
 		ss << " -D PARAM_ENABLE_MAT_METAL";
-
+	if (enable_MAT_MATTEMETAL)
+		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
 	if (scene->camera->lensRadius > 0.f) {
 		ss <<
 				" -D PARAM_CAMERA_HAS_DOF"

@@ -50,6 +50,7 @@
 //  PARAM_ENABLE_GLASS
 //  PARAM_ENABLE_MATTEMIRROR
 //  PARAM_ENABLE_METAL
+//  PARAM_ENABLE_MATTEMETAL
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -150,6 +151,7 @@ typedef struct {
 #define MAT_GLASS 3
 #define MAT_MATTEMIRROR 4
 #define MAT_METAL 5
+#define MAT_MATTEMETAL 6
 
 typedef struct {
     float r, g, b;
@@ -185,6 +187,12 @@ typedef struct {
 } MetalParam;
 
 typedef struct {
+	MatteParam matte;
+	MetalParam metal;
+	float matteFilter, totFilter, mattePdf, metalPdf;
+} MatteMetalParam;
+
+typedef struct {
 	unsigned int type;
 	union {
 		MatteParam matte;
@@ -193,6 +201,7 @@ typedef struct {
         GlassParam glass;
 		MatteMirrorParam matteMirror;
         MetalParam metal;
+        MatteMetalParam matteMetal;
 	} mat;
 } Material;
 
@@ -942,6 +951,33 @@ void Metal_Sample_f(__global MetalParam *mat, const Vector *wo, Vector *wi,
 			*pdf = 0.f;
 }
 
+void MatteMetal_Sample_f(__global MatteMetalParam *mat, const Vector *wo, Vector *wi,
+		float *pdf, Spectrum *f, const Vector *shadeN,
+		const float u0, const float u1, const float u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global int *specularBounce
+#endif
+		) {
+        const float totFilter = mat->totFilter;
+        const float comp = u2 * totFilter;
+
+		if (comp > mat->matteFilter) {
+            Metal_Sample_f(&mat->metal, wo, wi, pdf, f, shadeN, u0, u1
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+                , specularBounce
+#endif
+                );
+			*pdf *= mat->metalPdf;
+		} else {
+            Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+                , specularBounce
+#endif
+                );
+			*pdf *= mat->mattePdf;
+		}
+}
+
 //------------------------------------------------------------------------------
 // Lights
 //------------------------------------------------------------------------------
@@ -1312,6 +1348,16 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_METAL)
             case MAT_METAL:
 				Metal_Sample_f(&hitPointMat->mat.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					, &path->specularBounce
+#endif
+					);
+                break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MATTEMETAL)
+            case MAT_MATTEMETAL:
+                MatteMetal_Sample_f(&hitPointMat->mat.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
