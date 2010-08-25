@@ -43,6 +43,14 @@
 //  PARAM_DIRECT_LIGHT_SAMPLING
 //  PARAM_DL_LIGHT_COUNT
 
+// To enable single material suopport (work around for ATI compiler problems)
+//  PARAM_ENABLE_MAT_MATTE
+//  PARAM_ENABLE_AREALIGHT
+//  PARAM_ENABLE_MIRROR
+//  PARAM_ENABLE_GLASS
+//  PARAM_ENABLE_MATTEMIRROR
+//  PARAM_ENABLE_METAL
+
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
 //  PARAM_IL_GAIN_R
@@ -1241,6 +1249,8 @@ __kernel void AdvancePaths(
 		materialLe.b = 0.f;
 		bool areaLightHit = false;
 		switch (hitPointMat->type) {
+
+#if defined(PARAM_ENABLE_MAT_MATTE)
 			case MAT_MATTE:
 				Matte_Sample_f(&hitPointMat->mat.matte, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -1248,6 +1258,9 @@ __kernel void AdvancePaths(
 #endif
 					);
 				break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_AREALIGHT)
 			case MAT_AREALIGHT:
 				areaLightHit = true;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -1263,6 +1276,9 @@ __kernel void AdvancePaths(
                 f.g = 1.f;
                 f.b = 1.f;
 				break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MIRROR)
 			case MAT_MIRROR:
 				Mirror_Sample_f(&hitPointMat->mat.mirror, &wo, &wi, &pdf, &f, &shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -1270,6 +1286,9 @@ __kernel void AdvancePaths(
 #endif
 					);
 				break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_GLASS)
 			case MAT_GLASS:
 				Glass_Sample_f(&hitPointMat->mat.glass, &rayDir, &wi, &N, &shadeN,
                     u0, &pdf, &f
@@ -1278,6 +1297,9 @@ __kernel void AdvancePaths(
 #endif
 					);
 				break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MATTEMIRROR)
             case MAT_MATTEMIRROR:
                 MatteMirror_Sample_f(&hitPointMat->mat.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -1285,6 +1307,9 @@ __kernel void AdvancePaths(
 #endif
 					);
                 break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_METAL)
             case MAT_METAL:
 				Metal_Sample_f(&hitPointMat->mat.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -1292,6 +1317,8 @@ __kernel void AdvancePaths(
 #endif
 					);
                 break;
+#endif
+
 			default:
 				// Huston, we have a problem...
 				pdf = 0.f;
