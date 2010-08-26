@@ -202,7 +202,7 @@ typedef struct {
 		MatteMirrorParam matteMirror;
         MetalParam metal;
         MatteMetalParam matteMetal;
-	} mat;
+	} param;
 } Material;
 
 typedef struct {
@@ -729,21 +729,6 @@ void Matte_Sample_f(__global MatteParam *mat, const Vector *wo, Vector *wi,
 #endif
 }
 
-void Matte_f(__global MatteParam *mat, const Vector *wi,
-		float *pdf, Spectrum *f, const Vector *shadeN) {
-	const float dp = Dot(shadeN, wi);
-	// Using 0.0001 instead of 0.0 to cut down fireflies
-	if (dp <= 0.0001f)
-		*pdf = 0.f;
-	else {
-		*pdf = 1.f / dp;
-
-		f->r = mat->r * INV_PI;
-		f->g = mat->g * INV_PI;
-		f->b = mat->b * INV_PI;
-	}
-}
-
 void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -874,24 +859,24 @@ void MatteMirror_Sample_f(__global MatteMirrorParam *mat, const Vector *wo, Vect
 		, __global int *specularBounce
 #endif
 		) {
-        const float totFilter = mat->totFilter;
-        const float comp = u2 * totFilter;
+    const float totFilter = mat->totFilter;
+    const float comp = u2 * totFilter;
 
-		if (comp > mat->matteFilter) {
-            Mirror_Sample_f(&mat->mirror, wo, wi, pdf, f, shadeN
+    if (comp > mat->matteFilter) {
+        Mirror_Sample_f(&mat->mirror, wo, wi, pdf, f, shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-                , specularBounce
+            , specularBounce
 #endif
-                );
-			*pdf *= mat->mirrorPdf;
-		} else {
-            Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
+            );
+        *pdf *= mat->mirrorPdf;
+    } else {
+        Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-                , specularBounce
+            , specularBounce
 #endif
-                );
-			*pdf *= mat->mattePdf;
-		}
+            );
+        *pdf *= mat->mattePdf;
+    }
 }
 
 void GlossyReflection(const Vector *wo, Vector *wi, const float exponent,
@@ -1139,7 +1124,7 @@ __kernel void AdvancePaths(
 	uint currentTriangleIndex = rayHit->index;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	int newState = PATH_STATE_NEXT_VERTEX;
+    float directLightPdf = 0.f;
 	if (path->state == PATH_STATE_SAMPLE_LIGHT) {
 		if (currentTriangleIndex == 0xffffffffu) {
 			// Nothing was hit, the light is visible
@@ -1164,8 +1149,17 @@ __kernel void AdvancePaths(
 			const uint meshIndex = meshIDs[currentTriangleIndex];
 			__global Material *mat = &mats[meshMats[meshIndex]];
 
-			const bool isDiffuse = (mat->type == MAT_MATTE) || (mat->type == MAT_MATTEMIRROR);
-			newState = isDiffuse ? PATH_STATE_SAMPLE_LIGHT : PATH_STATE_NEXT_VERTEX;
+            switch (mat->type) {
+                case MAT_MATTE:
+                    directLightPdf = 1.f;
+                    break;
+                case MAT_MATTEMIRROR:
+                    directLightPdf = 1.f / mat->param.matteMirror.mattePdf;
+                    break;
+                case MAT_MATTEMETAL:
+                    directLightPdf = 1.f / mat->param.matteMetal.mattePdf;
+                    break;
+            }
 		}
 	}
 #endif
@@ -1209,7 +1203,7 @@ __kernel void AdvancePaths(
     }
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	if (newState == PATH_STATE_SAMPLE_LIGHT) {
+	if (directLightPdf > 0.f) {
 		// Select a light source to sample
 		const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 		__global TriangleLight *l = &triLights[lightIndex];
@@ -1228,15 +1222,17 @@ __kernel void AdvancePaths(
         // ATI coompiler is very slow if I use multiple if
 		//   if (lightPdf > 0.f) { ... }
         float matPdf;
-        Spectrum f;
-        // NOTE: I assume all matte mixed material have a MatteParam as first field
-        Matte_f(&hitPointMat->mat.matte, &shadowRay.d, &matPdf, &f, &shadeN);
+        const float dp = Dot(&shadeN, &shadowRay.d);
+        // Using 0.0001 instead of 0.0 to cut down fireflies
+        matPdf = (dp <= 0.0001f) ? 0.f : 1.f;
 
-        if ((lightPdf > 0.f) && (matPdf > 0.f)) {
-            const float invPdf = PARAM_DL_LIGHT_COUNT / (lightPdf * matPdf);
-            path->lightRadiance.r = throughput.r * f.r * Le.r * invPdf;
-            path->lightRadiance.g = throughput.g * f.g * Le.g * invPdf;
-            path->lightRadiance.b = throughput.b * f.b * Le.b * invPdf;
+        const float pdf = lightPdf * matPdf * directLightPdf;
+        if (pdf > 0.f) {
+            const float k = dp * PARAM_DL_LIGHT_COUNT / (pdf * M_PI);
+            // NOTE: I assume all matte mixed material have a MatteParam as first field
+            path->lightRadiance.r = throughput.r * hitPointMat->param.matte.r * k * Le.r;
+            path->lightRadiance.g = throughput.g * hitPointMat->param.matte.g * k * Le.g;
+            path->lightRadiance.b = throughput.b * hitPointMat->param.matte.b * k * Le.b;
 
             // Save current ray hit information
             path->pathHit.t = hitPointT;
@@ -1287,7 +1283,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MATTE)
 			case MAT_MATTE:
-				Matte_Sample_f(&hitPointMat->mat.matte, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+				Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1301,7 +1297,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				if (path->specularBounce) {
 #endif
-					AreaLight_Le(&hitPointMat->mat.areaLight, &wo, &N, &matRadiance);
+					AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &matRadiance);
                     matRadiance.r *= throughput.r;
                     matRadiance.g *= throughput.g;
                     matRadiance.b *= throughput.b;
@@ -1313,7 +1309,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MIRROR)
 			case MAT_MIRROR:
-				Mirror_Sample_f(&hitPointMat->mat.mirror, &wo, &wi, &pdf, &f, &shadeN
+				Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &pdf, &f, &shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1323,7 +1319,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_GLASS)
 			case MAT_GLASS:
-				Glass_Sample_f(&hitPointMat->mat.glass, &wo, &wi, &N, &shadeN,
+				Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &N, &shadeN,
                     u0, &pdf, &f
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
@@ -1334,7 +1330,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MATTEMIRROR)
             case MAT_MATTEMIRROR:
-                MatteMirror_Sample_f(&hitPointMat->mat.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+                MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1344,7 +1340,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_METAL)
             case MAT_METAL:
-				Metal_Sample_f(&hitPointMat->mat.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+				Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1354,7 +1350,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MATTEMETAL)
             case MAT_MATTEMETAL:
-                MatteMetal_Sample_f(&hitPointMat->mat.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+                MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif

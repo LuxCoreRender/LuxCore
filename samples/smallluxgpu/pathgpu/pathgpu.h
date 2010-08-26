@@ -140,7 +140,7 @@ typedef struct {
 		MatteMirrorParam matteMirror;
         MetalParam metal;
         MatteMetalParam matteMetal;
-	} mat;
+	} param;
 } Material;
 
 typedef struct {

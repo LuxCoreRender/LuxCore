@@ -193,9 +193,9 @@ void PathGPURenderThread::InitRender() {
 				MatteMaterial *mm = (MatteMaterial *)m;
 
 				gpum->type = MAT_MATTE;
-				gpum->mat.matte.r = mm->GetKd().r;
-				gpum->mat.matte.g = mm->GetKd().g;
-				gpum->mat.matte.b = mm->GetKd().b;
+				gpum->param.matte.r = mm->GetKd().r;
+				gpum->param.matte.g = mm->GetKd().g;
+				gpum->param.matte.b = mm->GetKd().b;
 				break;
 			}
 			case AREALIGHT: {
@@ -203,9 +203,9 @@ void PathGPURenderThread::InitRender() {
 				AreaLightMaterial *alm = (AreaLightMaterial *)m;
 
 				gpum->type = MAT_AREALIGHT;
-				gpum->mat.areaLight.gain_r = alm->GetGain().r;
-				gpum->mat.areaLight.gain_g = alm->GetGain().g;
-				gpum->mat.areaLight.gain_b = alm->GetGain().b;
+				gpum->param.areaLight.gain_r = alm->GetGain().r;
+				gpum->param.areaLight.gain_g = alm->GetGain().g;
+				gpum->param.areaLight.gain_b = alm->GetGain().b;
 				break;
 			}
 			case MIRROR: {
@@ -213,10 +213,10 @@ void PathGPURenderThread::InitRender() {
 				MirrorMaterial *mm = (MirrorMaterial *)m;
 
 				gpum->type = MAT_MIRROR;
-				gpum->mat.mirror.r = mm->GetKr().r;
-				gpum->mat.mirror.g = mm->GetKr().g;
-				gpum->mat.mirror.b = mm->GetKr().b;
-				gpum->mat.mirror.specularBounce = mm->HasSpecularBounceEnabled();
+				gpum->param.mirror.r = mm->GetKr().r;
+				gpum->param.mirror.g = mm->GetKr().g;
+				gpum->param.mirror.b = mm->GetKr().b;
+				gpum->param.mirror.specularBounce = mm->HasSpecularBounceEnabled();
 				break;
 			}
 			case GLASS: {
@@ -224,19 +224,19 @@ void PathGPURenderThread::InitRender() {
 				GlassMaterial *gm = (GlassMaterial *)m;
 
 				gpum->type = MAT_GLASS;
-				gpum->mat.glass.refl_r = gm->GetKrefl().r;
-				gpum->mat.glass.refl_g = gm->GetKrefl().g;
-				gpum->mat.glass.refl_b = gm->GetKrefl().b;
+				gpum->param.glass.refl_r = gm->GetKrefl().r;
+				gpum->param.glass.refl_g = gm->GetKrefl().g;
+				gpum->param.glass.refl_b = gm->GetKrefl().b;
 
-				gpum->mat.glass.refrct_r = gm->GetKrefrct().r;
-				gpum->mat.glass.refrct_g = gm->GetKrefrct().g;
-				gpum->mat.glass.refrct_b = gm->GetKrefrct().b;
+				gpum->param.glass.refrct_r = gm->GetKrefrct().r;
+				gpum->param.glass.refrct_g = gm->GetKrefrct().g;
+				gpum->param.glass.refrct_b = gm->GetKrefrct().b;
 
-				gpum->mat.glass.ousideIor = gm->GetOutsideIOR();
-				gpum->mat.glass.ior = gm->GetIOR();
-				gpum->mat.glass.R0 = gm->GetR0();
-				gpum->mat.glass.reflectionSpecularBounce = gm->HasReflSpecularBounceEnabled();
-				gpum->mat.glass.transmitionSpecularBounce = gm->HasRefrctSpecularBounceEnabled();
+				gpum->param.glass.ousideIor = gm->GetOutsideIOR();
+				gpum->param.glass.ior = gm->GetIOR();
+				gpum->param.glass.R0 = gm->GetR0();
+				gpum->param.glass.reflectionSpecularBounce = gm->HasReflSpecularBounceEnabled();
+				gpum->param.glass.transmitionSpecularBounce = gm->HasRefrctSpecularBounceEnabled();
 				break;
 			}
 			case MATTEMIRROR: {
@@ -244,19 +244,19 @@ void PathGPURenderThread::InitRender() {
 				MatteMirrorMaterial *mmm = (MatteMirrorMaterial *)m;
 
 				gpum->type = MAT_MATTEMIRROR;
-				gpum->mat.matteMirror.matte.r = mmm->GetMatte().GetKd().r;
-				gpum->mat.matteMirror.matte.g = mmm->GetMatte().GetKd().g;
-				gpum->mat.matteMirror.matte.b = mmm->GetMatte().GetKd().b;
+				gpum->param.matteMirror.matte.r = mmm->GetMatte().GetKd().r;
+				gpum->param.matteMirror.matte.g = mmm->GetMatte().GetKd().g;
+				gpum->param.matteMirror.matte.b = mmm->GetMatte().GetKd().b;
 
-				gpum->mat.matteMirror.mirror.r = mmm->GetMirror().GetKr().r;
-				gpum->mat.matteMirror.mirror.g = mmm->GetMirror().GetKr().g;
-				gpum->mat.matteMirror.mirror.b = mmm->GetMirror().GetKr().b;
-				gpum->mat.matteMirror.mirror.specularBounce = mmm->GetMirror().HasSpecularBounceEnabled();
+				gpum->param.matteMirror.mirror.r = mmm->GetMirror().GetKr().r;
+				gpum->param.matteMirror.mirror.g = mmm->GetMirror().GetKr().g;
+				gpum->param.matteMirror.mirror.b = mmm->GetMirror().GetKr().b;
+				gpum->param.matteMirror.mirror.specularBounce = mmm->GetMirror().HasSpecularBounceEnabled();
 
-				gpum->mat.matteMirror.matteFilter = mmm->GetMatteFilter();
-				gpum->mat.matteMirror.totFilter = mmm->GetTotFilter();
-				gpum->mat.matteMirror.mattePdf = mmm->GetMattePdf();
-				gpum->mat.matteMirror.mirrorPdf = mmm->GetMirrorPdf();
+				gpum->param.matteMirror.matteFilter = mmm->GetMatteFilter();
+				gpum->param.matteMirror.totFilter = mmm->GetTotFilter();
+				gpum->param.matteMirror.mattePdf = mmm->GetMattePdf();
+				gpum->param.matteMirror.mirrorPdf = mmm->GetMirrorPdf();
 				break;
 			}
 			case METAL: {
@@ -264,11 +264,11 @@ void PathGPURenderThread::InitRender() {
 				MetalMaterial *mm = (MetalMaterial *)m;
 
 				gpum->type = MAT_METAL;
-				gpum->mat.metal.r = mm->GetKr().r;
-				gpum->mat.metal.g = mm->GetKr().g;
-				gpum->mat.metal.b = mm->GetKr().b;
-				gpum->mat.metal.exponent = mm->GetExp();
-				gpum->mat.metal.specularBounce = mm->HasSpecularBounceEnabled();
+				gpum->param.metal.r = mm->GetKr().r;
+				gpum->param.metal.g = mm->GetKr().g;
+				gpum->param.metal.b = mm->GetKr().b;
+				gpum->param.metal.exponent = mm->GetExp();
+				gpum->param.metal.specularBounce = mm->HasSpecularBounceEnabled();
 				break;
 			}
 			case MATTEMETAL: {
@@ -276,28 +276,28 @@ void PathGPURenderThread::InitRender() {
 				MatteMetalMaterial *mmm = (MatteMetalMaterial *)m;
 
 				gpum->type = MATTEMETAL;
-				gpum->mat.matteMetal.matte.r = mmm->GetMatte().GetKd().r;
-				gpum->mat.matteMetal.matte.g = mmm->GetMatte().GetKd().g;
-				gpum->mat.matteMetal.matte.b = mmm->GetMatte().GetKd().b;
+				gpum->param.matteMetal.matte.r = mmm->GetMatte().GetKd().r;
+				gpum->param.matteMetal.matte.g = mmm->GetMatte().GetKd().g;
+				gpum->param.matteMetal.matte.b = mmm->GetMatte().GetKd().b;
 
-				gpum->mat.matteMetal.metal.r = mmm->GetMetal().GetKr().r;
-				gpum->mat.matteMetal.metal.g = mmm->GetMetal().GetKr().g;
-				gpum->mat.matteMetal.metal.b = mmm->GetMetal().GetKr().b;
-				gpum->mat.matteMetal.metal.exponent = mmm->GetMetal().GetExp();
-				gpum->mat.matteMetal.metal.specularBounce = mmm->GetMetal().HasSpecularBounceEnabled();
+				gpum->param.matteMetal.metal.r = mmm->GetMetal().GetKr().r;
+				gpum->param.matteMetal.metal.g = mmm->GetMetal().GetKr().g;
+				gpum->param.matteMetal.metal.b = mmm->GetMetal().GetKr().b;
+				gpum->param.matteMetal.metal.exponent = mmm->GetMetal().GetExp();
+				gpum->param.matteMetal.metal.specularBounce = mmm->GetMetal().HasSpecularBounceEnabled();
 
-				gpum->mat.matteMetal.matteFilter = mmm->GetMatteFilter();
-				gpum->mat.matteMetal.totFilter = mmm->GetTotFilter();
-				gpum->mat.matteMetal.mattePdf = mmm->GetMattePdf();
-				gpum->mat.matteMetal.metalPdf = mmm->GetMetalPdf();
+				gpum->param.matteMetal.matteFilter = mmm->GetMatteFilter();
+				gpum->param.matteMetal.totFilter = mmm->GetTotFilter();
+				gpum->param.matteMetal.mattePdf = mmm->GetMattePdf();
+				gpum->param.matteMetal.metalPdf = mmm->GetMetalPdf();
 				break;
 			}
 			default: {
 				enable_MAT_MATTE = true;
 				gpum->type = MAT_MATTE;
-				gpum->mat.matte.r = 0.75f;
-				gpum->mat.matte.g = 0.75f;
-				gpum->mat.matte.b = 0.75f;
+				gpum->param.matte.r = 0.75f;
+				gpum->param.matte.g = 0.75f;
+				gpum->param.matte.b = 0.75f;
 				break;
 			}
 		}
