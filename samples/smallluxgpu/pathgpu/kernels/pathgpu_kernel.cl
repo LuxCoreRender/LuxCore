@@ -1278,10 +1278,10 @@ __kernel void AdvancePaths(
 		float pdf;
 		Spectrum f;
 
-		Spectrum materialLe;
-		materialLe.r = 0.f;
-		materialLe.g = 0.f;
-		materialLe.b = 0.f;
+		Spectrum matRadiance;
+		matRadiance.r = 0.f;
+		matRadiance.g = 0.f;
+		matRadiance.b = 0.f;
 		bool areaLightHit = false;
 		switch (hitPointMat->type) {
 
@@ -1301,15 +1301,13 @@ __kernel void AdvancePaths(
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				if (path->specularBounce) {
 #endif
-					AreaLight_Le(&hitPointMat->mat.areaLight, &wo, &N, &materialLe);
+					AreaLight_Le(&hitPointMat->mat.areaLight, &wo, &N, &matRadiance);
+                    matRadiance.r *= throughput.r;
+                    matRadiance.g *= throughput.g;
+                    matRadiance.b *= throughput.b;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				}
 #endif
-
-                pdf = 1.f;
-                f.r = 1.f;
-                f.g = 1.f;
-                f.b = 1.f;
 				break;
 #endif
 
@@ -1370,33 +1368,22 @@ __kernel void AdvancePaths(
 				break;
 		}
 
-        const float invPdf = 1.f / pdf;
+		const uint pathDepth = path->depth + 1;
+        const float invPdf = (areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
         throughput.r *= f.r * invPdf;
 		throughput.g *= f.g * invPdf;
 		throughput.b *= f.b * invPdf;
 
-		const uint pathDepth = path->depth + 1;
-        bool terminatePath = areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH);
-
         // Russian roulette
-        if (!terminatePath && (pathDepth > PARAM_RR_DEPTH)) {
-    		const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float)PARAM_RR_CAP);
-    		const float rrSample = RndFloatValue(&seed);
+        const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float)PARAM_RR_CAP);
+        const float rrSample = RndFloatValue(&seed);
+        const float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
+        throughput.r *= invRRProb;
+        throughput.g *= invRRProb;
+        throughput.b *= invRRProb;
 
-            if (rrProb >= rrSample) {
-                const float invRRProb = 1.f / rrProb;
-                throughput.r *= invRRProb;
-                throughput.g *= invRRProb;
-                throughput.b *= invRRProb;
-            } else
-                terminatePath = true;
-        }
-
-		if (terminatePath) {
-			Spectrum radiance;
-			radiance.r = throughput.r * materialLe.r;
-			radiance.g = throughput.g * materialLe.g;
-			radiance.b = throughput.b * materialLe.b;
+		if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.g <= 0.f)) {
+			Spectrum radiance = matRadiance;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 			radiance.r += path->accumRadiance.r;
