@@ -291,21 +291,21 @@ void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) 
 			if (sy > 0.f)
 				theta = sy / r;
 			else
-				theta = 8.0f + sy / r;
+				theta = 8.f + sy / r;
 		} else {
 			// Handle second region of disk
 			r = sy;
-			theta = 2.0f - sx / r;
+			theta = 2.f - sx / r;
 		}
 	} else {
 		if (sx <= sy) {
 			// Handle third region of disk
 			r = -sx;
-			theta = 4.0f - sy / r;
+			theta = 4.f - sy / r;
 		} else {
 			// Handle fourth region of disk
 			r = -sy;
-			theta = 6.0f + sx / r;
+			theta = 6.f + sx / r;
 		}
 	}
 	theta *= M_PI / 4.f;

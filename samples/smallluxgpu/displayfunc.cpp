@@ -400,6 +400,85 @@ void reshapeFunc(int newWidth, int newHeight) {
 	}
 }
 
+// Used only when OpenGL Interoperability is enabled
+void idleFunc() {
+	assert ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()));
+
+	double raysSec = 0.0;
+	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+
+	sprintf(config->captionBuffer, "[Avg. rays/sec % 4dK on %.1fK tris]",
+			int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+	// Check if periodic save is enabled
+	if (config->NeedPeriodicSave()) {
+		// Time to save the image and film
+		config->SaveFilmImage();
+	}
+
+	glutPostRedisplay();
+}
+
+void timerFunc(int value) {
+	const unsigned int pass = config->GetRenderEngine()->GetPass();
+
+	double raysSec = 0.0;
+	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+
+	switch (config->GetRenderEngine()->GetEngineType()) {
+		case DIRECTLIGHT:
+		case PATH: {
+			const double sampleSec = config->film->GetAvgSampleSec();
+			sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			break;
+		}
+		case SPPM: {
+			SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
+
+			sprintf(config->captionBuffer, "[Pass %3d][Photon %.1fM][Avg. photon/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, sre->GetTotalPhotonCount() / 1000000.0, int(sre->GetTotalPhotonSec() / 1000.0),
+					int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			break;
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case PATHGPU: {
+			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+
+			if (pre->HasOpenGLInterop())
+				sprintf(config->captionBuffer, "[Avg. rays/sec % 4dK on %.1fK tris]",
+						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			else
+				sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
+						pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+			if (!pre->HasOpenGLInterop() || config->NeedPeriodicSave()) {
+				// Need to update the Film
+				pre->UpdateFilm();
+			}
+			break;
+		}
+#endif
+		default:
+			assert (false);
+	}
+
+	// Check if periodic save is enabled
+	if (config->NeedPeriodicSave()) {
+		// Time to save the image and film
+		config->SaveFilmImage();
+	}
+
+	glutPostRedisplay();
+
+	glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
+}
+
 #define MOVE_STEP 0.5f
 #define ROTATE_STEP 4.f
 void keyFunc(unsigned char key, int x, int y) {
@@ -506,15 +585,28 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case '0':
 			config->SetRenderingEngineType(DIRECTLIGHT);
+			glutIdleFunc(NULL);
+			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 			break;
 		case '1':
 			config->SetRenderingEngineType(PATH);
+			glutIdleFunc(NULL);
+			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 			break;
 		case '2':
 			config->SetRenderingEngineType(SPPM);
+			glutIdleFunc(NULL);
+			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 			break;
 		case '3':
 			config->SetRenderingEngineType(PATHGPU);
+			if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+					(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+				glutIdleFunc(idleFunc);
+			else {
+				glutIdleFunc(NULL);
+				glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
+			}
 			break;
 		case 'o': {
 #if defined(WIN32)
@@ -630,85 +722,6 @@ static void motionFunc(int x, int y) {
 			lastMouseUpdate = WallClockTime();
 		}
 	}
-}
-
-// Used only when OpenGL Interoperability is enabled
-void idleFunc() {
-	assert ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()));
-
-	double raysSec = 0.0;
-	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-
-	sprintf(config->captionBuffer, "[Avg. rays/sec % 4dK on %.1fK tris]",
-			int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-	// Check if periodic save is enabled
-	if (config->NeedPeriodicSave()) {
-		// Time to save the image and film
-		config->SaveFilmImage();
-	}
-
-	glutPostRedisplay();
-}
-
-void timerFunc(int value) {
-	const unsigned int pass = config->GetRenderEngine()->GetPass();
-
-	double raysSec = 0.0;
-	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-
-	switch (config->GetRenderEngine()->GetEngineType()) {
-		case DIRECTLIGHT:
-		case PATH: {
-			const double sampleSec = config->film->GetAvgSampleSec();
-			sprintf(config->captionBuffer, "[Pass %4d][Avg. samples/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
-					pass, int(sampleSec/ 1000.0), int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-			break;
-		}
-		case SPPM: {
-			SPPMRenderEngine *sre = (SPPMRenderEngine *)config->GetRenderEngine();
-
-			sprintf(config->captionBuffer, "[Pass %3d][Photon %.1fM][Avg. photon/sec % 4dK][Avg. rays/sec % 4dK on %.1fK tris]",
-					pass, sre->GetTotalPhotonCount() / 1000000.0, int(sre->GetTotalPhotonSec() / 1000.0),
-					int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-			break;
-		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case PATHGPU: {
-			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
-
-			if (pre->HasOpenGLInterop())
-				sprintf(config->captionBuffer, "[Avg. rays/sec % 4dK on %.1fK tris]",
-						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-			else
-				sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-						pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-			if (!pre->HasOpenGLInterop() || config->NeedPeriodicSave()) {
-				// Need to update the Film
-				pre->UpdateFilm();
-			}
-			break;
-		}
-#endif
-		default:
-			assert (false);
-	}
-
-	// Check if periodic save is enabled
-	if (config->NeedPeriodicSave()) {
-		// Time to save the image and film
-		config->SaveFilmImage();
-	}
-
-	glutPostRedisplay();
-
-	glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 }
 
 void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height) {
