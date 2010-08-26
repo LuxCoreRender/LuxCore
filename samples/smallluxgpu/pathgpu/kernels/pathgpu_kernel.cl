@@ -750,10 +750,10 @@ void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 		, __global int *specularBounce
 #endif
 		) {
-    const float RdotShadeN = Dot(shadeN, wo);
-	wi->x = (2.f * RdotShadeN) * shadeN->x - wo->x;
-	wi->y = (2.f * RdotShadeN) * shadeN->y - wo->y;
-	wi->z = (2.f * RdotShadeN) * shadeN->z - wo->z;
+    const float k = 2.f * Dot(shadeN, wo);
+	wi->x = k * shadeN->x - wo->x;
+	wi->y = k * shadeN->y - wo->y;
+	wi->z = k * shadeN->z - wo->z;
 
 	*pdf = 1.f;
 
@@ -767,17 +767,17 @@ void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 }
 
 void Glass_Sample_f(__global GlassParam *mat,
-    const Vector *rayDir, Vector *wi, const Vector *N, const Vector *shadeN,
+    const Vector *wo, Vector *wi, const Vector *N, const Vector *shadeN,
     const float u0, float *pdf, Spectrum *f
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 		, __global int *specularBounce
 #endif
         ) {
     Vector reflDir;
-    const float k = 2.f * Dot(N, rayDir);
-    reflDir.x = rayDir->x - k * N->x;
-    reflDir.y = rayDir->y - k * N->y;
-    reflDir.z = rayDir->z - k * N->z;
+    const float k = 2.f * Dot(N, wo);
+    reflDir.x = k * N->x - wo->x;
+    reflDir.y = k * N->y - wo->y;
+    reflDir.z = k * N->z - wo->z;
 
     // Ray from outside going in ?
     const bool into = (Dot(N, shadeN) > 0.f);
@@ -785,7 +785,7 @@ void Glass_Sample_f(__global GlassParam *mat,
     const float nc = mat->ousideIor;
     const float nt = mat->ior;
     const float nnt = into ? (nc / nt) : (nt / nc);
-    const float ddn = Dot(rayDir, shadeN);
+    const float ddn = -Dot(wo, shadeN);
     const float cos2t = 1.f - nnt * nnt * (1.f - ddn * ddn);
 
     // Total internal reflection
@@ -807,9 +807,9 @@ void Glass_Sample_f(__global GlassParam *mat,
         nkk.z *= kk;
 
         Vector transDir;
-        transDir.x = nnt * rayDir->x - nkk.x;
-        transDir.y = nnt * rayDir->y - nkk.y;
-        transDir.z = nnt * rayDir->z - nkk.z;
+        transDir.x = -nnt * wo->x - nkk.x;
+        transDir.y = -nnt * wo->y - nkk.y;
+        transDir.z = -nnt * wo->z - nkk.z;
         Normalize(&transDir);
 
         const float c = 1.f - (into ? -ddn : Dot(&transDir, N));
@@ -1323,7 +1323,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_GLASS)
 			case MAT_GLASS:
-				Glass_Sample_f(&hitPointMat->mat.glass, &rayDir, &wi, &N, &shadeN,
+				Glass_Sample_f(&hitPointMat->mat.glass, &wo, &wi, &N, &shadeN,
                     u0, &pdf, &f
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
