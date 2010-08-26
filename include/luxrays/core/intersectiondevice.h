@@ -40,6 +40,10 @@ public:
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
 		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalRayCount / statsTotalRayTime);
 	}
+	void ResetPerformaceStats() {
+		statsStartTime = WallClockTime();
+		statsTotalRayCount = 0;
+	}
 	virtual double GetLoad() const = 0;
 
 	friend class Context;

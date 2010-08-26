@@ -737,6 +737,9 @@ void PathGPURenderThread::InitRender() {
 		advancePathKernel->setArg(argIndex++, *infiniteLightBuff);
 	if (triLightsBuff)
 		advancePathKernel->setArg(argIndex++, *triLightsBuff);
+
+	// Reset statistics to be more accurate
+	intersectionDevice->ResetPerformaceStats();
 }
 
 void PathGPURenderThread::Interrupt() {
