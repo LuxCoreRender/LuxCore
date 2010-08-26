@@ -1225,40 +1225,40 @@ __kernel void AdvancePaths(
 		TriangleLight_Sample_L(l, &wo, &hitPoint, &shadeN, &lightPdf, &Le, &shadowRay,
 			RndFloatValue(&seed), RndFloatValue(&seed), RndFloatValue(&seed));
 
-		if (lightPdf <= 0.f) {
-            // Skip sample light step
-			newState = PATH_STATE_NEXT_VERTEX;
-		} else {
-			float matPdf;
-			Spectrum f;
-            // NOTE: I assume all matte mixed material have a MatteParam as first field
-			Matte_f(&hitPointMat->mat.matte, &shadowRay.d, &matPdf, &f, &shadeN);
+        // ATI coompiler is very slow if I use multiple if
+		//   if (lightPdf > 0.f) { ... }
+        float matPdf;
+        Spectrum f;
+        // NOTE: I assume all matte mixed material have a MatteParam as first field
+        Matte_f(&hitPointMat->mat.matte, &shadowRay.d, &matPdf, &f, &shadeN);
 
-			if (matPdf <= 0.f) {
-                // Skip sample light step
-                newState = PATH_STATE_NEXT_VERTEX;
-			} else {
-				const float invPdf = PARAM_DL_LIGHT_COUNT / (lightPdf * matPdf);
-				path->lightRadiance.r = throughput.r * f.r * Le.r * invPdf;
-				path->lightRadiance.g = throughput.g * f.g * Le.g * invPdf;
-				path->lightRadiance.b = throughput.b * f.b * Le.b * invPdf;
+        if ((lightPdf > 0.f) && (matPdf > 0.f)) {
+            const float invPdf = PARAM_DL_LIGHT_COUNT / (lightPdf * matPdf);
+            path->lightRadiance.r = throughput.r * f.r * Le.r * invPdf;
+            path->lightRadiance.g = throughput.g * f.g * Le.g * invPdf;
+            path->lightRadiance.b = throughput.b * f.b * Le.b * invPdf;
 
-				// Save current ray hit information
-				path->pathHit.t = hitPointT;
-				path->pathHit.b1 = hitPointB1;
-				path->pathHit.b2 = hitPointB2;
-				path->pathHit.index = currentTriangleIndex;
+            // Save current ray hit information
+            path->pathHit.t = hitPointT;
+            path->pathHit.b1 = hitPointB1;
+            path->pathHit.b2 = hitPointB2;
+            path->pathHit.index = currentTriangleIndex;
 
-				// Save the current Ray
-				path->pathRay = *ray;
+            // Save the current Ray
+            path->pathRay = *ray;
 
-				*ray = shadowRay;
-			}
-		}
+            *ray = shadowRay;
+
+            path->state = PATH_STATE_SAMPLE_LIGHT;
+
+            // Save the seed
+            path->seed.s1 = seed.s1;
+            path->seed.s2 = seed.s2;
+            path->seed.s3 = seed.s3;
+
+            return;
+        }
 	}
-
-	// To handle the case where the light pdf is 0.0
-	if (newState == PATH_STATE_NEXT_VERTEX) {
 
 #endif
 
@@ -1376,7 +1376,7 @@ __kernel void AdvancePaths(
 		throughput.b *= f.b * invPdf;
 
 		const uint pathDepth = path->depth + 1;
-		bool terminatePath = areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH);
+        bool terminatePath = areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH);
 
         // Russian roulette
         if (!terminatePath && (pathDepth > PARAM_RR_DEPTH)) {
@@ -1451,11 +1451,6 @@ __kernel void AdvancePaths(
 #endif
 			);
 	}
-
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	} else
-		path->state = PATH_STATE_SAMPLE_LIGHT;
-#endif
 
 	// Save the seed
 	path->seed.s1 = seed.s1;
