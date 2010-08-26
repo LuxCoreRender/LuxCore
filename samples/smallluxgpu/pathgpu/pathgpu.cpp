@@ -234,6 +234,7 @@ void PathGPURenderThread::InitRender() {
 
 				gpum->mat.glass.ousideIor = gm->GetOutsideIOR();
 				gpum->mat.glass.ior = gm->GetIOR();
+				gpum->mat.glass.R0 = gm->GetR0();
 				gpum->mat.glass.reflectionSpecularBounce = gm->HasReflSpecularBounceEnabled();
 				gpum->mat.glass.transmitionSpecularBounce = gm->HasRefrctSpecularBounceEnabled();
 				break;
