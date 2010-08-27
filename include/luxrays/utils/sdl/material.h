@@ -482,7 +482,7 @@ public:
 		reflectionSpecularBounce = reflSpecularBounce;
 		transmitionSpecularBounce = transSpecularBounce;
 
-		reflFilter = Krefl.Filter();
+		const float reflFilter = Krefl.Filter();
 		transFilter = Ktrans.Filter();
 		totFilter = reflFilter + transFilter;
 
@@ -508,7 +508,7 @@ public:
 		const float u0, const float u1,  const float u2, const bool onlySpecular,
 		float *pdf, bool &specularBounce) const {
 		// Ray from outside going in ?
-		const bool into = (Dot(N, shadeN) > 0);
+		const bool into = (Dot(N, shadeN) > 0.f);
 
 		if (!into) {
 			// No internal reflections
@@ -539,10 +539,16 @@ public:
 
 	const Spectrum &GetKrefl() const { return Krefl; }
 	const Spectrum &GetKrefrct() const { return Ktrans; }
+	const float GetTransFilter() const { return transFilter; }
+	const float GetTotFilter() const { return totFilter; }
+	const float GetReflPdf() const { return reflPdf; }
+	const float GetTransPdf() const { return transPdf; }
+	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
+	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
 
 private:
 	Spectrum Krefl, Ktrans;
-	float reflFilter, transFilter, totFilter, reflPdf, transPdf;
+	float transFilter, totFilter, reflPdf, transPdf;
 	bool reflectionSpecularBounce, transmitionSpecularBounce;
 };
 
