@@ -90,6 +90,8 @@ typedef struct {
 #define MAT_GLASS 3
 #define MAT_MATTEMIRROR 4
 #define MAT_METAL 5
+#define MAT_MATTEMETAL 6
+#define MAT_ALLOY 7
 
 typedef struct {
     float r, g, b;
@@ -131,6 +133,14 @@ typedef struct {
 } MatteMetalParam;
 
 typedef struct {
+    float diff_r, diff_g, diff_b;
+	float refl_r, refl_g, refl_b;
+    float exponent;
+    float R0;
+    int specularBounce;
+} AlloyParam;
+
+typedef struct {
 	unsigned int type;
 	union {
 		MatteParam matte;
@@ -140,6 +150,7 @@ typedef struct {
 		MatteMirrorParam matteMirror;
         MetalParam metal;
         MatteMetalParam matteMetal;
+        AlloyParam alloy;
 	} param;
 } Material;
 

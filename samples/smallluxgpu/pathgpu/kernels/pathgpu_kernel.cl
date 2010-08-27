@@ -51,6 +51,7 @@
 //  PARAM_ENABLE_MATTEMIRROR
 //  PARAM_ENABLE_METAL
 //  PARAM_ENABLE_MATTEMETAL
+//  PARAM_ENABLE_ALLOY
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -152,6 +153,7 @@ typedef struct {
 #define MAT_MATTEMIRROR 4
 #define MAT_METAL 5
 #define MAT_MATTEMETAL 6
+#define MAT_ALLOY 7
 
 typedef struct {
     float r, g, b;
@@ -193,6 +195,14 @@ typedef struct {
 } MatteMetalParam;
 
 typedef struct {
+    float diff_r, diff_g, diff_b;
+    float refl_r, refl_g, refl_b;
+    float exponent;
+    float R0;
+    int specularBounce;
+} AlloyParam;
+
+typedef struct {
 	unsigned int type;
 	union {
 		MatteParam matte;
@@ -202,6 +212,7 @@ typedef struct {
 		MatteMirrorParam matteMirror;
         MetalParam metal;
         MatteMetalParam matteMetal;
+        AlloyParam alloy;
 	} param;
 } Material;
 
@@ -963,6 +974,64 @@ void MatteMetal_Sample_f(__global MatteMetalParam *mat, const Vector *wo, Vector
 		}
 }
 
+void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
+		float *pdf, Spectrum *f, const Vector *shadeN,
+		const float u0, const float u1, const float u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global int *specularBounce
+#endif
+		) {
+    // Schilick's approximation
+    const float c = 1.f - Dot(wo, shadeN);
+    const float R0 = mat->R0;
+    const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+    const float P = .25f + .5f * Re;
+
+    if (u2 < P) {
+        GlossyReflection(wo, wi, mat->exponent, shadeN, u0, u1);
+        *pdf = P / Re;
+
+        f->r = Re * mat->refl_r;
+        f->g = Re * mat->refl_g;
+        f->b = Re * mat->refl_b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+        *specularBounce = mat->specularBounce;
+#endif
+    } else {
+        Vector dir;
+        CosineSampleHemisphere(&dir, u0, u1);
+        *pdf = dir.z * INV_PI;
+
+        Vector v1, v2;
+        CoordinateSystem(shadeN, &v1, &v2);
+
+        wi->x = v1.x * dir.x + v2.x * dir.y + shadeN->x * dir.z;
+        wi->y = v1.y * dir.x + v2.y * dir.y + shadeN->y * dir.z;
+        wi->z = v1.z * dir.x + v2.z * dir.y + shadeN->z * dir.z;
+
+        const float dp = Dot(shadeN, wi);
+        // Using 0.0001 instead of 0.0 to cut down fireflies
+        if (dp <= 0.0001f)
+            *pdf = 0.f;
+        else {
+            *pdf /=  dp;
+
+            const float iRe = 1.f - Re;
+            *pdf *= (1.f - P) / iRe;
+
+            f->r = iRe * mat->diff_r;
+            f->g = iRe * mat->diff_g;
+            f->b = iRe * mat->diff_b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+            *specularBounce = FALSE;
+#endif
+        }
+    }
+}
+
 //------------------------------------------------------------------------------
 // Lights
 //------------------------------------------------------------------------------
@@ -1143,24 +1212,8 @@ __kernel void AdvancePaths(
 	} else {
 		// state is PATH_STATE_NEXT_VERTEX
 
-		if (currentTriangleIndex != 0xffffffffu) {
-			// Something was hit
-
-			const uint meshIndex = meshIDs[currentTriangleIndex];
-			__global Material *mat = &mats[meshMats[meshIndex]];
-
-            switch (mat->type) {
-                case MAT_MATTE:
-                    directLightPdf = 1.f;
-                    break;
-                case MAT_MATTEMIRROR:
-                    directLightPdf = 1.f / mat->param.matteMirror.mattePdf;
-                    break;
-                case MAT_MATTEMETAL:
-                    directLightPdf = 1.f / mat->param.matteMetal.mattePdf;
-                    break;
-            }
-		}
+        // If something was hit, enable direct light sampling
+        directLightPdf =  (currentTriangleIndex != 0xffffffffu) ? 1.f : 0.f;
 	}
 #endif
 
@@ -1200,6 +1253,32 @@ __kernel void AdvancePaths(
 
 		const uint meshIndex = meshIDs[currentTriangleIndex];
 		hitPointMat = &mats[meshMats[meshIndex]];
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+        // directLightPdf is 0.f or 1.f at this point
+        switch (hitPointMat->type) {
+            case MAT_MATTE:
+                directLightPdf *= 1.f;
+                break;
+            case MAT_MATTEMIRROR:
+                directLightPdf *= 1.f / hitPointMat->param.matteMirror.mattePdf;
+                break;
+            case MAT_MATTEMETAL:
+                directLightPdf *= 1.f / hitPointMat->param.matteMetal.mattePdf;
+                break;
+            case MAT_ALLOY: {
+                // Schilick's approximation
+                const float c = 1.f + Dot(&rayDir, &shadeN);
+                const float R0 = hitPointMat->param.alloy.R0;
+                const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+                const float P = .25f + .5f * Re;
+
+                directLightPdf *= (1.f - P) / (1.f - Re);
+                break;
+            }
+        }
+#endif
     }
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -1351,6 +1430,16 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_MATTEMETAL)
             case MAT_MATTEMETAL:
                 MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					, &path->specularBounce
+#endif
+					);
+                break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_ALLOY)
+            case MAT_ALLOY:
+				Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
