@@ -182,6 +182,7 @@ void PathGPURenderThread::InitRender() {
 	bool enable_MAT_METAL = false;
 	bool enable_MAT_MATTEMETAL = false;
 	bool enable_MAT_ALLOY = false;
+	bool enable_MAT_ARCHGLASS = false;
 	const unsigned int materialsCount = scene->materials.size();
 	PathGPU::Material *mats = new PathGPU::Material[materialsCount];
 	for (unsigned int i = 0; i < materialsCount; ++i) {
@@ -309,6 +310,25 @@ void PathGPURenderThread::InitRender() {
 				gpum->param.alloy.exponent = am->GetExp();
 				gpum->param.alloy.R0 = am->GetR0();
 				gpum->param.alloy.specularBounce = am->HasSpecularBounceEnabled();
+				break;
+			}
+			case ARCHGLASS: {
+				enable_MAT_ARCHGLASS = true;
+				ArchGlassMaterial *agm = (ArchGlassMaterial *)m;
+
+				gpum->type = MAT_ARCHGLASS;
+				gpum->param.archGlass.refl_r = agm->GetKrefl().r;
+				gpum->param.archGlass.refl_g = agm->GetKrefl().g;
+				gpum->param.archGlass.refl_b = agm->GetKrefl().b;
+
+				gpum->param.archGlass.refrct_r = agm->GetKrefrct().r;
+				gpum->param.archGlass.refrct_g = agm->GetKrefrct().g;
+				gpum->param.archGlass.refrct_b = agm->GetKrefrct().b;
+
+				gpum->param.archGlass.transFilter = agm->GetTransFilter();
+				gpum->param.archGlass.totFilter = agm->GetTotFilter();
+				gpum->param.archGlass.reflPdf = agm->GetReflPdf();
+				gpum->param.archGlass.transPdf = agm->GetTransPdf();
 				break;
 			}
 			default: {
@@ -576,6 +596,8 @@ void PathGPURenderThread::InitRender() {
 		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
 	if (enable_MAT_ALLOY)
 		ss << " -D PARAM_ENABLE_MAT_ALLOY";
+	if (enable_MAT_ARCHGLASS)
+		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 	if (scene->camera->lensRadius > 0.f) {
 		ss <<
 				" -D PARAM_CAMERA_HAS_DOF"

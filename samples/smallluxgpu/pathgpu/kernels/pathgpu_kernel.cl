@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_PATH_COUNT
@@ -45,13 +45,14 @@
 
 // To enable single material suopport (work around for ATI compiler problems)
 //  PARAM_ENABLE_MAT_MATTE
-//  PARAM_ENABLE_AREALIGHT
-//  PARAM_ENABLE_MIRROR
-//  PARAM_ENABLE_GLASS
-//  PARAM_ENABLE_MATTEMIRROR
-//  PARAM_ENABLE_METAL
-//  PARAM_ENABLE_MATTEMETAL
-//  PARAM_ENABLE_ALLOY
+//  PARAM_ENABLE_MAT_AREALIGHT
+//  PARAM_ENABLE_MAT_MIRROR
+//  PARAM_ENABLE_MAT_GLASS
+//  PARAM_ENABLE_MAT_MATTEMIRROR
+//  PARAM_ENABLE_MAT_METAL
+//  PARAM_ENABLE_MAT_MATTEMETAL
+//  PARAM_ENABLE_MAT_ALLOY
+//  PARAM_ENABLE_MAT_ARCHGLASS
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT
@@ -154,6 +155,7 @@ typedef struct {
 #define MAT_METAL 5
 #define MAT_MATTEMETAL 6
 #define MAT_ALLOY 7
+#define MAT_ARCHGLASS 8
 
 typedef struct {
     float r, g, b;
@@ -203,6 +205,13 @@ typedef struct {
 } AlloyParam;
 
 typedef struct {
+    float refl_r, refl_g, refl_b;
+    float refrct_r, refrct_g, refrct_b;
+	float transFilter, totFilter, reflPdf, transPdf;
+	bool reflectionSpecularBounce, transmitionSpecularBounce;
+} ArchGlassParam;
+
+typedef struct {
 	unsigned int type;
 	union {
 		MatteParam matte;
@@ -213,6 +222,7 @@ typedef struct {
         MetalParam metal;
         MatteMetalParam matteMetal;
         AlloyParam alloy;
+        ArchGlassParam archGlass;
 	} param;
 } Material;
 
@@ -763,8 +773,8 @@ void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 }
 
 void Glass_Sample_f(__global GlassParam *mat,
-    const Vector *wo, Vector *wi, const Vector *N, const Vector *shadeN,
-    const float u0, float *pdf, Spectrum *f
+    const Vector *wo, Vector *wi, float *pdf, Spectrum *f, const Vector *N, const Vector *shadeN,
+    const float u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 		, __global int *specularBounce
 #endif
@@ -1032,6 +1042,65 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
     }
 }
 
+void ArchGlass_Sample_f(__global ArchGlassParam *mat,
+    const Vector *wo, Vector *wi, float *pdf, Spectrum *f, const Vector *N, const Vector *shadeN,
+    const float u0
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global int *specularBounce
+#endif
+        ) {
+    // Ray from outside going in ?
+    const bool into = (Dot(N, shadeN) > 0.f);
+
+    if (!into) {
+        // No internal reflections
+        wi->x = -wo->x;
+        wi->y = -wo->y;
+        wi->z = -wo->z;
+        *pdf = 1.f;
+
+        f->r = mat->refrct_r;
+        f->g = mat->refrct_g;
+        f->b = mat->refrct_b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+        *specularBounce = mat->transmitionSpecularBounce;
+#endif
+    } else {
+        // RR to choose if reflect the ray or go trough the glass
+        const float comp = u0 * mat->totFilter;
+
+        if (comp > mat->transFilter) {
+            const float k = 2.f * Dot(N, wo);
+            wi->x = k * N->x - wo->x;
+            wi->y = k * N->y - wo->y;
+            wi->z = k * N->z - wo->z;
+            *pdf =  mat->reflPdf;
+
+            f->r = mat->refl_r;
+            f->g = mat->refl_g;
+            f->b = mat->refl_b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+            *specularBounce = mat->reflectionSpecularBounce;
+#endif
+        } else {
+            wi->x = -wo->x;
+            wi->y = -wo->y;
+            wi->z = -wo->z;
+            *pdf =  mat->transPdf;
+
+            f->r = mat->refrct_r;
+            f->g = mat->refrct_g;
+            f->b = mat->refrct_b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+            *specularBounce = mat->transmitionSpecularBounce;
+#endif
+        }
+    }
+}
+
 //------------------------------------------------------------------------------
 // Lights
 //------------------------------------------------------------------------------
@@ -1202,6 +1271,29 @@ __kernel void AdvancePaths(
 			path->accumRadiance.g += path->lightRadiance.g;
 			path->accumRadiance.b += path->lightRadiance.b;
 		}
+#if defined(PARAM_ENABLE_MAT_ARCHGLASS)
+        // ATI compiler is unable to compile this code
+        else {
+            // Check if is a shadow transparent material
+            const uint meshIndex = meshIDs[currentTriangleIndex];
+            __global Material *hitPointMat = &mats[meshMats[meshIndex]];
+
+            if (hitPointMat->type == MAT_ARCHGLASS) {
+                const float hitPointT = rayHit->t;
+                ray->o.x = ray->o.x + ray->d.x * hitPointT;
+                ray->o.y = ray->o.y + ray->d.y * hitPointT;
+                ray->o.z = ray->o.z + ray->d.z * hitPointT;
+                ray->maxt -= hitPointT;
+
+                path->lightRadiance.r *= hitPointMat->param.archGlass.refrct_r;
+                path->lightRadiance.g *= hitPointMat->param.archGlass.refrct_g;
+                path->lightRadiance.b *= hitPointMat->param.archGlass.refrct_b;
+
+                // Continue to trace the ray
+                return;
+            }
+        }
+#endif
 
 		// Restore the path RayHit
 		rayHit = &path->pathHit;
@@ -1277,6 +1369,9 @@ __kernel void AdvancePaths(
                 directLightPdf *= (1.f - P) / (1.f - Re);
                 break;
             }
+            default:
+                directLightPdf = 0.f;
+                break;
         }
 #endif
     }
@@ -1398,8 +1493,7 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_GLASS)
 			case MAT_GLASS:
-				Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &N, &shadeN,
-                    u0, &pdf, &f
+				Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 					, &path->specularBounce
 #endif
@@ -1447,6 +1541,16 @@ __kernel void AdvancePaths(
                 break;
 #endif
 
+#if defined(PARAM_ENABLE_MAT_ARCHGLASS)
+            case MAT_ARCHGLASS:
+				ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					, &path->specularBounce
+#endif
+					);
+                break;
+#endif
+
 			default:
 				// Huston, we have a problem...
 				pdf = 0.f;
@@ -1467,7 +1571,7 @@ __kernel void AdvancePaths(
         throughput.g *= invRRProb;
         throughput.b *= invRRProb;
 
-		if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.g <= 0.f)) {
+		if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f)) {
 			Spectrum radiance = matRadiance;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)

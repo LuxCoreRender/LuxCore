@@ -92,6 +92,7 @@ typedef struct {
 #define MAT_METAL 5
 #define MAT_MATTEMETAL 6
 #define MAT_ALLOY 7
+#define MAT_ARCHGLASS 8
 
 typedef struct {
     float r, g, b;
@@ -141,6 +142,13 @@ typedef struct {
 } AlloyParam;
 
 typedef struct {
+    float refl_r, refl_g, refl_b;
+    float refrct_r, refrct_g, refrct_b;
+	float transFilter, totFilter, reflPdf, transPdf;
+	bool reflectionSpecularBounce, transmitionSpecularBounce;
+} ArchGlassParam;
+
+typedef struct {
 	unsigned int type;
 	union {
 		MatteParam matte;
@@ -151,6 +159,7 @@ typedef struct {
         MetalParam metal;
         MatteMetalParam matteMetal;
         AlloyParam alloy;
+        ArchGlassParam archGlass;
 	} param;
 } Material;
 
