@@ -213,8 +213,10 @@ private:
 	size_t updatePBWorkGroupSize;
 	cl::Kernel *updatePBBluredKernel;
 	size_t updatePBBluredWorkGroupSize;
-	cl::Kernel *advancePathKernel;
-	size_t advancePathWorkGroupSize;
+	cl::Kernel *advancePathStep1Kernel;
+	size_t advancePathStep1WorkGroupSize;
+	cl::Kernel *advancePathStep2Kernel;
+	size_t advancePathStep2WorkGroupSize;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;

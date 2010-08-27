@@ -59,9 +59,6 @@ PathGPURenderThread::PathGPURenderThread(const unsigned int index, const unsigne
 
 	renderThread = NULL;
 
-	initKernel = NULL;
-	advancePathKernel = NULL;
-
 	pbo = 0;
 
 	threadIndex = index;
@@ -731,16 +728,33 @@ void PathGPURenderThread::InitRender() {
 	// AdvancePaths kernel
 	//--------------------------------------------------------------------------
 
-	advancePathKernel = new cl::Kernel(program, "AdvancePaths");
-	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathWorkGroupSize << endl;
+	if (triLightsBuff) {
+		// Compile the first step only if direct light sampling is enabled
+		advancePathStep1Kernel = new cl::Kernel(program, "AdvancePaths_Step1");
+		advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step1 kernel work group size: " << advancePathStep1WorkGroupSize << endl;
 
-	advancePathKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathWorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathWorkGroupSize << endl;
+		advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep1WorkGroupSize << endl;
+
+		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+			advancePathStep1WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep1WorkGroupSize << endl;
+		}
+	} else
+		advancePathStep1Kernel = NULL;
+
+
+	advancePathStep2Kernel = new cl::Kernel(program, "AdvancePaths_Step2");
+	advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
+	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step2 kernel work group size: " << advancePathStep2WorkGroupSize << endl;
+
+	advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep2WorkGroupSize << endl;
 
 	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-		advancePathWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathWorkGroupSize << endl;
+		advancePathStep2WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep2WorkGroupSize << endl;
 	}
 
 	//--------------------------------------------------------------------------
@@ -762,24 +776,39 @@ void PathGPURenderThread::InitRender() {
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(initWorkGroupSize));
 
+	if (triLightsBuff) {
+		unsigned int argIndex = 0;
+		advancePathStep1Kernel->setArg(argIndex++, *pathsBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *raysBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *hitsBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *materialsBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *meshMatsBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *meshIDBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *triIDBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *colorsBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *normalsBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *trianglesBuff);
+		advancePathStep1Kernel->setArg(argIndex++, *triLightsBuff);
+	}
+
 	unsigned int argIndex = 0;
-	advancePathKernel->setArg(argIndex++, *pathsBuff);
-	advancePathKernel->setArg(argIndex++, *raysBuff);
-	advancePathKernel->setArg(argIndex++, *hitsBuff);
-	advancePathKernel->setArg(argIndex++, *frameBufferBuff);
-	advancePathKernel->setArg(argIndex++, *materialsBuff);
-	advancePathKernel->setArg(argIndex++, *meshMatsBuff);
-	advancePathKernel->setArg(argIndex++, *meshIDBuff);
-	advancePathKernel->setArg(argIndex++, *triIDBuff);
-	advancePathKernel->setArg(argIndex++, *colorsBuff);
-	advancePathKernel->setArg(argIndex++, *normalsBuff);
-	advancePathKernel->setArg(argIndex++, *trianglesBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *pathsBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *raysBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *hitsBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *frameBufferBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *materialsBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *meshMatsBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *meshIDBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *triIDBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *colorsBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *normalsBuff);
+	advancePathStep2Kernel->setArg(argIndex++, *trianglesBuff);
 	if (renderEngine->hasOpenGLInterop)
-		advancePathKernel->setArg(argIndex++, *cameraBuff);
+		advancePathStep2Kernel->setArg(argIndex++, *cameraBuff);
 	if (infiniteLight)
-		advancePathKernel->setArg(argIndex++, *infiniteLightBuff);
+		advancePathStep2Kernel->setArg(argIndex++, *infiniteLightBuff);
 	if (triLightsBuff)
-		advancePathKernel->setArg(argIndex++, *triLightsBuff);
+		advancePathStep2Kernel->setArg(argIndex++, *triLightsBuff);
 
 	// Reset statistics to be more accurate
 	intersectionDevice->ResetPerformaceStats();
@@ -848,7 +877,8 @@ void PathGPURenderThread::Stop() {
 	delete initFBKernel;
 	delete updatePBKernel;
 	delete updatePBBluredKernel;
-	delete advancePathKernel;
+	delete advancePathStep1Kernel;
+	delete advancePathStep2Kernel;
 
 	if (pbo) {
         // Delete old buffer
@@ -893,8 +923,14 @@ void PathGPURenderThread::UpdatePixelBuffer(const unsigned int screenRefreshInte
 			intersectionDevice->EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, PATHGPU_PATH_COUNT);
 
 			// Advance paths
-			oclQueue.enqueueNDRangeKernel(*advancePathKernel, cl::NullRange,
-				cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(advancePathWorkGroupSize));
+			if (triLightsBuff) {
+				// Only if direct light sampling is enabled
+				oclQueue.enqueueNDRangeKernel(*advancePathStep1Kernel, cl::NullRange,
+					cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(advancePathStep1WorkGroupSize));
+			}
+
+			oclQueue.enqueueNDRangeKernel(*advancePathStep2Kernel, cl::NullRange,
+				cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(advancePathStep2WorkGroupSize));
 		}
 
 		// Update PixelBuffer
@@ -1021,12 +1057,18 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 							*(renderThread->hitsBuff), PATHGPU_PATH_COUNT);
 
 					// Advance paths
+					if (renderThread->triLightsBuff) {
+						// Only if direct light sampling is enabled
+						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathStep1Kernel), cl::NullRange,
+							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathStep1WorkGroupSize));
+					}
+
 					if (i == 0)
-						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathKernel), cl::NullRange,
-							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathWorkGroupSize), NULL, &event);
+						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathStep2Kernel), cl::NullRange,
+							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathStep2WorkGroupSize), NULL, &event);
 					else
-						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathKernel), cl::NullRange,
-							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathWorkGroupSize));
+						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathStep2Kernel), cl::NullRange,
+							cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(renderThread->advancePathStep2WorkGroupSize));
 				}
 				oclQueue.flush();
 
