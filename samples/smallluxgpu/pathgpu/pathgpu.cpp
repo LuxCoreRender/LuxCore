@@ -181,6 +181,7 @@ void PathGPURenderThread::InitRender() {
 	bool enable_MAT_MATTEMIRROR = false;
 	bool enable_MAT_METAL = false;
 	bool enable_MAT_MATTEMETAL = false;
+	bool enable_MAT_ALLOY = false;
 	const unsigned int materialsCount = scene->materials.size();
 	PathGPU::Material *mats = new PathGPU::Material[materialsCount];
 	for (unsigned int i = 0; i < materialsCount; ++i) {
@@ -275,7 +276,7 @@ void PathGPURenderThread::InitRender() {
 				enable_MAT_MATTEMETAL = true;
 				MatteMetalMaterial *mmm = (MatteMetalMaterial *)m;
 
-				gpum->type = MATTEMETAL;
+				gpum->type = MAT_MATTEMETAL;
 				gpum->param.matteMetal.matte.r = mmm->GetMatte().GetKd().r;
 				gpum->param.matteMetal.matte.g = mmm->GetMatte().GetKd().g;
 				gpum->param.matteMetal.matte.b = mmm->GetMatte().GetKd().b;
@@ -290,6 +291,24 @@ void PathGPURenderThread::InitRender() {
 				gpum->param.matteMetal.totFilter = mmm->GetTotFilter();
 				gpum->param.matteMetal.mattePdf = mmm->GetMattePdf();
 				gpum->param.matteMetal.metalPdf = mmm->GetMetalPdf();
+				break;
+			}
+			case ALLOY: {
+				enable_MAT_ALLOY = true;
+				AlloyMaterial *am = (AlloyMaterial *)m;
+
+				gpum->type = MAT_ALLOY;
+				gpum->param.alloy.refl_r= am->GetKrefl().r;
+				gpum->param.alloy.refl_g = am->GetKrefl().g;
+				gpum->param.alloy.refl_b = am->GetKrefl().b;
+
+				gpum->param.alloy.diff_r = am->GetKd().r;
+				gpum->param.alloy.diff_g = am->GetKd().g;
+				gpum->param.alloy.diff_b = am->GetKd().b;
+
+				gpum->param.alloy.exponent = am->GetExp();
+				gpum->param.alloy.R0 = am->GetR0();
+				gpum->param.alloy.specularBounce = am->HasSpecularBounceEnabled();
 				break;
 			}
 			default: {
@@ -555,6 +574,8 @@ void PathGPURenderThread::InitRender() {
 		ss << " -D PARAM_ENABLE_MAT_METAL";
 	if (enable_MAT_MATTEMETAL)
 		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
+	if (enable_MAT_ALLOY)
+		ss << " -D PARAM_ENABLE_MAT_ALLOY";
 	if (scene->camera->lensRadius > 0.f) {
 		ss <<
 				" -D PARAM_CAMERA_HAS_DOF"

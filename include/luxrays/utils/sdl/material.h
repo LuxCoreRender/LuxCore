@@ -621,6 +621,10 @@ public:
 	}
 
 	const Spectrum &GetKrefl() const { return Krefl; }
+	const Spectrum &GetKd() const { return Kdiff; }
+	float GetExp() const { return exponent; }
+	float GetR0() const { return R0; }
+	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
 private:
 	Spectrum Krefl;
