@@ -1463,11 +1463,6 @@ __kernel void AdvancePaths_Step2(
     if (currentTriangleIndex != 0xffffffffu) {
 		// Something was hit
 
-		Vector wo;
-		wo.x = -rayDir.x;
-		wo.y = -rayDir.y;
-		wo.z = -rayDir.z;
-
 		// Interpolate Color
         Spectrum shadeColor;
 		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
@@ -1481,8 +1476,7 @@ __kernel void AdvancePaths_Step2(
 
 		// Flip the normal if required
         Vector shadeN;
-        // Using wo instead of rayDir because of problems with ATI compiler
-		const float nFlip = (Dot(&wo, &N) < 0.f) ? -1.f : 1.f;
+		const float nFlip = (Dot(&rayDir, &N) > 0.f) ? -1.f : 1.f;
 		shadeN.x = nFlip * N.x;
 		shadeN.y = nFlip * N.y;
 		shadeN.z = nFlip * N.z;
@@ -1490,21 +1484,19 @@ __kernel void AdvancePaths_Step2(
 		const uint meshIndex = meshIDs[currentTriangleIndex];
 		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 
-		// Something was hit
-
 		const float u0 = RndFloatValue(&seed);
 		const float u1 = RndFloatValue(&seed);
 		const float u2 = RndFloatValue(&seed);
+
+		Vector wo;
+		wo.x = -rayDir.x;
+		wo.y = -rayDir.y;
+		wo.z = -rayDir.z;
 
 		Vector wi;
 		float pdf;
 		Spectrum f;
 
-		Spectrum matRadiance;
-		matRadiance.r = 0.f;
-		matRadiance.g = 0.f;
-		matRadiance.b = 0.f;
-		bool areaLightHit = false;
 		switch (hitPointMat->type) {
 
 #if defined(PARAM_ENABLE_MAT_MATTE)
@@ -1519,14 +1511,33 @@ __kernel void AdvancePaths_Step2(
 
 #if defined(PARAM_ENABLE_MAT_AREALIGHT)
 			case MAT_AREALIGHT:
-				areaLightHit = true;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				if (path->specularBounce) {
 #endif
-					AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &matRadiance);
-                    matRadiance.r *= throughput.r;
-                    matRadiance.g *= throughput.g;
-                    matRadiance.b *= throughput.b;
+					Spectrum radiance;
+					AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &radiance);
+                    radiance.r *= throughput.r;
+                    radiance.g *= throughput.g;
+                    radiance.b *= throughput.b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					radiance.r += path->accumRadiance.r;
+					radiance.g += path->accumRadiance.g;
+					radiance.b += path->accumRadiance.b;
+#endif
+
+					TerminatePath(path, ray, frameBuffer, &seed, &radiance
+#if defined(PARAM_LOWLATENCY)
+						, cameraData
+#endif
+					);
+
+					// Save the seed
+					path->seed.s1 = seed.s1;
+					path->seed.s2 = seed.s2;
+					path->seed.s3 = seed.s3;
+
+					return;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				}
 #endif
@@ -1610,7 +1621,7 @@ __kernel void AdvancePaths_Step2(
 		}
 
 		const uint pathDepth = path->depth + 1;
-        const float invPdf = (areaLightHit || (pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
+        const float invPdf = ((pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
         throughput.r *= f.r * invPdf;
 		throughput.g *= f.g * invPdf;
 		throughput.b *= f.b * invPdf;
@@ -1624,12 +1635,15 @@ __kernel void AdvancePaths_Step2(
         throughput.b *= invRRProb;
 
 		if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f)) {
-			Spectrum radiance = matRadiance;
-
+			Spectrum radiance;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-			radiance.r += path->accumRadiance.r;
-			radiance.g += path->accumRadiance.g;
-			radiance.b += path->accumRadiance.b;
+			radiance.r = path->accumRadiance.r;
+			radiance.g = path->accumRadiance.g;
+			radiance.b = path->accumRadiance.b;
+#else
+			radiance.r = 0.f;
+			radiance.g = 0.f;
+			radiance.b = 0.f;
 #endif
 
 			TerminatePath(path, ray, frameBuffer, &seed, &radiance
