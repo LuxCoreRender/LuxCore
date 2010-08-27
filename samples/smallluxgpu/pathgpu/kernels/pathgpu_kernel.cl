@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_PATH_COUNT
@@ -1131,7 +1131,7 @@ void SampleTriangleLight(__global TriangleLight *light,	const float u0, const fl
 }
 
 void TriangleLight_Sample_L(__global TriangleLight *l,
-		const Vector *wo, const Point *hitPoint, const Vector *shadeN,
+		const Vector *wo, const Point *hitPoint,
 		float *pdf, Spectrum *f, Ray *shadowRay,
 		const float u0, const float u1, const float u2) {
 	Point samplePoint;
@@ -1149,9 +1149,9 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 
 	Vector sampleN = l->normal;
 	const float sampleNdotMinusWi = -Dot(&sampleN, &shadowRay->d);
-	if ((sampleNdotMinusWi <= 0.f) || (Dot(shadeN, &shadowRay->d) <= 0.f)) {
+	if (sampleNdotMinusWi <= 0.f)
 		*pdf = 0.f;
-	} else {
+	else {
 		*pdf = distanceSquared / (sampleNdotMinusWi * l->area);
 
 		// Using 0.1 instead of 0.0 to cut down fireflies
@@ -1223,46 +1223,27 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 #endif
 }
 
-__kernel void AdvancePaths(
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+__kernel void AdvancePaths_Step1(
 		__global Path *paths,
 		__global Ray *rays,
 		__global RayHit *rayHits,
-		__global Pixel *frameBuffer,
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
-		__global uint *triIDs,
+        __global uint *triIDs, // Not Used
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
-		__global Triangle *triangles
-#if defined(PARAM_LOWLATENCY)
-		, __global float *cameraData
-#endif
-#if defined(PARAM_HAVE_INFINITELIGHT)
-		, __global Spectrum *infiniteLightMap
-#endif
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global TriangleLight *triLights
-#endif
+		__global Triangle *triangles,
+        __global TriangleLight *triLights
 		) {
 	const int gid = get_global_id(0);
-	if (gid >= PARAM_PATH_COUNT)
-		return;
-
 	__global Path *path = &paths[gid];
-
-	// Read the seed
-	Seed seed;
-	seed.s1 = path->seed.s1;
-	seed.s2 = path->seed.s2;
-	seed.s3 = path->seed.s3;
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 	uint currentTriangleIndex = rayHit->index;
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-    float directLightPdf = 0.f;
 	if (path->state == PATH_STATE_SAMPLE_LIGHT) {
 		if (currentTriangleIndex == 0xffffffffu) {
 			// Nothing was hit, the light is visible
@@ -1272,7 +1253,6 @@ __kernel void AdvancePaths(
 			path->accumRadiance.b += path->lightRadiance.b;
 		}
 #if defined(PARAM_ENABLE_MAT_ARCHGLASS)
-        // ATI compiler is unable to compile this code
         else {
             // Check if is a shadow transparent material
             const uint meshIndex = meshIDs[currentTriangleIndex];
@@ -1296,67 +1276,55 @@ __kernel void AdvancePaths(
 #endif
 
 		// Restore the path RayHit
-		rayHit = &path->pathHit;
-		currentTriangleIndex = rayHit->index;
+		*rayHit = path->pathHit;
 
 		// Restore the path Ray
         *ray = path->pathRay;
-	} else {
-		// state is PATH_STATE_NEXT_VERTEX
 
-        // If something was hit, enable direct light sampling
-        directLightPdf =  (currentTriangleIndex != 0xffffffffu) ? 1.f : 0.f;
+        path->state = PATH_STATE_NEXT_VERTEX;
+        return;
 	}
-#endif
 
-	Vector rayDir = ray->d;
+    // state is PATH_STATE_NEXT_VERTEX
 
-	const float hitPointT = rayHit->t;
-    const float hitPointB1 = rayHit->b1;
-    const float hitPointB2 = rayHit->b2;
-
-	Point hitPoint;
-    hitPoint.x = ray->o.x + rayDir.x * hitPointT;
-	hitPoint.y = ray->o.y + rayDir.y * hitPointT;
-	hitPoint.z = ray->o.z + rayDir.z * hitPointT;
-
-	Spectrum throughput = path->throughput;
-
-    Vector N, shadeN;
-    __global Material *hitPointMat;
     if (currentTriangleIndex != 0xffffffffu) {
-		// Something was hit
+        // Something was hit
 
-		// Interpolate Color
-        Spectrum shadeColor;
-		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
-		throughput.r *= shadeColor.r;
-		throughput.g *= shadeColor.g;
-		throughput.b *= shadeColor.b;
+        Vector rayDir = ray->d;
+
+        const float hitPointT = rayHit->t;
+        const float hitPointB1 = rayHit->b1;
+        const float hitPointB2 = rayHit->b2;
+
+        Point hitPoint;
+        hitPoint.x = ray->o.x + rayDir.x * hitPointT;
+        hitPoint.y = ray->o.y + rayDir.y * hitPointT;
+        hitPoint.z = ray->o.z + rayDir.z * hitPointT;
 
 		// Interpolate the normal
+        Vector N;
 		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
 
 		// Flip the normal if required
+        Vector shadeN;
 		const float nFlip = (Dot(&rayDir, &N) > 0.f) ? -1.f : 1.f;
 		shadeN.x = nFlip * N.x;
 		shadeN.y = nFlip * N.y;
 		shadeN.z = nFlip * N.z;
 
 		const uint meshIndex = meshIDs[currentTriangleIndex];
-		hitPointMat = &mats[meshMats[meshIndex]];
+		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-        // directLightPdf is 0.f or 1.f at this point
+        float directLightPdf;
         switch (hitPointMat->type) {
             case MAT_MATTE:
-                directLightPdf *= 1.f;
+                directLightPdf = 1.f;
                 break;
             case MAT_MATTEMIRROR:
-                directLightPdf *= 1.f / hitPointMat->param.matteMirror.mattePdf;
+                directLightPdf = 1.f / hitPointMat->param.matteMirror.mattePdf;
                 break;
             case MAT_MATTEMETAL:
-                directLightPdf *= 1.f / hitPointMat->param.matteMetal.mattePdf;
+                directLightPdf = 1.f / hitPointMat->param.matteMetal.mattePdf;
                 break;
             case MAT_ALLOY: {
                 // Schilick's approximation
@@ -1366,83 +1334,167 @@ __kernel void AdvancePaths(
 
                 const float P = .25f + .5f * Re;
 
-                directLightPdf *= (1.f - P) / (1.f - Re);
+                directLightPdf = (1.f - P) / (1.f - Re);
                 break;
             }
             default:
                 directLightPdf = 0.f;
                 break;
         }
-#endif
-    }
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	if (directLightPdf > 0.f) {
-		// Select a light source to sample
-		const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
-		__global TriangleLight *l = &triLights[lightIndex];
+        if (directLightPdf > 0.f) {
+            // Read the seed
+            Seed seed;
+            seed.s1 = path->seed.s1;
+            seed.s2 = path->seed.s2;
+            seed.s3 = path->seed.s3;
 
-        // Setup the shadow ray
-		Vector wo;
-		wo.x = -rayDir.x;
-		wo.y = -rayDir.y;
-		wo.z = -rayDir.z;
-		Spectrum Le;
-		float lightPdf;
-		Ray shadowRay;
-		TriangleLight_Sample_L(l, &wo, &hitPoint, &shadeN, &lightPdf, &Le, &shadowRay,
-			RndFloatValue(&seed), RndFloatValue(&seed), RndFloatValue(&seed));
+            // Select a light source to sample
+            const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+            __global TriangleLight *l = &triLights[lightIndex];
 
-        // ATI coompiler is very slow if I use multiple if
-		//   if (lightPdf > 0.f) { ... }
-        float matPdf;
-        const float dp = Dot(&shadeN, &shadowRay.d);
-        // Using 0.0001 instead of 0.0 to cut down fireflies
-        matPdf = (dp <= 0.0001f) ? 0.f : 1.f;
+            // Setup the shadow ray
+            Vector wo;
+            wo.x = -rayDir.x;
+            wo.y = -rayDir.y;
+            wo.z = -rayDir.z;
+            Spectrum Le;
+            float lightPdf;
+            Ray shadowRay;
+            TriangleLight_Sample_L(l, &wo, &hitPoint, &lightPdf, &Le, &shadowRay,
+                RndFloatValue(&seed), RndFloatValue(&seed), RndFloatValue(&seed));
 
-        const float pdf = lightPdf * matPdf * directLightPdf;
-        if (pdf > 0.f) {
-            const float k = dp * PARAM_DL_LIGHT_COUNT / (pdf * M_PI);
-            // NOTE: I assume all matte mixed material have a MatteParam as first field
-            path->lightRadiance.r = throughput.r * hitPointMat->param.matte.r * k * Le.r;
-            path->lightRadiance.g = throughput.g * hitPointMat->param.matte.g * k * Le.g;
-            path->lightRadiance.b = throughput.b * hitPointMat->param.matte.b * k * Le.b;
+            const float dp = Dot(&shadeN, &shadowRay.d);
+            const float matPdf = (dp <= 0.f) ? 0.f : 1.f;
 
-            // Save current ray hit information
-            path->pathHit.t = hitPointT;
-            path->pathHit.b1 = hitPointB1;
-            path->pathHit.b2 = hitPointB2;
-            path->pathHit.index = currentTriangleIndex;
+            const float pdf = lightPdf * matPdf * directLightPdf;
+            if (pdf > 0.f) {
+                // Interpolate Color
+                Spectrum shadeColor;
+                Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+                Spectrum throughput = path->throughput;
+                throughput.r *= shadeColor.r;
+                throughput.g *= shadeColor.g;
+                throughput.b *= shadeColor.b;
 
-            // Save the current Ray
-            path->pathRay = *ray;
+                const float k = dp * PARAM_DL_LIGHT_COUNT / (pdf * M_PI);
+                // NOTE: I assume all matte mixed material have a MatteParam as first field
+                path->lightRadiance.r = throughput.r * hitPointMat->param.matte.r * k * Le.r;
+                path->lightRadiance.g = throughput.g * hitPointMat->param.matte.g * k * Le.g;
+                path->lightRadiance.b = throughput.b * hitPointMat->param.matte.b * k * Le.b;
 
-            *ray = shadowRay;
+                // Save current ray hit information
+                path->pathHit.t = hitPointT;
+                path->pathHit.b1 = hitPointB1;
+                path->pathHit.b2 = hitPointB2;
+                path->pathHit.index = currentTriangleIndex;
 
-            path->state = PATH_STATE_SAMPLE_LIGHT;
+                // Save the current Ray
+                path->pathRay = *ray;
+
+                *ray = shadowRay;
+
+                path->state = PATH_STATE_SAMPLE_LIGHT;
+            }
 
             // Save the seed
             path->seed.s1 = seed.s1;
             path->seed.s2 = seed.s2;
             path->seed.s3 = seed.s3;
-
-            return;
         }
-	}
-
+    }
+}
 #endif
 
-	if (currentTriangleIndex != 0xffffffffu) {
-		// Something was hit
+__kernel void AdvancePaths_Step2(
+		__global Path *paths,
+		__global Ray *rays,
+		__global RayHit *rayHits,
+		__global Pixel *frameBuffer,
+		__global Material *mats,
+		__global uint *meshMats,
+		__global uint *meshIDs,
+        __global uint *triIDs, // Not Used
+		__global Spectrum *vertColors,
+		__global Vector *vertNormals,
+		__global Triangle *triangles
+#if defined(PARAM_LOWLATENCY)
+		, __global float *cameraData
+#endif
+#if defined(PARAM_HAVE_INFINITELIGHT)
+		, __global Spectrum *infiniteLightMap
+#endif
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global TriangleLight *triLights
+#endif
+		) {
+	const int gid = get_global_id(0);
+	__global Path *path = &paths[gid];
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	if (path->state == PATH_STATE_SAMPLE_LIGHT) {
+        // Handled by Step1 kernel
+        return;
+    }
+#endif
 
-		const float u0 = RndFloatValue(&seed);
-		const float u1 = RndFloatValue(&seed);
-		const float u2 = RndFloatValue(&seed);
+	// Read the seed
+	Seed seed;
+	seed.s1 = path->seed.s1;
+	seed.s2 = path->seed.s2;
+	seed.s3 = path->seed.s3;
+
+	__global Ray *ray = &rays[gid];
+	__global RayHit *rayHit = &rayHits[gid];
+	uint currentTriangleIndex = rayHit->index;
+
+	const float hitPointT = rayHit->t;
+    const float hitPointB1 = rayHit->b1;
+    const float hitPointB2 = rayHit->b2;
+
+    Vector rayDir = ray->d;
+
+	Point hitPoint;
+    hitPoint.x = ray->o.x + rayDir.x * hitPointT;
+    hitPoint.y = ray->o.y + rayDir.y * hitPointT;
+    hitPoint.z = ray->o.z + rayDir.z * hitPointT;
+
+	Spectrum throughput = path->throughput;
+
+    if (currentTriangleIndex != 0xffffffffu) {
+		// Something was hit
 
 		Vector wo;
 		wo.x = -rayDir.x;
 		wo.y = -rayDir.y;
 		wo.z = -rayDir.z;
+
+		// Interpolate Color
+        Spectrum shadeColor;
+		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+		throughput.r *= shadeColor.r;
+		throughput.g *= shadeColor.g;
+		throughput.b *= shadeColor.b;
+
+		// Interpolate the normal
+        Vector N;
+		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
+
+		// Flip the normal if required
+        Vector shadeN;
+        // Using wo instead of rayDir because of problems with ATI compiler
+		const float nFlip = (Dot(&wo, &N) < 0.f) ? -1.f : 1.f;
+		shadeN.x = nFlip * N.x;
+		shadeN.y = nFlip * N.y;
+		shadeN.z = nFlip * N.z;
+
+		const uint meshIndex = meshIDs[currentTriangleIndex];
+		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
+
+		// Something was hit
+
+		const float u0 = RndFloatValue(&seed);
+		const float u1 = RndFloatValue(&seed);
+		const float u2 = RndFloatValue(&seed);
 
 		Vector wi;
 		float pdf;
