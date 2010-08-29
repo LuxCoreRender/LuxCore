@@ -1542,8 +1542,9 @@ __kernel void AdvancePaths_Step2(
 				}
 #endif
 				break;
-#endif
 			}
+#endif
+
 
 #if defined(PARAM_ENABLE_MAT_MIRROR)
 			case MAT_MIRROR:
