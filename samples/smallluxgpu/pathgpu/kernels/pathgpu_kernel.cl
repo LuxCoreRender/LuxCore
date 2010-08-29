@@ -1510,7 +1510,7 @@ __kernel void AdvancePaths_Step2(
 #endif
 
 #if defined(PARAM_ENABLE_MAT_AREALIGHT)
-			case MAT_AREALIGHT:
+			case MAT_AREALIGHT: {
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				if (path->specularBounce) {
 #endif
@@ -1543,6 +1543,7 @@ __kernel void AdvancePaths_Step2(
 #endif
 				break;
 #endif
+			}
 
 #if defined(PARAM_ENABLE_MAT_MIRROR)
 			case MAT_MIRROR:
