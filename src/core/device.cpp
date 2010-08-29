@@ -213,9 +213,14 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 				0
 			};
 
+#if defined(APPLE_WORKAROUND)
 			// TODO: find a btter way to handle APPLE odd behavior (i.e. it is not
 			// possible to explicit select the OpenCL device
-			oclContext = new cl::Context(CL_DEVICE_TYPE_GPU, cps);
+			oclContext = new cl::Context(cps);
+#else
+			oclContext = new cl::Context(devices, cps);
+#endif
+
 #else
 #ifdef WIN32
 			cl_context_properties cps[] = {
