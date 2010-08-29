@@ -212,15 +212,6 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 				CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)kCGLShareGroup,
 				0
 			};
-
-#if defined(APPLE_WORKAROUND)
-			// TODO: find a btter way to handle APPLE odd behavior (i.e. it is not
-			// possible to explicit select the OpenCL device
-			oclContext = new cl::Context(cps);
-#else
-			oclContext = new cl::Context(devices, cps);
-#endif
-
 #else
 #ifdef WIN32
 			cl_context_properties cps[] = {
@@ -229,8 +220,6 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 				0
 			};
-
-			oclContext = new cl::Context(devices, cps);
 #else
 			cl_context_properties cps[] = {
 				CL_GL_CONTEXT_KHR, (intptr_t)glXGetCurrentContext(),
@@ -238,10 +227,9 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
 				0
 			};
-
+#endif
+#endif
 			oclContext = new cl::Context(devices, cps);
-#endif
-#endif
 		} else {
 			cl_context_properties cps[] = {
 				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(), 0
