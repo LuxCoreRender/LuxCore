@@ -101,7 +101,7 @@ void PathGPURenderThread::Start() {
 
 	InitRender();
 
-	if (!renderEngine->hasOpenGLInterop) {
+	if (!renderEngine->enableOpenGLInterop) {
 		// Create the thread for the rendering
 		renderThread = new boost::thread(boost::bind(PathGPURenderThread::RenderThreadImpl, this));
 
@@ -416,9 +416,7 @@ void PathGPURenderThread::InitRender() {
 	// Allocate path buffer
 	//--------------------------------------------------------------------------
 
-	const size_t pathGPUSize = (renderEngine->hasOpenGLInterop) ?
-		(triLightsBuff ? sizeof(PathGPU::PathLowLatencyDL) : sizeof(PathGPU::PathLowLatency)) :
-		(triLightsBuff ? sizeof(PathGPU::PathDL) : sizeof(PathGPU::Path));
+	const size_t pathGPUSize = triLightsBuff ? sizeof(PathGPU::PathDL) : sizeof(PathGPU::Path);
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Paths buffer size: " << (pathGPUSize * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
 	pathsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
@@ -633,9 +631,12 @@ void PathGPURenderThread::InitRender() {
 				;
 	}
 
-	if (renderEngine->hasOpenGLInterop) {
-		// Low Latency mode uses a buffer to transfer camera position/orientation
-		ss << " -D PARAM_LOWLATENCY";
+	if (renderEngine->enableOpenGLInterop)
+		ss << " -D PARAM_OPENGL_INTEROP";
+
+	if (renderEngine->dynamicCamera) {
+		// Dynamic camera mode uses a buffer to transfer camera position/orientation
+		ss << " -D PARAM_CAMERA_DYNAMIC";
 
 		cerr << "[PathGPURenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(float) * 4 * 4 * 2 / 1024) << "Kbytes" << endl;
 		float data[4 * 4 * 2];
@@ -717,7 +718,7 @@ void PathGPURenderThread::InitRender() {
 		// UpdatePB kernel
 		//--------------------------------------------------------------------------
 
-		if (renderEngine->hasOpenGLInterop) {
+		if (renderEngine->enableOpenGLInterop) {
 			delete updatePBKernel;
 			updatePBKernel = new cl::Kernel(program, "UpdatePixelBuffer");
 			updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
@@ -788,7 +789,7 @@ void PathGPURenderThread::InitRender() {
 	// Initialize
 	//--------------------------------------------------------------------------
 
-	if (renderEngine->hasOpenGLInterop)
+	if (renderEngine->enableOpenGLInterop)
 		InitPixelBuffer();
 
 	// Clear the frame buffer
@@ -798,7 +799,7 @@ void PathGPURenderThread::InitRender() {
 	// Initialize the path buffer
 	initKernel->setArg(0, *pathsBuff);
 	initKernel->setArg(1, *raysBuff);
-	if (renderEngine->hasOpenGLInterop)
+	if (cameraBuff)
 		initKernel->setArg(2, *cameraBuff);
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(initWorkGroupSize));
@@ -830,7 +831,7 @@ void PathGPURenderThread::InitRender() {
 	advancePathStep2Kernel->setArg(argIndex++, *colorsBuff);
 	advancePathStep2Kernel->setArg(argIndex++, *normalsBuff);
 	advancePathStep2Kernel->setArg(argIndex++, *trianglesBuff);
-	if (renderEngine->hasOpenGLInterop)
+	if (cameraBuff)
 		advancePathStep2Kernel->setArg(argIndex++, *cameraBuff);
 	if (infiniteLight)
 		advancePathStep2Kernel->setArg(argIndex++, *infiniteLightBuff);
@@ -1008,7 +1009,7 @@ void PathGPURenderThread::UpdateCamera() {
 	// Initialize the path buffer
 	initKernel->setArg(0, *pathsBuff);
 	initKernel->setArg(1, *raysBuff);
-	if (renderEngine->hasOpenGLInterop)
+	if (cameraBuff)
 		initKernel->setArg(2, *cameraBuff);
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU_PATH_COUNT), cl::NDRange(initWorkGroupSize));
@@ -1020,7 +1021,7 @@ void PathGPURenderThread::EnqueueInitFrameBufferKernel(const bool clearPBO) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 	// Clear the frame buffer
-	if (renderEngine->hasOpenGLInterop) {
+	if (renderEngine->enableOpenGLInterop) {
 		VECTOR_CLASS<cl::Memory> buffs;
 		buffs.push_back(*pboBuff);
 		oclQueue.enqueueAcquireGLObjects(&buffs);
@@ -1052,11 +1053,7 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 	const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
 
 	try {
-		//const double refreshInterval = 1.0;
-		const double refreshInterval = 3.0;
-
-		// -refreshInterval is a trick to set the first frame buffer refresh after 1 sec
-		double startTime = WallClockTime() - (refreshInterval / 2.0);
+		double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
 			//if(renderThread->threadIndex == 0)
 			//	cerr<< "[DEBUG] =================================" << endl;
@@ -1071,7 +1068,7 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 
 			for(unsigned int j = 0;;++j) {
 				cl::Event event;
-				for (unsigned int i = 0; i < 32; ++i) {
+				for (unsigned int i = 0; i < 4; ++i) {
 					// Trace rays
 					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
 							*(renderThread->hitsBuff), PATHGPU_PATH_COUNT);
@@ -1098,7 +1095,8 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 				//if(renderThread->threadIndex == 0)
 				//	cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms" << endl;
 
-				if ((elapsedTime > refreshInterval) || boost::this_thread::interruption_requested())
+				if ((elapsedTime > renderThread->renderEngine->screenRefreshInterval) ||
+						boost::this_thread::interruption_requested())
 					break;
 			}
 
@@ -1150,21 +1148,32 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 		throw runtime_error("Unable to find an OpenCL intersection device for PathGPU render engine");
 
 	// Check if I have to enable OpenCL interoperability and if I can
-	if (cfg.GetInt("opencl.latency.mode", 1)) {
-		if (!oclIntersectionDevices[0]->GetDeviceDesc()->HasOCLContext() || oclIntersectionDevices[0]->GetDeviceDesc()->HasOGLInterop()) {
+	bool lowLatency = (cfg.GetInt("opencl.latency.mode", 1) != 0);
+	dynamicCamera = (cfg.GetInt("pathgpu.dynamiccamera.enable", lowLatency ? 1 : 0) != 0);
+	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000) / 1000.0;
+
+	if (lowLatency) {
+		// Check if I have to enable OpenGL interoperability
+		if ((cfg.GetInt("pathgpu.openglintreop.enable", 0) != 0) &&
+				(!oclIntersectionDevices[0]->GetDeviceDesc()->HasOCLContext() ||
+				oclIntersectionDevices[0]->GetDeviceDesc()->HasOGLInterop())) {
 			oclIntersectionDevices[0]->GetDeviceDesc()->EnableOGLInterop();
 			oclIntersectionDevices.resize(1);
 
-			hasOpenGLInterop = true;
-			cerr << "PathGPU low latency mode enabled" << endl;
+			enableOpenGLInterop = true;
+
+			screenRefreshInterval = 50;
+			cerr << "PathGPU OpenGL interoperability enabled" << endl;
 		} else {
-			hasOpenGLInterop = false;
-			cerr << "It is not possible to enable PathGPU low latency mode" << endl;
-			cerr << "PathGPU high bandwidth mode enabled" << endl;
+			enableOpenGLInterop = false;
+			cerr << "WARNING: it is not possible to enable PathGPU OpenGL interoperability" << endl;
 		}
+
+		samplePerPixel = 1;
+		dynamicCamera = true;
 	} else {
-		hasOpenGLInterop = false;
-		cerr << "PathGPU high bandwidth mode enabled" << endl;
+		enableOpenGLInterop = false;
+		cerr << "PathGPU OpenGL interoperability disabled" << endl;
 	}
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
@@ -1229,7 +1238,7 @@ void PathGPURenderEngine::UpdateFilm() {
 	const unsigned int imgWidth = film->GetWidth();
 	const unsigned int pixelCount = imgWidth * film->GetHeight();
 
-	if (hasOpenGLInterop && started) {
+	if (enableOpenGLInterop && started) {
 		// Transfer of the frame buffer
 		cl::CommandQueue &oclQueue = renderThreads[0]->intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueReadBuffer(

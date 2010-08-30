@@ -60,26 +60,6 @@ typedef struct {
 } PathDL;
 
 typedef struct {
-	Spectrum throughput;
-	unsigned int depth, pixelIndex;
-	Seed seed;
-} PathLowLatency;
-
-typedef struct {
-	Spectrum throughput;
-	unsigned int depth, pixelIndex;
-	Seed seed;
-
-	int specularBounce;
-	int state;
-
-	Ray pathRay;
-	RayHit pathHit;
-	Spectrum lightRadiance;
-	Spectrum accumRadiance;
-} PathLowLatencyDL;
-
-typedef struct {
 	Spectrum c;
 	unsigned int count;
 } Pixel;
@@ -276,7 +256,7 @@ public:
 	double GetRenderingTime() const { return (startTime == 0.0) ? 0.0 : (WallClockTime() - startTime); }
 
 	// Used for Low Latency mode
-	bool HasOpenGLInterop() const { return hasOpenGLInterop; }
+	bool HasOpenGLInterop() const { return enableOpenGLInterop; }
 	void UpdateCamera() { renderThreads[0]->UpdateCamera(); }
 	void UpdatePixelBuffer(const unsigned int screenRefreshInterval) { renderThreads[0]->UpdatePixelBuffer(screenRefreshInterval); }
 
@@ -297,10 +277,13 @@ private:
 	vector<PathGPURenderThread *> renderThreads;
 	SampleBuffer *sampleBuffer;
 
+	double screenRefreshInterval; // in seconds
+
 	double startTime;
 	double elapsedTime;
 	unsigned long long samplesCount;
-	bool hasOpenGLInterop;
+
+	bool enableOpenGLInterop, dynamicCamera;
 };
 
 #endif

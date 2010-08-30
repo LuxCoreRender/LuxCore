@@ -39,9 +39,10 @@
 //  PARAM_CAMERA_HAS_DOF
 //  PARAM_CAMERA_LENS_RADIUS
 //  PARAM_CAMERA_FOCAL_DISTANCE
-//  PARAM_LOWLATENCY
+//  PARAM_OPENGL_INTEROP
 //  PARAM_DIRECT_LIGHT_SAMPLING
 //  PARAM_DL_LIGHT_COUNT
+//  PARAM_CAMERA_DYNAMIC
 
 // To enable single material suopport (work around for ATI compiler problems)
 //  PARAM_ENABLE_MAT_MATTE
@@ -125,12 +126,9 @@ typedef struct {
 
 typedef struct {
 	Spectrum throughput;
-	uint depth, pixelIndex
-#if !defined(PARAM_LOWLATENCY)
-	, subpixelIndex
-#endif
-	;
+	uint depth, pixelIndex, subpixelIndex;
 	Seed seed;
+
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	int specularBounce;
 	int state;
@@ -360,7 +358,7 @@ void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
 void GenerateRay(
 		const uint pixelIndex,
 		__global Ray *ray, Seed *seed
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
 		) {
@@ -382,7 +380,7 @@ void GenerateRay(
 
 	Point orig;
 	// RasterToCamera(Pras, &orig);
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 	const float iw = 1.f / (cameraData[12] * Pras.x + cameraData[13] * Pras.y + cameraData[14] * Pras.z + cameraData[15]);
 	orig.x = (cameraData[0] * Pras.x + cameraData[1] * Pras.y + cameraData[2] * Pras.z + cameraData[3]) * iw;
 	orig.y = (cameraData[4] * Pras.x + cameraData[5] * Pras.y + cameraData[6] * Pras.z + cameraData[7]) * iw;
@@ -426,7 +424,7 @@ void GenerateRay(
 
 	// CameraToWorld(*ray, ray);
 	Point torig;
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 	const float iw2 = 1.f / (cameraData[16 + 12] * orig.x + cameraData[16 + 13] * orig.y + cameraData[16 + 14] * orig.z + cameraData[16 + 15]);
 	torig.x = (cameraData[16 + 0] * orig.x + cameraData[16 + 1] * orig.y + cameraData[16 + 2] * orig.z + cameraData[16 + 3]) * iw2;
 	torig.y = (cameraData[16 + 4] * orig.x + cameraData[16 + 5] * orig.y + cameraData[16 + 6] * orig.z + cameraData[16 + 7]) * iw2;
@@ -439,7 +437,7 @@ void GenerateRay(
 #endif
 
 	Vector tdir;
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 	tdir.x = cameraData[16 + 0] * dir.x + cameraData[16 + 1] * dir.y + cameraData[16 + 2] * dir.z;
 	tdir.y = cameraData[16 + 4] * dir.x + cameraData[16 + 5] * dir.y + cameraData[16 + 6] * dir.z;
 	tdir.z = cameraData[16 + 8] * dir.x + cameraData[16 + 9] * dir.y + cameraData[16 + 10] * dir.z;
@@ -460,7 +458,7 @@ void GenerateRay(
 __kernel void Init(
 		__global Path *paths,
 		__global Ray *rays
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
 		) {
@@ -484,9 +482,7 @@ __kernel void Init(
 
 	const uint pixelIndex = (PARAM_STARTLINE * PARAM_IMAGE_WIDTH + gid) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = pixelIndex;
-#if !defined(PARAM_LOWLATENCY)
 	path->subpixelIndex = 0;
-#endif
 
 	// Initialize random number generator
 	Seed seed;
@@ -494,7 +490,7 @@ __kernel void Init(
 
 	// Generate the eye ray
 	GenerateRay(pixelIndex, &rays[gid], &seed
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 		, cameraData
 #endif
 		);
@@ -509,7 +505,7 @@ __kernel void Init(
 
 __kernel void InitFrameBuffer(
 		__global Pixel *frameBuffer
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_OPENGL_INTEROP)
 		, const int clearPBO
 		, __global uint *pbo
 #endif
@@ -524,13 +520,13 @@ __kernel void InitFrameBuffer(
 	p->c.b = 0.f;
 	p->count = 0;
 
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_OPENGL_INTEROP)
 	if (clearPBO)
 		pbo[gid] = 0;
 #endif
 }
 
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_OPENGL_INTEROP)
 uint Radiance2PixelUInt(const float x) {
 	return (uint)(pow(clamp(x, 0.f, 1.f), 1.f / 2.2f) * 255.f + .5f);
 }
@@ -1172,7 +1168,7 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 //------------------------------------------------------------------------------
 
 void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frameBuffer, Seed *seed, Spectrum *radiance
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
 		) {
@@ -1189,7 +1185,7 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
     // Re-initialize the path
 
 	uint newPixelIndex;
-#if defined(PARAM_LOWLATENCY)
+#if (PARAM_SAMPLE_PER_PIXEL > 0)
 	newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 	path->pixelIndex = newPixelIndex;
 #else
@@ -1205,7 +1201,7 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 #endif
 
 	GenerateRay(newPixelIndex, ray, seed
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 		, cameraData
 #endif
 		);
@@ -1418,7 +1414,7 @@ __kernel void AdvancePaths_Step2(
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Triangle *triangles
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
 #if defined(PARAM_HAVE_INFINITELIGHT)
@@ -1527,7 +1523,7 @@ __kernel void AdvancePaths_Step2(
 #endif
 
 					TerminatePath(path, ray, frameBuffer, &seed, &radiance
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 						, cameraData
 #endif
 					);
@@ -1649,7 +1645,7 @@ __kernel void AdvancePaths_Step2(
 #endif
 
 			TerminatePath(path, ray, frameBuffer, &seed, &radiance
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 				, cameraData
 #endif
 				);
@@ -1690,7 +1686,7 @@ __kernel void AdvancePaths_Step2(
 #endif
 
 		TerminatePath(path, ray, frameBuffer, &seed, &radiance
-#if defined(PARAM_LOWLATENCY)
+#if defined(PARAM_CAMERA_DYNAMIC)
 				, cameraData
 #endif
 			);
