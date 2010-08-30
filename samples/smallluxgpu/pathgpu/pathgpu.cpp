@@ -1189,7 +1189,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 
 	if (lowLatency) {
 		// Check if I have to enable OpenGL interoperability
-		if ((cfg.GetInt("pathgpu.openglintreop.enable", 0) != 0) &&
+		if ((cfg.GetInt("pathgpu.openglinterop.enable", 0) != 0) &&
 				(!oclIntersectionDevices[0]->GetDeviceDesc()->HasOCLContext() ||
 				oclIntersectionDevices[0]->GetDeviceDesc()->HasOGLInterop())) {
 			oclIntersectionDevices[0]->GetDeviceDesc()->EnableOGLInterop();
