@@ -65,11 +65,26 @@ PathGPURenderThread::PathGPURenderThread(const unsigned int index, const unsigne
 	renderEngine = re;
 	started = false;
 	frameBuffer = NULL;
+
+	kernelsParameters = "";
+	initKernel = NULL;
+	initFBKernel = NULL;
+	updatePBKernel = NULL;
+	updatePBBluredKernel = NULL;
+	advancePathStep1Kernel = NULL;
+	advancePathStep2Kernel = NULL;
 }
 
 PathGPURenderThread::~PathGPURenderThread() {
 	if (started)
 		Stop();
+
+	delete initKernel;
+	delete initFBKernel;
+	delete updatePBKernel;
+	delete updatePBBluredKernel;
+	delete advancePathStep1Kernel;
+	delete advancePathStep2Kernel;
 
 	delete[] frameBuffer;
 }
@@ -555,10 +570,6 @@ void PathGPURenderThread::InitRender() {
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
-	// Compile sources
-	cl::Program::Sources source(1, std::make_pair(KernelSource_PathGPU.c_str(), KernelSource_PathGPU.length()));
-	cl::Program program = cl::Program(oclContext, source);
-
 	// Set #define symbols
 	stringstream ss;
 	ss.precision(6);
@@ -642,120 +653,136 @@ void PathGPURenderThread::InitRender() {
 		AppendMatrixDefinition(ss, "PARAM_CAMERA2WORLD", scene->camera->GetCameraToWorldMatrix());
 	}
 
-	try {
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << ss.str() << endl;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling kernels " << endl;
+	// Check if I have to recompile the kernels
+	string newKernelParameters = ss.str();
+	if (kernelsParameters != newKernelParameters) {
+		kernelsParameters = newKernelParameters;
 
-		const double t = WallClockTime();
-		VECTOR_CLASS<cl::Device> buildDevice;
-		buildDevice.push_back(oclDevice);
-		program.build(buildDevice, ss.str().c_str());
-		cerr  << "[PathGPURenderThread::" << threadIndex << "] Kernels compilation time: " << setprecision(1) << fixed << WallClockTime() - t << "secs" << endl;
-	} catch (cl::Error err) {
-		cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
+		// Compile sources
+		cl::Program::Sources source(1, std::make_pair(KernelSource_PathGPU.c_str(), KernelSource_PathGPU.length()));
+		cl::Program program = cl::Program(oclContext, source);
 
-		throw err;
-	}
+		try {
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters << endl;
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling kernels " << endl;
 
-	//--------------------------------------------------------------------------
-	// Init kernel
-	//--------------------------------------------------------------------------
+			const double t = WallClockTime();
+			VECTOR_CLASS<cl::Device> buildDevice;
+			buildDevice.push_back(oclDevice);
+			program.build(buildDevice, kernelsParameters.c_str());
+			cerr  << "[PathGPURenderThread::" << threadIndex << "] Kernels compilation time: " << setprecision(1) << fixed << WallClockTime() - t << "secs" << endl;
+		} catch (cl::Error err) {
+			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
-	initKernel = new cl::Kernel(program, "Init");
-	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
-
-	initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
-
-	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-		initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
-	}
-
-	//--------------------------------------------------------------------------
-	// InitFB kernel
-	//--------------------------------------------------------------------------
-
-	initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
-	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
-
-	initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
-
-	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-		initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
-	}
-
-	//--------------------------------------------------------------------------
-	// UpdatePB kernel
-	//--------------------------------------------------------------------------
-
-	if (renderEngine->hasOpenGLInterop) {
-		updatePBKernel = new cl::Kernel(program, "UpdatePixelBuffer");
-		updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBuffer kernel work group size: " << updatePBWorkGroupSize << endl;
-
-		updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			updatePBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBWorkGroupSize << endl;
+			throw err;
 		}
 
-		updatePBBluredKernel = new cl::Kernel(program, "UpdatePixelBufferBlured");
-		updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel work group size: " << updatePBBluredWorkGroupSize << endl;
+		//----------------------------------------------------------------------
+		// Init kernel
+		//----------------------------------------------------------------------
 
-		updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBBluredWorkGroupSize << endl;
+		delete initKernel;
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
+		initKernel = new cl::Kernel(program, "Init");
+		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
+
+		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			updatePBBluredWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBBluredWorkGroupSize << endl;
+			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
 		}
-	} else {
-		updatePBKernel = NULL;
-		updatePBBluredKernel = NULL;
-	}
 
-	//--------------------------------------------------------------------------
-	// AdvancePaths kernel
-	//--------------------------------------------------------------------------
+		//--------------------------------------------------------------------------
+		// InitFB kernel
+		//--------------------------------------------------------------------------
 
-	if (triLightsBuff) {
-		// Compile the first step only if direct light sampling is enabled
-		advancePathStep1Kernel = new cl::Kernel(program, "AdvancePaths_Step1");
-		advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step1 kernel work group size: " << advancePathStep1WorkGroupSize << endl;
+		delete initFBKernel;
+		initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
+		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
 
-		advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep1WorkGroupSize << endl;
+		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			advancePathStep1WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep1WorkGroupSize << endl;
+			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
+		}
+
+		//--------------------------------------------------------------------------
+		// UpdatePB kernel
+		//--------------------------------------------------------------------------
+
+		if (renderEngine->hasOpenGLInterop) {
+			delete updatePBKernel;
+			updatePBKernel = new cl::Kernel(program, "UpdatePixelBuffer");
+			updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
+			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBuffer kernel work group size: " << updatePBWorkGroupSize << endl;
+
+			updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBWorkGroupSize << endl;
+
+			if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+				updatePBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+				cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBWorkGroupSize << endl;
+			}
+
+			updatePBBluredKernel = new cl::Kernel(program, "UpdatePixelBufferBlured");
+			updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
+			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel work group size: " << updatePBBluredWorkGroupSize << endl;
+
+			updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBBluredWorkGroupSize << endl;
+
+			if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+				updatePBBluredWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+				cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBBluredWorkGroupSize << endl;
+			}
+		} else {
+			updatePBKernel = NULL;
+			updatePBBluredKernel = NULL;
+		}
+
+		//--------------------------------------------------------------------------
+		// AdvancePaths kernel
+		//--------------------------------------------------------------------------
+
+		if (triLightsBuff) {
+			delete advancePathStep1Kernel;
+
+			// Compile the first step only if direct light sampling is enabled
+			advancePathStep1Kernel = new cl::Kernel(program, "AdvancePaths_Step1");
+			advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
+			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step1 kernel work group size: " << advancePathStep1WorkGroupSize << endl;
+
+			advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep1WorkGroupSize << endl;
+
+			if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+				advancePathStep1WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+				cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep1WorkGroupSize << endl;
+			}
+		} else
+			advancePathStep1Kernel = NULL;
+
+		delete advancePathStep2Kernel;
+		advancePathStep2Kernel = new cl::Kernel(program, "AdvancePaths_Step2");
+		advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step2 kernel work group size: " << advancePathStep2WorkGroupSize << endl;
+
+		advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep2WorkGroupSize << endl;
+
+		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+			advancePathStep2WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep2WorkGroupSize << endl;
 		}
 	} else
-		advancePathStep1Kernel = NULL;
-
-
-	advancePathStep2Kernel = new cl::Kernel(program, "AdvancePaths_Step2");
-	advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step2 kernel work group size: " << advancePathStep2WorkGroupSize << endl;
-
-	advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep2WorkGroupSize << endl;
-
-	if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-		advancePathStep2WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep2WorkGroupSize << endl;
-	}
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Using cached kernels" << endl;
 
 	//--------------------------------------------------------------------------
 	// Initialize
@@ -872,13 +899,6 @@ void PathGPURenderThread::Stop() {
 		deviceDesc->FreeMemory(triLightsBuff->getInfo<CL_MEM_SIZE>());
 		delete triLightsBuff;
 	}
-
-	delete initKernel;
-	delete initFBKernel;
-	delete updatePBKernel;
-	delete updatePBBluredKernel;
-	delete advancePathStep1Kernel;
-	delete advancePathStep2Kernel;
 
 	if (pbo) {
         // Delete old buffer
