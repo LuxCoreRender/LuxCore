@@ -205,6 +205,7 @@ private:
 	OpenCLIntersectionDevice *intersectionDevice;
 
 	// OpenCL variables
+	string kernelsParameters;
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
 	cl::Kernel *initFBKernel;
