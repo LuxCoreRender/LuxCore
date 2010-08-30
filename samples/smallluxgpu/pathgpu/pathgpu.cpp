@@ -143,11 +143,15 @@ void PathGPURenderThread::InitRender() {
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 
+	double tStart, tEnd;
+
 	//--------------------------------------------------------------------------
 	// Allocate buffers
 	//--------------------------------------------------------------------------
 
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+
+	tStart = WallClockTime();
 
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
 	raysBuff = new cl::Buffer(oclContext,
@@ -182,9 +186,14 @@ void PathGPURenderThread::InitRender() {
 			(void *)scene->dataSet->GetMeshTriangleIDTable());
 	deviceDesc->AllocMemory(triIDBuff->getInfo<CL_MEM_SIZE>());
 
+	tEnd = WallClockTime();
+	cerr << "[PathGPURenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
 	//--------------------------------------------------------------------------
 	// Translate material definitions
 	//--------------------------------------------------------------------------
+
+	tStart = WallClockTime();
 
 	bool enable_MAT_MATTE = false;
 	bool enable_MAT_AREALIGHT = false;
@@ -363,9 +372,14 @@ void PathGPURenderThread::InitRender() {
 
 	delete[] mats;
 
+	tEnd = WallClockTime();
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Material translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
 	//--------------------------------------------------------------------------
 	// Translate area lights
 	//--------------------------------------------------------------------------
+
+	tStart = WallClockTime();
 
 	// Count the area lights
 	unsigned int areaLightCount = 0;
@@ -412,6 +426,9 @@ void PathGPURenderThread::InitRender() {
 	} else
 		triLightsBuff = NULL;
 
+	tEnd = WallClockTime();
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Area lights translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
 	//--------------------------------------------------------------------------
 	// Allocate path buffer
 	//--------------------------------------------------------------------------
@@ -426,6 +443,8 @@ void PathGPURenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 	// Translate mesh material indices
 	//--------------------------------------------------------------------------
+
+	tStart = WallClockTime();
 
 	const unsigned int meshCount = scene->objectMaterials.size();
 	unsigned int *meshMats = new unsigned int[meshCount];
@@ -453,9 +472,14 @@ void PathGPURenderThread::InitRender() {
 
 	delete[] meshMats;
 
+	tEnd = WallClockTime();
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Material indices translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
 	//--------------------------------------------------------------------------
 	// Check if there is an infinite light source
 	//--------------------------------------------------------------------------
+
+	tStart = WallClockTime();
 
 	InfiniteLight *infiniteLight = NULL;
 	if (scene->infiniteLight && (
@@ -493,9 +517,14 @@ void PathGPURenderThread::InitRender() {
 	if (!infiniteLight && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathGPU in the scene (i.e. sun is not yet supported)");
 
+	tEnd = WallClockTime();
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Infinitelight translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
 	//--------------------------------------------------------------------------
 	// Translate mesh colors
 	//--------------------------------------------------------------------------
+
+	tStart = WallClockTime();
 
 	const unsigned int colorsCount = scene->dataSet->GetTotalVertexCount();
 	Spectrum *colors = new Spectrum[colorsCount];
@@ -563,6 +592,9 @@ void PathGPURenderThread::InitRender() {
 			sizeof(Triangle) * trianglesCount,
 			(void *)preprocessedMesh->GetTriangles());
 	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+
+	tEnd = WallClockTime();
+	cerr << "[PathGPURenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -635,6 +667,8 @@ void PathGPURenderThread::InitRender() {
 		ss << " -D PARAM_OPENGL_INTEROP";
 
 	if (renderEngine->dynamicCamera) {
+		tStart = WallClockTime();
+
 		// Dynamic camera mode uses a buffer to transfer camera position/orientation
 		ss << " -D PARAM_CAMERA_DYNAMIC";
 
@@ -667,11 +701,9 @@ void PathGPURenderThread::InitRender() {
 			cerr << "[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters << endl;
 			cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling kernels " << endl;
 
-			const double t = WallClockTime();
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
 			program.build(buildDevice, kernelsParameters.c_str());
-			cerr  << "[PathGPURenderThread::" << threadIndex << "] Kernels compilation time: " << setprecision(1) << fixed << WallClockTime() - t << "secs" << endl;
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
@@ -782,6 +814,9 @@ void PathGPURenderThread::InitRender() {
 			advancePathStep2WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
 			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep2WorkGroupSize << endl;
 		}
+
+		tEnd = WallClockTime();
+		cerr  << "[PathGPURenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 	} else
 		cerr << "[PathGPURenderThread::" << threadIndex << "] Using cached kernels" << endl;
 

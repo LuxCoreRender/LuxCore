@@ -59,8 +59,8 @@ void RenderingConfig::Init() {
 	const unsigned int w = cfg.GetInt("image.width", 640);
 	const unsigned int h = cfg.GetInt("image.height", 480);
 	const unsigned int nativeThreadCount = cfg.GetInt("opencl.nativethread.count", 2);
-	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 0) == 1);
-	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) == 1);
+	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 0) != 0);
+	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
 	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
 	const string oclIntersectionDeviceConfig = cfg.GetString("opencl.devices.select", "");
