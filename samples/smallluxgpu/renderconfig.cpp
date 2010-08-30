@@ -302,7 +302,8 @@ void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 		cerr << "No OpenCL device selected" << endl;
 	else {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		if (cfg.GetInt("opencl.latency.mode", 1) && (cfg.GetInt("renderengine.type", 0) == 3)) {
+		if (cfg.GetInt("opencl.latency.mode", 1) && (cfg.GetInt("renderengine.type", 0) == 3) &&
+				(cfg.GetInt("pathgpu.openglintreop.enable", 0) != 0)) {
 			// Ask for OpenGL interoperability on the first device
 			((OpenCLDeviceDescription *)selectedDescs[0])->EnableOGLInterop();
 		}
