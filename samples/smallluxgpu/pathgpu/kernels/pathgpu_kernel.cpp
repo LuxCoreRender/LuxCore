@@ -676,7 +676,7 @@ std::string luxrays::KernelSource_PathGPU =
 "\n"
 "#if defined(PARAM_HAVE_INFINITELIGHT)\n"
 "void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector *dir) {\n"
-"	const float u = SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;\n"
+"	const float u = 1.f - SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;\n"
 "	const float v = SphericalTheta(dir) * INV_PI + PARAM_IL_SHIFT_V;\n"
 "\n"
 "	TexMap_GetColor(infiniteLightMap, PARAM_IL_WIDTH, PARAM_IL_HEIGHT, u, v, le);\n"

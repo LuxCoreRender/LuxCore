@@ -674,7 +674,7 @@ float SphericalPhi(const Vector *v) {
 
 #if defined(PARAM_HAVE_INFINITELIGHT)
 void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector *dir) {
-	const float u = SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;
+	const float u = 1.f - SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;
 	const float v = SphericalTheta(dir) * INV_PI + PARAM_IL_SHIFT_V;
 
 	TexMap_GetColor(infiniteLightMap, PARAM_IL_WIDTH, PARAM_IL_HEIGHT, u, v, le);
