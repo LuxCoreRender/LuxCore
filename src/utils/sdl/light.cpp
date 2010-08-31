@@ -280,7 +280,6 @@ InfiniteLight::InfiniteLight(TexMapInstance *tx) {
 
 Spectrum InfiniteLight::Le(const Vector &dir) const {
 	const UV uv(1.f - SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
-//std::cerr<<gain*tex->GetTexMap()->GetColor(uv)<<"\n";
 	return gain * tex->GetTexMap()->GetColor(uv);
 }
 
@@ -462,11 +461,11 @@ Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const Point &p, const Nor
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	float uv[2];
 	uvDistrib->SampleContinuous(u0, u1, uv, pdf);
-	uv[0] = 1.f - (uv[0] - shiftU);
+	uv[0] -= shiftU;
 	uv[1] -= shiftV;
 
 	// Convert sample point to direction on the unit sphere
-	const float phi = uv[0] * 2.f * M_PI;
+	const float phi = (1.f - uv[0]) * 2.f * M_PI;
 	const float theta = uv[1] * M_PI;
 	const float costheta = cosf(theta);
 	const float sintheta = sinf(theta);
@@ -480,9 +479,51 @@ Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const Point &p, const Nor
 	*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
 	*pdf /= (2.f * M_PI * M_PI * sintheta);
 
-	UV texUV(1.f - uv[0], uv[1]);
-	return gain * tex->GetTexMap()->GetColor(texUV);
+	return gain * tex->GetTexMap()->GetColor(UV(uv));
 }
+
+Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
+	// Choose a point on scene bounding sphere using IS
+	float uv[2];
+	float mapPdf;
+	uvDistrib->SampleContinuous(u0, u1, uv, &mapPdf);
+	uv[0] -= shiftU;
+	uv[1] -= shiftV;
+
+    const float theta = uv[1] * M_PI;
+	const float sintheta = sinf(theta);
+	if (sintheta == 0.f) {
+		*pdf = 0.f;
+		return Spectrum();
+	}
+	const float costheta = cosf(theta);
+
+	const float phi = (1.f - uv[0]) * 2.f * M_PI;
+    const float sinphi = sinf(phi);
+	const float cosphi = cosf(phi);
+    Vector d = -Vector(sintheta * cosphi, sintheta * sinphi, costheta);
+
+	// Compute origin for infinite light sample ray
+	const Point worldCenter = scene->dataSet->GetBSphere().center;
+	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+    Vector v1, v2;
+    CoordinateSystem(-d, &v1, &v2);
+
+    float d1, d2;
+    ConcentricSampleDisk(u2, u3, &d1, &d2);
+    const Point Pdisk = worldCenter + worldRadius * (d1 * v1 + d2 * v2);
+
+	*ray = Ray(Pdisk - worldRadius * d, d, 0.f, INFINITY);
+
+    // Compute InfiniteAreaLight ray PDF
+    const float directionPdf = mapPdf / (2.f * M_PI * M_PI * sintheta);
+    const float areaPdf = 1.f / (M_PI * worldRadius * worldRadius);
+    *pdf = directionPdf * areaPdf;
+
+	return gain * tex->GetTexMap()->GetColor(UV(uv));
+}
+
 
 //------------------------------------------------------------------------------
 // Triangle Area Light
