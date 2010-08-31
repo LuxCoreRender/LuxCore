@@ -15,6 +15,7 @@ scene.objects.glass.s1 = scenes/simple-mat/sphere.ply
 #scene.objects.whitelight.l2 = scenes/simple-mat/simple-mat-light2.ply
 scene.infinitelight.file = scenes/simple-mat/sky.exr
 #scene.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.infinitelight.file = scenes/simple-mat/image.png
 scene.infinitelight.gain = 1.0 1.0 1.0
 scene.objects.aglass.c3 = scenes/simple-mat/cube-glass.ply
 scene.objects.whitelight2.c4 = scenes/simple-mat/back-light.ply

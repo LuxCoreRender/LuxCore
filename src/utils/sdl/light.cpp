@@ -279,8 +279,8 @@ InfiniteLight::InfiniteLight(TexMapInstance *tx) {
 }
 
 Spectrum InfiniteLight::Le(const Vector &dir) const {
-	const UV uv(SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
-
+	const UV uv(1.f - SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
+//std::cerr<<gain*tex->GetTexMap()->GetColor(uv)<<"\n";
 	return gain * tex->GetTexMap()->GetColor(uv);
 }
 
@@ -394,7 +394,7 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const float u0,
 	const unsigned int portalCount = portals->GetTotalTriangleCount();
 	unsigned int portalIndex = Min<unsigned int>(Floor2UInt(portalCount * u4), portalCount - 1);
 
-	// Sample the triangle
+	// Sample the portal triangle
 	Point samplePoint;
 	float b0, b1, b2;
 	portals->Sample(portalIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
@@ -462,6 +462,8 @@ Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const Point &p, const Nor
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
 	float uv[2];
 	uvDistrib->SampleContinuous(u0, u1, uv, pdf);
+	uv[0] = 1.f - (uv[0] - shiftU);
+	uv[1] -= shiftV;
 
 	// Convert sample point to direction on the unit sphere
 	const float phi = uv[0] * 2.f * M_PI;
@@ -478,7 +480,7 @@ Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const Point &p, const Nor
 	*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
 	*pdf /= (2.f * M_PI * M_PI * sintheta);
 
-	UV texUV(uv[0], uv[1]);
+	UV texUV(1.f - uv[0], uv[1]);
 	return gain * tex->GetTexMap()->GetColor(texUV);
 }
 
