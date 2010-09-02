@@ -20,12 +20,12 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 #
-# SmallLuxGPU v1.6beta3 Blender 2.5 plug-in
+# SmallLuxGPU v1.7beta2 Blender 2.5 plug-in
 
 bl_addon_info = {
     "name": "Render: SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
-    "version": "0.63dev",
+    "version": "0.72dev",
     "blender": (2, 5, 4),
     "location": "Info Header (engine dropdown)",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
@@ -412,7 +412,7 @@ class SLGBP:
                             if do.settings.render_type == 'GROUP' and not do.settings.use_whole_group:
                                 if gn != i % ndgos:
                                     continue
-                            if p.alive_state == 'ALIVE':
+                            if p.alive_state == 'ALIVE' and p.is_exist and p.is_visible:
                                 objn = do.id_data.name.replace('.','_')+'{P}'+str(i)+plyn
                                 if isnan(p.rotation[0]): # Deal with Blender bug...
                                     rm = mathutils.Matrix()
