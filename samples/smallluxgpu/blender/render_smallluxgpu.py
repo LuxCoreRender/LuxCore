@@ -927,7 +927,7 @@ class SLGRender(bpy.types.Operator):
         self._iserror = False
         SLGBP.abort = False
         if self.properties.animation:
-            context.manager.add_modal_handler(self)
+            context.window_manager.add_modal_handler(self)
             SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
             SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
             SLGBP.exportrun(context.scene)
@@ -980,7 +980,7 @@ class SLGLive(bpy.types.Operator):
                 self.report('ERROR', "SLG must be running with telnet interface enabled")
                 return {'CANCELLED'}
         self._iserror = False
-        context.manager.add_modal_handler(self)
+        context.window_manager.add_modal_handler(self)
         # Disable global undo as it corrupts all pointers used by SLG Live! mode
         self._undo = bpy.context.user_preferences.edit.use_global_undo
         bpy.context.user_preferences.edit.use_global_undo = False
