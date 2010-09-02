@@ -114,7 +114,9 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "1", "path CPU/GPU rendering");
 	PrintHelpString(320, fontOffset, "2", "SPPM rendering");
 	fontOffset -= 15;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	PrintHelpString(15, fontOffset, "3", "path tracing GPU rendering");
+#endif
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -598,6 +600,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 			break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '3':
 			config->SetRenderingEngineType(PATHGPU);
 			if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
@@ -608,6 +611,7 @@ void keyFunc(unsigned char key, int x, int y) {
 				glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 			}
 			break;
+#endif
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
@@ -755,10 +759,12 @@ void RunGlut() {
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
 			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
 		glutIdleFunc(idleFunc);
 	else
+#endif
 		glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 
 	glMatrixMode(GL_PROJECTION);
