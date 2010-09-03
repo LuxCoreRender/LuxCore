@@ -150,6 +150,11 @@ typedef struct {
 	float gain_r, gain_g, gain_b;
 } TriangleLight;
 
+typedef struct {
+	unsigned int rgbOffset, alphaOffset;
+	unsigned int width, height;
+} TexMap;
+
 }
 
 //------------------------------------------------------------------------------
@@ -213,6 +218,10 @@ private:
 	cl::Buffer *colorsBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *triLightsBuff;
+	cl::Buffer *texMapBuff;
+	cl::Buffer *texMapDescBuff;
+	cl::Buffer *meshTexsBuff;
+	cl::Buffer *uvsBuff;
 
 	// Used only when OpenGL interoperability is enabled and only by the first
 	// thread

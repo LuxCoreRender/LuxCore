@@ -210,3 +210,8 @@ NormalMapInstance *TextureMapCache::GetNormalMapInstance(const std::string &file
 
 	return nm;
 }
+
+void TextureMapCache::GetTexMaps(std::vector<TextureMap *> &tms) {
+	for (std::map<std::string, TextureMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
+		tms.push_back(it->second);
+}
