@@ -84,6 +84,7 @@ public:
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
 	const Spectrum *GetPixels() const { return pixels; };
+	const float *GetAlphas() const { return alpha; };
 
 private:
 	const Spectrum &GetTexel(const int s, const int t) const {
@@ -155,6 +156,8 @@ public:
 	TexMapInstance *GetTexMapInstance(const std::string &fileName);
 	BumpMapInstance *GetBumpMapInstance(const std::string &fileName, const float scale);
 	NormalMapInstance *GetNormalMapInstance(const std::string &fileName);
+
+	void GetTexMaps(std::vector<TextureMap *> &tms);
 
 private:
 	TextureMap *GetTextureMap(const std::string &fileName);

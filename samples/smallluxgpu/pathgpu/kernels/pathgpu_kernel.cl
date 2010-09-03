@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_PATH_COUNT
@@ -43,6 +43,8 @@
 //  PARAM_DIRECT_LIGHT_SAMPLING
 //  PARAM_DL_LIGHT_COUNT
 //  PARAM_CAMERA_DYNAMIC
+//  PARAM_HAS_TEXTUREMAPS
+//  PARAM_HAS_ALPHA_TEXTUREMAPS
 
 // To enable single material suopport (work around for ATI compiler problems)
 //  PARAM_ENABLE_MAT_MATTE
@@ -88,6 +90,10 @@
 //------------------------------------------------------------------------------
 // Types
 //------------------------------------------------------------------------------
+
+typedef struct {
+	float u, v;
+} UV;
 
 typedef struct {
 	float r, g, b;
@@ -230,6 +236,11 @@ typedef struct {
 	float area;
 	float gain_r, gain_g, gain_b;
 } TriangleLight;
+
+typedef struct {
+	unsigned int rgbOffset, alphaOffset;
+	unsigned int width, height;
+} TexMap;
 
 //------------------------------------------------------------------------------
 // Random number generator
@@ -705,6 +716,15 @@ void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangl
 	N->z = b0 * normals[tri->v0].z + b1 * normals[tri->v1].z + b2 * normals[tri->v2].z;
 
 	Normalize(N);
+}
+
+void Mesh_InterpolateUV(__global UV *uvs, __global Triangle *triangles,
+		const uint triIndex, const float b1, const float b2, UV *uv) {
+	__global Triangle *tri = &triangles[triIndex];
+
+	const float b0 = 1.f - b1 - b2;
+	uv->u = b0 * uvs[tri->v0].u + b1 * uvs[tri->v1].u + b2 * uvs[tri->v2].u;
+	uv->v = b0 * uvs[tri->v0].v + b1 * uvs[tri->v1].v + b2 * uvs[tri->v2].v;
 }
 
 //------------------------------------------------------------------------------
@@ -1232,6 +1252,12 @@ __kernel void AdvancePaths_Step1(
 		__global Vector *vertNormals,
 		__global Triangle *triangles,
         __global TriangleLight *triLights
+#if defined(PARAM_HAS_TEXTUREMAPS)
+        , __global Spectrum *texMapBuff
+        , __global TexMap *texMapDescBuff
+        , __global unsigned int *meshTexsBuff
+        , __global UV *vertUVs
+#endif
 		) {
 	const int gid = get_global_id(0);
 	__global Path *path = &paths[gid];
@@ -1368,6 +1394,26 @@ __kernel void AdvancePaths_Step1(
                 // Interpolate Color
                 Spectrum shadeColor;
                 Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+
+#if defined(PARAM_HAS_TEXTUREMAPS)
+                // Interpolate UV coordinates
+                UV uv;
+                Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+
+                // Check it the mesh has a texture map
+                unsigned int texIndex = meshTexsBuff[meshIndex];
+                if (texIndex != 0xffffffffu) {
+                    __global TexMap *texMap = &texMapDescBuff[texIndex];
+
+                    Spectrum texColor;
+                    TexMap_GetColor(&texMapBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
+
+                    shadeColor.r *= texColor.r;
+                    shadeColor.g *= texColor.g;
+                    shadeColor.b *= texColor.b;
+                }
+#endif
+
                 Spectrum throughput = path->throughput;
                 throughput.r *= shadeColor.r;
                 throughput.g *= shadeColor.g;
@@ -1423,6 +1469,12 @@ __kernel void AdvancePaths_Step2(
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 		, __global TriangleLight *triLights
 #endif
+#if defined(PARAM_HAS_TEXTUREMAPS)
+        , __global Spectrum *texMapBuff
+        , __global TexMap *texMapDescBuff
+        , __global unsigned int *meshTexsBuff
+        , __global UV *vertUVs
+#endif
 		) {
 	const int gid = get_global_id(0);
 	__global Path *path = &paths[gid];
@@ -1459,9 +1511,32 @@ __kernel void AdvancePaths_Step2(
     if (currentTriangleIndex != 0xffffffffu) {
 		// Something was hit
 
+		const uint meshIndex = meshIDs[currentTriangleIndex];
+		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
+
 		// Interpolate Color
         Spectrum shadeColor;
 		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+
+#if defined(PARAM_HAS_TEXTUREMAPS)
+        // Interpolate UV coordinates
+        UV uv;
+        Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+
+        // Check it the mesh has a texture map
+        unsigned int texIndex = meshTexsBuff[meshIndex];
+        if (texIndex != 0xffffffffu) {
+            __global TexMap *texMap = &texMapDescBuff[texIndex];
+
+            Spectrum texColor;
+            TexMap_GetColor(&texMapBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
+
+            shadeColor.r *= texColor.r;
+            shadeColor.g *= texColor.g;
+            shadeColor.b *= texColor.b;
+        }
+#endif
+
 		throughput.r *= shadeColor.r;
 		throughput.g *= shadeColor.g;
 		throughput.b *= shadeColor.b;
@@ -1476,9 +1551,6 @@ __kernel void AdvancePaths_Step2(
 		shadeN.x = nFlip * N.x;
 		shadeN.y = nFlip * N.y;
 		shadeN.z = nFlip * N.z;
-
-		const uint meshIndex = meshIDs[currentTriangleIndex];
-		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 
 		const float u0 = RndFloatValue(&seed);
 		const float u1 = RndFloatValue(&seed);
