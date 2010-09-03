@@ -597,6 +597,131 @@ void PathGPURenderThread::InitRender() {
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 
 	//--------------------------------------------------------------------------
+	// Translate mesh texture maps
+	//--------------------------------------------------------------------------
+
+	std::vector<TextureMap *> tms;
+	scene->texMapCache->GetTexMaps(tms);
+	// Calculate the amount of ram to allocate
+	unsigned int totTexMem = 0;
+	bool hasAlphaTextureMaps = false;
+
+	for (unsigned int i = 0; i < tms.size(); ++i) {
+		TextureMap *tm = tms[i];
+		const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
+
+		totTexMem += pixelCount;
+		if (tm->HasAlpha()) {
+			hasAlphaTextureMaps = true;
+			totTexMem += pixelCount;
+		}
+	}
+
+	// Allocate texture map memory
+	if (totTexMem > 0) {
+		tStart = WallClockTime();
+
+		unsigned int offset = 0;
+		Spectrum *texMem = new Spectrum[totTexMem];
+		PathGPU::TexMap *gpuTexMap = new PathGPU::TexMap[tms.size()];
+
+		for (unsigned int i = 0; i < tms.size(); ++i) {
+			TextureMap *tm = tms[i];
+			gpuTexMap[i].width = tm->GetWidth();
+			gpuTexMap[i].height = tm->GetHeight();
+			const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
+
+			memcpy(&texMem[offset], tm->GetPixels(), pixelCount * sizeof(Spectrum));
+			gpuTexMap[i].rgbOffset = offset;
+			offset += pixelCount;
+
+			if (tm->HasAlpha()) {
+				memcpy(&texMem[offset], tm->GetAlphas(), pixelCount * sizeof(float));
+				gpuTexMap[i].alphaOffset = offset;
+				offset += pixelCount;
+			} else
+				gpuTexMap[i].alphaOffset = 0xffffffffu;
+		}
+
+		cerr << "[PathGPURenderThread::" << threadIndex << "] TexMap buffer size: " << (sizeof(Spectrum) * totTexMem / 1024) << "Kbytes" << endl;
+		texMapBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(Spectrum) * totTexMem,
+				texMem);
+		deviceDesc->AllocMemory(texMapBuff->getInfo<CL_MEM_SIZE>());
+
+		delete[] texMem;
+
+		cerr << "[PathGPURenderThread::" << threadIndex << "] TexMap indices buffer size: " << (sizeof(PathGPU::TexMap) * tms.size() / 1024) << "Kbytes" << endl;
+		texMapDescBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(PathGPU::TexMap) * tms.size(),
+				gpuTexMap);
+		deviceDesc->AllocMemory(texMapDescBuff->getInfo<CL_MEM_SIZE>());
+		delete[] gpuTexMap;
+
+		// Translate mesh texture indices
+		unsigned int *meshTexs = new unsigned int[meshCount];
+		for (unsigned int i = 0; i < meshCount; ++i) {
+			TexMapInstance *t = scene->objectTexMaps[i];
+
+			if (t) {
+				// Look for the index
+				unsigned int index = 0;
+				for (unsigned int j = 0; j < tms.size(); ++j) {
+					if (t->GetTexMap() == tms[j]) {
+						index = j;
+						break;
+					}
+				}
+
+				meshTexs[i] = index;
+			} else
+				meshTexs[i] = 0xffffffffu;
+		}
+
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Mesh texture maps index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
+		meshTexsBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(unsigned int) * meshCount,
+				meshTexs);
+		deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
+
+		delete[] meshTexs;
+
+		// Translate vertex uvs
+		const unsigned int uvsCount = scene->dataSet->GetTotalVertexCount();
+		UV *uvs = new UV[uvsCount];
+		unsigned int uvIndex = 0;
+		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
+			ExtMesh *mesh = scene->objects[i];
+
+			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
+				if (mesh->HasUVs())
+					uvs[uvIndex++] = mesh->GetUV(j);
+				else
+					uvs[uvIndex++] = UV(0.f, 0.f);
+			}
+		}
+
+		cerr << "[PathGPURenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * uvsCount / 1024) << "Kbytes" << endl;
+		uvsBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(UV) * uvsCount,
+				uvs);
+		deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
+		delete[] uvs;
+
+		tEnd = WallClockTime();
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Texture maps translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	} else {
+		texMapBuff = NULL;
+		texMapDescBuff = NULL;
+		meshTexsBuff = NULL;
+		uvsBuff = NULL;
+	}
+
+	//--------------------------------------------------------------------------
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
@@ -661,6 +786,12 @@ void PathGPURenderThread::InitRender() {
 				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
 				" -D PARAM_DL_LIGHT_COUNT=" << areaLightCount
 				;
+	}
+
+	if (texMapBuff) {
+		ss << " -D PARAM_HAS_TEXTUREMAPS";
+		if (hasAlphaTextureMaps)
+			ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
 	}
 
 	if (renderEngine->enableOpenGLInterop)
@@ -852,6 +983,12 @@ void PathGPURenderThread::InitRender() {
 		advancePathStep1Kernel->setArg(argIndex++, *normalsBuff);
 		advancePathStep1Kernel->setArg(argIndex++, *trianglesBuff);
 		advancePathStep1Kernel->setArg(argIndex++, *triLightsBuff);
+		if (texMapBuff) {
+			advancePathStep1Kernel->setArg(argIndex++, *texMapBuff);
+			advancePathStep1Kernel->setArg(argIndex++, *texMapDescBuff);
+			advancePathStep1Kernel->setArg(argIndex++, *meshTexsBuff);
+			advancePathStep1Kernel->setArg(argIndex++, *uvsBuff);
+		}
 	}
 
 	unsigned int argIndex = 0;
@@ -872,6 +1009,12 @@ void PathGPURenderThread::InitRender() {
 		advancePathStep2Kernel->setArg(argIndex++, *infiniteLightBuff);
 	if (triLightsBuff)
 		advancePathStep2Kernel->setArg(argIndex++, *triLightsBuff);
+	if (texMapBuff) {
+		advancePathStep2Kernel->setArg(argIndex++, *texMapBuff);
+		advancePathStep2Kernel->setArg(argIndex++, *texMapDescBuff);
+		advancePathStep2Kernel->setArg(argIndex++, *meshTexsBuff);
+		advancePathStep2Kernel->setArg(argIndex++, *uvsBuff);
+	}
 
 	// Reset statistics to be more accurate
 	intersectionDevice->ResetPerformaceStats();
@@ -934,6 +1077,16 @@ void PathGPURenderThread::Stop() {
 	if (triLightsBuff) {
 		deviceDesc->FreeMemory(triLightsBuff->getInfo<CL_MEM_SIZE>());
 		delete triLightsBuff;
+	}
+	if (texMapBuff) {
+		deviceDesc->FreeMemory(texMapBuff->getInfo<CL_MEM_SIZE>());
+		delete texMapBuff;
+		deviceDesc->FreeMemory(texMapDescBuff->getInfo<CL_MEM_SIZE>());
+		delete texMapDescBuff;
+		deviceDesc->FreeMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
+		delete meshTexsBuff;
+		deviceDesc->FreeMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
+		delete uvsBuff;
 	}
 
 	if (pbo) {

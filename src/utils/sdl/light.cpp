@@ -524,7 +524,6 @@ Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const float u0, const flo
 	return gain * tex->GetTexMap()->GetColor(UV(uv));
 }
 
-
 //------------------------------------------------------------------------------
 // Triangle Area Light
 //------------------------------------------------------------------------------
