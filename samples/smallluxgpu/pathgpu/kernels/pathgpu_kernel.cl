@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_PATH_COUNT
@@ -129,6 +129,7 @@ typedef struct {
 
 #define PATH_STATE_NEXT_VERTEX 0
 #define PATH_STATE_SAMPLE_LIGHT 1
+#define PATH_STATE_CONTINUE_NEXT_VERTEX 2
 
 typedef struct {
 	Spectrum throughput;
@@ -160,6 +161,7 @@ typedef struct {
 #define MAT_MATTEMETAL 6
 #define MAT_ALLOY 7
 #define MAT_ARCHGLASS 8
+#define MAT_NULL 9
 
 typedef struct {
     float r, g, b;
@@ -644,6 +646,16 @@ void TexMap_GetTexel(__global Spectrum *pixels, const uint width, const uint hei
 	col->b = pixels[index].b;
 }
 
+float TexMap_GetAlphaTexel(__global float *alphas, const uint width, const uint height,
+		const int s, const int t) {
+	const uint u = Mod(s, width);
+	const uint v = Mod(t, height);
+
+	const unsigned index = v * width + u;
+
+	return alphas[index];
+}
+
 void TexMap_GetColor(__global Spectrum *pixels, const uint width, const uint height,
 		const float u, const float v, Spectrum *col) {
 	const float s = u * width - 0.5f;
@@ -672,6 +684,33 @@ void TexMap_GetColor(__global Spectrum *pixels, const uint width, const uint hei
 	col->r = k0 * c0.r + k1 * c1.r + k2 * c2.r + k3 * c3.r;
 	col->g = k0 * c0.g + k1 * c1.g + k2 * c2.g + k3 * c3.g;
 	col->b = k0 * c0.b + k1 * c1.b + k2 * c2.b + k3 * c3.b;
+}
+
+float TexMap_GetAlpha(__global float *alphas, const uint width, const uint height,
+		const float u, const float v) {
+	const float s = u * width - 0.5f;
+	const float t = v * height - 0.5f;
+
+	const int s0 = (int)floor(s);
+	const int t0 = (int)floor(t);
+
+	const float ds = s - s0;
+	const float dt = t - t0;
+
+	const float ids = 1.f - ds;
+	const float idt = 1.f - dt;
+
+	const float c0 = TexMap_GetAlphaTexel(alphas, width, height, s0, t0);
+	const float c1 = TexMap_GetAlphaTexel(alphas, width, height, s0, t0 + 1);
+	const float c2 = TexMap_GetAlphaTexel(alphas, width, height, s0 + 1, t0);
+	const float c3 = TexMap_GetAlphaTexel(alphas, width, height, s0 + 1, t0 + 1);
+
+	const float k0 = ids * idt;
+	const float k1 = ids * dt;
+	const float k2 = ds * idt;
+	const float k3 = ds * dt;
+
+	return k0 * c0 + k1 * c1 + k2 * c2 + k3 * c3;
 }
 
 float SphericalTheta(const Vector *v) {
@@ -1247,13 +1286,15 @@ __kernel void AdvancePaths_Step1(
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
-        __global uint *triIDs, // Not Used
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Triangle *triangles,
         __global TriangleLight *triLights
 #if defined(PARAM_HAS_TEXTUREMAPS)
-        , __global Spectrum *texMapBuff
+        , __global Spectrum *texMapRGBBuff
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+		, __global float *texMapAlphaBuff
+#endif
         , __global TexMap *texMapDescBuff
         , __global unsigned int *meshTexsBuff
         , __global UV *vertUVs
@@ -1266,6 +1307,12 @@ __kernel void AdvancePaths_Step1(
 	__global RayHit *rayHit = &rayHits[gid];
 	uint currentTriangleIndex = rayHit->index;
 
+	// Read the seed
+	Seed seed;
+	seed.s1 = path->seed.s1;
+	seed.s2 = path->seed.s2;
+	seed.s3 = path->seed.s3;
+
 	if (path->state == PATH_STATE_SAMPLE_LIGHT) {
 		if (currentTriangleIndex == 0xffffffffu) {
 			// Nothing was hit, the light is visible
@@ -1274,10 +1321,50 @@ __kernel void AdvancePaths_Step1(
 			path->accumRadiance.g += path->lightRadiance.g;
 			path->accumRadiance.b += path->lightRadiance.b;
 		}
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS) || defined(PARAM_ENABLE_MAT_ARCHGLASS)
+		else {
+			const uint meshIndex = meshIDs[currentTriangleIndex];
+
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+			// Check if is a mesh with alpha texture map applied
+
+			const float hitPointB1 = rayHit->b1;
+			const float hitPointB2 = rayHit->b2;
+
+			// Check it the mesh has a texture map
+			unsigned int texIndex = meshTexsBuff[meshIndex];
+			if (texIndex != 0xffffffffu) {
+				__global TexMap *texMap = &texMapDescBuff[texIndex];
+
+				// Check if it has an alpha channel
+				if (texMap->alphaOffset != 0xffffffffu) {
+					// Interpolate UV coordinates
+					UV uv;
+					Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+
+					const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
+
+					if ((alpha == 0.0f) || ((alpha < 1.f) && (RndFloatValue(&seed) > alpha))) {
+						// Continue to trace the ray
+						const float hitPointT = rayHit->t;
+						ray->o.x = ray->o.x + ray->d.x * hitPointT;
+						ray->o.y = ray->o.y + ray->d.y * hitPointT;
+						ray->o.z = ray->o.z + ray->d.z * hitPointT;
+						ray->maxt -= hitPointT;
+
+						// Save the seed
+						path->seed.s1 = seed.s1;
+						path->seed.s2 = seed.s2;
+						path->seed.s3 = seed.s3;
+
+						return;
+					}
+				}
+			}
+#endif
+
 #if defined(PARAM_ENABLE_MAT_ARCHGLASS)
-        else {
             // Check if is a shadow transparent material
-            const uint meshIndex = meshIDs[currentTriangleIndex];
             __global Material *hitPointMat = &mats[meshMats[meshIndex]];
 
             if (hitPointMat->type == MAT_ARCHGLASS) {
@@ -1294,6 +1381,7 @@ __kernel void AdvancePaths_Step1(
                 // Continue to trace the ray
                 return;
             }
+#endif
         }
 #endif
 
@@ -1307,10 +1395,16 @@ __kernel void AdvancePaths_Step1(
         return;
 	}
 
-    // state is PATH_STATE_NEXT_VERTEX
+    // state is PATH_STATE_NEXT_VERTEX or PATH_STATE_CONTINUE_NEXT_VERTEX
+
+	// If we are in PATH_STATE_CONTINUE_NEXT_VERTEX state
+	path->state = PATH_STATE_NEXT_VERTEX;
 
     if (currentTriangleIndex != 0xffffffffu) {
         // Something was hit
+
+		const uint meshIndex = meshIDs[currentTriangleIndex];
+		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 
         Vector rayDir = ray->d;
 
@@ -1323,6 +1417,50 @@ __kernel void AdvancePaths_Step1(
         hitPoint.y = ray->o.y + rayDir.y * hitPointT;
         hitPoint.z = ray->o.z + rayDir.z * hitPointT;
 
+		// Interpolate Color
+		Spectrum shadeColor;
+		Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+
+#if defined(PARAM_HAS_TEXTUREMAPS)
+        // Interpolate UV coordinates
+        UV uv;
+        Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+
+        // Check it the mesh has a texture map
+        unsigned int texIndex = meshTexsBuff[meshIndex];
+        if (texIndex != 0xffffffffu) {
+            __global TexMap *texMap = &texMapDescBuff[texIndex];
+
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+			// Check if it has an alpha channel
+			if (texMap->alphaOffset != 0xffffffffu) {
+				const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
+
+				if ((alpha == 0.0f) || ((alpha < 1.f) && (RndFloatValue(&seed) > alpha))) {
+					// Continue to trace the ray
+					ray->o = hitPoint;
+					ray->maxt -= hitPointT;
+
+					path->state = PATH_STATE_CONTINUE_NEXT_VERTEX;
+					// Save the seed
+					path->seed.s1 = seed.s1;
+					path->seed.s2 = seed.s2;
+					path->seed.s3 = seed.s3;
+
+					return;
+				}
+			}
+#endif
+
+            Spectrum texColor;
+            TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
+
+            shadeColor.r *= texColor.r;
+            shadeColor.g *= texColor.g;
+            shadeColor.b *= texColor.b;
+        }
+#endif
+
 		// Interpolate the normal
         Vector N;
 		Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
@@ -1333,9 +1471,6 @@ __kernel void AdvancePaths_Step1(
 		shadeN.x = nFlip * N.x;
 		shadeN.y = nFlip * N.y;
 		shadeN.z = nFlip * N.z;
-
-		const uint meshIndex = meshIDs[currentTriangleIndex];
-		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 
         float directLightPdf;
         switch (hitPointMat->type) {
@@ -1365,12 +1500,6 @@ __kernel void AdvancePaths_Step1(
         }
 
         if (directLightPdf > 0.f) {
-            // Read the seed
-            Seed seed;
-            seed.s1 = path->seed.s1;
-            seed.s2 = path->seed.s2;
-            seed.s3 = path->seed.s3;
-
             // Select a light source to sample
             const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
             __global TriangleLight *l = &triLights[lightIndex];
@@ -1391,29 +1520,6 @@ __kernel void AdvancePaths_Step1(
 
             const float pdf = lightPdf * matPdf * directLightPdf;
             if (pdf > 0.f) {
-                // Interpolate Color
-                Spectrum shadeColor;
-                Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
-
-#if defined(PARAM_HAS_TEXTUREMAPS)
-                // Interpolate UV coordinates
-                UV uv;
-                Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
-
-                // Check it the mesh has a texture map
-                unsigned int texIndex = meshTexsBuff[meshIndex];
-                if (texIndex != 0xffffffffu) {
-                    __global TexMap *texMap = &texMapDescBuff[texIndex];
-
-                    Spectrum texColor;
-                    TexMap_GetColor(&texMapBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
-
-                    shadeColor.r *= texColor.r;
-                    shadeColor.g *= texColor.g;
-                    shadeColor.b *= texColor.b;
-                }
-#endif
-
                 Spectrum throughput = path->throughput;
                 throughput.r *= shadeColor.r;
                 throughput.g *= shadeColor.g;
@@ -1456,7 +1562,6 @@ __kernel void AdvancePaths_Step2(
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
-        __global uint *triIDs, // Not Used
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Triangle *triangles
@@ -1470,7 +1575,10 @@ __kernel void AdvancePaths_Step2(
 		, __global TriangleLight *triLights
 #endif
 #if defined(PARAM_HAS_TEXTUREMAPS)
-        , __global Spectrum *texMapBuff
+        , __global Spectrum *texMapRGBBuff
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+		, __global float *texMapAlphaBuff
+#endif
         , __global TexMap *texMapDescBuff
         , __global unsigned int *meshTexsBuff
         , __global UV *vertUVs
@@ -1479,7 +1587,8 @@ __kernel void AdvancePaths_Step2(
 	const int gid = get_global_id(0);
 	__global Path *path = &paths[gid];
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	if (path->state == PATH_STATE_SAMPLE_LIGHT) {
+	int pathState = path->state;
+	if ((pathState == PATH_STATE_SAMPLE_LIGHT) || (pathState == PATH_STATE_CONTINUE_NEXT_VERTEX)) {
         // Handled by Step1 kernel
         return;
     }
@@ -1513,6 +1622,7 @@ __kernel void AdvancePaths_Step2(
 
 		const uint meshIndex = meshIDs[currentTriangleIndex];
 		__global Material *hitPointMat = &mats[meshMats[meshIndex]];
+		uint matType = hitPointMat->type;
 
 		// Interpolate Color
         Spectrum shadeColor;
@@ -1528,8 +1638,20 @@ __kernel void AdvancePaths_Step2(
         if (texIndex != 0xffffffffu) {
             __global TexMap *texMap = &texMapDescBuff[texIndex];
 
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS) && !defined(PARAM_DIRECT_LIGHT_SAMPLING)
+			// Check if it has an alpha channel
+			if (texMap->alphaOffset != 0xffffffffu) {
+				const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
+
+				if ((alpha == 0.0f) || ((alpha < 1.f) && (RndFloatValue(&seed) > alpha))) {
+					// Continue to trace the ray
+					matType = MAT_NULL;
+				}
+			}
+#endif
+
             Spectrum texColor;
-            TexMap_GetColor(&texMapBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
+            TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
 
             shadeColor.r *= texColor.r;
             shadeColor.g *= texColor.g;
@@ -1565,7 +1687,7 @@ __kernel void AdvancePaths_Step2(
 		float pdf;
 		Spectrum f;
 
-		switch (hitPointMat->type) {
+		switch (matType) {
 
 #if defined(PARAM_ENABLE_MAT_MATTE)
 			case MAT_MATTE:
@@ -1608,8 +1730,8 @@ __kernel void AdvancePaths_Step2(
 					return;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				}
-#endif
 				break;
+#endif
 			}
 #endif
 
@@ -1683,6 +1805,17 @@ __kernel void AdvancePaths_Step2(
 					);
                 break;
 #endif
+
+			case MAT_NULL:
+				wi = rayDir;
+				pdf = 1.f;
+				f.r = 1.f;
+				f.g = 1.f;
+				f.b = 1.f;
+
+				// I have also to restore the original throughput
+				throughput = path->throughput;
+				break;
 
 			default:
 				// Huston, we have a problem...
