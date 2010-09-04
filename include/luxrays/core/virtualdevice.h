@@ -40,6 +40,8 @@ public:
 	~VirtualM2OHardwareIntersectionDevice();
 
 	IntersectionDevice *GetVirtualDevice(size_t index);
+	IntersectionDevice *AddVirtualDevice();
+	void RemoveVirtualDevice(IntersectionDevice *dev);
 
 	static size_t RayBufferSize;
 
@@ -76,7 +78,7 @@ private:
 	RayBufferQueueM2O rayBufferQueue;
 
 	boost::mutex virtualDeviceMutex;
-	VirtualM2ODevHInstance **virtualDeviceInstances;
+	std::vector<VirtualM2ODevHInstance *> virtualDeviceInstances;
 };
 
 //------------------------------------------------------------------------------
