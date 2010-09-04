@@ -91,6 +91,18 @@ public:
 	 */
 	const std::vector<IntersectionDevice *> &GetIntersectionDevices() const;
 
+	/*!	\brief Return a list of all VirtualM2O intersection device created within the Context.
+	 *
+	 *	\return the vector of all VirtualM2O in the Context.
+	 */
+	const std::vector<VirtualM2OHardwareIntersectionDevice *> &GetVirtualM2OIntersectionDevices() const;
+
+	/*!	\brief Return a list of all VirtualM2O intersection device created within the Context.
+	 *
+	 *	\return the vector of all VirtualM2O in the Context.
+	 */
+	const std::vector<VirtualM2MHardwareIntersectionDevice *> &GetVirtualM2MIntersectionDevices() const;
+
 	/*!	\brief Return a list of all pixel device created within the Context.
 	 *
 	 *	\return the vector of all PixelDevice in the Context.

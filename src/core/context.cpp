@@ -178,6 +178,14 @@ const std::vector<IntersectionDevice *> &Context::GetIntersectionDevices() const
 	return idevices;
 }
 
+const std::vector<VirtualM2OHardwareIntersectionDevice *> &Context::GetVirtualM2OIntersectionDevices() const {
+	return m2oDevices;
+}
+
+const std::vector<VirtualM2MHardwareIntersectionDevice *> &Context::GetVirtualM2MIntersectionDevices() const {
+	return m2mDevices;
+}
+
 const std::vector<PixelDevice *> &Context::GetPixelDevices() const {
 	return pdevices;
 }

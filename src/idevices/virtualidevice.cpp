@@ -38,19 +38,47 @@ VirtualM2OHardwareIntersectionDevice::VirtualM2OHardwareIntersectionDevice(const
 	realDevice = device;
 	realDevice->SetExternalRayBufferQueue(&rayBufferQueue);
 
-	virtualDeviceInstances = new VirtualM2ODevHInstance *[virtualDeviceCount];
 	for (size_t i = 0; i < virtualDeviceCount; ++i)
-		virtualDeviceInstances[i] = new VirtualM2ODevHInstance(this, i);
+		virtualDeviceInstances.push_back(new VirtualM2ODevHInstance(this, i));
 }
 
 VirtualM2OHardwareIntersectionDevice::~VirtualM2OHardwareIntersectionDevice() {
 	for (size_t i = 0; i < virtualDeviceCount; ++i)
 		delete virtualDeviceInstances[i];
-	delete virtualDeviceInstances;
 }
 
 IntersectionDevice *VirtualM2OHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
+	boost::mutex::scoped_lock lock(virtualDeviceMutex);
+
+	assert (index > 0);
+	assert (index < virtualDeviceInstances.size());
+
 	return virtualDeviceInstances[index];
+}
+
+IntersectionDevice *VirtualM2OHardwareIntersectionDevice::AddVirtualDevice() {
+	boost::mutex::scoped_lock lock(virtualDeviceMutex);
+
+	VirtualM2ODevHInstance *dev = new VirtualM2ODevHInstance(this, virtualDeviceInstances.size());
+	virtualDeviceInstances.push_back(dev);
+
+	return dev;
+}
+
+void VirtualM2OHardwareIntersectionDevice::RemoveVirtualDevice(IntersectionDevice *d) {
+	boost::mutex::scoped_lock lock(virtualDeviceMutex);
+
+	VirtualM2ODevHInstance *dev = (VirtualM2ODevHInstance *)d;
+
+	for (size_t i = 0; i < virtualDeviceInstances.size(); ++i) {
+		if (dev == virtualDeviceInstances[i]) {
+			delete dev;
+			virtualDeviceInstances.erase(virtualDeviceInstances.begin() + i);
+			return;
+		}
+	}
+
+	assert (false);
 }
 
 //------------------------------------------------------------------------------
