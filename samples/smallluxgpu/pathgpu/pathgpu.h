@@ -73,6 +73,7 @@ typedef struct {
 #define MAT_MATTEMETAL 6
 #define MAT_ALLOY 7
 #define MAT_ARCHGLASS 8
+#define MAT_NULL 9
 
 typedef struct {
     float r, g, b;
@@ -210,7 +211,6 @@ private:
 	cl::Buffer *frameBufferBuff;
 	cl::Buffer *materialsBuff;
 	cl::Buffer *meshIDBuff;
-	cl::Buffer *triIDBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
 	cl::Buffer *normalsBuff;
@@ -218,7 +218,8 @@ private:
 	cl::Buffer *colorsBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *triLightsBuff;
-	cl::Buffer *texMapBuff;
+	cl::Buffer *texMapRGBBuff;
+	cl::Buffer *texMapAlphaBuff;
 	cl::Buffer *texMapDescBuff;
 	cl::Buffer *meshTexsBuff;
 	cl::Buffer *uvsBuff;
