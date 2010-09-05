@@ -71,6 +71,9 @@ void DataSet::Preprocess() {
 	LR_LOG(context, "Total vertex count: " << totalVertexCount);
 	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
 
+	if (totalTriangleCount == 0)
+		throw std::runtime_error("An empty DataSet can not be preprocessed");
+
 	// Build the Acceleretor
 	switch (accelType) {
 		case ACCEL_BVH: {
