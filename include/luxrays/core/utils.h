@@ -49,6 +49,7 @@ extern "C" {
 #if defined(WIN32)
 #include <float.h>
 #define isnanf(a) _isnan(a)
+typedef unsigned int u_int;
 #endif
 
 #if defined(__APPLE__)
