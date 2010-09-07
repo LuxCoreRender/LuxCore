@@ -165,11 +165,11 @@ class SLGBP:
 
         # Get motion blur parameters
         if scene.slg.cameramotionblur:
-            scene.set_frame(scene.frame_current - 1)
+            scene.frame_set(scene.frame_current - 1)
             SLGBP.camdirBlur = scene.camera.matrix_world * mathutils.Vector((0, 0, -10))
             SLGBP.camlocBlur = scene.camera.matrix_world.translation_part()
             SLGBP.camupBlur = scene.camera.matrix_world.rotation_part() * mathutils.Vector((0,1,0))
-            scene.set_frame(scene.frame_current + 1)
+            scene.frame_set(scene.frame_current + 1)
 
         return True
 
@@ -824,13 +824,13 @@ class SLGBP:
     @staticmethod
     def liveanimrender(scene):
         SLGBP.liveanim = True
-        scene.set_frame(scene.frame_start-scene.frame_step)
+        scene.frame_set(scene.frame_start-scene.frame_step)
         SLGBP.livetrigger(scene, SLGBP.LIVEALL)
         if scene.slg.cameramotionblur:
             # Make sure first livetrigger takes place
             time.sleep(0.25)
         while True:
-            scene.set_frame(scene.frame_current+scene.frame_step)
+            scene.frame_set(scene.frame_current+scene.frame_step)
             SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(scene.frame_current) + " (ESC to abort)"
             SLGBP.livetrigger(scene, SLGBP.LIVEALL)
             time.sleep(scene.slg.batchmodetime)
@@ -921,7 +921,7 @@ class SLGRender(bpy.types.Operator):
                 self.report('ERROR', "SLG is already running")
                 return {'CANCELLED'}
         if self.properties.animation:
-            context.scene.set_frame(context.scene.frame_start)
+            context.scene.frame_set(context.scene.frame_start)
         if not SLGBP.init(context.scene, self._error):
             return {'CANCELLED'}
         self._iserror = False
@@ -1048,7 +1048,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         if not SLGBP.init(scene, self._error):
             return
         # Force an update to object matrices when rendering animations
-        scene.set_frame(scene.frame_current)
+        scene.frame_set(scene.frame_current)
         SLGBP.export(scene)
         SLGBP.runslg(scene)
 
