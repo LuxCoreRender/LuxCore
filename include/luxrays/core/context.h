@@ -157,6 +157,8 @@ public:
 	// Methods dedicated to DataSet definition
 	//--------------------------------------------------------------------------
 
+	DataSet *GetCurrentDataSet() const { return currentDataSet; }
+
 	void SetDataSet(DataSet *dataSet);
 	void UpdateDataSet();
 

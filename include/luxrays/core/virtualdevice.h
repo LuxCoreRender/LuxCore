@@ -60,7 +60,6 @@ private:
 
 		double GetLoad() const { return virtualDevice->realDevice->GetLoad(); }
 
-	protected:
 		void SetDataSet(const DataSet *newDataSet);
 		void Start();
 		void Interrupt();

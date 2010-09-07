@@ -58,8 +58,8 @@ void QBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int totalV
 
 	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
 			meshes, &meshIDs, &meshTriangleIDs);
-	assert (mesh->GetTotalVertexCount() == totalVertexCount);
-	assert (mesh->GetTotalTriangleCount() == totalTriangleCount);
+	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
+	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
 
 	LR_LOG(ctx, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
 	LR_LOG(ctx, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");

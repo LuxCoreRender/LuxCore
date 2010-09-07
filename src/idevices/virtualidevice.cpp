@@ -57,10 +57,21 @@ IntersectionDevice *VirtualM2OHardwareIntersectionDevice::GetVirtualDevice(size_
 }
 
 IntersectionDevice *VirtualM2OHardwareIntersectionDevice::AddVirtualDevice() {
-	boost::mutex::scoped_lock lock(virtualDeviceMutex);
+	VirtualM2ODevHInstance *dev;
 
-	VirtualM2ODevHInstance *dev = new VirtualM2ODevHInstance(this, virtualDeviceInstances.size());
-	virtualDeviceInstances.push_back(dev);
+	{
+		boost::mutex::scoped_lock lock(virtualDeviceMutex);
+
+		dev = new VirtualM2ODevHInstance(this, virtualDeviceInstances.size());
+		virtualDeviceInstances.push_back(dev);
+	}
+
+	const Context *ctx = realDevice->deviceContext;
+	if (ctx->GetCurrentDataSet())
+		dev->SetDataSet(ctx->GetCurrentDataSet());
+
+	if (ctx->IsRunning())
+		dev->Start();
 
 	return dev;
 }
