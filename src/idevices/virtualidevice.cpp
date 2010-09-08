@@ -64,6 +64,7 @@ IntersectionDevice *VirtualM2OHardwareIntersectionDevice::AddVirtualDevice() {
 
 		dev = new VirtualM2ODevHInstance(this, virtualDeviceInstances.size());
 		virtualDeviceInstances.push_back(dev);
+		++virtualDeviceCount;
 	}
 
 	const Context *ctx = realDevice->deviceContext;
@@ -85,6 +86,7 @@ void VirtualM2OHardwareIntersectionDevice::RemoveVirtualDevice(IntersectionDevic
 		if (dev == virtualDeviceInstances[i]) {
 			delete dev;
 			virtualDeviceInstances.erase(virtualDeviceInstances.begin() + i);
+			--virtualDeviceCount;
 			return;
 		}
 	}
