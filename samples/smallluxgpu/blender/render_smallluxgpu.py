@@ -1084,61 +1084,62 @@ class SLGSettings(bpy.types.IDPropertyGroup):
 
 def slg_add_properties():
     # Add SmallLuxGPU properties to scene
-    bpy.types.Scene.PointerProperty(attr="slg", type=SLGSettings, name="SLG", description="SLG Settings")
+    from bpy.props import PointerProperty, StringProperty, BoolProperty, EnumProperty, IntProperty, FloatProperty, FloatVectorProperty, CollectionProperty
+    bpy.types.Scene.slg = PointerProperty(type=SLGSettings, name="SLG", description="SLG Settings")
 
-    SLGSettings.StringProperty(attr="slgpath", name="SmallLuxGPU Path",
+    SLGSettings.slgpath = StringProperty(name="SmallLuxGPU Path",
         description="Full path to SmallLuxGPU's executable",
         default="", maxlen=1024, subtype="FILE_PATH")
 
-    SLGSettings.StringProperty(attr="scene_path", name="Export scene path",
+    SLGSettings.scene_path = StringProperty(name="Export scene path",
         description="Full path to directory where the exported scene is created",
         default="", maxlen=1024, subtype="DIR_PATH")
 
-    SLGSettings.StringProperty(attr="scenename", name="Scene Name",
+    SLGSettings.scenename = StringProperty(name="Scene Name",
         description="Name of SmallLuxGPU scene to create",
         default="testscene", maxlen=1024)
 
-    SLGSettings.BoolProperty(attr="export", name="PLY",
+    SLGSettings.export = BoolProperty(name="PLY",
         description="Export PLY (mesh data) files (uncheck only if scene has already been exported)",
         default=True)
 
-    SLGSettings.BoolProperty(attr="vuvs", name="UVs",
+    SLGSettings.vuvs = BoolProperty(name="UVs",
         description="Export optional vertex uv information (only if assigned)",
         default=True)
 
-    SLGSettings.BoolProperty(attr="vcolors", name="VCs",
+    SLGSettings.vcolors = BoolProperty(name="VCs",
         description="Export optional vertex color information (only if assigned)",
         default=False)
 
-    SLGSettings.BoolProperty(attr="vnormals", name="VNs",
+    SLGSettings.vnormals = BoolProperty(name="VNs",
         description="Export optional vertex normal information",
         default=True)
 
-    SLGSettings.BoolProperty(attr="infinitelightbf", name="InfiniteLight BF",
+    SLGSettings.infinitelightbf = BoolProperty(name="InfiniteLight BF",
         description="Enable brute force rendering for InifinteLight light source",
         default=False)
 
-    SLGSettings.BoolProperty(attr="cameramotionblur", name="Camera Motion Blur",
+    SLGSettings.cameramotionblur = BoolProperty(name="Camera Motion Blur",
         description="Enable camera motion blur",
         default=False)
 
-    SLGSettings.BoolProperty(attr="low_latency", name="Low Latency",
+    SLGSettings.low_latency = BoolProperty(name="Low Latency",
         description="In low latency mode render is more interactive, otherwise render is faster",
         default=True)
 
-    SLGSettings.IntProperty(attr="refreshrate", name="Screen Refresh Interval",
+    SLGSettings.refreshrate = IntProperty(name="Screen Refresh Interval",
         description="How often, in milliseconds, the screen refreshes",
         default=250, min=1, soft_min=1)
 
-    SLGSettings.IntProperty(attr="native_threads", name="Native Threads",
+    SLGSettings.native_threads = IntProperty(name="Native Threads",
         description="Number of native CPU threads",
         default=2, min=0, max=1024, soft_min=0, soft_max=1024)
 
-    SLGSettings.IntProperty(attr="devices_threads", name="OpenCL Threads",
+    SLGSettings.devices_threads = IntProperty(name="OpenCL Threads",
         description="Number of OpenCL devices threads",
         default=2, min=0, max=1024, soft_min=0, soft_max=1024)
 
-    SLGSettings.EnumProperty(attr="rendering_type", name="Rendering Type",
+    SLGSettings.rendering_type = EnumProperty(name="Rendering Type",
         description="Select the desired rendering type",
         items=(("0", "Path", "Path tracing"),
                ("1", "SPPM", "Stochastic Progressive Photon Mapping"),
@@ -1146,7 +1147,7 @@ def slg_add_properties():
                ("3", "PathGPU", "Path tracing using GPU only")),
         default="0")
 
-    SLGSettings.EnumProperty(attr="sppmlookuptype", name="",
+    SLGSettings.sppmlookuptype = EnumProperty(name="",
         description="SPPM Lookup Type (Hybrid generally best)",
         items=(("-1", "SPPM Lookup Type", "SPPM Lookup Type"),
                ("0", "Hash Grid", "Hash Grid"),
@@ -1154,31 +1155,31 @@ def slg_add_properties():
                ("2", "Hybrid Hash Grid", "Hybrid Hash Grid")),
         default="2")
 
-    SLGSettings.IntProperty(attr="sppm_eyepath_maxdepth", name="Eye depth",
+    SLGSettings.sppm_eyepath_maxdepth = IntProperty(name="Eye depth",
         description="SPPM eye path max depth",
         default=16, min=1, soft_min=1)
 
-    SLGSettings.FloatProperty(attr="sppm_photon_alpha", name="P.Alpha",
+    SLGSettings.sppm_photon_alpha = FloatProperty(name="P.Alpha",
         description="SPPM Photon Alpha: how fast the 'area of interest' around each eye hit point is reduced at each pass",
         default=0.7, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.FloatProperty(attr="sppm_photon_radiusscale", name="P.Radius",
+    SLGSettings.sppm_photon_radiusscale = FloatProperty(name="P.Radius",
         description="SPPM Photon Radius: how to scale the initial 'area of interest' around each eye hit point",
         default=1.0, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.IntProperty(attr="sppm_photon_per_pass", name="Photons",
+    SLGSettings.sppm_photon_per_pass = IntProperty(name="Photons",
         description="Number of (SPPM) photons to shot for each pass",
         default=2500000, min=100, soft_min=100)
 
-    SLGSettings.IntProperty(attr="sppm_photon_maxdepth", name="P.Depth",
+    SLGSettings.sppm_photon_maxdepth = IntProperty(name="P.Depth",
         description="Max depth for (SPPM) photons",
         default=8, min=1, soft_min=1)
 
-    SLGSettings.BoolProperty(attr="sppmdirectlight", name="Direct Light Sampling",
+    SLGSettings.sppmdirectlight = BoolProperty(name="Direct Light Sampling",
         description="SPPM Direct Light Sampling",
         default=False)
 
-    SLGSettings.EnumProperty(attr="accelerator_type", name="Accelerator Type",
+    SLGSettings.accelerator_type = EnumProperty(name="Accelerator Type",
         description="Select the desired ray tracing accelerator type",
         items=(("-1", "Default", "Default"),
                ("0", "BVH", "Bounding Volume Hierarchy"),
@@ -1187,46 +1188,46 @@ def slg_add_properties():
                ("3", "MQBVH (instances support)", "Multilevel Quad-Bounding Volume Hierarchy")),
         default="-1")
 
-    SLGSettings.EnumProperty(attr="film_filter_type", name="Film Filter Type",
+    SLGSettings.film_filter_type = EnumProperty(name="Film Filter Type",
         description="Select the desired film filter type",
         items=(("0", "None", "No filter"),
                ("1", "Gaussian", "Gaussian filter")),
         default="1")
 
-    SLGSettings.EnumProperty(attr="film_tonemap_type",
+    SLGSettings.film_tonemap_type = EnumProperty(
         description="Select the desired film tonemap type",
         items=(("-1", "Tonemapping", "Tonemapping"),
                ("0", "Linear tonemapping", "Linear tonemapping"),
                ("1", "Reinhard '02 tonemapping", "Reinhard '02 tonemapping")),
         default="0")
 
-    SLGSettings.FloatProperty(attr="linear_scale", name="scale",
+    SLGSettings.linear_scale = FloatProperty(name="scale",
         description="Linear tonemapping scale",
         default=1.0, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.FloatProperty(attr="reinhard_prescale", name="Pre-scale",
+    SLGSettings.reinhard_prescale = FloatProperty(name="Pre-scale",
         description="Reinhard '02 tonemapping pre-scale",
         default=1.0, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.FloatProperty(attr="reinhard_postscale", name="Post-scale",
+    SLGSettings.reinhard_postscale = FloatProperty(name="Post-scale",
         description="Reinhard '02 tonemapping post-scale",
         default=1.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.FloatProperty(attr="reinhard_burn", name="Burn",
+    SLGSettings.reinhard_burn = FloatProperty(name="Burn",
         description="Reinhard '02 tonemapping burn",
         default=3.75, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.FloatProperty(attr="film_gamma", name="Gamma",
+    SLGSettings.film_gamma = FloatProperty(name="Gamma",
         description="Gamma correction on screen and for saving non-HDR file format",
         default=2.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.EnumProperty(attr="lightstrategy", name="Light Strategy",
+    SLGSettings.lightstrategy = EnumProperty(name="Light Strategy",
         description="Select the desired light strategy",
         items=(("0", "ONE_UNIFORM", "ONE_UNIFORM"),
                ("1", "ALL_UNIFORM", "ALL_UNIFORM")),
         default="0")
 
-    SLGSettings.EnumProperty(attr="sampleperpixel", name="Sample per pixel",
+    SLGSettings.sampleperpixel = EnumProperty(name="Sample per pixel",
         description="Select the desired number of samples per pixel for each pass",
         items=(("1", "1x1", "1x1"),
                ("2", "2x2", "2x2"),
@@ -1239,122 +1240,122 @@ def slg_add_properties():
                ("9", "9x9", "9x9")),
         default="4")
 
-    SLGSettings.EnumProperty(attr="imageformat", name="Image File Format",
+    SLGSettings.imageformat = EnumProperty(name="Image File Format",
         description="Image file save format, saved with scene files (also Blender intermediary format)",
         items=(("png", "PNG", "PNG"),
                ("exr", "OpenEXR", "OpenEXR"),
                ("jpg", "JPG", "JPG")), # A lot more formats supported...
         default="png")
 
-    SLGSettings.IntProperty(attr="tracedepth", name="Max Path Trace Depth",
+    SLGSettings.tracedepth = IntProperty(name="Max Path Trace Depth",
         description="Maximum path tracing depth",
         default=3, min=1, max=1024, soft_min=1, soft_max=1024)
 
-    SLGSettings.IntProperty(attr="shadowrays", name="Shadow Rays",
+    SLGSettings.shadowrays = IntProperty(name="Shadow Rays",
         description="Shadow rays",
         default=1, min=1, max=1024, soft_min=1, soft_max=1024)
 
-    SLGSettings.EnumProperty(attr="rrstrategy", name="Russian Roulette Strategy",
+    SLGSettings.rrstrategy = EnumProperty(name="Russian Roulette Strategy",
         description="Select the desired russian roulette strategy",
         items=(("0", "Probability", "Probability"),
                ("1", "Importance", "Importance")),
         default="1")
 
-    SLGSettings.IntProperty(attr="rrdepth", name="Russian Roulette Depth",
+    SLGSettings.rrdepth = IntProperty(name="Russian Roulette Depth",
         description="Russian roulette depth",
         default=5, min=1, max=1024, soft_min=1, soft_max=1024)
 
-    SLGSettings.FloatProperty(attr="rrprob", name="Russian Roulette Probability",
+    SLGSettings.rrprob = FloatProperty(name="Russian Roulette Probability",
         description="Russian roulette probability",
         default=0.75, min=0, max=1, soft_min=0, soft_max=1, precision=3)
 
-    SLGSettings.FloatProperty(attr="rrcap", name="Russian Roulette Importance Cap",
+    SLGSettings.rrcap = FloatProperty(name="Russian Roulette Importance Cap",
         description="Russian roulette importance cap",
         default=0.25, min=0.01, max=0.99, soft_min=0.1, soft_max=0.9, precision=3)
 
     # Participating Media properties
-    SLGSettings.BoolProperty(attr="enablepartmedia", name="Participating Media",
+    SLGSettings.enablepartmedia = BoolProperty(name="Participating Media",
         description="Use single scattering participating media",
         default=False)
-    SLGSettings.FloatProperty(attr="partmedia_stepsize", name="Step Size",
+    SLGSettings.partmedia_stepsize = FloatProperty(name="Step Size",
         description="Set ray marching step size",
         default=2.0, min=0.01, max=100, soft_min=0.1, soft_max=10, precision=2)
-    SLGSettings.FloatProperty(attr="partmedia_rrprob", name="RR prob.",
+    SLGSettings.partmedia_rrprob = FloatProperty(name="RR prob.",
         description="Russian Roulette probability",
         default=0.33, min=0.01, max=1.0, soft_min=0.1, soft_max=0.9, precision=2)
-    SLGSettings.FloatVectorProperty(attr="partmedia_emission", name="Emission",
+    SLGSettings.partmedia_emission = FloatVectorProperty(name="Emission",
         description="Media emission",
         default=(0.05, 0.05, 0.05), min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, subtype="COLOR")
-    SLGSettings.FloatVectorProperty(attr="partmedia_scattering", name="Scattering",
+    SLGSettings.partmedia_scattering = FloatVectorProperty(name="Scattering",
         description="Media scattering",
         default=(0.05, 0.05, 0.05), min=0.0, max=100.0, soft_min=0.0, soft_max=100.0, subtype="COLOR")
-    SLGSettings.FloatVectorProperty(attr="partmedia_bbox1", name="Bounding Box Min",
+    SLGSettings.partmedia_bbox1 = FloatVectorProperty(name="Bounding Box Min",
         description="Media bounding box min",
         default=(-10.0, -10.0, -10.0), subtype="XYZ", size=3)
-    SLGSettings.FloatVectorProperty(attr="partmedia_bbox2", name="Bounding Box Max",
+    SLGSettings.partmedia_bbox2 = FloatVectorProperty(name="Bounding Box Max",
         description="Media bounding box max",
         default=(10.0, 10.0, 10.0), subtype="XYZ", size=3)
 
-    SLGSettings.BoolProperty(attr="enablebatchmode", name="Batch Mode",
+    SLGSettings.enablebatchmode = BoolProperty(name="Batch Mode",
         description="Render in background (required for animations)",
         default=False)
 
-    SLGSettings.IntProperty(attr="batchmodetime", name="Batch mode max run time",
+    SLGSettings.batchmodetime = IntProperty(name="Batch mode max run time",
         description="Max number of seconds to render; 0 = ignore",
         default=120, min=0, soft_min=0)
 
-    SLGSettings.IntProperty(attr="batchmodespp", name="Batch mode max samples per pixel",
+    SLGSettings.batchmodespp = IntProperty(name="Batch mode max samples per pixel",
         description="Max number of samples per pixels in batch mode; 0 = ignore",
         default=128, min=0, soft_min=0)
 
-    SLGSettings.IntProperty(attr="batchmode_periodicsave", name="Periodic image save",
+    SLGSettings.batchmode_periodicsave = IntProperty(name="Periodic image save",
         description="Save image periodically (in seconds); 0 = ignore",
         default=0, min=0, soft_min=0)
 
-    SLGSettings.BoolProperty(attr="waitrender", name="Wait",
+    SLGSettings.waitrender = BoolProperty(name="Wait",
         description="Wait for render to finish; load image into render results (required for animations)",
         default=False)
 
-    SLGSettings.BoolProperty(attr="enabletelnet", name="Telnet",
+    SLGSettings.enabletelnet = BoolProperty(name="Telnet",
         description="Enable SLG's telnet interface to allow use of SLG Live! mode",
         default=False)
 
-    SLGSettings.BoolProperty(attr="telnetecho", name="Echo",
+    SLGSettings.telnetecho = BoolProperty(name="Echo",
         description="Enable SLG's telnet echo of commands and informational messages (helps problem solve)",
         default=False)
 
-    SLGSettings.BoolProperty(attr="opencl_cpu", name="CPU",
+    SLGSettings.opencl_cpu = BoolProperty(name="CPU",
         description="Use OpenCL CPU devices if available",
         default=False)
 
-    SLGSettings.BoolProperty(attr="opencl_gpu", name="GPU",
+    SLGSettings.opencl_gpu = BoolProperty(name="GPU",
         description="Use OpenCL GPU devices if available",
         default=True)
 
-    SLGSettings.IntProperty(attr="gpu_workgroup_size", name="GPU Workgroup Size",
+    SLGSettings.gpu_workgroup_size = IntProperty(name="GPU Workgroup Size",
         description="Use a value of 0 to use the default value for your GPU",
         default=64, min=0, max=4096, soft_min=0, soft_max=4096)
 
-    SLGSettings.IntProperty(attr="platform", name="OpenCL platform",
+    SLGSettings.platform = IntProperty(name="OpenCL platform",
         description="OpenCL Platform to use; if you have multiple OpenCL ICDs installed",
         default=0, min=0, max=256, soft_min=0, soft_max=256)
 
-    SLGSettings.StringProperty(attr="devices", name="OpenCL devices to use",
+    SLGSettings.devices = StringProperty(name="OpenCL devices to use",
         description="blank = default (bitwise on/off value for each device, see SLG docs)",
         default="", maxlen=64)
 
     # Add SLG Camera Lens Radius
-    bpy.types.Camera.FloatProperty(attr="slg_lensradius", name="SLG DOF Lens Radius",
+    bpy.types.Camera.slg_lensradius = FloatProperty(name="SLG DOF Lens Radius",
         description="SmallLuxGPU camera lens radius for depth of field",
         default=0.015, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
     # Add Material PLY export override
-    bpy.types.Material.BoolProperty(attr="slg_forceply", name="SLG Force PLY Export",
+    bpy.types.Material.slg_forceply = BoolProperty(name="SLG Force PLY Export",
         description="SmallLuxGPU - Force export of PLY (mesh data) related to this material",
         default=False)
 
     # Add Objet Force Instance
-    bpy.types.Object.BoolProperty(attr="slg_forceinst", name="SLG Force Instance",
+    bpy.types.Object.slg_forceinst = BoolProperty(name="SLG Force Instance",
         description="SmallLuxGPU - Force export of instance for this object",
         default=False)
 
