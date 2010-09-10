@@ -23,11 +23,11 @@
 # SmallLuxGPU v1.7beta2 Blender 2.5 plug-in
 
 bl_addon_info = {
-    "name": "Render: SmallLuxGPU",
+    "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
-    "version": "0.72dev",
+    "version": (0, 7, 2),
     "blender": (2, 5, 4),
-    "location": "Info Header (engine dropdown)",
+    "location": "Render > Engine > SmallLuxGPU",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
     "warning": "",
     "wiki_url": "http://www.luxrender.net/wiki/index.php?title=Blender_2.5_exporter",
