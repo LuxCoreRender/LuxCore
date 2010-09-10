@@ -43,8 +43,10 @@ VirtualM2OHardwareIntersectionDevice::VirtualM2OHardwareIntersectionDevice(const
 }
 
 VirtualM2OHardwareIntersectionDevice::~VirtualM2OHardwareIntersectionDevice() {
-	for (size_t i = 0; i < virtualDeviceCount; ++i)
-		delete virtualDeviceInstances[i];
+	std::vector<VirtualM2ODevHInstance *> devs = virtualDeviceInstances;
+
+	for (size_t i = 0; i < devs.size(); ++i)
+		RemoveVirtualDevice(devs[i]);
 }
 
 IntersectionDevice *VirtualM2OHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
@@ -110,8 +112,10 @@ VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::VirtualM2ODevHInst
 }
 
 VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::~VirtualM2ODevHInstance() {
-	if (started)
-		Stop();
+	if (started) {
+		// In order to avoid dead lock
+		StopNoLock();
+	}
 }
 
 void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::SetDataSet(const DataSet *newDataSet) {
@@ -142,6 +146,10 @@ void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::Interrupt() {
 void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::Stop() {
 	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
 
+	StopNoLock();
+}
+
+void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::StopNoLock() {
 	// Need to wait for all my pending RayBuffer
 	while (pendingRayBuffers > 0)
 		PopRayBuffer();

@@ -66,6 +66,8 @@ private:
 		void Stop();
 
 	private:
+		void StopNoLock();
+
 		size_t instanceIndex;
 		VirtualM2OHardwareIntersectionDevice *virtualDevice;
 
