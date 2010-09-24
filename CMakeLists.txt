@@ -24,6 +24,14 @@
 cmake_minimum_required(VERSION 2.6)
 project(LuxRays)
 
+#Setting Universal Binary Properties, only for Mac OS X
+# generate with xcode/crosscompile, setting: ( darwin - 10.6 - gcc - g++ - MacOSX10.6.sdk - Find from root, then native system )
+IF(APPLE)
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.6)
+	SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
+	SET(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
+ENDIF(APPLE)
+
 SET(LUXRAYS_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LUXRAYS_CMAKE_DIR}")
 
@@ -85,8 +93,22 @@ endif(LUXRAYS_DISABLE_OPENCL)
 
 find_package(GLUT)
 find_package(OpenGL)
-find_package(GLEW)
-
+IF(APPLE)
+    FIND_PATH(GLEW_INCLUDE_DIR
+    	glew.h
+    	PATHS
+	../macos//include/GL	
+	NO_DEFAULT_PATH
+    )
+    FIND_LIBRARY(GLEW_LIBRARY
+    	libGLEW.a
+    	PATHS
+	../macos//lib	
+	NO_DEFAULT_PATH
+    )
+ELSE(APPLE)
+	find_package(GLEW)
+ENDIF(APPLE)
 message(STATUS "OpenGL include directory: " "${OPENGL_INCLUDE_DIR}")
 message(STATUS "OpenGL library: " "${OPENGL_LIBRARY}")
 message(STATUS "GLUT include directory: " "${GLUT_INCLUDE_DIR}")
@@ -99,8 +121,10 @@ message(STATUS "GLEW library: " "${GLEW_LIBRARY}")
 # Boost Libraries
 #
 #############################################################################
-
-find_package(Boost 1.39.0 REQUIRED COMPONENTS thread filesystem system)
+IF(APPLE)
+SET(BOOST_ROOT ../macos)
+ENDIF(APPLE)
+find_package(Boost 1.43.0 REQUIRED COMPONENTS thread filesystem system)
 
 if(Boost_FOUND)
 	message(STATUS "Boost include directory: " "${Boost_INCLUDE_DIRS}")
@@ -115,17 +139,31 @@ endif(Boost_FOUND)
 #
 #############################################################################
 
-find_package(FreeImage REQUIRED)
+IF(APPLE)
+    FIND_PATH(FREEIMAGE_INCLUDE_DIRS
+    	freeimage.h
+    	PATHS
+	../macos//include	
+	NO_DEFAULT_PATH
+    )
+    FIND_LIBRARY(FREEIMAGE_LIBRARIES
+    	libfreeimage.a
+    	PATHS
+	../macos//lib	
+	NO_DEFAULT_PATH
+    )
+ELSE(APPLE)
+	find_package(FreeImage REQUIRED)
 
-if(FREEIMAGE_FOUND)
-    message(STATUS "FreeImage library directory: " ${FREEIMAGE_LIBRARIES})
-    message(STATUS "FreeImage include directory: " ${FREEIMAGE_INCLUDE_PATH})
-else(FREEIMAGE_FOUND)
-    message(FATAL_ERROR "Could not find FreeImage")
-endif(FREEIMAGE_FOUND)
+	if(FREEIMAGE_FOUND)
+  	  message(STATUS "FreeImage library directory: " ${FREEIMAGE_LIBRARIES})
+   	 message(STATUS "FreeImage include directory: " ${FREEIMAGE_INCLUDE_PATH})
+	else(FREEIMAGE_FOUND)
+   	 message(FATAL_ERROR "Could not find FreeImage")
+	endif(FREEIMAGE_FOUND)
 
 include_directories("${FREEIMAGE_INCLUDE_PATH}")
-
+ENDIF(APPLE)
 #############################################################################
 #
 # LuxRays Docs
@@ -178,16 +216,19 @@ endif(DOXYGEN_FOUND)
 #
 #############################################################################
 
-set(CMAKE_CXX_FLAGS_DEBUG "-Wall -msse -msse2 -msse3 -mssse3 -fPIC -O0 -g")
-# NOTE: QBVH can not be compiled with -O3 because of a GCC bug
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
-# The QBVH accelerator needs to be compiled with much reduced optimizations
-# otherwise gcc produces incorrect code and ruins the render on 64bits machines
-SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
-SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
+IF(NOT APPLE)
+	set(CMAKE_CXX_FLAGS_DEBUG "-Wall -msse -msse2 -msse3 -mssse3 -fPIC -O0 -g")
+	# NOTE: QBVH can not be compiled with -O3 because of a GCC bug
+	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
+	#The QBVH accelerator needs to be compiled with much reduced optimizations
+	# otherwise gcc produces incorrect code and ruins the render on 64bits machines
 
-#OSX-flags by jensverwiebe
-#set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable")
+	SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
+	SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
+ELSE(NOT APPLE)
+	#OSX-flags by jensverwiebe
+	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable")
+ENDIF(NOT APPLE)
 
 ###########################################################################
 #
