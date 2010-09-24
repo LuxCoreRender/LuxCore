@@ -122,7 +122,7 @@ message(STATUS "GLEW library: " "${GLEW_LIBRARY}")
 #
 #############################################################################
 IF(APPLE)
-SET(BOOST_ROOT ../macos)
+	SET(BOOST_ROOT ../macos)
 ENDIF(APPLE)
 find_package(Boost 1.43.0 REQUIRED COMPONENTS thread filesystem system)
 
