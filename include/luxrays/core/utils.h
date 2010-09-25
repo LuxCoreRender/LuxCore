@@ -39,7 +39,7 @@ typedef unsigned int u_int;
 #if defined(__APPLE__)
 #if (__GNUC__ == 3) || (__GNUC__ == 4)
 extern "C" {
-	int isinf(float);
+	int isinf(double);
 	int isnan(double);
 	int isnanf(float);
 }
