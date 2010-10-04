@@ -867,7 +867,7 @@ PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmM
 	intersectionDevices = intersectionDev;
 
 	samplePerPixel = max(1, cfg.GetInt("path.sampler.spp", cfg.GetInt("sampler.spp", 4)));
-	lowLatency = cfg.GetInt("opencl.latency.mode", 1);
+	lowLatency = (cfg.GetInt("opencl.latency.mode", 1) != 0);
 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	int strat = cfg.GetInt("path.lightstrategy", 0);

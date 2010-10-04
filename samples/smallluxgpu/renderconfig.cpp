@@ -54,7 +54,7 @@ RenderingConfig::~RenderingConfig() {
 void RenderingConfig::Init() {
 	boost::unique_lock<boost::mutex> lock(cfgMutex);
 
-	const bool lowLatency = cfg.GetInt("opencl.latency.mode", 1);
+	const bool lowLatency = (cfg.GetInt("opencl.latency.mode", 1) != 0);
 	const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
 	const unsigned int w = cfg.GetInt("image.width", 640);
 	const unsigned int h = cfg.GetInt("image.height", 480);
