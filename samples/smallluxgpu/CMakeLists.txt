@@ -77,7 +77,7 @@ endif(DOXYGEN_FOUND)
 
 ###########################################################################
 #
-# Generate LuxRays kernel files
+# Generate kernel files
 #
 ###########################################################################
 
@@ -115,8 +115,8 @@ set(SMALLLUXGPU_SRCS
     sppm/kdtree.cpp
     sppm/sppm.cpp
 	telnet.cpp
-	volume.cpp)
+	volume.cpp
+	)
 
 add_executable(slg ${SMALLLUXGPU_SRCS})
 target_link_libraries(slg luxrays ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
-
