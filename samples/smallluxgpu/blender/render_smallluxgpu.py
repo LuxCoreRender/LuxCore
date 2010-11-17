@@ -238,12 +238,12 @@ class SLGBP:
 
         # Get camera and lookat direction
         cam = scene.camera
-        camdir = cam.matrix_world * mathutils.Vector((0, 0, -1))
+        camdir = mathutils.Vector((0, 0, -1)) * cam.matrix_world
 
         # Camera.location not always updated, but matrix is
         camloc = cam.matrix_world.translation_part()
         scn['scene.camera.lookat'] = '{} {} {} {} {} {}'.format(ff(camloc.x),ff(camloc.y),ff(camloc.z),ff(camdir.x),ff(camdir.y),ff(camdir.z))
-        camup = cam.matrix_world.rotation_part() * mathutils.Vector((0,1,0))
+        camup = mathutils.Vector((0,1,0)) * cam.matrix_world.rotation_part()
         scn['scene.camera.up'] = '{} {} {}'.format(ff(camup.x),ff(camup.y),ff(camup.z))
 
         scn['scene.camera.fieldofview'] = format(cam.data.angle*180.0/3.1415926536,'g')
