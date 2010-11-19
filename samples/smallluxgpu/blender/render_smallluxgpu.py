@@ -290,7 +290,7 @@ class SLGBP:
         # Sun lamp
         if SLGBP.sun:
             # We only support one visible sun lamp
-            sundir = SLGBP.sun.matrix_world.rotation_part() * mathutils.Vector((0,0,1))
+            sundir = mathutils.Vector((0,0,1)) * SLGBP.sun.matrix_world.rotation_part()
             sky = SLGBP.sun.data.sky
             # If envmap is also defined, only sun component is exported
             if not SLGBP.infinitelight and sky.use_atmosphere:
