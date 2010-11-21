@@ -24,24 +24,24 @@
 cmake_minimum_required(VERSION 2.6)
 project(LuxRays)
 
-#Setting Universal Binary Properties, only for Mac OS X
-# generate with xcode/crosscompile, setting: ( darwin - 10.6 - gcc - g++ - MacOSX10.6.sdk - Find from root, then native system )
-IF(APPLE)
-	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.6)
-	SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
-	SET(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
+# Setting Universal Binary Properties, only for Mac OS X
+#  generate with xcode/crosscompile, setting: ( darwin - 10.6 - gcc - g++ - MacOSX10.6.sdk - Find from root, then native system )
+if(APPLE)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6)
+	set(CMAKE_OSX_ARCHITECTURES i386;x86_64)
+	set(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
 	INCLUDE_DIRECTORIES( ../macos/include )
-ENDIF(APPLE)
+endif(APPLE)
 
-SET(LUXRAYS_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LUXRAYS_CMAKE_DIR}")
+set(LUXRAYS_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LUXRAYS_CMAKE_DIR}")
 
 # The supported kind of builds: Release or Debug
-#SET(CMAKE_BUILD_TYPE "Debug")
-#SET(CMAKE_BUILD_TYPE "Release")
-IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE Release)
-ENDIF(NOT CMAKE_BUILD_TYPE)
+#set(CMAKE_BUILD_TYPE "Debug")
+#set(CMAKE_BUILD_TYPE "Release")
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release)
+endif(NOT CMAKE_BUILD_TYPE)
 
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
@@ -94,22 +94,24 @@ endif(LUXRAYS_DISABLE_OPENCL)
 
 find_package(GLUT)
 find_package(OpenGL)
-IF(APPLE)
-    FIND_PATH(GLEW_INCLUDE_DIR
+
+if(APPLE)
+	find_path(GLEW_INCLUDE_DIR
     	glew.h
     	PATHS
-	../macos//include/GL	
-	NO_DEFAULT_PATH
+		../macos//include/GL
+		NO_DEFAULT_PATH
     )
-    FIND_LIBRARY(GLEW_LIBRARY
+    find_library(GLEW_LIBRARY
     	libGLEW.a
     	PATHS
-	../macos//lib	
-	NO_DEFAULT_PATH
+		../macos//lib
+		NO_DEFAULT_PATH
     )
-ELSE(APPLE)
+else(APPLE)
 	find_package(GLEW)
-ENDIF(APPLE)
+endif(APPLE)
+
 message(STATUS "OpenGL include directory: " "${OPENGL_INCLUDE_DIR}")
 message(STATUS "OpenGL library: " "${OPENGL_LIBRARY}")
 message(STATUS "GLUT include directory: " "${GLUT_INCLUDE_DIR}")
@@ -122,9 +124,11 @@ message(STATUS "GLEW library: " "${GLEW_LIBRARY}")
 # Boost Libraries
 #
 #############################################################################
-IF(APPLE)
-	SET(BOOST_ROOT ../macos)
-ENDIF(APPLE)
+
+if(APPLE)
+	set(BOOST_ROOT ../macos)
+endif(APPLE)
+
 find_package(Boost 1.43.0 REQUIRED COMPONENTS thread filesystem system)
 
 if(Boost_FOUND)
@@ -140,31 +144,47 @@ endif(Boost_FOUND)
 #
 #############################################################################
 
-IF(APPLE)
-    FIND_PATH(FREEIMAGE_INCLUDE_DIRS
+if(APPLE)
+    find_path(FREEIMAGE_INCLUDE_DIRS
     	freeimage.h
     	PATHS
-	../macos//include	
-	NO_DEFAULT_PATH
-    )
-    FIND_LIBRARY(FREEIMAGE_LIBRARIES
+		../macos//include
+		NO_DEFAULT_PATH
+	)
+    find_library(FREEIMAGE_LIBRARIES
     	libfreeimage.a
     	PATHS
-	../macos//lib	
-	NO_DEFAULT_PATH
-    )
-ELSE(APPLE)
+		../macos//lib
+		NO_DEFAULT_PATH
+	)
+else(APPLE)
 	find_package(FreeImage REQUIRED)
 
 	if(FREEIMAGE_FOUND)
-  	  message(STATUS "FreeImage library directory: " ${FREEIMAGE_LIBRARIES})
-   	 message(STATUS "FreeImage include directory: " ${FREEIMAGE_INCLUDE_PATH})
+		message(STATUS "FreeImage library directory: " ${FREEIMAGE_LIBRARIES})
+		message(STATUS "FreeImage include directory: " ${FREEIMAGE_INCLUDE_PATH})
 	else(FREEIMAGE_FOUND)
-   	 message(FATAL_ERROR "Could not find FreeImage")
+		 message(FATAL_ERROR "Could not find FreeImage")
 	endif(FREEIMAGE_FOUND)
 
-include_directories("${FREEIMAGE_INCLUDE_PATH}")
-ENDIF(APPLE)
+	include_directories("${FREEIMAGE_INCLUDE_PATH}")
+endif(APPLE)
+
+#############################################################################
+#
+# Qt Libraries
+#
+#############################################################################
+
+find_package(Qt4)
+if(QT4_FOUND)
+	message(STATUS "Qt library directory: " ${QT_LIBRARY_DIR})
+	message(STATUS "Qt include directory: " ${QT_INCLUDE_DIR})
+else(QT4_FOUND)
+	message(STATUS "Warning : could not find Qt - not building LuxMark")
+endif(QT4_FOUND)
+
+
 #############################################################################
 #
 # LuxRays Docs
@@ -217,19 +237,19 @@ endif(DOXYGEN_FOUND)
 #
 #############################################################################
 
-IF(NOT APPLE)
+if(NOT APPLE)
 	set(CMAKE_CXX_FLAGS_DEBUG "-Wall -msse -msse2 -msse3 -mssse3 -fPIC -O0 -g")
 	# NOTE: QBVH can not be compiled with -O3 because of a GCC bug
 	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
 	#The QBVH accelerator needs to be compiled with much reduced optimizations
 	# otherwise gcc produces incorrect code and ruins the render on 64bits machines
 
-	SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
-	SET_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
-ELSE(NOT APPLE)
+	set_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
+	set_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
+else(NOT APPLE)
 	#OSX-flags by jensverwiebe
 	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable")
-ENDIF(NOT APPLE)
+endif(NOT APPLE)
 
 ###########################################################################
 #
@@ -363,6 +383,9 @@ add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/smallluxgpu)
 add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/smallppmgpu)
+if(QT4_FOUND)
+	add_subdirectory(samples/luxmark)
+endif(QT4_FOUND)
 
 ###########################################################################
 #
