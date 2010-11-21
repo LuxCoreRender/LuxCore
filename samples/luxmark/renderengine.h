@@ -19,36 +19,47 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#ifndef _RENDERENGINE_H
+#define	_RENDERENGINE_H
 
-#include <cmath>
-#include <sstream>
-#include <fstream>
-#include <iostream>
+#include "smalllux.h"
 
-#if defined(__linux__) || defined(__APPLE__)
-#include <stddef.h>
-#include <sys/time.h>
-#elif defined (WIN32)
-#include <windows.h>
-#else
-	Unsupported Platform !!!
-#endif
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
 #include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
 
-#include "slgcfg.h"
+enum RenderEngineType {
+	PATH, SPPM, DIRECTLIGHT, PATHGPU
+};
 
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
+class RenderEngine {
+public:
+	RenderEngine(SLGScene *scn, Film *flm, boost::mutex *flmMutex) {
+		scene = scn;
+		film = flm;
+		filmMutex = flmMutex;
+		started = false;
+	};
+	virtual ~RenderEngine() { };
 
-extern void DebugHandler(const char *msg);
+	virtual void Start() {
+		assert (!started);
+		started = true;
+	}
+    virtual void Interrupt() = 0;
+	virtual void Stop() {
+		assert (started);
+		started = false;
+	}
 
-#endif	/* _SMALLLUX_H */
+	virtual unsigned int GetPass() const = 0;
+	virtual unsigned int GetThreadCount() const = 0;
+	virtual RenderEngineType GetEngineType() const = 0;
+
+protected:
+	SLGScene *scene;
+	Film *film;
+	boost::mutex *filmMutex;
+
+	bool started;
+};
+
+#endif	/* _RENDERENGINE_H */

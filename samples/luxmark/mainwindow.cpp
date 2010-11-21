@@ -21,6 +21,12 @@
 
 #include "mainwindow.h"
 #include "aboutdialog.h"
+#include "smalllux.h"
+#include "renderconfig.h"
+
+void DebugHandler(const char *msg) {
+	cerr << "[LuxRays] " << msg << endl;
+}
 
 MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(parent, flags),
 		ui(new Ui::MainWindow) {

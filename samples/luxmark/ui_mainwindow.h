@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Sat Oct 23 17:28:58 2010
+** Created: Sun Nov 21 10:53:27 2010
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -40,6 +40,9 @@ public:
             MainWindow->setObjectName(QString::fromUtf8("MainWindow"));
         MainWindow->resize(1024, 768);
         MainWindow->setMinimumSize(QSize(128, 128));
+        QIcon icon;
+        icon.addFile(QString::fromUtf8(":/images/resources/SLG_luxball_sppm_small.png"), QSize(), QIcon::Normal, QIcon::Off);
+        MainWindow->setWindowIcon(icon);
         action_Quit = new QAction(MainWindow);
         action_Quit->setObjectName(QString::fromUtf8("action_Quit"));
         actionAbout = new QAction(MainWindow);

@@ -27,7 +27,6 @@
 class RenderingConfig;
 
 extern RenderingConfig *config;
-extern void DebugHandler(const char *msg);
 
 extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
 extern void InitPixelBuffer(const unsigned int width, const unsigned int height);

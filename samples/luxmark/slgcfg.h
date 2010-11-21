@@ -19,36 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#ifndef _SLG_CFG_H
+#define	_SLG_CFG_H
 
-#include <cmath>
-#include <sstream>
-#include <fstream>
-#include <iostream>
+// The configured options and settings for SmallLuxGPU
 
-#if defined(__linux__) || defined(__APPLE__)
-#include <stddef.h>
-#include <sys/time.h>
-#elif defined (WIN32)
-#include <windows.h>
-#else
-	Unsupported Platform !!!
-#endif
+#define SLG_VERSION_MAJOR "1"
+#define SLG_VERSION_MINOR "7beta1"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
-
-#include "slgcfg.h"
-
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
-
-extern void DebugHandler(const char *msg);
-
-#endif	/* _SMALLLUX_H */
+#endif	/* _SLG_CFG_H */

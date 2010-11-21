@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'aboutdialog.ui'
 **
-** Created: Sat Oct 23 17:31:57 2010
+** Created: Sun Nov 21 10:53:27 2010
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -17,6 +17,7 @@
 #include <QtGui/QDialog>
 #include <QtGui/QHeaderView>
 #include <QtGui/QLabel>
+#include <QtGui/QPushButton>
 #include <QtGui/QTextBrowser>
 #include <QtGui/QVBoxLayout>
 
@@ -28,13 +29,14 @@ public:
     QVBoxLayout *verticalLayout;
     QLabel *AboutImage;
     QTextBrowser *AboutText;
+    QPushButton *AboutOk;
 
     void setupUi(QDialog *AboutDialog)
     {
         if (AboutDialog->objectName().isEmpty())
             AboutDialog->setObjectName(QString::fromUtf8("AboutDialog"));
         AboutDialog->setWindowModality(Qt::ApplicationModal);
-        AboutDialog->resize(480, 552);
+        AboutDialog->resize(480, 579);
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -53,7 +55,7 @@ public:
         sizePolicy1.setHeightForWidth(AboutImage->sizePolicy().hasHeightForWidth());
         AboutImage->setSizePolicy(sizePolicy1);
         AboutImage->setTextFormat(Qt::RichText);
-        AboutImage->setPixmap(QPixmap(QString::fromUtf8(":/resources/SLG_luxball_sppm.png")));
+        AboutImage->setPixmap(QPixmap(QString::fromUtf8(":/images/resources/SLG_luxball_sppm.png")));
         AboutImage->setAlignment(Qt::AlignHCenter|Qt::AlignTop);
 
         verticalLayout->addWidget(AboutImage);
@@ -63,8 +65,14 @@ public:
 
         verticalLayout->addWidget(AboutText);
 
+        AboutOk = new QPushButton(AboutDialog);
+        AboutOk->setObjectName(QString::fromUtf8("AboutOk"));
+
+        verticalLayout->addWidget(AboutOk);
+
 
         retranslateUi(AboutDialog);
+        QObject::connect(AboutOk, SIGNAL(clicked()), AboutDialog, SLOT(close()));
 
         QMetaObject::connectSlotsByName(AboutDialog);
     } // setupUi
@@ -78,6 +86,7 @@ public:
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">LuxMark bla bla bla</p></body></html>", 0, QApplication::UnicodeUTF8));
+        AboutOk->setText(QApplication::translate("AboutDialog", "Ok", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

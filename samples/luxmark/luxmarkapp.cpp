@@ -19,36 +19,15 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#include "luxmarkapp.h"
 
-#include <cmath>
-#include <sstream>
-#include <fstream>
-#include <iostream>
+LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
+}
 
-#if defined(__linux__) || defined(__APPLE__)
-#include <stddef.h>
-#include <sys/time.h>
-#elif defined (WIN32)
-#include <windows.h>
-#else
-	Unsupported Platform !!!
-#endif
+LuxMarkApp::~LuxMarkApp() {
+	if (mainwin != NULL)
+		delete mainwin;
+}
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
-
-#include "slgcfg.h"
-
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
-
-extern void DebugHandler(const char *msg);
-
-#endif	/* _SMALLLUX_H */
+void LuxMarkApp::init(void) {
+}

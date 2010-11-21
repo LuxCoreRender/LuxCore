@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>480</width>
-    <height>552</height>
+    <height>579</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -47,7 +47,7 @@
       <enum>Qt::RichText</enum>
      </property>
      <property name="pixmap">
-      <pixmap resource="resources.pro">:/resources/SLG_luxball_sppm.png</pixmap>
+      <pixmap resource="resources.qrc">:/images/resources/SLG_luxball_sppm.png</pixmap>
      </property>
      <property name="alignment">
       <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -65,10 +65,34 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
+   <item>
+    <widget class="QPushButton" name="AboutOk">
+     <property name="text">
+      <string>Ok</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources>
-  <include location="resources.pro"/>
+  <include location="resources.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>AboutOk</sender>
+   <signal>clicked()</signal>
+   <receiver>AboutDialog</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>239</x>
+     <y>538</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>239</x>
+     <y>275</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

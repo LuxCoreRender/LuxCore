@@ -383,9 +383,10 @@ add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/smallluxgpu)
 add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/smallppmgpu)
-if(QT4_FOUND)
+if(QT4_FOUND AND BUILD_LUXMARK)
 	add_subdirectory(samples/luxmark)
-endif(QT4_FOUND)
+	message(STATUS "Building LuxMark too")
+endif(QT4_FOUND AND BUILD_LUXMARK)
 
 ###########################################################################
 #
