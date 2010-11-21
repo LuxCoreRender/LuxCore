@@ -138,6 +138,8 @@ else(Boost_FOUND)
 	message(FATAL_ERROR "Could not find Boost Libraries")
 endif(Boost_FOUND)
 
+INCLUDE_DIRECTORIES(SYSTEM ${Boost_INCLUDE_DIRS}) 
+
 #############################################################################
 #
 # FreeImage Libraries
@@ -419,3 +421,5 @@ add_custom_command(
     COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
 
 add_custom_target(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
+
+message(STATUS ${INCLUDE_DIRS})
