@@ -19,36 +19,35 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#ifndef _SCENE_H
+#define	_SCENE_H
 
-#include <cmath>
-#include <sstream>
-#include <fstream>
+#include <string>
 #include <iostream>
+#include <fstream>
 
-#if defined(__linux__) || defined(__APPLE__)
-#include <stddef.h>
-#include <sys/time.h>
-#elif defined (WIN32)
-#include <windows.h>
-#else
-	Unsupported Platform !!!
-#endif
+#include "smalllux.h"
+#include "volume.h"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
+#include "luxrays/core/context.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/scene.h"
 #include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
 
-#include "slgcfg.h"
+typedef enum {
+	ONE_UNIFORM, ALL_UNIFORM
+} DirectLightStrategy;
 
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
+typedef enum {
+	PROBABILITY, IMPORTANCE
+} RussianRouletteStrategy;
 
-extern void DebugHandler(const char *msg);
+class SLGScene : public Scene {
+public:
+	SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType);
+	~SLGScene();
 
-#endif	/* _SMALLLUX_H */
+	VolumeIntegrator *volumeIntegrator;
+};
+
+#endif	/* _SCENE_H */

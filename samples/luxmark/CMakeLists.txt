@@ -35,14 +35,14 @@ configure_file(
 #
 ###########################################################################
 
-#add_custom_command(
-#   OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
-#   COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
-#   COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
-#   COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
-#   COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
-#   MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
-#   )
+add_custom_command(
+   OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
+   COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
+   MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
+   )
 
 #############################################################################
 #
@@ -54,20 +54,36 @@ set(QT_USE_QTOPENGL true)
 include(${QT_USE_FILE})
 
 set(LUXMARK_SRCS
+	aboutdialog.cpp
+	luxmarkapp.cpp
 	main.cpp
 	mainwindow.cpp
-	aboutdialog.cpp
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#!!! Files copied from SLG, do not edit the files !!!
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	path/path.cpp
+	pathgpu/kernels/pathgpu_kernel.cpp
+	pathgpu/pathgpu.cpp
+	renderconfig.cpp
+	slgscene.cpp
+    sppm/hashgrid.cpp
+    sppm/hybridhashgrid.cpp
+    sppm/hitpoints.cpp
+    sppm/kdtree.cpp
+    sppm/sppm.cpp
+	volume.cpp
 	)
 set(LUXMARK_MOC
-	mainwindow.h
 	aboutdialog.h
+	mainwindow.h
+	luxmarkapp.h
 	)
 set(LUXMARK_UIS
-	mainwindow.ui
 	aboutdialog.ui
+	mainwindow.ui
 	)
 set(LUXMARK_RCS
-	resources.pro
+	resources.qrc
 	)
 
 QT4_ADD_RESOURCES(LUXMARK_RC_SRCS ${LUXMARK_RCS})
