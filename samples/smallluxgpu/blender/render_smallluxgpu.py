@@ -166,9 +166,9 @@ class SLGBP:
         # Get motion blur parameters
         if scene.slg.cameramotionblur:
             scene.frame_set(scene.frame_current - 1)
-            SLGBP.camdirBlur = scene.camera.matrix_world * mathutils.Vector((0, 0, -10))
+            SLGBP.camdirBlur = mathutils.Vector((0, 0, -10)) * scene.camera.matrix_world 
             SLGBP.camlocBlur = scene.camera.matrix_world.translation_part()
-            SLGBP.camupBlur = scene.camera.matrix_world.rotation_part() * mathutils.Vector((0,1,0))
+            SLGBP.camupBlur = mathutils.Vector((0,1,0)) * scene.camera.matrix_world.rotation_part()
             scene.frame_set(scene.frame_current + 1)
 
         return True
@@ -238,7 +238,7 @@ class SLGBP:
 
         # Get camera and lookat direction
         cam = scene.camera
-        camdir = mathutils.Vector((0, 0, -1)) * cam.matrix_world
+        camdir = mathutils.Vector((0, 0, -1)) * cam.matrix_world 
 
         # Camera.location not always updated, but matrix is
         camloc = cam.matrix_world.translation_part()
@@ -927,7 +927,7 @@ class SLGRender(bpy.types.Operator):
         self._iserror = False
         SLGBP.abort = False
         if self.properties.animation:
-            context.window_manager.add_modal_handler(self)
+            context.window_manager.modal_handler_add(self)
             SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
             SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
             SLGBP.exportrun(context.scene)
@@ -980,7 +980,7 @@ class SLGLive(bpy.types.Operator):
                 self.report('ERROR', "SLG must be running with telnet interface enabled")
                 return {'CANCELLED'}
         self._iserror = False
-        context.window_manager.add_modal_handler(self)
+        context.window_manager.modal_handler_add(self)
         # Disable global undo as it corrupts all pointers used by SLG Live! mode
         self._undo = bpy.context.user_preferences.edit.use_global_undo
         bpy.context.user_preferences.edit.use_global_undo = False
