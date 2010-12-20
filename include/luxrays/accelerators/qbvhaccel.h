@@ -145,7 +145,7 @@ public:
 		const int testmask = _mm_movemask_ps(test);		
 		if (testmask == 0) return false;
 
-		u_int hit;
+		u_int hit = 0; // Must be initialized because next block might not initialize it
 		if ((testmask & (testmask - 1)) == 0) {
 			hit = UIntLog2(testmask);
 			ray.maxt = reinterpret_cast<const float *> (&t)[hit];

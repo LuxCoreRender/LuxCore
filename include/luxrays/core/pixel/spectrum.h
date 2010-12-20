@@ -118,7 +118,7 @@ public:
 	}
 
 	bool IsNaN() const {
-		return isnanf(r) || isnanf(g) || isnanf(b);
+		return isnan(r) || isnan(g) || isnan(b);
 	}
 
 	float Y() const {

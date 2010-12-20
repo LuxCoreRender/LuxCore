@@ -23,6 +23,7 @@
 #define	_LUXRAYS_UTILS_H
 
 #include <cmath>
+using std::isnan;
 
 #if defined (__linux__)
 #include <pthread.h>
@@ -60,13 +61,13 @@ typedef unsigned int u_int;
 
 #include <sstream>
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
 #include <stddef.h>
 #include <sys/time.h>
 #elif defined (WIN32)
 #include <windows.h>
 #else
-        Unsupported Platform !!!
+#error "Unsupported Platform !!!"
 #endif
 
 #ifndef M_PI
@@ -88,7 +89,7 @@ typedef unsigned int u_int;
 namespace luxrays {
 
 inline double WallClockTime() {
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
 	struct timeval t;
 	gettimeofday(&t, NULL);
 
@@ -96,7 +97,7 @@ inline double WallClockTime() {
 #elif defined (WIN32)
 	return GetTickCount() / 1000.0;
 #else
-	Unsupported Platform !!!
+#error "Unsupported Platform !!!"
 #endif
 }
 
@@ -227,7 +228,7 @@ inline void StringTrim(std::string &str) {
 }
 
 inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
-#if defined (__linux__) || defined (__APPLE__)
+#if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__)
 	{
 		const pthread_t tid = (pthread_t)thread->native_handle();
 
