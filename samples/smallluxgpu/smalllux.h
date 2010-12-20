@@ -27,7 +27,7 @@
 #include <fstream>
 #include <iostream>
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
 #include <stddef.h>
 #include <sys/time.h>
 #elif defined (WIN32)

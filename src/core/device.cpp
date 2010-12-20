@@ -22,6 +22,8 @@
 #if !defined(WIN32) && !defined(__APPLE__)
 #include <GL/glx.h>
 #endif
+#include <cstdio>
+using std::sprintf;
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixeldevice.h"
