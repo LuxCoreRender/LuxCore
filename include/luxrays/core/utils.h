@@ -23,13 +23,23 @@
 #define	_LUXRAYS_UTILS_H
 
 #include <cmath>
-using std::isnan;
 
 #if defined (__linux__)
 #include <pthread.h>
 #endif
 
 #include <boost/thread.hpp>
+
+#if defined(WIN32)
+#include <float.h>
+#define isnanf(a) _isnan(a)
+#if !defined(isnan)
+#define isnan(a) _isnan(a)
+#endif
+typedef unsigned int u_int;
+#else
+using std::isnan;
+#endif
 
 #if defined(__APPLE__) // OSX adaptions Jens Verwiebe
 #  define memalign(a,b) valloc(b)
@@ -45,12 +55,6 @@ extern "C" {
 	int isnanf(float);
 }
 #endif
-#endif
-
-#if defined(WIN32)
-#include <float.h>
-#define isnanf(a) _isnan(a)
-typedef unsigned int u_int;
 #endif
 
 #if defined(__APPLE__)
@@ -143,7 +147,7 @@ inline float Sgn(float a) {
 }
 
 inline int Sgn(int a) {
-	return a < 0 ? -1 : 1.f;
+	return a < 0 ? -1 : 1;
 }
 
 template<class T> inline int Float2Int(T val) {
