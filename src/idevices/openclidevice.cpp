@@ -68,10 +68,12 @@ std::string oclErrorString(cl_int error)
             return "CL_BUILD_PROGRAM_FAILURE";
         case CL_MAP_FAILURE:
             return "CL_MAP_FAILURE";
+#ifndef __APPLE__ /* still CL 1.0 api */
         case CL_MISALIGNED_SUB_BUFFER_OFFSET:
             return "CL_MISALIGNED_SUB_BUFFER_OFFSET";
         case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST:
             return "CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST";
+#endif
         case CL_INVALID_VALUE:
             return "CL_INVALID_VALUE";
         case CL_INVALID_DEVICE_TYPE:
