@@ -22,7 +22,7 @@
 #
 # SmallLuxGPU v1.7beta2 Blender 2.5 plug-in
 
-bl_addon_info = {
+bl_info = {
     "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
     "version": (0, 7, 2),
