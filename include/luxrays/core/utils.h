@@ -30,6 +30,17 @@
 
 #include <boost/thread.hpp>
 
+#if defined(WIN32)
+#include <float.h>
+#define isnanf(a) _isnan(a)
+#if !defined(isnan)
+#define isnan(a) _isnan(a)
+#endif
+typedef unsigned int u_int;
+#else
+using std::isnan;
+#endif
+
 #if defined(__APPLE__) // OSX adaptions Jens Verwiebe
 #  define memalign(a,b) valloc(b)
 #include <string>
@@ -46,12 +57,6 @@ extern "C" {
 #endif
 #endif
 
-#if defined(WIN32)
-#include <float.h>
-#define isnanf(a) _isnan(a)
-typedef unsigned int u_int;
-#endif
-
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #else
@@ -60,13 +65,13 @@ typedef unsigned int u_int;
 
 #include <sstream>
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
 #include <stddef.h>
 #include <sys/time.h>
 #elif defined (WIN32)
 #include <windows.h>
 #else
-        Unsupported Platform !!!
+#error "Unsupported Platform !!!"
 #endif
 
 #ifndef M_PI
@@ -88,7 +93,7 @@ typedef unsigned int u_int;
 namespace luxrays {
 
 inline double WallClockTime() {
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
 	struct timeval t;
 	gettimeofday(&t, NULL);
 
@@ -96,7 +101,7 @@ inline double WallClockTime() {
 #elif defined (WIN32)
 	return GetTickCount() / 1000.0;
 #else
-	Unsupported Platform !!!
+#error "Unsupported Platform !!!"
 #endif
 }
 
@@ -142,7 +147,7 @@ inline float Sgn(float a) {
 }
 
 inline int Sgn(int a) {
-	return a < 0 ? -1 : 1.f;
+	return a < 0 ? -1 : 1;
 }
 
 template<class T> inline int Float2Int(T val) {
@@ -227,7 +232,7 @@ inline void StringTrim(std::string &str) {
 }
 
 inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
-#if defined (__linux__) || defined (__APPLE__)
+#if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__)
 	{
 		const pthread_t tid = (pthread_t)thread->native_handle();
 

@@ -52,7 +52,7 @@ VirtualM2OHardwareIntersectionDevice::~VirtualM2OHardwareIntersectionDevice() {
 IntersectionDevice *VirtualM2OHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
 	boost::mutex::scoped_lock lock(virtualDeviceMutex);
 
-	assert (index > 0);
+	assert (index >= 0);
 	assert (index < virtualDeviceInstances.size());
 
 	return virtualDeviceInstances[index];
