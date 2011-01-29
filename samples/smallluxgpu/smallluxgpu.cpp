@@ -39,7 +39,7 @@
 #include "telnet.h"
 #include "luxrays/core/device.h"
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__CYGWIN__)
 #include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -188,7 +188,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 }
 
 int main(int argc, char *argv[]) {
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__CYGWIN__)
 	set_terminate(SLGTerminate);
 #endif
 

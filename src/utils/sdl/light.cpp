@@ -48,20 +48,20 @@ inline float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
 void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 	float X, Z;
 	
-	if (y != 0.0)
+	if (y != 0.f)
 		X = (x / y) * Y;
 	else
-		X = 0.0;
+		X = 0.f;
 	
-	if (y != 0.0 && Y != 0.0)
-		Z = (1.0 - x - y) / y * Y;
+	if (y != 0.f && Y != 0.f)
+		Z = (1.f - x - y) / y * Y;
 	else
-		Z = 0.0;
+		Z = 0.f;
 
 	// Assuming sRGB (D65 illuminant)
-	s->r =  3.2410 * X - 1.5374 * Y - 0.4986 * Z;
-	s->g = -0.9692 * X + 1.8760 * Y + 0.0416 * Z;
-	s->b =  0.0556 * X - 0.2040 * Y + 1.0570 * Z;
+	s->r =  3.2410f * X - 1.5374f * Y - 0.4986f * Z;
+	s->g = -0.9692f * X + 1.8760f * Y + 0.0416f * Z;
+	s->b =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
 }
 
 SkyLight::SkyLight(float turb, const Vector &sd) : InfiniteLight(NULL) {
@@ -89,7 +89,7 @@ void SkyLight::Init() {
 
 	float chi = (4.f / 9.f - T / 120.f) * (M_PI - 2.0f * thetaS);
 	zenith_Y = (4.0453f * T - 4.9710f) * tan(chi) - 0.2155f * T + 2.4192f;
-	zenith_Y *= 0.06;
+	zenith_Y *= 0.06f;
 
 	zenith_x =
 	(0.00166f * theta3 - 0.00375f * theta2 + 0.00209f * thetaS) * T2 +
