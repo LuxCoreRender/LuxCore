@@ -23,20 +23,40 @@
 #define _LUXMARKAPP_H
 
 #include <QtGui/QApplication>
+#include <QTimer>
+
+#include <boost/thread.hpp>
 
 #include "mainwindow.h"
+#include "renderconfig.h"
 
-class LuxMarkApp : public QApplication
-{
+enum LuxMarkAppMode {
+	BENCHMARK, INTERACTIVE
+};
+
+class LuxMarkApp : public QApplication {
 	Q_OBJECT
 
 public:
-	MainWindow *mainwin;
+	MainWindow *mainWin;
 
 	LuxMarkApp(int argc, char **argv);
 	~LuxMarkApp();
 	
-	void init(void);
+	void Init(void);
+
+	void SetMode(LuxMarkAppMode m);
+
+private:
+	LuxMarkAppMode mode;
+
+	boost::thread *engineThread;
+	RenderingConfig *renderConfig;
+
+	QTimer *renderRefreshTimer;
+
+private slots:
+	void RenderRefreshTimeout();
 };
 
 #endif // _LUXMARKAPP_H

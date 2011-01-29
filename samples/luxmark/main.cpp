@@ -19,14 +19,19 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <cstdio>
 #include <cstdlib>
 
+#include "smalllux.h"
 #include "mainwindow.h"
+#include "luxmarkapp.h"
 
 int main(int argc, char** argv) {
-	QApplication app(argc, argv);
-	MainWindow *win = new MainWindow();
+	LuxMarkApp app(argc, argv);
+	app.Init();
 
-	win->show();
-	return app.exec();
+	if (app.mainWin != NULL)
+		return app.exec();
+	else
+		return 0;
 }

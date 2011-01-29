@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1024</width>
-    <height>768</height>
+    <width>761</width>
+    <height>638</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -23,13 +23,61 @@
    <iconset resource="resources.qrc">
     <normaloff>:/images/resources/SLG_luxball_sppm_small.png</normaloff>:/images/resources/SLG_luxball_sppm_small.png</iconset>
   </property>
-  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QWidget" name="centralwidget">
+   <property name="minimumSize">
+    <size>
+     <width>160</width>
+     <height>120</height>
+    </size>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="margin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QSplitter" name="splitter_2">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <widget class="QSplitter" name="splitter">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <widget class="QGraphicsView" name="RenderView"/>
+       <widget class="QScrollArea" name="SettingsArea">
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="scrollAreaWidgetContents">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>82</width>
+           <height>291</height>
+          </rect>
+         </property>
+        </widget>
+       </widget>
+      </widget>
+      <widget class="QTextEdit" name="LogView">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1024</width>
+     <width>761</width>
      <height>25</height>
     </rect>
    </property>
@@ -45,7 +93,21 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menu_Mode">
+    <property name="title">
+     <string>&amp;Mode</string>
+    </property>
+    <addaction name="action_Benchmark"/>
+    <addaction name="action_Interactive"/>
+   </widget>
+   <widget class="QMenu" name="menu_Scene">
+    <property name="title">
+     <string>&amp;Scene</string>
+    </property>
+   </widget>
    <addaction name="menu_File"/>
+   <addaction name="menu_Mode"/>
+   <addaction name="menu_Scene"/>
    <addaction name="menu_Help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -60,6 +122,16 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="action_Benchmark">
+   <property name="text">
+    <string>&amp;Benchmark</string>
+   </property>
+  </action>
+  <action name="action_Interactive">
+   <property name="text">
+    <string>&amp;Interactive</string>
    </property>
   </action>
  </widget>

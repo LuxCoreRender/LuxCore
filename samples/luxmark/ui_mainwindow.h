@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Sun Nov 21 10:53:27 2010
+** Created: Sat Jan 29 11:14:01 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -14,11 +14,16 @@
 #include <QtGui/QAction>
 #include <QtGui/QApplication>
 #include <QtGui/QButtonGroup>
+#include <QtGui/QGraphicsView>
 #include <QtGui/QHeaderView>
 #include <QtGui/QMainWindow>
 #include <QtGui/QMenu>
 #include <QtGui/QMenuBar>
+#include <QtGui/QScrollArea>
+#include <QtGui/QSplitter>
 #include <QtGui/QStatusBar>
+#include <QtGui/QTextEdit>
+#include <QtGui/QVBoxLayout>
 #include <QtGui/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -28,17 +33,28 @@ class Ui_MainWindow
 public:
     QAction *action_Quit;
     QAction *actionAbout;
+    QAction *action_Benchmark;
+    QAction *action_Interactive;
     QWidget *centralwidget;
+    QVBoxLayout *verticalLayout;
+    QSplitter *splitter_2;
+    QSplitter *splitter;
+    QGraphicsView *RenderView;
+    QScrollArea *SettingsArea;
+    QWidget *scrollAreaWidgetContents;
+    QTextEdit *LogView;
     QMenuBar *menubar;
     QMenu *menu_File;
     QMenu *menu_Help;
+    QMenu *menu_Mode;
+    QMenu *menu_Scene;
     QStatusBar *statusbar;
 
     void setupUi(QMainWindow *MainWindow)
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName(QString::fromUtf8("MainWindow"));
-        MainWindow->resize(1024, 768);
+        MainWindow->resize(761, 638);
         MainWindow->setMinimumSize(QSize(128, 128));
         QIcon icon;
         icon.addFile(QString::fromUtf8(":/images/resources/SLG_luxball_sppm_small.png"), QSize(), QIcon::Normal, QIcon::Off);
@@ -47,25 +63,67 @@ public:
         action_Quit->setObjectName(QString::fromUtf8("action_Quit"));
         actionAbout = new QAction(MainWindow);
         actionAbout->setObjectName(QString::fromUtf8("actionAbout"));
+        action_Benchmark = new QAction(MainWindow);
+        action_Benchmark->setObjectName(QString::fromUtf8("action_Benchmark"));
+        action_Interactive = new QAction(MainWindow);
+        action_Interactive->setObjectName(QString::fromUtf8("action_Interactive"));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
+        centralwidget->setMinimumSize(QSize(160, 120));
+        verticalLayout = new QVBoxLayout(centralwidget);
+        verticalLayout->setSpacing(0);
+        verticalLayout->setContentsMargins(0, 0, 0, 0);
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        splitter_2 = new QSplitter(centralwidget);
+        splitter_2->setObjectName(QString::fromUtf8("splitter_2"));
+        splitter_2->setOrientation(Qt::Vertical);
+        splitter = new QSplitter(splitter_2);
+        splitter->setObjectName(QString::fromUtf8("splitter"));
+        splitter->setOrientation(Qt::Horizontal);
+        RenderView = new QGraphicsView(splitter);
+        RenderView->setObjectName(QString::fromUtf8("RenderView"));
+        splitter->addWidget(RenderView);
+        SettingsArea = new QScrollArea(splitter);
+        SettingsArea->setObjectName(QString::fromUtf8("SettingsArea"));
+        SettingsArea->setWidgetResizable(true);
+        scrollAreaWidgetContents = new QWidget();
+        scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
+        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 82, 291));
+        SettingsArea->setWidget(scrollAreaWidgetContents);
+        splitter->addWidget(SettingsArea);
+        splitter_2->addWidget(splitter);
+        LogView = new QTextEdit(splitter_2);
+        LogView->setObjectName(QString::fromUtf8("LogView"));
+        LogView->setReadOnly(true);
+        splitter_2->addWidget(LogView);
+
+        verticalLayout->addWidget(splitter_2);
+
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
-        menubar->setGeometry(QRect(0, 0, 1024, 25));
+        menubar->setGeometry(QRect(0, 0, 761, 25));
         menu_File = new QMenu(menubar);
         menu_File->setObjectName(QString::fromUtf8("menu_File"));
         menu_Help = new QMenu(menubar);
         menu_Help->setObjectName(QString::fromUtf8("menu_Help"));
+        menu_Mode = new QMenu(menubar);
+        menu_Mode->setObjectName(QString::fromUtf8("menu_Mode"));
+        menu_Scene = new QMenu(menubar);
+        menu_Scene->setObjectName(QString::fromUtf8("menu_Scene"));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName(QString::fromUtf8("statusbar"));
         MainWindow->setStatusBar(statusbar);
 
         menubar->addAction(menu_File->menuAction());
+        menubar->addAction(menu_Mode->menuAction());
+        menubar->addAction(menu_Scene->menuAction());
         menubar->addAction(menu_Help->menuAction());
         menu_File->addAction(action_Quit);
         menu_Help->addAction(actionAbout);
+        menu_Mode->addAction(action_Benchmark);
+        menu_Mode->addAction(action_Interactive);
 
         retranslateUi(MainWindow);
         QObject::connect(action_Quit, SIGNAL(triggered()), MainWindow, SLOT(exitApp()));
@@ -80,8 +138,12 @@ public:
         action_Quit->setText(QApplication::translate("MainWindow", "&Quit", 0, QApplication::UnicodeUTF8));
         action_Quit->setShortcut(QApplication::translate("MainWindow", "Ctrl+Q", 0, QApplication::UnicodeUTF8));
         actionAbout->setText(QApplication::translate("MainWindow", "About", 0, QApplication::UnicodeUTF8));
+        action_Benchmark->setText(QApplication::translate("MainWindow", "&Benchmark", 0, QApplication::UnicodeUTF8));
+        action_Interactive->setText(QApplication::translate("MainWindow", "&Interactive", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));
+        menu_Mode->setTitle(QApplication::translate("MainWindow", "&Mode", 0, QApplication::UnicodeUTF8));
+        menu_Scene->setTitle(QApplication::translate("MainWindow", "&Scene", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

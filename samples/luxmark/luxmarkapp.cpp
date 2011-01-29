@@ -19,15 +19,92 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include "luxmarkcfg.h"
 #include "luxmarkapp.h"
+#include "renderconfig.h"
+
+void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
+	printf("\n*** ");
+	if(fif != FIF_UNKNOWN)
+		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
+
+	printf("%s", message);
+	printf(" ***\n");
+}
 
 LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
+	// Initialize FreeImage Library, it must be done after QApplication() in
+	// order to avoid a crash
+	FreeImage_Initialise(TRUE);
+	FreeImage_SetOutputMessage(FreeImageErrorHandler);
+
+	mainWin = NULL;
+	engineThread = NULL;
+	renderConfig = NULL;
+	renderRefreshTimer = NULL;
 }
 
 LuxMarkApp::~LuxMarkApp() {
-	if (mainwin != NULL)
-		delete mainwin;
+	if (engineThread) {
+		// Stop the rendering engine
+		engineThread->interrupt();
+		engineThread->join();
+		delete engineThread;
+	}
+	delete renderConfig;
+	delete mainWin;
 }
 
-void LuxMarkApp::init(void) {
+void LuxMarkApp::Init(void) {
+	mainWin = new MainWindow();
+	mainWin->show();
+	LogWindow = mainWin;
+
+	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark V" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
+	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
+
+	SetMode(BENCHMARK);
+}
+
+void LuxMarkApp::SetMode(LuxMarkAppMode m) {
+	delete renderRefreshTimer;
+	renderRefreshTimer = NULL;
+
+	// Stop the engine thread if required
+	if (engineThread) {
+		// Stop the rendering engine
+		engineThread->interrupt();
+		engineThread->join();
+	}
+	delete engineThread;
+	engineThread = NULL;
+
+	// Free the scene if required
+
+	delete renderConfig;
+	renderConfig = NULL;
+
+	// Initialize the new mode
+
+	mode = m;
+	if (mode == BENCHMARK) {
+		renderConfig = new RenderingConfig("scenes/luxball/render-fast.cfg");
+		renderConfig->Init();
+
+		// Update timer
+		renderRefreshTimer = new QTimer();
+		connect(renderRefreshTimer, SIGNAL(timeout()), SLOT(RenderRefreshTimeout()));
+
+		// Refresh the screen every 5 secs in benchmark mode
+		renderRefreshTimer->start(5 * 1000);
+	}
+}
+
+void LuxMarkApp::RenderRefreshTimeout() {
+	// Get the rendered image
+	renderConfig->film->UpdateScreenBuffer();
+	const float *pixels = renderConfig->film->GetScreenBuffer();
+
+	// Update the window
+	mainWin->ShowFrameBuffer(pixels, renderConfig->film->GetWidth(), renderConfig->film->GetHeight());
 }
