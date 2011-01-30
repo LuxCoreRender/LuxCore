@@ -58,6 +58,8 @@ private:
 private slots:
 	void exitApp();
 	void showAbout();
+	void setLuxBallScene();
+	void setLuxBallHDRScene();
 };
 
 #endif	/* _MAINWINDOW_H */

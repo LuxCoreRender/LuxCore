@@ -91,7 +91,7 @@
     <property name="title">
      <string>&amp;Help</string>
     </property>
-    <addaction name="actionAbout"/>
+    <addaction name="action_About"/>
    </widget>
    <widget class="QMenu" name="menu_Mode">
     <property name="title">
@@ -104,6 +104,8 @@
     <property name="title">
      <string>&amp;Scene</string>
     </property>
+    <addaction name="action_LuxBall_HDR"/>
+    <addaction name="action_LuxBall"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Mode"/>
@@ -119,7 +121,7 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionAbout">
+  <action name="action_About">
    <property name="text">
     <string>About</string>
    </property>
@@ -132,6 +134,22 @@
   <action name="action_Interactive">
    <property name="text">
     <string>&amp;Interactive</string>
+   </property>
+  </action>
+  <action name="action_LuxBall_HDR">
+   <property name="text">
+    <string>LuxBall &amp;HDR</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+H</string>
+   </property>
+  </action>
+  <action name="action_LuxBall">
+   <property name="text">
+    <string>&amp;LuxBall</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
  </widget>
@@ -156,7 +174,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionAbout</sender>
+   <sender>action_About</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>showAbout()</slot>
@@ -171,9 +189,43 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_LuxBall</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setLuxBallScene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>380</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_LuxBall_HDR</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setLuxBallHDRScene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>380</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
   <slot>showAbout()</slot>
+  <slot>setLuxBallScene()</slot>
+  <slot>setLuxBallHDRScene()</slot>
  </slots>
 </ui>

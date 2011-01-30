@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Sat Jan 29 11:14:01 2011
+** Created: Sun Jan 30 11:28:04 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -32,9 +32,11 @@ class Ui_MainWindow
 {
 public:
     QAction *action_Quit;
-    QAction *actionAbout;
+    QAction *action_About;
     QAction *action_Benchmark;
     QAction *action_Interactive;
+    QAction *action_LuxBall_HDR;
+    QAction *action_LuxBall;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout;
     QSplitter *splitter_2;
@@ -61,12 +63,16 @@ public:
         MainWindow->setWindowIcon(icon);
         action_Quit = new QAction(MainWindow);
         action_Quit->setObjectName(QString::fromUtf8("action_Quit"));
-        actionAbout = new QAction(MainWindow);
-        actionAbout->setObjectName(QString::fromUtf8("actionAbout"));
+        action_About = new QAction(MainWindow);
+        action_About->setObjectName(QString::fromUtf8("action_About"));
         action_Benchmark = new QAction(MainWindow);
         action_Benchmark->setObjectName(QString::fromUtf8("action_Benchmark"));
         action_Interactive = new QAction(MainWindow);
         action_Interactive->setObjectName(QString::fromUtf8("action_Interactive"));
+        action_LuxBall_HDR = new QAction(MainWindow);
+        action_LuxBall_HDR->setObjectName(QString::fromUtf8("action_LuxBall_HDR"));
+        action_LuxBall = new QAction(MainWindow);
+        action_LuxBall->setObjectName(QString::fromUtf8("action_LuxBall"));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
@@ -121,13 +127,17 @@ public:
         menubar->addAction(menu_Scene->menuAction());
         menubar->addAction(menu_Help->menuAction());
         menu_File->addAction(action_Quit);
-        menu_Help->addAction(actionAbout);
+        menu_Help->addAction(action_About);
         menu_Mode->addAction(action_Benchmark);
         menu_Mode->addAction(action_Interactive);
+        menu_Scene->addAction(action_LuxBall_HDR);
+        menu_Scene->addAction(action_LuxBall);
 
         retranslateUi(MainWindow);
         QObject::connect(action_Quit, SIGNAL(triggered()), MainWindow, SLOT(exitApp()));
-        QObject::connect(actionAbout, SIGNAL(triggered()), MainWindow, SLOT(showAbout()));
+        QObject::connect(action_About, SIGNAL(triggered()), MainWindow, SLOT(showAbout()));
+        QObject::connect(action_LuxBall, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallScene()));
+        QObject::connect(action_LuxBall_HDR, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallHDRScene()));
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -137,9 +147,13 @@ public:
         MainWindow->setWindowTitle(QApplication::translate("MainWindow", "LuxMark", 0, QApplication::UnicodeUTF8));
         action_Quit->setText(QApplication::translate("MainWindow", "&Quit", 0, QApplication::UnicodeUTF8));
         action_Quit->setShortcut(QApplication::translate("MainWindow", "Ctrl+Q", 0, QApplication::UnicodeUTF8));
-        actionAbout->setText(QApplication::translate("MainWindow", "About", 0, QApplication::UnicodeUTF8));
+        action_About->setText(QApplication::translate("MainWindow", "About", 0, QApplication::UnicodeUTF8));
         action_Benchmark->setText(QApplication::translate("MainWindow", "&Benchmark", 0, QApplication::UnicodeUTF8));
         action_Interactive->setText(QApplication::translate("MainWindow", "&Interactive", 0, QApplication::UnicodeUTF8));
+        action_LuxBall_HDR->setText(QApplication::translate("MainWindow", "LuxBall &HDR", 0, QApplication::UnicodeUTF8));
+        action_LuxBall_HDR->setShortcut(QApplication::translate("MainWindow", "Ctrl+H", 0, QApplication::UnicodeUTF8));
+        action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall", 0, QApplication::UnicodeUTF8));
+        action_LuxBall->setShortcut(QApplication::translate("MainWindow", "Ctrl+L", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));
         menu_Mode->setTitle(QApplication::translate("MainWindow", "&Mode", 0, QApplication::UnicodeUTF8));

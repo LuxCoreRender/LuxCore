@@ -25,6 +25,7 @@
 #include "aboutdialog.h"
 #include "smalllux.h"
 #include "renderconfig.h"
+#include "luxmarkapp.h"
 
 #include <QDateTime>
 #include <QTextStream>
@@ -68,6 +69,10 @@ MainWindow::~MainWindow() {
 
 }
 
+//------------------------------------------------------------------------------
+// Qt Slots
+//------------------------------------------------------------------------------
+
 void MainWindow::exitApp() {
 	exit(0);
 }
@@ -77,6 +82,18 @@ void MainWindow::showAbout() {
 
 	dialog->exec();
 }
+
+void MainWindow::setLuxBallScene() {
+	LM_LOG("Set LuxBall scene");
+	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL);
+}
+
+void MainWindow::setLuxBallHDRScene() {
+	LM_LOG("Set LuxBall HDR scene");
+	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_HDR);
+}
+
+//------------------------------------------------------------------------------
 
 void MainWindow::ShowLogo() {
 	if (luxFrameBuffer->isVisible()) {
@@ -139,7 +156,7 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 	LM_LOG("Screen updated");
 }
 
-bool MainWindow::event (QEvent *event) {
+bool MainWindow::event(QEvent *event) {
 	bool retval = FALSE;
 	int eventtype = event->type();
 

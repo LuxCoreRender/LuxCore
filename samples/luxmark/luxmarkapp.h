@@ -34,6 +34,10 @@ enum LuxMarkAppMode {
 	BENCHMARK, INTERACTIVE
 };
 
+// List of supported scenes
+#define SCENE_LUXBALL_HDR "scenes/luxball/render-hdr.cfg"
+#define SCENE_LUXBALL "scenes/luxball/render.cfg"
+
 class LuxMarkApp : public QApplication {
 	Q_OBJECT
 
@@ -46,9 +50,13 @@ public:
 	void Init(void);
 
 	void SetMode(LuxMarkAppMode m);
+	void SetScene(const char *name);
 
 private:
+	void InitRendering(LuxMarkAppMode m, const char *scnName);
+
 	LuxMarkAppMode mode;
+	const char *sceneName;
 
 	boost::thread *engineThread;
 	RenderingConfig *renderConfig;
