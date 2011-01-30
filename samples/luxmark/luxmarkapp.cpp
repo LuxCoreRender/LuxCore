@@ -64,10 +64,21 @@ void LuxMarkApp::Init(void) {
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark V" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
 
-	SetMode(BENCHMARK);
+	InitRendering(BENCHMARK, SCENE_LUXBALL_HDR);
 }
 
 void LuxMarkApp::SetMode(LuxMarkAppMode m) {
+	InitRendering(m, sceneName);
+}
+
+void LuxMarkApp::SetScene(const char *name) {
+	InitRendering(mode, name);
+}
+
+void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
+	mode = m;
+	sceneName = scnName;
+
 	delete renderRefreshTimer;
 	renderRefreshTimer = NULL;
 
@@ -81,15 +92,12 @@ void LuxMarkApp::SetMode(LuxMarkAppMode m) {
 	engineThread = NULL;
 
 	// Free the scene if required
-
 	delete renderConfig;
 	renderConfig = NULL;
 
 	// Initialize the new mode
-
-	mode = m;
 	if (mode == BENCHMARK) {
-		renderConfig = new RenderingConfig("scenes/luxball/render.cfg");
+		renderConfig = new RenderingConfig(sceneName);
 		renderConfig->Init();
 
 		// Update timer
@@ -99,6 +107,8 @@ void LuxMarkApp::SetMode(LuxMarkAppMode m) {
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
 	}
+
+	mainWin->ShowLogo();
 }
 
 void LuxMarkApp::RenderRefreshTimeout() {
