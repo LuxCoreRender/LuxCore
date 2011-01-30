@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Sun Jan 30 11:28:04 2011
+** Created: Sun Jan 30 11:52:13 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -67,12 +67,16 @@ public:
         action_About->setObjectName(QString::fromUtf8("action_About"));
         action_Benchmark = new QAction(MainWindow);
         action_Benchmark->setObjectName(QString::fromUtf8("action_Benchmark"));
+        action_Benchmark->setCheckable(true);
         action_Interactive = new QAction(MainWindow);
         action_Interactive->setObjectName(QString::fromUtf8("action_Interactive"));
+        action_Interactive->setCheckable(true);
         action_LuxBall_HDR = new QAction(MainWindow);
         action_LuxBall_HDR->setObjectName(QString::fromUtf8("action_LuxBall_HDR"));
+        action_LuxBall_HDR->setCheckable(true);
         action_LuxBall = new QAction(MainWindow);
         action_LuxBall->setObjectName(QString::fromUtf8("action_LuxBall"));
+        action_LuxBall->setCheckable(true);
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
@@ -138,6 +142,8 @@ public:
         QObject::connect(action_About, SIGNAL(triggered()), MainWindow, SLOT(showAbout()));
         QObject::connect(action_LuxBall, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallScene()));
         QObject::connect(action_LuxBall_HDR, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallHDRScene()));
+        QObject::connect(action_Benchmark, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkMode()));
+        QObject::connect(action_Interactive, SIGNAL(triggered()), MainWindow, SLOT(setInteractiveMode()));
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi

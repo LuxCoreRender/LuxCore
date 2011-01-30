@@ -95,8 +95,15 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 	delete renderConfig;
 	renderConfig = NULL;
 
+	if (!strcmp(scnName, SCENE_LUXBALL_HDR))
+		mainWin->SetSceneCheck(0);
+	else if (!strcmp(scnName, SCENE_LUXBALL))
+		mainWin->SetSceneCheck(1);
+
 	// Initialize the new mode
 	if (mode == BENCHMARK) {
+		mainWin->SetModeCheck(0);
+
 		renderConfig = new RenderingConfig(sceneName);
 		renderConfig->Init();
 
@@ -106,6 +113,8 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
+	} else {
+		mainWin->SetModeCheck(1);
 	}
 
 	mainWin->ShowLogo();

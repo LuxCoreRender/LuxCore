@@ -43,6 +43,9 @@ public:
 	void ShowFrameBuffer(const float *frameBuffer,
 		const unsigned int width, const unsigned int height);
 
+	void SetModeCheck(const int index);
+	void SetSceneCheck(const int index);
+
 private:
 	bool event (QEvent *event);
 
@@ -60,6 +63,8 @@ private slots:
 	void showAbout();
 	void setLuxBallScene();
 	void setLuxBallHDRScene();
+	void setBenchmarkMode();
+	void setInteractiveMode();
 };
 
 #endif	/* _MAINWINDOW_H */

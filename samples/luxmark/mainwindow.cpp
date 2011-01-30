@@ -93,6 +93,14 @@ void MainWindow::setLuxBallHDRScene() {
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_HDR);
 }
 
+void MainWindow::setBenchmarkMode() {
+	LM_LOG("Set Benchmark mode");
+}
+
+void MainWindow::setInteractiveMode() {
+	LM_LOG("Set Interactive mode");
+}
+
 //------------------------------------------------------------------------------
 
 void MainWindow::ShowLogo() {
@@ -107,6 +115,30 @@ void MainWindow::ShowLogo() {
 	}
 
 	ui->RenderView->setInteractive(false);
+}
+
+void MainWindow::SetModeCheck(const int index) {
+	if (index == 0) {
+		ui->action_Benchmark->setChecked(true);
+		ui->action_Interactive->setChecked(false);
+	} else if (index == 1) {
+		ui->action_Benchmark->setChecked(false);
+		ui->action_Interactive->setChecked(true);
+	} else
+		assert(false);
+
+}
+
+void MainWindow::SetSceneCheck(const int index) {
+	if (index == 0) {
+		ui->action_LuxBall_HDR->setChecked(true);
+		ui->action_LuxBall->setChecked(false);
+	} else if (index == 1) {
+		ui->action_LuxBall_HDR->setChecked(false);
+		ui->action_LuxBall->setChecked(true);
+	} else
+		assert(false);
+
 }
 
 bool MainWindow::IsShowingLogo() const {
