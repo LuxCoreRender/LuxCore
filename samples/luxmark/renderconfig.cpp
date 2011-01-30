@@ -29,13 +29,13 @@
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
 RenderingConfig::RenderingConfig(const string &fileName) {
-	cerr << "Reading configuration file: " << fileName << endl;
+	LM_LOG_CFG("Reading configuration file: " << fileName);
 	cfg.LoadFile(fileName);
 
-	cerr << "Configuration: " << endl;
+	LM_LOG_CFG("Configuration: ");
 	vector<string> keys = cfg.GetAllKeys();
 	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
-		cerr << "  " << *i << " = " << cfg.GetString(*i, "") << endl;
+		LM_LOG_CFG("  " << *i << " = " << cfg.GetString(*i, ""));
 
 	renderEngine = NULL;
 	renderThreadsStarted = false;
@@ -298,9 +298,9 @@ void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 	}
 #endif
 
-	if (selectedDescs.size() == 0)
-		cerr << "No OpenCL device selected" << endl;
-	else {
+	if (selectedDescs.size() == 0) {
+		LM_LOG_CFG("No OpenCL device selected");
+	} else {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		if (cfg.GetInt("opencl.latency.mode", 1) && (cfg.GetInt("renderengine.type", 0) == 3) &&
 				(cfg.GetInt("pathgpu.openglinterop.enable", 0) != 0)) {
@@ -323,10 +323,9 @@ void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 			intersectionGPUDevices =  ctx->AddVirtualM2MIntersectionDevices(gpuRenderThreadCount, selectedDescs);
 		}
 
-		cerr << "OpenCL Devices used: ";
+		LM_LOG_CFG("OpenCL Devices used:");
 		for (size_t i = 0; i < intersectionGPUDevices.size(); ++i)
-			cerr << "[" << intersectionGPUDevices[i]->GetName() << "]";
-		cerr << endl;
+			LM_LOG_CFG("[" << intersectionGPUDevices[i]->GetName() << "]");
 	}
 }
 
@@ -342,16 +341,15 @@ void RenderingConfig::SetUpNativeDevices(const unsigned int nativeThreadCount) {
 			selectedDescs.push_back(descs[descs.size() - 1]);
 	}
 
-	if (selectedDescs.size() == 0)
-		cerr << "No Native thread device selected" << endl;
-	else {
+	if (selectedDescs.size() == 0) {
+		LM_LOG_CFG("No Native thread device selected");
+	} else {
 		// Allocate devices
 		intersectionCPUDevices =  ctx->AddIntersectionDevices(selectedDescs);
 
-		cerr << "Native Devices used: ";
+		LM_LOG_CFG("Native Devices used:")
 		for (size_t i = 0; i < intersectionCPUDevices.size(); ++i)
-			cerr << "[" << intersectionCPUDevices[i]->GetName() << "]";
-		cerr << endl;
+			LM_LOG_CFG("[" << intersectionCPUDevices[i]->GetName() << "]");
 	}
 }
 

@@ -26,10 +26,19 @@
 #include "smalllux.h"
 #include "renderconfig.h"
 
+#include <QDateTime>
+#include <QTextStream>
+
 MainWindow *LogWindow = NULL;
 
+int EVT_LUX_LOG_MESSAGE = QEvent::registerEventType();
+
+LuxLogEvent::LuxLogEvent(QString msg) : QEvent((QEvent::Type)EVT_LUX_LOG_MESSAGE), message(msg) {
+	setAccepted(false);
+}
+
 void DebugHandler(const char *msg) {
-	LM_LOG("<B>[LuxRays]</B> " << msg);
+	LM_LOG_LUXRAYS(msg);
 }
 
 MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(parent, flags),
@@ -57,12 +66,6 @@ MainWindow::~MainWindow() {
 	delete renderScene;
 	delete frameBuffer;
 
-}
-
-void MainWindow::PrintLog(const string &msg) {
-	boost::unique_lock<boost::mutex> lock(logMutex);
-
-	ui->LogView->append(QString(msg.c_str()));
 }
 
 void MainWindow::exitApp() {
@@ -134,4 +137,25 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 	ui->RenderView->setInteractive(true);
 
 	LM_LOG("Screen updated");
+}
+
+bool MainWindow::event (QEvent *event) {
+	bool retval = FALSE;
+	int eventtype = event->type();
+
+	// Check if it's one of "our" events
+	if (eventtype == EVT_LUX_LOG_MESSAGE) {
+		QTextStream ss(new QString());
+		ss << QDateTime::currentDateTime().toString(tr("yyyy-MM-dd hh:mm:ss")) << " - " <<
+				((LuxLogEvent *)event)->getMessage();
+
+		ui->LogView->append(ss.readAll());
+	}
+
+	if (retval) {
+		// Was our event, stop the event propagation
+		event->accept();
+	}
+
+	return QMainWindow::event(event);
 }

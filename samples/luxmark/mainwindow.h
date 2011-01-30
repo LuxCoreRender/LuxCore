@@ -38,14 +38,14 @@ public:
 	MainWindow(QWidget *parent = NULL, Qt::WindowFlags flags = 0);
 	~MainWindow();
 
-	void PrintLog(const std::string &msg);
-
 	void ShowLogo();
 	bool IsShowingLogo() const;
 	void ShowFrameBuffer(const float *frameBuffer,
 		const unsigned int width, const unsigned int height);
 
 private:
+	bool event (QEvent *event);
+
 	Ui::MainWindow *ui;
 	QGraphicsPixmapItem *luxLogo;
 
@@ -53,18 +53,12 @@ private:
 	unsigned char *frameBuffer;
 	unsigned int fbWidth, fbHeight;
 
-	boost::mutex logMutex;
-
 	QGraphicsScene *renderScene;
 
 private slots:
 	void exitApp();
 	void showAbout();
 };
-
-extern MainWindow *LogWindow;
-
-#define LM_LOG(a) { if (LogWindow) { std::stringstream _LM_LOG_LOCAL_SS; _LM_LOG_LOCAL_SS << a; LogWindow->PrintLog(_LM_LOG_LOCAL_SS.str().c_str()); } }
 
 #endif	/* _MAINWINDOW_H */
 

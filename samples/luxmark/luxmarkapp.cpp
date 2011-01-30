@@ -22,6 +22,7 @@
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
 #include "renderconfig.h"
+#include "pathgpu/pathgpu.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -88,7 +89,7 @@ void LuxMarkApp::SetMode(LuxMarkAppMode m) {
 
 	mode = m;
 	if (mode == BENCHMARK) {
-		renderConfig = new RenderingConfig("scenes/luxball/render-fast.cfg");
+		renderConfig = new RenderingConfig("scenes/luxball/render.cfg");
 		renderConfig->Init();
 
 		// Update timer
@@ -101,6 +102,15 @@ void LuxMarkApp::SetMode(LuxMarkAppMode m) {
 }
 
 void LuxMarkApp::RenderRefreshTimeout() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (renderConfig->GetRenderEngine()->GetEngineType() == PATHGPU) {
+		PathGPURenderEngine *pre = (PathGPURenderEngine *)renderConfig->GetRenderEngine();
+
+		// Need to update the Film
+		pre->UpdateFilm();
+	}
+#endif
+
 	// Get the rendered image
 	renderConfig->film->UpdateScreenBuffer();
 	const float *pixels = renderConfig->film->GetScreenBuffer();

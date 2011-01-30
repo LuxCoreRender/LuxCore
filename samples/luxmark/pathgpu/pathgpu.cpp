@@ -107,7 +107,7 @@ void PathGPURenderThread::Start() {
 		// Set renderThread priority
 		bool res = SetThreadRRPriority(renderThread);
 		if (res && !reportedPermissionError) {
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
+			//LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
 			reportedPermissionError = true;
 		}
 	}
@@ -152,26 +152,26 @@ void PathGPURenderThread::InitRender() {
 
 	tStart = WallClockTime();
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * PATHGPU_PATH_COUNT / 1024) << "Kbytes");
 	raysBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(Ray) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * PATHGPU_PATH_COUNT / 1024) << "Kbytes");
 	hitsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(RayHit) * PATHGPU_PATH_COUNT);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPU::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPU::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes");
 	frameBufferBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(PathGPU::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight());
 	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
 
 	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
-	cerr << "[PathGPURenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes");
 	meshIDBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(unsigned int) * trianglesCount,
@@ -179,7 +179,7 @@ void PathGPURenderThread::InitRender() {
 	deviceDesc->AllocMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
 
 	tEnd = WallClockTime();
-	cerr << "[PathGPURenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Translate material definitions
@@ -355,7 +355,7 @@ void PathGPURenderThread::InitRender() {
 		}
 	}
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Materials buffer size: " << (sizeof(PathGPU::Material) * materialsCount / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Materials buffer size: " << (sizeof(PathGPU::Material) * materialsCount / 1024) << "Kbytes");
 	materialsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(PathGPU::Material) * materialsCount,
@@ -365,7 +365,7 @@ void PathGPURenderThread::InitRender() {
 	delete[] mats;
 
 	tEnd = WallClockTime();
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Material translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Material translation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Translate area lights
@@ -407,7 +407,7 @@ void PathGPURenderThread::InitRender() {
 			}
 		}
 
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Triangle lights buffer size: " << (sizeof(PathGPU::TriangleLight) * areaLightCount / 1024) << "Kbytes" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Triangle lights buffer size: " << (sizeof(PathGPU::TriangleLight) * areaLightCount / 1024) << "Kbytes");
 		triLightsBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(PathGPU::TriangleLight) * areaLightCount,
@@ -419,14 +419,14 @@ void PathGPURenderThread::InitRender() {
 		triLightsBuff = NULL;
 
 	tEnd = WallClockTime();
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Area lights translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Area lights translation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Allocate path buffer
 	//--------------------------------------------------------------------------
 
 	const size_t pathGPUSize = triLightsBuff ? sizeof(PathGPU::PathDL) : sizeof(PathGPU::Path);
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Paths buffer size: " << (pathGPUSize * PATHGPU_PATH_COUNT / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Paths buffer size: " << (pathGPUSize * PATHGPU_PATH_COUNT / 1024) << "Kbytes");
 	pathsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			pathGPUSize * PATHGPU_PATH_COUNT);
@@ -455,7 +455,7 @@ void PathGPURenderThread::InitRender() {
 		meshMats[i] = index;
 	}
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Mesh material index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Mesh material index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes");
 	meshMatsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(unsigned int) * meshCount,
@@ -465,7 +465,7 @@ void PathGPURenderThread::InitRender() {
 	delete[] meshMats;
 
 	tEnd = WallClockTime();
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Material indices translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Material indices translation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinite light source
@@ -497,7 +497,7 @@ void PathGPURenderThread::InitRender() {
 		const TextureMap *texMap = infiniteLight->GetTexture()->GetTexMap();
 		const unsigned int pixelCount = texMap->GetWidth() * texMap->GetHeight();
 
-		cerr << "[PathGPURenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(Spectrum) * pixelCount / 1024) << "Kbytes" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(Spectrum) * pixelCount / 1024) << "Kbytes");
 		infiniteLightBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(Spectrum) * pixelCount,
@@ -510,7 +510,7 @@ void PathGPURenderThread::InitRender() {
 		throw runtime_error("There are no light sources supported by PathGPU in the scene (i.e. sun is not yet supported)");
 
 	tEnd = WallClockTime();
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Infinitelight translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Infinitelight translation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Translate mesh colors
@@ -532,7 +532,7 @@ void PathGPURenderThread::InitRender() {
 		}
 	}
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * colorsCount / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * colorsCount / 1024) << "Kbytes");
 	colorsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(Spectrum) * colorsCount,
@@ -554,7 +554,7 @@ void PathGPURenderThread::InitRender() {
 			normals[nIndex++] = mesh->GetNormal(j);
 	}
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * normalsCount / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * normalsCount / 1024) << "Kbytes");
 	normalsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(Normal) * normalsCount,
@@ -578,7 +578,7 @@ void PathGPURenderThread::InitRender() {
 			throw runtime_error("ACCEL_MQBVH is not yet supported by PathGPURenderEngine");
 	}
 
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes");
 	trianglesBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(Triangle) * trianglesCount,
@@ -586,7 +586,7 @@ void PathGPURenderThread::InitRender() {
 	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
 
 	tEnd = WallClockTime();
-	cerr << "[PathGPURenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Translate mesh texture maps
@@ -626,7 +626,7 @@ void PathGPURenderThread::InitRender() {
 				rgbOffset += pixelCount;
 			}
 
-			cerr << "[PathGPURenderThread::" << threadIndex << "] TexMap buffer size: " << (sizeof(Spectrum) * totRGBTexMem / 1024) << "Kbytes" << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] TexMap buffer size: " << (sizeof(Spectrum) * totRGBTexMem / 1024) << "Kbytes");
 			texMapRGBBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(Spectrum) * totRGBTexMem,
@@ -653,7 +653,7 @@ void PathGPURenderThread::InitRender() {
 					gpuTexMap[i].alphaOffset = 0xffffffffu;
 			}
 
-			cerr << "[PathGPURenderThread::" << threadIndex << "] TexMap buffer size: " << (sizeof(float) * totAlphaTexMem / 1024) << "Kbytes" << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] TexMap buffer size: " << (sizeof(float) * totAlphaTexMem / 1024) << "Kbytes");
 			texMapAlphaBuff = new cl::Buffer(oclContext,
 					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 					sizeof(float) * totAlphaTexMem,
@@ -671,7 +671,7 @@ void PathGPURenderThread::InitRender() {
 			gpuTexMap[i].height = tm->GetHeight();
 		}
 
-		cerr << "[PathGPURenderThread::" << threadIndex << "] TexMap indices buffer size: " << (sizeof(PathGPU::TexMap) * tms.size() / 1024) << "Kbytes" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] TexMap indices buffer size: " << (sizeof(PathGPU::TexMap) * tms.size() / 1024) << "Kbytes");
 		texMapDescBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(PathGPU::TexMap) * tms.size(),
@@ -699,7 +699,7 @@ void PathGPURenderThread::InitRender() {
 				meshTexs[i] = 0xffffffffu;
 		}
 
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Mesh texture maps index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Mesh texture maps index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes");
 		meshTexsBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(unsigned int) * meshCount,
@@ -723,7 +723,7 @@ void PathGPURenderThread::InitRender() {
 			}
 		}
 
-		cerr << "[PathGPURenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * uvsCount / 1024) << "Kbytes" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * uvsCount / 1024) << "Kbytes");
 		uvsBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(UV) * uvsCount,
@@ -732,7 +732,7 @@ void PathGPURenderThread::InitRender() {
 		delete[] uvs;
 
 		tEnd = WallClockTime();
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Texture maps translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Texture maps translation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 	} else {
 		texMapRGBBuff = NULL;
 		texMapAlphaBuff = NULL;
@@ -822,7 +822,7 @@ void PathGPURenderThread::InitRender() {
 		// Dynamic camera mode uses a buffer to transfer camera position/orientation
 		ss << " -D PARAM_CAMERA_DYNAMIC";
 
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(float) * 4 * 4 * 2 / 1024) << "Kbytes" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(float) * 4 * 4 * 2 / 1024) << "Kbytes");
 		float data[4 * 4 * 2];
 		memcpy(&data[0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
 		memcpy(&data[4 * 4], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
@@ -848,15 +848,15 @@ void PathGPURenderThread::InitRender() {
 		cl::Program program = cl::Program(oclContext, source);
 
 		try {
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters << endl;
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling kernels " << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Compiling kernels ");
 
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
 			program.build(buildDevice, kernelsParameters.c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str() << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] PathGPU compilation error:\n" << strError.c_str());
 
 			throw err;
 		}
@@ -866,17 +866,17 @@ void PathGPURenderThread::InitRender() {
 		//----------------------------------------------------------------------
 
 		delete initKernel;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Compiling Init Kernel");
 		initKernel = new cl::Kernel(program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize);
 
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize);
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize);
 		}
 
 		//--------------------------------------------------------------------------
@@ -886,14 +886,14 @@ void PathGPURenderThread::InitRender() {
 		delete initFBKernel;
 		initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] PathGPU InitFrameBuffer kernel work group size: " << initFBWorkGroupSize);
 
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize);
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize);
 		}
 
 		//--------------------------------------------------------------------------
@@ -904,26 +904,26 @@ void PathGPURenderThread::InitRender() {
 			delete updatePBKernel;
 			updatePBKernel = new cl::Kernel(program, "UpdatePixelBuffer");
 			updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
-			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBuffer kernel work group size: " << updatePBWorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBuffer kernel work group size: " << updatePBWorkGroupSize);
 
 			updatePBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBWorkGroupSize);
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBWorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBWorkGroupSize);
 
 			if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 				updatePBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-				cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBWorkGroupSize << endl;
+				LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBWorkGroupSize);
 			}
 
 			updatePBBluredKernel = new cl::Kernel(program, "UpdatePixelBufferBlured");
 			updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
-			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel work group size: " << updatePBBluredWorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] PathGPU UpdatePixelBluredBuffer kernel work group size: " << updatePBBluredWorkGroupSize);
 
 			updatePBBluredKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &updatePBBluredWorkGroupSize);
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBBluredWorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << updatePBBluredWorkGroupSize);
 
 			if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 				updatePBBluredWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-				cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBBluredWorkGroupSize << endl;
+				LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << updatePBBluredWorkGroupSize);
 			}
 		} else {
 			updatePBKernel = NULL;
@@ -940,14 +940,14 @@ void PathGPURenderThread::InitRender() {
 			// Compile the first step only if direct light sampling is enabled
 			advancePathStep1Kernel = new cl::Kernel(program, "AdvancePaths_Step1");
 			advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
-			cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step1 kernel work group size: " << advancePathStep1WorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step1 kernel work group size: " << advancePathStep1WorkGroupSize);
 
 			advancePathStep1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep1WorkGroupSize);
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep1WorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep1WorkGroupSize);
 
 			if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 				advancePathStep1WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-				cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep1WorkGroupSize << endl;
+				LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep1WorkGroupSize);
 			}
 		} else
 			advancePathStep1Kernel = NULL;
@@ -955,20 +955,20 @@ void PathGPURenderThread::InitRender() {
 		delete advancePathStep2Kernel;
 		advancePathStep2Kernel = new cl::Kernel(program, "AdvancePaths_Step2");
 		advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step2 kernel work group size: " << advancePathStep2WorkGroupSize << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths_Step2 kernel work group size: " << advancePathStep2WorkGroupSize);
 
 		advancePathStep2Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathStep2WorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep2WorkGroupSize << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathStep2WorkGroupSize);
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			advancePathStep2WorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep2WorkGroupSize << endl;
+			LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathStep2WorkGroupSize);
 		}
 
 		tEnd = WallClockTime();
-		cerr  << "[PathGPURenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 	} else
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Using cached kernels" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << threadIndex << "] Using cached kernels");
 
 	//--------------------------------------------------------------------------
 	// Initialize
@@ -1262,7 +1262,7 @@ void PathGPURenderThread::EnqueueInitFrameBufferKernel(const bool clearPBO) {
 }
 
 void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
-	cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
+	LM_LOG_ENGINE("[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 	const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
@@ -1271,7 +1271,7 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 		double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
 			//if(renderThread->threadIndex == 0)
-			//	cerr<< "[DEBUG] =================================" << endl;
+			//	cerr<< "[DEBUG] =================================");
 
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
@@ -1308,7 +1308,7 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 				const double elapsedTime = WallClockTime() - startTime;
 
 				//if(renderThread->threadIndex == 0)
-				//	cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms" << endl;
+				//	cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms");
 
 				if ((elapsedTime > renderThread->renderEngine->screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
@@ -1318,11 +1318,11 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 			startTime = WallClockTime();
 		}
 
-		cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
-		cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (cl::Error err) {
-		cerr << "[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
+		LM_LOG_ENGINE("[PathGPURenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")");
 	}
 
 	oclQueue.enqueueReadBuffer(
@@ -1357,7 +1357,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 			oclIntersectionDevices.push_back((OpenCLIntersectionDevice *)intersectionDevices[i]);
 	}
 
-	cerr << "Found "<< oclIntersectionDevices.size() << " OpenCL intersection devices for PathGPU render engine" << endl;
+	LM_LOG_ENGINE("Found "<< oclIntersectionDevices.size() << " OpenCL intersection devices for PathGPU render engine");
 
 	if (oclIntersectionDevices.size() < 1)
 		throw runtime_error("Unable to find an OpenCL intersection device for PathGPU render engine");
@@ -1378,24 +1378,24 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 			enableOpenGLInterop = true;
 
 			screenRefreshInterval = 50;
-			cerr << "PathGPU OpenGL interoperability enabled" << endl;
+			LM_LOG_ENGINE("PathGPU OpenGL interoperability enabled");
 		} else {
 			enableOpenGLInterop = false;
-			cerr << "WARNING: it is not possible to enable PathGPU OpenGL interoperability" << endl;
+			LM_LOG_ENGINE("WARNING: it is not possible to enable PathGPU OpenGL interoperability");
 		}
 
 		samplePerPixel = 1;
 		dynamicCamera = true;
 	} else {
 		enableOpenGLInterop = false;
-		cerr << "PathGPU OpenGL interoperability disabled" << endl;
+		LM_LOG_ENGINE("PathGPU OpenGL interoperability disabled");
 	}
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 
 	// Create and start render threads
 	const size_t renderThreadCount = oclIntersectionDevices.size();
-	cerr << "Starting "<< renderThreadCount << " PathGPU render threads" << endl;
+	LM_LOG_ENGINE("Starting "<< renderThreadCount << " PathGPU render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		PathGPURenderThread *t = new PathGPURenderThread(
 				i, seedBase + i * PATHGPU_PATH_COUNT, i / (float)renderThreadCount,

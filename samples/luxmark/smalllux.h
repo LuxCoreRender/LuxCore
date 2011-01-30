@@ -44,11 +44,30 @@
 
 #include "slgcfg.h"
 
+#include "mainwindow.h"
+
 using namespace std;
 using namespace luxrays;
 using namespace luxrays::sdl;
 using namespace luxrays::utils;
 
 extern void DebugHandler(const char *msg);
+
+extern MainWindow *LogWindow;
+
+class LuxLogEvent: public QEvent {
+public:
+	LuxLogEvent(QString mesg);
+ 
+	QString getMessage() { return message; }
+
+private:
+	QString message;
+};
+
+#define LM_LOG(a) { if (LogWindow) { std::stringstream _LM_LOG_LOCAL_SS; _LM_LOG_LOCAL_SS << a; qApp->postEvent(LogWindow, new LuxLogEvent(QString(_LM_LOG_LOCAL_SS.str().c_str()))); }}
+#define LM_LOG_LUXRAYS(a) { LM_LOG("<FONT COLOR=\"#000000\"><B>[LuxRays]</B></FONT> " << a); }
+#define LM_LOG_ENGINE(a) { LM_LOG("<FONT COLOR=\"#00ff00\"><B>[RenderEngine]</B></FONT> " << a); }
+#define LM_LOG_CFG(a) { LM_LOG("<FONT COLOR=\"#005500\"><B>[RenderConfig]</B></FONT> " << a); }
 
 #endif	/* _SMALLLUX_H */
