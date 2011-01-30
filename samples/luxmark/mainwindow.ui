@@ -127,16 +127,25 @@
    </property>
   </action>
   <action name="action_Benchmark">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>&amp;Benchmark</string>
    </property>
   </action>
   <action name="action_Interactive">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>&amp;Interactive</string>
    </property>
   </action>
   <action name="action_LuxBall_HDR">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>LuxBall &amp;HDR</string>
    </property>
@@ -145,6 +154,9 @@
    </property>
   </action>
   <action name="action_LuxBall">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>&amp;LuxBall</string>
    </property>
@@ -221,11 +233,45 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Benchmark</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setBenchmarkMode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>380</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_Interactive</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setInteractiveMode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>380</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
   <slot>showAbout()</slot>
   <slot>setLuxBallScene()</slot>
   <slot>setLuxBallHDRScene()</slot>
+  <slot>setBenchmarkMode()</slot>
+  <slot>setInteractiveMode()</slot>
  </slots>
 </ui>

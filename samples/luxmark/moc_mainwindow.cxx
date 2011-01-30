@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'mainwindow.h'
 **
-** Created: Sun Jan 30 11:08:54 2011
+** Created: Sun Jan 30 11:51:59 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.6.2)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_MainWindow[] = {
        4,       // revision
        0,       // classname
        0,    0, // classinfo
-       4,   14, // methods
+       6,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -35,6 +35,8 @@ static const uint qt_meta_data_MainWindow[] = {
       22,   11,   11,   11, 0x08,
       34,   11,   11,   11, 0x08,
       52,   11,   11,   11, 0x08,
+      73,   11,   11,   11, 0x08,
+      92,   11,   11,   11, 0x08,
 
        0        // eod
 };
@@ -42,6 +44,7 @@ static const uint qt_meta_data_MainWindow[] = {
 static const char qt_meta_stringdata_MainWindow[] = {
     "MainWindow\0\0exitApp()\0showAbout()\0"
     "setLuxBallScene()\0setLuxBallHDRScene()\0"
+    "setBenchmarkMode()\0setInteractiveMode()\0"
 };
 
 const QMetaObject MainWindow::staticMetaObject = {
@@ -77,9 +80,11 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         case 1: showAbout(); break;
         case 2: setLuxBallScene(); break;
         case 3: setLuxBallHDRScene(); break;
+        case 4: setBenchmarkMode(); break;
+        case 5: setInteractiveMode(); break;
         default: ;
         }
-        _id -= 4;
+        _id -= 6;
     }
     return _id;
 }
