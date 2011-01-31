@@ -22,6 +22,9 @@
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
 #include "renderconfig.h"
+#include "luxrays/utils/film/film.h"
+#include "path/path.h"
+#include "sppm/sppm.h"
 #include "pathgpu/pathgpu.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
@@ -42,6 +45,7 @@ LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
 	mainWin = NULL;
 	engineInitThread = NULL;
 	engineInitDone = false;
+	renderingStartTime = 0.0;
 	renderConfig = NULL;
 	renderRefreshTimer = NULL;
 }
@@ -127,6 +131,7 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		// TO DO
 	}
 
+	app->renderingStartTime = luxrays::WallClockTime();
 	app->engineInitDone = true;
 }
 
@@ -149,4 +154,44 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 	// Update the window
 	mainWin->ShowFrameBuffer(pixels, renderConfig->film->GetWidth(), renderConfig->film->GetHeight());
+
+	// Update the statistics
+
+	double raysSec = 0.0;
+	const vector<IntersectionDevice *> &intersectionDevices = renderConfig->GetIntersectionDevices();
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+
+	double sampleSec = 0.0;
+	int renderingTime = 0;
+	char buf[512];
+	
+	switch (renderConfig->GetRenderEngine()->GetEngineType()) {
+		case DIRECTLIGHT:
+		case PATH: {
+			renderingTime = int(renderConfig->film->GetTotalTime());
+			sampleSec = renderConfig->film->GetAvgSampleSec() * 1000.0;
+			break;
+		}
+		case SPPM: {
+			SPPMRenderEngine *sre = (SPPMRenderEngine *)renderConfig->GetRenderEngine();
+			renderingTime = int(sre->GetRenderingTime());
+			break;
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case PATHGPU: {
+			PathGPURenderEngine *pre = (PathGPURenderEngine *)renderConfig->GetRenderEngine();
+			renderingTime = int(pre->GetRenderingTime());
+			sampleSec = pre->GetTotalSamplesSec();
+		}
+#endif
+		default:
+			assert (false);
+	}
+
+	const bool valid = (renderingTime > 120);
+	sprintf(buf, "[Time: %dsecs (%s)][Samples/sec % 5dK][Rays/sec % 5dK on %.1fK tris]",
+			renderingTime, valid ? "OK" : "Wait", int(sampleSec / 1000.0),
+			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+	mainWin->UpdateScreenLabel(buf, valid);
 }

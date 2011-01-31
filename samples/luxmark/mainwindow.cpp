@@ -51,6 +51,9 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	renderScene->setBackgroundBrush(QColor(127,127,127));
 	luxLogo = renderScene->addPixmap(QPixmap(":/images/resources/luxlogo_bg.png"));
 	luxFrameBuffer = renderScene->addPixmap(QPixmap(":/images/resources/luxlogo_bg.png"));
+	screenLabelBack = renderScene->addRect(0.f, 0.f, 1.f, 1.f, QPen(), Qt::lightGray);
+	screenLabel = new QGraphicsSimpleTextItem(QString("[Time: 0secs (Wait)]"));
+	renderScene->addItem(screenLabel);
 	ui->RenderView->setScene(renderScene);
 
 	frameBuffer = NULL;
@@ -62,6 +65,8 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 
 MainWindow::~MainWindow() {
 	delete ui;
+	delete screenLabel;
+	delete screenLabelBack;
 	delete luxFrameBuffer;
 	delete luxLogo;
 	delete renderScene;
@@ -106,6 +111,8 @@ void MainWindow::setInteractiveMode() {
 void MainWindow::ShowLogo() {
 	if (luxFrameBuffer->isVisible()) {
 		luxFrameBuffer->hide();
+		screenLabelBack->hide();
+		screenLabel->hide();
 	}
 
 	if (!luxLogo->isVisible()) {
@@ -174,12 +181,16 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 	}
 
 	luxFrameBuffer->setPixmap(QPixmap::fromImage(QImage(
-		frameBuffer, width, height, width * 3, QImage::Format_RGB888)));
+		frameBuffer, fbWidth, fbHeight, width * 3, QImage::Format_RGB888)));
 
 	if (!luxFrameBuffer->isVisible()) {
 		luxFrameBuffer->show();
-		renderScene->setSceneRect(0.0f, 0.0f, width, height);
+		renderScene->setSceneRect(0.0f, 0.0f, fbWidth, fbHeight + screenLabel->boundingRect().height());
 		ui->RenderView->centerOn(luxFrameBuffer);
+
+		screenLabelBack->setRect(0.f, fbHeight, fbWidth, screenLabel->boundingRect().height());
+		screenLabelBack->show();
+		screenLabel->show();
 	}
 
 	ui->RenderView->setDragMode(QGraphicsView::ScrollHandDrag);
@@ -207,4 +218,10 @@ bool MainWindow::event(QEvent *event) {
 	}
 
 	return QMainWindow::event(event);
+}
+
+void MainWindow::UpdateScreenLabel(const char *msg, const bool valid) {
+	screenLabel->setText(QString(msg));
+	screenLabel->setBrush(valid ? Qt::green : Qt::red);
+	screenLabel->setPos(0.f, fbHeight);
 }

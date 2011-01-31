@@ -45,16 +45,18 @@ public:
 
 	void SetModeCheck(const int index);
 	void SetSceneCheck(const int index);
+	void UpdateScreenLabel(const char *msg, const bool valid);
 
 private:
 	bool event (QEvent *event);
 
 	Ui::MainWindow *ui;
 	QGraphicsPixmapItem *luxLogo;
-
 	QGraphicsPixmapItem *luxFrameBuffer;
 	unsigned char *frameBuffer;
 	unsigned int fbWidth, fbHeight;
+	QGraphicsSimpleTextItem *screenLabel;
+	QGraphicsRectItem *screenLabelBack;
 
 	QGraphicsScene *renderScene;
 
