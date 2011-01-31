@@ -40,17 +40,17 @@ LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
 	FreeImage_SetOutputMessage(FreeImageErrorHandler);
 
 	mainWin = NULL;
-	engineThread = NULL;
+	engineInitThread = NULL;
+	engineInitDone = false;
 	renderConfig = NULL;
 	renderRefreshTimer = NULL;
 }
 
 LuxMarkApp::~LuxMarkApp() {
-	if (engineThread) {
-		// Stop the rendering engine
-		engineThread->interrupt();
-		engineThread->join();
-		delete engineThread;
+	if (engineInitThread) {
+		// Wait for the init rendering thread
+		engineInitThread->join();
+		delete engineInitThread;
 	}
 	delete renderConfig;
 	delete mainWin;
@@ -82,14 +82,13 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 	delete renderRefreshTimer;
 	renderRefreshTimer = NULL;
 
-	// Stop the engine thread if required
-	if (engineThread) {
-		// Stop the rendering engine
-		engineThread->interrupt();
-		engineThread->join();
+	if (engineInitThread) {
+		// Wait for the init rendering thread
+		engineInitThread->join();
+		delete engineInitThread;
+		engineInitThread = NULL;
 	}
-	delete engineThread;
-	engineThread = NULL;
+	engineInitDone = false;
 
 	// Free the scene if required
 	delete renderConfig;
@@ -104,23 +103,37 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 	if (mode == BENCHMARK) {
 		mainWin->SetModeCheck(0);
 
-		renderConfig = new RenderingConfig(sceneName);
-		renderConfig->Init();
-
 		// Update timer
 		renderRefreshTimer = new QTimer();
 		connect(renderRefreshTimer, SIGNAL(timeout()), SLOT(RenderRefreshTimeout()));
 
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
-	} else {
+	} else
 		mainWin->SetModeCheck(1);
-	}
 
 	mainWin->ShowLogo();
+
+	// Start the engine init thread
+	engineInitThread = new boost::thread(boost::bind(LuxMarkApp::EngineInitThreadImpl, this));
+}
+
+void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
+	// Initialize the new mode
+	if (app->mode == BENCHMARK) {
+		app->renderConfig = new RenderingConfig(app->sceneName);
+		app->renderConfig->Init();
+	} else {
+		// TO DO
+	}
+
+	app->engineInitDone = true;
 }
 
 void LuxMarkApp::RenderRefreshTimeout() {
+	if (!engineInitDone)
+		return;
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (renderConfig->GetRenderEngine()->GetEngineType() == PATHGPU) {
 		PathGPURenderEngine *pre = (PathGPURenderEngine *)renderConfig->GetRenderEngine();

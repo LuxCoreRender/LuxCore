@@ -53,12 +53,15 @@ public:
 	void SetScene(const char *name);
 
 private:
+	static void EngineInitThreadImpl(LuxMarkApp *app);
+
 	void InitRendering(LuxMarkAppMode m, const char *scnName);
 
 	LuxMarkAppMode mode;
 	const char *sceneName;
 
-	boost::thread *engineThread;
+	boost::thread *engineInitThread;
+	bool engineInitDone;
 	RenderingConfig *renderConfig;
 
 	QTimer *renderRefreshTimer;

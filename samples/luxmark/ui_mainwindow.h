@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Sun Jan 30 11:52:13 2011
+** Created: Mon Jan 31 10:59:58 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -56,7 +56,7 @@ public:
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName(QString::fromUtf8("MainWindow"));
-        MainWindow->resize(761, 638);
+        MainWindow->resize(800, 600);
         MainWindow->setMinimumSize(QSize(128, 128));
         QIcon icon;
         icon.addFile(QString::fromUtf8(":/images/resources/SLG_luxball_sppm_small.png"), QSize(), QIcon::Normal, QIcon::Off);
@@ -98,7 +98,7 @@ public:
         SettingsArea->setWidgetResizable(true);
         scrollAreaWidgetContents = new QWidget();
         scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
-        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 82, 291));
+        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 82, 271));
         SettingsArea->setWidget(scrollAreaWidgetContents);
         splitter->addWidget(SettingsArea);
         splitter_2->addWidget(splitter);
@@ -112,7 +112,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
-        menubar->setGeometry(QRect(0, 0, 761, 25));
+        menubar->setGeometry(QRect(0, 0, 800, 26));
         menu_File = new QMenu(menubar);
         menu_File->setObjectName(QString::fromUtf8("menu_File"));
         menu_Help = new QMenu(menubar);
@@ -156,9 +156,9 @@ public:
         action_About->setText(QApplication::translate("MainWindow", "About", 0, QApplication::UnicodeUTF8));
         action_Benchmark->setText(QApplication::translate("MainWindow", "&Benchmark", 0, QApplication::UnicodeUTF8));
         action_Interactive->setText(QApplication::translate("MainWindow", "&Interactive", 0, QApplication::UnicodeUTF8));
-        action_LuxBall_HDR->setText(QApplication::translate("MainWindow", "LuxBall &HDR", 0, QApplication::UnicodeUTF8));
+        action_LuxBall_HDR->setText(QApplication::translate("MainWindow", "LuxBall &HDR (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall_HDR->setShortcut(QApplication::translate("MainWindow", "Ctrl+H", 0, QApplication::UnicodeUTF8));
-        action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall", 0, QApplication::UnicodeUTF8));
+        action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall  (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setShortcut(QApplication::translate("MainWindow", "Ctrl+L", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>761</width>
-    <height>638</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -57,7 +57,7 @@
            <x>0</x>
            <y>0</y>
            <width>82</width>
-           <height>291</height>
+           <height>271</height>
           </rect>
          </property>
         </widget>
@@ -77,8 +77,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>761</width>
-     <height>25</height>
+     <width>800</width>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -147,7 +147,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>LuxBall &amp;HDR</string>
+    <string>LuxBall &amp;HDR (262K triangles)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+H</string>
@@ -158,7 +158,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;LuxBall</string>
+    <string>&amp;LuxBall  (262K triangles)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
