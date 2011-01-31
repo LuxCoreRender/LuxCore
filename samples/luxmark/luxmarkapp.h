@@ -61,6 +61,7 @@ private:
 	const char *sceneName;
 
 	boost::thread *engineInitThread;
+	double renderingStartTime;
 	bool engineInitDone;
 	RenderingConfig *renderConfig;
 
