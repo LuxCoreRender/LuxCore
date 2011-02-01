@@ -36,6 +36,10 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
+//------------------------------------------------------------------------------
+// LuxMark Qt application
+//------------------------------------------------------------------------------
+
 LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
 	// Initialize FreeImage Library, it must be done after QApplication() in
 	// order to avoid a crash
@@ -48,6 +52,7 @@ LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
 	renderingStartTime = 0.0;
 	renderConfig = NULL;
 	renderRefreshTimer = NULL;
+	hardwareTreeModel = NULL;
 }
 
 LuxMarkApp::~LuxMarkApp() {
@@ -58,6 +63,7 @@ LuxMarkApp::~LuxMarkApp() {
 	}
 	delete renderConfig;
 	delete mainWin;
+	delete hardwareTreeModel;
 }
 
 void LuxMarkApp::Init(void) {
@@ -131,6 +137,10 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		// TO DO
 	}
 
+	// Initialize hardware information
+	app->hardwareTreeModel = new HardwareTreeModel(app->renderConfig->GetAvailableDeviceDescriptions());
+
+	// Done
 	app->renderingStartTime = luxrays::WallClockTime();
 	app->engineInitDone = true;
 }
@@ -138,6 +148,8 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 void LuxMarkApp::RenderRefreshTimeout() {
 	if (!engineInitDone)
 		return;
+
+	mainWin->SetHadwareTreeModel(hardwareTreeModel);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (renderConfig->GetRenderEngine()->GetEngineType() == PATHGPU) {
@@ -156,7 +168,6 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	mainWin->ShowFrameBuffer(pixels, renderConfig->film->GetWidth(), renderConfig->film->GetHeight());
 
 	// Update the statistics
-
 	double raysSec = 0.0;
 	const vector<IntersectionDevice *> &intersectionDevices = renderConfig->GetIntersectionDevices();
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)

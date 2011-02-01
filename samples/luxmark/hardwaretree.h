@@ -19,63 +19,60 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXMARKAPP_H
-#define _LUXMARKAPP_H
+#ifndef _HARDWARETREE_H
+#define _HARDWARETREE_H
 
-#include <QtGui/QApplication>
-#include <QTimer>
+#include <QVariant>
+#include <QModelIndex>
+#include <QAbstractItemModel>
 
-#include <boost/thread.hpp>
+#include "luxrays/luxrays.h"
+#include "luxrays/core/context.h"
+#include "luxrays/core/device.h"
 
-#include "mainwindow.h"
-#include "renderconfig.h"
-#include "hardwaretree.h"
+using namespace std;
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
-// LuxMark Qt application
+// Hardware tree view
 //------------------------------------------------------------------------------
 
-enum LuxMarkAppMode {
-	BENCHMARK, INTERACTIVE
+class HardwareTreeItem {
+public:
+	HardwareTreeItem(const QVariant &data, HardwareTreeItem *parent = 0);
+	~HardwareTreeItem();
+
+	void appendChild(HardwareTreeItem *child);
+
+	HardwareTreeItem *child(int row);
+	int childCount() const;
+	int columnCount() const;
+	QVariant data(int column) const;
+	int row() const;
+	HardwareTreeItem *parent();
+
+private:
+	QList<HardwareTreeItem *> childItems;
+	QVariant itemData;
+	HardwareTreeItem *parentItem;
 };
 
-// List of supported scenes
-#define SCENE_LUXBALL_HDR "scenes/luxball/render-hdr.cfg"
-#define SCENE_LUXBALL "scenes/luxball/render.cfg"
-
-class LuxMarkApp : public QApplication {
+class HardwareTreeModel : public QAbstractItemModel {
 	Q_OBJECT
 
 public:
-	MainWindow *mainWin;
+	HardwareTreeModel(const vector<DeviceDescription *> &devDescs);
+	~HardwareTreeModel();
 
-	LuxMarkApp(int argc, char **argv);
-	~LuxMarkApp();
-	
-	void Init(void);
-
-	void SetMode(LuxMarkAppMode m);
-	void SetScene(const char *name);
+	QVariant data(const QModelIndex &index, int role) const;
+	QModelIndex index(int row, int column,
+			const QModelIndex &parent = QModelIndex()) const;
+	QModelIndex parent(const QModelIndex &index) const;
+	int rowCount(const QModelIndex &parent = QModelIndex()) const;
+	int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
 private:
-	static void EngineInitThreadImpl(LuxMarkApp *app);
-
-	void InitRendering(LuxMarkAppMode m, const char *scnName);
-
-	LuxMarkAppMode mode;
-	const char *sceneName;
-
-	HardwareTreeModel *hardwareTreeModel;
-
-	boost::thread *engineInitThread;
-	double renderingStartTime;
-	bool engineInitDone;
-	RenderingConfig *renderConfig;
-
-	QTimer *renderRefreshTimer;
-
-private slots:
-	void RenderRefreshTimeout();
+	HardwareTreeItem *rootItem;
 };
 
-#endif // _LUXMARKAPP_H
+#endif // _HARDWARETREE_H

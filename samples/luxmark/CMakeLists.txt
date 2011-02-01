@@ -55,6 +55,7 @@ include(${QT_USE_FILE})
 
 set(LUXMARK_SRCS
 	aboutdialog.cpp
+    hardwaretree.cpp
 	luxmarkapp.cpp
 	main.cpp
 	mainwindow.cpp
@@ -76,6 +77,7 @@ set(LUXMARK_SRCS
 set(LUXMARK_MOC
 	aboutdialog.h
 	mainwindow.h
+    hardwaretree.h
 	luxmarkapp.h
 	)
 set(LUXMARK_UIS

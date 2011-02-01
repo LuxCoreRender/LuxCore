@@ -28,6 +28,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include "ui_mainwindow.h"
+#include "hardwaretree.h"
 
 #include <QGraphicsPixmapItem>
 
@@ -46,6 +47,7 @@ public:
 	void SetModeCheck(const int index);
 	void SetSceneCheck(const int index);
 	void UpdateScreenLabel(const char *msg, const bool valid);
+	void SetHadwareTreeModel(HardwareTreeModel *treeModel);
 
 private:
 	bool event (QEvent *event);
@@ -70,4 +72,3 @@ private slots:
 };
 
 #endif	/* _MAINWINDOW_H */
-
