@@ -199,6 +199,11 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 	LM_LOG("Screen updated");
 }
 
+void MainWindow::SetHadwareTreeModel(HardwareTreeModel *treeModel) {
+	if (!ui->HardwareView->model())
+		ui->HardwareView->setModel(treeModel);
+}
+
 bool MainWindow::event(QEvent *event) {
 	bool retval = FALSE;
 	int eventtype = event->type();

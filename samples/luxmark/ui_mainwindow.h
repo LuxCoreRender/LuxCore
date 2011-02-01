@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Mon Jan 31 15:42:52 2011
+** Created: Tue Feb 1 12:11:31 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -16,13 +16,14 @@
 #include <QtGui/QButtonGroup>
 #include <QtGui/QGraphicsView>
 #include <QtGui/QHeaderView>
+#include <QtGui/QLabel>
 #include <QtGui/QMainWindow>
 #include <QtGui/QMenu>
 #include <QtGui/QMenuBar>
-#include <QtGui/QScrollArea>
 #include <QtGui/QSplitter>
 #include <QtGui/QStatusBar>
 #include <QtGui/QTextEdit>
+#include <QtGui/QTreeView>
 #include <QtGui/QVBoxLayout>
 #include <QtGui/QWidget>
 
@@ -38,12 +39,14 @@ public:
     QAction *action_LuxBall_HDR;
     QAction *action_LuxBall;
     QWidget *centralwidget;
-    QVBoxLayout *verticalLayout;
+    QVBoxLayout *verticalLayout_2;
     QSplitter *splitter_2;
     QSplitter *splitter;
     QGraphicsView *RenderView;
-    QScrollArea *SettingsArea;
-    QWidget *scrollAreaWidgetContents;
+    QWidget *widget;
+    QVBoxLayout *verticalLayout;
+    QLabel *hardwareDevicesLabel;
+    QTreeView *HardwareView;
     QTextEdit *LogView;
     QMenuBar *menubar;
     QMenu *menu_File;
@@ -80,10 +83,10 @@ public:
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
-        verticalLayout = new QVBoxLayout(centralwidget);
-        verticalLayout->setSpacing(0);
-        verticalLayout->setContentsMargins(0, 0, 0, 0);
-        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout_2 = new QVBoxLayout(centralwidget);
+        verticalLayout_2->setSpacing(0);
+        verticalLayout_2->setContentsMargins(0, 0, 0, 0);
+        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
         splitter_2 = new QSplitter(centralwidget);
         splitter_2->setObjectName(QString::fromUtf8("splitter_2"));
         splitter_2->setOrientation(Qt::Vertical);
@@ -93,21 +96,45 @@ public:
         RenderView = new QGraphicsView(splitter);
         RenderView->setObjectName(QString::fromUtf8("RenderView"));
         splitter->addWidget(RenderView);
-        SettingsArea = new QScrollArea(splitter);
-        SettingsArea->setObjectName(QString::fromUtf8("SettingsArea"));
-        SettingsArea->setWidgetResizable(true);
-        scrollAreaWidgetContents = new QWidget();
-        scrollAreaWidgetContents->setObjectName(QString::fromUtf8("scrollAreaWidgetContents"));
-        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 82, 355));
-        SettingsArea->setWidget(scrollAreaWidgetContents);
-        splitter->addWidget(SettingsArea);
+        widget = new QWidget(splitter);
+        widget->setObjectName(QString::fromUtf8("widget"));
+        verticalLayout = new QVBoxLayout(widget);
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setContentsMargins(0, 0, 0, 0);
+        hardwareDevicesLabel = new QLabel(widget);
+        hardwareDevicesLabel->setObjectName(QString::fromUtf8("hardwareDevicesLabel"));
+        QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(hardwareDevicesLabel->sizePolicy().hasHeightForWidth());
+        hardwareDevicesLabel->setSizePolicy(sizePolicy);
+        hardwareDevicesLabel->setFrameShape(QFrame::NoFrame);
+        hardwareDevicesLabel->setFrameShadow(QFrame::Sunken);
+        hardwareDevicesLabel->setAlignment(Qt::AlignCenter);
+        hardwareDevicesLabel->setTextInteractionFlags(Qt::NoTextInteraction);
+
+        verticalLayout->addWidget(hardwareDevicesLabel);
+
+        HardwareView = new QTreeView(widget);
+        HardwareView->setObjectName(QString::fromUtf8("HardwareView"));
+        QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Expanding);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(HardwareView->sizePolicy().hasHeightForWidth());
+        HardwareView->setSizePolicy(sizePolicy1);
+        HardwareView->setFrameShape(QFrame::Box);
+        HardwareView->header()->setVisible(false);
+
+        verticalLayout->addWidget(HardwareView);
+
+        splitter->addWidget(widget);
         splitter_2->addWidget(splitter);
         LogView = new QTextEdit(splitter_2);
         LogView->setObjectName(QString::fromUtf8("LogView"));
         LogView->setReadOnly(true);
         splitter_2->addWidget(LogView);
 
-        verticalLayout->addWidget(splitter_2);
+        verticalLayout_2->addWidget(splitter_2);
 
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
@@ -160,6 +187,7 @@ public:
         action_LuxBall_HDR->setShortcut(QApplication::translate("MainWindow", "Ctrl+H", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall  (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setShortcut(QApplication::translate("MainWindow", "Ctrl+L", 0, QApplication::UnicodeUTF8));
+        hardwareDevicesLabel->setText(QApplication::translate("MainWindow", "Hardware Devices", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));
         menu_Mode->setTitle(QApplication::translate("MainWindow", "&Mode", 0, QApplication::UnicodeUTF8));

@@ -52,6 +52,7 @@ public:
 	void SetRenderingEngineType(const RenderEngineType type);
 	void SetMotionBlur(const bool v);
 
+	const std::vector<DeviceDescription *> &GetAvailableDeviceDescriptions() { return ctx->GetAvailableDeviceDescriptions(); }
 	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
 	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }
 	const RenderEngine *GetRenderEngine() { return renderEngine; }
