@@ -59,6 +59,7 @@ private:
 	unsigned int fbWidth, fbHeight;
 	QGraphicsSimpleTextItem *screenLabel;
 	QGraphicsRectItem *screenLabelBack;
+	QLabel *statusbarLabel;
 
 	QGraphicsScene *renderScene;
 
