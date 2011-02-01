@@ -60,11 +60,17 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	fbWidth = 0;
 	fbHeight = 0;
 
+	// Setup status bar
+	statusbarLabel = new QLabel(ui->statusbar);
+	statusbarLabel->setText("");
+	ui->statusbar->addWidget(statusbarLabel);
+
 	ShowLogo();
 }
 
 MainWindow::~MainWindow() {
 	delete ui;
+	delete statusbarLabel;
 	delete screenLabel;
 	delete screenLabelBack;
 	delete luxFrameBuffer;
@@ -121,6 +127,7 @@ void MainWindow::ShowLogo() {
 		ui->RenderView->centerOn(luxLogo);
 	}
 
+	statusbarLabel->setText("");
 	ui->RenderView->setInteractive(false);
 }
 
@@ -229,4 +236,7 @@ void MainWindow::UpdateScreenLabel(const char *msg, const bool valid) {
 	screenLabel->setText(QString(msg));
 	screenLabel->setBrush(valid ? Qt::green : Qt::red);
 	screenLabel->setPos(0.f, fbHeight);
+
+	// Update status bar message too
+	statusbarLabel->setText(msg);
 }
