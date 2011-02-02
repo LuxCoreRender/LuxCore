@@ -47,7 +47,7 @@
         <enum>Qt::Horizontal</enum>
        </property>
        <widget class="QGraphicsView" name="RenderView"/>
-       <widget class="QWidget" name="">
+       <widget class="QWidget" name="layoutWidget">
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
           <widget class="QLabel" name="hardwareDevicesLabel">
@@ -130,7 +130,9 @@
     <property name="title">
      <string>&amp;Mode</string>
     </property>
-    <addaction name="action_Benchmark"/>
+    <addaction name="action_Benchmark_OpenCL_GPUs"/>
+    <addaction name="action_Benchmark_OpenCL_CPUs_GPUs"/>
+    <addaction name="action_Benchmark_Native_CPUs"/>
     <addaction name="action_Interactive"/>
    </widget>
    <widget class="QMenu" name="menu_Scene">
@@ -159,12 +161,12 @@
     <string>About</string>
    </property>
   </action>
-  <action name="action_Benchmark">
+  <action name="action_Benchmark_OpenCL_GPUs">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Benchmark</string>
+    <string>Benchmark (OpenCL &amp;GPUs-only)</string>
    </property>
   </action>
   <action name="action_Interactive">
@@ -195,6 +197,22 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="action_Benchmark_OpenCL_CPUs_GPUs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Benchmark (OpenCL CPUs &amp;+ GPUs)</string>
+   </property>
+  </action>
+  <action name="action_Benchmark_Native_CPUs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Benchmark (&amp;Native CPUs-only)</string>
    </property>
   </action>
  </widget>
@@ -267,10 +285,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>action_Benchmark</sender>
+   <sender>action_Benchmark_OpenCL_CPUs_GPUs</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
-   <slot>setBenchmarkMode()</slot>
+   <slot>setBenchmarkCPUsGPUsMode()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -298,13 +316,47 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Benchmark_OpenCL_GPUs</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setBenchmarkGPUsMode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_Benchmark_Native_CPUs</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setBenchmarkNativeMode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
   <slot>showAbout()</slot>
   <slot>setLuxBallScene()</slot>
   <slot>setLuxBallHDRScene()</slot>
-  <slot>setBenchmarkMode()</slot>
+  <slot>setBenchmarkGPUsMode()</slot>
   <slot>setInteractiveMode()</slot>
+  <slot>setBenchmarkCPUsGPUsMode()</slot>
+  <slot>setBenchmarkNativeMode()</slot>
  </slots>
 </ui>

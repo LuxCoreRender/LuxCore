@@ -36,7 +36,7 @@
 //------------------------------------------------------------------------------
 
 enum LuxMarkAppMode {
-	BENCHMARK, INTERACTIVE
+	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU, BENCHMARK_NATIVE, INTERACTIVE
 };
 
 // List of supported scenes

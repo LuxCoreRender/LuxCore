@@ -68,13 +68,14 @@ LuxMarkApp::~LuxMarkApp() {
 
 void LuxMarkApp::Init(void) {
 	mainWin = new MainWindow();
+	mainWin->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	mainWin->show();
 	LogWindow = mainWin;
 
-	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark V" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
+	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
 
-	InitRendering(BENCHMARK, SCENE_LUXBALL_HDR);
+	InitRendering(BENCHMARK_OCL_GPU, SCENE_LUXBALL_HDR);
 }
 
 void LuxMarkApp::SetMode(LuxMarkAppMode m) {
@@ -110,8 +111,13 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 		mainWin->SetSceneCheck(1);
 
 	// Initialize the new mode
-	if (mode == BENCHMARK) {
-		mainWin->SetModeCheck(0);
+	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) || (mode == BENCHMARK_NATIVE)) {
+		if (mode == BENCHMARK_OCL_GPU)
+			mainWin->SetModeCheck(0);
+		else if (mode == BENCHMARK_OCL_CPUGPU)
+			mainWin->SetModeCheck(1);
+		else
+			mainWin->SetModeCheck(2);
 
 		// Update timer
 		renderRefreshTimer = new QTimer();
@@ -120,7 +126,7 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
 	} else
-		mainWin->SetModeCheck(1);
+		mainWin->SetModeCheck(3);
 
 	mainWin->ShowLogo();
 
@@ -130,8 +136,35 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 	// Initialize the new mode
-	if (app->mode == BENCHMARK) {
+	if ((app->mode == BENCHMARK_OCL_GPU) || (app->mode == BENCHMARK_OCL_CPUGPU) || (app->mode == BENCHMARK_NATIVE)) {
 		app->renderConfig = new RenderingConfig(app->sceneName);
+
+		// Overwrite properties according the current mode
+		Properties prop;
+		if (app->mode == BENCHMARK_OCL_GPU) {
+			prop.SetString("renderengine.type", "3");
+			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("opencl.cpu.use", "0");
+			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("opencl.latency.mode", "1");
+		} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
+			prop.SetString("renderengine.type", "3");
+			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("opencl.cpu.use", "1");
+			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("opencl.latency.mode", "1");
+		} else if (app->mode == BENCHMARK_NATIVE) {
+			prop.SetString("renderengine.type", "0");
+			stringstream ss;
+			ss << boost::thread::hardware_concurrency();
+			prop.SetString("opencl.nativethread.count", ss.str().c_str());
+			prop.SetString("opencl.cpu.use", "0");
+			prop.SetString("opencl.gpu.use", "0");
+			prop.SetString("opencl.latency.mode", "0");
+		} else
+			assert (false);
+
+		app->renderConfig->cfg.Load(prop);
 		app->renderConfig->Init();
 	} else {
 		// TO DO
@@ -180,7 +213,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 		case DIRECTLIGHT:
 		case PATH: {
 			renderingTime = int(renderConfig->film->GetTotalTime());
-			sampleSec = renderConfig->film->GetAvgSampleSec() * 1000.0;
+			sampleSec = renderConfig->film->GetAvgSampleSec();
 			break;
 		}
 		case SPPM: {
@@ -202,32 +235,37 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	const bool valid = (renderingTime > 120);
 	char buf[512];
 	stringstream ss("");
-	sprintf(buf, "[Time: %dsecs (%s)][Samples/sec % 5dK][Rays/sec % 5dK on %.1fK tris]\n",
+	sprintf(buf, "[Mode: %s][Time: %dsecs (%s)][Samples/sec % 5dK][Rays/sec % 5dK on %.1fK tris]",
+			(mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
+				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
+					((mode == BENCHMARK_NATIVE) ? "Native CPUs" :"Interactive")),
 			renderingTime, valid ? "OK" : "Wait", int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
 
-	ss << "\nRendering devices:";
-	double minPerf = intersectionDevices[0]->GetPerformance();
-	double totalPerf = intersectionDevices[0]->GetPerformance();
-	for (size_t i = 1; i < intersectionDevices.size(); ++i) {
-		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
-			minPerf = min(minPerf, intersectionDevices[i]->GetPerformance());
-			totalPerf += intersectionDevices[i]->GetPerformance();
+	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU)) {
+		ss << "\n\nOpenCL rendering devices:";
+		double minPerf = intersectionDevices[0]->GetPerformance();
+		double totalPerf = intersectionDevices[0]->GetPerformance();
+		for (size_t i = 1; i < intersectionDevices.size(); ++i) {
+			if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+				minPerf = min(minPerf, intersectionDevices[i]->GetPerformance());
+				totalPerf += intersectionDevices[i]->GetPerformance();
+			}
 		}
-	}
 
-	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
-		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
-			const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)intersectionDevices[i])->GetDeviceDesc();
-			sprintf(buf, "\n    [%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-					desc->GetName().c_str(),
-					int(intersectionDevices[i]->GetPerformance() / 1000.0),
-					intersectionDevices[i]->GetPerformance() / minPerf,
-					100.0 * intersectionDevices[i]->GetPerformance() / totalPerf,
-					int(desc->GetUsedMemory() / (1024 * 1024)),
-					int(desc->GetMaxMemory() / (1024 * 1024)));
-			ss << buf;
+		for (size_t i = 0; i < intersectionDevices.size(); ++i) {
+			if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+				const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)intersectionDevices[i])->GetDeviceDesc();
+				sprintf(buf, "\n    [%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+						desc->GetName().c_str(),
+						int(intersectionDevices[i]->GetPerformance() / 1000.0),
+						intersectionDevices[i]->GetPerformance() / minPerf,
+						100.0 * intersectionDevices[i]->GetPerformance() / totalPerf,
+						int(desc->GetUsedMemory() / (1024 * 1024)),
+						int(desc->GetMaxMemory() / (1024 * 1024)));
+				ss << buf;
+			}
 		}
 	}
 

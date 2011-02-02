@@ -104,12 +104,24 @@ void MainWindow::setLuxBallHDRScene() {
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_HDR);
 }
 
-void MainWindow::setBenchmarkMode() {
-	LM_LOG("Set Benchmark mode");
+void MainWindow::setBenchmarkGPUsMode() {
+	LM_LOG("Set Benchmark GPUs mode");
+	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_OCL_GPU);
+}
+
+void MainWindow::setBenchmarkCPUsGPUsMode() {
+	LM_LOG("Set Benchmark CPUs+GPUs mode");
+	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_OCL_CPUGPU);
+}
+
+void MainWindow::setBenchmarkNativeMode() {
+	LM_LOG("Set Benchmark Native CPU mode");
+	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_NATIVE);
 }
 
 void MainWindow::setInteractiveMode() {
 	LM_LOG("Set Interactive mode");
+	//((LuxMarkApp *)qApp)->SetMode(INTERACTIVE);
 }
 
 //------------------------------------------------------------------------------
@@ -133,14 +145,27 @@ void MainWindow::ShowLogo() {
 
 void MainWindow::SetModeCheck(const int index) {
 	if (index == 0) {
-		ui->action_Benchmark->setChecked(true);
+		ui->action_Benchmark_OpenCL_GPUs->setChecked(true);
+		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
+		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 	} else if (index == 1) {
-		ui->action_Benchmark->setChecked(false);
+		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(true);
+		ui->action_Benchmark_Native_CPUs->setChecked(false);
+		ui->action_Interactive->setChecked(false);
+	} else if (index == 2) {
+		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
+		ui->action_Benchmark_Native_CPUs->setChecked(true);
+		ui->action_Interactive->setChecked(false);
+	} else if (index == 3) {
+		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
+		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(true);
 	} else
 		assert(false);
-
 }
 
 void MainWindow::SetSceneCheck(const int index) {
@@ -192,10 +217,13 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 
 	if (!luxFrameBuffer->isVisible()) {
 		luxFrameBuffer->show();
-		renderScene->setSceneRect(0.0f, 0.0f, fbWidth, fbHeight + screenLabel->boundingRect().height());
+		qreal w = Max<qreal>(fbWidth, screenLabel->boundingRect().width());
+		qreal h = fbHeight + screenLabel->boundingRect().height();
+		renderScene->setSceneRect(0.f, 0.f, w, h);
+		luxFrameBuffer->setPos(Max<qreal>(0.f, (w - fbWidth) / 2), 0.f);
 		ui->RenderView->centerOn(luxFrameBuffer);
 
-		screenLabelBack->setRect(0.f, fbHeight, fbWidth, screenLabel->boundingRect().height());
+		screenLabelBack->setRect(0.f, fbHeight, w, screenLabel->boundingRect().height());
 		screenLabelBack->show();
 		screenLabel->show();
 	}
@@ -239,8 +267,11 @@ void MainWindow::UpdateScreenLabel(const char *msg, const bool valid) {
 	screenLabel->setPos(0.f, fbHeight);
 
 	// Update scene size
-	renderScene->setSceneRect(0.0f, 0.0f, fbWidth, fbHeight + screenLabel->boundingRect().height());
-	screenLabelBack->setRect(0.f, fbHeight, fbWidth, screenLabel->boundingRect().height());
+	qreal w = Max<qreal>(fbWidth, screenLabel->boundingRect().width());
+	qreal h = fbHeight + screenLabel->boundingRect().height();
+	renderScene->setSceneRect(0.f, 0.f, w, h);
+	luxFrameBuffer->setPos(Max<qreal>(0.f, (w - fbWidth) / 2), 0.f);
+	screenLabelBack->setRect(0.f, fbHeight, w, screenLabel->boundingRect().height());
 
 	// Update status bar with the first line of the message
 	QString qMsg(msg);

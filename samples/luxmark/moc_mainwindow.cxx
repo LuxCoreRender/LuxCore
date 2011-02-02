@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'mainwindow.h'
 **
-** Created: Tue Feb 1 14:46:30 2011
+** Created: Wed Feb 2 12:42:19 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.6.2)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_MainWindow[] = {
        4,       // revision
        0,       // classname
        0,    0, // classinfo
-       6,   14, // methods
+       8,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -36,7 +36,9 @@ static const uint qt_meta_data_MainWindow[] = {
       34,   11,   11,   11, 0x08,
       52,   11,   11,   11, 0x08,
       73,   11,   11,   11, 0x08,
-      92,   11,   11,   11, 0x08,
+      96,   11,   11,   11, 0x08,
+     123,   11,   11,   11, 0x08,
+     148,   11,   11,   11, 0x08,
 
        0        // eod
 };
@@ -44,7 +46,9 @@ static const uint qt_meta_data_MainWindow[] = {
 static const char qt_meta_stringdata_MainWindow[] = {
     "MainWindow\0\0exitApp()\0showAbout()\0"
     "setLuxBallScene()\0setLuxBallHDRScene()\0"
-    "setBenchmarkMode()\0setInteractiveMode()\0"
+    "setBenchmarkGPUsMode()\0"
+    "setBenchmarkCPUsGPUsMode()\0"
+    "setBenchmarkNativeMode()\0setInteractiveMode()\0"
 };
 
 const QMetaObject MainWindow::staticMetaObject = {
@@ -80,11 +84,13 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         case 1: showAbout(); break;
         case 2: setLuxBallScene(); break;
         case 3: setLuxBallHDRScene(); break;
-        case 4: setBenchmarkMode(); break;
-        case 5: setInteractiveMode(); break;
+        case 4: setBenchmarkGPUsMode(); break;
+        case 5: setBenchmarkCPUsGPUsMode(); break;
+        case 6: setBenchmarkNativeMode(); break;
+        case 7: setInteractiveMode(); break;
         default: ;
         }
-        _id -= 6;
+        _id -= 8;
     }
     return _id;
 }
