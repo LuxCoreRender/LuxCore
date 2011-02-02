@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Tue Feb 1 14:52:51 2011
+** Created: Wed Feb 2 12:48:47 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -34,16 +34,18 @@ class Ui_MainWindow
 public:
     QAction *action_Quit;
     QAction *action_About;
-    QAction *action_Benchmark;
+    QAction *action_Benchmark_OpenCL_GPUs;
     QAction *action_Interactive;
     QAction *action_LuxBall_HDR;
     QAction *action_LuxBall;
+    QAction *action_Benchmark_OpenCL_CPUs_GPUs;
+    QAction *action_Benchmark_Native_CPUs;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout_2;
     QSplitter *splitter_2;
     QSplitter *splitter;
     QGraphicsView *RenderView;
-    QWidget *widget;
+    QWidget *layoutWidget;
     QVBoxLayout *verticalLayout;
     QLabel *hardwareDevicesLabel;
     QTreeView *HardwareView;
@@ -68,9 +70,9 @@ public:
         action_Quit->setObjectName(QString::fromUtf8("action_Quit"));
         action_About = new QAction(MainWindow);
         action_About->setObjectName(QString::fromUtf8("action_About"));
-        action_Benchmark = new QAction(MainWindow);
-        action_Benchmark->setObjectName(QString::fromUtf8("action_Benchmark"));
-        action_Benchmark->setCheckable(true);
+        action_Benchmark_OpenCL_GPUs = new QAction(MainWindow);
+        action_Benchmark_OpenCL_GPUs->setObjectName(QString::fromUtf8("action_Benchmark_OpenCL_GPUs"));
+        action_Benchmark_OpenCL_GPUs->setCheckable(true);
         action_Interactive = new QAction(MainWindow);
         action_Interactive->setObjectName(QString::fromUtf8("action_Interactive"));
         action_Interactive->setCheckable(true);
@@ -80,6 +82,12 @@ public:
         action_LuxBall = new QAction(MainWindow);
         action_LuxBall->setObjectName(QString::fromUtf8("action_LuxBall"));
         action_LuxBall->setCheckable(true);
+        action_Benchmark_OpenCL_CPUs_GPUs = new QAction(MainWindow);
+        action_Benchmark_OpenCL_CPUs_GPUs->setObjectName(QString::fromUtf8("action_Benchmark_OpenCL_CPUs_GPUs"));
+        action_Benchmark_OpenCL_CPUs_GPUs->setCheckable(true);
+        action_Benchmark_Native_CPUs = new QAction(MainWindow);
+        action_Benchmark_Native_CPUs->setObjectName(QString::fromUtf8("action_Benchmark_Native_CPUs"));
+        action_Benchmark_Native_CPUs->setCheckable(true);
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
@@ -96,12 +104,12 @@ public:
         RenderView = new QGraphicsView(splitter);
         RenderView->setObjectName(QString::fromUtf8("RenderView"));
         splitter->addWidget(RenderView);
-        widget = new QWidget(splitter);
-        widget->setObjectName(QString::fromUtf8("widget"));
-        verticalLayout = new QVBoxLayout(widget);
+        layoutWidget = new QWidget(splitter);
+        layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
+        verticalLayout = new QVBoxLayout(layoutWidget);
         verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
         verticalLayout->setContentsMargins(0, 0, 0, 0);
-        hardwareDevicesLabel = new QLabel(widget);
+        hardwareDevicesLabel = new QLabel(layoutWidget);
         hardwareDevicesLabel->setObjectName(QString::fromUtf8("hardwareDevicesLabel"));
         QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy.setHorizontalStretch(0);
@@ -115,7 +123,7 @@ public:
 
         verticalLayout->addWidget(hardwareDevicesLabel);
 
-        HardwareView = new QTreeView(widget);
+        HardwareView = new QTreeView(layoutWidget);
         HardwareView->setObjectName(QString::fromUtf8("HardwareView"));
         QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Expanding);
         sizePolicy1.setHorizontalStretch(0);
@@ -127,7 +135,7 @@ public:
 
         verticalLayout->addWidget(HardwareView);
 
-        splitter->addWidget(widget);
+        splitter->addWidget(layoutWidget);
         splitter_2->addWidget(splitter);
         LogView = new QTextEdit(splitter_2);
         LogView->setObjectName(QString::fromUtf8("LogView"));
@@ -159,7 +167,9 @@ public:
         menubar->addAction(menu_Help->menuAction());
         menu_File->addAction(action_Quit);
         menu_Help->addAction(action_About);
-        menu_Mode->addAction(action_Benchmark);
+        menu_Mode->addAction(action_Benchmark_OpenCL_GPUs);
+        menu_Mode->addAction(action_Benchmark_OpenCL_CPUs_GPUs);
+        menu_Mode->addAction(action_Benchmark_Native_CPUs);
         menu_Mode->addAction(action_Interactive);
         menu_Scene->addAction(action_LuxBall_HDR);
         menu_Scene->addAction(action_LuxBall);
@@ -169,8 +179,10 @@ public:
         QObject::connect(action_About, SIGNAL(triggered()), MainWindow, SLOT(showAbout()));
         QObject::connect(action_LuxBall, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallScene()));
         QObject::connect(action_LuxBall_HDR, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallHDRScene()));
-        QObject::connect(action_Benchmark, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkMode()));
+        QObject::connect(action_Benchmark_OpenCL_CPUs_GPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCPUsGPUsMode()));
         QObject::connect(action_Interactive, SIGNAL(triggered()), MainWindow, SLOT(setInteractiveMode()));
+        QObject::connect(action_Benchmark_OpenCL_GPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkGPUsMode()));
+        QObject::connect(action_Benchmark_Native_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkNativeMode()));
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -181,12 +193,14 @@ public:
         action_Quit->setText(QApplication::translate("MainWindow", "&Quit", 0, QApplication::UnicodeUTF8));
         action_Quit->setShortcut(QApplication::translate("MainWindow", "Ctrl+Q", 0, QApplication::UnicodeUTF8));
         action_About->setText(QApplication::translate("MainWindow", "About", 0, QApplication::UnicodeUTF8));
-        action_Benchmark->setText(QApplication::translate("MainWindow", "&Benchmark", 0, QApplication::UnicodeUTF8));
+        action_Benchmark_OpenCL_GPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL &GPUs-only)", 0, QApplication::UnicodeUTF8));
         action_Interactive->setText(QApplication::translate("MainWindow", "&Interactive", 0, QApplication::UnicodeUTF8));
         action_LuxBall_HDR->setText(QApplication::translate("MainWindow", "LuxBall &HDR (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall_HDR->setShortcut(QApplication::translate("MainWindow", "Ctrl+H", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall  (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setShortcut(QApplication::translate("MainWindow", "Ctrl+L", 0, QApplication::UnicodeUTF8));
+        action_Benchmark_OpenCL_CPUs_GPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL CPUs &+ GPUs)", 0, QApplication::UnicodeUTF8));
+        action_Benchmark_Native_CPUs->setText(QApplication::translate("MainWindow", "Benchmark (&Native CPUs-only)", 0, QApplication::UnicodeUTF8));
         hardwareDevicesLabel->setText(QApplication::translate("MainWindow", "Hardware Devices", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));
