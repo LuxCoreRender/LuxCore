@@ -175,7 +175,6 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 	double sampleSec = 0.0;
 	int renderingTime = 0;
-	char buf[512];
 	
 	switch (renderConfig->GetRenderEngine()->GetEngineType()) {
 		case DIRECTLIGHT:
@@ -201,8 +200,36 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	}
 
 	const bool valid = (renderingTime > 120);
-	sprintf(buf, "[Time: %dsecs (%s)][Samples/sec % 5dK][Rays/sec % 5dK on %.1fK tris]",
+	char buf[512];
+	stringstream ss("");
+	sprintf(buf, "[Time: %dsecs (%s)][Samples/sec % 5dK][Rays/sec % 5dK on %.1fK tris]\n",
 			renderingTime, valid ? "OK" : "Wait", int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-	mainWin->UpdateScreenLabel(buf, valid);
+	ss << buf;
+
+	ss << "\nRendering devices:";
+	double minPerf = intersectionDevices[0]->GetPerformance();
+	double totalPerf = intersectionDevices[0]->GetPerformance();
+	for (size_t i = 1; i < intersectionDevices.size(); ++i) {
+		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+			minPerf = min(minPerf, intersectionDevices[i]->GetPerformance());
+			totalPerf += intersectionDevices[i]->GetPerformance();
+		}
+	}
+
+	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
+		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+			const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)intersectionDevices[i])->GetDeviceDesc();
+			sprintf(buf, "\n    [%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+					desc->GetName().c_str(),
+					int(intersectionDevices[i]->GetPerformance() / 1000.0),
+					intersectionDevices[i]->GetPerformance() / minPerf,
+					100.0 * intersectionDevices[i]->GetPerformance() / totalPerf,
+					int(desc->GetUsedMemory() / (1024 * 1024)),
+					int(desc->GetMaxMemory() / (1024 * 1024)));
+			ss << buf;
+		}
+	}
+
+	mainWin->UpdateScreenLabel(ss.str().c_str(), valid);
 }
