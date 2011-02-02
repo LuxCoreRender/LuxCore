@@ -234,9 +234,15 @@ bool MainWindow::event(QEvent *event) {
 
 void MainWindow::UpdateScreenLabel(const char *msg, const bool valid) {
 	screenLabel->setText(QString(msg));
-	screenLabel->setBrush(valid ? Qt::green : Qt::red);
+	//screenLabel->setBrush(valid ? Qt::green : Qt::red);
+	screenLabel->setBrush(Qt::blue);
 	screenLabel->setPos(0.f, fbHeight);
 
-	// Update status bar message too
-	statusbarLabel->setText(msg);
+	// Update scene size
+	renderScene->setSceneRect(0.0f, 0.0f, fbWidth, fbHeight + screenLabel->boundingRect().height());
+	screenLabelBack->setRect(0.f, fbHeight, fbWidth, screenLabel->boundingRect().height());
+
+	// Update status bar with the first line of the message
+	QString qMsg(msg);
+	statusbarLabel->setText(qMsg.split(QString("\n"))[0]);
 }
