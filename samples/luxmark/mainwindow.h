@@ -32,6 +32,21 @@
 
 #include <QGraphicsPixmapItem>
 
+class LuxMarkApp;
+
+class LuxFrameBuffer : public QGraphicsPixmapItem {
+public:
+	LuxFrameBuffer(const QPixmap &pixmap);
+
+	void SetLuxApp(LuxMarkApp *la) { luxApp = la; }
+
+private:
+	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+	void mousePressEvent(QGraphicsSceneMouseEvent *event);
+
+	LuxMarkApp *luxApp;
+};
+
 class MainWindow : public QMainWindow {
 	Q_OBJECT
 
@@ -48,13 +63,14 @@ public:
 	void SetSceneCheck(const int index);
 	void UpdateScreenLabel(const char *msg, const bool valid);
 	void SetHadwareTreeModel(HardwareTreeModel *treeModel);
+	void SetLuxApp(LuxMarkApp *la) { luxFrameBuffer->SetLuxApp(la); }
 
 private:
 	bool event (QEvent *event);
 
 	Ui::MainWindow *ui;
 	QGraphicsPixmapItem *luxLogo;
-	QGraphicsPixmapItem *luxFrameBuffer;
+	LuxFrameBuffer *luxFrameBuffer;
 	unsigned char *frameBuffer;
 	unsigned int fbWidth, fbHeight;
 	QGraphicsSimpleTextItem *screenLabel;
