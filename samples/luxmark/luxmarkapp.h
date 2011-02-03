@@ -57,6 +57,9 @@ public:
 	void SetMode(LuxMarkAppMode m);
 	void SetScene(const char *name);
 
+	void HandleMouseMoveEvent(QGraphicsSceneMouseEvent *event);
+	void HandleMousePressEvent(QGraphicsSceneMouseEvent *event);
+
 private:
 	static void EngineInitThreadImpl(LuxMarkApp *app);
 
@@ -73,6 +76,12 @@ private:
 	RenderingConfig *renderConfig;
 
 	QTimer *renderRefreshTimer;
+
+	bool mouseButton0;
+	bool mouseButton2;
+	qreal mouseGrabLastX;
+	qreal mouseGrabLastY;
+	double lastMouseUpdate;
 
 private slots:
 	void RenderRefreshTimeout();
