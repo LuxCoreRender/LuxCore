@@ -63,7 +63,7 @@ message(STATUS "Binaries directory: " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 # to the source code
 configure_file(
   "${LUXRAYS_SOURCE_DIR}/cfg.h.in"
-  "${LUXRAYS_INCLUDE_DIR}/luxrays/cfg.h"
+  "${CMAKE_BINARY_DIR}/${LUXRAYS_INCLUDE_DIR}/luxrays/cfg.h"
   )
 
 include_directories("${LUXRAYS_INCLUDE_DIR}" "${LUXRAYS_SOURCE_DIR}")
