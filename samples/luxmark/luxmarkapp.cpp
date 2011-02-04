@@ -28,6 +28,7 @@
 #include "path/path.h"
 #include "sppm/sppm.h"
 #include "pathgpu/pathgpu.h"
+#include "resultdialog.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -187,6 +188,7 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 	app->hardwareTreeModel = new HardwareTreeModel(app->renderConfig->GetAvailableDeviceDescriptions());
 
 	// Done
+	app->validResult = false;
 	app->renderingStartTime = luxrays::WallClockTime();
 	app->engineInitDone = true;
 }
@@ -245,14 +247,21 @@ void LuxMarkApp::RenderRefreshTimeout() {
 			assert (false);
 	}
 
-	const bool valid = (renderingTime > 120);
+	// After 120secs of benchmark, show the result dialog
+	if (!validResult && (renderingTime > 120) && (mode != INTERACTIVE)) {
+		validResult = true;
+		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec);
+
+		dialog->exec();
+	}
+
 	char buf[512];
 	stringstream ss("");
 	sprintf(buf, "[Mode: %s][Time: %dsecs (%s)][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
 			(mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
 				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
 					((mode == BENCHMARK_NATIVE) ? "Native CPUs" :"Interactive")),
-			renderingTime, valid ? "OK" : "Wait", int(sampleSec / 1000.0),
+			renderingTime, validResult ? "OK" : "Wait", int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
 
@@ -282,7 +291,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 		}
 	}
 
-	mainWin->UpdateScreenLabel(ss.str().c_str(), valid);
+	mainWin->UpdateScreenLabel(ss.str().c_str(), validResult);
 }
 
 #define MOVE_STEP 0.5f

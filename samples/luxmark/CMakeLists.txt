@@ -59,6 +59,7 @@ set(LUXMARK_SRCS
 	luxmarkapp.cpp
 	main.cpp
 	mainwindow.cpp
+    resultdialog.cpp
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #!!! Files copied from SLG, do not edit the files !!!
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -79,10 +80,12 @@ set(LUXMARK_MOC
 	mainwindow.h
     hardwaretree.h
 	luxmarkapp.h
+    resultdialog.h
 	)
 set(LUXMARK_UIS
 	aboutdialog.ui
 	mainwindow.ui
+    resultdialog.ui
 	)
 set(LUXMARK_RCS
 	resources.qrc
