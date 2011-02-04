@@ -19,7 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <qt4/QtGui/qtextedit.h>
+#include <QTextEdit>
+#include <QGraphicsSceneMouseEvent>
 
 #include "mainwindow.h"
 #include "aboutdialog.h"
@@ -42,6 +43,27 @@ void DebugHandler(const char *msg) {
 	LM_LOG_LUXRAYS(msg);
 }
 
+//------------------------------------------------------------------------------
+
+LuxFrameBuffer::LuxFrameBuffer(const QPixmap &pixmap) : QGraphicsPixmapItem(pixmap) {
+	luxApp = NULL;
+
+	setAcceptHoverEvents(true);
+	setFlag(QGraphicsItem::ItemIsSelectable, true);
+}
+
+void LuxFrameBuffer::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
+	if (luxApp)
+		luxApp->HandleMouseMoveEvent(event);
+}
+
+void LuxFrameBuffer::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+	if (luxApp)
+		luxApp->HandleMousePressEvent(event);
+}
+
+//------------------------------------------------------------------------------
+
 MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(parent, flags),
 		ui(new Ui::MainWindow) {
 	ui->setupUi(this);
@@ -50,7 +72,8 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	renderScene = new QGraphicsScene();
 	renderScene->setBackgroundBrush(QColor(127,127,127));
 	luxLogo = renderScene->addPixmap(QPixmap(":/images/resources/luxlogo_bg.png"));
-	luxFrameBuffer = renderScene->addPixmap(QPixmap(":/images/resources/luxlogo_bg.png"));
+	luxFrameBuffer = new LuxFrameBuffer(QPixmap(":/images/resources/luxlogo_bg.png"));
+	renderScene->addItem(luxFrameBuffer);
 	screenLabelBack = renderScene->addRect(0.f, 0.f, 1.f, 1.f, QPen(), Qt::lightGray);
 	screenLabel = new QGraphicsSimpleTextItem(QString("[Time: 0secs (Wait)]"));
 	renderScene->addItem(screenLabel);
@@ -121,7 +144,7 @@ void MainWindow::setBenchmarkNativeMode() {
 
 void MainWindow::setInteractiveMode() {
 	LM_LOG("Set Interactive mode");
-	//((LuxMarkApp *)qApp)->SetMode(INTERACTIVE);
+	((LuxMarkApp *)qApp)->SetMode(INTERACTIVE);
 }
 
 //------------------------------------------------------------------------------
@@ -231,7 +254,7 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 	ui->RenderView->setDragMode(QGraphicsView::ScrollHandDrag);
 	ui->RenderView->setInteractive(true);
 
-	LM_LOG("Screen updated");
+	//LM_LOG("Screen updated");
 }
 
 void MainWindow::SetHadwareTreeModel(HardwareTreeModel *treeModel) {

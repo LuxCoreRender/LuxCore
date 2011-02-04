@@ -19,75 +19,26 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _MAINWINDOW_H
-#define	_MAINWINDOW_H
+#ifndef _RESULTDIALOG_H
+#define	_RESULTDIALOG_H
 
 #include <cstddef>
-#include <string>
 
-#include <boost/thread/mutex.hpp>
+#include "smalllux.h"
 
-#include "ui_mainwindow.h"
-#include "hardwaretree.h"
+#include "ui_resultdialog.h"
 
-#include <QGraphicsPixmapItem>
-
-class LuxMarkApp;
-
-class LuxFrameBuffer : public QGraphicsPixmapItem {
-public:
-	LuxFrameBuffer(const QPixmap &pixmap);
-
-	void SetLuxApp(LuxMarkApp *la) { luxApp = la; }
-
-private:
-	void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
-	void mousePressEvent(QGraphicsSceneMouseEvent *event);
-
-	LuxMarkApp *luxApp;
-};
-
-class MainWindow : public QMainWindow {
+class ResultDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	MainWindow(QWidget *parent = NULL, Qt::WindowFlags flags = 0);
-	~MainWindow();
-
-	void ShowLogo();
-	bool IsShowingLogo() const;
-	void ShowFrameBuffer(const float *frameBuffer,
-		const unsigned int width, const unsigned int height);
-
-	void SetModeCheck(const int index);
-	void SetSceneCheck(const int index);
-	void UpdateScreenLabel(const char *msg, const bool valid);
-	void SetHadwareTreeModel(HardwareTreeModel *treeModel);
-	void SetLuxApp(LuxMarkApp *la) { luxFrameBuffer->SetLuxApp(la); }
+	ResultDialog(LuxMarkAppMode mode, const char *sceneName,
+			double sampleSecs, QWidget *parent = NULL);
+	~ResultDialog();
 
 private:
-	bool event (QEvent *event);
-
-	Ui::MainWindow *ui;
-	QGraphicsPixmapItem *luxLogo;
-	LuxFrameBuffer *luxFrameBuffer;
-	unsigned char *frameBuffer;
-	unsigned int fbWidth, fbHeight;
-	QGraphicsSimpleTextItem *screenLabel;
-	QGraphicsRectItem *screenLabelBack;
-	QLabel *statusbarLabel;
-
-	QGraphicsScene *renderScene;
-
-private slots:
-	void exitApp();
-	void showAbout();
-	void setLuxBallScene();
-	void setLuxBallHDRScene();
-	void setBenchmarkGPUsMode();
-	void setBenchmarkCPUsGPUsMode();
-	void setBenchmarkNativeMode();
-	void setInteractiveMode();
+	Ui::ResultDialog *ui;
 };
 
-#endif	/* _MAINWINDOW_H */
+#endif	/* _RESULTDIALOG_H */
+

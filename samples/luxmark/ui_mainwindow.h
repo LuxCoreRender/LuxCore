@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Wed Feb 2 12:48:47 2011
+** Created: Thu Feb 3 11:34:54 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -194,7 +194,7 @@ public:
         action_Quit->setShortcut(QApplication::translate("MainWindow", "Ctrl+Q", 0, QApplication::UnicodeUTF8));
         action_About->setText(QApplication::translate("MainWindow", "About", 0, QApplication::UnicodeUTF8));
         action_Benchmark_OpenCL_GPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL &GPUs-only)", 0, QApplication::UnicodeUTF8));
-        action_Interactive->setText(QApplication::translate("MainWindow", "&Interactive", 0, QApplication::UnicodeUTF8));
+        action_Interactive->setText(QApplication::translate("MainWindow", "&Interactive (OpenCL GPUs-only)", 0, QApplication::UnicodeUTF8));
         action_LuxBall_HDR->setText(QApplication::translate("MainWindow", "LuxBall &HDR (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall_HDR->setShortcut(QApplication::translate("MainWindow", "Ctrl+H", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall  (262K triangles)", 0, QApplication::UnicodeUTF8));

@@ -70,4 +70,8 @@ private:
 #define LM_LOG_ENGINE(a) { LM_LOG("<FONT COLOR=\"#00ff00\"><B>[RenderEngine]</B></FONT> " << a); }
 #define LM_LOG_CFG(a) { LM_LOG("<FONT COLOR=\"#005500\"><B>[RenderConfig]</B></FONT> " << a); }
 
+enum LuxMarkAppMode {
+	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU, BENCHMARK_NATIVE, INTERACTIVE
+};
+
 #endif	/* _SMALLLUX_H */
