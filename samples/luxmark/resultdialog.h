@@ -19,59 +19,26 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#ifndef _RESULTDIALOG_H
+#define	_RESULTDIALOG_H
 
-#include <cmath>
-#include <sstream>
-#include <fstream>
-#include <iostream>
+#include <cstddef>
 
-#if defined(__linux__) || defined(__APPLE__)
-#include <stddef.h>
-#include <sys/time.h>
-#elif defined (WIN32)
-#include <windows.h>
-#else
-	Unsupported Platform !!!
-#endif
+#include "smalllux.h"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
+#include "ui_resultdialog.h"
 
-#include "slgcfg.h"
+class ResultDialog : public QDialog {
+	Q_OBJECT
 
-#include "mainwindow.h"
-
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
-
-extern void DebugHandler(const char *msg);
-
-extern MainWindow *LogWindow;
-
-class LuxLogEvent: public QEvent {
 public:
-	LuxLogEvent(QString mesg);
- 
-	QString getMessage() { return message; }
+	ResultDialog(LuxMarkAppMode mode, const char *sceneName,
+			double sampleSecs, QWidget *parent = NULL);
+	~ResultDialog();
 
 private:
-	QString message;
+	Ui::ResultDialog *ui;
 };
 
-#define LM_LOG(a) { if (LogWindow) { std::stringstream _LM_LOG_LOCAL_SS; _LM_LOG_LOCAL_SS << a; qApp->postEvent(LogWindow, new LuxLogEvent(QString(_LM_LOG_LOCAL_SS.str().c_str()))); }}
-#define LM_LOG_LUXRAYS(a) { LM_LOG("<FONT COLOR=\"#000000\"><B>[LuxRays]</B></FONT> " << a); }
-#define LM_LOG_ENGINE(a) { LM_LOG("<FONT COLOR=\"#00ff00\"><B>[RenderEngine]</B></FONT> " << a); }
-#define LM_LOG_CFG(a) { LM_LOG("<FONT COLOR=\"#005500\"><B>[RenderConfig]</B></FONT> " << a); }
+#endif	/* _RESULTDIALOG_H */
 
-enum LuxMarkAppMode {
-	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU, BENCHMARK_NATIVE, INTERACTIVE
-};
-
-#endif	/* _SMALLLUX_H */

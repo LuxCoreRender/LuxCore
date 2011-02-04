@@ -35,10 +35,6 @@
 // LuxMark Qt application
 //------------------------------------------------------------------------------
 
-enum LuxMarkAppMode {
-	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU, BENCHMARK_NATIVE, INTERACTIVE
-};
-
 // List of supported scenes
 #define SCENE_LUXBALL_HDR "scenes/luxball/render-hdr.cfg"
 #define SCENE_LUXBALL "scenes/luxball/render.cfg"
@@ -72,6 +68,7 @@ private:
 
 	boost::thread *engineInitThread;
 	double renderingStartTime;
+	bool validResult;
 	bool engineInitDone;
 	RenderingConfig *renderConfig;
 
