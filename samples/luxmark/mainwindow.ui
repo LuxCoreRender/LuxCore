@@ -174,7 +174,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Interactive</string>
+    <string>&amp;Interactive (OpenCL GPUs-only)</string>
    </property>
   </action>
   <action name="action_LuxBall_HDR">

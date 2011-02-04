@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <QGraphicsSceneMouseEvent>
+
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
 #include "renderconfig.h"
@@ -26,6 +28,7 @@
 #include "path/path.h"
 #include "sppm/sppm.h"
 #include "pathgpu/pathgpu.h"
+#include "resultdialog.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -70,6 +73,7 @@ void LuxMarkApp::Init(void) {
 	mainWin = new MainWindow();
 	mainWin->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	mainWin->show();
+	mainWin->SetLuxApp(this);
 	LogWindow = mainWin;
 
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
@@ -125,8 +129,16 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
-	} else
+	} else {
 		mainWin->SetModeCheck(3);
+
+		// Update timer
+		renderRefreshTimer = new QTimer();
+		connect(renderRefreshTimer, SIGNAL(timeout()), SLOT(RenderRefreshTimeout()));
+
+		// Refresh the screen every 100ms in benchmark mode
+		renderRefreshTimer->start(100);
+	}
 
 	mainWin->ShowLogo();
 
@@ -136,44 +148,47 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 	// Initialize the new mode
-	if ((app->mode == BENCHMARK_OCL_GPU) || (app->mode == BENCHMARK_OCL_CPUGPU) || (app->mode == BENCHMARK_NATIVE)) {
-		app->renderConfig = new RenderingConfig(app->sceneName);
+	app->renderConfig = new RenderingConfig(app->sceneName);
 
-		// Overwrite properties according the current mode
-		Properties prop;
-		if (app->mode == BENCHMARK_OCL_GPU) {
-			prop.SetString("renderengine.type", "3");
-			prop.SetString("opencl.nativethread.count", "0");
-			prop.SetString("opencl.cpu.use", "0");
-			prop.SetString("opencl.gpu.use", "1");
-			prop.SetString("opencl.latency.mode", "1");
-		} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
-			prop.SetString("renderengine.type", "3");
-			prop.SetString("opencl.nativethread.count", "0");
-			prop.SetString("opencl.cpu.use", "1");
-			prop.SetString("opencl.gpu.use", "1");
-			prop.SetString("opencl.latency.mode", "1");
-		} else if (app->mode == BENCHMARK_NATIVE) {
-			prop.SetString("renderengine.type", "0");
-			stringstream ss;
-			ss << boost::thread::hardware_concurrency();
-			prop.SetString("opencl.nativethread.count", ss.str().c_str());
-			prop.SetString("opencl.cpu.use", "0");
-			prop.SetString("opencl.gpu.use", "0");
-			prop.SetString("opencl.latency.mode", "0");
-		} else
-			assert (false);
+	// Overwrite properties according the current mode
+	Properties prop;
+	if (app->mode == BENCHMARK_OCL_GPU) {
+		prop.SetString("renderengine.type", "3");
+		prop.SetString("opencl.nativethread.count", "0");
+		prop.SetString("opencl.cpu.use", "0");
+		prop.SetString("opencl.gpu.use", "1");
+		prop.SetString("opencl.latency.mode", "1");
+	} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
+		prop.SetString("renderengine.type", "3");
+		prop.SetString("opencl.nativethread.count", "0");
+		prop.SetString("opencl.cpu.use", "1");
+		prop.SetString("opencl.gpu.use", "1");
+		prop.SetString("opencl.latency.mode", "1");
+	} else if (app->mode == BENCHMARK_NATIVE) {
+		prop.SetString("renderengine.type", "0");
+		stringstream ss;
+		ss << boost::thread::hardware_concurrency();
+		prop.SetString("opencl.nativethread.count", ss.str().c_str());
+		prop.SetString("opencl.cpu.use", "0");
+		prop.SetString("opencl.gpu.use", "0");
+		prop.SetString("opencl.latency.mode", "0");
+	} else if (app->mode == INTERACTIVE) {
+		prop.SetString("renderengine.type", "3");
+		prop.SetString("opencl.nativethread.count", "0");
+		prop.SetString("opencl.cpu.use", "0");
+		prop.SetString("opencl.gpu.use", "1");
+		prop.SetString("opencl.latency.mode", "1");
+	} else
+		assert (false);
 
-		app->renderConfig->cfg.Load(prop);
-		app->renderConfig->Init();
-	} else {
-		// TO DO
-	}
+	app->renderConfig->cfg.Load(prop);
+	app->renderConfig->Init();
 
 	// Initialize hardware information
 	app->hardwareTreeModel = new HardwareTreeModel(app->renderConfig->GetAvailableDeviceDescriptions());
 
 	// Done
+	app->validResult = false;
 	app->renderingStartTime = luxrays::WallClockTime();
 	app->engineInitDone = true;
 }
@@ -232,14 +247,21 @@ void LuxMarkApp::RenderRefreshTimeout() {
 			assert (false);
 	}
 
-	const bool valid = (renderingTime > 120);
+	// After 120secs of benchmark, show the result dialog
+	if (!validResult && (renderingTime > 120) && (mode != INTERACTIVE)) {
+		validResult = true;
+		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec);
+
+		dialog->exec();
+	}
+
 	char buf[512];
 	stringstream ss("");
-	sprintf(buf, "[Mode: %s][Time: %dsecs (%s)][Samples/sec % 5dK][Rays/sec % 5dK on %.1fK tris]",
+	sprintf(buf, "[Mode: %s][Time: %dsecs (%s)][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
 			(mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
 				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
 					((mode == BENCHMARK_NATIVE) ? "Native CPUs" :"Interactive")),
-			renderingTime, valid ? "OK" : "Wait", int(sampleSec / 1000.0),
+			renderingTime, validResult ? "OK" : "Wait", int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
 
@@ -269,5 +291,67 @@ void LuxMarkApp::RenderRefreshTimeout() {
 		}
 	}
 
-	mainWin->UpdateScreenLabel(ss.str().c_str(), valid);
+	mainWin->UpdateScreenLabel(ss.str().c_str(), validResult);
+}
+
+#define MOVE_STEP 0.5f
+#define ROTATE_STEP 4.f
+void LuxMarkApp::HandleMouseMoveEvent(QGraphicsSceneMouseEvent *event) {
+	const double minInterval = 0.5;
+
+	if (mode == INTERACTIVE) {
+		if (mouseButton0) {
+			// Check elapsed time since last update
+			if (WallClockTime() - lastMouseUpdate > minInterval) {
+				const qreal distX = event->lastPos().x() - mouseGrabLastX;
+				const qreal distY = event->lastPos().y() - mouseGrabLastY;
+
+				renderConfig->scene->camera->RotateDown(0.04f * distY * ROTATE_STEP);
+				renderConfig->scene->camera->RotateRight(0.04f * distX * ROTATE_STEP);
+
+				mouseGrabLastX = event->lastPos().x();
+				mouseGrabLastY = event->lastPos().y();
+
+				renderConfig->ReInit(false);
+				lastMouseUpdate = WallClockTime();
+			}
+		} else if (mouseButton2) {
+			// Check elapsed time since last update
+			if (WallClockTime() - lastMouseUpdate > minInterval) {
+				const qreal distX = event->lastPos().x() - mouseGrabLastX;
+				const qreal distY = event->lastPos().y() - mouseGrabLastY;
+
+				renderConfig->scene->camera->TranslateRight(0.04f * distX * MOVE_STEP);
+				renderConfig->scene->camera->TranslateBackward(0.04f * distY * MOVE_STEP);
+
+				mouseGrabLastX = event->lastPos().x();
+				mouseGrabLastY = event->lastPos().y();
+
+				renderConfig->ReInit(false);
+				lastMouseUpdate = WallClockTime();
+			}
+		}
+	}
+}
+
+void LuxMarkApp::HandleMousePressEvent(QGraphicsSceneMouseEvent *event) {
+	if (mode == INTERACTIVE) {
+		if ((event->button() == Qt::LeftButton) || (event->button() == Qt::RightButton)) {
+			if (event->button() == Qt::LeftButton) {
+				mouseButton0 = true;
+				mouseButton2 = false;
+			} else if (event->button() == Qt::RightButton) {
+				mouseButton0 = false;
+				mouseButton2 = true;
+			} else {
+				mouseButton0 = false;
+				mouseButton2 = false;
+			}
+
+			// Record start position
+			mouseGrabLastX = event->lastPos().x();
+			mouseGrabLastY = event->lastPos().y();
+			lastMouseUpdate = WallClockTime();
+		}
+	}
 }
