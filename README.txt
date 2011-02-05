@@ -12,6 +12,19 @@ SLG (SmallLuxGPU)
 SmallLuxGPU is a LuxRays demo and LuxRender v0.8 "proof of concept". You can find
 more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
 
+LuxMark
+=======
+
+LuxMark is OpenCL and CPU benchmark based on SLG.
+
+Authors
+=======
+
+David "Dade" Bucciarelli <davibu.at.interfree.it>
+Alain "Chiaroscuro" Ducharme <>
+Jens Verwiebe <>
+Tom "Tomb" Bench <tom.bech.at.gmail.com>
+
 Credits
 =======
 
@@ -30,4 +43,4 @@ A special thanks goes to:
 - OpenEXR authors http://www.openexr.com/ (not used anymore);
 - FreeImage open source image library. See http://freeimage.sourceforge.net for details.
 
-This software is release under GPL License (see COPYING.txt file).
+This software is released under GPL License (see COPYING.txt file).
