@@ -90,10 +90,7 @@ void LuxMarkApp::SetScene(const char *name) {
 	InitRendering(mode, name);
 }
 
-void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
-	mode = m;
-	sceneName = scnName;
-
+void LuxMarkApp::Stop() {
 	delete renderRefreshTimer;
 	renderRefreshTimer = NULL;
 
@@ -108,6 +105,13 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 	// Free the scene if required
 	delete renderConfig;
 	renderConfig = NULL;
+}
+
+void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
+	mode = m;
+	sceneName = scnName;
+
+	Stop();
 
 	if (!strcmp(scnName, SCENE_LUXBALL_HDR))
 		mainWin->SetSceneCheck(0);
