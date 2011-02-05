@@ -23,8 +23,6 @@
 
 #include <boost/thread/thread.hpp>
 
-#include <qt4/QtCore/qabstractitemmodel.h>
-
 #include "luxrays/core/context.h"
 #include "luxrays/core/device.h"
 #include "luxrays/core/virtualdevice.h"

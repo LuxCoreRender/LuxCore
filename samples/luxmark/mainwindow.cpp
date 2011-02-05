@@ -108,6 +108,9 @@ MainWindow::~MainWindow() {
 //------------------------------------------------------------------------------
 
 void MainWindow::exitApp() {
+	// Win32 refuses to exit without the following line
+	((LuxMarkApp *)qApp)->Stop();
+
 	exit(0);
 }
 
