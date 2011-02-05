@@ -711,7 +711,7 @@ void PathNativeRenderThread::Stop() {
 }
 
 void PathNativeRenderThread::RenderThreadImpl(PathNativeRenderThread *renderThread) {
-	cerr << "[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
+	LM_LOG_ENGINE("[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 
 	try {
 		RayBuffer *rayBuffer = renderThread->rayBuffer;
@@ -725,13 +725,13 @@ void PathNativeRenderThread::RenderThreadImpl(PathNativeRenderThread *renderThre
 			pathIntegrator->AdvancePaths(rayBuffer);
 		}
 
-		cerr << "[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		LM_LOG_ENGINE("[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
-		cerr << "[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		LM_LOG_ENGINE("[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	catch (cl::Error err) {
-		cerr << "[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
+		LM_LOG_ENGINE("[PathNativeRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")");
 	}
 #endif
 }
@@ -800,7 +800,7 @@ void PathDeviceRenderThread::Start() {
 	// Set renderThread priority
 	bool res = SetThreadRRPriority(renderThread);
 	if (res && !reportedPermissionError) {
-		cerr << "[PathDeviceRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
+		LM_LOG_ENGINE("[PathDeviceRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
 		reportedPermissionError = true;
 	}
 }
@@ -822,7 +822,7 @@ void PathDeviceRenderThread::Stop() {
 }
 
 void PathDeviceRenderThread::RenderThreadImpl(PathDeviceRenderThread *renderThread) {
-	cerr << "[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
+	LM_LOG_ENGINE("[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 
 	std::deque<RayBuffer *> todoBuffers;
 	for(size_t i = 0; i < PATH_DEVICE_RENDER_BUFFER_COUNT; i++)
@@ -845,13 +845,13 @@ void PathDeviceRenderThread::RenderThreadImpl(PathDeviceRenderThread *renderThre
 			todoBuffers.push_back(rayBuffer);
 		}
 
-		cerr << "[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		LM_LOG_ENGINE("[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
-		cerr << "[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		LM_LOG_ENGINE("[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	catch (cl::Error err) {
-		cerr << "[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
+		LM_LOG_ENGINE("[PathDeviceRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")");
 	}
 #endif
 }
@@ -891,7 +891,7 @@ PathRenderEngine::PathRenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmM
 
 	// Create and start render threads
 	const size_t renderThreadCount = intersectionDevices.size();
-	cerr << "Starting "<< renderThreadCount << " Path render threads" << endl;
+	LM_LOG_ENGINE("Starting "<< renderThreadCount << " Path render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
 			PathNativeRenderThread *t = new PathNativeRenderThread(i, seedBase, i / (float)renderThreadCount,
