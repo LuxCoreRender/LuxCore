@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>480</width>
-    <height>579</height>
+    <width>640</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,6 +21,10 @@
   </property>
   <property name="windowTitle">
    <string>About</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="resources.qrc">
+    <normaloff>:/images/resources/SLG_luxball_sppm_small.png</normaloff>:/images/resources/SLG_luxball_sppm_small.png</iconset>
   </property>
   <property name="modal">
    <bool>true</bool>
@@ -47,7 +51,7 @@
       <enum>Qt::RichText</enum>
      </property>
      <property name="pixmap">
-      <pixmap resource="resources.qrc">:/images/resources/SLG_luxball_sppm.png</pixmap>
+      <pixmap resource="resources.qrc">:/images/resources/SLG_Splash.png</pixmap>
      </property>
      <property name="alignment">
       <set>Qt::AlignHCenter|Qt::AlignTop</set>

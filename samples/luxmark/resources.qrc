@@ -1,7 +1,7 @@
 <RCC>
   <qresource prefix="images">
+    <file>resources/SLG_Splash.png</file>
     <file>resources/luxlogo_bg.png</file>
     <file>resources/SLG_luxball_sppm_small.png</file>
-    <file>resources/SLG_luxball_sppm.png</file>
   </qresource>
 </RCC>

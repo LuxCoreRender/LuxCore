@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'aboutdialog.ui'
 **
-** Created: Sat Feb 5 10:55:47 2011
+** Created: Sat Feb 5 11:11:00 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -36,12 +36,15 @@ public:
         if (AboutDialog->objectName().isEmpty())
             AboutDialog->setObjectName(QString::fromUtf8("AboutDialog"));
         AboutDialog->setWindowModality(Qt::ApplicationModal);
-        AboutDialog->resize(480, 579);
+        AboutDialog->resize(640, 700);
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(AboutDialog->sizePolicy().hasHeightForWidth());
         AboutDialog->setSizePolicy(sizePolicy);
+        QIcon icon;
+        icon.addFile(QString::fromUtf8(":/images/resources/SLG_luxball_sppm_small.png"), QSize(), QIcon::Normal, QIcon::Off);
+        AboutDialog->setWindowIcon(icon);
         AboutDialog->setModal(true);
         verticalLayout = new QVBoxLayout(AboutDialog);
         verticalLayout->setSpacing(0);
@@ -55,7 +58,7 @@ public:
         sizePolicy1.setHeightForWidth(AboutImage->sizePolicy().hasHeightForWidth());
         AboutImage->setSizePolicy(sizePolicy1);
         AboutImage->setTextFormat(Qt::RichText);
-        AboutImage->setPixmap(QPixmap(QString::fromUtf8(":/images/resources/SLG_luxball_sppm.png")));
+        AboutImage->setPixmap(QPixmap(QString::fromUtf8(":/images/resources/SLG_Splash.png")));
         AboutImage->setAlignment(Qt::AlignHCenter|Qt::AlignTop);
 
         verticalLayout->addWidget(AboutImage);
