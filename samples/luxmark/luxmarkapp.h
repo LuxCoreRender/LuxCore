@@ -48,7 +48,8 @@ public:
 	LuxMarkApp(int argc, char **argv);
 	~LuxMarkApp();
 	
-	void Init(void);
+	void Init();
+	void Stop();
 
 	void SetMode(LuxMarkAppMode m);
 	void SetScene(const char *name);
