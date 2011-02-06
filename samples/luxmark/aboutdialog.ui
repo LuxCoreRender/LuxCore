@@ -20,7 +20,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>About</string>
+   <string>About LuxMark</string>
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
