@@ -1,9 +1,9 @@
 LuxRays
 =======
 
-LuxRays is the part of Luxrender dedicated to accelerate the ray intersection
+LuxRays is the part of LuxRender dedicated to accelerate the ray intersection
 process by using GPUs. You can find more information about the ongoing effort of
-integrating OpenCL support in Luxrender at http://www.luxrender.net/wiki/index.php?title=Luxrender_and_OpenCL
+integrating OpenCL support in LuxRender at http://www.luxrender.net/wiki/index.php?title=Luxrender_and_OpenCL
 and at http://www.luxrender.net/wiki/index.php?title=LuxRays
 
 SLG (SmallLuxGPU)

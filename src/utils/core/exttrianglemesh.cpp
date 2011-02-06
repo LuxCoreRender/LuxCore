@@ -241,18 +241,18 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 			vertNormals[triangles[i].v[1]] += N;
 			vertNormals[triangles[i].v[2]] += N;
 		}
-		int printedWarning = 0;
+		//int printedWarning = 0;
 		for (unsigned int i = 0; i < vertexCount; ++i) {
 			vertNormals[i] = Normalize(vertNormals[i]);
 			// Check for degenerate triangles/normals, they can freeze the GPU
 			if (isnan(vertNormals[i].x) || isnan(vertNormals[i].y) || isnan(vertNormals[i].z)) {
-				if (printedWarning < 15) {
+				/*if (printedWarning < 15) {
 					LR_LOG(ctx, "The model contains a degenerate normal (index " << i << ")");
 					++printedWarning;
 				} else if (printedWarning == 15) {
 					LR_LOG(ctx, "The model contains more degenerate normals");
 					++printedWarning;
-				}
+				}*/
 				vertNormals[i] = Normal(0.f, 0.f, 1.f);
 			}
 		}
