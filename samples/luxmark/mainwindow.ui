@@ -134,6 +134,7 @@
     <addaction name="action_Benchmark_OpenCL_CPUs_GPUs"/>
     <addaction name="action_Benchmark_Native_CPUs"/>
     <addaction name="action_Interactive"/>
+    <addaction name="action_Pause"/>
    </widget>
    <widget class="QMenu" name="menu_Scene">
     <property name="title">
@@ -213,6 +214,14 @@
    </property>
    <property name="text">
     <string>Benchmark (&amp;Native CPUs-only)</string>
+   </property>
+  </action>
+  <action name="action_Pause">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Pause</string>
    </property>
   </action>
  </widget>
@@ -348,6 +357,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Pause</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setPauseMode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
@@ -358,5 +383,6 @@
   <slot>setInteractiveMode()</slot>
   <slot>setBenchmarkCPUsGPUsMode()</slot>
   <slot>setBenchmarkNativeMode()</slot>
+  <slot>setPauseMode()</slot>
  </slots>
 </ui>

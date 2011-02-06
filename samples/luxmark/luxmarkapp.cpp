@@ -133,7 +133,7 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
-	} else {
+	} else if (mode == INTERACTIVE) {
 		mainWin->SetModeCheck(3);
 
 		// Update timer
@@ -142,12 +142,17 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 		// Refresh the screen every 100ms in benchmark mode
 		renderRefreshTimer->start(100);
-	}
+	} else if (mode == PAUSE) {
+		mainWin->SetModeCheck(4);
+	} else
+		assert (false);
 
 	mainWin->ShowLogo();
 
-	// Start the engine init thread
-	engineInitThread = new boost::thread(boost::bind(LuxMarkApp::EngineInitThreadImpl, this));
+	if (mode != PAUSE) {
+		// Start the engine init thread
+		engineInitThread = new boost::thread(boost::bind(LuxMarkApp::EngineInitThreadImpl, this));
+	}
 }
 
 void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
@@ -267,7 +272,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 		if (benchmarkDone)
 			strcpy(validBuf, " (OK)");
 		else
-			sprintf(validBuf, " (Wait %dsecs)", Max<int>(120 - renderingTime, 0));
+			sprintf(validBuf, " (%dsecs remaining)", Max<int>(120 - renderingTime, 0));
 	}	
 
 	sprintf(buf, "[Mode: %s][Time: %dsecs%s][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
@@ -307,11 +312,13 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	mainWin->UpdateScreenLabel(ss.str().c_str(), benchmarkDone);
 
 	if (benchmarkDone) {
+		Stop();
+
 		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec);
 		dialog->exec();
 
-		// Restart the benchmark
-		InitRendering(mode, sceneName);
+		// Go in PAUSE mode
+		InitRendering(PAUSE, sceneName);
 	}
 }
 
