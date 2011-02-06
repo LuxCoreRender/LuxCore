@@ -69,7 +69,6 @@ private:
 
 	boost::thread *engineInitThread;
 	double renderingStartTime;
-	bool validResult;
 	bool engineInitDone;
 	RenderingConfig *renderConfig;
 

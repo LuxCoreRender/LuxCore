@@ -1244,10 +1244,7 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
     // Re-initialize the path
 
 	uint newPixelIndex;
-#if (PARAM_SAMPLE_PER_PIXEL > 0)
-	newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-	path->pixelIndex = newPixelIndex;
-#else
+#if (PARAM_SAMPLE_PER_PIXEL > 1)
 	const uint subpixelIndex = path->subpixelIndex;
 	if (subpixelIndex >= PARAM_SAMPLE_PER_PIXEL) {
 		newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
@@ -1257,6 +1254,9 @@ void TerminatePath(__global Path *path, __global Ray *ray, __global Pixel *frame
 		newPixelIndex = pixelIndex;
 		path->subpixelIndex = subpixelIndex + 1;
 	}
+#else
+	newPixelIndex = (pixelIndex + PARAM_PATH_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+	path->pixelIndex = newPixelIndex;
 #endif
 
 	GenerateRay(newPixelIndex, ray, seed
