@@ -88,6 +88,7 @@ private slots:
 	void setBenchmarkCPUsGPUsMode();
 	void setBenchmarkNativeMode();
 	void setInteractiveMode();
+	void setPauseMode();
 };
 
 #endif	/* _MAINWINDOW_H */

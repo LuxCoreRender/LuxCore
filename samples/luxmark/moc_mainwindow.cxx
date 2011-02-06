@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'mainwindow.h'
 **
-** Created: Sat Feb 5 10:23:22 2011
+** Created: Sun Feb 6 17:10:03 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.6.2)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_MainWindow[] = {
        4,       // revision
        0,       // classname
        0,    0, // classinfo
-       8,   14, // methods
+       9,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -39,6 +39,7 @@ static const uint qt_meta_data_MainWindow[] = {
       96,   11,   11,   11, 0x08,
      123,   11,   11,   11, 0x08,
      148,   11,   11,   11, 0x08,
+     169,   11,   11,   11, 0x08,
 
        0        // eod
 };
@@ -49,6 +50,7 @@ static const char qt_meta_stringdata_MainWindow[] = {
     "setBenchmarkGPUsMode()\0"
     "setBenchmarkCPUsGPUsMode()\0"
     "setBenchmarkNativeMode()\0setInteractiveMode()\0"
+    "setPauseMode()\0"
 };
 
 const QMetaObject MainWindow::staticMetaObject = {
@@ -88,9 +90,10 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         case 5: setBenchmarkCPUsGPUsMode(); break;
         case 6: setBenchmarkNativeMode(); break;
         case 7: setInteractiveMode(); break;
+        case 8: setPauseMode(); break;
         default: ;
         }
-        _id -= 8;
+        _id -= 9;
     }
     return _id;
 }
