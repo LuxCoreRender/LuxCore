@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'luxmarkapp.h'
 **
-** Created: Thu Feb 3 15:25:54 2011
+** Created: Sun Feb 6 09:27:46 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.6.2)
 **
 ** WARNING! All changes made in this file will be lost!

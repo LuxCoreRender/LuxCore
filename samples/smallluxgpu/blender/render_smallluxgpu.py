@@ -167,8 +167,8 @@ class SLGBP:
         if scene.slg.cameramotionblur:
             scene.frame_set(scene.frame_current - 1)
             SLGBP.camdirBlur = mathutils.Vector((0, 0, -10)) * scene.camera.matrix_world 
-            SLGBP.camlocBlur = scene.camera.matrix_world.translation_part()
-            SLGBP.camupBlur = mathutils.Vector((0,1,0)) * scene.camera.matrix_world.rotation_part()
+            SLGBP.camlocBlur = scene.camera.matrix_world.to_translation()
+            SLGBP.camupBlur = mathutils.Vector((0,1,0)) * scene.camera.matrix_world.to_3x3()
             scene.frame_set(scene.frame_current + 1)
 
         return True
@@ -241,9 +241,9 @@ class SLGBP:
         camdir = mathutils.Vector((0, 0, -1)) * cam.matrix_world 
 
         # Camera.location not always updated, but matrix is
-        camloc = cam.matrix_world.translation_part()
+        camloc = cam.matrix_world.to_translation()
         scn['scene.camera.lookat'] = '{} {} {} {} {} {}'.format(ff(camloc.x),ff(camloc.y),ff(camloc.z),ff(camdir.x),ff(camdir.y),ff(camdir.z))
-        camup = mathutils.Vector((0,1,0)) * cam.matrix_world.rotation_part()
+        camup = mathutils.Vector((0,1,0)) * cam.matrix_world.to_3x3()
         scn['scene.camera.up'] = '{} {} {}'.format(ff(camup.x),ff(camup.y),ff(camup.z))
 
         scn['scene.camera.fieldofview'] = format(cam.data.angle*180.0/3.1415926536,'g')
@@ -260,7 +260,7 @@ class SLGBP:
                 scn['scene.camera.motionblur.up'] = '{} {} {}'.format(ff(SLGBP.camupBlur.x),ff(SLGBP.camupBlur.y),ff(SLGBP.camupBlur.z))
 
         # DOF
-        fdist = (camloc-cam.data.dof_object.matrix_world.translation_part()).magnitude if cam.data.dof_object else cam.data.dof_distance
+        fdist = (camloc-cam.data.dof_object.matrix_world.to_translation()).magnitude if cam.data.dof_object else cam.data.dof_distance
         if fdist:
             scn['scene.camera.focaldistance'] = ff(fdist)
             scn['scene.camera.lensradius'] = ff(cam.data.slg_lensradius)
@@ -290,7 +290,7 @@ class SLGBP:
         # Sun lamp
         if SLGBP.sun:
             # We only support one visible sun lamp
-            sundir = mathutils.Vector((0,0,1)) * SLGBP.sun.matrix_world.rotation_part()
+            sundir = mathutils.Vector((0,0,1)) * SLGBP.sun.matrix_world.to_3x3()
             sky = SLGBP.sun.data.sky
             # If envmap is also defined, only sun component is exported
             if not SLGBP.infinitelight and sky.use_atmosphere:
@@ -421,9 +421,9 @@ class SLGBP:
                                 if do.settings.use_whole_group:
                                     tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world * mathutils.Matrix.Scale(p.size,4) 
                                 elif do.settings.use_global_dupli:
-                                    tm = mathutils.Matrix.Translation(so.matrix_world.translation_part()) * mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.rotation_part().to_4x4() * mathutils.Matrix.Scale(p.size,4)
+                                    tm = mathutils.Matrix.Translation(so.matrix_world.to_translation()) * mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.to_3x3().to_4x4() * mathutils.Matrix.Scale(p.size,4)
                                 else:
-                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.rotation_part().to_4x4() * mathutils.Matrix.Scale(p.size,4)
+                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.to_3x3().to_4x4() * mathutils.Matrix.Scale(p.size,4)
                                 objscn(plyn, matn, objn, mat, tm)
                     else:
                         objn = do.name.replace('.','_')+plyn

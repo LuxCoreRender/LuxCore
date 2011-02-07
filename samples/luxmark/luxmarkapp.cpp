@@ -93,10 +93,7 @@ void LuxMarkApp::SetScene(const char *name) {
 	InitRendering(mode, name);
 }
 
-void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
-	mode = m;
-	sceneName = scnName;
-
+void LuxMarkApp::Stop() {
 	delete renderRefreshTimer;
 	renderRefreshTimer = NULL;
 
@@ -111,6 +108,13 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 	// Free the scene if required
 	delete renderConfig;
 	renderConfig = NULL;
+}
+
+void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
+	mode = m;
+	sceneName = scnName;
+
+	Stop();
 
 	if (!strcmp(scnName, SCENE_LUXBALL_HDR))
 		mainWin->SetSceneCheck(0);
@@ -132,7 +136,7 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
-	} else {
+	} else if (mode == INTERACTIVE) {
 		mainWin->SetModeCheck(3);
 
 		// Update timer
@@ -141,12 +145,17 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 		// Refresh the screen every 100ms in benchmark mode
 		renderRefreshTimer->start(100);
-	}
+	} else if (mode == PAUSE) {
+		mainWin->SetModeCheck(4);
+	} else
+		assert (false);
 
 	mainWin->ShowLogo();
 
-	// Start the engine init thread
-	engineInitThread = new boost::thread(boost::bind(LuxMarkApp::EngineInitThreadImpl, this));
+	if (mode != PAUSE) {
+		// Start the engine init thread
+		engineInitThread = new boost::thread(boost::bind(LuxMarkApp::EngineInitThreadImpl, this));
+	}
 }
 
 void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
@@ -161,12 +170,14 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		prop.SetString("opencl.cpu.use", "0");
 		prop.SetString("opencl.gpu.use", "1");
 		prop.SetString("opencl.latency.mode", "1");
+		prop.SetString("sampler.spp", "4");
 	} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
 		prop.SetString("renderengine.type", "3");
 		prop.SetString("opencl.nativethread.count", "0");
 		prop.SetString("opencl.cpu.use", "1");
 		prop.SetString("opencl.gpu.use", "1");
 		prop.SetString("opencl.latency.mode", "1");
+		prop.SetString("sampler.spp", "4");
 	} else if (app->mode == BENCHMARK_NATIVE) {
 		prop.SetString("renderengine.type", "0");
 		stringstream ss;
@@ -175,12 +186,14 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		prop.SetString("opencl.cpu.use", "0");
 		prop.SetString("opencl.gpu.use", "0");
 		prop.SetString("opencl.latency.mode", "0");
+		prop.SetString("sampler.spp", "4");
 	} else if (app->mode == INTERACTIVE) {
 		prop.SetString("renderengine.type", "3");
 		prop.SetString("opencl.nativethread.count", "0");
 		prop.SetString("opencl.cpu.use", "0");
 		prop.SetString("opencl.gpu.use", "1");
 		prop.SetString("opencl.latency.mode", "1");
+		prop.SetString("sampler.spp", "1");
 	} else
 		assert (false);
 
@@ -191,7 +204,6 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 	app->hardwareTreeModel = new HardwareTreeModel(app->renderConfig->GetAvailableDeviceDescriptions());
 
 	// Done
-	app->validResult = false;
 	app->renderingStartTime = luxrays::WallClockTime();
 	app->engineInitDone = true;
 }
@@ -251,20 +263,26 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	}
 
 	// After 120secs of benchmark, show the result dialog
-	if (!validResult && (renderingTime > 120) && (mode != INTERACTIVE)) {
-		validResult = true;
-		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec);
-
-		dialog->exec();
-	}
+	bool benchmarkDone = (renderingTime > 120) && (mode != INTERACTIVE);
 
 	char buf[512];
 	stringstream ss("");
-	sprintf(buf, "[Mode: %s][Time: %dsecs (%s)][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
+
+	char validBuf[128];
+	if (mode == INTERACTIVE)
+		strcpy(validBuf, "");
+	else {
+		if (benchmarkDone)
+			strcpy(validBuf, " (OK)");
+		else
+			sprintf(validBuf, " (%dsecs remaining)", Max<int>(120 - renderingTime, 0));
+	}	
+
+	sprintf(buf, "[Mode: %s][Time: %dsecs%s][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
 			(mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
 				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
 					((mode == BENCHMARK_NATIVE) ? "Native CPUs" :"Interactive")),
-			renderingTime, validResult ? "OK" : "Wait", int(sampleSec / 1000.0),
+			renderingTime, validBuf, int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
 
@@ -294,7 +312,17 @@ void LuxMarkApp::RenderRefreshTimeout() {
 		}
 	}
 
-	mainWin->UpdateScreenLabel(ss.str().c_str(), validResult);
+	mainWin->UpdateScreenLabel(ss.str().c_str(), benchmarkDone);
+
+	if (benchmarkDone) {
+		Stop();
+
+		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec);
+		dialog->exec();
+
+		// Go in PAUSE mode
+		InitRendering(PAUSE, sceneName);
+	}
 }
 
 #define MOVE_STEP 0.5f
