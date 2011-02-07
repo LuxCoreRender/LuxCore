@@ -367,4 +367,33 @@ add_custom_command(
 
 add_custom_target(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
 
+###########################################################################
+#
+# LuxMark binary directory
+#
+###########################################################################
+
+set(LUXMARK_BIN_DIR "luxmark-v0.1")
+
+add_custom_command(
+    OUTPUT "${LUXMARK_BIN_DIR}"
+    COMMAND rm -rf ${LUXMARK_BIN_DIR}
+    COMMAND mkdir ${LUXMARK_BIN_DIR}
+    COMMAND cp -r samples/luxmark/scenes ${LUXMARK_BIN_DIR}
+    COMMAND cp samples/luxmark/exe/*.* ${LUXMARK_BIN_DIR}
+    COMMAND cp bin/luxmark ${LUXMARK_BIN_DIR}
+    COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXMARK_BIN_DIR}
+    COMMENT "Building ${LUXMARK_BIN_DIR}")
+
+add_custom_command(
+    OUTPUT "${LUXMARK_BIN_DIR}.zip"
+    COMMAND zip -r ${LUXMARK_BIN_DIR}.zip ${LUXMARK_BIN_DIR}
+    COMMAND rm -rf ${LUXMARK_BIN_DIR}
+    DEPENDS ${LUXMARK_BIN_DIR}
+    COMMENT "Building ${LUXMARK_BIN_DIR}.zip")
+
+add_custom_target(luxmark_zip DEPENDS "${LUXMARK_BIN_DIR}.zip")
+
+################################################################################
+
 message(STATUS ${INCLUDE_DIRS})

@@ -108,6 +108,9 @@ MainWindow::~MainWindow() {
 //------------------------------------------------------------------------------
 
 void MainWindow::exitApp() {
+	// Win32 refuses to exit without the following line
+	((LuxMarkApp *)qApp)->Stop();
+
 	exit(0);
 }
 
@@ -147,6 +150,11 @@ void MainWindow::setInteractiveMode() {
 	((LuxMarkApp *)qApp)->SetMode(INTERACTIVE);
 }
 
+void MainWindow::setPauseMode() {
+	LM_LOG("Set Pause mode");
+	((LuxMarkApp *)qApp)->SetMode(PAUSE);
+}
+
 //------------------------------------------------------------------------------
 
 void MainWindow::ShowLogo() {
@@ -172,21 +180,31 @@ void MainWindow::SetModeCheck(const int index) {
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(false);
+		ui->action_Pause->setChecked(false);
 	} else if (index == 1) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(true);
 		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(false);
+		ui->action_Pause->setChecked(false);
 	} else if (index == 2) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_Native_CPUs->setChecked(true);
 		ui->action_Interactive->setChecked(false);
+		ui->action_Pause->setChecked(false);
 	} else if (index == 3) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(true);
+		ui->action_Pause->setChecked(false);
+	} else if (index == 4) {
+		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
+		ui->action_Benchmark_Native_CPUs->setChecked(false);
+		ui->action_Interactive->setChecked(false);
+		ui->action_Pause->setChecked(true);
 	} else
 		assert(false);
 }

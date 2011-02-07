@@ -27,7 +27,6 @@ ResultDialog::ResultDialog(LuxMarkAppMode mode, const char *sceneName,
 		ui(new Ui::ResultDialog) {
 	ui->setupUi(this);
 
-
 	this->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	ui->modeLabel->setText((mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
 				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :

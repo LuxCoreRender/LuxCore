@@ -1384,7 +1384,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 			LM_LOG_ENGINE("WARNING: it is not possible to enable PathGPU OpenGL interoperability");
 		}
 
-		samplePerPixel = 1;
+		//samplePerPixel = 1;
 		dynamicCamera = true;
 	} else {
 		enableOpenGLInterop = false;
