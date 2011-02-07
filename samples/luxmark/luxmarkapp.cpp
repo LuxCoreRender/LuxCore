@@ -70,6 +70,9 @@ LuxMarkApp::~LuxMarkApp() {
 }
 
 void LuxMarkApp::Init(void) {
+	// Set numeric format to standard to avoid errors when parsing files
+	setlocale(LC_ALL, "C");
+
 	mainWin = new MainWindow();
 	mainWin->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	mainWin->show();
