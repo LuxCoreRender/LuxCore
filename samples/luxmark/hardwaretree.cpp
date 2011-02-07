@@ -96,6 +96,7 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 	HardwareTreeItem *oclGPUDev = new HardwareTreeItem("GPUs");
 	oclDev->appendChild(oclGPUDev);
 
+#ifndef LUXRAYS_DISABLE_OPENCL
 	for (size_t i = 0; i < devDescs.size(); ++i) {
 		DeviceDescription *devDesc = devDescs[i];
 
@@ -116,6 +117,7 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 				oclGPUDev->appendChild(newNode);
 		}
 	}
+#endif
 }
 
 HardwareTreeModel::~HardwareTreeModel() {

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'aboutdialog.ui'
 **
-** Created: Sun Feb 6 08:43:46 2011
+** Created: Mon Feb 7 10:17:02 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -92,8 +92,8 @@ public:
 "</style></head><body style=\" font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">LuxRays</span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"></p>\n"
-"<p align=\"justify\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">LuxRays is the part of <a href=\"http://www.luxrender.net\"><span style=\" text-decoration: underline; color:#0000ff;\">Luxrender</span></a> dedicated to accelerate the ray intersection process by using GPUs. You can find"
-                        " more information about the ongoing effort of integrating OpenCL support in Luxrender at <a href=\"http://www.luxrender.net/wiki/index.php?title=Luxrender_and_OpenCL\"><span style=\" text-decoration: underline; color:#0000ff;\">Luxrender and OpenCL Wiki </span></a>and at <a href=\"http://www.luxrender.net/wiki/index.php?title=LuxRays\"><span style=\" text-decoration: underline; color:#0000ff;\">LuxRays Wiki</span></a>.</p>\n"
+"<p align=\"justify\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">LuxRays is the part of <a href=\"http://www.luxrender.net\"><span style=\" text-decoration: underline; color:#0000ff;\">LuxRender</span></a> dedicated to accelerate the ray intersection process by using GPUs. You can find"
+                        " more information about the ongoing effort of integrating OpenCL support in LuxRender at <a href=\"http://www.luxrender.net/wiki/index.php?title=Luxrender_and_OpenCL\"><span style=\" text-decoration: underline; color:#0000ff;\">Luxrender and OpenCL Wiki </span></a>and at <a href=\"http://www.luxrender.net/wiki/index.php?title=LuxRays\"><span style=\" text-decoration: underline; color:#0000ff;\">LuxRays Wiki</span></a>.</p>\n"
 "<p align=\"justify\" style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"></p>\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">SLG (SmallLuxGPU)</span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"></p>\n"

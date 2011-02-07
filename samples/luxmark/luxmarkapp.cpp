@@ -285,7 +285,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 			renderingTime, validBuf, int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
-
+#ifndef LUXRAYS_DISABLE_OPENCL
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU)) {
 		ss << "\n\nOpenCL rendering devices:";
 		double minPerf = intersectionDevices[0]->GetPerformance();
@@ -311,7 +311,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 			}
 		}
 	}
-
+#endif
 	mainWin->UpdateScreenLabel(ss.str().c_str(), benchmarkDone);
 
 	if (benchmarkDone) {
