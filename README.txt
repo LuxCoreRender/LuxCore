@@ -41,6 +41,8 @@ A special thanks goes to:
 - libPNG authors http://www.libpng.org;
 - zlib authors http://www.zlib.net/ (not used anymore);
 - OpenEXR authors http://www.openexr.com/ (not used anymore);
-- FreeImage open source image library. See http://freeimage.sourceforge.net for details.
+- FreeImage open source image library. See http://freeimage.sourceforge.net for details;
+- http://www.blendswap.com/3D-models/vehicles/audi-r8/ for Audi R8 model;
+- http://www.arroway-textures.com/ for few texture maps.
 
 This software is released under GPL License (see COPYING.txt file).

@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'mainwindow.h'
 **
-** Created: Mon Feb 7 10:17:01 2011
+** Created: Tue Feb 8 09:57:29 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.6.2)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_MainWindow[] = {
        4,       // revision
        0,       // classname
        0,    0, // classinfo
-       9,   14, // methods
+      10,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -36,10 +36,11 @@ static const uint qt_meta_data_MainWindow[] = {
       34,   11,   11,   11, 0x08,
       52,   11,   11,   11, 0x08,
       73,   11,   11,   11, 0x08,
-      96,   11,   11,   11, 0x08,
-     123,   11,   11,   11, 0x08,
-     148,   11,   11,   11, 0x08,
-     169,   11,   11,   11, 0x08,
+      91,   11,   11,   11, 0x08,
+     114,   11,   11,   11, 0x08,
+     141,   11,   11,   11, 0x08,
+     166,   11,   11,   11, 0x08,
+     187,   11,   11,   11, 0x08,
 
        0        // eod
 };
@@ -47,7 +48,7 @@ static const uint qt_meta_data_MainWindow[] = {
 static const char qt_meta_stringdata_MainWindow[] = {
     "MainWindow\0\0exitApp()\0showAbout()\0"
     "setLuxBallScene()\0setLuxBallHDRScene()\0"
-    "setBenchmarkGPUsMode()\0"
+    "setAudiRS8Scene()\0setBenchmarkGPUsMode()\0"
     "setBenchmarkCPUsGPUsMode()\0"
     "setBenchmarkNativeMode()\0setInteractiveMode()\0"
     "setPauseMode()\0"
@@ -86,14 +87,15 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         case 1: showAbout(); break;
         case 2: setLuxBallScene(); break;
         case 3: setLuxBallHDRScene(); break;
-        case 4: setBenchmarkGPUsMode(); break;
-        case 5: setBenchmarkCPUsGPUsMode(); break;
-        case 6: setBenchmarkNativeMode(); break;
-        case 7: setInteractiveMode(); break;
-        case 8: setPauseMode(); break;
+        case 4: setAudiRS8Scene(); break;
+        case 5: setBenchmarkGPUsMode(); break;
+        case 6: setBenchmarkCPUsGPUsMode(); break;
+        case 7: setBenchmarkNativeMode(); break;
+        case 8: setInteractiveMode(); break;
+        case 9: setPauseMode(); break;
         default: ;
         }
-        _id -= 9;
+        _id -= 10;
     }
     return _id;
 }

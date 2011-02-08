@@ -1,0 +1,21 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: SLGAudiRS8.blend
+element vertex 4
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+property float s
+property float t
+element face 2
+property list uchar uint vertex_indices
+end_header
+150.000000 149.999985 -0.997490 0 -0 1 -11.5938 -11.5198
+-149.999939 150.000061 -0.997490 0 -0 1 -11.5198 12.5938
+-150.000015 -149.999969 -0.997490 0 -0 1 12.5938 12.5198
+150.000000 -150.000000 -0.997490 0 -0 1 12.5198 -11.5938
+3 0 1 2
+3 0 2 3

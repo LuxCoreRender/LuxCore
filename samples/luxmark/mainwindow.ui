@@ -111,7 +111,7 @@
      <x>0</x>
      <y>0</y>
      <width>1024</width>
-     <height>25</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -142,6 +142,7 @@
     </property>
     <addaction name="action_LuxBall_HDR"/>
     <addaction name="action_LuxBall"/>
+    <addaction name="action_Audi_RS8"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Mode"/>
@@ -186,7 +187,7 @@
     <string>LuxBall &amp;HDR (262K triangles)</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+H</string>
+    <string>Ctrl+C</string>
    </property>
   </action>
   <action name="action_LuxBall">
@@ -222,6 +223,17 @@
    </property>
    <property name="text">
     <string>&amp;Pause</string>
+   </property>
+  </action>
+  <action name="action_Audi_RS8">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Audi RS8 (668K triangles)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+8</string>
    </property>
   </action>
  </widget>
@@ -373,6 +385,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Audi_RS8</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setAudiRS8Scene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
@@ -384,5 +412,6 @@
   <slot>setBenchmarkCPUsGPUsMode()</slot>
   <slot>setBenchmarkNativeMode()</slot>
   <slot>setPauseMode()</slot>
+  <slot>setAudiRS8Scene()</slot>
  </slots>
 </ui>

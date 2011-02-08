@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Mon Feb 7 10:17:02 2011
+** Created: Tue Feb 8 12:40:23 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -41,6 +41,7 @@ public:
     QAction *action_Benchmark_OpenCL_CPUs_GPUs;
     QAction *action_Benchmark_Native_CPUs;
     QAction *action_Pause;
+    QAction *action_Audi_RS8;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout_2;
     QSplitter *splitter_2;
@@ -92,6 +93,9 @@ public:
         action_Pause = new QAction(MainWindow);
         action_Pause->setObjectName(QString::fromUtf8("action_Pause"));
         action_Pause->setCheckable(true);
+        action_Audi_RS8 = new QAction(MainWindow);
+        action_Audi_RS8->setObjectName(QString::fromUtf8("action_Audi_RS8"));
+        action_Audi_RS8->setCheckable(true);
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
@@ -151,7 +155,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
-        menubar->setGeometry(QRect(0, 0, 1024, 25));
+        menubar->setGeometry(QRect(0, 0, 1024, 26));
         menu_File = new QMenu(menubar);
         menu_File->setObjectName(QString::fromUtf8("menu_File"));
         menu_Help = new QMenu(menubar);
@@ -178,6 +182,7 @@ public:
         menu_Mode->addAction(action_Pause);
         menu_Scene->addAction(action_LuxBall_HDR);
         menu_Scene->addAction(action_LuxBall);
+        menu_Scene->addAction(action_Audi_RS8);
 
         retranslateUi(MainWindow);
         QObject::connect(action_Quit, SIGNAL(triggered()), MainWindow, SLOT(exitApp()));
@@ -189,6 +194,7 @@ public:
         QObject::connect(action_Benchmark_OpenCL_GPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkGPUsMode()));
         QObject::connect(action_Benchmark_Native_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkNativeMode()));
         QObject::connect(action_Pause, SIGNAL(triggered()), MainWindow, SLOT(setPauseMode()));
+        QObject::connect(action_Audi_RS8, SIGNAL(triggered()), MainWindow, SLOT(setAudiRS8Scene()));
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -202,12 +208,14 @@ public:
         action_Benchmark_OpenCL_GPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL &GPUs-only)", 0, QApplication::UnicodeUTF8));
         action_Interactive->setText(QApplication::translate("MainWindow", "&Interactive (OpenCL GPUs-only)", 0, QApplication::UnicodeUTF8));
         action_LuxBall_HDR->setText(QApplication::translate("MainWindow", "LuxBall &HDR (262K triangles)", 0, QApplication::UnicodeUTF8));
-        action_LuxBall_HDR->setShortcut(QApplication::translate("MainWindow", "Ctrl+H", 0, QApplication::UnicodeUTF8));
+        action_LuxBall_HDR->setShortcut(QApplication::translate("MainWindow", "Ctrl+C", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall  (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setShortcut(QApplication::translate("MainWindow", "Ctrl+L", 0, QApplication::UnicodeUTF8));
         action_Benchmark_OpenCL_CPUs_GPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL CPUs &+ GPUs)", 0, QApplication::UnicodeUTF8));
         action_Benchmark_Native_CPUs->setText(QApplication::translate("MainWindow", "Benchmark (&Native CPUs-only)", 0, QApplication::UnicodeUTF8));
         action_Pause->setText(QApplication::translate("MainWindow", "&Pause", 0, QApplication::UnicodeUTF8));
+        action_Audi_RS8->setText(QApplication::translate("MainWindow", "Audi RS8 (668K triangles)", 0, QApplication::UnicodeUTF8));
+        action_Audi_RS8->setShortcut(QApplication::translate("MainWindow", "Ctrl+8", 0, QApplication::UnicodeUTF8));
         hardwareDevicesLabel->setText(QApplication::translate("MainWindow", "Hardware Devices", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));

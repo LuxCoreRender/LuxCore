@@ -130,6 +130,11 @@ void MainWindow::setLuxBallHDRScene() {
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_HDR);
 }
 
+void MainWindow::setAudiRS8Scene() {
+	LM_LOG("Set Audi RS8 scene");
+	((LuxMarkApp *)qApp)->SetScene(SCENE_AUDI_RS8);
+}
+
 void MainWindow::setBenchmarkGPUsMode() {
 	LM_LOG("Set Benchmark GPUs mode");
 	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_OCL_GPU);
@@ -213,9 +218,15 @@ void MainWindow::SetSceneCheck(const int index) {
 	if (index == 0) {
 		ui->action_LuxBall_HDR->setChecked(true);
 		ui->action_LuxBall->setChecked(false);
+		ui->action_Audi_RS8->setChecked(false);
 	} else if (index == 1) {
 		ui->action_LuxBall_HDR->setChecked(false);
 		ui->action_LuxBall->setChecked(true);
+		ui->action_Audi_RS8->setChecked(false);
+	} else if (index == 2) {
+		ui->action_LuxBall_HDR->setChecked(false);
+		ui->action_LuxBall->setChecked(false);
+		ui->action_Audi_RS8->setChecked(true);
 	} else
 		assert(false);
 
