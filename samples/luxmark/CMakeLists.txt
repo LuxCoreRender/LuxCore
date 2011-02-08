@@ -20,7 +20,7 @@
 ###########################################################################
 
 set(LUXMARK_VERSION_MAJOR 0)
-set(LUXMARK_VERSION_MINOR 1)
+set(LUXMARK_VERSION_MINOR 2)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
