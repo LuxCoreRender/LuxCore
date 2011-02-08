@@ -107,5 +107,54 @@ set(LUXMARK_SRCS
 	${LUXMARK_UI_HDRS}
 	)
 
-add_executable(luxmark ${LUXMARK_SRCS})
-target_link_libraries(luxmark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
+#############################################################################
+#
+#  APPLE CUSTOM GUI_TYPE MACOSX_BUNDLE 
+#
+#############################################################################
+
+IF(APPLE)
+	ADD_CUSTOM_TARGET(dist DEPENDS LuxMark)
+	ADD_CUSTOM_COMMAND(
+	TARGET dist POST_BUILD
+	COMMAND rm -rf LuxMark.app 
+	COMMAND mkdir LuxMark.app 
+	COMMAND mkdir LuxMark.app/Contents 
+	COMMAND mkdir LuxMark.app/Contents/MacOS 
+#	COMMAND mkdir LuxMark.app/Contents/Resources
+#	COMMAND cp ../macos/Info.plist LuxMark.app/Contents
+#	COMMAND cp LuxMark.icns LuxMark.app/Contents/Resources
+	COMMAND echo APPLnone > LuxMark.app/Contents/PkgInfo
+	COMMAND cp LuxMark LuxMark.app/Contents/MacOS/LuxMark)
+
+	SET(GUI_TYPE MACOSX_BUNDLE)
+	# SET(MACOSX_BUNDLE_LONG_VERSION_STRING "${OPENSCENEGRAPH_MAJOR_VERSION}.${OPENSCENEGRAPH_MINOR_VERSION}.${OPENSCENEGRAPH_PATCH_VERSION}")
+	# Short Version is the "marketing version". It is the version
+	# the user sees in an information panel.
+	SET(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VERSION}")
+	# Bundle version is the version the OS looks at.
+	SET(MACOSX_BUNDLE_BUNDLE_VERSION "${VERSION}")
+	SET(MACOSX_BUNDLE_GUI_IDENTIFIER "org.luxrenderk.luxrender" )
+	SET(MACOSX_BUNDLE_BUNDLE_NAME "LuxMark" )
+	SET(MACOSX_BUNDLE_ICON_FILE "LuxMark.icns")
+	# SET(MACOSX_BUNDLE_COPYRIGHT "")
+	# SET(MACOSX_BUNDLE_INFO_STRING "Info string, localized?")
+ENDIF(APPLE)
+
+#############################################################################
+
+if(APPLE)
+	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
+	target_link_libraries(LuxMark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
+	ADD_CUSTOM_COMMAND(
+			TARGET LuxMark POST_BUILD
+				COMMAND rm -rf ../../bin/release/LuxMark.app/Contents/Resources
+				COMMAND mkdir ../../bin/release/LuxMark.app/Contents/Resources
+				COMMAND cp ../../../macos/icons/luxrender.icns ../../bin/release/LuxMark.app/Contents/Resources/
+				COMMAND mv ../../bin/release/LuxMark.app/Contents/Resources/luxrender.icns ../../bin/release/LuxMark.app/Contents/Resources/LuxMark.icns
+#				COMMAND macdeployqt ../../bin/release/LuxMark.app ### bundling Qt frameworks ###
+				)
+else(APPLE)
+	add_executable(luxmark ${LUXMARK_SRCS})
+	target_link_libraries(luxmark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
+endif(APPLE)
