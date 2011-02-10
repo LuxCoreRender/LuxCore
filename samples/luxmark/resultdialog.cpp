@@ -30,7 +30,8 @@ ResultDialog::ResultDialog(LuxMarkAppMode mode, const char *sceneName,
 	this->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	ui->modeLabel->setText((mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
 				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
-					((mode == BENCHMARK_NATIVE) ? "Native CPUs" :"Interactive")));
+					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" :
+						((mode == BENCHMARK_NATIVE) ? "Native CPUs" :"Interactive"))));
 	ui->sceneLabel->setText(sceneName);
 	ui->resultLCD->display(int(sampleSecs / 1000.0));
 }

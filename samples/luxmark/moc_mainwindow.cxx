@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'mainwindow.h'
 **
-** Created: Tue Feb 8 09:57:29 2011
+** Created: Thu Feb 10 10:18:25 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.6.2)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_MainWindow[] = {
        4,       // revision
        0,       // classname
        0,    0, // classinfo
-      10,   14, // methods
+      11,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -39,8 +39,9 @@ static const uint qt_meta_data_MainWindow[] = {
       91,   11,   11,   11, 0x08,
      114,   11,   11,   11, 0x08,
      141,   11,   11,   11, 0x08,
-     166,   11,   11,   11, 0x08,
-     187,   11,   11,   11, 0x08,
+     164,   11,   11,   11, 0x08,
+     189,   11,   11,   11, 0x08,
+     210,   11,   11,   11, 0x08,
 
        0        // eod
 };
@@ -50,8 +51,8 @@ static const char qt_meta_stringdata_MainWindow[] = {
     "setLuxBallScene()\0setLuxBallHDRScene()\0"
     "setAudiRS8Scene()\0setBenchmarkGPUsMode()\0"
     "setBenchmarkCPUsGPUsMode()\0"
-    "setBenchmarkNativeMode()\0setInteractiveMode()\0"
-    "setPauseMode()\0"
+    "setBenchmarkCPUsMode()\0setBenchmarkNativeMode()\0"
+    "setInteractiveMode()\0setPauseMode()\0"
 };
 
 const QMetaObject MainWindow::staticMetaObject = {
@@ -90,12 +91,13 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         case 4: setAudiRS8Scene(); break;
         case 5: setBenchmarkGPUsMode(); break;
         case 6: setBenchmarkCPUsGPUsMode(); break;
-        case 7: setBenchmarkNativeMode(); break;
-        case 8: setInteractiveMode(); break;
-        case 9: setPauseMode(); break;
+        case 7: setBenchmarkCPUsMode(); break;
+        case 8: setBenchmarkNativeMode(); break;
+        case 9: setInteractiveMode(); break;
+        case 10: setPauseMode(); break;
         default: ;
         }
-        _id -= 10;
+        _id -= 11;
     }
     return _id;
 }

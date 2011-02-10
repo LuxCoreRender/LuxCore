@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Tue Feb 8 12:40:23 2011
+** Created: Thu Feb 10 10:25:39 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -42,6 +42,7 @@ public:
     QAction *action_Benchmark_Native_CPUs;
     QAction *action_Pause;
     QAction *action_Audi_RS8;
+    QAction *action_Benchmark_OpenCL_CPUs;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout_2;
     QSplitter *splitter_2;
@@ -96,6 +97,9 @@ public:
         action_Audi_RS8 = new QAction(MainWindow);
         action_Audi_RS8->setObjectName(QString::fromUtf8("action_Audi_RS8"));
         action_Audi_RS8->setCheckable(true);
+        action_Benchmark_OpenCL_CPUs = new QAction(MainWindow);
+        action_Benchmark_OpenCL_CPUs->setObjectName(QString::fromUtf8("action_Benchmark_OpenCL_CPUs"));
+        action_Benchmark_OpenCL_CPUs->setCheckable(true);
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
@@ -177,6 +181,7 @@ public:
         menu_Help->addAction(action_About);
         menu_Mode->addAction(action_Benchmark_OpenCL_GPUs);
         menu_Mode->addAction(action_Benchmark_OpenCL_CPUs_GPUs);
+        menu_Mode->addAction(action_Benchmark_OpenCL_CPUs);
         menu_Mode->addAction(action_Benchmark_Native_CPUs);
         menu_Mode->addAction(action_Interactive);
         menu_Mode->addAction(action_Pause);
@@ -195,6 +200,7 @@ public:
         QObject::connect(action_Benchmark_Native_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkNativeMode()));
         QObject::connect(action_Pause, SIGNAL(triggered()), MainWindow, SLOT(setPauseMode()));
         QObject::connect(action_Audi_RS8, SIGNAL(triggered()), MainWindow, SLOT(setAudiRS8Scene()));
+        QObject::connect(action_Benchmark_OpenCL_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCPUsMode()));
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -216,6 +222,7 @@ public:
         action_Pause->setText(QApplication::translate("MainWindow", "&Pause", 0, QApplication::UnicodeUTF8));
         action_Audi_RS8->setText(QApplication::translate("MainWindow", "Audi RS8 (668K triangles)", 0, QApplication::UnicodeUTF8));
         action_Audi_RS8->setShortcut(QApplication::translate("MainWindow", "Ctrl+8", 0, QApplication::UnicodeUTF8));
+        action_Benchmark_OpenCL_CPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL &CPUs-only)", 0, QApplication::UnicodeUTF8));
         hardwareDevicesLabel->setText(QApplication::translate("MainWindow", "Hardware Devices", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));
