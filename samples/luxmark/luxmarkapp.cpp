@@ -164,60 +164,70 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 }
 
 void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
-	// Initialize the new mode
-	app->renderConfig = new RenderingConfig(app->sceneName);
+	try {
+		// Initialize the new mode
+		app->renderConfig = new RenderingConfig(app->sceneName);
 
-	// Overwrite properties according the current mode
-	Properties prop;
-	if (app->mode == BENCHMARK_OCL_GPU) {
-		prop.SetString("renderengine.type", "3");
-		prop.SetString("opencl.nativethread.count", "0");
-		prop.SetString("opencl.cpu.use", "0");
-		prop.SetString("opencl.gpu.use", "1");
-		prop.SetString("opencl.latency.mode", "1");
-		prop.SetString("sampler.spp", "4");
-	} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
-		prop.SetString("renderengine.type", "3");
-		prop.SetString("opencl.nativethread.count", "0");
-		prop.SetString("opencl.cpu.use", "1");
-		prop.SetString("opencl.gpu.use", "1");
-		prop.SetString("opencl.latency.mode", "1");
-		prop.SetString("sampler.spp", "4");
-	} else if (app->mode == BENCHMARK_OCL_CPU) {
-		prop.SetString("renderengine.type", "3");
-		prop.SetString("opencl.nativethread.count", "0");
-		prop.SetString("opencl.cpu.use", "1");
-		prop.SetString("opencl.gpu.use", "0");
-		prop.SetString("opencl.latency.mode", "1");
-		prop.SetString("sampler.spp", "4");
-	} else if (app->mode == BENCHMARK_NATIVE) {
-		prop.SetString("renderengine.type", "0");
-		stringstream ss;
-		ss << boost::thread::hardware_concurrency();
-		prop.SetString("opencl.nativethread.count", ss.str().c_str());
-		prop.SetString("opencl.cpu.use", "0");
-		prop.SetString("opencl.gpu.use", "0");
-		prop.SetString("opencl.latency.mode", "0");
-		prop.SetString("sampler.spp", "4");
-	} else if (app->mode == INTERACTIVE) {
-		prop.SetString("renderengine.type", "3");
-		prop.SetString("opencl.nativethread.count", "0");
-		prop.SetString("opencl.cpu.use", "0");
-		prop.SetString("opencl.gpu.use", "1");
-		prop.SetString("opencl.latency.mode", "1");
-		prop.SetString("sampler.spp", "1");
-	} else
-		assert (false);
+		// Overwrite properties according the current mode
+		Properties prop;
+		if (app->mode == BENCHMARK_OCL_GPU) {
+			prop.SetString("renderengine.type", "3");
+			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("opencl.cpu.use", "0");
+			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("opencl.latency.mode", "1");
+			prop.SetString("sampler.spp", "4");
+		} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
+			prop.SetString("renderengine.type", "3");
+			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("opencl.cpu.use", "1");
+			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("opencl.latency.mode", "1");
+			prop.SetString("sampler.spp", "4");
+		} else if (app->mode == BENCHMARK_OCL_CPU) {
+			prop.SetString("renderengine.type", "3");
+			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("opencl.cpu.use", "1");
+			prop.SetString("opencl.gpu.use", "0");
+			prop.SetString("opencl.latency.mode", "1");
+			prop.SetString("sampler.spp", "4");
+		} else if (app->mode == BENCHMARK_NATIVE) {
+			prop.SetString("renderengine.type", "0");
+			stringstream ss;
+			ss << boost::thread::hardware_concurrency();
+			prop.SetString("opencl.nativethread.count", ss.str().c_str());
+			prop.SetString("opencl.cpu.use", "0");
+			prop.SetString("opencl.gpu.use", "0");
+			prop.SetString("opencl.latency.mode", "0");
+			prop.SetString("sampler.spp", "4");
+		} else if (app->mode == INTERACTIVE) {
+			prop.SetString("renderengine.type", "3");
+			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("opencl.cpu.use", "0");
+			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("opencl.latency.mode", "1");
+			prop.SetString("sampler.spp", "1");
+		} else
+			assert (false);
 
-	app->renderConfig->cfg.Load(prop);
-	app->renderConfig->Init();
+		app->renderConfig->cfg.Load(prop);
+		app->renderConfig->Init();
 
-	// Initialize hardware information
-	app->hardwareTreeModel = new HardwareTreeModel(app->renderConfig->GetAvailableDeviceDescriptions());
+		// Initialize hardware information
+		app->hardwareTreeModel = new HardwareTreeModel(app->renderConfig->GetAvailableDeviceDescriptions());
 
-	// Done
-	app->renderingStartTime = luxrays::WallClockTime();
-	app->engineInitDone = true;
+		// Done
+		app->renderingStartTime = luxrays::WallClockTime();
+		app->engineInitDone = true;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	} catch (cl::Error err) {
+		LM_ERROR("OpenCL ERROR: " << err.what() << "(" << err.err() << ")");
+#endif
+	} catch (runtime_error err) {
+		LM_ERROR("RUNTIME ERROR: " << err.what());
+	} catch (exception err) {
+		LM_ERROR("ERROR: " << err.what());
+	}
 }
 
 void LuxMarkApp::RenderRefreshTimeout() {

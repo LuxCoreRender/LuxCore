@@ -21,6 +21,7 @@
 
 #include <QTextEdit>
 #include <QGraphicsSceneMouseEvent>
+#include <QDialogButtonBox>
 
 #include "mainwindow.h"
 #include "aboutdialog.h"
@@ -34,8 +35,13 @@
 MainWindow *LogWindow = NULL;
 
 int EVT_LUX_LOG_MESSAGE = QEvent::registerEventType();
+int EVT_LUX_ERR_MESSAGE = QEvent::registerEventType();
 
 LuxLogEvent::LuxLogEvent(QString msg) : QEvent((QEvent::Type)EVT_LUX_LOG_MESSAGE), message(msg) {
+	setAccepted(false);
+}
+
+LuxErrorEvent::LuxErrorEvent(QString msg) : QEvent((QEvent::Type)EVT_LUX_ERR_MESSAGE), message(msg) {
 	setAccepted(false);
 }
 
@@ -319,6 +325,14 @@ bool MainWindow::event(QEvent *event) {
 				((LuxLogEvent *)event)->getMessage();
 
 		ui->LogView->append(ss.readAll());
+	} else if (eventtype == EVT_LUX_ERR_MESSAGE) {
+		QTextStream ss(new QString());
+		ss << "<FONT COLOR=\"#ff0000\">" << QDateTime::currentDateTime().toString(tr("yyyy-MM-dd hh:mm:ss")) << " - " <<
+				((LuxLogEvent *)event)->getMessage() << "</FONT>";
+
+		ui->LogView->append(ss.readAll());
+
+		((LuxMarkApp *)qApp)->SetMode(PAUSE);
 	}
 
 	if (retval) {
