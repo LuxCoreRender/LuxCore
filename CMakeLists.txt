@@ -321,6 +321,15 @@ set(LUXRAYS_SRCS
 
 add_library(luxrays STATIC ${LUXRAYS_SRCS})
 
+# copy needed files for compiling LuxRender to dependencies directory, to find them also if builddir name is not "luxrays"
+if(APPLE)
+	ADD_CUSTOM_COMMAND(
+	TARGET luxrays POST_BUILD
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/release/libluxrays.a ../macos/lib/LuxRays
+	COMMAND cp -R ${CMAKE_BINARY_DIR}/include/luxrays ../macos/include/LuxRays
+	)
+endif(APPLE)
+
 ###########################################################################
 #
 # Samples
