@@ -87,6 +87,7 @@ private slots:
 	void setAudiRS8Scene();
 	void setBenchmarkGPUsMode();
 	void setBenchmarkCPUsGPUsMode();
+	void setBenchmarkCPUsMode();
 	void setBenchmarkNativeMode();
 	void setInteractiveMode();
 	void setPauseMode();

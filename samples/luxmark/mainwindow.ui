@@ -132,6 +132,7 @@
     </property>
     <addaction name="action_Benchmark_OpenCL_GPUs"/>
     <addaction name="action_Benchmark_OpenCL_CPUs_GPUs"/>
+    <addaction name="action_Benchmark_OpenCL_CPUs"/>
     <addaction name="action_Benchmark_Native_CPUs"/>
     <addaction name="action_Interactive"/>
     <addaction name="action_Pause"/>
@@ -234,6 +235,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+8</string>
+   </property>
+  </action>
+  <action name="action_Benchmark_OpenCL_CPUs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Benchmark (OpenCL &amp;CPUs-only)</string>
    </property>
   </action>
  </widget>
@@ -401,6 +410,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Benchmark_OpenCL_CPUs</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setBenchmarkCPUsMode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
@@ -413,5 +438,6 @@
   <slot>setBenchmarkNativeMode()</slot>
   <slot>setPauseMode()</slot>
   <slot>setAudiRS8Scene()</slot>
+  <slot>setBenchmarkCPUsMode()</slot>
  </slots>
 </ui>

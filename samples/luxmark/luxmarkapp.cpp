@@ -124,13 +124,16 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 		mainWin->SetSceneCheck(2);
 
 	// Initialize the new mode
-	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) || (mode == BENCHMARK_NATIVE)) {
+	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||
+			(mode == BENCHMARK_OCL_CPU) || (mode == BENCHMARK_NATIVE)) {
 		if (mode == BENCHMARK_OCL_GPU)
 			mainWin->SetModeCheck(0);
 		else if (mode == BENCHMARK_OCL_CPUGPU)
 			mainWin->SetModeCheck(1);
-		else
+		else if (mode == BENCHMARK_OCL_CPU)
 			mainWin->SetModeCheck(2);
+		else
+			mainWin->SetModeCheck(3);
 
 		// Update timer
 		renderRefreshTimer = new QTimer();
@@ -139,7 +142,7 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 		// Refresh the screen every 5 secs in benchmark mode
 		renderRefreshTimer->start(5 * 1000);
 	} else if (mode == INTERACTIVE) {
-		mainWin->SetModeCheck(3);
+		mainWin->SetModeCheck(4);
 
 		// Update timer
 		renderRefreshTimer = new QTimer();
@@ -148,7 +151,7 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 		// Refresh the screen every 100ms in benchmark mode
 		renderRefreshTimer->start(100);
 	} else if (mode == PAUSE) {
-		mainWin->SetModeCheck(4);
+		mainWin->SetModeCheck(5);
 	} else
 		assert (false);
 
@@ -178,6 +181,13 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		prop.SetString("opencl.nativethread.count", "0");
 		prop.SetString("opencl.cpu.use", "1");
 		prop.SetString("opencl.gpu.use", "1");
+		prop.SetString("opencl.latency.mode", "1");
+		prop.SetString("sampler.spp", "4");
+	} else if (app->mode == BENCHMARK_OCL_CPU) {
+		prop.SetString("renderengine.type", "3");
+		prop.SetString("opencl.nativethread.count", "0");
+		prop.SetString("opencl.cpu.use", "1");
+		prop.SetString("opencl.gpu.use", "0");
 		prop.SetString("opencl.latency.mode", "1");
 		prop.SetString("sampler.spp", "4");
 	} else if (app->mode == BENCHMARK_NATIVE) {
@@ -282,13 +292,14 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 	sprintf(buf, "[Mode: %s][Time: %dsecs%s][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
 			(mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
-				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
-					((mode == BENCHMARK_NATIVE) ? "Native CPUs" :"Interactive")),
+				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" : 
+					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" :
+						((mode == BENCHMARK_NATIVE) ? "Native CPUs" : "Interactive"))),
 			renderingTime, validBuf, int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
 #ifndef LUXRAYS_DISABLE_OPENCL
-	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU)) {
+	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) || (mode == BENCHMARK_OCL_CPU)) {
 		ss << "\n\nOpenCL rendering devices:";
 		double minPerf = intersectionDevices[0]->GetPerformance();
 		double totalPerf = intersectionDevices[0]->GetPerformance();
