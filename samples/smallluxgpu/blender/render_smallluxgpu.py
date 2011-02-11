@@ -1082,7 +1082,9 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
 class SLGSettings(bpy.types.IDPropertyGroup):
     pass
 
-def slg_add_properties():
+def register():
+    bpy.utils.register_module(__name__)
+
     # Add SmallLuxGPU properties to scene
     from bpy.props import PointerProperty, StringProperty, BoolProperty, EnumProperty, IntProperty, FloatProperty, FloatVectorProperty, CollectionProperty
     bpy.types.Scene.slg = PointerProperty(type=SLGSettings, name="SLG", description="SLG Settings")
@@ -1634,27 +1636,11 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         if SLGBP.live:
             SLGBP.livetrigger(context.scene, SLGBP.LIVECFG)
 
-def register():
-    slg_add_properties()
-    bpy.types.DATA_PT_camera.append(slg_lensradius)
-    bpy.types.MATERIAL_PT_diffuse.append(slg_forceply)
-    bpy.types.OBJECT_PT_transform.append(slg_forceinst)
-    bpy.types.WORLD_PT_environment_lighting.append(slg_livescn)
-    bpy.types.TEXTURE_PT_mapping.append(slg_livescn)
-    bpy.types.DATA_PT_sunsky.append(slg_livescn)
-    bpy.types.VIEW3D_HT_header.append(slg_operators)
-    bpy.types.INFO_MT_render.append(slg_rendermenu)
 
 def unregister():
-    bpy.types.Scene.RemoveProperty("slg")
-    bpy.types.DATA_PT_camera.remove(slg_lensradius)
-    bpy.types.MATERIAL_PT_diffuse.remove(slg_forceply)
-    bpy.types.OBJECT_PT_transform.remove(slg_forceinst)
-    bpy.types.WORLD_PT_environment_lighting.remove(slg_livescn)
-    bpy.types.TEXTURE_PT_mapping.remove(slg_livescn)
-    bpy.types.DATA_PT_sunsky.remove(slg_livescn)
-    bpy.types.VIEW3D_HT_header.remove(slg_operators)
-    bpy.types.INFO_MT_render.remove(slg_rendermenu)
+
+    bpy.utils.unregister_module(__name__)
+
 
 if __name__ == "__main__":
     register()
