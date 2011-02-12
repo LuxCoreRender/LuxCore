@@ -26,7 +26,7 @@ bl_info = {
     "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
     "version": (0, 7, 2),
-    "blender": (2, 5, 4),
+    "blender": (2, 5, 6),
     "location": "Render > Engine > SmallLuxGPU",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
     "warning": "",
@@ -166,7 +166,7 @@ class SLGBP:
         # Get motion blur parameters
         if scene.slg.cameramotionblur:
             scene.frame_set(scene.frame_current - 1)
-            SLGBP.camdirBlur = mathutils.Vector((0, 0, -10)) * scene.camera.matrix_world 
+            SLGBP.camdirBlur = mathutils.Vector((0, 0, -10)) * scene.camera.matrix_world
             SLGBP.camlocBlur = scene.camera.matrix_world.to_translation()
             SLGBP.camupBlur = mathutils.Vector((0,1,0)) * scene.camera.matrix_world.to_3x3()
             scene.frame_set(scene.frame_current + 1)
@@ -238,7 +238,7 @@ class SLGBP:
 
         # Get camera and lookat direction
         cam = scene.camera
-        camdir = mathutils.Vector((0, 0, -1)) * cam.matrix_world 
+        camdir = mathutils.Vector((0, 0, -1)) * cam.matrix_world
 
         # Camera.location not always updated, but matrix is
         camloc = cam.matrix_world.to_translation()
@@ -416,10 +416,10 @@ class SLGBP:
                                 objn = do.id_data.name.replace('.','_')+'{P}'+str(i)+plyn
                                 if isnan(p.rotation[0]): # Deal with Blender bug...
                                     rm = mathutils.Matrix()
-                                else: 
+                                else:
                                     rm = p.rotation.to_matrix().to_4x4()
                                 if do.settings.use_whole_group:
-                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world * mathutils.Matrix.Scale(p.size,4) 
+                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world * mathutils.Matrix.Scale(p.size,4)
                                 elif do.settings.use_global_dupli:
                                     tm = mathutils.Matrix.Translation(so.matrix_world.to_translation()) * mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.to_3x3().to_4x4() * mathutils.Matrix.Scale(p.size,4)
                                 else:
@@ -876,8 +876,6 @@ class SLGRender(bpy.types.Operator):
         context.region.callback_remove(SLGBP.icb)
         context.area.tag_redraw()
         if self.properties.animation:
-            context.scene.render.fps = self._orig_fps
-            context.scene.render.fps_base = self._orig_fps_base
             if SLGBP.slgproc:
                 if SLGBP.slgproc.poll() == None:
                     SLGBP.slgproc.terminate()
@@ -891,7 +889,8 @@ class SLGRender(bpy.types.Operator):
                 self.report('WARNING', "SLG animation render aborted.")
                 return {'CANCELLED'}
             if event.type == 'TIMER0':
-                SLGBP.slgproc.wait()
+                if SLGBP.slgproc:
+                    SLGBP.slgproc.wait()
                 if not SLGBP.init(context.scene, self._error):
                     bpy.ops.screen.animation_play()
                     self._reset(context)
@@ -922,7 +921,7 @@ class SLGRender(bpy.types.Operator):
                 return {'CANCELLED'}
         if self.properties.animation:
             context.scene.frame_set(context.scene.frame_start)
-        if not SLGBP.init(context.scene, self._error):
+        elif not SLGBP.init(context.scene, self._error):
             return {'CANCELLED'}
         self._iserror = False
         SLGBP.abort = False
@@ -930,11 +929,6 @@ class SLGRender(bpy.types.Operator):
             context.window_manager.modal_handler_add(self)
             SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
             SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-            SLGBP.exportrun(context.scene)
-            self._orig_fps = context.scene.render.fps
-            self._orig_fps_base = context.scene.render.fps_base
-            context.scene.render.fps = 1
-            context.scene.render.fps_base = 5
             bpy.ops.screen.animation_play()
             return {'RUNNING_MODAL'}
         else:
@@ -1082,9 +1076,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
 class SLGSettings(bpy.types.IDPropertyGroup):
     pass
 
-def register():
-    bpy.utils.register_module(__name__)
-
+def slg_add_properties():
     # Add SmallLuxGPU properties to scene
     from bpy.props import PointerProperty, StringProperty, BoolProperty, EnumProperty, IntProperty, FloatProperty, FloatVectorProperty, CollectionProperty
     bpy.types.Scene.slg = PointerProperty(type=SLGSettings, name="SLG", description="SLG Settings")
@@ -1636,11 +1628,29 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         if SLGBP.live:
             SLGBP.livetrigger(context.scene, SLGBP.LIVECFG)
 
+def register():
+    bpy.utils.register_module(__name__)
+    slg_add_properties()
+    bpy.types.DATA_PT_camera.append(slg_lensradius)
+    bpy.types.MATERIAL_PT_diffuse.append(slg_forceply)
+    bpy.types.OBJECT_PT_transform.append(slg_forceinst)
+    bpy.types.WORLD_PT_environment_lighting.append(slg_livescn)
+    bpy.types.TEXTURE_PT_mapping.append(slg_livescn)
+    bpy.types.DATA_PT_sunsky.append(slg_livescn)
+    bpy.types.VIEW3D_HT_header.append(slg_operators)
+    bpy.types.INFO_MT_render.append(slg_rendermenu)
 
 def unregister():
-
+    bpy.types.Scene.RemoveProperty("slg")
+    bpy.types.DATA_PT_camera.remove(slg_lensradius)
+    bpy.types.MATERIAL_PT_diffuse.remove(slg_forceply)
+    bpy.types.OBJECT_PT_transform.remove(slg_forceinst)
+    bpy.types.WORLD_PT_environment_lighting.remove(slg_livescn)
+    bpy.types.TEXTURE_PT_mapping.remove(slg_livescn)
+    bpy.types.DATA_PT_sunsky.remove(slg_livescn)
+    bpy.types.VIEW3D_HT_header.remove(slg_operators)
+    bpy.types.INFO_MT_render.remove(slg_rendermenu)
     bpy.utils.unregister_module(__name__)
-
 
 if __name__ == "__main__":
     register()
