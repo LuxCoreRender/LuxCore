@@ -36,12 +36,12 @@ configure_file(
 ###########################################################################
 
 add_custom_command(
-   OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
+   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/luxmark/pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
-   MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
+   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/luxmark/pathgpu/kernels/pathgpu_kernel.cl
    )
 
 #############################################################################
