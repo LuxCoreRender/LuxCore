@@ -21,14 +21,30 @@
 
 # Luxrays build system
 
+MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
 cmake_minimum_required(VERSION 2.6)
+IF(COMMAND cmake_policy)
+	if(CMAKE_VERSION VERSION_LESS 2.8.1)
+	cmake_policy(SET CMP0003 NEW)
+	else(CMAKE_VERSION VERSION_LESS 2.8.1)
+	cmake_policy(SET CMP0015 NEW)
+	endif(CMAKE_VERSION VERSION_LESS 2.8.1)
+ENDIF(COMMAND cmake_policy)
+
 project(LuxRays)
 
 # Setting Universal Binary Properties, only for Mac OS X
 #  generate with xcode/crosscompile, setting: ( darwin - 10.6 - gcc - g++ - MacOSX10.6.sdk - Find from root, then native system )
 if(APPLE)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6)
-	set(CMAKE_OSX_ARCHITECTURES i386;x86_64)
+	if(CMAKE_VERSION VERSION_LESS 2.8.1)
+		SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
+		MESSAGE(STATUS "Setting CMAKE_OSX_ARCHITECTURES ( cmake lower 2.8 method ): " ${CMAKE_OSX_ARCHITECTURES})
+	else(CMAKE_VERSION VERSION_LESS 2.8.1)
+		SET(CMAKE_XCODE_ATTRIBUTE_ARCHS i386\ x86_64)
+		MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS ( cmake 2.8 or higher method ): " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
+	endif(CMAKE_VERSION VERSION_LESS 2.8.1)
+
 	set(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
 	INCLUDE_DIRECTORIES( ../macos/include )
 	set(BUILD_LUXMARK on)
