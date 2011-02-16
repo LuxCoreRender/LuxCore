@@ -111,7 +111,7 @@
      <x>0</x>
      <y>0</y>
      <width>1024</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -143,7 +143,6 @@
     </property>
     <addaction name="action_LuxBall_HDR"/>
     <addaction name="action_LuxBall"/>
-    <addaction name="action_Audi_RS8"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Mode"/>
@@ -395,22 +394,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>action_Audi_RS8</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>setAudiRS8Scene()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>511</x>
-     <y>383</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>action_Benchmark_OpenCL_CPUs</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -437,7 +420,6 @@
   <slot>setBenchmarkCPUsGPUsMode()</slot>
   <slot>setBenchmarkNativeMode()</slot>
   <slot>setPauseMode()</slot>
-  <slot>setAudiRS8Scene()</slot>
   <slot>setBenchmarkCPUsMode()</slot>
  </slots>
 </ui>

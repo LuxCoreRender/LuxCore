@@ -120,8 +120,6 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 		mainWin->SetSceneCheck(0);
 	else if (!strcmp(scnName, SCENE_LUXBALL))
 		mainWin->SetSceneCheck(1);
-	else if (!strcmp(scnName, SCENE_AUDI_RS8))
-		mainWin->SetSceneCheck(2);
 
 	// Initialize the new mode
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||

@@ -38,7 +38,6 @@
 // List of supported scenes
 #define SCENE_LUXBALL_HDR "scenes/luxball/render-hdr.cfg"
 #define SCENE_LUXBALL "scenes/luxball/render.cfg"
-#define SCENE_AUDI_RS8 "scenes/audi-rs8/render.cfg"
 
 class LuxMarkApp : public QApplication {
 	Q_OBJECT
