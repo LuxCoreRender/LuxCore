@@ -1073,7 +1073,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
                     break
                 time.sleep(0.1)
 
-class SLGSettings(bpy.types.IDPropertyGroup):
+class SLGSettings(bpy.types.PropertyGroup):
     pass
 
 def slg_add_properties():
