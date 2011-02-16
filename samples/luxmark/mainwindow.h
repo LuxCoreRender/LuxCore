@@ -84,7 +84,6 @@ private slots:
 	void showAbout();
 	void setLuxBallScene();
 	void setLuxBallHDRScene();
-	void setAudiRS8Scene();
 	void setBenchmarkGPUsMode();
 	void setBenchmarkCPUsGPUsMode();
 	void setBenchmarkCPUsMode();

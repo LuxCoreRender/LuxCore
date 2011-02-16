@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Thu Feb 10 10:25:39 2011
+** Created: Wed Feb 16 18:08:20 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -159,7 +159,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
-        menubar->setGeometry(QRect(0, 0, 1024, 26));
+        menubar->setGeometry(QRect(0, 0, 1024, 25));
         menu_File = new QMenu(menubar);
         menu_File->setObjectName(QString::fromUtf8("menu_File"));
         menu_Help = new QMenu(menubar);
@@ -187,7 +187,6 @@ public:
         menu_Mode->addAction(action_Pause);
         menu_Scene->addAction(action_LuxBall_HDR);
         menu_Scene->addAction(action_LuxBall);
-        menu_Scene->addAction(action_Audi_RS8);
 
         retranslateUi(MainWindow);
         QObject::connect(action_Quit, SIGNAL(triggered()), MainWindow, SLOT(exitApp()));
@@ -199,7 +198,6 @@ public:
         QObject::connect(action_Benchmark_OpenCL_GPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkGPUsMode()));
         QObject::connect(action_Benchmark_Native_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkNativeMode()));
         QObject::connect(action_Pause, SIGNAL(triggered()), MainWindow, SLOT(setPauseMode()));
-        QObject::connect(action_Audi_RS8, SIGNAL(triggered()), MainWindow, SLOT(setAudiRS8Scene()));
         QObject::connect(action_Benchmark_OpenCL_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCPUsMode()));
 
         QMetaObject::connectSlotsByName(MainWindow);
