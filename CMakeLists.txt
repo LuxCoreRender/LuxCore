@@ -398,26 +398,47 @@ add_custom_target(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
 #
 ###########################################################################
 
-set(LUXMARK_BIN_DIR "luxmark-v1.0")
+set(LUXMARK_LINUX64_BIN_DIR "luxmark-linux64-v1.0")
+set(LUXMARK_WIN32_BIN_DIR "luxmark-win32-v1.0")
+
+# Win32
 
 add_custom_command(
-    OUTPUT "${LUXMARK_BIN_DIR}"
-    COMMAND rm -rf ${LUXMARK_BIN_DIR}
-    COMMAND mkdir ${LUXMARK_BIN_DIR}
-    COMMAND cp -r samples/luxmark/scenes ${LUXMARK_BIN_DIR}
-    COMMAND cp samples/luxmark/exe/*.* ${LUXMARK_BIN_DIR}
-    COMMAND cp bin/luxmark ${LUXMARK_BIN_DIR}
-    COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXMARK_BIN_DIR}
-    COMMENT "Building ${LUXMARK_BIN_DIR}")
+    OUTPUT "${LUXMARK_WIN32_BIN_DIR}"
+    COMMAND rm -rf ${LUXMARK_WIN32_BIN_DIR}
+    COMMAND mkdir ${LUXMARK_WIN32_BIN_DIR}
+    COMMAND cp -r samples/luxmark/scenes ${LUXMARK_WIN32_BIN_DIR}
+    COMMAND cp samples/luxmark/exe/*.* ${LUXMARK_WIN32_BIN_DIR}
+	COMMAND mv ${LUXMARK_WIN32_BIN_DIR}/LuxMark.exe ${LUXMARK_WIN32_BIN_DIR}/LuxMark-win32.exe
+    COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXMARK_WIN32_BIN_DIR}
+    COMMENT "Building ${LUXMARK_WIN32_BIN_DIR}")
 
 add_custom_command(
-    OUTPUT "${LUXMARK_BIN_DIR}.zip"
-    COMMAND zip -r ${LUXMARK_BIN_DIR}.zip ${LUXMARK_BIN_DIR}
-    COMMAND rm -rf ${LUXMARK_BIN_DIR}
-    DEPENDS ${LUXMARK_BIN_DIR}
-    COMMENT "Building ${LUXMARK_BIN_DIR}.zip")
+    OUTPUT "${LUXMARK_WIN32_BIN_DIR}.zip"
+    COMMAND zip -r ${LUXMARK_WIN32_BIN_DIR}.zip ${LUXMARK_WIN32_BIN_DIR}
+    COMMAND rm -rf ${LUXMARK_WIN32_BIN_DIR}
+    DEPENDS ${LUXMARK_WIN32_BIN_DIR}
+    COMMENT "Building ${LUXMARK_WIN32_BIN_DIR}.zip")
 
-add_custom_target(luxmark_zip DEPENDS "${LUXMARK_BIN_DIR}.zip")
+# Linux64
+
+add_custom_command(
+    OUTPUT "${LUXMARK_LINUX64_BIN_DIR}"
+    COMMAND rm -rf ${LUXMARK_LINUX64_BIN_DIR}
+    COMMAND mkdir ${LUXMARK_LINUX64_BIN_DIR}
+    COMMAND cp -r samples/luxmark/scenes ${LUXMARK_LINUX64_BIN_DIR}
+    COMMAND cp bin/luxmark ${LUXMARK_LINUX64_BIN_DIR}/luxmark-linux64
+    COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXMARK_LINUX64_BIN_DIR}
+    COMMENT "Building ${LUXMARK_LINUX64_BIN_DIR}")
+
+add_custom_command(
+    OUTPUT "${LUXMARK_LINUX64_BIN_DIR}.zip"
+    COMMAND zip -r ${LUXMARK_LINUX64_BIN_DIR}.zip ${LUXMARK_LINUX64_BIN_DIR}
+    COMMAND rm -rf ${LUXMARK_LINUX64_BIN_DIR}
+    DEPENDS ${LUXMARK_LINUX64_BIN_DIR}
+    COMMENT "Building ${LUXMARK_LINUX64_BIN_DIR}.zip")
+
+add_custom_target(luxmark_all_zip DEPENDS "${LUXMARK_LINUX64_BIN_DIR}.zip" "${LUXMARK_WIN32_BIN_DIR}.zip")
 
 ################################################################################
 
@@ -438,4 +459,3 @@ IF(APPLE)
 	MESSAGE(STATUS "")
 	MESSAGE(STATUS "#####################################################################")
 ENDIF(APPLE)
-
