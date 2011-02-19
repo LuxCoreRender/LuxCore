@@ -19,8 +19,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
-set(LUXMARK_VERSION_MAJOR 0)
-set(LUXMARK_VERSION_MINOR 3)
+set(LUXMARK_VERSION_MAJOR 1)
+set(LUXMARK_VERSION_MINOR 0)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code

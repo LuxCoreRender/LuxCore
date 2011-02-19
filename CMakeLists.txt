@@ -398,7 +398,7 @@ add_custom_target(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
 #
 ###########################################################################
 
-set(LUXMARK_BIN_DIR "luxmark-v0.3")
+set(LUXMARK_BIN_DIR "luxmark-v1.0")
 
 add_custom_command(
     OUTPUT "${LUXMARK_BIN_DIR}"
