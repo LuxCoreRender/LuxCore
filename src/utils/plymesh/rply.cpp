@@ -18,6 +18,19 @@
 
 #include "luxrays/utils/plymesh/rply.h"
 
+// Patched for x64 Linux/OSX based on http://src.luxrender.net/lux/rev/612d14f647ae
+#if defined(WIN32) && !defined(__CYGWIN__) 
+// MSVC doesn't support C99, uses LLP64 
+typedef signed char int8_t; 
+typedef unsigned char uint8_t; 
+typedef short int16_t; 
+typedef unsigned short uint16_t; 
+typedef int int32_t; 
+typedef unsigned int uint32_t; 
+#else 
+#include <stdint.h> 
+#endif
+
 namespace luxrays {
 
 /* ----------------------------------------------------------------------
@@ -296,7 +309,7 @@ p_ply ply_open(const char *name, p_ply_error_cb error_cb) {
         return NULL;
     }
     assert(name);
-    fp = fopen(name, "r");
+    fp = fopen(name, "rb");
     if (!fp) {
         error_cb("Unable to open file");
         return NULL;
@@ -1246,37 +1259,37 @@ static int oascii_float64(p_ply ply, double value) {
 }
 
 static int obinary_int8(p_ply ply, double value) {
-    char int8 = (char) value;
+    int8_t int8 = (int8_t) value; //char int8 = (char) value;
     if (value > CHAR_MAX || value < CHAR_MIN) return 0;
     return ply->odriver->ochunk(ply, &int8, sizeof(int8));
 }
 
 static int obinary_uint8(p_ply ply, double value) {
-    unsigned char uint8 = (unsigned char) value;
+    uint8_t uint8 = (uint8_t) value; //unsigned char uint8 = (unsigned char) value;
     if (value > UCHAR_MAX || value < 0) return 0;
     return ply->odriver->ochunk(ply, &uint8, sizeof(uint8)); 
 }
 
 static int obinary_int16(p_ply ply, double value) {
-    short int16 = (short) value;
+    int16_t int16 = (int16_t) value; //short int16 = (short) value;
     if (value > SHRT_MAX || value < SHRT_MIN) return 0;
     return ply->odriver->ochunk(ply, &int16, sizeof(int16));
 }
 
 static int obinary_uint16(p_ply ply, double value) {
-    unsigned short uint16 = (unsigned short) value;
+    uint16_t uint16 = (uint16_t) value; //unsigned short uint16 = (unsigned short) value;
     if (value > USHRT_MAX || value < 0) return 0;
     return ply->odriver->ochunk(ply, &uint16, sizeof(uint16)); 
 }
 
 static int obinary_int32(p_ply ply, double value) {
-    long int32 = (long) value;
+    int32_t int32 = (int32_t) value; //long int32 = (long) value;
     if (value > LONG_MAX || value < LONG_MIN) return 0;
     return ply->odriver->ochunk(ply, &int32, sizeof(int32));
 }
 
 static int obinary_uint32(p_ply ply, double value) {
-    unsigned long uint32 = (unsigned long) value;
+    uint32_t uint32 = (uint32_t) value; //unsigned long uint32 = (unsigned long) value;
     if (value > ULONG_MAX || value < 0) return 0;
     return ply->odriver->ochunk(ply, &uint32, sizeof(uint32));
 }
@@ -1359,42 +1372,42 @@ static int iascii_float64(p_ply ply, double *value) {
 }
 
 static int ibinary_int8(p_ply ply, double *value) {
-    char int8;
+    int8_t int8; //char int8;
     if (!ply->idriver->ichunk(ply, &int8, 1)) return 0;
     *value = int8;
     return 1;
 }
 
 static int ibinary_uint8(p_ply ply, double *value) {
-    unsigned char uint8;
+    uint8_t uint8; //unsigned char uint8;
     if (!ply->idriver->ichunk(ply, &uint8, 1)) return 0;
     *value = uint8;
     return 1;
 }
 
 static int ibinary_int16(p_ply ply, double *value) {
-    short int16;
+    int16_t int16; //short int16;
     if (!ply->idriver->ichunk(ply, &int16, sizeof(int16))) return 0;
     *value = int16;
     return 1;
 }
 
 static int ibinary_uint16(p_ply ply, double *value) {
-    unsigned short uint16;
+    uint16_t uint16; //unsigned short uint16;
     if (!ply->idriver->ichunk(ply, &uint16, sizeof(uint16))) return 0;
     *value = uint16;
     return 1;
 }
 
 static int ibinary_int32(p_ply ply, double *value) {
-    long int32;
+    int32_t int32; //long int32;
     if (!ply->idriver->ichunk(ply, &int32, sizeof(int32))) return 0;
     *value = int32;
     return 1;
 }
 
 static int ibinary_uint32(p_ply ply, double *value) {
-    unsigned long uint32;
+    uint32_t uint32; //unsigned long uint32;
     if (!ply->idriver->ichunk(ply, &uint32, sizeof(uint32))) return 0;
     *value = uint32;
     return 1;
