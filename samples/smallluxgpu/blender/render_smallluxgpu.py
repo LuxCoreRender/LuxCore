@@ -103,7 +103,7 @@ class SLGBP:
         # SmallLuxGPU executable path
         SLGBP.slgpath = bpy.path.abspath(scene.slg.slgpath).replace('\\','/')
         if os.path.isdir(SLGBP.slgpath):
-            SLGBP.slgpath = SLGBP.slgpath + '/slg'
+            SLGBP.slgpath = os.path.join(SLGBP.slgpath, 'slg')
         elif not os.path.isfile(SLGBP.slgpath):
             errout("Full path to SmallLuxGPU executable required")
             return False
@@ -1496,7 +1496,6 @@ class AddPresetSLG(AddPresetBase, bpy.types.Operator):
     preset_values = [
         "scene.slg.slgpath",
         "scene.slg.scene_path",
-        "scene.slg.scenename",
         "scene.slg.export",
         "scene.slg.vuvs",
         "scene.slg.vcolors",
