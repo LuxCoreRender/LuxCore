@@ -36,11 +36,12 @@ bl_info = {
 
 import bpy
 import blf
-import mathutils
+from mathutils import Matrix, Vector
 import os
-import time
-import threading
-import telnetlib
+from threading import Lock, Thread
+from time import sleep
+from telnetlib import Telnet
+from struct import pack
 from itertools import zip_longest
 from subprocess import Popen
 from math import isnan
@@ -50,7 +51,7 @@ class SLGTelnet:
     def __init__(self):
         self.slgtn = None
         try:
-            self.slgtn = telnetlib.Telnet('localhost',18081)
+            self.slgtn = Telnet('localhost',18081)
             self.slgtn.read_until(b'SmallLuxGPU Telnet Server Interface')
             self.connected = True
         except:
@@ -87,6 +88,7 @@ class SLGBP:
     livemat = None
     liveact = 0
     slgproc = thread = None
+    lock = Lock()
     telnet = None
     abort = False
 
@@ -165,10 +167,10 @@ class SLGBP:
 
         # Get motion blur parameters
         if scene.slg.cameramotionblur:
-            scene.frame_set(scene.frame_current - 1)
-            SLGBP.camdirBlur = mathutils.Vector((0, 0, -10)) * scene.camera.matrix_world
+            scene.frame_set(scene.frame_current - 1) # Blender now supports sub-frames!
+            SLGBP.camdirBlur = Vector((0, 0, -10)) * scene.camera.matrix_world
             SLGBP.camlocBlur = scene.camera.matrix_world.to_translation()
-            SLGBP.camupBlur = mathutils.Vector((0,1,0)) * scene.camera.matrix_world.to_3x3()
+            SLGBP.camupBlur = Vector((0,1,0)) * scene.camera.matrix_world.to_3x3()
             scene.frame_set(scene.frame_current + 1)
 
         return True
@@ -238,12 +240,12 @@ class SLGBP:
 
         # Get camera and lookat direction
         cam = scene.camera
-        camdir = mathutils.Vector((0, 0, -1)) * cam.matrix_world
+        camdir = Vector((0, 0, -1)) * cam.matrix_world
 
         # Camera.location not always updated, but matrix is
         camloc = cam.matrix_world.to_translation()
         scn['scene.camera.lookat'] = '{} {} {} {} {} {}'.format(ff(camloc.x),ff(camloc.y),ff(camloc.z),ff(camdir.x),ff(camdir.y),ff(camdir.z))
-        camup = mathutils.Vector((0,1,0)) * cam.matrix_world.to_3x3()
+        camup = Vector((0,1,0)) * cam.matrix_world.to_3x3()
         scn['scene.camera.up'] = '{} {} {}'.format(ff(camup.x),ff(camup.y),ff(camup.z))
 
         scn['scene.camera.fieldofview'] = format(cam.data.angle*180.0/3.1415926536,'g')
@@ -290,7 +292,7 @@ class SLGBP:
         # Sun lamp
         if SLGBP.sun:
             # We only support one visible sun lamp
-            sundir = mathutils.Vector((0,0,1)) * SLGBP.sun.matrix_world.to_3x3()
+            sundir = Vector((0,0,1)) * SLGBP.sun.matrix_world.to_3x3()
             sky = SLGBP.sun.data.sky
             # If envmap is also defined, only sun component is exported
             if not SLGBP.infinitelight and sky.use_atmosphere:
@@ -415,15 +417,15 @@ class SLGBP:
                             if p.alive_state == 'ALIVE' and p.is_exist and (do.point_cache.is_baked or p.is_visible):
                                 objn = do.id_data.name.replace('.','_')+'{P}'+str(i)+plyn
                                 if isnan(p.rotation[0]): # Deal with Blender bug...
-                                    rm = mathutils.Matrix()
+                                    rm = Matrix()
                                 else:
                                     rm = p.rotation.to_matrix().to_4x4()
                                 if do.settings.use_whole_group:
-                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world * mathutils.Matrix.Scale(p.size,4)
+                                    tm = Matrix.Translation(p.location) * rm * so.matrix_world * Matrix.Scale(p.size,4)
                                 elif do.settings.use_global_dupli:
-                                    tm = mathutils.Matrix.Translation(so.matrix_world.to_translation()) * mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.to_3x3().to_4x4() * mathutils.Matrix.Scale(p.size,4)
+                                    tm = Matrix.Translation(so.matrix_world.to_translation()) * Matrix.Translation(p.location) * rm * so.matrix_world.to_3x3().to_4x4() * Matrix.Scale(p.size,4)
                                 else:
-                                    tm = mathutils.Matrix.Translation(p.location) * rm * so.matrix_world.to_3x3().to_4x4() * mathutils.Matrix.Scale(p.size,4)
+                                    tm = Matrix.Translation(p.location) * rm * so.matrix_world.to_3x3().to_4x4() * Matrix.Scale(p.size,4)
                                 objscn(plyn, matn, objn, mat, tm)
                     else:
                         objn = do.name.replace('.','_')+plyn
@@ -563,9 +565,9 @@ class SLGBP:
                         mesh.transform(obj.matrix_world)
                     # Make copy of verts for fast direct index access (mesh.vertices was very slow)
                     if scene.slg.vnormals:
-                        v = [tuple(vert.co) + tuple(vert.normal) for vert in mesh.vertices]
+                        v = [vert.co[:] + vert.normal[:] for vert in mesh.vertices]
                     else:
-                        v = [tuple(vert.co) for vert in mesh.vertices]
+                        v = [vert.co[:] for vert in mesh.vertices]
                     vcd = []
                     if scene.slg.vcolors and mesh.vertex_colors.active:
                         vcd = mesh.vertex_colors.active.data
@@ -617,7 +619,7 @@ class SLGBP:
                                 addv = True
                             if addv:
                                 if scene.slg.vnormals and not face.use_smooth:
-                                    verts[curmat].append(v[vert][:3]+tuple(face.normal))
+                                    verts[curmat].append(v[vert][:3]+face.normal[:])
                                 else:
                                     verts[curmat].append(v[vert])
                                 if scene.slg.vuvs:
@@ -649,7 +651,8 @@ class SLGBP:
                     print("SLGBP        writing PLY: {}".format(plyn))
                     fply = open('{}/{}.ply'.format(SLGBP.sfullpath,plyn), 'wb')
                     fply.write(b'ply\n')
-                    fply.write(b'format ascii 1.0\n')
+                    #fply.write(b'format ascii 1.0\n')
+                    fply.write(b'format binary_little_endian 1.0\n')
                     fply.write(str.encode('comment Created by SmallLuxGPU exporter for Blender 2.5, source file: {}\n'.format((bpy.data.filepath.split('/')[-1].split('\\')[-1]))))
                     fply.write(str.encode('element vertex {}\n'.format(vertnum[i])))
                     fply.write(b'property float x\n')
@@ -672,17 +675,22 @@ class SLGBP:
                     # Write out vertices
                     for j, v in enumerate(verts[i]):
                         if scene.slg.vnormals:
-                            fply.write(str.encode('{:.6f} {:.6f} {:.6f} {:.6g} {:.6g} {:.6g}'.format(*v)))
+                            #fply.write(str.encode('{:.6f} {:.6f} {:.6f} {:.6g} {:.6g} {:.6g}'.format(*v)))
+                            fply.write(pack('<6f', *v))
                         else:
-                            fply.write(str.encode('{:.6f} {:.6f} {:.6f}'.format(*v)))
+                            #fply.write(str.encode('{:.6f} {:.6f} {:.6f}'.format(*v)))
+                            fply.write(pack('<3f', *v))
                         if scene.slg.vuvs:
-                            fply.write(str.encode(' {:.6g} {:.6g}'.format(*vert_uvs[i][j])))
+                            #fply.write(str.encode(' {:.6g} {:.6g}'.format(*vert_uvs[i][j])))
+                            fply.write(pack('<2f', *vert_uvs[i][j]))
                         if scene.slg.vcolors and mvc[i]:
-                            fply.write(str.encode(' {} {} {}'.format(*vert_vcs[i][j])))
-                        fply.write(b'\n')
+                            #fply.write(str.encode(' {} {} {}'.format(*vert_vcs[i][j])))
+                            fply.write(pack('<3B', *vert_vcs[i][j]))
+                        #fply.write(b'\n')
                     # Write out faces
                     for f in faces[i]:
-                        fply.write(str.encode('3 {} {} {}\n'.format(*f)))
+                        #fply.write(str.encode('3 {} {} {}\n'.format(*f)))
+                        fply.write(pack('<B3I', 3, *f))
                     fply.close()
             elif pm in plys:
                 del plys[pm]
@@ -694,25 +702,26 @@ class SLGBP:
     # Export SLG scene
     @staticmethod
     def export(scene):
-        SLGBP.cfg = SLGBP.getcfg(scene)
-        fcfg = open('{}/{}/render.cfg'.format(SLGBP.spath,SLGBP.sname), 'w')
-        for k in sorted(SLGBP.cfg):
-            fcfg.write(k + ' = ' + SLGBP.cfg[k] + '\n')
-        fcfg.close()
-        SLGBP.expmatply(scene)
-        SLGBP.scn = SLGBP.getscn(scene)
-        SLGBP.matprops = {}
-        for m in bpy.data.materials:
-            if m.users:
-                matprop, scn = SLGBP.getmatscn(scene, m)
-                SLGBP.matprops[m.name] = matprop
-                SLGBP.scn.update(scn)
-        SLGBP.scn['scene.materials.matte.'+SLGBP.nomatn] = '0.75 0.75 0.75'
-        SLGBP.scn.update(SLGBP.getobjscn(scene))
-        fscn = open('{}/{}/{}.scn'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname), 'w')
-        for k in sorted(SLGBP.scn):
-            fscn.write(k + ' = ' + SLGBP.scn[k] + '\n')
-        fscn.close()
+        with SLGBP.lock:
+            SLGBP.cfg = SLGBP.getcfg(scene)
+            fcfg = open('{}/{}/render.cfg'.format(SLGBP.spath,SLGBP.sname), 'w')
+            for k in sorted(SLGBP.cfg):
+                fcfg.write(k + ' = ' + SLGBP.cfg[k] + '\n')
+            fcfg.close()
+            SLGBP.expmatply(scene)
+            SLGBP.scn = SLGBP.getscn(scene)
+            SLGBP.matprops = {}
+            for m in bpy.data.materials:
+                if m.users:
+                    matprop, scn = SLGBP.getmatscn(scene, m)
+                    SLGBP.matprops[m.name] = matprop
+                    SLGBP.scn.update(scn)
+            SLGBP.scn['scene.materials.matte.'+SLGBP.nomatn] = '0.75 0.75 0.75'
+            SLGBP.scn.update(SLGBP.getobjscn(scene))
+            fscn = open('{}/{}/{}.scn'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname), 'w')
+            for k in sorted(SLGBP.scn):
+                fscn.write(k + ' = ' + SLGBP.scn[k] + '\n')
+            fscn.close()
 
     # Run SLG executable with current scene
     @staticmethod
@@ -726,10 +735,26 @@ class SLGBP:
 
     # Export SLG scene and render it
     @staticmethod
-    def exportrun(scene):
-        SLGBP.export(scene)
-        if not SLGBP.abort:
-            SLGBP.runslg(scene)
+    def exportrun(scene, anim, errout):
+        sleep(0.25) # Allow time for screen to display last msg
+        while True:
+            if not SLGBP.init(scene, errout):
+                return
+            SLGBP.msg = 'SLG exporting frame: ' + str(scene.frame_current) + " (ESC to abort)"
+            SLGBP.msgrefresh()
+            SLGBP.export(scene)
+            if not SLGBP.abort:
+                SLGBP.msg = 'SLG rendering frame: ' + str(scene.frame_current) + " (ESC to abort)"
+                SLGBP.msgrefresh()
+                SLGBP.runslg(scene)
+            if not anim:
+                break
+            SLGBP.slgproc.wait()
+            if SLGBP.abort or scene.frame_current+scene.frame_step > scene.frame_end:
+                SLGBP.msg = 'SLG animation render done.'
+                SLGBP.msgrefresh()
+                break
+            scene.frame_set(scene.frame_current+scene.frame_step)
 
     # Update SLG parameters via telnet interface
     @staticmethod
@@ -753,7 +778,7 @@ class SLGBP:
     def livetrigger(scene, liveact):
         SLGBP.liveact = SLGBP.liveact|liveact
         if SLGBP.thread == None or not SLGBP.thread.is_alive():
-            SLGBP.thread = threading.Thread(target=SLGBP.liveupdate,args=[scene])
+            SLGBP.thread = Thread(target=SLGBP.liveupdate,args=[scene])
             SLGBP.thread.start()
 
     @staticmethod
@@ -786,7 +811,8 @@ class SLGBP:
                     elif cmpupd(k, cfg, SLGBP.cfg, not wasreset, False):
                         wasreset = True
             if act & SLGBP.LIVESCN > 0:
-                scn = SLGBP.getscn(scene)
+                with SLGBP.lock: 
+                    scn = SLGBP.getscn(scene)
                 for k in scn:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
                         wasreset = True
@@ -817,7 +843,7 @@ class SLGBP:
             if wasreset:
                 SLGBP.telnet.send('render.start')
 
-            time.sleep(0.5) # param?
+            sleep(0.5) # param?
             if SLGBP.liveact == 0: break
 
     # SLG live animation render
@@ -828,23 +854,29 @@ class SLGBP:
         SLGBP.livetrigger(scene, SLGBP.LIVEALL)
         if scene.slg.cameramotionblur:
             # Make sure first livetrigger takes place
-            time.sleep(0.25)
+            sleep(0.25)
         while True:
             scene.frame_set(scene.frame_current+scene.frame_step)
             SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(scene.frame_current) + " (ESC to abort)"
             SLGBP.livetrigger(scene, SLGBP.LIVEALL)
-            time.sleep(scene.slg.batchmodetime)
+            sleep(scene.slg.batchmodetime)
             SLGBP.telnet.send('image.save')
             if not SLGBP.live or scene.frame_current+scene.frame_step > scene.frame_end: break
         SLGBP.msg = 'SLG Live! (ESC to exit)'
         SLGBP.msgrefresh()
         SLGBP.liveanim = False
 
+def pre_draw_callback():
+    # Prevent simultaneous SLGBP export and View3D update (object matrices sometimes modified during draw, e.g. dupligroups)
+    SLGBP.lock.acquire()
+
 # Output informational message to main viewport
 def info_callback(context):
     blf.position(0, 75, 30, 0)
     blf.size(0, 14, 72)
     blf.draw(0, SLGBP.msg)
+    if SLGBP.lock.locked():
+        SLGBP.lock.release()
     if SLGBP.live:
         if SLGBP.slgproc.poll() != None:
             SLGBP.live = False
@@ -872,36 +904,30 @@ class SLGRender(bpy.types.Operator):
         self.report('ERROR', "SLGBP: " + msg)
 
     def _reset(self, context):
-        SLGBP.thread = None
-        context.region.callback_remove(SLGBP.icb)
+        context.region.callback_remove(self._pdcb)
+        context.region.callback_remove(self._icb)
         context.area.tag_redraw()
         if self.properties.animation:
+            SLGBP.thread = None
             if SLGBP.slgproc:
                 if SLGBP.slgproc.poll() == None:
                     SLGBP.slgproc.terminate()
 
     def modal(self, context, event):
-        if self.properties.animation:
-            if event.type == 'ESC':
+        if SLGBP.thread:
+            if SLGBP.thread.is_alive():
+                if event.type != 'ESC':
+                    return {'PASS_THROUGH'}
                 SLGBP.abort = True
-                bpy.ops.screen.animation_play()
-                self._reset(context)
-                self.report('WARNING', "SLG animation render aborted.")
+            self._reset(context)
+            if self._iserror:
                 return {'CANCELLED'}
-            if event.type == 'TIMER0':
-                if SLGBP.slgproc:
-                    SLGBP.slgproc.wait()
-                if not SLGBP.init(context.scene, self._error):
-                    bpy.ops.screen.animation_play()
-                    self._reset(context)
-                    return {'CANCELLED'}
-                SLGBP.exportrun(context.scene)
-                if context.scene.frame_current == context.scene.frame_end:
-                    bpy.ops.screen.animation_play()
-                    SLGBP.slgproc.wait()
-                    self._reset(context)
-                    self.report('INFO', "SLG animation render done.")
-                    return {'FINISHED'}
+            elif SLGBP.abort:
+                self.report('WARNING', "SLG export aborted.")
+                return {'CANCELLED'}
+            else:
+                self.report('INFO', "SLG export done.")
+                return {'FINISHED'}
         return {'PASS_THROUGH'}
 
     def invoke(self, context, event):
@@ -925,19 +951,15 @@ class SLGRender(bpy.types.Operator):
             return {'CANCELLED'}
         self._iserror = False
         SLGBP.abort = False
-        if self.properties.animation:
-            context.window_manager.modal_handler_add(self)
-            SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
-            SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-            bpy.ops.screen.animation_play()
-            return {'RUNNING_MODAL'}
-        else:
-            SLGBP.exportrun(context.scene)
-            if SLGBP.warn:
-                self.report('WARNING', SLGBP.warn)
-            else:
-                self.report('INFO', "SLG export done.")
-        return {'FINISHED'}
+        SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
+        SLGBP.msgrefresh = context.area.tag_redraw
+        context.window_manager.modal_handler_add(self)
+        self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
+        self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
+        SLGBP.msgrefresh()
+        SLGBP.thread = Thread(target=SLGBP.exportrun,args=[context.scene, self.properties.animation, self._error])
+        SLGBP.thread.start()
+        return {'RUNNING_MODAL'}
 
 # SLG Live operator
 class SLGLive(bpy.types.Operator):
@@ -953,7 +975,8 @@ class SLGLive(bpy.types.Operator):
         if self._iserror or SLGBP.abort or event.type == 'ESC':
             SLGBP.live = False
             SLGBP.telnet.close()
-            context.region.callback_remove(SLGBP.icb)
+            context.region.callback_remove(self._pdcb)
+            context.region.callback_remove(self._icb)
             context.area.tag_redraw()
             bpy.context.user_preferences.edit.use_global_undo = self._undo
             return {'FINISHED'}
@@ -982,8 +1005,9 @@ class SLGLive(bpy.types.Operator):
         SLGBP.msg = 'SLG Live!'
         SLGBP.msgrefresh = context.area.tag_redraw
         SLGBP.curframe = context.scene.frame_current
-        SLGBP.icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-        SLGBP.thread = threading.Thread(target=SLGBP.liveconnect,args=[context.scene, self._error])
+        self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
+        self._pdcb = context.region.callback_add(pre_draw_callback, (context,), 'PRE_VIEW')
+        SLGBP.thread = Thread(target=SLGBP.liveconnect,args=[context.scene, self._error])
         SLGBP.thread.start()
         return {'RUNNING_MODAL'}
 
@@ -1014,7 +1038,7 @@ class SLGLiveAnim(bpy.types.Operator):
 
     # def execute(self, context):
     def invoke(self, context, event):
-        threading.Thread(target=SLGBP.liveanimrender,args=[context.scene]).start()
+        Thread(target=SLGBP.liveanimrender,args=[context.scene]).start()
         return {'FINISHED'}
 
 class SmallLuxGPURender(bpy.types.RenderEngine):
@@ -1027,7 +1051,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         while True:
             if self.test_break():
                 break
-            time.sleep(0.1)
+            sleep(0.1)
 
     def render(self, scene):
 
@@ -1042,7 +1066,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
         if not SLGBP.init(scene, self._error):
             return
         # Force an update to object matrices when rendering animations
-        scene.frame_set(scene.frame_current)
+        scene.update()
         SLGBP.export(scene)
         SLGBP.runslg(scene)
 
@@ -1071,7 +1095,7 @@ class SmallLuxGPURender(bpy.types.RenderEngine):
                     except:
                         pass
                     break
-                time.sleep(0.1)
+                sleep(0.1)
 
 class SLGSettings(bpy.types.PropertyGroup):
     pass
@@ -1366,6 +1390,7 @@ def slg_add_properties():
     properties_material.MATERIAL_PT_context_material.COMPAT_ENGINES.add('SLG_RENDER')
     properties_material.MATERIAL_PT_diffuse.COMPAT_ENGINES.add('SLG_RENDER')
     properties_material.MATERIAL_PT_shading.COMPAT_ENGINES.add('SLG_RENDER')
+    properties_material.MATERIAL_PT_pipeline.COMPAT_ENGINES.add('SLG_RENDER')
     properties_material.MATERIAL_PT_transp.COMPAT_ENGINES.add('SLG_RENDER')
     properties_material.MATERIAL_PT_mirror.COMPAT_ENGINES.add('SLG_RENDER')
     del properties_material
