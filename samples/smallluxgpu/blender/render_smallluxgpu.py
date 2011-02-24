@@ -37,6 +37,7 @@ bl_info = {
 import bpy
 import blf
 from mathutils import Matrix, Vector
+from presets import AddPresetBase
 import os
 from threading import Lock, Thread
 from time import sleep
@@ -1478,6 +1479,81 @@ def slg_rendermenu(self, context):
             self.layout.operator("render.slg_render", text="SmallLuxGPU Export and Render Scene", icon='RENDER_STILL')
             self.layout.operator("render.slg_render", text="SmallLuxGPU Export and Render Animation", icon='RENDER_ANIMATION').animation = True
 
+class RENDER_MT_slg_presets(bpy.types.Menu):
+    bl_label = "SLG Presets"
+    preset_subdir = "slg"
+    preset_operator = "script.execute_preset"
+    draw = bpy.types.Menu.draw_preset
+
+class AddPresetSLG(AddPresetBase, bpy.types.Operator):
+    '''Add an SLG Preset'''
+    bl_idname = "render.slg_preset_add"
+    bl_label = "Add SLG Preset"
+    preset_menu = "RENDER_MT_slg_presets"
+
+    preset_defines = ["scene = bpy.context.scene"]
+
+    preset_values = [
+        "scene.slg.slgpath",
+        "scene.slg.scene_path",
+        "scene.slg.scenename",
+        "scene.slg.export",
+        "scene.slg.vuvs",
+        "scene.slg.vcolors",
+        "scene.slg.vnormals",
+        "scene.slg.infinitelightbf",
+        "scene.slg.cameramotionblur",
+        "scene.slg.rendering_type",
+        "scene.slg.accelerator_type",
+        "scene.slg.film_filter_type",
+        "scene.slg.film_tonemap_type",
+        "scene.slg.linear_scale",
+        "scene.slg.reinhard_burn",
+        "scene.slg.reinhard_prescale",
+        "scene.slg.reinhard_postscale",
+        "scene.slg.imageformat",
+        "scene.slg.film_gamma",
+        "scene.slg.sppmdirectlight",
+        "scene.slg.sppmlookuptype",
+        "scene.slg.sppm_photon_alpha",
+        "scene.slg.sppm_photon_radiusscale",
+        "scene.slg.sppm_eyepath_maxdepth",
+        "scene.slg.sppm_photon_maxdepth",
+        "scene.slg.sppm_photon_per_pass",
+        "scene.slg.lightstrategy",
+        "scene.slg.tracedepth",
+        "scene.slg.shadowrays",
+        "scene.slg.sampleperpixel",
+        "scene.slg.rrstrategy",
+        "scene.slg.rrdepth",
+        "scene.slg.rrprob",
+        "scene.slg.rrcap",
+        "scene.slg.enablepartmedia",
+        "scene.slg.partmedia_stepsize",
+        "scene.slg.partmedia_rrprob",
+        "scene.slg.partmedia_emission",
+        "scene.slg.partmedia_scattering",
+        "scene.slg.partmedia_bbox1",
+        "scene.slg.partmedia_bbox2",
+        "scene.slg.low_latency",
+        "scene.slg.refreshrate",
+        "scene.slg.enablebatchmode",
+        "scene.slg.waitrender",
+        "scene.slg.enabletelnet",
+        "scene.slg.telnetecho",
+        "scene.slg.batchmodetime",
+        "scene.slg.batchmodespp",
+        "scene.slg.batchmode_periodicsave",
+        "scene.slg.native_threads",
+        "scene.slg.devices_threads",
+        "scene.slg.opencl_cpu",
+        "scene.slg.opencl_gpu",
+        "scene.slg.gpu_workgroup_size",
+        "scene.slg.platform",
+        "scene.slg.devices"
+    ]
+    preset_subdir = "slg"
+
 class RenderButtonsPanel():
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
@@ -1494,6 +1570,11 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
     def draw(self, context):
         layout = self.layout
         slg = context.scene.slg
+
+        row = layout.row(align=True)
+        row.menu("RENDER_MT_slg_presets", text=bpy.types.RENDER_MT_slg_presets.bl_label)
+        row.operator("render.slg_preset_add", text="", icon="ZOOMIN")
+        row.operator("render.slg_preset_add", text="", icon="ZOOMOUT").remove_active = True
 
         split = layout.split()
         col = split.column()
