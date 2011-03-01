@@ -1007,7 +1007,7 @@ class SLGLive(bpy.types.Operator):
         SLGBP.msgrefresh = context.area.tag_redraw
         SLGBP.curframe = context.scene.frame_current
         self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-        self._pdcb = context.region.callback_add(pre_draw_callback, (context,), 'PRE_VIEW')
+        self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
         SLGBP.thread = Thread(target=SLGBP.liveconnect,args=[context.scene, self._error])
         SLGBP.thread.start()
         return {'RUNNING_MODAL'}
