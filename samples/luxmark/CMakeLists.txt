@@ -114,19 +114,6 @@ set(LUXMARK_SRCS
 #############################################################################
 
 IF(APPLE)
-	ADD_CUSTOM_TARGET(dist DEPENDS LuxMark)
-	ADD_CUSTOM_COMMAND(
-	TARGET dist POST_BUILD
-	COMMAND rm -rf LuxMark.app 
-	COMMAND mkdir LuxMark.app 
-	COMMAND mkdir LuxMark.app/Contents 
-	COMMAND mkdir LuxMark.app/Contents/MacOS 
-#	COMMAND mkdir LuxMark.app/Contents/Resources
-#	COMMAND cp ../macos/Info.plist LuxMark.app/Contents
-#	COMMAND cp LuxMark.icns LuxMark.app/Contents/Resources
-	COMMAND echo APPLnone > LuxMark.app/Contents/PkgInfo
-	COMMAND cp LuxMark LuxMark.app/Contents/MacOS/LuxMark)
-
 	SET(GUI_TYPE MACOSX_BUNDLE)
 	# SET(MACOSX_BUNDLE_LONG_VERSION_STRING "${OPENSCENEGRAPH_MAJOR_VERSION}.${OPENSCENEGRAPH_MINOR_VERSION}.${OPENSCENEGRAPH_PATCH_VERSION}")
 	# Short Version is the "marketing version". It is the version
