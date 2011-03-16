@@ -554,7 +554,7 @@ class SLGBP:
                 try:
                     if type(obj) == bpy.types.Object:
                         print("SLGBP        Create render mesh: {}".format(obj.name))
-                        mesh = obj.create_mesh(scene, True, 'RENDER')
+                        mesh = obj.to_mesh(scene, True, 'RENDER')
                     else:
                         print("SLGBP        Using render mesh: {}".format(obj.name))
                         mesh = obj
