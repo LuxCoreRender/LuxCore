@@ -23,6 +23,7 @@
 #include "path/path.h"
 #include "sppm/sppm.h"
 #include "pathgpu/pathgpu.h"
+#include "pathgpu2/pathgpu2.h"
 
 #include "luxrays/utils/film/film.h"
 
@@ -172,6 +173,9 @@ void RenderingConfig::Init() {
 		case 3:
 			renderEngine = new PathGPURenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
 			break;
+		case 4:
+			renderEngine = new PathGPU2RenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
+			break;
 #endif
 		default:
 			assert (false);
@@ -225,6 +229,9 @@ void RenderingConfig::SetRenderingEngineType(const RenderEngineType type) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			case PATHGPU:
 				renderEngine = new PathGPURenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
+				break;
+			case PATHGPU2:
+				renderEngine = new PathGPU2RenderEngine(scene, film, &filmMutex, intersectionGPUDevices, cfg);
 				break;
 #endif
 			default:
