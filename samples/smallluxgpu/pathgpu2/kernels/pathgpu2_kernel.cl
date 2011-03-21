@@ -590,7 +590,7 @@ float SphericalPhi(const Vector *v) {
 }
 
 #if defined(PARAM_HAVE_INFINITELIGHT)
-void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, Vector *dir) {
+void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, const Vector *dir) {
 	const float u = 1.f - SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;
 	const float v = SphericalTheta(dir) * INV_PI + PARAM_IL_SHIFT_V;
 
@@ -1253,6 +1253,12 @@ __kernel void GenerateRays(
 					, cameraData
 #endif
 				);
+
+			// Initialize the path state
+			task->pathState.depth = 0;
+			task->pathState.throughput.r = 1.f;
+			task->pathState.throughput.g = 1.f;
+			task->pathState.throughput.b = 1.f;
 			break;
 		}
 	}
@@ -1270,42 +1276,89 @@ __kernel void GenerateRays(
 __kernel void AdvancePaths(
 		__global GPUTask *tasks,
 		__global Ray *rays,
-		__global RayHit *rayHits
+		__global RayHit *rayHits,
+		__global Pixel *frameBuffer,
+		__global Material *mats,
+		__global uint *meshMats,
+		__global uint *meshIDs,
+		__global Spectrum *vertColors,
+		__global Vector *vertNormals,
+		__global Triangle *triangles
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
+#if defined(PARAM_HAVE_INFINITELIGHT)
+		, __global Spectrum *infiniteLightMap
+#endif
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global TriangleLight *triLights
+#endif
+#if defined(PARAM_HAS_TEXTUREMAPS)
+        , __global Spectrum *texMapRGBBuff
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+		, __global float *texMapAlphaBuff
+#endif
+        , __global TexMap *texMapDescBuff
+        , __global unsigned int *meshTexsBuff
+        , __global UV *vertUVs
+#endif
 		) {
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
 	__global GPUTask *task = &tasks[gid];
-	if (task->pathState.state == PATH_STATE_DONE)
+	const uint pathState = task->pathState.state;
+	if (pathState == PATH_STATE_DONE)
 		return;
 
-	//__global Ray *ray = &rays[gid];
+	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 
-	const uint indexRenderFirst = task->samples.indexRenderFirst;
-	uint indexRenderCurrent = task->samples.indexRenderCurrent;
-	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
+	const Vector rayDir = ray->d;
+	const uint currentTriangleIndex = rayHit->index;
+	Spectrum throughput = task->pathState.throughput;
 
-	uint currentTriangleIndex = rayHit->index;
-	if (currentTriangleIndex != 0xffffffffu) {
-		sample->result.r = 1.f;
-		sample->result.g = 1.f;
-		sample->result.b = 1.f;
-	} else {
-		sample->result.r = .0f;
-		sample->result.g = .0f;
-		sample->result.b = .0f;
-	}
+	switch (pathState) {
+		case PATH_STATE_EYE_VERTEX: {
+			uint indexRenderCurrent = task->samples.indexRenderCurrent;
+			__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
-	indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
-	if (indexRenderCurrent == indexRenderFirst) {
-		// We are out of samples to render, just leave the path in PATH_STATE_DONE
-		// and wait
-		task->pathState.state = PATH_STATE_DONE;
-	} else {
-		task->samples.indexRenderCurrent = indexRenderCurrent;
-		task->pathState.state = PATH_STATE_EYE_VERTEX;
+			if (currentTriangleIndex != 0xffffffffu) {
+				sample->result.r = 1.f;
+				sample->result.g = 1.f;
+				sample->result.b = 1.f;
+			} else {
+				Spectrum radiance;
+
+#if defined(PARAM_HAVE_INFINITELIGHT)
+				Spectrum Le;
+				InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
+
+				radiance.r = throughput.r * Le.r;
+				radiance.g = throughput.g * Le.g;
+				radiance.b = throughput.b * Le.b;
+#else
+				radiance.r = 0.f;
+				radiance.g = 0.f;
+				radiance.b = 0.f;
+#endif
+
+				sample->result = radiance;
+			}
+
+			const uint indexRenderFirst = task->samples.indexRenderFirst;
+			indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
+			if (indexRenderCurrent == indexRenderFirst) {
+				// We are out of samples to render, just leave the path in PATH_STATE_DONE
+				// and wait
+				task->pathState.state = PATH_STATE_DONE;
+			} else {
+				task->samples.indexRenderCurrent = indexRenderCurrent;
+				task->pathState.state = PATH_STATE_EYE_VERTEX;
+			}
+			break;
+		}
 	}
 }
 

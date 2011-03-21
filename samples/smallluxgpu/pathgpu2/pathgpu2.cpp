@@ -997,9 +997,32 @@ void PathGPU2RenderThread::InitRender() {
 	if (cameraBuff)
 		generateRaysKernel->setArg(2, *cameraBuff);
 
-	advancePathsKernel->setArg(0, *tasksBuff);
-	advancePathsKernel->setArg(1, *raysBuff);
-	advancePathsKernel->setArg(2, *hitsBuff);
+	unsigned int argIndex = 0;
+	advancePathsKernel->setArg(argIndex++, *tasksBuff);
+	advancePathsKernel->setArg(argIndex++, *raysBuff);
+	advancePathsKernel->setArg(argIndex++, *hitsBuff);
+	advancePathsKernel->setArg(argIndex++, *frameBufferBuff);
+	advancePathsKernel->setArg(argIndex++, *materialsBuff);
+	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
+	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
+	advancePathsKernel->setArg(argIndex++, *colorsBuff);
+	advancePathsKernel->setArg(argIndex++, *normalsBuff);
+	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
+	if (cameraBuff)
+		advancePathsKernel->setArg(argIndex++, *cameraBuff);
+	if (infiniteLight)
+		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
+	if (triLightsBuff)
+		advancePathsKernel->setArg(argIndex++, *triLightsBuff);
+	if (texMapRGBBuff)
+		advancePathsKernel->setArg(argIndex++, *texMapRGBBuff);
+	if (texMapAlphaBuff)
+		advancePathsKernel->setArg(argIndex++, *texMapAlphaBuff);
+	if (texMapRGBBuff || texMapAlphaBuff) {
+		advancePathsKernel->setArg(argIndex++, *texMapDescBuff);
+		advancePathsKernel->setArg(argIndex++, *meshTexsBuff);
+		advancePathsKernel->setArg(argIndex++, *uvsBuff);
+	}
 
 	collectResultsKernel->setArg(0, *tasksBuff);
 	collectResultsKernel->setArg(1, *frameBufferBuff);
