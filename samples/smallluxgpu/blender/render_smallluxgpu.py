@@ -1383,7 +1383,6 @@ def slg_add_properties():
     bl_ui.properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('SLG_RENDER')
     bl_ui.properties_render.RENDER_PT_output.COMPAT_ENGINES.add('SLG_RENDER')
     bl_ui.properties_render.RENDER_PT_post_processing.COMPAT_ENGINES.add('SLG_RENDER')
-    del bl_ui.properties_render
 
     bl_ui.properties_material.MATERIAL_PT_context_material.COMPAT_ENGINES.add('SLG_RENDER')
     bl_ui.properties_material.MATERIAL_PT_diffuse.COMPAT_ENGINES.add('SLG_RENDER')
@@ -1391,7 +1390,6 @@ def slg_add_properties():
     bl_ui.properties_material.MATERIAL_PT_pipeline.COMPAT_ENGINES.add('SLG_RENDER')
     bl_ui.properties_material.MATERIAL_PT_transp.COMPAT_ENGINES.add('SLG_RENDER')
     bl_ui.properties_material.MATERIAL_PT_mirror.COMPAT_ENGINES.add('SLG_RENDER')
-    del bl_ui.properties_material
 
     for member in dir(bl_ui.properties_texture):
         subclass = getattr(bl_ui.properties_texture, member)
@@ -1399,7 +1397,6 @@ def slg_add_properties():
             subclass.COMPAT_ENGINES.add('SLG_RENDER')
         except:
             pass
-    del bl_ui.properties_texture
 
     for member in dir(bl_ui.properties_data_camera):
         subclass = getattr(bl_ui.properties_data_camera, member)
@@ -1407,13 +1404,10 @@ def slg_add_properties():
             subclass.COMPAT_ENGINES.add('SLG_RENDER')
         except:
             pass
-    del bl_ui.properties_data_camera
 
     bl_ui.properties_world.WORLD_PT_environment_lighting.COMPAT_ENGINES.add('SLG_RENDER')
-    del bl_ui.properties_world
 
     bl_ui.properties_data_lamp.DATA_PT_sunsky.COMPAT_ENGINES.add('SLG_RENDER')
-    del bl_ui.properties_data_lamp
 
     for member in dir(bl_ui.properties_particle):
         subclass = getattr(bl_ui.properties_particle, member)
@@ -1421,7 +1415,6 @@ def slg_add_properties():
             subclass.COMPAT_ENGINES.add('SLG_RENDER')
         except:
             pass
-    del bl_ui.properties_particle
 
 # Add SLG Camera Lens Radius on Camera panel
 def slg_lensradius(self, context):
