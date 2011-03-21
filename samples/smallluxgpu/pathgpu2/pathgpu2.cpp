@@ -434,7 +434,7 @@ void PathGPU2RenderThread::InitRender() {
 			// float dofX, dofY;
 			((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
 			// Spectrum result;
-			sizeof(Spectrum)) * sampleCount + sizeof(unsigned short) * 2
+			sizeof(Spectrum)) * sampleCount + sizeof(unsigned int) * 2
 		) +
 		// PathState size
 		sizeof(PathGPU2::PathState);

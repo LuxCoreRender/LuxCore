@@ -144,7 +144,8 @@ typedef struct {
 	// A circular buffer of samples to render
 	Sample sample[PARAM_SAMPLE_COUNT];
 
-	ushort indexRenderFirst, indexRenderCurrent;
+	// Using ushort here totally freeze the ATI driver
+	uint indexRenderFirst, indexRenderCurrent;
 } Samples;
 
 #define PATH_STATE_EYE_VERTEX 0
@@ -1127,8 +1128,8 @@ __kernel void RandomSampler(
 	seed.s2 = task->seed.s2;
 	seed.s3 = task->seed.s3;
 
-	ushort indexRenderFirst = task->samples.indexRenderFirst;
-	const ushort indexRenderCurrent = task->samples.indexRenderCurrent;
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 
 	while (indexRenderFirst != indexRenderCurrent) {
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
@@ -1242,7 +1243,7 @@ __kernel void GenerateRays(
 	seed.s2 = task->seed.s2;
 	seed.s3 = task->seed.s3;
 
-	const ushort indexRenderCurrent = task->samples.indexRenderCurrent;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
 	switch (pathState) {
@@ -1282,8 +1283,8 @@ __kernel void AdvancePaths(
 	//__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 
-	const ushort indexRenderFirst = task->samples.indexRenderFirst;
-	ushort indexRenderCurrent = task->samples.indexRenderCurrent;
+	const uint indexRenderFirst = task->samples.indexRenderFirst;
+	uint indexRenderCurrent = task->samples.indexRenderCurrent;
 	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
 	uint currentTriangleIndex = rayHit->index;
@@ -1322,8 +1323,8 @@ __kernel void CollectResults(
 
 	__global GPUTask *task = &tasks[gid];
 
-	ushort indexRenderFirst = task->samples.indexRenderFirst;
-	const ushort indexRenderCurrent = task->samples.indexRenderCurrent;
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 
 	/*if (gid == 0) {
 		printf(\"===========================================================\\n\");
