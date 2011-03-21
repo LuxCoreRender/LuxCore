@@ -392,7 +392,6 @@ void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
 //------------------------------------------------------------------------------
 
 void GenerateRay(
-		const uint pixelIndex,
 		__global Sample *sample,
 		__global Ray *ray,
 		Seed *seed
@@ -400,6 +399,7 @@ void GenerateRay(
 		, __global float *cameraData
 #endif
 		) {
+	const uint pixelIndex = sample->pixelIndex;
 	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + sample->screenX - 0.5f;
 	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + sample->screenY - 0.5f;
 
@@ -481,6 +481,10 @@ void GenerateRay(
 	ray->d = tdir;
 	ray->mint = PARAM_RAY_EPSILON;
 	ray->maxt = (PARAM_CLIP_YON - PARAM_CLIP_HITHER) / dir.z;
+
+	/*printf(\"(%f, %f, %f) (%f, %f, %f) [%f, %f]\\n\",
+		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
+		ray->mint, ray->maxt);*/
 }
 
 //------------------------------------------------------------------------------
@@ -1222,6 +1226,8 @@ __kernel void GenerateRays(
 #endif
 		) {
 	const int gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
 
 	__global GPUTask *task = &tasks[gid];
 	const uint pathState = task->pathState.state;
@@ -1241,7 +1247,7 @@ __kernel void GenerateRays(
 
 	switch (pathState) {
 		case PATH_STATE_EYE_VERTEX: {
-			GenerateRay(sample->pixelIndex, sample, ray, &seed
+			GenerateRay(sample, ray, &seed
 #if defined(PARAM_CAMERA_DYNAMIC)
 					, cameraData
 #endif
@@ -1266,6 +1272,8 @@ __kernel void AdvancePaths(
 		__global RayHit *rayHits
 		) {
 	const int gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
 
 	__global GPUTask *task = &tasks[gid];
 	if (task->pathState.state == PATH_STATE_DONE)
@@ -1294,9 +1302,7 @@ __kernel void AdvancePaths(
 		// We are out of samples to render, just leave the path in PATH_STATE_DONE
 		// and wait
 		task->pathState.state = PATH_STATE_DONE;
-		return;
 	} else {
-
 		task->samples.indexRenderCurrent = indexRenderCurrent;
 		task->pathState.state = PATH_STATE_EYE_VERTEX;
 	}
@@ -1311,6 +1317,8 @@ __kernel void CollectResults(
 		__global Pixel *frameBuffer
 		) {
 	const int gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
 
 	__global GPUTask *task = &tasks[gid];
 
