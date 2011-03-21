@@ -150,6 +150,8 @@ typedef struct {
 
 #define PATH_STATE_EYE_VERTEX 0
 #define PATH_STATE_DONE 1
+#define PATH_STATE_DONE_AND_OUT_OF_SAMPLE 2
+#define PATH_STATE_NEXT_VERTEX 3
 
 typedef struct {
 	uint state;
@@ -1141,7 +1143,7 @@ __kernel void RandomSampler(
 	task->samples.indexRenderFirst = indexRenderFirst;
 
 	// I have generated new samples, unlock the rendering if required
-	if (task->pathState.state == PATH_STATE_DONE) {
+	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
 		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
 		task->pathState.state = PATH_STATE_EYE_VERTEX;
 	}
@@ -1232,7 +1234,7 @@ __kernel void GenerateRays(
 
 	__global GPUTask *task = &tasks[gid];
 	const uint pathState = task->pathState.state;
-	if (pathState == PATH_STATE_DONE)
+	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
 		return;
 
 	__global Ray *ray = &rays[gid];
@@ -1308,9 +1310,12 @@ __kernel void AdvancePaths(
 		return;
 
 	__global GPUTask *task = &tasks[gid];
-	const uint pathState = task->pathState.state;
-	if (pathState == PATH_STATE_DONE)
+	uint pathState = task->pathState.state;
+	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
 		return;
+
+	uint indexRenderCurrent = task->samples.indexRenderCurrent;
+	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
@@ -1321,9 +1326,6 @@ __kernel void AdvancePaths(
 
 	switch (pathState) {
 		case PATH_STATE_EYE_VERTEX: {
-			uint indexRenderCurrent = task->samples.indexRenderCurrent;
-			__global Sample *sample = &task->samples.sample[indexRenderCurrent];
-
 			if (currentTriangleIndex != 0xffffffffu) {
 				sample->result.r = 1.f;
 				sample->result.g = 1.f;
@@ -1347,17 +1349,22 @@ __kernel void AdvancePaths(
 				sample->result = radiance;
 			}
 
-			const uint indexRenderFirst = task->samples.indexRenderFirst;
-			indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
-			if (indexRenderCurrent == indexRenderFirst) {
-				// We are out of samples to render, just leave the path in PATH_STATE_DONE
-				// and wait
-				task->pathState.state = PATH_STATE_DONE;
-			} else {
-				task->samples.indexRenderCurrent = indexRenderCurrent;
-				task->pathState.state = PATH_STATE_EYE_VERTEX;
-			}
+			pathState = PATH_STATE_DONE;
 			break;
+		}
+
+	}
+
+	if (pathState == PATH_STATE_DONE) {
+		const uint indexRenderFirst = task->samples.indexRenderFirst;
+		indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
+		if (indexRenderCurrent == indexRenderFirst) {
+			// We are out of samples to render, just set the path in
+			// PATH_STATE_DONE_AND_OUT_OF_SAMPLE and wait
+			task->pathState.state = PATH_STATE_DONE_AND_OUT_OF_SAMPLE;
+		} else {
+			task->samples.indexRenderCurrent = indexRenderCurrent;
+			task->pathState.state = PATH_STATE_EYE_VERTEX;
 		}
 	}
 }
