@@ -434,11 +434,11 @@ void PathGPU2RenderThread::InitRender() {
 			// float dofX, dofY;
 			((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
 			// Spectrum result;
-			sizeof(Spectrum)) * sampleCount + sizeof(unsigned short) * 4
+			sizeof(Spectrum)) * sampleCount + sizeof(unsigned short) * 2
 		) +
 		// PathState size
 		sizeof(PathGPU2::PathState);
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Paths buffer size: " << (taskGPUSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (taskGPUSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			taskGPUSize * PATHGPU2_TASK_COUNT);
