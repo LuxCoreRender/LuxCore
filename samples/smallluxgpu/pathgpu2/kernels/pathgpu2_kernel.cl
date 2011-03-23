@@ -128,14 +128,31 @@ typedef struct {
 	unsigned int s1, s2, s3;
 } Seed;
 
+// Indices of Sample.u[] array
+#define IDX_SCREEN_X 0
+#define IDX_SCREEN_Y 1
+#if defined(PARAM_CAMERA_HAS_DOF)
+#define IDX_DOF_X 2
+#define IDX_DOF_Y 3
+#define IDX_BSDF_OFFSET 4
+#else
+#define IDX_BSDF_OFFSET 2
+#endif
+
+#define IDX_TEX_ALPHA 0
+#define IDX_BSDF_X 1
+#define IDX_BSDF_Y 2
+#define IDX_BSDF_Z 3
+
+#define SAMPLE_SIZE 4
+
+#define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
+
 typedef struct {
 	// This field is initialized at the start
 	uint pixelIndex;
 
-	float screenX, screenY;
-#if defined(PARAM_CAMERA_HAS_DOF)
-	float dofX, dofY;
-#endif
+	float u[TOTAL_U_SIZE];
 
 	Spectrum result;
 } Sample;
@@ -403,8 +420,8 @@ void GenerateRay(
 #endif
 		) {
 	const uint pixelIndex = sample->pixelIndex;
-	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + sample->screenX - 0.5f;
-	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + sample->screenY - 0.5f;
+	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + sample->u[IDX_SCREEN_X] - 0.5f;
+	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + sample->u[IDX_SCREEN_Y] - 0.5f;
 
 	Point Pras;
 	Pras.x = screenX;
@@ -433,7 +450,7 @@ void GenerateRay(
 #if defined(PARAM_CAMERA_HAS_DOF)
 	// Sample point on lens
 	float lensU, lensV;
-	ConcentricSampleDisk(sample->dofX, sample->dofY, &lensU, &lensV);
+	ConcentricSampleDisk(sample->u[IDX_DOF_X], sample->u[IDX_DOF_Y], &lensU, &lensV);
 	lensU *= PARAM_CAMERA_LENS_RADIUS;
 	lensV *= PARAM_CAMERA_LENS_RADIUS;
 
@@ -1106,12 +1123,8 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 //------------------------------------------------------------------------------
 
 void RandomSamplerInit(Seed *seed, __global Sample *sample) {
-	sample->screenX = RndFloatValue(seed);
-	sample->screenY = RndFloatValue(seed);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	sample->dofX = RndFloatValue(seed);
-	sample->dofY = RndFloatValue(seed);
-#endif
+	for (int i = 0; i < TOTAL_U_SIZE; ++i)
+		sample->u[i] = RndFloatValue(seed);
 }
 
 __kernel void RandomSampler(
@@ -1311,12 +1324,6 @@ __kernel void AdvancePaths(
 	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
 		return;
 
-	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
-
 	uint indexRenderCurrent = task->samples.indexRenderCurrent;
 	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
@@ -1343,6 +1350,9 @@ __kernel void AdvancePaths(
 			if (currentTriangleIndex != 0xffffffffu) {
 				// Something was hit
 
+				const uint pathDepth = task->pathState.depth + 1;
+				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
+
 				const uint meshIndex = meshIDs[currentTriangleIndex];
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 				uint matType = hitPointMat->type;
@@ -1366,7 +1376,7 @@ __kernel void AdvancePaths(
 					if (texMap->alphaOffset != 0xffffffffu) {
 						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
 
-						if ((alpha == 0.0f) || ((alpha < 1.f) && (RndFloatValue(&seed) > alpha))) {
+						if ((alpha == 0.0f) || ((alpha < 1.f) && (sampleData[IDX_TEX_ALPHA] > alpha))) {
 							// Continue to trace the ray
 							matType = MAT_NULL;
 						}
@@ -1397,9 +1407,9 @@ __kernel void AdvancePaths(
 				shadeN.y = nFlip * N.y;
 				shadeN.z = nFlip * N.z;
 
-				const float u0 = RndFloatValue(&seed);
-				const float u1 = RndFloatValue(&seed);
-				const float u2 = RndFloatValue(&seed);
+				const float u0 = sampleData[IDX_BSDF_X];
+				const float u1 = sampleData[IDX_BSDF_Y];
+				const float u2 = sampleData[IDX_BSDF_Z];
 
 				Vector wo;
 				wo.x = -rayDir.x;
@@ -1545,7 +1555,6 @@ __kernel void AdvancePaths(
 						break;
 				}
 
-				const uint pathDepth = task->pathState.depth + 1;
 				const float invPdf = ((pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
 
 				//if (pathDepth > 2)
@@ -1556,8 +1565,21 @@ __kernel void AdvancePaths(
 				throughput.b *= f.b * invPdf;
 
 				// Russian roulette
-				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
+
+				// Read the seed
+				Seed seed;
+				seed.s1 = task->seed.s1;
+				seed.s2 = task->seed.s2;
+				seed.s3 = task->seed.s3;
+
 				const float rrSample = RndFloatValue(&seed);
+
+				// Save the seed
+				task->seed.s1 = seed.s1;
+				task->seed.s2 = seed.s2;
+				task->seed.s3 = seed.s3;
+
+				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
 				const float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
 				throughput.r *= invRRProb;
 				throughput.g *= invRRProb;
@@ -1596,11 +1618,6 @@ __kernel void AdvancePaths(
 					path->state = PATH_STATE_NEXT_VERTEX;
 #endif
 				}
-
-				// Save the seed
-				task->seed.s1 = seed.s1;
-				task->seed.s2 = seed.s2;
-				task->seed.s3 = seed.s3;
 			} else {
 				Spectrum radiance;
 
