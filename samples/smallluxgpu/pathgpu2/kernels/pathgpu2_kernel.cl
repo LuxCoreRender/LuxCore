@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -1248,21 +1248,18 @@ __kernel void GenerateRays(
 	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
-	switch (pathState) {
-		case PATH_STATE_EYE_VERTEX: {
-			GenerateRay(sample, ray, &seed
+	if (pathState == PATH_STATE_EYE_VERTEX) {
+		GenerateRay(sample, ray, &seed
 #if defined(PARAM_CAMERA_DYNAMIC)
-					, cameraData
+				, cameraData
 #endif
 				);
 
-			// Initialize the path state
-			task->pathState.depth = 0;
-			task->pathState.throughput.r = 1.f;
-			task->pathState.throughput.g = 1.f;
-			task->pathState.throughput.b = 1.f;
-			break;
-		}
+		// Initialize the path state
+		task->pathState.depth = 0;
+		task->pathState.throughput.r = 1.f;
+		task->pathState.throughput.g = 1.f;
+		task->pathState.throughput.b = 1.f;
 	}
 
 	// Save the seed
@@ -1314,28 +1311,305 @@ __kernel void AdvancePaths(
 	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
 		return;
 
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
 	uint indexRenderCurrent = task->samples.indexRenderCurrent;
 	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
-
-	const Vector rayDir = ray->d;
 	const uint currentTriangleIndex = rayHit->index;
+
+	const float hitPointT = rayHit->t;
+    const float hitPointB1 = rayHit->b1;
+    const float hitPointB2 = rayHit->b2;
+
+    Vector rayDir = ray->d;
+
+	Point hitPoint;
+    hitPoint.x = ray->o.x + rayDir.x * hitPointT;
+    hitPoint.y = ray->o.y + rayDir.y * hitPointT;
+    hitPoint.z = ray->o.z + rayDir.z * hitPointT;
+
 	Spectrum throughput = task->pathState.throughput;
 
 	switch (pathState) {
+		case PATH_STATE_NEXT_VERTEX:
 		case PATH_STATE_EYE_VERTEX: {
 			if (currentTriangleIndex != 0xffffffffu) {
-				sample->result.r = 1.f;
-				sample->result.g = 1.f;
-				sample->result.b = 1.f;
+				// Something was hit
+
+				const uint meshIndex = meshIDs[currentTriangleIndex];
+				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
+				uint matType = hitPointMat->type;
+
+				// Interpolate Color
+				Spectrum shadeColor;
+				Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+
+#if defined(PARAM_HAS_TEXTUREMAPS)
+				// Interpolate UV coordinates
+				UV uv;
+				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+
+				// Check it the mesh has a texture map
+				unsigned int texIndex = meshTexsBuff[meshIndex];
+				if (texIndex != 0xffffffffu) {
+					__global TexMap *texMap = &texMapDescBuff[texIndex];
+
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS) && !defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					// Check if it has an alpha channel
+					if (texMap->alphaOffset != 0xffffffffu) {
+						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
+
+						if ((alpha == 0.0f) || ((alpha < 1.f) && (RndFloatValue(&seed) > alpha))) {
+							// Continue to trace the ray
+							matType = MAT_NULL;
+						}
+					}
+#endif
+
+					Spectrum texColor;
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
+
+					shadeColor.r *= texColor.r;
+					shadeColor.g *= texColor.g;
+					shadeColor.b *= texColor.b;
+				}
+#endif
+
+				throughput.r *= shadeColor.r;
+				throughput.g *= shadeColor.g;
+				throughput.b *= shadeColor.b;
+
+				// Interpolate the normal
+				Vector N;
+				Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
+
+				// Flip the normal if required
+				Vector shadeN;
+				const float nFlip = (Dot(&rayDir, &N) > 0.f) ? -1.f : 1.f;
+				shadeN.x = nFlip * N.x;
+				shadeN.y = nFlip * N.y;
+				shadeN.z = nFlip * N.z;
+
+				const float u0 = RndFloatValue(&seed);
+				const float u1 = RndFloatValue(&seed);
+				const float u2 = RndFloatValue(&seed);
+
+				Vector wo;
+				wo.x = -rayDir.x;
+				wo.y = -rayDir.y;
+				wo.z = -rayDir.z;
+
+				Vector wi;
+				float pdf;
+				Spectrum f;
+
+				switch (matType) {
+
+#if defined(PARAM_ENABLE_MAT_AREALIGHT)
+					case MAT_AREALIGHT: {
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+						if (path->specularBounce) {
+#endif
+							Spectrum radiance;
+							AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &radiance);
+							radiance.r *= throughput.r;
+							radiance.g *= throughput.g;
+							radiance.b *= throughput.b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+							radiance.r += path->accumRadiance.r;
+							radiance.g += path->accumRadiance.g;
+							radiance.b += path->accumRadiance.b;
+#endif
+
+							TerminatePath(path, ray, frameBuffer, &seed, &radiance
+#if defined(PARAM_CAMERA_DYNAMIC)
+									, cameraData
+#endif
+									);
+
+							// Save the seed
+							path->seed.s1 = seed.s1;
+							path->seed.s2 = seed.s2;
+							path->seed.s3 = seed.s3;
+
+							return;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+						}
+						break;
+#endif
+					}
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MATTE)
+					case MAT_MATTE:
+						Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MIRROR)
+					case MAT_MIRROR:
+						Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &pdf, &f, &shadeN
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_GLASS)
+					case MAT_GLASS:
+						Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MATTEMIRROR)
+					case MAT_MATTEMIRROR:
+						MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_METAL)
+					case MAT_METAL:
+						Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MATTEMETAL)
+					case MAT_MATTEMETAL:
+						MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_ALLOY)
+					case MAT_ALLOY:
+						Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_ARCHGLASS)
+					case MAT_ARCHGLASS:
+						ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+								, &path->specularBounce
+#endif
+								);
+						break;
+#endif
+
+					case MAT_NULL:
+						wi = rayDir;
+						pdf = 1.f;
+						f.r = 1.f;
+						f.g = 1.f;
+						f.b = 1.f;
+
+						// I have also to restore the original throughput
+						throughput = task->pathState.throughput;
+						break;
+
+					default:
+						// Huston, we have a problem...
+						pdf = 0.f;
+						break;
+				}
+
+				const uint pathDepth = task->pathState.depth + 1;
+				const float invPdf = ((pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
+
+				//if (pathDepth > 2)
+				//	printf(\"Depth: %d Throughput: (%f, %f, %f) f: (%f, %f, %f) Pdf: %f\\n\", pathDepth, throughput.r, throughput.g, throughput.b, f.r, f.g, f.b, pdf);
+
+				throughput.r *= f.r * invPdf;
+				throughput.g *= f.g * invPdf;
+				throughput.b *= f.b * invPdf;
+
+				// Russian roulette
+				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
+				const float rrSample = RndFloatValue(&seed);
+				const float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
+				throughput.r *= invRRProb;
+				throughput.g *= invRRProb;
+				throughput.b *= invRRProb;
+
+				//if (pathDepth > 2)
+				//	printf(\"Depth: %d Throughput: (%f, %f, %f)\\n\", pathDepth, throughput.r, throughput.g, throughput.b);
+
+				if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f)) {
+					Spectrum radiance;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					radiance.r = path->accumRadiance.r;
+					radiance.g = path->accumRadiance.g;
+					radiance.b = path->accumRadiance.b;
+#else
+					radiance.r = 0.f;
+					radiance.g = 0.f;
+					radiance.b = 0.f;
+#endif
+
+					sample->result = radiance;
+
+					pathState = PATH_STATE_DONE;
+				} else {
+					// Setup next ray
+					ray->o = hitPoint;
+					ray->d = wi;
+					ray->mint = PARAM_RAY_EPSILON;
+					ray->maxt = FLT_MAX;
+
+					task->pathState.throughput = throughput;
+					task->pathState.depth = pathDepth;
+
+					pathState = PATH_STATE_NEXT_VERTEX;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+					path->state = PATH_STATE_NEXT_VERTEX;
+#endif
+				}
+
+				// Save the seed
+				task->seed.s1 = seed.s1;
+				task->seed.s2 = seed.s2;
+				task->seed.s3 = seed.s3;
 			} else {
 				Spectrum radiance;
 
 #if defined(PARAM_HAVE_INFINITELIGHT)
 				Spectrum Le;
 				InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
+
+				/*if (task->pathState.depth > 0)
+					printf(\"Throughput: (%f, %f, %f) Le: (%f, %f, %f)\\n\", throughput.r, throughput.g, throughput.b, Le.r, Le.g, Le.b);*/
 
 				radiance.r = throughput.r * Le.r;
 				radiance.g = throughput.g * Le.g;
@@ -1347,12 +1621,11 @@ __kernel void AdvancePaths(
 #endif
 
 				sample->result = radiance;
-			}
 
-			pathState = PATH_STATE_DONE;
+				pathState = PATH_STATE_DONE;
+			}
 			break;
 		}
-
 	}
 
 	if (pathState == PATH_STATE_DONE) {
@@ -1366,7 +1639,8 @@ __kernel void AdvancePaths(
 			task->samples.indexRenderCurrent = indexRenderCurrent;
 			task->pathState.state = PATH_STATE_EYE_VERTEX;
 		}
-	}
+	} else
+		task->pathState.state = pathState;
 }
 
 //------------------------------------------------------------------------------

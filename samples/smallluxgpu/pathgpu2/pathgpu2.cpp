@@ -1202,9 +1202,9 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
 		vector<IntersectionDevice *> intersectionDevices, const Properties &cfg) :
 		RenderEngine(scn, flm, filmMutex) {
-	maxPathDepth = cfg.GetInt("path2.maxdepth", 3);
-	rrDepth = cfg.GetInt("path2.russianroulette.depth", 2);
-	rrImportanceCap = cfg.GetFloat("path2.russianroulette.cap", 0.125f);
+	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
+	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
 
 	startTime = 0.0;
 	samplesCount = 0;
@@ -1224,7 +1224,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 
 	// Check if I have to enable OpenCL interoperability and if I can
 	bool lowLatency = (cfg.GetInt("opencl.latency.mode", 1) != 0);
-	dynamicCamera = (cfg.GetInt("pathgpu2.dynamiccamera.enable", lowLatency ? 1 : 0) != 0);
+	dynamicCamera = (cfg.GetInt("pathgpu.dynamiccamera.enable", lowLatency ? 1 : 0) != 0);
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000) / 1000.0;
 
 	if (lowLatency)
