@@ -34,10 +34,9 @@ bl_info = {
     "tracker_url": "http://www.luxrender.net/forum/viewforum.php?f=34",
     "category": "Render"}
 
-import bpy
+import bpy, bl_operators, bl_ui
 import blf
 from mathutils import Matrix, Vector
-from presets import AddPresetBase
 import os
 from threading import Lock, Thread
 from time import sleep
@@ -1379,57 +1378,43 @@ def slg_add_properties():
         default=False)
 
     # Use some of the existing panels
-    import properties_render
-    properties_render.RENDER_PT_render.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_render.RENDER_PT_layers.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_render.RENDER_PT_output.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_render.RENDER_PT_post_processing.COMPAT_ENGINES.add('SLG_RENDER')
-    del properties_render
+    bl_ui.properties_render.RENDER_PT_render.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_render.RENDER_PT_layers.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_render.RENDER_PT_dimensions.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_render.RENDER_PT_output.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_render.RENDER_PT_post_processing.COMPAT_ENGINES.add('SLG_RENDER')
 
-    import properties_material
-    properties_material.MATERIAL_PT_context_material.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_material.MATERIAL_PT_diffuse.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_material.MATERIAL_PT_shading.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_material.MATERIAL_PT_pipeline.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_material.MATERIAL_PT_transp.COMPAT_ENGINES.add('SLG_RENDER')
-    properties_material.MATERIAL_PT_mirror.COMPAT_ENGINES.add('SLG_RENDER')
-    del properties_material
+    bl_ui.properties_material.MATERIAL_PT_context_material.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_material.MATERIAL_PT_diffuse.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_material.MATERIAL_PT_shading.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_material.MATERIAL_PT_pipeline.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_material.MATERIAL_PT_transp.COMPAT_ENGINES.add('SLG_RENDER')
+    bl_ui.properties_material.MATERIAL_PT_mirror.COMPAT_ENGINES.add('SLG_RENDER')
 
-    import properties_texture
-    for member in dir(properties_texture):
-        subclass = getattr(properties_texture, member)
+    for member in dir(bl_ui.properties_texture):
+        subclass = getattr(bl_ui.properties_texture, member)
         try:
             subclass.COMPAT_ENGINES.add('SLG_RENDER')
         except:
             pass
-    del properties_texture
 
-    import properties_data_camera
-    for member in dir(properties_data_camera):
-        subclass = getattr(properties_data_camera, member)
+    for member in dir(bl_ui.properties_data_camera):
+        subclass = getattr(bl_ui.properties_data_camera, member)
         try:
             subclass.COMPAT_ENGINES.add('SLG_RENDER')
         except:
             pass
-    del properties_data_camera
 
-    import properties_world
-    properties_world.WORLD_PT_environment_lighting.COMPAT_ENGINES.add('SLG_RENDER')
-    del properties_world
+    bl_ui.properties_world.WORLD_PT_environment_lighting.COMPAT_ENGINES.add('SLG_RENDER')
 
-    import properties_data_lamp
-    properties_data_lamp.DATA_PT_sunsky.COMPAT_ENGINES.add('SLG_RENDER')
-    del properties_data_lamp
+    bl_ui.properties_data_lamp.DATA_PT_sunsky.COMPAT_ENGINES.add('SLG_RENDER')
 
-    import properties_particle
-    for member in dir(properties_particle):
-        subclass = getattr(properties_particle, member)
+    for member in dir(bl_ui.properties_particle):
+        subclass = getattr(bl_ui.properties_particle, member)
         try:
             subclass.COMPAT_ENGINES.add('SLG_RENDER')
         except:
             pass
-    del properties_particle
 
 # Add SLG Camera Lens Radius on Camera panel
 def slg_lensradius(self, context):
@@ -1485,7 +1470,7 @@ class RENDER_MT_slg_presets(bpy.types.Menu):
     preset_operator = "script.execute_preset"
     draw = bpy.types.Menu.draw_preset
 
-class AddPresetSLG(AddPresetBase, bpy.types.Operator):
+class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
     '''Add an SLG Preset'''
     bl_idname = "render.slg_preset_add"
     bl_label = "Add SLG Preset"
