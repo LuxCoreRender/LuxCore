@@ -429,10 +429,12 @@ void PathGPU2RenderThread::InitRender() {
 		(
 			// int pixelIndex;
 			(sizeof(unsigned int) +
-			// float screenX, screenY;
+			// IDX_SCREEN_X, IDX_SCREEN_Y
 			sizeof(float) * 2 +
-			// float dofX, dofY;
+			// IDX_DOF_X, IDX_DOF_Y
 			((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
+			// PARAM_MAX_PATH_DEPTH * (IDX_TEX_ALPHA, IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z)
+			renderEngine->maxPathDepth * sizeof(float) * 4 +
 			// Spectrum result;
 			sizeof(Spectrum)) * sampleCount + sizeof(unsigned int) * 2
 		) +
