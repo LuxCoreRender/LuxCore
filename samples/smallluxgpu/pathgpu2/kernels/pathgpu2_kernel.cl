@@ -140,12 +140,49 @@ typedef struct {
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS) && defined(PARAM_DIRECT_LIGHT_SAMPLING)
+
+#define IDX_TEX_ALPHA 0
+#define IDX_BSDF_X 1
+#define IDX_BSDF_Y 2
+#define IDX_BSDF_Z 3
+#define IDX_DIRECTLIGHT_X 4
+#define IDX_DIRECTLIGHT_Y 5
+#define IDX_DIRECTLIGHT_Z 6
+#define IDX_DIRECTLIGHT_W 7
+
+#define SAMPLE_SIZE 8
+
+#elif defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+
 #define IDX_TEX_ALPHA 0
 #define IDX_BSDF_X 1
 #define IDX_BSDF_Y 2
 #define IDX_BSDF_Z 3
 
 #define SAMPLE_SIZE 4
+
+#elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
+
+#define IDX_BSDF_X 0
+#define IDX_BSDF_Y 1
+#define IDX_BSDF_Z 2
+#define IDX_DIRECTLIGHT_X 3
+#define IDX_DIRECTLIGHT_Y 4
+#define IDX_DIRECTLIGHT_Z 5
+#define IDX_DIRECTLIGHT_W 6
+
+#define SAMPLE_SIZE 7
+
+#else
+
+#define IDX_BSDF_X 0
+#define IDX_BSDF_Y 1
+#define IDX_BSDF_Z 2
+
+#define SAMPLE_SIZE 3
+
+#endif
 
 #define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
 
@@ -1058,11 +1095,11 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
 //------------------------------------------------------------------------------
 
 void AreaLight_Le(__global AreaLightParam *mat, const Vector *wo, const Vector *lightN, Spectrum *Le) {
-	if (Dot(lightN, wo) > 0.f) {
-        Le->r = mat->gain_r;
-        Le->g = mat->gain_g;
-        Le->b = mat->gain_b;
-    }
+	const bool brightSide = (Dot(lightN, wo) > 0.f);
+
+	Le->r = brightSide ? mat->gain_r : 0.f;
+	Le->g = brightSide ? mat->gain_g : 0.f;
+	Le->b = brightSide ? mat->gain_b : 0.f;
 }
 
 void SampleTriangleLight(__global TriangleLight *light,	const float u0, const float u1, Point *p) {
@@ -1190,7 +1227,7 @@ __kernel void Init(
 		return;
 
 	//if (gid == 0)
-	//	printf(\"GID: %d sizeof(GPUTask): %d (%d+%d+%d)\\n\", gid, sizeof(GPUTask), sizeof(Seed), sizeof(Samples), sizeof(PathState));
+	//	printf(\"GID: %d sizeof(GPUTask): %d (%d+%d[%d*%d]+%d)\\n\", gid, sizeof(GPUTask), sizeof(Seed), sizeof(Samples), sizeof(Sample), PARAM_SAMPLE_COUNT, sizeof(PathState));
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
@@ -1482,8 +1519,7 @@ __kernel void AdvancePaths(
 #endif
 
 #if defined(PARAM_ENABLE_MAT_AREALIGHT)
-					case MAT_AREALIGHT:
-					{
+					case MAT_AREALIGHT: {
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 						if (task->pathState.specularBounce) {
 #endif
@@ -1651,14 +1687,8 @@ __kernel void AdvancePaths(
 				}
 
 				if (directLightPdf > 0.f) {
-					// Read the seed
-					Seed seed;
-					seed.s1 = task->seed.s1;
-					seed.s2 = task->seed.s2;
-					seed.s3 = task->seed.s3;
-
 					// Select a light source to sample
-					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * sampleData[IDX_DIRECTLIGHT_X]), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 					__global TriangleLight *l = &triLights[lightIndex];
 
 					// Setup the shadow ray
@@ -1666,7 +1696,7 @@ __kernel void AdvancePaths(
 					float lightPdf;
 					Ray shadowRay;
 					TriangleLight_Sample_L(l, &wo, &hitPoint, &lightPdf, &Le, &shadowRay,
-						RndFloatValue(&seed), RndFloatValue(&seed), RndFloatValue(&seed));
+						sampleData[IDX_DIRECTLIGHT_Y], sampleData[IDX_DIRECTLIGHT_Z], sampleData[IDX_DIRECTLIGHT_W]);
 
 					const float dp = Dot(&shadeN, &shadowRay.d);
 					const float matPdf = (dp <= 0.f) ? 0.f : 1.f;
@@ -1697,6 +1727,27 @@ __kernel void AdvancePaths(
 						pathState = PATH_STATE_SAMPLE_LIGHT;
 					} else {
 						// Skip the shadow ray tracing step
+
+						if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f))
+							pathState = PATH_STATE_DONE;
+						else {
+							ray->o = hitPoint;
+							ray->d = wi;
+							ray->mint = PARAM_RAY_EPSILON;
+							ray->maxt = FLT_MAX;
+
+							task->pathState.throughput = throughput;
+							task->pathState.depth = pathDepth;
+
+							pathState = PATH_STATE_NEXT_VERTEX;
+						}
+					}
+				} else {
+					// Skip the shadow ray tracing step
+
+					if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f))
+						pathState = PATH_STATE_DONE;
+					else {
 						ray->o = hitPoint;
 						ray->d = wi;
 						ray->mint = PARAM_RAY_EPSILON;
@@ -1704,25 +1755,9 @@ __kernel void AdvancePaths(
 
 						task->pathState.throughput = throughput;
 						task->pathState.depth = pathDepth;
-	
+
 						pathState = PATH_STATE_NEXT_VERTEX;
 					}
-
-					// Save the seed
-					task->seed.s1 = seed.s1;
-					task->seed.s2 = seed.s2;
-					task->seed.s3 = seed.s3;
-				} else {
-					// Skip the shadow ray tracing step
-					ray->o = hitPoint;
-					ray->d = wi;
-					ray->mint = PARAM_RAY_EPSILON;
-					ray->maxt = FLT_MAX;
-
-					task->pathState.throughput = throughput;
-					task->pathState.depth = pathDepth;
-
-					pathState = PATH_STATE_NEXT_VERTEX;
 				}
 
 #else
