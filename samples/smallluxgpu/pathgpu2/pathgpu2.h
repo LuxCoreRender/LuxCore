@@ -48,6 +48,18 @@ typedef struct {
 } PathState;
 
 typedef struct {
+	uint state;
+	uint depth;
+	Spectrum throughput;
+
+	int specularBounce;
+
+	Ray nextPathRay;
+	Spectrum nextThroughput;
+	Spectrum lightRadiance;
+} PathStateDL;
+
+typedef struct {
 	Spectrum c;
 	unsigned int count;
 } Pixel;
