@@ -139,6 +139,7 @@ typedef struct {
 #define IDX_BSDF_OFFSET 2
 #endif
 
+// Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
 #define IDX_TEX_ALPHA 0
 #define IDX_BSDF_X 1
 #define IDX_BSDF_Y 2
@@ -154,7 +155,7 @@ typedef struct {
 
 	float u[TOTAL_U_SIZE];
 
-	Spectrum result;
+	Spectrum radiance;
 } Sample;
 
 typedef struct {
@@ -165,15 +166,25 @@ typedef struct {
 	uint indexRenderFirst, indexRenderCurrent;
 } Samples;
 
-#define PATH_STATE_EYE_VERTEX 0
+#define PATH_STATE_GENERATE_EYE_RAY 0
 #define PATH_STATE_DONE 1
 #define PATH_STATE_DONE_AND_OUT_OF_SAMPLE 2
 #define PATH_STATE_NEXT_VERTEX 3
+#define PATH_STATE_SAMPLE_LIGHT 4
 
 typedef struct {
 	uint state;
 	uint depth;
 	Spectrum throughput;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	int specularBounce;
+
+	Ray nextPathRay;
+	Spectrum nextThroughput;
+	// Radiance to add to the result if light source is visible
+	Spectrum lightRadiance;
+#endif
 } PathState;
 
 // The memory layout of this structure is highly UNoptimized for GPU !
@@ -1158,7 +1169,7 @@ __kernel void RandomSampler(
 	// I have generated new samples, unlock the rendering if required
 	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
 		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
-		task->pathState.state = PATH_STATE_EYE_VERTEX;
+		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
 	}
 
 	// Save the seed
@@ -1177,6 +1188,9 @@ __kernel void Init(
 	const int gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
+
+	//if (gid == 0)
+	//	printf(\"GID: %d sizeof(GPUTask): %d (%d+%d+%d)\\n\", gid, sizeof(GPUTask), sizeof(Seed), sizeof(Samples), sizeof(PathState));
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
@@ -1204,7 +1218,7 @@ __kernel void Init(
 		RandomSamplerInit(&seed, &task->samples.sample[i]);
 
 	// Initialize the path state
-	task->pathState.state = PATH_STATE_EYE_VERTEX;
+	task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -1236,9 +1250,32 @@ __kernel void InitFrameBuffer(
 
 __kernel void GenerateRays(
 		__global GPUTask *tasks,
-		__global Ray *rays
+		__global Ray *rays,
+		__global RayHit *rayHits,
+		__global Pixel *frameBuffer,
+		__global Material *mats,
+		__global uint *meshMats,
+		__global uint *meshIDs,
+		__global Spectrum *vertColors,
+		__global Vector *vertNormals,
+		__global Triangle *triangles
 #if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
+#endif
+#if defined(PARAM_HAVE_INFINITELIGHT)
+		, __global Spectrum *infiniteLightMap
+#endif
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		, __global TriangleLight *triLights
+#endif
+#if defined(PARAM_HAS_TEXTUREMAPS)
+        , __global Spectrum *texMapRGBBuff
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+		, __global float *texMapAlphaBuff
+#endif
+        , __global TexMap *texMapDescBuff
+        , __global unsigned int *meshTexsBuff
+        , __global UV *vertUVs
 #endif
 		) {
 	const int gid = get_global_id(0);
@@ -1250,35 +1287,48 @@ __kernel void GenerateRays(
 	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
 		return;
 
-	__global Ray *ray = &rays[gid];
+	//printf(\"pathState: %d\\n\", pathState);
 
-	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
+	switch (pathState) {
+		case PATH_STATE_GENERATE_EYE_RAY: {
+			__global Ray *ray = &rays[gid];
 
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
+			// Read the seed
+			Seed seed;
+			seed.s1 = task->seed.s1;
+			seed.s2 = task->seed.s2;
+			seed.s3 = task->seed.s3;
 
-	if (pathState == PATH_STATE_EYE_VERTEX) {
-		GenerateRay(sample, ray, &seed
+			const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+			__global Sample *sample = &task->samples.sample[indexRenderCurrent];
+
+			GenerateRay(sample, ray, &seed
 #if defined(PARAM_CAMERA_DYNAMIC)
-				, cameraData
+					, cameraData
 #endif
-				);
+					);
 
-		// Initialize the path state
-		task->pathState.depth = 0;
-		task->pathState.throughput.r = 1.f;
-		task->pathState.throughput.g = 1.f;
-		task->pathState.throughput.b = 1.f;
+			sample->radiance.r = 0.f;
+			sample->radiance.g = 0.f;
+			sample->radiance.b = 0.f;
+
+			// Initialize the path state
+			task->pathState.depth = 0;
+			task->pathState.throughput.r = 1.f;
+			task->pathState.throughput.g = 1.f;
+			task->pathState.throughput.b = 1.f;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+			task->pathState.specularBounce = TRUE;
+#endif
+			task->pathState.state = PATH_STATE_NEXT_VERTEX;
+
+			// Save the seed
+			task->seed.s1 = seed.s1;
+			task->seed.s2 = seed.s2;
+			task->seed.s3 = seed.s3;
+			break;
+		}
 	}
-
-	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
 }
 
 //------------------------------------------------------------------------------
@@ -1345,8 +1395,7 @@ __kernel void AdvancePaths(
 	Spectrum throughput = task->pathState.throughput;
 
 	switch (pathState) {
-		case PATH_STATE_NEXT_VERTEX:
-		case PATH_STATE_EYE_VERTEX: {
+		case PATH_STATE_NEXT_VERTEX: {
 			if (currentTriangleIndex != 0xffffffffu) {
 				// Something was hit
 
@@ -1371,7 +1420,7 @@ __kernel void AdvancePaths(
 				if (texIndex != 0xffffffffu) {
 					__global TexMap *texMap = &texMapDescBuff[texIndex];
 
-#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS) && !defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 					// Check if it has an alpha channel
 					if (texMap->alphaOffset != 0xffffffffu) {
 						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
@@ -1422,57 +1471,42 @@ __kernel void AdvancePaths(
 
 				switch (matType) {
 
-#if defined(PARAM_ENABLE_MAT_AREALIGHT)
-					case MAT_AREALIGHT: {
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-						if (path->specularBounce) {
-#endif
-							Spectrum radiance;
-							AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &radiance);
-							radiance.r *= throughput.r;
-							radiance.g *= throughput.g;
-							radiance.b *= throughput.b;
-
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-							radiance.r += path->accumRadiance.r;
-							radiance.g += path->accumRadiance.g;
-							radiance.b += path->accumRadiance.b;
-#endif
-
-							TerminatePath(path, ray, frameBuffer, &seed, &radiance
-#if defined(PARAM_CAMERA_DYNAMIC)
-									, cameraData
-#endif
-									);
-
-							// Save the seed
-							path->seed.s1 = seed.s1;
-							path->seed.s2 = seed.s2;
-							path->seed.s3 = seed.s3;
-
-							return;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-						}
-						break;
-#endif
-					}
-#endif
-
 #if defined(PARAM_ENABLE_MAT_MATTE)
 					case MAT_MATTE:
 						Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
+#endif
+
+#if defined(PARAM_ENABLE_MAT_AREALIGHT)
+					case MAT_AREALIGHT:
+					{
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+						if (task->pathState.specularBounce) {
+#endif
+							Spectrum Le;
+							AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &Le);
+							sample->radiance.r += throughput.r * Le.r;
+							sample->radiance.g += throughput.g * Le.g;
+							sample->radiance.b += throughput.b * Le.b;
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+						}
+#endif
+
+						pdf = 0.f;
+						break;
+					}
 #endif
 
 #if defined(PARAM_ENABLE_MAT_MIRROR)
 					case MAT_MIRROR:
 						Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &pdf, &f, &shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
@@ -1482,7 +1516,7 @@ __kernel void AdvancePaths(
 					case MAT_GLASS:
 						Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
@@ -1492,7 +1526,7 @@ __kernel void AdvancePaths(
 					case MAT_MATTEMIRROR:
 						MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
@@ -1502,7 +1536,7 @@ __kernel void AdvancePaths(
 					case MAT_METAL:
 						Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
@@ -1512,7 +1546,7 @@ __kernel void AdvancePaths(
 					case MAT_MATTEMETAL:
 						MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
@@ -1522,7 +1556,7 @@ __kernel void AdvancePaths(
 					case MAT_ALLOY:
 						Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
@@ -1532,7 +1566,7 @@ __kernel void AdvancePaths(
 					case MAT_ARCHGLASS:
 						ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &path->specularBounce
+								, &task->pathState.specularBounce
 #endif
 								);
 						break;
@@ -1588,22 +1622,114 @@ __kernel void AdvancePaths(
 				//if (pathDepth > 2)
 				//	printf(\"Depth: %d Throughput: (%f, %f, %f)\\n\", pathDepth, throughput.r, throughput.g, throughput.b);
 
-				if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f)) {
-					Spectrum radiance;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-					radiance.r = path->accumRadiance.r;
-					radiance.g = path->accumRadiance.g;
-					radiance.b = path->accumRadiance.b;
-#else
-					radiance.r = 0.f;
-					radiance.g = 0.f;
-					radiance.b = 0.f;
-#endif
+				float directLightPdf;
+				switch (matType) {
+					case MAT_MATTE:
+						directLightPdf = 1.f;
+						break;
+					case MAT_MATTEMIRROR:
+						directLightPdf = 1.f / hitPointMat->param.matteMirror.mattePdf;
+						break;
+					case MAT_MATTEMETAL:
+						directLightPdf = 1.f / hitPointMat->param.matteMetal.mattePdf;
+						break;
+					case MAT_ALLOY: {
+						// Schilick's approximation
+						const float c = 1.f + Dot(&rayDir, &shadeN);
+						const float R0 = hitPointMat->param.alloy.R0;
+						const float Re = R0 + (1.f - R0) * c * c * c * c * c;
 
-					sample->result = radiance;
+						const float P = .25f + .5f * Re;
 
-					pathState = PATH_STATE_DONE;
+						directLightPdf = (1.f - P) / (1.f - Re);
+						break;
+					}
+					default:
+						directLightPdf = 0.f;
+						break;
+				}
+
+				if (directLightPdf > 0.f) {
+					// Read the seed
+					Seed seed;
+					seed.s1 = task->seed.s1;
+					seed.s2 = task->seed.s2;
+					seed.s3 = task->seed.s3;
+
+					// Select a light source to sample
+					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * RndFloatValue(&seed)), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+					__global TriangleLight *l = &triLights[lightIndex];
+
+					// Setup the shadow ray
+					Spectrum Le;
+					float lightPdf;
+					Ray shadowRay;
+					TriangleLight_Sample_L(l, &wo, &hitPoint, &lightPdf, &Le, &shadowRay,
+						RndFloatValue(&seed), RndFloatValue(&seed), RndFloatValue(&seed));
+
+					const float dp = Dot(&shadeN, &shadowRay.d);
+					const float matPdf = (dp <= 0.f) ? 0.f : 1.f;
+
+					const float pdf = lightPdf * matPdf * directLightPdf;
+					if (pdf > 0.f) {
+						Spectrum throughputLightDir = task->pathState.throughput;
+						throughputLightDir.r *= shadeColor.r;
+						throughputLightDir.g *= shadeColor.g;
+						throughputLightDir.b *= shadeColor.b;
+
+						const float k = dp * PARAM_DL_LIGHT_COUNT / (pdf * M_PI);
+						// NOTE: I assume all matte mixed material have a MatteParam as first field
+						task->pathState.lightRadiance.r = throughputLightDir.r * hitPointMat->param.matte.r * k * Le.r;
+						task->pathState.lightRadiance.g = throughputLightDir.g * hitPointMat->param.matte.g * k * Le.g;
+						task->pathState.lightRadiance.b = throughputLightDir.b * hitPointMat->param.matte.b * k * Le.b;
+
+						*ray = shadowRay;
+
+						// Save data for next path vertex
+						task->pathState.nextPathRay.o = hitPoint;
+						task->pathState.nextPathRay.d = wi;
+						task->pathState.nextPathRay.mint = PARAM_RAY_EPSILON;
+						task->pathState.nextPathRay.maxt = FLT_MAX;
+
+						task->pathState.nextThroughput = throughput;
+
+						pathState = PATH_STATE_SAMPLE_LIGHT;
+					} else {
+						// Skip the shadow ray tracing step
+						ray->o = hitPoint;
+						ray->d = wi;
+						ray->mint = PARAM_RAY_EPSILON;
+						ray->maxt = FLT_MAX;
+
+						task->pathState.throughput = throughput;
+						task->pathState.depth = pathDepth;
+	
+						pathState = PATH_STATE_NEXT_VERTEX;
+					}
+
+					// Save the seed
+					task->seed.s1 = seed.s1;
+					task->seed.s2 = seed.s2;
+					task->seed.s3 = seed.s3;
 				} else {
+					// Skip the shadow ray tracing step
+					ray->o = hitPoint;
+					ray->d = wi;
+					ray->mint = PARAM_RAY_EPSILON;
+					ray->maxt = FLT_MAX;
+
+					task->pathState.throughput = throughput;
+					task->pathState.depth = pathDepth;
+
+					pathState = PATH_STATE_NEXT_VERTEX;
+				}
+
+#else
+
+				if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f))
+					pathState = PATH_STATE_DONE;
+				else {
 					// Setup next ray
 					ray->o = hitPoint;
 					ray->d = wi;
@@ -1614,13 +1740,10 @@ __kernel void AdvancePaths(
 					task->pathState.depth = pathDepth;
 
 					pathState = PATH_STATE_NEXT_VERTEX;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-					path->state = PATH_STATE_NEXT_VERTEX;
-#endif
 				}
-			} else {
-				Spectrum radiance;
+#endif
 
+			} else {
 #if defined(PARAM_HAVE_INFINITELIGHT)
 				Spectrum Le;
 				InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
@@ -1628,21 +1751,105 @@ __kernel void AdvancePaths(
 				/*if (task->pathState.depth > 0)
 					printf(\"Throughput: (%f, %f, %f) Le: (%f, %f, %f)\\n\", throughput.r, throughput.g, throughput.b, Le.r, Le.g, Le.b);*/
 
-				radiance.r = throughput.r * Le.r;
-				radiance.g = throughput.g * Le.g;
-				radiance.b = throughput.b * Le.b;
-#else
-				radiance.r = 0.f;
-				radiance.g = 0.f;
-				radiance.b = 0.f;
+				sample->radiance.r += throughput.r * Le.r;
+				sample->radiance.g += throughput.g * Le.g;
+				sample->radiance.b += throughput.b * Le.b;
 #endif
-
-				sample->result = radiance;
 
 				pathState = PATH_STATE_DONE;
 			}
 			break;
 		}
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+		case PATH_STATE_SAMPLE_LIGHT: {
+			if (currentTriangleIndex != 0xffffffffu) {
+				// The shadow ray has hit something
+
+#if defined(PARAM_HAS_TEXTUREMAPS) && defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+				// Check if I have to continue to trace the shadow ray
+
+				const uint pathDepth = task->pathState.depth;
+				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
+
+				const uint meshIndex = meshIDs[currentTriangleIndex];
+				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
+				uint matType = hitPointMat->type;
+
+				// Interpolate UV coordinates
+				UV uv;
+				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+
+				// Check it the mesh has a texture map
+				unsigned int texIndex = meshTexsBuff[meshIndex];
+				if (texIndex != 0xffffffffu) {
+					__global TexMap *texMap = &texMapDescBuff[texIndex];
+
+					// Check if it has an alpha channel
+					if (texMap->alphaOffset != 0xffffffffu) {
+						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
+
+						if ((alpha == 0.0f) || ((alpha < 1.f) && (sampleData[IDX_TEX_ALPHA] > alpha))) {
+							// Continue to trace the ray
+							matType = MAT_NULL;
+						}
+					}
+				}
+
+				if (matType == MAT_ARCHGLASS) {
+					task->pathState.lightRadiance.r *= hitPointMat->param.archGlass.refrct_r;
+					task->pathState.lightRadiance.g *= hitPointMat->param.archGlass.refrct_g;
+					task->pathState.lightRadiance.b *= hitPointMat->param.archGlass.refrct_b;
+				}
+
+				if ((matType == MAT_ARCHGLASS) || (matType == MAT_NULL)) {
+					const float hitPointT = rayHit->t;
+
+					Point hitPoint;
+					hitPoint.x = ray->o.x + rayDir.x * hitPointT;
+					hitPoint.y = ray->o.y + rayDir.y * hitPointT;
+					hitPoint.z = ray->o.z + rayDir.z * hitPointT;
+
+					// Continue to trace the ray
+					ray->o = hitPoint;
+					ray->maxt -= hitPointT;
+				} else
+					pathState = PATH_STATE_NEXT_VERTEX;
+
+#else
+				// The light is source is not visible
+
+				pathState = PATH_STATE_NEXT_VERTEX;
+#endif
+
+			} else {
+				// The light source is visible
+
+				sample->radiance.r += task->pathState.lightRadiance.r;
+				sample->radiance.g += task->pathState.lightRadiance.g;
+				sample->radiance.b += task->pathState.lightRadiance.b;
+
+				pathState = PATH_STATE_NEXT_VERTEX;
+			}
+
+
+			if (pathState == PATH_STATE_NEXT_VERTEX) {
+				Spectrum throughput = task->pathState.nextThroughput;
+				if ((throughput.r <= 0.f) && (throughput.g <= 0.f) && (throughput.b <= 0.f))
+					pathState = PATH_STATE_DONE;
+				else {
+					// Restore the ray for the next path vertex
+					*ray = task->pathState.nextPathRay;
+
+					task->pathState.throughput = throughput;
+
+					// Increase path depth
+					task->pathState.depth += 1;
+				}
+			}
+			break;
+		}
+#endif
 	}
 
 	if (pathState == PATH_STATE_DONE) {
@@ -1654,7 +1861,7 @@ __kernel void AdvancePaths(
 			task->pathState.state = PATH_STATE_DONE_AND_OUT_OF_SAMPLE;
 		} else {
 			task->samples.indexRenderCurrent = indexRenderCurrent;
-			task->pathState.state = PATH_STATE_EYE_VERTEX;
+			task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
 		}
 	} else
 		task->pathState.state = pathState;
@@ -1690,9 +1897,9 @@ __kernel void CollectResults(
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
 
 		__global Pixel *pixel = &frameBuffer[sample->pixelIndex];
-		pixel->c.r += sample->result.r;
-		pixel->c.g += sample->result.g;
-		pixel->c.b += sample->result.b;
+		pixel->c.r += sample->radiance.r;
+		pixel->c.g += sample->radiance.g;
+		pixel->c.b += sample->radiance.b;
 		pixel->count += 1;
 
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;

@@ -422,7 +422,7 @@ void PathGPU2RenderThread::InitRender() {
 
 	const unsigned int sampleCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / PATHGPU2_TASK_COUNT + 1;
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] PARAM_SAMPLE_COUNT: " << sampleCount << endl;
-	const size_t taskGPUSize =
+	const size_t gpuTaksSize =
 		// Seed size
 		sizeof(PathGPU2::Seed) +
 		// Samples size
@@ -435,15 +435,16 @@ void PathGPU2RenderThread::InitRender() {
 			((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
 			// PARAM_MAX_PATH_DEPTH * (IDX_TEX_ALPHA, IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z)
 			renderEngine->maxPathDepth * sizeof(float) * 4 +
-			// Spectrum result;
+			// Spectrum radiance;
 			sizeof(Spectrum)) * sampleCount + sizeof(unsigned int) * 2
 		) +
 		// PathState size
-		sizeof(PathGPU2::PathState);
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (taskGPUSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+		((areaLightCount > 0) ? sizeof(PathGPU2::PathStateDL) : sizeof(PathGPU2::PathState));
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			taskGPUSize * PATHGPU2_TASK_COUNT);
+			gpuTaksSize * PATHGPU2_TASK_COUNT);
 	deviceDesc->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
@@ -994,12 +995,34 @@ void PathGPU2RenderThread::InitRender() {
 
 	randomSamplerKernel->setArg(0, *tasksBuff);
 
-	generateRaysKernel->setArg(0, *tasksBuff);
-	generateRaysKernel->setArg(1, *raysBuff);
-	if (cameraBuff)
-		generateRaysKernel->setArg(2, *cameraBuff);
-
 	unsigned int argIndex = 0;
+	generateRaysKernel->setArg(argIndex++, *tasksBuff);
+	generateRaysKernel->setArg(argIndex++, *raysBuff);
+	generateRaysKernel->setArg(argIndex++, *hitsBuff);
+	generateRaysKernel->setArg(argIndex++, *frameBufferBuff);
+	generateRaysKernel->setArg(argIndex++, *materialsBuff);
+	generateRaysKernel->setArg(argIndex++, *meshMatsBuff);
+	generateRaysKernel->setArg(argIndex++, *meshIDBuff);
+	generateRaysKernel->setArg(argIndex++, *colorsBuff);
+	generateRaysKernel->setArg(argIndex++, *normalsBuff);
+	generateRaysKernel->setArg(argIndex++, *trianglesBuff);
+	if (cameraBuff)
+		generateRaysKernel->setArg(argIndex++, *cameraBuff);
+	if (infiniteLight)
+		generateRaysKernel->setArg(argIndex++, *infiniteLightBuff);
+	if (triLightsBuff)
+		generateRaysKernel->setArg(argIndex++, *triLightsBuff);
+	if (texMapRGBBuff)
+		generateRaysKernel->setArg(argIndex++, *texMapRGBBuff);
+	if (texMapAlphaBuff)
+		generateRaysKernel->setArg(argIndex++, *texMapAlphaBuff);
+	if (texMapRGBBuff || texMapAlphaBuff) {
+		generateRaysKernel->setArg(argIndex++, *texMapDescBuff);
+		generateRaysKernel->setArg(argIndex++, *meshTexsBuff);
+		generateRaysKernel->setArg(argIndex++, *uvsBuff);
+	}
+
+	argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
