@@ -417,37 +417,6 @@ void PathGPU2RenderThread::InitRender() {
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Area lights translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 
 	//--------------------------------------------------------------------------
-	// Allocate path buffer
-	//--------------------------------------------------------------------------
-
-	const unsigned int sampleCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / PATHGPU2_TASK_COUNT + 1;
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] PARAM_SAMPLE_COUNT: " << sampleCount << endl;
-	const size_t gpuTaksSize =
-		// Seed size
-		sizeof(PathGPU2::Seed) +
-		// Samples size
-		(
-			// int pixelIndex;
-			(sizeof(unsigned int) +
-			// IDX_SCREEN_X, IDX_SCREEN_Y
-			sizeof(float) * 2 +
-			// IDX_DOF_X, IDX_DOF_Y
-			((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
-			// PARAM_MAX_PATH_DEPTH * (IDX_TEX_ALPHA, IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z)
-			renderEngine->maxPathDepth * sizeof(float) * 4 +
-			// Spectrum radiance;
-			sizeof(Spectrum)) * sampleCount + sizeof(unsigned int) * 2
-		) +
-		// PathState size
-		((areaLightCount > 0) ? sizeof(PathGPU2::PathStateDL) : sizeof(PathGPU2::PathState));
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes" << endl;
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
-	tasksBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			gpuTaksSize * PATHGPU2_TASK_COUNT);
-	deviceDesc->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
-
-	//--------------------------------------------------------------------------
 	// Translate mesh material indices
 	//--------------------------------------------------------------------------
 
@@ -755,6 +724,52 @@ void PathGPU2RenderThread::InitRender() {
 		meshTexsBuff = NULL;
 		uvsBuff = NULL;
 	}
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU tasks buffer
+	//--------------------------------------------------------------------------
+
+	const unsigned int sampleCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / PATHGPU2_TASK_COUNT + 1;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Sample count: " << sampleCount << endl;
+	const size_t gpuTaksSizePart1 =
+		// Seed size
+		sizeof(PathGPU2::Seed);
+
+	const size_t uDataSize =
+		// IDX_SCREEN_X, IDX_SCREEN_Y
+		sizeof(float) * 2 +
+		// IDX_DOF_X, IDX_DOF_Y
+		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
+		(
+			// IDX_TEX_ALPHA,
+			((texMapAlphaBuff) ? sizeof(float) : 0) +
+			// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
+			sizeof(float) * 3 +
+			// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W
+			((areaLightCount > 0) ? (sizeof(float) * 4) : 0)
+		) * renderEngine->maxPathDepth;
+
+	const size_t sampleSize =
+		// int pixelIndex;
+		sizeof(unsigned int) +
+		uDataSize +
+		// Spectrum radiance;
+		sizeof(Spectrum);
+
+	const size_t gpuTaksSizePart2 = sampleSize * sampleCount + sizeof(unsigned int) * 2;
+
+	const size_t gpuTaksSizePart3 =
+		// PathState size
+		((areaLightCount > 0) ? sizeof(PathGPU2::PathStateDL) : sizeof(PathGPU2::PathState));
+
+	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
+			" (" << gpuTaksSizePart1 << "+" << gpuTaksSizePart2 << "[" << sampleSize << "*" << sampleCount << "]+" << gpuTaksSizePart3 << ")bytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+	tasksBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			gpuTaksSize * PATHGPU2_TASK_COUNT);
+	deviceDesc->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
 	// Compile kernels
