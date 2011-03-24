@@ -149,7 +149,13 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex, int depth) {
 	// Create a leaf ?
 	//********
-	if (end - start <= maxPrimsPerLeaf) {
+	if (depth > 64 || end - start <= maxPrimsPerLeaf) {
+		if (depth > 64) {
+			LR_LOG(ctx, "Maximum recursion depth reached while constructing QBVH, forcing a leaf node");
+			if (end - start > 64) {
+				LR_LOG(ctx, "QBVH unable to handle geometry, too many primitives in leaf");
+			}
+		}
 		CreateTempLeaf(parentIndex, childIndex, start, end, nodeBbox);
 		return;
 	}
