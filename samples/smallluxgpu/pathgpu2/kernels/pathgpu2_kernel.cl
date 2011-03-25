@@ -69,8 +69,11 @@
 //  PARAM_IL_HEIGHT
 //
 //  PARAM_IMAGE_FILTER_TYPE (0 = no filter, 1 = box, 2 = gaussian)
-//  PARAM_IMAGE_FILTER_WIDTH
-//  PARAM_IMAGE_FILTER_HEIGHT
+//  PARAM_IMAGE_FILTER_WIDTH_X
+//  PARAM_IMAGE_FILTER_WIDTH_Y
+// (Box filter)
+// (Gaussian filter)
+//  PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -1184,7 +1187,7 @@ size_t PixelIndex2GID(const int index) {
 uint NextPixelIndex(const size_t gid, const uint index) {
 	// Pre-requisite: PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
 #if (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT < PARAM_TASK_COUNT)
-	Error: Image too small !!!
+Error: Image too small !!!
 #endif
 
 	uint newIndex = index + PARAM_TASK_COUNT;
@@ -1197,13 +1200,48 @@ uint NextPixelIndex(const size_t gid, const uint index) {
 // Image filtering related functions
 //------------------------------------------------------------------------------
 
-#define PARAM_IMAGE_FILTER_TYPE 1
-#define PARAM_IMAGE_FILTER_WIDTH 3.f
-#define PARAM_IMAGE_FILTER_HEIGHT 3.f
+#define PARAM_IMAGE_FILTER_TYPE 2
+#define PARAM_IMAGE_FILTER_WIDTH_X 1.5f
+#define PARAM_IMAGE_FILTER_WIDTH_Y 1.5f
 
-float ImageFilter_Box_Evaluate(const float x, const float y) {
-	return 1.f;
+#define PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA 1.6f
+
+bool ImageFilter_IsInside(const float x, const float y) {
+	return (x >= -PARAM_IMAGE_FILTER_WIDTH_X) && (x <= PARAM_IMAGE_FILTER_WIDTH_X) &&
+			(y >= -PARAM_IMAGE_FILTER_WIDTH_Y) && (y <= PARAM_IMAGE_FILTER_WIDTH_Y);
 }
+
+#if (PARAM_IMAGE_FILTER_TYPE == 1)
+
+// Box Filter
+float ImageFilter_Evaluate(const float x, const float y) {
+	return ImageFilter_IsInside(x, y) ?
+		(1.f / (2.f * PARAM_IMAGE_FILTER_WIDTH_X * 2.f * PARAM_IMAGE_FILTER_WIDTH_Y)) :
+		0;
+}
+
+#elif (PARAM_IMAGE_FILTER_TYPE == 2)
+
+// Gaussian Filter
+
+float Gaussian(const float d, const float expv) {
+	return max(0.f, native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * d * d) - expv);
+}
+
+float ImageFilter_Evaluate(const float x, const float y) {
+	return ImageFilter_IsInside(x, y) ?
+		(Gaussian(x,
+			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_X * PARAM_IMAGE_FILTER_WIDTH_X)) *
+		Gaussian(y, 
+			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_Y * PARAM_IMAGE_FILTER_WIDTH_Y))) :
+		0.f;
+}
+
+#else
+
+Error: unknown image filter !!!
+
+#endif
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1984,7 +2022,10 @@ void SplatTaskSamples(
 				(yy >= 0) && (yy < PARAM_IMAGE_HEIGHT)) {
 			__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xx, yy)];
 
-			const float weight = 1.f / 9.f;
+			const float sx = sample->u[IDX_SCREEN_X] - 0.5f - offsetX;
+			const float sy = sample->u[IDX_SCREEN_Y] - 0.5f - offsetY;
+
+			const float weight = ImageFilter_Evaluate(sx, sy);
 			pixel->c.r += sample->radiance.r * weight;
 			pixel->c.g += sample->radiance.g * weight;
 			pixel->c.b += sample->radiance.b * weight;
@@ -2023,8 +2064,8 @@ __kernel void CollectResults(
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
 	}
 
-#elif (PARAM_IMAGE_FILTER_TYPE == 1)
-	// Box filter
+#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2)
+	// 3x3 filter
 
 	// 3x3
 
@@ -2041,6 +2082,6 @@ __kernel void CollectResults(
 	SplatTaskSamples(tasks, frameBuffer, gid, 1, 1);
 
 #else
-		Error: unknown image filter !!!
+Error: unknown image filter !!!
 #endif
 }
