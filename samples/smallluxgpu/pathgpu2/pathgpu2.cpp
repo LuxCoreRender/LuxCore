@@ -121,7 +121,7 @@ void PathGPU2RenderThread::InitRender() {
 		frameBuffer[i].c.r = 0.f;
 		frameBuffer[i].c.g = 0.f;
 		frameBuffer[i].c.b = 0.f;
-		frameBuffer[i].count = 0;
+		frameBuffer[i].count = 0.f;
 	}
 
 	SLGScene *scene = renderEngine->scene;
@@ -1346,7 +1346,7 @@ void PathGPU2RenderEngine::UpdateFilm() {
 	unsigned long long totalCount = 0;
 	for (unsigned int p = 0; p < pixelCount; ++p) {
 		Spectrum c;
-		unsigned int count = 0;
+		float count = 0;
 		for (size_t i = 0; i < renderThreads.size(); ++i) {
 			c += renderThreads[i]->frameBuffer[p].c;
 			count += renderThreads[i]->frameBuffer[p].count;

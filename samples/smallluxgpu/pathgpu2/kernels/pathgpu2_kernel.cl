@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -67,6 +67,10 @@
 //  PARAM_IL_SHIFT_V
 //  PARAM_IL_WIDTH
 //  PARAM_IL_HEIGHT
+//
+//  PARAM_IMAGE_FILTER_TYPE (0 = no filter, 1 = box, 2 = gaussian)
+//  PARAM_IMAGE_FILTER_WIDTH
+//  PARAM_IMAGE_FILTER_HEIGHT
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -239,7 +243,7 @@ typedef struct {
 
 typedef struct {
 	Spectrum c;
-	unsigned int count;
+	float count;
 } Pixel;
 
 //------------------------------------------------------------------------------
@@ -1159,7 +1163,25 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 	}
 }
 
-uint  NextPixelIndex(const size_t gid, const uint index) {
+//------------------------------------------------------------------------------
+// Pixel related functions
+//------------------------------------------------------------------------------
+
+void PixelIndex2XY(const uint index, uint *x, uint *y) {
+	*y = index / PARAM_IMAGE_WIDTH;
+	*x = index - (*y) * PARAM_IMAGE_WIDTH;
+}
+
+uint XY2PixelIndex(const uint x, const uint y) {
+	return x + y * PARAM_IMAGE_WIDTH;
+}
+
+// This accepts negative indices too
+size_t PixelIndex2GID(const int index) {
+	return Mod(index, PARAM_TASK_COUNT);
+}
+
+uint NextPixelIndex(const size_t gid, const uint index) {
 	// Pre-requisite: PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
 #if (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT < PARAM_TASK_COUNT)
 	Error: Image too small !!!
@@ -1169,6 +1191,18 @@ uint  NextPixelIndex(const size_t gid, const uint index) {
 
 	return (newIndex >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
 		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : newIndex;
+}
+
+//------------------------------------------------------------------------------
+// Image filtering related functions
+//------------------------------------------------------------------------------
+
+#define PARAM_IMAGE_FILTER_TYPE 1
+#define PARAM_IMAGE_FILTER_WIDTH 3.f
+#define PARAM_IMAGE_FILTER_HEIGHT 3.f
+
+float ImageFilter_Box_Evaluate(const float x, const float y) {
+	return 1.f;
 }
 
 //------------------------------------------------------------------------------
@@ -1292,7 +1326,7 @@ __kernel void InitFrameBuffer(
 	p->c.r = 0.f;
 	p->c.g = 0.f;
 	p->c.b = 0.f;
-	p->count = 0;
+	p->count = 0.f;
 }
 
 //------------------------------------------------------------------------------
@@ -1920,6 +1954,47 @@ __kernel void AdvancePaths(
 // CollectResults Kernel
 //------------------------------------------------------------------------------
 
+void SplatTaskSamples(
+	__global GPUTask *tasks,
+	__global Pixel *frameBuffer,
+	const size_t gid,
+	const int offsetX, const int offsetY) {
+	// Look for the other GPUTask
+	const int indexOther = (int)gid + offsetX + PARAM_IMAGE_WIDTH * offsetY;
+	const size_t gidOther = PixelIndex2GID(indexOther);
+	if ((gidOther == gid) && !((offsetX == 0) && (offsetY == 0)))
+		return;
+
+	__global GPUTask *task = &tasks[gid];
+
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+
+	while (indexRenderFirst != indexRenderCurrent) {
+		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		// Look for the index of one of my pixel affected by this sample
+		uint pixelX, pixelY;
+		PixelIndex2XY(sample->pixelIndex, &pixelX, &pixelY);
+
+		// Check if it is a valid pixel
+		int xx = as_int(pixelX) + offsetX;
+		int yy = as_int(pixelY) + offsetY;
+		if ((xx >= 0) && (xx < PARAM_IMAGE_WIDTH) &&
+				(yy >= 0) && (yy < PARAM_IMAGE_HEIGHT)) {
+			__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xx, yy)];
+
+			const float weight = 1.f / 9.f;
+			pixel->c.r += sample->radiance.r * weight;
+			pixel->c.g += sample->radiance.g * weight;
+			pixel->c.b += sample->radiance.b * weight;
+			pixel->count +=  weight;
+		}
+
+		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+	}
+}
+
 __kernel void CollectResults(
 		__global GPUTask *tasks,
 		__global Pixel *frameBuffer
@@ -1928,22 +2003,16 @@ __kernel void CollectResults(
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
 	__global GPUTask *task = &tasks[gid];
 
 	uint indexRenderFirst = task->samples.indexRenderFirst;
 	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 
-	/*if (gid == 0) {
-		printf(\"===========================================================\\n\");
-		printf(\"Index (%d, %d)\\n\", indexRenderFirst, indexRenderCurrent);
-		printf(\"Path state: %d\\n\", task->pathState.state);
-		for(int i=0;i<PARAM_SAMPLE_COUNT;++i) {
-			printf(\"Pixel index: %d\\n\", task->samples.sample[i].pixelIndex);
-		}
-	}*/
-
 	while (indexRenderFirst != indexRenderCurrent) {
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		// No filter
 
 		__global Pixel *pixel = &frameBuffer[sample->pixelIndex];
 		pixel->c.r += sample->radiance.r;
@@ -1953,4 +2022,25 @@ __kernel void CollectResults(
 
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
 	}
+
+#elif (PARAM_IMAGE_FILTER_TYPE == 1)
+	// Box filter
+
+	// 3x3
+
+	SplatTaskSamples(tasks, frameBuffer, gid, -1, -1);
+	SplatTaskSamples(tasks, frameBuffer, gid, 0, -1);
+	SplatTaskSamples(tasks, frameBuffer, gid, 1, -1);
+
+	SplatTaskSamples(tasks, frameBuffer, gid, -1, 0);
+	SplatTaskSamples(tasks, frameBuffer, gid, 0, 0);
+	SplatTaskSamples(tasks, frameBuffer, gid, 1, 0);
+
+	SplatTaskSamples(tasks, frameBuffer, gid, -1, 1);
+	SplatTaskSamples(tasks, frameBuffer, gid, 0, 1);
+	SplatTaskSamples(tasks, frameBuffer, gid, 1, 1);
+
+#else
+		Error: unknown image filter !!!
+#endif
 }

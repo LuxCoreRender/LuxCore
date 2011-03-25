@@ -62,7 +62,7 @@ typedef struct {
 
 typedef struct {
 	Spectrum c;
-	unsigned int count;
+	float count;
 } Pixel;
 
 //------------------------------------------------------------------------------
