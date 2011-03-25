@@ -1165,7 +1165,8 @@ uint  NextPixelIndex(const size_t gid, const uint index) {
 
 	uint newIndex = index + PARAM_TASK_COUNT;
 
-	return (newIndex >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ? gid : newIndex;
+	return (newIndex >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
+		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : newIndex;
 }
 
 //------------------------------------------------------------------------------
@@ -1252,7 +1253,7 @@ __kernel void Init(
 
 	// Initialize the samples
 
-	uint index = gid;
+	uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH;
 	task->samples.sample[0].pixelIndex = index;
 	for(int i = 1; i < PARAM_SAMPLE_COUNT; ++i) {
 		index = NextPixelIndex(gid, index);
