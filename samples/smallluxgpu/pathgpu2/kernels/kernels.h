@@ -19,12 +19,16 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_CFG_H
-#define	_SLG_CFG_H
+#ifndef _SLG_KERNELS_H
+#define	_SLG_KERNELS_H
 
-// The configured options and settings for SmallLuxGPU
+#include <string>
 
-#define SLG_VERSION_MAJOR "1"
-#define SLG_VERSION_MINOR "8beta1"
+namespace luxrays {
 
-#endif	/* _SLG_CFG_H */
+// Intersection kernels
+extern std::string KernelSource_PathGPU2;
+
+}
+
+#endif	/* _SLG_KERNELS_H */

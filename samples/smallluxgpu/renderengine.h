@@ -27,7 +27,7 @@
 #include "luxrays/utils/film/film.h"
 
 enum RenderEngineType {
-	PATH, SPPM, DIRECTLIGHT, PATHGPU
+	PATH, SPPM, DIRECTLIGHT, PATHGPU, PATHGPU2
 };
 
 class RenderEngine {

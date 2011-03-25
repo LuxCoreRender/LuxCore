@@ -36,6 +36,7 @@
 #include "path/path.h"
 #include "sppm/sppm.h"
 #include "pathgpu/pathgpu.h"
+#include "pathgpu2/pathgpu2.h"
 #include "telnet.h"
 #include "luxrays/core/device.h"
 
@@ -120,6 +121,11 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
 				pre->UpdateFilm();
+			} else if (config->GetRenderEngine()->GetEngineType() == PATHGPU2) {
+				// I need to update the Film
+				PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
+
+				pre->UpdateFilm();
 			}
 #endif
 
@@ -164,6 +170,20 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 				}
 				break;
 			}
+			case PATHGPU2: {
+				PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
+				sampleSec = pre->GetTotalSamplesSec();
+
+				sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
+						int(elapsedTime), int(stopTime), pass, stopSPP, sampleSec / 1000000.0,
+						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+				if (WallClockTime() - lastFilmUpdate > 5.0) {
+					pre->UpdateFilm();
+					lastFilmUpdate = WallClockTime();
+				}
+				break;
+			}
 #endif
 			default:
 				assert (false);
@@ -178,7 +198,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	// Save the rendered image
 	config->SaveFilmImage();
 
-	sprintf(buf, "LuxMark index: %.3f", sampleSec / 1000000.0);
+	sprintf(buf, "LuxMark index: %.3f", sampleSec / 1000.0);
 	cerr << buf << endl;
 
 	delete config;
