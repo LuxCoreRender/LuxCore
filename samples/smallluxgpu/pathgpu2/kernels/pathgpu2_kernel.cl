@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -187,7 +187,6 @@ typedef struct {
 #define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
 
 typedef struct {
-	// This field is initialized at the start
 	uint pixelIndex;
 
 	float u[TOTAL_U_SIZE];
@@ -1158,6 +1157,17 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 	}
 }
 
+uint  NextPixelIndex(const size_t gid, const uint index) {
+	// Pre-requisite: PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
+#if (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT < PARAM_TASK_COUNT)
+	Error: Image too small !!!
+#endif
+
+	uint newIndex = index + PARAM_TASK_COUNT;
+
+	return (newIndex >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ? gid : newIndex;
+}
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1178,7 +1188,7 @@ void RandomSamplerInit(Seed *seed, __global Sample *sample) {
 __kernel void RandomSampler(
 		__global GPUTask *tasks
 		) {
-	const int gid = get_global_id(0);
+	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
@@ -1196,6 +1206,10 @@ __kernel void RandomSampler(
 
 	while (indexRenderFirst != indexRenderCurrent) {
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		// Move to the next assigned pixel
+		sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
+
 		RandomSamplerInit(&seed, sample);
 
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
@@ -1222,7 +1236,7 @@ __kernel void RandomSampler(
 __kernel void Init(
 		__global GPUTask *tasks
 		) {
-	const int gid = get_global_id(0);
+	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
@@ -1238,13 +1252,10 @@ __kernel void Init(
 
 	// Initialize the samples
 
-	// I'm assuming
-	//  PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT * PARAM_SAMPLE_COUNT
-	// and
-	//  PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT < PARAM_TASK_COUNT * (PARAM_SAMPLE_COUNT + 1)
-	for(int i = 0; i < PARAM_SAMPLE_COUNT; ++i) {
-		int index = gid + i * PARAM_TASK_COUNT;
-		index =  (index >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ? gid : index;
+	uint index = gid;
+	task->samples.sample[0].pixelIndex = index;
+	for(int i = 1; i < PARAM_SAMPLE_COUNT; ++i) {
+		index = NextPixelIndex(gid, index);
 
 		task->samples.sample[i].pixelIndex = index;
 	}
@@ -1270,7 +1281,7 @@ __kernel void Init(
 __kernel void InitFrameBuffer(
 		__global Pixel *frameBuffer
 		) {
-	const int gid = get_global_id(0);
+	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
 		return;
 
@@ -1315,7 +1326,7 @@ __kernel void GenerateRays(
         , __global UV *vertUVs
 #endif
 		) {
-	const int gid = get_global_id(0);
+	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
@@ -1402,7 +1413,7 @@ __kernel void AdvancePaths(
         , __global UV *vertUVs
 #endif
 		) {
-	const int gid = get_global_id(0);
+	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
@@ -1910,7 +1921,7 @@ __kernel void CollectResults(
 		__global GPUTask *tasks,
 		__global Pixel *frameBuffer
 		) {
-	const int gid = get_global_id(0);
+	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
