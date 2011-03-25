@@ -20,7 +20,7 @@
 ###########################################################################
 
 set(SLG_VERSION_MAJOR 1)
-set(SLG_VERSION_MINOR 7beta1)
+set(SLG_VERSION_MINOR 8beta1)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -82,12 +82,21 @@ endif(DOXYGEN_FOUND)
 ###########################################################################
 
 add_custom_command(
-   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/smalluxgpu/pathgpu/kernels/pathgpu_kernel.cpp
+   OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
-   MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/smalluxgpu/pathgpu/kernels/pathgpu_kernel.cl
+   MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
+   )
+
+add_custom_command(
+   OUTPUT pathgpu2/kernels/pathgpu2_kernel.cpp
+   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU2 = " >> pathgpu2/kernels/pathgpu2_kernel.cpp
+   COMMAND cat pathgpu2/kernels/pathgpu2_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel.cpp
+   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel.cpp
+   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel.cl
    )
 
 #############################################################################
@@ -106,6 +115,8 @@ set(SMALLLUXGPU_SRCS
 	path/path.cpp
 	pathgpu/kernels/pathgpu_kernel.cpp
 	pathgpu/pathgpu.cpp
+	pathgpu2/kernels/pathgpu2_kernel.cpp
+	pathgpu2/pathgpu2.cpp
 	renderconfig.cpp
 	slgscene.cpp
 	smallluxgpu.cpp

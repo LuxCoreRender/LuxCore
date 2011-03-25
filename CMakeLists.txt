@@ -23,6 +23,8 @@
 
 MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
 cmake_minimum_required(VERSION 2.6)
+cmake_policy(VERSION 2.6)
+cmake_policy(SET CMP0015 OLD)
 
 project(LuxRays)
 
@@ -368,7 +370,7 @@ endif(QT4_FOUND AND BUILD_LUXMARK)
 
 set(CMAKE_INSTALL_PREFIX .)
 #set(LUXRAYS_BIN_SAMPLES_DIR "luxrays-v${LUXRAYS_VERSION_MAJOR}.${LUXRAYS_VERSION_MINOR}")
-set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.7beta1")
+set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.8beta1")
 
 add_custom_command(
     OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}"

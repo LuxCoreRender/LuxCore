@@ -43,6 +43,7 @@
 #include "path/path.h"
 #include "sppm/sppm.h"
 #include "pathgpu/pathgpu.h"
+#include "pathgpu2/pathgpu2.h"
 
 RenderingConfig *config;
 
@@ -52,10 +53,19 @@ void DebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
 }
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+static bool HasOpenGLInterop() {
+	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
+			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+		return true;
+	else
+		return false;
+}
+#endif
+
 static void UpdateCameraData() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop())) {
+	if (HasOpenGLInterop()) {
 		config->scene->camera->Update(config->film->GetWidth(), config->film->GetHeight());
 		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdateCamera();
 	} else
@@ -116,6 +126,7 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	PrintHelpString(15, fontOffset, "3", "path tracing GPU rendering");
+	PrintHelpString(320, fontOffset, "4", "path tracing GPU rendering V2");
 #endif
 	fontOffset -= 15;
 #if defined(WIN32)
@@ -142,6 +153,12 @@ static void PrintHelpAndSettings() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case PATHGPU: {
 			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+
+			renderingTime = int(pre->GetRenderingTime());
+			break;
+		}
+		case PATHGPU2: {
+			PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
 
 			renderingTime = int(pre->GetRenderingTime());
 			break;
@@ -209,6 +226,17 @@ static void PrintHelpAndSettings() {
 			PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 
 			sprintf(buf, "[PathGPU RE][Max path depth %d][RR Depth %d]",
+					pre->maxPathDepth,
+					pre->rrDepth);
+			PrintString(GLUT_BITMAP_8_BY_13, buf);
+			fontOffset -= 15;
+			glRasterPos2i(20, fontOffset);
+			break;
+		}
+		case PATHGPU2: {
+			PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
+
+			sprintf(buf, "[PathGPU2 RE][Max path depth %d][RR Depth %d]",
 					pre->maxPathDepth,
 					pre->rrDepth);
 			PrintString(GLUT_BITMAP_8_BY_13, buf);
@@ -294,7 +322,8 @@ static void PrintHelpAndSettings() {
 			break;
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		case PATHGPU: {
+		case PATHGPU:
+		case PATHGPU2: {
 			double minPerf = idevices[0]->GetPerformance();
 			double totalPerf = idevices[0]->GetPerformance();
 			for (size_t i = 1; i < idevices.size(); ++i) {
@@ -307,8 +336,7 @@ static void PrintHelpAndSettings() {
 			glColor3f(1.0f, 0.5f, 0.f);
 			int offset = 45;
 			size_t deviceCount = idevices.size();
-			if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-					(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+			if (HasOpenGLInterop())
 				deviceCount = 1;
 
 			for (size_t i = 0; i < deviceCount; ++i) {
@@ -364,8 +392,7 @@ void displayFunc(void) {
 
 	glRasterPos2i(0, 0);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+	if (HasOpenGLInterop())
 		((PathGPURenderEngine *)(config->GetRenderEngine()))->UpdatePixelBuffer(
 				Min(config->GetScreenRefreshInterval(), 500u));
 	else
@@ -404,8 +431,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 
 // Used only when OpenGL Interoperability is enabled
 void idleFunc() {
-	assert ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()));
+	assert (HasOpenGLInterop());
 
 	double raysSec = 0.0;
 	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
@@ -465,6 +491,16 @@ void timerFunc(int value) {
 			}
 			break;
 		}
+		case PATHGPU2: {
+			PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
+
+			sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+			// Need to update the Film
+			pre->UpdateFilm();
+			break;
+		}
 #endif
 		default:
 			assert (false);
@@ -491,6 +527,10 @@ void keyFunc(unsigned char key, int x, int y) {
 				// I need to update the Film
 				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
 				pre->UpdateFilm();
+			} else if (config->GetRenderEngine()->GetEngineType() == PATHGPU2) {
+				// I need to update the Film
+				PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
+				pre->UpdateFilm();
 			}
 #endif
 			config->SaveFilmImage();
@@ -502,6 +542,10 @@ void keyFunc(unsigned char key, int x, int y) {
 			if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
 				// I need to update the Film
 				PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+				pre->UpdateFilm();
+			} else if (config->GetRenderEngine()->GetEngineType() == PATHGPU2) {
+				// I need to update the Film
+				PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
 				pre->UpdateFilm();
 			}
 #endif
@@ -611,6 +655,11 @@ void keyFunc(unsigned char key, int x, int y) {
 				glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 			}
 			break;
+		case '4':
+			config->SetRenderingEngineType(PATHGPU2);
+			glutIdleFunc(NULL);
+			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
+			break;
 #endif
 		case 'o': {
 #if defined(WIN32)
@@ -687,8 +736,7 @@ static void mouseFunc(int button, int state, int x, int y) {
 
 static void motionFunc(int x, int y) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	const double minInterval =  (((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))) ? 0.05 : 0.2;
+	const double minInterval = (HasOpenGLInterop()) ? 0.05 : 0.2;
 #else
 	const double minInterval = 0.2;
 #endif
@@ -760,8 +808,7 @@ void RunGlut() {
 	glutMotionFunc(motionFunc);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&
-			(((PathGPURenderEngine *)(config->GetRenderEngine()))->HasOpenGLInterop()))
+	if (HasOpenGLInterop())
 		glutIdleFunc(idleFunc);
 	else
 #endif
