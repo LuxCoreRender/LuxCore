@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -35,9 +35,6 @@
 //  PARAM_MAX_PATH_DEPTH
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
-//  PARAM_CAMERA_HAS_DOF
-//  PARAM_CAMERA_LENS_RADIUS
-//  PARAM_CAMERA_FOCAL_DISTANCE
 //  PARAM_DIRECT_LIGHT_SAMPLING
 //  PARAM_DL_LIGHT_COUNT
 //  PARAM_CAMERA_DYNAMIC
@@ -55,6 +52,11 @@
 //  PARAM_ENABLE_MAT_MATTEMETAL
 //  PARAM_ENABLE_MAT_ALLOY
 //  PARAM_ENABLE_MAT_ARCHGLASS
+
+// (optional)
+//  PARAM_CAMERA_HAS_DOF
+//  PARAM_CAMERA_LENS_RADIUS
+//  PARAM_CAMERA_FOCAL_DISTANCE
 
 // (optional)
 //  PARAM_HAVE_INFINITELIGHT

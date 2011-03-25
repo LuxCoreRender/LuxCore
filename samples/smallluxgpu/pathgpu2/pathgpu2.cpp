@@ -1176,6 +1176,7 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 			//	cerr<< "[DEBUG] =================================" << endl;
 
 			// Async. transfer of the frame buffer
+
 			oclQueue.enqueueReadBuffer(
 				*(renderThread->frameBufferBuff),
 				CL_FALSE,
@@ -1183,32 +1184,42 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 				sizeof(PathGPU2::Pixel) * pixelCount,
 				renderThread->frameBuffer);
 
-			for (unsigned int j = 0;;++j) {
-				// Generate the samples
-				oclQueue.enqueueNDRangeKernel(*(renderThread->randomSamplerKernel), cl::NullRange,
-						cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->randomSamplerWorkGroupSize));
+			for (;;) {
+				cl::Event event;
 
-				// Render samples
-				for (unsigned int k = 0; k < PATHGPU2_SAMPLE_COUNT; ++k) {
-					oclQueue.enqueueNDRangeKernel(*(renderThread->generateRaysKernel), cl::NullRange,
-							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->generateRaysWorkGroupSize));
+				for (unsigned int i = 0; i < 4; ++i) {
+					// Generate the samples
+					if (i == 0)
+						oclQueue.enqueueNDRangeKernel(*(renderThread->randomSamplerKernel), cl::NullRange,
+								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->randomSamplerWorkGroupSize),
+								NULL, &event);
+					else
+						oclQueue.enqueueNDRangeKernel(*(renderThread->randomSamplerKernel), cl::NullRange,
+								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->randomSamplerWorkGroupSize));
 
-					// Trace rays
-					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
-							*(renderThread->hitsBuff), PATHGPU2_TASK_COUNT);
+					// Render samples
+					for (unsigned int k = 0; k < PATHGPU2_SAMPLE_COUNT; ++k) {
+						oclQueue.enqueueNDRangeKernel(*(renderThread->generateRaysKernel), cl::NullRange,
+								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->generateRaysWorkGroupSize));
 
-					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
-							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->advancePathsWorkGroupSize));
+						// Trace rays
+						renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
+								*(renderThread->hitsBuff), PATHGPU2_TASK_COUNT);
+
+						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
+								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->advancePathsWorkGroupSize));
+					}
+
+					oclQueue.enqueueNDRangeKernel(*(renderThread->collectResultsKernel), cl::NullRange,
+							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->collectResultWorkGroupSize));
 				}
+				oclQueue.flush();
 
-				oclQueue.enqueueNDRangeKernel(*(renderThread->collectResultsKernel), cl::NullRange,
-						cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->collectResultWorkGroupSize));
-				oclQueue.finish();
-
+				event.wait();
 				const double elapsedTime = WallClockTime() - startTime;
 
 				//if(renderThread->threadIndex == 0)
-				//	cerr<< "[DEBUG] =" << j << "="<< elapsedTime * 1000.0 << "ms" << endl;
+				//	cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 << "ms" << endl;
 
 				if ((elapsedTime > renderThread->renderEngine->screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
