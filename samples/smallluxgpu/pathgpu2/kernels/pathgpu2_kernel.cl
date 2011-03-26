@@ -1201,23 +1201,20 @@ Error: Image too small !!!
 //------------------------------------------------------------------------------
 
 #define PARAM_IMAGE_FILTER_TYPE 2
-#define PARAM_IMAGE_FILTER_WIDTH_X 1.5f
-#define PARAM_IMAGE_FILTER_WIDTH_Y 1.5f
+#define PARAM_IMAGE_FILTER_WIDTH_X 1.95f
+#define PARAM_IMAGE_FILTER_WIDTH_Y 1.95f
 
-#define PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA 1.6f
+#define PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA 2.f
 
-bool ImageFilter_IsInside(const float x, const float y) {
-	return (x >= -PARAM_IMAGE_FILTER_WIDTH_X) && (x <= PARAM_IMAGE_FILTER_WIDTH_X) &&
-			(y >= -PARAM_IMAGE_FILTER_WIDTH_Y) && (y <= PARAM_IMAGE_FILTER_WIDTH_Y);
-}
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
 
-#if (PARAM_IMAGE_FILTER_TYPE == 1)
+// Nothing
+
+#elif (PARAM_IMAGE_FILTER_TYPE == 1)
 
 // Box Filter
 float ImageFilter_Evaluate(const float x, const float y) {
-	return ImageFilter_IsInside(x, y) ?
-		(1.f / (2.f * PARAM_IMAGE_FILTER_WIDTH_X * 2.f * PARAM_IMAGE_FILTER_WIDTH_Y)) :
-		0;
+	return 1.f;
 }
 
 #elif (PARAM_IMAGE_FILTER_TYPE == 2)
@@ -1229,12 +1226,10 @@ float Gaussian(const float d, const float expv) {
 }
 
 float ImageFilter_Evaluate(const float x, const float y) {
-	return ImageFilter_IsInside(x, y) ?
-		(Gaussian(x,
+	return Gaussian(x,
 			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_X * PARAM_IMAGE_FILTER_WIDTH_X)) *
 		Gaussian(y, 
-			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_Y * PARAM_IMAGE_FILTER_WIDTH_Y))) :
-		0.f;
+			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_Y * PARAM_IMAGE_FILTER_WIDTH_Y));
 }
 
 #else
@@ -1992,6 +1987,7 @@ __kernel void AdvancePaths(
 // CollectResults Kernel
 //------------------------------------------------------------------------------
 
+#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2)
 void SplatTaskSamples(
 	__global GPUTask *tasks,
 	__global Pixel *frameBuffer,
@@ -2016,16 +2012,17 @@ void SplatTaskSamples(
 		PixelIndex2XY(sample->pixelIndex, &pixelX, &pixelY);
 
 		// Check if it is a valid pixel
-		int xx = as_int(pixelX) + offsetX;
-		int yy = as_int(pixelY) + offsetY;
+		int xx = as_int(pixelX) - offsetX;
+		int yy = as_int(pixelY) - offsetY;
 		if ((xx >= 0) && (xx < PARAM_IMAGE_WIDTH) &&
 				(yy >= 0) && (yy < PARAM_IMAGE_HEIGHT)) {
 			__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xx, yy)];
 
-			const float sx = sample->u[IDX_SCREEN_X] - 0.5f - offsetX;
-			const float sy = sample->u[IDX_SCREEN_Y] - 0.5f - offsetY;
+			const float sx = sample->u[IDX_SCREEN_X] - .5f + offsetX;
+			const float sy = sample->u[IDX_SCREEN_Y] - .5f + offsetY;
 
 			const float weight = ImageFilter_Evaluate(sx, sy);
+
 			pixel->c.r += sample->radiance.r * weight;
 			pixel->c.g += sample->radiance.g * weight;
 			pixel->c.b += sample->radiance.b * weight;
@@ -2035,6 +2032,7 @@ void SplatTaskSamples(
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
 	}
 }
+#endif
 
 __kernel void CollectResults(
 		__global GPUTask *tasks,
