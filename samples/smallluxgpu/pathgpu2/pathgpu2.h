@@ -276,6 +276,8 @@ private:
 	cl::Buffer *texMapDescBuff;
 	cl::Buffer *meshTexsBuff;
 	cl::Buffer *uvsBuff;
+	cl::Buffer *permutedHaltonBufferBuff;
+	cl::Buffer *permutedHaltonPermuteTableBuff;
 
 	float samplingStart;
 	unsigned int seed;
@@ -337,7 +339,7 @@ private:
 	double elapsedTime;
 	unsigned long long samplesCount;
 
-	bool enableOpenGLInterop, dynamicCamera;
+	bool dynamicCamera;
 };
 
 #endif

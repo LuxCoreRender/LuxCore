@@ -117,6 +117,7 @@ set(SMALLLUXGPU_SRCS
 	pathgpu/pathgpu.cpp
 	pathgpu2/kernels/pathgpu2_kernel.cpp
 	pathgpu2/pathgpu2.cpp
+	pathgpu2/permutedhalton.cpp
 	renderconfig.cpp
 	slgscene.cpp
 	smallluxgpu.cpp
