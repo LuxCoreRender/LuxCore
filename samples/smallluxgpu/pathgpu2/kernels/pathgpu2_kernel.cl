@@ -67,7 +67,8 @@
 //  PARAM_IL_SHIFT_V
 //  PARAM_IL_WIDTH
 //  PARAM_IL_HEIGHT
-//
+
+// (optional)
 //  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = MitchellSS)
 //  PARAM_IMAGE_FILTER_WIDTH_X
 //  PARAM_IMAGE_FILTER_WIDTH_Y
@@ -77,6 +78,9 @@
 // (Mitchell filter) & (MitchellSS filter)
 //  PARAM_IMAGE_FILTER_MITCHELL_B
 //  PARAM_IMAGE_FILTER_MITCHELL_C
+
+// (optional)
+//  PARAM_SAMPLER_TYPE (0 = Random, 1 = Stratifield)
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -207,6 +211,7 @@ typedef struct {
 } Sample;
 
 typedef struct {
+
 	// A circular buffer of samples to render
 	Sample sample[PARAM_SAMPLE_COUNT];
 
@@ -1177,6 +1182,19 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 // Pixel related functions
 //------------------------------------------------------------------------------
 
+uint PixelIndex(const size_t gid, const uint i) {
+	const uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH + i * PARAM_TASK_COUNT;
+
+	return (index >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
+		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : index;
+}
+
+uint PixelCountPerTask(const size_t gid) {
+	const uint lastGID = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT - PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT * PARAM_TASK_COUNT;
+
+	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT + ((gid < lastGID) ? 1 : 0);
+}
+
 void PixelIndex2XY(const uint index, uint *x, uint *y) {
 	*y = index / PARAM_IMAGE_WIDTH;
 	*x = index - (*y) * PARAM_IMAGE_WIDTH;
@@ -1310,16 +1328,24 @@ Error: unknown image filter !!!
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
+#define PARAM_SAMPLER_TYPE 0
+
 //------------------------------------------------------------------------------
-// RandomSamplerInit Kernel
+// Random Sampler Kernel
 //------------------------------------------------------------------------------
 
-void RandomSamplerInit(Seed *seed, __global Sample *sample) {
+#if (PARAM_SAMPLER_TYPE == 0)
+
+void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
+	__global Sample *sample = &samples->sample[i];
+
+	sample->pixelIndex = PixelIndex(gid, i);
+
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		sample->u[i] = RndFloatValue(seed);
 }
 
-__kernel void RandomSampler(
+__kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats
 		) {
@@ -1347,7 +1373,8 @@ __kernel void RandomSampler(
 		// Move to the next assigned pixel
 		sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
 
-		RandomSamplerInit(&seed, sample);
+		for (int i = 0; i < TOTAL_U_SIZE; ++i)
+			sample->u[i] = RndFloatValue(&seed);
 
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
 		++sampleCount;
@@ -1367,6 +1394,87 @@ __kernel void RandomSampler(
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
 }
+
+#endif
+
+//------------------------------------------------------------------------------
+// Stratifield Sampler Kernel
+//------------------------------------------------------------------------------
+
+#if (PARAM_SAMPLER_TYPE == 1)
+
+void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
+	__global Sample *sample = &samples->sample[i];
+
+	/*const uint pixelCountPerTask = PixelCountPerTask(gid);
+	const uint idx = min((uint)floor(pixelCountPerTask * RndFloatValue(seed)), pixelCountPerTask - 1);
+	sample->pixelIndex = PixelIndex(gid, idx);*/
+
+	//if (gid == 0)
+	//	printf(\"pixelCountPerTask: %d idx: %d sample->pixelIndex: %d\\n\", pixelCountPerTask, idx, sample->pixelIndex);
+
+	sample->pixelIndex = PixelIndex(gid, i);
+
+	for (int i = 0; i < TOTAL_U_SIZE; ++i)
+		sample->u[i] = RndFloatValue(seed);
+}
+
+__kernel void Sampler(
+		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	uint sampleCount = taskStat->sampleCount;
+	//const uint pixelCountPerTask = PixelCountPerTask(gid);
+	while (indexRenderFirst != indexRenderCurrent) {
+		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		/*// Choose a new pixel to sample
+		const uint idx = min((uint)floor(pixelCountPerTask * RndFloatValue(&seed)), pixelCountPerTask - 1);
+		sample->pixelIndex = PixelIndex(gid, idx);*/
+
+		// Move to the next assigned pixel
+		sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
+
+		for (int i = 0; i < TOTAL_U_SIZE; ++i)
+			sample->u[i] = RndFloatValue(&seed);
+
+		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+		++sampleCount;
+	}
+
+	task->samples.indexRenderFirst = indexRenderFirst;
+	taskStat->sampleCount = sampleCount;
+
+	// I have generated new samples, unlock the rendering if required
+	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
+		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
+		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
+	}
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+}
+
+#endif
 
 //------------------------------------------------------------------------------
 // Init Kernel
@@ -1391,19 +1499,11 @@ __kernel void Init(
 	InitRandomGenerator(PARAM_SEED + gid, &seed);
 
 	// Initialize the samples
+	for(int i = 0; i < PARAM_SAMPLE_COUNT; ++i)
+		Sampler_Init(gid, &seed, &task->samples, i);
 
-	uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH;
-	task->samples.sample[0].pixelIndex = index;
-	for(int i = 1; i < PARAM_SAMPLE_COUNT; ++i) {
-		index = NextPixelIndex(gid, index);
-
-		task->samples.sample[i].pixelIndex = index;
-	}
 	task->samples.indexRenderFirst = 0;
 	task->samples.indexRenderCurrent = 0;
-
-	for(int i = 0; i < PARAM_SAMPLE_COUNT; ++i)
-		RandomSamplerInit(&seed, &task->samples.sample[i]);
 
 	// Initialize the path state
 	task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
