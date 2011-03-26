@@ -36,7 +36,7 @@ class PathGPU2RenderEngine;
 namespace PathGPU2 {
 
 #define PATHGPU2_TASK_COUNT 32768
-#define PATHGPU2_SAMPLE_COUNT 16
+#define PATHGPU2_SAMPLE_COUNT 8
 
 typedef struct {
 	unsigned int s1, s2, s3;
@@ -64,6 +64,58 @@ typedef struct {
 	Spectrum c;
 	float count;
 } Pixel;
+
+//------------------------------------------------------------------------------
+// Filters
+//------------------------------------------------------------------------------
+
+typedef enum {
+	NONE, BOX, GAUSSIAN, MITCHELL, MITCHELL_SS
+} FilterType;
+
+class Filter {
+public:
+	Filter(const FilterType t, const float wx, const float wy) :
+		type(t), widthX(wx), widthY(wy) { }
+
+	FilterType type;
+	float widthX, widthY;
+};
+
+class NoneFilter : public Filter {
+public:
+	NoneFilter() : Filter(NONE, 0.f, 0.f) { }
+};
+
+class BoxFilter : public Filter {
+public:
+	BoxFilter(const float wx, const float wy) :
+		Filter(BOX, wx, wy) { }
+};
+
+class GaussianFilter : public Filter {
+public:
+	GaussianFilter(const float wx, const float wy, const float a) :
+		Filter(GAUSSIAN, wx, wy), alpha(a) { }
+
+	float alpha;
+};
+
+class MitchellFilter : public Filter {
+public:
+	MitchellFilter(const float wx, const float wy, const float b, const float c) :
+		Filter(MITCHELL, wx, wy), B(b), C(c) { }
+
+	float B, C;
+};
+
+class MitchellFilterSS : public Filter {
+public:
+	MitchellFilterSS(const float wx, const float wy, const float b, const float c) :
+		Filter(MITCHELL_SS, wx, wy), B(b), C(c) { }
+
+	float B, C;
+};
 
 //------------------------------------------------------------------------------
 
@@ -264,6 +316,8 @@ public:
 
 	int rrDepth;
 	float rrImportanceCap;
+
+	PathGPU2::Filter *filter;
 
 private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;

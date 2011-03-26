@@ -1203,15 +1203,6 @@ Error: Image too small !!!
 // Image filtering related functions
 //------------------------------------------------------------------------------
 
-#define PARAM_IMAGE_FILTER_TYPE 4
-#define PARAM_IMAGE_FILTER_WIDTH_X 1.95f
-#define PARAM_IMAGE_FILTER_WIDTH_Y 1.95f
-
-#define PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA 2.f
-
-#define PARAM_IMAGE_FILTER_MITCHELL_B (1.f / 3.f)
-#define PARAM_IMAGE_FILTER_MITCHELL_C (1.f / 3.f)
-
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
 // Nothing
