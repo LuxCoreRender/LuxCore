@@ -248,8 +248,8 @@ private:
 	size_t initWorkGroupSize;
 	cl::Kernel *initFBKernel;
 	size_t initFBWorkGroupSize;
-	cl::Kernel *randomSamplerKernel;
-	size_t randomSamplerWorkGroupSize;
+	cl::Kernel *samplerKernel;
+	size_t samplerWorkGroupSize;
 	cl::Kernel *generateRaysKernel;
 	size_t generateRaysWorkGroupSize;
 	cl::Kernel *advancePathsKernel;

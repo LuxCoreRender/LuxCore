@@ -67,7 +67,7 @@ PathGPU2RenderThread::PathGPU2RenderThread(const unsigned int index, const unsig
 	kernelsParameters = "";
 	initKernel = NULL;
 	initFBKernel = NULL;
-	randomSamplerKernel = NULL;
+	samplerKernel = NULL;
 	generateRaysKernel = NULL;
 	advancePathsKernel = NULL;
 	collectResultsKernel = NULL;
@@ -79,7 +79,7 @@ PathGPU2RenderThread::~PathGPU2RenderThread() {
 
 	delete initKernel;
 	delete initFBKernel;
-	delete randomSamplerKernel;
+	delete samplerKernel;
 	delete generateRaysKernel;
 	delete advancePathsKernel;
 	delete collectResultsKernel;
@@ -970,18 +970,18 @@ void PathGPU2RenderThread::InitRender() {
 		// RandomSampler kernel
 		//----------------------------------------------------------------------
 
-		delete randomSamplerKernel;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling RandomSampler Kernel" << endl;
-		randomSamplerKernel = new cl::Kernel(program, "RandomSampler");
-		randomSamplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &randomSamplerWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU RandomSampler kernel work group size: " << randomSamplerWorkGroupSize << endl;
+		delete samplerKernel;
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling Sampler Kernel" << endl;
+		samplerKernel = new cl::Kernel(program, "Sampler");
+		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Sampler kernel work group size: " << samplerWorkGroupSize << endl;
 
-		randomSamplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &randomSamplerWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << randomSamplerWorkGroupSize << endl;
+		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
+		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << samplerWorkGroupSize << endl;
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			randomSamplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << randomSamplerWorkGroupSize << endl;
+			samplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
 		}
 
 		//----------------------------------------------------------------------
@@ -1051,8 +1051,8 @@ void PathGPU2RenderThread::InitRender() {
 
 	// Set kernel arguments
 
-	randomSamplerKernel->setArg(0, *tasksBuff);
-	randomSamplerKernel->setArg(1, *taskStatsBuff);
+	samplerKernel->setArg(0, *tasksBuff);
+	samplerKernel->setArg(1, *taskStatsBuff);
 
 	unsigned int argIndex = 0;
 	generateRaysKernel->setArg(argIndex++, *tasksBuff);
@@ -1245,12 +1245,12 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 				for (unsigned int i = 0; i < 4; ++i) {
 					// Generate the samples
 					if (i == 0)
-						oclQueue.enqueueNDRangeKernel(*(renderThread->randomSamplerKernel), cl::NullRange,
-								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->randomSamplerWorkGroupSize),
+						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
+								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->samplerWorkGroupSize),
 								NULL, &event);
 					else
-						oclQueue.enqueueNDRangeKernel(*(renderThread->randomSamplerKernel), cl::NullRange,
-								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->randomSamplerWorkGroupSize));
+						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
+								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->samplerWorkGroupSize));
 
 					// Render samples
 					for (unsigned int k = 0; k < PATHGPU2_SAMPLE_COUNT; ++k) {
