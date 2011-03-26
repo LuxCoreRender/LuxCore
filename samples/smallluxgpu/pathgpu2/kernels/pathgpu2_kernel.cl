@@ -68,12 +68,15 @@
 //  PARAM_IL_WIDTH
 //  PARAM_IL_HEIGHT
 //
-//  PARAM_IMAGE_FILTER_TYPE (0 = no filter, 1 = box, 2 = gaussian)
+//  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = MitchellSS)
 //  PARAM_IMAGE_FILTER_WIDTH_X
 //  PARAM_IMAGE_FILTER_WIDTH_Y
 // (Box filter)
 // (Gaussian filter)
 //  PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA
+// (Mitchell filter) & (MitchellSS filter)
+//  PARAM_IMAGE_FILTER_MITCHELL_B
+//  PARAM_IMAGE_FILTER_MITCHELL_C
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -1200,11 +1203,14 @@ Error: Image too small !!!
 // Image filtering related functions
 //------------------------------------------------------------------------------
 
-#define PARAM_IMAGE_FILTER_TYPE 2
+#define PARAM_IMAGE_FILTER_TYPE 4
 #define PARAM_IMAGE_FILTER_WIDTH_X 1.95f
 #define PARAM_IMAGE_FILTER_WIDTH_Y 1.95f
 
 #define PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA 2.f
+
+#define PARAM_IMAGE_FILTER_MITCHELL_B (1.f / 3.f)
+#define PARAM_IMAGE_FILTER_MITCHELL_C (1.f / 3.f)
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
@@ -1219,17 +1225,80 @@ float ImageFilter_Evaluate(const float x, const float y) {
 
 #elif (PARAM_IMAGE_FILTER_TYPE == 2)
 
-// Gaussian Filter
-
 float Gaussian(const float d, const float expv) {
 	return max(0.f, native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * d * d) - expv);
 }
 
+// Gaussian Filter
 float ImageFilter_Evaluate(const float x, const float y) {
 	return Gaussian(x,
 			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_X * PARAM_IMAGE_FILTER_WIDTH_X)) *
 		Gaussian(y, 
 			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_Y * PARAM_IMAGE_FILTER_WIDTH_Y));
+}
+
+#elif (PARAM_IMAGE_FILTER_TYPE == 3)
+
+float Mitchell1D(float x) {
+	const float B = PARAM_IMAGE_FILTER_MITCHELL_B;
+	const float C = PARAM_IMAGE_FILTER_MITCHELL_C;
+
+	if (x >= 1.f)
+		return 0.f;
+	x = fabs(2.f * x);
+
+	if (x > 1.f)
+		return (((-B / 6.f - C) * x + (B + 5.f * C)) * x +
+			(-2.f * B - 8.f * C)) * x + (4.f / 3.f * B + 4.f * C);
+	else
+		return ((2.f - 1.5f * B - C) * x +
+			(-3.f + 2.f * B + C)) * x * x +
+			(1.f - B / 3.f);
+}
+
+// Mitchell Filter
+float ImageFilter_Evaluate(const float x, const float y) {
+	const float distance = native_sqrt(
+			x * x * (1.f / (PARAM_IMAGE_FILTER_WIDTH_X * PARAM_IMAGE_FILTER_WIDTH_X)) +
+			y * y * (1.f / (PARAM_IMAGE_FILTER_WIDTH_Y * PARAM_IMAGE_FILTER_WIDTH_Y)));
+
+	return Mitchell1D(distance);
+}
+
+#elif (PARAM_IMAGE_FILTER_TYPE == 4)
+
+float Mitchell1D(float x) {
+	const float B = PARAM_IMAGE_FILTER_MITCHELL_B;
+	const float C = PARAM_IMAGE_FILTER_MITCHELL_C;
+
+	if (x >= 1.f)
+		return 0.f;
+	x = fabs(2.f * x);
+
+	if (x > 1.f)
+		return (((-B / 6.f - C) * x + (B + 5.f * C)) * x +
+			(-2.f * B - 8.f * C)) * x + (4.f / 3.f * B + 4.f * C);
+	else
+		return ((2.f - 1.5f * B - C) * x +
+			(-3.f + 2.f * B + C)) * x * x +
+			(1.f - B / 3.f);
+}
+
+// Mitchell Filter with Super Sampling
+float ImageFilter_Evaluate(const float x, const float y) {
+	const float distance = native_sqrt(
+			x * x * (1.f / (PARAM_IMAGE_FILTER_WIDTH_X * 5.f / 3.f * PARAM_IMAGE_FILTER_WIDTH_X * 5.f / 3.f)) +
+			y * y * (1.f / (PARAM_IMAGE_FILTER_WIDTH_Y * 5.f / 3.f * PARAM_IMAGE_FILTER_WIDTH_Y * 5.f / 3.f)));
+
+	const float dist = distance / .6f;
+	const float B = PARAM_IMAGE_FILTER_MITCHELL_B;
+	const float C = PARAM_IMAGE_FILTER_MITCHELL_C;
+	const float a0 = (76.f - 16.f * B + 8.f * C) / 81.f;
+	const float a1 = (1.f - a0)/ 2.f;
+
+	return a1 * Mitchell1D(dist - 2.f / 3.f) +
+			a0 * Mitchell1D(dist) +
+			a1 * Mitchell1D(dist + 2.f / 3.f);
 }
 
 #else
@@ -1987,7 +2056,7 @@ __kernel void AdvancePaths(
 // CollectResults Kernel
 //------------------------------------------------------------------------------
 
-#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2)
+#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
 void SplatTaskSamples(
 	__global GPUTask *tasks,
 	__global Pixel *frameBuffer,
@@ -2062,10 +2131,8 @@ __kernel void CollectResults(
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
 	}
 
-#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2)
+#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
 	// 3x3 filter
-
-	// 3x3
 
 	SplatTaskSamples(tasks, frameBuffer, gid, -1, -1);
 	SplatTaskSamples(tasks, frameBuffer, gid, 0, -1);
