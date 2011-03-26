@@ -736,19 +736,19 @@ void PathGPU2RenderThread::InitRender() {
 		sizeof(PathGPU2::Seed) +
 		(1 ? sizeof(unsigned int) : 0);
 
-	const size_t uDataSize =
+	const size_t uDataEyePathVertexSize =
 		// IDX_SCREEN_X, IDX_SCREEN_Y
 		sizeof(float) * 2 +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
-		(
-			// IDX_TEX_ALPHA,
-			((texMapAlphaBuff) ? sizeof(float) : 0) +
-			// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
-			sizeof(float) * 3 +
-			// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W
-			((areaLightCount > 0) ? (sizeof(float) * 4) : 0)
-		) * renderEngine->maxPathDepth;
+		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
+	const size_t uDataPerPathVertexSize =
+		// IDX_TEX_ALPHA,
+		((texMapAlphaBuff) ? sizeof(float) : 0) +
+		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
+		sizeof(float) * 3 +
+		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W
+		((areaLightCount > 0) ? (sizeof(float) * 4) : 0);
+	const size_t uDataSize = uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth;
 
 	const size_t sampleSize =
 		// int pixelIndex;
@@ -786,7 +786,7 @@ void PathGPU2RenderThread::InitRender() {
 	// Allocate Permuted Halton buffers
 	//--------------------------------------------------------------------------
 
-	const u_int haltonDims = uDataSize / sizeof(float) + 1;
+	const u_int haltonDims = (uDataEyePathVertexSize + uDataPerPathVertexSize) / sizeof(float) + 1;
 	const u_int haltonBuffSize = haltonDims;
 	const u_int haltonPermuteTableSize = PermutedHalton::GetPermuteTableSize(haltonDims);
 	if (1) {

@@ -1424,17 +1424,20 @@ float PermutedRadicalInverse(uint n, uint base, __global uint *p) {
 }
 
 void PHSample(uint n, float *out0, __global float *out,
-	__global uint *b, __global uint *permute) {
+	__global uint *b, __global uint *permute, Seed *seed) {
 	__global uint *p = permute;
 
-	for (uint i = 0; i < TOTAL_U_SIZE; ++i) {
-		const uint bi = b[i];
+	const uint bi = b[0];
+	*out0 = min((float)PermutedRadicalInverse(n, bi, p), ONE_MINUS_EPSILON);
+
+	for (uint i = 0; i < IDX_BSDF_OFFSET + SAMPLE_SIZE; ++i) {
+		const uint bi = b[i + 1];
 		out[i] = min((float)PermutedRadicalInverse(n, bi, p), ONE_MINUS_EPSILON);
 		p += bi;
 	}
 
-	const uint bi = b[TOTAL_U_SIZE];
-	*out0 = min((float)PermutedRadicalInverse(n, bi, p), ONE_MINUS_EPSILON);
+	for (uint i = IDX_BSDF_OFFSET + SAMPLE_SIZE; i < TOTAL_U_SIZE; ++i)
+		out[i] = RndFloatValue(seed);
 }
 
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples,
@@ -1448,7 +1451,7 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples,
 	float u0;
 	PHSample(i, &u0, sample->u,
 		&permutedHaltonBuff[gid * permutedHaltonBuffSize],
-		&permutedHaltonPrimeTable[gid * permutedHaltonPrimeTableSize]);
+		&permutedHaltonPrimeTable[gid * permutedHaltonPrimeTableSize], seed);
 
 	// Choose a new pixel to sample
 	const uint idx = min((uint)floor(pixelCountPerTask * u0), pixelCountPerTask - 1);
@@ -1469,6 +1472,12 @@ __kernel void Sampler(
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
 	uint indexRenderFirst = task->samples.indexRenderFirst;
 	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 
@@ -1483,7 +1492,7 @@ __kernel void Sampler(
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
 
 		float u0;
-		PHSample(permutedHaltonStep, &u0, sample->u, b, p);
+		PHSample(permutedHaltonStep, &u0, sample->u, b, p, &seed);
 
 		// Choose a new pixel to sample
 		const uint idx = min((uint)floor(pixelCountPerTask * u0), pixelCountPerTask - 1);
@@ -1503,6 +1512,11 @@ __kernel void Sampler(
 		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
 		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
 	}
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
 }
 
 #endif
