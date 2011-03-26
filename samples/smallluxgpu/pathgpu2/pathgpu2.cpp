@@ -842,6 +842,40 @@ void PathGPU2RenderThread::InitRender() {
 	if (texMapAlphaBuff)
 		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
 
+	const PathGPU2::Filter *filter = renderEngine->filter;
+	switch (filter->type) {
+		case PathGPU2::NONE:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
+			break;
+		case PathGPU2::BOX:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE 1" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f";
+			break;
+		case PathGPU2::GAUSSIAN:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << ((PathGPU2::GaussianFilter *)filter)->alpha << "f";
+			break;
+		case PathGPU2::MITCHELL:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathGPU2::MitchellFilter *)filter)->B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathGPU2::MitchellFilter *)filter)->C << "f";
+			break;
+		case PathGPU2::MITCHELL_SS:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathGPU2::MitchellFilterSS *)filter)->B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathGPU2::MitchellFilterSS *)filter)->C << "f";
+			break;
+		default:
+			assert (false);
+	}
+
 	if (renderEngine->dynamicCamera) {
 		tStart = WallClockTime();
 
@@ -1251,9 +1285,43 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mutex *filmMutex,
 		vector<IntersectionDevice *> intersectionDevices, const Properties &cfg) :
 		RenderEngine(scn, flm, filmMutex) {
+	// Rendering parameters
+
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+
+	//--------------------------------------------------------------------------
+	// Filter
+	//--------------------------------------------------------------------------
+
+	const string filterType = cfg.GetString("path.filter.type", "MITCHELL_SS");
+	const float filterWidthX = cfg.GetFloat("path.filter.width.x", 2.f);
+	const float filterWidthY = cfg.GetFloat("path.filter.width.y", 2.f);
+	if ((filterWidthX <= 0.f) || (filterWidthX > 2.f))
+		throw std::runtime_error("path.filter.width.x must be between 0.0 and 2.0");
+	if ((filterWidthY <= 0.f) || (filterWidthY > 2.f))
+		throw std::runtime_error("path.filter.width.y must be between 0.0 and 2.0");
+
+	if (filterType.compare("NONE") == 0)
+		filter = new PathGPU2::NoneFilter();
+	else if (filterType.compare("BOX") == 0)
+		filter = new PathGPU2::BoxFilter(filterWidthX, filterWidthY);
+	else if (filterType.compare("GAUSSIAN") == 0) {
+		const float alpha = cfg.GetFloat("path.filter.alpha", 2.f);
+		filter = new PathGPU2::GaussianFilter(filterWidthX, filterWidthY, alpha);
+	} else if (filterType.compare("MITCHELL") == 0) {
+		const float B = cfg.GetFloat("path.filter.B", 1.f / 3.f);
+		const float C = cfg.GetFloat("path.filter.C", 1.f / 3.f);
+		filter = new PathGPU2::MitchellFilter(filterWidthX, filterWidthY, B, C);
+	} else if (filterType.compare("MITCHELL_SS") == 0) {
+		const float B = cfg.GetFloat("path.filter.B", 1.f / 3.f);
+		const float C = cfg.GetFloat("path.filter.C", 1.f / 3.f);
+		filter = new PathGPU2::MitchellFilterSS(filterWidthX, filterWidthY, B, C);
+	} else
+		throw std::runtime_error("Unknown path.filter.type");
+
+	//--------------------------------------------------------------------------
 
 	startTime = 0.0;
 	samplesCount = 0;
@@ -1271,7 +1339,6 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 	if (oclIntersectionDevices.size() < 1)
 		throw runtime_error("Unable to find an OpenCL intersection device for PathGPU2 render engine");
 
-	// Check if I have to enable OpenCL interoperability and if I can
 	bool lowLatency = (cfg.GetInt("opencl.latency.mode", 1) != 0);
 	dynamicCamera = (cfg.GetInt("pathgpu.dynamiccamera.enable", lowLatency ? 1 : 0) != 0);
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000) / 1000.0;
@@ -1302,6 +1369,8 @@ PathGPU2RenderEngine::~PathGPU2RenderEngine() {
 		delete renderThreads[i];
 
 	film->FreeSampleBuffer(sampleBuffer);
+
+	delete filter;
 }
 
 void PathGPU2RenderEngine::Start() {
