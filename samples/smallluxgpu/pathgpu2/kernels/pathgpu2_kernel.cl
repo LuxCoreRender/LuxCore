@@ -235,7 +235,7 @@ typedef struct {
 #endif
 } PathState;
 
-// The memory layout of this structure is highly UNoptimized for GPU !
+// The memory layout of this structure is highly UNoptimized for GPUs !
 typedef struct {
 	// The task seed
 	Seed seed;
@@ -246,6 +246,10 @@ typedef struct {
 	// The state used to keep track of the rendered path
 	PathState pathState;
 } GPUTask;
+
+typedef struct {
+	uint sampleCount;
+} GPUTaskStats;
 
 typedef struct {
 	Spectrum c;
@@ -1316,7 +1320,8 @@ void RandomSamplerInit(Seed *seed, __global Sample *sample) {
 }
 
 __kernel void RandomSampler(
-		__global GPUTask *tasks
+		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -1334,6 +1339,8 @@ __kernel void RandomSampler(
 	uint indexRenderFirst = task->samples.indexRenderFirst;
 	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	uint sampleCount = taskStat->sampleCount;
 	while (indexRenderFirst != indexRenderCurrent) {
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
 
@@ -1343,9 +1350,11 @@ __kernel void RandomSampler(
 		RandomSamplerInit(&seed, sample);
 
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+		++sampleCount;
 	}
 
 	task->samples.indexRenderFirst = indexRenderFirst;
+	taskStat->sampleCount = sampleCount;
 
 	// I have generated new samples, unlock the rendering if required
 	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
@@ -1364,7 +1373,8 @@ __kernel void RandomSampler(
 //------------------------------------------------------------------------------
 
 __kernel void Init(
-		__global GPUTask *tasks
+		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -1402,6 +1412,9 @@ __kernel void Init(
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	taskStat->sampleCount = 0;
 }
 
 //------------------------------------------------------------------------------

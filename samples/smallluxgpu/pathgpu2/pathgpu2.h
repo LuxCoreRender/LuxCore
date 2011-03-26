@@ -65,6 +65,10 @@ typedef struct {
 	float count;
 } Pixel;
 
+typedef struct {
+	uint sampleCount;
+} GPUTaskStats;
+
 //------------------------------------------------------------------------------
 // Filters
 //------------------------------------------------------------------------------
@@ -256,6 +260,7 @@ private:
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *tasksBuff;
+	cl::Buffer *taskStatsBuff;
 	cl::Buffer *frameBufferBuff;
 	cl::Buffer *materialsBuff;
 	cl::Buffer *meshIDBuff;
@@ -281,7 +286,9 @@ private:
 	PathGPU2RenderEngine *renderEngine;
 	PathGPU2::Pixel *frameBuffer;
 
-	bool started, reportedPermissionError;
+	bool started, reportedPermissionError, pad0, pad1;
+
+	PathGPU2::GPUTaskStats gpuTaskStats[PATHGPU2_TASK_COUNT];
 };
 
 //------------------------------------------------------------------------------

@@ -726,7 +726,7 @@ void PathGPU2RenderThread::InitRender() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Allocate GPU tasks buffer
+	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Sample count: " << PATHGPU2_SAMPLE_COUNT << endl;
@@ -769,6 +769,16 @@ void PathGPU2RenderThread::InitRender() {
 			CL_MEM_READ_WRITE,
 			gpuTaksSize * PATHGPU2_TASK_COUNT);
 	deviceDesc->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU task statistic buffers
+	//--------------------------------------------------------------------------
+
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(PathGPU2::GPUTaskStats) * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+	taskStatsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			sizeof(PathGPU2::GPUTaskStats) * PATHGPU2_TASK_COUNT);
+	deviceDesc->AllocMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -1042,6 +1052,7 @@ void PathGPU2RenderThread::InitRender() {
 	// Set kernel arguments
 
 	randomSamplerKernel->setArg(0, *tasksBuff);
+	randomSamplerKernel->setArg(1, *taskStatsBuff);
 
 	unsigned int argIndex = 0;
 	generateRaysKernel->setArg(argIndex++, *tasksBuff);
@@ -1111,6 +1122,7 @@ void PathGPU2RenderThread::InitRender() {
 
 	// Initialize the tasks buffer
 	initKernel->setArg(0, *tasksBuff);
+	initKernel->setArg(1, *taskStatsBuff);
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(initWorkGroupSize));
 
@@ -1148,6 +1160,8 @@ void PathGPU2RenderThread::Stop() {
 	delete hitsBuff;
 	deviceDesc->FreeMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
 	delete tasksBuff;
+	deviceDesc->FreeMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
+	delete taskStatsBuff;
 	deviceDesc->FreeMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
 	delete frameBufferBuff;
 	deviceDesc->FreeMemory(materialsBuff->getInfo<CL_MEM_SIZE>());
@@ -1210,13 +1224,20 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 			//	cerr<< "[DEBUG] =================================" << endl;
 
 			// Async. transfer of the frame buffer
-
 			oclQueue.enqueueReadBuffer(
 				*(renderThread->frameBufferBuff),
 				CL_FALSE,
 				0,
 				sizeof(PathGPU2::Pixel) * pixelCount,
 				renderThread->frameBuffer);
+
+			// Async. transfer of GPU task statistics
+			oclQueue.enqueueReadBuffer(
+				*(renderThread->taskStatsBuff),
+				CL_FALSE,
+				0,
+				sizeof(PathGPU2::GPUTaskStats) * PATHGPU2_TASK_COUNT,
+				renderThread->gpuTaskStats);
 
 			for (;;) {
 				cl::Event event;
@@ -1412,7 +1433,6 @@ void PathGPU2RenderEngine::UpdateFilm() {
 
 	film->Reset();
 
-	unsigned long long totalCount = 0;
 	for (unsigned int p = 0; p < pixelCount; ++p) {
 		Spectrum c;
 		float count = 0;
@@ -1432,8 +1452,6 @@ void PathGPU2RenderEngine::UpdateFilm() {
 				film->SplatSampleBuffer(true, sampleBuffer);
 				sampleBuffer = film->GetFreeSampleBuffer();
 			}
-
-			totalCount += count;
 		}
 
 		if (sampleBuffer->GetSampleCount() > 0) {
@@ -1441,6 +1459,15 @@ void PathGPU2RenderEngine::UpdateFilm() {
 			film->SplatSampleBuffer(true, sampleBuffer);
 			sampleBuffer = film->GetFreeSampleBuffer();
 		}
+	}
+
+	// Update the sample count statistic
+	unsigned long long totalCount = 0;
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		PathGPU2::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
+
+		for (size_t i = 0; i < PATHGPU2_TASK_COUNT; ++i)
+			totalCount += stats[i].sampleCount;
 	}
 
 	samplesCount = totalCount;
