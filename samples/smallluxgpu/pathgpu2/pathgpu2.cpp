@@ -748,7 +748,9 @@ void PathGPU2RenderThread::InitRender() {
 		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
 		sizeof(float) * 3 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W
-		((areaLightCount > 0) ? (sizeof(float) * 4) : 0);
+		((areaLightCount > 0) ? (sizeof(float) * 4) : 0) +
+		// IDX_RR
+		sizeof(float);
 	const size_t uDataSize = (renderEngine->samplerType == PathGPU2::INLINED_RANDOM) ?
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		(sizeof(float) * 2) :
