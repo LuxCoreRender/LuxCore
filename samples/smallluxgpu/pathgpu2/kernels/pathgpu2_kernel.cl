@@ -80,9 +80,9 @@
 //  PARAM_IMAGE_FILTER_MITCHELL_C
 
 // (optional)
-//  PARAM_SAMPLER_TYPE (0 = Random, 1 = Randomized Halton)
+//  PARAM_SAMPLER_TYPE (0 = Random)
 
-#define PARAM_SAMPLER_TYPE 1
+#define PARAM_SAMPLER_TYPE 0
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -243,10 +243,6 @@ typedef struct {
 
 // The memory layout of this structure is highly UNoptimized for GPUs !
 typedef struct {
-#if (PARAM_SAMPLER_TYPE == 1)
-	uint permutedHaltonStep;
-#endif
-
 	// The task seed
 	Seed seed;
 
@@ -1401,139 +1397,12 @@ __kernel void Sampler(
 #endif
 
 //------------------------------------------------------------------------------
-// Randomized Halton Sampler Kernel
-//------------------------------------------------------------------------------
-
-#if (PARAM_SAMPLER_TYPE == 1)
-
-#define ONE_MINUS_EPSILON 0.9999999403953552f
-
-float PermutedRadicalInverse(uint n, uint base, __global uint *p) {
-	float val = 0;
-	float invBase = 1.f / base;
-	float invBi = invBase;
-
-	while (n > 0) {
-		uint d_i = p[n % base];
-		val += d_i * invBi;
-		n *= invBase;
-		invBi *= invBase;
-	}
-
-	return val;
-}
-
-void PHSample(uint n, float *out0, __global float *out,
-	__global uint *b, __global uint *permute, Seed *seed) {
-	__global uint *p = permute;
-
-	const uint bi = b[0];
-	*out0 = min((float)PermutedRadicalInverse(n, bi, p), ONE_MINUS_EPSILON);
-
-	for (uint i = 0; i < IDX_BSDF_OFFSET + SAMPLE_SIZE; ++i) {
-		const uint bi = b[i + 1];
-		out[i] = min((float)PermutedRadicalInverse(n, bi, p), ONE_MINUS_EPSILON);
-		p += bi;
-	}
-
-	for (uint i = IDX_BSDF_OFFSET + SAMPLE_SIZE; i < TOTAL_U_SIZE; ++i)
-		out[i] = RndFloatValue(seed);
-}
-
-void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples,
-	const uint i, const uint pixelCountPerTask,
-	__global uint *permutedHaltonBuff,
-	uint permutedHaltonBuffSize,
-	__global uint *permutedHaltonPrimeTable,
-	uint permutedHaltonPrimeTableSize) {
-	__global Sample *sample = &samples->sample[i];
-
-	float u0;
-	PHSample(i, &u0, sample->u,
-		&permutedHaltonBuff[gid * permutedHaltonBuffSize],
-		&permutedHaltonPrimeTable[gid * permutedHaltonPrimeTableSize], seed);
-
-	// Choose a new pixel to sample
-	const uint idx = min((uint)floor(pixelCountPerTask * u0), pixelCountPerTask - 1);
-	sample->pixelIndex = PixelIndex(gid, idx);
-}
-
-__kernel void Sampler(
-		__global GPUTask *tasks,
-		__global GPUTaskStats *taskStats,
-		__global uint *permutedHaltonBuff,
-		uint permutedHaltonBuffSize,
-		__global uint *permutedHaltonPrimeTable,
-		uint permutedHaltonPrimeTableSize) {
-	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
-
-	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
-
-	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
-
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	__global GPUTaskStats *taskStat = &taskStats[gid];
-	uint sampleCount = taskStat->sampleCount;
-	uint permutedHaltonStep = task->permutedHaltonStep;
-	const uint pixelCountPerTask = PixelCountPerTask(gid);
-
-	__global uint *b = &permutedHaltonBuff[gid * permutedHaltonBuffSize];
-	__global uint *p = &permutedHaltonPrimeTable[gid * permutedHaltonPrimeTableSize];
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
-
-		float u0;
-		PHSample(permutedHaltonStep, &u0, sample->u, b, p, &seed);
-
-		// Choose a new pixel to sample
-		const uint idx = min((uint)floor(pixelCountPerTask * u0), pixelCountPerTask - 1);
-		sample->pixelIndex = PixelIndex(gid, idx);
-		++permutedHaltonStep;
-
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-		++sampleCount;
-	}
-
-	task->permutedHaltonStep = permutedHaltonStep;
-	task->samples.indexRenderFirst = indexRenderFirst;
-	taskStat->sampleCount = sampleCount;
-
-	// I have generated new samples, unlock the rendering if required
-	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
-		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
-		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
-	}
-
-	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
-}
-
-#endif
-
-//------------------------------------------------------------------------------
 // Init Kernel
 //------------------------------------------------------------------------------
 
 __kernel void Init(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats
-#if (PARAM_SAMPLER_TYPE == 1)
-		, __global uint *permutedHaltonBuff
-		, uint permutedHaltonBuffSize
-		, __global uint *permutedHaltonPrimeTable
-		, uint permutedHaltonPrimeTableSize
-#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -1547,21 +1416,9 @@ __kernel void Init(
 	InitRandomGenerator(PARAM_SEED + gid, &seed);
 
 	// Initialize the samples
-#if (PARAM_SAMPLER_TYPE == 1)
-	task->permutedHaltonStep = PARAM_SAMPLE_COUNT;
-	const uint pixelCountPerTask = PixelCountPerTask(gid);
-#endif
 
 	for(int i = 0; i < PARAM_SAMPLE_COUNT; ++i)
-		Sampler_Init(gid, &seed, &task->samples, i
-#if (PARAM_SAMPLER_TYPE == 1)
-				, pixelCountPerTask
-				, permutedHaltonBuff
-				, permutedHaltonBuffSize
-				, permutedHaltonPrimeTable
-				, permutedHaltonPrimeTableSize
-#endif
-				);
+		Sampler_Init(gid, &seed, &task->samples, i);
 
 	task->samples.indexRenderFirst = 0;
 	task->samples.indexRenderCurrent = 0;
