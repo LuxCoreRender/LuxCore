@@ -166,8 +166,9 @@ typedef struct {
 #define IDX_DIRECTLIGHT_Y 5
 #define IDX_DIRECTLIGHT_Z 6
 #define IDX_DIRECTLIGHT_W 7
+#define IDX_RR 8
 
-#define SAMPLE_SIZE 8
+#define SAMPLE_SIZE 9
 
 #elif defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 
@@ -175,8 +176,9 @@ typedef struct {
 #define IDX_BSDF_X 1
 #define IDX_BSDF_Y 2
 #define IDX_BSDF_Z 3
+#define IDX_RR 4
 
-#define SAMPLE_SIZE 4
+#define SAMPLE_SIZE 5
 
 #elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
 
@@ -187,16 +189,18 @@ typedef struct {
 #define IDX_DIRECTLIGHT_Y 4
 #define IDX_DIRECTLIGHT_Z 5
 #define IDX_DIRECTLIGHT_W 6
+#define IDX_RR 7
 
-#define SAMPLE_SIZE 7
+#define SAMPLE_SIZE 8
 
 #else
 
 #define IDX_BSDF_X 0
 #define IDX_BSDF_Y 1
 #define IDX_BSDF_Z 2
+#define IDX_RR 4
 
-#define SAMPLE_SIZE 3
+#define SAMPLE_SIZE 4
 
 #endif
 
@@ -1933,21 +1937,10 @@ __kernel void AdvancePaths(
 
 				// Russian roulette
 
-#if (PARAM_SAMPLER_TYPE == 1)
-				// Read the seed
-				Seed seed;
-				seed.s1 = task->seed.s1;
-				seed.s2 = task->seed.s2;
-				seed.s3 = task->seed.s3;
-#endif
-				// TODO: TO FIX
+#if (PARAM_SAMPLER_TYPE == 0)
 				const float rrSample = RndFloatValue(&seed);
-
-#if (PARAM_SAMPLER_TYPE == 1)
-				// Save the seed
-				task->seed.s1 = seed.s1;
-				task->seed.s2 = seed.s2;
-				task->seed.s3 = seed.s3;
+#elif (PARAM_SAMPLER_TYPE == 1)
+				const float rrSample = sampleData[IDX_RR];
 #endif
 
 				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
