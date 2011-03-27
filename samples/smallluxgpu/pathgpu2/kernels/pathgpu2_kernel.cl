@@ -1361,8 +1361,8 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const
 
 	sample->pixelIndex = PixelIndex(gid, i);
 
-	sample->u[IDX_SCREEN_X] = RndFloatValue(&seed);
-	sample->u[IDX_SCREEN_Y] = RndFloatValue(&seed);
+	sample->u[IDX_SCREEN_X] = RndFloatValue(seed);
+	sample->u[IDX_SCREEN_Y] = RndFloatValue(seed);
 }
 
 __kernel void Sampler(
