@@ -113,7 +113,7 @@ void PathGPU2RenderThread::Start() {
 void PathGPU2RenderThread::InitRender() {
 	const unsigned int frameBufferPixelCount =
 		renderEngine->film->GetWidth() * renderEngine->film->GetHeight() *
-		((renderEngine->filter == 0) ? 1 : 9);
+		((renderEngine->filter->type == PathGPU2::NONE) ? 1 : 9);
 
 	// Delete previous allocated frameBuffer
 	delete[] frameBuffer;
