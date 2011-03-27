@@ -42,7 +42,6 @@
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/pixel/samplebuffer.h"
-#include "permutedhalton.h"
 
 // TODO: add a check for PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
 
@@ -783,50 +782,6 @@ void PathGPU2RenderThread::InitRender() {
 	deviceDesc->AllocMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
-	// Allocate Permuted Halton buffers
-	//--------------------------------------------------------------------------
-
-	const u_int haltonDims = (uDataEyePathVertexSize + uDataPerPathVertexSize) / sizeof(float) + 1;
-	const u_int haltonBuffSize = haltonDims;
-	const u_int haltonPermuteTableSize = PermutedHalton::GetPermuteTableSize(haltonDims);
-	if (1) {
-		RandomGenerator rng(seed);
-
-		// Initialize Permute Halton tables
-		u_int *buff = new u_int[haltonDims * PATHGPU2_TASK_COUNT];
-		u_int *permuteTable = new u_int[haltonPermuteTableSize * PATHGPU2_TASK_COUNT];
-
-		u_int *b = buff;
-		u_int *p = permuteTable;
-		for (size_t i = 0; i < PATHGPU2_TASK_COUNT; ++i) {
-			PermutedHalton::InitTables(haltonDims, b, p, rng);
-
-			b += haltonBuffSize;
-			p += haltonPermuteTableSize;
-		}
-
-		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Permuted Halton Buff buffer size: " << (sizeof(unsigned int) * haltonBuffSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
-		permutedHaltonBufferBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(unsigned int) * haltonBuffSize * PATHGPU2_TASK_COUNT,
-				buff);
-		deviceDesc->AllocMemory(permutedHaltonBufferBuff->getInfo<CL_MEM_SIZE>());
-
-		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Permuted Halton permute table buffer size: " << (sizeof(unsigned int) * haltonPermuteTableSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
-		permutedHaltonPermuteTableBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(unsigned int) * haltonPermuteTableSize * PATHGPU2_TASK_COUNT,
-				permuteTable);
-		deviceDesc->AllocMemory(permutedHaltonPermuteTableBuff->getInfo<CL_MEM_SIZE>());
-
-		delete buff;
-		delete permuteTable;
-	} else {
-		permutedHaltonBufferBuff = NULL;
-		permutedHaltonPermuteTableBuff = NULL;
-	}
-
-	//--------------------------------------------------------------------------
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
@@ -1099,12 +1054,6 @@ void PathGPU2RenderThread::InitRender() {
 
 	samplerKernel->setArg(0, *tasksBuff);
 	samplerKernel->setArg(1, *taskStatsBuff);
-	if (1) {
-		samplerKernel->setArg(2, *permutedHaltonBufferBuff);
-		samplerKernel->setArg(3, haltonBuffSize);
-		samplerKernel->setArg(4, *permutedHaltonPermuteTableBuff);
-		samplerKernel->setArg(5, haltonPermuteTableSize);
-	}
 
 	unsigned int argIndex = 0;
 	generateRaysKernel->setArg(argIndex++, *tasksBuff);
@@ -1175,12 +1124,7 @@ void PathGPU2RenderThread::InitRender() {
 	// Initialize the tasks buffer
 	initKernel->setArg(0, *tasksBuff);
 	initKernel->setArg(1, *taskStatsBuff);
-	if (1) {
-		initKernel->setArg(2, *permutedHaltonBufferBuff);
-		initKernel->setArg(3, haltonBuffSize);
-		initKernel->setArg(4, *permutedHaltonPermuteTableBuff);
-		initKernel->setArg(5, haltonPermuteTableSize);
-	}
+
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(initWorkGroupSize));
 	oclQueue.finish();
@@ -1262,16 +1206,6 @@ void PathGPU2RenderThread::Stop() {
 		delete meshTexsBuff;
 		deviceDesc->FreeMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
 		delete uvsBuff;
-	}
-
-	if (permutedHaltonBufferBuff) {
-		deviceDesc->FreeMemory(permutedHaltonBufferBuff->getInfo<CL_MEM_SIZE>());
-		delete permutedHaltonBufferBuff;
-	}
-
-	if (permutedHaltonPermuteTableBuff) {
-		deviceDesc->FreeMemory(permutedHaltonPermuteTableBuff->getInfo<CL_MEM_SIZE>());
-		delete permutedHaltonPermuteTableBuff;
 	}
 
 	started = false;

@@ -276,8 +276,6 @@ private:
 	cl::Buffer *texMapDescBuff;
 	cl::Buffer *meshTexsBuff;
 	cl::Buffer *uvsBuff;
-	cl::Buffer *permutedHaltonBufferBuff;
-	cl::Buffer *permutedHaltonPermuteTableBuff;
 
 	float samplingStart;
 	unsigned int seed;
