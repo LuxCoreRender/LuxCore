@@ -49,8 +49,8 @@ typedef struct {
 } PathState;
 
 typedef struct {
-	uint state;
-	uint depth;
+	unsigned int state;
+	unsigned int depth;
 	Spectrum throughput;
 
 	int specularBounce;
@@ -66,7 +66,7 @@ typedef struct {
 } Pixel;
 
 typedef struct {
-	uint sampleCount;
+	unsigned int sampleCount;
 } GPUTaskStats;
 
 //------------------------------------------------------------------------------
