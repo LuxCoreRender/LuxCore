@@ -111,13 +111,15 @@ void PathGPU2RenderThread::Start() {
 }
 
 void PathGPU2RenderThread::InitRender() {
-	const unsigned int pixelCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
+	const unsigned int frameBufferPixelCount =
+		renderEngine->film->GetWidth() * renderEngine->film->GetHeight() *
+		((renderEngine->filter == 0) ? 1 : 9);
 
 	// Delete previous allocated frameBuffer
 	delete[] frameBuffer;
-	frameBuffer = new PathGPU2::Pixel[pixelCount];
+	frameBuffer = new PathGPU2::Pixel[frameBufferPixelCount];
 
-	for (unsigned int i = 0; i < pixelCount; ++i) {
+	for (unsigned int i = 0; i < frameBufferPixelCount; ++i) {
 		frameBuffer[i].c.r = 0.f;
 		frameBuffer[i].c.g = 0.f;
 		frameBuffer[i].c.b = 0.f;
@@ -159,10 +161,10 @@ void PathGPU2RenderThread::InitRender() {
 			sizeof(RayHit) * PATHGPU2_TASK_COUNT);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPU2::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPU2::Pixel) * frameBufferPixelCount / 1024) << "Kbytes" << endl;
 	frameBufferBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			sizeof(PathGPU2::Pixel) * renderEngine->film->GetWidth() * renderEngine->film->GetHeight());
+			sizeof(PathGPU2::Pixel) * frameBufferPixelCount);
 	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
 
 	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
@@ -1059,7 +1061,6 @@ void PathGPU2RenderThread::InitRender() {
 	generateRaysKernel->setArg(argIndex++, *tasksBuff);
 	generateRaysKernel->setArg(argIndex++, *raysBuff);
 	generateRaysKernel->setArg(argIndex++, *hitsBuff);
-	generateRaysKernel->setArg(argIndex++, *frameBufferBuff);
 	generateRaysKernel->setArg(argIndex++, *materialsBuff);
 	generateRaysKernel->setArg(argIndex++, *meshMatsBuff);
 	generateRaysKernel->setArg(argIndex++, *meshIDBuff);
@@ -1086,7 +1087,6 @@ void PathGPU2RenderThread::InitRender() {
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
-	advancePathsKernel->setArg(argIndex++, *frameBufferBuff);
 	advancePathsKernel->setArg(argIndex++, *materialsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
@@ -1148,12 +1148,11 @@ void PathGPU2RenderThread::Stop() {
 
 	// Transfer of the frame buffer
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	const unsigned int pixelCount = renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
 	oclQueue.enqueueReadBuffer(
 		*frameBufferBuff,
 		CL_TRUE,
 		0,
-		sizeof(PathGPU2::Pixel) * pixelCount,
+		frameBufferBuff->getInfo<CL_MEM_SIZE>(),
 		frameBuffer);
 
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
@@ -1218,7 +1217,6 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 	cerr << "[PathGPU2RenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
-	const unsigned int pixelCount = renderThread->renderEngine->film->GetWidth() * renderThread->renderEngine->film->GetHeight();
 
 	try {
 		double startTime = WallClockTime();
@@ -1231,7 +1229,7 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 				*(renderThread->frameBufferBuff),
 				CL_FALSE,
 				0,
-				sizeof(PathGPU2::Pixel) * pixelCount,
+				renderThread->frameBufferBuff->getInfo<CL_MEM_SIZE>(),
 				renderThread->frameBuffer);
 
 			// Async. transfer of GPU task statistics
@@ -1298,7 +1296,7 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 			*(renderThread->frameBufferBuff),
 			CL_TRUE,
 			0,
-			sizeof(PathGPU2::Pixel) * pixelCount,
+			renderThread->frameBufferBuff->getInfo<CL_MEM_SIZE>(),
 			renderThread->frameBuffer);
 }
 
@@ -1319,13 +1317,13 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 	// Filter
 	//--------------------------------------------------------------------------
 
-	const string filterType = cfg.GetString("path.filter.type", "NONE");
-	const float filterWidthX = cfg.GetFloat("path.filter.width.x", 2.f);
-	const float filterWidthY = cfg.GetFloat("path.filter.width.y", 2.f);
-	if ((filterWidthX <= 0.f) || (filterWidthX > 2.f))
-		throw std::runtime_error("path.filter.width.x must be between 0.0 and 2.0");
-	if ((filterWidthY <= 0.f) || (filterWidthY > 2.f))
-		throw std::runtime_error("path.filter.width.y must be between 0.0 and 2.0");
+	const string filterType = cfg.GetString("path.filter.type", "MITCHELL_SS");
+	const float filterWidthX = cfg.GetFloat("path.filter.width.x", 1.5f);
+	const float filterWidthY = cfg.GetFloat("path.filter.width.y", 1.5f);
+	if ((filterWidthX <= 0.f) || (filterWidthX > 1.5f))
+		throw std::runtime_error("path.filter.width.x must be between 0.0 and 1.5");
+	if ((filterWidthY <= 0.f) || (filterWidthY > 1.5f))
+		throw std::runtime_error("path.filter.width.y must be between 0.0 and 1.5");
 
 	if (filterType.compare("NONE") == 0)
 		filter = new PathGPU2::NoneFilter();
@@ -1427,40 +1425,92 @@ unsigned int PathGPU2RenderEngine::GetThreadCount() const {
 	return renderThreads.size();
 }
 
+static u_int FilteredPixelXY2Index(
+		const u_int imgWidth,
+		const u_int x, const u_int y,
+		const u_int subX, const u_int subY) {
+	return (x + y * imgWidth) * 9 +
+			subX + subY * 3 + 1 + 3;
+}
+
 void PathGPU2RenderEngine::UpdateFilm() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
 	elapsedTime = WallClockTime() - startTime;
 	const unsigned int imgWidth = film->GetWidth();
-	const unsigned int pixelCount = imgWidth * film->GetHeight();
+	const unsigned int imgHeight = film->GetHeight();
+	const unsigned int pixelCount = imgWidth * imgHeight;
 
 	film->Reset();
 
-	for (unsigned int p = 0; p < pixelCount; ++p) {
-		Spectrum c;
-		float count = 0;
-		for (size_t i = 0; i < renderThreads.size(); ++i) {
-			c += renderThreads[i]->frameBuffer[p].c;
-			count += renderThreads[i]->frameBuffer[p].count;
-		}
+	if (filter->type == PathGPU2::NONE) {
+		for (unsigned int p = 0; p < pixelCount; ++p) {
+			Spectrum c;
+			float count = 0;
+			for (size_t i = 0; i < renderThreads.size(); ++i) {
+				c += renderThreads[i]->frameBuffer[p].c;
+				count += renderThreads[i]->frameBuffer[p].count;
+			}
 
-		if (count > 0) {
-			const float scrX = p % imgWidth;
-			const float scrY = p / imgWidth;
-			c /= count;
-			sampleBuffer->SplatSample(scrX, scrY, c);
+			if (count > 0) {
+				const float scrX = p % imgWidth;
+				const float scrY = p / imgWidth;
+				c /= count;
+				sampleBuffer->SplatSample(scrX, scrY, c);
 
-			if (sampleBuffer->IsFull()) {
+				if (sampleBuffer->IsFull()) {
+					// Splat all samples on the film
+					film->SplatSampleBuffer(true, sampleBuffer);
+					sampleBuffer = film->GetFreeSampleBuffer();
+				}
+			}
+
+			if (sampleBuffer->GetSampleCount() > 0) {
 				// Splat all samples on the film
 				film->SplatSampleBuffer(true, sampleBuffer);
 				sampleBuffer = film->GetFreeSampleBuffer();
 			}
 		}
+	} else {
+		for (unsigned int p = 0; p < pixelCount; ++p) {
+			Spectrum c;
+			float count = 0;
+			for (size_t i = 0; i < renderThreads.size(); ++i) {
+				const float scrX = p % imgWidth;
+				const float scrY = p / imgWidth;
 
-		if (sampleBuffer->GetSampleCount() > 0) {
-			// Splat all samples on the film
-			film->SplatSampleBuffer(true, sampleBuffer);
-			sampleBuffer = film->GetFreeSampleBuffer();
+				for (int y = -1; y <= 1; ++y) {
+					for (int x = -1; x <= 1; ++x) {
+						const u_int subScrX = scrX - x;
+						const u_int subScrY = scrY - y;
+
+						if ((subScrX >= 0) && (subScrY >= 0) && (subScrX < imgWidth) && (subScrY < imgHeight)) {
+							u_int pIndex = FilteredPixelXY2Index(imgWidth, subScrX, subScrY, -x, -y);
+							c += renderThreads[i]->frameBuffer[pIndex].c;
+							count += renderThreads[i]->frameBuffer[pIndex].count;
+						}
+					}
+				}
+			}
+
+			if (count > 0) {
+				const float scrX = p % imgWidth;
+				const float scrY = p / imgWidth;
+				c /= count;
+				sampleBuffer->SplatSample(scrX, scrY, c);
+
+				if (sampleBuffer->IsFull()) {
+					// Splat all samples on the film
+					film->SplatSampleBuffer(true, sampleBuffer);
+					sampleBuffer = film->GetFreeSampleBuffer();
+				}
+			}
+
+			if (sampleBuffer->GetSampleCount() > 0) {
+				// Splat all samples on the film
+				film->SplatSampleBuffer(true, sampleBuffer);
+				sampleBuffer = film->GetFreeSampleBuffer();
+			}
 		}
 	}
 

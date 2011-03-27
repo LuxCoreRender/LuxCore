@@ -1446,11 +1446,30 @@ __kernel void InitFrameBuffer(
 	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
 		return;
 
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+
 	__global Pixel *p = &frameBuffer[gid];
 	p->c.r = 0.f;
 	p->c.g = 0.f;
 	p->c.b = 0.f;
 	p->count = 0.f;
+
+#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+
+	__global Pixel *p = &frameBuffer[gid * 9];
+	for (int i = 0; i < 9; ++i) {
+		p->c.r = 0.f;
+		p->c.g = 0.f;
+		p->c.b = 0.f;
+		p->count = 0.f;
+		++p;
+	}
+
+#else
+
+Error: unknown image filter !!!
+
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -1461,7 +1480,6 @@ __kernel void GenerateRays(
 		__global GPUTask *tasks,
 		__global Ray *rays,
 		__global RayHit *rayHits,
-		__global Pixel *frameBuffer,
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
@@ -1548,7 +1566,6 @@ __kernel void AdvancePaths(
 		__global GPUTask *tasks,
 		__global Ray *rays,
 		__global RayHit *rayHits,
-		__global Pixel *frameBuffer,
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
@@ -2125,6 +2142,35 @@ void SplatTaskSamples(
 }
 #endif
 
+void Pixel_AddRadiance(__global Pixel *pixel, __global Spectrum *rad, const float count) {
+	float4 s;
+	s.x = rad->r;
+	s.y = rad->g;
+	s.z = rad->b;
+	s.w = count;
+
+	float4 p = *((__global float4 *)pixel);
+	p += s;
+	*((__global float4 *)pixel) = p;
+}
+
+#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+void Pixel_AddFilteredRadiance(__global Pixel *pixel, __global Spectrum *rad,
+	const float distX, const float distY) {
+	const float weight = ImageFilter_Evaluate(distX, distY);
+
+	float4 s;
+	s.x = rad->r;
+	s.y = rad->g;
+	s.z = rad->b;
+	s.w = 1.f;
+
+	float4 p = *((__global float4 *)pixel);
+	p += s * (float4)weight;
+	*((__global float4 *)pixel) = p;
+}
+#endif
+
 __kernel void CollectResults(
 		__global GPUTask *tasks,
 		__global Pixel *frameBuffer
@@ -2134,6 +2180,7 @@ __kernel void CollectResults(
 		return;
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
+
 	__global GPUTask *task = &tasks[gid];
 
 	uint indexRenderFirst = task->samples.indexRenderFirst;
@@ -2143,32 +2190,55 @@ __kernel void CollectResults(
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
 
 		// No filter
-
 		__global Pixel *pixel = &frameBuffer[sample->pixelIndex];
-		pixel->c.r += sample->radiance.r;
-		pixel->c.g += sample->radiance.g;
-		pixel->c.b += sample->radiance.b;
-		pixel->count += 1;
+		Pixel_AddRadiance(pixel, &sample->radiance, 1.f);
 
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
 	}
 
 #elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
-	// 3x3 filter
 
-	SplatTaskSamples(tasks, frameBuffer, gid, -1, -1);
-	SplatTaskSamples(tasks, frameBuffer, gid, 0, -1);
-	SplatTaskSamples(tasks, frameBuffer, gid, 1, -1);
+	__global GPUTask *task = &tasks[gid];
 
-	SplatTaskSamples(tasks, frameBuffer, gid, -1, 0);
-	SplatTaskSamples(tasks, frameBuffer, gid, 0, 0);
-	SplatTaskSamples(tasks, frameBuffer, gid, 1, 0);
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 
-	SplatTaskSamples(tasks, frameBuffer, gid, -1, 1);
-	SplatTaskSamples(tasks, frameBuffer, gid, 0, 1);
-	SplatTaskSamples(tasks, frameBuffer, gid, 1, 1);
+	__global Pixel *pixel;
+	while (indexRenderFirst != indexRenderCurrent) {
+		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		uint bufferPixelIndex = sample->pixelIndex * 9;
+
+		const float sx = sample->u[IDX_SCREEN_X] - .5f;
+		const float sy = sample->u[IDX_SCREEN_X] - .5f;
+
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx + 1.f, sy + 1.f);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx      , sy + 1.f);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx - 1.f, sy + 1.f);
+
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx + 1.f, sy);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx      , sy);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx - 1.f, sy);
+
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx + 1.f, sy - 1.f);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx      , sy - 1.f);
+		pixel = &frameBuffer[bufferPixelIndex];
+		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx - 1.f, sy - 1.f);
+
+		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+	}
 
 #else
+
 Error: unknown image filter !!!
+
 #endif
 }
