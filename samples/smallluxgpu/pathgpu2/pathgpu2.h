@@ -35,7 +35,7 @@ class PathGPU2RenderEngine;
 
 namespace PathGPU2 {
 
-#define PATHGPU2_TASK_COUNT 32768
+#define PATHGPU2_TASK_COUNT (2 * 32768)
 #define PATHGPU2_SAMPLE_COUNT 8
 
 typedef struct {
@@ -68,6 +68,14 @@ typedef struct {
 typedef struct {
 	uint sampleCount;
 } GPUTaskStats;
+
+//------------------------------------------------------------------------------
+// Samplers
+//------------------------------------------------------------------------------
+
+typedef enum {
+	INLINED_RANDOM, RANDOM
+} SamplerType;
 
 //------------------------------------------------------------------------------
 // Filters
@@ -324,6 +332,7 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
+	PathGPU2::SamplerType samplerType;
 	PathGPU2::Filter *filter;
 
 private:

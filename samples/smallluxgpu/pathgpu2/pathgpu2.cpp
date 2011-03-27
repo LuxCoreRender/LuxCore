@@ -749,7 +749,10 @@ void PathGPU2RenderThread::InitRender() {
 		sizeof(float) * 3 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W
 		((areaLightCount > 0) ? (sizeof(float) * 4) : 0);
-	const size_t uDataSize = uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth;
+	const size_t uDataSize = (renderEngine->samplerType == PathGPU2::INLINED_RANDOM) ?
+		// Only IDX_SCREEN_X, IDX_SCREEN_Y
+		(sizeof(float) * 2) :
+		(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth);
 
 	const size_t sampleSize =
 		// int pixelIndex;
@@ -1314,10 +1317,20 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
 
 	//--------------------------------------------------------------------------
+	// Sampler
+	//--------------------------------------------------------------------------
+
+	 const string samplerTypeName = cfg.GetString("path.sampler.type", "INLINED_RANDOM");
+	 if (samplerTypeName.compare("INLINED_RANDOM") == 0)
+		 samplerType = PathGPU2::INLINED_RANDOM;
+	 else if (samplerTypeName.compare("RANDOM") == 0)
+		 samplerType = PathGPU2::RANDOM;
+
+	//--------------------------------------------------------------------------
 	// Filter
 	//--------------------------------------------------------------------------
 
-	const string filterType = cfg.GetString("path.filter.type", "MITCHELL_SS");
+	const string filterType = cfg.GetString("path.filter.type", "NONE");
 	const float filterWidthX = cfg.GetFloat("path.filter.width.x", 1.5f);
 	const float filterWidthY = cfg.GetFloat("path.filter.width.y", 1.5f);
 	if ((filterWidthX <= 0.f) || (filterWidthX > 1.5f))

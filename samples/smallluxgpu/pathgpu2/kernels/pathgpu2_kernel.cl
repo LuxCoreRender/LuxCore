@@ -80,9 +80,7 @@
 //  PARAM_IMAGE_FILTER_MITCHELL_C
 
 // (optional)
-//  PARAM_SAMPLER_TYPE (0 = Random)
-
-#define PARAM_SAMPLER_TYPE 0
+//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random)
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -207,7 +205,12 @@ typedef struct {
 typedef struct {
 	uint pixelIndex;
 
+#if (PARAM_SAMPLER_TYPE == 0)
+	// Only IDX_SCREEN_X and IDX_SCREEN_Y need to be saved
+	float u[2];
+#elif (PARAM_SAMPLER_TYPE == 1)
 	float u[TOTAL_U_SIZE];
+#endif
 
 	Spectrum radiance;
 } Sample;
@@ -482,15 +485,20 @@ void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
 
 void GenerateRay(
 		__global Sample *sample,
-		__global Ray *ray,
-		Seed *seed
+		__global Ray *ray
+#if (PARAM_SAMPLER_TYPE == 0)
+		, Seed *seed
+#endif
 #if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
 		) {
+	const float scrSampleX = sample->u[IDX_SCREEN_X];
+	const float scrSampleY = sample->u[IDX_SCREEN_Y];
+
 	const uint pixelIndex = sample->pixelIndex;
-	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + sample->u[IDX_SCREEN_X] - 0.5f;
-	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + sample->u[IDX_SCREEN_Y] - 0.5f;
+	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - 0.5f;
+	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - 0.5f;
 
 	Point Pras;
 	Pras.x = screenX;
@@ -517,9 +525,18 @@ void GenerateRay(
 	dir.z = orig.z;
 
 #if defined(PARAM_CAMERA_HAS_DOF)
+
+#if (PARAM_SAMPLER_TYPE == 0)
+	const float dofSampleX = RndFloatValue(seed);
+	const float dofSampleY = RndFloatValue(seed);
+#elif (PARAM_SAMPLER_TYPE == 1)
+	const float dofSampleX = sample->u[IDX_DOF_X];
+	const float dofSampleY = sample->u[IDX_DOF_Y];
+#endif
+
 	// Sample point on lens
 	float lensU, lensV;
-	ConcentricSampleDisk(sample->u[IDX_DOF_X], sample->u[IDX_DOF_Y], &lensU, &lensV);
+	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
 	lensU *= PARAM_CAMERA_LENS_RADIUS;
 	lensV *= PARAM_CAMERA_LENS_RADIUS;
 
@@ -1330,10 +1347,77 @@ Error: unknown image filter !!!
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Random Sampler Kernel
+// Inlined Random Sampler Kernel
 //------------------------------------------------------------------------------
 
 #if (PARAM_SAMPLER_TYPE == 0)
+
+void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
+	__global Sample *sample = &samples->sample[i];
+
+	sample->pixelIndex = PixelIndex(gid, i);
+
+	sample->u[IDX_SCREEN_X] = RndFloatValue(&seed);
+	sample->u[IDX_SCREEN_Y] = RndFloatValue(&seed);
+}
+
+__kernel void Sampler(
+		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	uint sampleCount = taskStat->sampleCount;
+	while (indexRenderFirst != indexRenderCurrent) {
+		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		// Move to the next assigned pixel
+		sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
+
+		sample->u[IDX_SCREEN_X] = RndFloatValue(&seed);
+		sample->u[IDX_SCREEN_Y] = RndFloatValue(&seed);
+
+		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+		++sampleCount;
+	}
+
+	task->samples.indexRenderFirst = indexRenderFirst;
+	taskStat->sampleCount = sampleCount;
+
+	// I have generated new samples, unlock the rendering if required
+	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
+		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
+		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
+	}
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Random Sampler Kernel
+//------------------------------------------------------------------------------
+
+#if (PARAM_SAMPLER_TYPE == 1)
 
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
 	__global Sample *sample = &samples->sample[i];
@@ -1416,7 +1500,6 @@ __kernel void Init(
 	InitRandomGenerator(PARAM_SEED + gid, &seed);
 
 	// Initialize the samples
-
 	for(int i = 0; i < PARAM_SAMPLE_COUNT; ++i)
 		Sampler_Init(gid, &seed, &task->samples, i);
 
@@ -1529,7 +1612,10 @@ __kernel void GenerateRays(
 			const uint indexRenderCurrent = task->samples.indexRenderCurrent;
 			__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
-			GenerateRay(sample, ray, &seed
+			GenerateRay(sample, ray
+#if (PARAM_SAMPLER_TYPE == 0)
+					, &seed
+#endif
 #if defined(PARAM_CAMERA_DYNAMIC)
 					, cameraData
 #endif
@@ -1600,6 +1686,14 @@ __kernel void AdvancePaths(
 	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
 		return;
 
+#if (PARAM_SAMPLER_TYPE == 0)
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+#endif
+
 	uint indexRenderCurrent = task->samples.indexRenderCurrent;
 	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
 
@@ -1626,7 +1720,9 @@ __kernel void AdvancePaths(
 				// Something was hit
 
 				const uint pathDepth = task->pathState.depth + 1;
+#if (PARAM_SAMPLER_TYPE == 1)
 				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
+#endif
 
 				const uint meshIndex = meshIDs[currentTriangleIndex];
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
@@ -1651,7 +1747,13 @@ __kernel void AdvancePaths(
 					if (texMap->alphaOffset != 0xffffffffu) {
 						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
 
-						if ((alpha == 0.0f) || ((alpha < 1.f) && (sampleData[IDX_TEX_ALPHA] > alpha))) {
+#if (PARAM_SAMPLER_TYPE == 0)
+						const float texAlphaSample = RndFloatValue(&seed);
+#elif (PARAM_SAMPLER_TYPE == 1)
+						const float texAlphaSample = sample->u[IDX_TEX_ALPHA];
+#endif
+
+						if ((alpha == 0.0f) || ((alpha < 1.f) && (texAlphaSample > alpha))) {
 							// Continue to trace the ray
 							matType = MAT_NULL;
 						}
@@ -1682,9 +1784,15 @@ __kernel void AdvancePaths(
 				shadeN.y = nFlip * N.y;
 				shadeN.z = nFlip * N.z;
 
+#if (PARAM_SAMPLER_TYPE == 0)
+				const float u0 = RndFloatValue(&seed);
+				const float u1 = RndFloatValue(&seed);
+				const float u2 = RndFloatValue(&seed);
+#elif (PARAM_SAMPLER_TYPE == 1)
 				const float u0 = sampleData[IDX_BSDF_X];
 				const float u1 = sampleData[IDX_BSDF_Y];
 				const float u2 = sampleData[IDX_BSDF_Z];
+#endif
 
 				Vector wo;
 				wo.x = -rayDir.x;
@@ -1825,18 +1933,22 @@ __kernel void AdvancePaths(
 
 				// Russian roulette
 
+#if (PARAM_SAMPLER_TYPE == 1)
 				// Read the seed
 				Seed seed;
 				seed.s1 = task->seed.s1;
 				seed.s2 = task->seed.s2;
 				seed.s3 = task->seed.s3;
-
+#endif
+				// TODO: TO FIX
 				const float rrSample = RndFloatValue(&seed);
 
+#if (PARAM_SAMPLER_TYPE == 1)
 				// Save the seed
 				task->seed.s1 = seed.s1;
 				task->seed.s2 = seed.s2;
 				task->seed.s3 = seed.s3;
+#endif
 
 				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
 				const float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
@@ -1876,8 +1988,20 @@ __kernel void AdvancePaths(
 				}
 
 				if (directLightPdf > 0.f) {
+#if (PARAM_SAMPLER_TYPE == 0)
+					const float ul0 = RndFloatValue(&seed);
+					const float ul1 = RndFloatValue(&seed);
+					const float ul2 = RndFloatValue(&seed);
+					const float ul3 = RndFloatValue(&seed);
+#elif (PARAM_SAMPLER_TYPE == 1)
+					const float ul0 = sampleData[IDX_DIRECTLIGHT_X];
+					const float ul1 = sampleData[IDX_DIRECTLIGHT_Y];
+					const float ul2 = sampleData[IDX_DIRECTLIGHT_Z];
+					const float ul3 = sampleData[IDX_DIRECTLIGHT_W];
+#endif
+
 					// Select a light source to sample
-					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * sampleData[IDX_DIRECTLIGHT_X]), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * ul0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 					__global TriangleLight *l = &triLights[lightIndex];
 
 					// Setup the shadow ray
@@ -1885,7 +2009,7 @@ __kernel void AdvancePaths(
 					float lightPdf;
 					Ray shadowRay;
 					TriangleLight_Sample_L(l, &wo, &hitPoint, &lightPdf, &Le, &shadowRay,
-						sampleData[IDX_DIRECTLIGHT_Y], sampleData[IDX_DIRECTLIGHT_Z], sampleData[IDX_DIRECTLIGHT_W]);
+						ul1, ul2, ul3);
 
 					const float dp = Dot(&shadeN, &shadowRay.d);
 					const float matPdf = (dp <= 0.f) ? 0.f : 1.f;
@@ -2013,7 +2137,13 @@ __kernel void AdvancePaths(
 					if (texMap->alphaOffset != 0xffffffffu) {
 						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
 
-						if ((alpha == 0.0f) || ((alpha < 1.f) && (sampleData[IDX_TEX_ALPHA] > alpha))) {
+#if (PARAM_SAMPLER_TYPE == 0)
+						const float texAlphaSample = RndFloatValue(&seed);
+#elif (PARAM_SAMPLER_TYPE == 1)
+						const float texAlphaSample = sampleData[IDX_TEX_ALPHA];
+#endif
+
+						if ((alpha == 0.0f) || ((alpha < 1.f) && (texAlphaSample > alpha))) {
 							// Continue to trace the ray
 							matType = MAT_NULL;
 						}
@@ -2075,6 +2205,13 @@ __kernel void AdvancePaths(
 		}
 #endif
 	}
+
+#if (PARAM_SAMPLER_TYPE == 0)
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+#endif
 
 	if (pathState == PATH_STATE_DONE) {
 		const uint indexRenderFirst = task->samples.indexRenderFirst;
