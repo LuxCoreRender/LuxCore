@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -80,7 +80,10 @@
 //  PARAM_IMAGE_FILTER_MITCHELL_C
 
 // (optional)
-//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random)
+//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
+
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE 32
+#define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -150,9 +153,25 @@ typedef struct {
 #if defined(PARAM_CAMERA_HAS_DOF)
 #define IDX_DOF_X 2
 #define IDX_DOF_Y 3
+
+#if (PARAM_SAMPLER_TYPE == 2)
+// Metropolis needs one more sample for the pixelIndex
+#define IDX_PIXEL_INDEX 4
+#define IDX_BSDF_OFFSET 5
+#else
 #define IDX_BSDF_OFFSET 4
+#endif
+
+#else
+
+#if (PARAM_SAMPLER_TYPE == 2)
+// Metropolis needs one more sample for the pixelIndex
+#define IDX_PIXEL_INDEX 2
+#define IDX_BSDF_OFFSET 3
 #else
 #define IDX_BSDF_OFFSET 2
+#endif
+
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
@@ -207,16 +226,28 @@ typedef struct {
 #define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
 
 typedef struct {
-	uint pixelIndex;
+	Spectrum radiance;
 
 #if (PARAM_SAMPLER_TYPE == 0)
+	uint pixelIndex;
+
 	// Only IDX_SCREEN_X and IDX_SCREEN_Y need to be saved
 	float u[2];
 #elif (PARAM_SAMPLER_TYPE == 1)
-	float u[TOTAL_U_SIZE];
-#endif
+	uint pixelIndex;
 
-	Spectrum radiance;
+	float u[TOTAL_U_SIZE];
+#elif (PARAM_SAMPLER_TYPE == 2)
+	float boostrapI;
+
+	uint current, proposed;
+	uint mutationCount;
+	uint consecutiveRejects;
+
+	Spectrum currentRadiance;
+
+	float u[2][TOTAL_U_SIZE];
+#endif
 } Sample;
 
 typedef struct {
@@ -405,6 +436,10 @@ float RndFloatValue(Seed *s) {
 
 //------------------------------------------------------------------------------
 
+float Spectrum_Y(const Spectrum *s) {
+	return 0.212671f * s->r + 0.715160f * s->g + 0.072169f * s->b;
+}
+
 float Dot(const Vector *v0, const Vector *v1) {
 	return v0->x * v1->x + v0->y * v1->y + v0->z * v1->z;
 }
@@ -483,118 +518,6 @@ void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {
 	}
 
 	Cross(v3, v1, v2);
-}
-
-//------------------------------------------------------------------------------
-
-void GenerateRay(
-		__global Sample *sample,
-		__global Ray *ray
-#if (PARAM_SAMPLER_TYPE == 0)
-		, Seed *seed
-#endif
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
-		) {
-	const float scrSampleX = sample->u[IDX_SCREEN_X];
-	const float scrSampleY = sample->u[IDX_SCREEN_Y];
-
-	const uint pixelIndex = sample->pixelIndex;
-	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - 0.5f;
-	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - 0.5f;
-
-	Point Pras;
-	Pras.x = screenX;
-	Pras.y = PARAM_IMAGE_HEIGHT - screenY - 1.f;
-	Pras.z = 0;
-
-	Point orig;
-	// RasterToCamera(Pras, &orig);
-#if defined(PARAM_CAMERA_DYNAMIC)
-	const float iw = 1.f / (cameraData[12] * Pras.x + cameraData[13] * Pras.y + cameraData[14] * Pras.z + cameraData[15]);
-	orig.x = (cameraData[0] * Pras.x + cameraData[1] * Pras.y + cameraData[2] * Pras.z + cameraData[3]) * iw;
-	orig.y = (cameraData[4] * Pras.x + cameraData[5] * Pras.y + cameraData[6] * Pras.z + cameraData[7]) * iw;
-	orig.z = (cameraData[8] * Pras.x + cameraData[9] * Pras.y + cameraData[10] * Pras.z + cameraData[11]) * iw;
-#else
-	const float iw = 1.f / (PARAM_RASTER2CAMERA_30 * Pras.x + PARAM_RASTER2CAMERA_31 * Pras.y + PARAM_RASTER2CAMERA_32 * Pras.z + PARAM_RASTER2CAMERA_33);
-	orig.x = (PARAM_RASTER2CAMERA_00 * Pras.x + PARAM_RASTER2CAMERA_01 * Pras.y + PARAM_RASTER2CAMERA_02 * Pras.z + PARAM_RASTER2CAMERA_03) * iw;
-	orig.y = (PARAM_RASTER2CAMERA_10 * Pras.x + PARAM_RASTER2CAMERA_11 * Pras.y + PARAM_RASTER2CAMERA_12 * Pras.z + PARAM_RASTER2CAMERA_13) * iw;
-	orig.z = (PARAM_RASTER2CAMERA_20 * Pras.x + PARAM_RASTER2CAMERA_21 * Pras.y + PARAM_RASTER2CAMERA_22 * Pras.z + PARAM_RASTER2CAMERA_23) * iw;
-#endif
-
-	Vector dir;
-	dir.x = orig.x;
-	dir.y = orig.y;
-	dir.z = orig.z;
-
-#if defined(PARAM_CAMERA_HAS_DOF)
-
-#if (PARAM_SAMPLER_TYPE == 0)
-	const float dofSampleX = RndFloatValue(seed);
-	const float dofSampleY = RndFloatValue(seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
-	const float dofSampleX = sample->u[IDX_DOF_X];
-	const float dofSampleY = sample->u[IDX_DOF_Y];
-#endif
-
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	lensU *= PARAM_CAMERA_LENS_RADIUS;
-	lensV *= PARAM_CAMERA_LENS_RADIUS;
-
-	// Compute point on plane of focus
-	const float ft = (PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / dir.z;
-	Point Pfocus;
-	Pfocus.x = orig.x + dir.x * ft;
-	Pfocus.y = orig.y + dir.y * ft;
-	Pfocus.z = orig.z + dir.z * ft;
-
-	// Update ray for effect of lens
-	orig.x += lensU * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
-	orig.y += lensV * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
-
-	dir.x = Pfocus.x - orig.x;
-	dir.y = Pfocus.y - orig.y;
-	dir.z = Pfocus.z - orig.z;
-#endif
-
-	Normalize(&dir);
-
-	// CameraToWorld(*ray, ray);
-	Point torig;
-#if defined(PARAM_CAMERA_DYNAMIC)
-	const float iw2 = 1.f / (cameraData[16 + 12] * orig.x + cameraData[16 + 13] * orig.y + cameraData[16 + 14] * orig.z + cameraData[16 + 15]);
-	torig.x = (cameraData[16 + 0] * orig.x + cameraData[16 + 1] * orig.y + cameraData[16 + 2] * orig.z + cameraData[16 + 3]) * iw2;
-	torig.y = (cameraData[16 + 4] * orig.x + cameraData[16 + 5] * orig.y + cameraData[16 + 6] * orig.z + cameraData[16 + 7]) * iw2;
-	torig.z = (cameraData[16 + 8] * orig.x + cameraData[16 + 9] * orig.y + cameraData[16 + 12] * orig.z + cameraData[16 + 11]) * iw2;
-#else
-	const float iw2 = 1.f / (PARAM_CAMERA2WORLD_30 * orig.x + PARAM_CAMERA2WORLD_31 * orig.y + PARAM_CAMERA2WORLD_32 * orig.z + PARAM_CAMERA2WORLD_33);
-	torig.x = (PARAM_CAMERA2WORLD_00 * orig.x + PARAM_CAMERA2WORLD_01 * orig.y + PARAM_CAMERA2WORLD_02 * orig.z + PARAM_CAMERA2WORLD_03) * iw2;
-	torig.y = (PARAM_CAMERA2WORLD_10 * orig.x + PARAM_CAMERA2WORLD_11 * orig.y + PARAM_CAMERA2WORLD_12 * orig.z + PARAM_CAMERA2WORLD_13) * iw2;
-	torig.z = (PARAM_CAMERA2WORLD_20 * orig.x + PARAM_CAMERA2WORLD_21 * orig.y + PARAM_CAMERA2WORLD_22 * orig.z + PARAM_CAMERA2WORLD_23) * iw2;
-#endif
-
-	Vector tdir;
-#if defined(PARAM_CAMERA_DYNAMIC)
-	tdir.x = cameraData[16 + 0] * dir.x + cameraData[16 + 1] * dir.y + cameraData[16 + 2] * dir.z;
-	tdir.y = cameraData[16 + 4] * dir.x + cameraData[16 + 5] * dir.y + cameraData[16 + 6] * dir.z;
-	tdir.z = cameraData[16 + 8] * dir.x + cameraData[16 + 9] * dir.y + cameraData[16 + 10] * dir.z;
-#else
-	tdir.x = PARAM_CAMERA2WORLD_00 * dir.x + PARAM_CAMERA2WORLD_01 * dir.y + PARAM_CAMERA2WORLD_02 * dir.z;
-	tdir.y = PARAM_CAMERA2WORLD_10 * dir.x + PARAM_CAMERA2WORLD_11 * dir.y + PARAM_CAMERA2WORLD_12 * dir.z;
-	tdir.z = PARAM_CAMERA2WORLD_20 * dir.x + PARAM_CAMERA2WORLD_21 * dir.y + PARAM_CAMERA2WORLD_22 * dir.z;
-#endif
-
-	ray->o = torig;
-	ray->d = tdir;
-	ray->mint = PARAM_RAY_EPSILON;
-	ray->maxt = (PARAM_CLIP_YON - PARAM_CLIP_HITHER) / dir.z;
-
-	/*printf(\"(%f, %f, %f) (%f, %f, %f) [%f, %f]\\n\",
-		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
-		ray->mint, ray->maxt);*/
 }
 
 //------------------------------------------------------------------------------
@@ -1204,17 +1127,27 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 // Pixel related functions
 //------------------------------------------------------------------------------
 
-uint PixelIndex(const size_t gid, const uint i) {
+uint PixelCountPerTask(const size_t gid) {
+	const uint lastGID = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT - PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT * PARAM_TASK_COUNT;
+
+	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT + ((gid < lastGID) ? 1 : 0);
+}
+
+uint SelectPixelIndex(const size_t gid, const float u) {
+	const uint pixelCountPerTask = PixelCountPerTask(gid);
+	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
+
 	const uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH + i * PARAM_TASK_COUNT;
 
 	return (index >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
 		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : index;
 }
 
-uint PixelCountPerTask(const size_t gid) {
-	const uint lastGID = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT - PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT * PARAM_TASK_COUNT;
+uint PixelIndex(const size_t gid, const uint i) {
+	const uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH + i * PARAM_TASK_COUNT;
 
-	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT + ((gid < lastGID) ? 1 : 0);
+	return (index >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
+		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : index;
 }
 
 void PixelIndex2XY(const uint index, uint *x, uint *y) {
@@ -1241,6 +1174,127 @@ Error: Image too small !!!
 
 	return (newIndex >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
 		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : newIndex;
+}
+
+//------------------------------------------------------------------------------
+// GenerateRay
+//------------------------------------------------------------------------------
+
+void GenerateRay(
+		__global Sample *sample,
+		__global Ray *ray
+#if (PARAM_SAMPLER_TYPE == 0)
+		, Seed *seed
+#endif
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
+		) {
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+	__global float *sampleData = &sample->u[IDX_SCREEN_X];
+	const uint pixelIndex = sample->pixelIndex;
+#elif (PARAM_SAMPLER_TYPE == 2)
+	__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
+	const uint pixelIndex = SelectPixelIndex(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
+#endif
+
+	const float scrSampleX = sampleData[IDX_SCREEN_X];
+	const float scrSampleY = sampleData[IDX_SCREEN_Y];
+
+	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - 0.5f;
+	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - 0.5f;
+
+	Point Pras;
+	Pras.x = screenX;
+	Pras.y = PARAM_IMAGE_HEIGHT - screenY - 1.f;
+	Pras.z = 0;
+
+	Point orig;
+	// RasterToCamera(Pras, &orig);
+#if defined(PARAM_CAMERA_DYNAMIC)
+	const float iw = 1.f / (cameraData[12] * Pras.x + cameraData[13] * Pras.y + cameraData[14] * Pras.z + cameraData[15]);
+	orig.x = (cameraData[0] * Pras.x + cameraData[1] * Pras.y + cameraData[2] * Pras.z + cameraData[3]) * iw;
+	orig.y = (cameraData[4] * Pras.x + cameraData[5] * Pras.y + cameraData[6] * Pras.z + cameraData[7]) * iw;
+	orig.z = (cameraData[8] * Pras.x + cameraData[9] * Pras.y + cameraData[10] * Pras.z + cameraData[11]) * iw;
+#else
+	const float iw = 1.f / (PARAM_RASTER2CAMERA_30 * Pras.x + PARAM_RASTER2CAMERA_31 * Pras.y + PARAM_RASTER2CAMERA_32 * Pras.z + PARAM_RASTER2CAMERA_33);
+	orig.x = (PARAM_RASTER2CAMERA_00 * Pras.x + PARAM_RASTER2CAMERA_01 * Pras.y + PARAM_RASTER2CAMERA_02 * Pras.z + PARAM_RASTER2CAMERA_03) * iw;
+	orig.y = (PARAM_RASTER2CAMERA_10 * Pras.x + PARAM_RASTER2CAMERA_11 * Pras.y + PARAM_RASTER2CAMERA_12 * Pras.z + PARAM_RASTER2CAMERA_13) * iw;
+	orig.z = (PARAM_RASTER2CAMERA_20 * Pras.x + PARAM_RASTER2CAMERA_21 * Pras.y + PARAM_RASTER2CAMERA_22 * Pras.z + PARAM_RASTER2CAMERA_23) * iw;
+#endif
+
+	Vector dir;
+	dir.x = orig.x;
+	dir.y = orig.y;
+	dir.z = orig.z;
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+
+#if (PARAM_SAMPLER_TYPE == 0)
+	const float dofSampleX = RndFloatValue(seed);
+	const float dofSampleY = RndFloatValue(seed);
+#elif (PARAM_SAMPLER_TYPE == 1)
+	const float dofSampleX = sampleData[IDX_DOF_X];
+	const float dofSampleY = sampleData[IDX_DOF_Y];
+#endif
+
+	// Sample point on lens
+	float lensU, lensV;
+	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+	lensU *= PARAM_CAMERA_LENS_RADIUS;
+	lensV *= PARAM_CAMERA_LENS_RADIUS;
+
+	// Compute point on plane of focus
+	const float ft = (PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / dir.z;
+	Point Pfocus;
+	Pfocus.x = orig.x + dir.x * ft;
+	Pfocus.y = orig.y + dir.y * ft;
+	Pfocus.z = orig.z + dir.z * ft;
+
+	// Update ray for effect of lens
+	orig.x += lensU * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
+	orig.y += lensV * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
+
+	dir.x = Pfocus.x - orig.x;
+	dir.y = Pfocus.y - orig.y;
+	dir.z = Pfocus.z - orig.z;
+#endif
+
+	Normalize(&dir);
+
+	// CameraToWorld(*ray, ray);
+	Point torig;
+#if defined(PARAM_CAMERA_DYNAMIC)
+	const float iw2 = 1.f / (cameraData[16 + 12] * orig.x + cameraData[16 + 13] * orig.y + cameraData[16 + 14] * orig.z + cameraData[16 + 15]);
+	torig.x = (cameraData[16 + 0] * orig.x + cameraData[16 + 1] * orig.y + cameraData[16 + 2] * orig.z + cameraData[16 + 3]) * iw2;
+	torig.y = (cameraData[16 + 4] * orig.x + cameraData[16 + 5] * orig.y + cameraData[16 + 6] * orig.z + cameraData[16 + 7]) * iw2;
+	torig.z = (cameraData[16 + 8] * orig.x + cameraData[16 + 9] * orig.y + cameraData[16 + 12] * orig.z + cameraData[16 + 11]) * iw2;
+#else
+	const float iw2 = 1.f / (PARAM_CAMERA2WORLD_30 * orig.x + PARAM_CAMERA2WORLD_31 * orig.y + PARAM_CAMERA2WORLD_32 * orig.z + PARAM_CAMERA2WORLD_33);
+	torig.x = (PARAM_CAMERA2WORLD_00 * orig.x + PARAM_CAMERA2WORLD_01 * orig.y + PARAM_CAMERA2WORLD_02 * orig.z + PARAM_CAMERA2WORLD_03) * iw2;
+	torig.y = (PARAM_CAMERA2WORLD_10 * orig.x + PARAM_CAMERA2WORLD_11 * orig.y + PARAM_CAMERA2WORLD_12 * orig.z + PARAM_CAMERA2WORLD_13) * iw2;
+	torig.z = (PARAM_CAMERA2WORLD_20 * orig.x + PARAM_CAMERA2WORLD_21 * orig.y + PARAM_CAMERA2WORLD_22 * orig.z + PARAM_CAMERA2WORLD_23) * iw2;
+#endif
+
+	Vector tdir;
+#if defined(PARAM_CAMERA_DYNAMIC)
+	tdir.x = cameraData[16 + 0] * dir.x + cameraData[16 + 1] * dir.y + cameraData[16 + 2] * dir.z;
+	tdir.y = cameraData[16 + 4] * dir.x + cameraData[16 + 5] * dir.y + cameraData[16 + 6] * dir.z;
+	tdir.z = cameraData[16 + 8] * dir.x + cameraData[16 + 9] * dir.y + cameraData[16 + 10] * dir.z;
+#else
+	tdir.x = PARAM_CAMERA2WORLD_00 * dir.x + PARAM_CAMERA2WORLD_01 * dir.y + PARAM_CAMERA2WORLD_02 * dir.z;
+	tdir.y = PARAM_CAMERA2WORLD_10 * dir.x + PARAM_CAMERA2WORLD_11 * dir.y + PARAM_CAMERA2WORLD_12 * dir.z;
+	tdir.z = PARAM_CAMERA2WORLD_20 * dir.x + PARAM_CAMERA2WORLD_21 * dir.y + PARAM_CAMERA2WORLD_22 * dir.z;
+#endif
+
+	ray->o = torig;
+	ray->d = tdir;
+	ray->mint = PARAM_RAY_EPSILON;
+	ray->maxt = (PARAM_CLIP_YON - PARAM_CLIP_HITHER) / dir.z;
+
+	/*printf(\"(%f, %f, %f) (%f, %f, %f) [%f, %f]\\n\",
+		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
+		ray->mint, ray->maxt);*/
 }
 
 //------------------------------------------------------------------------------
@@ -1334,6 +1388,128 @@ float ImageFilter_Evaluate(const float x, const float y) {
 	return a1 * Mitchell1D(dist - 2.f / 3.f) +
 			a0 * Mitchell1D(dist) +
 			a1 * Mitchell1D(dist + 2.f / 3.f);
+}
+
+#else
+
+Error: unknown image filter !!!
+
+#endif
+
+#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+void SplatTaskSamples(
+	__global GPUTask *tasks,
+	__global Pixel *frameBuffer,
+	const size_t gid,
+	const int offsetX, const int offsetY) {
+	// Look for the other GPUTask
+	const int indexOther = (int)gid + offsetX + PARAM_IMAGE_WIDTH * offsetY;
+	const size_t gidOther = PixelIndex2GID(indexOther);
+	if ((gidOther == gid) && !((offsetX == 0) && (offsetY == 0)))
+		return;
+
+	__global GPUTask *task = &tasks[gid];
+
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+
+	while (indexRenderFirst != indexRenderCurrent) {
+		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		// Look for the index of one of my pixel affected by this sample
+		uint pixelX, pixelY;
+		PixelIndex2XY(sample->pixelIndex, &pixelX, &pixelY);
+
+		// Check if it is a valid pixel
+		int xx = as_int(pixelX) - offsetX;
+		int yy = as_int(pixelY) - offsetY;
+		if ((xx >= 0) && (xx < PARAM_IMAGE_WIDTH) &&
+				(yy >= 0) && (yy < PARAM_IMAGE_HEIGHT)) {
+			__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xx, yy)];
+
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+			__global float *sampleData = &sample->u[IDX_SCREEN_X];
+#elif (PARAM_SAMPLER_TYPE == 2)
+			__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
+#endif
+			const float sx = sampleData[IDX_SCREEN_X] - .5f + offsetX;
+			const float sy = sampleData[IDX_SCREEN_Y] - .5f + offsetY;
+
+			const float weight = ImageFilter_Evaluate(sx, sy);
+
+			pixel->c.r += sample->radiance.r * weight;
+			pixel->c.g += sample->radiance.g * weight;
+			pixel->c.b += sample->radiance.b * weight;
+			pixel->count +=  weight;
+		}
+
+		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+	}
+}
+#endif
+
+void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad) {
+	float4 s;
+	s.x = rad->r;
+	s.y = rad->g;
+	s.z = rad->b;
+	s.w = 1.f;
+
+	float4 p = *((__global float4 *)pixel);
+	p += s;
+	*((__global float4 *)pixel) = p;
+}
+
+#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+void Pixel_AddFilteredRadiance(__global Pixel *pixel, Spectrum *rad,
+	const float distX, const float distY) {
+	const float weight = ImageFilter_Evaluate(distX, distY);
+
+	float4 s;
+	s.x = rad->r;
+	s.y = rad->g;
+	s.z = rad->b;
+	s.w = 1.f;
+
+	float4 p = *((__global float4 *)pixel);
+	p += s * (float4)weight;
+	*((__global float4 *)pixel) = p;
+}
+#endif
+
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+
+void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, Spectrum *radiance) {
+		__global Pixel *pixel = &frameBuffer[pixelIndex];
+
+		Pixel_AddRadiance(pixel, radiance);
+}
+
+#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+
+void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, const float sx, const float sy, Spectrum *radiance) {
+		uint bufferPixelIndex = pixelIndex * 9;
+
+		__global Pixel *pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy + 1.f);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f);
+
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy);
+
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f);
+		pixel = &frameBuffer[bufferPixelIndex++];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy - 1.f);
+		pixel = &frameBuffer[bufferPixelIndex];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f);
 }
 
 #else
@@ -1485,6 +1661,198 @@ __kernel void Sampler(
 #endif
 
 //------------------------------------------------------------------------------
+// Metropolis Sampler Kernel
+//------------------------------------------------------------------------------
+
+#if (PARAM_SAMPLER_TYPE == 2)
+
+void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
+	__global Sample *sample = &samples->sample[i];
+
+	sample->boostrapI = .5f; // TODO
+
+	sample->current = 0xffffffff;
+	sample->proposed = 0;
+
+	sample->mutationCount = 0;
+	sample->consecutiveRejects = 0;
+	for (int i = 0; i < TOTAL_U_SIZE; ++i) {
+		sample->u[0][i] = RndFloatValue(seed);
+		sample->u[1][i] = RndFloatValue(seed);
+	}
+}
+
+void LargeStep(Seed *seed, __global float *proposedU) {
+	for (int i = 0; i < TOTAL_U_SIZE; ++i)
+		proposedU[i] = RndFloatValue(seed);
+}
+
+float Mutate(Seed *seed, float v) {
+    const float a = 1.f / 1024.f;
+	const float b = 1.f / 64.f;
+	const float logRatio = -log(b / a);
+
+    const float delta = b * exp(logRatio * RndFloatValue(seed));
+    if (RndFloatValue(seed) < .5f) {
+        v += delta;
+        v =  (v >= 1.f) ?  (v - 1.f) : v;
+    } else {
+        v -= delta;
+        v =  (v < 0.f) ?  (1.f + v) : v;
+    }
+
+	return (v < 0.f || v > 1.f) ? 0.f : v;
+}
+
+void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
+	for (int i = 0; i < TOTAL_U_SIZE; ++i)
+		proposedU[i] = Mutate(seed, currentU[i]);
+}
+
+__kernel void Sampler(
+		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	uint sampleCount = taskStat->sampleCount;
+	while (indexRenderFirst != indexRenderCurrent) {
+		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
+		uint current = sample->current;
+
+		// Check if it is the very first sample
+		if (current != 0xffffffff) {
+			const uint proposed = sample->proposed;
+
+			__global float *currentU = &sample->u[current][0];
+			__global float *proposedU = &sample->u[proposed][0];
+
+			const uint mutationCount = sample->mutationCount;
+			const bool largeStep = ((mutationCount % PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) == 0);
+			if (largeStep)
+				LargeStep(&seed, proposedU);
+			else
+				SmallStep(&seed, currentU, proposedU);
+
+			sample->mutationCount = mutationCount + 1;
+		}
+
+		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+		++sampleCount;
+	}
+
+	task->samples.indexRenderFirst = indexRenderFirst;
+	taskStat->sampleCount = sampleCount;
+
+	// I have generated new samples, unlock the rendering if required
+	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
+		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
+		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
+	}
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+}
+
+void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global Sample *sample) {
+	uint current = sample->current;
+	uint proposed = sample->proposed;
+
+	Spectrum radiance = sample->radiance;
+
+	if (current == 0xffffffff) {
+		// It is the very first sample, I have still to initialize the current
+		// sample
+
+		sample->currentRadiance = radiance;
+
+		current = proposed;
+		proposed ^= 1;
+	} else {
+		const Spectrum currentL = sample->currentRadiance;
+		const float currentI = Spectrum_Y(&currentL);
+
+		const Spectrum proposedL = radiance;
+		const float proposedI = Spectrum_Y(&proposedL);
+
+		// Compute acceptance probability for proposed sample
+		const float a = min(1.f, proposedI / currentI);
+
+		//const float boostrapI = sample->boostrapI;
+		if (currentI > 0.f) {
+			if (!isinf(1.f / currentI)) {
+				Spectrum contrib;
+				const float k = (1.f - a);// * (boostrapI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / currentI;
+				contrib.r = k * currentL.r;
+				contrib.g = k * currentL.g;
+				contrib.b = k * currentL.b;
+
+				const uint pixelIndex = SelectPixelIndex(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+				SplatSample(frameBuffer, pixelIndex, &contrib);
+#else
+				SplatSample(frameBuffer, pixelIndex, sample->u[current][IDX_SCREEN_X], sample->u[current][IDX_SCREEN_Y], &contrib);
+#endif
+			}
+		}
+
+		if (proposedI > 0.f) {
+			if (!isinf(1.f / proposedI)) {
+				Spectrum contrib;
+				const float k = a;// * (boostrapI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / proposedI;
+				contrib.r = k * proposedL.r;
+				contrib.g = k * proposedL.g;
+				contrib.b = k * proposedL.b;
+
+				const uint pixelIndex = SelectPixelIndex(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+				SplatSample(frameBuffer, pixelIndex, &contrib);
+#else
+				SplatSample(frameBuffer, pixelIndex, sample->u[proposed][IDX_SCREEN_X], sample->u[proposed][IDX_SCREEN_Y], &contrib);
+#endif
+			}
+		}
+
+		// Randomly accept proposed path mutation
+		uint consecutiveRejects = sample->consecutiveRejects;
+		if ((consecutiveRejects >= PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT) ||
+				(RndFloatValue(seed) < a)) {
+			current ^= 1;
+			proposed ^= 1;
+			consecutiveRejects = 0;
+
+			sample->currentRadiance = proposedL;
+		} else
+			++consecutiveRejects;
+
+		sample->consecutiveRejects = consecutiveRejects;
+	}
+
+	sample->current = current;
+	sample->proposed = proposed;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Init Kernel
 //------------------------------------------------------------------------------
 
@@ -1495,6 +1863,9 @@ __kernel void Init(
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
+
+	//if (gid == 0)
+	//	printf(\"GPUTask: %d\\n\", sizeof(GPUTask));
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
@@ -1726,6 +2097,8 @@ __kernel void AdvancePaths(
 				const uint pathDepth = task->pathState.depth + 1;
 #if (PARAM_SAMPLER_TYPE == 1)
 				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
+#elif (PARAM_SAMPLER_TYPE == 2)
+				__global float *sampleData = &sample->u[sample->proposed][IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
 #endif
 
 				const uint meshIndex = meshIDs[currentTriangleIndex];
@@ -1753,8 +2126,8 @@ __kernel void AdvancePaths(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
-						const float texAlphaSample = sample->u[IDX_TEX_ALPHA];
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
+						const float texAlphaSample = sampleData[IDX_TEX_ALPHA];
 #endif
 
 						if ((alpha == 0.0f) || ((alpha < 1.f) && (texAlphaSample > alpha))) {
@@ -1792,7 +2165,7 @@ __kernel void AdvancePaths(
 				const float u0 = RndFloatValue(&seed);
 				const float u1 = RndFloatValue(&seed);
 				const float u2 = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
+#elif (PARAM_SAMPLER_TYPE == 1) ||(PARAM_SAMPLER_TYPE == 2)
 				const float u0 = sampleData[IDX_BSDF_X];
 				const float u1 = sampleData[IDX_BSDF_Y];
 				const float u2 = sampleData[IDX_BSDF_Z];
@@ -1939,7 +2312,7 @@ __kernel void AdvancePaths(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 				const float rrSample = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
 				const float rrSample = sampleData[IDX_RR];
 #endif
 
@@ -1986,7 +2359,7 @@ __kernel void AdvancePaths(
 					const float ul1 = RndFloatValue(&seed);
 					const float ul2 = RndFloatValue(&seed);
 					const float ul3 = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
 					const float ul0 = sampleData[IDX_DIRECTLIGHT_X];
 					const float ul1 = sampleData[IDX_DIRECTLIGHT_Y];
 					const float ul2 = sampleData[IDX_DIRECTLIGHT_Z];
@@ -2111,7 +2484,11 @@ __kernel void AdvancePaths(
 				// Check if I have to continue to trace the shadow ray
 
 				const uint pathDepth = task->pathState.depth;
+#if (PARAM_SAMPLER_TYPE == 1)
 				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
+#elif (PARAM_SAMPLER_TYPE == 2)
+				__global float *sampleData = &sample->u[sample->proposed][IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
+#endif
 
 				const uint meshIndex = meshIDs[currentTriangleIndex];
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
@@ -2132,7 +2509,7 @@ __kernel void AdvancePaths(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
 						const float texAlphaSample = sampleData[IDX_TEX_ALPHA];
 #endif
 
@@ -2225,82 +2602,6 @@ __kernel void AdvancePaths(
 // CollectResults Kernel
 //------------------------------------------------------------------------------
 
-#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
-void SplatTaskSamples(
-	__global GPUTask *tasks,
-	__global Pixel *frameBuffer,
-	const size_t gid,
-	const int offsetX, const int offsetY) {
-	// Look for the other GPUTask
-	const int indexOther = (int)gid + offsetX + PARAM_IMAGE_WIDTH * offsetY;
-	const size_t gidOther = PixelIndex2GID(indexOther);
-	if ((gidOther == gid) && !((offsetX == 0) && (offsetY == 0)))
-		return;
-
-	__global GPUTask *task = &tasks[gid];
-
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
-
-		// Look for the index of one of my pixel affected by this sample
-		uint pixelX, pixelY;
-		PixelIndex2XY(sample->pixelIndex, &pixelX, &pixelY);
-
-		// Check if it is a valid pixel
-		int xx = as_int(pixelX) - offsetX;
-		int yy = as_int(pixelY) - offsetY;
-		if ((xx >= 0) && (xx < PARAM_IMAGE_WIDTH) &&
-				(yy >= 0) && (yy < PARAM_IMAGE_HEIGHT)) {
-			__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xx, yy)];
-
-			const float sx = sample->u[IDX_SCREEN_X] - .5f + offsetX;
-			const float sy = sample->u[IDX_SCREEN_Y] - .5f + offsetY;
-
-			const float weight = ImageFilter_Evaluate(sx, sy);
-
-			pixel->c.r += sample->radiance.r * weight;
-			pixel->c.g += sample->radiance.g * weight;
-			pixel->c.b += sample->radiance.b * weight;
-			pixel->count +=  weight;
-		}
-
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-	}
-}
-#endif
-
-void Pixel_AddRadiance(__global Pixel *pixel, __global Spectrum *rad, const float count) {
-	float4 s;
-	s.x = rad->r;
-	s.y = rad->g;
-	s.z = rad->b;
-	s.w = count;
-
-	float4 p = *((__global float4 *)pixel);
-	p += s;
-	*((__global float4 *)pixel) = p;
-}
-
-#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
-void Pixel_AddFilteredRadiance(__global Pixel *pixel, __global Spectrum *rad,
-	const float distX, const float distY) {
-	const float weight = ImageFilter_Evaluate(distX, distY);
-
-	float4 s;
-	s.x = rad->r;
-	s.y = rad->g;
-	s.z = rad->b;
-	s.w = 1.f;
-
-	float4 p = *((__global float4 *)pixel);
-	p += s * (float4)weight;
-	*((__global float4 *)pixel) = p;
-}
-#endif
-
 __kernel void CollectResults(
 		__global GPUTask *tasks,
 		__global Pixel *frameBuffer
@@ -2309,66 +2610,53 @@ __kernel void CollectResults(
 	if (gid >= PARAM_TASK_COUNT)
 		return;
 
+	__global GPUTask *task = &tasks[gid];
+
+#if (PARAM_SAMPLER_TYPE == 2)
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+#endif
+
+	uint indexRenderFirst = task->samples.indexRenderFirst;
+	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+
+	while (indexRenderFirst != indexRenderCurrent) {
+		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
-	__global GPUTask *task = &tasks[gid];
-
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
-
-		// No filter
-		__global Pixel *pixel = &frameBuffer[sample->pixelIndex];
-		Pixel_AddRadiance(pixel, &sample->radiance, 1.f);
-
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-	}
-
-#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
-
-	__global GPUTask *task = &tasks[gid];
-
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	__global Pixel *pixel;
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
-
-		uint bufferPixelIndex = sample->pixelIndex * 9;
-
-		const float sx = sample->u[IDX_SCREEN_X] - .5f;
-		const float sy = sample->u[IDX_SCREEN_X] - .5f;
-
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx + 1.f, sy + 1.f);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx      , sy + 1.f);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx - 1.f, sy + 1.f);
-
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx + 1.f, sy);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx      , sy);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx - 1.f, sy);
-
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx + 1.f, sy - 1.f);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx      , sy - 1.f);
-		pixel = &frameBuffer[bufferPixelIndex];
-		Pixel_AddFilteredRadiance(pixel, &sample->radiance, sx - 1.f, sy - 1.f);
-
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-	}
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+		Spectrum radiance = sample->radiance;
+		SplatSample(frameBuffer, sample->pixelIndex, &radiance);
+#elif (PARAM_SAMPLER_TYPE == 2)
+		Sampler_MTL_SplatSample(frameBuffer, &seed, sample);
+#endif
 
 #else
 
-Error: unknown image filter !!!
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+		__global float *sampleData = &sample->u[IDX_SCREEN_X];
+		const float sx = sampleData[IDX_SCREEN_X] - .5f;
+		const float sy = sampleData[IDX_SCREEN_X] - .5f;
 
+		Spectrum radiance = sample->radiance;
+		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance);
+#elif (PARAM_SAMPLER_TYPE == 2)
+		Sampler_MTL_SplatSample(frameBuffer, &seed, sample);
+#endif
+
+#endif
+
+		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
+	}
+
+#if (PARAM_SAMPLER_TYPE == 2)
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
 #endif
 }

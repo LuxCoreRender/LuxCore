@@ -35,7 +35,7 @@ class PathGPU2RenderEngine;
 
 namespace PathGPU2 {
 
-#define PATHGPU2_TASK_COUNT (2 * 32768)
+#define PATHGPU2_TASK_COUNT 32768
 #define PATHGPU2_SAMPLE_COUNT 8
 
 typedef struct {
@@ -74,7 +74,7 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	INLINED_RANDOM, RANDOM
+	INLINED_RANDOM, RANDOM, METROPOLIS
 } SamplerType;
 
 //------------------------------------------------------------------------------
