@@ -734,14 +734,15 @@ void PathGPU2RenderThread::InitRender() {
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Sample count: " << PATHGPU2_SAMPLE_COUNT << endl;
 	const size_t gpuTaksSizePart1 =
 		// Seed size
-		sizeof(PathGPU2::Seed) +
-		(1 ? sizeof(unsigned int) : 0);
+		sizeof(PathGPU2::Seed);
 
 	const size_t uDataEyePathVertexSize =
 		// IDX_SCREEN_X, IDX_SCREEN_Y
 		sizeof(float) * 2 +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
+		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
+		// IDX_PIXEL_INDEX
+		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? sizeof(float) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_TEX_ALPHA,
 		((texMapAlphaBuff) ? sizeof(float) : 0) +
@@ -754,11 +755,13 @@ void PathGPU2RenderThread::InitRender() {
 	const size_t uDataSize = (renderEngine->samplerType == PathGPU2::INLINED_RANDOM) ?
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		(sizeof(float) * 2) :
-		(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth);
+		((renderEngine->samplerType == PathGPU2::METROPOLIS) ?
+			(sizeof(float) + sizeof(unsigned int) * 4 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
+			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
 
 	const size_t sampleSize =
-		// int pixelIndex;
-		sizeof(unsigned int) +
+		// uint pixelIndex;
+		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? 0 : sizeof(unsigned int)) +
 		uDataSize +
 		// Spectrum radiance;
 		sizeof(Spectrum);
@@ -889,6 +892,20 @@ void PathGPU2RenderThread::InitRender() {
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathGPU2::MitchellFilterSS *)filter)->B << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathGPU2::MitchellFilterSS *)filter)->C << "f";
+			break;
+		default:
+			assert (false);
+	}
+
+	switch (renderEngine->samplerType) {
+		case PathGPU2::INLINED_RANDOM:
+			ss << " -D PARAM_SAMPLER_TYPE=0";
+			break;
+		case PathGPU2::RANDOM:
+			ss << " -D PARAM_SAMPLER_TYPE=1";
+			break;
+		case PathGPU2::METROPOLIS:
+			ss << " -D PARAM_SAMPLER_TYPE=2";
 			break;
 		default:
 			assert (false);
@@ -1322,11 +1339,15 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	 const string samplerTypeName = cfg.GetString("path.sampler.type", "INLINED_RANDOM");
+	 const string samplerTypeName = cfg.GetString("path.sampler.type", "METROPOLIS");
 	 if (samplerTypeName.compare("INLINED_RANDOM") == 0)
 		 samplerType = PathGPU2::INLINED_RANDOM;
 	 else if (samplerTypeName.compare("RANDOM") == 0)
 		 samplerType = PathGPU2::RANDOM;
+	 else if (samplerTypeName.compare("METROPOLIS") == 0)
+		 samplerType = PathGPU2::METROPOLIS;
+	 else
+		throw std::runtime_error("Unknown path.sampler.type");
 
 	//--------------------------------------------------------------------------
 	// Filter
