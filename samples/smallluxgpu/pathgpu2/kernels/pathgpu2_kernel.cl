@@ -1429,14 +1429,20 @@ void SplatTaskSamples(
 #endif
 
 void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight) {
+	/*if (isnan(rad->r) || isinf(rad->r) ||
+			isnan(rad->g) || isinf(rad->g) ||
+			isnan(rad->b) || isinf(rad->b) ||
+			isnan(weight) || isinf(weight))
+		printf(\"(NaN/Inf. error: (%f, %f, %f) [%f]\\n\", rad->r, rad->g, rad->b, weight);*/
+
 	float4 s;
 	s.x = rad->r;
 	s.y = rad->g;
 	s.z = rad->b;
-	s.w = weight;
+	s.w = 1.f;
 
 	float4 p = *((__global float4 *)pixel);
-	p += s;
+	p += s * (float4)weight;
 	*((__global float4 *)pixel) = p;
 }
 
@@ -1449,10 +1455,10 @@ void Pixel_AddFilteredRadiance(__global Pixel *pixel, Spectrum *rad,
 	s.x = rad->r;
 	s.y = rad->g;
 	s.z = rad->b;
-	s.w = weight;
+	s.w = 1.f;
 
 	float4 p = *((__global float4 *)pixel);
-	p += s * (float4)filterWeight;
+	p += s * (float4)(weight * filterWeight);
 	*((__global float4 *)pixel) = p;
 }
 #endif
@@ -1846,9 +1852,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		if ((accProb == 1.f) || (RndFloatValue(seed) < accProb)) {
 			// Add accumulated contribution of previous reference sample
 			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-			contrib.r = norm * currentL.r;
-			contrib.g = norm * currentL.g;
-			contrib.b = norm * currentL.b;
+			contrib = currentL;
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[current][IDX_SCREEN_X];
 			sy = sample->u[current][IDX_SCREEN_Y];
@@ -1864,9 +1868,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		} else {
 			// Add contribution of new sample before rejecting it
 			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-			contrib.r = norm * proposedL.r;
-			contrib.g = norm * proposedL.g;
-			contrib.b = norm * proposedL.b;
+			contrib = proposedL;
 
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[proposed][IDX_SCREEN_X];
