@@ -82,8 +82,10 @@
 // (optional)
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
 
+//#define PARAM_SAMPLER_TYPE 2
 #define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE 32
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
+#define PARAM_SAMPLER_METROPOLIS_NBOOTSTRAP 1000
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -238,7 +240,7 @@ typedef struct {
 
 	float u[TOTAL_U_SIZE];
 #elif (PARAM_SAMPLER_TYPE == 2)
-	float boostrapI;
+	float meanI;
 
 	uint current, proposed;
 	uint mutationCount;
@@ -1133,21 +1135,18 @@ uint PixelCountPerTask(const size_t gid) {
 	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT + ((gid < lastGID) ? 1 : 0);
 }
 
-uint SelectPixelIndex(const size_t gid, const float u) {
-	const uint pixelCountPerTask = PixelCountPerTask(gid);
-	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
-
+uint PixelIndexInt(const size_t gid, const uint i) {
 	const uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH + i * PARAM_TASK_COUNT;
 
 	return (index >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
 		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : index;
 }
 
-uint PixelIndex(const size_t gid, const uint i) {
-	const uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH + i * PARAM_TASK_COUNT;
+uint PixelIndexFloat(const size_t gid, const float u) {
+	const uint pixelCountPerTask = PixelCountPerTask(gid);
+	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
 
-	return (index >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
-		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : index;
+	return PixelIndexInt(gid, i);
 }
 
 void PixelIndex2XY(const uint index, uint *x, uint *y) {
@@ -1195,7 +1194,7 @@ void GenerateRay(
 	const uint pixelIndex = sample->pixelIndex;
 #elif (PARAM_SAMPLER_TYPE == 2)
 	__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
-	const uint pixelIndex = SelectPixelIndex(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
+	const uint pixelIndex = PixelIndexFloat(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
 #endif
 
 	const float scrSampleX = sampleData[IDX_SCREEN_X];
@@ -1535,7 +1534,7 @@ Error: unknown image filter !!!
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
 	__global Sample *sample = &samples->sample[i];
 
-	sample->pixelIndex = PixelIndex(gid, i);
+	sample->pixelIndex = PixelIndexInt(gid, i);
 
 	sample->u[IDX_SCREEN_X] = RndFloatValue(seed);
 	sample->u[IDX_SCREEN_Y] = RndFloatValue(seed);
@@ -1602,7 +1601,7 @@ __kernel void Sampler(
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
 	__global Sample *sample = &samples->sample[i];
 
-	sample->pixelIndex = PixelIndex(gid, i);
+	sample->pixelIndex = PixelIndexInt(gid, i);
 
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		sample->u[i] = RndFloatValue(seed);
@@ -1669,7 +1668,7 @@ __kernel void Sampler(
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
 	__global Sample *sample = &samples->sample[i];
 
-	sample->boostrapI = .5f; // TODO
+	sample->meanI = 0.f;
 
 	sample->current = 0xffffffff;
 	sample->proposed = 0;
@@ -1701,7 +1700,7 @@ float Mutate(Seed *seed, float v) {
         v =  (v < 0.f) ?  (1.f + v) : v;
     }
 
-	return (v < 0.f || v > 1.f) ? 0.f : v;
+	return ((v < 0.f) || (v >= 1.f)) ? 0.f : v;
 }
 
 void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
@@ -1796,39 +1795,35 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		// Compute acceptance probability for proposed sample
 		const float a = min(1.f, proposedI / currentI);
 
-		//const float boostrapI = sample->boostrapI;
-		if (currentI > 0.f) {
-			if (!isinf(1.f / currentI)) {
-				Spectrum contrib;
-				const float k = (1.f - a);// * (boostrapI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / currentI;
-				contrib.r = k * currentL.r;
-				contrib.g = k * currentL.g;
-				contrib.b = k * currentL.b;
+		//const float meanI = sample->meanI;
+		if ((currentI > 0.f) && (!isinf(1.f / currentI))) {
+			Spectrum contrib;
+			const float k = (1.f - a);// * (meanI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / currentI;
+			contrib.r = k * currentL.r;
+			contrib.g = k * currentL.g;
+			contrib.b = k * currentL.b;
 
-				const uint pixelIndex = SelectPixelIndex(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
+			const uint pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-				SplatSample(frameBuffer, pixelIndex, &contrib);
+			SplatSample(frameBuffer, pixelIndex, &contrib);
 #else
-				SplatSample(frameBuffer, pixelIndex, sample->u[current][IDX_SCREEN_X], sample->u[current][IDX_SCREEN_Y], &contrib);
+			SplatSample(frameBuffer, pixelIndex, sample->u[current][IDX_SCREEN_X], sample->u[current][IDX_SCREEN_Y], &contrib);
 #endif
-			}
 		}
 
-		if (proposedI > 0.f) {
-			if (!isinf(1.f / proposedI)) {
-				Spectrum contrib;
-				const float k = a;// * (boostrapI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / proposedI;
-				contrib.r = k * proposedL.r;
-				contrib.g = k * proposedL.g;
-				contrib.b = k * proposedL.b;
+		if ((proposedI > 0.f) && (!isinf(1.f / proposedI))) {
+			Spectrum contrib;
+			const float k = a;// * (meanI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / proposedI;
+			contrib.r = k * proposedL.r;
+			contrib.g = k * proposedL.g;
+			contrib.b = k * proposedL.b;
 
-				const uint pixelIndex = SelectPixelIndex(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
+			const uint pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-				SplatSample(frameBuffer, pixelIndex, &contrib);
+			SplatSample(frameBuffer, pixelIndex, &contrib);
 #else
-				SplatSample(frameBuffer, pixelIndex, sample->u[proposed][IDX_SCREEN_X], sample->u[proposed][IDX_SCREEN_Y], &contrib);
+			SplatSample(frameBuffer, pixelIndex, sample->u[proposed][IDX_SCREEN_X], sample->u[proposed][IDX_SCREEN_Y], &contrib);
 #endif
-			}
 		}
 
 		// Randomly accept proposed path mutation
