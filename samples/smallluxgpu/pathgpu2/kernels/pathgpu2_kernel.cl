@@ -85,7 +85,7 @@
 //#define PARAM_SAMPLER_TYPE 2
 #define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .4f
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
-#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL 128
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL 64
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -1677,21 +1677,25 @@ void LargeStep(Seed *seed, __global float *proposedU) {
 		proposedU[i] = RndFloatValue(seed);
 }
 
-float Mutate(Seed *seed, float v) {
-    const float a = 1.f / 1024.f;
-	const float b = 1.f / 64.f;
-	const float logRatio = -log(b / a);
+float Mutate(Seed *seed, const float x) {
+	const float s1 = 1.f / 512.f;
+	const float s2 = 1.f / 16.f;
 
-    const float delta = b * exp(logRatio * RndFloatValue(seed));
-    if (RndFloatValue(seed) < .5f) {
-        v += delta;
-        v =  (v >= 1.f) ?  (v - 1.f) : v;
-    } else {
-        v -= delta;
-        v =  (v < 0.f) ?  (1.f + v) : v;
-    }
+	const float randomValue = RndFloatValue(seed);
 
-	return ((v < 0.f) || (v >= 1.f)) ? 0.f : v;
+	const float dx = s1 / (s1 / s2 + fabs(2.f * randomValue - 1.f)) -
+		s1 / (s1 / s2 + 1.f);
+
+	float mutatedX = x;
+	if (randomValue < 0.5f) {
+		mutatedX += dx;
+		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
+	} else {
+		mutatedX -= dx;
+		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
+	}
+
+	return mutatedX;
 }
 
 void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
@@ -1724,38 +1728,39 @@ __kernel void Sampler(
 	while (indexRenderFirst != indexRenderCurrent) {
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
 
-		uint current = sample->current;
+		const uint current = sample->current;
 
 		// Check if it is the very first sample
 		if (current != 0xffffffff) {
 			const uint proposed = sample->proposed;
 
-			__global float *currentU = &sample->u[current][0];
 			__global float *proposedU = &sample->u[proposed][0];
 
+			// Check if it is time to work on next pixel
+			if (sample->sampleCount >= PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL) {
+				sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
+
+				sample->totalI = 0.f;
+				sample->sampleCount = 0.f;
+
+				sample->current = 0xffffffff;
+				sample->proposed = 1;
+
+				sample->smallMutationCount = 0;
+				sample->consecutiveRejects = 0;
+
+				sample->weight = 0.f;
+				sample->currentRadiance.r = 0.f;
+				sample->currentRadiance.g = 0.f;
+				sample->currentRadiance.b = 0.f;
+			}
+
 			if (RndFloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
-				// Check if it is time to work on next pixel
-				if (sample->sampleCount >= PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL) {
-					sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
-
-					sample->totalI = 0.f;
-					sample->sampleCount = 0.f;
-
-					sample->current = 0xffffffff;
-					sample->proposed = 1;
-
-					sample->smallMutationCount = 0;
-					sample->consecutiveRejects = 0;
-
-					sample->weight = 0.f;
-					sample->currentRadiance.r = 0.f;
-					sample->currentRadiance.g = 0.f;
-					sample->currentRadiance.b = 0.f;
-				}
-
 				LargeStep(&seed, proposedU);
 				sample->smallMutationCount = 0;
 			} else {
+				__global float *currentU = &sample->u[current][0];
+
 				SmallStep(&seed, currentU, proposedU);
 				sample->smallMutationCount += 1;
 			}
