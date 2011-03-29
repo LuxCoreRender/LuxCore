@@ -83,9 +83,8 @@
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
 
 //#define PARAM_SAMPLER_TYPE 2
-#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE 32
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .25f
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
-#define PARAM_SAMPLER_METROPOLIS_NBOOTSTRAP 1000
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -240,12 +239,14 @@ typedef struct {
 
 	float u[TOTAL_U_SIZE];
 #elif (PARAM_SAMPLER_TYPE == 2)
-	float meanI;
+	float totalI;
+	uint sampleCount;
 
 	uint current, proposed;
-	uint mutationCount;
+	uint smallMutationCount;
 	uint consecutiveRejects;
 
+	float weight;
 	Spectrum currentRadiance;
 
 	float u[2][TOTAL_U_SIZE];
@@ -1668,13 +1669,20 @@ __kernel void Sampler(
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
 	__global Sample *sample = &samples->sample[i];
 
-	sample->meanI = 0.f;
+	sample->totalI = 0.f;
+	sample->sampleCount = 0.f;
 
 	sample->current = 0xffffffff;
-	sample->proposed = 0;
+	sample->proposed = 1;
 
-	sample->mutationCount = 0;
+	sample->smallMutationCount = 0;
 	sample->consecutiveRejects = 0;
+
+	sample->weight = 0.f;
+	sample->currentRadiance.r = 0.f;
+	sample->currentRadiance.g = 0.f;
+	sample->currentRadiance.b = 0.f;
+
 	for (int i = 0; i < TOTAL_U_SIZE; ++i) {
 		sample->u[0][i] = RndFloatValue(seed);
 		sample->u[1][i] = RndFloatValue(seed);
@@ -1742,14 +1750,13 @@ __kernel void Sampler(
 			__global float *currentU = &sample->u[current][0];
 			__global float *proposedU = &sample->u[proposed][0];
 
-			const uint mutationCount = sample->mutationCount;
-			const bool largeStep = ((mutationCount % PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) == 0);
-			if (largeStep)
+			if (RndFloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
 				LargeStep(&seed, proposedU);
-			else
+				sample->smallMutationCount = 0;
+			} else {
 				SmallStep(&seed, currentU, proposedU);
-
-			sample->mutationCount = mutationCount + 1;
+				sample->smallMutationCount += 1;
+			}
 		}
 
 		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
@@ -1782,6 +1789,11 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		// sample
 
 		sample->currentRadiance = radiance;
+		sample->totalI = Spectrum_Y(&radiance);
+
+		// The following 2 lines could be moved in the initialization code
+		sample->sampleCount = 1;
+		sample->weight = 1.f;
 
 		current = proposed;
 		proposed ^= 1;
@@ -1792,53 +1804,88 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		const Spectrum proposedL = radiance;
 		const float proposedI = Spectrum_Y(&proposedL);
 
-		// Compute acceptance probability for proposed sample
-		const float a = min(1.f, proposedI / currentI);
+		float totalI = sample->totalI;
+		uint sampleCount = sample->sampleCount;
+		uint smallMutationCount = sample->smallMutationCount;
+		if (smallMutationCount == 0) {
+			// It is a large mutation
+			totalI += Spectrum_Y(&proposedL);
+			sampleCount += 1;
 
-		//const float meanI = sample->meanI;
-		if ((currentI > 0.f) && (!isinf(1.f / currentI))) {
-			Spectrum contrib;
-			const float k = (1.f - a);// * (meanI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / currentI;
-			contrib.r = k * currentL.r;
-			contrib.g = k * currentL.g;
-			contrib.b = k * currentL.b;
-
-			const uint pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
-			SplatSample(frameBuffer, pixelIndex, &contrib);
-#else
-			SplatSample(frameBuffer, pixelIndex, sample->u[current][IDX_SCREEN_X], sample->u[current][IDX_SCREEN_Y], &contrib);
-#endif
+			sample->totalI = totalI;
+			sample->sampleCount = sampleCount;
 		}
 
-		if ((proposedI > 0.f) && (!isinf(1.f / proposedI))) {
-			Spectrum contrib;
-			const float k = a;// * (meanI / PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) / proposedI;
-			contrib.r = k * proposedL.r;
-			contrib.g = k * proposedL.g;
-			contrib.b = k * proposedL.b;
+		const float meanI = (totalI > 0.f) ? (totalI / sampleCount) : 1.f;
 
-			const uint pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
-			SplatSample(frameBuffer, pixelIndex, &contrib);
-#else
-			SplatSample(frameBuffer, pixelIndex, sample->u[proposed][IDX_SCREEN_X], sample->u[proposed][IDX_SCREEN_Y], &contrib);
-#endif
-		}
-
-		// Randomly accept proposed path mutation
+		// Calculate accept probability from old and new image sample
 		uint consecutiveRejects = sample->consecutiveRejects;
-		if ((consecutiveRejects >= PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT) ||
-				(RndFloatValue(seed) < a)) {
+
+		float accProb;
+		if ((currentI > 0.f) && (consecutiveRejects < PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT))
+			accProb = min(1.f, proposedI / currentI);
+		else
+			accProb = 1.f;
+
+		const float newWeight = accProb + ((smallMutationCount == 0) ? 1.f : 0.f);
+		float weight = sample->weight;
+		weight += 1.f - accProb;
+
+		Spectrum contrib;
+		uint pixelIndex;
+		bool validNorm;
+#if (PARAM_IMAGE_FILTER_TYPE != 0)
+		float sx, sy;
+#endif
+		if ((accProb == 1.f) || (RndFloatValue(seed) < accProb)) {
+			// Add accumulated contribution of previous reference sample
+			const float norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
+
+			validNorm = (norm > 0.f);
+			contrib.r = norm * currentL.r;
+			contrib.g = norm * currentL.g;
+			contrib.b = norm * currentL.b;
+
+			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
+#if (PARAM_IMAGE_FILTER_TYPE != 0)
+			sx = sample->u[current][IDX_SCREEN_X];
+			sy = sample->u[current][IDX_SCREEN_Y];
+#endif
+
 			current ^= 1;
 			proposed ^= 1;
 			consecutiveRejects = 0;
 
-			sample->currentRadiance = proposedL;
-		} else
-			++consecutiveRejects;
+			weight = newWeight;
 
-		sample->consecutiveRejects = consecutiveRejects;
+			sample->currentRadiance = proposedL;
+		} else {
+			// Add contribution of new sample before rejecting it
+			const float norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
+
+			validNorm = (norm > 0.f);
+			contrib.r = norm * proposedL.r;
+			contrib.g = norm * proposedL.g;
+			contrib.b = norm * proposedL.b;
+
+			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
+#if (PARAM_IMAGE_FILTER_TYPE != 0)
+			sx = sample->u[proposed][IDX_SCREEN_X];
+			sy = sample->u[proposed][IDX_SCREEN_Y];
+#endif
+
+			++consecutiveRejects;
+		}
+
+		if (validNorm) {
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+			SplatSample(frameBuffer, pixelIndex, &contrib);
+#else
+			SplatSample(frameBuffer, pixelIndex, sx, sy, &contrib);
+#endif
+		}
+
+		sample->weight = weight;
 	}
 
 	sample->current = current;

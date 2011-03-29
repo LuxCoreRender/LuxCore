@@ -756,7 +756,7 @@ void PathGPU2RenderThread::InitRender() {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		(sizeof(float) * 2) :
 		((renderEngine->samplerType == PathGPU2::METROPOLIS) ?
-			(sizeof(float) + sizeof(unsigned int) * 4 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
+			(sizeof(float) * 2 + sizeof(unsigned int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
 			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
 
 	const size_t sampleSize =
