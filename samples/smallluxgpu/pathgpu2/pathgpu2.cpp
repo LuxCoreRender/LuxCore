@@ -740,9 +740,7 @@ void PathGPU2RenderThread::InitRender() {
 		// IDX_SCREEN_X, IDX_SCREEN_Y
 		sizeof(float) * 2 +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
-		// IDX_PIXEL_INDEX
-		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? sizeof(float) : 0);
+		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_TEX_ALPHA,
 		((texMapAlphaBuff) ? sizeof(float) : 0) +
@@ -761,7 +759,7 @@ void PathGPU2RenderThread::InitRender() {
 
 	const size_t sampleSize =
 		// uint pixelIndex;
-		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? 0 : sizeof(unsigned int)) +
+		sizeof(unsigned int) +
 		uDataSize +
 		// Spectrum radiance;
 		sizeof(Spectrum);
