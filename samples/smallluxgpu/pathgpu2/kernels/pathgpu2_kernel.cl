@@ -1233,7 +1233,7 @@ void GenerateRay(
 #if (PARAM_SAMPLER_TYPE == 0)
 	const float dofSampleX = RndFloatValue(seed);
 	const float dofSampleY = RndFloatValue(seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
 	const float dofSampleX = sampleData[IDX_DOF_X];
 	const float dofSampleY = sampleData[IDX_DOF_Y];
 #endif
@@ -2206,11 +2206,17 @@ __kernel void AdvancePaths(
 #if (PARAM_SAMPLER_TYPE == 0)
 				const float u0 = RndFloatValue(&seed);
 				const float u1 = RndFloatValue(&seed);
-				const float u2 = RndFloatValue(&seed);
 #elif (PARAM_SAMPLER_TYPE == 1) ||(PARAM_SAMPLER_TYPE == 2)
 				const float u0 = sampleData[IDX_BSDF_X];
 				const float u1 = sampleData[IDX_BSDF_Y];
+#endif
+
+#if defined(PARAM_ENABLE_MAT_MATTEMIRROR) || defined(PARAM_ENABLE_MAT_MATTEMETAL) || defined(PARAM_ENABLE_MAT_ALLOY)
+#if (PARAM_SAMPLER_TYPE == 0)
+				const float u2 = RndFloatValue(&seed);
+#elif (PARAM_SAMPLER_TYPE == 1) ||(PARAM_SAMPLER_TYPE == 2)
 				const float u2 = sampleData[IDX_BSDF_Z];
+#endif
 #endif
 
 				Vector wo;
