@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -82,10 +82,11 @@
 // (optional)
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
 
-#define PARAM_SAMPLER_TYPE 2
-#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .5f
+// TODO: to fix
+#define PARAM_STARTLINE 0
+
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .4f
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
-#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL 1024
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -155,9 +156,25 @@ typedef struct {
 #if defined(PARAM_CAMERA_HAS_DOF)
 #define IDX_DOF_X 2
 #define IDX_DOF_Y 3
+
+#if (PARAM_SAMPLER_TYPE == 2)
+// Metropolis needs one more sample for the pixelIndex
+#define IDX_PIXEL_INDEX 4
+#define IDX_BSDF_OFFSET 5
+#else
 #define IDX_BSDF_OFFSET 4
+#endif
+
+#else
+
+#if (PARAM_SAMPLER_TYPE == 2)
+// Metropolis needs one more sample for the pixelIndex
+#define IDX_PIXEL_INDEX 2
+#define IDX_BSDF_OFFSET 3
 #else
 #define IDX_BSDF_OFFSET 2
+#endif
+
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
@@ -212,13 +229,16 @@ typedef struct {
 #define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
 
 typedef struct {
-	uint pixelIndex;
 	Spectrum radiance;
 
 #if (PARAM_SAMPLER_TYPE == 0)
+	uint pixelIndex;
+
 	// Only IDX_SCREEN_X and IDX_SCREEN_Y need to be saved
 	float u[2];
 #elif (PARAM_SAMPLER_TYPE == 1)
+	uint pixelIndex;
+
 	float u[TOTAL_U_SIZE];
 #elif (PARAM_SAMPLER_TYPE == 2)
 	float totalI;
@@ -1173,10 +1193,11 @@ void GenerateRay(
 		) {
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
 	__global float *sampleData = &sample->u[IDX_SCREEN_X];
+	const uint pixelIndex = sample->pixelIndex;
 #elif (PARAM_SAMPLER_TYPE == 2)
 	__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
+	const uint pixelIndex = PixelIndexFloat(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
 #endif
-	const uint pixelIndex = sample->pixelIndex;
 
 	const float scrSampleX = sampleData[IDX_SCREEN_X];
 	const float scrSampleY = sampleData[IDX_SCREEN_Y];
@@ -1397,8 +1418,15 @@ void SplatTaskSamples(
 		__global Sample *sample = &task->samples.sample[indexRenderFirst];
 
 		// Look for the index of one of my pixel affected by this sample
+
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+		const uint pixelIndex = sample->pixelIndex;
+#elif (PARAM_SAMPLER_TYPE == 2)
+		__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
+		const uint pixelIndex = PixelIndexFloat(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
+#endif
 		uint pixelX, pixelY;
-		PixelIndex2XY(sample->pixelIndex, &pixelX, &pixelY);
+		PixelIndex2XY(pixelIndex, &pixelX, &pixelY);
 
 		// Check if it is a valid pixel
 		int xx = as_int(pixelX) - offsetX;
@@ -1409,8 +1437,6 @@ void SplatTaskSamples(
 
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
 			__global float *sampleData = &sample->u[IDX_SCREEN_X];
-#elif (PARAM_SAMPLER_TYPE == 2)
-			__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
 #endif
 			const float sx = sampleData[IDX_SCREEN_X] - .5f + offsetX;
 			const float sy = sampleData[IDX_SCREEN_Y] - .5f + offsetY;
@@ -1655,8 +1681,6 @@ __kernel void Sampler(
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
 	__global Sample *sample = &samples->sample[i];
 
-	sample->pixelIndex = PixelIndexInt(gid, i);
-
 	sample->totalI = 0.f;
 	sample->sampleCount = 0.f;
 
@@ -1740,25 +1764,6 @@ __kernel void Sampler(
 			const uint proposed = sample->proposed;
 
 			__global float *proposedU = &sample->u[proposed][0];
-
-			// Check if it is time to work on next pixel
-			if (sample->sampleCount >= PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL) {
-				sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
-
-				sample->totalI = 0.f;
-				sample->sampleCount = 0.f;
-
-				sample->current = 0xffffffffu;
-				sample->proposed = 1;
-
-				sample->smallMutationCount = 0;
-				sample->consecutiveRejects = 0;
-
-				sample->weight = 0.f;
-				sample->currentRadiance.r = 0.f;
-				sample->currentRadiance.g = 0.f;
-				sample->currentRadiance.b = 0.f;
-			}
 
 			if (RndFloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
 				LargeStep(&seed, proposedU);
@@ -1858,6 +1863,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 		float sx, sy;
 #endif
+		uint pixelIndex;
 		if ((accProb == 1.f) || (rndVal < accProb)) {
 			/*if (sample->pixelIndex == 0)
 				printf(\"\\t\\tACCEPTED !\\n\");*/
@@ -1866,6 +1872,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = currentL;
 
+			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[current][IDX_SCREEN_X];
 			sy = sample->u[current][IDX_SCREEN_Y];
@@ -1886,6 +1893,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = proposedL;
 
+			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[proposed][IDX_SCREEN_X];
 			sy = sample->u[proposed][IDX_SCREEN_Y];
@@ -1900,9 +1908,9 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 		if (norm > 0.f) {
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-			SplatSample(frameBuffer, sample->pixelIndex, &contrib, norm);
+			SplatSample(frameBuffer, pixelIndex, &contrib, norm);
 #else
-			SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &contrib, norm);
+			SplatSample(frameBuffer, pixelIndex, sx, sy, &contrib, norm);
 #endif
 		}
 
@@ -2715,7 +2723,7 @@ __kernel void CollectResults(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-		Sampler_MTL_SplatSample(frameBuffer, &seed, sample, 1.f);
+		Sampler_MTL_SplatSample(frameBuffer, &seed, sample);
 #endif
 
 #endif

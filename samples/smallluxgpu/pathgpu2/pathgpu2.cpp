@@ -732,6 +732,7 @@ void PathGPU2RenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Sample count: " << PATHGPU2_SAMPLE_COUNT << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Pixels per GPUTask: " << (renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / PATHGPU2_TASK_COUNT) << endl;
 	const size_t gpuTaksSizePart1 =
 		// Seed size
 		sizeof(PathGPU2::Seed);
@@ -740,7 +741,9 @@ void PathGPU2RenderThread::InitRender() {
 		// IDX_SCREEN_X, IDX_SCREEN_Y
 		sizeof(float) * 2 +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
+		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
+		// IDX_PIXEL_INDEX
+		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? sizeof(float) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_TEX_ALPHA,
 		((texMapAlphaBuff) ? sizeof(float) : 0) +
@@ -759,7 +762,7 @@ void PathGPU2RenderThread::InitRender() {
 
 	const size_t sampleSize =
 		// uint pixelIndex;
-		sizeof(unsigned int) +
+		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? 0 : sizeof(unsigned int)) +
 		uDataSize +
 		// Spectrum radiance;
 		sizeof(Spectrum);
