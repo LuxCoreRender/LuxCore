@@ -1846,7 +1846,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			contrib.g = norm * currentL.g;
 			contrib.b = norm * currentL.b;
 
-			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
+			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[current][IDX_SCREEN_X];
 			sy = sample->u[current][IDX_SCREEN_Y];
@@ -1886,6 +1886,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		}
 
 		sample->weight = weight;
+		sample->consecutiveRejects = consecutiveRejects;
 	}
 
 	sample->current = current;
