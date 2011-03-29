@@ -83,8 +83,9 @@
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
 
 //#define PARAM_SAMPLER_TYPE 2
-#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .25f
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .4f
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL 128
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -154,25 +155,9 @@ typedef struct {
 #if defined(PARAM_CAMERA_HAS_DOF)
 #define IDX_DOF_X 2
 #define IDX_DOF_Y 3
-
-#if (PARAM_SAMPLER_TYPE == 2)
-// Metropolis needs one more sample for the pixelIndex
-#define IDX_PIXEL_INDEX 4
-#define IDX_BSDF_OFFSET 5
-#else
 #define IDX_BSDF_OFFSET 4
-#endif
-
-#else
-
-#if (PARAM_SAMPLER_TYPE == 2)
-// Metropolis needs one more sample for the pixelIndex
-#define IDX_PIXEL_INDEX 2
-#define IDX_BSDF_OFFSET 3
 #else
 #define IDX_BSDF_OFFSET 2
-#endif
-
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
@@ -227,16 +212,13 @@ typedef struct {
 #define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
 
 typedef struct {
+	uint pixelIndex;
 	Spectrum radiance;
 
 #if (PARAM_SAMPLER_TYPE == 0)
-	uint pixelIndex;
-
 	// Only IDX_SCREEN_X and IDX_SCREEN_Y need to be saved
 	float u[2];
 #elif (PARAM_SAMPLER_TYPE == 1)
-	uint pixelIndex;
-
 	float u[TOTAL_U_SIZE];
 #elif (PARAM_SAMPLER_TYPE == 2)
 	float totalI;
@@ -1192,11 +1174,10 @@ void GenerateRay(
 		) {
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
 	__global float *sampleData = &sample->u[IDX_SCREEN_X];
-	const uint pixelIndex = sample->pixelIndex;
 #elif (PARAM_SAMPLER_TYPE == 2)
 	__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
-	const uint pixelIndex = PixelIndexFloat(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
 #endif
+	const uint pixelIndex = sample->pixelIndex;
 
 	const float scrSampleX = sampleData[IDX_SCREEN_X];
 	const float scrSampleY = sampleData[IDX_SCREEN_Y];
@@ -1448,12 +1429,12 @@ void SplatTaskSamples(
 }
 #endif
 
-void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad) {
+void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight) {
 	float4 s;
 	s.x = rad->r;
 	s.y = rad->g;
 	s.z = rad->b;
-	s.w = 1.f;
+	s.w = weight;
 
 	float4 p = *((__global float4 *)pixel);
 	p += s;
@@ -1462,54 +1443,54 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad) {
 
 #if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
 void Pixel_AddFilteredRadiance(__global Pixel *pixel, Spectrum *rad,
-	const float distX, const float distY) {
-	const float weight = ImageFilter_Evaluate(distX, distY);
+	const float distX, const float distY, const float weight) {
+	const float filterWeight = ImageFilter_Evaluate(distX, distY);
 
 	float4 s;
 	s.x = rad->r;
 	s.y = rad->g;
 	s.z = rad->b;
-	s.w = 1.f;
+	s.w = weight;
 
 	float4 p = *((__global float4 *)pixel);
-	p += s * (float4)weight;
+	p += s * (float4)filterWeight;
 	*((__global float4 *)pixel) = p;
 }
 #endif
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
-void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, Spectrum *radiance) {
+void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, Spectrum *radiance, const float weight) {
 		__global Pixel *pixel = &frameBuffer[pixelIndex];
 
-		Pixel_AddRadiance(pixel, radiance);
+		Pixel_AddRadiance(pixel, radiance, weight);
 }
 
 #elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
 
-void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, const float sx, const float sy, Spectrum *radiance) {
+void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, const float sx, const float sy, Spectrum *radiance, const float weight) {
 		uint bufferPixelIndex = pixelIndex * 9;
 
 		__global Pixel *pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f, weight);
 		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy + 1.f);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy + 1.f, weight);
 		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f, weight);
 
 		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy, weight);
 		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy, weight);
 		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy, weight);
 
 		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f, weight);
 		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy - 1.f);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy - 1.f, weight);
 		pixel = &frameBuffer[bufferPixelIndex];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f);
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f, weight);
 }
 
 #else
@@ -1669,6 +1650,8 @@ __kernel void Sampler(
 void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
 	__global Sample *sample = &samples->sample[i];
 
+	sample->pixelIndex = PixelIndexInt(gid, i);
+
 	sample->totalI = 0.f;
 	sample->sampleCount = 0.f;
 
@@ -1751,6 +1734,25 @@ __kernel void Sampler(
 			__global float *proposedU = &sample->u[proposed][0];
 
 			if (RndFloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
+				// Check if it is time to work on next pixel
+				if (sample->sampleCount >= PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL) {
+					sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
+
+					sample->totalI = 0.f;
+					sample->sampleCount = 0.f;
+
+					sample->current = 0xffffffff;
+					sample->proposed = 1;
+
+					sample->smallMutationCount = 0;
+					sample->consecutiveRejects = 0;
+
+					sample->weight = 0.f;
+					sample->currentRadiance.r = 0.f;
+					sample->currentRadiance.g = 0.f;
+					sample->currentRadiance.b = 0.f;
+				}
+
 				LargeStep(&seed, proposedU);
 				sample->smallMutationCount = 0;
 			} else {
@@ -1802,7 +1804,8 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		const float currentI = Spectrum_Y(&currentL);
 
 		const Spectrum proposedL = radiance;
-		const float proposedI = Spectrum_Y(&proposedL);
+		float proposedI = Spectrum_Y(&proposedL);
+		proposedI = isinf(proposedI) ? 0.f : proposedI;
 
 		float totalI = sample->totalI;
 		uint sampleCount = sample->sampleCount;
@@ -1832,21 +1835,16 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		weight += 1.f - accProb;
 
 		Spectrum contrib;
-		uint pixelIndex;
-		bool validNorm;
+		float norm;
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 		float sx, sy;
 #endif
 		if ((accProb == 1.f) || (RndFloatValue(seed) < accProb)) {
 			// Add accumulated contribution of previous reference sample
-			const float norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-
-			validNorm = (norm > 0.f);
+			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib.r = norm * currentL.r;
 			contrib.g = norm * currentL.g;
 			contrib.b = norm * currentL.b;
-
-			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[current][IDX_SCREEN_X];
 			sy = sample->u[current][IDX_SCREEN_Y];
@@ -1861,14 +1859,11 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			sample->currentRadiance = proposedL;
 		} else {
 			// Add contribution of new sample before rejecting it
-			const float norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-
-			validNorm = (norm > 0.f);
+			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib.r = norm * proposedL.r;
 			contrib.g = norm * proposedL.g;
 			contrib.b = norm * proposedL.b;
 
-			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[proposed][IDX_SCREEN_X];
 			sy = sample->u[proposed][IDX_SCREEN_Y];
@@ -1877,11 +1872,11 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			++consecutiveRejects;
 		}
 
-		if (validNorm) {
+		if (norm > 0.f) {
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-			SplatSample(frameBuffer, pixelIndex, &contrib);
+			SplatSample(frameBuffer, sample->pixelIndex, &contrib, norm);
 #else
-			SplatSample(frameBuffer, pixelIndex, sx, sy, &contrib);
+			SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &contrib, norm);
 #endif
 		}
 
@@ -2679,7 +2674,7 @@ __kernel void CollectResults(
 
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
 		Spectrum radiance = sample->radiance;
-		SplatSample(frameBuffer, sample->pixelIndex, &radiance);
+		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
 		Sampler_MTL_SplatSample(frameBuffer, &seed, sample);
 #endif
@@ -2692,9 +2687,9 @@ __kernel void CollectResults(
 		const float sy = sampleData[IDX_SCREEN_X] - .5f;
 
 		Spectrum radiance = sample->radiance;
-		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance);
+		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-		Sampler_MTL_SplatSample(frameBuffer, &seed, sample);
+		Sampler_MTL_SplatSample(frameBuffer, &seed, sample, 1.f);
 #endif
 
 #endif
