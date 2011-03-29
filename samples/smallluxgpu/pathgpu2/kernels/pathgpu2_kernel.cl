@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -82,10 +82,10 @@
 // (optional)
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
 
-//#define PARAM_SAMPLER_TYPE 2
-#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .4f
+#define PARAM_SAMPLER_TYPE 2
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .5f
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
-#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL 64
+#define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_PER_PIXEL 1024
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -1805,7 +1805,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 		// The following 2 lines could be moved in the initialization code
 		sample->sampleCount = 1;
-		sample->weight = 1.f;
+		sample->weight = 0.f;
 
 		current = proposed;
 		proposed ^= 1;
@@ -1844,15 +1844,28 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		float weight = sample->weight;
 		weight += 1.f - accProb;
 
+		const float rndVal = RndFloatValue(seed);
+
+		/*if (sample->pixelIndex == 0)
+			printf(\"[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\\n\",
+					smallMutationCount,
+					currentL.r, currentL.g, currentL.b, weight,
+					proposedL.r, proposedL.g, proposedL.b, newWeight,
+					accProb, rndVal);*/
+
 		Spectrum contrib;
 		float norm;
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 		float sx, sy;
 #endif
-		if ((accProb == 1.f) || (RndFloatValue(seed) < accProb)) {
+		if ((accProb == 1.f) || (rndVal < accProb)) {
+			/*if (sample->pixelIndex == 0)
+				printf(\"\\t\\tACCEPTED !\\n\");*/
+
 			// Add accumulated contribution of previous reference sample
 			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = currentL;
+
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[current][IDX_SCREEN_X];
 			sy = sample->u[current][IDX_SCREEN_Y];
@@ -1866,6 +1879,9 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 			sample->currentRadiance = proposedL;
 		} else {
+			/*if (sample->pixelIndex == 0)
+				printf(\"\\t\\tREJECTED !\\n\");*/
+
 			// Add contribution of new sample before rejecting it
 			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = proposedL;
@@ -1877,6 +1893,10 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 			++consecutiveRejects;
 		}
+
+		/*if (sample->pixelIndex == 0)
+			printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
+					contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
 		if (norm > 0.f) {
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
