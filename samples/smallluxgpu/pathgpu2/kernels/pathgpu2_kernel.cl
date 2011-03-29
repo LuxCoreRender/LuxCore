@@ -224,9 +224,8 @@ typedef struct {
 	float totalI;
 	uint sampleCount;
 
-	uint current, proposed;
-	uint smallMutationCount;
-	uint consecutiveRejects;
+	// Using ushort here totally freeze the ATI driver
+	uint current, proposed, smallMutationCount, consecutiveRejects;
 
 	float weight;
 	Spectrum currentRadiance;
@@ -1655,7 +1654,7 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const
 	sample->totalI = 0.f;
 	sample->sampleCount = 0.f;
 
-	sample->current = 0xffffffff;
+	sample->current = 0xffffffffu;
 	sample->proposed = 1;
 
 	sample->smallMutationCount = 0;
@@ -1731,7 +1730,7 @@ __kernel void Sampler(
 		const uint current = sample->current;
 
 		// Check if it is the very first sample
-		if (current != 0xffffffff) {
+		if (current != 0xffffffffu) {
 			const uint proposed = sample->proposed;
 
 			__global float *proposedU = &sample->u[proposed][0];
@@ -1743,7 +1742,7 @@ __kernel void Sampler(
 				sample->totalI = 0.f;
 				sample->sampleCount = 0.f;
 
-				sample->current = 0xffffffff;
+				sample->current = 0xffffffffu;
 				sample->proposed = 1;
 
 				sample->smallMutationCount = 0;
@@ -1791,7 +1790,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 	Spectrum radiance = sample->radiance;
 
-	if (current == 0xffffffff) {
+	if (current == 0xffffffffu) {
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
