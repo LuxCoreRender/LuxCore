@@ -818,7 +818,7 @@ class SLGBP:
                     elif cmpupd(k, cfg, SLGBP.cfg, not wasreset, False):
                         wasreset = True
             if act & SLGBP.LIVESCN > 0:
-                with SLGBP.lock: 
+                with SLGBP.lock:
                     scn = SLGBP.getscn(scene)
                 for k in scn:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
@@ -1203,11 +1203,11 @@ def slg_add_properties():
 
     SLGSettings.filter_B = FloatProperty(name="Filter B",
         description="Filter B",
-        default=0.3333, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
+        default=0.333333, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
 
     SLGSettings.filter_C = FloatProperty(name="Filter C",
         description="Filter C",
-        default=0.3333, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
+        default=0.333333, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
 
     SLGSettings.sppmlookuptype = EnumProperty(name="SPPM Lookup Type",
         description="SPPM Lookup Type (Hybrid generally best)",
@@ -1578,7 +1578,14 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.opencl_gpu",
         "scene.slg.gpu_workgroup_size",
         "scene.slg.platform",
-        "scene.slg.devices"
+        "scene.slg.devices",
+        "scene.slg.sampler_type",
+        "scene.slg.filter_type",
+        "scene.slg.filter_width_x",
+        "scene.slg.filter_width_y",
+        "scene.slg.filter_alpha",
+        "scene.slg.filter_B",
+        "scene.slg.filter_C"
     ]
     preset_subdir = "slg"
 
