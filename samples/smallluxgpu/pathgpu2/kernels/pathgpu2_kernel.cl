@@ -1162,7 +1162,7 @@ size_t PixelIndex2GID(const int index) {
 	return Mod(index, PARAM_TASK_COUNT);
 }
 
-/*uint NextPixelIndex(const size_t gid, const uint index) {
+uint NextPixelIndex(const size_t gid, const uint index) {
 	// Pre-requisite: PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
 #if (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT < PARAM_TASK_COUNT)
 Error: Image too small !!!
@@ -1174,7 +1174,7 @@ Error: Image too small !!!
 		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : newIndex;
 }
 
-uint PixelCountPerTask(const size_t gid) {
+/*uint PixelCountPerTask(const size_t gid) {
 	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;
 }
 
@@ -1191,7 +1191,7 @@ uint PixelIndexFloat(const size_t gid, const float u) {
 
 uint NextPixelIndex(const size_t gid, const uint index) {
 	return (index + 1) %  (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-}
+}*/
 
 void PixelIndex2XY(const uint index, uint *x, uint *y) {
 	*y = index / PARAM_IMAGE_WIDTH;
@@ -1200,7 +1200,7 @@ void PixelIndex2XY(const uint index, uint *x, uint *y) {
 
 uint XY2PixelIndex(const uint x, const uint y) {
 	return x + y * PARAM_IMAGE_WIDTH;
-}*/
+}
 
 //------------------------------------------------------------------------------
 // GenerateRay
