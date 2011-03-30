@@ -81,12 +81,18 @@
 
 // (optional)
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
+// (Metropolis)
+//  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
+//  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
+//  PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY
 
 // TODO: to fix
 #define PARAM_STARTLINE 0
 
+//#define PARAM_SAMPLER_TYPE 2
 #define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .4f
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
+//#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -1151,21 +1157,12 @@ uint PixelIndexFloat(const size_t gid, const float u) {
 	return PixelIndexInt(gid, i);
 }
 
-void PixelIndex2XY(const uint index, uint *x, uint *y) {
-	*y = index / PARAM_IMAGE_WIDTH;
-	*x = index - (*y) * PARAM_IMAGE_WIDTH;
-}
-
-uint XY2PixelIndex(const uint x, const uint y) {
-	return x + y * PARAM_IMAGE_WIDTH;
-}
-
 // This accepts negative indices too
 size_t PixelIndex2GID(const int index) {
 	return Mod(index, PARAM_TASK_COUNT);
 }
 
-uint NextPixelIndex(const size_t gid, const uint index) {
+/*uint NextPixelIndex(const size_t gid, const uint index) {
 	// Pre-requisite: PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
 #if (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT < PARAM_TASK_COUNT)
 Error: Image too small !!!
@@ -1176,6 +1173,34 @@ Error: Image too small !!!
 	return (newIndex >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
 		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : newIndex;
 }
+
+uint PixelCountPerTask(const size_t gid) {
+	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;
+}
+
+uint PixelIndexInt(const size_t gid, const uint i) {
+	return i % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+}
+
+uint PixelIndexFloat(const size_t gid, const float u) {
+	const uint pixelCountPerTask = PixelCountPerTask(gid);
+	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
+
+	return PixelIndexInt(gid, i);
+}
+
+uint NextPixelIndex(const size_t gid, const uint index) {
+	return (index + 1) %  (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+}
+
+void PixelIndex2XY(const uint index, uint *x, uint *y) {
+	*y = index / PARAM_IMAGE_WIDTH;
+	*x = index - (*y) * PARAM_IMAGE_WIDTH;
+}
+
+uint XY2PixelIndex(const uint x, const uint y) {
+	return x + y * PARAM_IMAGE_WIDTH;
+}*/
 
 //------------------------------------------------------------------------------
 // GenerateRay
@@ -1795,7 +1820,7 @@ __kernel void Sampler(
 	task->seed.s3 = seed.s3;
 }
 
-void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global Sample *sample) {
+void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global Sample *sample, const int sampleIndex) {
 	uint current = sample->current;
 	uint proposed = sample->proposed;
 
@@ -1851,7 +1876,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 		const float rndVal = RndFloatValue(seed);
 
-		/*if (sample->pixelIndex == 0)
+		/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
 			printf(\"[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\\n\",
 					smallMutationCount,
 					currentL.r, currentL.g, currentL.b, weight,
@@ -1865,7 +1890,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 #endif
 		uint pixelIndex;
 		if ((accProb == 1.f) || (rndVal < accProb)) {
-			/*if (sample->pixelIndex == 0)
+			/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
 				printf(\"\\t\\tACCEPTED !\\n\");*/
 
 			// Add accumulated contribution of previous reference sample
@@ -1878,6 +1903,12 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			sy = sample->u[current][IDX_SCREEN_Y];
 #endif
 
+#if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
+			// Debug code: to check sample distribution
+			contrib.r = contrib.g = contrib.b = (consecutiveRejects + 1.f)  * .01f;
+			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
+#endif
+
 			current ^= 1;
 			proposed ^= 1;
 			consecutiveRejects = 0;
@@ -1886,7 +1917,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 			sample->currentRadiance = proposedL;
 		} else {
-			/*if (sample->pixelIndex == 0)
+			/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
 				printf(\"\\t\\tREJECTED !\\n\");*/
 
 			// Add contribution of new sample before rejecting it
@@ -1900,19 +1931,27 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 #endif
 
 			++consecutiveRejects;
+
+#if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
+			// Debug code: to check sample distribution
+			contrib.r = contrib.g = contrib.b = 1.f * .01f;
+			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
+#endif
 		}
 
-		/*if (sample->pixelIndex == 0)
-			printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
-					contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
-
+#if !defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
 		if (norm > 0.f) {
+			/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
+				printf(\"\\t\\tPixelIndex: %d Contrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
+						pixelIndex, contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
+
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 			SplatSample(frameBuffer, pixelIndex, &contrib, norm);
 #else
 			SplatSample(frameBuffer, pixelIndex, sx, sy, &contrib, norm);
 #endif
 		}
+#endif
 
 		sample->weight = weight;
 		sample->consecutiveRejects = consecutiveRejects;
@@ -2710,7 +2749,7 @@ __kernel void CollectResults(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-		Sampler_MTL_SplatSample(frameBuffer, &seed, sample);
+		Sampler_MTL_SplatSample(frameBuffer, &seed, sample, indexRenderFirst);
 #endif
 
 #else
@@ -2723,7 +2762,7 @@ __kernel void CollectResults(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-		Sampler_MTL_SplatSample(frameBuffer, &seed, sample);
+		Sampler_MTL_SplatSample(frameBuffer, &seed, sample, indexRenderFirst);
 #endif
 
 #endif
