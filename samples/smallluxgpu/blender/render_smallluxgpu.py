@@ -25,7 +25,7 @@
 bl_info = {
     "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
-    "version": (0, 7, 2),
+    "version": (0, 8, 1),
     "blender": (2, 5, 6),
     "location": "Render > Engine > SmallLuxGPU",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
@@ -219,6 +219,13 @@ class SLGBP:
         cfg['sppm.photon.startradiusscale'] = ff(scene.slg.sppm_photon_radiusscale)
         cfg['sppm.photon.maxdepth'] = format(scene.slg.sppm_photon_maxdepth)
         cfg['sppm.stochastic.count'] = format(scene.slg.sppm_photon_per_pass)
+        cfg['path.sampler.type'] = scene.slg.sampler_type
+        cfg['path.filter.type'] = scene.slg.filter_type
+        cfg['path.filter.width.x'] = format(scene.slg.filter_width_x)
+        cfg['path.filter.width.y'] = format(scene.slg.filter_width_y)
+        cfg['path.filter.alpha'] = format(scene.slg.filter_alpha)
+        cfg['path.filter.B'] = format(scene.slg.filter_B)
+        cfg['path.filter.C'] = format(scene.slg.filter_C)
         cfg['path.maxdepth'] = format(scene.slg.tracedepth)
         cfg['path.russianroulette.depth'] = format(scene.slg.rrdepth)
         cfg['path.russianroulette.strategy'] = scene.slg.rrstrategy
@@ -811,7 +818,7 @@ class SLGBP:
                     elif cmpupd(k, cfg, SLGBP.cfg, not wasreset, False):
                         wasreset = True
             if act & SLGBP.LIVESCN > 0:
-                with SLGBP.lock: 
+                with SLGBP.lock:
                     scn = SLGBP.getscn(scene)
                 for k in scn:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
@@ -1162,10 +1169,47 @@ def slg_add_properties():
         items=(("0", "Path", "Path tracing"),
                ("1", "SPPM", "Stochastic Progressive Photon Mapping"),
                ("2", "Direct", "Direct lighting only"),
-               ("3", "PathGPU", "Path tracing using GPU only")),
+               ("3", "PathGPU", "Path tracing using GPU only"),
+               ("4", "PathGPU2", "New Path tracing using GPU only")),
         default="0")
 
-    SLGSettings.sppmlookuptype = EnumProperty(name="",
+    SLGSettings.sampler_type = EnumProperty(name="Sampler Type",
+        description="Sampler Type",
+        items=(("INLINED_RANDOM", "Inlined Random", "Inlined Random"),
+               ("RANDOM", "Random", "Random"),
+               ("METROPOLIS", "Metropolis", "Metropolis")),
+        default="METROPOLIS")
+
+    SLGSettings.filter_type = EnumProperty(name="Filter Type",
+        description="Filter Type",
+        items=(("NONE", "None", "None"),
+               ("BOX", "Box", "Box"),
+               ("GAUSSIAN", "Gaussian", "Gaussian"),
+               ("MITCHELL", "Mitchell", "Mitchell"),
+               ("MITCHELL_SS", "Mitchell_SS", "Mitchell_SS")),
+        default="NONE")
+
+    SLGSettings.filter_width_x = FloatProperty(name="Filter Width X",
+        description="Filter width x",
+        default=1.5, min=0.0, max=1.5, soft_min=0.0, soft_max=1.5, precision=3)
+
+    SLGSettings.filter_width_y = FloatProperty(name="Filter Width Y",
+        description="Filter width y",
+        default=1.5, min=0.0, max=1.5, soft_min=0.0, soft_max=1.5, precision=3)
+
+    SLGSettings.filter_alpha = FloatProperty(name="Filter Alpha",
+        description="Filter alpha",
+        default=2.0, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
+
+    SLGSettings.filter_B = FloatProperty(name="Filter B",
+        description="Filter B",
+        default=0.333333, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
+
+    SLGSettings.filter_C = FloatProperty(name="Filter C",
+        description="Filter C",
+        default=0.333333, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
+
+    SLGSettings.sppmlookuptype = EnumProperty(name="SPPM Lookup Type",
         description="SPPM Lookup Type (Hybrid generally best)",
         items=(("-1", "SPPM Lookup Type", "SPPM Lookup Type"),
                ("0", "Hash Grid", "Hash Grid"),
@@ -1534,7 +1578,14 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.opencl_gpu",
         "scene.slg.gpu_workgroup_size",
         "scene.slg.platform",
-        "scene.slg.devices"
+        "scene.slg.devices",
+        "scene.slg.sampler_type",
+        "scene.slg.filter_type",
+        "scene.slg.filter_width_x",
+        "scene.slg.filter_width_y",
+        "scene.slg.filter_alpha",
+        "scene.slg.filter_B",
+        "scene.slg.filter_C"
     ]
     preset_subdir = "slg"
 
@@ -1611,6 +1662,28 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col.prop(slg, "imageformat")
         col = split.column()
         col.prop(slg, "film_gamma")
+        if slg.rendering_type == '4':
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "sampler_type")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "filter_type")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "filter_width_x")
+            col = split.column()
+            col.prop(slg, "filter_width_y")
+            if slg.filter_type == 'GAUSSIAN':
+                split = layout.split()
+                col = split.column()
+                col.prop(slg, "filter_alpha")
+            elif slg.filter_type == 'MITCHELL' or slg.filter_type == 'MITCHELL_SS':
+                split = layout.split()
+                col = split.column()
+                col.prop(slg, "filter_B")
+                col = split.column()
+                col.prop(slg, "filter_C")
         if slg.rendering_type == '1':
             split = layout.split()
             col = split.column()
