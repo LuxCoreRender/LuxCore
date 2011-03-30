@@ -20,7 +20,7 @@
  ***************************************************************************/
 
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+//#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
@@ -447,7 +447,7 @@ float RndFloatValue(Seed *s) {
 
 //------------------------------------------------------------------------------
 
-void AtomicAdd(__global float *val, const float delta) {
+/*void AtomicAdd(__global float *val, const float delta) {
 	union {
 		float f;
 		unsigned int i;
@@ -461,7 +461,7 @@ void AtomicAdd(__global float *val, const float delta) {
 		oldVal.f = *val;
 		newVal.f = oldVal.f + delta;
 	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
-}
+}*/
 
 float Spectrum_Y(const Spectrum *s) {
 	return 0.212671f * s->r + 0.715160f * s->g + 0.072169f * s->b;
@@ -1503,7 +1503,7 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 			isnan(weight) || isinf(weight))
 		printf(\"(NaN/Inf. error: (%f, %f, %f) [%f]\\n\", rad->r, rad->g, rad->b, weight);*/
 
-	/*float4 s;
+	float4 s;
 	s.x = rad->r;
 	s.y = rad->g;
 	s.z = rad->b;
@@ -1511,9 +1511,9 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 
 	float4 p = *((__global float4 *)pixel);
 	p += s * (float4)weight;
-	*((__global float4 *)pixel) = p;*/
+	*((__global float4 *)pixel) = p;
 
-	float4 s;
+	/*float4 s;
 	s.x = rad->r * weight;
 	s.y = rad->g * weight;
 	s.z = rad->b * weight;
@@ -1522,7 +1522,7 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 	AtomicAdd(&pixel->c.r, s.x);
 	AtomicAdd(&pixel->c.g, s.y);
 	AtomicAdd(&pixel->c.b, s.z);
-	AtomicAdd(&pixel->count, s.w);
+	AtomicAdd(&pixel->count, s.w);*/
 }
 
 #if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
