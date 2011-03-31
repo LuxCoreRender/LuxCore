@@ -904,7 +904,7 @@ void PathGPU2RenderThread::InitRender() {
 			break;
 		case PathGPU2::METROPOLIS:
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << renderEngine->mtlLargeStepRate;
+					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << renderEngine->mtlLargeStepRate << "f";
 			break;
 		default:
 			assert (false);
@@ -938,7 +938,14 @@ void PathGPU2RenderThread::InitRender() {
 		kernelsParameters = newKernelParameters;
 
 		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_PathGPU2.c_str(), KernelSource_PathGPU2.length()));
+
+		stringstream ssKernel;
+		ssKernel << KernelSource_PathGPU2_datatypes << KernelSource_PathGPU2_core <<
+				 KernelSource_PathGPU2_filters << KernelSource_PathGPU2_scene <<
+				KernelSource_PathGPU2_samplers << KernelSource_PathGPU2_kernels;
+		string kernelSource = ssKernel.str();
+
+		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
 		cl::Program program = cl::Program(oclContext, source);
 
 		try {
