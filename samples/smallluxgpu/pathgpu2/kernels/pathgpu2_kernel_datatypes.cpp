@@ -91,7 +91,6 @@ std::string luxrays::KernelSource_PathGPU2_datatypes =
 "\n"
 "//#define PARAM_USE_PIXEL_ATOMICS 1\n"
 "//#define PARAM_SAMPLER_TYPE 2\n"
-"#define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512\n"
 "//#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1\n"
 "\n"
 "#pragma OPENCL EXTENSION cl_amd_printf : enable\n"

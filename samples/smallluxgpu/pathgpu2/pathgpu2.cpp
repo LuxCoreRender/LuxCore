@@ -741,7 +741,7 @@ void PathGPU2RenderThread::InitRender() {
 		// IDX_DOF_X, IDX_DOF_Y
 		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
 		// IDX_PIXEL_INDEX
-		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? sizeof(float) : 0);
+		((renderEngine->sampler->type == PathGPU2::METROPOLIS) ? sizeof(float) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_TEX_ALPHA,
 		((texMapAlphaBuff) ? sizeof(float) : 0) +
@@ -751,16 +751,16 @@ void PathGPU2RenderThread::InitRender() {
 		((areaLightCount > 0) ? (sizeof(float) * 4) : 0) +
 		// IDX_RR
 		sizeof(float);
-	const size_t uDataSize = (renderEngine->samplerType == PathGPU2::INLINED_RANDOM) ?
+	const size_t uDataSize = (renderEngine->sampler->type == PathGPU2::INLINED_RANDOM) ?
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		(sizeof(float) * 2) :
-		((renderEngine->samplerType == PathGPU2::METROPOLIS) ?
+		((renderEngine->sampler->type == PathGPU2::METROPOLIS) ?
 			(sizeof(float) * 2 + sizeof(unsigned int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
 			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
 
 	const size_t sampleSize =
 		// uint pixelIndex;
-		((renderEngine->samplerType == PathGPU2::METROPOLIS) ? 0 : sizeof(unsigned int)) +
+		((renderEngine->sampler->type == PathGPU2::METROPOLIS) ? 0 : sizeof(unsigned int)) +
 		uDataSize +
 		// Spectrum radiance;
 		sizeof(Spectrum);
@@ -895,7 +895,8 @@ void PathGPU2RenderThread::InitRender() {
 			assert (false);
 	}
 
-	switch (renderEngine->samplerType) {
+	const PathGPU2::Sampler *sampler = renderEngine->sampler;
+	switch (sampler->type) {
 		case PathGPU2::INLINED_RANDOM:
 			ss << " -D PARAM_SAMPLER_TYPE=0";
 			break;
@@ -904,7 +905,8 @@ void PathGPU2RenderThread::InitRender() {
 			break;
 		case PathGPU2::METROPOLIS:
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << renderEngine->mtlLargeStepRate << "f";
+					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << ((PathGPU2::MetropolisSampler *)sampler)->largeStepRate << "f" <<
+					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << ((PathGPU2::MetropolisSampler *)sampler)->maxConsecutiveReject;
 			break;
 		default:
 			assert (false);
@@ -938,7 +940,6 @@ void PathGPU2RenderThread::InitRender() {
 		kernelsParameters = newKernelParameters;
 
 		// Compile sources
-
 		stringstream ssKernel;
 		ssKernel << KernelSource_PathGPU2_datatypes << KernelSource_PathGPU2_core <<
 				 KernelSource_PathGPU2_filters << KernelSource_PathGPU2_scene <<
@@ -1335,25 +1336,25 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		RenderEngine(scn, flm, filmMutex) {
 	// Rendering parameters
 
-	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
-	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
+	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
+	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
 
 	//--------------------------------------------------------------------------
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	 const string samplerTypeName = cfg.GetString("path.sampler.type", "METROPOLIS");
+	 const string samplerTypeName = cfg.GetString("path.sampler->type", "METROPOLIS");
 	 if (samplerTypeName.compare("INLINED_RANDOM") == 0)
-		 samplerType = PathGPU2::INLINED_RANDOM;
+		 sampler = new PathGPU2::InlinedRandomSampler();
 	 else if (samplerTypeName.compare("RANDOM") == 0)
-		 samplerType = PathGPU2::RANDOM;
+		 sampler = new PathGPU2::RandomSampler();
 	 else if (samplerTypeName.compare("METROPOLIS") == 0) {
-		 samplerType = PathGPU2::METROPOLIS;
-
-		 mtlLargeStepRate = cfg.GetFloat("path.sampler.largesteprate", 0.25f);
+		 const float rate = cfg.GetFloat("path.sampler.largesteprate", 0.25f);
+		 const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
+		 sampler = new PathGPU2::MetropolisSampler(rate, reject);
 	 } else
-		throw std::runtime_error("Unknown path.sampler.type");
+		throw std::runtime_error("Unknown path.sampler->type");
 
 	//--------------------------------------------------------------------------
 	// Filter
@@ -1434,6 +1435,7 @@ PathGPU2RenderEngine::~PathGPU2RenderEngine() {
 
 	film->FreeSampleBuffer(sampleBuffer);
 
+	delete sampler;
 	delete filter;
 }
 

@@ -69,14 +69,6 @@ typedef struct {
 } GPUTaskStats;
 
 //------------------------------------------------------------------------------
-// Samplers
-//------------------------------------------------------------------------------
-
-typedef enum {
-	INLINED_RANDOM, RANDOM, METROPOLIS
-} SamplerType;
-
-//------------------------------------------------------------------------------
 // Filters
 //------------------------------------------------------------------------------
 
@@ -126,6 +118,49 @@ public:
 		Filter(MITCHELL_SS, wx, wy), B(b), C(c) { }
 
 	float B, C;
+};
+
+//------------------------------------------------------------------------------
+// Samplers
+//------------------------------------------------------------------------------
+
+typedef enum {
+	INLINED_RANDOM, RANDOM, METROPOLIS
+} SamplerType;
+
+class Sampler {
+public:
+	Sampler(const SamplerType t) :
+		type(t) { }
+
+	SamplerType type;
+};
+
+class InlinedRandomSampler : public Sampler {
+public:
+	InlinedRandomSampler() :
+		Sampler(INLINED_RANDOM) { }
+
+	SamplerType type;
+};
+
+class RandomSampler : public Sampler {
+public:
+	RandomSampler() :
+		Sampler(RANDOM) { }
+
+	SamplerType type;
+};
+
+
+class MetropolisSampler : public Sampler {
+public:
+	MetropolisSampler(const float rate, const float reject) :
+		Sampler(METROPOLIS), largeStepRate(rate), maxConsecutiveReject(reject) { }
+
+	SamplerType type;
+	float largeStepRate;
+	unsigned int maxConsecutiveReject;
 };
 
 //------------------------------------------------------------------------------
@@ -331,9 +366,7 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
-	PathGPU2::SamplerType samplerType;
-	float mtlLargeStepRate;
-
+	PathGPU2::Sampler *sampler;
 	PathGPU2::Filter *filter;
 
 private:
