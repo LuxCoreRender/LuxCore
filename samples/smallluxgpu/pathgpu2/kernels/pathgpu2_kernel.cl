@@ -19,9 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
-//#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
 //  PARAM_IMAGE_WIDTH
@@ -41,7 +38,7 @@
 //  PARAM_CAMERA_DYNAMIC
 //  PARAM_HAS_TEXTUREMAPS
 //  PARAM_HAS_ALPHA_TEXTUREMAPS
-//  PARAM_SAMPLE_COUNT
+//  PARAM_USE_PIXEL_ATOMICS
 
 // To enable single material suopport (work around for ATI compiler problems)
 //  PARAM_ENABLE_MAT_MATTE
@@ -90,10 +87,16 @@
 // TODO: to fix
 #define PARAM_STARTLINE 0
 
+//#define PARAM_USE_PIXEL_ATOMICS 1
 //#define PARAM_SAMPLER_TYPE 2
 #define PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE .4f
 #define PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT 512
 //#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1
+
+#pragma OPENCL EXTENSION cl_amd_printf : enable
+#if defined(PARAM_USE_PIXEL_ATOMICS)
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#endif
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -261,19 +264,10 @@ typedef struct {
 #endif
 } Sample;
 
-typedef struct {
-	// A circular buffer of samples to render
-	Sample sample[PARAM_SAMPLE_COUNT];
-
-	// Using ushort here totally freeze the ATI driver
-	uint indexRenderFirst, indexRenderCurrent;
-} Samples;
-
 #define PATH_STATE_GENERATE_EYE_RAY 0
 #define PATH_STATE_DONE 1
-#define PATH_STATE_DONE_AND_OUT_OF_SAMPLE 2
-#define PATH_STATE_NEXT_VERTEX 3
-#define PATH_STATE_SAMPLE_LIGHT 4
+#define PATH_STATE_NEXT_VERTEX 2
+#define PATH_STATE_SAMPLE_LIGHT 3
 
 typedef struct {
 	uint state;
@@ -296,7 +290,7 @@ typedef struct {
 	Seed seed;
 
 	// The set of Samples assigned to this task
-	Samples samples;
+	Sample sample;
 
 	// The state used to keep track of the rendered path
 	PathState pathState;
@@ -447,7 +441,8 @@ float RndFloatValue(Seed *s) {
 
 //------------------------------------------------------------------------------
 
-/*void AtomicAdd(__global float *val, const float delta) {
+#if defined(PARAM_USE_PIXEL_ATOMICS)
+void AtomicAdd(__global float *val, const float delta) {
 	union {
 		float f;
 		unsigned int i;
@@ -461,7 +456,8 @@ float RndFloatValue(Seed *s) {
 		oldVal.f = *val;
 		newVal.f = oldVal.f + delta;
 	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
-}*/
+}
+#endif
 
 float Spectrum_Y(const Spectrum *s) {
 	return 0.212671f * s->r + 0.715160f * s->g + 0.072169f * s->b;
@@ -1153,62 +1149,26 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 //------------------------------------------------------------------------------
 // Pixel related functions
 //------------------------------------------------------------------------------
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
 
-uint PixelCountPerTask(const size_t gid) {
-	const uint lastGID = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT - PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT * PARAM_TASK_COUNT;
-
-	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT / PARAM_TASK_COUNT + ((gid < lastGID) ? 1 : 0);
+uint PixelIndexInt(const size_t gid) {
+	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 }
 
-uint PixelIndexInt(const size_t gid, const uint i) {
-	const uint index = gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH + i * PARAM_TASK_COUNT;
-
-	return (index >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
-		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : index;
+uint NextPixelIndex(const uint i) {
+	return (i + PARAM_TASK_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 }
 
-uint PixelIndexFloat(const size_t gid, const float u) {
-	const uint pixelCountPerTask = PixelCountPerTask(gid);
+#elif (PARAM_SAMPLER_TYPE == 2)
+
+uint PixelIndexFloat(const float u) {
+	const uint pixelCountPerTask = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;
 	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
 
-	return PixelIndexInt(gid, i);
+	return i;
 }
 
-// This accepts negative indices too
-size_t PixelIndex2GID(const int index) {
-	return Mod(index, PARAM_TASK_COUNT);
-}
-
-uint NextPixelIndex(const size_t gid, const uint index) {
-	// Pre-requisite: PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
-#if (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT < PARAM_TASK_COUNT)
-Error: Image too small !!!
 #endif
-
-	uint newIndex = index + PARAM_TASK_COUNT;
-
-	return (newIndex >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) ?
-		(gid + PARAM_STARTLINE * PARAM_IMAGE_WIDTH) : newIndex;
-}
-
-/*uint PixelCountPerTask(const size_t gid) {
-	return PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;
-}
-
-uint PixelIndexInt(const size_t gid, const uint i) {
-	return i % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-}
-
-uint PixelIndexFloat(const size_t gid, const float u) {
-	const uint pixelCountPerTask = PixelCountPerTask(gid);
-	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
-
-	return PixelIndexInt(gid, i);
-}
-
-uint NextPixelIndex(const size_t gid, const uint index) {
-	return (index + 1) %  (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-}*/
 
 void PixelIndex2XY(const uint index, uint *x, uint *y) {
 	*y = index / PARAM_IMAGE_WIDTH;
@@ -1238,7 +1198,7 @@ void GenerateRay(
 	const uint pixelIndex = sample->pixelIndex;
 #elif (PARAM_SAMPLER_TYPE == 2)
 	__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
-	const uint pixelIndex = PixelIndexFloat(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
+	const uint pixelIndex = PixelIndexFloat(sampleData[IDX_PIXEL_INDEX]);
 #endif
 
 	const float scrSampleX = sampleData[IDX_SCREEN_X];
@@ -1439,63 +1399,6 @@ Error: unknown image filter !!!
 
 #endif
 
-#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
-void SplatTaskSamples(
-	__global GPUTask *tasks,
-	__global Pixel *frameBuffer,
-	const size_t gid,
-	const int offsetX, const int offsetY) {
-	// Look for the other GPUTask
-	const int indexOther = (int)gid + offsetX + PARAM_IMAGE_WIDTH * offsetY;
-	const size_t gidOther = PixelIndex2GID(indexOther);
-	if ((gidOther == gid) && !((offsetX == 0) && (offsetY == 0)))
-		return;
-
-	__global GPUTask *task = &tasks[gid];
-
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
-
-		// Look for the index of one of my pixel affected by this sample
-
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
-		const uint pixelIndex = sample->pixelIndex;
-#elif (PARAM_SAMPLER_TYPE == 2)
-		__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
-		const uint pixelIndex = PixelIndexFloat(get_global_id(0), sampleData[IDX_PIXEL_INDEX]);
-#endif
-		uint pixelX, pixelY;
-		PixelIndex2XY(pixelIndex, &pixelX, &pixelY);
-
-		// Check if it is a valid pixel
-		int xx = as_int(pixelX) - offsetX;
-		int yy = as_int(pixelY) - offsetY;
-		if ((xx >= 0) && (xx < PARAM_IMAGE_WIDTH) &&
-				(yy >= 0) && (yy < PARAM_IMAGE_HEIGHT)) {
-			__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xx, yy)];
-
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
-			__global float *sampleData = &sample->u[IDX_SCREEN_X];
-#endif
-			const float sx = sampleData[IDX_SCREEN_X] - .5f + offsetX;
-			const float sy = sampleData[IDX_SCREEN_Y] - .5f + offsetY;
-
-			const float weight = ImageFilter_Evaluate(sx, sy);
-
-			pixel->c.r += sample->radiance.r * weight;
-			pixel->c.g += sample->radiance.g * weight;
-			pixel->c.b += sample->radiance.b * weight;
-			pixel->count +=  weight;
-		}
-
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-	}
-}
-#endif
-
 void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight) {
 	/*if (isnan(rad->r) || isinf(rad->r) ||
 			isnan(rad->g) || isinf(rad->g) ||
@@ -1508,21 +1411,19 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 	s.y = rad->g;
 	s.z = rad->b;
 	s.w = 1.f;
+	s *= weight;
 
-	float4 p = *((__global float4 *)pixel);
-	p += s * (float4)weight;
-	*((__global float4 *)pixel) = p;
-
-	/*float4 s;
-	s.x = rad->r * weight;
-	s.y = rad->g * weight;
-	s.z = rad->b * weight;
-	s.w = weight;
-
+#if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&pixel->c.r, s.x);
 	AtomicAdd(&pixel->c.g, s.y);
 	AtomicAdd(&pixel->c.b, s.z);
-	AtomicAdd(&pixel->count, s.w);*/
+	AtomicAdd(&pixel->count, s.w);
+
+#else
+	float4 p = *((__global float4 *)pixel);
+	p += s;
+	*((__global float4 *)pixel) = p;
+#endif
 }
 
 #if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
@@ -1530,15 +1431,7 @@ void Pixel_AddFilteredRadiance(__global Pixel *pixel, Spectrum *rad,
 	const float distX, const float distY, const float weight) {
 	const float filterWeight = ImageFilter_Evaluate(distX, distY);
 
-	float4 s;
-	s.x = rad->r;
-	s.y = rad->g;
-	s.z = rad->b;
-	s.w = 1.f;
-
-	float4 p = *((__global float4 *)pixel);
-	p += s * (float4)(weight * filterWeight);
-	*((__global float4 *)pixel) = p;
+	Pixel_AddRadiance(pixel, rad, weight * filterWeight)
 }
 #endif
 
@@ -1597,10 +1490,8 @@ Error: unknown image filter !!!
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
-	__global Sample *sample = &samples->sample[i];
-
-	sample->pixelIndex = PixelIndexInt(gid, i);
+void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+	sample->pixelIndex = PixelIndexInt(gid);
 
 	sample->u[IDX_SCREEN_X] = RndFloatValue(seed);
 	sample->u[IDX_SCREEN_Y] = RndFloatValue(seed);
@@ -1617,43 +1508,30 @@ __kernel void Sampler(
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 
-	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
+	if (task->pathState.state == PATH_STATE_DONE) {
+		__global Sample *sample = &task->sample;
 
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	__global GPUTaskStats *taskStat = &taskStats[gid];
-	uint sampleCount = taskStat->sampleCount;
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+		// Read the seed
+		Seed seed;
+		seed.s1 = task->seed.s1;
+		seed.s2 = task->seed.s2;
+		seed.s3 = task->seed.s3;
 
 		// Move to the next assigned pixel
-		sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
+		sample->pixelIndex = NextPixelIndex(sample->pixelIndex);
 
 		sample->u[IDX_SCREEN_X] = RndFloatValue(&seed);
 		sample->u[IDX_SCREEN_Y] = RndFloatValue(&seed);
 
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-		++sampleCount;
-	}
-
-	task->samples.indexRenderFirst = indexRenderFirst;
-	taskStat->sampleCount = sampleCount;
-
-	// I have generated new samples, unlock the rendering if required
-	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
-		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
 		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
-	}
 
-	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
+		taskStats[gid].sampleCount += 1;
+
+		// Save the seed
+		task->seed.s1 = seed.s1;
+		task->seed.s2 = seed.s2;
+		task->seed.s3 = seed.s3;
+	}
 }
 
 #endif
@@ -1664,10 +1542,8 @@ __kernel void Sampler(
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
-	__global Sample *sample = &samples->sample[i];
-
-	sample->pixelIndex = PixelIndexInt(gid, i);
+void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+	sample->pixelIndex = PixelIndexInt(gid);
 
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		sample->u[i] = RndFloatValue(seed);
@@ -1684,43 +1560,30 @@ __kernel void Sampler(
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 
-	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
+	if (task->pathState.state == PATH_STATE_DONE) {
+		__global Sample *sample = &task->sample;
 
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	__global GPUTaskStats *taskStat = &taskStats[gid];
-	uint sampleCount = taskStat->sampleCount;
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+		// Read the seed
+		Seed seed;
+		seed.s1 = task->seed.s1;
+		seed.s2 = task->seed.s2;
+		seed.s3 = task->seed.s3;
 
 		// Move to the next assigned pixel
-		sample->pixelIndex = NextPixelIndex(gid, sample->pixelIndex);
+		sample->pixelIndex = NextPixelIndex(sample->pixelIndex);
 
 		for (int i = 0; i < TOTAL_U_SIZE; ++i)
 			sample->u[i] = RndFloatValue(&seed);
 
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-		++sampleCount;
-	}
-
-	task->samples.indexRenderFirst = indexRenderFirst;
-	taskStat->sampleCount = sampleCount;
-
-	// I have generated new samples, unlock the rendering if required
-	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
-		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
 		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
-	}
 
-	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
+		taskStats[gid].sampleCount += 1;
+
+		// Save the seed
+		task->seed.s1 = seed.s1;
+		task->seed.s2 = seed.s2;
+		task->seed.s3 = seed.s3;
+	}
 }
 
 #endif
@@ -1731,9 +1594,7 @@ __kernel void Sampler(
 
 #if (PARAM_SAMPLER_TYPE == 2)
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Samples *samples, const uint i) {
-	__global Sample *sample = &samples->sample[i];
-
+void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 	sample->totalI = 0.f;
 	sample->sampleCount = 0.f;
 
@@ -1796,59 +1657,42 @@ __kernel void Sampler(
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 
-	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
+	__global Sample *sample = &task->sample;
+	const uint current = sample->current;
 
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
+	// Check if it is a complete path and not the very first sample
+	if ((current != 0xffffffffu) && (task->pathState.state == PATH_STATE_DONE)) {
+		// Read the seed
+		Seed seed;
+		seed.s1 = task->seed.s1;
+		seed.s2 = task->seed.s2;
+		seed.s3 = task->seed.s3;
 
-	__global GPUTaskStats *taskStat = &taskStats[gid];
-	uint sampleCount = taskStat->sampleCount;
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+		const uint proposed = sample->proposed;
+		__global float *proposedU = &sample->u[proposed][0];
 
-		const uint current = sample->current;
+		if (RndFloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
+			LargeStep(&seed, proposedU);
+			sample->smallMutationCount = 0;
+		} else {
+			__global float *currentU = &sample->u[current][0];
 
-		// Check if it is the very first sample
-		if (current != 0xffffffffu) {
-			const uint proposed = sample->proposed;
-
-			__global float *proposedU = &sample->u[proposed][0];
-
-			if (RndFloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
-				LargeStep(&seed, proposedU);
-				sample->smallMutationCount = 0;
-			} else {
-				__global float *currentU = &sample->u[current][0];
-
-				SmallStep(&seed, currentU, proposedU);
-				sample->smallMutationCount += 1;
-			}
+			SmallStep(&seed, currentU, proposedU);
+			sample->smallMutationCount += 1;
 		}
 
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-		++sampleCount;
-	}
+		taskStats[gid].sampleCount += 1;
 
-	task->samples.indexRenderFirst = indexRenderFirst;
-	taskStat->sampleCount = sampleCount;
-
-	// I have generated new samples, unlock the rendering if required
-	if (task->pathState.state == PATH_STATE_DONE_AND_OUT_OF_SAMPLE) {
-		task->samples.indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
 		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
-	}
 
-	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
+		// Save the seed
+		task->seed.s1 = seed.s1;
+		task->seed.s2 = seed.s2;
+		task->seed.s3 = seed.s3;
+	}
 }
 
-void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global Sample *sample, const int sampleIndex) {
+void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global Sample *sample) {
 	uint current = sample->current;
 	uint proposed = sample->proposed;
 
@@ -1904,7 +1748,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 		const float rndVal = RndFloatValue(seed);
 
-		/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
+		/*if (get_global_id(0) == 0)
 			printf(\"[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\\n\",
 					smallMutationCount,
 					currentL.r, currentL.g, currentL.b, weight,
@@ -1918,14 +1762,14 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 #endif
 		uint pixelIndex;
 		if ((accProb == 1.f) || (rndVal < accProb)) {
-			/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
+			/*if (get_global_id(0) == 0)
 				printf(\"\\t\\tACCEPTED !\\n\");*/
 
 			// Add accumulated contribution of previous reference sample
 			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = currentL;
 
-			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[current][IDX_PIXEL_INDEX]);
+			pixelIndex = PixelIndexFloat(sample->u[current][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[current][IDX_SCREEN_X];
 			sy = sample->u[current][IDX_SCREEN_Y];
@@ -1945,14 +1789,14 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 			sample->currentRadiance = proposedL;
 		} else {
-			/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
+			/*if (get_global_id(0) == 0)
 				printf(\"\\t\\tREJECTED !\\n\");*/
 
 			// Add contribution of new sample before rejecting it
 			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = proposedL;
 
-			pixelIndex = PixelIndexFloat(get_global_id(0), sample->u[proposed][IDX_PIXEL_INDEX]);
+			pixelIndex = PixelIndexFloat(sample->u[proposed][IDX_PIXEL_INDEX]);
 #if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[proposed][IDX_SCREEN_X];
 			sy = sample->u[proposed][IDX_SCREEN_Y];
@@ -1969,7 +1813,7 @@ void Sampler_MTL_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 #if !defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
 		if (norm > 0.f) {
-			/*if ((get_global_id(0) == 0) && (sampleIndex == 0))
+			/*if (get_global_id(0) == 0)
 				printf(\"\\t\\tPixelIndex: %d Contrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						pixelIndex, contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
@@ -2013,12 +1857,8 @@ __kernel void Init(
 	Seed seed;
 	InitRandomGenerator(PARAM_SEED + gid, &seed);
 
-	// Initialize the samples
-	for(int i = 0; i < PARAM_SAMPLE_COUNT; ++i)
-		Sampler_Init(gid, &seed, &task->samples, i);
-
-	task->samples.indexRenderFirst = 0;
-	task->samples.indexRenderCurrent = 0;
+	// Initialize the sample
+	Sampler_Init(gid, &seed, &task->sample);
 
 	// Initialize the path state
 	task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
@@ -2108,8 +1948,6 @@ __kernel void GenerateRays(
 
 	__global GPUTask *task = &tasks[gid];
 	const uint pathState = task->pathState.state;
-	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
-		return;
 
 	//printf(\"pathState: %d\\n\", pathState);
 
@@ -2123,8 +1961,7 @@ __kernel void GenerateRays(
 			seed.s2 = task->seed.s2;
 			seed.s3 = task->seed.s3;
 
-			const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-			__global Sample *sample = &task->samples.sample[indexRenderCurrent];
+			__global Sample *sample = &task->sample;
 
 			GenerateRay(sample, ray
 #if (PARAM_SAMPLER_TYPE == 0)
@@ -2197,8 +2034,6 @@ __kernel void AdvancePaths(
 
 	__global GPUTask *task = &tasks[gid];
 	uint pathState = task->pathState.state;
-	if (pathState == PATH_STATE_DONE_AND_OUT_OF_SAMPLE)
-		return;
 
 #if (PARAM_SAMPLER_TYPE == 0)
 	// Read the seed
@@ -2208,8 +2043,7 @@ __kernel void AdvancePaths(
 	seed.s3 = task->seed.s3;
 #endif
 
-	uint indexRenderCurrent = task->samples.indexRenderCurrent;
-	__global Sample *sample = &task->samples.sample[indexRenderCurrent];
+	__global Sample *sample = &task->sample;
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
@@ -2721,26 +2555,14 @@ __kernel void AdvancePaths(
 #endif
 	}
 
+	task->pathState.state = pathState;
+
 #if (PARAM_SAMPLER_TYPE == 0)
 	// Save the seed
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
 #endif
-
-	if (pathState == PATH_STATE_DONE) {
-		const uint indexRenderFirst = task->samples.indexRenderFirst;
-		indexRenderCurrent = (indexRenderCurrent + 1) % PARAM_SAMPLE_COUNT;
-		if (indexRenderCurrent == indexRenderFirst) {
-			// We are out of samples to render, just set the path in
-			// PATH_STATE_DONE_AND_OUT_OF_SAMPLE and wait
-			task->pathState.state = PATH_STATE_DONE_AND_OUT_OF_SAMPLE;
-		} else {
-			task->samples.indexRenderCurrent = indexRenderCurrent;
-			task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
-		}
-	} else
-		task->pathState.state = pathState;
 }
 
 //------------------------------------------------------------------------------
@@ -2757,19 +2579,16 @@ __kernel void CollectResults(
 
 	__global GPUTask *task = &tasks[gid];
 
+	if (task->pathState.state == PATH_STATE_DONE) {
 #if (PARAM_SAMPLER_TYPE == 2)
-	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
+		// Read the seed
+		Seed seed;
+		seed.s1 = task->seed.s1;
+		seed.s2 = task->seed.s2;
+		seed.s3 = task->seed.s3;
 #endif
 
-	uint indexRenderFirst = task->samples.indexRenderFirst;
-	const uint indexRenderCurrent = task->samples.indexRenderCurrent;
-
-	while (indexRenderFirst != indexRenderCurrent) {
-		__global Sample *sample = &task->samples.sample[indexRenderFirst];
+		__global Sample *sample = &task->sample;
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
@@ -2777,7 +2596,7 @@ __kernel void CollectResults(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-		Sampler_MTL_SplatSample(frameBuffer, &seed, sample, indexRenderFirst);
+		Sampler_MLT_SplatSample(frameBuffer, &seed, sample);
 #endif
 
 #else
@@ -2790,18 +2609,16 @@ __kernel void CollectResults(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-		Sampler_MTL_SplatSample(frameBuffer, &seed, sample, indexRenderFirst);
+		Sampler_MLT_SplatSample(frameBuffer, &seed, sample);
 #endif
 
 #endif
-
-		indexRenderFirst = (indexRenderFirst + 1) % PARAM_SAMPLE_COUNT;
-	}
 
 #if (PARAM_SAMPLER_TYPE == 2)
 	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
+		task->seed.s1 = seed.s1;
+		task->seed.s2 = seed.s2;
+		task->seed.s3 = seed.s3;
 #endif
+	}
 }

@@ -35,8 +35,7 @@ class PathGPU2RenderEngine;
 
 namespace PathGPU2 {
 
-#define PATHGPU2_TASK_COUNT (65536 / 2)
-#define PATHGPU2_SAMPLE_COUNT 4
+#define PATHGPU2_TASK_COUNT (2 * 65536)
 
 typedef struct {
 	unsigned int s1, s2, s3;

@@ -731,8 +731,6 @@ void PathGPU2RenderThread::InitRender() {
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Sample count: " << PATHGPU2_SAMPLE_COUNT << endl;
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Pixels per GPUTask: " << (renderEngine->film->GetWidth() * renderEngine->film->GetHeight() / PATHGPU2_TASK_COUNT) << endl;
 	const size_t gpuTaksSizePart1 =
 		// Seed size
 		sizeof(PathGPU2::Seed);
@@ -767,7 +765,7 @@ void PathGPU2RenderThread::InitRender() {
 		// Spectrum radiance;
 		sizeof(Spectrum);
 
-	const size_t gpuTaksSizePart2 = sampleSize * PATHGPU2_SAMPLE_COUNT + sizeof(unsigned int) * 2;
+	const size_t gpuTaksSizePart2 = sampleSize;
 
 	const size_t gpuTaksSizePart3 =
 		// PathState size
@@ -775,7 +773,7 @@ void PathGPU2RenderThread::InitRender() {
 
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
-			" (" << gpuTaksSizePart1 << "+" << gpuTaksSizePart2 << "[" << sampleSize << "*" << PATHGPU2_SAMPLE_COUNT << "]+" << gpuTaksSizePart3 << ")bytes" << endl;
+			" (" << gpuTaksSizePart1 << "bytes + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")" << endl;
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
@@ -810,8 +808,7 @@ void PathGPU2RenderThread::InitRender() {
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
-			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f" <<
-			" -D PARAM_SAMPLE_COUNT=" << PATHGPU2_SAMPLE_COUNT
+			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
 			;
 
 	if (enable_MAT_MATTE)
@@ -1277,17 +1274,15 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->samplerWorkGroupSize));
 
 					// Render samples
-					for (unsigned int k = 0; k < PATHGPU2_SAMPLE_COUNT; ++k) {
-						oclQueue.enqueueNDRangeKernel(*(renderThread->generateRaysKernel), cl::NullRange,
-								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->generateRaysWorkGroupSize));
+					oclQueue.enqueueNDRangeKernel(*(renderThread->generateRaysKernel), cl::NullRange,
+							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->generateRaysWorkGroupSize));
 
-						// Trace rays
-						renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
+					// Trace rays
+					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
 								*(renderThread->hitsBuff), PATHGPU2_TASK_COUNT);
 
-						oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
-								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->advancePathsWorkGroupSize));
-					}
+					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
+							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->advancePathsWorkGroupSize));
 
 					oclQueue.enqueueNDRangeKernel(*(renderThread->collectResultsKernel), cl::NullRange,
 							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->collectResultWorkGroupSize));
