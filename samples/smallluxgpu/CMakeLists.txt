@@ -81,6 +81,8 @@ endif(DOXYGEN_FOUND)
 #
 ###########################################################################
 
+# PathGPU kernel
+
 add_custom_command(
    OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
    COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
@@ -90,13 +92,55 @@ add_custom_command(
    MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
    )
 
+# PathGPU2 kernel
+
 add_custom_command(
-   OUTPUT pathgpu2/kernels/pathgpu2_kernel.cpp
-   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel.cpp
-   COMMAND echo "std::string luxrays::KernelSource_PathGPU2 = " >> pathgpu2/kernels/pathgpu2_kernel.cpp
-   COMMAND cat pathgpu2/kernels/pathgpu2_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel.cpp
-   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel.cpp
-   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel.cl
+   OUTPUT pathgpu2/kernels/pathgpu2_kernel_core.cpp
+   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel_core.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU2_core = " >> pathgpu2/kernels/pathgpu2_kernel_core.cpp
+   COMMAND cat pathgpu2/kernels/pathgpu2_kernel_core.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel_core.cpp
+   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel_core.cpp
+   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel_core.cl
+   )
+add_custom_command(
+   OUTPUT pathgpu2/kernels/pathgpu2_kernel_datatypes.cpp
+   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel_datatypes.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU2_datatypes = " >> pathgpu2/kernels/pathgpu2_kernel_datatypes.cpp
+   COMMAND cat pathgpu2/kernels/pathgpu2_kernel_datatypes.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel_datatypes.cpp
+   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel_datatypes.cpp
+   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel_datatypes.cl
+   )
+add_custom_command(
+   OUTPUT pathgpu2/kernels/pathgpu2_kernel_filters.cpp
+   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel_filters.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU2_filters = " >> pathgpu2/kernels/pathgpu2_kernel_filters.cpp
+   COMMAND cat pathgpu2/kernels/pathgpu2_kernel_filters.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel_filters.cpp
+   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel_filters.cpp
+   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel_filters.cl
+   )
+add_custom_command(
+   OUTPUT pathgpu2/kernels/pathgpu2_kernel_samplers.cpp
+   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel_samplers.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU2_samplers = " >> pathgpu2/kernels/pathgpu2_kernel_samplers.cpp
+   COMMAND cat pathgpu2/kernels/pathgpu2_kernel_samplers.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel_samplers.cpp
+   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel_samplers.cpp
+   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel_samplers.cl
+   )
+add_custom_command(
+   OUTPUT pathgpu2/kernels/pathgpu2_kernel_scene.cpp
+   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel_scene.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU2_scene = " >> pathgpu2/kernels/pathgpu2_kernel_scene.cpp
+   COMMAND cat pathgpu2/kernels/pathgpu2_kernel_scene.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel_scene.cpp
+   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel_scene.cpp
+   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel_scene.cl
+   )
+add_custom_command(
+   OUTPUT pathgpu2/kernels/pathgpu2_kernels.cpp
+   COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernels.cpp
+   COMMAND echo "std::string luxrays::KernelSource_PathGPU2_kernels = " >> pathgpu2/kernels/pathgpu2_kernels.cpp
+   COMMAND cat pathgpu2/kernels/pathgpu2_kernels.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernels.cpp
+   COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernels.cpp
+   MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernels.cl
    )
 
 #############################################################################
@@ -115,7 +159,12 @@ set(SMALLLUXGPU_SRCS
 	path/path.cpp
 	pathgpu/kernels/pathgpu_kernel.cpp
 	pathgpu/pathgpu.cpp
-	pathgpu2/kernels/pathgpu2_kernel.cpp
+	pathgpu2/kernels/pathgpu2_kernel_core.cpp
+	pathgpu2/kernels/pathgpu2_kernel_datatypes.cpp
+	pathgpu2/kernels/pathgpu2_kernel_filters.cpp
+	pathgpu2/kernels/pathgpu2_kernel_samplers.cpp
+	pathgpu2/kernels/pathgpu2_kernel_scene.cpp
+	pathgpu2/kernels/pathgpu2_kernels.cpp
 	pathgpu2/pathgpu2.cpp
 	renderconfig.cpp
 	slgscene.cpp
