@@ -903,7 +903,8 @@ void PathGPU2RenderThread::InitRender() {
 			ss << " -D PARAM_SAMPLER_TYPE=1";
 			break;
 		case PathGPU2::METROPOLIS:
-			ss << " -D PARAM_SAMPLER_TYPE=2";
+			ss << " -D PARAM_SAMPLER_TYPE=2" <<
+					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << renderEngine->mtlLargeStepRate;
 			break;
 		default:
 			assert (false);
@@ -1340,9 +1341,11 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		 samplerType = PathGPU2::INLINED_RANDOM;
 	 else if (samplerTypeName.compare("RANDOM") == 0)
 		 samplerType = PathGPU2::RANDOM;
-	 else if (samplerTypeName.compare("METROPOLIS") == 0)
+	 else if (samplerTypeName.compare("METROPOLIS") == 0) {
 		 samplerType = PathGPU2::METROPOLIS;
-	 else
+
+		 mtlLargeStepRate = cfg.GetFloat("path.sampler.largesteprate", 0.25f);
+	 } else
 		throw std::runtime_error("Unknown path.sampler.type");
 
 	//--------------------------------------------------------------------------
