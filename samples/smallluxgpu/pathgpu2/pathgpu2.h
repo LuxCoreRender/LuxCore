@@ -332,6 +332,8 @@ public:
 	float rrImportanceCap;
 
 	PathGPU2::SamplerType samplerType;
+	float mtlLargeStepRate;
+
 	PathGPU2::Filter *filter;
 
 private:
