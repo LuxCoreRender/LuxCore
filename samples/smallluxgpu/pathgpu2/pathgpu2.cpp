@@ -68,7 +68,6 @@ PathGPU2RenderThread::PathGPU2RenderThread(const unsigned int index, const unsig
 	initKernel = NULL;
 	initFBKernel = NULL;
 	samplerKernel = NULL;
-	generateRaysKernel = NULL;
 	advancePathsKernel = NULL;
 	collectResultsKernel = NULL;
 }
@@ -80,7 +79,6 @@ PathGPU2RenderThread::~PathGPU2RenderThread() {
 	delete initKernel;
 	delete initFBKernel;
 	delete samplerKernel;
-	delete generateRaysKernel;
 	delete advancePathsKernel;
 	delete collectResultsKernel;
 
@@ -1017,24 +1015,6 @@ void PathGPU2RenderThread::InitRender() {
 		}
 
 		//----------------------------------------------------------------------
-		// GenerateRays kernel
-		//----------------------------------------------------------------------
-
-		delete generateRaysKernel;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling GenerateRays Kernel" << endl;
-		generateRaysKernel = new cl::Kernel(program, "GenerateRays");
-		generateRaysKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &generateRaysWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU GenerateRays kernel work group size: " << generateRaysWorkGroupSize << endl;
-
-		generateRaysKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &generateRaysWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << generateRaysWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			generateRaysWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << generateRaysWorkGroupSize << endl;
-		}
-
-		//----------------------------------------------------------------------
 		// AdvancePaths kernel
 		//----------------------------------------------------------------------
 
@@ -1085,34 +1065,11 @@ void PathGPU2RenderThread::InitRender() {
 
 	samplerKernel->setArg(0, *tasksBuff);
 	samplerKernel->setArg(1, *taskStatsBuff);
+	samplerKernel->setArg(2, *raysBuff);
+	if (cameraBuff)
+		samplerKernel->setArg(3, *cameraBuff);
 
 	unsigned int argIndex = 0;
-	generateRaysKernel->setArg(argIndex++, *tasksBuff);
-	generateRaysKernel->setArg(argIndex++, *raysBuff);
-	generateRaysKernel->setArg(argIndex++, *hitsBuff);
-	generateRaysKernel->setArg(argIndex++, *materialsBuff);
-	generateRaysKernel->setArg(argIndex++, *meshMatsBuff);
-	generateRaysKernel->setArg(argIndex++, *meshIDBuff);
-	generateRaysKernel->setArg(argIndex++, *colorsBuff);
-	generateRaysKernel->setArg(argIndex++, *normalsBuff);
-	generateRaysKernel->setArg(argIndex++, *trianglesBuff);
-	if (cameraBuff)
-		generateRaysKernel->setArg(argIndex++, *cameraBuff);
-	if (infiniteLight)
-		generateRaysKernel->setArg(argIndex++, *infiniteLightBuff);
-	if (triLightsBuff)
-		generateRaysKernel->setArg(argIndex++, *triLightsBuff);
-	if (texMapRGBBuff)
-		generateRaysKernel->setArg(argIndex++, *texMapRGBBuff);
-	if (texMapAlphaBuff)
-		generateRaysKernel->setArg(argIndex++, *texMapAlphaBuff);
-	if (texMapRGBBuff || texMapAlphaBuff) {
-		generateRaysKernel->setArg(argIndex++, *texMapDescBuff);
-		generateRaysKernel->setArg(argIndex++, *meshTexsBuff);
-		generateRaysKernel->setArg(argIndex++, *uvsBuff);
-	}
-
-	argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
@@ -1153,6 +1110,9 @@ void PathGPU2RenderThread::InitRender() {
 	// Initialize the tasks buffer
 	initKernel->setArg(0, *tasksBuff);
 	initKernel->setArg(1, *taskStatsBuff);
+	initKernel->setArg(2, *raysBuff);
+	if (cameraBuff)
+		initKernel->setArg(3, *cameraBuff);
 
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(initWorkGroupSize));
@@ -1250,8 +1210,8 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 	try {
 		double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
-			//if(renderThread->threadIndex == 0)
-			//	cerr<< "[DEBUG] =================================" << endl;
+			/*if(renderThread->threadIndex == 0)
+				cerr<< "[DEBUG] =================================" << endl;*/
 
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
@@ -1272,8 +1232,8 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 			for (;;) {
 				cl::Event event;
 
-				for (unsigned int i = 0; i < 4; ++i) {
-					// Generate the samples
+				for (unsigned int i = 0; i < 8; ++i) {
+					// Generate the samples and paths
 					if (i == 0)
 						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
 								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->samplerWorkGroupSize),
@@ -1282,14 +1242,11 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
 								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->samplerWorkGroupSize));
 
-					// Render samples
-					oclQueue.enqueueNDRangeKernel(*(renderThread->generateRaysKernel), cl::NullRange,
-							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->generateRaysWorkGroupSize));
-
 					// Trace rays
 					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
 								*(renderThread->hitsBuff), PATHGPU2_TASK_COUNT);
 
+					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
 							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->advancePathsWorkGroupSize));
 
@@ -1301,8 +1258,8 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 				event.wait();
 				const double elapsedTime = WallClockTime() - startTime;
 
-				//if(renderThread->threadIndex == 0)
-				//	cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 << "ms" << endl;
+				/*if(renderThread->threadIndex == 0)
+					cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 << "ms" << endl;*/
 
 				if ((elapsedTime > renderThread->renderEngine->screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
@@ -1344,7 +1301,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	 const string samplerTypeName = cfg.GetString("path.sampler->type", "METROPOLIS");
+	 const string samplerTypeName = cfg.GetString("path.sampler.type", "METROPOLIS");
 	 if (samplerTypeName.compare("INLINED_RANDOM") == 0)
 		 sampler = new PathGPU2::InlinedRandomSampler();
 	 else if (samplerTypeName.compare("RANDOM") == 0)
@@ -1354,7 +1311,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		 const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
 		 sampler = new PathGPU2::MetropolisSampler(rate, reject);
 	 } else
-		throw std::runtime_error("Unknown path.sampler->type");
+		throw std::runtime_error("Unknown path.sampler.type");
 
 	//--------------------------------------------------------------------------
 	// Filter

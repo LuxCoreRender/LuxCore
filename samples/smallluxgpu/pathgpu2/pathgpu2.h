@@ -292,8 +292,6 @@ private:
 	size_t initFBWorkGroupSize;
 	cl::Kernel *samplerKernel;
 	size_t samplerWorkGroupSize;
-	cl::Kernel *generateRaysKernel;
-	size_t generateRaysWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	size_t advancePathsWorkGroupSize;
 	cl::Kernel *collectResultsKernel;
