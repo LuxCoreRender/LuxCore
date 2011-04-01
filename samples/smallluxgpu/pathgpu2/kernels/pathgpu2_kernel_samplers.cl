@@ -19,6 +19,40 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+void GenerateCameraPath(
+		__global GPUTask *task,
+		__global Ray *ray,
+		Seed *seed
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
+		) {
+	__global Sample *sample = &task->sample;
+
+	GenerateCameraRay(sample, ray
+#if (PARAM_SAMPLER_TYPE == 0)
+			, &seed
+#endif
+#if defined(PARAM_CAMERA_DYNAMIC)
+			, cameraData
+#endif
+			);
+
+	sample->radiance.r = 0.f;
+	sample->radiance.g = 0.f;
+	sample->radiance.b = 0.f;
+
+	// Initialize the path state
+	task->pathState.depth = 0;
+	task->pathState.throughput.r = 1.f;
+	task->pathState.throughput.g = 1.f;
+	task->pathState.throughput.b = 1.f;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	task->pathState.specularBounce = TRUE;
+#endif
+	task->pathState.state = PATH_STATE_NEXT_VERTEX;
+}
+
 //------------------------------------------------------------------------------
 // Inlined Random Sampler Kernel
 //------------------------------------------------------------------------------
@@ -34,7 +68,11 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 
 __kernel void Sampler(
 		__global GPUTask *tasks,
-		__global GPUTaskStats *taskStats
+		__global GPUTaskStats *taskStats,
+		__global Ray *rays
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -58,9 +96,13 @@ __kernel void Sampler(
 		sample->u[IDX_SCREEN_X] = RndFloatValue(&seed);
 		sample->u[IDX_SCREEN_Y] = RndFloatValue(&seed);
 
-		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
-
 		taskStats[gid].sampleCount += 1;
+
+		GenerateCameraPath(task, &rays[gid], &seed
+#if defined(PARAM_CAMERA_DYNAMIC)
+				, cameraData
+#endif
+				);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -86,7 +128,11 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 
 __kernel void Sampler(
 		__global GPUTask *tasks,
-		__global GPUTaskStats *taskStats
+		__global GPUTaskStats *taskStats,
+		__global Ray *rays
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -110,7 +156,11 @@ __kernel void Sampler(
 		for (int i = 0; i < TOTAL_U_SIZE; ++i)
 			sample->u[i] = RndFloatValue(&seed);
 
-		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
+		GenerateCameraPath(task, &rays[gid], &seed
+#if defined(PARAM_CAMERA_DYNAMIC)
+				, cameraData
+#endif
+				);
 
 		taskStats[gid].sampleCount += 1;
 
@@ -183,7 +233,11 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 
 __kernel void Sampler(
 		__global GPUTask *tasks,
-		__global GPUTaskStats *taskStats
+		__global GPUTaskStats *taskStats,
+		__global Ray *rays
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -218,7 +272,11 @@ __kernel void Sampler(
 
 		taskStats[gid].sampleCount += 1;
 
-		task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
+		GenerateCameraPath(task, &rays[gid], &seed
+#if defined(PARAM_CAMERA_DYNAMIC)
+				, cameraData
+#endif
+				);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;

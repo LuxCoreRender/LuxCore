@@ -25,7 +25,11 @@
 
 __kernel void Init(
 		__global GPUTask *tasks,
-		__global GPUTaskStats *taskStats
+		__global GPUTaskStats *taskStats,
+		__global Ray *rays
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -44,8 +48,12 @@ __kernel void Init(
 	// Initialize the sample
 	Sampler_Init(gid, &seed, &task->sample);
 
-	// Initialize the path state
-	task->pathState.state = PATH_STATE_GENERATE_EYE_RAY;
+	// Initialize the path
+	GenerateCameraPath(task, &rays[gid], &seed
+#if defined(PARAM_CAMERA_DYNAMIC)
+			, cameraData
+#endif
+			);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -91,92 +99,6 @@ __kernel void InitFrameBuffer(
 Error: unknown image filter !!!
 
 #endif
-}
-
-//------------------------------------------------------------------------------
-// GenerateRays Kernel
-//------------------------------------------------------------------------------
-
-__kernel void GenerateRays(
-		__global GPUTask *tasks,
-		__global Ray *rays,
-		__global RayHit *rayHits,
-		__global Material *mats,
-		__global uint *meshMats,
-		__global uint *meshIDs,
-		__global Spectrum *vertColors,
-		__global Vector *vertNormals,
-		__global Triangle *triangles
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
-#if defined(PARAM_HAVE_INFINITELIGHT)
-		, __global Spectrum *infiniteLightMap
-#endif
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global TriangleLight *triLights
-#endif
-#if defined(PARAM_HAS_TEXTUREMAPS)
-        , __global Spectrum *texMapRGBBuff
-#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
-		, __global float *texMapAlphaBuff
-#endif
-        , __global TexMap *texMapDescBuff
-        , __global unsigned int *meshTexsBuff
-        , __global UV *vertUVs
-#endif
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
-
-	__global GPUTask *task = &tasks[gid];
-	const uint pathState = task->pathState.state;
-
-	//printf(\"pathState: %d\\n\", pathState);
-
-	switch (pathState) {
-		case PATH_STATE_GENERATE_EYE_RAY: {
-			__global Ray *ray = &rays[gid];
-
-			// Read the seed
-			Seed seed;
-			seed.s1 = task->seed.s1;
-			seed.s2 = task->seed.s2;
-			seed.s3 = task->seed.s3;
-
-			__global Sample *sample = &task->sample;
-
-			GenerateCameraRay(sample, ray
-#if (PARAM_SAMPLER_TYPE == 0)
-					, &seed
-#endif
-#if defined(PARAM_CAMERA_DYNAMIC)
-					, cameraData
-#endif
-					);
-
-			sample->radiance.r = 0.f;
-			sample->radiance.g = 0.f;
-			sample->radiance.b = 0.f;
-
-			// Initialize the path state
-			task->pathState.depth = 0;
-			task->pathState.throughput.r = 1.f;
-			task->pathState.throughput.g = 1.f;
-			task->pathState.throughput.b = 1.f;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-			task->pathState.specularBounce = TRUE;
-#endif
-			task->pathState.state = PATH_STATE_NEXT_VERTEX;
-
-			// Save the seed
-			task->seed.s1 = seed.s1;
-			task->seed.s2 = seed.s2;
-			task->seed.s3 = seed.s3;
-			break;
-		}
-	}
 }
 
 //------------------------------------------------------------------------------
