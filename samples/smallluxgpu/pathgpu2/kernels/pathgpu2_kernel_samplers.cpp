@@ -33,7 +33,7 @@ std::string luxrays::KernelSource_PathGPU2_samplers =
 "\n"
 "	GenerateCameraRay(sample, ray\n"
 "#if (PARAM_SAMPLER_TYPE == 0)\n"
-"			, &seed\n"
+"			, seed\n"
 "#endif\n"
 "#if defined(PARAM_CAMERA_DYNAMIC)\n"
 "			, cameraData\n"
