@@ -35,8 +35,6 @@ class PathGPU2RenderEngine;
 
 namespace PathGPU2 {
 
-#define PATHGPU2_TASK_COUNT (2 * 65536)
-
 typedef struct {
 	unsigned int s1, s2, s3;
 } Seed;
@@ -328,7 +326,7 @@ private:
 
 	bool started, reportedPermissionError, pad0, pad1;
 
-	PathGPU2::GPUTaskStats gpuTaskStats[PATHGPU2_TASK_COUNT];
+	PathGPU2::GPUTaskStats *gpuTaskStats;
 };
 
 //------------------------------------------------------------------------------
@@ -366,6 +364,8 @@ public:
 
 	PathGPU2::Sampler *sampler;
 	PathGPU2::Filter *filter;
+
+	unsigned int taskCount;
 
 private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;

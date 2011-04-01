@@ -70,6 +70,8 @@ PathGPU2RenderThread::PathGPU2RenderThread(const unsigned int index, const unsig
 	samplerKernel = NULL;
 	advancePathsKernel = NULL;
 	collectResultsKernel = NULL;
+
+	gpuTaskStats = new PathGPU2::GPUTaskStats[renderEngine->taskCount];
 }
 
 PathGPU2RenderThread::~PathGPU2RenderThread() {
@@ -83,6 +85,7 @@ PathGPU2RenderThread::~PathGPU2RenderThread() {
 	delete collectResultsKernel;
 
 	delete[] frameBuffer;
+	delete[] gpuTaskStats;
 }
 
 static void AppendMatrixDefinition(stringstream &ss, const char *paramName, const Matrix4x4 &m) {
@@ -144,19 +147,20 @@ void PathGPU2RenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+	const unsigned int taskCount = renderEngine->taskCount;
 
 	tStart = WallClockTime();
 
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * taskCount / 1024) << "Kbytes" << endl;
 	raysBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			sizeof(Ray) * PATHGPU2_TASK_COUNT);
+			sizeof(Ray) * taskCount);
 	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * taskCount / 1024) << "Kbytes" << endl;
 	hitsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			sizeof(RayHit) * PATHGPU2_TASK_COUNT);
+			sizeof(RayHit) * taskCount);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathGPU2::Pixel) * frameBufferPixelCount / 1024) << "Kbytes" << endl;
@@ -772,20 +776,20 @@ void PathGPU2RenderThread::InitRender() {
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
 			" (" << gpuTaksSizePart1 << "bytes + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")" << endl;
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes" << endl;
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			gpuTaksSize * PATHGPU2_TASK_COUNT);
+			gpuTaksSize * taskCount);
 	deviceDesc->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
 	//--------------------------------------------------------------------------
 
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(PathGPU2::GPUTaskStats) * PATHGPU2_TASK_COUNT / 1024) << "Kbytes" << endl;
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(PathGPU2::GPUTaskStats) * taskCount / 1024) << "Kbytes" << endl;
 	taskStatsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			sizeof(PathGPU2::GPUTaskStats) * PATHGPU2_TASK_COUNT);
+			sizeof(PathGPU2::GPUTaskStats) * taskCount);
 	deviceDesc->AllocMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
@@ -797,7 +801,7 @@ void PathGPU2RenderThread::InitRender() {
 	ss.precision(6);
 	ss << scientific <<
 			" -D PARAM_STARTLINE=" << startLine <<
-			" -D PARAM_TASK_COUNT=" << PATHGPU2_TASK_COUNT <<
+			" -D PARAM_TASK_COUNT=" << taskCount <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
 			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON << "f" <<
@@ -1115,7 +1119,7 @@ void PathGPU2RenderThread::InitRender() {
 		initKernel->setArg(3, *cameraBuff);
 
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-			cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(initWorkGroupSize));
+			cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
 	oclQueue.finish();
 
 	// Reset statistics to be more accurate
@@ -1206,6 +1210,7 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 	cerr << "[PathGPU2RenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
+	const unsigned int taskCount = renderThread->renderEngine->taskCount;
 
 	try {
 		double startTime = WallClockTime();
@@ -1226,7 +1231,7 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 				*(renderThread->taskStatsBuff),
 				CL_FALSE,
 				0,
-				sizeof(PathGPU2::GPUTaskStats) * PATHGPU2_TASK_COUNT,
+				sizeof(PathGPU2::GPUTaskStats) * taskCount,
 				renderThread->gpuTaskStats);
 
 			for (;;) {
@@ -1236,22 +1241,22 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 					// Generate the samples and paths
 					if (i == 0)
 						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
-								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->samplerWorkGroupSize),
+								cl::NDRange(taskCount), cl::NDRange(renderThread->samplerWorkGroupSize),
 								NULL, &event);
 					else
 						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
-								cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->samplerWorkGroupSize));
+								cl::NDRange(taskCount), cl::NDRange(renderThread->samplerWorkGroupSize));
 
 					// Trace rays
 					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
-								*(renderThread->hitsBuff), PATHGPU2_TASK_COUNT);
+								*(renderThread->hitsBuff), taskCount);
 
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
-							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->advancePathsWorkGroupSize));
+							cl::NDRange(taskCount), cl::NDRange(renderThread->advancePathsWorkGroupSize));
 
 					oclQueue.enqueueNDRangeKernel(*(renderThread->collectResultsKernel), cl::NullRange,
-							cl::NDRange(PATHGPU2_TASK_COUNT), cl::NDRange(renderThread->collectResultWorkGroupSize));
+							cl::NDRange(taskCount), cl::NDRange(renderThread->collectResultWorkGroupSize));
 				}
 				oclQueue.flush();
 
@@ -1292,6 +1297,9 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		vector<IntersectionDevice *> intersectionDevices, const Properties &cfg) :
 		RenderEngine(scn, flm, filmMutex) {
 	// Rendering parameters
+
+	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 2 * 65536));
+	cerr << "[PathGPU2RenderThread] OpenCL task count: " << taskCount << endl;
 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
@@ -1375,7 +1383,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 	cerr << "Starting "<< renderThreadCount << " PathGPU2 render threads" << endl;
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		PathGPU2RenderThread *t = new PathGPU2RenderThread(
-				i, seedBase + i * PATHGPU2_TASK_COUNT, i / (float)renderThreadCount,
+				i, seedBase + i * taskCount, i / (float)renderThreadCount,
 				oclIntersectionDevices[i], this);
 		renderThreads.push_back(t);
 	}
@@ -1520,7 +1528,7 @@ void PathGPU2RenderEngine::UpdateFilm() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		PathGPU2::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
 
-		for (size_t i = 0; i < PATHGPU2_TASK_COUNT; ++i)
+		for (size_t i = 0; i < taskCount; ++i)
 			totalCount += stats[i].sampleCount;
 	}
 
