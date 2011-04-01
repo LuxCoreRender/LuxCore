@@ -31,7 +31,7 @@ void GenerateCameraPath(
 
 	GenerateCameraRay(sample, ray
 #if (PARAM_SAMPLER_TYPE == 0)
-			, &seed
+			, seed
 #endif
 #if defined(PARAM_CAMERA_DYNAMIC)
 			, cameraData
