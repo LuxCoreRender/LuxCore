@@ -1008,7 +1008,7 @@ void PathGPU2RenderThread::InitRender() {
 			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 
 			while ((initWorkGroupSize > 64) && (m * initWorkGroupSize > localMem))
-				initWorkGroupSize -= 64;
+				initWorkGroupSize /= 2;
 
 			if (m * initWorkGroupSize > localMem)
 				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
@@ -1056,7 +1056,7 @@ void PathGPU2RenderThread::InitRender() {
 			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 
 			while ((samplerWorkGroupSize > 64) && (m * samplerWorkGroupSize > localMem))
-				samplerWorkGroupSize -= 64;
+				samplerWorkGroupSize /= 2;
 
 			if (m * samplerWorkGroupSize > localMem)
 				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
