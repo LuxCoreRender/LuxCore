@@ -1001,10 +1001,19 @@ void PathGPU2RenderThread::InitRender() {
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
 			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
-		} else if ((initWorkGroupSize > 256) && (renderEngine->sampler->type == PathGPU2::STRATIFIED)) {
-			// Otherwise I will probably run out of local memory
-			initWorkGroupSize = 256;
-			cerr << "[PathGPU2RenderThread::" << threadIndex << "]  Cap work group size to: " << initWorkGroupSize << endl;
+		} else if (renderEngine->sampler->type == PathGPU2::STRATIFIED) {
+			// Resize the workgroup to have enough local memory
+			size_t m = 2  * sizeof(float) *
+					((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples * ((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples;
+			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+
+			while ((initWorkGroupSize > 64) && (m * initWorkGroupSize > localMem))
+				initWorkGroupSize -= 64;
+
+			if (m * initWorkGroupSize > localMem)
+				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
+
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Cap work group size to: " << initWorkGroupSize << endl;
 		}
 
 		//--------------------------------------------------------------------------
@@ -1040,9 +1049,18 @@ void PathGPU2RenderThread::InitRender() {
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			samplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
 			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
-		} else if ((samplerWorkGroupSize > 256) && (renderEngine->sampler->type == PathGPU2::STRATIFIED)) {
-			// Otherwise I will probably run out of local memory
-			samplerWorkGroupSize = 256;
+		} else if (renderEngine->sampler->type == PathGPU2::STRATIFIED) {
+			// Resize the workgroup to have enough local memory
+			size_t m = 2  * sizeof(float) *
+					((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples * ((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples;
+			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+
+			while ((samplerWorkGroupSize > 64) && (m * samplerWorkGroupSize > localMem))
+				samplerWorkGroupSize -= 64;
+
+			if (m * samplerWorkGroupSize > localMem)
+				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
+
 			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize << endl;
 		}
 
