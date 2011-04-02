@@ -292,8 +292,6 @@ private:
 	size_t samplerWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	size_t advancePathsWorkGroupSize;
-	cl::Kernel *collectResultsKernel;
-	size_t collectResultWorkGroupSize;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
@@ -362,11 +360,6 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
-	PathGPU2::Sampler *sampler;
-	PathGPU2::Filter *filter;
-
-	unsigned int taskCount;
-
 private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	vector<PathGPU2RenderThread *> renderThreads;
@@ -378,7 +371,12 @@ private:
 	double elapsedTime;
 	unsigned long long samplesCount;
 
-	bool dynamicCamera;
+	PathGPU2::Sampler *sampler;
+	PathGPU2::Filter *filter;
+
+	unsigned int taskCount;
+
+	bool dynamicCamera, usePixelAtomics;
 };
 
 #endif
