@@ -25,7 +25,7 @@ std::string luxrays::KernelSource_PathGPU2_filters =
 "// Pixel related functions\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
-"#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)\n"
+"#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)\n"
 "\n"
 "uint PixelIndexInt(const size_t gid) {\n"
 "	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);\n"

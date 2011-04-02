@@ -175,7 +175,7 @@ __kernel void AdvancePaths(
 				// Something was hit
 
 				const uint pathDepth = task->pathState.depth + 1;
-#if (PARAM_SAMPLER_TYPE == 1)
+#if (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
 #elif (PARAM_SAMPLER_TYPE == 2)
 				__global float *sampleData = &sample->u[sample->proposed][IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
@@ -206,7 +206,7 @@ __kernel void AdvancePaths(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 						const float texAlphaSample = sampleData[IDX_TEX_ALPHA];
 #endif
 
@@ -244,7 +244,7 @@ __kernel void AdvancePaths(
 #if (PARAM_SAMPLER_TYPE == 0)
 				const float u0 = RndFloatValue(&seed);
 				const float u1 = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1) ||(PARAM_SAMPLER_TYPE == 2)
+#elif (PARAM_SAMPLER_TYPE == 1) ||(PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 				const float u0 = sampleData[IDX_BSDF_X];
 				const float u1 = sampleData[IDX_BSDF_Y];
 #endif
@@ -252,7 +252,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_MATTEMIRROR) || defined(PARAM_ENABLE_MAT_MATTEMETAL) || defined(PARAM_ENABLE_MAT_ALLOY)
 #if (PARAM_SAMPLER_TYPE == 0)
 				const float u2 = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1) ||(PARAM_SAMPLER_TYPE == 2)
+#elif (PARAM_SAMPLER_TYPE == 1) ||(PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 				const float u2 = sampleData[IDX_BSDF_Z];
 #endif
 #endif
@@ -398,7 +398,7 @@ __kernel void AdvancePaths(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 				const float rrSample = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 				const float rrSample = sampleData[IDX_RR];
 #endif
 
@@ -444,12 +444,10 @@ __kernel void AdvancePaths(
 					const float ul0 = RndFloatValue(&seed);
 					const float ul1 = RndFloatValue(&seed);
 					const float ul2 = RndFloatValue(&seed);
-					const float ul3 = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 					const float ul0 = sampleData[IDX_DIRECTLIGHT_X];
 					const float ul1 = sampleData[IDX_DIRECTLIGHT_Y];
 					const float ul2 = sampleData[IDX_DIRECTLIGHT_Z];
-					const float ul3 = sampleData[IDX_DIRECTLIGHT_W];
 #endif
 
 					// Select a light source to sample
@@ -460,8 +458,7 @@ __kernel void AdvancePaths(
 					Spectrum Le;
 					float lightPdf;
 					Ray shadowRay;
-					TriangleLight_Sample_L(l, &wo, &hitPoint, &lightPdf, &Le, &shadowRay,
-						ul1, ul2, ul3);
+					TriangleLight_Sample_L(l, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
 
 					const float dp = Dot(&shadeN, &shadowRay.d);
 					const float matPdf = (dp <= 0.f) ? 0.f : 1.f;
@@ -570,7 +567,7 @@ __kernel void AdvancePaths(
 				// Check if I have to continue to trace the shadow ray
 
 				const uint pathDepth = task->pathState.depth;
-#if (PARAM_SAMPLER_TYPE == 1)
+#if (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
 #elif (PARAM_SAMPLER_TYPE == 2)
 				__global float *sampleData = &sample->u[sample->proposed][IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
@@ -595,7 +592,7 @@ __kernel void AdvancePaths(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);
-#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 						const float texAlphaSample = sampleData[IDX_TEX_ALPHA];
 #endif
 
@@ -665,7 +662,7 @@ __kernel void AdvancePaths(
 	if (pathState == PATH_STATE_DONE) {
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
@@ -692,7 +689,7 @@ __kernel void AdvancePaths(
 
 #else
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 		__global float *sampleData = &sample->u[IDX_SCREEN_X];
 		const float sx = sampleData[IDX_SCREEN_X] - .5f;
 		const float sy = sampleData[IDX_SCREEN_X] - .5f;

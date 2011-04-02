@@ -123,7 +123,7 @@ public:
 //------------------------------------------------------------------------------
 
 typedef enum {
-	INLINED_RANDOM, RANDOM, METROPOLIS
+	INLINED_RANDOM, RANDOM, STRATIFIED, METROPOLIS
 } SamplerType;
 
 class Sampler {
@@ -148,6 +148,15 @@ public:
 		Sampler(RANDOM) { }
 
 	SamplerType type;
+};
+
+class StratifiedSampler : public Sampler {
+public:
+	StratifiedSampler(const unsigned int x, const unsigned int y) :
+		Sampler(STRATIFIED), xSamples(x), ySamples(y) { }
+
+	SamplerType type;
+	unsigned int xSamples, ySamples;
 };
 
 

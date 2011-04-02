@@ -747,8 +747,8 @@ void PathGPU2RenderThread::InitRender() {
 		((texMapAlphaBuff) ? sizeof(float) : 0) +
 		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
 		sizeof(float) * 3 +
-		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W
-		((areaLightCount > 0) ? (sizeof(float) * 4) : 0) +
+		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
+		((areaLightCount > 0) ? (sizeof(float) * 3) : 0) +
 		// IDX_RR
 		sizeof(float);
 	const size_t uDataSize = (renderEngine->sampler->type == PathGPU2::INLINED_RANDOM) ?
@@ -761,6 +761,10 @@ void PathGPU2RenderThread::InitRender() {
 	const size_t sampleSize =
 		// uint pixelIndex;
 		((renderEngine->sampler->type == PathGPU2::METROPOLIS) ? 0 : sizeof(unsigned int)) +
+		((renderEngine->sampler->type == PathGPU2::STRATIFIED) ?
+			(((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples * ((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples *
+				(uDataEyePathVertexSize + uDataPerPathVertexSize)) :
+			0) +
 		uDataSize +
 		// Spectrum radiance;
 		sizeof(Spectrum);
@@ -773,8 +777,12 @@ void PathGPU2RenderThread::InitRender() {
 
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
-			" (" << gpuTaksSizePart1 << "bytes + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")" << endl;
+			"bytes (" << gpuTaksSizePart1 << " + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")" << endl;
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes" << endl;
+
+	// Check if the task buffer is too big
+	// TODO
+
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			gpuTaksSize * taskCount);
@@ -910,6 +918,11 @@ void PathGPU2RenderThread::InitRender() {
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
 					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << ((PathGPU2::MetropolisSampler *)sampler)->largeStepRate << "f" <<
 					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << ((PathGPU2::MetropolisSampler *)sampler)->maxConsecutiveReject;
+			break;
+		case PathGPU2::STRATIFIED:
+			ss << " -D PARAM_SAMPLER_TYPE=3" <<
+					" -D PARAM_SAMPLER_STRATIFIED_X_SAMPLES=" << ((PathGPU2::StratifiedSampler *)sampler)->xSamples <<
+					" -D PARAM_SAMPLER_STRATIFIED_Y_SAMPLES=" << ((PathGPU2::StratifiedSampler *)sampler)->ySamples;
 			break;
 		default:
 			assert (false);
@@ -1292,9 +1305,15 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		 sampler = new PathGPU2::InlinedRandomSampler();
 	 else if (samplerTypeName.compare("RANDOM") == 0)
 		 sampler = new PathGPU2::RandomSampler();
-	 else if (samplerTypeName.compare("METROPOLIS") == 0) {
+	 else if (samplerTypeName.compare("STRATIFIED") == 0) {
+		 const unsigned int xSamples = cfg.GetInt("path.sampler.xsamples", 3);
+		 const unsigned int ySamples = cfg.GetInt("path.sampler.ysamples", 3);
+
+		 sampler = new PathGPU2::StratifiedSampler(xSamples, ySamples);
+	 } else if (samplerTypeName.compare("METROPOLIS") == 0) {
 		 const float rate = cfg.GetFloat("path.sampler.largesteprate", 0.25f);
 		 const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
+
 		 sampler = new PathGPU2::MetropolisSampler(rate, reject);
 	 } else
 		throw std::runtime_error("Unknown path.sampler.type");

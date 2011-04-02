@@ -78,11 +78,14 @@
 //  PARAM_IMAGE_FILTER_MITCHELL_C
 
 // (optional)
-//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis)
+//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Random, 2 = Metropolis, 3 = Stratified)
 // (Metropolis)
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
 //  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
 //  PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY
+// (Stratified)
+//  PARAM_SAMPLER_STRATIFIED_X_SAMPLES
+//  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES
 
 // TODO: to fix
 #define PARAM_STARTLINE 0
@@ -91,7 +94,7 @@
 //#define PARAM_SAMPLER_TYPE 2
 //#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #endif
@@ -195,10 +198,9 @@ typedef struct {
 #define IDX_DIRECTLIGHT_X 4
 #define IDX_DIRECTLIGHT_Y 5
 #define IDX_DIRECTLIGHT_Z 6
-#define IDX_DIRECTLIGHT_W 7
-#define IDX_RR 8
+#define IDX_RR 7
 
-#define SAMPLE_SIZE 9
+#define SAMPLE_SIZE 8
 
 #elif defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 
@@ -218,10 +220,9 @@ typedef struct {
 #define IDX_DIRECTLIGHT_X 3
 #define IDX_DIRECTLIGHT_Y 4
 #define IDX_DIRECTLIGHT_Z 5
-#define IDX_DIRECTLIGHT_W 6
-#define IDX_RR 7
+#define IDX_RR 6
 
-#define SAMPLE_SIZE 8
+#define SAMPLE_SIZE 7
 
 #else
 
@@ -259,6 +260,26 @@ typedef struct {
 	Spectrum currentRadiance;
 
 	float u[2][TOTAL_U_SIZE];
+#elif (PARAM_SAMPLER_TYPE == 3)
+	uint pixelIndex;
+
+	float stratifiedScreen2D[PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES * 2];
+#if defined(PARAM_CAMERA_HAS_DOF)
+	float stratifiedDof2D[PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES * 2];
+#endif
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+	float stratifiedAlpha1D[PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES];
+#endif
+	float stratifiedBSDF2D[PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES * 2];
+#if defined(PARAM_ENABLE_MAT_MATTEMIRROR) || defined(PARAM_ENABLE_MAT_MATTEMETAL) || defined(PARAM_ENABLE_MAT_ALLOY)
+	float stratifiedBSDF1D[PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES];
+#endif
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	float stratifiedLight2D[PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES * 2];
+	float stratifiedLight1D[PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES];
+#endif
+
+	float u[TOTAL_U_SIZE];
 #endif
 } Sample;
 
