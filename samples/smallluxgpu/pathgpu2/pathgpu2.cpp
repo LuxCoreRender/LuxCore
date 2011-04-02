@@ -781,7 +781,13 @@ void PathGPU2RenderThread::InitRender() {
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes" << endl;
 
 	// Check if the task buffer is too big
-	// TODO
+	if (oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() < gpuTaksSize * taskCount) {
+		stringstream ss;
+		ss << "The GPUTask buffer is too big for this device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
+				oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() <<
+				"): try to reduce opencl.task.count and/or path.maxdepth and/or to change Sampler";
+		throw std::runtime_error(ss.str());
+	}
 
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
