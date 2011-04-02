@@ -109,6 +109,7 @@ __kernel void AdvancePaths(
 		__global GPUTask *tasks,
 		__global Ray *rays,
 		__global RayHit *rayHits,
+		__global Pixel *frameBuffer,
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
@@ -661,32 +662,16 @@ __kernel void AdvancePaths(
 #endif
 	}
 
-	task->pathState.state = pathState;
+	if (pathState == PATH_STATE_DONE) {
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
 
-#if (PARAM_SAMPLER_TYPE == 0)
-	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
-#endif
-}
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+		Spectrum radiance = sample->radiance;
+		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
+#elif (PARAM_SAMPLER_TYPE == 2)
 
-//------------------------------------------------------------------------------
-// CollectResults Kernel
-//------------------------------------------------------------------------------
 
-__kernel void CollectResults(
-		__global GPUTask *tasks,
-		__global Pixel *frameBuffer
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
-
-	__global GPUTask *task = &tasks[gid];
-
-	if (task->pathState.state == PATH_STATE_DONE) {
-#if (PARAM_SAMPLER_TYPE == 2)
+#if (PARAM_SAMPLER_TYPE != 0)
 		// Read the seed
 		Seed seed;
 		seed.s1 = task->seed.s1;
@@ -694,15 +679,15 @@ __kernel void CollectResults(
 		seed.s3 = task->seed.s3;
 #endif
 
-		__global Sample *sample = &task->sample;
-
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
-
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
-		Spectrum radiance = sample->radiance;
-		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
-#elif (PARAM_SAMPLER_TYPE == 2)
 		Sampler_MLT_SplatSample(frameBuffer, &seed, sample);
+
+#if (PARAM_SAMPLER_TYPE != 0)
+		// Save the seed
+		task->seed.s1 = seed.s1;
+		task->seed.s2 = seed.s2;
+		task->seed.s3 = seed.s3;
+#endif
+
 #endif
 
 #else
@@ -715,16 +700,35 @@ __kernel void CollectResults(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
+
+#if (PARAM_SAMPLER_TYPE != 0)
+		// Read the seed
+		Seed seed;
+		seed.s1 = task->seed.s1;
+		seed.s2 = task->seed.s2;
+		seed.s3 = task->seed.s3;
+#endif
+
 		Sampler_MLT_SplatSample(frameBuffer, &seed, sample);
-#endif
 
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 2)
-	// Save the seed
+#if (PARAM_SAMPLER_TYPE != 0)
+		// Save the seed
 		task->seed.s1 = seed.s1;
 		task->seed.s2 = seed.s2;
 		task->seed.s3 = seed.s3;
 #endif
+
+#endif
+
+#endif
 	}
+
+	task->pathState.state = pathState;
+
+#if (PARAM_SAMPLER_TYPE == 0)
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+#endif
 }

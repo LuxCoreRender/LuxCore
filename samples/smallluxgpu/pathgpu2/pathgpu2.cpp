@@ -69,7 +69,6 @@ PathGPU2RenderThread::PathGPU2RenderThread(const unsigned int index, const unsig
 	initFBKernel = NULL;
 	samplerKernel = NULL;
 	advancePathsKernel = NULL;
-	collectResultsKernel = NULL;
 
 	gpuTaskStats = new PathGPU2::GPUTaskStats[renderEngine->taskCount];
 }
@@ -82,7 +81,6 @@ PathGPU2RenderThread::~PathGPU2RenderThread() {
 	delete initFBKernel;
 	delete samplerKernel;
 	delete advancePathsKernel;
-	delete collectResultsKernel;
 
 	delete[] frameBuffer;
 	delete[] gpuTaskStats;
@@ -897,6 +895,9 @@ void PathGPU2RenderThread::InitRender() {
 			assert (false);
 	}
 
+	if (renderEngine->usePixelAtomics)
+		ss << " -D PARAM_USE_PIXEL_ATOMICS";
+
 	const PathGPU2::Sampler *sampler = renderEngine->sampler;
 	switch (sampler->type) {
 		case PathGPU2::INLINED_RANDOM:
@@ -1037,24 +1038,6 @@ void PathGPU2RenderThread::InitRender() {
 		}
 
 		//----------------------------------------------------------------------
-		// CollectResults kernel
-		//----------------------------------------------------------------------
-
-		delete collectResultsKernel;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling CollectResults Kernel" << endl;
-		collectResultsKernel = new cl::Kernel(program, "CollectResults");
-		collectResultsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &collectResultWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU CollectResults kernel work group size: " << collectResultWorkGroupSize << endl;
-
-		collectResultsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &collectResultWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << collectResultWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			collectResultWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << collectResultWorkGroupSize << endl;
-		}
-
-		//----------------------------------------------------------------------
 
 		tEnd = WallClockTime();
 		cerr  << "[PathGPU2RenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
@@ -1077,6 +1060,7 @@ void PathGPU2RenderThread::InitRender() {
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
+	advancePathsKernel->setArg(argIndex++, *frameBufferBuff);
 	advancePathsKernel->setArg(argIndex++, *materialsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
@@ -1098,9 +1082,6 @@ void PathGPU2RenderThread::InitRender() {
 		advancePathsKernel->setArg(argIndex++, *meshTexsBuff);
 		advancePathsKernel->setArg(argIndex++, *uvsBuff);
 	}
-
-	collectResultsKernel->setArg(0, *tasksBuff);
-	collectResultsKernel->setArg(1, *frameBufferBuff);
 
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
@@ -1254,9 +1235,6 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
 							cl::NDRange(taskCount), cl::NDRange(renderThread->advancePathsWorkGroupSize));
-
-					oclQueue.enqueueNDRangeKernel(*(renderThread->collectResultsKernel), cl::NullRange,
-							cl::NDRange(taskCount), cl::NDRange(renderThread->collectResultWorkGroupSize));
 				}
 				oclQueue.flush();
 
@@ -1350,6 +1328,8 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		filter = new PathGPU2::MitchellFilterSS(filterWidthX, filterWidthY, B, C);
 	} else
 		throw std::runtime_error("Unknown path.filter.type");
+
+	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);
 
 	//--------------------------------------------------------------------------
 
