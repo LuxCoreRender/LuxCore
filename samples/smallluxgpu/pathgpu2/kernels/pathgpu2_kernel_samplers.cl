@@ -427,3 +427,185 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Stratified Sampler Kernel
+//------------------------------------------------------------------------------
+
+#if (PARAM_SAMPLER_TYPE == 3)
+
+void StratifiedSample1D(__global float *buff, Seed *seed) {
+	const float dx = 1.f / PARAM_SAMPLER_STRATIFIED_X_SAMPLES;
+
+	for (uint y = 0; y < PARAM_SAMPLER_STRATIFIED_Y_SAMPLES; ++y) {
+		for (uint x = 0; x < PARAM_SAMPLER_STRATIFIED_X_SAMPLES; ++x) {
+			*buff++ = (x + RndFloatValue(seed)) * dx;
+		}
+	}
+}
+void Shuffle1D(__global float *buff, Seed *seed) {
+	const uint count = PARAM_SAMPLER_STRATIFIED_X_SAMPLES *  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES;
+
+	for (uint i = 0; i < count; ++i) {
+		const uint other = RndUintValue(seed) % (count - i);
+
+		const float u0 = buff[other];
+		buff[other] = buff[i];
+		buff[i] = u0;
+	}
+}
+
+void StratifiedSample2D(__global float *buff, Seed *seed) {
+	const float dx = 1.f / PARAM_SAMPLER_STRATIFIED_X_SAMPLES;
+	const float dy = 1.f / PARAM_SAMPLER_STRATIFIED_Y_SAMPLES;
+
+	for (uint y = 0; y < PARAM_SAMPLER_STRATIFIED_Y_SAMPLES; ++y) {
+		for (uint x = 0; x < PARAM_SAMPLER_STRATIFIED_X_SAMPLES; ++x) {
+			*buff++ = (x + RndFloatValue(seed)) * dx;
+			*buff++ = (y + RndFloatValue(seed)) * dy;
+		}
+	}
+}
+void Shuffle2D(__global float *buff, Seed *seed) {
+	const uint count = PARAM_SAMPLER_STRATIFIED_X_SAMPLES *  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES;
+
+	for (uint i = 0; i < count; ++i) {
+		const uint other = RndUintValue(seed) % (count - i);
+
+		uint otherIdx = 2 * other;
+		uint iIdx = 2 * i;
+
+		const float u0 = buff[otherIdx];
+		buff[otherIdx] = buff[iIdx];
+		buff[iIdx] = u0;
+
+		++otherIdx;
+		++iIdx;
+		const float u1 = buff[otherIdx];
+		buff[otherIdx] = buff[iIdx];
+		buff[iIdx] = u1;
+	}
+}
+
+void Sampler_StratifiedBufferInit(Seed *seed, __global Sample *sample) {
+	StratifiedSample2D(&sample->stratifiedScreen2D[0], seed);
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	StratifiedSample2D(&sample->stratifiedDof2D[0], seed);
+	Shuffle2D(&sample->stratifiedDof2D[0], seed);
+#endif
+
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+	StratifiedSample1D(&sample->stratifiedAlpha1D[0], seed);
+	Shuffle1D(&sample->stratifiedAlpha1D[0], seed);
+#endif
+
+	StratifiedSample2D(&sample->stratifiedBSDF2D[0], seed);
+	Shuffle2D(&sample->stratifiedBSDF2D[0], seed);
+#if defined(PARAM_ENABLE_MAT_MATTEMIRROR) || defined(PARAM_ENABLE_MAT_MATTEMETAL) || defined(PARAM_ENABLE_MAT_ALLOY)
+	StratifiedSample1D(&sample->stratifiedBSDF1D[0], seed);
+	Shuffle1D(&sample->stratifiedBSDF1D[0], seed);
+#endif
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	StratifiedSample2D(&sample->stratifiedLight2D[0], seed);
+	Shuffle2D(&sample->stratifiedLight1D[0], seed);
+	StratifiedSample1D(&sample->stratifiedLight1D[0], seed);
+	Shuffle1D(&sample->stratifiedLight1D[0], seed);
+#endif
+}
+
+void Sampler_CopyFromStratifiedBuffer(Seed *seed, __global Sample *sample, const uint index) {
+	const uint i0 = index * 2;
+	const uint i1 = i0;
+
+	sample->u[IDX_SCREEN_X] = sample->stratifiedScreen2D[i0];
+	sample->u[IDX_SCREEN_Y] = sample->stratifiedScreen2D[i1];
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	sample->u[IDX_DOF_X] = sample->stratifiedDof2D[i0];
+	sample->u[IDX_DOF_Y] = sample->stratifiedDof2D[i1];
+#endif
+
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+	sample->u[IDX_TEX_ALPHA] = sample->stratifiedAlpha1D[i0];
+#endif
+
+	sample->u[IDX_BSDF_X] = sample->stratifiedBSDF2D[i0];
+	sample->u[IDX_BSDF_Y] = sample->stratifiedBSDF2D[i1];
+#if defined(PARAM_ENABLE_MAT_MATTEMIRROR) || defined(PARAM_ENABLE_MAT_MATTEMETAL) || defined(PARAM_ENABLE_MAT_ALLOY)
+	sample->u[IDX_BSDF_Z] = sample->stratifiedBSDF1D[i0];
+#endif
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	sample->u[IDX_DIRECTLIGHT_X] = sample->stratifiedLight2D[i0];
+	sample->u[IDX_DIRECTLIGHT_Y] = sample->stratifiedLight2D[i1];
+	sample->u[IDX_DIRECTLIGHT_Z] = sample->stratifiedLight1D[i0];
+#endif
+
+	for (int i = IDX_BSDF_OFFSET + IDX_BSDF_Z + 1; i < TOTAL_U_SIZE; ++i)
+		sample->u[i] = RndFloatValue(seed);
+}
+
+void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+	sample->pixelIndex = PixelIndexInt(gid);
+
+	Sampler_StratifiedBufferInit(seed, sample);
+
+	Sampler_CopyFromStratifiedBuffer(seed, sample, 0);
+}
+
+__kernel void Sampler(
+		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats,
+		__global Ray *rays
+#if defined(PARAM_CAMERA_DYNAMIC)
+		, __global float *cameraData
+#endif
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+
+	if (task->pathState.state == PATH_STATE_DONE) {
+		__global Sample *sample = &task->sample;
+
+		// Read the seed
+		Seed seed;
+		seed.s1 = task->seed.s1;
+		seed.s2 = task->seed.s2;
+		seed.s3 = task->seed.s3;
+
+		// Check if I have used all the stratified samples
+		const uint sampleNewCount = taskStats[gid].sampleCount + 1;
+		const uint sampleNewIndex = sampleNewCount % (PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES);
+
+		if (sampleNewIndex == 0) {
+			// Move to the next assigned pixel
+			sample->pixelIndex = NextPixelIndex(sample->pixelIndex);
+
+			// Initialize the stratified buffer
+			Sampler_StratifiedBufferInit(&seed, sample);
+		}
+
+		Sampler_CopyFromStratifiedBuffer(&seed, sample, sampleNewIndex);
+
+		GenerateCameraPath(task, &rays[gid], &seed
+#if defined(PARAM_CAMERA_DYNAMIC)
+				, cameraData
+#endif
+				);
+
+		taskStats[gid].sampleCount = sampleNewCount;
+
+		// Save the seed
+		task->seed.s1 = seed.s1;
+		task->seed.s2 = seed.s2;
+		task->seed.s3 = seed.s3;
+	}
+}
+
+#endif

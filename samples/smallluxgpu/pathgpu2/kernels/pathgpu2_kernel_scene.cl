@@ -562,9 +562,9 @@ void SampleTriangleLight(__global TriangleLight *light,	const float u0, const fl
 }
 
 void TriangleLight_Sample_L(__global TriangleLight *l,
-		const Vector *wo, const Point *hitPoint,
+		const Point *hitPoint,
 		float *pdf, Spectrum *f, Ray *shadowRay,
-		const float u0, const float u1, const float u2) {
+		const float u0, const float u1) {
 	Point samplePoint;
 	SampleTriangleLight(l, u0, u1, &samplePoint);
 
@@ -614,7 +614,7 @@ void GenerateCameraRay(
 		, __global float *cameraData
 #endif
 		) {
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 	__global float *sampleData = &sample->u[IDX_SCREEN_X];
 	const uint pixelIndex = sample->pixelIndex;
 #elif (PARAM_SAMPLER_TYPE == 2)
@@ -657,7 +657,7 @@ void GenerateCameraRay(
 #if (PARAM_SAMPLER_TYPE == 0)
 	const float dofSampleX = RndFloatValue(seed);
 	const float dofSampleY = RndFloatValue(seed);
-#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2)
+#elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
 	const float dofSampleX = sampleData[IDX_DOF_X];
 	const float dofSampleY = sampleData[IDX_DOF_Y];
 #endif

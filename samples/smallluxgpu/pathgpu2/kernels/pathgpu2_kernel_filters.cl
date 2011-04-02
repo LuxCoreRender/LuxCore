@@ -23,7 +23,7 @@
 // Pixel related functions
 //------------------------------------------------------------------------------
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1)
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 
 uint PixelIndexInt(const size_t gid) {
 	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
