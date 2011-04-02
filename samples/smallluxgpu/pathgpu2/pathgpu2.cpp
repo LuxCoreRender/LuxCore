@@ -990,17 +990,21 @@ void PathGPU2RenderThread::InitRender() {
 		//----------------------------------------------------------------------
 
 		delete initKernel;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
 		initKernel = new cl::Kernel(program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] PathGPU Init kernel work group size: " << initWorkGroupSize << endl;
 
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
+		} else if ((initWorkGroupSize > 256) && (renderEngine->sampler->type == PathGPU2::STRATIFIED)) {
+			// Otherwise I will probably run out of local memory
+			initWorkGroupSize = 256;
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "]  Cap work group size to: " << initWorkGroupSize << endl;
 		}
 
 		//--------------------------------------------------------------------------
@@ -1025,17 +1029,21 @@ void PathGPU2RenderThread::InitRender() {
 		//----------------------------------------------------------------------
 
 		delete samplerKernel;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling Sampler Kernel" << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Compiling Sampler Kernel" << endl;
 		samplerKernel = new cl::Kernel(program, "Sampler");
 		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU Sampler kernel work group size: " << samplerWorkGroupSize << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] PathGPU Sampler kernel work group size: " << samplerWorkGroupSize << endl;
 
 		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << samplerWorkGroupSize << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Suggested work group size: " << samplerWorkGroupSize << endl;
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			samplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
+		} else if ((samplerWorkGroupSize > 256) && (renderEngine->sampler->type == PathGPU2::STRATIFIED)) {
+			// Otherwise I will probably run out of local memory
+			samplerWorkGroupSize = 256;
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize << endl;
 		}
 
 		//----------------------------------------------------------------------
@@ -1043,17 +1051,17 @@ void PathGPU2RenderThread::InitRender() {
 		//----------------------------------------------------------------------
 
 		delete advancePathsKernel;
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel" << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel" << endl;
 		advancePathsKernel = new cl::Kernel(program, "AdvancePaths");
 		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathsWorkGroupSize << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] PathGPU AdvancePaths kernel work group size: " << advancePathsWorkGroupSize << endl;
 
 		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		cerr << "[PathGPURenderThread::" << threadIndex << "] Suggested work group size: " << advancePathsWorkGroupSize << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Suggested work group size: " << advancePathsWorkGroupSize << endl;
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
 			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathGPURenderThread::" << threadIndex << "] Forced work group size: " << advancePathsWorkGroupSize << endl;
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Forced work group size: " << advancePathsWorkGroupSize << endl;
 		}
 
 		//----------------------------------------------------------------------
@@ -1069,13 +1077,18 @@ void PathGPU2RenderThread::InitRender() {
 
 	// Set kernel arguments
 
-	samplerKernel->setArg(0, *tasksBuff);
-	samplerKernel->setArg(1, *taskStatsBuff);
-	samplerKernel->setArg(2, *raysBuff);
-	if (cameraBuff)
-		samplerKernel->setArg(3, *cameraBuff);
-
 	unsigned int argIndex = 0;
+	samplerKernel->setArg(argIndex++, *tasksBuff);
+	samplerKernel->setArg(argIndex++, *taskStatsBuff);
+	samplerKernel->setArg(argIndex++, *raysBuff);
+	if (cameraBuff)
+		samplerKernel->setArg(argIndex++, *cameraBuff);
+	if (renderEngine->sampler->type == PathGPU2::STRATIFIED)
+		samplerKernel->setArg(argIndex++, samplerWorkGroupSize * sizeof(float) *
+				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples *
+				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples, NULL);
+
+	argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
@@ -1112,11 +1125,16 @@ void PathGPU2RenderThread::InitRender() {
 			cl::NDRange(initFBWorkGroupSize));
 
 	// Initialize the tasks buffer
-	initKernel->setArg(0, *tasksBuff);
-	initKernel->setArg(1, *taskStatsBuff);
-	initKernel->setArg(2, *raysBuff);
+	argIndex = 0;
+	initKernel->setArg(argIndex++, *tasksBuff);
+	initKernel->setArg(argIndex++, *taskStatsBuff);
+	initKernel->setArg(argIndex++, *raysBuff);
 	if (cameraBuff)
-		initKernel->setArg(3, *cameraBuff);
+		initKernel->setArg(argIndex++, *cameraBuff);
+	if (renderEngine->sampler->type == PathGPU2::STRATIFIED)
+		initKernel->setArg(argIndex++, initWorkGroupSize * sizeof(float) *
+				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples *
+				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples, NULL);
 
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));

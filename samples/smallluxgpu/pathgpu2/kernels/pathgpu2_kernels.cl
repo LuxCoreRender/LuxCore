@@ -30,6 +30,9 @@ __kernel void Init(
 #if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
+#if (PARAM_SAMPLER_TYPE == 3)
+		, __local float *localMemTempBuff
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -46,7 +49,11 @@ __kernel void Init(
 	InitRandomGenerator(PARAM_SEED + gid, &seed);
 
 	// Initialize the sample
-	Sampler_Init(gid, &seed, &task->sample);
+	Sampler_Init(gid,
+#if (PARAM_SAMPLER_TYPE == 3)
+			localMemTempBuff,
+#endif
+			&seed, &task->sample);
 
 	// Initialize the path
 	GenerateCameraPath(task, &rays[gid], &seed

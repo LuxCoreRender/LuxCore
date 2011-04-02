@@ -434,7 +434,7 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 #if (PARAM_SAMPLER_TYPE == 3)
 
-void StratifiedSample1D(__global float *buff, Seed *seed) {
+void StratifiedSample1D(__local float *buff, Seed *seed) {
 	const float dx = 1.f / PARAM_SAMPLER_STRATIFIED_X_SAMPLES;
 
 	for (uint y = 0; y < PARAM_SAMPLER_STRATIFIED_Y_SAMPLES; ++y) {
@@ -443,7 +443,7 @@ void StratifiedSample1D(__global float *buff, Seed *seed) {
 		}
 	}
 }
-void Shuffle1D(__global float *buff, Seed *seed) {
+void Shuffle1D(__local float *buff, Seed *seed) {
 	const uint count = PARAM_SAMPLER_STRATIFIED_X_SAMPLES *  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES;
 
 	for (uint i = 0; i < count; ++i) {
@@ -455,7 +455,7 @@ void Shuffle1D(__global float *buff, Seed *seed) {
 	}
 }
 
-void StratifiedSample2D(__global float *buff, Seed *seed) {
+void StratifiedSample2D(__local float *buff, Seed *seed) {
 	const float dx = 1.f / PARAM_SAMPLER_STRATIFIED_X_SAMPLES;
 	const float dy = 1.f / PARAM_SAMPLER_STRATIFIED_Y_SAMPLES;
 
@@ -466,7 +466,8 @@ void StratifiedSample2D(__global float *buff, Seed *seed) {
 		}
 	}
 }
-void Shuffle2D(__global float *buff, Seed *seed) {
+
+void Shuffle2D(__local float *buff, Seed *seed) {
 	const uint count = PARAM_SAMPLER_STRATIFIED_X_SAMPLES *  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES;
 
 	for (uint i = 0; i < count; ++i) {
@@ -487,29 +488,53 @@ void Shuffle2D(__global float *buff, Seed *seed) {
 	}
 }
 
-void Sampler_StratifiedBufferInit(Seed *seed, __global Sample *sample) {
-	StratifiedSample2D(&sample->stratifiedScreen2D[0], seed);
+void Copy2D(__local float *src, __global float *dest) {
+	for (uint i = 0; i < PARAM_SAMPLER_STRATIFIED_X_SAMPLES *  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES; ++i) {
+		*dest++ = *src++;
+		*dest++ = *src++;
+	}
+}
+
+void Copy1D(__local float *src, __global float *dest) {
+	for (uint i = 0; i < PARAM_SAMPLER_STRATIFIED_X_SAMPLES *  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES; ++i)
+		*dest++ = *src++;
+}
+
+void Sampler_StratifiedBufferInit(__local float *localMemTempBuff,
+		Seed *seed, __global Sample *sample) {
+	__local float *tempBuff = &localMemTempBuff[get_local_id(0) * PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES * 2];
+
+	StratifiedSample2D(tempBuff, seed);
+	Copy2D(tempBuff, &sample->stratifiedScreen2D[0]);
 
 #if defined(PARAM_CAMERA_HAS_DOF)
-	StratifiedSample2D(&sample->stratifiedDof2D[0], seed);
-	Shuffle2D(&sample->stratifiedDof2D[0], seed);
+	StratifiedSample2D(tempBuff, seed);
+	Shuffle2D(tempBuff, seed);
+	Copy2D(tempBuff, &sample->stratifiedDof2D[0]);
 #endif
 
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
-	StratifiedSample1D(&sample->stratifiedAlpha1D[0], seed);
-	Shuffle1D(&sample->stratifiedAlpha1D[0], seed);
+	StratifiedSample1D(tempBuff, seed);
+	Shuffle1D(tempBuff, seed);
+	Copy1D(tempBuff, &sample->stratifiedAlpha1D[0])
 #endif
 
-	StratifiedSample2D(&sample->stratifiedBSDF2D[0], seed);
-	Shuffle2D(&sample->stratifiedBSDF2D[0], seed);
-	StratifiedSample1D(&sample->stratifiedBSDF1D[0], seed);
-	Shuffle1D(&sample->stratifiedBSDF1D[0], seed);
+	StratifiedSample2D(tempBuff, seed);
+	Shuffle2D(tempBuff, seed);
+	Copy2D(tempBuff, &sample->stratifiedBSDF2D[0]);
+
+	StratifiedSample1D(tempBuff, seed);
+	Shuffle1D(tempBuff, seed);
+	Copy1D(tempBuff, &sample->stratifiedBSDF1D[0]);
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	StratifiedSample2D(&sample->stratifiedLight2D[0], seed);
-	Shuffle2D(&sample->stratifiedLight1D[0], seed);
-	StratifiedSample1D(&sample->stratifiedLight1D[0], seed);
-	Shuffle1D(&sample->stratifiedLight1D[0], seed);
+	StratifiedSample2D(tempBuff, seed);
+	Shuffle2D(tempBuff, seed);
+	Copy2D(tempBuff, &sample->stratifiedLight2D[0]);
+
+	StratifiedSample1D(tempBuff, seed);
+	Shuffle1D(tempBuff, seed);
+	Copy1D(tempBuff, &sample->stratifiedLight1D[0]);
 #endif
 }
 
@@ -545,10 +570,11 @@ void Sampler_CopyFromStratifiedBuffer(Seed *seed, __global Sample *sample, const
 		sample->u[i] = RndFloatValue(seed);
 }
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+void Sampler_Init(const size_t gid, __local float *localMemTempBuff,
+		Seed *seed, __global Sample *sample) {
 	sample->pixelIndex = PixelIndexInt(gid);
 
-	Sampler_StratifiedBufferInit(seed, sample);
+	Sampler_StratifiedBufferInit(localMemTempBuff, seed, sample);
 
 	Sampler_CopyFromStratifiedBuffer(seed, sample, 0);
 }
@@ -560,6 +586,7 @@ __kernel void Sampler(
 #if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
+		, __local float *localMemTempBuff
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -586,7 +613,7 @@ __kernel void Sampler(
 			sample->pixelIndex = NextPixelIndex(sample->pixelIndex);
 
 			// Initialize the stratified buffer
-			Sampler_StratifiedBufferInit(&seed, sample);
+			Sampler_StratifiedBufferInit(localMemTempBuff, &seed, sample);
 		}
 
 		Sampler_CopyFromStratifiedBuffer(&seed, sample, sampleNewIndex);
