@@ -502,10 +502,8 @@ void Sampler_StratifiedBufferInit(Seed *seed, __global Sample *sample) {
 
 	StratifiedSample2D(&sample->stratifiedBSDF2D[0], seed);
 	Shuffle2D(&sample->stratifiedBSDF2D[0], seed);
-#if defined(PARAM_ENABLE_MAT_MATTEMIRROR) || defined(PARAM_ENABLE_MAT_MATTEMETAL) || defined(PARAM_ENABLE_MAT_ALLOY)
 	StratifiedSample1D(&sample->stratifiedBSDF1D[0], seed);
 	Shuffle1D(&sample->stratifiedBSDF1D[0], seed);
-#endif
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	StratifiedSample2D(&sample->stratifiedLight2D[0], seed);
@@ -517,7 +515,7 @@ void Sampler_StratifiedBufferInit(Seed *seed, __global Sample *sample) {
 
 void Sampler_CopyFromStratifiedBuffer(Seed *seed, __global Sample *sample, const uint index) {
 	const uint i0 = index * 2;
-	const uint i1 = i0;
+	const uint i1 = i0 + 1;
 
 	sample->u[IDX_SCREEN_X] = sample->stratifiedScreen2D[i0];
 	sample->u[IDX_SCREEN_Y] = sample->stratifiedScreen2D[i1];
@@ -528,22 +526,22 @@ void Sampler_CopyFromStratifiedBuffer(Seed *seed, __global Sample *sample, const
 #endif
 
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
-	sample->u[IDX_TEX_ALPHA] = sample->stratifiedAlpha1D[i0];
+	sample->u[IDX_BSDF_OFFSET + IDX_TEX_ALPHA] = sample->stratifiedAlpha1D[i0];
 #endif
 
-	sample->u[IDX_BSDF_X] = sample->stratifiedBSDF2D[i0];
-	sample->u[IDX_BSDF_Y] = sample->stratifiedBSDF2D[i1];
-#if defined(PARAM_ENABLE_MAT_MATTEMIRROR) || defined(PARAM_ENABLE_MAT_MATTEMETAL) || defined(PARAM_ENABLE_MAT_ALLOY)
-	sample->u[IDX_BSDF_Z] = sample->stratifiedBSDF1D[i0];
-#endif
+	sample->u[IDX_BSDF_OFFSET + IDX_BSDF_X] = sample->stratifiedBSDF2D[i0];
+	sample->u[IDX_BSDF_OFFSET + IDX_BSDF_Y] = sample->stratifiedBSDF2D[i1];
+	sample->u[IDX_BSDF_OFFSET + IDX_BSDF_Z] = sample->stratifiedBSDF1D[i0];
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	sample->u[IDX_DIRECTLIGHT_X] = sample->stratifiedLight2D[i0];
-	sample->u[IDX_DIRECTLIGHT_Y] = sample->stratifiedLight2D[i1];
-	sample->u[IDX_DIRECTLIGHT_Z] = sample->stratifiedLight1D[i0];
+	sample->u[IDX_BSDF_OFFSET + IDX_DIRECTLIGHT_X] = sample->stratifiedLight2D[i0];
+	sample->u[IDX_BSDF_OFFSET + IDX_DIRECTLIGHT_Y] = sample->stratifiedLight2D[i1];
+	sample->u[IDX_BSDF_OFFSET + IDX_DIRECTLIGHT_Z] = sample->stratifiedLight1D[i0];
 #endif
 
-	for (int i = IDX_BSDF_OFFSET + IDX_BSDF_Z + 1; i < TOTAL_U_SIZE; ++i)
+	sample->u[IDX_BSDF_OFFSET + IDX_RR] = RndFloatValue(seed);
+
+	for (int i = IDX_BSDF_OFFSET + SAMPLE_SIZE; i < TOTAL_U_SIZE; ++i)
 		sample->u[i] = RndFloatValue(seed);
 }
 
