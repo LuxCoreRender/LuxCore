@@ -213,7 +213,7 @@ std::string luxrays::KernelSource_PathGPU2_datatypes =
 "#define IDX_BSDF_X 0\n"
 "#define IDX_BSDF_Y 1\n"
 "#define IDX_BSDF_Z 2\n"
-"#define IDX_RR 4\n"
+"#define IDX_RR 3\n"
 "\n"
 "#define SAMPLE_SIZE 4\n"
 "\n"

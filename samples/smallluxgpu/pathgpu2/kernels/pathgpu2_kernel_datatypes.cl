@@ -211,7 +211,7 @@ typedef struct {
 #define IDX_BSDF_X 0
 #define IDX_BSDF_Y 1
 #define IDX_BSDF_Z 2
-#define IDX_RR 4
+#define IDX_RR 3
 
 #define SAMPLE_SIZE 4
 
