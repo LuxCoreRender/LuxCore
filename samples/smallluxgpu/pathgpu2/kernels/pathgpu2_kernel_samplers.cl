@@ -429,14 +429,13 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 void StratifiedSample1D(__local float *buff, Seed *seed) {
 	const float dx = 1.f / PARAM_SAMPLER_STRATIFIED_X_SAMPLES;
 
-	for (uint y = 0; y < PARAM_SAMPLER_STRATIFIED_Y_SAMPLES; ++y) {
-		for (uint x = 0; x < PARAM_SAMPLER_STRATIFIED_X_SAMPLES; ++x) {
-			*buff++ = (x + RndFloatValue(seed)) * dx;
-		}
+	for (uint x = 0; x < PARAM_SAMPLER_STRATIFIED_X_SAMPLES; ++x) {
+		*buff++ = (x + RndFloatValue(seed)) * dx;
 	}
 }
+
 void Shuffle1D(__local float *buff, Seed *seed) {
-	const uint count = PARAM_SAMPLER_STRATIFIED_X_SAMPLES *  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES;
+	const uint count = PARAM_SAMPLER_STRATIFIED_X_SAMPLES;
 
 	for (uint i = 0; i < count; ++i) {
 		const uint other = RndUintValue(seed) % (count - i);
@@ -543,22 +542,20 @@ void Sampler_CopyFromStratifiedBuffer(Seed *seed, __global Sample *sample, const
 #endif
 
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
-	sample->u[IDX_BSDF_OFFSET + IDX_TEX_ALPHA] = sample->stratifiedAlpha1D[i0];
+	sample->u[IDX_BSDF_OFFSET + IDX_TEX_ALPHA] = sample->stratifiedAlpha1D[index];
 #endif
 
 	sample->u[IDX_BSDF_OFFSET + IDX_BSDF_X] = sample->stratifiedBSDF2D[i0];
 	sample->u[IDX_BSDF_OFFSET + IDX_BSDF_Y] = sample->stratifiedBSDF2D[i1];
-	sample->u[IDX_BSDF_OFFSET + IDX_BSDF_Z] = sample->stratifiedBSDF1D[i0];
+	sample->u[IDX_BSDF_OFFSET + IDX_BSDF_Z] = sample->stratifiedBSDF1D[index];
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	sample->u[IDX_BSDF_OFFSET + IDX_DIRECTLIGHT_X] = sample->stratifiedLight2D[i0];
 	sample->u[IDX_BSDF_OFFSET + IDX_DIRECTLIGHT_Y] = sample->stratifiedLight2D[i1];
-	sample->u[IDX_BSDF_OFFSET + IDX_DIRECTLIGHT_Z] = sample->stratifiedLight1D[i0];
+	sample->u[IDX_BSDF_OFFSET + IDX_DIRECTLIGHT_Z] = sample->stratifiedLight1D[index];
 #endif
 
-	sample->u[IDX_BSDF_OFFSET + IDX_RR] = RndFloatValue(seed);
-
-	for (int i = IDX_BSDF_OFFSET + SAMPLE_SIZE; i < TOTAL_U_SIZE; ++i)
+	for (int i = IDX_BSDF_OFFSET + IDX_RR; i < TOTAL_U_SIZE; ++i)
 		sample->u[i] = RndFloatValue(seed);
 }
 
