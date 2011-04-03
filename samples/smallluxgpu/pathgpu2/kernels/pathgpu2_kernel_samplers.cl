@@ -179,28 +179,7 @@ __kernel void Sampler(
 
 #if (PARAM_SAMPLER_TYPE == 2)
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
-	sample->totalI = 0.f;
-	sample->sampleCount = 0.f;
-
-	sample->current = 0xffffffffu;
-	sample->proposed = 1;
-
-	sample->smallMutationCount = 0;
-	sample->consecutiveRejects = 0;
-
-	sample->weight = 0.f;
-	sample->currentRadiance.r = 0.f;
-	sample->currentRadiance.g = 0.f;
-	sample->currentRadiance.b = 0.f;
-
-	for (int i = 0; i < TOTAL_U_SIZE; ++i) {
-		sample->u[0][i] = RndFloatValue(seed);
-		sample->u[1][i] = RndFloatValue(seed);
-	}
-}
-
-void LargeStep(Seed *seed, __global float *proposedU) {
+void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = RndFloatValue(seed);
 }
@@ -229,6 +208,24 @@ float Mutate(Seed *seed, const float x) {
 void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Mutate(seed, currentU[i]);
+}
+
+void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+	sample->totalI = 0.f;
+	sample->largeMutationCount = 0.f;
+
+	sample->current = 0xffffffffu;
+	sample->proposed = 1;
+
+	sample->smallMutationCount = 0;
+	sample->consecutiveRejects = 0;
+
+	sample->weight = 0.f;
+	sample->currentRadiance.r = 0.f;
+	sample->currentRadiance.g = 0.f;
+	sample->currentRadiance.b = 0.f;
+
+	LargeStep(seed, 0, &sample->u[1][0]);
 }
 
 __kernel void Sampler(
@@ -261,7 +258,7 @@ __kernel void Sampler(
 		__global float *proposedU = &sample->u[proposed][0];
 
 		if (RndFloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
-			LargeStep(&seed, proposedU);
+			LargeStep(&seed, sample->largeMutationCount, proposedU);
 			sample->smallMutationCount = 0;
 		} else {
 			__global float *currentU = &sample->u[current][0];
@@ -299,7 +296,7 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		sample->totalI = Spectrum_Y(&radiance);
 
 		// The following 2 lines could be moved in the initialization code
-		sample->sampleCount = 1;
+		sample->largeMutationCount = 1;
 		sample->weight = 0.f;
 
 		current = proposed;
@@ -313,18 +310,18 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 		proposedI = isinf(proposedI) ? 0.f : proposedI;
 
 		float totalI = sample->totalI;
-		uint sampleCount = sample->sampleCount;
+		uint largeMutationCount = sample->largeMutationCount;
 		uint smallMutationCount = sample->smallMutationCount;
 		if (smallMutationCount == 0) {
 			// It is a large mutation
 			totalI += Spectrum_Y(&proposedL);
-			sampleCount += 1;
+			largeMutationCount += 1;
 
 			sample->totalI = totalI;
-			sample->sampleCount = sampleCount;
+			sample->largeMutationCount = largeMutationCount;
 		}
 
-		const float meanI = (totalI > 0.f) ? (totalI / sampleCount) : 1.f;
+		const float meanI = (totalI > 0.f) ? (totalI / largeMutationCount) : 1.f;
 
 		// Calculate accept probability from old and new image sample
 		uint consecutiveRejects = sample->consecutiveRejects;
@@ -350,10 +347,8 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 		Spectrum contrib;
 		float norm;
-#if (PARAM_IMAGE_FILTER_TYPE != 0)
 		float sx, sy;
-#endif
-		uint pixelIndex;
+
 		if ((accProb == 1.f) || (rndVal < accProb)) {
 			/*if (get_global_id(0) == 0)
 				printf(\"\\t\\tACCEPTED !\\n\");*/
@@ -362,15 +357,13 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = currentL;
 
-			pixelIndex = PixelIndexFloat(sample->u[current][IDX_PIXEL_INDEX]);
-#if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[current][IDX_SCREEN_X];
 			sy = sample->u[current][IDX_SCREEN_Y];
-#endif
 
 #if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
 			// Debug code: to check sample distribution
 			contrib.r = contrib.g = contrib.b = (consecutiveRejects + 1.f)  * .01f;
+			const uint pixelIndex = PixelIndexFloat2D(sx, sy);
 			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
 #endif
 
@@ -389,17 +382,15 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = proposedL;
 
-			pixelIndex = PixelIndexFloat(sample->u[proposed][IDX_PIXEL_INDEX]);
-#if (PARAM_IMAGE_FILTER_TYPE != 0)
 			sx = sample->u[proposed][IDX_SCREEN_X];
 			sy = sample->u[proposed][IDX_SCREEN_Y];
-#endif
 
 			++consecutiveRejects;
 
 #if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
 			// Debug code: to check sample distribution
 			contrib.r = contrib.g = contrib.b = 1.f * .01f;
+			const uint pixelIndex = PixelIndexFloat2D(sx, sy);
 			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
 #endif
 		}
@@ -410,6 +401,7 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 				printf(\"\\t\\tPixelIndex: %d Contrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						pixelIndex, contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
+			const uint pixelIndex = PixelIndexFloat2D(sx, sy);
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 			SplatSample(frameBuffer, pixelIndex, &contrib, norm);
 #else

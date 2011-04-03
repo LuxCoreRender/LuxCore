@@ -90,8 +90,6 @@
 // TODO: to fix
 #define PARAM_STARTLINE 0
 
-//#define PARAM_USE_PIXEL_ATOMICS 1
-//#define PARAM_SAMPLER_TYPE 2
 //#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1
 
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
@@ -167,25 +165,9 @@ typedef struct {
 #if defined(PARAM_CAMERA_HAS_DOF)
 #define IDX_DOF_X 2
 #define IDX_DOF_Y 3
-
-#if (PARAM_SAMPLER_TYPE == 2)
-// Metropolis needs one more sample for the pixelIndex
-#define IDX_PIXEL_INDEX 4
-#define IDX_BSDF_OFFSET 5
-#else
 #define IDX_BSDF_OFFSET 4
-#endif
-
-#else
-
-#if (PARAM_SAMPLER_TYPE == 2)
-// Metropolis needs one more sample for the pixelIndex
-#define IDX_PIXEL_INDEX 2
-#define IDX_BSDF_OFFSET 3
 #else
 #define IDX_BSDF_OFFSET 2
-#endif
-
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
@@ -251,10 +233,10 @@ typedef struct {
 	float u[TOTAL_U_SIZE];
 #elif (PARAM_SAMPLER_TYPE == 2)
 	float totalI;
-	uint sampleCount;
 
 	// Using ushort here totally freeze the ATI driver
-	uint current, proposed, smallMutationCount, consecutiveRejects;
+	uint largeMutationCount, smallMutationCount;
+	uint current, proposed, consecutiveRejects;
 
 	float weight;
 	Spectrum currentRadiance;

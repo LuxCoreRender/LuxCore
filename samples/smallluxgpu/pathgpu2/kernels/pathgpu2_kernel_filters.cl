@@ -23,7 +23,14 @@
 // Pixel related functions
 //------------------------------------------------------------------------------
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
+void PixelIndex2XY(const uint index, uint *x, uint *y) {
+	*y = index / PARAM_IMAGE_WIDTH;
+	*x = index - (*y) * PARAM_IMAGE_WIDTH;
+}
+
+uint XY2PixelIndex(const uint x, const uint y) {
+	return x + y * PARAM_IMAGE_WIDTH;
+}
 
 uint PixelIndexInt(const size_t gid) {
 	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
@@ -33,8 +40,6 @@ uint NextPixelIndex(const uint i) {
 	return (i + PARAM_TASK_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 }
 
-#elif (PARAM_SAMPLER_TYPE == 2)
-
 uint PixelIndexFloat(const float u) {
 	const uint pixelCountPerTask = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;
 	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
@@ -42,15 +47,11 @@ uint PixelIndexFloat(const float u) {
 	return i;
 }
 
-#endif
+uint PixelIndexFloat2D(const float ux, const float uy) {
+	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * ux), PARAM_IMAGE_WIDTH - 1);
+	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * uy), PARAM_IMAGE_HEIGHT - 1);
 
-void PixelIndex2XY(const uint index, uint *x, uint *y) {
-	*y = index / PARAM_IMAGE_WIDTH;
-	*x = index - (*y) * PARAM_IMAGE_WIDTH;
-}
-
-uint XY2PixelIndex(const uint x, const uint y) {
-	return x + y * PARAM_IMAGE_WIDTH;
+	return XY2PixelIndex(x, y);
 }
 
 //------------------------------------------------------------------------------
