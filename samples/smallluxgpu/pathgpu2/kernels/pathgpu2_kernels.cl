@@ -181,7 +181,7 @@ __kernel void AdvancePaths(
 			if (currentTriangleIndex != 0xffffffffu) {
 				// Something was hit
 
-				const uint pathDepth = task->pathState.depth + 1;
+				uint pathDepth = task->pathState.depth;
 #if (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
 #elif (PARAM_SAMPLER_TYPE == 2)
@@ -392,6 +392,7 @@ __kernel void AdvancePaths(
 						break;
 				}
 
+				pathDepth += 1;
 				const float invPdf = ((pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
 
 				//if (pathDepth > 2)
@@ -452,9 +453,9 @@ __kernel void AdvancePaths(
 					const float ul1 = RndFloatValue(&seed);
 					const float ul2 = RndFloatValue(&seed);
 #elif (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 2) || (PARAM_SAMPLER_TYPE == 3)
-					const float ul0 = sampleData[IDX_DIRECTLIGHT_X];
-					const float ul1 = sampleData[IDX_DIRECTLIGHT_Y];
-					const float ul2 = sampleData[IDX_DIRECTLIGHT_Z];
+					const float ul1 = sampleData[IDX_DIRECTLIGHT_X];
+					const float ul2 = sampleData[IDX_DIRECTLIGHT_Y];
+					const float ul0 = sampleData[IDX_DIRECTLIGHT_Z];
 #endif
 
 					// Select a light source to sample

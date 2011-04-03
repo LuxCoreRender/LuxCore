@@ -731,6 +731,8 @@ void PathGPU2RenderThread::InitRender() {
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
+	// TODO: clenup all this mess
+
 	const size_t gpuTaksSizePart1 =
 		// Seed size
 		sizeof(PathGPU2::Seed);
@@ -756,16 +758,33 @@ void PathGPU2RenderThread::InitRender() {
 			(sizeof(float) * 2 + sizeof(unsigned int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
 			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
 
-	const size_t sampleSize =
+	size_t sampleSize =
 		// uint pixelIndex;
 		((renderEngine->sampler->type == PathGPU2::METROPOLIS) ? 0 : sizeof(unsigned int)) +
-		((renderEngine->sampler->type == PathGPU2::STRATIFIED) ?
-			(((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples * ((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples *
-				(uDataEyePathVertexSize + uDataPerPathVertexSize)) :
-			0) +
 		uDataSize +
 		// Spectrum radiance;
 		sizeof(Spectrum);
+
+	size_t stratifiedDataSize = 0;
+	if (renderEngine->sampler->type == PathGPU2::STRATIFIED) {
+		PathGPU2::StratifiedSampler *s = (PathGPU2::StratifiedSampler *)renderEngine->sampler;
+		stratifiedDataSize =
+				// stratifiedScreen2D
+				sizeof(float) * s->xSamples * s->ySamples * 2 +
+				// stratifiedDof2D
+				((scene->camera->lensRadius > 0.f) ? (sizeof(float) * s->xSamples * s->ySamples * 2) : 0) +
+				// stratifiedAlpha1D
+				((texMapAlphaBuff) ? (sizeof(float) * s->xSamples) : 0) +
+				// stratifiedBSDF2D
+				sizeof(float) * s->xSamples * s->ySamples * 2 +
+				// stratifiedBSDF1D
+				sizeof(float) * s->xSamples +
+				// stratifiedLight2D
+				// stratifiedLight1D
+				((areaLightCount > 0) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
+
+		sampleSize += stratifiedDataSize;
+	}
 
 	const size_t gpuTaksSizePart2 = sampleSize;
 
@@ -1001,14 +1020,12 @@ void PathGPU2RenderThread::InitRender() {
 			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
 		} else if (renderEngine->sampler->type == PathGPU2::STRATIFIED) {
 			// Resize the workgroup to have enough local memory
-			size_t m = 2  * sizeof(float) *
-					((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples * ((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples;
 			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 
-			while ((initWorkGroupSize > 64) && (m * initWorkGroupSize > localMem))
+			while ((initWorkGroupSize > 64) && (stratifiedDataSize * initWorkGroupSize > localMem))
 				initWorkGroupSize /= 2;
 
-			if (m * initWorkGroupSize > localMem)
+			if (stratifiedDataSize * initWorkGroupSize > localMem)
 				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
 
 			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Cap work group size to: " << initWorkGroupSize << endl;
@@ -1049,14 +1066,12 @@ void PathGPU2RenderThread::InitRender() {
 			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
 		} else if (renderEngine->sampler->type == PathGPU2::STRATIFIED) {
 			// Resize the workgroup to have enough local memory
-			size_t m = 2  * sizeof(float) *
-					((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples * ((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples;
 			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 
-			while ((samplerWorkGroupSize > 64) && (m * samplerWorkGroupSize > localMem))
+			while ((samplerWorkGroupSize > 64) && (stratifiedDataSize * samplerWorkGroupSize > localMem))
 				samplerWorkGroupSize /= 2;
 
-			if (m * samplerWorkGroupSize > localMem)
+			if (stratifiedDataSize * samplerWorkGroupSize > localMem)
 				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
 
 			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize << endl;
@@ -1100,9 +1115,7 @@ void PathGPU2RenderThread::InitRender() {
 	if (cameraBuff)
 		samplerKernel->setArg(argIndex++, *cameraBuff);
 	if (renderEngine->sampler->type == PathGPU2::STRATIFIED)
-		samplerKernel->setArg(argIndex++, samplerWorkGroupSize * sizeof(float) *
-				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples *
-				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples, NULL);
+		samplerKernel->setArg(argIndex++, samplerWorkGroupSize * stratifiedDataSize, NULL);
 
 	argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
@@ -1148,9 +1161,7 @@ void PathGPU2RenderThread::InitRender() {
 	if (cameraBuff)
 		initKernel->setArg(argIndex++, *cameraBuff);
 	if (renderEngine->sampler->type == PathGPU2::STRATIFIED)
-		initKernel->setArg(argIndex++, initWorkGroupSize * sizeof(float) *
-				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->xSamples *
-				((PathGPU2::StratifiedSampler *)renderEngine->sampler)->ySamples, NULL);
+		initKernel->setArg(argIndex++, initWorkGroupSize * stratifiedDataSize, NULL);
 
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
