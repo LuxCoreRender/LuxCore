@@ -1,5 +1,5 @@
 ###########################################################################
-#   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 #
+#   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 #
 #                                                                         #
 #   This file is part of LuxRays.                                         #
 #                                                                         #
@@ -22,6 +22,15 @@
 set(LUXMARK_VERSION_MAJOR 1)
 set(LUXMARK_VERSION_MINOR 0)
 
+find_package(QT4 REQUIRED)
+IF(QT4_FOUND)
+  include(${QT_USE_FILE})
+  include_directories(${QT_INCLUDES})
+ELSE(QT4_FOUND)
+  message(STATUS "Is env variable QTDIR set correctly? Currently: $ENV{QTDIR}")
+ENDIF(QT4_FOUND)
+
+
 # Configure a header file to pass some of the CMake settings
 # to the source code
 configure_file(
@@ -35,14 +44,25 @@ configure_file(
 #
 ###########################################################################
 
-add_custom_command(
-   OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
-   COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
-   COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
-   COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
-   COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
-   MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
-   )
+IF(WIN32)
+  add_custom_command(
+    OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND echo "#include \"pathgpu/kernels/kernels.h\"" > pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND echo std::string luxrays::KernelSource_PathGPU = >> pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu\\kernels\\pathgpu_kernel.cl >> pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND echo ";" >> pathgpu/kernels/pathgpu_kernel.cpp
+    MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
+  )
+ELSE(WIN32)
+  add_custom_command(
+    OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
+    MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
+  )
+ENDIF(WIN32)
 
 #############################################################################
 #
@@ -130,7 +150,7 @@ ENDIF(APPLE)
 
 #############################################################################
 
-if(APPLE)
+IF(APPLE)
 	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
 	target_link_libraries(LuxMark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
 	ADD_CUSTOM_COMMAND(
@@ -141,7 +161,15 @@ if(APPLE)
 				COMMAND mv ../../bin/release/LuxMark.app/Contents/Resources/luxrender.icns ../../bin/release/LuxMark.app/Contents/Resources/LuxMark.icns
 #				COMMAND macdeployqt ../../bin/release/LuxMark.app ### bundling Qt frameworks ###
 				)
-else(APPLE)
-	add_executable(luxmark ${LUXMARK_SRCS})
-	target_link_libraries(luxmark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
-endif(APPLE)
+ELSE(APPLE)
+
+	ADD_EXECUTABLE(luxmark ${LUXMARK_SRCS})
+	
+	TARGET_LINK_LIBRARIES(luxmark LuxRays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${OPENGL_LIBRARY} ${Boost_LIBRARIES})
+	TARGET_LINK_LIBRARIES(luxmark ${OpenCL_LIBRARY})
+	TARGET_LINK_LIBRARIES(luxmark ${GLUT_LIBRARY})
+	
+	# This instructs FREEGLUT to emit a pragma for the static version
+	SET_TARGET_PROPERTIES(luxmark PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)
+
+ENDIF(APPLE)
