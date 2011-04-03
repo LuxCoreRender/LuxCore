@@ -20,7 +20,7 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 #
-# SmallLuxGPU v1.7beta2 Blender 2.5 plug-in
+# SmallLuxGPU v1.8beta1 Blender 2.5 plug-in
 
 bl_info = {
     "name": "SmallLuxGPU",
@@ -203,6 +203,7 @@ class SLGBP:
         cfg['opencl.nativethread.count'] = format(scene.slg.native_threads)
         cfg['opencl.cpu.use'] = format(scene.slg.opencl_cpu, 'b')
         cfg['opencl.gpu.use'] = format(scene.slg.opencl_gpu, 'b')
+        cfg['opencl.task.count'] = format(scene.slg.opencl_task_count)
         cfg['opencl.platform.index'] = format(scene.slg.platform)
         if scene.slg.devices.strip():
             cfg['opencl.devices.select'] = scene.slg.devices
@@ -220,12 +221,17 @@ class SLGBP:
         cfg['sppm.photon.maxdepth'] = format(scene.slg.sppm_photon_maxdepth)
         cfg['sppm.stochastic.count'] = format(scene.slg.sppm_photon_per_pass)
         cfg['path.sampler.type'] = scene.slg.sampler_type
+        cfg['path.pixelatomics.enable'] = format(scene.slg.pixelatomics_enable, 'b')
+        cfg['path.sampler.xsamples'] = format(scene.slg.sampler_xsamples)
+        cfg['path.sampler.ysamples'] = format(scene.slg.sampler_ysamples)
+        cfg['path.sampler.largesteprate'] = ff(scene.slg.sampler_largesteprate)
+        cfg['path.sampler.maxconsecutivereject'] = ff(scene.slg.sampler_maxconsecutivereject)
         cfg['path.filter.type'] = scene.slg.filter_type
-        cfg['path.filter.width.x'] = format(scene.slg.filter_width_x)
-        cfg['path.filter.width.y'] = format(scene.slg.filter_width_y)
-        cfg['path.filter.alpha'] = format(scene.slg.filter_alpha)
-        cfg['path.filter.B'] = format(scene.slg.filter_B)
-        cfg['path.filter.C'] = format(scene.slg.filter_C)
+        cfg['path.filter.width.x'] = ff(scene.slg.filter_width_x)
+        cfg['path.filter.width.y'] = ff(scene.slg.filter_width_y)
+        cfg['path.filter.alpha'] = ff(scene.slg.filter_alpha)
+        cfg['path.filter.B'] = ff(scene.slg.filter_B)
+        cfg['path.filter.C'] = ff(scene.slg.filter_C)
         cfg['path.maxdepth'] = format(scene.slg.tracedepth)
         cfg['path.russianroulette.depth'] = format(scene.slg.rrdepth)
         cfg['path.russianroulette.strategy'] = scene.slg.rrstrategy
@@ -1108,7 +1114,7 @@ class SLGSettings(bpy.types.PropertyGroup):
     pass
 
 def slg_add_properties():
-    # Add SmallLuxGPU properties to scene
+    # Add SmallLuxGPU properties to scene (prop. name max length is 31)
     from bpy.props import PointerProperty, StringProperty, BoolProperty, EnumProperty, IntProperty, FloatProperty, FloatVectorProperty, CollectionProperty
     bpy.types.Scene.slg = PointerProperty(type=SLGSettings, name="SLG", description="SLG Settings")
 
@@ -1177,6 +1183,7 @@ def slg_add_properties():
         description="Sampler Type",
         items=(("INLINED_RANDOM", "Inlined Random", "Inlined Random"),
                ("RANDOM", "Random", "Random"),
+               ("STRATIFIED", "Stratified", "Stratified"),
                ("METROPOLIS", "Metropolis", "Metropolis")),
         default="METROPOLIS")
 
@@ -1188,6 +1195,26 @@ def slg_add_properties():
                ("MITCHELL", "Mitchell", "Mitchell"),
                ("MITCHELL_SS", "Mitchell_SS", "Mitchell_SS")),
         default="NONE")
+
+    SLGSettings.pixelatomics_enable = BoolProperty(name="Use Pixel Atomics",
+        description="Use Pixel Atomics",
+        default=False)
+
+    SLGSettings.sampler_xsamples = IntProperty(name="X Samples",
+        description="Stratified sampler X samples",
+        default=3, min=1, soft_min=1)
+
+    SLGSettings.sampler_ysamples = IntProperty(name="Y Samples",
+        description="Stratified sampler Y samples",
+        default=3, min=1, soft_min=1)
+
+    SLGSettings.sampler_largesteprate = FloatProperty(name="Large Step Rate",
+        description="Large Step Rate",
+        default=0.4, min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, precision=3)
+
+    SLGSettings.sampler_maxconsecutivereject = FloatProperty(name="Max Consecutive Reject",
+        description="Max Consecutive Reject",
+        default=512.0, min=0.0, soft_min=0.0)
 
     SLGSettings.filter_width_x = FloatProperty(name="Filter Width X",
         description="Filter width x",
@@ -1208,6 +1235,10 @@ def slg_add_properties():
     SLGSettings.filter_C = FloatProperty(name="Filter C",
         description="Filter C",
         default=0.333333, min=0.0, max=10, soft_min=0.0, soft_max=10, precision=3)
+
+    SLGSettings.opencl_task_count = IntProperty(name="OpenCL Task Count",
+        description="OpenCL Task Count: Higher values can lead to better performance but consumes more memory",
+        default=131072, min=1, soft_min=1)
 
     SLGSettings.sppmlookuptype = EnumProperty(name="SPPM Lookup Type",
         description="SPPM Lookup Type (Hybrid generally best)",
@@ -1370,7 +1401,7 @@ def slg_add_properties():
         description="Max number of samples per pixels in batch mode; 0 = ignore",
         default=128, min=0, soft_min=0)
 
-    SLGSettings.batchmode_periodicsave = IntProperty(name="Periodic image save",
+    SLGSettings.batchmode_periodicsave = IntProperty(name="Periodic save interval",
         description="Save image periodically (in seconds); 0 = ignore",
         default=0, min=0, soft_min=0)
 
@@ -1576,10 +1607,16 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.devices_threads",
         "scene.slg.opencl_cpu",
         "scene.slg.opencl_gpu",
+        "scene.slg.opencl_task_count",
         "scene.slg.gpu_workgroup_size",
         "scene.slg.platform",
         "scene.slg.devices",
         "scene.slg.sampler_type",
+        "scene.slg.pixelatomics_enable",
+        "scene.slg.sampler_xsamples",
+        "scene.slg.sampler_ysamples",
+        "scene.slg.sampler_largesteprate",
+        "scene.slg.sampler_maxconsecutivereject",
         "scene.slg.filter_type",
         "scene.slg.filter_width_x",
         "scene.slg.filter_width_y",
@@ -1666,6 +1703,18 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             split = layout.split()
             col = split.column()
             col.prop(slg, "sampler_type")
+            if slg.sampler_type == 'STRATIFIED':
+                split = layout.split()
+                col = split.column()
+                col.prop(slg, "sampler_xsamples")
+                col = split.column()
+                col.prop(slg, "sampler_ysamples")
+            elif slg.sampler_type == 'METROPOLIS':
+                split = layout.split()
+                col = split.column()
+                col.prop(slg, "sampler_largesteprate")
+                col = split.column()
+                col.prop(slg, "sampler_maxconsecutivereject")
             split = layout.split()
             col = split.column()
             col.prop(slg, "filter_type")
@@ -1727,6 +1776,9 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             else:
                 col.prop(slg, "rrcap", text="RR Cap")
             split = layout.split()
+            if slg.rendering_type == '4':
+                col = split.column()
+                col.prop(slg, "pixelatomics_enable")
             col = split.column()
             col.prop(slg, "enablepartmedia")
             if slg.enablepartmedia:
@@ -1767,12 +1819,12 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col.prop(slg, "batchmodespp", text="Samples")
         split = layout.split()
         col = split.column()
-        col.prop(slg, "batchmode_periodicsave", text="Periodic save interval")
+        col.prop(slg, "batchmode_periodicsave")
         split = layout.split()
         col = split.column()
-        col.prop(slg, "native_threads", text="Native Threads")
+        col.prop(slg, "native_threads")
         col = split.column()
-        col.prop(slg, "devices_threads", text="OpenCL Threads")
+        col.prop(slg, "devices_threads")
         split = layout.split(percentage=0.33)
         col = split.column()
         col.label(text="OpenCL devs:")
@@ -1781,8 +1833,12 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col = split.column()
         col.prop(slg, "opencl_gpu")
         split = layout.split()
+        if slg.rendering_type == '4':
+            col = split.column()
+            col.prop(slg, "opencl_task_count")
+            split = layout.split()
         col = split.column()
-        col.prop(slg, "gpu_workgroup_size", text="GPU workgroup size")
+        col.prop(slg, "gpu_workgroup_size")
         split = layout.split()
         col = split.column()
         col.prop(slg, "platform", text="Platform")
