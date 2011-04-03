@@ -48,8 +48,8 @@ uint PixelIndexFloat(const float u) {
 }
 
 uint PixelIndexFloat2D(const float ux, const float uy) {
-	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * ux), PARAM_IMAGE_WIDTH - 1);
-	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * uy), PARAM_IMAGE_HEIGHT - 1);
+	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * ux), (uint)(PARAM_IMAGE_WIDTH - 1));
+	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * uy), (uint)(PARAM_IMAGE_HEIGHT - 1));
 
 	return XY2PixelIndex(x, y);
 }
