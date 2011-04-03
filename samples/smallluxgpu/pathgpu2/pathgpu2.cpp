@@ -739,9 +739,7 @@ void PathGPU2RenderThread::InitRender() {
 		// IDX_SCREEN_X, IDX_SCREEN_Y
 		sizeof(float) * 2 +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0) +
-		// IDX_PIXEL_INDEX
-		((renderEngine->sampler->type == PathGPU2::METROPOLIS) ? sizeof(float) : 0);
+		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_TEX_ALPHA,
 		((texMapAlphaBuff) ? sizeof(float) : 0) +
@@ -1353,7 +1351,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 
 		 sampler = new PathGPU2::StratifiedSampler(xSamples, ySamples);
 	 } else if (samplerTypeName.compare("METROPOLIS") == 0) {
-		 const float rate = cfg.GetFloat("path.sampler.largesteprate", 0.25f);
+		 const float rate = cfg.GetFloat("path.sampler.largesteprate", 0.4f);
 		 const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
 
 		 sampler = new PathGPU2::MetropolisSampler(rate, reject);
