@@ -75,8 +75,6 @@ __kernel void Sampler(
 #endif
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
@@ -135,8 +133,6 @@ __kernel void Sampler(
 #endif
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
@@ -237,8 +233,6 @@ __kernel void Sampler(
 #endif
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
@@ -578,8 +572,6 @@ __kernel void Sampler(
 		, __local float *localMemTempBuff
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
