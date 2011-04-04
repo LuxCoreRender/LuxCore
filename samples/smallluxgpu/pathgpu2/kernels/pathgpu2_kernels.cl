@@ -35,8 +35,6 @@ __kernel void Init(
 #endif
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	//if (gid == 0)
 	//	printf(\"GPUTask: %d\\n\", sizeof(GPUTask));
@@ -143,8 +141,6 @@ __kernel void AdvancePaths(
 #endif
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
-		return;
 
 	__global GPUTask *task = &tasks[gid];
 	uint pathState = task->pathState.state;
