@@ -625,8 +625,8 @@ void GenerateCameraRay(
 	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - 0.5f;
 #elif (PARAM_SAMPLER_TYPE == 2)
 	__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
-	const float screenX = min((uint)(sampleData[IDX_SCREEN_X] * PARAM_IMAGE_WIDTH), (uint)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min((uint)(sampleData[IDX_SCREEN_Y] * PARAM_IMAGE_HEIGHT), (uint)(PARAM_IMAGE_HEIGHT - 1));
+	const float screenX = min(sampleData[IDX_SCREEN_X] * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
+	const float screenY = min(sampleData[IDX_SCREEN_Y] * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
 #endif
 
 	Point Pras;
