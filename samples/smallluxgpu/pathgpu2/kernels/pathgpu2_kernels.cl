@@ -175,6 +175,7 @@ __kernel void AdvancePaths(
     hitPoint.z = ray->o.z + rayDir.z * hitPointT;
 
 	Spectrum throughput = task->pathState.throughput;
+	const Spectrum prevThroughput = throughput;
 
 	switch (pathState) {
 		case PATH_STATE_NEXT_VERTEX: {
@@ -383,7 +384,7 @@ __kernel void AdvancePaths(
 						f.b = 1.f;
 
 						// I have also to restore the original throughput
-						throughput = task->pathState.throughput;
+						throughput = prevThroughput;
 						break;
 
 					default:
@@ -473,7 +474,7 @@ __kernel void AdvancePaths(
 
 					const float pdf = lightPdf * matPdf * directLightPdf;
 					if (pdf > 0.f) {
-						Spectrum throughputLightDir = task->pathState.throughput;
+						Spectrum throughputLightDir = prevThroughput;
 						throughputLightDir.r *= shadeColor.r;
 						throughputLightDir.g *= shadeColor.g;
 						throughputLightDir.b *= shadeColor.b;
