@@ -42,7 +42,7 @@ uint NextPixelIndex(const uint i) {
 
 uint PixelIndexFloat(const float u) {
 	const uint pixelCountPerTask = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;
-	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);
+	const uint i = min((uint)floor(pixelCountPerTask * u), (uint)(pixelCountPerTask - 1));
 
 	return i;
 }

@@ -44,7 +44,7 @@ std::string luxrays::KernelSource_PathGPU2_filters =
 "\n"
 "uint PixelIndexFloat(const float u) {\n"
 "	const uint pixelCountPerTask = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;\n"
-"	const uint i = min((uint)floor(pixelCountPerTask * u), pixelCountPerTask - 1);\n"
+"	const uint i = min((uint)floor(pixelCountPerTask * u), (uint)(pixelCountPerTask - 1));\n"
 "\n"
 "	return i;\n"
 "}\n"
