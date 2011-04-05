@@ -71,7 +71,7 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	NONE, BOX, GAUSSIAN, MITCHELL, MITCHELL_SS
+	NONE, BOX, GAUSSIAN, MITCHELL
 } FilterType;
 
 class Filter {
@@ -106,14 +106,6 @@ class MitchellFilter : public Filter {
 public:
 	MitchellFilter(const float wx, const float wy, const float b, const float c) :
 		Filter(MITCHELL, wx, wy), B(b), C(c) { }
-
-	float B, C;
-};
-
-class MitchellFilterSS : public Filter {
-public:
-	MitchellFilterSS(const float wx, const float wy, const float b, const float c) :
-		Filter(MITCHELL_SS, wx, wy), B(b), C(c) { }
 
 	float B, C;
 };

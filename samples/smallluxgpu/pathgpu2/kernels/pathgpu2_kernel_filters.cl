@@ -54,6 +54,20 @@ uint PixelIndexFloat2D(const float ux, const float uy) {
 	return XY2PixelIndex(x, y);
 }
 
+uint PixelIndexFloat2DWithOffset(const float ux, const float uy, float *ox, float *oy) {
+	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * ux), (uint)(PARAM_IMAGE_WIDTH - 1));
+	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * uy), (uint)(PARAM_IMAGE_HEIGHT - 1));
+
+	*ox = PARAM_IMAGE_WIDTH * ux - (float)x;
+	*oy = PARAM_IMAGE_HEIGHT * uy - (float)y;
+
+	return XY2PixelIndex(x, y);
+}
+
+bool IsValidPixelXY(const int x, const int y) {
+	return (x >= 0) && (x < PARAM_IMAGE_WIDTH) && (y >= 0) && (y < PARAM_IMAGE_HEIGHT);
+}
+
 //------------------------------------------------------------------------------
 // Image filtering related functions
 //------------------------------------------------------------------------------
@@ -111,42 +125,6 @@ float ImageFilter_Evaluate(const float x, const float y) {
 	return Mitchell1D(distance);
 }
 
-#elif (PARAM_IMAGE_FILTER_TYPE == 4)
-
-float Mitchell1D(float x) {
-	const float B = PARAM_IMAGE_FILTER_MITCHELL_B;
-	const float C = PARAM_IMAGE_FILTER_MITCHELL_C;
-
-	if (x >= 1.f)
-		return 0.f;
-	x = fabs(2.f * x);
-
-	if (x > 1.f)
-		return (((-B / 6.f - C) * x + (B + 5.f * C)) * x +
-			(-2.f * B - 8.f * C)) * x + (4.f / 3.f * B + 4.f * C);
-	else
-		return ((2.f - 1.5f * B - C) * x +
-			(-3.f + 2.f * B + C)) * x * x +
-			(1.f - B / 3.f);
-}
-
-// Mitchell Filter with Super Sampling
-float ImageFilter_Evaluate(const float x, const float y) {
-	const float distance = native_sqrt(
-			x * x * (1.f / (PARAM_IMAGE_FILTER_WIDTH_X * 5.f / 3.f * PARAM_IMAGE_FILTER_WIDTH_X * 5.f / 3.f)) +
-			y * y * (1.f / (PARAM_IMAGE_FILTER_WIDTH_Y * 5.f / 3.f * PARAM_IMAGE_FILTER_WIDTH_Y * 5.f / 3.f)));
-
-	const float dist = distance / .6f;
-	const float B = PARAM_IMAGE_FILTER_MITCHELL_B;
-	const float C = PARAM_IMAGE_FILTER_MITCHELL_C;
-	const float a0 = (76.f - 16.f * B + 8.f * C) / 81.f;
-	const float a1 = (1.f - a0)/ 2.f;
-
-	return a1 * Mitchell1D(dist - 2.f / 3.f) +
-			a0 * Mitchell1D(dist) +
-			a1 * Mitchell1D(dist + 2.f / 3.f);
-}
-
 #else
 
 Error: unknown image filter !!!
@@ -180,12 +158,12 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 #endif
 }
 
-#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
 void Pixel_AddFilteredRadiance(__global Pixel *pixel, Spectrum *rad,
 	const float distX, const float distY, const float weight) {
 	const float filterWeight = ImageFilter_Evaluate(distX, distY);
 
-	Pixel_AddRadiance(pixel, rad, weight * filterWeight)
+	Pixel_AddRadiance(pixel, rad, weight * filterWeight);
 }
 #endif
 
@@ -197,31 +175,64 @@ void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, Spectrum *r
 		Pixel_AddRadiance(pixel, radiance, weight);
 }
 
-#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
 
 void SplatSample(__global Pixel *frameBuffer, const uint pixelIndex, const float sx, const float sy, Spectrum *radiance, const float weight) {
-		uint bufferPixelIndex = pixelIndex * 9;
+	uint ux, uy;
+	PixelIndex2XY(pixelIndex, &ux, &uy);
+	int x = (int)ux;
+	int y = (int)uy;
 
-		__global Pixel *pixel = &frameBuffer[bufferPixelIndex++];
+	int xs = x - 1;
+	int ys = y - 1;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
 		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f, weight);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy + 1.f, weight);
-		pixel = &frameBuffer[bufferPixelIndex++];
+	}
+	xs = x;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy + 1.f, weight);
+	}
+	xs = x + 1;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
 		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f, weight);
+	}
 
-		pixel = &frameBuffer[bufferPixelIndex++];
+	xs = x - 1;
+	ys = y;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
 		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy, weight);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy, weight);
-		pixel = &frameBuffer[bufferPixelIndex++];
+	}
+	xs = x;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy, weight);
+	}
+	xs = x + 1;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
 		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy, weight);
+	}
 
-		pixel = &frameBuffer[bufferPixelIndex++];
+	xs = x - 1;
+	ys = y + 1;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
 		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f, weight);
-		pixel = &frameBuffer[bufferPixelIndex++];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx      , sy - 1.f, weight);
-		pixel = &frameBuffer[bufferPixelIndex];
+	}
+	xs = x;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
+		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy - 1.f, weight);
+	}
+	xs = x + 1;
+	if (IsValidPixelXY(xs, ys)) {
+		__global Pixel *pixel = &frameBuffer[XY2PixelIndex(xs, ys)];
 		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f, weight);
+	}
 }
 
 #else
