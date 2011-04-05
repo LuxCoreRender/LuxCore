@@ -43,8 +43,6 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/pixel/samplebuffer.h"
 
-// TODO: add a check for PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT > PARAM_TASK_COUNT
-
 //------------------------------------------------------------------------------
 // PathGPU2RenderThread
 //------------------------------------------------------------------------------
@@ -111,8 +109,7 @@ void PathGPU2RenderThread::Start() {
 
 void PathGPU2RenderThread::InitRender() {
 	const unsigned int frameBufferPixelCount =
-		renderEngine->film->GetWidth() * renderEngine->film->GetHeight() *
-		((renderEngine->filter->type == PathGPU2::NONE) ? 1 : 9);
+		renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
 
 	// Delete previous allocated frameBuffer
 	delete[] frameBuffer;
@@ -898,7 +895,7 @@ void PathGPU2RenderThread::InitRender() {
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
 			break;
 		case PathGPU2::BOX:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE 1" <<
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f";
 			break;
@@ -914,13 +911,6 @@ void PathGPU2RenderThread::InitRender() {
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathGPU2::MitchellFilter *)filter)->B << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathGPU2::MitchellFilter *)filter)->C << "f";
-			break;
-		case PathGPU2::MITCHELL_SS:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathGPU2::MitchellFilterSS *)filter)->B << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathGPU2::MitchellFilterSS *)filter)->C << "f";
 			break;
 		default:
 			assert (false);
@@ -1392,10 +1382,6 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		const float B = cfg.GetFloat("path.filter.B", 1.f / 3.f);
 		const float C = cfg.GetFloat("path.filter.C", 1.f / 3.f);
 		filter = new PathGPU2::MitchellFilter(filterWidthX, filterWidthY, B, C);
-	} else if (filterType.compare("MITCHELL_SS") == 0) {
-		const float B = cfg.GetFloat("path.filter.B", 1.f / 3.f);
-		const float C = cfg.GetFloat("path.filter.C", 1.f / 3.f);
-		filter = new PathGPU2::MitchellFilterSS(filterWidthX, filterWidthY, B, C);
 	} else
 		throw std::runtime_error("Unknown path.filter.type");
 
@@ -1484,14 +1470,6 @@ unsigned int PathGPU2RenderEngine::GetThreadCount() const {
 	return renderThreads.size();
 }
 
-static u_int FilteredPixelXY2Index(
-		const u_int imgWidth,
-		const u_int x, const u_int y,
-		const u_int subX, const u_int subY) {
-	return (x + y * imgWidth) * 9 +
-			subX + subY * 3 + 1 + 3;
-}
-
 void PathGPU2RenderEngine::UpdateFilm() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
@@ -1502,74 +1480,31 @@ void PathGPU2RenderEngine::UpdateFilm() {
 
 	film->Reset();
 
-	if (filter->type == PathGPU2::NONE) {
-		for (unsigned int p = 0; p < pixelCount; ++p) {
-			Spectrum c;
-			float count = 0;
-			for (size_t i = 0; i < renderThreads.size(); ++i) {
-				c += renderThreads[i]->frameBuffer[p].c;
-				count += renderThreads[i]->frameBuffer[p].count;
-			}
+	for (unsigned int p = 0; p < pixelCount; ++p) {
+		Spectrum c;
+		float count = 0;
+		for (size_t i = 0; i < renderThreads.size(); ++i) {
+			c += renderThreads[i]->frameBuffer[p].c;
+			count += renderThreads[i]->frameBuffer[p].count;
+		}
 
-			if (count > 0) {
-				const float scrX = p % imgWidth;
-				const float scrY = p / imgWidth;
-				c /= count;
-				sampleBuffer->SplatSample(scrX, scrY, c);
+		if (count > 0) {
+			const float scrX = p % imgWidth;
+			const float scrY = p / imgWidth;
+			c /= count;
+			sampleBuffer->SplatSample(scrX, scrY, c);
 
-				if (sampleBuffer->IsFull()) {
-					// Splat all samples on the film
-					film->SplatSampleBuffer(true, sampleBuffer);
-					sampleBuffer = film->GetFreeSampleBuffer();
-				}
-			}
-
-			if (sampleBuffer->GetSampleCount() > 0) {
+			if (sampleBuffer->IsFull()) {
 				// Splat all samples on the film
 				film->SplatSampleBuffer(true, sampleBuffer);
 				sampleBuffer = film->GetFreeSampleBuffer();
 			}
 		}
-	} else {
-		for (unsigned int p = 0; p < pixelCount; ++p) {
-			Spectrum c;
-			float count = 0;
-			for (size_t i = 0; i < renderThreads.size(); ++i) {
-				const float scrX = p % imgWidth;
-				const float scrY = p / imgWidth;
 
-				for (int y = -1; y <= 1; ++y) {
-					for (int x = -1; x <= 1; ++x) {
-						const u_int subScrX = scrX - x;
-						const u_int subScrY = scrY - y;
-
-						if ((subScrX >= 0) && (subScrY >= 0) && (subScrX < imgWidth) && (subScrY < imgHeight)) {
-							u_int pIndex = FilteredPixelXY2Index(imgWidth, subScrX, subScrY, -x, -y);
-							c += renderThreads[i]->frameBuffer[pIndex].c;
-							count += renderThreads[i]->frameBuffer[pIndex].count;
-						}
-					}
-				}
-			}
-
-			if (count > 0) {
-				const float scrX = p % imgWidth;
-				const float scrY = p / imgWidth;
-				c /= count;
-				sampleBuffer->SplatSample(scrX, scrY, c);
-
-				if (sampleBuffer->IsFull()) {
-					// Splat all samples on the film
-					film->SplatSampleBuffer(true, sampleBuffer);
-					sampleBuffer = film->GetFreeSampleBuffer();
-				}
-			}
-
-			if (sampleBuffer->GetSampleCount() > 0) {
-				// Splat all samples on the film
-				film->SplatSampleBuffer(true, sampleBuffer);
-				sampleBuffer = film->GetFreeSampleBuffer();
-			}
+		if (sampleBuffer->GetSampleCount() > 0) {
+			// Splat all samples on the film
+			film->SplatSampleBuffer(true, sampleBuffer);
+			sampleBuffer = film->GetFreeSampleBuffer();
 		}
 	}
 

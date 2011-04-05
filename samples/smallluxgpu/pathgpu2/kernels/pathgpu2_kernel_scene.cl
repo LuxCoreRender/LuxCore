@@ -621,8 +621,8 @@ void GenerateCameraRay(
 	const float scrSampleX = sampleData[IDX_SCREEN_X];
 	const float scrSampleY = sampleData[IDX_SCREEN_Y];
 
-	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - 0.5f;
-	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - 0.5f;
+	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - .5f;
+	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - .5f;
 #elif (PARAM_SAMPLER_TYPE == 2)
 	__global float *sampleData = &sample->u[sample->proposed][IDX_SCREEN_X];
 	const float screenX = min(sampleData[IDX_SCREEN_X] * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));

@@ -341,7 +341,7 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 		Spectrum contrib;
 		float norm;
-		float sx, sy;
+		float scrX, scrY;
 
 		if ((accProb == 1.f) || (rndVal < accProb)) {
 			/*if (get_global_id(0) == 0)
@@ -351,13 +351,13 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = currentL;
 
-			sx = sample->u[current][IDX_SCREEN_X];
-			sy = sample->u[current][IDX_SCREEN_Y];
+			scrX = sample->u[current][IDX_SCREEN_X];
+			scrY = sample->u[current][IDX_SCREEN_Y];
 
 #if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
 			// Debug code: to check sample distribution
 			contrib.r = contrib.g = contrib.b = (consecutiveRejects + 1.f)  * .01f;
-			const uint pixelIndex = PixelIndexFloat2D(sx, sy);
+			const uint pixelIndex = PPixelIndexFloat2D(scrX, scrY);
 			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
 #endif
 
@@ -376,15 +376,15 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
 			contrib = proposedL;
 
-			sx = sample->u[proposed][IDX_SCREEN_X];
-			sy = sample->u[proposed][IDX_SCREEN_Y];
+			scrX = sample->u[proposed][IDX_SCREEN_X];
+			scrY = sample->u[proposed][IDX_SCREEN_Y];
 
 			++consecutiveRejects;
 
 #if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
 			// Debug code: to check sample distribution
 			contrib.r = contrib.g = contrib.b = 1.f * .01f;
-			const uint pixelIndex = PixelIndexFloat2D(sx, sy);
+			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
 			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
 #endif
 		}
@@ -395,10 +395,12 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 				printf(\"\\t\\tPixelIndex: %d Contrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						pixelIndex, contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
-			const uint pixelIndex = PixelIndexFloat2D(sx, sy);
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
+			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
 			SplatSample(frameBuffer, pixelIndex, &contrib, norm);
 #else
+			float sx, sy;
+			const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
 			SplatSample(frameBuffer, pixelIndex, sx, sy, &contrib, norm);
 #endif
 		}

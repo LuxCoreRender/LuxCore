@@ -80,30 +80,11 @@ __kernel void InitFrameBuffer(
 	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
 		return;
 
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
-
 	__global Pixel *p = &frameBuffer[gid];
 	p->c.r = 0.f;
 	p->c.g = 0.f;
 	p->c.b = 0.f;
 	p->count = 0.f;
-
-#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
-
-	__global Pixel *p = &frameBuffer[gid * 9];
-	for (int i = 0; i < 9; ++i) {
-		p->c.r = 0.f;
-		p->c.g = 0.f;
-		p->c.b = 0.f;
-		p->count = 0.f;
-		++p;
-	}
-
-#else
-
-Error: unknown image filter !!!
-
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -697,7 +678,7 @@ __kernel void AdvancePaths(
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 		__global float *sampleData = &sample->u[IDX_SCREEN_X];
 		const float sx = sampleData[IDX_SCREEN_X] - .5f;
-		const float sy = sampleData[IDX_SCREEN_X] - .5f;
+		const float sy = sampleData[IDX_SCREEN_Y] - .5f;
 
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
