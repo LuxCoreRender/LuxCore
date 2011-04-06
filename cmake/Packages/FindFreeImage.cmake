@@ -53,13 +53,13 @@ use_pkgconfig(FreeImage_PKGC freeimage)
 findpkg_framework(FreeImage)
 
 find_path(FreeImage_INCLUDE_DIR NAMES FreeImage.h HINTS ${FreeImage_INC_SEARCH_PATH} ${FreeImage_PKGC_INCLUDE_DIRS})
-MESSAGE(STATUS "FreeImage_INCLUDE_DIR NAMES" ${FreeImage_INCLUDE_DIR})
+MESSAGE(STATUS "FreeImage_INCLUDE_DIR NAMES " ${FreeImage_INCLUDE_DIR})
 
 find_library(FreeImage_LIBRARY_REL NAMES ${FreeImage_LIBRARY_NAMES} HINTS ${FreeImage_LIB_SEARCH_PATH} ${FreeImage_PKGC_LIBRARY_DIRS} PATH_SUFFIXES "" release relwithdebinfo minsizerel dist)
 find_library(FreeImage_LIBRARY_DBG NAMES ${FreeImage_LIBRARY_NAMES_DBG} HINTS ${FreeImage_LIB_SEARCH_PATH} ${FreeImage_PKGC_LIBRARY_DIRS} PATH_SUFFIXES "" debug dist)
 
 make_library_set(FreeImage_LIBRARY)
-MESSAGE(STATUS "FreeImage_LIBRARY_DBG NAMES" ${FreeImage_LIBRARY_NAMES})
+MESSAGE(STATUS "FreeImage_LIBRARY_DBG NAMES " ${FreeImage_LIBRARY_NAMES})
 
 findpkg_finish(FreeImage)
 

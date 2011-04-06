@@ -49,7 +49,8 @@ IF(WIN32)
     OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
     COMMAND echo "#include \"pathgpu/kernels/kernels.h\"" > pathgpu/kernels/pathgpu_kernel.cpp
     COMMAND echo std::string luxrays::KernelSource_PathGPU = >> pathgpu/kernels/pathgpu_kernel.cpp
-    COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu\\kernels\\pathgpu_kernel.cl >> pathgpu/kernels/pathgpu_kernel.cpp
+#    COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu\\kernels\\pathgpu_kernel.cl >> pathgpu/kernels/pathgpu_kernel.cpp
+    COMMAND for /F \"tokens=*\" %%a in (pathgpu\\kernels\\pathgpu_kernel.cl) do echo \"%%a\\n\" >> pathgpu/kernels/pathgpu_kernel.cpp
     COMMAND echo ";" >> pathgpu/kernels/pathgpu_kernel.cpp
     MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
   )
