@@ -118,6 +118,10 @@ __kernel void AdvancePaths(
 #endif
         , __global TexMap *texMapDescBuff
         , __global unsigned int *meshTexsBuff
+#if defined(PARAM_HAS_BUMPMAPS)
+        , __global unsigned int *meshBumpsBuff
+		, __global float *meshBumpsScaleBuff
+#endif
         , __global UV *vertUVs
 #endif
 		) {
@@ -218,6 +222,44 @@ __kernel void AdvancePaths(
 				// Interpolate the normal
 				Vector N;
 				Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
+
+#if defined(PARAM_HAS_BUMPMAPS)
+				// Check it the mesh has a bump map
+				unsigned int bumpIndex = meshBumpsBuff[meshIndex];
+				if (bumpIndex != 0xffffffffu) {
+					// Apply bump mapping
+					__global TexMap *texMap = &texMapDescBuff[bumpIndex];
+					const uint texWidth = texMap->width;
+					const uint texHeight = texMap->height;
+
+					UV dudv;
+					dudv.u = 1.f / texWidth;
+					dudv.v = 1.f / texHeight;
+
+					Spectrum texColor;
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v, &texColor);
+					const float b0 = Spectrum_Y(&texColor);
+
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u + dudv.u, uv.v, &texColor);
+					const float bu = Spectrum_Y(&texColor);
+
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v + dudv.v, &texColor);
+					const float bv = Spectrum_Y(&texColor);
+
+					const float scale = meshBumpsScaleBuff[meshIndex];
+					Vector bump;
+					bump.x = scale * (bu - b0);
+					bump.y = scale * (bv - b0);
+					bump.z = 1.f;
+
+					Vector v1, v2;
+					CoordinateSystem(&N, &v1, &v2);
+					N.x = v1.x * bump.x + v2.x * bump.y + N.x * bump.z;
+					N.y = v1.y * bump.x + v2.y * bump.y + N.y * bump.z;
+					N.z = v1.z * bump.x + v2.z * bump.y + N.z * bump.z;
+					Normalize(&N);
+				}
+#endif
 
 				// Flip the normal if required
 				Vector shadeN;

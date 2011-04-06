@@ -312,6 +312,8 @@ private:
 	cl::Buffer *texMapAlphaBuff;
 	cl::Buffer *texMapDescBuff;
 	cl::Buffer *meshTexsBuff;
+	cl::Buffer *meshBumpsBuff;
+	cl::Buffer *meshBumpsScaleBuff;
 	cl::Buffer *uvsBuff;
 
 	float samplingStart;
