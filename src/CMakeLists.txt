@@ -34,7 +34,8 @@ FOREACH(kernel ${KERNELS})
       OUTPUT ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
       COMMAND echo "#include \"luxrays/kernels/kernels.h\"" >  ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
       COMMAND echo std::string luxrays::KernelSource_${kernel} = >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-      COMMAND ../BuildTools/ProcessClKernelFile.exe ${LuxRays_SOURCE_DIR}\\src\\kernels\\${kernel_lowercase}_kernel.cl >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
+#      COMMAND ../BuildTools/ProcessClKernelFile.exe ${LuxRays_SOURCE_DIR}\\src\\kernels\\${kernel_lowercase}_kernel.cl >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
+      COMMAND for /F \"tokens=*\" %%a in (${LuxRays_SOURCE_DIR}\\src\\kernels\\${kernel_lowercase}_kernel.cl) do echo \"%%a\\n\" >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
       COMMAND echo ";" >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
       MAIN_DEPENDENCY ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cl
     )

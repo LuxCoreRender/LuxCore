@@ -11,6 +11,7 @@
 
 IF (WIN32)
 	FIND_PATH( GLUT_INCLUDE_PATH GL/glut.h
+		${GLUT_ROOT}/include
 		$ENV{PROGRAMFILES}/GLUT/include
 		${LuxRays_SOURCE_DIR}/../freeglut/include
 		${LuxRays_SOURCE_DIR}/../glut/include
@@ -18,6 +19,8 @@ IF (WIN32)
 	FIND_LIBRARY( GLUT_LIBRARY
 		NAMES glut GLUT glut32 glut32s freeglut freeglut_static
 		PATHS
+		${GLUT_LIBRARYDIR}
+		${GLUT_ROOT}/lib
 		$ENV{PROGRAMFILES}/GLUT/lib
 		${LuxRays_SOURCE_DIR}/../freeglut/lib
 		${LuxRays_SOURCE_DIR}/../glut/lib

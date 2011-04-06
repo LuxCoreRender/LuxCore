@@ -38,8 +38,9 @@ set(Boost_USE_STATIC_LIBS       ON)
 set(Boost_USE_MULTITHREADED     ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(BOOST_ROOT                  "${BOOST_SEARCH_PATH}")
+#set(Boost_DEBUG                 ON)
 
-set(Boost_ADDITIONAL_VERSIONS "1.46.2" "1.46.1" "1.46" "1.46.0" "1.45" "1.45.0" "1.44" "1.44.0" )
+set(Boost_ADDITIONAL_VERSIONS "1.46.2" "1.46.1" "1.46" "1.46.0" "1.45" "1.45.0" "1.44" "1.44.0" "1.43" "1.43.0" )
 
 set(LUXRAYS_BOOST_COMPONENTS thread filesystem system)
 find_package(Boost COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
@@ -50,7 +51,7 @@ if (NOT Boost_FOUND)
         else()
                 set(Boost_USE_STATIC_LIBS OFF)
         endif()
-        find_package(Boost COMPONENTS ${LUXRAYS_BOOST_COMPONENTS} QUIET)
+        find_package(Boost COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
 find_package(Boost)
 
@@ -66,6 +67,7 @@ if (OPENGL_FOUND)
   include_directories(${OPENGL_INCLUDE_PATH})
 endif()
 
+set(GLEW_ROOT                  "${GLEW_SEARCH_PATH}")
 find_package(GLEW)
 
 # GLEW
@@ -74,6 +76,7 @@ if (GLEW_FOUND)
 endif ()
 
 
+set(GLUT_ROOT                  "${GLUT_SEARCH_PATH}")
 find_package(GLUT)
 
 # GLUT
@@ -81,6 +84,7 @@ if (GLUT_FOUND)
   include_directories(${GLUT_INCLUDE_PATH})
 endif ()
 
+set(OPENCL_ROOT                  "${OPENCL_SEARCH_PATH}")
 find_package(OpenCL)
 # OpenCL
 if (OPENCL_FOUND)

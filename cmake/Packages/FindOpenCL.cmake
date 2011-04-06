@@ -8,11 +8,14 @@
 
 IF (WIN32)
 	FIND_PATH( OPENCL_INCLUDE_PATH CL/cl.h
+		${OPENCL_ROOT}/include
 		${LuxRays_SOURCE_DIR}/../opencl
 		DOC "The directory where CL/cl.h resides")
 	FIND_LIBRARY( OPENCL_LIBRARY
 		NAMES OpenCL.lib
 		PATHS
+		${OPENCL_LIBRARYDIR}
+		${OPENCL_ROOT}/lib/
 		${LuxRays_SOURCE_DIR}/../opencl/
 		DOC "The OpenCL library")
 ELSE (WIN32)
