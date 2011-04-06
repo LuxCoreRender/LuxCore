@@ -41,6 +41,7 @@ std::string luxrays::KernelSource_PathGPU2_datatypes =
 "//  PARAM_HAS_TEXTUREMAPS\n"
 "//  PARAM_HAS_ALPHA_TEXTUREMAPS\n"
 "//  PARAM_USE_PIXEL_ATOMICS\n"
+"//  PARAM_HAS_BUMPMAPS\n"
 "\n"
 "// To enable single material suopport (work around for ATI compiler problems)\n"
 "//  PARAM_ENABLE_MAT_MATTE\n"

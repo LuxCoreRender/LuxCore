@@ -39,6 +39,7 @@
 //  PARAM_HAS_TEXTUREMAPS
 //  PARAM_HAS_ALPHA_TEXTUREMAPS
 //  PARAM_USE_PIXEL_ATOMICS
+//  PARAM_HAS_BUMPMAPS
 
 // To enable single material suopport (work around for ATI compiler problems)
 //  PARAM_ENABLE_MAT_MATTE

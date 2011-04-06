@@ -647,6 +647,8 @@ void PathGPU2RenderThread::InitRender() {
 		} else
 			texMapAlphaBuff = NULL;
 
+		//----------------------------------------------------------------------
+
 		// Translate texture map description
 		for (unsigned int i = 0; i < tms.size(); ++i) {
 			TextureMap *tm = tms[i];
@@ -661,6 +663,8 @@ void PathGPU2RenderThread::InitRender() {
 				gpuTexMap);
 		deviceDesc->AllocMemory(texMapDescBuff->getInfo<CL_MEM_SIZE>());
 		delete[] gpuTexMap;
+
+		//-----------------------------------------------
 
 		// Translate mesh texture indices
 		unsigned int *meshTexs = new unsigned int[meshCount];
@@ -690,6 +694,65 @@ void PathGPU2RenderThread::InitRender() {
 		deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
 
 		delete[] meshTexs;
+
+		//----------------------------------------------------------------------
+
+		// Translate mesh bump map indices
+		bool hasBumpMapping = false;
+		unsigned int *meshBumps = new unsigned int[meshCount];
+		for (unsigned int i = 0; i < meshCount; ++i) {
+			BumpMapInstance *bm = scene->objectBumpMaps[i];
+
+			if (bm) {
+				// Look for the index
+				unsigned int index = 0;
+				for (unsigned int j = 0; j < tms.size(); ++j) {
+					if (bm->GetTexMap() == tms[j]) {
+						index = j;
+						break;
+					}
+				}
+
+				meshBumps[i] = index;
+				hasBumpMapping = true;
+			} else
+				meshBumps[i] = 0xffffffffu;
+		}
+
+		if (hasBumpMapping) {
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Mesh bump maps index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
+			meshBumpsBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(unsigned int) * meshCount,
+					meshBumps);
+			deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
+
+			float *scales = new float[meshCount];
+			for (unsigned int i = 0; i < meshCount; ++i) {
+				BumpMapInstance *bm = scene->objectBumpMaps[i];
+
+				if (bm)
+					scales[i] = bm->GetScale();
+				else
+					scales[i] = 1.f;
+			}
+
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Mesh bump maps scale buffer size: " << (sizeof(float) * meshCount / 1024) << "Kbytes" << endl;
+			meshBumpsScaleBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(float) * meshCount,
+					scales);
+			deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
+
+			delete[] scales;
+		} else {
+			meshBumpsBuff = NULL;
+			meshBumpsScaleBuff = NULL;
+		}
+
+		delete[] meshBumps;
+
+		//----------------------------------------------------------------------
 
 		// Translate vertex uvs
 		const unsigned int uvsCount = scene->dataSet->GetTotalVertexCount();
@@ -721,6 +784,8 @@ void PathGPU2RenderThread::InitRender() {
 		texMapAlphaBuff = NULL;
 		texMapDescBuff = NULL;
 		meshTexsBuff = NULL;
+		meshBumpsBuff = NULL;
+		meshBumpsScaleBuff = NULL;
 		uvsBuff = NULL;
 	}
 
@@ -888,6 +953,8 @@ void PathGPU2RenderThread::InitRender() {
 		ss << " -D PARAM_HAS_TEXTUREMAPS";
 	if (texMapAlphaBuff)
 		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
+	if (meshBumpsBuff)
+		ss << " -D PARAM_HAS_BUMPMAPS";
 
 	const PathGPU2::Filter *filter = renderEngine->filter;
 	switch (filter->type) {
@@ -1131,6 +1198,10 @@ void PathGPU2RenderThread::InitRender() {
 	if (texMapRGBBuff || texMapAlphaBuff) {
 		advancePathsKernel->setArg(argIndex++, *texMapDescBuff);
 		advancePathsKernel->setArg(argIndex++, *meshTexsBuff);
+		if (meshBumpsBuff) {
+			advancePathsKernel->setArg(argIndex++, *meshBumpsBuff);
+			advancePathsKernel->setArg(argIndex++, *meshBumpsScaleBuff);
+		}
 		advancePathsKernel->setArg(argIndex++, *uvsBuff);
 	}
 
@@ -1231,6 +1302,12 @@ void PathGPU2RenderThread::Stop() {
 		delete texMapDescBuff;
 		deviceDesc->FreeMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
 		delete meshTexsBuff;
+		if (meshBumpsBuff) {
+			deviceDesc->FreeMemory(meshBumpsBuff->getInfo<CL_MEM_SIZE>());
+			delete meshBumpsBuff;
+			deviceDesc->FreeMemory(meshBumpsScaleBuff->getInfo<CL_MEM_SIZE>());
+			delete meshBumpsScaleBuff;
+		}
 		deviceDesc->FreeMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
 		delete uvsBuff;
 	}
