@@ -267,8 +267,8 @@ if(NOT APPLE)
 	set_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
 	set_SOURCE_FILES_PROPERTIES(${LUXRAYS_SOURCE_DIR}/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
 else(NOT APPLE)
-	#OSX-flags by jensverwiebe
-	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller -cl-fast-relaxed-math -cl-mad-enable")
+	#OSX-flags by jensverwiebe # testflags:  -cl-fast-relaxed-math -cl-mad-enable
+	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
 endif(NOT APPLE)
 
 ###########################################################################
