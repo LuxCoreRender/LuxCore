@@ -403,7 +403,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				}
 
 				// Compile QBVH+image storage kernel only if image support is available
-				if (deviceDesc->HasImageSupport()) {
+				if (deviceDesc->HasImageSupport() && (deviceDesc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
 					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
 					cl::Program program = cl::Program(oclContext, source);
 					try {
@@ -454,7 +454,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Disable forced for QBVH scene storage inside image");
 				qbvhUseImage = false;
 			} else {
-				if (deviceDesc->HasImageSupport()) {
+				if (deviceDesc->HasImageSupport() && (deviceDesc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image support is available");
 
 					// Check if the scene is small enough to be stored inside an image
