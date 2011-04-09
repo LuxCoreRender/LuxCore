@@ -50,6 +50,7 @@ std::string luxrays::KernelSource_PathGPU2_samplers =
 "	task->pathState.throughput.g = 1.f;\n"
 "	task->pathState.throughput.b = 1.f;\n"
 "#if defined(PARAM_DIRECT_LIGHT_SAMPLING)\n"
+"	task->pathState.bouncePdf = 1.f;\n"
 "	task->pathState.specularBounce = TRUE;\n"
 "#endif\n"
 "	task->pathState.state = PATH_STATE_NEXT_VERTEX;\n"

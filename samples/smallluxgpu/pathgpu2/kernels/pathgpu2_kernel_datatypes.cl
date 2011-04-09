@@ -94,7 +94,7 @@
 
 //#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #endif
@@ -278,6 +278,7 @@ typedef struct {
 	Spectrum throughput;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	float bouncePdf;
 	int specularBounce;
 
 	Ray nextPathRay;

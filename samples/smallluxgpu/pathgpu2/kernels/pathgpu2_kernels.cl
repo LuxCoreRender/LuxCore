@@ -101,6 +101,7 @@ __kernel void AdvancePaths(
 		__global uint *meshIDs,
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
+		__global Point *vertices,
 		__global Triangle *triangles
 #if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
@@ -290,16 +291,17 @@ __kernel void AdvancePaths(
 				wo.z = -rayDir.z;
 
 				Vector wi;
-				float pdf;
 				Spectrum f;
+				float materialPdf;
+				int specularMaterial;
 
 				switch (matType) {
 
 #if defined(PARAM_ENABLE_MAT_MATTE)
 					case MAT_MATTE:
-						Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+						Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -307,29 +309,34 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_AREALIGHT)
 					case MAT_AREALIGHT: {
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-						if (task->pathState.specularBounce) {
-#endif
-							Spectrum Le;
-							AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &Le);
-							sample->radiance.r += throughput.r * Le.r;
-							sample->radiance.g += throughput.g * Le.g;
-							sample->radiance.b += throughput.b * Le.b;
+						Spectrum Le;
+						AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &Le);
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+						if (!task->pathState.specularBounce) {
+							const float lpdf = PARAM_DL_LIGHT_COUNT / Mesh_Area(vertices, triangles, currentTriangleIndex);
+							const float ph = PowerHeuristic(1, task->pathState.bouncePdf, 1, lpdf);
+
+							Le.r *= ph;
+							Le.g *= ph;
+							Le.b *= ph;
 						}
 #endif
 
-						pdf = 0.f;
+						sample->radiance.r += throughput.r * Le.r;
+						sample->radiance.g += throughput.g * Le.g;
+						sample->radiance.b += throughput.b * Le.b;
+
+						materialPdf = 0.f;
 						break;
 					}
 #endif
 
 #if defined(PARAM_ENABLE_MAT_MIRROR)
 					case MAT_MIRROR:
-						Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &pdf, &f, &shadeN
+						Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &materialPdf, &f, &shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -337,9 +344,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_GLASS)
 					case MAT_GLASS:
-						Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
+						Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &materialPdf, &f, &N, &shadeN, u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -347,9 +354,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MATTEMIRROR)
 					case MAT_MATTEMIRROR:
-						MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+						MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -357,9 +364,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_METAL)
 					case MAT_METAL:
-						Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+						Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -367,9 +374,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MATTEMETAL)
 					case MAT_MATTEMETAL:
-						MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+						MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -377,9 +384,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_ALLOY)
 					case MAT_ALLOY:
-						Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+						Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -387,9 +394,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_ARCHGLASS)
 					case MAT_ARCHGLASS:
-						ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
+						ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &materialPdf, &f, &N, &shadeN, u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -397,7 +404,7 @@ __kernel void AdvancePaths(
 
 					case MAT_NULL:
 						wi = rayDir;
-						pdf = 1.f;
+						materialPdf = 1.f;
 						f.r = 1.f;
 						f.g = 1.f;
 						f.b = 1.f;
@@ -408,19 +415,9 @@ __kernel void AdvancePaths(
 
 					default:
 						// Huston, we have a problem...
-						pdf = 0.f;
+						materialPdf = 0.f;
 						break;
 				}
-
-				pathDepth += 1;
-				const float invPdf = ((pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
-
-				//if (pathDepth > 2)
-				//	printf(\"Depth: %d Throughput: (%f, %f, %f) f: (%f, %f, %f) Pdf: %f\\n\", pathDepth, throughput.r, throughput.g, throughput.b, f.r, f.g, f.b, pdf);
-
-				throughput.r *= f.r * invPdf;
-				throughput.g *= f.g * invPdf;
-				throughput.b *= f.b * invPdf;
 
 				// Russian roulette
 
@@ -431,10 +428,12 @@ __kernel void AdvancePaths(
 #endif
 
 				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
-				const float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
-				throughput.r *= invRRProb;
-				throughput.g *= invRRProb;
-				throughput.b *= invRRProb;
+				pathDepth += 1;
+				float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
+				invRRProb = ((materialPdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : invRRProb;
+				throughput.r *= f.r * invRRProb;
+				throughput.g *= f.g * invRRProb;
+				throughput.b *= f.b * invRRProb;
 
 				//if (pathDepth > 2)
 				//	printf(\"Depth: %d Throughput: (%f, %f, %f)\\n\", pathDepth, throughput.r, throughput.g, throughput.b);
@@ -489,20 +488,23 @@ __kernel void AdvancePaths(
 					TriangleLight_Sample_L(l, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
 
 					const float dp = Dot(&shadeN, &shadowRay.d);
-					const float matPdf = (dp <= 0.f) ? 0.f : 1.f;
+					const float matPdf = M_PI;
 
-					const float pdf = lightPdf * matPdf * directLightPdf;
+					const float lPdf = PARAM_DL_LIGHT_COUNT / l->area;
+					const float mPdf = directLightPdf * dp * INV_PI;
+					const float pdf = (dp <= 0.f) ? 0.f :
+						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * directLightPdf * matPdf / (dp * PARAM_DL_LIGHT_COUNT));
 					if (pdf > 0.f) {
 						Spectrum throughputLightDir = prevThroughput;
 						throughputLightDir.r *= shadeColor.r;
 						throughputLightDir.g *= shadeColor.g;
 						throughputLightDir.b *= shadeColor.b;
 
-						const float k = dp * PARAM_DL_LIGHT_COUNT / (pdf * M_PI);
+						const float k = 1.f / pdf;
 						// NOTE: I assume all matte mixed material have a MatteParam as first field
-						task->pathState.lightRadiance.r = throughputLightDir.r * hitPointMat->param.matte.r * k * Le.r;
-						task->pathState.lightRadiance.g = throughputLightDir.g * hitPointMat->param.matte.g * k * Le.g;
-						task->pathState.lightRadiance.b = throughputLightDir.b * hitPointMat->param.matte.b * k * Le.b;
+						task->pathState.lightRadiance.r = throughputLightDir.r * hitPointMat->param.matte.r * Le.r * k;
+						task->pathState.lightRadiance.g = throughputLightDir.g * hitPointMat->param.matte.g * Le.g * k;
+						task->pathState.lightRadiance.b = throughputLightDir.b * hitPointMat->param.matte.b * Le.b * k;
 
 						*ray = shadowRay;
 
@@ -512,6 +514,8 @@ __kernel void AdvancePaths(
 						task->pathState.nextPathRay.mint = PARAM_RAY_EPSILON;
 						task->pathState.nextPathRay.maxt = FLT_MAX;
 
+						task->pathState.bouncePdf = materialPdf;
+						task->pathState.specularBounce = specularMaterial;
 						task->pathState.nextThroughput = throughput;
 
 						pathState = PATH_STATE_SAMPLE_LIGHT;
@@ -526,6 +530,8 @@ __kernel void AdvancePaths(
 							ray->mint = PARAM_RAY_EPSILON;
 							ray->maxt = FLT_MAX;
 
+							task->pathState.bouncePdf = materialPdf;
+							task->pathState.specularBounce = specularMaterial;
 							task->pathState.throughput = throughput;
 							task->pathState.depth = pathDepth;
 
@@ -543,6 +549,8 @@ __kernel void AdvancePaths(
 						ray->mint = PARAM_RAY_EPSILON;
 						ray->maxt = FLT_MAX;
 
+						task->pathState.bouncePdf = materialPdf;
+						task->pathState.specularBounce = specularMaterial;
 						task->pathState.throughput = throughput;
 						task->pathState.depth = pathDepth;
 

@@ -50,6 +50,7 @@ typedef struct {
 	unsigned int depth;
 	Spectrum throughput;
 
+	float bouncePdf;
 	int specularBounce;
 
 	Ray nextPathRay;
@@ -303,6 +304,7 @@ private:
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
+	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *colorsBuff;

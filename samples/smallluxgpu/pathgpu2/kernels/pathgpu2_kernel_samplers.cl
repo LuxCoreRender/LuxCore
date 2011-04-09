@@ -48,6 +48,7 @@ void GenerateCameraPath(
 	task->pathState.throughput.g = 1.f;
 	task->pathState.throughput.b = 1.f;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	task->pathState.bouncePdf = 1.f;
 	task->pathState.specularBounce = TRUE;
 #endif
 	task->pathState.state = PATH_STATE_NEXT_VERTEX;

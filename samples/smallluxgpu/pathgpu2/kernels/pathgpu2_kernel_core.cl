@@ -61,6 +61,13 @@ float RndFloatValue(Seed *s) {
 
 //------------------------------------------------------------------------------
 
+float PowerHeuristic(const uint nf, const float fPdf, const uint ng, const float gPdf) {
+	const float f = nf * fPdf;
+	const float g = ng * gPdf;
+
+	return (f * f) / (f * f + g * g);
+}
+
 float VanDerCorput(uint n, uint scramble) {
 	// Reverse bits of n
 	n = (n << 16) | (n >> 16);

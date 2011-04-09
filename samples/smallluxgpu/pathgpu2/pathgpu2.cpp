@@ -546,7 +546,7 @@ void PathGPU2RenderThread::InitRender() {
 	delete[] normals;
 
 	//--------------------------------------------------------------------------
-	// Translate mesh indices
+	// Translate mesh indices and vertices
 	//--------------------------------------------------------------------------
 
 	const TriangleMesh *preprocessedMesh;
@@ -567,6 +567,14 @@ void PathGPU2RenderThread::InitRender() {
 			sizeof(Triangle) * trianglesCount,
 			(void *)preprocessedMesh->GetTriangles());
 	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+
+	const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();	
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
+	vertsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Point) * verticesCount,
+			(void *)preprocessedMesh->GetVertices());
+	deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 
 	tEnd = WallClockTime();
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
@@ -1184,6 +1192,7 @@ void PathGPU2RenderThread::InitRender() {
 	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
 	advancePathsKernel->setArg(argIndex++, *colorsBuff);
 	advancePathsKernel->setArg(argIndex++, *normalsBuff);
+	advancePathsKernel->setArg(argIndex++, *vertsBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	if (cameraBuff)
 		advancePathsKernel->setArg(argIndex++, *cameraBuff);
@@ -1277,6 +1286,8 @@ void PathGPU2RenderThread::Stop() {
 	delete normalsBuff;
 	deviceDesc->FreeMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
 	delete trianglesBuff;
+	deviceDesc->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
+	delete vertsBuff;
 	if (infiniteLightBuff) {
 		deviceDesc->FreeMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
 		delete infiniteLightBuff;
