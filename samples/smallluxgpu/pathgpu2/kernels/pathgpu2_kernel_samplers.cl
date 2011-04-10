@@ -504,7 +504,7 @@ void Sampler_StratifiedBufferInit(__local float *localMemTempBuff,
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 	StratifiedSample1D(tempBuff, seed);
 	Shuffle1D(tempBuff, seed);
-	Copy1D(tempBuff, &sample->stratifiedAlpha1D[0])
+	Copy1D(tempBuff, &sample->stratifiedAlpha1D[0]);
 #endif
 
 	StratifiedSample2D(tempBuff, seed);
