@@ -328,6 +328,9 @@ __kernel void AdvancePaths(
 						sample->radiance.b += throughput.b * Le.b;
 
 						materialPdf = 0.f;
+						f.r = 1.f;
+						f.g = 1.f;
+						f.b = 1.f;
 						break;
 					}
 #endif
@@ -416,6 +419,9 @@ __kernel void AdvancePaths(
 					default:
 						// Huston, we have a problem...
 						materialPdf = 0.f;
+						f.r = 1.f;
+						f.g = 1.f;
+						f.b = 1.f;
 						break;
 				}
 
@@ -702,7 +708,6 @@ __kernel void AdvancePaths(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-
 
 #if (PARAM_SAMPLER_TYPE != 0)
 		// Read the seed
