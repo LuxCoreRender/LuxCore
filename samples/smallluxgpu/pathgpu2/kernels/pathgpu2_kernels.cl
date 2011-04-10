@@ -292,6 +292,9 @@ __kernel void AdvancePaths(
 
 				Vector wi;
 				Spectrum f;
+				f.r = 1.f;
+				f.g = 1.f;
+				f.b = 1.f;
 				float materialPdf;
 				int specularMaterial;
 
@@ -328,9 +331,6 @@ __kernel void AdvancePaths(
 						sample->radiance.b += throughput.b * Le.b;
 
 						materialPdf = 0.f;
-						f.r = 1.f;
-						f.g = 1.f;
-						f.b = 1.f;
 						break;
 					}
 #endif
@@ -408,9 +408,6 @@ __kernel void AdvancePaths(
 					case MAT_NULL:
 						wi = rayDir;
 						materialPdf = 1.f;
-						f.r = 1.f;
-						f.g = 1.f;
-						f.b = 1.f;
 
 						// I have also to restore the original throughput
 						throughput = prevThroughput;
@@ -419,9 +416,6 @@ __kernel void AdvancePaths(
 					default:
 						// Huston, we have a problem...
 						materialPdf = 0.f;
-						f.r = 1.f;
-						f.g = 1.f;
-						f.b = 1.f;
 						break;
 				}
 
