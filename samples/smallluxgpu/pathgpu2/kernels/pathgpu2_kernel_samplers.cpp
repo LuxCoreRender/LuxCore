@@ -506,7 +506,7 @@ std::string luxrays::KernelSource_PathGPU2_samplers =
 "#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)\n"
 "	StratifiedSample1D(tempBuff, seed);\n"
 "	Shuffle1D(tempBuff, seed);\n"
-"	Copy1D(tempBuff, &sample->stratifiedAlpha1D[0])\n"
+"	Copy1D(tempBuff, &sample->stratifiedAlpha1D[0]);\n"
 "#endif\n"
 "\n"
 "	StratifiedSample2D(tempBuff, seed);\n"

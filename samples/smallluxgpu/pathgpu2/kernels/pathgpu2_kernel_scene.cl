@@ -344,6 +344,7 @@ void MatteMirror_Sample_f(__global MatteMirrorParam *mat, const Vector *wo, Vect
     }
 
 	*pdf *= mpdf;
+
 	f->r /= mpdf;
 	f->g /= mpdf;
 	f->b /= mpdf;
@@ -434,10 +435,10 @@ void MatteMetal_Sample_f(__global MatteMetalParam *mat, const Vector *wo, Vector
 	}
 
 	*pdf *= mpdf;
-	// The following code seems to drive crazy ATI GPU
-	//f->r /= mpdf;
-	//f->g /= mpdf;
-	//f->b /= mpdf;
+
+	f->r /= mpdf;
+	f->g /= mpdf;
+	f->b /= mpdf;
 }
 
 void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
@@ -454,7 +455,7 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
 
     const float P = .25f + .5f * Re;
 
-    if (u2 < P) {
+    if (u2 <= P) {
         GlossyReflection(wo, wi, mat->exponent, shadeN, u0, u1);
         *pdf = P / Re;
 
