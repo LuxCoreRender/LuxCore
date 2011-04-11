@@ -24,6 +24,7 @@ ELSE (WIN32)
 		/usr/local/include
 		/sw/include
 		/opt/local/include
+		${OPENCL_ROOT}/include
 		DOC "The directory where CL/cl.h resides")
 	FIND_LIBRARY( OPENCL_LIBRARY
 		NAMES opencl OpenCL
@@ -34,6 +35,7 @@ ELSE (WIN32)
 		/usr/local/lib
 		/sw/lib
 		/opt/local/lib
+		${OPENCL_LIBRARYDIR}
 		DOC "The OpenCL library")
 ENDIF (WIN32)
 
