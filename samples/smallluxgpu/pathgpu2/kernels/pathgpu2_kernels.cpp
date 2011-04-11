@@ -431,7 +431,7 @@ std::string luxrays::KernelSource_PathGPU2_kernels =
 "\n"
 "				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);\n"
 "				pathDepth += 1;\n"
-"				float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;\n"
+"				float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb < rrSample) ? 0.f : (1.f / rrProb)) : 1.f;\n"
 "				invRRProb = ((materialPdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : invRRProb;\n"
 "				throughput.r *= f.r * invRRProb;\n"
 "				throughput.g *= f.g * invRRProb;\n"
