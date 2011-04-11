@@ -114,56 +114,31 @@ ENDFOREACH(kernel)
 #
 # PathGPU2 kernel
 #
-SET(KERNELS core datatypes filters samplers scene)
+SET(KERNELS kernel_core kernel_datatypes kernel_filters kernel_samplers kernel_scene kernels)
 FOREACH(kernel ${KERNELS})
 	STRING(TOLOWER ${kernel} kernel_lowercase)
 
   IF(WIN32)
     add_custom_command(
-      OUTPUT pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND echo "#include \"pathgpu2/kernels/kernels.h\"" > pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND echo std::string luxrays::KernelSource_PathGPU2_${kernel} = >> pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-#      COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu2\\kernels\\pathgpu2_kernel_${kernel_lowercase}.cl >> pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND for /F \"tokens=*\" %%a in (pathgpu2\\kernels\\pathgpu2_kernel_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND echo ";" >> pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cl
+      OUTPUT pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND echo "#include \"pathgpu2/kernels/kernels.h\"" > pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND echo std::string luxrays::KernelSource_PathGPU2_${kernel} = >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+#      COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu2\\kernels\\pathgpu2_${kernel_lowercase}.cl >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND for /F \"tokens=*\" %%a in (pathgpu2\\kernels\\pathgpu2_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND echo ";" >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cl
     )
 	ELSE(WIN32)
     add_custom_command(
-      OUTPUT pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND echo "std::string luxrays::KernelSource_PathGPU2_${kernel} = " >> pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND cat pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cpp
-      MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernel_${kernel_lowercase}.cl
+      OUTPUT pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND echo "std::string luxrays::KernelSource_PathGPU2_${kernel} = " >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND cat pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+      MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cl
     )
   ENDIF(WIN32)
 ENDFOREACH(kernel)
-
-#
-# PathGPU2 kernels
-#
-IF(WIN32)
-  add_custom_command(
-    OUTPUT pathgpu2/kernels/pathgpu2_kernels.cpp
-    COMMAND echo "#include \"pathgpu2/kernels/kernels.h\"" > pathgpu2/kernels/pathgpu2_kernels.cpp
-    COMMAND echo std::string luxrays::KernelSource_PathGPU2_kernels = >> pathgpu2/kernels/pathgpu2_kernels.cpp
-#    COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu2\\kernels\\pathgpu2_kernels.cl >> pathgpu2/kernels/pathgpu2_kernels.cpp
-    COMMAND for /F \"tokens=*\" %%a in (pathgpu2\\kernels\\pathgpu2_kernels.cl) do echo \"%%a\\n\" >> pathgpu2/kernels/pathgpu2_kernels.cpp
-    COMMAND echo ";" >> pathgpu2/kernels/pathgpu2_kernels.cpp
-    MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernels.cl
-  )
-ELSE(WIN32)
-  add_custom_command(
-    OUTPUT pathgpu2/kernels/pathgpu2_kernels.cpp
-    COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > pathgpu2/kernels/pathgpu2_kernels.cpp
-    COMMAND echo "std::string luxrays::KernelSource_PathGPU2_kernels = " >> pathgpu2/kernels/pathgpu2_kernels.cpp
-    COMMAND cat pathgpu2/kernels/pathgpu2_kernels.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu2/kernels/pathgpu2_kernel_s.cpp
-    COMMAND echo "\;" >> pathgpu2/kernels/pathgpu2_kernels.cpp
-    MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_kernels.cl
-  )
-ENDIF(WIN32)
-  
 
 #############################################################################
 #
