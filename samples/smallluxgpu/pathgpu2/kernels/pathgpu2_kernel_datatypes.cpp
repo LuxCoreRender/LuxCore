@@ -1,5 +1,5 @@
 #include "pathgpu2/kernels/kernels.h"
-std::string luxrays::KernelSource_PathGPU2_datatypes = 
+std::string luxrays::KernelSource_PathGPU2_kernel_datatypes = 
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
