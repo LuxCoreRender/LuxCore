@@ -43,10 +43,10 @@ SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limit configs" FORCE
 
 set(CMAKE_MODULE_PATH 
   "${LuxRays_SOURCE_DIR}"
-  "${LuxRays_SOURCE_DIR}/CMake"
-  "${LuxRays_SOURCE_DIR}/CMake/Utils" 
-  "${LuxRays_SOURCE_DIR}/CMake/Packages"
-  "${LuxRays_SOURCE_DIR}/CMake/SpecializedConfig"
+  "${LuxRays_SOURCE_DIR}/cmake"
+  "${LuxRays_SOURCE_DIR}/cmake/Utils"
+  "${LuxRays_SOURCE_DIR}/cmake/Packages"
+  "${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
 INCLUDE(PlatformSpecific)
