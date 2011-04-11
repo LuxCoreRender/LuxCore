@@ -613,14 +613,14 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 		if (*pdf <= 0.1f)
 			*pdf = 0.f;
 		else {
-            shadowRay->o = *hitPoint;
-            shadowRay->mint = PARAM_RAY_EPSILON;
-            shadowRay->maxt = distance - PARAM_RAY_EPSILON;
+			shadowRay->o = *hitPoint;
+			shadowRay->mint = PARAM_RAY_EPSILON;
+			shadowRay->maxt = distance - PARAM_RAY_EPSILON;
 
-            f->r = l->gain_r;
-            f->g = l->gain_g;
-            f->b = l->gain_b;
-        }
+			f->r = l->gain_r;
+			f->g = l->gain_g;
+			f->b = l->gain_b;
+		}
 	}
 }
 
