@@ -98,16 +98,16 @@ float TexMap_GetAlpha(__global float *alphas, const uint width, const uint heigh
 	return k0 * c0 + k1 * c1 + k2 * c2 + k3 * c3;
 }
 
-#if defined(PARAM_HAVE_INFINITELIGHT)
-void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, const Vector *dir) {
-	const float u = 1.f - SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;
-	const float v = SphericalTheta(dir) * INV_PI + PARAM_IL_SHIFT_V;
+#if defined(PARAM_HAS_INFINITELIGHT)
+void InfiniteLight_Le(__global InfiniteLight *infiniteLight, __global Spectrum *infiniteLightMap, Spectrum *le, const Vector *dir) {
+	const float u = 1.f - SphericalPhi(dir) * INV_TWOPI +  infiniteLight->shiftU;
+	const float v = SphericalTheta(dir) * INV_PI + infiniteLight->shiftV;
 
-	TexMap_GetColor(infiniteLightMap, PARAM_IL_WIDTH, PARAM_IL_HEIGHT, u, v, le);
+	TexMap_GetColor(infiniteLightMap, infiniteLight->width, infiniteLight->height, u, v, le);
 
-	le->r *= PARAM_IL_GAIN_R;
-	le->g *= PARAM_IL_GAIN_G;
-	le->b *= PARAM_IL_GAIN_B;
+	le->r *= infiniteLight->gain.r;
+	le->g *= infiniteLight->gain.g;
+	le->b *= infiniteLight->gain.b;
 }
 #endif
 

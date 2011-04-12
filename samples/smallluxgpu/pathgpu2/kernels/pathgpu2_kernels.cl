@@ -106,7 +106,8 @@ __kernel void AdvancePaths(
 #if defined(PARAM_CAMERA_DYNAMIC)
 		, __global float *cameraData
 #endif
-#if defined(PARAM_HAVE_INFINITELIGHT)
+#if defined(PARAM_HAS_INFINITELIGHT)
+		, __global Spectrum *infiniteLight
 		, __global Spectrum *infiniteLightMap
 #endif
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -577,9 +578,9 @@ __kernel void AdvancePaths(
 #endif
 
 			} else {
-#if defined(PARAM_HAVE_INFINITELIGHT)
+#if defined(PARAM_HAS_INFINITELIGHT)
 				Spectrum Le;
-				InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
+				InfiniteLight_Le(infiniteLight, infiniteLightMap, &Le, &rayDir);
 
 				/*if (task->pathState.depth > 0)
 					printf(\"Throughput: (%f, %f, %f) Le: (%f, %f, %f)\\n\", throughput.r, throughput.g, throughput.b, Le.r, Le.g, Le.b);*/

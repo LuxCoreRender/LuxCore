@@ -477,17 +477,33 @@ void PathGPU2RenderThread::InitRender() {
 	}
 
 	if (infiniteLight) {
-		const TextureMap *texMap = infiniteLight->GetTexture()->GetTexMap();
-		const unsigned int pixelCount = texMap->GetWidth() * texMap->GetHeight();
+		PathGPU2::InfiniteLight il;
 
-		cerr << "[PathGPU2RenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(Spectrum) * pixelCount / 1024) << "Kbytes" << endl;
+		il.gain = infiniteLight->GetGain();
+		il.shiftU = infiniteLight->GetShiftU();
+		il.shiftV = infiniteLight->GetShiftV();
+		const TextureMap *texMap = infiniteLight->GetTexture()->GetTexMap();
+		il.width = texMap->GetWidth();
+		il.height = texMap->GetHeight();
+
+		//cerr << "[PathGPU2RenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(PathGPU2::InfiniteLight) / 1024) << "Kbytes" << endl;
 		infiniteLightBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(PathGPU2::InfiniteLight),
+				(void *)&il);
+		deviceDesc->AllocMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
+
+		const unsigned int pixelCount = il.width * il.height;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] InfiniteLight Map buffer size: " << (sizeof(Spectrum) * pixelCount / 1024) << "Kbytes" << endl;
+		infiniteLightMapBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(Spectrum) * pixelCount,
 				(void *)texMap->GetPixels());
-		deviceDesc->AllocMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
-	} else
+		deviceDesc->AllocMemory(infiniteLightMapBuff->getInfo<CL_MEM_SIZE>());
+	} else {
 		infiniteLightBuff = NULL;
+		infiniteLightMapBuff = NULL;
+	}
 
 	if (!infiniteLight && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathGPU2 in the scene (i.e. sun is not yet supported)");
@@ -937,18 +953,8 @@ void PathGPU2RenderThread::InitRender() {
 				" -D PARAM_CAMERA_FOCAL_DISTANCE=" << scene->camera->focalDistance << "f";
 	}
 
-	if (infiniteLight) {
-		ss <<
-				" -D PARAM_HAVE_INFINITELIGHT" <<
-				" -D PARAM_IL_GAIN_R=" << infiniteLight->GetGain().r << "f" <<
-				" -D PARAM_IL_GAIN_G=" << infiniteLight->GetGain().g << "f" <<
-				" -D PARAM_IL_GAIN_B=" << infiniteLight->GetGain().b << "f" <<
-				" -D PARAM_IL_SHIFT_U=" << infiniteLight->GetShiftU() << "f" <<
-				" -D PARAM_IL_SHIFT_V=" << infiniteLight->GetShiftV() << "f" <<
-				" -D PARAM_IL_WIDTH=" << infiniteLight->GetTexture()->GetTexMap()->GetWidth() <<
-				" -D PARAM_IL_HEIGHT=" << infiniteLight->GetTexture()->GetTexMap()->GetHeight()
-				;
-	}
+	if (infiniteLight)
+		ss << " -D PARAM_HAS_INFINITELIGHT";
 
 	if (triLightsBuff) {
 		ss <<
@@ -1196,8 +1202,10 @@ void PathGPU2RenderThread::InitRender() {
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	if (cameraBuff)
 		advancePathsKernel->setArg(argIndex++, *cameraBuff);
-	if (infiniteLight)
+	if (infiniteLight) {
 		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
+		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
+	}
 	if (triLightsBuff)
 		advancePathsKernel->setArg(argIndex++, *triLightsBuff);
 	if (texMapRGBBuff)
@@ -1291,6 +1299,8 @@ void PathGPU2RenderThread::Stop() {
 	if (infiniteLightBuff) {
 		deviceDesc->FreeMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
 		delete infiniteLightBuff;
+		deviceDesc->FreeMemory(infiniteLightMapBuff->getInfo<CL_MEM_SIZE>());
+		delete infiniteLightMapBuff;
 	}
 	if (cameraBuff) {
 		deviceDesc->FreeMemory(cameraBuff->getInfo<CL_MEM_SIZE>());

@@ -58,14 +58,10 @@
 //  PARAM_CAMERA_FOCAL_DISTANCE
 
 // (optional)
-//  PARAM_HAVE_INFINITELIGHT
-//  PARAM_IL_GAIN_R
-//  PARAM_IL_GAIN_G
-//  PARAM_IL_GAIN_B
-//  PARAM_IL_SHIFT_U
-//  PARAM_IL_SHIFT_V
-//  PARAM_IL_WIDTH
-//  PARAM_IL_HEIGHT
+//  PARAM_HAS_INFINITELIGHT
+
+// (optional)
+//  PARAM_HAS_SUNLIGHT
 
 // (optional)
 //  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = MitchellSS)
@@ -392,12 +388,34 @@ typedef struct {
 	} param;
 } Material;
 
+//------------------------------------------------------------------------------
+
 typedef struct {
 	Point v0, v1, v2;
 	Vector normal;
 	float area;
 	float gain_r, gain_g, gain_b;
 } TriangleLight;
+
+typedef struct {
+	float shiftU, shiftV;
+	Spectrum gain;
+	uint width, height;
+} InfiniteLight;
+
+typedef struct {
+	Vector sundir;
+	Spectrum gain;
+	float turbidity;
+	float relSize;
+	// XY Vectors for cone sampling
+	Vector x, y;
+	float thetaS, phiS, V;
+	float cosThetaMax, sin2ThetaMax;
+	Spectrum suncolor;
+} SunLight;
+
+//------------------------------------------------------------------------------
 
 typedef struct {
 	unsigned int rgbOffset, alphaOffset;

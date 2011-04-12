@@ -245,12 +245,34 @@ typedef struct {
 	} param;
 } Material;
 
+//------------------------------------------------------------------------------
+
 typedef struct {
 	Point v0, v1, v2;
 	Normal normal;
 	float area;
 	float gain_r, gain_g, gain_b;
 } TriangleLight;
+
+typedef struct {
+	float shiftU, shiftV;
+	Spectrum gain;
+	uint width, height;
+} InfiniteLight;
+
+typedef struct {
+	Vector sundir;
+	Spectrum gain;
+	float turbidity;
+	float relSize;
+	// XY Vectors for cone sampling
+	Vector x, y;
+	float thetaS, phiS, V;
+	float cosThetaMax, sin2ThetaMax;
+	Spectrum suncolor;
+} SunLight;
+
+//------------------------------------------------------------------------------
 
 typedef struct {
 	unsigned int rgbOffset, alphaOffset;
@@ -304,6 +326,7 @@ private:
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
+	cl::Buffer *infiniteLightMapBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;
