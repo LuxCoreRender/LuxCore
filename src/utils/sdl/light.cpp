@@ -230,7 +230,7 @@ void SunLight::SetGain(const Spectrum &g) {
 }
 
 Spectrum SunLight::Le(const Vector &dir) const {
-	if(cosThetaMax < 1.f && Dot(dir,-sundir) > cosThetaMax)
+	if((cosThetaMax < 1.f) && (Dot(dir,-sundir) > cosThetaMax))
 		return suncolor;
 	else
 		return Spectrum();

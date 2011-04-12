@@ -111,6 +111,43 @@ void InfiniteLight_Le(__global InfiniteLight *infiniteLight, __global Spectrum *
 }
 #endif
 
+#if defined(PARAM_HAS_SUNLIGHT)
+void SunLight_Le(__global SunLight *sunLight, Spectrum *le, const Vector *dir) {
+	const float cosThetaMax = sunLight->cosThetaMax;
+	Vector sundir = sunLight->sundir;
+
+	if((cosThetaMax < 1.f) && (Dot(dir, &sundir) > cosThetaMax))
+		*le = sunLight->suncolor;
+	else {
+		le->r = 0.f;
+		le->g = 0.f;
+		le->b = 0.f;
+	}
+}
+
+void SunLight_Sample_L(__global SunLight *sunLight,
+		const Point *hitPoint,
+		float *pdf, Spectrum *f, Ray *shadowRay,
+		const float u0, const float u1) {
+	const float cosThetaMax = sunLight->cosThetaMax;
+	const Vector sundir = sunLight->sundir;
+	const Vector x = sunLight->x;
+	const Vector y = sunLight->y;
+
+	Vector wi;
+	UniformSampleCone(&wi, u0, u1, cosThetaMax, &x, &y, &sundir);
+
+	shadowRay->o = *hitPoint;
+	shadowRay->d = wi;
+	shadowRay->mint = PARAM_RAY_EPSILON;
+	shadowRay->maxt = FLT_MAX;
+
+	*f = sunLight->suncolor;
+
+	*pdf = UniformConePdf(cosThetaMax);
+}
+#endif
+
 void Mesh_InterpolateColor(__global Spectrum *colors, __global Triangle *triangles,
 		const uint triIndex, const float b1, const float b2, Spectrum *C) {
 	__global Triangle *tri = &triangles[triIndex];
@@ -560,6 +597,8 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
 // Lights
 //------------------------------------------------------------------------------
 
+#if (PARAM_DL_LIGHT_COUNT > 0)
+
 void AreaLight_Le(__global AreaLightParam *mat, const Vector *wo, const Vector *lightN, Spectrum *Le) {
 	const bool brightSide = (Dot(lightN, wo) > 0.f);
 
@@ -623,6 +662,8 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 		}
 	}
 }
+
+#endif
 
 //------------------------------------------------------------------------------
 // GenerateCameraRay
