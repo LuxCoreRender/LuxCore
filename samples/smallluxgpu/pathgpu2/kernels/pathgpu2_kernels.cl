@@ -323,7 +323,12 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 						if (!task->pathState.specularBounce) {
-							const float lpdf = PARAM_DL_LIGHT_COUNT / Mesh_Area(vertices, triangles, currentTriangleIndex);
+#if defined(PARAM_HAS_SUNLIGHT)
+							const uint lightSourceCount = PARAM_DL_LIGHT_COUNT + 1;
+#else
+							const uint lightSourceCount = PARAM_DL_LIGHT_COUNT;
+#endif
+							const float lpdf = lightSourceCount / Mesh_Area(vertices, triangles, currentTriangleIndex);
 							const float ph = PowerHeuristic(1, task->pathState.bouncePdf, 1, lpdf);
 
 							Le.r *= ph;
@@ -507,7 +512,22 @@ __kernel void AdvancePaths(
 					// This is the case with sun light and area lights
 					//----------------------------------------------------------
 
-					TODO
+					// Select one of the lights
+					const uint lightIndex = min((uint)floor((PARAM_DL_LIGHT_COUNT + 1)* ul0), (uint)(PARAM_DL_LIGHT_COUNT));
+					lightSourceCount = PARAM_DL_LIGHT_COUNT + 1;
+
+					if (lightIndex == PARAM_DL_LIGHT_COUNT) {
+						// The sun light was selected
+
+						SunLight_Sample_L(sunLight, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+						lPdf = lightPdf;
+					} else {
+						// An area light was selected
+
+						__global TriangleLight *l = &triLights[lightIndex];
+						TriangleLight_Sample_L(l, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+						lPdf = PARAM_DL_LIGHT_COUNT / l->area;
+					}
 
 					//----------------------------------------------------------
 #elif !defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
