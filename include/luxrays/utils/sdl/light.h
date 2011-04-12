@@ -200,6 +200,20 @@ public:
 	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
 		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
 
+	void GetInitData(Vector *xData, Vector *yData,
+		float *thetaSData, float *phiSData, float *VData,
+		float *cosThetaMaxData, float *sin2ThetaMaxData,
+		Spectrum *suncolorData) const {
+		*xData = x;
+		*yData = y;
+		*thetaSData = thetaS;
+		*phiSData = phiS;
+		*VData = V;
+		*cosThetaMaxData = cosThetaMax;
+		*sin2ThetaMaxData = sin2ThetaMax;
+		*suncolorData = suncolor;
+	}
+
 protected:
 	Vector sundir;
 	Spectrum gain;

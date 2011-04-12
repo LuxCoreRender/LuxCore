@@ -107,10 +107,13 @@ __kernel void AdvancePaths(
 		, __global float *cameraData
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT)
-		, __global Spectrum *infiniteLight
+		, __global InfiniteLight *infiniteLight
 		, __global Spectrum *infiniteLightMap
 #endif
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_HAS_SUNLIGHT)
+		, __global SunLight *sunLight
+#endif
+#if (PARAM_DL_LIGHT_COUNT > 0)
 		, __global TriangleLight *triLights
 #endif
 #if defined(PARAM_HAS_TEXTUREMAPS)
@@ -297,7 +300,9 @@ __kernel void AdvancePaths(
 				f.g = 1.f;
 				f.b = 1.f;
 				float materialPdf;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 				int specularMaterial;
+#endif
 
 				switch (matType) {
 
@@ -311,7 +316,7 @@ __kernel void AdvancePaths(
 						break;
 #endif
 
-#if defined(PARAM_ENABLE_MAT_AREALIGHT)
+#if (PARAM_DL_LIGHT_COUNT > 0)
 					case MAT_AREALIGHT: {
 						Spectrum Le;
 						AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &Le);
@@ -479,22 +484,56 @@ __kernel void AdvancePaths(
 #endif
 
 					// Select a light source to sample
-					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * ul0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
-					__global TriangleLight *l = &triLights[lightIndex];
 
 					// Setup the shadow ray
 					Spectrum Le;
+					uint lightSourceCount;
 					float lightPdf;
+					float lPdf; // pdf used for MIS
 					Ray shadowRay;
+
+#if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT == 0)
+					//----------------------------------------------------------
+					// This is the case with only the sun light
+					//----------------------------------------------------------
+
+					SunLight_Sample_L(sunLight, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+					lPdf = lightPdf;
+					lightSourceCount = 1;
+
+					//----------------------------------------------------------
+#elif defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+					//----------------------------------------------------------
+					// This is the case with sun light and area lights
+					//----------------------------------------------------------
+
+					TODO
+
+					//----------------------------------------------------------
+#elif !defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+					//----------------------------------------------------------
+					// This is the case without sun light and with area lights
+					//----------------------------------------------------------
+
+					// Select one of the area lights
+					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * ul0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+					__global TriangleLight *l = &triLights[lightIndex];
+
 					TriangleLight_Sample_L(l, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+					lPdf = PARAM_DL_LIGHT_COUNT / l->area;
+					lightSourceCount = PARAM_DL_LIGHT_COUNT;
+
+					//----------------------------------------------------------
+#else
+Error: Huston, we have a problem !
+#endif
 
 					const float dp = Dot(&shadeN, &shadowRay.d);
 					const float matPdf = M_PI;
 
-					const float lPdf = PARAM_DL_LIGHT_COUNT / l->area;
 					const float mPdf = directLightPdf * dp * INV_PI;
 					const float pdf = (dp <= 0.f) ? 0.f :
-						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * directLightPdf * matPdf / (dp * PARAM_DL_LIGHT_COUNT));
+						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * directLightPdf * matPdf / (dp * lightSourceCount));
 					if (pdf > 0.f) {
 						Spectrum throughputLightDir = prevThroughput;
 						throughputLightDir.r *= shadeColor.r;
@@ -579,15 +618,34 @@ __kernel void AdvancePaths(
 
 			} else {
 #if defined(PARAM_HAS_INFINITELIGHT)
-				Spectrum Le;
-				InfiniteLight_Le(infiniteLight, infiniteLightMap, &Le, &rayDir);
+				Spectrum iLe;
+				InfiniteLight_Le(infiniteLight, infiniteLightMap, &iLe, &rayDir);
 
-				/*if (task->pathState.depth > 0)
-					printf(\"Throughput: (%f, %f, %f) Le: (%f, %f, %f)\\n\", throughput.r, throughput.g, throughput.b, Le.r, Le.g, Le.b);*/
+				sample->radiance.r += throughput.r * iLe.r;
+				sample->radiance.g += throughput.g * iLe.g;
+				sample->radiance.b += throughput.b * iLe.b;
+#endif
 
-				sample->radiance.r += throughput.r * Le.r;
-				sample->radiance.g += throughput.g * Le.g;
-				sample->radiance.b += throughput.b * Le.b;
+#if defined(PARAM_HAS_SUNLIGHT)
+				// Make the sun visible only if relsize has been changed (in order
+				// to avoid fireflies).
+				if (sunLight->relSize > 5.f) {
+					Spectrum sLe;
+					SunLight_Le(sunLight, &sLe, &rayDir);
+
+					if (!task->pathState.specularBounce) {
+						const float lpdf = UniformConePdf(sunLight->cosThetaMax);
+						const float ph = PowerHeuristic(1, task->pathState.bouncePdf, 1, lpdf);
+
+						sLe.r *= ph;
+						sLe.g *= ph;
+						sLe.b *= ph;
+					}
+
+					sample->radiance.r += throughput.r * sLe.r;
+					sample->radiance.g += throughput.g * sLe.g;
+					sample->radiance.b += throughput.b * sLe.b;
+				}
 #endif
 
 				pathState = PATH_STATE_DONE;

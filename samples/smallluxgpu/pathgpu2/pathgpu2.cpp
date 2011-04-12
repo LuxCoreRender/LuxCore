@@ -486,7 +486,7 @@ void PathGPU2RenderThread::InitRender() {
 		il.width = texMap->GetWidth();
 		il.height = texMap->GetHeight();
 
-		//cerr << "[PathGPU2RenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(PathGPU2::InfiniteLight) / 1024) << "Kbytes" << endl;
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(PathGPU2::InfiniteLight) / 1024) << "Kbytes" << endl;
 		infiniteLightBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(PathGPU2::InfiniteLight),
@@ -505,11 +505,45 @@ void PathGPU2RenderThread::InitRender() {
 		infiniteLightMapBuff = NULL;
 	}
 
-	if (!infiniteLight && (areaLightCount == 0))
-		throw runtime_error("There are no light sources supported by PathGPU2 in the scene (i.e. sun is not yet supported)");
-
 	tEnd = WallClockTime();
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Infinitelight translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
+	//--------------------------------------------------------------------------
+	// Check if there is an sun light source
+	//--------------------------------------------------------------------------
+
+	SunLight *sunLight = NULL;
+
+	// Look for the sun light
+	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+		LightSource *l = scene->lights[i];
+
+		if (l->GetType() == TYPE_SUN) {
+			sunLight = (SunLight *)l;
+			break;
+		}
+	}
+
+	if (sunLight) {
+		PathGPU2::SunLight sl;
+
+		sl.sundir = sunLight->GetDir();
+		sl.gain = sunLight->GetGain();
+		sl.turbidity = sunLight->GetTubidity();
+		sl.relSize= sunLight->GetRelSize();
+		sunLight->GetInitData(&sl.x, &sl.y, &sl.thetaS, &sl.phiS, &sl.V,
+				&sl.cosThetaMax, &sl.sin2ThetaMax, &sl.suncolor);
+
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] SunLight buffer size: " << (sizeof(PathGPU2::SunLight) / 1024) << "Kbytes" << endl;
+		sunLightBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(PathGPU2::SunLight),
+				(void *)&sl);
+		deviceDesc->AllocMemory(sunLightBuff->getInfo<CL_MEM_SIZE>());
+	}
+
+	if (!sunLight && !infiniteLight && (areaLightCount == 0))
+		throw runtime_error("There are no light sources supported by PathGPU2 in the scene");
 
 	//--------------------------------------------------------------------------
 	// Translate mesh colors
@@ -834,7 +868,7 @@ void PathGPU2RenderThread::InitRender() {
 		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
 		sizeof(float) * 3 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
-		((areaLightCount > 0) ? (sizeof(float) * 3) : 0) +
+		(((areaLightCount > 0) || sunLight) ? (sizeof(float) * 3) : 0) +
 		// IDX_RR
 		sizeof(float);
 	const size_t uDataSize = (renderEngine->sampler->type == PathGPU2::INLINED_RANDOM) ?
@@ -867,7 +901,7 @@ void PathGPU2RenderThread::InitRender() {
 				sizeof(float) * s->xSamples +
 				// stratifiedLight2D
 				// stratifiedLight1D
-				((areaLightCount > 0) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
+				(((areaLightCount > 0) || sunLight) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
 
 		sampleSize += stratifiedDataSize;
 	}
@@ -876,7 +910,7 @@ void PathGPU2RenderThread::InitRender() {
 
 	const size_t gpuTaksSizePart3 =
 		// PathState size
-		((areaLightCount > 0) ? sizeof(PathGPU2::PathStateDL) : sizeof(PathGPU2::PathState));
+		(((areaLightCount > 0) || sunLight) ? sizeof(PathGPU2::PathStateDL) : sizeof(PathGPU2::PathState));
 
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
@@ -925,7 +959,8 @@ void PathGPU2RenderThread::InitRender() {
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
-			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
+			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f" <<
+			" -D PARAM_WORLD_RADIUS=" << (scene->dataSet->GetBSphere().rad * 1.01f) << "f"
 			;
 
 	if (enable_MAT_MATTE)
@@ -955,6 +990,17 @@ void PathGPU2RenderThread::InitRender() {
 
 	if (infiniteLight)
 		ss << " -D PARAM_HAS_INFINITELIGHT";
+
+	if (sunLight) {
+		ss << " -D PARAM_HAS_SUNLIGHT";
+
+		if (!triLightsBuff) {
+			ss <<
+				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
+				" -D PARAM_DL_LIGHT_COUNT=0"
+				;
+		}
+	}
 
 	if (triLightsBuff) {
 		ss <<
@@ -1206,6 +1252,8 @@ void PathGPU2RenderThread::InitRender() {
 		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
 		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
 	}
+	if (sunLight)
+		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
 	if (triLightsBuff)
 		advancePathsKernel->setArg(argIndex++, *triLightsBuff);
 	if (texMapRGBBuff)
@@ -1301,6 +1349,10 @@ void PathGPU2RenderThread::Stop() {
 		delete infiniteLightBuff;
 		deviceDesc->FreeMemory(infiniteLightMapBuff->getInfo<CL_MEM_SIZE>());
 		delete infiniteLightMapBuff;
+	}
+	if (sunLightBuff) {
+		deviceDesc->FreeMemory(sunLightBuff->getInfo<CL_MEM_SIZE>());
+		delete sunLightBuff;
 	}
 	if (cameraBuff) {
 		deviceDesc->FreeMemory(cameraBuff->getInfo<CL_MEM_SIZE>());

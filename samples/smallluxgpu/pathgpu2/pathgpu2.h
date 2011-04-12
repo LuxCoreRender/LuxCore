@@ -327,6 +327,7 @@ private:
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
 	cl::Buffer *infiniteLightMapBuff;
+	cl::Buffer *sunLightBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;

@@ -132,6 +132,10 @@ int Mod(int a, int b) {
 	return a;
 }
 
+float Lerp(float t, float v1, float v2) {
+	return (1.f - t) * v1 + t * v2;
+}
+
 void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
 	float r, theta;
 	// Map uniform random numbers to $[-1,1]^2$
@@ -176,6 +180,25 @@ void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) 
 void CosineSampleHemisphere(Vector *ret, const float u1, const float u2) {
 	ConcentricSampleDisk(u1, u2, &ret->x, &ret->y);
 	ret->z = sqrt(max(0.f, 1.f - ret->x * ret->x - ret->y * ret->y));
+}
+
+void UniformSampleCone(Vector *ret, const float u1, const float u2, const float costhetamax,
+	const Vector *x, const Vector *y, const Vector *z) {
+	const float costheta = Lerp(u1, costhetamax, 1.f);
+	const float sintheta = sqrt(1.f - costheta * costheta);
+	const float phi = u2 * 2.f * M_PI;
+
+	const float kx = cos(phi) * sintheta;
+	const float ky = sin(phi) * sintheta;
+	const float kz = costheta;
+
+	ret->x = kx * x->x + ky * y->x + kz * z->x;
+	ret->y = kx * x->y + ky * y->y + kz * z->y;
+	ret->z = kx * x->z + ky * y->z + kz * z->z;
+}
+
+float UniformConePdf(float costhetamax) {
+	return 1.f / (2.f * M_PI * (1.f - costhetamax));
 }
 
 void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {

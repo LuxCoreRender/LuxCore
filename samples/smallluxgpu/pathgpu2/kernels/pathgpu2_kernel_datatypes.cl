@@ -33,13 +33,12 @@
 //  PARAM_MAX_PATH_DEPTH
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
-//  PARAM_DIRECT_LIGHT_SAMPLING
-//  PARAM_DL_LIGHT_COUNT
 //  PARAM_CAMERA_DYNAMIC
 //  PARAM_HAS_TEXTUREMAPS
 //  PARAM_HAS_ALPHA_TEXTUREMAPS
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_HAS_BUMPMAPS
+//  PARAM_WORLD_RADIUS
 
 // To enable single material suopport (work around for ATI compiler problems)
 //  PARAM_ENABLE_MAT_MATTE
@@ -53,6 +52,10 @@
 //  PARAM_ENABLE_MAT_ARCHGLASS
 
 // (optional)
+//  PARAM_DIRECT_LIGHT_SAMPLING
+//  PARAM_DL_LIGHT_COUNT
+
+// (optional)
 //  PARAM_CAMERA_HAS_DOF
 //  PARAM_CAMERA_LENS_RADIUS
 //  PARAM_CAMERA_FOCAL_DISTANCE
@@ -60,7 +63,7 @@
 // (optional)
 //  PARAM_HAS_INFINITELIGHT
 
-// (optional)
+// (optional, requires PARAM_DIRECT_LIGHT_SAMPLING)
 //  PARAM_HAS_SUNLIGHT
 
 // (optional)
@@ -91,9 +94,13 @@
 
 //#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#endif
+
+#if defined(PARAM_HAS_SUNLIGHT) & !defined(PARAM_DIRECT_LIGHT_SAMPLING)
+Error: PARAM_HAS_SUNLIGHT requires PARAM_DIRECT_LIGHT_SAMPLING !
 #endif
 
 #ifndef M_PI
