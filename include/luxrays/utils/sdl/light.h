@@ -163,6 +163,21 @@ public:
 	virtual Spectrum Le(const Vector &dir) const;
 	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
 
+	void GetInitData(float *thetaSData, float *phiSData,
+		float *zenith_YData, float *zenith_xData, float *zenith_yData,
+		float *perez_YData, float *perez_xData, float *perez_yData) {
+		*thetaSData = thetaS;
+		*phiSData = phiS;
+		*zenith_YData = zenith_Y;
+		*zenith_xData = zenith_x;
+		*zenith_yData = zenith_y;
+		for (size_t i = 0; i < 6; ++i) {
+			perez_YData[i] = perez_Y[i];
+			perez_xData[i] = perez_x[i];
+			perez_yData[i] = perez_y[i];
+		}
+	}
+
 protected:
 	Vector sundir;
 	float turbidity;

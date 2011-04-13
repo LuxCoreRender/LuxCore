@@ -543,7 +543,43 @@ void PathGPU2RenderThread::InitRender() {
 		deviceDesc->AllocMemory(sunLightBuff->getInfo<CL_MEM_SIZE>());
 	}
 
-	if (!sunLight && !infiniteLight && (areaLightCount == 0))
+	//--------------------------------------------------------------------------
+	// Check if there is an sky light source
+	//--------------------------------------------------------------------------
+
+	SkyLight *skyLight = NULL;
+
+	if (scene->infiniteLight && (scene->infiniteLight->GetType() == TYPE_IL_SKY))
+		skyLight = (SkyLight *)scene->infiniteLight;
+	else {
+		// Look for the sky light
+		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+			LightSource *l = scene->lights[i];
+
+			if (l->GetType() == TYPE_IL_SKY) {
+				skyLight = (SkyLight *)l;
+				break;
+			}
+		}
+	}
+
+	if (skyLight) {
+		PathGPU2::SkyLight sl;
+
+		sl.gain = skyLight->GetGain();
+		skyLight->GetInitData(&sl.thetaS, &sl.phiS,
+				&sl.zenith_Y, &sl.zenith_x, &sl.zenith_y,
+				sl.perez_Y, sl.perez_x, sl.perez_y);
+
+		cerr << "[PathGPU2RenderThread::" << threadIndex << "] SkyLight buffer size: " << (sizeof(PathGPU2::SkyLight) / 1024) << "Kbytes" << endl;
+		skyLightBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(PathGPU2::SkyLight),
+				(void *)&sl);
+		deviceDesc->AllocMemory(skyLightBuff->getInfo<CL_MEM_SIZE>());
+	}
+
+	if (!skyLight && !sunLight && !infiniteLight && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathGPU2 in the scene");
 
 	//--------------------------------------------------------------------------
@@ -992,6 +1028,9 @@ void PathGPU2RenderThread::InitRender() {
 	if (infiniteLight)
 		ss << " -D PARAM_HAS_INFINITELIGHT";
 
+	if (skyLight)
+		ss << " -D PARAM_HAS_SKYLIGHT";
+
 	if (sunLight) {
 		ss << " -D PARAM_HAS_SUNLIGHT";
 
@@ -1255,6 +1294,8 @@ void PathGPU2RenderThread::InitRender() {
 	}
 	if (sunLight)
 		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
+	if (skyLight)
+		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
 	if (triLightsBuff)
 		advancePathsKernel->setArg(argIndex++, *triLightsBuff);
 	if (texMapRGBBuff)
@@ -1354,6 +1395,10 @@ void PathGPU2RenderThread::Stop() {
 	if (sunLightBuff) {
 		deviceDesc->FreeMemory(sunLightBuff->getInfo<CL_MEM_SIZE>());
 		delete sunLightBuff;
+	}
+	if (skyLightBuff) {
+		deviceDesc->FreeMemory(skyLightBuff->getInfo<CL_MEM_SIZE>());
+		delete skyLightBuff;
 	}
 	if (cameraBuff) {
 		deviceDesc->FreeMemory(cameraBuff->getInfo<CL_MEM_SIZE>());

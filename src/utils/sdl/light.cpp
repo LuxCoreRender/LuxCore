@@ -134,11 +134,10 @@ Spectrum SkyLight::Le(const Vector &dir) const {
 	return gain * s;
 }
 
-void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const
-{
+void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const {
 	// add bottom half of hemisphere with horizon colour
 	const float theta_fin = Min<float>(theta, (M_PI * 0.5f) - 0.001f);
-	const float gamma = RiAngleBetween(theta,phi,thetaS,phiS);
+	const float gamma = RiAngleBetween(theta, phi, thetaS, phiS);
 
 	// Compute xyY values
 	const float x = zenith_x * PerezBase(perez_x, theta_fin, gamma);

@@ -271,6 +271,14 @@ typedef struct {
 	Spectrum suncolor;
 } SunLight;
 
+typedef struct {
+	Spectrum gain;
+	float thetaS;
+	float phiS;
+	float zenith_Y, zenith_x, zenith_y;
+	float perez_Y[6], perez_x[6], perez_y[6];
+} SkyLight;
+
 //------------------------------------------------------------------------------
 
 typedef struct {
@@ -327,6 +335,7 @@ private:
 	cl::Buffer *infiniteLightBuff;
 	cl::Buffer *infiniteLightMapBuff;
 	cl::Buffer *sunLightBuff;
+	cl::Buffer *skyLightBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;

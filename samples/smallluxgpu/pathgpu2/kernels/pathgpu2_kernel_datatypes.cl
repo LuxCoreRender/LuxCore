@@ -67,6 +67,9 @@
 //  PARAM_HAS_SUNLIGHT
 
 // (optional)
+//  PARAM_HAS_SKYLIGHT
+
+// (optional)
 //  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = MitchellSS)
 //  PARAM_IMAGE_FILTER_WIDTH_X
 //  PARAM_IMAGE_FILTER_WIDTH_Y
@@ -420,6 +423,14 @@ typedef struct {
 	float cosThetaMax;
 	Spectrum suncolor;
 } SunLight;
+
+typedef struct {
+	Spectrum gain;
+	float thetaS;
+	float phiS;
+	float zenith_Y, zenith_x, zenith_y;
+	float perez_Y[6], perez_x[6], perez_y[6];
+} SkyLight;
 
 //------------------------------------------------------------------------------
 
