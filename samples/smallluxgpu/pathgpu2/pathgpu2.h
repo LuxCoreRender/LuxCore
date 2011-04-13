@@ -267,8 +267,7 @@ typedef struct {
 	float relSize;
 	// XY Vectors for cone sampling
 	Vector x, y;
-	float thetaS, phiS, V;
-	float cosThetaMax, sin2ThetaMax;
+	float cosThetaMax;
 	Spectrum suncolor;
 } SunLight;
 
