@@ -257,7 +257,7 @@ typedef struct {
 typedef struct {
 	float shiftU, shiftV;
 	Spectrum gain;
-	uint width, height;
+	unsigned int width, height;
 } InfiniteLight;
 
 typedef struct {
