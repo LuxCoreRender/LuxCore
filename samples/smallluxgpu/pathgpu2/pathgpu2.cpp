@@ -531,8 +531,9 @@ void PathGPU2RenderThread::InitRender() {
 		sl.gain = sunLight->GetGain();
 		sl.turbidity = sunLight->GetTubidity();
 		sl.relSize= sunLight->GetRelSize();
-		sunLight->GetInitData(&sl.x, &sl.y, &sl.thetaS, &sl.phiS, &sl.V,
-				&sl.cosThetaMax, &sl.sin2ThetaMax, &sl.suncolor);
+		float tmp;
+		sunLight->GetInitData(&sl.x, &sl.y, &tmp, &tmp, &tmp,
+				&sl.cosThetaMax, &tmp, &sl.suncolor);
 
 		cerr << "[PathGPU2RenderThread::" << threadIndex << "] SunLight buffer size: " << (sizeof(PathGPU2::SunLight) / 1024) << "Kbytes" << endl;
 		sunLightBuff = new cl::Buffer(oclContext,
