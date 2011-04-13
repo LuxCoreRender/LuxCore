@@ -113,6 +113,9 @@ __kernel void AdvancePaths(
 #if defined(PARAM_HAS_SUNLIGHT)
 		, __global SunLight *sunLight
 #endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		, __global SkyLight *skyLight
+#endif
 #if (PARAM_DL_LIGHT_COUNT > 0)
 		, __global TriangleLight *triLights
 #endif
@@ -666,6 +669,15 @@ Error: Huston, we have a problem !
 					sample->radiance.g += throughput.g * sLe.g;
 					sample->radiance.b += throughput.b * sLe.b;
 				}
+#endif
+
+#if defined(PARAM_HAS_SKYLIGHT)
+				Spectrum skLe;
+				SkyLight_Le(skyLight, &skLe, &rayDir);
+
+				sample->radiance.r += throughput.r * skLe.r;
+				sample->radiance.g += throughput.g * skLe.g;
+				sample->radiance.b += throughput.b * skLe.b;
 #endif
 
 				pathState = PATH_STATE_DONE;

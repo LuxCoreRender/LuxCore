@@ -148,6 +148,67 @@ void SunLight_Sample_L(__global SunLight *sunLight,
 }
 #endif
 
+#if defined(PARAM_HAS_SKYLIGHT)
+float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
+	const float cospsi = sin(thetav) * sin(theta) * cos(phi - phiv) + cos(thetav) * cos(theta);
+	if (cospsi >= 1.f)
+		return 0.f;
+	if (cospsi <= -1.f)
+		return M_PI;
+	return acos(cospsi);
+}
+
+float SkyLight_PerezBase(__global float *lam, float theta, float gamma) {
+	return (1.f + lam[1] * exp(lam[2] / cos(theta))) *
+		(1.f + lam[3] * exp(lam[4] * gamma)  + lam[5] * cos(gamma) * cos(gamma));
+}
+
+void SkyLight_ChromaticityToSpectrum(const float Y, const float x, const float y, Spectrum *s) {
+	float X, Z;
+
+	if (y != 0.f)
+		X = (x / y) * Y;
+	else
+		X = 0.f;
+
+	if (y != 0.f && Y != 0.f)
+		Z = (1.f - x - y) / y * Y;
+	else
+		Z = 0.f;
+
+	// Assuming sRGB (D65 illuminant)
+	s->r =  3.2410f * X - 1.5374f * Y - 0.4986f * Z;
+	s->g = -0.9692f * X + 1.8760f * Y + 0.0416f * Z;
+	s->b =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
+}
+
+void SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
+		const float theta, const float phi, Spectrum *spect) {
+	// add bottom half of hemisphere with horizon colour
+	const float theta_fin = min(theta, (M_PI * 0.5f) - 0.001f);
+	const float gamma = RiAngleBetween(theta, phi, skyLight->thetaS, skyLight->phiS);
+
+	// Compute xyY values
+	const float x = skyLight->zenith_x * SkyLight_PerezBase(skyLight->perez_x, theta_fin, gamma);
+	const float y = skyLight->zenith_y * SkyLight_PerezBase(skyLight->perez_y, theta_fin, gamma);
+	const float Y = skyLight->zenith_Y * SkyLight_PerezBase(skyLight->perez_Y, theta_fin, gamma);
+
+	SkyLight_ChromaticityToSpectrum(Y, x, y, spect);
+}
+
+void SkyLight_Le(__global SkyLight *skyLight, Spectrum *f, const Vector *dir) {
+	const float theta = SphericalTheta(dir);
+	const float phi = SphericalPhi(dir);
+
+	Spectrum s;
+	SkyLight_GetSkySpectralRadiance(skyLight, theta, phi, &s);
+
+	f->r = skyLight->gain.r * s.r;
+	f->g = skyLight->gain.g * s.g;
+	f->b = skyLight->gain.b * s.b;
+}
+#endif
+
 void Mesh_InterpolateColor(__global Spectrum *colors, __global Triangle *triangles,
 		const uint triIndex, const float b1, const float b2, Spectrum *C) {
 	__global Triangle *tri = &triangles[triIndex];
