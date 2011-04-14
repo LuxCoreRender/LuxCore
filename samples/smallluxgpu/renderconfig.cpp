@@ -72,7 +72,7 @@ void RenderingConfig::Init() {
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
+	const unsigned int screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
 
 	captionBuffer[0] = '\0';
 
@@ -180,6 +180,7 @@ void RenderingConfig::Init() {
 		default:
 			assert (false);
 	}
+	renderEngine->SetScreenRefreshInterval(screenRefreshInterval);
 
 	film->StartSampleTime();
 	StartAllRenderThreadsLockless();

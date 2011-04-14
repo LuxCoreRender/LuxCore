@@ -402,8 +402,6 @@ private:
 	vector<PathGPU2RenderThread *> renderThreads;
 	SampleBuffer *sampleBuffer;
 
-	double screenRefreshInterval; // in seconds
-
 	double startTime;
 	double elapsedTime;
 	unsigned long long samplesCount;
@@ -413,7 +411,7 @@ private:
 
 	unsigned int taskCount;
 
-	bool dynamicCamera, usePixelAtomics;
+	bool usePixelAtomics;
 };
 
 #endif

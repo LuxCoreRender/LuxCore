@@ -84,13 +84,6 @@ PathGPU2RenderThread::~PathGPU2RenderThread() {
 	delete[] gpuTaskStats;
 }
 
-static void AppendMatrixDefinition(stringstream &ss, const char *paramName, const Matrix4x4 &m) {
-	for (unsigned int i = 0; i < 4; ++i) {
-		for (unsigned int j = 0; j < 4; ++j)
-			ss << " -D " << paramName << "_" << i << j << "=" << m.m[i][j] << "f";
-	}
-}
-
 void PathGPU2RenderThread::Start() {
 	started = true;
 
@@ -174,6 +167,22 @@ void PathGPU2RenderThread::InitRender() {
 
 	tEnd = WallClockTime();
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
+	//--------------------------------------------------------------------------
+	// Camera definition
+	//--------------------------------------------------------------------------
+
+	// Dynamic camera mode uses a buffer to transfer camera position/orientation
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(float) * 4 * 4 * 2 / 1024) << "Kbytes" << endl;
+	float data[4 * 4 * 2];
+	memcpy(&data[0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+	memcpy(&data[4 * 4], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+
+	cameraBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(float) * 4 * 4 * 2,
+			(void *)data);
+	deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
 	// Translate material definitions
@@ -1145,27 +1154,9 @@ void PathGPU2RenderThread::InitRender() {
 			assert (false);
 	}
 
-	if (renderEngine->dynamicCamera) {
-		tStart = WallClockTime();
+	//--------------------------------------------------------------------------
 
-		// Dynamic camera mode uses a buffer to transfer camera position/orientation
-		ss << " -D PARAM_CAMERA_DYNAMIC";
-
-		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(float) * 4 * 4 * 2 / 1024) << "Kbytes" << endl;
-		float data[4 * 4 * 2];
-		memcpy(&data[0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-		memcpy(&data[4 * 4], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
-
-		cameraBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(float) * 4 * 4 * 2,
-				(void *)data);
-		deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
-	} else {
-		cameraBuff = NULL;
-		AppendMatrixDefinition(ss, "PARAM_RASTER2CAMERA", scene->camera->GetRasterToCameraMatrix());
-		AppendMatrixDefinition(ss, "PARAM_CAMERA2WORLD", scene->camera->GetCameraToWorldMatrix());
-	}
+	tStart = WallClockTime();
 
 	// Check if I have to recompile the kernels
 	string newKernelParameters = ss.str();
@@ -1529,9 +1520,10 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 				const double elapsedTime = WallClockTime() - startTime;
 
 				/*if(renderThread->threadIndex == 0)
-					cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 << "ms" << endl;*/
+					cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 <<
+							"ms (screenRefreshInterval: " << renderThread->renderEngine->screenRefreshInterval << ")" << endl;*/
 
-				if ((elapsedTime > renderThread->renderEngine->screenRefreshInterval) ||
+				if ((elapsedTime * 1000.0 > (double)renderThread->renderEngine->screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
 					break;
 			}
@@ -1637,13 +1629,6 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 
 	if (oclIntersectionDevices.size() < 1)
 		throw runtime_error("Unable to find an OpenCL intersection device for PathGPU2 render engine");
-
-	bool lowLatency = (cfg.GetInt("opencl.latency.mode", 1) != 0);
-	dynamicCamera = (cfg.GetInt("pathgpu.dynamiccamera.enable", lowLatency ? 1 : 0) != 0);
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000) / 1000.0;
-
-	if (lowLatency)
-		dynamicCamera = true;
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 

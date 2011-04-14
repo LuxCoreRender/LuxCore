@@ -26,10 +26,8 @@
 __kernel void Init(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
-		__global Ray *rays
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
+		__global Ray *rays,
+		__global float *cameraData
 #if (PARAM_SAMPLER_TYPE == 3)
 		, __local float *localMemTempBuff
 #endif
@@ -54,11 +52,7 @@ __kernel void Init(
 			&seed, &task->sample);
 
 	// Initialize the path
-	GenerateCameraPath(task, &rays[gid], &seed
-#if defined(PARAM_CAMERA_DYNAMIC)
-			, cameraData
-#endif
-			);
+	GenerateCameraPath(task, &rays[gid], &seed, cameraData);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -102,10 +96,8 @@ __kernel void AdvancePaths(
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Point *vertices,
-		__global Triangle *triangles
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
+		__global Triangle *triangles,
+		__global float *cameraData
 #if defined(PARAM_HAS_INFINITELIGHT)
 		, __global InfiniteLight *infiniteLight
 		, __global Spectrum *infiniteLightMap
