@@ -162,6 +162,11 @@ public:
 	cl::Context &GetOCLContext() const;
 	cl::Device &GetOCLDevice() const { return oclDevice; }
 
+	bool IsAMDPlatform() const {
+		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
+		return !strcmp(platform.getInfo<CL_PLATFORM_VENDOR>().c_str(), "Advanced Micro Devices, Inc.");
+	}
+
 	static void Filter(const OpenCLDeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 
 	friend class Context;

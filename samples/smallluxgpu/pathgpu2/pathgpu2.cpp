@@ -1154,6 +1154,10 @@ void PathGPU2RenderThread::InitRender() {
 			assert (false);
 	}
 
+	// Check the OpenCL vendor and use some specific compiler options
+	if (deviceDesc->IsAMDPlatform())
+		ss << " -fno-alias";
+
 	//--------------------------------------------------------------------------
 
 	tStart = WallClockTime();
