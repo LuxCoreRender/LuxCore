@@ -35,7 +35,6 @@ std::string luxrays::KernelSource_PathGPU2_datatypes =
 "//  PARAM_MAX_PATH_DEPTH\n"
 "//  PARAM_MAX_RR_DEPTH\n"
 "//  PARAM_MAX_RR_CAP\n"
-"//  PARAM_CAMERA_DYNAMIC\n"
 "//  PARAM_HAS_TEXTUREMAPS\n"
 "//  PARAM_HAS_ALPHA_TEXTUREMAPS\n"
 "//  PARAM_USE_PIXEL_ATOMICS\n"
