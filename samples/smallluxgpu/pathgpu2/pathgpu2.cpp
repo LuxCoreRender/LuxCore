@@ -638,32 +638,53 @@ void PathGPU2RenderThread::InitRender() {
 	// Translate mesh indices and vertices
 	//--------------------------------------------------------------------------
 
-	const TriangleMesh *preprocessedMesh;
-	switch (scene->dataSet->GetAcceleratorType()) {
-		case ACCEL_BVH:
-			preprocessedMesh = ((BVHAccel *)scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
+	AcceleratorType accelType = scene->dataSet->GetAcceleratorType();
+	switch (accelType) {
+		case ACCEL_BVH: {
+			const TriangleMesh *preprocessedMesh = ((BVHAccel *)scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
+
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
+			trianglesBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(Triangle) * trianglesCount,
+					(void *)preprocessedMesh->GetTriangles());
+			deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+
+			const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
+			vertsBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(Point) * verticesCount,
+					(void *)preprocessedMesh->GetVertices());
+			deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 			break;
-		case ACCEL_QBVH:
-			preprocessedMesh = ((QBVHAccel *)scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
+		}
+		case ACCEL_QBVH: {
+			const TriangleMesh *preprocessedMesh = ((QBVHAccel *)scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
+
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
+			trianglesBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(Triangle) * trianglesCount,
+					(void *)preprocessedMesh->GetTriangles());
+			deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+
+			const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
+			vertsBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(Point) * verticesCount,
+					(void *)preprocessedMesh->GetVertices());
+			deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 			break;
+		}
+		case ACCEL_MQBVH: {
+			// TODO
+			break;
+		}
 		default:
-			throw runtime_error("ACCEL_MQBVH is not yet supported by PathGPU2RenderEngine");
+			throw runtime_error("Unknown accelerator not supported by PathGPU2RenderEngine");
 	}
-
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
-	trianglesBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Triangle) * trianglesCount,
-			(void *)preprocessedMesh->GetTriangles());
-	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
-
-	const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();	
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
-	vertsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Point) * verticesCount,
-			(void *)preprocessedMesh->GetVertices());
-	deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 
 	tEnd = WallClockTime();
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
@@ -1001,6 +1022,20 @@ void PathGPU2RenderThread::InitRender() {
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f" <<
 			" -D PARAM_WORLD_RADIUS=" << (scene->dataSet->GetBSphere().rad * 1.01f) << "f"
 			;
+
+	switch (accelType) {
+		case ACCEL_BVH:
+			ss << " -D PARAM_ACCEL_BVH";
+			break;
+		case ACCEL_QBVH:
+			ss << " -D PARAM_ACCEL_QBVH";
+			break;
+		case ACCEL_MQBVH:
+			ss << " -D PARAM_ACCEL_MQBVH";
+			break;
+		default:
+			assert (false);
+	}
 
 	if (enable_MAT_MATTE)
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
