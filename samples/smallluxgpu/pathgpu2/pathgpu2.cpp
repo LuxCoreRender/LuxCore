@@ -541,7 +541,8 @@ void PathGPU2RenderThread::InitRender() {
 				sizeof(PathGPU2::SunLight),
 				(void *)&sl);
 		deviceDesc->AllocMemory(sunLightBuff->getInfo<CL_MEM_SIZE>());
-	}
+	} else
+		sunLightBuff = NULL;
 
 	//--------------------------------------------------------------------------
 	// Check if there is an sky light source
@@ -577,7 +578,8 @@ void PathGPU2RenderThread::InitRender() {
 				sizeof(PathGPU2::SkyLight),
 				(void *)&sl);
 		deviceDesc->AllocMemory(skyLightBuff->getInfo<CL_MEM_SIZE>());
-	}
+	} else
+		skyLightBuff = NULL;
 
 	if (!skyLight && !sunLight && !infiniteLight && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathGPU2 in the scene");
@@ -1292,9 +1294,9 @@ void PathGPU2RenderThread::InitRender() {
 		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
 		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
 	}
-	if (sunLight)
+	if (sunLightBuff)
 		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
-	if (skyLight)
+	if (skyLightBuff)
 		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
 	if (triLightsBuff)
 		advancePathsKernel->setArg(argIndex++, *triLightsBuff);
