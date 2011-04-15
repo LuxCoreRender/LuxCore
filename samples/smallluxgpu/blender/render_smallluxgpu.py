@@ -848,7 +848,7 @@ class SLGBP:
                 for k in scn:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
                         wasreset = True
-            if act & SLGBP.LIVEOBJ > 0 and scene.slg.accelerator_type == '3':
+            if act & SLGBP.LIVEOBJ > 0:
                 scn = SLGBP.getobjscn(scene)
                 for k in scn:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
