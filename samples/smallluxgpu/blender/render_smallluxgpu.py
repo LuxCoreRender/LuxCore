@@ -26,7 +26,7 @@ bl_info = {
     "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
     "version": (0, 8, 1),
-    "blender": (2, 5, 6),
+    "blender": (2, 5, 7),
     "location": "Render > Engine > SmallLuxGPU",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
     "warning": "",
@@ -210,7 +210,10 @@ class SLGBP:
         cfg['opencl.renderthread.count'] = format(scene.slg.devices_threads)
         cfg['opencl.gpu.workgroup.size'] = format(scene.slg.gpu_workgroup_size)
         cfg['film.gamma'] = format(scene.slg.film_gamma, 'g')
-        cfg['film.filter.type'] = scene.slg.film_filter_type
+        if scene.slg.rendering_type == '4' and scene.slg.filter_type != 'NONE':
+            cfg['film.filter.type'] = '0'
+        else:
+            cfg['film.filter.type'] = scene.slg.film_filter_type
         cfg['screen.refresh.interval'] = format(scene.slg.refreshrate)
         cfg['renderengine.type'] = scene.slg.rendering_type
         cfg['sppm.lookup.type'] = scene.slg.sppmlookuptype
@@ -1192,8 +1195,7 @@ def slg_add_properties():
         items=(("NONE", "None", "None"),
                ("BOX", "Box", "Box"),
                ("GAUSSIAN", "Gaussian", "Gaussian"),
-               ("MITCHELL", "Mitchell", "Mitchell"),
-               ("MITCHELL_SS", "Mitchell_SS", "Mitchell_SS")),
+               ("MITCHELL", "Mitchell", "Mitchell")),
         default="NONE")
 
     SLGSettings.pixelatomics_enable = BoolProperty(name="Use Pixel Atomics",
@@ -1342,7 +1344,7 @@ def slg_add_properties():
 
     SLGSettings.tracedepth = IntProperty(name="Max Path Trace Depth",
         description="Maximum path tracing depth",
-        default=3, min=1, max=1024, soft_min=1, soft_max=1024)
+        default=6, min=1, max=1024, soft_min=1, soft_max=1024)
 
     SLGSettings.shadowrays = IntProperty(name="Shadow Rays",
         description="Shadow rays",
@@ -1727,7 +1729,7 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
                 split = layout.split()
                 col = split.column()
                 col.prop(slg, "filter_alpha")
-            elif slg.filter_type == 'MITCHELL' or slg.filter_type == 'MITCHELL_SS':
+            elif slg.filter_type == 'MITCHELL':
                 split = layout.split()
                 col = split.column()
                 col.prop(slg, "filter_B")
