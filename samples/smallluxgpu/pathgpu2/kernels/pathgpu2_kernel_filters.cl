@@ -150,11 +150,10 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 	AtomicAdd(&pixel->c.g, s.y);
 	AtomicAdd(&pixel->c.b, s.z);
 	AtomicAdd(&pixel->count, s.w);
-
 #else
-	float4 p = *((__global float4 *)pixel);
+	float4 p = vload4(0, (__global float4 *)pixel);
 	p += s;
-	*((__global float4 *)pixel) = p;
+	vstore4(p, 0, (__global float4 *)pixel);
 #endif
 }
 
