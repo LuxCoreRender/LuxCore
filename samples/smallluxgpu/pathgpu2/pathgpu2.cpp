@@ -225,6 +225,13 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 }
 
 void PathGPU2RenderThread::InitRender() {
+	SLGScene *scene = renderEngine->scene;
+	AcceleratorType accelType = scene->dataSet->GetAcceleratorType();
+
+	// Check the used accelerator type
+	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
+		throw runtime_error("ACCEL_MQBVH is not yet supported by PathGPU2RenderEngine");
+
 	const unsigned int frameBufferPixelCount =
 		renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
 
@@ -238,8 +245,6 @@ void PathGPU2RenderThread::InitRender() {
 		frameBuffer[i].c.b = 0.f;
 		frameBuffer[i].count = 0.f;
 	}
-
-	SLGScene *scene = renderEngine->scene;
 
 	const unsigned int startLine = Clamp<unsigned int>(
 			renderEngine->film->GetHeight() * samplingStart,
@@ -300,7 +305,6 @@ void PathGPU2RenderThread::InitRender() {
 	// Translate mesh geometry
 	//--------------------------------------------------------------------------
 
-	AcceleratorType accelType = scene->dataSet->GetAcceleratorType();
 	InitRenderGeometry();
 
 	//--------------------------------------------------------------------------

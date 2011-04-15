@@ -78,7 +78,7 @@ public:
 	void SaveFilmImage();
 	void SaveFilm();
 
-	void UpdateSceneDataSet() { ctx->UpdateDataSet(); };
+	void UpdateSceneDataSet();
 
 	Properties cfg;
 

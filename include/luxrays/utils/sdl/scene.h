@@ -91,6 +91,8 @@ public:
 		return NULL;
 	}
 
+	void UpdateDataSet(Context *ctx, const int accelType);
+
 	static Material *CreateMaterial(const std::string &propName, const Properties &prop);
 
 	PerspectiveCamera *camera;

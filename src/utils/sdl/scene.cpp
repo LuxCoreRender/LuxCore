@@ -308,6 +308,27 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 	// Create the DataSet
 	//--------------------------------------------------------------------------
 
+	dataSet = NULL;
+	UpdateDataSet(ctx, accelType);
+}
+
+Scene::~Scene() {
+	delete camera;
+
+	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
+		delete *l;
+	if (useInfiniteLightBruteForce)
+		delete infiniteLight;
+
+	delete dataSet;
+
+	delete extMeshCache;
+	delete texMapCache;
+	delete scnProp;
+}
+
+void Scene::UpdateDataSet(Context *ctx, const int accelType) {
+	delete dataSet;
 	dataSet = new DataSet(ctx);
 
 	// Check the type of accelerator to use
@@ -335,21 +356,6 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 		dataSet->Add(*obj);
 
 	dataSet->Preprocess();
-}
-
-Scene::~Scene() {
-	delete camera;
-
-	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
-		delete *l;
-	if (useInfiniteLightBruteForce)
-		delete infiniteLight;
-
-	delete dataSet;
-
-	delete extMeshCache;
-	delete texMapCache;
-	delete scnProp;
 }
 
 std::vector<float> Scene::GetParameters(const Properties &prop, const std::string &paramName,

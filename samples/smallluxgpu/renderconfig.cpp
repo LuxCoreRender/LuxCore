@@ -424,3 +424,16 @@ void RenderingConfig::SaveFilm() {
 
 	StartAllRenderThreadsLockless();
 }
+
+void RenderingConfig::UpdateSceneDataSet() {
+	// Check if we are using a MQBVH accelerator
+	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) {
+		// Update the DataSet
+		ctx->UpdateDataSet();
+	} else {
+		// For all other accelerator, I have to rebuild the DataSet
+		scene->UpdateDataSet(ctx, scene->dataSet->GetAcceleratorType());
+		// Set the Luxrays SataSet
+		ctx->SetDataSet(scene->dataSet);
+	}
+}
