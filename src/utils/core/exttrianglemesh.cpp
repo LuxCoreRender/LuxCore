@@ -268,3 +268,8 @@ BBox ExtTriangleMesh::GetBBox() const {
 
 	return bbox;
 }
+
+void ExtTriangleMesh::ApplayTransform(const Transform &trans) {
+	for (unsigned int i = 0; i < vertCount; ++i)
+		vertices[i] = trans(vertices[i]);
+}

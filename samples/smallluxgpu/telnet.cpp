@@ -30,7 +30,6 @@
 #include "renderconfig.h"
 
 #include "luxrays/utils/properties.h"
-#include "luxrays/accelerators/mqbvhaccel.h"
 
 using boost::asio::ip::tcp;
 
@@ -403,6 +402,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.materials.*.* (requires render.stop)\n";
 						respStream << "scene.infinitelight.gain (requires render.stop)\n";
 						respStream << "scene.infinitelight.shift (requires render.stop)\n";
+						respStream << "scene.objects.*.*.transform (requires render.stop)\n";
 						respStream << "scene.objects.*.*.transformation (requires render.stop)\n";
 						respStream << "scene.skylight.dir (requires render.stop)\n";
 						respStream << "scene.skylight.gain (requires render.stop)\n";
@@ -457,6 +457,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							if (havaToUpdateSceneDataSet) {
 								// Update the DataSet
 								telnetServer->config->UpdateSceneDataSet();
+
 								havaToUpdateSceneDataSet = false;
 							}
 
@@ -775,13 +776,61 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 									cerr << "[Telnet server] Wrong state: " << property << endl;
 								}
-							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
+							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transform") == propertyName.size() - 10)) {
 								if (state == STOP) {
 									Scene *scene = telnetServer->config->scene;
 
-									// Check if we are using a MQBVH accelerator
-									if (scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH)
-										throw std::runtime_error("Wrong accelerator type");
+									// Check if it is the name of a known objects
+									const std::string matType = Properties::ExtractField(propertyName, 2);
+									if (matType == "")
+										throw std::runtime_error("Syntax error in " + propertyName);
+									const std::string objName = Properties::ExtractField(propertyName, 3);
+									if (objName == "")
+										throw std::runtime_error("Syntax error in " + propertyName);
+
+									std::map<std::string, size_t>::const_iterator iter = scene->objectIndices.find(objName);
+									if (iter == scene->objectIndices.end())
+										throw std::runtime_error("Unknown object name: " + objName);
+
+									const unsigned int meshIndex = iter->second;
+									ExtMesh *obj = scene->objects[meshIndex];
+
+									// Read the new transformation
+									const std::vector<float> vf = prop.GetFloatVector(propertyName,
+											"1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+									const Matrix4x4 mat(
+											vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+											vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+											vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+											vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+									const Transform trans(mat);
+
+									obj->ApplayTransform(trans);
+
+									// Check if it is a light source
+									if (scene->objectMaterials[meshIndex]->IsLightSource()) {
+										// Have to update all light source using this mesh
+										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+											if (scene->lights[i]->GetType() == luxrays::sdl::TYPE_TRIANGLE) {
+												TriangleLight *tl = (TriangleLight *)scene->lights[i];
+
+												if (tl->GetMeshIndex() == meshIndex)
+													tl->Init(scene->objects);
+											}
+										}
+									}
+
+									// Set the flag to Update the DataSet
+									havaToUpdateSceneDataSet = true;
+
+									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+								} else {
+									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+									cerr << "[Telnet server] Wrong state: " << property << endl;
+								}
+							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
+								if (state == STOP) {
+									Scene *scene = telnetServer->config->scene;
 
 									// Check if it is the name of a known objects
 									const std::string matType = Properties::ExtractField(propertyName, 2);
