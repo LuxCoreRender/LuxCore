@@ -310,6 +310,7 @@ private:
 
 	void InitPixelBuffer();
 	void InitRender();
+	void InitRenderGeometry();
 
 	OpenCLIntersectionDevice *intersectionDevice;
 

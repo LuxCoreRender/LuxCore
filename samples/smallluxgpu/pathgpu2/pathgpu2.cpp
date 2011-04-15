@@ -100,6 +100,130 @@ void PathGPU2RenderThread::Start() {
 	}
 }
 
+void PathGPU2RenderThread::InitRenderGeometry() {
+	SLGScene *scene = renderEngine->scene;
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+
+	const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
+	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
+
+	//--------------------------------------------------------------------------
+	// Translate mesh IDs
+	//--------------------------------------------------------------------------
+
+	const TriangleMeshID *meshIDs = scene->dataSet->GetMeshIDTable();
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
+	meshIDBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(unsigned int) * trianglesCount,
+			(void *)meshIDs);
+	deviceDesc->AllocMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
+
+	//--------------------------------------------------------------------------
+	// Translate mesh colors
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	Spectrum *colors = new Spectrum[verticesCount];
+	unsigned int cIndex = 0;
+	for (unsigned int i = 0; i < scene->objects.size(); ++i) {
+		ExtMesh *mesh = scene->objects[i];
+
+		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
+			if (mesh->HasColors())
+				colors[cIndex++] = mesh->GetColor(j);
+			else
+				colors[cIndex++] = Spectrum(1.f, 1.f, 1.f);
+		}
+	}
+
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * verticesCount / 1024) << "Kbytes" << endl;
+	colorsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Spectrum) * verticesCount,
+			colors);
+	deviceDesc->AllocMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
+	delete[] colors;
+
+	//--------------------------------------------------------------------------
+	// Translate mesh normals
+	//--------------------------------------------------------------------------
+
+	Normal *normals = new Normal[verticesCount];
+	unsigned int nIndex = 0;
+	for (unsigned int i = 0; i < scene->objects.size(); ++i) {
+		ExtMesh *mesh = scene->objects[i];
+
+		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
+			normals[nIndex++] = mesh->GetNormal(j);
+	}
+
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * verticesCount / 1024) << "Kbytes" << endl;
+	normalsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Normal) * verticesCount,
+			normals);
+	deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
+	delete[] normals;
+
+	//--------------------------------------------------------------------------
+	// Translate mesh vertices
+	//--------------------------------------------------------------------------
+
+	unsigned int *meshOffsets = new unsigned int[scene->objects.size()];
+	Point *verts = new Point[verticesCount];
+	unsigned int vIndex = 0;
+	for (unsigned int i = 0; i < scene->objects.size(); ++i) {
+		ExtMesh *mesh = scene->objects[i];
+
+		meshOffsets[i] = vIndex;
+		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
+			verts[vIndex++] = mesh->GetVertex(j);
+	}
+
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
+	vertsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Point) * verticesCount,
+			(void *)verts);
+	deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
+	delete[] verts;
+
+	//--------------------------------------------------------------------------
+	// Translate mesh indices
+	//--------------------------------------------------------------------------
+
+	Triangle *tris = new Triangle[trianglesCount];
+	unsigned int tIndex = 0;
+	for (unsigned int i = 0; i < scene->objects.size(); ++i) {
+		ExtMesh *mesh = scene->objects[i];
+
+		Triangle *mtris = mesh->GetTriangles();
+		const unsigned int moffset = meshOffsets[i];
+		for (unsigned int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
+			tris[tIndex].v[0] = mtris[j].v[0] + moffset;
+			tris[tIndex].v[1] = mtris[j].v[1] + moffset;
+			tris[tIndex].v[2] = mtris[j].v[2] + moffset;
+			++tIndex;
+		}
+	}
+
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
+	trianglesBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Triangle) * trianglesCount,
+			(void *)tris);
+	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+	delete[] tris;
+
+	delete[] meshOffsets;
+
+	const double tEnd = WallClockTime();
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+}
+
 void PathGPU2RenderThread::InitRender() {
 	const unsigned int frameBufferPixelCount =
 		renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
@@ -117,16 +241,13 @@ void PathGPU2RenderThread::InitRender() {
 
 	SLGScene *scene = renderEngine->scene;
 
-	// Check the used accelerator type
-	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
-		throw runtime_error("ACCEL_MQBVH is not yet supported by PathGPU2RenderEngine");
-
 	const unsigned int startLine = Clamp<unsigned int>(
 			renderEngine->film->GetHeight() * samplingStart,
 			0, renderEngine->film->GetHeight() - 1);
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 	double tStart, tEnd;
 
@@ -134,7 +255,6 @@ void PathGPU2RenderThread::InitRender() {
 	// Allocate buffers
 	//--------------------------------------------------------------------------
 
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 	const unsigned int taskCount = renderEngine->taskCount;
 
 	tStart = WallClockTime();
@@ -157,14 +277,6 @@ void PathGPU2RenderThread::InitRender() {
 			sizeof(PathGPU2::Pixel) * frameBufferPixelCount);
 	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
 
-	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
-	meshIDBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(unsigned int) * trianglesCount,
-			(void *)scene->dataSet->GetMeshIDTable());
-	deviceDesc->AllocMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
-
 	tEnd = WallClockTime();
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 
@@ -183,6 +295,13 @@ void PathGPU2RenderThread::InitRender() {
 			sizeof(float) * 4 * 4 * 2,
 			(void *)data);
 	deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
+
+	//--------------------------------------------------------------------------
+	// Translate mesh geometry
+	//--------------------------------------------------------------------------
+
+	AcceleratorType accelType = scene->dataSet->GetAcceleratorType();
+	InitRenderGeometry();
 
 	//--------------------------------------------------------------------------
 	// Translate material definitions
@@ -364,7 +483,6 @@ void PathGPU2RenderThread::InitRender() {
 			sizeof(PathGPU2::Material) * materialsCount,
 			mats);
 	deviceDesc->AllocMemory(materialsBuff->getInfo<CL_MEM_SIZE>());
-
 	delete[] mats;
 
 	tEnd = WallClockTime();
@@ -416,7 +534,6 @@ void PathGPU2RenderThread::InitRender() {
 				sizeof(PathGPU2::TriangleLight) * areaLightCount,
 				tals);
 		deviceDesc->AllocMemory(triLightsBuff->getInfo<CL_MEM_SIZE>());
-
 		delete[] tals;
 	} else
 		triLightsBuff = NULL;
@@ -453,7 +570,6 @@ void PathGPU2RenderThread::InitRender() {
 			sizeof(unsigned int) * meshCount,
 			meshMats);
 	deviceDesc->AllocMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
-
 	delete[] meshMats;
 
 	tEnd = WallClockTime();
@@ -594,111 +710,6 @@ void PathGPU2RenderThread::InitRender() {
 		throw runtime_error("There are no light sources supported by PathGPU2 in the scene");
 
 	//--------------------------------------------------------------------------
-	// Translate mesh colors
-	//--------------------------------------------------------------------------
-
-	tStart = WallClockTime();
-
-	const unsigned int colorsCount = scene->dataSet->GetTotalVertexCount();
-	Spectrum *colors = new Spectrum[colorsCount];
-	unsigned int cIndex = 0;
-	for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-		ExtMesh *mesh = scene->objects[i];
-
-		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-			if (mesh->HasColors())
-				colors[cIndex++] = mesh->GetColor(j);
-			else
-				colors[cIndex++] = Spectrum(1.f, 1.f, 1.f);
-		}
-	}
-
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * colorsCount / 1024) << "Kbytes" << endl;
-	colorsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Spectrum) * colorsCount,
-			colors);
-	deviceDesc->AllocMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
-	delete[] colors;
-
-	//--------------------------------------------------------------------------
-	// Translate mesh normals
-	//--------------------------------------------------------------------------
-
-	const unsigned int normalsCount = scene->dataSet->GetTotalVertexCount();
-	Normal *normals = new Normal[normalsCount];
-	unsigned int nIndex = 0;
-	for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-		ExtMesh *mesh = scene->objects[i];
-
-		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-			normals[nIndex++] = mesh->GetNormal(j);
-	}
-
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * normalsCount / 1024) << "Kbytes" << endl;
-	normalsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Normal) * normalsCount,
-			normals);
-	deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
-	delete[] normals;
-
-	//--------------------------------------------------------------------------
-	// Translate mesh indices and vertices
-	//--------------------------------------------------------------------------
-
-	AcceleratorType accelType = scene->dataSet->GetAcceleratorType();
-	switch (accelType) {
-		case ACCEL_BVH: {
-			const TriangleMesh *preprocessedMesh = ((BVHAccel *)scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
-
-			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
-			trianglesBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(Triangle) * trianglesCount,
-					(void *)preprocessedMesh->GetTriangles());
-			deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
-
-			const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
-			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
-			vertsBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(Point) * verticesCount,
-					(void *)preprocessedMesh->GetVertices());
-			deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-			break;
-		}
-		case ACCEL_QBVH: {
-			const TriangleMesh *preprocessedMesh = ((QBVHAccel *)scene->dataSet->GetAccelerator())->GetPreprocessedMesh();
-
-			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
-			trianglesBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(Triangle) * trianglesCount,
-					(void *)preprocessedMesh->GetTriangles());
-			deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
-
-			const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
-			cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
-			vertsBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(Point) * verticesCount,
-					(void *)preprocessedMesh->GetVertices());
-			deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-			break;
-		}
-		case ACCEL_MQBVH: {
-			// TODO
-			break;
-		}
-		default:
-			throw runtime_error("Unknown accelerator not supported by PathGPU2RenderEngine");
-	}
-
-	tEnd = WallClockTime();
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
-
-	//--------------------------------------------------------------------------
 	// Translate mesh texture maps
 	//--------------------------------------------------------------------------
 
@@ -742,7 +753,6 @@ void PathGPU2RenderThread::InitRender() {
 					sizeof(Spectrum) * totRGBTexMem,
 					rgbTexMem);
 			deviceDesc->AllocMemory(texMapRGBBuff->getInfo<CL_MEM_SIZE>());
-
 			delete[] rgbTexMem;
 		} else
 			texMapRGBBuff = NULL;
@@ -769,7 +779,6 @@ void PathGPU2RenderThread::InitRender() {
 					sizeof(float) * totAlphaTexMem,
 					alphaTexMem);
 			deviceDesc->AllocMemory(texMapAlphaBuff->getInfo<CL_MEM_SIZE>());
-
 			delete[] alphaTexMem;
 		} else
 			texMapAlphaBuff = NULL;
@@ -819,7 +828,6 @@ void PathGPU2RenderThread::InitRender() {
 				sizeof(unsigned int) * meshCount,
 				meshTexs);
 		deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
-
 		delete[] meshTexs;
 
 		//----------------------------------------------------------------------
@@ -870,7 +878,6 @@ void PathGPU2RenderThread::InitRender() {
 					sizeof(float) * meshCount,
 					scales);
 			deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
-
 			delete[] scales;
 		} else {
 			meshBumpsBuff = NULL;
