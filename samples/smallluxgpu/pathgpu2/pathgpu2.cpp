@@ -1566,7 +1566,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 		RenderEngine(scn, flm, filmMutex) {
 	// Rendering parameters
 
-	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 2 * 65536));
+	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 65536));
 	cerr << "[PathGPU2RenderThread] OpenCL task count: " << taskCount << endl;
 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
