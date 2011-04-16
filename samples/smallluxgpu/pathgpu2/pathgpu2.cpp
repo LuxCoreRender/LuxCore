@@ -1674,6 +1674,8 @@ PathGPU2RenderEngine::~PathGPU2RenderEngine() {
 }
 
 void PathGPU2RenderEngine::Start() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
 	RenderEngine::Start();
 
 	samplesCount = 0;
@@ -1686,24 +1688,37 @@ void PathGPU2RenderEngine::Start() {
 }
 
 void PathGPU2RenderEngine::Interrupt() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 }
 
 void PathGPU2RenderEngine::Stop() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
 	RenderEngine::Stop();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
 
-	UpdateFilm();
+	UpdateFilmLockLess();
 }
 
 unsigned int PathGPU2RenderEngine::GetThreadCount() const {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
 	return renderThreads.size();
 }
 
 void PathGPU2RenderEngine::UpdateFilm() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
+	if (started)
+		UpdateFilmLockLess();
+}
+
+void PathGPU2RenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
 	elapsedTime = WallClockTime() - startTime;
