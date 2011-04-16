@@ -147,6 +147,7 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 		vector<Point> verts;
 		vector<Spectrum> colors;
 		vector<Normal> normals;
+		vector<UV> uvs;
 		vector<Triangle> tris;
 		vector<PathGPU2::Mesh> meshDescs;
 		std::map<ExtMesh *, unsigned int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
@@ -218,6 +219,21 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
 					normals.push_back(mesh->GetNormal(j));
 
+				//----------------------------------------------------------------------
+				// Translate vertex uvs
+				//----------------------------------------------------------------------
+
+				if (scene->texMapCache->GetSize()) {
+					// TODO: I should check if the only texture map is used for infinitelight
+
+					for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
+						if (mesh->HasUVs())
+							uvs.push_back(mesh->GetUV(j));
+						else
+							uvs.push_back(UV(0.f, 0.f));
+					}
+				}
+
 				//--------------------------------------------------------------
 				// Translate mesh vertices
 				//--------------------------------------------------------------
@@ -248,6 +264,16 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 				sizeof(Normal) * normals.size(),
 				(void *)&normals[0]);
 		deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
+
+		if (uvs.size() > 0) {
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * verticesCount / 1024) << "Kbytes" << endl;
+			uvsBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(UV) * verticesCount,
+					(void *)&uvs[0]);
+			deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
+		} else
+			uvsBuff = NULL;
 
 		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verts.size() / 1024) << "Kbytes" << endl;
 		vertsBuff = new cl::Buffer(oclContext,
@@ -318,6 +344,36 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 				normals);
 		deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
 		delete[] normals;
+
+		//----------------------------------------------------------------------
+		// Translate vertex uvs
+		//----------------------------------------------------------------------
+
+		if (scene->texMapCache->GetSize()) {
+			// TODO: I should check if the only texture map is used for infinitelight
+
+			UV *uvs = new UV[verticesCount];
+			unsigned int uvIndex = 0;
+			for (unsigned int i = 0; i < scene->objects.size(); ++i) {
+				ExtMesh *mesh = scene->objects[i];
+
+				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
+					if (mesh->HasUVs())
+						uvs[uvIndex++] = mesh->GetUV(j);
+					else
+						uvs[uvIndex++] = UV(0.f, 0.f);
+				}
+			}
+
+			cerr << "[PathGPU2RenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * verticesCount / 1024) << "Kbytes" << endl;
+			uvsBuff = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(UV) * verticesCount,
+					uvs);
+			deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
+			delete[] uvs;
+		} else
+			uvsBuff = NULL;
 
 		//----------------------------------------------------------------------
 		// Translate mesh vertices
@@ -1038,31 +1094,6 @@ void PathGPU2RenderThread::InitRender() {
 
 		delete[] meshBumps;
 
-		//----------------------------------------------------------------------
-
-		// Translate vertex uvs
-		const unsigned int uvsCount = scene->dataSet->GetTotalVertexCount();
-		UV *uvs = new UV[uvsCount];
-		unsigned int uvIndex = 0;
-		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-			ExtMesh *mesh = scene->objects[i];
-
-			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-				if (mesh->HasUVs())
-					uvs[uvIndex++] = mesh->GetUV(j);
-				else
-					uvs[uvIndex++] = UV(0.f, 0.f);
-			}
-		}
-
-		cerr << "[PathGPU2RenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * uvsCount / 1024) << "Kbytes" << endl;
-		uvsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(UV) * uvsCount,
-				uvs);
-		deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
-		delete[] uvs;
-
 		tEnd = WallClockTime();
 		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Texture maps translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 	} else {
@@ -1072,7 +1103,6 @@ void PathGPU2RenderThread::InitRender() {
 		meshTexsBuff = NULL;
 		meshBumpsBuff = NULL;
 		meshBumpsScaleBuff = NULL;
-		uvsBuff = NULL;
 	}
 
 	//--------------------------------------------------------------------------
