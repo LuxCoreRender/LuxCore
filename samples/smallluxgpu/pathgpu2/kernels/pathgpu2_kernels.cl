@@ -180,6 +180,7 @@ __kernel void AdvancePaths(
 				__global Point *iVertices = &vertices[meshDesc->vertsOffset];
 				__global Spectrum *iVertColors = &vertColors[meshDesc->vertsOffset];
 				__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
+				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
 				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
 				const uint triangleID = triangleIDs[currentTriangleIndex];
 #endif
@@ -195,14 +196,13 @@ __kernel void AdvancePaths(
 #endif
 
 #if defined(PARAM_HAS_TEXTUREMAPS)
-#if defined(PARAM_ACCEL_MQBVH)
-TODO
-#endif
-
 				// Interpolate UV coordinates
 				UV uv;
+#if defined(PARAM_ACCEL_MQBVH)
+				Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, hitPointB1, hitPointB2, &uv);
+#else
 				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
-
+#endif
 				// Check it the mesh has a texture map
 				unsigned int texIndex = meshTexsBuff[meshIndex];
 				if (texIndex != 0xffffffffu) {
@@ -728,7 +728,15 @@ Error: Huston, we have a problem !
 
 				// Interpolate UV coordinates
 				UV uv;
+#if defined(PARAM_ACCEL_MQBVH)
+				__global Mesh *meshDesc = &meshDescs[meshIndex];
+				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
+				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+				const uint triangleID = triangleIDs[currentTriangleIndex];
+				Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, hitPointB1, hitPointB2, &uv);
+#else
 				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+#endif
 
 				// Check it the mesh has a texture map
 				unsigned int texIndex = meshTexsBuff[meshIndex];
