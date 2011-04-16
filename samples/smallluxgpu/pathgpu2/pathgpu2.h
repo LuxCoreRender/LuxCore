@@ -399,6 +399,10 @@ public:
 	float rrImportanceCap;
 
 private:
+	void UpdateFilmLockLess();
+
+	mutable boost::mutex engineMutex;
+
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	vector<PathGPU2RenderThread *> renderThreads;
 	SampleBuffer *sampleBuffer;
