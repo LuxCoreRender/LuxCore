@@ -64,7 +64,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 				respStream << "SmallLuxGPU Telnet Server Interface\n";
 				boost::asio::write(socket, response);
 
-				bool havaToUpdateSceneDataSet = false;
+				bool instanceTranformationModified = false;
+				bool completeSceneDataSetUpdate = false;
 				bool echoCommandOn = true;
 				for (bool exit = false; !exit;) {
 					// Print prompt
@@ -454,11 +455,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 					} else if (command == "render.start") {
 						if (state == STOP) {
 							// Check if I have to update the LuxRays data set
-							if (havaToUpdateSceneDataSet) {
+							if (instanceTranformationModified || completeSceneDataSetUpdate) {
 								// Update the DataSet
-								telnetServer->config->UpdateSceneDataSet();
+								telnetServer->config->UpdateSceneDataSet(completeSceneDataSetUpdate);
 
-								havaToUpdateSceneDataSet = false;
+								completeSceneDataSetUpdate = false;
+								instanceTranformationModified = false;
 							}
 
 							telnetServer->config->StartAllRenderThreads();
@@ -469,7 +471,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						if (state == RUN)
 							telnetServer->config->StopAllRenderThreads();
 						state = STOP;
-						havaToUpdateSceneDataSet = false;
+						completeSceneDataSetUpdate = false;
+						instanceTranformationModified = false;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "set") {
 						//------------------------------------------------------
@@ -821,7 +824,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									}
 
 									// Set the flag to Update the DataSet
-									havaToUpdateSceneDataSet = true;
+
+									// Check if the object is an instance
+									if (obj->GetType() == TYPE_EXT_TRIANGLE_INSTANCE)
+										instanceTranformationModified = true;
+									else
+										completeSceneDataSetUpdate = true;
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
@@ -878,7 +886,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									}
 
 									// Set the flag to Update the DataSet
-									havaToUpdateSceneDataSet = true;
+									instanceTranformationModified = true;
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
