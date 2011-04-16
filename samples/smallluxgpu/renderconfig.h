@@ -78,7 +78,7 @@ public:
 	void SaveFilmImage();
 	void SaveFilm();
 
-	void UpdateSceneDataSet();
+	void UpdateSceneDataSet(const bool forceCompleteUpdate);
 
 	Properties cfg;
 
