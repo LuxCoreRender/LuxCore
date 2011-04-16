@@ -93,6 +93,10 @@ __kernel void AdvancePaths(
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
+#if defined(PARAM_ACCEL_MQBVH)
+		__global uint *triangleIDs,
+		__global Mesh *meshDescs,
+#endif
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Point *vertices,
@@ -171,14 +175,30 @@ __kernel void AdvancePaths(
 #endif
 
 				const uint meshIndex = meshIDs[currentTriangleIndex];
+#if defined(PARAM_ACCEL_MQBVH)
+				__global Mesh *meshDesc = &meshDescs[meshIndex];
+				__global Point *iVertices = &vertices[meshDesc->vertsOffset];
+				__global Spectrum *iVertColors = &vertColors[meshDesc->vertsOffset];
+				__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
+				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+				const uint triangleID = triangleIDs[currentTriangleIndex];
+#endif
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 				uint matType = hitPointMat->type;
 
 				// Interpolate Color
 				Spectrum shadeColor;
+#if defined(PARAM_ACCEL_MQBVH)
+				Mesh_InterpolateColor(iVertColors, iTriangles, triangleID, hitPointB1, hitPointB2, &shadeColor);
+#else
 				Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+#endif
 
 #if defined(PARAM_HAS_TEXTUREMAPS)
+#if defined(PARAM_ACCEL_MQBVH)
+TODO
+#endif
+
 				// Interpolate UV coordinates
 				UV uv;
 				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
@@ -221,7 +241,12 @@ __kernel void AdvancePaths(
 
 				// Interpolate the normal
 				Vector N;
+#if defined(PARAM_ACCEL_MQBVH)
+				Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, hitPointB1, hitPointB2, &N);
+				TransformNormal(meshDesc->invTrans, &N);
+#else
 				Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
+#endif
 
 #if defined(PARAM_HAS_BUMPMAPS)
 				// Check it the mesh has a bump map
@@ -323,7 +348,12 @@ __kernel void AdvancePaths(
 #else
 							const uint lightSourceCount = PARAM_DL_LIGHT_COUNT;
 #endif
-							const float lpdf = lightSourceCount / Mesh_Area(vertices, triangles, currentTriangleIndex);
+#if defined(PARAM_ACCEL_MQBVH)
+							const float area = InstanceMesh_Area(meshDesc->trans, iVertices, iTriangles, triangleID);
+#else
+							const float area = Mesh_Area(vertices, triangles, currentTriangleIndex);
+#endif
+							const float lpdf = lightSourceCount / area;
 							const float ph = PowerHeuristic(1, task->pathState.bouncePdf, 1, lpdf);
 
 							Le.r *= ph;

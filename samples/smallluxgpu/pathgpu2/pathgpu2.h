@@ -286,6 +286,14 @@ typedef struct {
 	unsigned int width, height;
 } TexMap;
 
+typedef struct {
+	unsigned int vertsOffset;
+	unsigned int trisOffset;
+
+	float trans[4][4];
+	float invTrans[4][4];
+} Mesh;
+
 }
 
 //------------------------------------------------------------------------------
@@ -332,6 +340,8 @@ private:
 	cl::Buffer *frameBufferBuff;
 	cl::Buffer *materialsBuff;
 	cl::Buffer *meshIDBuff;
+	cl::Buffer *triangleIDBuff;
+	cl::Buffer *meshDescsBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
 	cl::Buffer *infiniteLightMapBuff;

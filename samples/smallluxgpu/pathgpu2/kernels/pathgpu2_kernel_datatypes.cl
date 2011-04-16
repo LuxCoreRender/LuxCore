@@ -435,6 +435,14 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef struct {
-	unsigned int rgbOffset, alphaOffset;
-	unsigned int width, height;
+	uint rgbOffset, alphaOffset;
+	uint width, height;
 } TexMap;
+
+typedef struct {
+	uint vertsOffset;
+	uint trisOffset;
+
+	float trans[4][4];
+	float invTrans[4][4];
+} Mesh;

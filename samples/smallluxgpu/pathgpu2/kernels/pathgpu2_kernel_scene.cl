@@ -255,6 +255,24 @@ float Mesh_Area(__global Point *verts, __global Triangle *triangles,
 	return 0.5f * length(cross(p1 - p0, p2 - p0));
 }
 
+float InstanceMesh_Area(__global float m[4][4], __global Point *verts,
+		__global Triangle *triangles, const uint triIndex) {
+	__global Triangle *tri = &triangles[triIndex];
+
+	Point pp0 = verts[tri->v0];
+	TransformPoint(m, &pp0);
+	Point pp1 = verts[tri->v1];
+	TransformPoint(m, &pp1);
+	Point pp2 = verts[tri->v2];
+	TransformPoint(m, &pp2);
+
+	const float4 p0 = (float4)(pp0.x, pp0.y, pp0.z, 0.f);
+	const float4 p1 = (float4)(pp1.x, pp1.y, pp1.z, 0.f);
+	const float4 p2 = (float4)(pp2.x, pp2.y, pp2.z, 0.f);
+
+	return 0.5f * length(cross(p1 - p0, p2 - p0));
+}
+
 //------------------------------------------------------------------------------
 // Materials
 //------------------------------------------------------------------------------
