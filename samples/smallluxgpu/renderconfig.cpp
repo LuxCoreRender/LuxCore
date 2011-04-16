@@ -425,9 +425,9 @@ void RenderingConfig::SaveFilm() {
 	StartAllRenderThreadsLockless();
 }
 
-void RenderingConfig::UpdateSceneDataSet() {
+void RenderingConfig::UpdateSceneDataSet(const bool forceCompleteUpdate) {
 	// Check if we are using a MQBVH accelerator
-	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) {
+	if ((scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) && !forceCompleteUpdate) {
 		// Update the DataSet
 		ctx->UpdateDataSet();
 	} else {
