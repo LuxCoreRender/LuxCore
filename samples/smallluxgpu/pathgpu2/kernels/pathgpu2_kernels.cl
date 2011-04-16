@@ -180,7 +180,9 @@ __kernel void AdvancePaths(
 				__global Point *iVertices = &vertices[meshDesc->vertsOffset];
 				__global Spectrum *iVertColors = &vertColors[meshDesc->vertsOffset];
 				__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
+#if defined(PARAM_HAS_TEXTUREMAPS)
 				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
+#endif
 				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
 				const uint triangleID = triangleIDs[currentTriangleIndex];
 #endif
