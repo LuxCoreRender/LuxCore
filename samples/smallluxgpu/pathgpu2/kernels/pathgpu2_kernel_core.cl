@@ -114,6 +114,30 @@ void Normalize(Vector *v) {
 	v->y *= il;
 	v->z *= il;
 }
+void TransformPoint(__global float m[4][4], Point *v) {
+	const float x = v->x;
+	const float y = v->y;
+	const float z = v->z;
+
+	v->x = m[0][0] * x + m[0][1] * y + m[0][2] * z;
+	v->y = m[1][0] * x + m[1][1] * y + m[1][2] * z;
+	v->z = m[2][0] * x + m[2][1] * y + m[2][2] * z;
+}
+
+void TransformVector(__global float m[4][4], Vector *v) {
+	const float x = v->x;
+	const float y = v->y;
+	const float z = v->z;
+
+	v->x = m[0][0] * x + m[0][1] * y + m[0][2] * z;
+	v->y = m[1][0] * x + m[1][1] * y + m[1][2] * z;
+	v->z = m[2][0] * x + m[2][1] * y + m[2][2] * z;
+}
+
+void TransformNormal(__global float m[4][4], Vector *v) {
+	TransformVector(m, v);
+	Normalize(v);
+}
 
 void Cross(Vector *v3, const Vector *v1, const Vector *v2) {
 	v3->x = (v1->y * v2->z) - (v1->z * v2->y);
