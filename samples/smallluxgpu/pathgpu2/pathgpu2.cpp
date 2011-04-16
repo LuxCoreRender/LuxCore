@@ -1169,6 +1169,10 @@ void PathGPU2RenderThread::InitRender() {
 	if (deviceDesc->IsAMDPlatform())
 		ss << " -fno-alias";
 
+#if defined(__APPLE__)
+	ss << " -D __APPLE__";
+#endif
+
 	//--------------------------------------------------------------------------
 
 	tStart = WallClockTime();
