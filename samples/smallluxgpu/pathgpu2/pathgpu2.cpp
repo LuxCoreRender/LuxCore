@@ -499,8 +499,8 @@ void PathGPU2RenderThread::InitRender() {
 	camera.hither = scene->camera->clipHither;
 	camera.lensRadius = scene->camera->lensRadius;
 	camera.focalDistance = scene->camera->focalDistance;
-	memcpy(&camera.RasterToCameraMatrix[0][0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-	memcpy(&camera.CameraToWorldMatrix[0][0], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+	memcpy(&camera.rasterToCameraMatrix[0][0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+	memcpy(&camera.cameraToWorldMatrix[0][0], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
 
 	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(PathGPU2::Camera) / 1024) << "Kbytes" << endl;
 	cameraBuff = new cl::Buffer(oclContext,

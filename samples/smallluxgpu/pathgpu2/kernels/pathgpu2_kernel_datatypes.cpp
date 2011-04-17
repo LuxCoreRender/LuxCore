@@ -448,7 +448,7 @@ std::string luxrays::KernelSource_PathGPU2_datatypes =
 "	float focalDistance;\n"
 "	float yon, hither;\n"
 "\n"
-"	float RasterToCameraMatrix[4][4];\n"
-"	float CameraToWorldMatrix[4][4];\n"
+"	float rasterToCameraMatrix[4][4];\n"
+"	float cameraToWorldMatrix[4][4];\n"
 "} Camera;\n"
 ;
