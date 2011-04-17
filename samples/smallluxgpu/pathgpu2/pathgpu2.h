@@ -299,8 +299,8 @@ typedef struct {
 	float focalDistance;
 	float yon, hither;
 
-	float RasterToCameraMatrix[4][4];
-	float CameraToWorldMatrix[4][4];
+	float rasterToCameraMatrix[4][4];
+	float cameraToWorldMatrix[4][4];
 } Camera;
 
 }

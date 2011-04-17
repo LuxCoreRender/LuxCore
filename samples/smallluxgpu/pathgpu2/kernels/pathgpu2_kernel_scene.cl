@@ -778,10 +778,10 @@ void GenerateCameraRay(
 	Point orig;
 	// RasterToCamera(Pras, &orig);
 
-	const float iw = 1.f / (camera->RasterToCameraMatrix[3][0] * Pras.x + camera->RasterToCameraMatrix[3][1] * Pras.y + camera->RasterToCameraMatrix[3][2] * Pras.z + camera->RasterToCameraMatrix[3][3]);
-	orig.x = (camera->RasterToCameraMatrix[0][0] * Pras.x + camera->RasterToCameraMatrix[0][1] * Pras.y + camera->RasterToCameraMatrix[0][2] * Pras.z + camera->RasterToCameraMatrix[0][3]) * iw;
-	orig.y = (camera->RasterToCameraMatrix[1][0] * Pras.x + camera->RasterToCameraMatrix[1][1] * Pras.y + camera->RasterToCameraMatrix[1][2] * Pras.z + camera->RasterToCameraMatrix[1][3]) * iw;
-	orig.z = (camera->RasterToCameraMatrix[2][0] * Pras.x + camera->RasterToCameraMatrix[2][1] * Pras.y + camera->RasterToCameraMatrix[2][2] * Pras.z + camera->RasterToCameraMatrix[2][3]) * iw;
+	const float iw = 1.f / (camera->rasterToCameraMatrix[3][0] * Pras.x + camera->rasterToCameraMatrix[3][1] * Pras.y + camera->rasterToCameraMatrix[3][2] * Pras.z + camera->rasterToCameraMatrix[3][3]);
+	orig.x = (camera->rasterToCameraMatrix[0][0] * Pras.x + camera->rasterToCameraMatrix[0][1] * Pras.y + camera->rasterToCameraMatrix[0][2] * Pras.z + camera->rasterToCameraMatrix[0][3]) * iw;
+	orig.y = (camera->rasterToCameraMatrix[1][0] * Pras.x + camera->rasterToCameraMatrix[1][1] * Pras.y + camera->rasterToCameraMatrix[1][2] * Pras.z + camera->rasterToCameraMatrix[1][3]) * iw;
+	orig.z = (camera->rasterToCameraMatrix[2][0] * Pras.x + camera->rasterToCameraMatrix[2][1] * Pras.y + camera->rasterToCameraMatrix[2][2] * Pras.z + camera->rasterToCameraMatrix[2][3]) * iw;
 
 	Vector dir;
 	dir.x = orig.x;
@@ -830,15 +830,15 @@ void GenerateCameraRay(
 
 	// CameraToWorld(*ray, ray);
 	Point torig;
-	const float iw2 = 1.f / (camera->CameraToWorldMatrix[3][0] * orig.x + camera->CameraToWorldMatrix[3][1] * orig.y + camera->CameraToWorldMatrix[3][2] * orig.z + camera->CameraToWorldMatrix[3][3]);
-	torig.x = (camera->CameraToWorldMatrix[0][0] * orig.x + camera->CameraToWorldMatrix[0][1] * orig.y + camera->CameraToWorldMatrix[0][2] * orig.z + camera->CameraToWorldMatrix[0][3]) * iw2;
-	torig.y = (camera->CameraToWorldMatrix[1][0] * orig.x + camera->CameraToWorldMatrix[1][1] * orig.y + camera->CameraToWorldMatrix[1][2] * orig.z + camera->CameraToWorldMatrix[1][3]) * iw2;
-	torig.z = (camera->CameraToWorldMatrix[2][0] * orig.x + camera->CameraToWorldMatrix[2][1] * orig.y + camera->CameraToWorldMatrix[2][2] * orig.z + camera->CameraToWorldMatrix[2][3]) * iw2;
+	const float iw2 = 1.f / (camera->cameraToWorldMatrix[3][0] * orig.x + camera->cameraToWorldMatrix[3][1] * orig.y + camera->cameraToWorldMatrix[3][2] * orig.z + camera->cameraToWorldMatrix[3][3]);
+	torig.x = (camera->cameraToWorldMatrix[0][0] * orig.x + camera->cameraToWorldMatrix[0][1] * orig.y + camera->cameraToWorldMatrix[0][2] * orig.z + camera->cameraToWorldMatrix[0][3]) * iw2;
+	torig.y = (camera->cameraToWorldMatrix[1][0] * orig.x + camera->cameraToWorldMatrix[1][1] * orig.y + camera->cameraToWorldMatrix[1][2] * orig.z + camera->cameraToWorldMatrix[1][3]) * iw2;
+	torig.z = (camera->cameraToWorldMatrix[2][0] * orig.x + camera->cameraToWorldMatrix[2][1] * orig.y + camera->cameraToWorldMatrix[2][2] * orig.z + camera->cameraToWorldMatrix[2][3]) * iw2;
 
 	Vector tdir;
-	tdir.x = camera->CameraToWorldMatrix[0][0] * dir.x + camera->CameraToWorldMatrix[0][1] * dir.y + camera->CameraToWorldMatrix[0][2] * dir.z;
-	tdir.y = camera->CameraToWorldMatrix[1][0] * dir.x + camera->CameraToWorldMatrix[1][1] * dir.y + camera->CameraToWorldMatrix[1][2] * dir.z;
-	tdir.z = camera->CameraToWorldMatrix[2][0] * dir.x + camera->CameraToWorldMatrix[2][1] * dir.y + camera->CameraToWorldMatrix[2][2] * dir.z;
+	tdir.x = camera->cameraToWorldMatrix[0][0] * dir.x + camera->cameraToWorldMatrix[0][1] * dir.y + camera->cameraToWorldMatrix[0][2] * dir.z;
+	tdir.y = camera->cameraToWorldMatrix[1][0] * dir.x + camera->cameraToWorldMatrix[1][1] * dir.y + camera->cameraToWorldMatrix[1][2] * dir.z;
+	tdir.z = camera->cameraToWorldMatrix[2][0] * dir.x + camera->cameraToWorldMatrix[2][1] * dir.y + camera->cameraToWorldMatrix[2][2] * dir.z;
 
 	ray->o = torig;
 	ray->d = tdir;
