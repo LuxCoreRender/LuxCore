@@ -93,7 +93,7 @@ std::string luxrays::KernelSource_PathGPU2_datatypes =
 "\n"
 "//#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1\n"
 "\n"
-"#pragma OPENCL EXTENSION cl_amd_printf : enable\n"
+"//#pragma OPENCL EXTENSION cl_amd_printf : enable\n"
 "#if defined(PARAM_USE_PIXEL_ATOMICS)\n"
 "#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable\n"
 "#endif\n"
