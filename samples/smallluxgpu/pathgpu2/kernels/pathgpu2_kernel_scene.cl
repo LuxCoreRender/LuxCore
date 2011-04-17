@@ -754,7 +754,7 @@ void GenerateCameraRay(
 #if (PARAM_SAMPLER_TYPE == 0)
 		, Seed *seed
 #endif
-		, __global float *cameraData) {
+		, __global Camera *camera) {
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 	__global float *sampleData = &sample->u[IDX_SCREEN_X];
 	const uint pixelIndex = sample->pixelIndex;
@@ -778,15 +778,17 @@ void GenerateCameraRay(
 	Point orig;
 	// RasterToCamera(Pras, &orig);
 
-	const float iw = 1.f / (cameraData[12] * Pras.x + cameraData[13] * Pras.y + cameraData[14] * Pras.z + cameraData[15]);
-	orig.x = (cameraData[0] * Pras.x + cameraData[1] * Pras.y + cameraData[2] * Pras.z + cameraData[3]) * iw;
-	orig.y = (cameraData[4] * Pras.x + cameraData[5] * Pras.y + cameraData[6] * Pras.z + cameraData[7]) * iw;
-	orig.z = (cameraData[8] * Pras.x + cameraData[9] * Pras.y + cameraData[10] * Pras.z + cameraData[11]) * iw;
+	const float iw = 1.f / (camera->RasterToCameraMatrix[3][0] * Pras.x + camera->RasterToCameraMatrix[3][1] * Pras.y + camera->RasterToCameraMatrix[3][2] * Pras.z + camera->RasterToCameraMatrix[3][3]);
+	orig.x = (camera->RasterToCameraMatrix[0][0] * Pras.x + camera->RasterToCameraMatrix[0][1] * Pras.y + camera->RasterToCameraMatrix[0][2] * Pras.z + camera->RasterToCameraMatrix[0][3]) * iw;
+	orig.y = (camera->RasterToCameraMatrix[1][0] * Pras.x + camera->RasterToCameraMatrix[1][1] * Pras.y + camera->RasterToCameraMatrix[1][2] * Pras.z + camera->RasterToCameraMatrix[1][3]) * iw;
+	orig.z = (camera->RasterToCameraMatrix[2][0] * Pras.x + camera->RasterToCameraMatrix[2][1] * Pras.y + camera->RasterToCameraMatrix[2][2] * Pras.z + camera->RasterToCameraMatrix[2][3]) * iw;
 
 	Vector dir;
 	dir.x = orig.x;
 	dir.y = orig.y;
 	dir.z = orig.z;
+
+	const float hither = camera->hither;
 
 #if defined(PARAM_CAMERA_HAS_DOF)
 
@@ -801,19 +803,23 @@ void GenerateCameraRay(
 	// Sample point on lens
 	float lensU, lensV;
 	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	lensU *= PARAM_CAMERA_LENS_RADIUS;
-	lensV *= PARAM_CAMERA_LENS_RADIUS;
+	const float lensRadius = camera->lensRadius;
+	lensU *= lensRadius;
+	lensV *= lensRadius;
 
 	// Compute point on plane of focus
-	const float ft = (PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / dir.z;
+	const float focalDistance = camera->focalDistance;
+	const float dist = focalDistance - hither;
+	const float ft = dist / dir.z;
 	Point Pfocus;
 	Pfocus.x = orig.x + dir.x * ft;
 	Pfocus.y = orig.y + dir.y * ft;
 	Pfocus.z = orig.z + dir.z * ft;
 
 	// Update ray for effect of lens
-	orig.x += lensU * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
-	orig.y += lensV * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
+	const float k = dist / focalDistance;
+	orig.x += lensU * k;
+	orig.y += lensV * k;
 
 	dir.x = Pfocus.x - orig.x;
 	dir.y = Pfocus.y - orig.y;
@@ -824,20 +830,20 @@ void GenerateCameraRay(
 
 	// CameraToWorld(*ray, ray);
 	Point torig;
-	const float iw2 = 1.f / (cameraData[16 + 12] * orig.x + cameraData[16 + 13] * orig.y + cameraData[16 + 14] * orig.z + cameraData[16 + 15]);
-	torig.x = (cameraData[16 + 0] * orig.x + cameraData[16 + 1] * orig.y + cameraData[16 + 2] * orig.z + cameraData[16 + 3]) * iw2;
-	torig.y = (cameraData[16 + 4] * orig.x + cameraData[16 + 5] * orig.y + cameraData[16 + 6] * orig.z + cameraData[16 + 7]) * iw2;
-	torig.z = (cameraData[16 + 8] * orig.x + cameraData[16 + 9] * orig.y + cameraData[16 + 12] * orig.z + cameraData[16 + 11]) * iw2;
+	const float iw2 = 1.f / (camera->CameraToWorldMatrix[3][0] * orig.x + camera->CameraToWorldMatrix[3][1] * orig.y + camera->CameraToWorldMatrix[3][2] * orig.z + camera->CameraToWorldMatrix[3][3]);
+	torig.x = (camera->CameraToWorldMatrix[0][0] * orig.x + camera->CameraToWorldMatrix[0][1] * orig.y + camera->CameraToWorldMatrix[0][2] * orig.z + camera->CameraToWorldMatrix[0][3]) * iw2;
+	torig.y = (camera->CameraToWorldMatrix[1][0] * orig.x + camera->CameraToWorldMatrix[1][1] * orig.y + camera->CameraToWorldMatrix[1][2] * orig.z + camera->CameraToWorldMatrix[1][3]) * iw2;
+	torig.z = (camera->CameraToWorldMatrix[2][0] * orig.x + camera->CameraToWorldMatrix[2][1] * orig.y + camera->CameraToWorldMatrix[2][2] * orig.z + camera->CameraToWorldMatrix[2][3]) * iw2;
 
 	Vector tdir;
-	tdir.x = cameraData[16 + 0] * dir.x + cameraData[16 + 1] * dir.y + cameraData[16 + 2] * dir.z;
-	tdir.y = cameraData[16 + 4] * dir.x + cameraData[16 + 5] * dir.y + cameraData[16 + 6] * dir.z;
-	tdir.z = cameraData[16 + 8] * dir.x + cameraData[16 + 9] * dir.y + cameraData[16 + 10] * dir.z;
+	tdir.x = camera->CameraToWorldMatrix[0][0] * dir.x + camera->CameraToWorldMatrix[0][1] * dir.y + camera->CameraToWorldMatrix[0][2] * dir.z;
+	tdir.y = camera->CameraToWorldMatrix[1][0] * dir.x + camera->CameraToWorldMatrix[1][1] * dir.y + camera->CameraToWorldMatrix[1][2] * dir.z;
+	tdir.z = camera->CameraToWorldMatrix[2][0] * dir.x + camera->CameraToWorldMatrix[2][1] * dir.y + camera->CameraToWorldMatrix[2][2] * dir.z;
 
 	ray->o = torig;
 	ray->d = tdir;
 	ray->mint = PARAM_RAY_EPSILON;
-	ray->maxt = (PARAM_CLIP_YON - PARAM_CLIP_HITHER) / dir.z;
+	ray->maxt = (camera->yon - hither) / dir.z;
 
 	/*printf(\"(%f, %f, %f) (%f, %f, %f) [%f, %f]\\n\",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
