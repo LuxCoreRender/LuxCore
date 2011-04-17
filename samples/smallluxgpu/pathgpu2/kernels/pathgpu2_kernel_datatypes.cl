@@ -24,11 +24,7 @@
 //  PARAM_IMAGE_WIDTH
 //  PARAM_IMAGE_HEIGHT
 //  PARAM_STARTLINE
-//  PARAM_RASTER2CAMERA_IJ (Matrix4x4)
 //  PARAM_RAY_EPSILON
-//  PARAM_CLIP_YON
-//  PARAM_CLIP_HITHER
-//  PARAM_CAMERA2WORLD_IJ (Matrix4x4)
 //  PARAM_SEED
 //  PARAM_MAX_PATH_DEPTH
 //  PARAM_MAX_RR_DEPTH
@@ -57,8 +53,6 @@
 
 // (optional)
 //  PARAM_CAMERA_HAS_DOF
-//  PARAM_CAMERA_LENS_RADIUS
-//  PARAM_CAMERA_FOCAL_DISTANCE
 
 // (optional)
 //  PARAM_HAS_INFINITELIGHT
@@ -446,3 +440,12 @@ typedef struct {
 	float trans[4][4];
 	float invTrans[4][4];
 } Mesh;
+
+typedef struct {
+	float lensRadius;
+	float focalDistance;
+	float yon, hither;
+
+	float RasterToCameraMatrix[4][4];
+	float CameraToWorldMatrix[4][4];
+} Camera;

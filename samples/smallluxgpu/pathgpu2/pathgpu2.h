@@ -294,6 +294,15 @@ typedef struct {
 	float invTrans[4][4];
 } Mesh;
 
+typedef struct {
+	float lensRadius;
+	float focalDistance;
+	float yon, hither;
+
+	float RasterToCameraMatrix[4][4];
+	float CameraToWorldMatrix[4][4];
+} Camera;
+
 }
 
 //------------------------------------------------------------------------------

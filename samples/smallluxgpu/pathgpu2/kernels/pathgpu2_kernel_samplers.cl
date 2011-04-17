@@ -23,7 +23,7 @@ void GenerateCameraPath(
 		__global GPUTask *task,
 		__global Ray *ray,
 		Seed *seed,
-		__global float *cameraData
+		__global Camera *camera
 		) {
 	__global Sample *sample = &task->sample;
 
@@ -31,7 +31,7 @@ void GenerateCameraPath(
 #if (PARAM_SAMPLER_TYPE == 0)
 			, seed
 #endif
-			, cameraData);
+			, camera);
 
 	sample->radiance.r = 0.f;
 	sample->radiance.g = 0.f;
@@ -66,7 +66,7 @@ __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
-		__global float *cameraData
+		__global Camera *camera
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -90,7 +90,7 @@ __kernel void Sampler(
 
 		taskStats[gid].sampleCount += 1;
 
-		GenerateCameraPath(task, &rays[gid], &seed, cameraData);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -118,7 +118,7 @@ __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
-		__global float *cameraData) {
+		__global Camera *camera) {
 	const size_t gid = get_global_id(0);
 
 	// Initialize the task
@@ -139,7 +139,7 @@ __kernel void Sampler(
 		for (int i = 0; i < TOTAL_U_SIZE; ++i)
 			sample->u[i] = RndFloatValue(&seed);
 
-		GenerateCameraPath(task, &rays[gid], &seed, cameraData);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		taskStats[gid].sampleCount += 1;
 
@@ -211,7 +211,7 @@ __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
-		__global float *cameraData) {
+		__global Camera *camera) {
 	const size_t gid = get_global_id(0);
 
 	// Initialize the task
@@ -243,7 +243,7 @@ __kernel void Sampler(
 
 		taskStats[gid].sampleCount += 1;
 
-		GenerateCameraPath(task, &rays[gid], &seed, cameraData);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -544,7 +544,7 @@ __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
-		__global float *cameraData,
+		__global Camera *camera,
 		__local float *localMemTempBuff
 		) {
 	const size_t gid = get_global_id(0);
@@ -575,7 +575,7 @@ __kernel void Sampler(
 
 		Sampler_CopyFromStratifiedBuffer(&seed, sample, sampleNewIndex);
 
-		GenerateCameraPath(task, &rays[gid], &seed, cameraData);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		taskStats[gid].sampleCount = sampleNewCount;
 

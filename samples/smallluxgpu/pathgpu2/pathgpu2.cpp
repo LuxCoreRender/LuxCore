@@ -494,15 +494,19 @@ void PathGPU2RenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	// Dynamic camera mode uses a buffer to transfer camera position/orientation
-	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(float) * 4 * 4 * 2 / 1024) << "Kbytes" << endl;
-	float data[4 * 4 * 2];
-	memcpy(&data[0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-	memcpy(&data[4 * 4], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+	PathGPU2::Camera camera;
+	camera.yon = scene->camera->clipYon;
+	camera.hither = scene->camera->clipHither;
+	camera.lensRadius = scene->camera->lensRadius;
+	camera.focalDistance = scene->camera->focalDistance;
+	memcpy(&camera.RasterToCameraMatrix[0][0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+	memcpy(&camera.CameraToWorldMatrix[0][0], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
 
+	cerr << "[PathGPU2RenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(PathGPU2::Camera) / 1024) << "Kbytes" << endl;
 	cameraBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(float) * 4 * 4 * 2,
-			(void *)data);
+			sizeof(PathGPU2::Camera),
+			(void *)&camera);
 	deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
@@ -1212,8 +1216,6 @@ void PathGPU2RenderThread::InitRender() {
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
 			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON << "f" <<
-			" -D PARAM_CLIP_YON=" << scene->camera->GetClipYon() << "f" <<
-			" -D PARAM_CLIP_HITHER=" << scene->camera->GetClipHither() << "f" <<
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
@@ -1253,12 +1255,10 @@ void PathGPU2RenderThread::InitRender() {
 		ss << " -D PARAM_ENABLE_MAT_ALLOY";
 	if (enable_MAT_ARCHGLASS)
 		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
-	if (scene->camera->lensRadius > 0.f) {
-		ss <<
-				" -D PARAM_CAMERA_HAS_DOF"
-				" -D PARAM_CAMERA_LENS_RADIUS=" << scene->camera->lensRadius << "f" <<
-				" -D PARAM_CAMERA_FOCAL_DISTANCE=" << scene->camera->focalDistance << "f";
-	}
+
+	if (scene->camera->lensRadius > 0.f)
+		ss << " -D PARAM_CAMERA_HAS_DOF";
+
 
 	if (infiniteLight)
 		ss << " -D PARAM_HAS_INFINITELIGHT";
