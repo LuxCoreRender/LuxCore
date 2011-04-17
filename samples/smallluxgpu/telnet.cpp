@@ -821,6 +821,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 													tl->Init(scene->objects);
 											}
 										}
+
+										// Some render engine requires a complete update when
+										// modifing a light source
+										completeSceneDataSetUpdate = true;
 									}
 
 									// Set the flag to Update the DataSet
@@ -883,6 +887,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 													tl->Init(scene->objects);
 											}
 										}
+
+										// Some render engine requires a complete update when
+										// modifing a light source
+										completeSceneDataSetUpdate = true;
 									}
 
 									// Set the flag to Update the DataSet
