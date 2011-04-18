@@ -155,6 +155,8 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 		PathGPU2::Mesh newMeshDesc;
 		newMeshDesc.vertsOffset = 0;
 		newMeshDesc.trisOffset = 0;
+		memcpy(newMeshDesc.trans, Matrix4x4().m, sizeof(float[4][4]));
+		memcpy(newMeshDesc.invTrans, Matrix4x4().m, sizeof(float[4][4]));
 
 		PathGPU2::Mesh currentMeshDesc;
 
@@ -187,7 +189,6 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 				memcpy(currentMeshDesc.invTrans, imesh->GetInvTransformation().GetMatrix().m, sizeof(float[4][4]));
 				mesh = imesh->GetExtTriangleMesh();
 			} else {
-				memcpy(newMeshDesc.invTrans, Matrix4x4().m, sizeof(float[4][4]));
 				currentMeshDesc = newMeshDesc;
 
 				newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
