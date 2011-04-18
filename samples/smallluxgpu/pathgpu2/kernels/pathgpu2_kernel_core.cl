@@ -114,6 +114,7 @@ void Normalize(Vector *v) {
 	v->y *= il;
 	v->z *= il;
 }
+
 void TransformPoint(__global float m[4][4], Point *v) {
 	const float x = v->x;
 	const float y = v->y;
@@ -122,6 +123,11 @@ void TransformPoint(__global float m[4][4], Point *v) {
 	v->x = m[0][0] * x + m[0][1] * y + m[0][2] * z;
 	v->y = m[1][0] * x + m[1][1] * y + m[1][2] * z;
 	v->z = m[2][0] * x + m[2][1] * y + m[2][2] * z;
+
+	const float wp = 1.f / (m[3][0] * x + m[3][1] * y + m[3][2] * z + m[3][3]);
+	v->x *= wp;
+	v->y *= wp;
+	v->z *= wp;
 }
 
 void TransformVector(__global float m[4][4], Vector *v) {
@@ -134,8 +140,16 @@ void TransformVector(__global float m[4][4], Vector *v) {
 	v->z = m[2][0] * x + m[2][1] * y + m[2][2] * z;
 }
 
+// Matrix m must be the inverse and transpose of normal transformation
 void TransformNormal(__global float m[4][4], Vector *v) {
-	TransformVector(m, v);
+	const float x = v->x;
+	const float y = v->y;
+	const float z = v->z;
+
+	v->x = m[0][0] * x + m[1][0] * y + m[2][0] * z;
+	v->y = m[0][1] * x + m[1][1] * y + m[2][1] * z;
+	v->z = m[0][2] * x + m[1][2] * y + m[2][2] * z;
+
 	Normalize(v);
 }
 
