@@ -432,7 +432,7 @@ void RenderingConfig::UpdateSceneDataSet(const bool forceCompleteUpdate) {
 		ctx->UpdateDataSet();
 	} else {
 		// For all other accelerator, I have to rebuild the DataSet
-		scene->UpdateDataSet(ctx, scene->dataSet->GetAcceleratorType());
+		scene->UpdateDataSet(ctx);
 		// Set the Luxrays SataSet
 		ctx->SetDataSet(scene->dataSet);
 	}
