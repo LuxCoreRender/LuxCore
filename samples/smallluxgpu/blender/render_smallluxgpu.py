@@ -508,8 +508,11 @@ class SLGBP:
         for obj in scene.objects:
             if not obj.hide_render:
                 if obj.type in rendertypes and inscenelayer(obj) and not (obj.particle_systems and not any(ps for ps in obj.particle_systems if ps.settings.use_render_emitter)):
+                    if scene.slg.forceobjplys:
+                        # Force export of one PLY file for every object and material slot combination (Treat everything as SLG "Instances")
+                        dupliobj(obj, obj)
                     # Mesh instances
-                    if obj.slg_forceinst or (obj.data.users > 1 and not obj.modifiers):
+                    elif obj.slg_forceinst or (obj.data.users > 1 and not obj.modifiers):
                         if obj.data in instobjs:
                             if obj.data.materials:
                                 for i in range(len(obj.data.materials)):
@@ -1149,6 +1152,10 @@ def slg_add_properties():
         description="Export optional vertex normal information",
         default=True)
 
+    SLGSettings.forceobjplys = BoolProperty(name="Instance all Objects",
+        description="Create PLYs/transforms for every object/material pair - SLG Live! mode (may cause issues with MQBVH)",
+        default=False)
+
     SLGSettings.infinitelightbf = BoolProperty(name="InfiniteLight BF",
         description="Enable brute force rendering for InifinteLight light source",
         default=False)
@@ -1562,6 +1569,7 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.vuvs",
         "scene.slg.vcolors",
         "scene.slg.vnormals",
+        "scene.slg.forceobjplys",
         "scene.slg.infinitelightbf",
         "scene.slg.cameramotionblur",
         "scene.slg.rendering_type",
@@ -1669,6 +1677,9 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col = split.column()
         col.active = slg.export
         col.prop(slg, "vnormals")
+        split = layout.split()
+        col = split.column()
+        col.prop(slg, "forceobjplys")
         split = layout.split()
         col = split.column()
         col.prop(slg, "infinitelightbf")
