@@ -39,7 +39,7 @@ namespace luxrays { namespace sdl {
 
 class Scene {
 public:
-	Scene(Context *ctx, const std::string &fileName, const int accelType = -1);
+	Scene(Context *ctx, const std::string &fileName, const int aType = -1);
 	~Scene();
 
 	unsigned int GetLightCount(bool skipInfiniteLight = false) const {
@@ -91,7 +91,7 @@ public:
 		return NULL;
 	}
 
-	void UpdateDataSet(Context *ctx, const int accelType);
+	void UpdateDataSet(Context *ctx);
 
 	static Material *CreateMaterial(const std::string &propName, const Properties &prop);
 
@@ -120,6 +120,7 @@ protected:
 		const std::string &paramName, const unsigned int paramCount,
 		const std::string &defaultValue);
 
+	int accelType;
 	Properties *scnProp;
 };
 

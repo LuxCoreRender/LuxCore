@@ -33,7 +33,9 @@
 using namespace luxrays;
 using namespace luxrays::sdl;
 
-Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
+Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
+	accelType = aType;
+
 	extMeshCache = new ExtMeshCache(ctx);
 	texMapCache = new TextureMapCache(ctx);
 
@@ -309,7 +311,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int accelType) {
 	//--------------------------------------------------------------------------
 
 	dataSet = NULL;
-	UpdateDataSet(ctx, accelType);
+	UpdateDataSet(ctx);
 }
 
 Scene::~Scene() {
@@ -327,7 +329,7 @@ Scene::~Scene() {
 	delete scnProp;
 }
 
-void Scene::UpdateDataSet(Context *ctx, const int accelType) {
+void Scene::UpdateDataSet(Context *ctx) {
 	delete dataSet;
 	dataSet = new DataSet(ctx);
 
