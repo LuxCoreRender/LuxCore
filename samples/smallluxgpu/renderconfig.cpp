@@ -431,8 +431,12 @@ void RenderingConfig::UpdateSceneDataSet(const bool forceCompleteUpdate) {
 		// Update the DataSet
 		ctx->UpdateDataSet();
 	} else {
+		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
+		ctx->SetDataSet(NULL);
+
 		// For all other accelerator, I have to rebuild the DataSet
 		scene->UpdateDataSet(ctx);
+
 		// Set the Luxrays SataSet
 		ctx->SetDataSet(scene->dataSet);
 	}

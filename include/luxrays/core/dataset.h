@@ -56,6 +56,7 @@ public:
 	unsigned int GetTotalVertexCount() const { return totalVertexCount; }
 	unsigned int GetTotalTriangleCount() const { return totalTriangleCount; }
 
+	unsigned int GetDataSetID() const { return dataSetID; }
 	bool IsEqual(const DataSet *dataSet) const;
 
 	friend class Context;
