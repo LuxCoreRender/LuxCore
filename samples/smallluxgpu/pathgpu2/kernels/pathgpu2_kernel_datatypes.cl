@@ -33,7 +33,6 @@
 //  PARAM_HAS_ALPHA_TEXTUREMAPS
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_HAS_BUMPMAPS
-//  PARAM_WORLD_RADIUS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
 
 // To enable single material suopport (work around for ATI compiler problems)

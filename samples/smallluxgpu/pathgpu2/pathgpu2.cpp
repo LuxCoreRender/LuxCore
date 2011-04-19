@@ -1220,8 +1220,7 @@ void PathGPU2RenderThread::InitRender() {
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
-			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f" <<
-			" -D PARAM_WORLD_RADIUS=" << (scene->dataSet->GetBSphere().rad * 1.01f) << "f"
+			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
 			;
 
 	switch (accelType) {
