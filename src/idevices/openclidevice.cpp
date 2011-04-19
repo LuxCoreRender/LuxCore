@@ -236,45 +236,60 @@ void OpenCLIntersectionDevice::FreeDataSetBuffers() {
 	if (dataSet) {
 		deviceDesc->usedMemory -= raysBuff->getInfo<CL_MEM_SIZE>();
 		delete raysBuff;
+		raysBuff = NULL;
 		deviceDesc->usedMemory -= hitsBuff->getInfo<CL_MEM_SIZE>();
 		delete hitsBuff;
+		hitsBuff = NULL;
 
 		if (bvhBuff) {
 			deviceDesc->usedMemory -= vertsBuff->getInfo<CL_MEM_SIZE>();
 			delete vertsBuff;
+			vertsBuff = NULL;
 			deviceDesc->usedMemory -= trisBuff->getInfo<CL_MEM_SIZE>();
 			delete trisBuff;
+			trisBuff = NULL;
 			deviceDesc->usedMemory -= bvhBuff->getInfo<CL_MEM_SIZE>();
 			delete bvhBuff;
+			bvhBuff = NULL;
 		}
 
 		if (qbvhBuff) {
 			if (qbvhUseImage) {
 				deviceDesc->usedMemory -= qbvhImageBuff->getInfo<CL_MEM_SIZE>();
 				delete qbvhImageBuff;
+				qbvhImageBuff = NULL;
 				deviceDesc->usedMemory -= qbvhTrisImageBuff->getInfo<CL_MEM_SIZE>();
 				delete qbvhTrisImageBuff;
+				qbvhTrisImageBuff = NULL;
 			} else {
 				deviceDesc->usedMemory -= qbvhBuff->getInfo<CL_MEM_SIZE>();
 				delete qbvhBuff;
+				qbvhBuff = NULL;
 				deviceDesc->usedMemory -= qbvhTrisBuff->getInfo<CL_MEM_SIZE>();
 				delete qbvhTrisBuff;
+				qbvhTrisBuff = NULL;
 			}
 		}
 
 		if (mqbvhBuff) {
 			deviceDesc->usedMemory -= mqbvhBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhBuff;
+			mqbvhBuff = NULL;
 			deviceDesc->usedMemory -= mqbvhMemMapBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhMemMapBuff;
+			mqbvhMemMapBuff = NULL;
 			deviceDesc->usedMemory -= mqbvhLeafBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhLeafBuff;
+			mqbvhLeafBuff = NULL;
 			deviceDesc->usedMemory -= mqbvhLeafQuadTrisBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhLeafQuadTrisBuff;
+			mqbvhLeafQuadTrisBuff = NULL;
 			deviceDesc->usedMemory -= mqbvhInvTransBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhInvTransBuff;
+			mqbvhInvTransBuff = NULL;
 			deviceDesc->usedMemory -= mqbvhTrisOffsetBuff->getInfo<CL_MEM_SIZE>();
 			delete mqbvhTrisOffsetBuff;
+			mqbvhTrisOffsetBuff = NULL;
 		}
 	}
 }
@@ -283,6 +298,9 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	FreeDataSetBuffers();
 
 	IntersectionDevice::SetDataSet(newDataSet);
+
+	if (!newDataSet)
+		return;
 
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 
