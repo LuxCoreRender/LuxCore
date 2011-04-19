@@ -113,8 +113,7 @@ Context::~Context() {
 
 void Context::SetDataSet(DataSet *dataSet) {
 	assert (!started);
-	assert (dataSet != NULL);
-	assert (dataSet->IsPreprocessed());
+	assert ((dataSet == NULL) || ((dataSet != NULL) && dataSet->IsPreprocessed()));
 
 	currentDataSet = dataSet;
 
