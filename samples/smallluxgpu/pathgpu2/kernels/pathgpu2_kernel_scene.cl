@@ -607,10 +607,10 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
             f->b = mat->diff_b / k;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-            *specularBounce = FALSE;
+			*specularBounce = FALSE;
 #endif
-        }
-    }
+		}
+	}
 }
 
 void ArchGlass_Sample_f(__global ArchGlassParam *mat,
