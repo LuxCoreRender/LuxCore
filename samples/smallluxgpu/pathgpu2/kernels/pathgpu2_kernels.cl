@@ -498,7 +498,7 @@ __kernel void AdvancePaths(
 
 						const float P = .25f + .5f * Re;
 
-						directLightPdf = (1.f - P) / (1.f - Re);
+						directLightPdf = 1.f - P;
 						break;
 					}
 					default:

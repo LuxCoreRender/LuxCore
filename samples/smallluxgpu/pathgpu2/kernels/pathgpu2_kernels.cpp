@@ -500,7 +500,7 @@ std::string luxrays::KernelSource_PathGPU2_kernels =
 "\n"
 "						const float P = .25f + .5f * Re;\n"
 "\n"
-"						directLightPdf = (1.f - P) / (1.f - Re);\n"
+"						directLightPdf = 1.f - P;\n"
 "						break;\n"
 "					}\n"
 "					default:\n"
