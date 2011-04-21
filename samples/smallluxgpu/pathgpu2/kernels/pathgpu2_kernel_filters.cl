@@ -55,11 +55,14 @@ uint PixelIndexFloat2D(const float ux, const float uy) {
 }
 
 uint PixelIndexFloat2DWithOffset(const float ux, const float uy, float *ox, float *oy) {
-	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * ux), (uint)(PARAM_IMAGE_WIDTH - 1));
-	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * uy), (uint)(PARAM_IMAGE_HEIGHT - 1));
+	const float px = PARAM_IMAGE_WIDTH * ux;
+	const float py = PARAM_IMAGE_HEIGHT * uy;
 
-	*ox = PARAM_IMAGE_WIDTH * ux - (float)x;
-	*oy = PARAM_IMAGE_HEIGHT * uy - (float)y;
+	const uint x = min((uint)floor(px), (uint)(PARAM_IMAGE_WIDTH - 1));
+	const uint y = min((uint)floor(py), (uint)(PARAM_IMAGE_HEIGHT - 1));
+
+	*ox = px - (float)x;
+	*oy = py - (float)y;
 
 	return XY2PixelIndex(x, y);
 }
@@ -86,15 +89,15 @@ float ImageFilter_Evaluate(const float x, const float y) {
 #elif (PARAM_IMAGE_FILTER_TYPE == 2)
 
 float Gaussian(const float d, const float expv) {
-	return max(0.f, native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * d * d) - expv);
+	return max(0.f, exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * d * d) - expv);
 }
 
 // Gaussian Filter
 float ImageFilter_Evaluate(const float x, const float y) {
 	return Gaussian(x,
-			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_X * PARAM_IMAGE_FILTER_WIDTH_X)) *
+			exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_X * PARAM_IMAGE_FILTER_WIDTH_X)) *
 		Gaussian(y, 
-			native_exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_Y * PARAM_IMAGE_FILTER_WIDTH_Y));
+			exp(-PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA * PARAM_IMAGE_FILTER_WIDTH_Y * PARAM_IMAGE_FILTER_WIDTH_Y));
 }
 
 #elif (PARAM_IMAGE_FILTER_TYPE == 3)

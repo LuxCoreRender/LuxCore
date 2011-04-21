@@ -821,60 +821,33 @@ Error: Huston, we have a problem !
 	}
 
 	if (pathState == PATH_STATE_DONE) {
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
+#if (PARAM_SAMPLER_TYPE == 2)
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
-		Spectrum radiance = sample->radiance;
-		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
-#elif (PARAM_SAMPLER_TYPE == 2)
-
-#if (PARAM_SAMPLER_TYPE != 0)
 		// Read the seed
 		Seed seed;
 		seed.s1 = task->seed.s1;
 		seed.s2 = task->seed.s2;
 		seed.s3 = task->seed.s3;
-#endif
 
 		Sampler_MLT_SplatSample(frameBuffer, &seed, sample);
 
-#if (PARAM_SAMPLER_TYPE != 0)
 		// Save the seed
 		task->seed.s1 = seed.s1;
 		task->seed.s2 = seed.s2;
 		task->seed.s3 = seed.s3;
-#endif
-
-#endif
 
 #else
 
-#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
-		__global float *sampleData = &sample->u[IDX_SCREEN_X];
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+		Spectrum radiance = sample->radiance;
+		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
+#else
+		__global float *sampleData = &sample->u[0];
 		const float sx = sampleData[IDX_SCREEN_X] - .5f;
 		const float sy = sampleData[IDX_SCREEN_Y] - .5f;
 
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
-#elif (PARAM_SAMPLER_TYPE == 2)
-
-#if (PARAM_SAMPLER_TYPE != 0)
-		// Read the seed
-		Seed seed;
-		seed.s1 = task->seed.s1;
-		seed.s2 = task->seed.s2;
-		seed.s3 = task->seed.s3;
-#endif
-
-		Sampler_MLT_SplatSample(frameBuffer, &seed, sample);
-
-#if (PARAM_SAMPLER_TYPE != 0)
-		// Save the seed
-		task->seed.s1 = seed.s1;
-		task->seed.s2 = seed.s2;
-		task->seed.s3 = seed.s3;
-#endif
-
 #endif
 
 #endif
