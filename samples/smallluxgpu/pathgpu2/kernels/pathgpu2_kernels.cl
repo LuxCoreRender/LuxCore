@@ -71,7 +71,7 @@ __kernel void InitFrameBuffer(
 		__global Pixel *frameBuffer
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
+	if (gid >= (PARAM_IMAGE_WIDTH + 2) * (PARAM_IMAGE_HEIGHT + 2))
 		return;
 
 	__global Pixel *p = &frameBuffer[gid];
