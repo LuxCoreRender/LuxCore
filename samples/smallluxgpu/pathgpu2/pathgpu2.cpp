@@ -438,7 +438,7 @@ void PathGPU2RenderThread::InitRender() {
 	AcceleratorType accelType = scene->dataSet->GetAcceleratorType();
 
 	const unsigned int frameBufferPixelCount =
-		renderEngine->film->GetWidth() * renderEngine->film->GetHeight();
+		(renderEngine->film->GetWidth() + 2) * (renderEngine->film->GetHeight() + 2);
 
 	// Delete previous allocated frameBuffer
 	delete[] frameBuffer;
@@ -1546,8 +1546,7 @@ void PathGPU2RenderThread::InitRender() {
 	// Clear the frame buffer
 	initFBKernel->setArg(0, *frameBufferBuff);
 	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
-			cl::NDRange(RoundUp<unsigned int>(
-				renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), initFBWorkGroupSize)),
+			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),
 			cl::NDRange(initFBWorkGroupSize));
 
 	// Initialize the tasks buffer
@@ -1918,36 +1917,40 @@ void PathGPU2RenderEngine::UpdateFilmLockLess() {
 	elapsedTime = WallClockTime() - startTime;
 	const unsigned int imgWidth = film->GetWidth();
 	const unsigned int imgHeight = film->GetHeight();
-	const unsigned int pixelCount = imgWidth * imgHeight;
 
 	film->Reset();
 
-	for (unsigned int p = 0; p < pixelCount; ++p) {
-		Spectrum c;
-		float count = 0;
-		for (size_t i = 0; i < renderThreads.size(); ++i) {
-			c += renderThreads[i]->frameBuffer[p].c;
-			count += renderThreads[i]->frameBuffer[p].count;
-		}
+	for (unsigned int y = 0; y < imgHeight; ++y) {
+		for (unsigned int x = 0; x < imgWidth; ++x) {
+			const unsigned int pGPU = x + 1 + (y + 1) * imgWidth;
 
-		if (count > 0) {
-			const float scrX = p % imgWidth;
-			const float scrY = p / imgWidth;
-			c /= count;
-			sampleBuffer->SplatSample(scrX, scrY, c);
+			Spectrum c;
+			float count = 0;
+			for (size_t i = 0; i < renderThreads.size(); ++i) {
+				c += renderThreads[i]->frameBuffer[pGPU].c;
+				count += renderThreads[i]->frameBuffer[pGPU].count;
+			}
 
-			if (sampleBuffer->IsFull()) {
-				// Splat all samples on the film
-				film->SplatSampleBuffer(true, sampleBuffer);
-				sampleBuffer = film->GetFreeSampleBuffer();
+			if (count > 0) {
+				const unsigned int pCPU = x + y * imgWidth;
+				const float scrX = pCPU % imgWidth;
+				const float scrY = pCPU / imgWidth;
+				c /= count;
+				sampleBuffer->SplatSample(scrX, scrY, c);
+
+				if (sampleBuffer->IsFull()) {
+					// Splat all samples on the film
+					film->SplatSampleBuffer(true, sampleBuffer);
+					sampleBuffer = film->GetFreeSampleBuffer();
+				}
 			}
 		}
+	}
 
-		if (sampleBuffer->GetSampleCount() > 0) {
-			// Splat all samples on the film
-			film->SplatSampleBuffer(true, sampleBuffer);
-			sampleBuffer = film->GetFreeSampleBuffer();
-		}
+	if (sampleBuffer->GetSampleCount() > 0) {
+		// Splat all samples on the film
+		film->SplatSampleBuffer(true, sampleBuffer);
+		sampleBuffer = film->GetFreeSampleBuffer();
 	}
 
 	// Update the sample count statistic

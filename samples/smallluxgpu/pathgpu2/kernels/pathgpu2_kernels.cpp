@@ -73,7 +73,7 @@ std::string luxrays::KernelSource_PathGPU2_kernels =
 "		__global Pixel *frameBuffer\n"
 "		) {\n"
 "	const size_t gid = get_global_id(0);\n"
-"	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)\n"
+"	if (gid >= (PARAM_IMAGE_WIDTH + 2) * (PARAM_IMAGE_HEIGHT + 2))\n"
 "		return;\n"
 "\n"
 "	__global Pixel *p = &frameBuffer[gid];\n"
