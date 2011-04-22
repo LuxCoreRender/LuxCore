@@ -38,7 +38,7 @@ std::string luxrays::KernelSource_PathGPU2_filters =
 "	return x + 1 + (y + 1) * PARAM_IMAGE_WIDTH;\n"
 "}\n"
 "\n"
-"uint PixelIndexInt(const size_t gid) {\n"
+"uint InitialPixelIndex(const size_t gid) {\n"
 "	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);\n"
 "}\n"
 "\n"

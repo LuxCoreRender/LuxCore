@@ -56,7 +56,12 @@ void GenerateCameraPath(
 #if (PARAM_SAMPLER_TYPE == 0)
 
 void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
-	sample->pixelIndex = PixelIndexInt(gid);
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+	sample->pixelIndex = InitialPixelIndex(gid);
+#else
+	// To avoid patterns when not using atomics
+	sample->pixelIndex = PixelIndexFloat2D(RndFloatValue(seed), RndFloatValue(seed));
+#endif
 
 	sample->u[IDX_SCREEN_X] = RndFloatValue(seed);
 	sample->u[IDX_SCREEN_Y] = RndFloatValue(seed);
@@ -108,7 +113,12 @@ __kernel void Sampler(
 #if (PARAM_SAMPLER_TYPE == 1)
 
 void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
-	sample->pixelIndex = PixelIndexInt(gid);
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+	sample->pixelIndex = InitialPixelIndex(gid);
+#else
+	// To avoid patterns when not using atomics
+	sample->pixelIndex = PixelIndexFloat2D(RndFloatValue(seed), RndFloatValue(seed));
+#endif
 
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		sample->u[i] = RndFloatValue(seed);
@@ -533,7 +543,12 @@ void Sampler_CopyFromStratifiedBuffer(Seed *seed, __global Sample *sample, const
 
 void Sampler_Init(const size_t gid, __local float *localMemTempBuff,
 		Seed *seed, __global Sample *sample) {
-	sample->pixelIndex = PixelIndexInt(gid);
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+	sample->pixelIndex = InitialPixelIndex(gid);
+#else
+	// To avoid patterns when not using atomics
+	sample->pixelIndex = PixelIndexFloat2D(RndFloatValue(seed), RndFloatValue(seed));
+#endif
 
 	Sampler_StratifiedBufferInit(localMemTempBuff, seed, sample);
 

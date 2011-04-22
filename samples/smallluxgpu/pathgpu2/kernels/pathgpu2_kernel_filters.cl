@@ -36,7 +36,7 @@ uint XY2FrameBufferIndex(const int x, const int y) {
 	return x + 1 + (y + 1) * PARAM_IMAGE_WIDTH;
 }
 
-uint PixelIndexInt(const size_t gid) {
+uint InitialPixelIndex(const size_t gid) {
 	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 }
 
