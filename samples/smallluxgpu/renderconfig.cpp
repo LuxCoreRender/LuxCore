@@ -72,7 +72,7 @@ void RenderingConfig::Init() {
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
+	const unsigned int screenRefreshInterval = cfg.GetInt("screen.refresh.interval", lowLatency ? 100 : 2000);
 
 	captionBuffer[0] = '\0';
 
@@ -180,6 +180,7 @@ void RenderingConfig::Init() {
 		default:
 			assert (false);
 	}
+	renderEngine->SetScreenRefreshInterval(screenRefreshInterval);
 
 	film->StartSampleTime();
 	StartAllRenderThreadsLockless();
@@ -422,4 +423,17 @@ void RenderingConfig::SaveFilm() {
 		film->SaveFilm("merged.flm");
 
 	StartAllRenderThreadsLockless();
+}
+
+void RenderingConfig::UpdateSceneDataSet(const bool forceCompleteUpdate) {
+	// Check if we are using a MQBVH accelerator
+	if ((scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) && !forceCompleteUpdate) {
+		// Update the DataSet
+		ctx->UpdateDataSet();
+	} else {
+		// For all other accelerator, I have to rebuild the DataSet
+		scene->UpdateDataSet(ctx, scene->dataSet->GetAcceleratorType());
+		// Set the Luxrays SataSet
+		ctx->SetDataSet(scene->dataSet);
+	}
 }

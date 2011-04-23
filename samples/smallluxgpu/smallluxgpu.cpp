@@ -93,6 +93,9 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 }
 
 static int BatchMode(double stopTime, unsigned int stopSPP) {
+	// Force the film update at 2.5secs (mostly used by PathGPU)
+	config->SetScreenRefreshInterval(2500);
+
 	const double startTime = WallClockTime();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -197,9 +200,6 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 
 	// Save the rendered image
 	config->SaveFilmImage();
-
-	sprintf(buf, "LuxMark index: %.3f", sampleSec / 1000.0);
-	cerr << buf << endl;
 
 	delete config;
 	cerr << "Done." << endl;

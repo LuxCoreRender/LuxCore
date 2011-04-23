@@ -26,10 +26,8 @@
 __kernel void Init(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
-		__global Ray *rays
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
+		__global Ray *rays,
+		__global Camera *camera
 #if (PARAM_SAMPLER_TYPE == 3)
 		, __local float *localMemTempBuff
 #endif
@@ -54,11 +52,7 @@ __kernel void Init(
 			&seed, &task->sample);
 
 	// Initialize the path
-	GenerateCameraPath(task, &rays[gid], &seed
-#if defined(PARAM_CAMERA_DYNAMIC)
-			, cameraData
-#endif
-			);
+	GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -99,16 +93,26 @@ __kernel void AdvancePaths(
 		__global Material *mats,
 		__global uint *meshMats,
 		__global uint *meshIDs,
+#if defined(PARAM_ACCEL_MQBVH)
+		__global uint *triangleIDs,
+		__global Mesh *meshDescs,
+#endif
 		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
-		__global Triangle *triangles
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
-#if defined(PARAM_HAVE_INFINITELIGHT)
+		__global Point *vertices,
+		__global Triangle *triangles,
+		__global Camera *camera
+#if defined(PARAM_HAS_INFINITELIGHT)
+		, __global InfiniteLight *infiniteLight
 		, __global Spectrum *infiniteLightMap
 #endif
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_HAS_SUNLIGHT)
+		, __global SunLight *sunLight
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		, __global SkyLight *skyLight
+#endif
+#if (PARAM_DL_LIGHT_COUNT > 0)
 		, __global TriangleLight *triLights
 #endif
 #if defined(PARAM_HAS_TEXTUREMAPS)
@@ -118,6 +122,10 @@ __kernel void AdvancePaths(
 #endif
         , __global TexMap *texMapDescBuff
         , __global unsigned int *meshTexsBuff
+#if defined(PARAM_HAS_BUMPMAPS)
+        , __global unsigned int *meshBumpsBuff
+		, __global float *meshBumpsScaleBuff
+#endif
         , __global UV *vertUVs
 #endif
 		) {
@@ -167,18 +175,36 @@ __kernel void AdvancePaths(
 #endif
 
 				const uint meshIndex = meshIDs[currentTriangleIndex];
+#if defined(PARAM_ACCEL_MQBVH)
+				__global Mesh *meshDesc = &meshDescs[meshIndex];
+				__global Point *iVertices = &vertices[meshDesc->vertsOffset];
+				__global Spectrum *iVertColors = &vertColors[meshDesc->vertsOffset];
+				__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
+#if defined(PARAM_HAS_TEXTUREMAPS)
+				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
+#endif
+				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+				const uint triangleID = triangleIDs[currentTriangleIndex];
+#endif
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 				uint matType = hitPointMat->type;
 
 				// Interpolate Color
 				Spectrum shadeColor;
+#if defined(PARAM_ACCEL_MQBVH)
+				Mesh_InterpolateColor(iVertColors, iTriangles, triangleID, hitPointB1, hitPointB2, &shadeColor);
+#else
 				Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
+#endif
 
 #if defined(PARAM_HAS_TEXTUREMAPS)
 				// Interpolate UV coordinates
 				UV uv;
+#if defined(PARAM_ACCEL_MQBVH)
+				Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, hitPointB1, hitPointB2, &uv);
+#else
 				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
-
+#endif
 				// Check it the mesh has a texture map
 				unsigned int texIndex = meshTexsBuff[meshIndex];
 				if (texIndex != 0xffffffffu) {
@@ -217,7 +243,51 @@ __kernel void AdvancePaths(
 
 				// Interpolate the normal
 				Vector N;
+#if defined(PARAM_ACCEL_MQBVH)
+				Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, hitPointB1, hitPointB2, &N);
+				// (__global float (*)[4]) seems required by Apple OpenCL
+				TransformNormal((__global float (*)[4])(meshDesc->invTrans), &N);
+#else
 				Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
+#endif
+
+#if defined(PARAM_HAS_BUMPMAPS)
+				// Check it the mesh has a bump map
+				unsigned int bumpIndex = meshBumpsBuff[meshIndex];
+				if (bumpIndex != 0xffffffffu) {
+					// Apply bump mapping
+					__global TexMap *texMap = &texMapDescBuff[bumpIndex];
+					const uint texWidth = texMap->width;
+					const uint texHeight = texMap->height;
+
+					UV dudv;
+					dudv.u = 1.f / texWidth;
+					dudv.v = 1.f / texHeight;
+
+					Spectrum texColor;
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v, &texColor);
+					const float b0 = Spectrum_Y(&texColor);
+
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u + dudv.u, uv.v, &texColor);
+					const float bu = Spectrum_Y(&texColor);
+
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v + dudv.v, &texColor);
+					const float bv = Spectrum_Y(&texColor);
+
+					const float scale = meshBumpsScaleBuff[meshIndex];
+					Vector bump;
+					bump.x = scale * (bu - b0);
+					bump.y = scale * (bv - b0);
+					bump.z = 1.f;
+
+					Vector v1, v2;
+					CoordinateSystem(&N, &v1, &v2);
+					N.x = v1.x * bump.x + v2.x * bump.y + N.x * bump.z;
+					N.y = v1.y * bump.x + v2.y * bump.y + N.y * bump.z;
+					N.z = v1.z * bump.x + v2.z * bump.y + N.z * bump.z;
+					Normalize(&N);
+				}
+#endif
 
 				// Flip the normal if required
 				Vector shadeN;
@@ -248,46 +318,68 @@ __kernel void AdvancePaths(
 				wo.z = -rayDir.z;
 
 				Vector wi;
-				float pdf;
 				Spectrum f;
+				f.r = 1.f;
+				f.g = 1.f;
+				f.b = 1.f;
+				float materialPdf;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+				int specularMaterial;
+#endif
 
 				switch (matType) {
 
 #if defined(PARAM_ENABLE_MAT_MATTE)
 					case MAT_MATTE:
-						Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+						Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
 #endif
 
-#if defined(PARAM_ENABLE_MAT_AREALIGHT)
+#if (PARAM_DL_LIGHT_COUNT > 0)
 					case MAT_AREALIGHT: {
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-						if (task->pathState.specularBounce) {
-#endif
-							Spectrum Le;
-							AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &Le);
-							sample->radiance.r += throughput.r * Le.r;
-							sample->radiance.g += throughput.g * Le.g;
-							sample->radiance.b += throughput.b * Le.b;
+						Spectrum Le;
+						AreaLight_Le(&hitPointMat->param.areaLight, &wo, &N, &Le);
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+						if (!task->pathState.specularBounce) {
+#if defined(PARAM_HAS_SUNLIGHT)
+							const uint lightSourceCount = PARAM_DL_LIGHT_COUNT + 1;
+#else
+							const uint lightSourceCount = PARAM_DL_LIGHT_COUNT;
+#endif
+#if defined(PARAM_ACCEL_MQBVH)
+							// (__global float (*)[4]) seems required by Apple OpenCL
+							const float area = InstanceMesh_Area((__global float (*)[4])(meshDesc->trans), iVertices, iTriangles, triangleID);
+#else
+							const float area = Mesh_Area(vertices, triangles, currentTriangleIndex);
+#endif
+							const float lpdf = lightSourceCount / area;
+							const float ph = PowerHeuristic(1, task->pathState.bouncePdf, 1, lpdf);
+
+							Le.r *= ph;
+							Le.g *= ph;
+							Le.b *= ph;
 						}
 #endif
 
-						pdf = 0.f;
+						sample->radiance.r += throughput.r * Le.r;
+						sample->radiance.g += throughput.g * Le.g;
+						sample->radiance.b += throughput.b * Le.b;
+
+						materialPdf = 0.f;
 						break;
 					}
 #endif
 
 #if defined(PARAM_ENABLE_MAT_MIRROR)
 					case MAT_MIRROR:
-						Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &pdf, &f, &shadeN
+						Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &materialPdf, &f, &shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -295,9 +387,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_GLASS)
 					case MAT_GLASS:
-						Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
+						Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &materialPdf, &f, &N, &shadeN, u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -305,9 +397,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MATTEMIRROR)
 					case MAT_MATTEMIRROR:
-						MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+						MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -315,9 +407,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_METAL)
 					case MAT_METAL:
-						Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &pdf, &f, &shadeN, u0, u1
+						Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -325,9 +417,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_MATTEMETAL)
 					case MAT_MATTEMETAL:
-						MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+						MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -335,9 +427,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_ALLOY)
 					case MAT_ALLOY:
-						Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &pdf, &f, &shadeN, u0, u1, u2
+						Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -345,9 +437,9 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_ENABLE_MAT_ARCHGLASS)
 					case MAT_ARCHGLASS:
-						ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &pdf, &f, &N, &shadeN, u0
+						ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &materialPdf, &f, &N, &shadeN, u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-								, &task->pathState.specularBounce
+								, &specularMaterial
 #endif
 								);
 						break;
@@ -355,10 +447,7 @@ __kernel void AdvancePaths(
 
 					case MAT_NULL:
 						wi = rayDir;
-						pdf = 1.f;
-						f.r = 1.f;
-						f.g = 1.f;
-						f.b = 1.f;
+						materialPdf = 1.f;
 
 						// I have also to restore the original throughput
 						throughput = prevThroughput;
@@ -366,19 +455,9 @@ __kernel void AdvancePaths(
 
 					default:
 						// Huston, we have a problem...
-						pdf = 0.f;
+						materialPdf = 0.f;
 						break;
 				}
-
-				pathDepth += 1;
-				const float invPdf = ((pdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : (1.f / pdf);
-
-				//if (pathDepth > 2)
-				//	printf(\"Depth: %d Throughput: (%f, %f, %f) f: (%f, %f, %f) Pdf: %f\\n\", pathDepth, throughput.r, throughput.g, throughput.b, f.r, f.g, f.b, pdf);
-
-				throughput.r *= f.r * invPdf;
-				throughput.g *= f.g * invPdf;
-				throughput.b *= f.b * invPdf;
 
 				// Russian roulette
 
@@ -389,10 +468,12 @@ __kernel void AdvancePaths(
 #endif
 
 				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
-				const float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb >= rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
-				throughput.r *= invRRProb;
-				throughput.g *= invRRProb;
-				throughput.b *= invRRProb;
+				pathDepth += 1;
+				float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb < rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
+				invRRProb = ((materialPdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : invRRProb;
+				throughput.r *= f.r * invRRProb;
+				throughput.g *= f.g * invRRProb;
+				throughput.b *= f.b * invRRProb;
 
 				//if (pathDepth > 2)
 				//	printf(\"Depth: %d Throughput: (%f, %f, %f)\\n\", pathDepth, throughput.r, throughput.g, throughput.b);
@@ -437,30 +518,82 @@ __kernel void AdvancePaths(
 #endif
 
 					// Select a light source to sample
-					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * ul0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
-					__global TriangleLight *l = &triLights[lightIndex];
 
 					// Setup the shadow ray
 					Spectrum Le;
+					uint lightSourceCount;
 					float lightPdf;
+					float lPdf; // pdf used for MIS
 					Ray shadowRay;
+
+#if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT == 0)
+					//----------------------------------------------------------
+					// This is the case with only the sun light
+					//----------------------------------------------------------
+
+					SunLight_Sample_L(sunLight, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+					lPdf = lightPdf;
+					lightSourceCount = 1;
+
+					//----------------------------------------------------------
+#elif defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+					//----------------------------------------------------------
+					// This is the case with sun light and area lights
+					//----------------------------------------------------------
+
+					// Select one of the lights
+					const uint lightIndex = min((uint)floor((PARAM_DL_LIGHT_COUNT + 1)* ul0), (uint)(PARAM_DL_LIGHT_COUNT));
+					lightSourceCount = PARAM_DL_LIGHT_COUNT + 1;
+
+					if (lightIndex == PARAM_DL_LIGHT_COUNT) {
+						// The sun light was selected
+
+						SunLight_Sample_L(sunLight, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+						lPdf = lightPdf;
+					} else {
+						// An area light was selected
+
+						__global TriangleLight *l = &triLights[lightIndex];
+						TriangleLight_Sample_L(l, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+						lPdf = PARAM_DL_LIGHT_COUNT / l->area;
+					}
+
+					//----------------------------------------------------------
+#elif !defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+					//----------------------------------------------------------
+					// This is the case without sun light and with area lights
+					//----------------------------------------------------------
+
+					// Select one of the area lights
+					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * ul0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+					__global TriangleLight *l = &triLights[lightIndex];
+
 					TriangleLight_Sample_L(l, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+					lPdf = PARAM_DL_LIGHT_COUNT / l->area;
+					lightSourceCount = PARAM_DL_LIGHT_COUNT;
+
+					//----------------------------------------------------------
+#else
+Error: Huston, we have a problem !
+#endif
 
 					const float dp = Dot(&shadeN, &shadowRay.d);
-					const float matPdf = (dp <= 0.f) ? 0.f : 1.f;
+					const float matPdf = M_PI;
 
-					const float pdf = lightPdf * matPdf * directLightPdf;
+					const float mPdf = directLightPdf * dp * INV_PI;
+					const float pdf = (dp <= 0.f) ? 0.f :
+						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * directLightPdf * matPdf / (dp * lightSourceCount));
 					if (pdf > 0.f) {
 						Spectrum throughputLightDir = prevThroughput;
 						throughputLightDir.r *= shadeColor.r;
 						throughputLightDir.g *= shadeColor.g;
 						throughputLightDir.b *= shadeColor.b;
 
-						const float k = dp * PARAM_DL_LIGHT_COUNT / (pdf * M_PI);
+						const float k = 1.f / pdf;
 						// NOTE: I assume all matte mixed material have a MatteParam as first field
-						task->pathState.lightRadiance.r = throughputLightDir.r * hitPointMat->param.matte.r * k * Le.r;
-						task->pathState.lightRadiance.g = throughputLightDir.g * hitPointMat->param.matte.g * k * Le.g;
-						task->pathState.lightRadiance.b = throughputLightDir.b * hitPointMat->param.matte.b * k * Le.b;
+						task->pathState.lightRadiance.r = throughputLightDir.r * hitPointMat->param.matte.r * Le.r * k;
+						task->pathState.lightRadiance.g = throughputLightDir.g * hitPointMat->param.matte.g * Le.g * k;
+						task->pathState.lightRadiance.b = throughputLightDir.b * hitPointMat->param.matte.b * Le.b * k;
 
 						*ray = shadowRay;
 
@@ -470,6 +603,8 @@ __kernel void AdvancePaths(
 						task->pathState.nextPathRay.mint = PARAM_RAY_EPSILON;
 						task->pathState.nextPathRay.maxt = FLT_MAX;
 
+						task->pathState.bouncePdf = materialPdf;
+						task->pathState.specularBounce = specularMaterial;
 						task->pathState.nextThroughput = throughput;
 
 						pathState = PATH_STATE_SAMPLE_LIGHT;
@@ -484,6 +619,8 @@ __kernel void AdvancePaths(
 							ray->mint = PARAM_RAY_EPSILON;
 							ray->maxt = FLT_MAX;
 
+							task->pathState.bouncePdf = materialPdf;
+							task->pathState.specularBounce = specularMaterial;
 							task->pathState.throughput = throughput;
 							task->pathState.depth = pathDepth;
 
@@ -501,6 +638,8 @@ __kernel void AdvancePaths(
 						ray->mint = PARAM_RAY_EPSILON;
 						ray->maxt = FLT_MAX;
 
+						task->pathState.bouncePdf = materialPdf;
+						task->pathState.specularBounce = specularMaterial;
 						task->pathState.throughput = throughput;
 						task->pathState.depth = pathDepth;
 
@@ -527,16 +666,44 @@ __kernel void AdvancePaths(
 #endif
 
 			} else {
-#if defined(PARAM_HAVE_INFINITELIGHT)
-				Spectrum Le;
-				InfiniteLight_Le(infiniteLightMap, &Le, &rayDir);
+#if defined(PARAM_HAS_INFINITELIGHT)
+				Spectrum iLe;
+				InfiniteLight_Le(infiniteLight, infiniteLightMap, &iLe, &rayDir);
 
-				/*if (task->pathState.depth > 0)
-					printf(\"Throughput: (%f, %f, %f) Le: (%f, %f, %f)\\n\", throughput.r, throughput.g, throughput.b, Le.r, Le.g, Le.b);*/
+				sample->radiance.r += throughput.r * iLe.r;
+				sample->radiance.g += throughput.g * iLe.g;
+				sample->radiance.b += throughput.b * iLe.b;
+#endif
 
-				sample->radiance.r += throughput.r * Le.r;
-				sample->radiance.g += throughput.g * Le.g;
-				sample->radiance.b += throughput.b * Le.b;
+#if defined(PARAM_HAS_SUNLIGHT)
+				// Make the sun visible only if relsize has been changed (in order
+				// to avoid fireflies).
+				if (sunLight->relSize > 5.f) {
+					Spectrum sLe;
+					SunLight_Le(sunLight, &sLe, &rayDir);
+
+					if (!task->pathState.specularBounce) {
+						const float lpdf = UniformConePdf(sunLight->cosThetaMax);
+						const float ph = PowerHeuristic(1, task->pathState.bouncePdf, 1, lpdf);
+
+						sLe.r *= ph;
+						sLe.g *= ph;
+						sLe.b *= ph;
+					}
+
+					sample->radiance.r += throughput.r * sLe.r;
+					sample->radiance.g += throughput.g * sLe.g;
+					sample->radiance.b += throughput.b * sLe.b;
+				}
+#endif
+
+#if defined(PARAM_HAS_SKYLIGHT)
+				Spectrum skLe;
+				SkyLight_Le(skyLight, &skLe, &rayDir);
+
+				sample->radiance.r += throughput.r * skLe.r;
+				sample->radiance.g += throughput.g * skLe.g;
+				sample->radiance.b += throughput.b * skLe.b;
 #endif
 
 				pathState = PATH_STATE_DONE;
@@ -565,7 +732,15 @@ __kernel void AdvancePaths(
 
 				// Interpolate UV coordinates
 				UV uv;
+#if defined(PARAM_ACCEL_MQBVH)
+				__global Mesh *meshDesc = &meshDescs[meshIndex];
+				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
+				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+				const uint triangleID = triangleIDs[currentTriangleIndex];
+				Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, hitPointB1, hitPointB2, &uv);
+#else
 				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
+#endif
 
 				// Check it the mesh has a texture map
 				unsigned int texIndex = meshTexsBuff[meshIndex];
@@ -652,7 +827,6 @@ __kernel void AdvancePaths(
 		Spectrum radiance = sample->radiance;
 		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
 #elif (PARAM_SAMPLER_TYPE == 2)
-
 
 #if (PARAM_SAMPLER_TYPE != 0)
 		// Read the seed

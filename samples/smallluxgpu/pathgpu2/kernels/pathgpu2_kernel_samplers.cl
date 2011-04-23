@@ -22,10 +22,8 @@
 void GenerateCameraPath(
 		__global GPUTask *task,
 		__global Ray *ray,
-		Seed *seed
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
+		Seed *seed,
+		__global Camera *camera
 		) {
 	__global Sample *sample = &task->sample;
 
@@ -33,10 +31,7 @@ void GenerateCameraPath(
 #if (PARAM_SAMPLER_TYPE == 0)
 			, seed
 #endif
-#if defined(PARAM_CAMERA_DYNAMIC)
-			, cameraData
-#endif
-			);
+			, camera);
 
 	sample->radiance.r = 0.f;
 	sample->radiance.g = 0.f;
@@ -48,6 +43,7 @@ void GenerateCameraPath(
 	task->pathState.throughput.g = 1.f;
 	task->pathState.throughput.b = 1.f;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	task->pathState.bouncePdf = 1.f;
 	task->pathState.specularBounce = TRUE;
 #endif
 	task->pathState.state = PATH_STATE_NEXT_VERTEX;
@@ -69,10 +65,8 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
-		__global Ray *rays
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
+		__global Ray *rays,
+		__global Camera *camera
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -96,11 +90,7 @@ __kernel void Sampler(
 
 		taskStats[gid].sampleCount += 1;
 
-		GenerateCameraPath(task, &rays[gid], &seed
-#if defined(PARAM_CAMERA_DYNAMIC)
-				, cameraData
-#endif
-				);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -127,11 +117,8 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
-		__global Ray *rays
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
-		) {
+		__global Ray *rays,
+		__global Camera *camera) {
 	const size_t gid = get_global_id(0);
 
 	// Initialize the task
@@ -152,11 +139,7 @@ __kernel void Sampler(
 		for (int i = 0; i < TOTAL_U_SIZE; ++i)
 			sample->u[i] = RndFloatValue(&seed);
 
-		GenerateCameraPath(task, &rays[gid], &seed
-#if defined(PARAM_CAMERA_DYNAMIC)
-				, cameraData
-#endif
-				);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		taskStats[gid].sampleCount += 1;
 
@@ -227,11 +210,8 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
-		__global Ray *rays
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
-		) {
+		__global Ray *rays,
+		__global Camera *camera) {
 	const size_t gid = get_global_id(0);
 
 	// Initialize the task
@@ -263,11 +243,7 @@ __kernel void Sampler(
 
 		taskStats[gid].sampleCount += 1;
 
-		GenerateCameraPath(task, &rays[gid], &seed
-#if defined(PARAM_CAMERA_DYNAMIC)
-				, cameraData
-#endif
-				);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -503,7 +479,7 @@ void Sampler_StratifiedBufferInit(__local float *localMemTempBuff,
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 	StratifiedSample1D(tempBuff, seed);
 	Shuffle1D(tempBuff, seed);
-	Copy1D(tempBuff, &sample->stratifiedAlpha1D[0])
+	Copy1D(tempBuff, &sample->stratifiedAlpha1D[0]);
 #endif
 
 	StratifiedSample2D(tempBuff, seed);
@@ -567,11 +543,9 @@ void Sampler_Init(const size_t gid, __local float *localMemTempBuff,
 __kernel void Sampler(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
-		__global Ray *rays
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
-		, __local float *localMemTempBuff
+		__global Ray *rays,
+		__global Camera *camera,
+		__local float *localMemTempBuff
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -601,11 +575,7 @@ __kernel void Sampler(
 
 		Sampler_CopyFromStratifiedBuffer(&seed, sample, sampleNewIndex);
 
-		GenerateCameraPath(task, &rays[gid], &seed
-#if defined(PARAM_CAMERA_DYNAMIC)
-				, cameraData
-#endif
-				);
+		GenerateCameraPath(task, &rays[gid], &seed, camera);
 
 		taskStats[gid].sampleCount = sampleNewCount;
 

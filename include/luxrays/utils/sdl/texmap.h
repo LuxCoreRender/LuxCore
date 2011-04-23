@@ -158,6 +158,7 @@ public:
 	NormalMapInstance *GetNormalMapInstance(const std::string &fileName);
 
 	void GetTexMaps(std::vector<TextureMap *> &tms);
+	unsigned int GetSize()const { return maps.size(); }
 
 private:
 	TextureMap *GetTextureMap(const std::string &fileName);

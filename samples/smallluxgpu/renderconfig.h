@@ -56,8 +56,12 @@ public:
 	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }
 	const RenderEngine *GetRenderEngine() { return renderEngine; }
 
-	void SetScreenRefreshInterval(const unsigned int t) {  screenRefreshInterval = t; }
-	unsigned int GetScreenRefreshInterval() const {  return screenRefreshInterval; }
+	void SetScreenRefreshInterval(const unsigned int t) {
+			renderEngine->SetScreenRefreshInterval(t);
+	}
+	unsigned int GetScreenRefreshInterval() const {
+		return renderEngine->GetScreenRefreshInterval();
+	}
 
 	bool NeedPeriodicSave() {
 		if (periodicSaveEnabled) {
@@ -74,7 +78,7 @@ public:
 	void SaveFilmImage();
 	void SaveFilm();
 
-	void UpdateSceneDataSet() { ctx->UpdateDataSet(); };
+	void UpdateSceneDataSet(const bool forceCompleteUpdate);
 
 	Properties cfg;
 
@@ -106,7 +110,6 @@ private:
 
 	vector<IntersectionDevice *> intersectionAllDevices;
 
-	unsigned int screenRefreshInterval;
 	bool periodicSaveEnabled;
 	double lastPeriodicSave, periodiceSaveTime;
 };

@@ -24,21 +24,17 @@
 //  PARAM_IMAGE_WIDTH
 //  PARAM_IMAGE_HEIGHT
 //  PARAM_STARTLINE
-//  PARAM_RASTER2CAMERA_IJ (Matrix4x4)
 //  PARAM_RAY_EPSILON
-//  PARAM_CLIP_YON
-//  PARAM_CLIP_HITHER
-//  PARAM_CAMERA2WORLD_IJ (Matrix4x4)
 //  PARAM_SEED
 //  PARAM_MAX_PATH_DEPTH
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
-//  PARAM_DIRECT_LIGHT_SAMPLING
-//  PARAM_DL_LIGHT_COUNT
-//  PARAM_CAMERA_DYNAMIC
 //  PARAM_HAS_TEXTUREMAPS
 //  PARAM_HAS_ALPHA_TEXTUREMAPS
 //  PARAM_USE_PIXEL_ATOMICS
+//  PARAM_HAS_BUMPMAPS
+//  PARAM_WORLD_RADIUS
+//  PARAM_ACCEL_BVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
 
 // To enable single material suopport (work around for ATI compiler problems)
 //  PARAM_ENABLE_MAT_MATTE
@@ -52,19 +48,20 @@
 //  PARAM_ENABLE_MAT_ARCHGLASS
 
 // (optional)
-//  PARAM_CAMERA_HAS_DOF
-//  PARAM_CAMERA_LENS_RADIUS
-//  PARAM_CAMERA_FOCAL_DISTANCE
+//  PARAM_DIRECT_LIGHT_SAMPLING
+//  PARAM_DL_LIGHT_COUNT
 
 // (optional)
-//  PARAM_HAVE_INFINITELIGHT
-//  PARAM_IL_GAIN_R
-//  PARAM_IL_GAIN_G
-//  PARAM_IL_GAIN_B
-//  PARAM_IL_SHIFT_U
-//  PARAM_IL_SHIFT_V
-//  PARAM_IL_WIDTH
-//  PARAM_IL_HEIGHT
+//  PARAM_CAMERA_HAS_DOF
+
+// (optional)
+//  PARAM_HAS_INFINITELIGHT
+
+// (optional, requires PARAM_DIRECT_LIGHT_SAMPLING)
+//  PARAM_HAS_SUNLIGHT
+
+// (optional)
+//  PARAM_HAS_SKYLIGHT
 
 // (optional)
 //  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = MitchellSS)
@@ -88,6 +85,7 @@
 //  PARAM_SAMPLER_STRATIFIED_Y_SAMPLES
 
 // TODO: IDX_BSDF_Z used only if needed
+
 // TODO: to fix
 #define PARAM_STARTLINE 0
 
@@ -96,6 +94,10 @@
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#endif
+
+#if defined(PARAM_HAS_SUNLIGHT) & !defined(PARAM_DIRECT_LIGHT_SAMPLING)
+Error: PARAM_HAS_SUNLIGHT requires PARAM_DIRECT_LIGHT_SAMPLING !
 #endif
 
 #ifndef M_PI
@@ -277,6 +279,7 @@ typedef struct {
 	Spectrum throughput;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	float bouncePdf;
 	int specularBounce;
 
 	Ray nextPathRay;
@@ -389,6 +392,8 @@ typedef struct {
 	} param;
 } Material;
 
+//------------------------------------------------------------------------------
+
 typedef struct {
 	Point v0, v1, v2;
 	Vector normal;
@@ -397,6 +402,50 @@ typedef struct {
 } TriangleLight;
 
 typedef struct {
-	unsigned int rgbOffset, alphaOffset;
-	unsigned int width, height;
+	float shiftU, shiftV;
+	Spectrum gain;
+	uint width, height;
+} InfiniteLight;
+
+typedef struct {
+	Vector sundir;
+	Spectrum gain;
+	float turbidity;
+	float relSize;
+	// XY Vectors for cone sampling
+	Vector x, y;
+	float cosThetaMax;
+	Spectrum suncolor;
+} SunLight;
+
+typedef struct {
+	Spectrum gain;
+	float thetaS;
+	float phiS;
+	float zenith_Y, zenith_x, zenith_y;
+	float perez_Y[6], perez_x[6], perez_y[6];
+} SkyLight;
+
+//------------------------------------------------------------------------------
+
+typedef struct {
+	uint rgbOffset, alphaOffset;
+	uint width, height;
 } TexMap;
+
+typedef struct {
+	uint vertsOffset;
+	uint trisOffset;
+
+	float trans[4][4];
+	float invTrans[4][4];
+} Mesh;
+
+typedef struct {
+	float lensRadius;
+	float focalDistance;
+	float yon, hither;
+
+	float rasterToCameraMatrix[4][4];
+	float cameraToWorldMatrix[4][4];
+} Camera;

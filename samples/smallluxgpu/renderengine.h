@@ -36,6 +36,7 @@ public:
 		scene = scn;
 		film = flm;
 		filmMutex = flmMutex;
+		screenRefreshInterval = 100;
 		started = false;
 	};
 	virtual ~RenderEngine() { };
@@ -50,6 +51,9 @@ public:
 		started = false;
 	}
 
+	virtual void SetScreenRefreshInterval(const unsigned int t) {  screenRefreshInterval = t; }
+	unsigned int GetScreenRefreshInterval() const {  return screenRefreshInterval; }
+
 	virtual unsigned int GetPass() const = 0;
 	virtual unsigned int GetThreadCount() const = 0;
 	virtual RenderEngineType GetEngineType() const = 0;
@@ -58,6 +62,8 @@ protected:
 	SLGScene *scene;
 	Film *film;
 	boost::mutex *filmMutex;
+
+	unsigned int screenRefreshInterval; // in ms
 
 	bool started;
 };
