@@ -39,11 +39,12 @@ set(Boost_USE_MULTITHREADED     ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(BOOST_ROOT                  "${BOOST_SEARCH_PATH}")
 #set(Boost_DEBUG                 ON)
+set(Boost_MINIMUM_VERSION       "1.43.0")
 
 set(Boost_ADDITIONAL_VERSIONS "1.46.2" "1.46.1" "1.46" "1.46.0" "1.45" "1.45.0" "1.44" "1.44.0" "1.43" "1.43.0" )
 
 set(LUXRAYS_BOOST_COMPONENTS thread filesystem system)
-find_package(Boost COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
+find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 if (NOT Boost_FOUND)
         # Try again with the other type of libs
         if(Boost_USE_STATIC_LIBS)
@@ -51,7 +52,7 @@ if (NOT Boost_FOUND)
         else()
                 set(Boost_USE_STATIC_LIBS OFF)
         endif()
-        find_package(Boost COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
+        find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
 find_package(Boost)
 
