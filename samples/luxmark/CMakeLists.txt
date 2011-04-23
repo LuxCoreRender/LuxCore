@@ -153,14 +153,14 @@ ENDIF(APPLE)
 
 IF(APPLE)
 	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
-	target_link_libraries(LuxMark LuxRays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
+	target_link_libraries(LuxMark LuxRays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 	ADD_CUSTOM_COMMAND(
 			TARGET LuxMark POST_BUILD
-				COMMAND rm -rf ../../bin/release/LuxMark.app/Contents/Resources
-				COMMAND mkdir ../../bin/release/LuxMark.app/Contents/Resources
-				COMMAND cp ../../../macos/icons/luxrender.icns ../../bin/release/LuxMark.app/Contents/Resources/
-				COMMAND mv ../../bin/release/LuxMark.app/Contents/Resources/luxrender.icns ../../bin/release/LuxMark.app/Contents/Resources/LuxMark.icns
-#				COMMAND macdeployqt ../../bin/release/LuxMark.app ### bundling Qt frameworks ###
+				COMMAND rm -rf ${CMAKE_BINARY_DIR}/Release/LuxMark.app/Contents/Resources
+				COMMAND mkdir ${CMAKE_BINARY_DIR}/Release/LuxMark.app/Contents/Resources
+				COMMAND cp ${CMAKE_BINARY_DIR}/../macos/icons/luxrender.icns ${CMAKE_BINARY_DIR}/Release/LuxMark.app/Contents/Resources/
+				COMMAND mv ${CMAKE_BINARY_DIR}/Release/LuxMark.app/Contents/Resources/luxrender.icns ${CMAKE_BINARY_DIR}/Release/LuxMark.app/Contents/Resources/LuxMark.icns
+#				COMMAND macdeployqt ${CMAKE_BINARY_DIR}/Release/LuxMark.app ### bundling Qt frameworks ###
 				)
 ELSE(APPLE)
 
