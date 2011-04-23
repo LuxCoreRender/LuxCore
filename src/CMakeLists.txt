@@ -290,8 +290,8 @@ ENDIF(GCC)
 IF(APPLE)
 	ADD_CUSTOM_COMMAND(
 	TARGET LuxRays POST_BUILD
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/release/libluxrays.a ../macos/lib/LuxRays
-	COMMAND cp -R ${CMAKE_BINARY_DIR}/include/luxrays ../macos/include/LuxRays
+	COMMAND cp ${CMAKE_BINARY_DIR}/src/release/libluxrays.a ${CMAKE_BINARY_DIR}/../macos/lib/LuxRays
+	COMMAND cp -R ${CMAKE_BINARY_DIR}/include/luxrays ${CMAKE_BINARY_DIR}/../macos/include/LuxRays
 	)
 ENDIF(APPLE)
 
