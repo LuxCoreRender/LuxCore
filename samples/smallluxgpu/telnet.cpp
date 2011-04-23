@@ -28,6 +28,8 @@
 #include "smalllux.h"
 #include "telnet.h"
 #include "renderconfig.h"
+#include "pathgpu/pathgpu.h"
+#include "pathgpu2/pathgpu2.h"
 
 #include "luxrays/utils/properties.h"
 
@@ -449,8 +451,21 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
 					} else if (command == "image.save") {
-						std::string fileName = telnetServer->config->cfg.GetString("image.filename", "image.png");
-						telnetServer->config->film->Save(fileName);
+						RenderingConfig *config = telnetServer->config;
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+						if (config->GetRenderEngine()->GetEngineType() == PATHGPU) {
+							// I need to update the Film
+							PathGPURenderEngine *pre = (PathGPURenderEngine *)config->GetRenderEngine();
+							pre->UpdateFilm();
+						} else if (config->GetRenderEngine()->GetEngineType() == PATHGPU2) {
+							// I need to update the Film
+							PathGPU2RenderEngine *pre = (PathGPU2RenderEngine *)config->GetRenderEngine();
+							pre->UpdateFilm();
+						}
+#endif
+
+						config->SaveFilmImage();
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "render.start") {
 						if (state == STOP) {
