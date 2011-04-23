@@ -156,9 +156,9 @@ class SLGBP:
             SLGBP.image_filename = '{}/{}/{}.{}'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname,scene.slg.imageformat)
 
         # Check/create scene directory to hold scene files
-        print("SLGBP ===> Create scene directory")
         SLGBP.sfullpath = '{}/{}'.format(SLGBP.spath,SLGBP.sname)
         if not os.path.exists(SLGBP.sfullpath):
+            print("SLGBP ===> Create scene directory")
             try:
                 os.mkdir(SLGBP.sfullpath)
             except:
@@ -508,7 +508,7 @@ class SLGBP:
         for obj in scene.objects:
             if not obj.hide_render:
                 if obj.type in rendertypes and inscenelayer(obj) and not (obj.particle_systems and not any(ps for ps in obj.particle_systems if ps.settings.use_render_emitter)):
-                    if scene.slg.forceobjplys:
+                    if scene.slg.forceobjplys and not any(m for m in obj.material_slots if m.material.use_shadeless):
                         # Force export of one PLY file for every object and material slot combination (Treat everything as SLG "Instances")
                         dupliobj(obj, obj)
                     # Mesh instances
@@ -879,6 +879,7 @@ class SLGBP:
             SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(scene.frame_current) + " (ESC to abort)"
             SLGBP.livetrigger(scene, SLGBP.LIVEALL)
             sleep(scene.slg.batchmodetime)
+            SLGBP.telnet.send('render.stop')
             SLGBP.telnet.send('image.save')
             if not SLGBP.live or scene.frame_current+scene.frame_step > scene.frame_end: break
         SLGBP.msg = 'SLG Live! (ESC to exit)'
