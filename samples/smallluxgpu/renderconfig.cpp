@@ -157,7 +157,12 @@ void RenderingConfig::Init() {
 	intersectionAllDevices = ctx->GetIntersectionDevices();
 
 	// Check the kind of render engine to start
+#if defined(LUXRAYS_DISABLE_OPENCL)
 	const int renderEngineType = cfg.GetInt("renderengine.type", 0);
+#else
+	const int renderEngineType = cfg.GetInt("renderengine.type", 4);
+#endif
+
 	// Create and start the render engine
 	switch (renderEngineType) {
 		case 0:
