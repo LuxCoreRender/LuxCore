@@ -153,7 +153,7 @@ ENDIF(APPLE)
 
 IF(APPLE)
 	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
-	target_link_libraries(LuxMark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
+	target_link_libraries(LuxMark LuxRays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
 	ADD_CUSTOM_COMMAND(
 			TARGET LuxMark POST_BUILD
 				COMMAND rm -rf ../../bin/release/LuxMark.app/Contents/Resources

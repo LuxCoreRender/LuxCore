@@ -69,7 +69,9 @@ if (OPENGL_FOUND)
 endif()
 
 set(GLEW_ROOT                  "${GLEW_SEARCH_PATH}")
-find_package(GLEW)
+if(NOT APPLE)
+	find_package(GLEW)
+endif()
 
 # GLEW
 if (GLEW_FOUND)

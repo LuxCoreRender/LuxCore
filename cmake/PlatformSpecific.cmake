@@ -104,8 +104,10 @@ IF(APPLE)
 	endif(CMAKE_VERSION VERSION_LESS 2.8.1)
 	set(CMAKE_CONFIGURATION_TYPES Release)
 	set(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
-	INCLUDE_DIRECTORIES( ../macos/include )
-	set(BUILD_LUXMARK on)
+#	INCLUDE_DIRECTORIES( ../macos/include )
+#	set(BUILD_LUXMARK on)
+	set(LUXRAYS_NO_DEFAULT_CONFIG true)
+	set(LUXRAY_CUSTOM_CONFIG Config_OSX)
 
 	#OSX-flags by jensverwiebe
 	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
