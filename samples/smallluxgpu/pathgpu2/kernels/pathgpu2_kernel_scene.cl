@@ -98,16 +98,114 @@ float TexMap_GetAlpha(__global float *alphas, const uint width, const uint heigh
 	return k0 * c0 + k1 * c1 + k2 * c2 + k3 * c3;
 }
 
-#if defined(PARAM_HAVE_INFINITELIGHT)
-void InfiniteLight_Le(__global Spectrum *infiniteLightMap, Spectrum *le, const Vector *dir) {
-	const float u = 1.f - SphericalPhi(dir) * INV_TWOPI +  PARAM_IL_SHIFT_U;
-	const float v = SphericalTheta(dir) * INV_PI + PARAM_IL_SHIFT_V;
+#if defined(PARAM_HAS_INFINITELIGHT)
+void InfiniteLight_Le(__global InfiniteLight *infiniteLight, __global Spectrum *infiniteLightMap, Spectrum *le, const Vector *dir) {
+	const float u = 1.f - SphericalPhi(dir) * INV_TWOPI +  infiniteLight->shiftU;
+	const float v = SphericalTheta(dir) * INV_PI + infiniteLight->shiftV;
 
-	TexMap_GetColor(infiniteLightMap, PARAM_IL_WIDTH, PARAM_IL_HEIGHT, u, v, le);
+	TexMap_GetColor(infiniteLightMap, infiniteLight->width, infiniteLight->height, u, v, le);
 
-	le->r *= PARAM_IL_GAIN_R;
-	le->g *= PARAM_IL_GAIN_G;
-	le->b *= PARAM_IL_GAIN_B;
+	le->r *= infiniteLight->gain.r;
+	le->g *= infiniteLight->gain.g;
+	le->b *= infiniteLight->gain.b;
+}
+#endif
+
+#if defined(PARAM_HAS_SUNLIGHT)
+void SunLight_Le(__global SunLight *sunLight, Spectrum *le, const Vector *dir) {
+	const float cosThetaMax = sunLight->cosThetaMax;
+	Vector sundir = sunLight->sundir;
+
+	if((cosThetaMax < 1.f) && (Dot(dir, &sundir) > cosThetaMax))
+		*le = sunLight->suncolor;
+	else {
+		le->r = 0.f;
+		le->g = 0.f;
+		le->b = 0.f;
+	}
+}
+
+void SunLight_Sample_L(__global SunLight *sunLight,
+		const Point *hitPoint,
+		float *pdf, Spectrum *f, Ray *shadowRay,
+		const float u0, const float u1) {
+	const float cosThetaMax = sunLight->cosThetaMax;
+	const Vector sundir = sunLight->sundir;
+	const Vector x = sunLight->x;
+	const Vector y = sunLight->y;
+
+	Vector wi;
+	UniformSampleCone(&wi, u0, u1, cosThetaMax, &x, &y, &sundir);
+
+	shadowRay->o = *hitPoint;
+	shadowRay->d = wi;
+	shadowRay->mint = PARAM_RAY_EPSILON;
+	shadowRay->maxt = FLT_MAX;
+
+	*f = sunLight->suncolor;
+
+	*pdf = UniformConePdf(cosThetaMax);
+}
+#endif
+
+#if defined(PARAM_HAS_SKYLIGHT)
+float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
+	const float cospsi = sin(thetav) * sin(theta) * cos(phi - phiv) + cos(thetav) * cos(theta);
+	if (cospsi >= 1.f)
+		return 0.f;
+	if (cospsi <= -1.f)
+		return M_PI;
+	return acos(cospsi);
+}
+
+float SkyLight_PerezBase(__global float *lam, float theta, float gamma) {
+	return (1.f + lam[1] * exp(lam[2] / cos(theta))) *
+		(1.f + lam[3] * exp(lam[4] * gamma)  + lam[5] * cos(gamma) * cos(gamma));
+}
+
+void SkyLight_ChromaticityToSpectrum(const float Y, const float x, const float y, Spectrum *s) {
+	float X, Z;
+
+	if (y != 0.f)
+		X = (x / y) * Y;
+	else
+		X = 0.f;
+
+	if (y != 0.f && Y != 0.f)
+		Z = (1.f - x - y) / y * Y;
+	else
+		Z = 0.f;
+
+	// Assuming sRGB (D65 illuminant)
+	s->r =  3.2410f * X - 1.5374f * Y - 0.4986f * Z;
+	s->g = -0.9692f * X + 1.8760f * Y + 0.0416f * Z;
+	s->b =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
+}
+
+void SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
+		const float theta, const float phi, Spectrum *spect) {
+	// add bottom half of hemisphere with horizon colour
+	const float theta_fin = min(theta, (M_PI * 0.5f) - 0.001f);
+	const float gamma = RiAngleBetween(theta, phi, skyLight->thetaS, skyLight->phiS);
+
+	// Compute xyY values
+	const float x = skyLight->zenith_x * SkyLight_PerezBase(skyLight->perez_x, theta_fin, gamma);
+	const float y = skyLight->zenith_y * SkyLight_PerezBase(skyLight->perez_y, theta_fin, gamma);
+	const float Y = skyLight->zenith_Y * SkyLight_PerezBase(skyLight->perez_Y, theta_fin, gamma);
+
+	SkyLight_ChromaticityToSpectrum(Y, x, y, spect);
+}
+
+void SkyLight_Le(__global SkyLight *skyLight, Spectrum *f, const Vector *dir) {
+	const float theta = SphericalTheta(dir);
+	const float phi = SphericalPhi(dir);
+
+	Spectrum s;
+	SkyLight_GetSkySpectralRadiance(skyLight, theta, phi, &s);
+
+	f->r = skyLight->gain.r * s.r;
+	f->g = skyLight->gain.g * s.g;
+	f->b = skyLight->gain.b * s.b;
 }
 #endif
 
@@ -142,6 +240,39 @@ void Mesh_InterpolateUV(__global UV *uvs, __global Triangle *triangles,
 	uv->v = b0 * uvs[tri->v0].v + b1 * uvs[tri->v1].v + b2 * uvs[tri->v2].v;
 }
 
+float Mesh_Area(__global Point *verts, __global Triangle *triangles,
+		const uint triIndex) {
+	__global Triangle *tri = &triangles[triIndex];
+
+	const __global Point *pp0 = &verts[tri->v0];
+	const __global Point *pp1 = &verts[tri->v1];
+	const __global Point *pp2 = &verts[tri->v2];
+
+	const float4 p0 = (float4)(pp0->x, pp0->y, pp0->z, 0.f);
+	const float4 p1 = (float4)(pp1->x, pp1->y, pp1->z, 0.f);
+	const float4 p2 = (float4)(pp2->x, pp2->y, pp2->z, 0.f);
+
+	return 0.5f * length(cross(p1 - p0, p2 - p0));
+}
+
+float InstanceMesh_Area(__global float m[4][4], __global Point *verts,
+		__global Triangle *triangles, const uint triIndex) {
+	__global Triangle *tri = &triangles[triIndex];
+
+	Point pp0 = verts[tri->v0];
+	TransformPoint(m, &pp0);
+	Point pp1 = verts[tri->v1];
+	TransformPoint(m, &pp1);
+	Point pp2 = verts[tri->v2];
+	TransformPoint(m, &pp2);
+
+	const float4 p0 = (float4)(pp0.x, pp0.y, pp0.z, 0.f);
+	const float4 p1 = (float4)(pp1.x, pp1.y, pp1.z, 0.f);
+	const float4 p2 = (float4)(pp2.x, pp2.y, pp2.z, 0.f);
+
+	return 0.5f * length(cross(p1 - p0, p2 - p0));
+}
+
 //------------------------------------------------------------------------------
 // Materials
 //------------------------------------------------------------------------------
@@ -150,7 +281,7 @@ void Matte_Sample_f(__global MatteParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
 		) {
 	Vector dir;
@@ -164,16 +295,13 @@ void Matte_Sample_f(__global MatteParam *mat, const Vector *wo, Vector *wi,
 	wi->y = v1.y * dir.x + v2.y * dir.y + shadeN->y * dir.z;
 	wi->z = v1.z * dir.x + v2.z * dir.y + shadeN->z * dir.z;
 
-	const float dp = Dot(shadeN, wi);
 	// Using 0.0001 instead of 0.0 to cut down fireflies
-	if (dp <= 0.0001f)
+	if (dir.z <= 0.0001f)
 		*pdf = 0.f;
 	else {
-		*pdf /=  dp;
-
-		f->r = mat->r * INV_PI;
-		f->g = mat->g * INV_PI;
-		f->b = mat->b * INV_PI;
+		f->r = mat->r;
+		f->g = mat->g;
+		f->b = mat->b;
 	}
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
@@ -184,7 +312,7 @@ void Matte_Sample_f(__global MatteParam *mat, const Vector *wo, Vector *wi,
 void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
 		) {
     const float k = 2.f * Dot(shadeN, wo);
@@ -207,7 +335,7 @@ void Glass_Sample_f(__global GlassParam *mat,
     const Vector *wo, Vector *wi, float *pdf, Spectrum *f, const Vector *N, const Vector *shadeN,
     const float u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
         ) {
     Vector reflDir;
@@ -284,9 +412,9 @@ void Glass_Sample_f(__global GlassParam *mat,
             *wi = reflDir;
             *pdf = P / Re;
 
-            f->r = mat->refl_r;
-            f->g = mat->refl_g;
-            f->b = mat->refl_b;
+            f->r = mat->refl_r / (*pdf);
+            f->g = mat->refl_g / (*pdf);
+            f->b = mat->refl_b / (*pdf);
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = mat->reflectionSpecularBounce;
 #endif
@@ -294,9 +422,9 @@ void Glass_Sample_f(__global GlassParam *mat,
             *wi = transDir;
             *pdf = (1.f - P) / Tr;
 
-            f->r = mat->refrct_r;
-            f->g = mat->refrct_g;
-            f->b = mat->refrct_b;
+            f->r = mat->refrct_r / (*pdf);
+            f->g = mat->refrct_g / (*pdf);
+            f->b = mat->refrct_b / (*pdf);
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = mat->transmitionSpecularBounce;
 #endif
@@ -308,27 +436,34 @@ void MatteMirror_Sample_f(__global MatteMirrorParam *mat, const Vector *wo, Vect
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1, const float u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
 		) {
     const float totFilter = mat->totFilter;
     const float comp = u2 * totFilter;
 
+	float mpdf;
     if (comp > mat->matteFilter) {
         Mirror_Sample_f(&mat->mirror, wo, wi, pdf, f, shadeN
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             , specularBounce
 #endif
             );
-        *pdf *= mat->mirrorPdf;
+		mpdf = mat->mirrorPdf;
     } else {
         Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             , specularBounce
 #endif
             );
-        *pdf *= mat->mattePdf;
+		mpdf = mat->mattePdf;
     }
+
+	*pdf *= mpdf;
+
+	f->r /= mpdf;
+	f->g /= mpdf;
+	f->b /= mpdf;
 }
 
 void GlossyReflection(const Vector *wo, Vector *wi, const float exponent,
@@ -369,7 +504,7 @@ void Metal_Sample_f(__global MetalParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
 		) {
         GlossyReflection(wo, wi, mat->exponent, shadeN, u0, u1);
@@ -392,34 +527,41 @@ void MatteMetal_Sample_f(__global MatteMetalParam *mat, const Vector *wo, Vector
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1, const float u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
 		) {
-        const float totFilter = mat->totFilter;
-        const float comp = u2 * totFilter;
+	const float totFilter = mat->totFilter;
+	const float comp = u2 * totFilter;
 
-		if (comp > mat->matteFilter) {
-            Metal_Sample_f(&mat->metal, wo, wi, pdf, f, shadeN, u0, u1
+	float mpdf;
+	if (comp > mat->matteFilter) {
+		Metal_Sample_f(&mat->metal, wo, wi, pdf, f, shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-                , specularBounce
+			, specularBounce
 #endif
-                );
-			*pdf *= mat->metalPdf;
-		} else {
-            Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
+			);
+		mpdf = mat->metalPdf;
+	} else {
+		Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-                , specularBounce
+			, specularBounce
 #endif
-                );
-			*pdf *= mat->mattePdf;
-		}
+			);
+		mpdf = mat->mattePdf;
+	}
+
+	*pdf *= mpdf;
+
+	f->r /= mpdf;
+	f->g /= mpdf;
+	f->b /= mpdf;
 }
 
 void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1, const float u2
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
 		) {
     // Schilick's approximation
@@ -429,13 +571,13 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
 
     const float P = .25f + .5f * Re;
 
-    if (u2 < P) {
+    if (u2 <= P) {
         GlossyReflection(wo, wi, mat->exponent, shadeN, u0, u1);
         *pdf = P / Re;
 
-        f->r = Re * mat->refl_r;
-        f->g = Re * mat->refl_g;
-        f->b = Re * mat->refl_b;
+        f->r = mat->refl_r / (*pdf);
+        f->g = mat->refl_g / (*pdf);
+        f->b = mat->refl_b / (*pdf);
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
         *specularBounce = mat->specularBounce;
@@ -452,19 +594,17 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
         wi->y = v1.y * dir.x + v2.y * dir.y + shadeN->y * dir.z;
         wi->z = v1.z * dir.x + v2.z * dir.y + shadeN->z * dir.z;
 
-        const float dp = Dot(shadeN, wi);
         // Using 0.0001 instead of 0.0 to cut down fireflies
-        if (dp <= 0.0001f)
+        if (dir.z <= 0.0001f)
             *pdf = 0.f;
         else {
-            *pdf /=  dp;
+			const float iRe = 1.f - Re;
+			const float k = (1.f - P) / iRe;
+            *pdf *= k;
 
-            const float iRe = 1.f - Re;
-            *pdf *= (1.f - P) / iRe;
-
-            f->r = iRe * mat->diff_r;
-            f->g = iRe * mat->diff_g;
-            f->b = iRe * mat->diff_b;
+            f->r = mat->diff_r / k;
+            f->g = mat->diff_g / k;
+            f->b = mat->diff_b / k;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = FALSE;
@@ -477,7 +617,7 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
     const Vector *wo, Vector *wi, float *pdf, Spectrum *f, const Vector *N, const Vector *shadeN,
     const float u0
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-		, __global int *specularBounce
+		, int *specularBounce
 #endif
         ) {
     // Ray from outside going in ?
@@ -506,11 +646,11 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
             wi->x = k * N->x - wo->x;
             wi->y = k * N->y - wo->y;
             wi->z = k * N->z - wo->z;
-            *pdf =  mat->reflPdf;
+            *pdf = mat->reflPdf;
 
-            f->r = mat->refl_r;
-            f->g = mat->refl_g;
-            f->b = mat->refl_b;
+            f->r = mat->refl_r / mat->reflPdf;
+            f->g = mat->refl_g / mat->reflPdf;
+            f->b = mat->refl_b / mat->reflPdf;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = mat->reflectionSpecularBounce;
@@ -519,11 +659,11 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
             wi->x = -wo->x;
             wi->y = -wo->y;
             wi->z = -wo->z;
-            *pdf =  mat->transPdf;
+            *pdf = mat->transPdf;
 
-            f->r = mat->refrct_r;
-            f->g = mat->refrct_g;
-            f->b = mat->refrct_b;
+            f->r = mat->refrct_r / mat->transPdf;
+            f->g = mat->refrct_g / mat->transPdf;
+            f->b = mat->refrct_b / mat->transPdf;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
             *specularBounce = mat->transmitionSpecularBounce;
@@ -535,6 +675,8 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
 //------------------------------------------------------------------------------
 // Lights
 //------------------------------------------------------------------------------
+
+#if (PARAM_DL_LIGHT_COUNT > 0)
 
 void AreaLight_Le(__global AreaLightParam *mat, const Vector *wo, const Vector *lightN, Spectrum *Le) {
 	const bool brightSide = (Dot(lightN, wo) > 0.f);
@@ -589,16 +731,18 @@ void TriangleLight_Sample_L(__global TriangleLight *l,
 		if (*pdf <= 0.1f)
 			*pdf = 0.f;
 		else {
-            shadowRay->o = *hitPoint;
-            shadowRay->mint = PARAM_RAY_EPSILON;
-            shadowRay->maxt = distance - PARAM_RAY_EPSILON;
+			shadowRay->o = *hitPoint;
+			shadowRay->mint = PARAM_RAY_EPSILON;
+			shadowRay->maxt = distance - PARAM_RAY_EPSILON;
 
-            f->r = l->gain_r;
-            f->g = l->gain_g;
-            f->b = l->gain_b;
-        }
+			f->r = l->gain_r;
+			f->g = l->gain_g;
+			f->b = l->gain_b;
+		}
 	}
 }
+
+#endif
 
 //------------------------------------------------------------------------------
 // GenerateCameraRay
@@ -610,10 +754,7 @@ void GenerateCameraRay(
 #if (PARAM_SAMPLER_TYPE == 0)
 		, Seed *seed
 #endif
-#if defined(PARAM_CAMERA_DYNAMIC)
-		, __global float *cameraData
-#endif
-		) {
+		, __global Camera *camera) {
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 	__global float *sampleData = &sample->u[IDX_SCREEN_X];
 	const uint pixelIndex = sample->pixelIndex;
@@ -636,22 +777,18 @@ void GenerateCameraRay(
 
 	Point orig;
 	// RasterToCamera(Pras, &orig);
-#if defined(PARAM_CAMERA_DYNAMIC)
-	const float iw = 1.f / (cameraData[12] * Pras.x + cameraData[13] * Pras.y + cameraData[14] * Pras.z + cameraData[15]);
-	orig.x = (cameraData[0] * Pras.x + cameraData[1] * Pras.y + cameraData[2] * Pras.z + cameraData[3]) * iw;
-	orig.y = (cameraData[4] * Pras.x + cameraData[5] * Pras.y + cameraData[6] * Pras.z + cameraData[7]) * iw;
-	orig.z = (cameraData[8] * Pras.x + cameraData[9] * Pras.y + cameraData[10] * Pras.z + cameraData[11]) * iw;
-#else
-	const float iw = 1.f / (PARAM_RASTER2CAMERA_30 * Pras.x + PARAM_RASTER2CAMERA_31 * Pras.y + PARAM_RASTER2CAMERA_32 * Pras.z + PARAM_RASTER2CAMERA_33);
-	orig.x = (PARAM_RASTER2CAMERA_00 * Pras.x + PARAM_RASTER2CAMERA_01 * Pras.y + PARAM_RASTER2CAMERA_02 * Pras.z + PARAM_RASTER2CAMERA_03) * iw;
-	orig.y = (PARAM_RASTER2CAMERA_10 * Pras.x + PARAM_RASTER2CAMERA_11 * Pras.y + PARAM_RASTER2CAMERA_12 * Pras.z + PARAM_RASTER2CAMERA_13) * iw;
-	orig.z = (PARAM_RASTER2CAMERA_20 * Pras.x + PARAM_RASTER2CAMERA_21 * Pras.y + PARAM_RASTER2CAMERA_22 * Pras.z + PARAM_RASTER2CAMERA_23) * iw;
-#endif
+
+	const float iw = 1.f / (camera->rasterToCameraMatrix[3][0] * Pras.x + camera->rasterToCameraMatrix[3][1] * Pras.y + camera->rasterToCameraMatrix[3][2] * Pras.z + camera->rasterToCameraMatrix[3][3]);
+	orig.x = (camera->rasterToCameraMatrix[0][0] * Pras.x + camera->rasterToCameraMatrix[0][1] * Pras.y + camera->rasterToCameraMatrix[0][2] * Pras.z + camera->rasterToCameraMatrix[0][3]) * iw;
+	orig.y = (camera->rasterToCameraMatrix[1][0] * Pras.x + camera->rasterToCameraMatrix[1][1] * Pras.y + camera->rasterToCameraMatrix[1][2] * Pras.z + camera->rasterToCameraMatrix[1][3]) * iw;
+	orig.z = (camera->rasterToCameraMatrix[2][0] * Pras.x + camera->rasterToCameraMatrix[2][1] * Pras.y + camera->rasterToCameraMatrix[2][2] * Pras.z + camera->rasterToCameraMatrix[2][3]) * iw;
 
 	Vector dir;
 	dir.x = orig.x;
 	dir.y = orig.y;
 	dir.z = orig.z;
+
+	const float hither = camera->hither;
 
 #if defined(PARAM_CAMERA_HAS_DOF)
 
@@ -666,19 +803,23 @@ void GenerateCameraRay(
 	// Sample point on lens
 	float lensU, lensV;
 	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	lensU *= PARAM_CAMERA_LENS_RADIUS;
-	lensV *= PARAM_CAMERA_LENS_RADIUS;
+	const float lensRadius = camera->lensRadius;
+	lensU *= lensRadius;
+	lensV *= lensRadius;
 
 	// Compute point on plane of focus
-	const float ft = (PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / dir.z;
+	const float focalDistance = camera->focalDistance;
+	const float dist = focalDistance - hither;
+	const float ft = dist / dir.z;
 	Point Pfocus;
 	Pfocus.x = orig.x + dir.x * ft;
 	Pfocus.y = orig.y + dir.y * ft;
 	Pfocus.z = orig.z + dir.z * ft;
 
 	// Update ray for effect of lens
-	orig.x += lensU * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
-	orig.y += lensV * ((PARAM_CAMERA_FOCAL_DISTANCE - PARAM_CLIP_HITHER) / PARAM_CAMERA_FOCAL_DISTANCE);
+	const float k = dist / focalDistance;
+	orig.x += lensU * k;
+	orig.y += lensV * k;
 
 	dir.x = Pfocus.x - orig.x;
 	dir.y = Pfocus.y - orig.y;
@@ -689,33 +830,20 @@ void GenerateCameraRay(
 
 	// CameraToWorld(*ray, ray);
 	Point torig;
-#if defined(PARAM_CAMERA_DYNAMIC)
-	const float iw2 = 1.f / (cameraData[16 + 12] * orig.x + cameraData[16 + 13] * orig.y + cameraData[16 + 14] * orig.z + cameraData[16 + 15]);
-	torig.x = (cameraData[16 + 0] * orig.x + cameraData[16 + 1] * orig.y + cameraData[16 + 2] * orig.z + cameraData[16 + 3]) * iw2;
-	torig.y = (cameraData[16 + 4] * orig.x + cameraData[16 + 5] * orig.y + cameraData[16 + 6] * orig.z + cameraData[16 + 7]) * iw2;
-	torig.z = (cameraData[16 + 8] * orig.x + cameraData[16 + 9] * orig.y + cameraData[16 + 12] * orig.z + cameraData[16 + 11]) * iw2;
-#else
-	const float iw2 = 1.f / (PARAM_CAMERA2WORLD_30 * orig.x + PARAM_CAMERA2WORLD_31 * orig.y + PARAM_CAMERA2WORLD_32 * orig.z + PARAM_CAMERA2WORLD_33);
-	torig.x = (PARAM_CAMERA2WORLD_00 * orig.x + PARAM_CAMERA2WORLD_01 * orig.y + PARAM_CAMERA2WORLD_02 * orig.z + PARAM_CAMERA2WORLD_03) * iw2;
-	torig.y = (PARAM_CAMERA2WORLD_10 * orig.x + PARAM_CAMERA2WORLD_11 * orig.y + PARAM_CAMERA2WORLD_12 * orig.z + PARAM_CAMERA2WORLD_13) * iw2;
-	torig.z = (PARAM_CAMERA2WORLD_20 * orig.x + PARAM_CAMERA2WORLD_21 * orig.y + PARAM_CAMERA2WORLD_22 * orig.z + PARAM_CAMERA2WORLD_23) * iw2;
-#endif
+	const float iw2 = 1.f / (camera->cameraToWorldMatrix[3][0] * orig.x + camera->cameraToWorldMatrix[3][1] * orig.y + camera->cameraToWorldMatrix[3][2] * orig.z + camera->cameraToWorldMatrix[3][3]);
+	torig.x = (camera->cameraToWorldMatrix[0][0] * orig.x + camera->cameraToWorldMatrix[0][1] * orig.y + camera->cameraToWorldMatrix[0][2] * orig.z + camera->cameraToWorldMatrix[0][3]) * iw2;
+	torig.y = (camera->cameraToWorldMatrix[1][0] * orig.x + camera->cameraToWorldMatrix[1][1] * orig.y + camera->cameraToWorldMatrix[1][2] * orig.z + camera->cameraToWorldMatrix[1][3]) * iw2;
+	torig.z = (camera->cameraToWorldMatrix[2][0] * orig.x + camera->cameraToWorldMatrix[2][1] * orig.y + camera->cameraToWorldMatrix[2][2] * orig.z + camera->cameraToWorldMatrix[2][3]) * iw2;
 
 	Vector tdir;
-#if defined(PARAM_CAMERA_DYNAMIC)
-	tdir.x = cameraData[16 + 0] * dir.x + cameraData[16 + 1] * dir.y + cameraData[16 + 2] * dir.z;
-	tdir.y = cameraData[16 + 4] * dir.x + cameraData[16 + 5] * dir.y + cameraData[16 + 6] * dir.z;
-	tdir.z = cameraData[16 + 8] * dir.x + cameraData[16 + 9] * dir.y + cameraData[16 + 10] * dir.z;
-#else
-	tdir.x = PARAM_CAMERA2WORLD_00 * dir.x + PARAM_CAMERA2WORLD_01 * dir.y + PARAM_CAMERA2WORLD_02 * dir.z;
-	tdir.y = PARAM_CAMERA2WORLD_10 * dir.x + PARAM_CAMERA2WORLD_11 * dir.y + PARAM_CAMERA2WORLD_12 * dir.z;
-	tdir.z = PARAM_CAMERA2WORLD_20 * dir.x + PARAM_CAMERA2WORLD_21 * dir.y + PARAM_CAMERA2WORLD_22 * dir.z;
-#endif
+	tdir.x = camera->cameraToWorldMatrix[0][0] * dir.x + camera->cameraToWorldMatrix[0][1] * dir.y + camera->cameraToWorldMatrix[0][2] * dir.z;
+	tdir.y = camera->cameraToWorldMatrix[1][0] * dir.x + camera->cameraToWorldMatrix[1][1] * dir.y + camera->cameraToWorldMatrix[1][2] * dir.z;
+	tdir.z = camera->cameraToWorldMatrix[2][0] * dir.x + camera->cameraToWorldMatrix[2][1] * dir.y + camera->cameraToWorldMatrix[2][2] * dir.z;
 
 	ray->o = torig;
 	ray->d = tdir;
 	ray->mint = PARAM_RAY_EPSILON;
-	ray->maxt = (PARAM_CLIP_YON - PARAM_CLIP_HITHER) / dir.z;
+	ray->maxt = (camera->yon - hither) / dir.z;
 
 	/*printf(\"(%f, %f, %f) (%f, %f, %f) [%f, %f]\\n\",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,

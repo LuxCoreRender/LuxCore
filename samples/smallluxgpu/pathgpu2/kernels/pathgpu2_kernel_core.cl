@@ -61,6 +61,13 @@ float RndFloatValue(Seed *s) {
 
 //------------------------------------------------------------------------------
 
+float PowerHeuristic(const uint nf, const float fPdf, const uint ng, const float gPdf) {
+	const float f = nf * fPdf;
+	const float g = ng * gPdf;
+
+	return (f * f) / (f * f + g * g);
+}
+
 float VanDerCorput(uint n, uint scramble) {
 	// Reverse bits of n
 	n = (n << 16) | (n >> 16);
@@ -107,6 +114,30 @@ void Normalize(Vector *v) {
 	v->y *= il;
 	v->z *= il;
 }
+void TransformPoint(__global float m[4][4], Point *v) {
+	const float x = v->x;
+	const float y = v->y;
+	const float z = v->z;
+
+	v->x = m[0][0] * x + m[0][1] * y + m[0][2] * z;
+	v->y = m[1][0] * x + m[1][1] * y + m[1][2] * z;
+	v->z = m[2][0] * x + m[2][1] * y + m[2][2] * z;
+}
+
+void TransformVector(__global float m[4][4], Vector *v) {
+	const float x = v->x;
+	const float y = v->y;
+	const float z = v->z;
+
+	v->x = m[0][0] * x + m[0][1] * y + m[0][2] * z;
+	v->y = m[1][0] * x + m[1][1] * y + m[1][2] * z;
+	v->z = m[2][0] * x + m[2][1] * y + m[2][2] * z;
+}
+
+void TransformNormal(__global float m[4][4], Vector *v) {
+	TransformVector(m, v);
+	Normalize(v);
+}
 
 void Cross(Vector *v3, const Vector *v1, const Vector *v2) {
 	v3->x = (v1->y * v2->z) - (v1->z * v2->y);
@@ -123,6 +154,10 @@ int Mod(int a, int b) {
 		a += b;
 
 	return a;
+}
+
+float Lerp(float t, float v1, float v2) {
+	return (1.f - t) * v1 + t * v2;
 }
 
 void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
@@ -169,6 +204,25 @@ void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) 
 void CosineSampleHemisphere(Vector *ret, const float u1, const float u2) {
 	ConcentricSampleDisk(u1, u2, &ret->x, &ret->y);
 	ret->z = sqrt(max(0.f, 1.f - ret->x * ret->x - ret->y * ret->y));
+}
+
+void UniformSampleCone(Vector *ret, const float u1, const float u2, const float costhetamax,
+	const Vector *x, const Vector *y, const Vector *z) {
+	const float costheta = Lerp(u1, costhetamax, 1.f);
+	const float sintheta = sqrt(1.f - costheta * costheta);
+	const float phi = u2 * 2.f * M_PI;
+
+	const float kx = cos(phi) * sintheta;
+	const float ky = sin(phi) * sintheta;
+	const float kz = costheta;
+
+	ret->x = kx * x->x + ky * y->x + kz * z->x;
+	ret->y = kx * x->y + ky * y->y + kz * z->y;
+	ret->z = kx * x->z + ky * y->z + kz * z->z;
+}
+
+float UniformConePdf(float costhetamax) {
+	return 1.f / (2.f * M_PI * (1.f - costhetamax));
 }
 
 void CoordinateSystem(const Vector *v1, Vector *v2, Vector *v3) {

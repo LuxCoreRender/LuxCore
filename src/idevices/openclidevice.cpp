@@ -313,7 +313,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
 					buildDevice.push_back(oclDevice);
-					program.build(buildDevice, "-I.");
+					program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -fno-alias" : "-I.");
 				} catch (cl::Error err) {
 					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
@@ -377,7 +377,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
 						buildDevice.push_back(oclDevice);
-						program.build(buildDevice, "-I.");
+						program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -fno-alias" : "-I.");
 					} catch (cl::Error err) {
 						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compilation error:\n" << strError.c_str());
@@ -403,13 +403,13 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				}
 
 				// Compile QBVH+image storage kernel only if image support is available
-				if (deviceDesc->HasImageSupport()) {
+				if (deviceDesc->HasImageSupport() && (deviceDesc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
 					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
 					cl::Program program = cl::Program(oclContext, source);
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
 						buildDevice.push_back(oclDevice);
-						program.build(buildDevice, "-I. -DUSE_IMAGE_STORAGE");
+						program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -DUSE_IMAGE_STORAGE -fno-alias" : "-I. -DUSE_IMAGE_STORAGE");
 					} catch (cl::Error err) {
 						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage compilation error:\n" << strError.c_str());
@@ -454,7 +454,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Disable forced for QBVH scene storage inside image");
 				qbvhUseImage = false;
 			} else {
-				if (deviceDesc->HasImageSupport()) {
+				if (deviceDesc->HasImageSupport() && (deviceDesc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] OpenCL image support is available");
 
 					// Check if the scene is small enough to be stored inside an image
@@ -579,7 +579,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
 					buildDevice.push_back(oclDevice);
-					program.build(buildDevice, "-I.");
+					program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -fno-alias" : "-I.");
 				} catch (cl::Error err) {
 					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH compilation error:\n" << strError.c_str());

@@ -37,6 +37,11 @@ BBox TriangleMesh::GetBBox() const {
 	return bbox;
 }
 
+void TriangleMesh::ApplayTransform(const Transform &trans) {
+	for (unsigned int i = 0; i < vertCount; ++i)
+		vertices[i] = trans(vertices[i]);
+}
+
 TriangleMesh *TriangleMesh::Merge(
 	const std::deque<Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,

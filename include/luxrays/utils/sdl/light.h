@@ -163,6 +163,21 @@ public:
 	virtual Spectrum Le(const Vector &dir) const;
 	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
 
+	void GetInitData(float *thetaSData, float *phiSData,
+		float *zenith_YData, float *zenith_xData, float *zenith_yData,
+		float *perez_YData, float *perez_xData, float *perez_yData) {
+		*thetaSData = thetaS;
+		*phiSData = phiS;
+		*zenith_YData = zenith_Y;
+		*zenith_xData = zenith_x;
+		*zenith_yData = zenith_y;
+		for (size_t i = 0; i < 6; ++i) {
+			perez_YData[i] = perez_Y[i];
+			perez_xData[i] = perez_x[i];
+			perez_yData[i] = perez_y[i];
+		}
+	}
+
 protected:
 	Vector sundir;
 	float turbidity;
@@ -199,6 +214,20 @@ public:
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
 		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
+
+	void GetInitData(Vector *xData, Vector *yData,
+		float *thetaSData, float *phiSData, float *VData,
+		float *cosThetaMaxData, float *sin2ThetaMaxData,
+		Spectrum *suncolorData) const {
+		*xData = x;
+		*yData = y;
+		*thetaSData = thetaS;
+		*phiSData = phiS;
+		*VData = V;
+		*cosThetaMaxData = cosThetaMax;
+		*sin2ThetaMaxData = sin2ThetaMax;
+		*suncolorData = suncolor;
+	}
 
 protected:
 	Vector sundir;

@@ -141,6 +141,8 @@ public:
 	Point *GetVertices() const { return vertices; }
 	Triangle *GetTriangles() const { return tris; }
 
+	virtual void ApplayTransform(const Transform &trans);
+
 	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName, const bool usePlyNormals = false);
 
 private:
@@ -209,6 +211,8 @@ public:
 		mesh->Sample(index, u0, u1, p , b0, b1, b2);
 		*p = trans(*p);
 	}
+
+	virtual void ApplayTransform(const Transform &t) { trans = trans * t; }
 
 	const Transform &GetTransformation() const { return trans; }
 	const Transform &GetInvTransformation() const { return invTrans; }

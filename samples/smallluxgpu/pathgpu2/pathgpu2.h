@@ -50,6 +50,7 @@ typedef struct {
 	unsigned int depth;
 	Spectrum throughput;
 
+	float bouncePdf;
 	int specularBounce;
 
 	Ray nextPathRay;
@@ -244,6 +245,8 @@ typedef struct {
 	} param;
 } Material;
 
+//------------------------------------------------------------------------------
+
 typedef struct {
 	Point v0, v1, v2;
 	Normal normal;
@@ -252,9 +255,53 @@ typedef struct {
 } TriangleLight;
 
 typedef struct {
+	float shiftU, shiftV;
+	Spectrum gain;
+	unsigned int width, height;
+} InfiniteLight;
+
+typedef struct {
+	Vector sundir;
+	Spectrum gain;
+	float turbidity;
+	float relSize;
+	// XY Vectors for cone sampling
+	Vector x, y;
+	float cosThetaMax;
+	Spectrum suncolor;
+} SunLight;
+
+typedef struct {
+	Spectrum gain;
+	float thetaS;
+	float phiS;
+	float zenith_Y, zenith_x, zenith_y;
+	float perez_Y[6], perez_x[6], perez_y[6];
+} SkyLight;
+
+//------------------------------------------------------------------------------
+
+typedef struct {
 	unsigned int rgbOffset, alphaOffset;
 	unsigned int width, height;
 } TexMap;
+
+typedef struct {
+	unsigned int vertsOffset;
+	unsigned int trisOffset;
+
+	float trans[4][4];
+	float invTrans[4][4];
+} Mesh;
+
+typedef struct {
+	float lensRadius;
+	float focalDistance;
+	float yon, hither;
+
+	float rasterToCameraMatrix[4][4];
+	float cameraToWorldMatrix[4][4];
+} Camera;
 
 }
 
@@ -280,6 +327,7 @@ private:
 
 	void InitPixelBuffer();
 	void InitRender();
+	void InitRenderGeometry();
 
 	OpenCLIntersectionDevice *intersectionDevice;
 
@@ -301,8 +349,14 @@ private:
 	cl::Buffer *frameBufferBuff;
 	cl::Buffer *materialsBuff;
 	cl::Buffer *meshIDBuff;
+	cl::Buffer *triangleIDBuff;
+	cl::Buffer *meshDescsBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
+	cl::Buffer *infiniteLightMapBuff;
+	cl::Buffer *sunLightBuff;
+	cl::Buffer *skyLightBuff;
+	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *colorsBuff;
@@ -312,6 +366,8 @@ private:
 	cl::Buffer *texMapAlphaBuff;
 	cl::Buffer *texMapDescBuff;
 	cl::Buffer *meshTexsBuff;
+	cl::Buffer *meshBumpsBuff;
+	cl::Buffer *meshBumpsScaleBuff;
 	cl::Buffer *uvsBuff;
 
 	float samplingStart;
@@ -362,11 +418,13 @@ public:
 	float rrImportanceCap;
 
 private:
+	void UpdateFilmLockLess();
+
+	mutable boost::mutex engineMutex;
+
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	vector<PathGPU2RenderThread *> renderThreads;
 	SampleBuffer *sampleBuffer;
-
-	double screenRefreshInterval; // in seconds
 
 	double startTime;
 	double elapsedTime;
@@ -377,7 +435,7 @@ private:
 
 	unsigned int taskCount;
 
-	bool dynamicCamera, usePixelAtomics;
+	bool usePixelAtomics;
 };
 
 #endif

@@ -56,6 +56,8 @@ public:
 	unsigned int GetTotalVertexCount() const { return totalVertexCount; }
 	unsigned int GetTotalTriangleCount() const { return totalTriangleCount; }
 
+	bool IsEqual(const DataSet *dataSet) const;
+
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
 
@@ -63,6 +65,8 @@ protected:
 	void UpdateMeshes();
 
 private:
+	unsigned int dataSetID;
+
 	const Context *context;
 
 	unsigned int totalVertexCount;

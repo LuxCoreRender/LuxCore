@@ -34,7 +34,14 @@
 
 using namespace luxrays;
 
+static unsigned int DataSetID = 0;
+static boost::mutex DataSetIDMutex;
+
 DataSet::DataSet(const Context *luxRaysContext) {
+	{
+		boost::unique_lock<boost::mutex> lock(DataSetIDMutex);
+		dataSetID = DataSetID++;
+	}
 	context = luxRaysContext;
 
 	totalVertexCount = 0;
@@ -124,4 +131,8 @@ void DataSet::UpdateMeshes() {
 
 bool DataSet::Intersect(const Ray *ray, RayHit *hit) const {
 	return accel->Intersect(ray, hit);
+}
+
+bool DataSet::IsEqual(const DataSet *dataSet) const {
+	return (dataSet != NULL) && (dataSetID == dataSet->dataSetID);
 }

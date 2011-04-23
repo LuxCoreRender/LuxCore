@@ -123,7 +123,8 @@ void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::SetDataSet(co
 	IntersectionDevice::SetDataSet(newDataSet);
 
 	// Set the real device data set if it is a new one
-	if (virtualDevice->realDevice->GetDataSet() != newDataSet)
+	const DataSet *oldDataSet = virtualDevice->realDevice->GetDataSet();
+	if ((oldDataSet == NULL) || !oldDataSet->IsEqual(newDataSet))
 		virtualDevice->realDevice->SetDataSet(newDataSet);
 }
 
@@ -247,7 +248,9 @@ void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::SetDataSet(co
 
 	// Set the real devices data set if it is a new one
 	for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
-		if (virtualDevice->realDevices[i]->GetDataSet() != newDataSet)
+		const DataSet *oldDataSet = virtualDevice->realDevices[i]->GetDataSet();
+
+		if ((oldDataSet == NULL) || !oldDataSet->IsEqual(newDataSet))
 			virtualDevice->realDevices[i]->SetDataSet(newDataSet);
 	}
 }
