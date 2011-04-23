@@ -7,7 +7,7 @@
 
 MESSAGE(STATUS "Using OSX Configuration settings")
 
-set(BUILD_LUXMARK FALSE) # This will require QT
+set(BUILD_LUXMARK TRUE) # This will require QT
 
 
 set(OSX_SEARCH_PATH     "../macos")

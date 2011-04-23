@@ -276,12 +276,12 @@ add_library(LuxRays STATIC ${LuxRays_SRCS} ${LuxRays_HEADERS})
 #
 ###########################################################################
 
-IF(GCC)
+IF(GCC AND NOT APPLE)
 	# These accelerators needs to be compiled with much reduced optimizations
 	# otherwise gcc produces incorrect code and ruins the render on 64bits machines
 	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/accelerators/qbvhaccel.cpp COMPILE_FLAGS "-O2")
 	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
-ENDIF(GCC)
+ENDIF(GCC AND NOT APPLE)
 
 #
 # copy needed files for compiling LuxRender to dependencies directory, to find 
