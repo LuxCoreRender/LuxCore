@@ -412,13 +412,13 @@ add_custom_command(
     COMMENT "Building ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}")
 
 add_custom_command(
-    OUTPUT "${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.tgz"
-    COMMAND tar zcvf ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.tgz ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}
+    OUTPUT "${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.zip"
+    COMMAND zip -r ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.zip ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}
     COMMAND rm -rf ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}
     DEPENDS ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}
-    COMMENT "Building ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.tgz")
+    COMMENT "Building ${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.zip")
 
-add_custom_target(slg_win32_tgz DEPENDS "${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.tgz")
+add_custom_target(slg_win32_zip DEPENDS "${LUXRAYS_BIN_WIN32_SAMPLES_DIR}.zip")
 
 ###########################################################################
 #
