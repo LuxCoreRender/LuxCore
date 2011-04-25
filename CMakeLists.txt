@@ -357,6 +357,7 @@ endif(APPLE)
 
 add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/smallluxgpu)
+add_subdirectory(samples/smallluxgpu2)
 add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/smallppmgpu)
 if(QT4_FOUND AND BUILD_LUXMARK)
@@ -374,7 +375,7 @@ set(CMAKE_INSTALL_PREFIX .)
 #set(LUXRAYS_BIN_SAMPLES_DIR "luxrays-v${LUXRAYS_VERSION_MAJOR}.${LUXRAYS_VERSION_MINOR}")
 
 # Linux 64bit
-set(LUXRAYS_BIN_LINUX64_SAMPLES_DIR "slg-linux64-v1.8beta1")
+set(LUXRAYS_BIN_LINUX64_SAMPLES_DIR "slg-linux64-v2.0beta1")
 
 add_custom_command(
     OUTPUT "${LUXRAYS_BIN_LINUX64_SAMPLES_DIR}"
@@ -397,7 +398,7 @@ add_custom_command(
 add_custom_target(slg_linux64_tgz DEPENDS "${LUXRAYS_BIN_LINUX64_SAMPLES_DIR}.tgz")
 
 # Windows 32bit
-set(LUXRAYS_BIN_WIN32_SAMPLES_DIR "slg-win32-v1.8beta1")
+set(LUXRAYS_BIN_WIN32_SAMPLES_DIR "slg-win32-v2.0beta1")
 
 add_custom_command(
     OUTPUT "${LUXRAYS_BIN_WIN32_SAMPLES_DIR}"
