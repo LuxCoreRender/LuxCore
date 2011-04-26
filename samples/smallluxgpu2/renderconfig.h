@@ -22,92 +22,25 @@
 #ifndef _RENDERCONFIG_H
 #define	_RENDERCONFIG_H
 
+#include "smalllux.h"
+
 #include <boost/thread/mutex.hpp>
 
-#include "renderengine.h"
-
-#include "luxrays/core/context.h"
-#include "luxrays/core/device.h"
-#include "luxrays/core/virtualdevice.h"
 #include "luxrays/utils/properties.h"
 
-extern string SLG_LABEL;
-
-class RenderingConfig {
+class RenderConfig {
 public:
-	RenderingConfig() { }
-	RenderingConfig(const string &fileName);
+	RenderConfig(const string &fileName);
+	~RenderConfig();
 
-	~RenderingConfig();
-
-	void Init();
-	void StartAllRenderThreads();
-	void StopAllRenderThreads();
-	void ReInit(const bool reallocBuffers, const unsigned int w = 0, unsigned int h = 0);
-
-	void SetRenderingEngineType(const RenderEngineType type);
-	void SetMotionBlur(const bool v);
-
-	const vector<IntersectionDevice *> &GetIntersectionDevices() { return intersectionCPUGPUDevices; }
-	const vector<PixelDevice *> &GetPixelDevices() { return ctx->GetPixelDevices(); }
-	const RenderEngine *GetRenderEngine() { return renderEngine; }
-
-	void SetScreenRefreshInterval(const unsigned int t) {
-			renderEngine->SetScreenRefreshInterval(t);
-	}
-	unsigned int GetScreenRefreshInterval() const {
-		return renderEngine->GetScreenRefreshInterval();
-	}
-
-	bool NeedPeriodicSave() {
-		if (periodicSaveEnabled) {
-			const double now = WallClockTime();
-			if (now - lastPeriodicSave > periodiceSaveTime) {
-				lastPeriodicSave = now;
-				return true;
-			} else
-				return false;
-		} else
-			return false;
-	}
-
-	void SaveFilmImage();
-	void SaveFilm();
-
-	void UpdateSceneDataSet(const bool forceCompleteUpdate);
+	void SetScreenRefreshInterval(const unsigned int t);
+	unsigned int GetScreenRefreshInterval() const;
 
 	Properties cfg;
-
-	char captionBuffer[512];
-
 	Scene *scene;
-	Film *film;
-	boost::mutex filmMutex;
 
 private:
-	void StartAllRenderThreadsLockless();
-	void StopAllRenderThreadsLockless();
-
-	void SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
-		const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig);
-
-	void SetUpNativeDevices(const unsigned int nativeThreadCount);
-
-	boost::mutex cfgMutex;
-	Context *ctx;
-
-	bool renderThreadsStarted;
-	RenderEngine *renderEngine;
-
-
-	vector<IntersectionDevice *> intersectionGPUDevices;
-	vector<IntersectionDevice *> intersectionCPUDevices;
-	vector<IntersectionDevice *> intersectionCPUGPUDevices;
-
-	vector<IntersectionDevice *> intersectionAllDevices;
-
-	bool periodicSaveEnabled;
-	double lastPeriodicSave, periodiceSaveTime;
+	unsigned int screenRefreshInterval;
 };
 
 #endif	/* _RENDERCONFIG_H */

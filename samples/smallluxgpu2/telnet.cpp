@@ -34,7 +34,7 @@
 
 using boost::asio::ip::tcp;
 
-TelnetServer::TelnetServer(const unsigned int serverPort, RenderingConfig *renderConfig) : port(serverPort) {
+TelnetServer::TelnetServer(const unsigned int serverPort, RenderConfig *renderConfig) : port(serverPort) {
 	config = renderConfig;
 	serverThread = new boost::thread(boost::bind(TelnetServer::ServerThreadImpl, this));
 }
@@ -450,7 +450,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
 					} else if (command == "image.save") {
-						RenderingConfig *config = telnetServer->config;
+						RenderConfig *config = telnetServer->config;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 						if (config->GetRenderEngine()->GetEngineType() == PATHOCL) {

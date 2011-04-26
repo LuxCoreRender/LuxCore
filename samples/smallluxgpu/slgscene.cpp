@@ -32,8 +32,8 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/film/film.h"
 
-SLGScene::SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType) :
-	Scene(ctx, fileName, accelType) {
+SLGScene::SLGScene(const string &fileName, Film *film, const int accelType) :
+	Scene(fileName, accelType) {
 	camera->Update(film->GetWidth(), film->GetHeight());
 
 	//--------------------------------------------------------------------------

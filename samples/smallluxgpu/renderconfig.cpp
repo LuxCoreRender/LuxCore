@@ -121,7 +121,8 @@ void RenderingConfig::Init() {
 
 	// Create the Scene
 	const int accelType = cfg.GetInt("accelerator.type", -1);
-	scene = new SLGScene(ctx, sceneFileName, film, accelType);
+	scene = new SLGScene(sceneFileName, film, accelType);
+	scene->UpdateDataSet(ctx);
 	// For compatibility with old scenes
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", scene->camera->fieldOfView);
 	scene->camera->Update(film->GetWidth(), film->GetHeight());

@@ -212,6 +212,8 @@ int main(int argc, char *argv[]) {
 	set_terminate(SLGTerminate);
 #endif
 
+	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
+
 	try {
 		cerr << "Usage: " << argv[0] << " [options] [configuration file]" << endl <<
 				" -o [configuration file]" << endl <<

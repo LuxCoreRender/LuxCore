@@ -32,10 +32,23 @@
 
 #include "smalllux.h"
 #include "displayfunc.h"
-#include "renderconfig.h"
+#include "rendersession.h"
 #include "pathocl/pathocl.h"
 #include "telnet.h"
 #include "luxrays/core/device.h"
+
+string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
+
+RenderSession *session = NULL;
+
+
+void DebugHandler(const char *msg) {
+	cerr << "[LuxRays] " << msg << endl;
+}
+
+void SDLDebugHandler(const char *msg) {
+	cerr << "[LuxRays::SDL] " << msg << endl;
+}
 
 #if defined(__GNUC__) && !defined(__CYGWIN__)
 #include <execinfo.h>
@@ -90,23 +103,25 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 }
 
 static int BatchMode(double stopTime, unsigned int stopSPP) {
+	RenderConfig *config = session->renderConfig;
+	RenderEngine *engine = session->renderEngine;
+
 	// Force the film update at 2.5secs (mostly used by PathOCL)
 	config->SetScreenRefreshInterval(2500);
 
+	// Start the rendering
+	session->Start();
 	const double startTime = WallClockTime();
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	double lastFilmUpdate = WallClockTime();
-#endif
 	double sampleSec = 0.0;
 	char buf[512];
-	const vector<IntersectionDevice *> interscetionDevices = config->GetIntersectionDevices();
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 		const double now = WallClockTime();
-		const double elapsedTime =now - startTime;
+		const double elapsedTime = now - startTime;
 
-		const unsigned int pass = config->GetRenderEngine()->GetPass();
+		const unsigned int pass = engine->GetPass();
 
 		if ((stopTime > 0) && (elapsedTime >= stopTime))
 			break;
@@ -114,56 +129,33 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 			break;
 
 		// Check if periodic save is enabled
-		if (config->NeedPeriodicSave()) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-			if (config->GetRenderEngine()->GetEngineType() == PATHOCL) {
-				// I need to update the Film
-				PathOCLRenderEngine *pre = (PathOCLRenderEngine *)config->GetRenderEngine();
-
-				pre->UpdateFilm();
-			}
-#endif
-
+		if (session->NeedPeriodicSave()) {
 			// Time to save the image and film
-			config->SaveFilmImage();
+			session->SaveFilmImage();
+		} else {
+			// Film update may be required by some render engine to
+			// update statistics and more
+			if (WallClockTime() - lastFilmUpdate > 5.0) {
+				session->renderEngine->UpdateFilm();
+				lastFilmUpdate = WallClockTime();
+			}
 		}
 
 		// Print some information about the rendering progress
-		double raysSec = 0.0;
-		for (size_t i = 0; i < interscetionDevices.size(); ++i)
-			raysSec += interscetionDevices[i]->GetPerformance();
-
-		switch (config->GetRenderEngine()->GetEngineType()) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-			case PATHOCL: {
-				PathOCLRenderEngine *pre = (PathOCLRenderEngine *)config->GetRenderEngine();
-				sampleSec = pre->GetTotalSamplesSec();
-
-				sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-						int(elapsedTime), int(stopTime), pass, stopSPP, sampleSec / 1000000.0,
-						int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-				if (WallClockTime() - lastFilmUpdate > 5.0) {
-					pre->UpdateFilm();
-					lastFilmUpdate = WallClockTime();
-				}
-				break;
-			}
-#endif
-			default:
-				assert (false);
-		}
+		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.2fM on %.1fK tris]",
+				int(elapsedTime), int(stopTime), pass, stopSPP, sampleSec / 1000000.0,
+				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 		cerr << buf << endl;
 	}
 
 	// Stop the rendering
-	config->StopAllRenderThreads();
+	session->Stop();
 
 	// Save the rendered image
-	config->SaveFilmImage();
+	session->SaveFilmImage();
 
-	delete config;
+	delete session;
 	cerr << "Done." << endl;
 
 	return EXIT_SUCCESS;
@@ -174,19 +166,14 @@ int main(int argc, char *argv[]) {
 	set_terminate(SLGTerminate);
 #endif
 
+	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
+
 	try {
 		cerr << "Usage: " << argv[0] << " [options] [configuration file]" << endl <<
 				" -o [configuration file]" << endl <<
 				" -f [scene file]" << endl <<
 				" -w [window width]" << endl <<
 				" -e [window height]" << endl <<
-				" -g <disable OpenCL GPU device>" << endl <<
-				" -p <enable OpenCL CPU device>" << endl <<
-				" -n [native thread count]" << endl <<
-				" -r [gpu thread count]" << endl <<
-				" -l [set high/low latency mode]" << endl <<
-				" -b <enable high latency mode>" << endl <<
-				" -s [GPU workgroup size]" << endl <<
 				" -t [halt time in secs]" << endl <<
 				" -T <enable the telnet server>" << endl <<
 				" -D [property name] [property value]" << endl <<
@@ -200,6 +187,7 @@ int main(int argc, char *argv[]) {
 		bool batchMode = false;
 		bool telnetServerEnabled = false;
 		Properties cmdLineProp;
+		RenderConfig *config = NULL;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...
@@ -210,7 +198,7 @@ int main(int argc, char *argv[]) {
 					if (config)
 						throw runtime_error("Used multiple configuration files");
 
-					config = new RenderingConfig(argv[++i]);
+					config = new RenderConfig(argv[++i]);
 				}
 
 				else if (argv[i][1] == 'e') cmdLineProp.SetString("image.height", argv[++i]);
@@ -218,18 +206,6 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'w') cmdLineProp.SetString("image.width", argv[++i]);
 
 				else if (argv[i][1] == 'f') cmdLineProp.SetString("scene.file", argv[++i]);
-
-				else if (argv[i][1] == 'p') cmdLineProp.SetString("opencl.cpu.use", "1");
-
-				else if (argv[i][1] == 'g') cmdLineProp.SetString("opencl.gpu.use", "0");
-
-				else if (argv[i][1] == 'l') cmdLineProp.SetString("opencl.latency.mode", argv[++i]);
-
-				else if (argv[i][1] == 'n') cmdLineProp.SetString("opencl.nativethread.count", argv[++i]);
-
-				else if (argv[i][1] == 'r') cmdLineProp.SetString("opencl.renderthread.count", argv[++i]);
-
-				else if (argv[i][1] == 's') cmdLineProp.SetString("opencl.gpu.workgroup.size", argv[++i]);
 
 				else if (argv[i][1] == 't') cmdLineProp.SetString("batch.halttime", argv[++i]);
 
@@ -251,15 +227,16 @@ int main(int argc, char *argv[]) {
 				if ((s.length() >= 4) && (s.substr(s.length() - 4) == ".cfg")) {
 					if (config)
 						throw runtime_error("Used multiple configuration files");
-					config = new RenderingConfig(s);
+					config = new RenderConfig(s);
 				} else
 					throw runtime_error("Unknow file extension: " + s);
 			}
 		}
 
 		if (!config)
-			config = new RenderingConfig("scenes/luxball/render-fast.cfg");
+			config = new RenderConfig("scenes/luxball/render-fast.cfg");
 
+		// Overtwirte properties with the one defined on command line
 		config->cfg.Load(cmdLineProp);
 
 		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
@@ -270,27 +247,28 @@ int main(int argc, char *argv[]) {
 			batchMode = false;
 
 		if (batchMode) {
-			config->Init();
+			session = new RenderSession(config);
 			return BatchMode(halttime, haltspp);
 		} else {
+			// TODO
+
 			// It is important to initialize OpenGL before OpenCL
-			unsigned int width = config->cfg.GetInt("image.width", 640);
+			// (for OpenGL/OpenCL interoperability)
+			/*unsigned int width = config->cfg.GetInt("image.width", 640);
 			unsigned int height = config->cfg.GetInt("image.height", 480);
 
 			InitGlut(argc, argv, width, height);
 
-			config->Init();
+			session = new RenderSession(config);
 
 			if (telnetServerEnabled) {
 				TelnetServer telnetServer(18081, config);
 				RunGlut();
 			} else
-				RunGlut();
+				RunGlut();*/
 		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
 		cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << endl;
-#endif
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << endl;
 	} catch (exception err) {

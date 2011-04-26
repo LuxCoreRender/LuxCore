@@ -28,7 +28,6 @@
 #endif
 #include <math.h>
 
-#include <GL/glew.h>
 // Jens's patch for MacOS
 #if defined(__APPLE__)
 #include <GLUT/glut.h>
@@ -42,13 +41,7 @@
 #include "luxrays/utils/film/film.h"
 #include "pathocl/pathocl.h"
 
-RenderingConfig *config;
-
 static int printHelp = 1;
-
-void DebugHandler(const char *msg) {
-	cerr << "[LuxRays] " << msg << endl;
-}
 
 static void UpdateCameraData() {
 	config->ReInit(false);

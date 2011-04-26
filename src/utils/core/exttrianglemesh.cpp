@@ -24,7 +24,6 @@
 
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/plymesh/rply.h"
-#include "luxrays/core/context.h"
 
 using namespace luxrays;
 
@@ -143,7 +142,7 @@ static int FaceCB(p_ply_argument argument) {
 	return 1;
 }
 
-ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::string &fileName, const bool usePlyNormals) {
+ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals) {
 	p_ply plyfile = ply_open(fileName.c_str(), NULL);
 	if (!plyfile) {
 		std::stringstream ss;
@@ -247,10 +246,10 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(Context *ctx, const std::s
 			// Check for degenerate triangles/normals, they can freeze the GPU
 			if (isnan(vertNormals[i].x) || isnan(vertNormals[i].y) || isnan(vertNormals[i].z)) {
 				/*if (printedWarning < 15) {
-					LR_LOG(ctx, "The model contains a degenerate normal (index " << i << ")");
+					SDL_LOG("The model contains a degenerate normal (index " << i << ")");
 					++printedWarning;
 				} else if (printedWarning == 15) {
-					LR_LOG(ctx, "The model contains more degenerate normals");
+					SDL_LOG("The model contains more degenerate normals");
 					++printedWarning;
 				}*/
 				vertNormals[i] = Normal(0.f, 0.f, 1.f);

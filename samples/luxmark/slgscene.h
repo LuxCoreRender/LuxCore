@@ -44,7 +44,7 @@ typedef enum {
 
 class SLGScene : public Scene {
 public:
-	SLGScene(Context *ctx, const string &fileName, Film *film, const int accelType);
+	SLGScene(const string &fileName, Film *film, const int accelType);
 	~SLGScene();
 
 	VolumeIntegrator *volumeIntegrator;

@@ -26,6 +26,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <cstddef>
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
 #include <stddef.h>
@@ -48,6 +49,8 @@ using namespace std;
 using namespace luxrays;
 using namespace luxrays::sdl;
 using namespace luxrays::utils;
+
+extern string SLG_LABEL;
 
 extern void DebugHandler(const char *msg);
 

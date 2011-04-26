@@ -335,6 +335,7 @@ set(LUXRAYS_SRCS
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/extmeshcache.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/light.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/scene.cpp
+	${LUXRAYS_SOURCE_DIR}/utils/sdl/sdl.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/spd.cpp
     ${LUXRAYS_SOURCE_DIR}/utils/sdl/texmap.cpp)
 
@@ -357,7 +358,10 @@ endif(APPLE)
 
 add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/smallluxgpu)
-add_subdirectory(samples/smallluxgpu2)
+if(NOT LUXRAYS_DISABLE_OPENCL)
+	add_subdirectory(samples/smallluxgpu2)
+endif(NOT LUXRAYS_DISABLE_OPENCL)
+
 add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/smallppmgpu)
 if(QT4_FOUND AND BUILD_LUXMARK)
