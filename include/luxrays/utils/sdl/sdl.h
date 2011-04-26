@@ -19,75 +19,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _RENDERENGINE_H
-#define	_RENDERENGINE_H
+#ifndef _LUXRAYS_SDL_H
+#define	_LUXRAYS_SDL_H
 
-#include "smalllux.h"
-#include "renderconfig.h"
+#include "luxrays/luxrays.h"
 
-#include "luxrays/utils/film/film.h"
+namespace luxrays { namespace sdl {
 
-enum RenderEngineType {
-	PATHOCL
-};
+extern void (*LuxRaysSDLDebugHandler)(const char *msg);
 
-class RenderEngine {
-public:
-	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~RenderEngine() { };
+#define SDL_LOG(a) { if (luxrays::sdl::LuxRaysSDLDebugHandler) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; luxrays::sdl::LuxRaysSDLDebugHandler(_LR_LOG_LOCAL_SS.str().c_str()); } }
 
-	virtual void Start() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
+} }
 
-		StartLockLess();
-	}
-	virtual void Stop() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StopLockLess();
-	}
-
-	virtual void UpdateFilm() = 0;
-
-	virtual RenderEngineType GetEngineType() const = 0;
-	virtual unsigned int GetPass() const = 0;
-	virtual double GetTotalSamplesSec() const = 0;
-
-protected:
-	void StartLockLess();
-	void StopLockLess();
-
-	boost::mutex engineMutex;
-
-	RenderConfig *renderConfig;
-	Film *film;
-	boost::mutex *filmMutex;
-
-	bool started;
-};
-
-class OCLRenderEngine : public RenderEngine {
-public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~OCLRenderEngine();
-
-	virtual void Start() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StartLockLess();
-	}
-	virtual void Stop() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StopLockLess();
-	}
-
-protected:
-	void StartLockLess();
-	void StopLockLess();
-
-	Context *ctx;
-	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
-};
-
-#endif	/* _RENDERENGINE_H */
+#endif	/* _LUXRAYS_SDL_H */

@@ -144,7 +144,12 @@ link_directories (${LUXRAYS_LIB_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 
 set(SMALLLUXGPU_SRCS
-	displayfunc.cpp
+	smallluxgpu.cpp
+	rendersession.cpp
+	renderconfig.cpp
+	renderengine.cpp
+#	displayfunc.cpp
+#	telnet.cpp
 	pathocl/kernels/pathocl_kernel_core.cpp
 	pathocl/kernels/pathocl_kernel_datatypes.cpp
 	pathocl/kernels/pathocl_kernel_filters.cpp
@@ -152,9 +157,7 @@ set(SMALLLUXGPU_SRCS
 	pathocl/kernels/pathocl_kernel_scene.cpp
 	pathocl/kernels/pathocl_kernels.cpp
 	pathocl/pathocl.cpp
-	renderconfig.cpp
-	smallluxgpu.cpp
-	telnet.cpp
+	pathocl/renderthread.cpp
 	)
 
 add_executable(slg2 ${SMALLLUXGPU_SRCS})

@@ -143,7 +143,7 @@ public:
 
 	virtual void ApplayTransform(const Transform &trans);
 
-	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName, const bool usePlyNormals = false);
+	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals = false);
 
 private:
 	unsigned int vertCount;

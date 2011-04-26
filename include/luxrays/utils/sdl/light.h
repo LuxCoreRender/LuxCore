@@ -108,7 +108,7 @@ public:
 
 class InfiniteLightPortal : public InfiniteLight {
 public:
-	InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const std::string &portalFileName);
+	InfiniteLightPortal(TexMapInstance *tx, const std::string &portalFileName);
 	~InfiniteLightPortal();
 
 	LightSourceType GetType() const { return TYPE_IL_PORTAL; }

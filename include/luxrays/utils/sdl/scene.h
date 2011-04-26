@@ -26,21 +26,23 @@
 #include <iostream>
 #include <fstream>
 
+#include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/camera.h"
 #include "luxrays/utils/sdl/light.h"
 #include "luxrays/utils/sdl/material.h"
 #include "luxrays/utils/sdl/texmap.h"
 #include "luxrays/utils/sdl/extmeshcache.h"
 
-#include "luxrays/core/context.h"
 #include "luxrays/utils/properties.h"
 
 namespace luxrays { namespace sdl {
 
 class Scene {
 public:
-	Scene(Context *ctx, const std::string &fileName, const int aType = -1);
+	Scene(const std::string &fileName, const int aType = -1);
 	~Scene();
+
+	int GetAccelType() const { return accelType; }
 
 	unsigned int GetLightCount(bool skipInfiniteLight = false) const {
 		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight)

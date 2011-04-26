@@ -384,29 +384,23 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// Path Tracing GPU-only render engine (ver.2)
+// Path Tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class PathOCLRenderEngine : public RenderEngine {
+class PathOCLRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLRenderEngine(Scene *scn, Film *flm, boost::mutex *filmMutex,
-			vector<IntersectionDevice *> intersectionDevices, const Properties &cfg);
+	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLRenderEngine();
 
 	void Start();
-	void Interrupt();
 	void Stop();
+	void UpdateFilm();
 
 	unsigned int GetPass() const;
-	unsigned int GetThreadCount() const;
 	RenderEngineType GetEngineType() const { return PATHOCL; }
-
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
-	double GetRenderingTime() const { return (startTime == 0.0) ? 0.0 : (WallClockTime() - startTime); }
-
-	void UpdateFilm();
 
 	friend class PathOCLRenderThread;
 
@@ -421,7 +415,6 @@ private:
 
 	mutable boost::mutex engineMutex;
 
-	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	vector<PathOCLRenderThread *> renderThreads;
 	SampleBuffer *sampleBuffer;
 

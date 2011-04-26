@@ -19,75 +19,38 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _RENDERENGINE_H
-#define	_RENDERENGINE_H
+#ifndef _RENDERSESSION_H
+#define	_RENDERSESSION_H
 
 #include "smalllux.h"
 #include "renderconfig.h"
+#include "renderengine.h"
 
 #include "luxrays/utils/film/film.h"
 
-enum RenderEngineType {
-	PATHOCL
-};
-
-class RenderEngine {
+class RenderSession {
 public:
-	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~RenderEngine() { };
+	RenderSession(RenderConfig *cfg);
+	~RenderSession();
 
-	virtual void Start() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
+	void Start();
 
-		StartLockLess();
-	}
-	virtual void Stop() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
+	void Stop();
 
-		StopLockLess();
-	}
-
-	virtual void UpdateFilm() = 0;
-
-	virtual RenderEngineType GetEngineType() const = 0;
-	virtual unsigned int GetPass() const = 0;
-	virtual double GetTotalSamplesSec() const = 0;
-
-protected:
-	void StartLockLess();
-	void StopLockLess();
-
-	boost::mutex engineMutex;
+	bool NeedPeriodicSave();
+	void SaveFilmImage();
 
 	RenderConfig *renderConfig;
+	RenderEngine *renderEngine;
+
+	boost::mutex filmMutex;
 	Film *film;
-	boost::mutex *filmMutex;
-
-	bool started;
-};
-
-class OCLRenderEngine : public RenderEngine {
-public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~OCLRenderEngine();
-
-	virtual void Start() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StartLockLess();
-	}
-	virtual void Stop() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StopLockLess();
-	}
 
 protected:
-	void StartLockLess();
-	void StopLockLess();
-
 	Context *ctx;
-	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
+	double lastPeriodicSave, periodiceSaveTime;
+
+	bool started, periodicSaveEnabled;
 };
 
-#endif	/* _RENDERENGINE_H */
+#endif	/* _RENDERSESSION_H */

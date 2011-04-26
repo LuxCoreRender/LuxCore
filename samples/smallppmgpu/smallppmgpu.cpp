@@ -615,7 +615,11 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 }
 
 void DebugHandler(const char *msg) {
-	std::cerr << msg << std::endl;
+	std::cerr << "[LuxRays] " << msg << std::endl;
+}
+
+void SDLDebugHandler(const char *msg) {
+	std::cerr << "[LuxRays::SDL] " << msg << std::endl;
 }
 
 //------------------------------------------------------------------------------
@@ -917,6 +921,8 @@ static void RunGlut(const unsigned int width, const unsigned int height) {
 int main(int argc, char *argv[]) {
 	std::cerr << SPPMG_LABEL << std::endl;
 
+	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
+
 	try {
 		//----------------------------------------------------------------------
 		// Parse command line options
@@ -1012,7 +1018,8 @@ int main(int argc, char *argv[]) {
 		// Read the scene
 		//----------------------------------------------------------------------
 
-		scene = new luxrays::sdl::Scene(ctx, sceneFileName);
+		scene = new luxrays::sdl::Scene(sceneFileName);
+		scene->UpdateDataSet(ctx);
 		scene->camera->Update(imgWidth, imgHeight);
 
 		// Set the Luxrays SataSet

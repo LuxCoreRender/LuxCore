@@ -27,7 +27,7 @@
 
 class TelnetServer {
 public:
-	TelnetServer(const unsigned int serverPort, RenderingConfig *renderConfig);
+	TelnetServer(const unsigned int serverPort, RenderConfig *renderConfig);
 	~TelnetServer();
 
 private:
@@ -40,7 +40,7 @@ private:
 	const unsigned int port;
 	boost::thread *serverThread;
 
-	RenderingConfig *config;
+	RenderConfig *config;
 };
 
 #endif	/* _TELNET_H */
