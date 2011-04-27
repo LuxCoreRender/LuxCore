@@ -34,8 +34,10 @@ public:
 	~RenderSession();
 
 	void Start();
-
 	void Stop();
+
+	void BeginEdit();
+	void EndEdit();
 
 	bool NeedPeriodicSave();
 	void SaveFilmImage();
@@ -46,11 +48,13 @@ public:
 	boost::mutex filmMutex;
 	Film *film;
 
+	EditActionList editActions;
+
 protected:
 	Context *ctx;
 	double lastPeriodicSave, periodiceSaveTime;
 
-	bool started, periodicSaveEnabled;
+	bool started, editMode, periodicSaveEnabled;
 };
 
 #endif	/* _RENDERSESSION_H */

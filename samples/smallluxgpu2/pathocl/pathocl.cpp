@@ -131,8 +131,10 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
+	if (editMode)
+		EndEditLockLess(EditActionList());
 	if (started)
-		Stop();
+		StopLockLess();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
@@ -168,6 +170,26 @@ void PathOCLRenderEngine::Stop() {
 	UpdateFilmLockLess();
 
 	OCLRenderEngine::StopLockLess();
+}
+
+void PathOCLRenderEngine::BeginEdit() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->BeginEdit();
+
+	OCLRenderEngine::BeginEditLockLess();
+}
+
+void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
+	OCLRenderEngine::EndEditLockLess(editActions);
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->EndEdit(editActions);
 }
 
 void PathOCLRenderEngine::UpdateFilm() {

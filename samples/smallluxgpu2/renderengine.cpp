@@ -33,7 +33,15 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	film = flm;
 	filmMutex = flmMutex;
 	started = false;
+	editMode = false;
 };
+
+RenderEngine::~RenderEngine() {
+	if (editMode)
+		EndEditLockLess(EditActionList());
+	if (started)
+		StopLockLess();
+}
 
 void RenderEngine::StartLockLess() {
 	assert (!started);
@@ -43,6 +51,20 @@ void RenderEngine::StartLockLess() {
 void RenderEngine::StopLockLess() {
 	assert (started);
 	started = false;
+}
+
+void RenderEngine::BeginEditLockLess() {
+	assert (started);
+	assert (!editMode);
+
+	editMode = true;
+}
+
+void RenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	assert (started);
+	assert (editMode);
+
+	editMode = false;
 }
 
 //------------------------------------------------------------------------------
@@ -122,6 +144,8 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 };
 
 OCLRenderEngine::~OCLRenderEngine() {
+	if (editMode)
+		EndEditLockLess(EditActionList());
 	if (started)
 		StopLockLess();
 }
@@ -136,4 +160,22 @@ void OCLRenderEngine::StopLockLess() {
 	RenderEngine::StopLockLess();
 
 	ctx->Stop();
+}
+
+void OCLRenderEngine::BeginEditLockLess() {
+	RenderEngine::BeginEditLockLess();
+
+	// Stop all intersection devices
+	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
+		oclIntersectionDevices[i]->Interrupt();
+	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
+		oclIntersectionDevices[i]->Stop();
+}
+
+void OCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	RenderEngine::EndEditLockLess(editActions);
+
+	// Restart all intersection devices
+	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
+		oclIntersectionDevices[i]->Start();
 }

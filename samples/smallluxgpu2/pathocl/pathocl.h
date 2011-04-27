@@ -26,283 +26,13 @@
 
 #include "smalllux.h"
 #include "renderengine.h"
+#include "ocldatatypes.h"
+
 #include "luxrays/core/intersectiondevice.h"
 
 #include <boost/thread/thread.hpp>
 
 class PathOCLRenderEngine;
-
-namespace PathOCL {
-
-typedef struct {
-	unsigned int s1, s2, s3;
-} Seed;
-
-typedef struct {
-	unsigned int state;
-	unsigned int depth;
-	Spectrum throughput;
-} PathState;
-
-typedef struct {
-	unsigned int state;
-	unsigned int depth;
-	Spectrum throughput;
-
-	float bouncePdf;
-	int specularBounce;
-
-	Ray nextPathRay;
-	Spectrum nextThroughput;
-	Spectrum lightRadiance;
-} PathStateDL;
-
-typedef struct {
-	Spectrum c;
-	float count;
-} Pixel;
-
-typedef struct {
-	unsigned int sampleCount;
-} GPUTaskStats;
-
-//------------------------------------------------------------------------------
-// Filters
-//------------------------------------------------------------------------------
-
-typedef enum {
-	NONE, BOX, GAUSSIAN, MITCHELL
-} FilterType;
-
-class Filter {
-public:
-	Filter(const FilterType t, const float wx, const float wy) :
-		type(t), widthX(wx), widthY(wy) { }
-
-	FilterType type;
-	float widthX, widthY;
-};
-
-class NoneFilter : public Filter {
-public:
-	NoneFilter() : Filter(NONE, 0.f, 0.f) { }
-};
-
-class BoxFilter : public Filter {
-public:
-	BoxFilter(const float wx, const float wy) :
-		Filter(BOX, wx, wy) { }
-};
-
-class GaussianFilter : public Filter {
-public:
-	GaussianFilter(const float wx, const float wy, const float a) :
-		Filter(GAUSSIAN, wx, wy), alpha(a) { }
-
-	float alpha;
-};
-
-class MitchellFilter : public Filter {
-public:
-	MitchellFilter(const float wx, const float wy, const float b, const float c) :
-		Filter(MITCHELL, wx, wy), B(b), C(c) { }
-
-	float B, C;
-};
-
-//------------------------------------------------------------------------------
-// Samplers
-//------------------------------------------------------------------------------
-
-typedef enum {
-	INLINED_RANDOM, RANDOM, STRATIFIED, METROPOLIS
-} SamplerType;
-
-class Sampler {
-public:
-	Sampler(const SamplerType t) :
-		type(t) { }
-
-	SamplerType type;
-};
-
-class InlinedRandomSampler : public Sampler {
-public:
-	InlinedRandomSampler() :
-		Sampler(INLINED_RANDOM) { }
-
-	SamplerType type;
-};
-
-class RandomSampler : public Sampler {
-public:
-	RandomSampler() :
-		Sampler(RANDOM) { }
-
-	SamplerType type;
-};
-
-class StratifiedSampler : public Sampler {
-public:
-	StratifiedSampler(const unsigned int x, const unsigned int y) :
-		Sampler(STRATIFIED), xSamples(x), ySamples(y) { }
-
-	SamplerType type;
-	unsigned int xSamples, ySamples;
-};
-
-
-class MetropolisSampler : public Sampler {
-public:
-	MetropolisSampler(const float rate, const float reject) :
-		Sampler(METROPOLIS), largeStepRate(rate), maxConsecutiveReject(reject) { }
-
-	SamplerType type;
-	float largeStepRate;
-	unsigned int maxConsecutiveReject;
-};
-
-//------------------------------------------------------------------------------
-
-#define MAT_MATTE 0
-#define MAT_AREALIGHT 1
-#define MAT_MIRROR 2
-#define MAT_GLASS 3
-#define MAT_MATTEMIRROR 4
-#define MAT_METAL 5
-#define MAT_MATTEMETAL 6
-#define MAT_ALLOY 7
-#define MAT_ARCHGLASS 8
-#define MAT_NULL 9
-
-typedef struct {
-    float r, g, b;
-} MatteParam;
-
-typedef struct {
-    float gain_r, gain_g, gain_b;
-} AreaLightParam;
-
-typedef struct {
-    float r, g, b;
-    int specularBounce;
-} MirrorParam;
-
-typedef struct {
-    float refl_r, refl_g, refl_b;
-    float refrct_r, refrct_g, refrct_b;
-    float ousideIor, ior;
-    float R0;
-    int reflectionSpecularBounce, transmitionSpecularBounce;
-} GlassParam;
-
-typedef struct {
-	MatteParam matte;
-	MirrorParam mirror;
-	float matteFilter, totFilter, mattePdf, mirrorPdf;
-} MatteMirrorParam;
-
-typedef struct {
-    float r, g, b;
-    float exponent;
-    int specularBounce;
-} MetalParam;
-
-typedef struct {
-	MatteParam matte;
-	MetalParam metal;
-	float matteFilter, totFilter, mattePdf, metalPdf;
-} MatteMetalParam;
-
-typedef struct {
-    float diff_r, diff_g, diff_b;
-	float refl_r, refl_g, refl_b;
-    float exponent;
-    float R0;
-    int specularBounce;
-} AlloyParam;
-
-typedef struct {
-    float refl_r, refl_g, refl_b;
-    float refrct_r, refrct_g, refrct_b;
-	float transFilter, totFilter, reflPdf, transPdf;
-	bool reflectionSpecularBounce, transmitionSpecularBounce;
-} ArchGlassParam;
-
-typedef struct {
-	unsigned int type;
-	union {
-		MatteParam matte;
-        AreaLightParam areaLight;
-		MirrorParam mirror;
-        GlassParam glass;
-		MatteMirrorParam matteMirror;
-        MetalParam metal;
-        MatteMetalParam matteMetal;
-        AlloyParam alloy;
-        ArchGlassParam archGlass;
-	} param;
-} Material;
-
-//------------------------------------------------------------------------------
-
-typedef struct {
-	Point v0, v1, v2;
-	Normal normal;
-	float area;
-	float gain_r, gain_g, gain_b;
-} TriangleLight;
-
-typedef struct {
-	float shiftU, shiftV;
-	Spectrum gain;
-	unsigned int width, height;
-} InfiniteLight;
-
-typedef struct {
-	Vector sundir;
-	Spectrum gain;
-	float turbidity;
-	float relSize;
-	// XY Vectors for cone sampling
-	Vector x, y;
-	float cosThetaMax;
-	Spectrum suncolor;
-} SunLight;
-
-typedef struct {
-	Spectrum gain;
-	float thetaS;
-	float phiS;
-	float zenith_Y, zenith_x, zenith_y;
-	float perez_Y[6], perez_x[6], perez_y[6];
-} SkyLight;
-
-//------------------------------------------------------------------------------
-
-typedef struct {
-	unsigned int rgbOffset, alphaOffset;
-	unsigned int width, height;
-} TexMap;
-
-typedef struct {
-	unsigned int vertsOffset;
-	unsigned int trisOffset;
-
-	float trans[4][4];
-	float invTrans[4][4];
-} Mesh;
-
-typedef struct {
-	float lensRadius;
-	float focalDistance;
-	float yon, hither;
-
-	float rasterToCameraMatrix[4][4];
-	float cameraToWorldMatrix[4][4];
-} Camera;
-
-}
 
 //------------------------------------------------------------------------------
 // Path Tracing GPU-only render threads
@@ -319,14 +49,24 @@ public:
     void Interrupt();
 	void Stop();
 
+	void BeginEdit();
+	void EndEdit(const EditActionList &editActions);
+
 	friend class PathOCLRenderEngine;
 
 private:
 	static void RenderThreadImpl(PathOCLRenderThread *renderThread);
 
-	void InitPixelBuffer();
+	void StartRenderThread();
+	void StopRenderThread();
+
 	void InitRender();
+	void InitFrameBuffer();
+	void InitCamera();
 	void InitRenderGeometry();
+	void InitKernels();
+
+	void SetKernelArgs();
 
 	OpenCLIntersectionDevice *intersectionDevice;
 
@@ -378,7 +118,15 @@ private:
 	PathOCLRenderEngine *renderEngine;
 	PathOCL::Pixel *frameBuffer;
 
-	bool started, reportedPermissionError, pad0, pad1;
+	// TODO: cleanup
+	unsigned int frameBufferPixelCount;
+	size_t stratifiedDataSize;
+	unsigned int areaLightCount;
+	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS;
+	bool enable_MAT_MATTEMIRROR, enable_MAT_METAL, enable_MAT_MATTEMETAL, enable_MAT_ALLOY;
+	bool enable_MAT_ARCHGLASS;
+
+	bool started, editMode, reportedPermissionError;
 
 	PathOCL::GPUTaskStats *gpuTaskStats;
 };
@@ -394,6 +142,10 @@ public:
 
 	void Start();
 	void Stop();
+
+	void BeginEdit();
+	void EndEdit(const EditActionList &editActions);
+
 	void UpdateFilm();
 
 	unsigned int GetPass() const;

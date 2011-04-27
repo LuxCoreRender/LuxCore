@@ -40,12 +40,11 @@
 
 #include "luxrays/utils/film/film.h"
 #include "pathocl/pathocl.h"
+#include "rendersession.h"
 
-static int printHelp = 1;
+bool OSDPrintHelp = false;
 
-static void UpdateCameraData() {
-	config->ReInit(false);
-}
+static char captionBuffer[512];
 
 static void PrintString(void *font, const char *string) {
 	int len, i;
@@ -71,12 +70,12 @@ static void PrintHelpAndSettings() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.5f);
-	glRecti(10, 40, config->film->GetWidth() - 10, config->film->GetHeight() - 40);
+	glRecti(10, 40, session->film->GetWidth() - 10, session->film->GetHeight() - 40);
 	glDisable(GL_BLEND);
 
 	glColor3f(1.f, 1.f, 1.f);
-	int fontOffset = config->film->GetHeight() - 40 - 20;
-	glRasterPos2i((config->film->GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
+	int fontOffset = session->film->GetHeight() - 40 - 20;
+	glRasterPos2i((session->film->GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
 	PrintString(GLUT_BITMAP_9_BY_15, "Help & Settings & Devices");
 
 	// Help
@@ -89,19 +88,10 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "p", "save image.png (or to image.filename property value)");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "y", "toggle camera motion blur");
-	PrintHelpString(320, fontOffset, "t", "toggle tonemapping");
+	PrintHelpString(15, fontOffset, "t", "toggle tonemapping");
+	PrintHelpString(320, fontOffset, "n, m", "dec./inc. the screen refresh");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "n, m", "dec./inc. the screen refresh");
-	PrintHelpString(320, fontOffset, "0", "direct lighting rendering");
-	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "1", "path CPU/GPU rendering");
-	PrintHelpString(320, fontOffset, "2", "SPPM rendering");
-	fontOffset -= 15;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	PrintHelpString(15, fontOffset, "3", "path tracing GPU rendering");
-	PrintHelpString(320, fontOffset, "4", "path tracing GPU rendering V2");
-#endif
+	PrintHelpString(320, fontOffset, "0", "OpenCL path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -116,116 +106,47 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	int renderingTime = 0;
-	switch (config->GetRenderEngine()->GetEngineType()) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case PATHOCL: {
-			PathOCLRenderEngine *pre = (PathOCLRenderEngine *)config->GetRenderEngine();
-
-			renderingTime = int(pre->GetRenderingTime());
-			break;
-		}
-#endif
-		default:
-			renderingTime = int(config->film->GetTotalTime());
-			break;
-	}
-	sprintf(buf, "[Rendering time %dsecs][FOV %.1f][Screen refresh %dms][Render threads %d]",
-			renderingTime,
-			config->scene->camera->fieldOfView,
-			config->GetScreenRefreshInterval(), int(config->GetRenderEngine()->GetThreadCount()));
+	sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms]",
+			int(session->film->GetTotalTime()),
+			session->renderConfig->GetScreenRefreshInterval());
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Camera motion blur %s][Tonemapping %s]",
-			config->scene->camera->motionBlur ? "YES" : "NO",
-			(config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
+	sprintf(buf, "[Tonemapping %s]",
+			(session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-
-	// Renering engine settings
-	switch (config->GetRenderEngine()->GetEngineType()) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case PATHOCL: {
-			PathOCLRenderEngine *pre = (PathOCLRenderEngine *)config->GetRenderEngine();
-
-			sprintf(buf, "[PathOCL RE][Max path depth %d][RR Depth %d]",
-					pre->maxPathDepth,
-					pre->rrDepth);
-			PrintString(GLUT_BITMAP_8_BY_13, buf);
-			fontOffset -= 15;
-			glRasterPos2i(20, fontOffset);
-			break;
-		}
-#endif
-		default:
-			assert (false);
-	}
-
-	// Pixel Device
-	char buff[512];
-	glColor3f(1.0f, 0.25f, 0.f);
-	fontOffset -= 15;
-	glRasterPos2i(15, fontOffset);
-	PrintString(GLUT_BITMAP_8_BY_13, "Pixel device: ");
-	const vector<PixelDevice *> pdevices = config->GetPixelDevices();
-	assert (pdevices.size() > 0);
-	sprintf(buff, "[%s][Samples/sec % 3.2fM]", pdevices[0]->GetName().c_str(),
-			pdevices[0]->GetPerformance() / 1000000.0);
-	PrintString(GLUT_BITMAP_8_BY_13, buff);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
-		OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
-		const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
-		sprintf(buff, "[Mem %dM/%dM][Free buffers % 2d/%d]",
-				int(desc->GetUsedMemory() / (1024 * 1024)),
-				int(desc->GetMaxMemory() / (1024 * 1024)),
-				int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
-		PrintString(GLUT_BITMAP_8_BY_13, buff);
-	} else
-#endif
-	if (pdevices[0]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
-		NativePixelDevice *dev = (NativePixelDevice *)pdevices[0];
-		sprintf(buff, "[Free buffers % 2d/%d]",
-				int(dev->GetFreeDevBufferCount()), int(dev->GetTotalDevBufferCount()));
-		PrintString(GLUT_BITMAP_8_BY_13, buff);
-	}
 
 	// Intersection devices
-	const vector<IntersectionDevice *> idevices = config->GetIntersectionDevices();
-	switch (config->GetRenderEngine()->GetEngineType()) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+	switch (session->renderEngine->GetEngineType()) {
 		case PATHOCL: {
+			PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
+			const vector<OpenCLIntersectionDevice *> &idevices = engine->GetIntersectionDevices();
+
 			double minPerf = idevices[0]->GetPerformance();
 			double totalPerf = idevices[0]->GetPerformance();
 			for (size_t i = 1; i < idevices.size(); ++i) {
-				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
-					minPerf = min(minPerf, idevices[i]->GetPerformance());
-					totalPerf += idevices[i]->GetPerformance();
-				}
+				minPerf = min(minPerf, idevices[i]->GetPerformance());
+				totalPerf += idevices[i]->GetPerformance();
 			}
 
 			glColor3f(1.0f, 0.5f, 0.f);
 			int offset = 45;
 			size_t deviceCount = idevices.size();
 
+			char buff[512];
 			for (size_t i = 0; i < deviceCount; ++i) {
-				// Check if it is an OpenCL device
-				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
-					const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
-					sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-							idevices[i]->GetName().c_str(),
-							int(idevices[i]->GetPerformance() / 1000.0),
-							idevices[i]->GetPerformance() / minPerf,
-							100.0 * idevices[i]->GetPerformance() / totalPerf,
-							int(desc->GetUsedMemory() / (1024 * 1024)),
-							int(desc->GetMaxMemory() / (1024 * 1024)));
-					glRasterPos2i(20, offset);
-					PrintString(GLUT_BITMAP_8_BY_13, buff);
-				}
-
+				const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
+				sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+						idevices[i]->GetName().c_str(),
+						int(idevices[i]->GetPerformance() / 1000.0),
+						idevices[i]->GetPerformance() / minPerf,
+						100.0 * idevices[i]->GetPerformance() / totalPerf,
+						int(desc->GetUsedMemory() / (1024 * 1024)),
+						int(desc->GetMaxMemory() / (1024 * 1024)));
+				glRasterPos2i(20, offset);
+				PrintString(GLUT_BITMAP_8_BY_13, buff);
 				offset += 15;
 			}
 
@@ -233,7 +154,6 @@ static void PrintHelpAndSettings() {
 			PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 			break;
 		}
-#endif
 		default:
 			assert (false);
 	}
@@ -243,35 +163,35 @@ static void PrintCaptions() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.8f);
-	glRecti(0, config->film->GetHeight() - 15,
-			config->film->GetWidth() - 1, config->film->GetHeight() - 1);
-	glRecti(0, 0, config->film->GetWidth() - 1, 18);
+	glRecti(0, session->film->GetHeight() - 15,
+			session->film->GetWidth() - 1, session->film->GetHeight() - 1);
+	glRecti(0, 0, session->film->GetWidth() - 1, 18);
 	glDisable(GL_BLEND);
 
 	// Caption line 0
 	glColor3f(1.f, 1.f, 1.f);
 	glRasterPos2i(4, 5);
-	PrintString(GLUT_BITMAP_8_BY_13, config->captionBuffer);
+	PrintString(GLUT_BITMAP_8_BY_13, captionBuffer);
 
 	// Title
-	glRasterPos2i(4, config->film->GetHeight() - 10);
+	glRasterPos2i(4, session->film->GetHeight() - 10);
 	PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
 }
 
 void displayFunc(void) {
-	config->film->UpdateScreenBuffer();
-	const float *pixels = config->film->GetScreenBuffer();
+	session->film->UpdateScreenBuffer();
+	const float *pixels = session->film->GetScreenBuffer();
 
 	glRasterPos2i(0, 0);
-	glDrawPixels(config->film->GetWidth(), config->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
+	glDrawPixels(session->film->GetWidth(), session->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
 
 	PrintCaptions();
 
-	if (printHelp) {
+	if (OSDPrintHelp) {
 		glPushMatrix();
 		glLoadIdentity();
-		glOrtho(-0.5f, config->film->GetWidth() - 0.5f,
-				-0.5f, config->film->GetHeight() - 0.5f, -1.f, 1.f);
+		glOrtho(-0.5f, session->film->GetWidth() - 0.5f,
+				-0.5f, session->film->GetHeight() - 0.5f, -1.f, 1.f);
 
 		PrintHelpAndSettings();
 
@@ -282,53 +202,60 @@ void displayFunc(void) {
 }
 
 void reshapeFunc(int newWidth, int newHeight) {
-	// Check if width or height are really changed
-	if ((newWidth != (int)config->film->GetWidth()) ||
-			(newHeight != (int)config->film->GetHeight())) {
+	// Check if width or height have really changed
+	if ((newWidth != (int)session->film->GetWidth()) ||
+			(newHeight != (int)session->film->GetHeight())) {
 		glViewport(0, 0, newWidth, newHeight);
 		glLoadIdentity();
 		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
 
-		config->ReInit(true, newWidth, newHeight);
+		session->BeginEdit();
+
+		session->film->Init(newWidth, newHeight);
+		session->editActions.AddAction(FILM_EDIT);
+
+		session->renderConfig->scene->camera->Update(newWidth, newHeight);
+		session->editActions.AddAction(CAMERA_EDIT);
+
+		session->EndEdit();
 
 		glutPostRedisplay();
 	}
 }
 
 void timerFunc(int value) {
-	const unsigned int pass = config->GetRenderEngine()->GetPass();
-
-	double raysSec = 0.0;
-	const vector<IntersectionDevice *> &intersectionDevices = config->GetIntersectionDevices();
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-
-	switch (config->GetRenderEngine()->GetEngineType()) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+	switch (session->renderEngine->GetEngineType()) {
 		case PATHOCL: {
-			PathOCLRenderEngine *pre = (PathOCLRenderEngine *)config->GetRenderEngine();
+			PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
 
-			sprintf(config->captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-					pass, pre->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0), config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			const unsigned int pass = engine->GetPass();
+
+			double raysSec = 0.0;
+			const vector<OpenCLIntersectionDevice *> &idevices = engine->GetIntersectionDevices();
+			for (size_t i = 0; i < idevices.size(); ++i)
+				raysSec += idevices[i]->GetPerformance();
+
+			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
+					pass, engine->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0),
+					session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 			// Need to update the Film
-			pre->UpdateFilm();
+			engine->UpdateFilm();
 			break;
 		}
-#endif
 		default:
 			assert (false);
 	}
 
 	// Check if periodic save is enabled
-	if (config->NeedPeriodicSave()) {
+	if (session->NeedPeriodicSave()) {
 		// Time to save the image and film
-		config->SaveFilmImage();
+		session->SaveFilmImage();
 	}
 
 	glutPostRedisplay();
 
-	glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
+	glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 }
 
 #define MOVE_STEP 0.5f
@@ -336,33 +263,19 @@ void timerFunc(int value) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-			if (config->GetRenderEngine()->GetEngineType() == PATHOCL) {
-				// I need to update the Film
-				PathOCLRenderEngine *pre = (PathOCLRenderEngine *)config->GetRenderEngine();
-				pre->UpdateFilm();
-			}
-#endif
-			config->SaveFilmImage();
+			session->SaveFilmImage();
 			break;
 		}
 		case 27: { // Escape key
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 			// Check if I have to save the film
-			if (config->GetRenderEngine()->GetEngineType() == PATHOCL) {
-				// I need to update the Film
-				PathOCLRenderEngine *pre = (PathOCLRenderEngine *)config->GetRenderEngine();
-				pre->UpdateFilm();
-			}
-#endif
-			config->SaveFilm();
-			delete config;
+			session->SaveFilmImage();
+			delete session;
 
 			cerr << "Done." << endl;
 			exit(EXIT_SUCCESS);
 			break;
 		}
-		case ' ': // Restart rendering
+		/*case ' ': // Restart rendering
 			config->ReInit(true, config->film->GetWidth(), config->film->GetHeight());
 			break;
 		case 'a': {
@@ -392,11 +305,11 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'f':
 			config->scene->camera->Translate(Vector(0.f, 0.f, -MOVE_STEP));
 			UpdateCameraData();
-			break;
+			break;*/
 		case 'h':
-			printHelp = (!printHelp);
+			OSDPrintHelp = (!OSDPrintHelp);
 			break;
-		case 'x':
+		/*case 'x':
 			config->scene->camera->fieldOfView = max(15.f,
 					config->scene->camera->fieldOfView - 5.f);
 			config->ReInit(false);
@@ -435,12 +348,10 @@ void keyFunc(unsigned char key, int x, int y) {
 				config->film->SetToneMapParams(params);
 			}
 			break;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '0':
 			config->SetRenderingEngineType(PATHOCL);
 			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
-			break;
-#endif
+			break;*/
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
@@ -462,7 +373,7 @@ void keyFunc(unsigned char key, int x, int y) {
 }
 
 void specialFunc(int key, int x, int y) {
-	switch (key) {
+	/*switch (key) {
 		case GLUT_KEY_UP:
 			config->scene->camera->RotateUp(ROTATE_STEP);
 			UpdateCameraData();
@@ -481,7 +392,7 @@ void specialFunc(int key, int x, int y) {
 			break;
 		default:
 			break;
-	}
+	}*/
 
 	displayFunc();
 }
@@ -490,7 +401,7 @@ static int mouseButton0 = 0;
 static int mouseButton2 = 0;
 static int mouseGrabLastX = 0;
 static int mouseGrabLastY = 0;
-static double lastMouseUpdate = 0.0;
+//static double lastMouseUpdate = 0.0;
 
 static void mouseFunc(int button, int state, int x, int y) {
 	if (button == 0) {
@@ -515,7 +426,7 @@ static void mouseFunc(int button, int state, int x, int y) {
 }
 
 static void motionFunc(int x, int y) {
-	const double minInterval = 0.2;
+	/*const double minInterval = 0.2;
 
 	if (mouseButton0) {
 		// Check elapsed time since last update
@@ -549,7 +460,7 @@ static void motionFunc(int x, int y) {
 			displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
-	}
+	}*/
 }
 
 void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height) {
@@ -566,13 +477,6 @@ void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned i
 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 	glutCreateWindow(SLG_LABEL.c_str());
-
-	// Check if OpenGL interoperability will be enabled
-	if (config->cfg.GetInt("opencl.latency.mode", 1) && (config->cfg.GetInt("renderengine.type", 0) == 3)) {
-		glewInit();
-		if (!glewIsSupported("GL_VERSION_2_0 " "GL_ARB_pixel_buffer_object"))
-			throw runtime_error("GL_ARB_pixel_buffer_object is not supported");
-	}
 }
 
 void RunGlut() {
@@ -582,13 +486,13 @@ void RunGlut() {
 	glutDisplayFunc(displayFunc);
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
-	glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
+	glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 
 	glMatrixMode(GL_PROJECTION);
-	glViewport(0, 0, config->film->GetWidth(), config->film->GetHeight());
+	glViewport(0, 0, session->film->GetWidth(), session->film->GetHeight());
 	glLoadIdentity();
-	glOrtho(0.f, config->film->GetWidth() - 1.f,
-			0.f, config->film->GetHeight() - 1.f, -1.f, 1.f);
+	glOrtho(0.f, session->film->GetWidth() - 1.f,
+			0.f, session->film->GetHeight() - 1.f, -1.f, 1.f);
 
 	glutMainLoop();
 }

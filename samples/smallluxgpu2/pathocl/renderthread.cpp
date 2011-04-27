@@ -58,6 +58,7 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	threadIndex = index;
 	renderEngine = re;
 	started = false;
+	editMode = false;
 	frameBuffer = NULL;
 
 	kernelsParameters = "";
@@ -66,10 +67,15 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	samplerKernel = NULL;
 	advancePathsKernel = NULL;
 
+	frameBufferBuff = NULL;
+	cameraBuff = NULL;
+
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
+	if (editMode)
+		EndEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -82,20 +88,73 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete[] gpuTaskStats;
 }
 
-void PathOCLRenderThread::Start() {
-	started = true;
+void PathOCLRenderThread::InitFrameBuffer() {
+	//--------------------------------------------------------------------------
+	// FrameBuffer definition
+	//--------------------------------------------------------------------------
 
-	InitRender();
+	frameBufferPixelCount =	(renderEngine->film->GetWidth() + 2) * (renderEngine->film->GetHeight() + 2);
 
-	// Create the thread for the rendering
-	renderThread = new boost::thread(boost::bind(PathOCLRenderThread::RenderThreadImpl, this));
+	// Delete previous allocated frameBuffer
+	delete[] frameBuffer;
+	frameBuffer = new PathOCL::Pixel[frameBufferPixelCount];
 
-	// Set renderThread priority
-	bool res = SetThreadRRPriority(renderThread);
-	if (res && !reportedPermissionError) {
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
-		reportedPermissionError = true;
+	for (unsigned int i = 0; i < frameBufferPixelCount; ++i) {
+		frameBuffer[i].c.r = 0.f;
+		frameBuffer[i].c.g = 0.f;
+		frameBuffer[i].c.b = 0.f;
+		frameBuffer[i].count = 0.f;
 	}
+
+	// OpenCL framebuffer handling code
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+
+	// Delete previous allocated OpenCL framebuffer
+	if (frameBufferBuff) {
+		deviceDesc->FreeMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
+		delete frameBufferBuff;
+	}
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathOCL::Pixel) * frameBufferPixelCount / 1024) << "Kbytes" << endl;
+	frameBufferBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			sizeof(PathOCL::Pixel) * frameBufferPixelCount);
+	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
+}
+
+void PathOCLRenderThread::InitCamera() {
+	//--------------------------------------------------------------------------
+	// Camera definition
+	//--------------------------------------------------------------------------
+
+	Scene *scene = renderEngine->renderConfig->scene;
+
+	// Dynamic camera mode uses a buffer to transfer camera position/orientation
+	PathOCL::Camera camera;
+	camera.yon = scene->camera->clipYon;
+	camera.hither = scene->camera->clipHither;
+	camera.lensRadius = scene->camera->lensRadius;
+	camera.focalDistance = scene->camera->focalDistance;
+	memcpy(&camera.rasterToCameraMatrix[0][0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+	memcpy(&camera.cameraToWorldMatrix[0][0], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+
+	// OpenCL framebuffer handling code
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+
+	// Delete previous allocated OpenCL camera buffer
+	if (cameraBuff) {
+		deviceDesc->FreeMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
+		delete cameraBuff;
+	}
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(PathOCL::Camera) / 1024) << "Kbytes" << endl;
+	cameraBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(PathOCL::Camera),
+			(void *)&camera);
+	deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
 }
 
 static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
@@ -429,27 +488,296 @@ void PathOCLRenderThread::InitRenderGeometry() {
 	cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 }
 
-void PathOCLRenderThread::InitRender() {
+void PathOCLRenderThread::InitKernels() {
+	//--------------------------------------------------------------------------
+	// Compile kernels
+	//--------------------------------------------------------------------------
+
 	Scene *scene = renderEngine->renderConfig->scene;
-	AcceleratorType accelType = scene->dataSet->GetAcceleratorType();
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
-	const unsigned int frameBufferPixelCount =
-		(renderEngine->film->GetWidth() + 2) * (renderEngine->film->GetHeight() + 2);
+	// Set #define symbols
+	stringstream ss;
+	ss.precision(6);
+	ss << scientific <<
+			" -D PARAM_TASK_COUNT=" << renderEngine->taskCount <<
+			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
+			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
+			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON << "f" <<
+			" -D PARAM_SEED=" << seed <<
+			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
+			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
+			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
+			;
 
-	// Delete previous allocated frameBuffer
-	delete[] frameBuffer;
-	frameBuffer = new PathOCL::Pixel[frameBufferPixelCount];
-
-	for (unsigned int i = 0; i < frameBufferPixelCount; ++i) {
-		frameBuffer[i].c.r = 0.f;
-		frameBuffer[i].c.g = 0.f;
-		frameBuffer[i].c.b = 0.f;
-		frameBuffer[i].count = 0.f;
+	switch (scene->dataSet->GetAcceleratorType()) {
+		case ACCEL_BVH:
+			ss << " -D PARAM_ACCEL_BVH";
+			break;
+		case ACCEL_QBVH:
+			ss << " -D PARAM_ACCEL_QBVH";
+			break;
+		case ACCEL_MQBVH:
+			ss << " -D PARAM_ACCEL_MQBVH";
+			break;
+		default:
+			assert (false);
 	}
 
-	const unsigned int startLine = Clamp<unsigned int>(
-			renderEngine->film->GetHeight() * samplingStart,
-			0, renderEngine->film->GetHeight() - 1);
+	if (enable_MAT_MATTE)
+		ss << " -D PARAM_ENABLE_MAT_MATTE";
+	if (enable_MAT_AREALIGHT)
+		ss << " -D PARAM_ENABLE_MAT_AREALIGHT";
+	if (enable_MAT_MIRROR)
+		ss << " -D PARAM_ENABLE_MAT_MIRROR";
+	if (enable_MAT_GLASS)
+		ss << " -D PARAM_ENABLE_MAT_GLASS";
+	if (enable_MAT_MATTEMIRROR)
+		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
+	if (enable_MAT_METAL)
+		ss << " -D PARAM_ENABLE_MAT_METAL";
+	if (enable_MAT_MATTEMETAL)
+		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
+	if (enable_MAT_ALLOY)
+		ss << " -D PARAM_ENABLE_MAT_ALLOY";
+	if (enable_MAT_ARCHGLASS)
+		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
+
+	if (scene->camera->lensRadius > 0.f)
+		ss << " -D PARAM_CAMERA_HAS_DOF";
+
+
+	if (infiniteLightBuff)
+		ss << " -D PARAM_HAS_INFINITELIGHT";
+
+	if (skyLightBuff)
+		ss << " -D PARAM_HAS_SKYLIGHT";
+
+	if (sunLightBuff) {
+		ss << " -D PARAM_HAS_SUNLIGHT";
+
+		if (!triLightsBuff) {
+			ss <<
+				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
+				" -D PARAM_DL_LIGHT_COUNT=0"
+				;
+		}
+	}
+
+	if (triLightsBuff) {
+		ss <<
+				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
+				" -D PARAM_DL_LIGHT_COUNT=" << areaLightCount
+				;
+	}
+
+	if (texMapRGBBuff || texMapAlphaBuff)
+		ss << " -D PARAM_HAS_TEXTUREMAPS";
+	if (texMapAlphaBuff)
+		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
+	if (meshBumpsBuff)
+		ss << " -D PARAM_HAS_BUMPMAPS";
+
+	const PathOCL::Filter *filter = renderEngine->filter;
+	switch (filter->type) {
+		case PathOCL::NONE:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
+			break;
+		case PathOCL::BOX:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f";
+			break;
+		case PathOCL::GAUSSIAN:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << ((PathOCL::GaussianFilter *)filter)->alpha << "f";
+			break;
+		case PathOCL::MITCHELL:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathOCL::MitchellFilter *)filter)->B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathOCL::MitchellFilter *)filter)->C << "f";
+			break;
+		default:
+			assert (false);
+	}
+
+	if (renderEngine->usePixelAtomics)
+		ss << " -D PARAM_USE_PIXEL_ATOMICS";
+
+	const PathOCL::Sampler *sampler = renderEngine->sampler;
+	switch (sampler->type) {
+		case PathOCL::INLINED_RANDOM:
+			ss << " -D PARAM_SAMPLER_TYPE=0";
+			break;
+		case PathOCL::RANDOM:
+			ss << " -D PARAM_SAMPLER_TYPE=1";
+			break;
+		case PathOCL::METROPOLIS:
+			ss << " -D PARAM_SAMPLER_TYPE=2" <<
+					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << ((PathOCL::MetropolisSampler *)sampler)->largeStepRate << "f" <<
+					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << ((PathOCL::MetropolisSampler *)sampler)->maxConsecutiveReject;
+			break;
+		case PathOCL::STRATIFIED:
+			ss << " -D PARAM_SAMPLER_TYPE=3" <<
+					" -D PARAM_SAMPLER_STRATIFIED_X_SAMPLES=" << ((PathOCL::StratifiedSampler *)sampler)->xSamples <<
+					" -D PARAM_SAMPLER_STRATIFIED_Y_SAMPLES=" << ((PathOCL::StratifiedSampler *)sampler)->ySamples;
+			break;
+		default:
+			assert (false);
+	}
+
+	// Check the OpenCL vendor and use some specific compiler options
+	if (deviceDesc->IsAMDPlatform())
+		ss << " -fno-alias";
+
+#if defined(__APPLE__)
+	ss << " -D __APPLE__";
+#endif
+
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	// Check if I have to recompile the kernels
+	string newKernelParameters = ss.str();
+	if (kernelsParameters != newKernelParameters) {
+		kernelsParameters = newKernelParameters;
+
+		// Compile sources
+		stringstream ssKernel;
+		ssKernel << PathOCL::KernelSource_PathOCL_datatypes << PathOCL::KernelSource_PathOCL_core <<
+				 PathOCL::KernelSource_PathOCL_filters << PathOCL::KernelSource_PathOCL_scene <<
+				PathOCL::KernelSource_PathOCL_samplers << PathOCL::KernelSource_PathOCL_kernels;
+		string kernelSource = ssKernel.str();
+
+		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
+		cl::Program program = cl::Program(oclContext, source);
+
+		try {
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters << endl;
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling kernels " << endl;
+
+			VECTOR_CLASS<cl::Device> buildDevice;
+			buildDevice.push_back(oclDevice);
+			program.build(buildDevice, kernelsParameters.c_str());
+		} catch (cl::Error err) {
+			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error:\n" << strError.c_str() << endl;
+
+			throw err;
+		}
+
+		//----------------------------------------------------------------------
+		// Init kernel
+		//----------------------------------------------------------------------
+
+		delete initKernel;
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
+		initKernel = new cl::Kernel(program, "Init");
+		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL Init kernel work group size: " << initWorkGroupSize << endl;
+
+		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
+
+		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
+		} else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
+			// Resize the workgroup to have enough local memory
+			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+
+			while ((initWorkGroupSize > 64) && (stratifiedDataSize * initWorkGroupSize > localMem))
+				initWorkGroupSize /= 2;
+
+			if (stratifiedDataSize * initWorkGroupSize > localMem)
+				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
+
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << initWorkGroupSize << endl;
+		}
+
+		//--------------------------------------------------------------------------
+		// InitFB kernel
+		//--------------------------------------------------------------------------
+
+		delete initFBKernel;
+		initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
+		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
+
+		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
+
+		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
+		}
+
+		//----------------------------------------------------------------------
+		// Sampler kernel
+		//----------------------------------------------------------------------
+
+		delete samplerKernel;
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Sampler Kernel" << endl;
+		samplerKernel = new cl::Kernel(program, "Sampler");
+		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL Sampler kernel work group size: " << samplerWorkGroupSize << endl;
+
+		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << samplerWorkGroupSize << endl;
+
+		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+			samplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
+		} else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
+			// Resize the workgroup to have enough local memory
+			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+
+			while ((samplerWorkGroupSize > 64) && (stratifiedDataSize * samplerWorkGroupSize > localMem))
+				samplerWorkGroupSize /= 2;
+
+			if (stratifiedDataSize * samplerWorkGroupSize > localMem)
+				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
+
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize << endl;
+		}
+
+		//----------------------------------------------------------------------
+		// AdvancePaths kernel
+		//----------------------------------------------------------------------
+
+		delete advancePathsKernel;
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel" << endl;
+		advancePathsKernel = new cl::Kernel(program, "AdvancePaths");
+		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL AdvancePaths kernel work group size: " << advancePathsWorkGroupSize << endl;
+
+		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << advancePathsWorkGroupSize << endl;
+
+		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << advancePathsWorkGroupSize << endl;
+		}
+
+		//----------------------------------------------------------------------
+
+		const double tEnd = WallClockTime();
+		cerr  << "[PathOCLRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	} else
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Using cached kernels" << endl;
+}
+
+void PathOCLRenderThread::InitRender() {
+	Scene *scene = renderEngine->renderConfig->scene;
+
+	InitFrameBuffer();
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
@@ -477,12 +805,6 @@ void PathOCLRenderThread::InitRender() {
 			sizeof(RayHit) * taskCount);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathOCL::Pixel) * frameBufferPixelCount / 1024) << "Kbytes" << endl;
-	frameBufferBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			sizeof(PathOCL::Pixel) * frameBufferPixelCount);
-	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
-
 	tEnd = WallClockTime();
 	cerr << "[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 
@@ -490,21 +812,7 @@ void PathOCLRenderThread::InitRender() {
 	// Camera definition
 	//--------------------------------------------------------------------------
 
-	// Dynamic camera mode uses a buffer to transfer camera position/orientation
-	PathOCL::Camera camera;
-	camera.yon = scene->camera->clipYon;
-	camera.hither = scene->camera->clipHither;
-	camera.lensRadius = scene->camera->lensRadius;
-	camera.focalDistance = scene->camera->focalDistance;
-	memcpy(&camera.rasterToCameraMatrix[0][0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-	memcpy(&camera.cameraToWorldMatrix[0][0], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
-
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(PathOCL::Camera) / 1024) << "Kbytes" << endl;
-	cameraBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(PathOCL::Camera),
-			(void *)&camera);
-	deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
+	InitCamera();
 
 	//--------------------------------------------------------------------------
 	// Translate mesh geometry
@@ -518,15 +826,15 @@ void PathOCLRenderThread::InitRender() {
 
 	tStart = WallClockTime();
 
-	bool enable_MAT_MATTE = false;
-	bool enable_MAT_AREALIGHT = false;
-	bool enable_MAT_MIRROR = false;
-	bool enable_MAT_GLASS = false;
-	bool enable_MAT_MATTEMIRROR = false;
-	bool enable_MAT_METAL = false;
-	bool enable_MAT_MATTEMETAL = false;
-	bool enable_MAT_ALLOY = false;
-	bool enable_MAT_ARCHGLASS = false;
+	enable_MAT_MATTE = false;
+	enable_MAT_AREALIGHT = false;
+	enable_MAT_MIRROR = false;
+	enable_MAT_GLASS = false;
+	enable_MAT_MATTEMIRROR = false;
+	enable_MAT_METAL = false;
+	enable_MAT_MATTEMETAL = false;
+	enable_MAT_ALLOY = false;
+	enable_MAT_ARCHGLASS = false;
 	const unsigned int materialsCount = scene->materials.size();
 	PathOCL::Material *mats = new PathOCL::Material[materialsCount];
 	for (unsigned int i = 0; i < materialsCount; ++i) {
@@ -704,7 +1012,7 @@ void PathOCLRenderThread::InitRender() {
 	tStart = WallClockTime();
 
 	// Count the area lights
-	unsigned int areaLightCount = 0;
+	areaLightCount = 0;
 	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
 		if (scene->lights[i]->IsAreaLight())
 			++areaLightCount;
@@ -1144,7 +1452,7 @@ void PathOCLRenderThread::InitRender() {
 		// Spectrum radiance;
 		sizeof(Spectrum);
 
-	size_t stratifiedDataSize = 0;
+	stratifiedDataSize = 0;
 	if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
 		PathOCL::StratifiedSampler *s = (PathOCL::StratifiedSampler *)renderEngine->sampler;
 		stratifiedDataSize =
@@ -1204,288 +1512,37 @@ void PathOCLRenderThread::InitRender() {
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
-	// Set #define symbols
-	stringstream ss;
-	ss.precision(6);
-	ss << scientific <<
-			" -D PARAM_STARTLINE=" << startLine <<
-			" -D PARAM_TASK_COUNT=" << taskCount <<
-			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
-			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON << "f" <<
-			" -D PARAM_SEED=" << seed <<
-			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
-			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
-			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
-			;
-
-	switch (accelType) {
-		case ACCEL_BVH:
-			ss << " -D PARAM_ACCEL_BVH";
-			break;
-		case ACCEL_QBVH:
-			ss << " -D PARAM_ACCEL_QBVH";
-			break;
-		case ACCEL_MQBVH:
-			ss << " -D PARAM_ACCEL_MQBVH";
-			break;
-		default:
-			assert (false);
-	}
-
-	if (enable_MAT_MATTE)
-		ss << " -D PARAM_ENABLE_MAT_MATTE";
-	if (enable_MAT_AREALIGHT)
-		ss << " -D PARAM_ENABLE_MAT_AREALIGHT";
-	if (enable_MAT_MIRROR)
-		ss << " -D PARAM_ENABLE_MAT_MIRROR";
-	if (enable_MAT_GLASS)
-		ss << " -D PARAM_ENABLE_MAT_GLASS";
-	if (enable_MAT_MATTEMIRROR)
-		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
-	if (enable_MAT_METAL)
-		ss << " -D PARAM_ENABLE_MAT_METAL";
-	if (enable_MAT_MATTEMETAL)
-		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
-	if (enable_MAT_ALLOY)
-		ss << " -D PARAM_ENABLE_MAT_ALLOY";
-	if (enable_MAT_ARCHGLASS)
-		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
-
-	if (scene->camera->lensRadius > 0.f)
-		ss << " -D PARAM_CAMERA_HAS_DOF";
-
-
-	if (infiniteLight)
-		ss << " -D PARAM_HAS_INFINITELIGHT";
-
-	if (skyLight)
-		ss << " -D PARAM_HAS_SKYLIGHT";
-
-	if (sunLight) {
-		ss << " -D PARAM_HAS_SUNLIGHT";
-
-		if (!triLightsBuff) {
-			ss <<
-				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-				" -D PARAM_DL_LIGHT_COUNT=0"
-				;
-		}
-	}
-
-	if (triLightsBuff) {
-		ss <<
-				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-				" -D PARAM_DL_LIGHT_COUNT=" << areaLightCount
-				;
-	}
-
-	if (texMapRGBBuff || texMapAlphaBuff)
-		ss << " -D PARAM_HAS_TEXTUREMAPS";
-	if (texMapAlphaBuff)
-		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
-	if (meshBumpsBuff)
-		ss << " -D PARAM_HAS_BUMPMAPS";
-
-	const PathOCL::Filter *filter = renderEngine->filter;
-	switch (filter->type) {
-		case PathOCL::NONE:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
-			break;
-		case PathOCL::BOX:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f";
-			break;
-		case PathOCL::GAUSSIAN:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << ((PathOCL::GaussianFilter *)filter)->alpha << "f";
-			break;
-		case PathOCL::MITCHELL:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathOCL::MitchellFilter *)filter)->B << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathOCL::MitchellFilter *)filter)->C << "f";
-			break;
-		default:
-			assert (false);
-	}
-
-	if (renderEngine->usePixelAtomics)
-		ss << " -D PARAM_USE_PIXEL_ATOMICS";
-
-	const PathOCL::Sampler *sampler = renderEngine->sampler;
-	switch (sampler->type) {
-		case PathOCL::INLINED_RANDOM:
-			ss << " -D PARAM_SAMPLER_TYPE=0";
-			break;
-		case PathOCL::RANDOM:
-			ss << " -D PARAM_SAMPLER_TYPE=1";
-			break;
-		case PathOCL::METROPOLIS:
-			ss << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << ((PathOCL::MetropolisSampler *)sampler)->largeStepRate << "f" <<
-					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << ((PathOCL::MetropolisSampler *)sampler)->maxConsecutiveReject;
-			break;
-		case PathOCL::STRATIFIED:
-			ss << " -D PARAM_SAMPLER_TYPE=3" <<
-					" -D PARAM_SAMPLER_STRATIFIED_X_SAMPLES=" << ((PathOCL::StratifiedSampler *)sampler)->xSamples <<
-					" -D PARAM_SAMPLER_STRATIFIED_Y_SAMPLES=" << ((PathOCL::StratifiedSampler *)sampler)->ySamples;
-			break;
-		default:
-			assert (false);
-	}
-
-	// Check the OpenCL vendor and use some specific compiler options
-	if (deviceDesc->IsAMDPlatform())
-		ss << " -fno-alias";
-
-#if defined(__APPLE__)
-	ss << " -D __APPLE__";
-#endif
-
-	//--------------------------------------------------------------------------
-
-	tStart = WallClockTime();
-
-	// Check if I have to recompile the kernels
-	string newKernelParameters = ss.str();
-	if (kernelsParameters != newKernelParameters) {
-		kernelsParameters = newKernelParameters;
-
-		// Compile sources
-		stringstream ssKernel;
-		ssKernel << PathOCL::KernelSource_PathOCL_datatypes << PathOCL::KernelSource_PathOCL_core <<
-				 PathOCL::KernelSource_PathOCL_filters << PathOCL::KernelSource_PathOCL_scene <<
-				PathOCL::KernelSource_PathOCL_samplers << PathOCL::KernelSource_PathOCL_kernels;
-		string kernelSource = ssKernel.str();
-
-		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
-		cl::Program program = cl::Program(oclContext, source);
-
-		try {
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters << endl;
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling kernels " << endl;
-
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, kernelsParameters.c_str());
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error:\n" << strError.c_str() << endl;
-
-			throw err;
-		}
-
-		//----------------------------------------------------------------------
-		// Init kernel
-		//----------------------------------------------------------------------
-
-		delete initKernel;
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
-		initKernel = new cl::Kernel(program, "Init");
-		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL Init kernel work group size: " << initWorkGroupSize << endl;
-
-		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
-		} else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
-			// Resize the workgroup to have enough local memory
-			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-
-			while ((initWorkGroupSize > 64) && (stratifiedDataSize * initWorkGroupSize > localMem))
-				initWorkGroupSize /= 2;
-
-			if (stratifiedDataSize * initWorkGroupSize > localMem)
-				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
-
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << initWorkGroupSize << endl;
-		}
-
-		//--------------------------------------------------------------------------
-		// InitFB kernel
-		//--------------------------------------------------------------------------
-
-		delete initFBKernel;
-		initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
-		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
-
-		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
-		}
-
-		//----------------------------------------------------------------------
-		// Sampler kernel
-		//----------------------------------------------------------------------
-
-		delete samplerKernel;
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Sampler Kernel" << endl;
-		samplerKernel = new cl::Kernel(program, "Sampler");
-		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL Sampler kernel work group size: " << samplerWorkGroupSize << endl;
-
-		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << samplerWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			samplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
-		} else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
-			// Resize the workgroup to have enough local memory
-			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-
-			while ((samplerWorkGroupSize > 64) && (stratifiedDataSize * samplerWorkGroupSize > localMem))
-				samplerWorkGroupSize /= 2;
-
-			if (stratifiedDataSize * samplerWorkGroupSize > localMem)
-				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
-
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize << endl;
-		}
-
-		//----------------------------------------------------------------------
-		// AdvancePaths kernel
-		//----------------------------------------------------------------------
-
-		delete advancePathsKernel;
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel" << endl;
-		advancePathsKernel = new cl::Kernel(program, "AdvancePaths");
-		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL AdvancePaths kernel work group size: " << advancePathsWorkGroupSize << endl;
-
-		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << advancePathsWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
-			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << advancePathsWorkGroupSize << endl;
-		}
-
-		//----------------------------------------------------------------------
-
-		tEnd = WallClockTime();
-		cerr  << "[PathOCLRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
-	} else
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Using cached kernels" << endl;
+	InitKernels();
 
 	//--------------------------------------------------------------------------
 	// Initialize
 	//--------------------------------------------------------------------------
 
 	// Set kernel arguments
+	SetKernelArgs();
 
+	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+
+	// Clear the frame buffer
+	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
+			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),
+			cl::NDRange(initFBWorkGroupSize));
+
+	// Initialize the tasks buffer
+	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
+			cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
+	oclQueue.finish();
+
+	// Reset statistics in order to be more accurate
+	intersectionDevice->ResetPerformaceStats();
+}
+
+void PathOCLRenderThread::SetKernelArgs() {
+	// Set OpenCL kernel arguments
+
+	//--------------------------------------------------------------------------
+	// initFBKernel
+	//--------------------------------------------------------------------------
 	unsigned int argIndex = 0;
 	samplerKernel->setArg(argIndex++, *tasksBuff);
 	samplerKernel->setArg(argIndex++, *taskStatsBuff);
@@ -1513,7 +1570,7 @@ void PathOCLRenderThread::InitRender() {
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	if (cameraBuff)
 		advancePathsKernel->setArg(argIndex++, *cameraBuff);
-	if (infiniteLight) {
+	if (infiniteLightBuff) {
 		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
 		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
 	}
@@ -1537,15 +1594,16 @@ void PathOCLRenderThread::InitRender() {
 		advancePathsKernel->setArg(argIndex++, *uvsBuff);
 	}
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+	//--------------------------------------------------------------------------
+	// initFBKernel
+	//--------------------------------------------------------------------------
 
-	// Clear the frame buffer
 	initFBKernel->setArg(0, *frameBufferBuff);
-	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
-			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),
-			cl::NDRange(initFBWorkGroupSize));
 
-	// Initialize the tasks buffer
+	//--------------------------------------------------------------------------
+	// initKernel
+	//--------------------------------------------------------------------------
+
 	argIndex = 0;
 	initKernel->setArg(argIndex++, *tasksBuff);
 	initKernel->setArg(argIndex++, *taskStatsBuff);
@@ -1554,13 +1612,13 @@ void PathOCLRenderThread::InitRender() {
 		initKernel->setArg(argIndex++, *cameraBuff);
 	if (renderEngine->sampler->type == PathOCL::STRATIFIED)
 		initKernel->setArg(argIndex++, initWorkGroupSize * stratifiedDataSize, NULL);
+}
 
-	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
-	oclQueue.finish();
+void PathOCLRenderThread::Start() {
+	started = true;
 
-	// Reset statistics to be more accurate
-	intersectionDevice->ResetPerformaceStats();
+	InitRender();
+	StartRenderThread();
 }
 
 void PathOCLRenderThread::Interrupt() {
@@ -1569,12 +1627,7 @@ void PathOCLRenderThread::Interrupt() {
 }
 
 void PathOCLRenderThread::Stop() {
-	if (renderThread) {
-		renderThread->interrupt();
-		renderThread->join();
-		delete renderThread;
-		renderThread = NULL;
-	}
+	StopRenderThread();
 
 	// Transfer of the frame buffer
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
@@ -1667,6 +1720,81 @@ void PathOCLRenderThread::Stop() {
 
 	// frameBuffer is delete on the destructor to allow image saving after
 	// the rendering is finished
+}
+
+void PathOCLRenderThread::StartRenderThread() {
+	// Create the thread for the rendering
+	renderThread = new boost::thread(boost::bind(PathOCLRenderThread::RenderThreadImpl, this));
+
+	// Set renderThread priority
+	bool res = SetThreadRRPriority(renderThread);
+	if (res && !reportedPermissionError) {
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
+		reportedPermissionError = true;
+	}
+}
+
+void PathOCLRenderThread::StopRenderThread() {
+	if (renderThread) {
+		renderThread->interrupt();
+		renderThread->join();
+		delete renderThread;
+		renderThread = NULL;
+	}
+}
+
+void PathOCLRenderThread::BeginEdit() {
+	StopRenderThread();
+}
+
+void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
+	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+
+	//--------------------------------------------------------------------------
+	// Update OpenCL buffers
+	//--------------------------------------------------------------------------
+
+	if (editActions.Has(FILM_EDIT)) {
+		// Resize the framebuffer
+		InitFrameBuffer();
+	}
+
+	if (editActions.Has(CAMERA_EDIT)) {
+		// Update Camera
+		InitCamera();
+	}
+
+	//--------------------------------------------------------------------------
+	// Recompile Kernels if required
+	//--------------------------------------------------------------------------
+
+	if (editActions.Has(FILM_EDIT))
+		InitKernels();
+
+	if (editActions.Size() > 0)
+		SetKernelArgs();
+
+	//--------------------------------------------------------------------------
+	// Execute initialization kernels
+	//--------------------------------------------------------------------------
+
+	if (editActions.Has(FILM_EDIT)) {
+		// Clear the frame buffer
+		oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
+			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),
+			cl::NDRange(initFBWorkGroupSize));
+	}
+
+	if (editActions.Size() > 0) {
+		// Initialize the tasks buffer
+		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
+				cl::NDRange(renderEngine->taskCount), cl::NDRange(initWorkGroupSize));
+	}
+
+	// Reset statistics in order to be more accurate
+	intersectionDevice->ResetPerformaceStats();
+
+	StartRenderThread();
 }
 
 void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
