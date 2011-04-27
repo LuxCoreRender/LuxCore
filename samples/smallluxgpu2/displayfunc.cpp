@@ -267,8 +267,6 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		}
 		case 27: { // Escape key
-			// Check if I have to save the film
-			session->SaveFilmImage();
 			delete session;
 
 			cerr << "Done." << endl;
