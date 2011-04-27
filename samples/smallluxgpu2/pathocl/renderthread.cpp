@@ -1778,14 +1778,12 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	// Execute initialization kernels
 	//--------------------------------------------------------------------------
 
-	if (editActions.Has(FILM_EDIT)) {
+	if (editActions.Size() > 0) {
 		// Clear the frame buffer
 		oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
 			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),
 			cl::NDRange(initFBWorkGroupSize));
-	}
 
-	if (editActions.Size() > 0) {
 		// Initialize the tasks buffer
 		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 				cl::NDRange(renderEngine->taskCount), cl::NDRange(initWorkGroupSize));

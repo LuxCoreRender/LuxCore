@@ -123,6 +123,9 @@ void RenderSession::EndEdit() {
 	assert (started);
 	assert (editMode);
 
+	if (editActions.Size() > 0)
+		film->Reset();
+
 	ctx->Start();
 	renderEngine->EndEdit(editActions);
 	editMode = false;

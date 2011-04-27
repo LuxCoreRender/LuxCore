@@ -277,49 +277,63 @@ void keyFunc(unsigned char key, int x, int y) {
 		}
 		/*case ' ': // Restart rendering
 			config->ReInit(true, config->film->GetWidth(), config->film->GetHeight());
-			break;
+			break;*/
 		case 'a': {
-			config->scene->camera->TranslateLeft(MOVE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->TranslateLeft(MOVE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		}
 		case 'd': {
-			config->scene->camera->TranslateRight(MOVE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->TranslateRight(MOVE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		}
 		case 'w': {
-			config->scene->camera->TranslateForward(MOVE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->TranslateForward(MOVE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		}
 		case 's': {
-			config->scene->camera->TranslateBackward(MOVE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->TranslateBackward(MOVE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		}
 		case 'r':
-			config->scene->camera->Translate(Vector(0.f, 0.f, MOVE_STEP));
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, MOVE_STEP));
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		case 'f':
-			config->scene->camera->Translate(Vector(0.f, 0.f, -MOVE_STEP));
-			UpdateCameraData();
-			break;*/
+			session->BeginEdit();
+			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -MOVE_STEP));
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
+			break;
 		case 'h':
 			OSDPrintHelp = (!OSDPrintHelp);
 			break;
-		/*case 'x':
-			config->scene->camera->fieldOfView = max(15.f,
-					config->scene->camera->fieldOfView - 5.f);
-			config->ReInit(false);
-			break;
-		case 'c':
-			config->scene->camera->fieldOfView = min(180.f,
-					config->scene->camera->fieldOfView + 5.f);
-			config->ReInit(false);
-			break;
-		case 'n': {
+		/*case 'n': {
 			const unsigned int screenRefreshInterval = config->GetScreenRefreshInterval();
 			if (screenRefreshInterval > 1000)
 				config->SetScreenRefreshInterval(max(1000u, screenRefreshInterval - 1000));
@@ -335,9 +349,6 @@ void keyFunc(unsigned char key, int x, int y) {
 				config->SetScreenRefreshInterval(screenRefreshInterval + 50);
 			break;
 		}
-		case 'y':
-			config->SetMotionBlur(!config->scene->camera->motionBlur);
-			break;
 		case 't':
 			// Toggle tonemap type
 			if (config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
@@ -373,26 +384,42 @@ void keyFunc(unsigned char key, int x, int y) {
 }
 
 void specialFunc(int key, int x, int y) {
-	/*switch (key) {
+	switch (key) {
 		case GLUT_KEY_UP:
-			config->scene->camera->RotateUp(ROTATE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->RotateUp(ROTATE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		case GLUT_KEY_DOWN:
-			config->scene->camera->RotateDown(ROTATE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->RotateDown(ROTATE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		case GLUT_KEY_LEFT:
-			config->scene->camera->RotateLeft(ROTATE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->RotateLeft(ROTATE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		case GLUT_KEY_RIGHT:
-			config->scene->camera->RotateRight(ROTATE_STEP);
-			UpdateCameraData();
+			session->BeginEdit();
+			session->renderConfig->scene->camera->RotateRight(ROTATE_STEP);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
 		default:
 			break;
-	}*/
+	}
 
 	displayFunc();
 }
@@ -401,7 +428,7 @@ static int mouseButton0 = 0;
 static int mouseButton2 = 0;
 static int mouseGrabLastX = 0;
 static int mouseGrabLastY = 0;
-//static double lastMouseUpdate = 0.0;
+static double lastMouseUpdate = 0.0;
 
 static void mouseFunc(int button, int state, int x, int y) {
 	if (button == 0) {
@@ -426,7 +453,7 @@ static void mouseFunc(int button, int state, int x, int y) {
 }
 
 static void motionFunc(int x, int y) {
-	/*const double minInterval = 0.2;
+	const double minInterval = 0.2;
 
 	if (mouseButton0) {
 		// Check elapsed time since last update
@@ -434,13 +461,19 @@ static void motionFunc(int x, int y) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
-			config->scene->camera->RotateDown(0.04f * distY * ROTATE_STEP);
-			config->scene->camera->RotateRight(0.04f * distX * ROTATE_STEP);
+			session->BeginEdit();
+
+			session->renderConfig->scene->camera->RotateDown(0.04f * distY * ROTATE_STEP);
+			session->renderConfig->scene->camera->RotateRight(0.04f * distX * ROTATE_STEP);
+
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			UpdateCameraData();
 			displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
@@ -450,17 +483,23 @@ static void motionFunc(int x, int y) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
-			config->scene->camera->TranslateRight(0.04f * distX * MOVE_STEP);
-			config->scene->camera->TranslateBackward(0.04f * distY * MOVE_STEP);
+			session->BeginEdit();
+
+			session->renderConfig->scene->camera->TranslateRight(0.04f * distX * MOVE_STEP);
+			session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * MOVE_STEP);
+
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			UpdateCameraData();
 			displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
-	}*/
+	}
 }
 
 void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height) {
