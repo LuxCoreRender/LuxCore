@@ -25,6 +25,7 @@
 RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig = rcfg;
 	started = false;
+	editMode = false;
 
 	const Properties &cfg = renderConfig->cfg;
 	const unsigned int w = cfg.GetInt("image.width", 640);
@@ -83,6 +84,8 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 }
 
 RenderSession::~RenderSession() {
+	if (editMode)
+		EndEdit();
 	if (started)
 		Stop();
 
@@ -105,6 +108,26 @@ void RenderSession::Stop() {
 	renderEngine->Stop();
 }
 
+void RenderSession::BeginEdit() {
+	assert (started);
+	assert (!editMode);
+
+	renderEngine->BeginEdit();
+	editActions.Reset();
+
+	ctx->Stop();
+	editMode = true;
+}
+
+void RenderSession::EndEdit() {
+	assert (started);
+	assert (editMode);
+
+	ctx->Start();
+	renderEngine->EndEdit(editActions);
+	editMode = false;
+}
+
 bool RenderSession::NeedPeriodicSave() {
 	if (periodicSaveEnabled) {
 		const double now = WallClockTime();
@@ -118,10 +141,11 @@ bool RenderSession::NeedPeriodicSave() {
 }
 
 void RenderSession::SaveFilmImage() {
-	boost::unique_lock<boost::mutex> lock(filmMutex);
-
 	// Ask to the RenderEngine to update the film
 	renderEngine->UpdateFilm();
+
+	// renderEngine->UpdateFilm() uses the film lock on its own
+	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Save the film
 	const string fileName = renderConfig->cfg.GetString("image.filename", "image.png");

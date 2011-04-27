@@ -24,6 +24,7 @@
 
 #include "smalllux.h"
 #include "renderconfig.h"
+#include "editaction.h"
 
 #include "luxrays/utils/film/film.h"
 
@@ -34,7 +35,7 @@ enum RenderEngineType {
 class RenderEngine {
 public:
 	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~RenderEngine() { };
+	virtual ~RenderEngine();
 
 	virtual void Start() {
 		boost::unique_lock<boost::mutex> lock(engineMutex);
@@ -47,6 +48,18 @@ public:
 		StopLockLess();
 	}
 
+	virtual void BeginEdit() {
+		boost::unique_lock<boost::mutex> lock(engineMutex);
+
+		BeginEditLockLess();
+	}
+
+	virtual void EndEdit(const EditActionList &editActions) {
+		boost::unique_lock<boost::mutex> lock(engineMutex);
+
+		EndEditLockLess(editActions);
+	}
+
 	virtual void UpdateFilm() = 0;
 
 	virtual RenderEngineType GetEngineType() const = 0;
@@ -57,13 +70,16 @@ protected:
 	void StartLockLess();
 	void StopLockLess();
 
+	void BeginEditLockLess();
+	void EndEditLockLess(const EditActionList &editActions);
+
 	boost::mutex engineMutex;
 
 	RenderConfig *renderConfig;
 	Film *film;
 	boost::mutex *filmMutex;
 
-	bool started;
+	bool started, editMode;
 };
 
 class OCLRenderEngine : public RenderEngine {
@@ -82,9 +98,28 @@ public:
 		StopLockLess();
 	}
 
+	virtual void BeginEdit() {
+		boost::unique_lock<boost::mutex> lock(engineMutex);
+
+		BeginEditLockLess();
+	}
+
+	virtual void EndEdit(const EditActionList &editActions) {
+		boost::unique_lock<boost::mutex> lock(engineMutex);
+
+		EndEditLockLess(editActions);
+	}
+
+	const vector<OpenCLIntersectionDevice *> &GetIntersectionDevices() const {
+		return oclIntersectionDevices;
+	}
+
 protected:
 	void StartLockLess();
 	void StopLockLess();
+
+	void BeginEditLockLess();
+	void EndEditLockLess(const EditActionList &editActions);
 
 	Context *ctx;
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;

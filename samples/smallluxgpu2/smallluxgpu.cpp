@@ -250,22 +250,23 @@ int main(int argc, char *argv[]) {
 			session = new RenderSession(config);
 			return BatchMode(halttime, haltspp);
 		} else {
-			// TODO
-
 			// It is important to initialize OpenGL before OpenCL
 			// (for OpenGL/OpenCL interoperability)
-			/*unsigned int width = config->cfg.GetInt("image.width", 640);
+			unsigned int width = config->cfg.GetInt("image.width", 640);
 			unsigned int height = config->cfg.GetInt("image.height", 480);
 
 			InitGlut(argc, argv, width, height);
 
 			session = new RenderSession(config);
 
+			// Start the rendering
+			session->Start();
+
 			if (telnetServerEnabled) {
-				TelnetServer telnetServer(18081, config);
+				//TelnetServer telnetServer(18081, config);
 				RunGlut();
 			} else
-				RunGlut();*/
+				RunGlut();
 		}
 	} catch (cl::Error err) {
 		cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << endl;

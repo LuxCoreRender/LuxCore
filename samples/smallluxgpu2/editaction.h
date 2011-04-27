@@ -19,42 +19,30 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#ifndef _EDITACTION_H
+#define	_EDITACTION_H
 
-#include <cmath>
-#include <sstream>
-#include <fstream>
-#include <iostream>
-#include <cstddef>
+#include <set>
 
-#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
-#include <stddef.h>
-#include <sys/time.h>
-#elif defined (WIN32)
-#include <windows.h>
-#else
-	Unsupported Platform !!!
-#endif
+#include "smalllux.h"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
+enum EditAction {
+	FILM_EDIT, // Use this for image Film resize
+	CAMERA_EDIT // Use this for any camera parameter editing
+};
 
-#include "slgcfg.h"
+class EditActionList {
+public:
+	EditActionList() { };
+	~EditActionList() { };
 
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
+	void Reset() { actions.clear(); }
+	void AddAction(const EditAction a) { actions.insert(a); };
+	bool Has(const EditAction a) const { return (actions.find(a) != actions.end()); };
+	size_t Size() const { return actions.size(); };
 
-extern string SLG_LABEL;
+private:
+	set<EditAction> actions;
+};
 
-class RenderSession;
-extern RenderSession *session;
-
-extern void DebugHandler(const char *msg);
-
-#endif	/* _SMALLLUX_H */
+#endif	/* _EDITACTION_H */
