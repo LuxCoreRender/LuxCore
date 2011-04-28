@@ -67,8 +67,33 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	samplerKernel = NULL;
 	advancePathsKernel = NULL;
 
+	raysBuff = NULL;
+	hitsBuff = NULL;
+	tasksBuff = NULL;
+	taskStatsBuff = NULL;
 	frameBufferBuff = NULL;
+	materialsBuff = NULL;
+	meshIDBuff = NULL;
+	triangleIDBuff = NULL;
+	meshDescsBuff = NULL;
+	meshMatsBuff = NULL;
+	infiniteLightBuff = NULL;
+	infiniteLightMapBuff = NULL;
+	sunLightBuff = NULL;
+	skyLightBuff = NULL;
+	vertsBuff = NULL;
+	normalsBuff = NULL;
+	trianglesBuff = NULL;
+	colorsBuff = NULL;
 	cameraBuff = NULL;
+	triLightsBuff = NULL;
+	texMapRGBBuff = NULL;
+	texMapAlphaBuff = NULL;
+	texMapDescBuff = NULL;
+	meshTexsBuff = NULL;
+	meshBumpsBuff = NULL;
+	meshBumpsScaleBuff = NULL;
+	uvsBuff = NULL;
 
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
 }
@@ -86,6 +111,61 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 
 	delete[] frameBuffer;
 	delete[] gpuTaskStats;
+}
+
+void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+	if (*buff) {
+		// Check the size of the already allocated buffer
+
+		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
+			// I can reuse the buffer; just update the content
+
+			//cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes" << endl;
+			cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+			oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
+			return;
+		}
+	}
+
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes" << endl;
+	*buff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			size, src);
+	deviceDesc->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+}
+
+void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
+	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+	if (*buff) {
+		// Check the size of the already allocated buffer
+
+		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
+			// I can reuse the buffer
+			//cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer reused for size: " << (size / 1024) << "Kbytes" << endl;
+			return;
+		}
+	}
+
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes" << endl;
+	*buff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			size);
+	deviceDesc->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+}
+
+void PathOCLRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
+	if (*buff) {
+		const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
+
+		deviceDesc->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+		delete buff;
+		*buff = NULL;
+	}
 }
 
 void PathOCLRenderThread::InitFrameBuffer() {
@@ -106,117 +186,63 @@ void PathOCLRenderThread::InitFrameBuffer() {
 		frameBuffer[i].count = 0.f;
 	}
 
-	// OpenCL framebuffer handling code
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
-
-	// Delete previous allocated OpenCL framebuffer
-	if (frameBufferBuff) {
-		deviceDesc->FreeMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
-		delete frameBufferBuff;
-	}
-
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] FrameBuffer buffer size: " << (sizeof(PathOCL::Pixel) * frameBufferPixelCount / 1024) << "Kbytes" << endl;
-	frameBufferBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			sizeof(PathOCL::Pixel) * frameBufferPixelCount);
-	deviceDesc->AllocMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRW(&frameBufferBuff, sizeof(PathOCL::Pixel) * frameBufferPixelCount, "FrameBuffer");
 }
 
 void PathOCLRenderThread::InitCamera() {
-	// OpenCL framebuffer handling code
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
-
-	// Delete previous allocated OpenCL camera buffer
-	if (cameraBuff) {
-		deviceDesc->FreeMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
-		delete cameraBuff;
-	}
-
-	PathOCL::Camera *camera = &renderEngine->compiledScene->camera;
-
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(PathOCL::Camera) / 1024) << "Kbytes" << endl;
-	cameraBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(PathOCL::Camera),
-			(void *)camera);
-	deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRO(&cameraBuff, &renderEngine->compiledScene->camera,
+			sizeof(PathOCL::Camera), "Camera");
 }
 
 void PathOCLRenderThread::InitGeometry() {
 	Scene *scene = renderEngine->renderConfig->scene;
 	CompiledScene *cscene = renderEngine->compiledScene;
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
-	meshIDBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(unsigned int) * trianglesCount,
-			(void *)cscene->meshIDs);
-	deviceDesc->AllocMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRO(&meshIDBuff, (void *)cscene->meshIDs,
+			sizeof(unsigned int) * trianglesCount, "MeshIDs");
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * cscene->colors.size() / 1024) << "Kbytes" << endl;
-	colorsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Spectrum) * cscene->colors.size(),
-			(void *)&cscene->colors[0]);
-	deviceDesc->AllocMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRO(&colorsBuff, &cscene->colors[0],
+		sizeof(Spectrum) * cscene->colors.size(), "Colors");
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * cscene->normals.size() / 1024) << "Kbytes" << endl;
-	normalsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Normal) * cscene->normals.size(),
-			(void *)&cscene->normals[0]);
-	deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRO(&normalsBuff, &cscene->normals[0],
+		sizeof(Normal) * cscene->normals.size(), "Normals");
 
-	if (cscene->uvs.size() > 0) {
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * cscene->uvs.size() / 1024) << "Kbytes" << endl;
-		uvsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(UV) * cscene->uvs.size(),
-				(void *)&cscene->uvs[0]);
-		deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
-	} else
+	if (cscene->uvs.size() > 0)
+		AllocOCLBufferRO(&uvsBuff, &cscene->uvs[0],
+			sizeof(UV) * cscene->uvs.size(), "UVs");
+	else
 		uvsBuff = NULL;
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * cscene->verts.size() / 1024) << "Kbytes" << endl;
-	vertsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Point) * cscene->verts.size(),
-			(void *)&cscene->verts[0]);
-	deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRO(&vertsBuff, &cscene->verts[0],
+		sizeof(Point) * cscene->verts.size(), "Vertices");
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * cscene->tris.size() / 1024) << "Kbytes" << endl;
-	trianglesBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(Triangle) * cscene->tris.size(),
-			(void *)&cscene->tris[0]);
-	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRO(&trianglesBuff, &cscene->tris[0],
+		sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
 	// Check the used accelerator type
 	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) {
 		// MQBVH geometry must be defined in a specific way.
 
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] TriangleIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
-		triangleIDBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(unsigned int) * trianglesCount,
-				(void *)cscene->triangleIDs);
-		deviceDesc->AllocMemory(triangleIDBuff->getInfo<CL_MEM_SIZE>());
+		AllocOCLBufferRO(&triangleIDBuff, (void *)cscene->triangleIDs,
+				sizeof(unsigned int) * trianglesCount, "TriangleIDs");
 
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh description buffer size: " << (sizeof(PathOCL::Mesh) * cscene->meshDescs.size() / 1024) << "Kbytes" << endl;
-		meshDescsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(PathOCL::Mesh) * cscene->meshDescs.size(),
-				(void *)&cscene->meshDescs[0]);
-		deviceDesc->AllocMemory(meshDescsBuff->getInfo<CL_MEM_SIZE>());
+		AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
+				sizeof(PathOCL::Mesh) * cscene->meshDescs.size(), "Mesh description");
 	} else {
 		triangleIDBuff = NULL;
 		meshDescsBuff = NULL;
 	}
+}
+
+void PathOCLRenderThread::InitMaterials() {
+	const size_t materialsCount = renderEngine->compiledScene->mats.size();
+	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
+			sizeof(PathOCL::Material) * materialsCount, "Materials");
+
+	const unsigned int meshCount = renderEngine->compiledScene->meshMats.size();
+	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
+			sizeof(unsigned int) * meshCount, "Mesh material index");
 }
 
 void PathOCLRenderThread::InitKernels() {
@@ -224,7 +250,7 @@ void PathOCLRenderThread::InitKernels() {
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
-	Scene *scene = renderEngine->renderConfig->scene;
+	CompiledScene *cscene = renderEngine->compiledScene;
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
@@ -243,7 +269,7 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
 			;
 
-	switch (scene->dataSet->GetAcceleratorType()) {
+	switch (renderEngine->renderConfig->scene->dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH:
 			ss << " -D PARAM_ACCEL_BVH";
 			break;
@@ -257,26 +283,26 @@ void PathOCLRenderThread::InitKernels() {
 			assert (false);
 	}
 
-	if (enable_MAT_MATTE)
+	if (cscene->enable_MAT_MATTE)
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
-	if (enable_MAT_AREALIGHT)
+	if (cscene->enable_MAT_AREALIGHT)
 		ss << " -D PARAM_ENABLE_MAT_AREALIGHT";
-	if (enable_MAT_MIRROR)
+	if (cscene->enable_MAT_MIRROR)
 		ss << " -D PARAM_ENABLE_MAT_MIRROR";
-	if (enable_MAT_GLASS)
+	if (cscene->enable_MAT_GLASS)
 		ss << " -D PARAM_ENABLE_MAT_GLASS";
-	if (enable_MAT_MATTEMIRROR)
+	if (cscene->enable_MAT_MATTEMIRROR)
 		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
-	if (enable_MAT_METAL)
+	if (cscene->enable_MAT_METAL)
 		ss << " -D PARAM_ENABLE_MAT_METAL";
-	if (enable_MAT_MATTEMETAL)
+	if (cscene->enable_MAT_MATTEMETAL)
 		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
-	if (enable_MAT_ALLOY)
+	if (cscene->enable_MAT_ALLOY)
 		ss << " -D PARAM_ENABLE_MAT_ALLOY";
-	if (enable_MAT_ARCHGLASS)
+	if (cscene->enable_MAT_ARCHGLASS)
 		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 
-	if (scene->camera->lensRadius > 0.f)
+	if (cscene->camera.lensRadius > 0.f)
 		ss << " -D PARAM_CAMERA_HAS_DOF";
 
 
@@ -559,186 +585,7 @@ void PathOCLRenderThread::InitRender() {
 	// Translate material definitions
 	//--------------------------------------------------------------------------
 
-	tStart = WallClockTime();
-
-	enable_MAT_MATTE = false;
-	enable_MAT_AREALIGHT = false;
-	enable_MAT_MIRROR = false;
-	enable_MAT_GLASS = false;
-	enable_MAT_MATTEMIRROR = false;
-	enable_MAT_METAL = false;
-	enable_MAT_MATTEMETAL = false;
-	enable_MAT_ALLOY = false;
-	enable_MAT_ARCHGLASS = false;
-	const unsigned int materialsCount = scene->materials.size();
-	PathOCL::Material *mats = new PathOCL::Material[materialsCount];
-	for (unsigned int i = 0; i < materialsCount; ++i) {
-		Material *m = scene->materials[i];
-		PathOCL::Material *gpum = &mats[i];
-
-		switch (m->GetType()) {
-			case MATTE: {
-				enable_MAT_MATTE = true;
-				MatteMaterial *mm = (MatteMaterial *)m;
-
-				gpum->type = MAT_MATTE;
-				gpum->param.matte.r = mm->GetKd().r;
-				gpum->param.matte.g = mm->GetKd().g;
-				gpum->param.matte.b = mm->GetKd().b;
-				break;
-			}
-			case AREALIGHT: {
-				enable_MAT_AREALIGHT = true;
-				AreaLightMaterial *alm = (AreaLightMaterial *)m;
-
-				gpum->type = MAT_AREALIGHT;
-				gpum->param.areaLight.gain_r = alm->GetGain().r;
-				gpum->param.areaLight.gain_g = alm->GetGain().g;
-				gpum->param.areaLight.gain_b = alm->GetGain().b;
-				break;
-			}
-			case MIRROR: {
-				enable_MAT_MIRROR = true;
-				MirrorMaterial *mm = (MirrorMaterial *)m;
-
-				gpum->type = MAT_MIRROR;
-				gpum->param.mirror.r = mm->GetKr().r;
-				gpum->param.mirror.g = mm->GetKr().g;
-				gpum->param.mirror.b = mm->GetKr().b;
-				gpum->param.mirror.specularBounce = mm->HasSpecularBounceEnabled();
-				break;
-			}
-			case GLASS: {
-				enable_MAT_GLASS = true;
-				GlassMaterial *gm = (GlassMaterial *)m;
-
-				gpum->type = MAT_GLASS;
-				gpum->param.glass.refl_r = gm->GetKrefl().r;
-				gpum->param.glass.refl_g = gm->GetKrefl().g;
-				gpum->param.glass.refl_b = gm->GetKrefl().b;
-
-				gpum->param.glass.refrct_r = gm->GetKrefrct().r;
-				gpum->param.glass.refrct_g = gm->GetKrefrct().g;
-				gpum->param.glass.refrct_b = gm->GetKrefrct().b;
-
-				gpum->param.glass.ousideIor = gm->GetOutsideIOR();
-				gpum->param.glass.ior = gm->GetIOR();
-				gpum->param.glass.R0 = gm->GetR0();
-				gpum->param.glass.reflectionSpecularBounce = gm->HasReflSpecularBounceEnabled();
-				gpum->param.glass.transmitionSpecularBounce = gm->HasRefrctSpecularBounceEnabled();
-				break;
-			}
-			case MATTEMIRROR: {
-				enable_MAT_MATTEMIRROR = true;
-				MatteMirrorMaterial *mmm = (MatteMirrorMaterial *)m;
-
-				gpum->type = MAT_MATTEMIRROR;
-				gpum->param.matteMirror.matte.r = mmm->GetMatte().GetKd().r;
-				gpum->param.matteMirror.matte.g = mmm->GetMatte().GetKd().g;
-				gpum->param.matteMirror.matte.b = mmm->GetMatte().GetKd().b;
-
-				gpum->param.matteMirror.mirror.r = mmm->GetMirror().GetKr().r;
-				gpum->param.matteMirror.mirror.g = mmm->GetMirror().GetKr().g;
-				gpum->param.matteMirror.mirror.b = mmm->GetMirror().GetKr().b;
-				gpum->param.matteMirror.mirror.specularBounce = mmm->GetMirror().HasSpecularBounceEnabled();
-
-				gpum->param.matteMirror.matteFilter = mmm->GetMatteFilter();
-				gpum->param.matteMirror.totFilter = mmm->GetTotFilter();
-				gpum->param.matteMirror.mattePdf = mmm->GetMattePdf();
-				gpum->param.matteMirror.mirrorPdf = mmm->GetMirrorPdf();
-				break;
-			}
-			case METAL: {
-				enable_MAT_METAL = true;
-				MetalMaterial *mm = (MetalMaterial *)m;
-
-				gpum->type = MAT_METAL;
-				gpum->param.metal.r = mm->GetKr().r;
-				gpum->param.metal.g = mm->GetKr().g;
-				gpum->param.metal.b = mm->GetKr().b;
-				gpum->param.metal.exponent = mm->GetExp();
-				gpum->param.metal.specularBounce = mm->HasSpecularBounceEnabled();
-				break;
-			}
-			case MATTEMETAL: {
-				enable_MAT_MATTEMETAL = true;
-				MatteMetalMaterial *mmm = (MatteMetalMaterial *)m;
-
-				gpum->type = MAT_MATTEMETAL;
-				gpum->param.matteMetal.matte.r = mmm->GetMatte().GetKd().r;
-				gpum->param.matteMetal.matte.g = mmm->GetMatte().GetKd().g;
-				gpum->param.matteMetal.matte.b = mmm->GetMatte().GetKd().b;
-
-				gpum->param.matteMetal.metal.r = mmm->GetMetal().GetKr().r;
-				gpum->param.matteMetal.metal.g = mmm->GetMetal().GetKr().g;
-				gpum->param.matteMetal.metal.b = mmm->GetMetal().GetKr().b;
-				gpum->param.matteMetal.metal.exponent = mmm->GetMetal().GetExp();
-				gpum->param.matteMetal.metal.specularBounce = mmm->GetMetal().HasSpecularBounceEnabled();
-
-				gpum->param.matteMetal.matteFilter = mmm->GetMatteFilter();
-				gpum->param.matteMetal.totFilter = mmm->GetTotFilter();
-				gpum->param.matteMetal.mattePdf = mmm->GetMattePdf();
-				gpum->param.matteMetal.metalPdf = mmm->GetMetalPdf();
-				break;
-			}
-			case ALLOY: {
-				enable_MAT_ALLOY = true;
-				AlloyMaterial *am = (AlloyMaterial *)m;
-
-				gpum->type = MAT_ALLOY;
-				gpum->param.alloy.refl_r= am->GetKrefl().r;
-				gpum->param.alloy.refl_g = am->GetKrefl().g;
-				gpum->param.alloy.refl_b = am->GetKrefl().b;
-
-				gpum->param.alloy.diff_r = am->GetKd().r;
-				gpum->param.alloy.diff_g = am->GetKd().g;
-				gpum->param.alloy.diff_b = am->GetKd().b;
-
-				gpum->param.alloy.exponent = am->GetExp();
-				gpum->param.alloy.R0 = am->GetR0();
-				gpum->param.alloy.specularBounce = am->HasSpecularBounceEnabled();
-				break;
-			}
-			case ARCHGLASS: {
-				enable_MAT_ARCHGLASS = true;
-				ArchGlassMaterial *agm = (ArchGlassMaterial *)m;
-
-				gpum->type = MAT_ARCHGLASS;
-				gpum->param.archGlass.refl_r = agm->GetKrefl().r;
-				gpum->param.archGlass.refl_g = agm->GetKrefl().g;
-				gpum->param.archGlass.refl_b = agm->GetKrefl().b;
-
-				gpum->param.archGlass.refrct_r = agm->GetKrefrct().r;
-				gpum->param.archGlass.refrct_g = agm->GetKrefrct().g;
-				gpum->param.archGlass.refrct_b = agm->GetKrefrct().b;
-
-				gpum->param.archGlass.transFilter = agm->GetTransFilter();
-				gpum->param.archGlass.totFilter = agm->GetTotFilter();
-				gpum->param.archGlass.reflPdf = agm->GetReflPdf();
-				gpum->param.archGlass.transPdf = agm->GetTransPdf();
-				break;
-			}
-			default: {
-				enable_MAT_MATTE = true;
-				gpum->type = MAT_MATTE;
-				gpum->param.matte.r = 0.75f;
-				gpum->param.matte.g = 0.75f;
-				gpum->param.matte.b = 0.75f;
-				break;
-			}
-		}
-	}
-
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Materials buffer size: " << (sizeof(PathOCL::Material) * materialsCount / 1024) << "Kbytes" << endl;
-	materialsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(PathOCL::Material) * materialsCount,
-			mats);
-	deviceDesc->AllocMemory(materialsBuff->getInfo<CL_MEM_SIZE>());
-	delete[] mats;
-
-	tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Material translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	InitMaterials();
 
 	//--------------------------------------------------------------------------
 	// Translate area lights
@@ -792,40 +639,6 @@ void PathOCLRenderThread::InitRender() {
 
 	tEnd = WallClockTime();
 	cerr << "[PathOCLRenderThread::" << threadIndex << "] Area lights translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
-
-	//--------------------------------------------------------------------------
-	// Translate mesh material indices
-	//--------------------------------------------------------------------------
-
-	tStart = WallClockTime();
-
-	const unsigned int meshCount = scene->objectMaterials.size();
-	unsigned int *meshMats = new unsigned int[meshCount];
-	for (unsigned int i = 0; i < meshCount; ++i) {
-		Material *m = scene->objectMaterials[i];
-
-		// Look for the index
-		unsigned int index = 0;
-		for (unsigned int j = 0; j < materialsCount; ++j) {
-			if (m == scene->materials[j]) {
-				index = j;
-				break;
-			}
-		}
-
-		meshMats[i] = index;
-	}
-
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh material index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
-	meshMatsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(unsigned int) * meshCount,
-			meshMats);
-	deviceDesc->AllocMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
-	delete[] meshMats;
-
-	tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Material indices translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinite light source
@@ -1052,9 +865,10 @@ void PathOCLRenderThread::InitRender() {
 		deviceDesc->AllocMemory(texMapDescBuff->getInfo<CL_MEM_SIZE>());
 		delete[] gpuTexMap;
 
-		//-----------------------------------------------
+		//----------------------------------------------------------------------
 
 		// Translate mesh texture indices
+		const unsigned int meshCount = renderEngine->compiledScene->meshMats.size();
 		unsigned int *meshTexs = new unsigned int[meshCount];
 		for (unsigned int i = 0; i < meshCount; ++i) {
 			TexMapInstance *t = scene->objectTexMaps[i];
@@ -1490,7 +1304,7 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	//--------------------------------------------------------------------------
 
 	if (editActions.Has(FILM_EDIT)) {
-		// Resize the framebuffer
+		// Resize the Framebuffer
 		InitFrameBuffer();
 	}
 
@@ -1500,15 +1314,22 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	}
 
 	if (editActions.Has(GEOMETRY_EDIT)) {
-		// Update Scene geometry
+		// Update Scene Geometry
 		InitGeometry();
+	}
+
+	if (editActions.Has(MATERIALS_EDIT)) {
+		// Update Scene Materials
+		InitMaterials();
 	}
 
 	//--------------------------------------------------------------------------
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (editActions.Has(FILM_EDIT))
+	// TODO: optimize the case when MATERIALS_EDIT doesn't change the type
+	// of materials used
+	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIALS_EDIT))
 		InitKernels();
 
 	if (editActions.Size() > 0)

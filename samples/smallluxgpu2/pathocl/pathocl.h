@@ -58,13 +58,19 @@ public:
 private:
 	static void RenderThreadImpl(PathOCLRenderThread *renderThread);
 
+	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc);
+	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc);
+	void FreeOCLBuffer(cl::Buffer **buff);
+
 	void StartRenderThread();
 	void StopRenderThread();
 
 	void InitRender();
+
 	void InitFrameBuffer();
 	void InitCamera();
 	void InitGeometry();
+	void InitMaterials();
 	void InitKernels();
 
 	void SetKernelArgs();
@@ -123,9 +129,6 @@ private:
 	unsigned int frameBufferPixelCount;
 	size_t stratifiedDataSize;
 	unsigned int areaLightCount;
-	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS;
-	bool enable_MAT_MATTEMIRROR, enable_MAT_METAL, enable_MAT_MATTEMETAL, enable_MAT_ALLOY;
-	bool enable_MAT_ARCHGLASS;
 
 	bool started, editMode, reportedPermissionError;
 

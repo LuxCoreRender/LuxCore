@@ -29,7 +29,8 @@
 enum EditAction {
 	FILM_EDIT, // Use this for image Film resize
 	CAMERA_EDIT, // Use this for any camera parameter editing
-	GEOMETRY_EDIT,  // Use this for any DataSet related editing
+	GEOMETRY_EDIT, // Use this for any DataSet related editing
+	MATERIALS_EDIT, // Use this for any Material related editing
 };
 
 class EditActionList {
@@ -43,6 +44,7 @@ public:
 		AddAction(FILM_EDIT);
 		AddAction(CAMERA_EDIT);
 		AddAction(GEOMETRY_EDIT);
+		AddAction(MATERIALS_EDIT);
 	}
 	bool Has(const EditAction a) const { return (actions.find(a) != actions.end()); };
 	size_t Size() const { return actions.size(); };

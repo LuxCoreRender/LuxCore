@@ -39,10 +39,6 @@ public:
 	RenderConfig *renderConfig;
 	Film *film;
 
-	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,
-		enable_MAT_MATTEMIRROR, enable_MAT_METAL, enable_MAT_MATTEMETAL, enable_MAT_ALLOY,
-		enable_MAT_ARCHGLASS;
-
 	// Compiled Camera
 	PathOCL::Camera camera;
 
@@ -56,9 +52,17 @@ public:
 	const TriangleMeshID *meshIDs;
 	const TriangleID *triangleIDs;
 
+	// Compiled Materials
+	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,
+		enable_MAT_MATTEMIRROR, enable_MAT_METAL, enable_MAT_MATTEMETAL, enable_MAT_ALLOY,
+		enable_MAT_ARCHGLASS;
+	vector<PathOCL::Material> mats;
+	vector<unsigned int> meshMats;
+
 private:
 	void CompileCamera();
 	void CompileGeometry();
+	void CompileMaterials();
 };
 
 #endif	/* _COMPILEDSESSION_H */
