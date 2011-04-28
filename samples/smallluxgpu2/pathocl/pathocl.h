@@ -27,6 +27,7 @@
 #include "smalllux.h"
 #include "renderengine.h"
 #include "ocldatatypes.h"
+#include "compiledscene.h"
 
 #include "luxrays/core/intersectiondevice.h"
 
@@ -63,7 +64,7 @@ private:
 	void InitRender();
 	void InitFrameBuffer();
 	void InitCamera();
-	void InitRenderGeometry();
+	void InitGeometry();
 	void InitKernels();
 
 	void SetKernelArgs();
@@ -166,6 +167,8 @@ private:
 	void UpdateFilmLockLess();
 
 	mutable boost::mutex engineMutex;
+
+	CompiledScene *compiledScene;
 
 	vector<PathOCLRenderThread *> renderThreads;
 	SampleBuffer *sampleBuffer;

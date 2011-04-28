@@ -124,21 +124,6 @@ void PathOCLRenderThread::InitFrameBuffer() {
 }
 
 void PathOCLRenderThread::InitCamera() {
-	//--------------------------------------------------------------------------
-	// Camera definition
-	//--------------------------------------------------------------------------
-
-	Scene *scene = renderEngine->renderConfig->scene;
-
-	// Dynamic camera mode uses a buffer to transfer camera position/orientation
-	PathOCL::Camera camera;
-	camera.yon = scene->camera->clipYon;
-	camera.hither = scene->camera->clipHither;
-	camera.lensRadius = scene->camera->lensRadius;
-	camera.focalDistance = scene->camera->focalDistance;
-	memcpy(&camera.rasterToCameraMatrix[0][0], scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-	memcpy(&camera.cameraToWorldMatrix[0][0], scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
-
 	// OpenCL framebuffer handling code
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
@@ -149,343 +134,89 @@ void PathOCLRenderThread::InitCamera() {
 		delete cameraBuff;
 	}
 
+	PathOCL::Camera *camera = &renderEngine->compiledScene->camera;
+
 	cerr << "[PathOCLRenderThread::" << threadIndex << "] Camera buffer size: " << (sizeof(PathOCL::Camera) / 1024) << "Kbytes" << endl;
 	cameraBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(PathOCL::Camera),
-			(void *)&camera);
+			(void *)camera);
 	deviceDesc->AllocMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
 }
 
-static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
-	return p0 < p1;
-}
-
-void PathOCLRenderThread::InitRenderGeometry() {
+void PathOCLRenderThread::InitGeometry() {
 	Scene *scene = renderEngine->renderConfig->scene;
+	CompiledScene *cscene = renderEngine->compiledScene;
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
-	const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
 	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
-
-	//--------------------------------------------------------------------------
-	// Translate mesh IDs
-	//--------------------------------------------------------------------------
-
-	const TriangleMeshID *meshIDs = scene->dataSet->GetMeshIDTable();
 	cerr << "[PathOCLRenderThread::" << threadIndex << "] MeshIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
 	meshIDBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(unsigned int) * trianglesCount,
-			(void *)meshIDs);
+			(void *)cscene->meshIDs);
 	deviceDesc->AllocMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
 
-	const double tStart = WallClockTime();
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * cscene->colors.size() / 1024) << "Kbytes" << endl;
+	colorsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Spectrum) * cscene->colors.size(),
+			(void *)&cscene->colors[0]);
+	deviceDesc->AllocMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * cscene->normals.size() / 1024) << "Kbytes" << endl;
+	normalsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Normal) * cscene->normals.size(),
+			(void *)&cscene->normals[0]);
+	deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
+
+	if (cscene->uvs.size() > 0) {
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * cscene->uvs.size() / 1024) << "Kbytes" << endl;
+		uvsBuff = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(UV) * cscene->uvs.size(),
+				(void *)&cscene->uvs[0]);
+		deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
+	} else
+		uvsBuff = NULL;
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * cscene->verts.size() / 1024) << "Kbytes" << endl;
+	vertsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Point) * cscene->verts.size(),
+			(void *)&cscene->verts[0]);
+	deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * cscene->tris.size() / 1024) << "Kbytes" << endl;
+	trianglesBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(Triangle) * cscene->tris.size(),
+			(void *)&cscene->tris[0]);
+	deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
 
 	// Check the used accelerator type
 	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) {
 		// MQBVH geometry must be defined in a specific way.
 
-		//----------------------------------------------------------------------
-		// Translate mesh IDs
-		//----------------------------------------------------------------------
-
-		const TriangleID *triangleIDs = scene->dataSet->GetMeshTriangleIDTable();
 		cerr << "[PathOCLRenderThread::" << threadIndex << "] TriangleIDs buffer size: " << (sizeof(unsigned int) * trianglesCount / 1024) << "Kbytes" << endl;
 		triangleIDBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(unsigned int) * trianglesCount,
-				(void *)triangleIDs);
+				(void *)cscene->triangleIDs);
 		deviceDesc->AllocMemory(triangleIDBuff->getInfo<CL_MEM_SIZE>());
 
-		vector<Point> verts;
-		vector<Spectrum> colors;
-		vector<Normal> normals;
-		vector<UV> uvs;
-		vector<Triangle> tris;
-		vector<PathOCL::Mesh> meshDescs;
-		std::map<ExtMesh *, unsigned int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
-
-		PathOCL::Mesh newMeshDesc;
-		newMeshDesc.vertsOffset = 0;
-		newMeshDesc.trisOffset = 0;
-		memcpy(newMeshDesc.trans, Matrix4x4().m, sizeof(float[4][4]));
-		memcpy(newMeshDesc.invTrans, Matrix4x4().m, sizeof(float[4][4]));
-
-		PathOCL::Mesh currentMeshDesc;
-
-		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-			ExtMesh *mesh = scene->objects[i];
-
-			bool isExistingInstance;
-			if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-				ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
-
-				// Check if is one of the already defined meshes
-				std::map<ExtMesh *, unsigned int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
-				if (it == definedMeshs.end()) {
-					// It is a new one
-					currentMeshDesc = newMeshDesc;
-
-					newMeshDesc.vertsOffset += imesh->GetTotalVertexCount();
-					newMeshDesc.trisOffset += imesh->GetTotalTriangleCount();
-
-					isExistingInstance = false;
-
-					definedMeshs[imesh->GetExtTriangleMesh()] = definedMeshs.size();
-				} else {
-					currentMeshDesc = meshDescs[it->second];
-
-					isExistingInstance = true;
-				}
-
-				memcpy(currentMeshDesc.trans, imesh->GetTransformation().GetMatrix().m, sizeof(float[4][4]));
-				memcpy(currentMeshDesc.invTrans, imesh->GetInvTransformation().GetMatrix().m, sizeof(float[4][4]));
-				mesh = imesh->GetExtTriangleMesh();
-			} else {
-				currentMeshDesc = newMeshDesc;
-
-				newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
-				newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
-
-				isExistingInstance = false;
-			}
-
-			meshDescs.push_back(currentMeshDesc);
-
-			if (!isExistingInstance) {
-				assert (mesh->GetType() == TYPE_EXT_TRIANGLE);
-
-				//--------------------------------------------------------------
-				// Translate mesh colors
-				//--------------------------------------------------------------
-
-				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-					if (mesh->HasColors())
-						colors.push_back(mesh->GetColor(j));
-					else
-						colors.push_back(Spectrum(1.f, 1.f, 1.f));
-				}
-
-				//--------------------------------------------------------------
-				// Translate mesh normals
-				//--------------------------------------------------------------
-
-				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					normals.push_back(mesh->GetNormal(j));
-
-				//----------------------------------------------------------------------
-				// Translate vertex uvs
-				//----------------------------------------------------------------------
-
-				if (scene->texMapCache->GetSize()) {
-					// TODO: I should check if the only texture map is used for infinitelight
-
-					for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-						if (mesh->HasUVs())
-							uvs.push_back(mesh->GetUV(j));
-						else
-							uvs.push_back(UV(0.f, 0.f));
-					}
-				}
-
-				//--------------------------------------------------------------
-				// Translate mesh vertices
-				//--------------------------------------------------------------
-
-				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					verts.push_back(mesh->GetVertex(j));
-
-				//--------------------------------------------------------------
-				// Translate mesh indices
-				//--------------------------------------------------------------
-
-				Triangle *mtris = mesh->GetTriangles();
-				for (unsigned int j = 0; j < mesh->GetTotalTriangleCount(); ++j)
-					tris.push_back(mtris[j]);
-			}
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * colors.size() / 1024) << "Kbytes" << endl;
-		colorsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Spectrum) * colors.size(),
-				(void *)&colors[0]);
-		deviceDesc->AllocMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * normals.size() / 1024) << "Kbytes" << endl;
-		normalsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Normal) * normals.size(),
-				(void *)&normals[0]);
-		deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
-
-		if (uvs.size() > 0) {
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * verticesCount / 1024) << "Kbytes" << endl;
-			uvsBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(UV) * verticesCount,
-					(void *)&uvs[0]);
-			deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
-		} else
-			uvsBuff = NULL;
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verts.size() / 1024) << "Kbytes" << endl;
-		vertsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Point) * verts.size(),
-				(void *)&verts[0]);
-		deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * tris.size() / 1024) << "Kbytes" << endl;
-		trianglesBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Triangle) * tris.size(),
-				(void *)&tris[0]);
-		deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh description buffer size: " << (sizeof(PathOCL::Mesh) * meshDescs.size() / 1024) << "Kbytes" << endl;
+		cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh description buffer size: " << (sizeof(PathOCL::Mesh) * cscene->meshDescs.size() / 1024) << "Kbytes" << endl;
 		meshDescsBuff = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(PathOCL::Mesh) * meshDescs.size(),
-				(void *)&meshDescs[0]);
+				sizeof(PathOCL::Mesh) * cscene->meshDescs.size(),
+				(void *)&cscene->meshDescs[0]);
 		deviceDesc->AllocMemory(meshDescsBuff->getInfo<CL_MEM_SIZE>());
 	} else {
 		triangleIDBuff = NULL;
 		meshDescsBuff = NULL;
-
-		//----------------------------------------------------------------------
-		// Translate mesh colors
-		//----------------------------------------------------------------------
-
-		Spectrum *colors = new Spectrum[verticesCount];
-		unsigned int cIndex = 0;
-		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-			ExtMesh *mesh = scene->objects[i];
-
-			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-				if (mesh->HasColors())
-					colors[cIndex++] = mesh->GetColor(j);
-				else
-					colors[cIndex++] = Spectrum(1.f, 1.f, 1.f);
-			}
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Colors buffer size: " << (sizeof(Spectrum) * verticesCount / 1024) << "Kbytes" << endl;
-		colorsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Spectrum) * verticesCount,
-				colors);
-		deviceDesc->AllocMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
-		delete[] colors;
-
-		//----------------------------------------------------------------------
-		// Translate mesh normals
-		//----------------------------------------------------------------------
-
-		Normal *normals = new Normal[verticesCount];
-		unsigned int nIndex = 0;
-		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-			ExtMesh *mesh = scene->objects[i];
-
-			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				normals[nIndex++] = mesh->GetNormal(j);
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * verticesCount / 1024) << "Kbytes" << endl;
-		normalsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Normal) * verticesCount,
-				normals);
-		deviceDesc->AllocMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
-		delete[] normals;
-
-		//----------------------------------------------------------------------
-		// Translate vertex uvs
-		//----------------------------------------------------------------------
-
-		if (scene->texMapCache->GetSize()) {
-			// TODO: I should check if the only texture map is used for infinitelight
-
-			UV *uvs = new UV[verticesCount];
-			unsigned int uvIndex = 0;
-			for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-				ExtMesh *mesh = scene->objects[i];
-
-				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-					if (mesh->HasUVs())
-						uvs[uvIndex++] = mesh->GetUV(j);
-					else
-						uvs[uvIndex++] = UV(0.f, 0.f);
-				}
-			}
-
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] UVs buffer size: " << (sizeof(UV) * verticesCount / 1024) << "Kbytes" << endl;
-			uvsBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(UV) * verticesCount,
-					uvs);
-			deviceDesc->AllocMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
-			delete[] uvs;
-		} else
-			uvsBuff = NULL;
-
-		//----------------------------------------------------------------------
-		// Translate mesh vertices
-		//----------------------------------------------------------------------
-
-		unsigned int *meshOffsets = new unsigned int[scene->objects.size()];
-		Point *verts = new Point[verticesCount];
-		unsigned int vIndex = 0;
-		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-			ExtMesh *mesh = scene->objects[i];
-
-			meshOffsets[i] = vIndex;
-			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				verts[vIndex++] = mesh->GetVertex(j);
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Vertices buffer size: " << (sizeof(Point) * verticesCount / 1024) << "Kbytes" << endl;
-		vertsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Point) * verticesCount,
-				(void *)verts);
-		deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-		delete[] verts;
-
-		//----------------------------------------------------------------------
-		// Translate mesh indices
-		//----------------------------------------------------------------------
-
-		Triangle *tris = new Triangle[trianglesCount];
-		unsigned int tIndex = 0;
-		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-			ExtMesh *mesh = scene->objects[i];
-
-			Triangle *mtris = mesh->GetTriangles();
-			const unsigned int moffset = meshOffsets[i];
-			for (unsigned int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-				tris[tIndex].v[0] = mtris[j].v[0] + moffset;
-				tris[tIndex].v[1] = mtris[j].v[1] + moffset;
-				tris[tIndex].v[2] = mtris[j].v[2] + moffset;
-				++tIndex;
-			}
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Triangles buffer size: " << (sizeof(Triangle) * trianglesCount / 1024) << "Kbytes" << endl;
-		trianglesBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Triangle) * trianglesCount,
-				(void *)tris);
-		deviceDesc->AllocMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
-		delete[] tris;
-
-		delete[] meshOffsets;
 	}
-
-	const double tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh information translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 }
 
 void PathOCLRenderThread::InitKernels() {
@@ -777,13 +508,17 @@ void PathOCLRenderThread::InitKernels() {
 void PathOCLRenderThread::InitRender() {
 	Scene *scene = renderEngine->renderConfig->scene;
 
-	InitFrameBuffer();
-
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 	double tStart, tEnd;
+
+	//--------------------------------------------------------------------------
+	// FrameBuffer definition
+	//--------------------------------------------------------------------------
+
+	InitFrameBuffer();
 
 	//--------------------------------------------------------------------------
 	// Allocate buffers
@@ -815,10 +550,10 @@ void PathOCLRenderThread::InitRender() {
 	InitCamera();
 
 	//--------------------------------------------------------------------------
-	// Translate mesh geometry
+	// Scene geometry
 	//--------------------------------------------------------------------------
 
-	InitRenderGeometry();
+	InitGeometry();
 
 	//--------------------------------------------------------------------------
 	// Translate material definitions
@@ -1762,6 +1497,11 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if (editActions.Has(CAMERA_EDIT)) {
 		// Update Camera
 		InitCamera();
+	}
+
+	if (editActions.Has(GEOMETRY_EDIT)) {
+		// Update Scene geometry
+		InitGeometry();
 	}
 
 	//--------------------------------------------------------------------------

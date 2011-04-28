@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef OCLDATATYPES_H
-#define	OCLDATATYPES_H
+#ifndef _OCLDATATYPES_H
+#define	_OCLDATATYPES_H
 
 #include "smalllux.h"
 
@@ -297,4 +297,4 @@ typedef struct {
 }
 
 
-#endif	/* OCLDATATYPES_H */
+#endif	/* _OCLDATATYPES_H */

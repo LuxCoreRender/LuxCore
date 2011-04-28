@@ -50,6 +50,7 @@
 PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		OCLRenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
+	compiledScene = NULL;
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
@@ -148,6 +149,8 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 void PathOCLRenderEngine::Start() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
+	compiledScene = new CompiledScene(renderConfig, film);
+
 	OCLRenderEngine::StartLockLess();
 
 	samplesCount = 0;
@@ -170,6 +173,9 @@ void PathOCLRenderEngine::Stop() {
 	UpdateFilmLockLess();
 
 	OCLRenderEngine::StopLockLess();
+
+	delete compiledScene;
+	compiledScene = NULL;
 }
 
 void PathOCLRenderEngine::BeginEdit() {
@@ -185,6 +191,8 @@ void PathOCLRenderEngine::BeginEdit() {
 
 void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
+
+	compiledScene->Recompile(editActions);
 
 	OCLRenderEngine::EndEditLockLess(editActions);
 
