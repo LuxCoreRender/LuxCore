@@ -19,36 +19,46 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _EDITACTION_H
-#define	_EDITACTION_H
-
-#include <set>
+#ifndef _COMPILEDSESSION_H
+#define	_COMPILEDSESSION_H
 
 #include "smalllux.h"
+#include "ocldatatypes.h"
+#include "renderconfig.h"
+#include "editaction.h"
 
-enum EditAction {
-	FILM_EDIT, // Use this for image Film resize
-	CAMERA_EDIT, // Use this for any camera parameter editing
-	GEOMETRY_EDIT,  // Use this for any DataSet related editing
-};
+#include "luxrays/utils/film/film.h"
 
-class EditActionList {
+class CompiledScene {
 public:
-	EditActionList() { };
-	~EditActionList() { };
+	CompiledScene(RenderConfig *cfg, Film *flm);
+	~CompiledScene();
 
-	void Reset() { actions.clear(); }
-	void AddAction(const EditAction a) { actions.insert(a); };
-	void AddAllAction() {
-		AddAction(FILM_EDIT);
-		AddAction(CAMERA_EDIT);
-		AddAction(GEOMETRY_EDIT);
-	}
-	bool Has(const EditAction a) const { return (actions.find(a) != actions.end()); };
-	size_t Size() const { return actions.size(); };
+	void Recompile(const EditActionList &editActions);
+
+	RenderConfig *renderConfig;
+	Film *film;
+
+	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,
+		enable_MAT_MATTEMIRROR, enable_MAT_METAL, enable_MAT_MATTEMETAL, enable_MAT_ALLOY,
+		enable_MAT_ARCHGLASS;
+
+	// Compiled Camera
+	PathOCL::Camera camera;
+
+	// Compiled Scene Geometry
+	vector<Point> verts;
+	vector<Spectrum> colors;
+	vector<Normal> normals;
+	vector<UV> uvs;
+	vector<Triangle> tris;
+	vector<PathOCL::Mesh> meshDescs;
+	const TriangleMeshID *meshIDs;
+	const TriangleID *triangleIDs;
 
 private:
-	set<EditAction> actions;
+	void CompileCamera();
+	void CompileGeometry();
 };
 
-#endif	/* _EDITACTION_H */
+#endif	/* _COMPILEDSESSION_H */
