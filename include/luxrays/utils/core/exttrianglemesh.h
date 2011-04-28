@@ -158,7 +158,7 @@ private:
 class ExtInstanceTriangleMesh : public ExtMesh {
 public:
 	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) {
-		assert (mesh != NULL);
+		assert (m != NULL);
 
 		trans = t;
 		invTrans = t.GetInverse();
