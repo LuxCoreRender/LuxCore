@@ -163,7 +163,7 @@ void PathOCLRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
 		const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 		deviceDesc->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-		delete buff;
+		delete *buff;
 		*buff = NULL;
 	}
 }
@@ -1187,82 +1187,40 @@ void PathOCLRenderThread::Stop() {
 		frameBufferBuff->getInfo<CL_MEM_SIZE>(),
 		frameBuffer);
 
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
-	deviceDesc->FreeMemory(raysBuff->getInfo<CL_MEM_SIZE>());
-	delete raysBuff;
-	deviceDesc->FreeMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
-	delete hitsBuff;
-	deviceDesc->FreeMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
-	delete tasksBuff;
-	deviceDesc->FreeMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
-	delete taskStatsBuff;
-	deviceDesc->FreeMemory(frameBufferBuff->getInfo<CL_MEM_SIZE>());
-	delete frameBufferBuff;
-	deviceDesc->FreeMemory(materialsBuff->getInfo<CL_MEM_SIZE>());
-	delete materialsBuff;
-	deviceDesc->FreeMemory(meshIDBuff->getInfo<CL_MEM_SIZE>());
-	delete meshIDBuff;
-	if (triangleIDBuff) {
-		deviceDesc->FreeMemory(triangleIDBuff->getInfo<CL_MEM_SIZE>());
-		delete triangleIDBuff;
-	}
-	if (meshDescsBuff) {
-		deviceDesc->FreeMemory(meshDescsBuff->getInfo<CL_MEM_SIZE>());
-		delete meshDescsBuff;
-	}
-	deviceDesc->FreeMemory(meshMatsBuff->getInfo<CL_MEM_SIZE>());
-	delete meshMatsBuff;
-	deviceDesc->FreeMemory(colorsBuff->getInfo<CL_MEM_SIZE>());
-	delete colorsBuff;
-	deviceDesc->FreeMemory(normalsBuff->getInfo<CL_MEM_SIZE>());
-	delete normalsBuff;
-	deviceDesc->FreeMemory(trianglesBuff->getInfo<CL_MEM_SIZE>());
-	delete trianglesBuff;
-	deviceDesc->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-	delete vertsBuff;
+	FreeOCLBuffer(&raysBuff);
+	FreeOCLBuffer(&hitsBuff);
+	FreeOCLBuffer(&tasksBuff);
+	FreeOCLBuffer(&taskStatsBuff);
+	FreeOCLBuffer(&frameBufferBuff);
+	FreeOCLBuffer(&materialsBuff);
+	FreeOCLBuffer(&meshIDBuff);
+	FreeOCLBuffer(&triangleIDBuff);
+	FreeOCLBuffer(&meshDescsBuff);
+	FreeOCLBuffer(&meshMatsBuff);
+	FreeOCLBuffer(&colorsBuff);
+	FreeOCLBuffer(&normalsBuff);
+	FreeOCLBuffer(&trianglesBuff);
+	FreeOCLBuffer(&vertsBuff);
 	if (infiniteLightBuff) {
-		deviceDesc->FreeMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
-		delete infiniteLightBuff;
-		deviceDesc->FreeMemory(infiniteLightMapBuff->getInfo<CL_MEM_SIZE>());
-		delete infiniteLightMapBuff;
+		FreeOCLBuffer(&infiniteLightBuff);
+		FreeOCLBuffer(&infiniteLightMapBuff);
 	}
-	if (sunLightBuff) {
-		deviceDesc->FreeMemory(sunLightBuff->getInfo<CL_MEM_SIZE>());
-		delete sunLightBuff;
-	}
-	if (skyLightBuff) {
-		deviceDesc->FreeMemory(skyLightBuff->getInfo<CL_MEM_SIZE>());
-		delete skyLightBuff;
-	}
-	if (cameraBuff) {
-		deviceDesc->FreeMemory(cameraBuff->getInfo<CL_MEM_SIZE>());
-		delete cameraBuff;
-	}
-	if (triLightsBuff) {
-		deviceDesc->FreeMemory(triLightsBuff->getInfo<CL_MEM_SIZE>());
-		delete triLightsBuff;
-	}
-	if (texMapRGBBuff) {
-		deviceDesc->FreeMemory(texMapRGBBuff->getInfo<CL_MEM_SIZE>());
-		delete texMapRGBBuff;
-	}
-	if (texMapAlphaBuff) {
-		deviceDesc->FreeMemory(texMapAlphaBuff->getInfo<CL_MEM_SIZE>());
-		delete texMapAlphaBuff;
-	}
+	FreeOCLBuffer(&sunLightBuff);
+	FreeOCLBuffer(&skyLightBuff);
+	FreeOCLBuffer(&cameraBuff);
+	FreeOCLBuffer(&triLightsBuff);
+	FreeOCLBuffer(&texMapRGBBuff);
+	FreeOCLBuffer(&texMapAlphaBuff);
 	if (texMapRGBBuff || texMapAlphaBuff) {
-		deviceDesc->FreeMemory(texMapDescBuff->getInfo<CL_MEM_SIZE>());
-		delete texMapDescBuff;
-		deviceDesc->FreeMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
-		delete meshTexsBuff;
+		FreeOCLBuffer(&texMapDescBuff);
+		FreeOCLBuffer(&meshTexsBuff);
+
 		if (meshBumpsBuff) {
-			deviceDesc->FreeMemory(meshBumpsBuff->getInfo<CL_MEM_SIZE>());
-			delete meshBumpsBuff;
-			deviceDesc->FreeMemory(meshBumpsScaleBuff->getInfo<CL_MEM_SIZE>());
-			delete meshBumpsScaleBuff;
+			FreeOCLBuffer(&meshBumpsBuff);
+			FreeOCLBuffer(&meshBumpsScaleBuff);
 		}
-		deviceDesc->FreeMemory(uvsBuff->getInfo<CL_MEM_SIZE>());
-		delete uvsBuff;
+
+		FreeOCLBuffer(&uvsBuff);
 	}
 
 	started = false;
