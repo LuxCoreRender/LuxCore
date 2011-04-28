@@ -346,18 +346,18 @@ void keyFunc(unsigned char key, int x, int y) {
 			else
 				config->SetScreenRefreshInterval(screenRefreshInterval + 50);
 			break;
-		}
+		}*/
 		case 't':
 			// Toggle tonemap type
-			if (config->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+			if (session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
 				Reinhard02ToneMapParams params;
-				config->film->SetToneMapParams(params);
+				session->film->SetToneMapParams(params);
 			} else {
 				LinearToneMapParams params;
-				config->film->SetToneMapParams(params);
+				session->film->SetToneMapParams(params);
 			}
 			break;
-		case '0':
+		/*case '0':
 			config->SetRenderingEngineType(PATHOCL);
 			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
 			break;*/
