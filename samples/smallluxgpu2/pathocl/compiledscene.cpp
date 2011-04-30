@@ -25,12 +25,15 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 	renderConfig = cfg;
 	film = flm;
 
+	infiniteLight = NULL;
+
 	EditActionList editActions;
 	editActions.AddAllAction();
 	Recompile(editActions);
 }
 
 CompiledScene::~CompiledScene() {
+	delete infiniteLight;
 }
 
 void CompiledScene::CompileCamera() {
@@ -532,6 +535,57 @@ void CompiledScene::CompileAreaLights() {
 
 }
 
+void CompiledScene::CompileInfiniteLight() {
+	Scene *scene = renderConfig->scene;
+
+	delete infiniteLight;
+
+	//--------------------------------------------------------------------------
+	// Check if there is an infinite light source
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	InfiniteLight *il = NULL;
+	if (scene->infiniteLight && (
+			(scene->infiniteLight->GetType() == TYPE_IL_BF) ||
+			(scene->infiniteLight->GetType() == TYPE_IL_PORTAL) ||
+			(scene->infiniteLight->GetType() == TYPE_IL_IS)))
+		il = scene->infiniteLight;
+	else {
+		// Look for the infinite light
+
+		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+			LightSource *l = scene->lights[i];
+
+			if ((l->GetType() == TYPE_IL_BF) || (l->GetType() == TYPE_IL_PORTAL) ||
+					(l->GetType() == TYPE_IL_IS)) {
+				il = (InfiniteLight *)l;
+				break;
+			}
+		}
+	}
+
+	if (il) {
+		infiniteLight = new PathOCL::InfiniteLight();
+
+		infiniteLight->gain = il->GetGain();
+		infiniteLight->shiftU = il->GetShiftU();
+		infiniteLight->shiftV = il->GetShiftV();
+		const TextureMap *texMap = il->GetTexture()->GetTexMap();
+		infiniteLight->width = texMap->GetWidth();
+		infiniteLight->height = texMap->GetHeight();
+
+		infiniteLightMap = texMap->GetPixels();
+	} else {
+		infiniteLight = NULL;
+		infiniteLightMap = NULL;
+	}
+
+	const double tEnd = WallClockTime();
+	cerr << "[PathOCLRenderThread::CompiledScene] Infinitelight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+}
+
 void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(CAMERA_EDIT))
 		CompileCamera();
@@ -541,4 +595,6 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileMaterials();
 	if (editActions.Has(AREALIGHTS_EDIT))
 		CompileAreaLights();
+	if (editActions.Has(INFINITELIGHT_EDIT))
+		CompileInfiniteLight();
 }

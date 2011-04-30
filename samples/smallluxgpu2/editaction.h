@@ -32,7 +32,8 @@ enum EditAction {
 	GEOMETRY_EDIT, // Use this for any DataSet related editing
 	MATERIALS_EDIT, // Use this for any Material related editing
 	MATERIAL_TYPES_EDIT, // Use this if the kind of materials changes
-	AREALIGHTS_EDIT // Use this for any AreaLight related editing
+	AREALIGHTS_EDIT, // Use this for any AreaLight related editing
+	INFINITELIGHT_EDIT // Use this for any InfiniteLight related editing
 };
 
 class EditActionList {
@@ -49,6 +50,7 @@ public:
 		AddAction(MATERIALS_EDIT);
 		AddAction(MATERIAL_TYPES_EDIT);
 		AddAction(AREALIGHTS_EDIT);
+		AddAction(INFINITELIGHT_EDIT);
 	}
 	bool Has(const EditAction a) const { return (actions.find(a) != actions.end()); };
 	size_t Size() const { return actions.size(); };

@@ -52,8 +52,12 @@ public:
 	const TriangleMeshID *meshIDs;
 	const TriangleID *triangleIDs;
 
-	// Compiled Lights
+	// Compiled AreaLights
 	vector<PathOCL::TriangleLight> areaLights;
+
+	// Compiled InfiniteLights
+	PathOCL::InfiniteLight *infiniteLight;
+	const Spectrum *infiniteLightMap;
 
 	// Compiled Materials
 	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,
@@ -67,6 +71,7 @@ private:
 	void CompileGeometry();
 	void CompileMaterials();
 	void CompileAreaLights();
+	void CompileInfiniteLight();
 };
 
 #endif	/* _COMPILEDSESSION_H */
