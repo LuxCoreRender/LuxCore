@@ -30,7 +30,7 @@ enum EditAction {
 	FILM_EDIT, // Use this for image Film resize
 	CAMERA_EDIT, // Use this for any camera parameter editing
 	GEOMETRY_EDIT, // Use this for any DataSet related editing
-	MATERIALS_EDIT, // Use this for any Material related editing
+	MATERIALS_EDIT // Use this for any Material related editing
 };
 
 class EditActionList {

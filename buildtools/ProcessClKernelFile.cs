@@ -1,5 +1,5 @@
-/***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+﻿/***************************************************************************
+ *   Copyright (C) 2011 by amir@mohammadkhani.eu                           *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -19,22 +19,41 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_KERNELS_H
-#define	_SLG_KERNELS_H
+// Compile under Linux using
+// gmcs ProcessClKernelFile.cs
 
-#include <string>
+using System;
+using System.IO;
+using System.Text.RegularExpressions;
 
-namespace luxrays {
+namespace luxbuild
+{
+    class ProcessClKernelFile
+    {
+        static void Main(string[] args)
+        {
+            if ( args.Length != 1 )
+            {
+                Console.WriteLine("Please supply exactly 1 argument - Path to file");
+                return;
+            }
 
-// Intersection kernels
-extern std::string KernelSource_PathGPU2_kernel_core;
-extern std::string KernelSource_PathGPU2_kernel_datatypes;
-extern std::string KernelSource_PathGPU2_kernel_filters;
-extern std::string KernelSource_PathGPU2_kernel_samplers;
-extern std::string KernelSource_PathGPU2_kernel_scene;
-extern std::string KernelSource_PathGPU2_kernels;
+            string filename = args[0];
 
+            if ( ! File.Exists(filename) )
+            {
+                Console.WriteLine( "Could not find file {0}", filename );
+                return;
+            }
 
+            string fileContent = File.ReadAllText( filename );
+
+            fileContent = fileContent.Trim();
+            
+            // encapsulate every line with ""
+            fileContent = Regex.Replace(fileContent, "^(?<lineContent>.*)$", "\"${lineContent}\\n\"", RegexOptions.Multiline);
+
+            Console.Write( fileContent );
+        }
+    }
 }
-
-#endif	/* _SLG_KERNELS_H */

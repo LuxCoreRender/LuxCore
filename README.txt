@@ -20,10 +20,7 @@ LuxMark is OpenCL and CPU benchmark based on SLG.
 Authors
 =======
 
-David "Dade" Bucciarelli <davibu.at.interfree.it>
-Alain "Chiaroscuro" Ducharme <>
-Jens Verwiebe <>
-Tom "Tomb" Bench <tom.bech.at.gmail.com>
+See AUTHORS.txt file.
 
 Credits
 =======
