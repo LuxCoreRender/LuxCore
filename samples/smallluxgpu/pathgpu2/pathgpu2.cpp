@@ -178,7 +178,8 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 
 					isExistingInstance = false;
 
-					definedMeshs[imesh->GetExtTriangleMesh()] = definedMeshs.size();
+					const unsigned int index = meshDescs.size();
+					definedMeshs[imesh->GetExtTriangleMesh()] = index;
 				} else {
 					currentMeshDesc = meshDescs[it->second];
 
