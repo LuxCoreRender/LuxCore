@@ -1,5 +1,5 @@
 #include "pathocl/kernels/kernels.h"
-std::string PathOCL::KernelSource_PathOCL_filters = 
+std::string luxrays::KernelSource_PathOCL_kernel_filters = 
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"

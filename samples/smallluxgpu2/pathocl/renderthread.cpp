@@ -408,9 +408,9 @@ void PathOCLRenderThread::InitKernels() {
 
 		// Compile sources
 		stringstream ssKernel;
-		ssKernel << PathOCL::KernelSource_PathOCL_datatypes << PathOCL::KernelSource_PathOCL_core <<
-				 PathOCL::KernelSource_PathOCL_filters << PathOCL::KernelSource_PathOCL_scene <<
-				PathOCL::KernelSource_PathOCL_samplers << PathOCL::KernelSource_PathOCL_kernels;
+		ssKernel << KernelSource_PathOCL_kernel_datatypes << KernelSource_PathOCL_kernel_core <<
+				 KernelSource_PathOCL_kernel_filters << KernelSource_PathOCL_kernel_scene <<
+				KernelSource_PathOCL_kernel_samplers << KernelSource_PathOCL_kernels;
 		string kernelSource = ssKernel.str();
 
 		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));

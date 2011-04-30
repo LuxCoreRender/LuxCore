@@ -1,5 +1,5 @@
 #include "pathocl/kernels/kernels.h"
-std::string PathOCL::KernelSource_PathOCL_scene = 
+std::string luxrays::KernelSource_PathOCL_kernel_scene = 
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
