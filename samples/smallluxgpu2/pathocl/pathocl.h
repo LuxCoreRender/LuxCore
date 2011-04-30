@@ -72,6 +72,7 @@ private:
 	void InitGeometry();
 	void InitMaterials();
 	void InitAreaLights();
+	void InitInfiniteLight();
 	void InitKernels();
 
 	void SetKernelArgs();

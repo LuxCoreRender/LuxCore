@@ -255,6 +255,22 @@ void PathOCLRenderThread::InitAreaLights() {
 		areaLightsBuff = NULL;
 }
 
+void PathOCLRenderThread::InitInfiniteLight() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->infiniteLight) {
+		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
+			sizeof(PathOCL::InfiniteLight), "Infinite light");
+
+		const unsigned int pixelCount = cscene->infiniteLight->width * cscene->infiniteLight->height;
+		AllocOCLBufferRO(&infiniteLightMapBuff, (void *)cscene->infiniteLightMap,
+			sizeof(Spectrum) * pixelCount, "Infinite light map");
+	} else {
+		infiniteLightBuff = NULL;
+		infiniteLightMapBuff = NULL;
+	}
+}
+
 void PathOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -607,59 +623,7 @@ void PathOCLRenderThread::InitRender() {
 	// Check if there is an infinite light source
 	//--------------------------------------------------------------------------
 
-	tStart = WallClockTime();
-
-	InfiniteLight *infiniteLight = NULL;
-	if (scene->infiniteLight && (
-			(scene->infiniteLight->GetType() == TYPE_IL_BF) ||
-			(scene->infiniteLight->GetType() == TYPE_IL_PORTAL) ||
-			(scene->infiniteLight->GetType() == TYPE_IL_IS)))
-		infiniteLight = scene->infiniteLight;
-	else {
-		// Look for the infinite light
-
-		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			LightSource *l = scene->lights[i];
-
-			if ((l->GetType() == TYPE_IL_BF) || (l->GetType() == TYPE_IL_PORTAL) ||
-					(l->GetType() == TYPE_IL_IS)) {
-				infiniteLight = (InfiniteLight *)l;
-				break;
-			}
-		}
-	}
-
-	if (infiniteLight) {
-		PathOCL::InfiniteLight il;
-
-		il.gain = infiniteLight->GetGain();
-		il.shiftU = infiniteLight->GetShiftU();
-		il.shiftV = infiniteLight->GetShiftV();
-		const TextureMap *texMap = infiniteLight->GetTexture()->GetTexMap();
-		il.width = texMap->GetWidth();
-		il.height = texMap->GetHeight();
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] InfiniteLight buffer size: " << (sizeof(PathOCL::InfiniteLight) / 1024) << "Kbytes" << endl;
-		infiniteLightBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(PathOCL::InfiniteLight),
-				(void *)&il);
-		deviceDesc->AllocMemory(infiniteLightBuff->getInfo<CL_MEM_SIZE>());
-
-		const unsigned int pixelCount = il.width * il.height;
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] InfiniteLight Map buffer size: " << (sizeof(Spectrum) * pixelCount / 1024) << "Kbytes" << endl;
-		infiniteLightMapBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(Spectrum) * pixelCount,
-				(void *)texMap->GetPixels());
-		deviceDesc->AllocMemory(infiniteLightMapBuff->getInfo<CL_MEM_SIZE>());
-	} else {
-		infiniteLightBuff = NULL;
-		infiniteLightMapBuff = NULL;
-	}
-
-	tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Infinitelight translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	InitInfiniteLight();
 
 	//--------------------------------------------------------------------------
 	// Check if there is an sun light source
@@ -735,7 +699,7 @@ void PathOCLRenderThread::InitRender() {
 		skyLightBuff = NULL;
 
 	const unsigned int areaLightCount = renderEngine->compiledScene->areaLights.size();
-	if (!skyLight && !sunLight && !infiniteLight && (areaLightCount == 0))
+	if (!skyLight && !sunLight && !infiniteLightBuff && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
 	//--------------------------------------------------------------------------
@@ -1246,6 +1210,11 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if  (editActions.Has(AREALIGHTS_EDIT)) {
 		// Update Scene Area Lights
 		InitAreaLights();
+	}
+
+	if  (editActions.Has(INFINITELIGHT_EDIT)) {
+		// Update Scene Infinite Light
+		InitInfiniteLight();
 	}
 
 	//--------------------------------------------------------------------------
