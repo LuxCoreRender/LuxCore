@@ -86,7 +86,7 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	trianglesBuff = NULL;
 	colorsBuff = NULL;
 	cameraBuff = NULL;
-	triLightsBuff = NULL;
+	areaLightsBuff = NULL;
 	texMapRGBBuff = NULL;
 	texMapAlphaBuff = NULL;
 	texMapDescBuff = NULL;
@@ -245,6 +245,16 @@ void PathOCLRenderThread::InitMaterials() {
 			sizeof(unsigned int) * meshCount, "Mesh material index");
 }
 
+void PathOCLRenderThread::InitAreaLights() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->areaLights.size() > 0) {
+		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
+			sizeof(PathOCL::TriangleLight) * cscene->areaLights.size(), "Area lights");
+	} else
+		areaLightsBuff = NULL;
+}
+
 void PathOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -315,7 +325,7 @@ void PathOCLRenderThread::InitKernels() {
 	if (sunLightBuff) {
 		ss << " -D PARAM_HAS_SUNLIGHT";
 
-		if (!triLightsBuff) {
+		if (!areaLightsBuff) {
 			ss <<
 				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
 				" -D PARAM_DL_LIGHT_COUNT=0"
@@ -323,10 +333,10 @@ void PathOCLRenderThread::InitKernels() {
 		}
 	}
 
-	if (triLightsBuff) {
+	if (areaLightsBuff) {
 		ss <<
 				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-				" -D PARAM_DL_LIGHT_COUNT=" << areaLightCount
+				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->areaLights.size()
 				;
 	}
 
@@ -591,54 +601,7 @@ void PathOCLRenderThread::InitRender() {
 	// Translate area lights
 	//--------------------------------------------------------------------------
 
-	tStart = WallClockTime();
-
-	// Count the area lights
-	areaLightCount = 0;
-	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-		if (scene->lights[i]->IsAreaLight())
-			++areaLightCount;
-	}
-
-	if (areaLightCount > 0) {
-		PathOCL::TriangleLight *tals = new PathOCL::TriangleLight[areaLightCount];
-
-		unsigned int index = 0;
-		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			if (scene->lights[i]->IsAreaLight()) {
-				const TriangleLight *tl = (TriangleLight *)scene->lights[i];
-
-				const ExtMesh *mesh = scene->objects[tl->GetMeshIndex()];
-				const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriIndex()]);
-				tals[index].v0 = mesh->GetVertex(tri->v[0]);
-				tals[index].v1 = mesh->GetVertex(tri->v[1]);
-				tals[index].v2 = mesh->GetVertex(tri->v[2]);
-
-				tals[index].normal = mesh->GetNormal(tri->v[0]);
-
-				tals[index].area = tl->GetArea();
-
-				AreaLightMaterial *alm = (AreaLightMaterial *)tl->GetMaterial();
-				tals[index].gain_r = alm->GetGain().r;
-				tals[index].gain_g = alm->GetGain().g;
-				tals[index].gain_b = alm->GetGain().b;
-
-				++index;
-			}
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Triangle lights buffer size: " << (sizeof(PathOCL::TriangleLight) * areaLightCount / 1024) << "Kbytes" << endl;
-		triLightsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(PathOCL::TriangleLight) * areaLightCount,
-				tals);
-		deviceDesc->AllocMemory(triLightsBuff->getInfo<CL_MEM_SIZE>());
-		delete[] tals;
-	} else
-		triLightsBuff = NULL;
-
-	tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Area lights translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	InitAreaLights();
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinite light source
@@ -771,6 +734,7 @@ void PathOCLRenderThread::InitRender() {
 	} else
 		skyLightBuff = NULL;
 
+	const unsigned int areaLightCount = renderEngine->compiledScene->areaLights.size();
 	if (!skyLight && !sunLight && !infiniteLight && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
@@ -1127,8 +1091,8 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
 	if (skyLightBuff)
 		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
-	if (triLightsBuff)
-		advancePathsKernel->setArg(argIndex++, *triLightsBuff);
+	if (areaLightsBuff)
+		advancePathsKernel->setArg(argIndex++, *areaLightsBuff);
 	if (texMapRGBBuff)
 		advancePathsKernel->setArg(argIndex++, *texMapRGBBuff);
 	if (texMapAlphaBuff)
@@ -1208,7 +1172,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&sunLightBuff);
 	FreeOCLBuffer(&skyLightBuff);
 	FreeOCLBuffer(&cameraBuff);
-	FreeOCLBuffer(&triLightsBuff);
+	FreeOCLBuffer(&areaLightsBuff);
 	FreeOCLBuffer(&texMapRGBBuff);
 	FreeOCLBuffer(&texMapAlphaBuff);
 	if (texMapRGBBuff || texMapAlphaBuff) {
@@ -1255,8 +1219,6 @@ void PathOCLRenderThread::BeginEdit() {
 }
 
 void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
 	//--------------------------------------------------------------------------
@@ -1276,18 +1238,21 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 		InitGeometry();
 	}
 
-	if (editActions.Has(MATERIALS_EDIT)) {
+	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
 		// Update Scene Materials
 		InitMaterials();
+	}
+
+	if  (editActions.Has(AREALIGHTS_EDIT)) {
+		// Update Scene Area Lights
+		InitAreaLights();
 	}
 
 	//--------------------------------------------------------------------------
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	// TODO: optimize the case when MATERIALS_EDIT doesn't change the type
-	// of materials used
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIALS_EDIT))
+	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
 	if (editActions.Size() > 0)
@@ -1298,6 +1263,8 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	//--------------------------------------------------------------------------
 
 	if (editActions.Size() > 0) {
+		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+
 		// Clear the frame buffer
 		oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
 			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),

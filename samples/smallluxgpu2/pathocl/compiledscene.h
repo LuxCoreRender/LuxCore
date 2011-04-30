@@ -52,6 +52,9 @@ public:
 	const TriangleMeshID *meshIDs;
 	const TriangleID *triangleIDs;
 
+	// Compiled Lights
+	vector<PathOCL::TriangleLight> areaLights;
+
 	// Compiled Materials
 	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,
 		enable_MAT_MATTEMIRROR, enable_MAT_METAL, enable_MAT_MATTEMETAL, enable_MAT_ALLOY,
@@ -63,6 +66,7 @@ private:
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();
+	void CompileAreaLights();
 };
 
 #endif	/* _COMPILEDSESSION_H */
