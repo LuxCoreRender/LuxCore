@@ -277,6 +277,8 @@ add_library(LuxRays STATIC ${LuxRays_SRCS} ${LuxRays_HEADERS})
 #
 ###########################################################################
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../lib")
+
 IF(GCC AND NOT APPLE)
 	# These accelerators needs to be compiled with much reduced optimizations
 	# otherwise gcc produces incorrect code and ruins the render on 64bits machines
@@ -300,5 +302,4 @@ TARGET_LINK_LIBRARIES(LuxRays ${OPENGL_gl_LIBRARY})
 
 TARGET_LINK_LIBRARIES(LuxRays debug ${FreeImage_LIBRARY_DBG} optimized ${FreeImage_LIBRARY_REL} general ${FreeImage_LIBRARY_REL})
 TARGET_LINK_LIBRARIES(LuxRays ${OPENCL_LIBRARY})
-
 TARGET_LINK_LIBRARIES(LuxRays ${Boost_LIBRARIES})

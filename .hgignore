@@ -1,11 +1,4 @@
-^lib/libluxrays.a
-^benchpixel
-^benchsimple
-^luxmark
-^slg
-^slg2
-^smallppmgpu
-^src/libLuxRays.a
+^lib/libLuxRays.a
 ^doxygen-luxrays.conf
 ^doxygen/luxrays.template
 ^doxygen-slg.conf
