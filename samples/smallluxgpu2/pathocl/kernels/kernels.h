@@ -24,16 +24,15 @@
 
 #include <string>
 
-namespace PathOCL {
+namespace luxrays {
 
 // Intersection kernels
-extern std::string KernelSource_PathOCL_core;
-extern std::string KernelSource_PathOCL_datatypes;
-extern std::string KernelSource_PathOCL_filters;
-extern std::string KernelSource_PathOCL_samplers;
-extern std::string KernelSource_PathOCL_scene;
+extern std::string KernelSource_PathOCL_kernel_core;
+extern std::string KernelSource_PathOCL_kernel_datatypes;
+extern std::string KernelSource_PathOCL_kernel_filters;
+extern std::string KernelSource_PathOCL_kernel_samplers;
+extern std::string KernelSource_PathOCL_kernel_scene;
 extern std::string KernelSource_PathOCL_kernels;
-
 
 }
 
