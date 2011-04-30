@@ -46,11 +46,6 @@ RenderConfig::~RenderConfig() {
 }
 void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {
 	screenRefreshInterval = t;
-
-	stringstream ss;
-	ss << screenRefreshInterval;
-
-	cfg.SetString("", ss.str());
 }
 
 unsigned int RenderConfig::GetScreenRefreshInterval() const {

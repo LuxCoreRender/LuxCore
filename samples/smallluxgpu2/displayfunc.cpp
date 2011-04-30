@@ -331,22 +331,22 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'h':
 			OSDPrintHelp = (!OSDPrintHelp);
 			break;
-		/*case 'n': {
-			const unsigned int screenRefreshInterval = config->GetScreenRefreshInterval();
+		case 'n': {
+			const unsigned int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
 			if (screenRefreshInterval > 1000)
-				config->SetScreenRefreshInterval(max(1000u, screenRefreshInterval - 1000));
+				session->renderConfig->SetScreenRefreshInterval(max(1000u, screenRefreshInterval - 1000));
 			else
-				config->SetScreenRefreshInterval(max(50u, screenRefreshInterval - 50));
+				session->renderConfig->SetScreenRefreshInterval(max(50u, screenRefreshInterval - 50));
 			break;
 		}
 		case 'm': {
-			const unsigned int screenRefreshInterval = config->GetScreenRefreshInterval();
+			const unsigned int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
 			if (screenRefreshInterval >= 1000)
-				config->SetScreenRefreshInterval(screenRefreshInterval + 1000);
+				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 1000);
 			else
-				config->SetScreenRefreshInterval(screenRefreshInterval + 50);
+				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 50);
 			break;
-		}*/
+		}
 		case 't':
 			// Toggle tonemap type
 			if (session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {

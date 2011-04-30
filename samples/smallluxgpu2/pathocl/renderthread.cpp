@@ -1345,7 +1345,20 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 			for (;;) {
 				cl::Event event;
 
-				for (unsigned int i = 0; i < 8; ++i) {
+				// Decide how many kernels to enqueue
+				const unsigned int screenRefreshInterval = renderThread->renderEngine->renderConfig->GetScreenRefreshInterval();
+
+				unsigned int iterations;
+				if (screenRefreshInterval <= 100)
+					iterations = 1;
+				else if (screenRefreshInterval <= 500)
+					iterations = 2;
+				else if (screenRefreshInterval <= 1000)
+					iterations = 4;
+				else
+					iterations = 8;
+
+				for (unsigned int i = 0; i < iterations; ++i) {
 					// Generate the samples and paths
 					if (i == 0)
 						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
@@ -1372,7 +1385,7 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 					cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 <<
 							"ms (screenRefreshInterval: " << renderThread->renderEngine->screenRefreshInterval << ")" << endl;*/
 
-				if ((elapsedTime * 1000.0 > (double)renderThread->renderEngine->renderConfig->GetScreenRefreshInterval()) ||
+				if ((elapsedTime * 1000.0 > (double)screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
 					break;
 			}
