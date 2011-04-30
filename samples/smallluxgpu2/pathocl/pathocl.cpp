@@ -181,23 +181,39 @@ void PathOCLRenderEngine::Stop() {
 void PathOCLRenderEngine::BeginEdit() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
+	/*cerr<< "[DEBUG] BeginEdit() =================================" << endl;
+	const double t1 = WallClockTime();*/
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->BeginEdit();
 
+	//const double t2 = WallClockTime();
 	OCLRenderEngine::BeginEditLockLess();
+
+	/*const double t3 = WallClockTime();
+	cerr<< "[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
+		" T2 = " << int((t3 - t2) * 1000.0) << endl;*/
 }
 
 void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
+	/*cerr<< "[DEBUG] EndEdit() =================================" << endl;
+	const double t1 = WallClockTime();*/
 	compiledScene->Recompile(editActions);
 
+	//const double t2 = WallClockTime();
 	OCLRenderEngine::EndEditLockLess(editActions);
 
+	//const double t3 = WallClockTime();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->EndEdit(editActions);
+
+	/*const double t4 = WallClockTime();
+	cerr<< "[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
+		" T2 = " << int((t3 - t2) * 1000.0) <<
+		" T3 = " << int((t4 - t3) * 1000.0) << endl;*/
 }
 
 void PathOCLRenderEngine::UpdateFilm() {
