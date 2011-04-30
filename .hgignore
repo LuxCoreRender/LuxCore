@@ -1,14 +1,27 @@
 ^lib/libluxrays.a
+^benchpixel
+^benchsimple
+^luxmark
+^slg
+^slg2
+^smallppmgpu
+^src/libLuxRays.a
 ^doxygen-luxrays.conf
 ^doxygen/luxrays.template
 ^doxygen-slg.conf
 ^doxygen/slg.template
 ^bin/*
 ^doc/*
+^samples/(benchpixel|benchsimpel|luxmark|smallluxgpu|smallppmgpu)/(Debug|Release)/
+(benchpixel|luxmark|smallluxgpu|smallppmgpu|slg|LUXRAYS|benchsimple)\.dir
+^src/(Debug|Release)/
+^(Debug|Release|x64)/
 syntax: glob
 *~
 *CMakeFiles
 *CMakeCache.txt
 *Makefile
 *cmake_install.cmake
+*.sdf
+*.vcxproj*
 

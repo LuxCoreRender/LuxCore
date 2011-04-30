@@ -34,7 +34,7 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	filmMutex = flmMutex;
 	started = false;
 	editMode = false;
-};
+}
 
 RenderEngine::~RenderEngine() {
 	if (editMode)
@@ -141,7 +141,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 	// Set the Luxrays SataSet
 	renderConfig->scene->UpdateDataSet(ctx);
 	ctx->SetDataSet(renderConfig->scene->dataSet);
-};
+}
 
 OCLRenderEngine::~OCLRenderEngine() {
 	if (editMode)
