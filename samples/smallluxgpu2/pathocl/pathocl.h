@@ -71,6 +71,7 @@ private:
 	void InitCamera();
 	void InitGeometry();
 	void InitMaterials();
+	void InitAreaLights();
 	void InitKernels();
 
 	void SetKernelArgs();
@@ -107,7 +108,7 @@ private:
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *colorsBuff;
 	cl::Buffer *cameraBuff;
-	cl::Buffer *triLightsBuff;
+	cl::Buffer *areaLightsBuff;
 	cl::Buffer *texMapRGBBuff;
 	cl::Buffer *texMapAlphaBuff;
 	cl::Buffer *texMapDescBuff;
@@ -128,7 +129,6 @@ private:
 	// TODO: cleanup
 	unsigned int frameBufferPixelCount;
 	size_t stratifiedDataSize;
-	unsigned int areaLightCount;
 
 	bool started, editMode, reportedPermissionError;
 

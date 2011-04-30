@@ -275,7 +275,7 @@ void CompiledScene::CompileGeometry() {
 	}
 
 	const double tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::CompiledSession] Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	cerr << "[PathOCLRenderThread::CompiledScene] Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 }
 
 void CompiledScene::CompileMaterials() {
@@ -483,11 +483,62 @@ void CompiledScene::CompileMaterials() {
 	cerr << "[PathOCLRenderThread::CompiledScene] Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 }
 
+void CompiledScene::CompileAreaLights() {
+	Scene *scene = renderConfig->scene;
+
+	//--------------------------------------------------------------------------
+	// Translate area lights
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	// Count the area lights
+	unsigned int areaLightCount = 0;
+	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+		if (scene->lights[i]->IsAreaLight())
+			++areaLightCount;
+	}
+
+	areaLights.resize(areaLightCount);
+	if (areaLightCount > 0) {
+		unsigned int index = 0;
+		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+			if (scene->lights[i]->IsAreaLight()) {
+				const TriangleLight *tl = (TriangleLight *)scene->lights[i];
+				const ExtMesh *mesh = scene->objects[tl->GetMeshIndex()];
+				const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriIndex()]);
+
+				PathOCL::TriangleLight *cpl = &areaLights[index];
+				cpl->v0 = mesh->GetVertex(tri->v[0]);
+				cpl->v1 = mesh->GetVertex(tri->v[1]);
+				cpl->v2 = mesh->GetVertex(tri->v[2]);
+
+				cpl->normal = mesh->GetNormal(tri->v[0]);
+
+				cpl->area = tl->GetArea();
+
+				AreaLightMaterial *alm = (AreaLightMaterial *)tl->GetMaterial();
+				cpl->gain_r = alm->GetGain().r;
+				cpl->gain_g = alm->GetGain().g;
+				cpl->gain_b = alm->GetGain().b;
+
+				++index;
+			}
+		}
+	}
+
+	const double tEnd = WallClockTime();
+	cerr << "[PathOCLRenderThread::CompiledScene] Area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+
+}
+
 void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(CAMERA_EDIT))
 		CompileCamera();
 	if (editActions.Has(GEOMETRY_EDIT))
 		CompileGeometry();
-	if (editActions.Has(MATERIALS_EDIT))
+	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();
+	if (editActions.Has(AREALIGHTS_EDIT))
+		CompileAreaLights();
 }
