@@ -68,6 +68,20 @@ ELSE(NOT LUXRAYS_NO_DEFAULT_CONFIG)
 
 ENDIF(NOT LUXRAYS_NO_DEFAULT_CONFIG)
 
+# Setup libraries output directory
+SET (LIBRARY_OUTPUT_PATH
+   ${PROJECT_BINARY_DIR}/lib
+   CACHE PATH
+   "Single Directory for all Libraries"
+   )
+
+# Setup binaries output directory
+SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY
+	${PROJECT_BINARY_DIR}/bin
+   CACHE PATH
+   "Single Directory for all binaries"
+	)
+
 #
 # Overwrite defaults with Custom Settings
 #

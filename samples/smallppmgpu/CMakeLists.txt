@@ -21,7 +21,6 @@
 
 include_directories(${LuxRays_INCLUDE_DIR})
 link_directories (${LuxRays_LIB_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LuxRays_BIN_DIR}")
 
 add_executable(smallppmgpu smallppmgpu.cpp)
 target_link_libraries(smallppmgpu LuxRays ${OPENGL_LIBRARY} ${Boost_LIBRARIES})

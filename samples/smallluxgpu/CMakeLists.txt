@@ -148,7 +148,6 @@ ENDFOREACH(kernel)
 include_directories(${LuxRays_INCLUDE_DIR})
 include_directories(".")
 link_directories (${LuxRays_LIB_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LuxRays_BIN_DIR}")
 
 set(SMALLLUXGPU_SRCS
 	displayfunc.cpp
