@@ -214,6 +214,9 @@ void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	cerr<< "[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
 		" T2 = " << int((t3 - t2) * 1000.0) <<
 		" T3 = " << int((t4 - t3) * 1000.0) << endl;*/
+
+	elapsedTime = 0.0f;
+	startTime = WallClockTime();
 }
 
 void PathOCLRenderEngine::UpdateFilm() {
