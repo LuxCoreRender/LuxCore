@@ -29,6 +29,11 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 	infiniteLightMap = NULL;
 	sunLight = NULL;
 	skyLight = NULL;
+	rgbTexMem = NULL;
+	alphaTexMem = NULL;
+	meshTexs = NULL;
+	meshBumps = NULL;
+	bumpMapScales = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -40,6 +45,11 @@ CompiledScene::~CompiledScene() {
 	// infiniteLightMap memory is handled from another class
 	delete sunLight;
 	delete skyLight;
+	delete[] rgbTexMem;
+	delete[] alphaTexMem;
+	delete[] meshTexs;
+	delete[] meshBumps;
+	delete[] bumpMapScales;
 }
 
 void CompiledScene::CompileCamera() {
@@ -663,6 +673,158 @@ void CompiledScene::CompileSkyLight() {
 		skyLight = NULL;
 }
 
+void CompiledScene::CompileTextureMaps() {
+	Scene *scene = renderConfig->scene;
+
+	gpuTexMaps.resize(0);
+	delete[] rgbTexMem;
+	delete[] alphaTexMem;
+	delete[] meshTexs;
+	delete[] meshBumps;
+	delete[] bumpMapScales;
+
+	//--------------------------------------------------------------------------
+	// Translate mesh texture maps
+	//--------------------------------------------------------------------------
+
+	const float tStart = WallClockTime();
+
+	std::vector<TextureMap *> tms;
+	scene->texMapCache->GetTexMaps(tms);
+	// Calculate the amount of ram to allocate
+	totRGBTexMem = 0;
+	totAlphaTexMem = 0;
+
+	for (unsigned int i = 0; i < tms.size(); ++i) {
+		TextureMap *tm = tms[i];
+		const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
+
+		totRGBTexMem += pixelCount;
+		if (tm->HasAlpha())
+			totAlphaTexMem += pixelCount;
+	}
+
+	// Allocate texture map memory
+	if ((totRGBTexMem > 0) || (totAlphaTexMem > 0)) {
+		gpuTexMaps.resize(tms.size());
+
+		if (totRGBTexMem > 0) {
+			unsigned int rgbOffset = 0;
+			rgbTexMem = new Spectrum[totRGBTexMem];
+
+			for (unsigned int i = 0; i < tms.size(); ++i) {
+				TextureMap *tm = tms[i];
+				const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
+
+				memcpy(&rgbTexMem[rgbOffset], tm->GetPixels(), pixelCount * sizeof(Spectrum));
+				gpuTexMaps[i].rgbOffset = rgbOffset;
+				rgbOffset += pixelCount;
+			}
+		} else
+			rgbTexMem = NULL;
+
+		if (totAlphaTexMem > 0) {
+			unsigned int alphaOffset = 0;
+			alphaTexMem = new float[totAlphaTexMem];
+
+			for (unsigned int i = 0; i < tms.size(); ++i) {
+				TextureMap *tm = tms[i];
+				const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
+
+				if (tm->HasAlpha()) {
+					memcpy(&alphaTexMem[alphaOffset], tm->GetAlphas(), pixelCount * sizeof(float));
+					gpuTexMaps[i].alphaOffset = alphaOffset;
+					alphaOffset += pixelCount;
+				} else
+					gpuTexMaps[i].alphaOffset = 0xffffffffu;
+			}
+		} else
+			alphaTexMem = NULL;
+
+		//----------------------------------------------------------------------
+
+		// Translate texture map description
+		for (unsigned int i = 0; i < tms.size(); ++i) {
+			TextureMap *tm = tms[i];
+			gpuTexMaps[i].width = tm->GetWidth();
+			gpuTexMaps[i].height = tm->GetHeight();
+		}
+
+		//----------------------------------------------------------------------
+
+		// Translate mesh texture indices
+		const unsigned int meshCount = meshMats.size();
+		meshTexs = new unsigned int[meshCount];
+		for (unsigned int i = 0; i < meshCount; ++i) {
+			TexMapInstance *t = scene->objectTexMaps[i];
+
+			if (t) {
+				// Look for the index
+				unsigned int index = 0;
+				for (unsigned int j = 0; j < tms.size(); ++j) {
+					if (t->GetTexMap() == tms[j]) {
+						index = j;
+						break;
+					}
+				}
+
+				meshTexs[i] = index;
+			} else
+				meshTexs[i] = 0xffffffffu;
+		}
+
+		//----------------------------------------------------------------------
+
+		// Translate mesh bump map indices
+		bool hasBumpMapping = false;
+		meshBumps = new unsigned int[meshCount];
+		for (unsigned int i = 0; i < meshCount; ++i) {
+			BumpMapInstance *bm = scene->objectBumpMaps[i];
+
+			if (bm) {
+				// Look for the index
+				unsigned int index = 0;
+				for (unsigned int j = 0; j < tms.size(); ++j) {
+					if (bm->GetTexMap() == tms[j]) {
+						index = j;
+						break;
+					}
+				}
+
+				meshBumps[i] = index;
+				hasBumpMapping = true;
+			} else
+				meshBumps[i] = 0xffffffffu;
+		}
+
+		if (hasBumpMapping) {
+			bumpMapScales = new float[meshCount];
+			for (unsigned int i = 0; i < meshCount; ++i) {
+				BumpMapInstance *bm = scene->objectBumpMaps[i];
+
+				if (bm)
+					bumpMapScales[i] = bm->GetScale();
+				else
+					bumpMapScales[i] = 1.f;
+			}
+		} else {
+			delete[] meshBumps;
+			meshBumps = NULL;
+			bumpMapScales = NULL;
+		}
+	} else {
+		gpuTexMaps.resize(0);
+		rgbTexMem = NULL;
+		alphaTexMem = NULL;
+		meshTexs = NULL;
+		meshBumps = NULL;
+		bumpMapScales = NULL;
+	}
+
+	const double tEnd = WallClockTime();
+	cerr << "[PathOCLRenderThread::CompiledScene] Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+}
+
 void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(CAMERA_EDIT))
 		CompileCamera();
@@ -678,4 +840,6 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileSunLight();
 	if (editActions.Has(SKYLIGHT_EDIT))
 		CompileSkyLight();
+	if (editActions.Has(TEXTUREMAPS_EDIT))
+		CompileTextureMaps();
 }

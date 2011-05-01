@@ -291,6 +291,49 @@ void PathOCLRenderThread::InitSkyLight() {
 		skyLightBuff = NULL;
 }
 
+void PathOCLRenderThread::InitTextureMaps() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if ((cscene->totRGBTexMem > 0) || (cscene->totAlphaTexMem > 0)) {
+		if (cscene->totRGBTexMem > 0)
+			AllocOCLBufferRO(&texMapRGBBuff, cscene->rgbTexMem,
+				sizeof(Spectrum) * cscene->totRGBTexMem, "TexMaps");
+		else
+			texMapRGBBuff = NULL;
+
+		if (cscene->totAlphaTexMem > 0)
+			AllocOCLBufferRO(&texMapAlphaBuff, cscene->alphaTexMem,
+				sizeof(float) * cscene->totAlphaTexMem, "TexMaps Alpha Channel");
+		else
+			texMapAlphaBuff = NULL;
+
+		AllocOCLBufferRO(&texMapDescBuff, &cscene->gpuTexMaps[0],
+				sizeof(PathOCL::TexMap) * cscene->gpuTexMaps.size(), "TexMaps description");
+
+		const unsigned int meshCount = renderEngine->compiledScene->meshMats.size();
+		AllocOCLBufferRO(&meshTexsBuff, cscene->meshTexs,
+				sizeof(unsigned int) * meshCount, "Mesh TexMaps index");
+
+		if (cscene->meshBumps) {
+			AllocOCLBufferRO(&meshBumpsBuff, cscene->meshBumps,
+				sizeof(unsigned int) * meshCount, "Mesh BumpMaps index");
+
+			AllocOCLBufferRO(&meshBumpsScaleBuff, cscene->bumpMapScales,
+				sizeof(float) * meshCount, "Mesh BumpMaps scales");
+		} else {
+			meshBumpsBuff = NULL;
+			meshBumpsScaleBuff = NULL;
+		}
+	} else {
+		texMapRGBBuff = NULL;
+		texMapAlphaBuff = NULL;
+		texMapDescBuff = NULL;
+		meshTexsBuff = NULL;
+		meshBumpsBuff = NULL;
+		meshBumpsScaleBuff = NULL;
+	}
+}
+
 void PathOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -642,190 +685,7 @@ void PathOCLRenderThread::InitRender() {
 	// Translate mesh texture maps
 	//--------------------------------------------------------------------------
 
-	tStart = WallClockTime();
-
-	std::vector<TextureMap *> tms;
-	scene->texMapCache->GetTexMaps(tms);
-	// Calculate the amount of ram to allocate
-	unsigned int totRGBTexMem = 0;
-	unsigned int totAlphaTexMem = 0;
-
-	for (unsigned int i = 0; i < tms.size(); ++i) {
-		TextureMap *tm = tms[i];
-		const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
-
-		totRGBTexMem += pixelCount;
-		if (tm->HasAlpha())
-			totAlphaTexMem += pixelCount;
-	}
-
-	// Allocate texture map memory
-	if ((totRGBTexMem > 0) || (totAlphaTexMem > 0)) {
-		PathOCL::TexMap *gpuTexMap = new PathOCL::TexMap[tms.size()];
-
-		if (totRGBTexMem > 0) {
-			unsigned int rgbOffset = 0;
-			Spectrum *rgbTexMem = new Spectrum[totRGBTexMem];
-
-			for (unsigned int i = 0; i < tms.size(); ++i) {
-				TextureMap *tm = tms[i];
-				const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
-
-				memcpy(&rgbTexMem[rgbOffset], tm->GetPixels(), pixelCount * sizeof(Spectrum));
-				gpuTexMap[i].rgbOffset = rgbOffset;
-				rgbOffset += pixelCount;
-			}
-
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] TexMap buffer size: " << (sizeof(Spectrum) * totRGBTexMem / 1024) << "Kbytes" << endl;
-			texMapRGBBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(Spectrum) * totRGBTexMem,
-					rgbTexMem);
-			deviceDesc->AllocMemory(texMapRGBBuff->getInfo<CL_MEM_SIZE>());
-			delete[] rgbTexMem;
-		} else
-			texMapRGBBuff = NULL;
-
-		if (totAlphaTexMem > 0) {
-			unsigned int alphaOffset = 0;
-			float *alphaTexMem = new float[totAlphaTexMem];
-
-			for (unsigned int i = 0; i < tms.size(); ++i) {
-				TextureMap *tm = tms[i];
-				const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
-
-				if (tm->HasAlpha()) {
-					memcpy(&alphaTexMem[alphaOffset], tm->GetAlphas(), pixelCount * sizeof(float));
-					gpuTexMap[i].alphaOffset = alphaOffset;
-					alphaOffset += pixelCount;
-				} else
-					gpuTexMap[i].alphaOffset = 0xffffffffu;
-			}
-
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] TexMap buffer size: " << (sizeof(float) * totAlphaTexMem / 1024) << "Kbytes" << endl;
-			texMapAlphaBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(float) * totAlphaTexMem,
-					alphaTexMem);
-			deviceDesc->AllocMemory(texMapAlphaBuff->getInfo<CL_MEM_SIZE>());
-			delete[] alphaTexMem;
-		} else
-			texMapAlphaBuff = NULL;
-
-		//----------------------------------------------------------------------
-
-		// Translate texture map description
-		for (unsigned int i = 0; i < tms.size(); ++i) {
-			TextureMap *tm = tms[i];
-			gpuTexMap[i].width = tm->GetWidth();
-			gpuTexMap[i].height = tm->GetHeight();
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] TexMap indices buffer size: " << (sizeof(PathOCL::TexMap) * tms.size() / 1024) << "Kbytes" << endl;
-		texMapDescBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(PathOCL::TexMap) * tms.size(),
-				gpuTexMap);
-		deviceDesc->AllocMemory(texMapDescBuff->getInfo<CL_MEM_SIZE>());
-		delete[] gpuTexMap;
-
-		//----------------------------------------------------------------------
-
-		// Translate mesh texture indices
-		const unsigned int meshCount = renderEngine->compiledScene->meshMats.size();
-		unsigned int *meshTexs = new unsigned int[meshCount];
-		for (unsigned int i = 0; i < meshCount; ++i) {
-			TexMapInstance *t = scene->objectTexMaps[i];
-
-			if (t) {
-				// Look for the index
-				unsigned int index = 0;
-				for (unsigned int j = 0; j < tms.size(); ++j) {
-					if (t->GetTexMap() == tms[j]) {
-						index = j;
-						break;
-					}
-				}
-
-				meshTexs[i] = index;
-			} else
-				meshTexs[i] = 0xffffffffu;
-		}
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh texture maps index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
-		meshTexsBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(unsigned int) * meshCount,
-				meshTexs);
-		deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
-		delete[] meshTexs;
-
-		//----------------------------------------------------------------------
-
-		// Translate mesh bump map indices
-		bool hasBumpMapping = false;
-		unsigned int *meshBumps = new unsigned int[meshCount];
-		for (unsigned int i = 0; i < meshCount; ++i) {
-			BumpMapInstance *bm = scene->objectBumpMaps[i];
-
-			if (bm) {
-				// Look for the index
-				unsigned int index = 0;
-				for (unsigned int j = 0; j < tms.size(); ++j) {
-					if (bm->GetTexMap() == tms[j]) {
-						index = j;
-						break;
-					}
-				}
-
-				meshBumps[i] = index;
-				hasBumpMapping = true;
-			} else
-				meshBumps[i] = 0xffffffffu;
-		}
-
-		if (hasBumpMapping) {
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh bump maps index buffer size: " << (sizeof(unsigned int) * meshCount / 1024) << "Kbytes" << endl;
-			meshBumpsBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(unsigned int) * meshCount,
-					meshBumps);
-			deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
-
-			float *scales = new float[meshCount];
-			for (unsigned int i = 0; i < meshCount; ++i) {
-				BumpMapInstance *bm = scene->objectBumpMaps[i];
-
-				if (bm)
-					scales[i] = bm->GetScale();
-				else
-					scales[i] = 1.f;
-			}
-
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Mesh bump maps scale buffer size: " << (sizeof(float) * meshCount / 1024) << "Kbytes" << endl;
-			meshBumpsScaleBuff = new cl::Buffer(oclContext,
-					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-					sizeof(float) * meshCount,
-					scales);
-			deviceDesc->AllocMemory(meshTexsBuff->getInfo<CL_MEM_SIZE>());
-			delete[] scales;
-		} else {
-			meshBumpsBuff = NULL;
-			meshBumpsScaleBuff = NULL;
-		}
-
-		delete[] meshBumps;
-
-		tEnd = WallClockTime();
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Texture maps translation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
-	} else {
-		texMapRGBBuff = NULL;
-		texMapAlphaBuff = NULL;
-		texMapDescBuff = NULL;
-		meshTexsBuff = NULL;
-		meshBumpsBuff = NULL;
-		meshBumpsScaleBuff = NULL;
-	}
+	InitTextureMaps();
 
 	//--------------------------------------------------------------------------
 	// Allocate Ray/RayHit buffers

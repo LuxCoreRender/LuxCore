@@ -75,6 +75,7 @@ private:
 	void InitInfiniteLight();
 	void InitSunLight();
 	void InitSkyLight();
+	void InitTextureMaps();
 	void InitKernels();
 
 	void SetKernelArgs();
