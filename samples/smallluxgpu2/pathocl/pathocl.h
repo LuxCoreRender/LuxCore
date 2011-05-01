@@ -74,6 +74,7 @@ private:
 	void InitAreaLights();
 	void InitInfiniteLight();
 	void InitSunLight();
+	void InitSkyLight();
 	void InitKernels();
 
 	void SetKernelArgs();

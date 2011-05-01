@@ -26,7 +26,9 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 	film = flm;
 
 	infiniteLight = NULL;
+	infiniteLightMap = NULL;
 	sunLight = NULL;
+	skyLight = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -35,7 +37,9 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 
 CompiledScene::~CompiledScene() {
 	delete infiniteLight;
+	// infiniteLightMap memory is handled from another class
 	delete sunLight;
+	delete skyLight;
 }
 
 void CompiledScene::CompileCamera() {
@@ -623,6 +627,42 @@ void CompiledScene::CompileSunLight() {
 		sunLight = NULL;
 }
 
+void CompiledScene::CompileSkyLight() {
+	Scene *scene = renderConfig->scene;
+
+	delete skyLight;
+
+	//--------------------------------------------------------------------------
+	// Check if there is an sky light source
+	//--------------------------------------------------------------------------
+
+	SkyLight *sl = NULL;
+
+	if (scene->infiniteLight && (scene->infiniteLight->GetType() == TYPE_IL_SKY))
+		sl = (SkyLight *)scene->infiniteLight;
+	else {
+		// Look for the sky light
+		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+			LightSource *l = scene->lights[i];
+
+			if (l->GetType() == TYPE_IL_SKY) {
+				sl = (SkyLight *)l;
+				break;
+			}
+		}
+	}
+
+	if (sl) {
+		skyLight = new PathOCL::SkyLight();
+
+		skyLight->gain = sl->GetGain();
+		sl->GetInitData(&skyLight->thetaS, &skyLight->phiS,
+				&skyLight->zenith_Y, &skyLight->zenith_x, &skyLight->zenith_y,
+				skyLight->perez_Y, skyLight->perez_x, skyLight->perez_y);
+	} else
+		skyLight = NULL;
+}
+
 void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(CAMERA_EDIT))
 		CompileCamera();
@@ -636,4 +676,6 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileInfiniteLight();
 	if (editActions.Has(SUNLIGHT_EDIT))
 		CompileSunLight();
+	if (editActions.Has(SKYLIGHT_EDIT))
+		CompileSkyLight();
 }

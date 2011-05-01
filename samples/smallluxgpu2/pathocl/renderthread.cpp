@@ -281,6 +281,16 @@ void PathOCLRenderThread::InitSunLight() {
 		sunLightBuff = NULL;
 }
 
+void PathOCLRenderThread::InitSkyLight() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->skyLight)
+		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
+			sizeof(PathOCL::SkyLight), "SkyLight");
+	else
+		skyLightBuff = NULL;
+}
+
 void PathOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -583,29 +593,6 @@ void PathOCLRenderThread::InitRender() {
 	InitFrameBuffer();
 
 	//--------------------------------------------------------------------------
-	// Allocate buffers
-	//--------------------------------------------------------------------------
-
-	const unsigned int taskCount = renderEngine->taskCount;
-
-	tStart = WallClockTime();
-
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * taskCount / 1024) << "Kbytes" << endl;
-	raysBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			sizeof(Ray) * taskCount);
-	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
-
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * taskCount / 1024) << "Kbytes" << endl;
-	hitsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			sizeof(RayHit) * taskCount);
-	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
-
-	tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
-
-	//--------------------------------------------------------------------------
 	// Camera definition
 	//--------------------------------------------------------------------------
 
@@ -645,41 +632,10 @@ void PathOCLRenderThread::InitRender() {
 	// Check if there is an sky light source
 	//--------------------------------------------------------------------------
 
-	SkyLight *skyLight = NULL;
-
-	if (scene->infiniteLight && (scene->infiniteLight->GetType() == TYPE_IL_SKY))
-		skyLight = (SkyLight *)scene->infiniteLight;
-	else {
-		// Look for the sky light
-		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			LightSource *l = scene->lights[i];
-
-			if (l->GetType() == TYPE_IL_SKY) {
-				skyLight = (SkyLight *)l;
-				break;
-			}
-		}
-	}
-
-	if (skyLight) {
-		PathOCL::SkyLight sl;
-
-		sl.gain = skyLight->GetGain();
-		skyLight->GetInitData(&sl.thetaS, &sl.phiS,
-				&sl.zenith_Y, &sl.zenith_x, &sl.zenith_y,
-				sl.perez_Y, sl.perez_x, sl.perez_y);
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] SkyLight buffer size: " << (sizeof(PathOCL::SkyLight) / 1024) << "Kbytes" << endl;
-		skyLightBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(PathOCL::SkyLight),
-				(void *)&sl);
-		deviceDesc->AllocMemory(skyLightBuff->getInfo<CL_MEM_SIZE>());
-	} else
-		skyLightBuff = NULL;
+	InitSkyLight();
 
 	const unsigned int areaLightCount = renderEngine->compiledScene->areaLights.size();
-	if (!skyLight && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
+	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
 	//--------------------------------------------------------------------------
@@ -870,6 +826,29 @@ void PathOCLRenderThread::InitRender() {
 		meshBumpsBuff = NULL;
 		meshBumpsScaleBuff = NULL;
 	}
+
+	//--------------------------------------------------------------------------
+	// Allocate Ray/RayHit buffers
+	//--------------------------------------------------------------------------
+
+	const unsigned int taskCount = renderEngine->taskCount;
+
+	tStart = WallClockTime();
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * taskCount / 1024) << "Kbytes" << endl;
+	raysBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			sizeof(Ray) * taskCount);
+	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
+
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * taskCount / 1024) << "Kbytes" << endl;
+	hitsBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			sizeof(RayHit) * taskCount);
+	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
+
+	tEnd = WallClockTime();
+	cerr << "[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task buffers
@@ -1200,6 +1179,11 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if  (editActions.Has(SUNLIGHT_EDIT)) {
 		// Update Scene Sun Light
 		InitSunLight();
+	}
+
+	if  (editActions.Has(SKYLIGHT_EDIT)) {
+		// Update Scene Sun Light
+		InitSkyLight();
 	}
 
 	//--------------------------------------------------------------------------
