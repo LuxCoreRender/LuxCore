@@ -71,6 +71,18 @@ public:
 	vector<PathOCL::Material> mats;
 	vector<unsigned int> meshMats;
 
+	// Compiled TextureMaps
+	vector<PathOCL::TexMap> gpuTexMaps;
+	unsigned int totRGBTexMem;
+	Spectrum *rgbTexMem;
+	unsigned int totAlphaTexMem;
+	float *alphaTexMem;
+	unsigned int *meshTexs;
+	// Bump mapping
+	unsigned int *meshBumps;
+	float *bumpMapScales;
+
+
 private:
 	void CompileCamera();
 	void CompileGeometry();
@@ -79,6 +91,7 @@ private:
 	void CompileInfiniteLight();
 	void CompileSunLight();
 	void CompileSkyLight();
+	void CompileTextureMaps();
 };
 
 #endif	/* _COMPILEDSESSION_H */
