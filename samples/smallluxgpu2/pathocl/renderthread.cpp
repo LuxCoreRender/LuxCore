@@ -250,7 +250,7 @@ void PathOCLRenderThread::InitAreaLights() {
 
 	if (cscene->areaLights.size() > 0) {
 		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
-			sizeof(PathOCL::TriangleLight) * cscene->areaLights.size(), "Area lights");
+			sizeof(PathOCL::TriangleLight) * cscene->areaLights.size(), "AreaLights");
 	} else
 		areaLightsBuff = NULL;
 }
@@ -260,15 +260,25 @@ void PathOCLRenderThread::InitInfiniteLight() {
 
 	if (cscene->infiniteLight) {
 		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
-			sizeof(PathOCL::InfiniteLight), "Infinite light");
+			sizeof(PathOCL::InfiniteLight), "InfiniteLight");
 
 		const unsigned int pixelCount = cscene->infiniteLight->width * cscene->infiniteLight->height;
 		AllocOCLBufferRO(&infiniteLightMapBuff, (void *)cscene->infiniteLightMap,
-			sizeof(Spectrum) * pixelCount, "Infinite light map");
+			sizeof(Spectrum) * pixelCount, "InfiniteLight map");
 	} else {
 		infiniteLightBuff = NULL;
 		infiniteLightMapBuff = NULL;
 	}
+}
+
+void PathOCLRenderThread::InitSunLight() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->sunLight)
+		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
+			sizeof(PathOCL::SunLight), "SunLight");
+	else
+		sunLightBuff = NULL;
 }
 
 void PathOCLRenderThread::InitKernels() {
@@ -629,37 +639,7 @@ void PathOCLRenderThread::InitRender() {
 	// Check if there is an sun light source
 	//--------------------------------------------------------------------------
 
-	SunLight *sunLight = NULL;
-
-	// Look for the sun light
-	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-		LightSource *l = scene->lights[i];
-
-		if (l->GetType() == TYPE_SUN) {
-			sunLight = (SunLight *)l;
-			break;
-		}
-	}
-
-	if (sunLight) {
-		PathOCL::SunLight sl;
-
-		sl.sundir = sunLight->GetDir();
-		sl.gain = sunLight->GetGain();
-		sl.turbidity = sunLight->GetTubidity();
-		sl.relSize= sunLight->GetRelSize();
-		float tmp;
-		sunLight->GetInitData(&sl.x, &sl.y, &tmp, &tmp, &tmp,
-				&sl.cosThetaMax, &tmp, &sl.suncolor);
-
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] SunLight buffer size: " << (sizeof(PathOCL::SunLight) / 1024) << "Kbytes" << endl;
-		sunLightBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(PathOCL::SunLight),
-				(void *)&sl);
-		deviceDesc->AllocMemory(sunLightBuff->getInfo<CL_MEM_SIZE>());
-	} else
-		sunLightBuff = NULL;
+	InitSunLight();
 
 	//--------------------------------------------------------------------------
 	// Check if there is an sky light source
@@ -699,7 +679,7 @@ void PathOCLRenderThread::InitRender() {
 		skyLightBuff = NULL;
 
 	const unsigned int areaLightCount = renderEngine->compiledScene->areaLights.size();
-	if (!skyLight && !sunLight && !infiniteLightBuff && (areaLightCount == 0))
+	if (!skyLight && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
 	//--------------------------------------------------------------------------
@@ -912,7 +892,7 @@ void PathOCLRenderThread::InitRender() {
 		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
 		sizeof(float) * 3 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
-		(((areaLightCount > 0) || sunLight) ? (sizeof(float) * 3) : 0) +
+		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 3) : 0) +
 		// IDX_RR
 		sizeof(float);
 	const size_t uDataSize = (renderEngine->sampler->type == PathOCL::INLINED_RANDOM) ?
@@ -945,7 +925,7 @@ void PathOCLRenderThread::InitRender() {
 				sizeof(float) * s->xSamples +
 				// stratifiedLight2D
 				// stratifiedLight1D
-				(((areaLightCount > 0) || sunLight) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
+				(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
 
 		sampleSize += stratifiedDataSize;
 	}
@@ -954,7 +934,7 @@ void PathOCLRenderThread::InitRender() {
 
 	const size_t gpuTaksSizePart3 =
 		// PathState size
-		(((areaLightCount > 0) || sunLight) ? sizeof(PathOCL::PathStateDL) : sizeof(PathOCL::PathState));
+		(((areaLightCount > 0) || sunLightBuff) ? sizeof(PathOCL::PathStateDL) : sizeof(PathOCL::PathState));
 
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
 	cerr << "[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
@@ -1215,6 +1195,11 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if  (editActions.Has(INFINITELIGHT_EDIT)) {
 		// Update Scene Infinite Light
 		InitInfiniteLight();
+	}
+
+	if  (editActions.Has(SUNLIGHT_EDIT)) {
+		// Update Scene Sun Light
+		InitSunLight();
 	}
 
 	//--------------------------------------------------------------------------
