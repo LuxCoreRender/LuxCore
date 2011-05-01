@@ -26,6 +26,7 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 	film = flm;
 
 	infiniteLight = NULL;
+	sunLight = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -34,6 +35,7 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 
 CompiledScene::~CompiledScene() {
 	delete infiniteLight;
+	delete sunLight;
 }
 
 void CompiledScene::CompileCamera() {
@@ -586,6 +588,41 @@ void CompiledScene::CompileInfiniteLight() {
 	cerr << "[PathOCLRenderThread::CompiledScene] Infinitelight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
 }
 
+void CompiledScene::CompileSunLight() {
+	Scene *scene = renderConfig->scene;
+
+	delete sunLight;
+
+	//--------------------------------------------------------------------------
+	// Check if there is an sun light source
+	//--------------------------------------------------------------------------
+
+	SunLight *sl = NULL;
+
+	// Look for the sun light
+	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
+		LightSource *l = scene->lights[i];
+
+		if (l->GetType() == TYPE_SUN) {
+			sl = (SunLight *)l;
+			break;
+		}
+	}
+
+	if (sl) {
+		sunLight = new PathOCL::SunLight();
+
+		sunLight->sundir = sl->GetDir();
+		sunLight->gain = sl->GetGain();
+		sunLight->turbidity = sl->GetTubidity();
+		sunLight->relSize= sl->GetRelSize();
+		float tmp;
+		sl->GetInitData(&sunLight->x, &sunLight->y, &tmp, &tmp, &tmp,
+				&sunLight->cosThetaMax, &tmp, &sunLight->suncolor);
+	} else
+		sunLight = NULL;
+}
+
 void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(CAMERA_EDIT))
 		CompileCamera();
@@ -597,4 +634,6 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileAreaLights();
 	if (editActions.Has(INFINITELIGHT_EDIT))
 		CompileInfiniteLight();
+	if (editActions.Has(SUNLIGHT_EDIT))
+		CompileSunLight();
 }
