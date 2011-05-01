@@ -61,6 +61,8 @@ public:
 
 	// Compiled SunLight
 	PathOCL::SunLight *sunLight;
+	// Compiled SkyLight
+	PathOCL::SkyLight *skyLight;
 
 	// Compiled Materials
 	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,
@@ -76,6 +78,7 @@ private:
 	void CompileAreaLights();
 	void CompileInfiniteLight();
 	void CompileSunLight();
+	void CompileSkyLight();
 };
 
 #endif	/* _COMPILEDSESSION_H */
