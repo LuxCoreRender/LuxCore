@@ -122,7 +122,6 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 		throw runtime_error("No OpenCL device selected or available");
 
 	// Allocate devices
-
 	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDescs);
 
 	for (size_t i = 0; i < devs.size(); ++i)
@@ -141,6 +140,10 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 	// Set the Luxrays SataSet
 	renderConfig->scene->UpdateDataSet(ctx);
 	ctx->SetDataSet(renderConfig->scene->dataSet);
+
+	// Disable the support for hybrid rendering
+	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
+		oclIntersectionDevices[i]->SetHybridRenderingSupport(false);
 }
 
 OCLRenderEngine::~OCLRenderEngine() {

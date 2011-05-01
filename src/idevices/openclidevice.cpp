@@ -160,6 +160,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	reportedPermissionError = false;
 	qbvhUseImage = false;
 	qbvhDisableImageStorage = false;
+	hybridRenderingSupport = true;
 	intersectionThread = NULL;
 
 	bvhKernel = NULL;
@@ -789,32 +790,38 @@ void OpenCLIntersectionDevice::UpdateDataSet() {
 void OpenCLIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
-	// Create the thread for the rendering
-	intersectionThread = new boost::thread(boost::bind(OpenCLIntersectionDevice::IntersectionThread, this));
+	if (hybridRenderingSupport) {
+		// Create the thread for the rendering
+		intersectionThread = new boost::thread(boost::bind(OpenCLIntersectionDevice::IntersectionThread, this));
 
-	// Set intersectionThread priority
-	bool res = SetThreadRRPriority(intersectionThread);
-	if (res && !reportedPermissionError) {
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
-		reportedPermissionError = true;
+		// Set intersectionThread priority
+		bool res = SetThreadRRPriority(intersectionThread);
+		if (res && !reportedPermissionError) {
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
+			reportedPermissionError = true;
+		}
 	}
 }
 
 void OpenCLIntersectionDevice::Interrupt() {
 	assert (started);
-	intersectionThread->interrupt();
+
+	if (hybridRenderingSupport)
+		intersectionThread->interrupt();
 }
 
 void OpenCLIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 
-	intersectionThread->interrupt();
-	intersectionThread->join();
-	delete intersectionThread;
-	intersectionThread = NULL;
+	if (hybridRenderingSupport) {
+		intersectionThread->interrupt();
+		intersectionThread->join();
+		delete intersectionThread;
+		intersectionThread = NULL;
 
-	if (!externalRayBufferQueue)
-		rayBufferQueue.Clear();
+		if (!externalRayBufferQueue)
+			rayBufferQueue.Clear();
+	}
 }
 
 void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event) {
