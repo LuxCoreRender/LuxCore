@@ -269,7 +269,7 @@ set(LuxRays_HEADERS
 	${LuxRays_HEADERS_LUXRAYS_UTILS_SDL_DATA}
 )
 
-add_library(LuxRays STATIC ${LuxRays_SRCS} ${LuxRays_HEADERS})
+add_library(luxrays STATIC ${LuxRays_SRCS} ${LuxRays_HEADERS})
 
 ###########################################################################
 #
@@ -292,14 +292,14 @@ ENDIF(GCC AND NOT APPLE)
 #
 IF(UPDATE_OSX_LUXRAYS_REPO)
 	ADD_CUSTOM_COMMAND(
-	TARGET LuxRays POST_BUILD
+	TARGET luxrays POST_BUILD
 	COMMAND cp ${CMAKE_BINARY_DIR}/lib/release/libluxrays.a ${CMAKE_BINARY_DIR}/../macos/lib/LuxRays
 	COMMAND cp -R ${CMAKE_BINARY_DIR}/include/luxrays ${CMAKE_BINARY_DIR}/../macos/include/LuxRays
 	)
 ENDIF(UPDATE_OSX_LUXRAYS_REPO)
 
-TARGET_LINK_LIBRARIES(LuxRays ${OPENGL_gl_LIBRARY})
+TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
 
-TARGET_LINK_LIBRARIES(LuxRays debug ${FreeImage_LIBRARY_DBG} optimized ${FreeImage_LIBRARY_REL} general ${FreeImage_LIBRARY_REL})
-TARGET_LINK_LIBRARIES(LuxRays ${OPENCL_LIBRARY})
-TARGET_LINK_LIBRARIES(LuxRays ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(luxrays debug ${FreeImage_LIBRARY_DBG} optimized ${FreeImage_LIBRARY_REL} general ${FreeImage_LIBRARY_REL})
+TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARY})
+TARGET_LINK_LIBRARIES(luxrays ${Boost_LIBRARIES})
