@@ -1,4 +1,4 @@
-^lib/libLuxRays.a
+^lib/libluxrays.a
 ^doxygen-luxrays.conf
 ^doxygen/luxrays.template
 ^doxygen-slg.conf

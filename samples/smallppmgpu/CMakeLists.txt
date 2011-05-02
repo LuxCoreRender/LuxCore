@@ -23,7 +23,7 @@ include_directories(${LuxRays_INCLUDE_DIR})
 link_directories (${LuxRays_LIB_DIR})
 
 add_executable(smallppmgpu smallppmgpu.cpp)
-target_link_libraries(smallppmgpu LuxRays ${OPENGL_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(smallppmgpu luxrays ${OPENGL_LIBRARY} ${Boost_LIBRARIES})
 
 TARGET_LINK_LIBRARIES(smallppmgpu ${OpenCL_LIBRARY})
 TARGET_LINK_LIBRARIES(smallppmgpu ${GLUT_LIBRARY})

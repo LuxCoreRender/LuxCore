@@ -153,7 +153,7 @@ ENDIF(APPLE)
 
 IF(APPLE)
 	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
-	target_link_libraries(LuxMark LuxRays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+	target_link_libraries(LuxMark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 	ADD_CUSTOM_COMMAND(
 			TARGET LuxMark POST_BUILD
 				COMMAND rm -rf ${CMAKE_BINARY_DIR}/Release/LuxMark.app/Contents/Resources
@@ -166,7 +166,7 @@ ELSE(APPLE)
 
 	ADD_EXECUTABLE(luxmark ${LUXMARK_SRCS})
 	
-	TARGET_LINK_LIBRARIES(luxmark LuxRays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${OPENGL_LIBRARY} ${Boost_LIBRARIES})
+	TARGET_LINK_LIBRARIES(luxmark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${OPENGL_LIBRARY} ${Boost_LIBRARIES})
 	TARGET_LINK_LIBRARIES(luxmark ${OpenCL_LIBRARY})
 	TARGET_LINK_LIBRARIES(luxmark ${GLUT_LIBRARY})
 	
