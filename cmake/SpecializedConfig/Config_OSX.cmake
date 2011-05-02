@@ -7,9 +7,6 @@
 
 MESSAGE(STATUS "Using OSX Configuration settings")
 
-set(BUILD_LUXMARK TRUE) # This will require QT
-set(UPDATE_OSX_LUXRAYS_REPO FALSE)
-
 set(OSX_SEARCH_PATH     "../macos")
 
 set(FREEIMAGE_SEARCH_PATH "${OSX_SEARCH_PATH}")

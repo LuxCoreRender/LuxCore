@@ -290,13 +290,13 @@ ENDIF(GCC AND NOT APPLE)
 # copy needed files for compiling LuxRender to dependencies directory, to find 
 # them also if builddir name is not "luxrays"
 #
-IF(UPDATE_OSX_LUXRAYS_REPO)
+IF({OSX_UPDATE_LUXRAYS_REPO)
 	ADD_CUSTOM_COMMAND(
 	TARGET luxrays POST_BUILD
 	COMMAND cp ${CMAKE_BINARY_DIR}/lib/release/libluxrays.a ${CMAKE_BINARY_DIR}/../macos/lib/LuxRays
 	COMMAND cp -R ${CMAKE_BINARY_DIR}/include/luxrays ${CMAKE_BINARY_DIR}/../macos/include/LuxRays
 	)
-ENDIF(UPDATE_OSX_LUXRAYS_REPO)
+ENDIF({OSX_UPDATE_LUXRAYS_REPO)
 
 TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
 

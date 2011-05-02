@@ -23,4 +23,4 @@ include_directories(${LuxRays_INCLUDE_DIR})
 link_directories (${LuxRays_LIB_DIR})
 
 add_executable(benchsimple benchsimple.cpp)
-target_link_libraries(benchsimple luxrays ${OPENGL_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(benchsimple luxrays ${OPENGL_LIBRARY})
