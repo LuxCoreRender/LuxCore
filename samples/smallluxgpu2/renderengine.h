@@ -26,7 +26,7 @@
 #include "renderconfig.h"
 #include "editaction.h"
 
-#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/film/nativefilm.h"
 
 enum RenderEngineType {
 	PATHOCL
@@ -34,7 +34,7 @@ enum RenderEngineType {
 
 class RenderEngine {
 public:
-	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RenderEngine(RenderConfig *cfg, NativeFilm *flm, boost::mutex *flmMutex);
 	virtual ~RenderEngine();
 
 	virtual void Start() {
@@ -76,7 +76,7 @@ protected:
 	boost::mutex engineMutex;
 
 	RenderConfig *renderConfig;
-	Film *film;
+	NativeFilm *film;
 	boost::mutex *filmMutex;
 
 	bool started, editMode;
@@ -84,7 +84,7 @@ protected:
 
 class OCLRenderEngine : public RenderEngine {
 public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	OCLRenderEngine(RenderConfig *cfg, NativeFilm *flm, boost::mutex *flmMutex);
 	virtual ~OCLRenderEngine();
 
 	virtual void Start() {

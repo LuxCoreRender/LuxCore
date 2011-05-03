@@ -47,7 +47,7 @@
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mutex *flmMutex) :
 		OCLRenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
@@ -237,7 +237,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	for (unsigned int y = 0; y < imgHeight; ++y) {
 		for (unsigned int x = 0; x < imgWidth; ++x) {
-			const unsigned int pGPU = x + 1 + (y + 1) * imgWidth;
+			const unsigned int pGPU = x + 1 + (y + 1) * (imgWidth + 2);
 
 			Spectrum c;
 			float count = 0;

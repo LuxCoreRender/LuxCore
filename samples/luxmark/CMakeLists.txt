@@ -119,7 +119,6 @@ QT4_WRAP_CPP(LUXMARK_MOC_SRCS ${LUXMARK_MOC})
 include_directories(${LUXRAYS_INCLUDE_DIR})
 include_directories(".")
 link_directories (${LUXRAYS_LIB_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
 
 set(LUXMARK_SRCS
 	${LUXMARK_SRCS}

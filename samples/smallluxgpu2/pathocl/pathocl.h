@@ -145,7 +145,7 @@ private:
 
 class PathOCLRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathOCLRenderEngine(RenderConfig *cfg, NativeFilm *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLRenderEngine();
 
 	void Start();
