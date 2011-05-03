@@ -62,6 +62,7 @@ public:
 	void SetFilterType(const FilterType filter) {
 		filterType = filter;
 	}
+	FilterType GetFilterType() const { return filterType; }
 
 	const ToneMapParams *GetToneMapParams() const { return toneMapParams; }
 	void SetToneMapParams(const ToneMapParams &params) {

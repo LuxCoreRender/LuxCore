@@ -246,7 +246,7 @@ void NativeFilm::AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuff
 				const int x = (int)sampleElem->screenX;
 				const int y = (int)sampleElem->screenY;
 
-				SplatRadiance(sampleElem->radiance, x, y, 1.f);
+				SplatRadiance(sampleElem->radiance, x, y);
 			}
 			break;
 		}
