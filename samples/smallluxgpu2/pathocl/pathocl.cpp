@@ -235,37 +235,62 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
-	for (unsigned int y = 0; y < imgHeight; ++y) {
-		for (unsigned int x = 0; x < imgWidth; ++x) {
-			const unsigned int pGPU = x + 1 + (y + 1) * (imgWidth + 2);
+	switch (film->GetFilterType()) {
+		case FILTER_GAUSSIAN: {
+			SampleBufferElem sbe;
 
-			Spectrum c;
-			float count = 0;
-			for (size_t i = 0; i < renderThreads.size(); ++i) {
-				c += renderThreads[i]->frameBuffer[pGPU].c;
-				count += renderThreads[i]->frameBuffer[pGPU].count;
-			}
+			for (unsigned int y = 0; y < imgHeight; ++y) {
+				unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
+				unsigned int pCPU = y * imgWidth;
 
-			if (count > 0) {
-				const unsigned int pCPU = x + y * imgWidth;
-				const float scrX = pCPU % imgWidth;
-				const float scrY = pCPU / imgWidth;
-				c /= count;
-				sampleBuffer->SplatSample(scrX, scrY, c);
+				for (unsigned int x = 0; x < imgWidth; ++x) {
+					Spectrum c;
+					float count = 0.f;
+					for (size_t i = 0; i < renderThreads.size(); ++i) {
+						c += renderThreads[i]->frameBuffer[pGPU].c;
+						count += renderThreads[i]->frameBuffer[pGPU].count;
+					}
 
-				if (sampleBuffer->IsFull()) {
-					// Splat all samples on the film
-					film->SplatSampleBuffer(true, sampleBuffer);
-					sampleBuffer = film->GetFreeSampleBuffer();
+					if ((count > 0) && !c.IsNaN()) {
+						sbe.screenX = x;
+						sbe.screenY = y;
+						c /= count;
+						sbe.radiance = c;
+
+						film->SplatFiltered(&sbe);
+					}
+
+					++pGPU;
+					++pCPU;
 				}
 			}
+			break;
 		}
-	}
+		case FILTER_NONE: {
+			for (unsigned int y = 0; y < imgHeight; ++y) {
+				unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
+				unsigned int pCPU = y * imgWidth;
 
-	if (sampleBuffer->GetSampleCount() > 0) {
-		// Splat all samples on the film
-		film->SplatSampleBuffer(true, sampleBuffer);
-		sampleBuffer = film->GetFreeSampleBuffer();
+				for (unsigned int x = 0; x < imgWidth; ++x) {
+					Spectrum c;
+					float count = 0.f;
+					for (size_t i = 0; i < renderThreads.size(); ++i) {
+						c += renderThreads[i]->frameBuffer[pGPU].c;
+						count += renderThreads[i]->frameBuffer[pGPU].count;
+					}
+
+					if ((count > 0) && !c.IsNaN())
+						film->AddRadiance(x, y, c, count);
+
+					++pGPU;
+					++pCPU;
+				}
+			}
+			break;
+		}
+		default:
+			assert (false);
+			break;
 	}
 
 	// Update the sample count statistic

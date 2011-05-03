@@ -54,6 +54,19 @@ public:
 
 	void Save(const std::string &fileName);
 
+	//--------------------------------------------------------------------------
+
+	void AddRadiance(const unsigned int x, const unsigned int y, const Spectrum radiance, const float weight) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+
+		sp->radiance += radiance;
+		sp->weight += weight;
+	}
+
+	void SplatPreview(const SampleBufferElem *sampleElem);
+	void SplatFiltered(const SampleBufferElem *sampleElem);
+
 	static size_t SampleBufferSize;
 
 protected:
@@ -64,15 +77,21 @@ protected:
 	void AddSampleFrameBuffer(const SampleFrameBuffer *sfb);
 
 	void AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer);
-	void SplatPreview(const SampleBufferElem *sampleElem);
-	void SplatFiltered(const SampleBufferElem *sampleElem);
 
-	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight = 1.f) {
+	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight) {
 		const unsigned int offset = x + y * width;
 		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
 
 		sp->radiance += weight * radiance;
 		sp->weight += weight;
+	}
+
+	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+
+		sp->radiance += radiance;
+		sp->weight += 1.f;
 	}
 
 	SampleFrameBuffer *sampleFrameBuffer;
