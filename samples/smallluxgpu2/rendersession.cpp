@@ -22,6 +22,8 @@
 #include "rendersession.h"
 #include "pathocl/pathocl.h"
 
+#include "luxrays/utils/film/pixeldevicefilm.h"
+
 RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig = rcfg;
 	started = false;
@@ -36,14 +38,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
-	// Create LuxRays context
-	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
-	ctx = new Context(DebugHandler, oclPlatformIndex);
-	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-
+	//--------------------------------------------------------------------------
 	// Create the Film
-	film = new LuxRaysFilm(ctx, w, h, descs[0]);
+	//--------------------------------------------------------------------------
+
+	film = new NativeFilm(w, h);
 
 	const int filterType = cfg.GetInt("film.filter.type", 1);
 	if (filterType == 0)
@@ -68,7 +67,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	if (gamma != 2.2f)
 		film->InitGammaTable(gamma);
 
-	ctx->Start();
+	film->Init(w, h);
+
+	//--------------------------------------------------------------------------
+	// Create the RenderEngine
+	//--------------------------------------------------------------------------
 
 	// Check the kind of render engine to start
 	const int renderEngineType = cfg.GetInt("renderengine.type", 4);
@@ -90,7 +93,6 @@ RenderSession::~RenderSession() {
 		Stop();
 
 	delete film;
-	delete ctx;
 	delete renderConfig;
 }
 
@@ -115,7 +117,6 @@ void RenderSession::BeginEdit() {
 	renderEngine->BeginEdit();
 	editActions.Reset();
 
-	ctx->Stop();
 	editMode = true;
 }
 
@@ -126,7 +127,6 @@ void RenderSession::EndEdit() {
 	if (editActions.Size() > 0)
 		film->Reset();
 
-	ctx->Start();
 	renderEngine->EndEdit(editActions);
 	editMode = false;
 }

@@ -120,6 +120,13 @@ set(LuxRays_SRC_UTILS_CORE
 )
 SOURCE_GROUP("Source Files\\Utils\\core" FILES ${LuxRays_SRC_UTILS_CORE})	
 
+set(LuxRays_SRC_UTILS_FILM
+	${LuxRays_SOURCE_DIR}/src/utils/film/film.cpp
+	${LuxRays_SOURCE_DIR}/src/utils/film/nativefilm.cpp
+	${LuxRays_SOURCE_DIR}/src/utils/film/pixeldevicefilm.cpp
+)
+SOURCE_GROUP("Source Files\\Utils\\FILM" FILES ${LuxRays_SRC_UTILS_FILM})
+
 set(LuxRays_SRC_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/light.cpp
@@ -144,6 +151,7 @@ set(LuxRays_SRCS
 	${LuxRays_SRCS_KERNELS}
 	${LuxRays_SRCS_PDEVICES}
 	${LuxRays_SRC_UTILS_CORE}
+	${LuxRays_SRC_UTILS_FILM}
 	${LuxRays_SRC_UTILS_SDL}
 	${LuxRays_SRC_UTILS_PLYMESH}
 	${LuxRays_SRC_UTILS}

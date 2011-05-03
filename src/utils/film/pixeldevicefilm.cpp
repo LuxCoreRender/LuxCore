@@ -19,41 +19,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _RENDERSESSION_H
-#define	_RENDERSESSION_H
+#include "luxrays/utils/film/pixeldevicefilm.h"
 
-#include "smalllux.h"
-#include "renderconfig.h"
-#include "renderengine.h"
+using namespace luxrays;
+using namespace luxrays::utils;
 
-#include "luxrays/utils/film/nativefilm.h"
+PixelDeviceFilm::PixelDeviceFilm(Context *context, const unsigned int w,
+			const unsigned int h, DeviceDescription *deviceDesc) : Film(w, h) {
+	ctx = context;
 
-class RenderSession {
-public:
-	RenderSession(RenderConfig *cfg);
-	~RenderSession();
-
-	void Start();
-	void Stop();
-
-	void BeginEdit();
-	void EndEdit();
-
-	bool NeedPeriodicSave();
-	void SaveFilmImage();
-
-	RenderConfig *renderConfig;
-	RenderEngine *renderEngine;
-
-	boost::mutex filmMutex;
-	NativeFilm *film;
-
-	EditActionList editActions;
-
-protected:
-	double lastPeriodicSave, periodiceSaveTime;
-
-	bool started, editMode, periodicSaveEnabled;
-};
-
-#endif	/* _RENDERSESSION_H */
+	std::vector<DeviceDescription *> descs;
+	descs.push_back(deviceDesc);
+	pixelDevice = ctx->AddPixelDevices(descs)[0];
+	pixelDevice->Init(w, h);
+}

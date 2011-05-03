@@ -35,7 +35,7 @@ std::string luxrays::KernelSource_PathOCL_kernel_filters =
 "}\n"
 "\n"
 "uint XY2FrameBufferIndex(const int x, const int y) {\n"
-"	return x + 1 + (y + 1) * PARAM_IMAGE_WIDTH;\n"
+"	return x + 1 + (y + 1) * (PARAM_IMAGE_WIDTH + 2);\n"
 "}\n"
 "\n"
 "uint InitialPixelIndex(const size_t gid) {\n"

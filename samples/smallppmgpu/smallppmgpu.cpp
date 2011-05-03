@@ -50,7 +50,7 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
-#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/film/pixeldevicefilm.h"
 
 #define MAX_EYE_PATH_DEPTH 16
 #define MAX_PHOTON_PATH_DEPTH 16
@@ -1011,7 +1011,7 @@ int main(int argc, char *argv[]) {
 
 		std::vector<luxrays::DeviceDescription *> pixelDevDecs = ctx->GetAvailableDeviceDescriptions();
 		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, pixelDevDecs);
-		film = new luxrays::utils::LuxRaysFilm(ctx, imgWidth, imgHeight, pixelDevDecs[0]);
+		film = new luxrays::utils::PixelDeviceFilm(ctx, imgWidth, imgHeight, pixelDevDecs[0]);
 		sampleBuffer = film->GetFreeSampleBuffer();
 
 		//----------------------------------------------------------------------
