@@ -273,9 +273,10 @@ void keyFunc(unsigned char key, int x, int y) {
 			exit(EXIT_SUCCESS);
 			break;
 		}
-		/*case ' ': // Restart rendering
-			config->ReInit(true, config->film->GetWidth(), config->film->GetHeight());
-			break;*/
+		case ' ': // Restart rendering
+			session->Stop();
+			session->Start();
+			break;
 		case 'a': {
 			session->BeginEdit();
 			session->renderConfig->scene->camera->TranslateLeft(MOVE_STEP);
