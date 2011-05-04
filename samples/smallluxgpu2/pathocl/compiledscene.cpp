@@ -53,6 +53,8 @@ CompiledScene::~CompiledScene() {
 }
 
 void CompiledScene::CompileCamera() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile Camera" << endl;
+
 	//--------------------------------------------------------------------------
 	// Camera definition
 	//--------------------------------------------------------------------------
@@ -72,6 +74,8 @@ static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
 }
 
 void CompiledScene::CompileGeometry() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile Geometry" << endl;
+
 	Scene *scene = renderConfig->scene;
 
 	const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
@@ -298,6 +302,8 @@ void CompiledScene::CompileGeometry() {
 }
 
 void CompiledScene::CompileMaterials() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile Materials" << endl;
+
 	Scene *scene = renderConfig->scene;
 
 	//--------------------------------------------------------------------------
@@ -503,6 +509,8 @@ void CompiledScene::CompileMaterials() {
 }
 
 void CompiledScene::CompileAreaLights() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile AreaLights" << endl;
+
 	Scene *scene = renderConfig->scene;
 
 	//--------------------------------------------------------------------------
@@ -552,6 +560,8 @@ void CompiledScene::CompileAreaLights() {
 }
 
 void CompiledScene::CompileInfiniteLight() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile InfiniteLight" << endl;
+
 	Scene *scene = renderConfig->scene;
 
 	delete infiniteLight;
@@ -603,6 +613,8 @@ void CompiledScene::CompileInfiniteLight() {
 }
 
 void CompiledScene::CompileSunLight() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile SunLight" << endl;
+
 	Scene *scene = renderConfig->scene;
 
 	delete sunLight;
@@ -638,6 +650,8 @@ void CompiledScene::CompileSunLight() {
 }
 
 void CompiledScene::CompileSkyLight() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile SkyLight" << endl;
+
 	Scene *scene = renderConfig->scene;
 
 	delete skyLight;
@@ -674,6 +688,8 @@ void CompiledScene::CompileSkyLight() {
 }
 
 void CompiledScene::CompileTextureMaps() {
+	cerr << "[PathOCLRenderThread::CompiledScene] Compile TextureMaps" << endl;
+
 	Scene *scene = renderConfig->scene;
 
 	gpuTexMaps.resize(0);
@@ -842,4 +858,31 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileSkyLight();
 	if (editActions.Has(TEXTUREMAPS_EDIT))
 		CompileTextureMaps();
+}
+
+bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
+	switch (type) {
+		case MATTE:
+			return enable_MAT_MATTE;
+		case AREALIGHT:
+			return enable_MAT_AREALIGHT;
+		case MIRROR:
+			return enable_MAT_MIRROR;
+		case MATTEMIRROR:
+			return enable_MAT_MATTEMIRROR;
+		case GLASS:
+			return enable_MAT_GLASS;
+		case METAL:
+			return enable_MAT_METAL;
+		case MATTEMETAL:
+			return enable_MAT_MATTEMETAL;
+		case ARCHGLASS:
+			return enable_MAT_ARCHGLASS;
+		case ALLOY:
+			return enable_MAT_ALLOY;
+		default:
+			assert (false);
+			return false;
+			break;
+	}
 }

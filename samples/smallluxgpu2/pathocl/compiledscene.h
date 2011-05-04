@@ -35,6 +35,7 @@ public:
 	~CompiledScene();
 
 	void Recompile(const EditActionList &editActions);
+	bool IsMaterialCompiled(const MaterialType type) const;
 
 	RenderConfig *renderConfig;
 	Film *film;
