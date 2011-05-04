@@ -162,6 +162,8 @@ public:
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
 
+	bool IsMaterialCompiled(const MaterialType type) const;
+
 	friend class PathOCLRenderThread;
 
 	// Signed because of the delta parameter

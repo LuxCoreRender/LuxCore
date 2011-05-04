@@ -161,6 +161,8 @@ void Context::Interrupt() {
 void Context::Stop() {
 	assert (started);
 
+	Interrupt();
+
 	for (size_t i = 0; i < idevices.size(); ++i)
 		idevices[i]->Stop();
 	for (size_t i = 0; i < pdevices.size(); ++i)

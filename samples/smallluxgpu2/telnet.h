@@ -23,16 +23,16 @@
 #define	_TELNET_H
 
 #include "smalllux.h"
-#include "renderconfig.h"
+#include "rendersession.h"
 
 class TelnetServer {
 public:
-	TelnetServer(const unsigned int serverPort, RenderConfig *renderConfig);
+	TelnetServer(const unsigned int serverPort, RenderSession *renderSession);
 	~TelnetServer();
 
 private:
 	enum ServerState {
-		RUN, STOP
+		RUN, EDIT
 	};
 
 	static void ServerThreadImpl(TelnetServer *telnetServer);
@@ -40,7 +40,7 @@ private:
 	const unsigned int port;
 	boost::thread *serverThread;
 
-	RenderConfig *config;
+	RenderSession *session;
 };
 
 #endif	/* _TELNET_H */

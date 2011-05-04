@@ -309,4 +309,8 @@ unsigned int PathOCLRenderEngine::GetPass() const {
 	return samplesCount / (film->GetWidth() * film->GetHeight());
 }
 
+bool PathOCLRenderEngine::IsMaterialCompiled(const MaterialType type) const {
+	return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
+}
+
 #endif

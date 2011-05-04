@@ -169,16 +169,35 @@ void OCLRenderEngine::BeginEditLockLess() {
 	RenderEngine::BeginEditLockLess();
 
 	// Stop all intersection devices
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		oclIntersectionDevices[i]->Interrupt();
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		oclIntersectionDevices[i]->Stop();
+	ctx->Stop();
 }
 
 void OCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
 	RenderEngine::EndEditLockLess(editActions);
 
+	bool dataSetUpdated;
+	if (editActions.Has(GEOMETRY_EDIT) ||
+			((renderConfig->scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH) &&
+			editActions.Has(INSTANCE_TRANS_EDIT))) {
+		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
+		ctx->SetDataSet(NULL);
+
+		// For all other accelerator, I have to rebuild the DataSet
+		renderConfig->scene->UpdateDataSet(ctx);
+
+		// Set the Luxrays SataSet
+		ctx->SetDataSet(renderConfig->scene->dataSet);
+
+		dataSetUpdated = true;
+	} else
+		dataSetUpdated = false;
+
 	// Restart all intersection devices
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		oclIntersectionDevices[i]->Start();
+	ctx->Start();
+
+	if (!dataSetUpdated && (renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) &&
+			editActions.Has(INSTANCE_TRANS_EDIT)) {
+		// Update the DataSet
+		ctx->UpdateDataSet();
+	}
 }

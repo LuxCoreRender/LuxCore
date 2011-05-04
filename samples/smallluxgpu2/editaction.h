@@ -30,6 +30,7 @@ enum EditAction {
 	FILM_EDIT, // Use this for image Film resize
 	CAMERA_EDIT, // Use this for any Camera parameter editing
 	GEOMETRY_EDIT, // Use this for any DataSet related editing
+	INSTANCE_TRANS_EDIT, // Use this for any instance transformation related editing
 	MATERIALS_EDIT, // Use this for any Material related editing
 	MATERIAL_TYPES_EDIT, // Use this if the kind of materials changes
 	AREALIGHTS_EDIT, // Use this for any AreaLight related editing
@@ -50,6 +51,7 @@ public:
 		AddAction(FILM_EDIT);
 		AddAction(CAMERA_EDIT);
 		AddAction(GEOMETRY_EDIT);
+		AddAction(INSTANCE_TRANS_EDIT);
 		AddAction(MATERIALS_EDIT);
 		AddAction(MATERIAL_TYPES_EDIT);
 		AddAction(AREALIGHTS_EDIT);
@@ -61,8 +63,62 @@ public:
 	bool Has(const EditAction a) const { return (actions.find(a) != actions.end()); };
 	size_t Size() const { return actions.size(); };
 
+	friend std::ostream &operator<<(std::ostream &os, const EditActionList &eal);
 private:
 	set<EditAction> actions;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
+	os << "EditActionList[";
+
+	bool sep = false;
+	for (set<EditAction>::iterator it = eal.actions.begin(); it!=eal.actions.end(); ++it) {
+		if (sep)
+			os << ", ";
+
+		switch (*it) {
+			case FILM_EDIT:
+				os << "FILM_EDIT";
+				break;
+			case CAMERA_EDIT:
+				os << "CAMERA_EDIT";
+				break;
+			case GEOMETRY_EDIT:
+				os << "GEOMETRY_EDIT";
+				break;
+			case INSTANCE_TRANS_EDIT:
+				os << "INSTANCE_TRANS_EDIT";
+				break;
+			case MATERIALS_EDIT:
+				os << "MATERIALS_EDIT";
+				break;
+			case MATERIAL_TYPES_EDIT:
+				os << "MATERIAL_TYPES_EDIT";
+				break;
+			case AREALIGHTS_EDIT:
+				os << "AREALIGHTS_EDIT";
+				break;
+			case INFINITELIGHT_EDIT:
+				os << "INFINITELIGHT_EDIT";
+				break;
+			case SUNLIGHT_EDIT:
+				os << "SUNLIGHT_EDIT";
+				break;
+			case SKYLIGHT_EDIT:
+				os << "SKYLIGHT_EDIT";
+				break;
+			case TEXTUREMAPS_EDIT:
+				os << "TEXTUREMAPS_EDIT";
+				break;
+			default:
+				os << "UNKNOWN[" << *it << "]";
+				break;
+		}
+	}
+
+	os << "]";
+
+	return os;
+}
 
 #endif	/* _EDITACTION_H */

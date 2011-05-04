@@ -126,7 +126,7 @@ set(SMALLLUXGPU_SRCS
 	renderconfig.cpp
 	renderengine.cpp
 	displayfunc.cpp
-#	telnet.cpp
+	telnet.cpp
 	pathocl/kernels/pathocl_kernel_core.cpp
 	pathocl/kernels/pathocl_kernel_datatypes.cpp
 	pathocl/kernels/pathocl_kernel_filters.cpp
