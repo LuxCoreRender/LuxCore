@@ -110,7 +110,6 @@ private:
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;
-	cl::Buffer *colorsBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *areaLightsBuff;
 	cl::Buffer *texMapRGBBuff;

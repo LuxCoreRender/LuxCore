@@ -45,7 +45,6 @@ public:
 
 	// Compiled Scene Geometry
 	vector<Point> verts;
-	vector<Spectrum> colors;
 	vector<Normal> normals;
 	vector<UV> uvs;
 	vector<Triangle> tris;

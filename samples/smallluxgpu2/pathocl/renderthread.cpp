@@ -84,7 +84,6 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	vertsBuff = NULL;
 	normalsBuff = NULL;
 	trianglesBuff = NULL;
-	colorsBuff = NULL;
 	cameraBuff = NULL;
 	areaLightsBuff = NULL;
 	texMapRGBBuff = NULL;
@@ -201,9 +200,6 @@ void PathOCLRenderThread::InitGeometry() {
 	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
 	AllocOCLBufferRO(&meshIDBuff, (void *)cscene->meshIDs,
 			sizeof(unsigned int) * trianglesCount, "MeshIDs");
-
-	AllocOCLBufferRO(&colorsBuff, &cscene->colors[0],
-		sizeof(Spectrum) * cscene->colors.size(), "Colors");
 
 	AllocOCLBufferRO(&normalsBuff, &cscene->normals[0],
 		sizeof(Normal) * cscene->normals.size(), "Normals");
@@ -860,7 +856,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *triangleIDBuff);
 	if (meshDescsBuff)
 		advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
-	advancePathsKernel->setArg(argIndex++, *colorsBuff);
 	advancePathsKernel->setArg(argIndex++, *normalsBuff);
 	advancePathsKernel->setArg(argIndex++, *vertsBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
@@ -944,7 +939,6 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&triangleIDBuff);
 	FreeOCLBuffer(&meshDescsBuff);
 	FreeOCLBuffer(&meshMatsBuff);
-	FreeOCLBuffer(&colorsBuff);
 	FreeOCLBuffer(&normalsBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);

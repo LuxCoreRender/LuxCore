@@ -82,7 +82,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			renderEngine = new PathOCLRenderEngine(renderConfig, film, &filmMutex);
 			break;
 		default:
-			assert (false);
+			throw runtime_error("Unknown renderengine.type");
 	}
 }
 
