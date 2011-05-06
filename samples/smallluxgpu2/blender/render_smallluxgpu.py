@@ -236,6 +236,7 @@ class SLGBP:
         cfg['path.filter.B'] = ff(scene.slg.filter_B)
         cfg['path.filter.C'] = ff(scene.slg.filter_C)
         cfg['path.maxdepth'] = format(scene.slg.tracedepth)
+        cfg['path.maxdiffusebounce'] = format(scene.slg.diffusebounce)
         cfg['path.russianroulette.depth'] = format(scene.slg.rrdepth)
         cfg['path.russianroulette.strategy'] = scene.slg.rrstrategy
         if scene.slg.rrstrategy == '0':
@@ -1354,6 +1355,10 @@ def slg_add_properties():
         description="Maximum path tracing depth",
         default=6, min=1, max=1024, soft_min=1, soft_max=1024)
 
+    SLGSettings.diffusebounce = IntProperty(name="Max Diffuse Bounces",
+        description="Maximum path tracing diffuse bounce",
+        default=5, min=0, max=1024, soft_min=0, soft_max=1024)
+
     SLGSettings.shadowrays = IntProperty(name="Shadow Rays",
         description="Shadow rays",
         default=1, min=1, max=1024, soft_min=1, soft_max=1024)
@@ -1592,6 +1597,7 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.sppm_photon_per_pass",
         "scene.slg.lightstrategy",
         "scene.slg.tracedepth",
+		"scene.slg.diffusebounce",
         "scene.slg.shadowrays",
         "scene.slg.sampleperpixel",
         "scene.slg.rrstrategy",
@@ -1774,6 +1780,8 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col = split.column()
             col.prop(slg, "tracedepth", text="Depth")
             col = split.column()
+            col.prop(slg, "diffusebounce", text="Diffuse Bounces")
+            split = layout.split()
             col.prop(slg, "shadowrays", text="Shadow")
             split = layout.split()
             col = split.column()
