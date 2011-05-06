@@ -60,6 +60,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 	cerr << "[PathOCLRenderThread] OpenCL task count: " << taskCount << endl;
 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
+	maxDiffusePathVertexCount = cfg.GetInt("path.maxdiffusebounce", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
 

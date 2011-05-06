@@ -39,6 +39,9 @@ void GenerateCameraPath(
 
 	// Initialize the path state
 	task->pathState.depth = 0;
+#if (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+	task->pathState.diffuseVertexCount = 0;
+#endif
 	task->pathState.throughput.r = 1.f;
 	task->pathState.throughput.g = 1.f;
 	task->pathState.throughput.b = 1.f;

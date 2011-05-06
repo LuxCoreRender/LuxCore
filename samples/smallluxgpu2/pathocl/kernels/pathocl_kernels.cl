@@ -319,7 +319,7 @@ __kernel void AdvancePaths(
 				f.g = 1.f;
 				f.b = 1.f;
 				float materialPdf;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 				int specularMaterial;
 #endif
 
@@ -328,7 +328,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_MATTE)
 					case MAT_MATTE:
 						Matte_Sample_f(&hitPointMat->param.matte, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -366,6 +366,9 @@ __kernel void AdvancePaths(
 						sample->radiance.g += throughput.g * Le.g;
 						sample->radiance.b += throughput.b * Le.b;
 
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+						specularMaterial = 0;
+#endif
 						materialPdf = 0.f;
 						break;
 					}
@@ -374,7 +377,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_MIRROR)
 					case MAT_MIRROR:
 						Mirror_Sample_f(&hitPointMat->param.mirror, &wo, &wi, &materialPdf, &f, &shadeN
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -384,7 +387,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_GLASS)
 					case MAT_GLASS:
 						Glass_Sample_f(&hitPointMat->param.glass, &wo, &wi, &materialPdf, &f, &N, &shadeN, u0
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -394,7 +397,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_MATTEMIRROR)
 					case MAT_MATTEMIRROR:
 						MatteMirror_Sample_f(&hitPointMat->param.matteMirror, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -404,7 +407,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_METAL)
 					case MAT_METAL:
 						Metal_Sample_f(&hitPointMat->param.metal, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -414,7 +417,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_MATTEMETAL)
 					case MAT_MATTEMETAL:
 						MatteMetal_Sample_f(&hitPointMat->param.matteMetal, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -424,7 +427,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_ALLOY)
 					case MAT_ALLOY:
 						Alloy_Sample_f(&hitPointMat->param.alloy, &wo, &wi, &materialPdf, &f, &shadeN, u0, u1, u2
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -434,7 +437,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_MAT_ARCHGLASS)
 					case MAT_ARCHGLASS:
 						ArchGlass_Sample_f(&hitPointMat->param.archGlass, &wo, &wi, &materialPdf, &f, &N, &shadeN, u0
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 								, &specularMaterial
 #endif
 								);
@@ -443,6 +446,9 @@ __kernel void AdvancePaths(
 
 					case MAT_NULL:
 						wi = rayDir;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+						specularMaterial = 1;
+#endif
 						materialPdf = 1.f;
 
 						// I have also to restore the original throughput
@@ -451,6 +457,9 @@ __kernel void AdvancePaths(
 
 					default:
 						// Huston, we have a problem...
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+						specularMaterial = 1;
+#endif
 						materialPdf = 0.f;
 						break;
 				}
@@ -466,7 +475,15 @@ __kernel void AdvancePaths(
 				const float rrProb = max(max(throughput.r, max(throughput.g, throughput.b)), (float) PARAM_RR_CAP);
 				pathDepth += 1;
 				float invRRProb = (pathDepth > PARAM_RR_DEPTH) ? ((rrProb < rrSample) ? 0.f : (1.f / rrProb)) : 1.f;
-				invRRProb = ((materialPdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)) ? 0.f : invRRProb;
+#if (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+				const uint diffuseVertexCount = task->pathState.diffuseVertexCount + (specularMaterial ? 0 : 1);
+#endif
+				invRRProb = ((materialPdf <= 0.f) || (pathDepth >= PARAM_MAX_PATH_DEPTH)
+#if (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+						|| (diffuseVertexCount > PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT)
+#endif
+						) ? 0.f : invRRProb;
+
 				throughput.r *= f.r * invRRProb;
 				throughput.g *= f.g * invRRProb;
 				throughput.b *= f.b * invRRProb;
@@ -621,6 +638,9 @@ Error: Huston, we have a problem !
 							task->pathState.specularBounce = specularMaterial;
 							task->pathState.throughput = throughput;
 							task->pathState.depth = pathDepth;
+#if (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+							task->pathState.diffuseVertexCount = diffuseVertexCount;
+#endif
 
 							pathState = PATH_STATE_NEXT_VERTEX;
 						}
@@ -640,6 +660,9 @@ Error: Huston, we have a problem !
 						task->pathState.specularBounce = specularMaterial;
 						task->pathState.throughput = throughput;
 						task->pathState.depth = pathDepth;
+#if (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+						task->pathState.diffuseVertexCount = diffuseVertexCount;
+#endif
 
 						pathState = PATH_STATE_NEXT_VERTEX;
 					}
@@ -658,6 +681,9 @@ Error: Huston, we have a problem !
 
 					task->pathState.throughput = throughput;
 					task->pathState.depth = pathDepth;
+#if (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+					task->pathState.diffuseVertexCount = diffuseVertexCount;
+#endif
 
 					pathState = PATH_STATE_NEXT_VERTEX;
 				}

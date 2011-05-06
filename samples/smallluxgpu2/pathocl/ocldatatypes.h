@@ -33,12 +33,16 @@ typedef struct {
 typedef struct {
 	unsigned int state;
 	unsigned int depth;
+	//unsigned int diffuseVertexCount;
+
 	Spectrum throughput;
 } PathState;
 
 typedef struct {
 	unsigned int state;
 	unsigned int depth;
+	//unsigned int diffuseVertexCount;
+
 	Spectrum throughput;
 
 	float bouncePdf;
