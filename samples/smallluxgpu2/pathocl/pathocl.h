@@ -160,6 +160,7 @@ public:
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
+	double GetRenderingTime() const { return elapsedTime; }
 
 	bool IsMaterialCompiled(const MaterialType type) const;
 
