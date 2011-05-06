@@ -97,7 +97,6 @@ __kernel void AdvancePaths(
 		__global uint *triangleIDs,
 		__global Mesh *meshDescs,
 #endif
-		__global Spectrum *vertColors,
 		__global Vector *vertNormals,
 		__global Point *vertices,
 		__global Triangle *triangles,
@@ -178,7 +177,6 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ACCEL_MQBVH)
 				__global Mesh *meshDesc = &meshDescs[meshIndex];
 				__global Point *iVertices = &vertices[meshDesc->vertsOffset];
-				__global Spectrum *iVertColors = &vertColors[meshDesc->vertsOffset];
 				__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
 #if defined(PARAM_HAS_TEXTUREMAPS)
 				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
@@ -189,15 +187,9 @@ __kernel void AdvancePaths(
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 				uint matType = hitPointMat->type;
 
-				// Interpolate Color
-				Spectrum shadeColor;
-#if defined(PARAM_ACCEL_MQBVH)
-				Mesh_InterpolateColor(iVertColors, iTriangles, triangleID, hitPointB1, hitPointB2, &shadeColor);
-#else
-				Mesh_InterpolateColor(vertColors, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &shadeColor);
-#endif
-
 #if defined(PARAM_HAS_TEXTUREMAPS)
+				Spectrum shadeColor;
+
 				// Interpolate UV coordinates
 				UV uv;
 #if defined(PARAM_ACCEL_MQBVH)
@@ -231,15 +223,19 @@ __kernel void AdvancePaths(
 					Spectrum texColor;
 					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
 
-					shadeColor.r *= texColor.r;
-					shadeColor.g *= texColor.g;
-					shadeColor.b *= texColor.b;
+					shadeColor.r = texColor.r;
+					shadeColor.g = texColor.g;
+					shadeColor.b = texColor.b;
+				} else {
+					shadeColor.r = 1.f;
+					shadeColor.g = 1.f;
+					shadeColor.b = 1.f;
 				}
-#endif
 
 				throughput.r *= shadeColor.r;
 				throughput.g *= shadeColor.g;
 				throughput.b *= shadeColor.b;
+#endif
 
 				// Interpolate the normal
 				Vector N;
@@ -585,9 +581,11 @@ Error: Huston, we have a problem !
 						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * directLightPdf * matPdf / (dp * lightSourceCount));
 					if (pdf > 0.f) {
 						Spectrum throughputLightDir = prevThroughput;
+#if defined(PARAM_HAS_TEXTUREMAPS)
 						throughputLightDir.r *= shadeColor.r;
 						throughputLightDir.g *= shadeColor.g;
 						throughputLightDir.b *= shadeColor.b;
+#endif
 
 						const float k = 1.f / pdf;
 						// NOTE: I assume all matte mixed material have a MatteParam as first field

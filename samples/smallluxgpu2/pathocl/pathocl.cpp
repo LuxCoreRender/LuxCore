@@ -67,7 +67,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	 const string samplerTypeName = cfg.GetString("path.sampler.type", "METROPOLIS");
+	 const string samplerTypeName = cfg.GetString("path.sampler.type", "INLINED_RANDOM");
 	 if (samplerTypeName.compare("INLINED_RANDOM") == 0)
 		 sampler = new PathOCL::InlinedRandomSampler();
 	 else if (samplerTypeName.compare("RANDOM") == 0)

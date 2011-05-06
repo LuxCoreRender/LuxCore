@@ -85,7 +85,6 @@ void CompiledScene::CompileGeometry() {
 
 	// Clear vectors
 	verts.resize(0);
-	colors.resize(0);
 	normals.resize(0);
 	uvs.resize(0);
 	tris.resize(0);
@@ -161,17 +160,6 @@ void CompiledScene::CompileGeometry() {
 				assert (mesh->GetType() == TYPE_EXT_TRIANGLE);
 
 				//--------------------------------------------------------------
-				// Translate mesh colors
-				//--------------------------------------------------------------
-
-				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-					if (mesh->HasColors())
-						colors.push_back(mesh->GetColor(j));
-					else
-						colors.push_back(Spectrum(1.f, 1.f, 1.f));
-				}
-
-				//--------------------------------------------------------------
 				// Translate mesh normals
 				//--------------------------------------------------------------
 
@@ -211,22 +199,6 @@ void CompiledScene::CompileGeometry() {
 		}
 	} else {
 		triangleIDs = NULL;
-
-		//----------------------------------------------------------------------
-		// Translate mesh colors
-		//----------------------------------------------------------------------
-
-		colors.reserve(verticesCount);
-		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
-			ExtMesh *mesh = scene->objects[i];
-
-			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-				if (mesh->HasColors())
-					colors.push_back(mesh->GetColor(j));
-				else
-					colors.push_back(Spectrum(1.f, 1.f, 1.f));
-			}
-		}
 
 		//----------------------------------------------------------------------
 		// Translate mesh normals
