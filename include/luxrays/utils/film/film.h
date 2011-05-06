@@ -94,10 +94,10 @@ public:
 		statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
 	}
 
-	unsigned int GetWidth() { return width; }
-	unsigned int GetHeight() { return height; }
-	unsigned int GetTotalSampleCount() { return statsTotalSampleCount; }
-	double GetTotalTime() {
+	unsigned int GetWidth() const { return width; }
+	unsigned int GetHeight() const { return height; }
+	unsigned int GetTotalSampleCount() const { return statsTotalSampleCount; }
+	double GetTotalTime() const {
 		return WallClockTime() - statsStartSampleTime;
 	}
 	double GetAvgSampleSec() {

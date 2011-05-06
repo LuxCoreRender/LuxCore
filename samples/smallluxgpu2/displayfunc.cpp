@@ -107,7 +107,7 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms]",
-			int(session->film->GetTotalTime()),
+			int(session->renderEngine->GetRenderingTime()),
 			session->renderConfig->GetScreenRefreshInterval());
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;

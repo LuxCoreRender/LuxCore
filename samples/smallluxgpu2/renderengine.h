@@ -65,6 +65,7 @@ public:
 	virtual RenderEngineType GetEngineType() const = 0;
 	virtual unsigned int GetPass() const = 0;
 	virtual double GetTotalSamplesSec() const = 0;
+	virtual double GetRenderingTime() const = 0;
 
 protected:
 	void StartLockLess();
