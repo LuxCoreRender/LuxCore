@@ -166,7 +166,7 @@ public:
 	friend class PathOCLRenderThread;
 
 	// Signed because of the delta parameter
-	int maxPathDepth;
+	int maxPathDepth, maxDiffusePathVertexCount;
 
 	int rrDepth;
 	float rrImportanceCap;

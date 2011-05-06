@@ -280,7 +280,7 @@ float InstanceMesh_Area(__global float m[4][4], __global Point *verts,
 void Matte_Sample_f(__global MatteParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
 		) {
@@ -304,14 +304,14 @@ void Matte_Sample_f(__global MatteParam *mat, const Vector *wo, Vector *wi,
 		f->b = mat->b;
 	}
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 	*specularBounce = FALSE;
 #endif
 }
 
 void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
 		) {
@@ -326,7 +326,7 @@ void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 	f->g = mat->g;
 	f->b = mat->b;
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 	*specularBounce = mat->specularBounce;
 #endif
 }
@@ -334,7 +334,7 @@ void Mirror_Sample_f(__global MirrorParam *mat, const Vector *wo, Vector *wi,
 void Glass_Sample_f(__global GlassParam *mat,
     const Vector *wo, Vector *wi, float *pdf, Spectrum *f, const Vector *N, const Vector *shadeN,
     const float u0
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
         ) {
@@ -361,7 +361,7 @@ void Glass_Sample_f(__global GlassParam *mat,
         f->r = mat->refl_r;
         f->g = mat->refl_g;
         f->b = mat->refl_b;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
         *specularBounce = mat->reflectionSpecularBounce;
 #endif
     } else {
@@ -394,7 +394,7 @@ void Glass_Sample_f(__global GlassParam *mat,
                 f->r = mat->refl_r;
                 f->g = mat->refl_g;
                 f->b = mat->refl_b;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
                 *specularBounce = mat->reflectionSpecularBounce;
 #endif
             }
@@ -405,7 +405,7 @@ void Glass_Sample_f(__global GlassParam *mat,
             f->r = mat->refrct_r;
             f->g = mat->refrct_g;
             f->b = mat->refrct_b;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             *specularBounce = mat->transmitionSpecularBounce;
 #endif
         } else if (u0 < P) {
@@ -415,7 +415,7 @@ void Glass_Sample_f(__global GlassParam *mat,
             f->r = mat->refl_r / (*pdf);
             f->g = mat->refl_g / (*pdf);
             f->b = mat->refl_b / (*pdf);
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             *specularBounce = mat->reflectionSpecularBounce;
 #endif
         } else {
@@ -425,7 +425,7 @@ void Glass_Sample_f(__global GlassParam *mat,
             f->r = mat->refrct_r / (*pdf);
             f->g = mat->refrct_g / (*pdf);
             f->b = mat->refrct_b / (*pdf);
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             *specularBounce = mat->transmitionSpecularBounce;
 #endif
         }
@@ -435,7 +435,7 @@ void Glass_Sample_f(__global GlassParam *mat,
 void MatteMirror_Sample_f(__global MatteMirrorParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1, const float u2
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
 		) {
@@ -445,14 +445,14 @@ void MatteMirror_Sample_f(__global MatteMirrorParam *mat, const Vector *wo, Vect
 	float mpdf;
     if (comp > mat->matteFilter) {
         Mirror_Sample_f(&mat->mirror, wo, wi, pdf, f, shadeN
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             , specularBounce
 #endif
             );
 		mpdf = mat->mirrorPdf;
     } else {
         Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             , specularBounce
 #endif
             );
@@ -503,7 +503,7 @@ void GlossyReflection(const Vector *wo, Vector *wi, const float exponent,
 void Metal_Sample_f(__global MetalParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
 		) {
@@ -516,7 +516,7 @@ void Metal_Sample_f(__global MetalParam *mat, const Vector *wo, Vector *wi,
             f->g = mat->g;
             f->b = mat->b;
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             *specularBounce = mat->specularBounce;
 #endif
 		} else
@@ -526,7 +526,7 @@ void Metal_Sample_f(__global MetalParam *mat, const Vector *wo, Vector *wi,
 void MatteMetal_Sample_f(__global MatteMetalParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1, const float u2
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
 		) {
@@ -536,14 +536,14 @@ void MatteMetal_Sample_f(__global MatteMetalParam *mat, const Vector *wo, Vector
 	float mpdf;
 	if (comp > mat->matteFilter) {
 		Metal_Sample_f(&mat->metal, wo, wi, pdf, f, shadeN, u0, u1
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 			, specularBounce
 #endif
 			);
 		mpdf = mat->metalPdf;
 	} else {
 		Matte_Sample_f(&mat->matte, wo, wi, pdf, f, shadeN, u0, u1
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 			, specularBounce
 #endif
 			);
@@ -560,7 +560,7 @@ void MatteMetal_Sample_f(__global MatteMetalParam *mat, const Vector *wo, Vector
 void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
 		float *pdf, Spectrum *f, const Vector *shadeN,
 		const float u0, const float u1, const float u2
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
 		) {
@@ -579,7 +579,7 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
         f->g = mat->refl_g / (*pdf);
         f->b = mat->refl_b / (*pdf);
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
         *specularBounce = mat->specularBounce;
 #endif
     } else {
@@ -606,7 +606,7 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
             f->g = mat->diff_g / k;
             f->b = mat->diff_b / k;
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 			*specularBounce = FALSE;
 #endif
 		}
@@ -616,7 +616,7 @@ void Alloy_Sample_f(__global AlloyParam *mat, const Vector *wo, Vector *wi,
 void ArchGlass_Sample_f(__global ArchGlassParam *mat,
     const Vector *wo, Vector *wi, float *pdf, Spectrum *f, const Vector *N, const Vector *shadeN,
     const float u0
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 		, int *specularBounce
 #endif
         ) {
@@ -634,7 +634,7 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
         f->g = mat->refrct_g;
         f->b = mat->refrct_b;
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
         *specularBounce = mat->transmitionSpecularBounce;
 #endif
     } else {
@@ -652,7 +652,7 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
             f->g = mat->refl_g / mat->reflPdf;
             f->b = mat->refl_b / mat->reflPdf;
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             *specularBounce = mat->reflectionSpecularBounce;
 #endif
         } else {
@@ -665,7 +665,7 @@ void ArchGlass_Sample_f(__global ArchGlassParam *mat,
             f->g = mat->refrct_g / mat->transPdf;
             f->b = mat->refrct_b / mat->transPdf;
 
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
             *specularBounce = mat->transmitionSpecularBounce;
 #endif
         }

@@ -350,6 +350,7 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON << "f" <<
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
+			" -D PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT=" << renderEngine->maxDiffusePathVertexCount <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
 			;
@@ -769,7 +770,9 @@ void PathOCLRenderThread::InitRender() {
 
 	const size_t gpuTaksSizePart3 =
 		// PathState size
-		(((areaLightCount > 0) || sunLightBuff) ? sizeof(PathOCL::PathStateDL) : sizeof(PathOCL::PathState));
+		((((areaLightCount > 0) || sunLightBuff) ? sizeof(PathOCL::PathStateDL) : sizeof(PathOCL::PathState)) +
+			//unsigned int diffuseVertexCount;
+			((renderEngine->maxDiffusePathVertexCount < renderEngine->maxPathDepth) ? sizeof(unsigned int) : 0));
 
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
 	cerr << "[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<

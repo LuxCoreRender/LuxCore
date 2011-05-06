@@ -26,6 +26,7 @@
 //  PARAM_RAY_EPSILON
 //  PARAM_SEED
 //  PARAM_MAX_PATH_DEPTH
+//  PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
 //  PARAM_HAS_TEXTUREMAPS
@@ -271,6 +272,9 @@ typedef struct {
 typedef struct {
 	uint state;
 	uint depth;
+ #if (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
+	uint diffuseVertexCount;
+#endif
 	Spectrum throughput;
 
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
