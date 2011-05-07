@@ -142,6 +142,10 @@ set(LuxRays_SRC_UTILS_PLYMESH
 )
 SOURCE_GROUP("Source Files\\Utils\\PlyMesh" FILES ${LuxRays_SRC_UTILS_PLYMESH})	
 
+set(LuxRays_SRC_UTILS_OCL
+	${LuxRays_SOURCE_DIR}/src/utils/ocl/utils.cpp
+)
+SOURCE_GROUP("Source Files\\Utils\\Utils" FILES ${LuxRays_SRC_UTILS_OCL})
 
 set(LuxRays_SRCS
 	${LuxRays_SRCS_ACCELERATORS}
@@ -152,6 +156,7 @@ set(LuxRays_SRCS
 	${LuxRays_SRCS_PDEVICES}
 	${LuxRays_SRC_UTILS_CORE}
 	${LuxRays_SRC_UTILS_FILM}
+	${LuxRays_SRC_UTILS_OCL}
 	${LuxRays_SRC_UTILS_SDL}
 	${LuxRays_SRC_UTILS_PLYMESH}
 	${LuxRays_SRC_UTILS}
