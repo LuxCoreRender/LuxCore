@@ -40,6 +40,7 @@
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/pixel/samplebuffer.h"
+#include "luxrays/utils/ocl/utils.h"
 
 //------------------------------------------------------------------------------
 // PathOCLRenderThread
@@ -511,7 +512,9 @@ void PathOCLRenderThread::InitKernels() {
 			program.build(buildDevice, kernelsParameters.c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error:\n" << strError.c_str() << endl;
+			cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error (ERROR: " <<
+					err.what() << "[" << luxrays::utils::oclErrorString(err.err()) << "]" <<
+					"):\n" << strError.c_str() << endl;
 
 			throw err;
 		}
@@ -1159,7 +1162,8 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 	} catch (boost::thread_interrupted) {
 		cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (cl::Error err) {
-		cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() << "(" << err.err() << ")" << endl;
+		cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() <<
+				"(" << luxrays::utils::oclErrorString(err.err()) << ")" << endl;
 	}
 
 	oclQueue.enqueueReadBuffer(

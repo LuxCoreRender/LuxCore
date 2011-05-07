@@ -36,6 +36,7 @@
 #include "pathocl/pathocl.h"
 #include "telnet.h"
 #include "luxrays/core/device.h"
+#include "luxrays/utils/ocl/utils.h"
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
@@ -269,7 +270,7 @@ int main(int argc, char *argv[]) {
 				RunGlut();
 		}
 	} catch (cl::Error err) {
-		cerr << "OpenCL ERROR: " << err.what() << "(" << err.err() << ")" << endl;
+		cerr << "OpenCL ERROR: " << err.what() << "(" << luxrays::utils::oclErrorString(err.err()) << ")" << endl;
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << endl;
 	} catch (exception err) {
