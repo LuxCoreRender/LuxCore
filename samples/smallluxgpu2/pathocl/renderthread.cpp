@@ -527,15 +527,10 @@ void PathOCLRenderThread::InitKernels() {
 		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
 		initKernel = new cl::Kernel(program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL Init kernel work group size: " << initWorkGroupSize << endl;
 
-		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << initWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << initWorkGroupSize << endl;
-		} else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
+		else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
 			// Resize the workgroup to have enough local memory
 			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 
@@ -555,15 +550,8 @@ void PathOCLRenderThread::InitKernels() {
 		delete initFBKernel;
 		initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL InitFrameBuffer kernel work group size: " << initFBWorkGroupSize << endl;
-
-		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << initFBWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << initFBWorkGroupSize << endl;
-		}
 
 		//----------------------------------------------------------------------
 		// Sampler kernel
@@ -573,15 +561,10 @@ void PathOCLRenderThread::InitKernels() {
 		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Sampler Kernel" << endl;
 		samplerKernel = new cl::Kernel(program, "Sampler");
 		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL Sampler kernel work group size: " << samplerWorkGroupSize << endl;
 
-		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << samplerWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			samplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << samplerWorkGroupSize << endl;
-		} else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
+		else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
 			// Resize the workgroup to have enough local memory
 			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
 
@@ -602,15 +585,8 @@ void PathOCLRenderThread::InitKernels() {
 		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel" << endl;
 		advancePathsKernel = new cl::Kernel(program, "AdvancePaths");
 		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL AdvancePaths kernel work group size: " << advancePathsWorkGroupSize << endl;
-
-		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Suggested work group size: " << advancePathsWorkGroupSize << endl;
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0) {
+		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Forced work group size: " << advancePathsWorkGroupSize << endl;
-		}
 
 		//----------------------------------------------------------------------
 
@@ -979,13 +955,6 @@ void PathOCLRenderThread::Stop() {
 void PathOCLRenderThread::StartRenderThread() {
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(PathOCLRenderThread::RenderThreadImpl, this));
-
-	// Set renderThread priority
-	bool res = SetThreadRRPriority(renderThread);
-	if (res && !reportedPermissionError) {
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)" << endl;
-		reportedPermissionError = true;
-	}
 }
 
 void PathOCLRenderThread::StopRenderThread() {
@@ -1080,7 +1049,7 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 }
 
 void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
-	cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
+	//cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
 
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 	const unsigned int taskCount = renderThread->renderEngine->taskCount;
@@ -1158,7 +1127,7 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 			startTime = WallClockTime();
 		}
 
-		cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		//cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (boost::thread_interrupted) {
 		cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
 	} catch (cl::Error err) {

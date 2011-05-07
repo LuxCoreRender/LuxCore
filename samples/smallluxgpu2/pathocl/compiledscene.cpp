@@ -675,7 +675,7 @@ void CompiledScene::CompileTextureMaps() {
 	// Translate mesh texture maps
 	//--------------------------------------------------------------------------
 
-	const float tStart = WallClockTime();
+	const double tStart = WallClockTime();
 
 	std::vector<TextureMap *> tms;
 	scene->texMapCache->GetTexMaps(tms);
