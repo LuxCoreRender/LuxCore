@@ -53,7 +53,7 @@ CompiledScene::~CompiledScene() {
 }
 
 void CompiledScene::CompileCamera() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile Camera" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Camera");
 
 	//--------------------------------------------------------------------------
 	// Camera definition
@@ -74,7 +74,7 @@ static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
 }
 
 void CompiledScene::CompileGeometry() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile Geometry" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Geometry");
 
 	Scene *scene = renderConfig->scene;
 
@@ -270,11 +270,11 @@ void CompiledScene::CompileGeometry() {
 	}
 
 	const double tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::CompiledScene] Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileMaterials() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile Materials" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
 
 	Scene *scene = renderConfig->scene;
 
@@ -477,11 +477,11 @@ void CompiledScene::CompileMaterials() {
 	}
 
 	const double tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::CompiledScene] Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileAreaLights() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile AreaLights" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile AreaLights");
 
 	Scene *scene = renderConfig->scene;
 
@@ -527,12 +527,12 @@ void CompiledScene::CompileAreaLights() {
 	}
 
 	const double tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::CompiledScene] Area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 }
 
 void CompiledScene::CompileInfiniteLight() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile InfiniteLight" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
 
 	Scene *scene = renderConfig->scene;
 
@@ -581,11 +581,11 @@ void CompiledScene::CompileInfiniteLight() {
 	}
 
 	const double tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::CompiledScene] Infinitelight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Infinitelight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileSunLight() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile SunLight" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SunLight");
 
 	Scene *scene = renderConfig->scene;
 
@@ -622,7 +622,7 @@ void CompiledScene::CompileSunLight() {
 }
 
 void CompiledScene::CompileSkyLight() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile SkyLight" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SkyLight");
 
 	Scene *scene = renderConfig->scene;
 
@@ -660,7 +660,7 @@ void CompiledScene::CompileSkyLight() {
 }
 
 void CompiledScene::CompileTextureMaps() {
-	cerr << "[PathOCLRenderThread::CompiledScene] Compile TextureMaps" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile TextureMaps");
 
 	Scene *scene = renderConfig->scene;
 
@@ -810,7 +810,7 @@ void CompiledScene::CompileTextureMaps() {
 	}
 
 	const double tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::CompiledScene] Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {

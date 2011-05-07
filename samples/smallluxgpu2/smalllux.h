@@ -56,5 +56,8 @@ class RenderSession;
 extern RenderSession *session;
 
 extern void DebugHandler(const char *msg);
+extern void SLGDebugHandler(const char *msg);
+
+#define SLG_LOG(a) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; SLGDebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); }
 
 #endif	/* _SMALLLUX_H */

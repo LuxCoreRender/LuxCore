@@ -51,6 +51,10 @@ void SDLDebugHandler(const char *msg) {
 	cerr << "[LuxRays::SDL] " << msg << endl;
 }
 
+void SLGDebugHandler(const char *msg) {
+	cerr << "[SLG] " << msg << endl;
+}
+
 #if defined(__GNUC__) && !defined(__CYGWIN__)
 #include <execinfo.h>
 #include <stdio.h>
@@ -78,17 +82,17 @@ static string Demangle(const char *symbol) {
 }
 
 void SLGTerminate(void) {
-	cerr << "=========================================================" << endl;
-	cerr << "Unhandled exception" << endl;
+	SLG_LOG("=========================================================");
+	SLG_LOG("Unhandled exception");
 
 	void *array[32];
 	size_t size = backtrace(array, 32);
 	char **strings = backtrace_symbols(array, size);
 
-	cerr << "Obtained " << size << " stack frames." << endl;
+	SLG_LOG("Obtained " << size << " stack frames.");
 
 	for (size_t i = 0; i < size; i++)
-		cerr << "  " << Demangle(strings[i]) << endl;
+		SLG_LOG("  " << Demangle(strings[i]));
 
 	free(strings);
 }
@@ -147,7 +151,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 				int(elapsedTime), int(stopTime), pass, stopSPP, sampleSec / 1000000.0,
 				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
-		cerr << buf << endl;
+		SLG_LOG(buf);
 	}
 
 	// Stop the rendering
@@ -157,7 +161,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	session->SaveFilmImage();
 
 	delete session;
-	cerr << "Done." << endl;
+	SLG_LOG("Done.");
 
 	return EXIT_SUCCESS;
 }
@@ -170,7 +174,7 @@ int main(int argc, char *argv[]) {
 	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
 
 	try {
-		cerr << "Usage: " << argv[0] << " [options] [configuration file]" << endl <<
+		SLG_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
 				" -o [configuration file]" << endl <<
 				" -f [scene file]" << endl <<
 				" -w [window width]" << endl <<
@@ -179,7 +183,7 @@ int main(int argc, char *argv[]) {
 				" -T <enable the telnet server>" << endl <<
 				" -D [property name] [property value]" << endl <<
 				" -d [current directory path]" << endl <<
-				" -h <display this help and exit>" << endl;
+				" -h <display this help and exit>");
 
 		// Initialize FreeImage Library
 		FreeImage_Initialise(TRUE);
@@ -220,7 +224,7 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
 				else {
-					cerr << "Invalid option: " << argv[i] << endl;
+					SLG_LOG("Invalid option: " << argv[i]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
@@ -270,11 +274,11 @@ int main(int argc, char *argv[]) {
 				RunGlut();
 		}
 	} catch (cl::Error err) {
-		cerr << "OpenCL ERROR: " << err.what() << "(" << luxrays::utils::oclErrorString(err.err()) << ")" << endl;
+		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << luxrays::utils::oclErrorString(err.err()) << ")");
 	} catch (runtime_error err) {
-		cerr << "RUNTIME ERROR: " << err.what() << endl;
+		SLG_LOG("RUNTIME ERROR: " << err.what());
 	} catch (exception err) {
-		cerr << "ERROR: " << err.what() << endl;
+		SLG_LOG("ERROR: " << err.what());
 	}
 
 	return EXIT_SUCCESS;

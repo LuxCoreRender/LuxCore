@@ -24,13 +24,13 @@
 #include "luxrays/utils/film/film.h"
 
 RenderConfig::RenderConfig(const string &fileName) {
-	cerr << "Reading configuration file: " << fileName << endl;
+	SLG_LOG("Reading configuration file: " << fileName);
 	cfg.LoadFile(fileName);
 
-	cerr << "Configuration: " << endl;
+	SLG_LOG("Configuration: ");
 	vector<string> keys = cfg.GetAllKeys();
 	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
-		cerr << "  " << *i << " = " << cfg.GetString(*i, "") << endl;
+		SLG_LOG("  " << *i << " = " << cfg.GetString(*i, ""));
 
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
 
