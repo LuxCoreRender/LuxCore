@@ -45,14 +45,14 @@ TelnetServer::~TelnetServer() {
 }
 
 void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
-	cerr << "[Telnet server] Thread started" << endl;
+	SLG_LOG("[Telnet server] Thread started");
 
 	try {
 		ServerState state = RUN;
 
 		boost::asio::io_service ioService;
 		tcp::acceptor acceptor(ioService, tcp::endpoint(tcp::v4(), telnetServer->port));
-		cerr << "[Telnet server] Server started on port: " << telnetServer->port << endl;
+		SLG_LOG("[Telnet server] Server started on port: " << telnetServer->port);
 
 		for (;;) {
 			tcp::socket socket(ioService);
@@ -78,7 +78,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 					string command;
 					commandStream >> command;
 					if (echoCommandOn)
-						cerr << "[Telnet server] Received command: " << command << endl;
+						SLG_LOG("[Telnet server] Received command: " << command);
 
 					RenderSession *session = telnetServer->session;
 					Scene *scene = session->renderConfig->scene;
@@ -131,7 +131,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] Not using TONEMAP_LINEAR" << endl;
+								SLG_LOG("[Telnet server] Not using TONEMAP_LINEAR");
 							}
 						} else if (property == "film.tonemap.reinhard02.burn") {
 							if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
@@ -143,7 +143,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+								SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 							}
 						} else if (property == "film.tonemap.reinhard02.postscale") {
 							if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
@@ -155,7 +155,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+								SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 							}
 						} else if (property == "film.tonemap.reinhard02.prescale") {
 							if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
@@ -167,7 +167,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+								SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 							}
 						} else if (property == "film.tonemap.type") {
 							boost::asio::streambuf response;
@@ -234,7 +234,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No InfiniteLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No InfiniteLight defined: " << property);
 							}
 						} else if (property == "scene.infinitelight.shift") {
 							if (scene->infiniteLight &&
@@ -246,7 +246,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No InfiniteLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No InfiniteLight defined: " << property);
 							}
 						} else if (property == "scene.skylight.dir") {
 							if (scene->infiniteLight &&
@@ -260,7 +260,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 							}						} else if (property == "scene.skylight.gain") {
 							if (scene->infiniteLight &&
 									(scene->infiniteLight->GetType() == TYPE_IL_SKY)) {
@@ -271,7 +271,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 							}
 						} else if (property == "scene.skylight.turbidity") {
 							if (scene->infiniteLight &&
@@ -284,7 +284,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 							}
 						} else if (property == "scene.sunlight.turbidity") {
 							// Look for the SunLight
@@ -297,7 +297,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No SunLight defined: " << property);
 							}
 						} else if (property == "scene.sunlight.relsize") {
 							// Look for the SunLight
@@ -310,7 +310,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No SunLight defined: " << property);
 							}
 						} else if (property == "scene.sunlight.dir") {
 							// Look for the SunLight
@@ -324,7 +324,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No SunLight defined: " << property);
 							}
 						} else if (property == "scene.sunlight.gain") {
 							// Look for the SunLight
@@ -338,11 +338,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] No SunLight defined: " << property << endl;
+								SLG_LOG("[Telnet server] No SunLight defined: " << property);
 							}
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-							cerr << "[Telnet server] Unknown property: " << property << endl;
+							SLG_LOG("[Telnet server] Unknown property: " << property);
 						}
 					} else if (command == "help.get") {
 						boost::asio::streambuf response;
@@ -403,7 +403,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-							cerr << "[Telnet server] Wrong state" << endl;
+							SLG_LOG("[Telnet server] Wrong state");
 						}
 					} else if (command == "material.list") {
 						boost::asio::streambuf response;
@@ -457,7 +457,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							Properties prop;
 							const string propertyName = prop.SetString(property);
 							if (echoCommandOn)
-								cerr << "[Telnet server] Set: " << property << endl;
+								SLG_LOG("[Telnet server] Set: " << property);
 
 							// Check if is one of the supported properties
 							if (propertyName == "film.tonemap.linear.scale") {
@@ -474,7 +474,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, response);
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.burn") {
 								const float k = prop.GetFloat(propertyName, 3.75f);
@@ -490,7 +490,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, response);
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.postscale") {
 								const float k = prop.GetFloat(propertyName, 1.2f);
@@ -506,7 +506,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, response);
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.prescale") {
 								const float k = prop.GetFloat(propertyName, 1.f);
@@ -522,7 +522,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, response);
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Not using TONEMAP_REINHARD02" << endl;
+									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.type") {
 								const int type = prop.GetInt(propertyName, 0);
@@ -557,11 +557,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No InifinteLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No InifinteLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.infinitelight.shift") {
 								// Check if we are in the right state
@@ -575,11 +575,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No InifinteLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No InifinteLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.skylight.dir") {
 								// Check if we are in the right state
@@ -596,11 +596,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.skylight.gain") {
 								// Check if we are in the right state
@@ -615,11 +615,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.skylight.turbidity") {
 								// Check if we are in the right state
@@ -634,11 +634,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No SkyLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.sunlight.turbidity") {
 								if (state == EDIT) {
@@ -653,11 +653,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No SunLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No SunLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.sunlight.relsize") {
 								if (state == EDIT) {
@@ -672,11 +672,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No SunLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No SunLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.sunlight.dir") {
 								if (state == EDIT) {
@@ -693,11 +693,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No SunLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No SunLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.sunlight.gain") {
 								if (state == EDIT) {
@@ -714,11 +714,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										cerr << "[Telnet server] No SunLight defined: " << property << endl;
+										SLG_LOG("[Telnet server] No SunLight defined: " << property);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName.find("scene.materials.") == 0) {
 								if (state == EDIT) {
@@ -785,7 +785,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transform") == propertyName.size() - 10)) {
 								if (state == EDIT) {
@@ -842,7 +842,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
 								if (state == EDIT) {
@@ -901,7 +901,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.camera.lookat") {
 								// Check if we are in the right state
@@ -918,7 +918,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.camera.up") {
 								// Check if we are in the right state
@@ -933,7 +933,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.camera.lensradius") {
 								// Check if we are in the right state
@@ -945,7 +945,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.camera.fieldofview") {
 								// Check if we are in the right state
@@ -957,7 +957,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.camera.focaldistance") {
 								// Check if we are in the right state
@@ -969,7 +969,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else if (propertyName == "scene.camera.motionblur.enable") {
 								// Check if we are in the right state
@@ -981,26 +981,26 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									cerr << "[Telnet server] Wrong state: " << property << endl;
+									SLG_LOG("[Telnet server] Wrong state: " << property);
 								}
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								cerr << "[Telnet server] Unknown property: " << property << endl;
+								SLG_LOG("[Telnet server] Unknown property: " << property);
 							}
 						} catch (std::exception& e) {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-							cerr << "[Telnet server] Error while setting a property: " << e.what() << endl;
+							SLG_LOG("[Telnet server] Error while setting a property: " << e.what());
 						}
 					} else {
 						boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-						cerr << "[Telnet server] Unknown command" << endl;
+						SLG_LOG("[Telnet server] Unknown command");
 					}
 				}
 			} catch (std::exception& e) {
-				cerr << "[Telnet server] Connection error: " << e.what() << endl;
+				SLG_LOG("[Telnet server] Connection error: " << e.what());
 			}
 		}
 	} catch (std::exception& e) {
-		cerr << "Telnet server error: " << e.what() << endl;
+		SLG_LOG("Telnet server error: " << e.what());
 	}
 }

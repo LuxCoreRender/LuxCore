@@ -121,7 +121,7 @@ void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const s
 		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
 			// I can reuse the buffer; just update the content
 
-			//cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes" << endl;
+			//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
 			cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 			oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
 			return;
@@ -130,7 +130,7 @@ void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const s
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes" << endl;
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes");
 	*buff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			size, src);
@@ -144,14 +144,14 @@ void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size,
 
 		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
 			// I can reuse the buffer
-			//cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer reused for size: " << (size / 1024) << "Kbytes" << endl;
+			//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer reused for size: " << (size / 1024) << "Kbytes");
 			return;
 		}
 	}
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes" << endl;
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes");
 	*buff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			size);
@@ -504,17 +504,17 @@ void PathOCLRenderThread::InitKernels() {
 		cl::Program program = cl::Program(oclContext, source);
 
 		try {
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters << endl;
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling kernels " << endl;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling kernels ");
 
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
 			program.build(buildDevice, kernelsParameters.c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error (ERROR: " <<
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error (ERROR: " <<
 					err.what() << "[" << luxrays::utils::oclErrorString(err.err()) << "]" <<
-					"):\n" << strError.c_str() << endl;
+					"):\n" << strError.c_str());
 
 			throw err;
 		}
@@ -524,7 +524,7 @@ void PathOCLRenderThread::InitKernels() {
 		//----------------------------------------------------------------------
 
 		delete initKernel;
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel" << endl;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel");
 		initKernel = new cl::Kernel(program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
 
@@ -540,7 +540,7 @@ void PathOCLRenderThread::InitKernels() {
 			if (stratifiedDataSize * initWorkGroupSize > localMem)
 				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
 
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << initWorkGroupSize << endl;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << initWorkGroupSize);
 		}
 
 		//--------------------------------------------------------------------------
@@ -558,7 +558,7 @@ void PathOCLRenderThread::InitKernels() {
 		//----------------------------------------------------------------------
 
 		delete samplerKernel;
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling Sampler Kernel" << endl;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Sampler Kernel");
 		samplerKernel = new cl::Kernel(program, "Sampler");
 		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
 
@@ -574,7 +574,7 @@ void PathOCLRenderThread::InitKernels() {
 			if (stratifiedDataSize * samplerWorkGroupSize > localMem)
 				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
 
-			cerr << "[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize << endl;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize);
 		}
 
 		//----------------------------------------------------------------------
@@ -582,7 +582,7 @@ void PathOCLRenderThread::InitKernels() {
 		//----------------------------------------------------------------------
 
 		delete advancePathsKernel;
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel" << endl;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel");
 		advancePathsKernel = new cl::Kernel(program, "AdvancePaths");
 		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
 		if (intersectionDevice->GetForceWorkGroupSize() > 0)
@@ -591,9 +591,9 @@ void PathOCLRenderThread::InitKernels() {
 		//----------------------------------------------------------------------
 
 		const double tEnd = WallClockTime();
-		cerr  << "[PathOCLRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 	} else
-		cerr << "[PathOCLRenderThread::" << threadIndex << "] Using cached kernels" << endl;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Using cached kernels");
 }
 
 void PathOCLRenderThread::InitRender() {
@@ -671,20 +671,20 @@ void PathOCLRenderThread::InitRender() {
 
 	tStart = WallClockTime();
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * taskCount / 1024) << "Kbytes" << endl;
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * taskCount / 1024) << "Kbytes");
 	raysBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(Ray) * taskCount);
 	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * taskCount / 1024) << "Kbytes" << endl;
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * taskCount / 1024) << "Kbytes");
 	hitsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(RayHit) * taskCount);
 	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
 	tEnd = WallClockTime();
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms" << endl;
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task buffers
@@ -754,9 +754,9 @@ void PathOCLRenderThread::InitRender() {
 			((renderEngine->maxDiffusePathVertexCount < renderEngine->maxPathDepth) ? sizeof(unsigned int) : 0));
 
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
-			"bytes (" << gpuTaksSizePart1 << " + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")" << endl;
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes" << endl;
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
+			"bytes (" << gpuTaksSizePart1 << " + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")");
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes");
 
 	// Check if the task buffer is too big
 	if (oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() < gpuTaksSize * taskCount) {
@@ -776,7 +776,7 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate GPU task statistic buffers
 	//--------------------------------------------------------------------------
 
-	cerr << "[PathOCLRenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(PathOCL::GPUTaskStats) * taskCount / 1024) << "Kbytes" << endl;
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(PathOCL::GPUTaskStats) * taskCount / 1024) << "Kbytes");
 	taskStatsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(PathOCL::GPUTaskStats) * taskCount);
@@ -1049,7 +1049,7 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 }
 
 void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
-	//cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread started" << endl;
+	//SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 	const unsigned int taskCount = renderThread->renderEngine->taskCount;
@@ -1058,7 +1058,7 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 		double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
 			/*if(renderThread->threadIndex == 0)
-				cerr<< "[DEBUG] =================================" << endl;*/
+				cerr<< "[DEBUG] =================================");*/
 
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
@@ -1117,7 +1117,7 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 
 				/*if(renderThread->threadIndex == 0)
 					cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 <<
-							"ms (screenRefreshInterval: " << renderThread->renderEngine->screenRefreshInterval << ")" << endl;*/
+							"ms (screenRefreshInterval: " << renderThread->renderEngine->screenRefreshInterval << ")");*/
 
 				if ((elapsedTime * 1000.0 > (double)screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
@@ -1127,12 +1127,12 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 			startTime = WallClockTime();
 		}
 
-		//cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		//SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
-		cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted" << endl;
+		SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (cl::Error err) {
-		cerr << "[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() <<
-				"(" << luxrays::utils::oclErrorString(err.err()) << ")" << endl;
+		SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() <<
+				"(" << luxrays::utils::oclErrorString(err.err()) << ")");
 	}
 
 	oclQueue.enqueueReadBuffer(

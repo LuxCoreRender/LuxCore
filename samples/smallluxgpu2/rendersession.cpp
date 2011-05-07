@@ -127,7 +127,7 @@ void RenderSession::EndEdit() {
 	if (editActions.Size() > 0)
 		film->Reset();
 
-	cerr << "[RenderSession] Edit actions: " << editActions << endl;
+	SLG_LOG("[RenderSession] Edit actions: " << editActions);
 	renderEngine->EndEdit(editActions);
 	editMode = false;
 }

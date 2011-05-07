@@ -269,7 +269,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 27: { // Escape key
 			delete session;
 
-			cerr << "Done." << endl;
+			SLG_LOG("Done.");
 			exit(EXIT_SUCCESS);
 			break;
 		}

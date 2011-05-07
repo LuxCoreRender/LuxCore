@@ -127,10 +127,9 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 	for (size_t i = 0; i < devs.size(); ++i)
 		oclIntersectionDevices.push_back((OpenCLIntersectionDevice *)devs[i]);
 
-	cerr << "OpenCL Devices used: ";
+	SLG_LOG("OpenCL Devices used:");
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		cerr << "[" << oclIntersectionDevices[i]->GetName() << "]";
-	cerr << endl;
+		SLG_LOG("[" << oclIntersectionDevices[i]->GetName() << "]");
 
 	// Check if I have to disable image storage
 	const bool frocedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);

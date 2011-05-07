@@ -57,7 +57,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 	//--------------------------------------------------------------------------
 
 	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 65536));
-	cerr << "[PathOCLRenderThread] OpenCL task count: " << taskCount << endl;
+	SLG_LOG("[PathOCLRenderThread] OpenCL task count: " << taskCount);
 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	maxDiffusePathVertexCount = cfg.GetInt("path.maxdiffusebounce", 5);
@@ -123,7 +123,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 
 	// Create and start render threads
 	const size_t renderThreadCount = oclIntersectionDevices.size();
-	cerr << "Starting "<< renderThreadCount << " PathOCL render threads" << endl;
+	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		PathOCLRenderThread *t = new PathOCLRenderThread(
 				i, seedBase + i * taskCount, i / (float)renderThreadCount,
@@ -182,7 +182,7 @@ void PathOCLRenderEngine::Stop() {
 void PathOCLRenderEngine::BeginEdit() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
-	/*cerr<< "[DEBUG] BeginEdit() =================================" << endl;
+	/*SLG_LOG("[DEBUG] BeginEdit() =================================");
 	const double t1 = WallClockTime();*/
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
@@ -193,14 +193,14 @@ void PathOCLRenderEngine::BeginEdit() {
 	OCLRenderEngine::BeginEditLockLess();
 
 	/*const double t3 = WallClockTime();
-	cerr<< "[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
-		" T2 = " << int((t3 - t2) * 1000.0) << endl;*/
+	SLG_LOG("[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
+		" T2 = " << int((t3 - t2) * 1000.0));*/
 }
 
 void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
-	/*cerr<< "[DEBUG] EndEdit() =================================" << endl;
+	/*SLG_LOG("[DEBUG] EndEdit() =================================");
 	const double t1 = WallClockTime();*/
 	compiledScene->Recompile(editActions);
 
@@ -212,9 +212,9 @@ void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 		renderThreads[i]->EndEdit(editActions);
 
 	/*const double t4 = WallClockTime();
-	cerr<< "[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
+	SLG_LOG("[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
 		" T2 = " << int((t3 - t2) * 1000.0) <<
-		" T3 = " << int((t4 - t3) * 1000.0) << endl;*/
+		" T3 = " << int((t4 - t3) * 1000.0));*/
 
 	elapsedTime = 0.0f;
 	startTime = WallClockTime();
