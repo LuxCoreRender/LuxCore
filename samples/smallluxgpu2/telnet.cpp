@@ -103,6 +103,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "material.list - print the list of materials\n";
 						respStream << "object.list - print the list of objects\n";
 						respStream << "set <property name> = <values> - set the value of a (supported) property\n";
+						respStream << "transmit.framebuffer.rgb_float - transmit the current framebuffer (RGB float format)\n";
+						respStream << "transmit.framebuffer.rgb_byte - transmit the current framebuffer (RGB byte format)\n";
 						respStream << "OK\n";
 					    boost::asio::write(socket, response);
 					} else if (command == "echocmd.off") {
@@ -991,6 +993,49 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 							SLG_LOG("[Telnet server] Error while setting a property: " << e.what());
 						}
+					} else if ((command == "transmit.framebuffer.rgb_float")) {
+						// Lock the film
+						{
+							boost::unique_lock<boost::mutex> lock(session->filmMutex);
+
+							// Transmit the image size
+							const unsigned int w = film->GetWidth();
+							const unsigned int h = film->GetHeight();
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(&w, sizeof(unsigned int))));
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(&h, sizeof(unsigned int))));
+
+							// Transmit the framebuffer (RGB float)
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(session->film->GetScreenBuffer(),
+									sizeof(float) * w * h * 3)));
+						}
+						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+					} else if ((command == "transmit.framebuffer.rgb_byte")) {
+						// Lock the film
+						{
+							boost::unique_lock<boost::mutex> lock(session->filmMutex);
+
+							// Transmit the image size
+							const unsigned int w = film->GetWidth();
+							const unsigned int h = film->GetHeight();
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(&w, sizeof(unsigned int))));
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(&h, sizeof(unsigned int))));
+
+							// Translate the framebuffer
+							unsigned char *fb = new unsigned char[w * h * 3];
+							unsigned char *dst = fb;
+							const float *src = session->film->GetScreenBuffer();
+							for (unsigned int i = 0; i < w * h; ++i) {
+								*dst++ = (*src++) * 255.f + .5f;
+								*dst++ = (*src++) * 255.f + .5f;
+								*dst++ = (*src++) * 255.f + .5f;
+							}
+
+							// Transmit the framebuffer (RGB byte)
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(fb,
+									sizeof(unsigned char) * w * h * 3)));
+							delete fb;
+						}
+						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else {
 						boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 						SLG_LOG("[Telnet server] Unknown command");
