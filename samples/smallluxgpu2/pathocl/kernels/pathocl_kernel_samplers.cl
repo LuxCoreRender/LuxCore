@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// Line 451 + 268 + 242 + 854 = 1815
+
 void GenerateCameraPath(
 		__global GPUTask *task,
 		__global Ray *ray,
