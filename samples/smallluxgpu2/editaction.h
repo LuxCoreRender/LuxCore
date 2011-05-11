@@ -72,7 +72,7 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 	os << "EditActionList[";
 
 	bool sep = false;
-	for (set<EditAction>::iterator it = eal.actions.begin(); it!=eal.actions.end(); ++it) {
+	for (set<EditAction>::const_iterator it = eal.actions.begin(); it!=eal.actions.end(); ++it) {
 		if (sep)
 			os << ", ";
 
