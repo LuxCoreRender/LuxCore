@@ -33,29 +33,29 @@ IF (WIN32)
 
 ELSE (WIN32)
 	set(CMAKE_INSTALL_PREFIX .)
-	set(LUXRAYS_BIN_SAMPLES_DIR "slg-v1.8beta1")
+
+	# Windows 32bit
+	set(SLG2_BIN_WIN32_DIR "slg-win32-v2.0devel1")
+	add_custom_command(
+		OUTPUT "${SLG2_BIN_WIN32_DIR}"
+		COMMAND rm -rf ${SLG2_BIN_WIN32_DIR}
+		COMMAND mkdir ${SLG2_BIN_WIN32_DIR}
+		COMMAND cp -r scenes ${SLG2_BIN_WIN32_DIR}
+		COMMAND cp samples/smallluxgpu2/bat/*.bat ${SLG2_BIN_WIN32_DIR}
+		COMMAND cp samples/smallluxgpu2/exe/*.* ${SLG2_BIN_WIN32_DIR}
+		COMMAND mkdir ${SLG2_BIN_WIN32_DIR}/blender
+		COMMAND cp samples/smallluxgpu2/blender/*.py ${SLG2_BIN_WIN32_DIR}/blender
+		COMMAND cp AUTHORS.txt COPYING.txt README.txt ${SLG2_BIN_WIN32_DIR}
+		COMMENT "Building ${SLG2_BIN_WIN32_DIR}")
 
 	add_custom_command(
-	    OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}"
-	    COMMAND rm -rf ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMAND mkdir ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMAND cp -r scenes ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMAND cp samples/smallluxgpu/bat/*.bat ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMAND cp samples/smallluxgpu/exe/*.* ${LUXRAYS_BIN_SAMPLES_DIR}
-		COMMAND mkdir ${LUXRAYS_BIN_SAMPLES_DIR}/blender
-	    COMMAND cp samples/smallluxgpu/blender/*.py ${LUXRAYS_BIN_SAMPLES_DIR}/blender
-	    COMMAND cp bin/slg ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}")
-	
-	add_custom_command(
-	    OUTPUT "${LUXRAYS_BIN_SAMPLES_DIR}.tgz"
-	    COMMAND tar zcvf ${LUXRAYS_BIN_SAMPLES_DIR}.tgz ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMAND rm -rf ${LUXRAYS_BIN_SAMPLES_DIR}
-	    DEPENDS ${LUXRAYS_BIN_SAMPLES_DIR}
-	    COMMENT "Building ${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
-	
-	add_custom_target(samples_tgz DEPENDS "${LUXRAYS_BIN_SAMPLES_DIR}.tgz")
+		OUTPUT "${SLG2_BIN_WIN32_DIR}.zip"
+		COMMAND zip -r ${SLG2_BIN_WIN32_DIR}.zip ${SLG2_BIN_WIN32_DIR}
+		COMMAND rm -rf ${SLG2_BIN_WIN32_DIR}
+		DEPENDS ${SLG2_BIN_WIN32_DIR}
+		COMMENT "Building ${SLG2_BIN_WIN32_DIR}.zip")
+
+	add_custom_target(slg2_win32_zip DEPENDS "${SLG2_BIN_WIN32_DIR}.zip")
 ENDIF(WIN32)
 
 ###########################################################################
