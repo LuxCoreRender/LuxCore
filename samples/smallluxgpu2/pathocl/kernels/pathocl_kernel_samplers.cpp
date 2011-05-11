@@ -21,6 +21,8 @@ std::string luxrays::KernelSource_PathOCL_kernel_samplers =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
+"// Line 451 + 268 + 242 + 854 = 1815\n"
+"\n"
 "void GenerateCameraPath(\n"
 "		__global GPUTask *task,\n"
 "		__global Ray *ray,\n"

@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// Line 451 + 268 + 242 = 961
+
 void TexMap_GetTexel(__global Spectrum *pixels, const uint width, const uint height,
 		const int s, const int t, Spectrum *col) {
 	const uint u = Mod(s, width);
@@ -255,7 +257,7 @@ float Mesh_Area(__global Point *verts, __global Triangle *triangles,
 	return 0.5f * length(cross(p1 - p0, p2 - p0));
 }
 
-float InstanceMesh_Area(__global float m[4][4], __global Point *verts,
+float InstanceMesh_Area(__global float *m[4], __global Point *verts,
 		__global Triangle *triangles, const uint triIndex) {
 	__global Triangle *tri = &triangles[triIndex];
 
