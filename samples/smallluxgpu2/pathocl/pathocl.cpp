@@ -79,10 +79,11 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 
 		 sampler = new PathOCL::StratifiedSampler(xSamples, ySamples);
 	 } else if (samplerTypeName.compare("METROPOLIS") == 0) {
-		 const float rate = cfg.GetFloat("path.sampler.largesteprate", 0.4f);
+		 const float rate = cfg.GetFloat("path.sampler.largesteprate", .4f);
 		 const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
+		 const float mutationrate = cfg.GetFloat("path.sampler.imagemutationrate", .1f);
 
-		 sampler = new PathOCL::MetropolisSampler(rate, reject);
+		 sampler = new PathOCL::MetropolisSampler(rate, reject, mutationrate);
 	 } else
 		throw std::runtime_error("Unknown path.sampler.type");
 
