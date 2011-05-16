@@ -62,7 +62,7 @@ void RenderingConfig::Init() {
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 0) != 0);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
+	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", -1);
 	const string oclIntersectionDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const int oclPixelDeviceConfig = cfg.GetInt("opencl.pixeldevice.select", -1);
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
