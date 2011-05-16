@@ -150,11 +150,12 @@ public:
 
 class MetropolisSampler : public Sampler {
 public:
-	MetropolisSampler(const float rate, const float reject) :
-		Sampler(METROPOLIS), largeStepRate(rate), maxConsecutiveReject(reject) { }
+	MetropolisSampler(const float rate, const float reject, const float mutationRate) :
+		Sampler(METROPOLIS), largeStepRate(rate), imageMutationRate(mutationRate),
+		maxConsecutiveReject(reject) { }
 
 	SamplerType type;
-	float largeStepRate;
+	float largeStepRate, imageMutationRate;
 	unsigned int maxConsecutiveReject;
 };
 

@@ -465,7 +465,8 @@ void PathOCLRenderThread::InitKernels() {
 		case PathOCL::METROPOLIS:
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
 					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << ((PathOCL::MetropolisSampler *)sampler)->largeStepRate << "f" <<
-					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << ((PathOCL::MetropolisSampler *)sampler)->maxConsecutiveReject;
+					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << ((PathOCL::MetropolisSampler *)sampler)->maxConsecutiveReject <<
+					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << ((PathOCL::MetropolisSampler *)sampler)->imageMutationRate << "f";
 			break;
 		case PathOCL::STRATIFIED:
 			ss << " -D PARAM_SAMPLER_TYPE=3" <<

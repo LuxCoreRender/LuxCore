@@ -199,8 +199,33 @@ float Mutate(Seed *seed, const float x) {
 	return mutatedX;
 }
 
+float MutateScaled(Seed *seed, const float x, const float range) {
+	const float s1 = 32.f;
+
+	const float randomValue = RndFloatValue(seed);
+
+	const float dx = range / (s1 / (1.f + s1) + (s1 * s1) / (1.f + s1) *
+		fabs(2.f * randomValue - 1.f)) - range / s1;
+
+	float mutatedX = x;
+	if (randomValue < 0.5f) {
+		mutatedX += dx;
+		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
+	} else {
+		mutatedX -= dx;
+		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
+	}
+
+	return mutatedX;
+}
+
 void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) {
-	for (int i = 0; i < TOTAL_U_SIZE; ++i)
+	proposedU[IDX_SCREEN_X] = MutateScaled(seed, currentU[IDX_SCREEN_X],
+			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE);
+	proposedU[IDX_SCREEN_Y] = MutateScaled(seed, currentU[IDX_SCREEN_Y],
+			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE);
+
+	for (int i = IDX_SCREEN_Y + 1; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Mutate(seed, currentU[i]);
 }
 
