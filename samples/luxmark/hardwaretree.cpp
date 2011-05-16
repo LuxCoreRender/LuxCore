@@ -103,7 +103,9 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 		if (devDesc->GetType() ==  DEVICE_TYPE_OPENCL) {
 			const OpenCLDeviceDescription *odevDesc = (OpenCLDeviceDescription *)devDesc;
 
-			HardwareTreeItem *newNode = new HardwareTreeItem(odevDesc->GetName().c_str());
+			cl::Platform platform = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
+			string name = "[" + platform.getInfo<CL_PLATFORM_VENDOR>() + "] " + odevDesc->GetName();
+			HardwareTreeItem *newNode = new HardwareTreeItem(name.c_str());
 			ss.str("");
 			ss << "Compute Units: " << odevDesc->GetComputeUnits();
 			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
