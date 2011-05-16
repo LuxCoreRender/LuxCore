@@ -67,7 +67,7 @@ public:
 	 * \param handler is an optional pointer to a debug message handler. I can be NULL.
 	 * \param openclPlatformIndex is the index of the OpenCL platform to use (the
 	 *	order is the one returned by cl::Platform::get() function). If the values is -1,
-	 *	the first available platform is selected.
+	 *	the all the available platforms will be selected.
 	 */
 	Context(LuxRaysDebugHandler handler = NULL, const int openclPlatformIndex = -1);
 
