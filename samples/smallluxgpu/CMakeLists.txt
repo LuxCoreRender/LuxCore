@@ -90,13 +90,12 @@ FOREACH(kernel ${KERNELS})
 
 	IF(WIN32)
 		add_custom_command(
-			OUTPUT pathgpu/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo "#include \"pathgpu/kernels/kernels.h\"" > pathgpu/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo std::string luxrays::KernelSource_${kernel} = >> pathgpu/kernels/${kernel_lowercase}_kernel.cpp
-#			COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu\\kernels\\${kernel_lowercase}_kernel.cl >> pathgpu/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND for /F \"tokens=*\" %%a in (pathgpu\\kernels\\${kernel_lowercase}_kernel.cl) do echo \"%%a\\n\" >> pathgpu/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo ";" >> pathgpu/kernels/${kernel_lowercase}_kernel.cpp
-			MAIN_DEPENDENCY pathgpu/kernels/${kernel_lowercase}_kernel.cl
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/${kernel_lowercase}_kernel.cpp
+			COMMAND echo "#include \"pathgpu/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/${kernel_lowercase}_kernel.cpp
+			COMMAND echo std::string luxrays::KernelSource_${kernel} = >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/${kernel_lowercase}_kernel.cpp
+			COMMAND for /F \"tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\pathgpu\\kernels\\${kernel_lowercase}_kernel.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/${kernel_lowercase}_kernel.cpp
+			COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/${kernel_lowercase}_kernel.cpp
+			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/${kernel_lowercase}_kernel.cl
 		)
 	ELSE(WIN32)
 		add_custom_command(
@@ -119,13 +118,12 @@ FOREACH(kernel ${KERNELS})
 
 	IF(WIN32)
 		add_custom_command(
-			OUTPUT pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND echo "#include \"pathgpu2/kernels/kernels.h\"" > pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND echo std::string luxrays::KernelSource_PathGPU2_${kernel} = >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
-#			COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu2\\kernels\\pathgpu2_${kernel_lowercase}.cl >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND for /F \"tokens=*\" %%a in (pathgpu2\\kernels\\pathgpu2_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND echo ";" >> pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
-			MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cl
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND echo "#include \"pathgpu2/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND echo std::string luxrays::KernelSource_PathGPU2_${kernel} = >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND for /F \"tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\pathgpu2\\kernels\\pathgpu2_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cl
 		)
 	ELSE(WIN32)
 		add_custom_command(

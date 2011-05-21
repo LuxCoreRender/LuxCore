@@ -90,13 +90,12 @@ FOREACH(kernel ${KERNELS})
 
 	IF(WIN32)
 		add_custom_command(
-			OUTPUT pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo "#include \"pathocl/kernels/kernels.h\"" > pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo std::string luxrays::KernelSource_PathOCL_${kernel} = >> pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-#			COMMAND ../../BuildTools/ProcessClKernelFile.exe pathocl\\kernels\\pathocl_${kernel_lowercase}.cl >> pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND for /F \"tokens=*\" %%a in (pathocl\\kernels\\pathocl_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo ";" >> pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			MAIN_DEPENDENCY pathocl/kernels/pathocl_${kernel_lowercase}.cl
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo "#include \"pathocl/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo std::string luxrays::KernelSource_PathOCL_${kernel} = >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND for /F \"tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\pathocl\\kernels\\pathocl_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cl
 		)
 	ELSE(WIN32)
 		add_custom_command(
