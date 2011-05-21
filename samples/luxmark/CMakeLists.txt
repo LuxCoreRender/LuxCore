@@ -46,13 +46,12 @@ configure_file(
 
 IF(WIN32)
 	add_custom_command(
-		OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo "#include \"pathgpu/kernels/kernels.h\"" > pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo std::string luxrays::KernelSource_PathGPU = >> pathgpu/kernels/pathgpu_kernel.cpp
-#		COMMAND ../../BuildTools/ProcessClKernelFile.exe pathgpu\\kernels\\pathgpu_kernel.cl >> pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND for /F \"tokens=*\" %%a in (pathgpu\\kernels\\pathgpu_kernel.cl) do echo \"%%a\\n\" >> pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo ";" >> pathgpu/kernels/pathgpu_kernel.cpp
-		MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND echo "#include \"pathgpu/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND echo std::string luxrays::KernelSource_PathGPU = >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND for /F \"tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\pathgpu\\kernels\\pathgpu_kernel.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cl
 	)
 ELSE(WIN32)
 	add_custom_command(
@@ -164,7 +163,7 @@ IF(APPLE)
 ELSE(APPLE)
 
 	ADD_EXECUTABLE(luxmark ${LUXMARK_SRCS})
-	
+
 	TARGET_LINK_LIBRARIES(luxmark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${OPENGL_LIBRARY})
 	TARGET_LINK_LIBRARIES(luxmark ${OpenCL_LIBRARY})
 	TARGET_LINK_LIBRARIES(luxmark ${GLUT_LIBRARY})
