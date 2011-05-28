@@ -37,4 +37,3 @@ ADD_DEFINITIONS(-DFREEGLUT_STATIC)
 
 set(GLEW_SEARCH_PATH          "C:/Users/David/Dati/OpenCL/LuxRays-64bit/glew-1.6.0")
 ADD_DEFINITIONS(-DGLEW_BUILD)
-
