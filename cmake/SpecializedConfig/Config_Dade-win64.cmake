@@ -9,7 +9,7 @@
 # C:/Users/David/Dati/OpenCL/LuxRays-64bit/luxrays/cmake/SpecializedConfig/Config_Dade-win64.cmake
 # 
 # Boost:
-#  call "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\vcvarsall.bat"
+#  "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat"
 #  bjam --toolset=msvc address-model=64 --stagedir=stage stage -j 8
 
 
@@ -37,6 +37,4 @@ ADD_DEFINITIONS(-DFREEGLUT_STATIC)
 
 set(GLEW_SEARCH_PATH          "C:/Users/David/Dati/OpenCL/LuxRays-64bit/glew-1.6.0")
 ADD_DEFINITIONS(-DGLEW_BUILD)
-
-
 
