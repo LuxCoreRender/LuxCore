@@ -41,8 +41,11 @@ ELSE (WIN32)
 		COMMAND rm -rf ${SLG2_BIN_WIN32_DIR}
 		COMMAND mkdir ${SLG2_BIN_WIN32_DIR}
 		COMMAND cp -r scenes ${SLG2_BIN_WIN32_DIR}
+		COMMAND find ${SLG2_BIN_WIN32_DIR}/scenes -name "*.blend" > filelist.tmp
+		COMMAND rm -f `cat filelist.tmp`
+		COMMAND rm -f cat filelist.tmp
 		COMMAND cp samples/smallluxgpu2/bat/*.bat ${SLG2_BIN_WIN32_DIR}
-		COMMAND cp samples/smallluxgpu2/exe/*.* ${SLG2_BIN_WIN32_DIR}
+		COMMAND cp samples/smallluxgpu2/exe-32bit/*.* ${SLG2_BIN_WIN32_DIR}
 		COMMAND mkdir ${SLG2_BIN_WIN32_DIR}/blender
 		COMMAND cp samples/smallluxgpu2/blender/*.py ${SLG2_BIN_WIN32_DIR}/blender
 		COMMAND cp AUTHORS.txt COPYING.txt README.txt ${SLG2_BIN_WIN32_DIR}
@@ -56,6 +59,58 @@ ELSE (WIN32)
 		COMMENT "Building ${SLG2_BIN_WIN32_DIR}.zip")
 
 	add_custom_target(slg2_win32_zip DEPENDS "${SLG2_BIN_WIN32_DIR}.zip")
+
+	# Windows 64bit
+	set(SLG2_BIN_WIN64_DIR "slg-win64-v2.0devel1")
+	add_custom_command(
+		OUTPUT "${SLG2_BIN_WIN64_DIR}"
+		COMMAND rm -rf ${SLG2_BIN_WIN64_DIR}
+		COMMAND mkdir ${SLG2_BIN_WIN64_DIR}
+		COMMAND cp -r scenes ${SLG2_BIN_WIN64_DIR}
+		COMMAND find ${SLG2_BIN_WIN64_DIR}/scenes -name "*.blend" > filelist.tmp
+		COMMAND rm -f `cat filelist.tmp`
+		COMMAND rm -f cat filelist.tmp
+		COMMAND cp samples/smallluxgpu2/bat/*.bat ${SLG2_BIN_WIN64_DIR}
+		COMMAND cp samples/smallluxgpu2/exe-64bit/*.* ${SLG2_BIN_WIN64_DIR}
+		COMMAND mkdir ${SLG2_BIN_WIN64_DIR}/blender
+		COMMAND cp samples/smallluxgpu2/blender/*.py ${SLG2_BIN_WIN64_DIR}/blender
+		COMMAND cp AUTHORS.txt COPYING.txt README.txt ${SLG2_BIN_WIN64_DIR}
+		COMMENT "Building ${SLG2_BIN_WIN64_DIR}")
+
+	add_custom_command(
+		OUTPUT "${SLG2_BIN_WIN64_DIR}.zip"
+		COMMAND zip -r ${SLG2_BIN_WIN64_DIR}.zip ${SLG2_BIN_WIN64_DIR}
+		COMMAND rm -rf ${SLG2_BIN_WIN64_DIR}
+		DEPENDS ${SLG2_BIN_WIN64_DIR}
+		COMMENT "Building ${SLG2_BIN_WIN64_DIR}.zip")
+
+	add_custom_target(slg2_win64_zip DEPENDS "${SLG2_BIN_WIN64_DIR}.zip")
+
+	# Linux 64bit
+	set(SLG2_BIN_LINUX64_DIR "slg-linux64-v2.0devel1")
+	add_custom_command(
+		OUTPUT "${SLG2_BIN_LINUX64_DIR}"
+		COMMAND rm -rf ${SLG2_BIN_LINUX64_DIR}
+		COMMAND mkdir ${SLG2_BIN_LINUX64_DIR}
+		COMMAND cp -r scenes ${SLG2_BIN_LINUX64_DIR}
+		COMMAND find ${SLG2_BIN_LINUX64_DIR}/scenes -name "*.blend" > filelist.tmp
+		COMMAND rm -f `cat filelist.tmp`
+		COMMAND rm -f cat filelist.tmp
+		COMMAND cp samples/smallluxgpu2/sh/*.sh ${SLG2_BIN_LINUX64_DIR}
+		COMMAND cp bin/slg2 ${SLG2_BIN_LINUX64_DIR}
+		COMMAND mkdir ${SLG2_BIN_LINUX64_DIR}/blender
+		COMMAND cp samples/smallluxgpu2/blender/*.py ${SLG2_BIN_LINUX64_DIR}/blender
+		COMMAND cp AUTHORS.txt COPYING.txt README.txt ${SLG2_BIN_LINUX64_DIR}
+		COMMENT "Building ${SLG2_BIN_LINUX64_DIR}")
+
+	add_custom_command(
+		OUTPUT "${SLG2_BIN_LINUX64_DIR}.zip"
+		COMMAND zip -r ${SLG2_BIN_LINUX64_DIR}.zip ${SLG2_BIN_LINUX64_DIR}
+		COMMAND rm -rf ${SLG2_BIN_LINUX64_DIR}
+		DEPENDS ${SLG2_BIN_LINUX64_DIR}
+		COMMENT "Building ${SLG2_BIN_LINUX64_DIR}.zip")
+
+	add_custom_target(slg2_linux64_zip DEPENDS "${SLG2_BIN_LINUX64_DIR}.zip")
 ENDIF(WIN32)
 
 ###########################################################################
