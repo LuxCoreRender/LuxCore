@@ -30,6 +30,7 @@
 #include "compiledscene.h"
 
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/utils/ocl/utils.h"
 
 #include <boost/thread/thread.hpp>
 
@@ -119,6 +120,8 @@ private:
 	cl::Buffer *meshBumpsBuff;
 	cl::Buffer *meshBumpsScaleBuff;
 	cl::Buffer *uvsBuff;
+
+	luxrays::utils::oclKernelVolatileCache *kernelCache;
 
 	float samplingStart;
 	unsigned int seed;
