@@ -78,7 +78,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const unsigned int oclPlatformIndex = cfg.GetInt("opencl.platform.index", 0);
+	const int oclPlatformIndex = cfg.GetInt("opencl.platform.index", -1);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 
 	// Create LuxRays context
