@@ -97,7 +97,7 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
 
-	kernelCache = new luxrays::utils::oclKernelVolatileCache();
+	kernelCache = new luxrays::utils::oclKernelPersistentCache("slg_" + string(SLG_VERSION_MAJOR) + "." + string(SLG_VERSION_MINOR));
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {

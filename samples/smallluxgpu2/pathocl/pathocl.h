@@ -121,7 +121,7 @@ private:
 	cl::Buffer *meshBumpsScaleBuff;
 	cl::Buffer *uvsBuff;
 
-	luxrays::utils::oclKernelVolatileCache *kernelCache;
+	luxrays::utils::oclKernelCache *kernelCache;
 
 	float samplingStart;
 	unsigned int seed;
