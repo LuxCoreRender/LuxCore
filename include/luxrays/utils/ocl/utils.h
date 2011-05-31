@@ -32,19 +32,43 @@ namespace luxrays { namespace utils {
 
 extern std::string oclErrorString(cl_int error);
 
-class oclKernelVolatileCache {
+class oclKernelCache {
+public:
+	oclKernelCache() { }
+	virtual ~oclKernelCache() { }
+
+	virtual cl::Program *Compile(cl::Context &context, cl::Device &device,
+		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL) = 0;
+
+	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
+		const std::string &kernelsParameters, const std::string &kernelSource);
+};
+
+class oclKernelVolatileCache : public oclKernelCache {
 public:
 	oclKernelVolatileCache();
 	~oclKernelVolatileCache();
 
 	cl::Program *Compile(cl::Context &context, cl::Device &device,
 		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL);
-	
-	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource);
 
 private:
 	std::map<std::string, cl::Program::Binaries> kernelCache;
+};
+
+// WARNING: this class is not thread safe !
+class oclKernelPersistentCache : public oclKernelCache {
+public:
+	oclKernelPersistentCache(const std::string &applicationName);
+	~oclKernelPersistentCache();
+
+	cl::Program *Compile(cl::Context &context, cl::Device &device,
+		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL);
+
+private:
+	static std::string HashString(const std::string &ss);
+
+	std::string appName;
 };
 
 } }
