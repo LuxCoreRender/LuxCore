@@ -136,4 +136,65 @@ std::string luxrays::utils::oclErrorString(cl_int error) {
 	}
 }
 
+//------------------------------------------------------------------------------
+// oclKernelVolatileCache
+//------------------------------------------------------------------------------
+
+oclKernelVolatileCache::oclKernelVolatileCache() {
+
+}
+
+oclKernelVolatileCache::~oclKernelVolatileCache() {
+}
+
+cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& device,
+		const std::string &kernelsParameters, const std::string &kernelSource,
+		bool *cached) {
+	// Check if the kernel is available in the cache
+	std::map<std::string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
+
+	if (it == kernelCache.end()) {
+		// It isn't available, compile the source
+		cl::Program *program = ForcedCompile(
+				context, device, kernelsParameters, kernelSource);
+
+		// Obtain the binaries of the sources
+		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
+		assert (bins.size() == 1);
+		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES >();
+		assert (sizes.size() == 1);
+
+		// Add the kernel to the cache
+		kernelCache[kernelsParameters] = cl::Program::Binaries(1, std::make_pair(bins[0], sizes[0]));
+
+		if (cached)
+			*cached = false;
+
+		return program;
+	} else {
+		// Compile from the binaries
+		VECTOR_CLASS<cl::Device> buildDevice;
+		buildDevice.push_back(device);
+		cl::Program *program = new cl::Program(context, buildDevice, it->second);
+		program->build(buildDevice);
+
+		if (cached)
+			*cached = true;
+
+		return program;
+	}
+}
+
+cl::Program *oclKernelVolatileCache::ForcedCompile(cl::Context &context, cl::Device &device,
+		const std::string &kernelsParameters, const std::string &kernelSource) {
+	cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
+	cl::Program *program = new cl::Program(context, source);
+
+	VECTOR_CLASS<cl::Device> buildDevice;
+	buildDevice.push_back(device);
+	program->build(buildDevice, kernelsParameters.c_str());
+
+	return program;
+}
+
 #endif

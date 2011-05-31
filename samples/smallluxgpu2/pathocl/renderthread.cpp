@@ -96,6 +96,8 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	uvsBuff = NULL;
 
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
+
+	kernelCache = new luxrays::utils::oclKernelVolatileCache();
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -111,6 +113,8 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 
 	delete[] frameBuffer;
 	delete[] gpuTaskStats;
+
+	delete kernelCache;
 }
 
 void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
@@ -501,18 +505,22 @@ void PathOCLRenderThread::InitKernels() {
 				KernelSource_PathOCL_kernel_samplers << KernelSource_PathOCL_kernels;
 		string kernelSource = ssKernel.str();
 
-		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
-		cl::Program program = cl::Program(oclContext, source);
+		cl::Program *program = NULL;
 
 		try {
 			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
 			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling kernels ");
 
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, kernelsParameters.c_str());
+			bool cached;
+			program = kernelCache->Compile(oclContext, oclDevice, kernelsParameters, kernelSource, &cached);
+
+			if (cached) {
+				SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels cached");
+			} else {
+				SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels not cached");
+			}
 		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
+			cl::STRING_CLASS strError = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error (ERROR: " <<
 					err.what() << "[" << luxrays::utils::oclErrorString(err.err()) << "]" <<
 					"):\n" << strError.c_str());
@@ -526,7 +534,7 @@ void PathOCLRenderThread::InitKernels() {
 
 		delete initKernel;
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel");
-		initKernel = new cl::Kernel(program, "Init");
+		initKernel = new cl::Kernel(*program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0)
@@ -549,7 +557,7 @@ void PathOCLRenderThread::InitKernels() {
 		//--------------------------------------------------------------------------
 
 		delete initFBKernel;
-		initFBKernel = new cl::Kernel(program, "InitFrameBuffer");
+		initFBKernel = new cl::Kernel(*program, "InitFrameBuffer");
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
 		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
@@ -560,7 +568,7 @@ void PathOCLRenderThread::InitKernels() {
 
 		delete samplerKernel;
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Sampler Kernel");
-		samplerKernel = new cl::Kernel(program, "Sampler");
+		samplerKernel = new cl::Kernel(*program, "Sampler");
 		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
 
 		if (intersectionDevice->GetForceWorkGroupSize() > 0)
@@ -584,7 +592,7 @@ void PathOCLRenderThread::InitKernels() {
 
 		delete advancePathsKernel;
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel");
-		advancePathsKernel = new cl::Kernel(program, "AdvancePaths");
+		advancePathsKernel = new cl::Kernel(*program, "AdvancePaths");
 		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
 		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
@@ -593,6 +601,8 @@ void PathOCLRenderThread::InitKernels() {
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		delete program;
 	} else
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Using cached kernels");
 }

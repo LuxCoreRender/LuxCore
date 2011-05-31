@@ -22,6 +22,8 @@
 #ifndef _OCL_UTILS_H
 #define	_OCL_UTILS_H
 
+#include <string>
+
 #include "luxrays/luxrays.h"
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -29,6 +31,21 @@
 namespace luxrays { namespace utils {
 
 extern std::string oclErrorString(cl_int error);
+
+class oclKernelVolatileCache {
+public:
+	oclKernelVolatileCache();
+	~oclKernelVolatileCache();
+
+	cl::Program *Compile(cl::Context &context, cl::Device &device,
+		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL);
+	
+	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
+		const std::string &kernelsParameters, const std::string &kernelSource);
+
+private:
+	std::map<std::string, cl::Program::Binaries> kernelCache;
+};
 
 } }
 
