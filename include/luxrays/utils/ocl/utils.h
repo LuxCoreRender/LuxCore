@@ -44,6 +44,20 @@ public:
 		const std::string &kernelsParameters, const std::string &kernelSource);
 };
 
+class oclKernelDummyCache : public oclKernelCache {
+public:
+	oclKernelDummyCache() { }
+	~oclKernelDummyCache() { }
+
+	cl::Program *Compile(cl::Context &context, cl::Device &device,
+		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL) {
+		if (cached)
+			cached = false;
+
+		return ForcedCompile(context, device, kernelsParameters, kernelSource);
+	}
+};
+
 class oclKernelVolatileCache : public oclKernelCache {
 public:
 	oclKernelVolatileCache();
