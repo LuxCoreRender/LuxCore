@@ -26,6 +26,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
+#include <string.h>
 
 #include "luxrays/utils/ocl/utils.h"
 
@@ -165,6 +166,8 @@ oclKernelVolatileCache::oclKernelVolatileCache() {
 }
 
 oclKernelVolatileCache::~oclKernelVolatileCache() {
+	for (std::vector<char *>::iterator it = kernels.begin(); it != kernels.end(); it++)
+		delete[] (*it);
 }
 
 cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& device,
@@ -181,11 +184,17 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 		// Obtain the binaries of the sources
 		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
 		assert (bins.size() == 1);
-		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES >();
+		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES>();
 		assert (sizes.size() == 1);
 
-		// Add the kernel to the cache
-		kernelCache[kernelsParameters] = cl::Program::Binaries(1, std::make_pair(bins[0], sizes[0]));
+		if (sizes[0] > 0) {
+			// Add the kernel to the cache
+			char *bin = new char[sizes[0]];
+			memcpy(bin, bins[0], sizes[0]);
+			kernels.push_back(bin);
+
+			kernelCache[kernelsParameters] = cl::Program::Binaries(1, std::make_pair(bin, sizes[0]));
+		}
 
 		if (cached)
 			*cached = false;
