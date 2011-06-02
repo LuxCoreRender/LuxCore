@@ -266,19 +266,24 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES >();
 		assert (sizes.size() == 1);
 
-		// Add the kernel to the cache
-		boost::filesystem::create_directories(dirName);
-		std::ofstream file(fileName.c_str(), std::ios_base::out | std::ios_base::binary);
-		file.write(bins[0], sizes[0]);
+		std::cerr << "DEBUG: Kernel binary size = " << sizes[0] << std::endl;
 
-		// Check for errors
-		char buf[512];
-		if (file.fail()) {
-			sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
-			throw std::runtime_error(buf);
+		// Create the file only if the binaries include something
+		if (sizes[0] > 0) {
+			// Add the kernel to the cache
+			boost::filesystem::create_directories(dirName);
+			std::ofstream file(fileName.c_str(), std::ios_base::out | std::ios_base::binary);
+			file.write(bins[0], sizes[0]);
+
+			// Check for errors
+			char buf[512];
+			if (file.fail()) {
+				sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
+				throw std::runtime_error(buf);
+			}
+
+			file.close();
 		}
-
-		file.close();
 
 		if (cached)
 			*cached = false;
@@ -286,34 +291,41 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		return program;
 	} else {
 		const size_t kernelSize = boost::filesystem::file_size(fileName);
-		assert (kernelSize >  0);
-		char *kernelBin = new char[kernelSize];
 
-		std::ifstream file(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
-		file.read(kernelBin, kernelSize);
+		if (kernelSize > 0) {
+			char *kernelBin = new char[kernelSize];
 
-		// Check for errors
-		char buf[512];
-		if (file.fail()) {
-			sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
-			throw std::runtime_error(buf);
+			std::ifstream file(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
+			file.read(kernelBin, kernelSize);
+
+			// Check for errors
+			char buf[512];
+			if (file.fail()) {
+				sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
+				throw std::runtime_error(buf);
+			}
+
+			file.close();
+
+			// Compile from the binaries
+			VECTOR_CLASS<cl::Device> buildDevice;
+			buildDevice.push_back(device);
+			cl::Program *program = new cl::Program(context, buildDevice,
+					cl::Program::Binaries(1, std::make_pair(kernelBin, kernelSize)));
+			program->build(buildDevice);
+
+			if (cached)
+				*cached = true;
+
+			delete[] kernelBin;
+
+			return program;
+		} else {
+			// Something wrong in the file, remove the file and retry
+			boost::filesystem::remove(fileName);
+
+			return Compile(context, device, kernelsParameters, kernelSource, cached);
 		}
-
-		file.close();
-
-		// Compile from the binaries
-		VECTOR_CLASS<cl::Device> buildDevice;
-		buildDevice.push_back(device);
-		cl::Program *program = new cl::Program(context, buildDevice,
-				cl::Program::Binaries(1, std::make_pair(kernelBin, kernelSize)));
-		program->build(buildDevice);
-
-		if (cached)
-			*cached = true;
-
-		delete[] kernelBin;
-
-		return program;
 	}
 }
 
