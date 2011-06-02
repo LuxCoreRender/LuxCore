@@ -68,6 +68,7 @@ public:
 
 private:
 	std::map<std::string, cl::Program::Binaries> kernelCache;
+	std::vector<char *> kernels;
 };
 
 // WARNING: this class is not thread safe !
