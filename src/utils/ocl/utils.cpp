@@ -234,7 +234,7 @@ oclKernelPersistentCache::~oclKernelPersistentCache() {
 std::string oclKernelPersistentCache::HashString(const std::string &ss) {
 	const char *s = ss.c_str();
 
-	uint32_t hash = 0;
+	unsigned int hash = 0;
 
 	for (; *s; ++s) {
 		hash += *s;
