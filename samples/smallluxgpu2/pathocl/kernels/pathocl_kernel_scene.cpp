@@ -189,7 +189,7 @@ std::string luxrays::KernelSource_PathOCL_kernel_scene =
 "void SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,\n"
 "		const float theta, const float phi, Spectrum *spect) {\n"
 "	// add bottom half of hemisphere with horizon colour\n"
-"	const float theta_fin = min(theta, (M_PI * 0.5f) - 0.001f);\n"
+"	const float theta_fin = min(theta, (const float)((M_PI * 0.5f) - 0.001f));\n"
 "	const float gamma = RiAngleBetween(theta, phi, skyLight->thetaS, skyLight->phiS);\n"
 "\n"
 "	// Compute xyY values\n"
