@@ -146,13 +146,29 @@ std::string luxrays::utils::oclErrorString(cl_int error) {
 //------------------------------------------------------------------------------
 
 cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource) {
-	cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
-	cl::Program *program = new cl::Program(context, source);
+		const std::string &kernelsParameters, const std::string &kernelSource,
+		cl::STRING_CLASS *error) {
+	cl::Program *program = NULL;
 
-	VECTOR_CLASS<cl::Device> buildDevice;
-	buildDevice.push_back(device);
-	program->build(buildDevice, kernelsParameters.c_str());
+	try {
+		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));
+		program = new cl::Program(context, source);
+
+		VECTOR_CLASS<cl::Device> buildDevice;
+		buildDevice.push_back(device);
+		program->build(buildDevice, kernelsParameters.c_str());
+	} catch (cl::Error err) {
+		const std::string clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
+
+		std::stringstream ss;
+		ss << "ERROR " << err.what() << "[" << luxrays::utils::oclErrorString(err.err()) << "]:" <<
+				std::endl << clerr << std::endl;
+		*error = ss.str();
+
+		if (program)
+			delete program;
+		program = NULL;
+	}
 
 	return program;
 }
@@ -172,14 +188,16 @@ oclKernelVolatileCache::~oclKernelVolatileCache() {
 
 cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& device,
 		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached) {
+		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
 	std::map<std::string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
 
 	if (it == kernelCache.end()) {
 		// It isn't available, compile the source
 		cl::Program *program = ForcedCompile(
-				context, device, kernelsParameters, kernelSource);
+				context, device, kernelsParameters, kernelSource, error);
+		if (!program)
+			return NULL;
 
 		// Obtain the binaries of the sources
 		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
@@ -254,7 +272,7 @@ std::string oclKernelPersistentCache::HashString(const std::string &ss) {
 
 cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device& device,
 		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached) {
+		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
 
 	cl::Platform platform = device.getInfo<CL_DEVICE_PLATFORM>();
@@ -267,15 +285,15 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	if (!boost::filesystem::exists(fileName)) {
 		// It isn't available, compile the source
 		cl::Program *program = ForcedCompile(
-				context, device, kernelsParameters, kernelSource);
+				context, device, kernelsParameters, kernelSource, error);
+		if (!program)
+			return NULL;
 
 		// Obtain the binaries of the sources
 		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
 		assert (bins.size() == 1);
 		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES >();
 		assert (sizes.size() == 1);
-
-		std::cerr << "DEBUG: Kernel binary size = " << sizes[0] << std::endl;
 
 		// Create the file only if the binaries include something
 		if (sizes[0] > 0) {
@@ -333,7 +351,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			// Something wrong in the file, remove the file and retry
 			boost::filesystem::remove(fileName);
 
-			return Compile(context, device, kernelsParameters, kernelSource, cached);
+			return Compile(context, device, kernelsParameters, kernelSource, cached, error);
 		}
 	}
 }
