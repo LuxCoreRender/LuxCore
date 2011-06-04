@@ -38,10 +38,12 @@ public:
 	virtual ~oclKernelCache() { }
 
 	virtual cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL) = 0;
+		const std::string &kernelsParameters, const std::string &kernelSource,
+		bool *cached, cl::STRING_CLASS *error) = 0;
 
 	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource);
+		const std::string &kernelsParameters, const std::string &kernelSource,
+		cl::STRING_CLASS *error);
 };
 
 class oclKernelDummyCache : public oclKernelCache {
@@ -50,11 +52,12 @@ public:
 	~oclKernelDummyCache() { }
 
 	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL) {
+		const std::string &kernelsParameters, const std::string &kernelSource,
+		bool *cached, cl::STRING_CLASS *error) {
 		if (cached)
 			cached = false;
 
-		return ForcedCompile(context, device, kernelsParameters, kernelSource);
+		return ForcedCompile(context, device, kernelsParameters, kernelSource, error);
 	}
 };
 
@@ -64,7 +67,8 @@ public:
 	~oclKernelVolatileCache();
 
 	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL);
+		const std::string &kernelsParameters, const std::string &kernelSource,
+		bool *cached, cl::STRING_CLASS *error);
 
 private:
 	std::map<std::string, cl::Program::Binaries> kernelCache;
@@ -78,7 +82,8 @@ public:
 	~oclKernelPersistentCache();
 
 	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource, bool *cached = NULL);
+		const std::string &kernelsParameters, const std::string &kernelSource,
+		bool *cached, cl::STRING_CLASS *error);
 
 private:
 	static std::string HashString(const std::string &ss);
@@ -90,4 +95,4 @@ private:
 
 #endif
 
-#endif	/* _LUXRAYS_FILM_FILM_H */
+#endif	/* _OCL_UTILS_H */

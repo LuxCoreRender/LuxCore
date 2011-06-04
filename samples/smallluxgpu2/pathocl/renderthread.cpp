@@ -515,27 +515,25 @@ void PathOCLRenderThread::InitKernels() {
 				KernelSource_PathOCL_kernel_samplers << KernelSource_PathOCL_kernels;
 		string kernelSource = ssKernel.str();
 
-		cl::Program *program = NULL;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling kernels ");
 
-		try {
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling kernels ");
+		bool cached;
+		cl::STRING_CLASS error;
+		cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
+				kernelsParameters, kernelSource,
+				&cached, &error);
 
-			bool cached;
-			program = kernelCache->Compile(oclContext, oclDevice, kernelsParameters, kernelSource, &cached);
+		if (!program) {
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << std::endl << error);
 
-			if (cached) {
-				SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels cached");
-			} else {
-				SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels not cached");
-			}
-		} catch (cl::Error err) {
-			cl::STRING_CLASS strError = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] PathOCL compilation error (ERROR: " <<
-					err.what() << "[" << luxrays::utils::oclErrorString(err.err()) << "]" <<
-					"):\n" << strError.c_str());
+			throw std::runtime_error("PathOCL kernel compilation error");
+		}
 
-			throw err;
+		if (cached) {
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels cached");
+		} else {
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels not cached");
 		}
 
 		//----------------------------------------------------------------------
