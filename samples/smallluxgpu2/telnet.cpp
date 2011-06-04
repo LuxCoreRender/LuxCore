@@ -836,9 +836,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									}
 
 									// Set the flag to Update the DataSet
-									if (obj->GetType() == TYPE_EXT_TRIANGLE_INSTANCE)
-										session->editActions.AddAction(INSTANCE_TRANS_EDIT);
-									else
+									if (obj->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+										if (session->renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
+											session->editActions.AddAction(INSTANCE_TRANS_EDIT);
+										else
+											session->editActions.AddAction(GEOMETRY_EDIT);
+									} else
 										session->editActions.AddAction(GEOMETRY_EDIT);
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
@@ -898,7 +901,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									}
 
 									// Set the flag to Update the DataSet
-									session->editActions.AddAction(INSTANCE_TRANS_EDIT);
+									if (session->renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
+										session->editActions.AddAction(INSTANCE_TRANS_EDIT);
+									else
+										session->editActions.AddAction(GEOMETRY_EDIT);
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
