@@ -50,5 +50,6 @@ using namespace luxrays::sdl;
 using namespace luxrays::utils;
 
 extern void DebugHandler(const char *msg);
+extern void SDLDebugHandler(const char *msg);
 
 #endif	/* _SMALLLUX_H */

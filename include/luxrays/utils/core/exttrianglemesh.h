@@ -143,7 +143,7 @@ public:
 
 	virtual void ApplayTransform(const Transform &trans);
 
-	static ExtTriangleMesh *LoadExtTriangleMesh(Context *ctx, const std::string &fileName, const bool usePlyNormals = false);
+	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals = false);
 
 private:
 	unsigned int vertCount;
@@ -158,7 +158,7 @@ private:
 class ExtInstanceTriangleMesh : public ExtMesh {
 public:
 	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) {
-		assert (mesh != NULL);
+		assert (m != NULL);
 
 		trans = t;
 		invTrans = t.GetInverse();

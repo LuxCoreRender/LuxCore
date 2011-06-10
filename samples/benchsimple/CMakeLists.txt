@@ -1,5 +1,5 @@
 ###########################################################################
-#   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 #
+#   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 #
 #                                                                         #
 #   This file is part of LuxRays.                                         #
 #                                                                         #
@@ -19,9 +19,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
-include_directories(${LUXRAYS_INCLUDE_DIR})
-link_directories (${LUXRAYS_LIB_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
+include_directories(${LuxRays_INCLUDE_DIR})
+link_directories (${LuxRays_LIB_DIR})
 
 add_executable(benchsimple benchsimple.cpp)
-target_link_libraries(benchsimple luxrays ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(benchsimple luxrays ${OPENGL_LIBRARY})

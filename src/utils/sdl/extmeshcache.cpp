@@ -20,13 +20,13 @@
  ***************************************************************************/
 
 #include "luxrays/core/context.h"
+#include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/extmeshcache.h"
 
 using namespace luxrays;
 using namespace luxrays::sdl;
 
-ExtMeshCache::ExtMeshCache(Context *context) {
-	ctx = context;
+ExtMeshCache::ExtMeshCache() {
 }
 
 ExtMeshCache::~ExtMeshCache() {
@@ -44,14 +44,14 @@ ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePly
 
 	if (it == maps.end()) {
 		// I have yet to load the file
-		ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(ctx, fileName, usePlyNormals);
+		ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName, usePlyNormals);
 
 		maps.insert(std::make_pair(key, mesh));
 		meshes.push_back(mesh);
 
 		return mesh;
 	} else {
-		//LR_LOG(ctx, "Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
+		//SDL_LOG("Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
 		return it->second;
 	}
 }

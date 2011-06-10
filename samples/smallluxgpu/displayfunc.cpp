@@ -53,6 +53,10 @@ void DebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
 }
 
+void SDLDebugHandler(const char *msg) {
+	std::cerr << "[LuxRays::SDL] " << msg << std::endl;
+}
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 static bool HasOpenGLInterop() {
 	if ((config->GetRenderEngine()->GetEngineType() == PATHGPU) &&

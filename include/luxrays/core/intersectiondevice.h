@@ -146,6 +146,10 @@ public:
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
 
+	void SetHybridRenderingSupport(const bool v) {
+		assert (!started);
+		hybridRenderingSupport = v;
+	}
 	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
 	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
@@ -211,7 +215,7 @@ private:
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
 
-	bool reportedPermissionError, qbvhUseImage, qbvhDisableImageStorage;
+	bool reportedPermissionError, qbvhUseImage, qbvhDisableImageStorage, hybridRenderingSupport;
 };
 
 #endif

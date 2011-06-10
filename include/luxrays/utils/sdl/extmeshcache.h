@@ -34,7 +34,7 @@ namespace luxrays { namespace sdl {
 
 class ExtMeshCache {
 public:
-	ExtMeshCache(Context *context);
+	ExtMeshCache();
 	~ExtMeshCache();
 
 	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals);
@@ -42,7 +42,6 @@ public:
 		const Transform &trans);
 
 private:
-	Context *ctx;
 	std::map<std::string, ExtTriangleMesh *> maps;
 	std::vector<ExtMesh *> meshes;
 };

@@ -25,14 +25,13 @@
 
 #include <FreeImage.h>
 
-#include "luxrays/core/context.h"
 #include "luxrays/utils/sdl/texmap.h"
 
 using namespace luxrays;
 using namespace luxrays::sdl;
 
-TextureMap::TextureMap(Context *ctx, const std::string &fileName) {
-	LR_LOG(ctx, "Reading texture map: " << fileName);
+TextureMap::TextureMap(const std::string &fileName) {
+	SDL_LOG("Reading texture map: " << fileName);
 
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(fileName.c_str(), 0);
 	if(fif == FIF_UNKNOWN)
@@ -53,7 +52,7 @@ TextureMap::TextureMap(Context *ctx, const std::string &fileName) {
 		BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 
 		if ((imageType == FIT_RGBAF) && (bpp == 128)) {
-			LR_LOG(ctx, "HDR RGB (128bit) texture map size: " << width << "x" << height << " (" <<
+			SDL_LOG("HDR RGB (128bit) texture map size: " << width << "x" << height << " (" <<
 					width * height * sizeof(Spectrum) / 1024 << "Kbytes)");
 			pixels = new Spectrum[width * height];
 			alpha = NULL;
@@ -71,7 +70,7 @@ TextureMap::TextureMap(Context *ctx, const std::string &fileName) {
 				bits += pitch;
 			}
 		} else if ((imageType == FIT_RGBF) && (bpp == 96)) {
-			LR_LOG(ctx, "HDR RGB (96bit) texture map size: " << width << "x" << height << " (" <<
+			SDL_LOG("HDR RGB (96bit) texture map size: " << width << "x" << height << " (" <<
 					width * height * sizeof(Spectrum) / 1024 << "Kbytes)");
 			pixels = new Spectrum[width * height];
 			alpha = NULL;
@@ -89,7 +88,7 @@ TextureMap::TextureMap(Context *ctx, const std::string &fileName) {
 				bits += pitch;
 			}
 		} else if ((imageType == FIT_BITMAP) && (bpp == 32)) {
-			LR_LOG(ctx, "RGBA texture map size: " << width << "x" << height << " (" <<
+			SDL_LOG("RGBA texture map size: " << width << "x" << height << " (" <<
 					width * height * (sizeof(Spectrum) + sizeof(float)) / 1024 << "Kbytes)");
 			const unsigned int pixelCount = width * height;
 			pixels = new Spectrum[pixelCount];
@@ -110,7 +109,7 @@ TextureMap::TextureMap(Context *ctx, const std::string &fileName) {
 				bits += pitch;
 			}
 		} else if (bpp == 24) {
-			LR_LOG(ctx, "RGB texture map size: " << width << "x" << height << " (" <<
+			SDL_LOG("RGB texture map size: " << width << "x" << height << " (" <<
 					width * height * sizeof(Spectrum) / 1024 << "Kbytes)");
 			pixels = new Spectrum[width * height];
 			alpha = NULL;
@@ -154,8 +153,7 @@ TextureMap::~TextureMap() {
 	delete[] alpha;
 }
 
-TextureMapCache::TextureMapCache(Context *context) {
-	ctx = context;
+TextureMapCache::TextureMapCache() {
 }
 
 TextureMapCache::~TextureMapCache() {
@@ -177,12 +175,12 @@ TextureMap *TextureMapCache::GetTextureMap(const std::string &fileName) {
 	if (it == maps.end()) {
 		// I have yet to load the file
 
-		TextureMap *tm = new TextureMap(ctx, fileName);
+		TextureMap *tm = new TextureMap(fileName);
 		maps.insert(std::make_pair(fileName, tm));
 
 		return tm;
 	} else {
-		//LR_LOG(ctx, "Cached texture map: " << fileName);
+		//SDL_LOG("Cached texture map: " << fileName);
 		return it->second;
 	}
 }
