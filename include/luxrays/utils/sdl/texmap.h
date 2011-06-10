@@ -26,13 +26,13 @@
 #include <vector>
 #include <map>
 
-#include "luxrays/core/context.h"
+#include "luxrays/utils/sdl/sdl.h"
 
 namespace luxrays { namespace sdl {
 
 class TextureMap {
 public:
-	TextureMap(Context *ctx, const std::string &fileName);
+	TextureMap(const std::string &fileName);
 	TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h);
 	~TextureMap();
 
@@ -150,7 +150,7 @@ private:
 
 class TextureMapCache {
 public:
-	TextureMapCache(Context *context);
+	TextureMapCache();
 	~TextureMapCache();
 
 	TexMapInstance *GetTexMapInstance(const std::string &fileName);
@@ -163,7 +163,6 @@ public:
 private:
 	TextureMap *GetTextureMap(const std::string &fileName);
 
-	Context *ctx;
 	std::map<std::string, TextureMap *> maps;
 	std::vector<TexMapInstance *> texInstances;
 	std::vector<BumpMapInstance *> bumpInstances;

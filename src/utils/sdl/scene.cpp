@@ -28,18 +28,19 @@
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/scene.h"
 
 using namespace luxrays;
 using namespace luxrays::sdl;
 
-Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
+Scene::Scene(const std::string &fileName, const int aType) {
 	accelType = aType;
 
-	extMeshCache = new ExtMeshCache(ctx);
-	texMapCache = new TextureMapCache(ctx);
+	extMeshCache = new ExtMeshCache();
+	texMapCache = new TextureMapCache();
 
-	LR_LOG(ctx, "Reading scene: " << fileName);
+	SDL_LOG("Reading scene: " << fileName);
 
 	scnProp = new Properties(fileName);
 
@@ -51,8 +52,8 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
 	Point o(vf.at(0), vf.at(1), vf.at(2));
 	Point t(vf.at(3), vf.at(4), vf.at(5));
 
-	LR_LOG(ctx, "Camera postion: " << o);
-	LR_LOG(ctx, "Camera target: " << t);
+	SDL_LOG("Camera postion: " << o);
+	SDL_LOG("Camera target: " << t);
 
 	vf = GetParameters(*scnProp, "scene.camera.up", 3, "0.0 0.0 0.1");
 	const Vector up(vf.at(0), vf.at(1), vf.at(2));
@@ -90,7 +91,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
 		const std::string matName = Properties::ExtractField(key, 3);
 		if (matName == "")
 			throw std::runtime_error("Syntax error in " + key);
-		LR_LOG(ctx, "Material definition: " << matName << " [" << matType << "]");
+		SDL_LOG("Material definition: " << matName << " [" << matType << "]");
 
 		Material *mat = CreateMaterial(key, *scnProp);
 
@@ -128,11 +129,11 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
 		const std::string plyFileName = args.at(0);
 		const double now = WallClockTime();
 		if (now - lastPrint > 2.0) {
-			LR_LOG(ctx, "PLY object count: " << objCount);
+			SDL_LOG("PLY object count: " << objCount);
 			lastPrint = now;
 		}
 		++objCount;
-		//LR_LOG(ctx, "PLY object [" << objName << "] file name: " << plyFileName);
+		//SDL_LOG("PLY object [" << objName << "] file name: " << plyFileName);
 
 		// Check if I have to calculate normal or not
 		const bool usePlyNormals = (scnProp->GetInt(key + ".useplynormals", 0) != 0);
@@ -165,7 +166,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
 
 		// Check if it is a light sources
 		if (mat->IsLightSource()) {
-			LR_LOG(ctx, "The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
+			SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
 
 			AreaLightMaterial *light = (AreaLightMaterial *)mat;
 			objectMaterials.push_back(mat);
@@ -228,7 +229,7 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
 				objectNormalMaps.push_back(NULL);
 		}
 	}
-	LR_LOG(ctx, "PLY object count: " << objCount);
+	SDL_LOG("PLY object count: " << objCount);
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinitelight source defined
@@ -240,12 +241,12 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
 
 		// Check if I have to use InfiniteLightBF method
 		if (scnProp->GetInt("scene.infinitelight.usebruteforce", 0)) {
-			LR_LOG(ctx, "Using brute force infinite light sampling");
+			SDL_LOG("Using brute force infinite light sampling");
 			infiniteLight = new InfiniteLightBF(tex);
 			useInfiniteLightBruteForce = true;
 		} else {
 			if (ilParams.size() == 2)
-				infiniteLight = new InfiniteLightPortal(ctx, tex, ilParams.at(1));
+				infiniteLight = new InfiniteLightPortal(tex, ilParams.at(1));
 			else
 				infiniteLight = new InfiniteLightIS(tex);
 
@@ -307,11 +308,8 @@ Scene::Scene(Context *ctx, const std::string &fileName, const int aType) {
 	}
 
 	//--------------------------------------------------------------------------
-	// Create the DataSet
-	//--------------------------------------------------------------------------
 
 	dataSet = NULL;
-	UpdateDataSet(ctx);
 }
 
 Scene::~Scene() {

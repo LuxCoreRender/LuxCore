@@ -27,11 +27,11 @@
 namespace luxrays {
 
 // Intersection kernels
-extern std::string KernelSource_PathGPU2_core;
-extern std::string KernelSource_PathGPU2_datatypes;
-extern std::string KernelSource_PathGPU2_filters;
-extern std::string KernelSource_PathGPU2_samplers;
-extern std::string KernelSource_PathGPU2_scene;
+extern std::string KernelSource_PathGPU2_kernel_core;
+extern std::string KernelSource_PathGPU2_kernel_datatypes;
+extern std::string KernelSource_PathGPU2_kernel_filters;
+extern std::string KernelSource_PathGPU2_kernel_samplers;
+extern std::string KernelSource_PathGPU2_kernel_scene;
 extern std::string KernelSource_PathGPU2_kernels;
 
 

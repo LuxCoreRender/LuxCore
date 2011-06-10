@@ -1,5 +1,5 @@
 ###########################################################################
-#   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 #
+#   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 #
 #                                                                         #
 #   This file is part of LuxRays.                                         #
 #                                                                         #
@@ -19,9 +19,14 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
-include_directories(${LUXRAYS_INCLUDE_DIR})
-link_directories (${LUXRAYS_LIB_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../../${LUXRAYS_BIN_DIR}")
+include_directories(${LuxRays_INCLUDE_DIR})
+link_directories (${LuxRays_LIB_DIR})
 
 add_executable(smallppmgpu smallppmgpu.cpp)
-target_link_libraries(smallppmgpu luxrays ${GLUT_LIBRARY} ${OPENGL_LIBRARY} ${OCL_LIBRARY} ${Boost_LIBRARIES} ${FREEIMAGE_LIBRARIES})
+target_link_libraries(smallppmgpu luxrays ${OPENGL_LIBRARY})
+
+TARGET_LINK_LIBRARIES(smallppmgpu ${OpenCL_LIBRARY})
+TARGET_LINK_LIBRARIES(smallppmgpu ${GLUT_LIBRARY})
+
+# This instructs FREEGLUT to emit a pragma for the static version
+SET_TARGET_PROPERTIES(smallppmgpu PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)

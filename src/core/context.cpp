@@ -37,9 +37,11 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 	currentDataSet = NULL;
 	started = false;
 
+	// Get the list of devices available on the platform
+	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Platform info
-	cl::Platform oclPlatform;
 	VECTOR_CLASS<cl::Platform> platforms;
 	cl::Platform::get(&platforms);
 	for (size_t i = 0; i < platforms.size(); ++i)
@@ -47,22 +49,20 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 
 	if (openclPlatformIndex < 0) {
 		if (platforms.size() > 0) {
-			// Just use the first platform available
-			oclPlatform = platforms[0];
+			// Just use all the platforms available
+			for (size_t i = 0; i < platforms.size(); ++i)
+				OpenCLDeviceDescription::AddDeviceDescs(
+					platforms[i], OCL_DEVICE_TYPE_ALL, deviceDescriptions);
 		} else
 			LR_LOG(this, "No OpenCL platform available");
 	} else {
 		if ((platforms.size() == 0) || (openclPlatformIndex >= (int)platforms.size()))
 			throw std::runtime_error("Unable to find an appropiate OpenCL platform");
-		else
-			oclPlatform = platforms[openclPlatformIndex];
+		else {
+			OpenCLDeviceDescription::AddDeviceDescs(
+				platforms[openclPlatformIndex], OCL_DEVICE_TYPE_ALL, deviceDescriptions);
+		}
 	}
-#endif
-
-	// Get the list of devices available on the platform
-	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	OpenCLDeviceDescription::AddDeviceDescs(oclPlatform, OCL_DEVICE_TYPE_ALL, deviceDescriptions);
 #endif
 
 	// Print device info
@@ -160,6 +160,8 @@ void Context::Interrupt() {
 
 void Context::Stop() {
 	assert (started);
+
+	Interrupt();
 
 	for (size_t i = 0; i < idevices.size(); ++i)
 		idevices[i]->Stop();

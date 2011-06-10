@@ -1,4 +1,5 @@
 scene.camera.lookat = 0.618576 -11.311428 5.343666 -2.558834 -1.985422 3.632028
+scene.camera.fieldofview = 77.3196
 scene.materials.light.mat_light = 800.000012 800.000012 400.
 scene.objects.mat_light.mat_light = scenes/media/mat_light.ply
 scene.materials.matte.mat_white = 0.603827 0.603827 0.603827

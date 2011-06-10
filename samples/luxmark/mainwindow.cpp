@@ -49,6 +49,10 @@ void DebugHandler(const char *msg) {
 	LM_LOG_LUXRAYS(msg);
 }
 
+void SDLDebugHandler(const char *msg) {
+	LM_LOG_SDL(msg);
+}
+
 //------------------------------------------------------------------------------
 
 LuxFrameBuffer::LuxFrameBuffer(const QPixmap &pixmap) : QGraphicsPixmapItem(pixmap) {

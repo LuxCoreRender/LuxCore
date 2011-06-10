@@ -25,7 +25,7 @@
 #include "pathgpu/pathgpu.h"
 #include "pathgpu2/pathgpu2.h"
 
-#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/film/pixeldevicefilm.h"
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
@@ -83,10 +83,10 @@ void RenderingConfig::Init() {
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
 	if (oclPixelDeviceConfig == -1) {
 		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-		film = new LuxRaysFilm(ctx, w, h, descs[0]);
+		film = new PixelDeviceFilm(ctx, w, h, descs[0]);
 	} else {
 		DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
-		film = new LuxRaysFilm(ctx, w, h, descs[oclPixelDeviceConfig]);
+		film = new PixelDeviceFilm(ctx, w, h, descs[oclPixelDeviceConfig]);
 	}
 
 	const int filterType = cfg.GetInt("film.filter.type", 1);
@@ -121,7 +121,8 @@ void RenderingConfig::Init() {
 
 	// Create the Scene
 	const int accelType = cfg.GetInt("accelerator.type", -1);
-	scene = new SLGScene(ctx, sceneFileName, film, accelType);
+	scene = new SLGScene(sceneFileName, film, accelType);
+	scene->UpdateDataSet(ctx);
 	// For compatibility with old scenes
 	scene->camera->fieldOfView = cfg.GetFloat("scene.fieldofview", scene->camera->fieldOfView);
 	scene->camera->Update(film->GetWidth(), film->GetHeight());

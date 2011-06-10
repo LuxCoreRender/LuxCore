@@ -332,11 +332,11 @@ Spectrum InfiniteLight::Sample_L(const Scene *scene, const float u0, const float
 // InfiniteLight with portals
 //------------------------------------------------------------------------------
 
-InfiniteLightPortal::InfiniteLightPortal(Context *ctx, TexMapInstance *tx, const std::string &portalFileName) :
+InfiniteLightPortal::InfiniteLightPortal(TexMapInstance *tx, const std::string &portalFileName) :
 	InfiniteLight(tx) {
 	// Read portals
-	LR_LOG(ctx, "Portal PLY objects file name: " << portalFileName);
-	portals = ExtTriangleMesh::LoadExtTriangleMesh(ctx, portalFileName);
+	SDL_LOG("Portal PLY objects file name: " << portalFileName);
+	portals = ExtTriangleMesh::LoadExtTriangleMesh(portalFileName);
 	const Triangle *tris = portals->GetTriangles();
 	for (unsigned int i = 0; i < portals->GetTotalTriangleCount(); ++i)
 		portalAreas.push_back(tris[i].Area(portals->GetVertices()));

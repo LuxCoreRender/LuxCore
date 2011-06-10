@@ -50,7 +50,7 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
-#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/film/pixeldevicefilm.h"
 
 #define MAX_EYE_PATH_DEPTH 16
 #define MAX_PHOTON_PATH_DEPTH 16
@@ -615,7 +615,11 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 }
 
 void DebugHandler(const char *msg) {
-	std::cerr << msg << std::endl;
+	std::cerr << "[LuxRays] " << msg << std::endl;
+}
+
+void SDLDebugHandler(const char *msg) {
+	std::cerr << "[LuxRays::SDL] " << msg << std::endl;
 }
 
 //------------------------------------------------------------------------------
@@ -917,6 +921,8 @@ static void RunGlut(const unsigned int width, const unsigned int height) {
 int main(int argc, char *argv[]) {
 	std::cerr << SPPMG_LABEL << std::endl;
 
+	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
+
 	try {
 		//----------------------------------------------------------------------
 		// Parse command line options
@@ -1005,14 +1011,15 @@ int main(int argc, char *argv[]) {
 
 		std::vector<luxrays::DeviceDescription *> pixelDevDecs = ctx->GetAvailableDeviceDescriptions();
 		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, pixelDevDecs);
-		film = new luxrays::utils::LuxRaysFilm(ctx, imgWidth, imgHeight, pixelDevDecs[0]);
+		film = new luxrays::utils::PixelDeviceFilm(ctx, imgWidth, imgHeight, pixelDevDecs[0]);
 		sampleBuffer = film->GetFreeSampleBuffer();
 
 		//----------------------------------------------------------------------
 		// Read the scene
 		//----------------------------------------------------------------------
 
-		scene = new luxrays::sdl::Scene(ctx, sceneFileName);
+		scene = new luxrays::sdl::Scene(sceneFileName);
+		scene->UpdateDataSet(ctx);
 		scene->camera->Update(imgWidth, imgHeight);
 
 		// Set the Luxrays SataSet
