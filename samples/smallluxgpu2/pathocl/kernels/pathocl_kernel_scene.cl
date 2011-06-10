@@ -257,7 +257,7 @@ float Mesh_Area(__global Point *verts, __global Triangle *triangles,
 	return 0.5f * length(cross(p1 - p0, p2 - p0));
 }
 
-float InstanceMesh_Area(__global float *m[4], __global Point *verts,
+float InstanceMesh_Area(__global float (*m)[4], __global Point *verts,
 		__global Triangle *triangles, const uint triIndex) {
 	__global Triangle *tri = &triangles[triIndex];
 

@@ -242,6 +242,8 @@ int main(int argc, char *argv[]) {
 			config = new RenderConfig("scenes/luxball/render-fast.cfg");
 
 		// Overtwirte properties with the one defined on command line
+		// NOTE: few properties like accelerator.type, etc. (the one used
+		// in RenderConfig() constructor can not be overwritten.
 		config->cfg.Load(cmdLineProp);
 
 		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
