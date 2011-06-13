@@ -201,8 +201,10 @@ RayBuffer *VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::PopRayB
 size_t VirtualM2MHardwareIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
 
 VirtualM2MHardwareIntersectionDevice::VirtualM2MHardwareIntersectionDevice(const size_t count,
-		const std::vector<HardwareIntersectionDevice *> &devices) : rayBufferQueue(count) {
-	assert (count > 0);
+		const std::vector<HardwareIntersectionDevice *> &devices) :
+// I need to initalize rayBufferQueue with the size of producers. In the
+// case this value is unknown (i.e. equals to 0) I set the count to 256.
+		rayBufferQueue((count == 0) ? 256 : count) {
 	assert (devices.size() > 0);
 
 	// Set the queue for all hardware device
@@ -211,19 +213,56 @@ VirtualM2MHardwareIntersectionDevice::VirtualM2MHardwareIntersectionDevice(const
 		realDevices[i]->SetExternalRayBufferQueue(&rayBufferQueue);
 
 	virtualDeviceCount = count;
-	virtualDeviceInstances = new VirtualM2MDevHInstance *[virtualDeviceCount];
 	for (size_t i = 0; i < virtualDeviceCount; ++i)
-		virtualDeviceInstances[i] = new VirtualM2MDevHInstance(this, i);
+		virtualDeviceInstances.push_back(new VirtualM2MDevHInstance(this, i));
 }
 
 VirtualM2MHardwareIntersectionDevice::~VirtualM2MHardwareIntersectionDevice() {
-	for (size_t i = 0; i < virtualDeviceCount; ++i)
-		delete virtualDeviceInstances[i];
-	delete virtualDeviceInstances;
+	std::vector<VirtualM2MDevHInstance *> devs = virtualDeviceInstances;
+
+	// The virtual devices must always be removed in reverse order
+	for (size_t i = 0; i < devs.size(); ++i)
+		RemoveVirtualDevice(devs[devs.size() - i - 1]);
 }
 
 IntersectionDevice *VirtualM2MHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
 	return virtualDeviceInstances[index];
+}
+
+IntersectionDevice *VirtualM2MHardwareIntersectionDevice::AddVirtualDevice() {
+	VirtualM2MDevHInstance *dev;
+
+	{
+		boost::mutex::scoped_lock lock(virtualDeviceMutex);
+
+		dev = new VirtualM2MDevHInstance(this, virtualDeviceInstances.size());
+		virtualDeviceInstances.push_back(dev);
+		++virtualDeviceCount;
+	}
+
+	// I assume all real devices have the same DataSet and state
+	const Context *ctx = realDevices[0]->deviceContext;
+
+	if (ctx->GetCurrentDataSet())
+		dev->SetDataSet(ctx->GetCurrentDataSet());
+
+	if (ctx->IsRunning())
+		dev->Start();
+
+	return dev;
+}
+
+void VirtualM2MHardwareIntersectionDevice::RemoveVirtualDevice(IntersectionDevice *d) {
+	VirtualM2MDevHInstance *dev = (VirtualM2MDevHInstance *)d;
+	
+	{
+		boost::mutex::scoped_lock lock(virtualDeviceMutex);
+
+		virtualDeviceInstances.erase(virtualDeviceInstances.begin() + dev->instanceIndex);
+		--virtualDeviceCount;
+	}
+
+	delete dev;
 }
 
 //------------------------------------------------------------------------------
