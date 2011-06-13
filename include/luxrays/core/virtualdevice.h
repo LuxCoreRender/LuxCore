@@ -52,6 +52,7 @@ private:
 		~VirtualM2ODevHInstance();
 
 		RayBuffer *NewRayBuffer();
+		RayBuffer *NewRayBuffer(const size_t size);
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
 		size_t GetQueueSize() { return virtualDevice->rayBufferQueue.GetSizeToDo(); }
@@ -102,6 +103,7 @@ private:
 		~VirtualM2MDevHInstance();
 
 		RayBuffer *NewRayBuffer();
+		RayBuffer *NewRayBuffer(const size_t size);
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
 		size_t GetQueueSize() { return virtualDevice->rayBufferQueue.GetSizeToDo(); }

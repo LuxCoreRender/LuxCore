@@ -32,6 +32,7 @@ public:
 	const DataSet *GetDataSet() const { return dataSet; }
 
 	virtual RayBuffer *NewRayBuffer() = 0;
+	virtual RayBuffer *NewRayBuffer(const size_t size) = 0;
 	virtual void PushRayBuffer(RayBuffer *rayBuffer) = 0;
 	virtual RayBuffer *PopRayBuffer() = 0;
 	virtual size_t GetQueueSize() = 0;
@@ -89,6 +90,7 @@ public:
 	void Stop();
 
 	RayBuffer *NewRayBuffer();
+	RayBuffer *NewRayBuffer(const size_t size);
 	size_t GetQueueSize() { return 0; }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
@@ -127,6 +129,7 @@ public:
 	void Stop();
 
 	RayBuffer *NewRayBuffer();
+	RayBuffer *NewRayBuffer(const size_t size);
 	size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
 	void PushRayBuffer(RayBuffer *rayBuffer);
 	RayBuffer *PopRayBuffer();
