@@ -173,7 +173,11 @@ void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::StopNoLock() 
 }
 
 RayBuffer *VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::NewRayBuffer() {
-	return new RayBuffer(RayBufferSize);
+	return NewRayBuffer(RayBufferSize);
+}
+
+RayBuffer *VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::NewRayBuffer(const size_t size) {
+	return new RayBuffer(size);
 }
 
 void VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::PushRayBuffer(RayBuffer *rayBuffer) {
@@ -301,7 +305,11 @@ void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Stop() {
 }
 
 RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::NewRayBuffer() {
-	return new RayBuffer(RayBufferSize);
+	return NewRayBuffer(RayBufferSize);
+}
+
+RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::NewRayBuffer(const size_t size) {
+	return new RayBuffer(size);
 }
 
 void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PushRayBuffer(RayBuffer *rayBuffer) {
