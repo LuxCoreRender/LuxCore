@@ -80,11 +80,18 @@ set(LuxRays_SRCS_CORE_GEOMETRY
 )
 SOURCE_GROUP("Source Files\\Core\\Geometry" FILES ${LuxRays_SRCS_CORE_GEOMETRY})
 
-set(LuxRays_SRCS_IDEVICES
-	${LuxRays_SOURCE_DIR}/src/idevices/openclidevice.cpp
-	${LuxRays_SOURCE_DIR}/src/idevices/nativeidevice.cpp
-	${LuxRays_SOURCE_DIR}/src/idevices/virtualidevice.cpp
-)
+IF(LUXRAYS_DISABLE_OPENCL)
+	set(LuxRays_SRCS_IDEVICES
+		${LuxRays_SOURCE_DIR}/src/idevices/nativeidevice.cpp
+		${LuxRays_SOURCE_DIR}/src/idevices/virtualidevice.cpp
+	)
+ELSE(LUXRAYS_DISABLE_OPENCL)
+	set(LuxRays_SRCS_IDEVICES
+		${LuxRays_SOURCE_DIR}/src/idevices/openclidevice.cpp
+		${LuxRays_SOURCE_DIR}/src/idevices/nativeidevice.cpp
+		${LuxRays_SOURCE_DIR}/src/idevices/virtualidevice.cpp
+	)
+ENDIF(LUXRAYS_DISABLE_OPENCL)
 SOURCE_GROUP("Source Files\\IDevices" FILES ${LuxRays_SRCS_IDEVICES})
 
 
@@ -141,9 +148,13 @@ set(LuxRays_SRC_UTILS_PLYMESH
 )
 SOURCE_GROUP("Source Files\\Utils\\PlyMesh" FILES ${LuxRays_SRC_UTILS_PLYMESH})	
 
-set(LuxRays_SRC_UTILS_OCL
-	${LuxRays_SOURCE_DIR}/src/utils/ocl/utils.cpp
-)
+IF(LUXRAYS_DISABLE_OPENCL)
+	set(LuxRays_SRC_UTILS_OCL )
+ELSE(LUXRAYS_DISABLE_OPENCL)
+	set(LuxRays_SRC_UTILS_OCL
+		${LuxRays_SOURCE_DIR}/src/utils/ocl/utils.cpp
+	)
+ENDIF(LUXRAYS_DISABLE_OPENCL)
 SOURCE_GROUP("Source Files\\Utils\\Utils" FILES ${LuxRays_SRC_UTILS_OCL})
 
 set(LuxRays_SRCS
@@ -313,5 +324,7 @@ ENDIF({OSX_UPDATE_LUXRAYS_REPO)
 TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
 
 TARGET_LINK_LIBRARIES(luxrays debug ${FreeImage_LIBRARY_DBG} optimized ${FreeImage_LIBRARY_REL} general ${FreeImage_LIBRARY_REL})
-TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARY})
+IF (NOT LUXRAYS_DISABLE_OPENCL)
+	TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARY})
+ENDIF(NOT LUXRAYS_DISABLE_OPENCL)
 TARGET_LINK_LIBRARIES(luxrays ${Boost_LIBRARIES})
