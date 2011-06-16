@@ -335,7 +335,7 @@ void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Stop() {
 
 	if (lastOne) {
 		for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
-			LR_LOG(deviceContext, "[VirtualM2ODevice::" << deviceName << "] Stopping real device: " << i);
+			LR_LOG(deviceContext, "[VirtualM2MDevice::" << deviceName << "] Stopping real device: " << i);
 			virtualDevice->realDevices[i]->Stop();
 		}
 	}
