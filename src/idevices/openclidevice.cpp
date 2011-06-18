@@ -104,7 +104,11 @@ void OpenCLIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue) 
 }
 
 RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
-	return new RayBuffer(RayBufferSize);
+	return NewRayBuffer(RayBufferSize);
+}
+
+RayBuffer *OpenCLIntersectionDevice::NewRayBuffer(const size_t size) {
+	return new RayBuffer(RoundUpPow2<size_t>(size));
 }
 
 void OpenCLIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
