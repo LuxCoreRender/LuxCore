@@ -259,7 +259,7 @@ std::string luxrays::KernelSource_PathOCL_kernel_scene =
 "	return 0.5f * length(cross(p1 - p0, p2 - p0));\n"
 "}\n"
 "\n"
-"float InstanceMesh_Area(__global float *m[4], __global Point *verts,\n"
+"float InstanceMesh_Area(__global float (*m)[4], __global Point *verts,\n"
 "		__global Triangle *triangles, const uint triIndex) {\n"
 "	__global Triangle *tri = &triangles[triIndex];\n"
 "\n"

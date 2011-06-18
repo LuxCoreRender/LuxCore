@@ -52,6 +52,7 @@ private:
 		~VirtualM2ODevHInstance();
 
 		RayBuffer *NewRayBuffer();
+		RayBuffer *NewRayBuffer(const size_t size);
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
 		size_t GetQueueSize() { return virtualDevice->rayBufferQueue.GetSizeToDo(); }
@@ -92,6 +93,11 @@ public:
 	~VirtualM2MHardwareIntersectionDevice();
 
 	IntersectionDevice *GetVirtualDevice(size_t index);
+	// The following methods can be used only if the device has been initialize
+	// with count = 0
+	IntersectionDevice *AddVirtualDevice();
+	// The virtual devices must always be removed in reverse order
+	void RemoveVirtualDevice(IntersectionDevice *dev);
 
 	static size_t RayBufferSize;
 
@@ -102,6 +108,7 @@ private:
 		~VirtualM2MDevHInstance();
 
 		RayBuffer *NewRayBuffer();
+		RayBuffer *NewRayBuffer(const size_t size);
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
 		size_t GetQueueSize() { return virtualDevice->rayBufferQueue.GetSizeToDo(); }
@@ -110,14 +117,17 @@ private:
 
 		double GetLoad() const { return 1.0; }
 
+		friend class VirtualM2MHardwareIntersectionDevice;
+
 	protected:
 		void SetDataSet(const DataSet *newDataSet);
 		void Start();
 		void Interrupt();
 		void Stop();
 
-	private:
 		size_t instanceIndex;
+
+	private:
 		VirtualM2MHardwareIntersectionDevice *virtualDevice;
 
 		size_t pendingRayBuffers;
@@ -128,7 +138,7 @@ private:
 	RayBufferQueueM2M rayBufferQueue;
 
 	boost::mutex virtualDeviceMutex;
-	VirtualM2MDevHInstance **virtualDeviceInstances;
+	std::vector<VirtualM2MDevHInstance *> virtualDeviceInstances;
 };
 
 }

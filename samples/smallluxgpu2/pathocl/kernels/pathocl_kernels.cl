@@ -241,8 +241,7 @@ __kernel void AdvancePaths(
 				Vector N;
 #if defined(PARAM_ACCEL_MQBVH)
 				Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, hitPointB1, hitPointB2, &N);
-				// (__global float (*)[4]) seems required by Apple OpenCL
-				TransformNormal((__global float (*)[4])(meshDesc->invTrans), &N);
+				TransformNormal(meshDesc->invTrans, &N);
 #else
 				Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
 #endif
@@ -348,8 +347,7 @@ __kernel void AdvancePaths(
 							const uint lightSourceCount = PARAM_DL_LIGHT_COUNT;
 #endif
 #if defined(PARAM_ACCEL_MQBVH)
-							// (__global float (*)[4]) seems required by Apple OpenCL
-							const float area = InstanceMesh_Area((__global float (*)[4])(meshDesc->trans), iVertices, iTriangles, triangleID);
+							const float area = InstanceMesh_Area(meshDesc->trans, iVertices, iTriangles, triangleID);
 #else
 							const float area = Mesh_Area(vertices, triangles, currentTriangleIndex);
 #endif
