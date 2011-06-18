@@ -64,7 +64,11 @@ void NativeThreadIntersectionDevice::Stop() {
 }
 
 RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
-	return new RayBuffer(RayBufferSize);
+	return NewRayBuffer(RayBufferSize);
+}
+
+RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer(const size_t size) {
+	return new RayBuffer(size);
 }
 
 void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
