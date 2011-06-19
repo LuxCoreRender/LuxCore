@@ -119,7 +119,6 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	const double startTime = WallClockTime();
 
 	double lastFilmUpdate = WallClockTime();
-	double sampleSec = 0.0;
 	char buf[512];
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
@@ -148,7 +147,7 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 
 		// Print some information about the rendering progress
 		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.2fM on %.1fK tris]",
-				int(elapsedTime), int(stopTime), pass, stopSPP, sampleSec / 1000000.0,
+				int(elapsedTime), int(stopTime), pass, stopSPP, engine->GetTotalSamplesSec() / 1000000.0,
 				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 		SLG_LOG(buf);
