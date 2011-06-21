@@ -94,7 +94,7 @@ __kernel void AdvancePaths(
 		__global uint *meshMats,
 		__global uint *meshIDs,
 #if defined(PARAM_ACCEL_MQBVH)
-		__global uint *triangleIDs,
+		__global uint *meshFirstTriangleOffset,
 		__global Mesh *meshDescs,
 #endif
 		__global Vector *vertNormals,
@@ -182,7 +182,7 @@ __kernel void AdvancePaths(
 				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
 #endif
 				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
-				const uint triangleID = triangleIDs[currentTriangleIndex];
+				const uint triangleID = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
 #endif
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 				uint matType = hitPointMat->type;
@@ -758,7 +758,7 @@ Error: Huston, we have a problem !
 				__global Mesh *meshDesc = &meshDescs[meshIndex];
 				__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
 				__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
-				const uint triangleID = triangleIDs[currentTriangleIndex];
+				const uint triangleID = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
 				Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, hitPointB1, hitPointB2, &uv);
 #else
 				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);

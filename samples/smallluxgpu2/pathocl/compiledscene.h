@@ -50,7 +50,9 @@ public:
 	vector<Triangle> tris;
 	vector<PathOCL::Mesh> meshDescs;
 	const TriangleMeshID *meshIDs;
-	const TriangleID *triangleIDs;
+	// One element for each mesh, it used to translate the RayBuffer currentTriangleIndex
+	// to mesh TriangleID
+	unsigned int *meshFirstTriangleOffset;
 
 	// Compiled AreaLights
 	vector<PathOCL::TriangleLight> areaLights;

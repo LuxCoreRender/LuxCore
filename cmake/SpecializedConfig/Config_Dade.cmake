@@ -7,7 +7,7 @@
 
 #cmake -DLUXRAYS_CUSTOM_CONFIG=cmake/SpecializedConfig/Config_Dade.cmake .
 
-MESSAGE(STATUS "Using Dade's Configuration settings")
+MESSAGE(STATUS "Using Dade's Linux Configuration settings")
 
 set(BOOST_SEARCH_PATH         "/home/david/projects/luxrender-dev/boost_1_43_0")
 
