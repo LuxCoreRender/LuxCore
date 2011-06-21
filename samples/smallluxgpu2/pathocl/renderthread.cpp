@@ -235,8 +235,8 @@ void PathOCLRenderThread::InitGeometry() {
 	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) {
 		// MQBVH geometry must be defined in a specific way.
 
-		AllocOCLBufferRO(&triangleIDBuff, (void *)cscene->triangleIDs,
-				sizeof(unsigned int) * trianglesCount, "TriangleIDs");
+		AllocOCLBufferRO(&triangleIDBuff, (void *)cscene->meshFirstTriangleOffset,
+				sizeof(unsigned int) * cscene->meshDescs.size(), "First mesh triangle offset");
 
 		AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
 				sizeof(PathOCL::Mesh) * cscene->meshDescs.size(), "Mesh description");

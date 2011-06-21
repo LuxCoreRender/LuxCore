@@ -41,6 +41,7 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 }
 
 CompiledScene::~CompiledScene() {
+	delete[] meshFirstTriangleOffset;
 	delete infiniteLight;
 	// infiniteLightMap memory is handled from another class
 	delete sunLight;
@@ -100,7 +101,15 @@ void CompiledScene::CompileGeometry() {
 		// Translate mesh IDs
 		//----------------------------------------------------------------------
 
-		triangleIDs = scene->dataSet->GetMeshTriangleIDTable();
+		// This is a bit a trick, it does some assumption about how the merge
+		// of Mesh works
+		meshFirstTriangleOffset = new TriangleID[scene->objects.size()];
+		size_t currentIndex = 0;
+		for (unsigned int i = 0; i < scene->objects.size(); ++i) {
+			ExtMesh *mesh = scene->objects[i];
+			meshFirstTriangleOffset[i] = currentIndex;
+			currentIndex += mesh->GetTotalTriangleCount();
+		}
 
 		//----------------------------------------------------------------------
 		// Translate geometry
@@ -198,7 +207,7 @@ void CompiledScene::CompileGeometry() {
 			}
 		}
 	} else {
-		triangleIDs = NULL;
+		meshFirstTriangleOffset = NULL;
 
 		//----------------------------------------------------------------------
 		// Translate mesh normals
