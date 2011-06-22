@@ -127,8 +127,30 @@ TextureMap::TextureMap(const std::string &fileName) {
 				// Next line
 				bits += pitch;
 			}
-		} else
-			throw std::runtime_error("Unsupported bitmap depth in a texture map: " + fileName);
+		} else if (bpp == 8) {
+			SDL_LOG("Converting 8bpp image to 24bpp RGB texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(Spectrum) / 1024 << "Kbytes)");
+			pixels = new Spectrum[width * height];
+			alpha = NULL;
+
+			for (unsigned int y = 0; y < height; ++y) {
+				BYTE pixel;
+				for (unsigned int x = 0; x < width; ++x) {
+					FreeImage_GetPixelIndex(dib, x, y, &pixel);
+					const unsigned int offest = x + (height - y - 1) * width;
+					pixels[offest].r = pixel / 255.f;
+					pixels[offest].g = pixel / 255.f;
+					pixels[offest].b = pixel / 255.f;
+				}
+
+				// Next line
+				bits += pitch;
+			}
+		} else {
+			std::stringstream msg;
+			msg << "Unsupported bitmap depth (" << bpp << ") in a texture map: " << fileName;
+			throw std::runtime_error(msg.str());
+		}
 
 		FreeImage_Unload(dib);
 	} else
