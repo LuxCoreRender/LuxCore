@@ -127,8 +127,29 @@ TextureMap::TextureMap(const std::string &fileName) {
 				// Next line
 				bits += pitch;
 			}
-		} else
-			throw std::runtime_error("Unsupported bitmap depth in a texture map: " + fileName);
+		} else if (bpp == 8) {
+			SDL_LOG("Converting 8bpp image to 24bpp");
+			pixels = new Spectrum[width * height];
+			alpha = NULL;
+
+			for (unsigned int y = 0; y < height; ++y) {
+				BYTE pixel;
+				for (unsigned int x = 0; x < width; ++x) {
+					FreeImage_GetPixelIndex(dib, x, y, &pixel);
+					const unsigned int offest = x + (height - y - 1) * width;
+					pixels[offest].r = pixel / 255.f;
+					pixels[offest].g = pixel / 255.f;
+					pixels[offest].b = pixel / 255.f;
+				}
+
+				// Next line
+				bits += pitch;
+			}
+		} else {
+			std::stringstream msg;
+			msg << "Unsupported bitmap depth (" << bpp << ") in a texture map: " << fileName;
+			throw std::runtime_error(msg.str());
+		}
 
 		FreeImage_Unload(dib);
 	} else
@@ -151,6 +172,85 @@ TextureMap::TextureMap(Spectrum *cols, const unsigned int w, const unsigned int 
 TextureMap::~TextureMap() {
 	delete[] pixels;
 	delete[] alpha;
+}
+
+TextureMap::TextureMap(const std::string& baseFileName, const float red, const float green, const float blue) {
+	SDL_LOG("Creating blank texture from: " << baseFileName);
+
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(baseFileName.c_str(), 0);
+	if (fif == FIF_UNKNOWN)
+		fif = FreeImage_GetFIFFromFilename(baseFileName.c_str());
+
+	if ((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
+		FIBITMAP *dib = FreeImage_Load(fif, baseFileName.c_str(), 0);
+
+		if (!dib)
+			throw std::runtime_error("Unable to read base texture map: " + baseFileName);
+
+		width = FreeImage_GetWidth(dib);
+		height = FreeImage_GetHeight(dib);
+		FreeImage_Unload(dib);
+
+		const unsigned int numPixels = width*height;
+		pixels = new Spectrum[numPixels];
+		alpha = NULL;
+
+		SDL_LOG("Initializing the texture with " << red << ", " << green << ", " << blue << " for " << numPixels << " pixels");
+		for (unsigned int i = 0; i < numPixels; i++) {
+			pixels[i].r = red;
+			pixels[i].g = green;
+			pixels[i].b = blue;
+		}
+	}
+	DuDv.u = 1.f / width;
+	DuDv.v = 1.f / height;
+}
+
+void TextureMap::AddAlpha(const std::string &alphaMapFileName) {
+	// Don't overwrite a pre-existing alpha
+	if (alpha != NULL) {
+		return;
+	}
+
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(alphaMapFileName.c_str(), 0);
+	if (fif == FIF_UNKNOWN)
+		fif = FreeImage_GetFIFFromFilename(alphaMapFileName.c_str());
+
+	if ((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
+		FIBITMAP *dib = FreeImage_Load(fif, alphaMapFileName.c_str(), 0);
+
+		if (!dib)
+			throw std::runtime_error("Unable to read alpha map: " + alphaMapFileName);
+
+		unsigned int alphaWidth = FreeImage_GetWidth(dib);
+		unsigned int alphaHeight = FreeImage_GetHeight(dib);
+
+		unsigned int pitch = FreeImage_GetPitch(dib);
+		unsigned int bpp = FreeImage_GetBPP(dib);
+		BYTE *bits = (BYTE *) FreeImage_GetBits(dib);
+
+		const unsigned int pixelCount = alphaWidth * alphaHeight;
+		alpha = new float[pixelCount];
+		if (alpha == NULL) {
+			SDL_LOG("Error: could not allocate alpha channel for map " << alphaMapFileName);
+			return;
+		}
+
+		unsigned short int pixelIncrement = bpp / 8; // I'm well aware of the assumption risk. Alphamaps are usually RGB or greyscale (1bpp)
+		for (unsigned int y = 0; y < alphaHeight; ++y) {
+			BYTE *pixel = (BYTE *) bits;
+			for (unsigned int x = 0; x < alphaWidth; ++x) {
+				const unsigned int offset = x + (alphaHeight - y - 1) * alphaWidth;
+				alpha[offset] = *pixel / 255.f;
+				pixel += pixelIncrement;
+			}
+
+			// Next line
+			bits += pitch;
+		}
+
+		FreeImage_Unload(dib);
+	}
 }
 
 TextureMapCache::TextureMapCache() {
@@ -183,6 +283,31 @@ TextureMap *TextureMapCache::GetTextureMap(const std::string &fileName) {
 		//SDL_LOG("Cached texture map: " << fileName);
 		return it->second;
 	}
+}
+
+TexMapInstance *TextureMapCache::AddTextureMap(const std::string &fileName, TextureMap *tm) {
+	// Check if the texture map has been already loaded
+	std::map<std::string, TextureMap *>::const_iterator it = maps.find(fileName);
+
+	if (it == maps.end()) {
+		SDL_LOG("AddTexMap: " << fileName);
+		maps.insert(std::make_pair(fileName, tm));
+		TexMapInstance *texm = new TexMapInstance(tm);
+		texInstances.push_back(texm);
+		return (texm);
+	} else
+		std::runtime_error("Cannot add texture map: " + fileName + " to the cache. An instance exists already");
+
+	return NULL;
+}
+
+TextureMap *TextureMapCache::FindTextureMap(const std::string &fileName) {
+	// Check if the texture map has been already loaded
+	std::map<std::string, TextureMap *>::const_iterator it = maps.find(fileName);
+	if (it == maps.end())
+		return NULL;
+	else
+		return (it->second);
 }
 
 TexMapInstance *TextureMapCache::GetTexMapInstance(const std::string &fileName) {
