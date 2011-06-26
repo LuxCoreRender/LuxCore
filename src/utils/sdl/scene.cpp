@@ -62,7 +62,7 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	camera->lensRadius = scnProp->GetFloat("scene.camera.lensradius", 0.f);
 	camera->focalDistance = scnProp->GetFloat("scene.camera.focaldistance", 10.f);
 	camera->fieldOfView = scnProp->GetFloat("scene.camera.fieldofview", 45.f);
-
+  
 	// Check if camera motion blur is enabled
 	if (scnProp->GetInt("scene.camera.motionblur.enable", 0)) {
 		camera->motionBlur = true;
@@ -202,6 +202,34 @@ Scene::Scene(const std::string &fileName, const int aType) {
 			} else
 				objectTexMaps.push_back(NULL);
 
+			/**
+			 * Check if there is an alpha map associated to the object
+			 * If there is, the map is added to a previously added texturemap.
+			 * If no texture map (diffuse map) is detected, a black texture
+			 * is created and the alpha map is added to it. --PC
+			 */
+			const std::string alphaMap = scnProp->GetString(key + ".alphamap", "");
+			if (alphaMap != "") {
+				// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
+				const std::string texMap = scnProp->GetString(key + ".texmap", "");
+				TextureMap *tm;
+				if (!(tm = texMapCache->FindTextureMap(texMap))) {
+					SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
+					// We have an alpha map without a diffuse texture. In this case we need to create
+					// a texture map filled with black
+					tm = new TextureMap(alphaMap, 1.0, 1.0, 1.0);
+					tm->AddAlpha(alphaMap);
+					TexMapInstance *tmi = texMapCache->AddTextureMap(alphaMap, tm);
+					// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
+					objectTexMaps.pop_back();
+					// Add the new texture to the chain
+					objectTexMaps.push_back(tmi);
+				} else {
+					// Add an alpha map to the pre-existing diffuse texture
+					tm->AddAlpha(alphaMap);
+				}
+			}
+      
 			// Check for if there is a bump map associated to the object
 			const std::string bumpMap = scnProp->GetString(key + ".bumpmap", "");
 			if (bumpMap != "") {
