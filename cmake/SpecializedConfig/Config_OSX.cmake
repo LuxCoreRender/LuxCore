@@ -8,6 +8,9 @@
 MESSAGE(STATUS "Using OSX Configuration settings")
 
 set(OSX_SEARCH_PATH     "../macos")
+if(OSX_BUILD_LUXMARK)
+	set(BUILD_LUXMARK TRUE)
+endif(OSX_BUILD_LUXMARK)
 
 set(FREEIMAGE_SEARCH_PATH "${OSX_SEARCH_PATH}")
 set(FreeImage_INC_SEARCH_PATH "${FREEIMAGE_SEARCH_PATH}/include")
