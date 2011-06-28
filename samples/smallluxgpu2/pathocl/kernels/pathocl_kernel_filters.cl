@@ -38,8 +38,8 @@ uint XY2FrameBufferIndex(const int x, const int y) {
 	return x + 1 + (y + 1) * (PARAM_IMAGE_WIDTH + 2);
 }
 
-uint InitialPixelIndex(const size_t gid) {
-	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
+uint InitialPixelIndex(const uint taskIndex) {
+	return taskIndex % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
 }
 
 uint NextPixelIndex(const uint i) {

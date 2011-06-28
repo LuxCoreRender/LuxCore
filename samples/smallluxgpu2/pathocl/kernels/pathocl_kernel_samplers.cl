@@ -60,9 +60,9 @@ void GenerateCameraPath(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+void Sampler_Init(const uint taskIndex, Seed *seed, __global Sample *sample) {
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-	sample->pixelIndex = InitialPixelIndex(gid);
+	sample->pixelIndex = InitialPixelIndex(taskIndex);
 #else
 	// To avoid patterns when not using atomics
 	sample->pixelIndex = PixelIndexFloat2D(RndFloatValue(seed), RndFloatValue(seed));
@@ -73,15 +73,17 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 }
 
 __kernel void Sampler(
+		__global uint *taskIndices,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
 		__global Camera *camera
 		) {
-	const size_t gid = get_global_id(0);
-
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
+	const uint taskIndex = taskIndices[get_global_id(0)];
+	__global GPUTask *task = &tasks[taskIndex];
+
+	//printf(\"GPUTask: %d => %d (%d)\\n\", get_global_id(0), taskIndex, task->pathState.state);
 
 	if (task->pathState.state == PATH_STATE_DONE) {
 		__global Sample *sample = &task->sample;
@@ -98,9 +100,9 @@ __kernel void Sampler(
 		sample->u[IDX_SCREEN_X] = RndFloatValue(&seed);
 		sample->u[IDX_SCREEN_Y] = RndFloatValue(&seed);
 
-		taskStats[gid].sampleCount += 1;
+		taskStats[taskIndex].sampleCount += 1;
 
-		GenerateCameraPath(task, &rays[gid], &seed, camera);
+		GenerateCameraPath(task, &rays[taskIndex], &seed, camera);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -117,9 +119,9 @@ __kernel void Sampler(
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+void Sampler_Init(const uint taskIndex, Seed *seed, __global Sample *sample) {
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-	sample->pixelIndex = InitialPixelIndex(gid);
+	sample->pixelIndex = InitialPixelIndex(taskIndex);
 #else
 	// To avoid patterns when not using atomics
 	sample->pixelIndex = PixelIndexFloat2D(RndFloatValue(seed), RndFloatValue(seed));
@@ -130,14 +132,14 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 }
 
 __kernel void Sampler(
+		__global uint *taskIndices,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
 		__global Camera *camera) {
-	const size_t gid = get_global_id(0);
-
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
+	const uint taskIndex = taskIndices[get_global_id(0)];
+	__global GPUTask *task = &tasks[taskIndex];
 
 	if (task->pathState.state == PATH_STATE_DONE) {
 		__global Sample *sample = &task->sample;
@@ -154,9 +156,9 @@ __kernel void Sampler(
 		for (int i = 0; i < TOTAL_U_SIZE; ++i)
 			sample->u[i] = RndFloatValue(&seed);
 
-		GenerateCameraPath(task, &rays[gid], &seed, camera);
+		GenerateCameraPath(task, &rays[taskIndex], &seed, camera);
 
-		taskStats[gid].sampleCount += 1;
+		taskStats[taskIndex].sampleCount += 1;
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -229,7 +231,7 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(seed, currentU[i]);
 }
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+void Sampler_Init(const uint taskIndex, Seed *seed, __global Sample *sample) {
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 0.f;
 
@@ -248,14 +250,14 @@ void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
 }
 
 __kernel void Sampler(
+		__global uint *taskIndices,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
 		__global Camera *camera) {
-	const size_t gid = get_global_id(0);
-
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
+	const uint taskIndex = taskIndices[get_global_id(0)];
+	__global GPUTask *task = &tasks[taskIndex];
 
 	__global Sample *sample = &task->sample;
 	const uint current = sample->current;
@@ -281,9 +283,9 @@ __kernel void Sampler(
 			sample->smallMutationCount += 1;
 		}
 
-		taskStats[gid].sampleCount += 1;
+		taskStats[taskIndex].sampleCount += 1;
 
-		GenerateCameraPath(task, &rays[gid], &seed, camera);
+		GenerateCameraPath(task, &rays[taskIndex], &seed, camera);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -571,10 +573,10 @@ void Sampler_CopyFromStratifiedBuffer(Seed *seed, __global Sample *sample, const
 		sample->u[i] = RndFloatValue(seed);
 }
 
-void Sampler_Init(const size_t gid, __local float *localMemTempBuff,
+void Sampler_Init(const uint taskIndex, __local float *localMemTempBuff,
 		Seed *seed, __global Sample *sample) {
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-	sample->pixelIndex = InitialPixelIndex(gid);
+	sample->pixelIndex = InitialPixelIndex(taskIndex);
 #else
 	// To avoid patterns when not using atomics
 	sample->pixelIndex = PixelIndexFloat2D(RndFloatValue(seed), RndFloatValue(seed));
@@ -586,16 +588,16 @@ void Sampler_Init(const size_t gid, __local float *localMemTempBuff,
 }
 
 __kernel void Sampler(
+		__global uint *taskIndices,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
 		__global Camera *camera,
 		__local float *localMemTempBuff
 		) {
-	const size_t gid = get_global_id(0);
-
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
+	const uint taskIndex = taskIndices[get_global_id(0)];
+	__global GPUTask *task = &tasks[taskIndex];
 
 	if (task->pathState.state == PATH_STATE_DONE) {
 		__global Sample *sample = &task->sample;
@@ -607,7 +609,7 @@ __kernel void Sampler(
 		seed.s3 = task->seed.s3;
 
 		// Check if I have used all the stratified samples
-		const uint sampleNewCount = taskStats[gid].sampleCount + 1;
+		const uint sampleNewCount = taskStats[taskIndex].sampleCount + 1;
 		const uint sampleNewIndex = sampleNewCount % (PARAM_SAMPLER_STRATIFIED_X_SAMPLES * PARAM_SAMPLER_STRATIFIED_Y_SAMPLES);
 
 		if (sampleNewIndex == 0) {
@@ -620,9 +622,9 @@ __kernel void Sampler(
 
 		Sampler_CopyFromStratifiedBuffer(&seed, sample, sampleNewIndex);
 
-		GenerateCameraPath(task, &rays[gid], &seed, camera);
+		GenerateCameraPath(task, &rays[taskIndex], &seed, camera);
 
-		taskStats[gid].sampleCount = sampleNewCount;
+		taskStats[taskIndex].sampleCount = sampleNewCount;
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
