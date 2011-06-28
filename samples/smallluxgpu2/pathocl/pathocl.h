@@ -93,9 +93,12 @@ private:
 	size_t samplerWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	size_t advancePathsWorkGroupSize;
+	cl::Kernel *sortGPUTasksKernel;
+	size_t sortGPUTasksWorkGroupSize;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
+	cl::Buffer *taskIndicesBuff;
 	cl::Buffer *tasksBuff;
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *frameBufferBuff;

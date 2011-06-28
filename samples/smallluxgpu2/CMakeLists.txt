@@ -20,7 +20,7 @@
 ###########################################################################
 
 set(SLG_VERSION_MAJOR 2)
-set(SLG_VERSION_MINOR 0devel3)
+set(SLG_VERSION_MINOR 0devel4)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code

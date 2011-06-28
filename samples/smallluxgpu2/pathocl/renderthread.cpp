@@ -67,9 +67,11 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	initFBKernel = NULL;
 	samplerKernel = NULL;
 	advancePathsKernel = NULL;
+	sortGPUTasksKernel = NULL;
 
 	raysBuff = NULL;
 	hitsBuff = NULL;
+	taskIndicesBuff = NULL;
 	tasksBuff = NULL;
 	taskStatsBuff = NULL;
 	frameBufferBuff = NULL;
@@ -120,6 +122,7 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete initFBKernel;
 	delete samplerKernel;
 	delete advancePathsKernel;
+	delete sortGPUTasksKernel;
 
 	delete[] frameBuffer;
 	delete[] gpuTaskStats;
@@ -606,6 +609,17 @@ void PathOCLRenderThread::InitKernels() {
 			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
 
 		//----------------------------------------------------------------------
+		// SortGPUTasks kernel
+		//----------------------------------------------------------------------
+
+		delete sortGPUTasksKernel;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling SortGPUTasks Kernel");
+		sortGPUTasksKernel = new cl::Kernel(*program, "SortGPUTasks");
+		sortGPUTasksKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &sortGPUTasksWorkGroupSize);
+		if (intersectionDevice->GetForceWorkGroupSize() > 0)
+			sortGPUTasksWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+
+		//----------------------------------------------------------------------
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -786,6 +800,10 @@ void PathOCLRenderThread::InitRender() {
 		throw std::runtime_error(ss.str());
 	}
 
+	taskIndicesBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_WRITE,
+			sizeof(uint) * taskCount);
+	deviceDesc->AllocMemory(taskIndicesBuff->getInfo<CL_MEM_SIZE>());
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			gpuTaksSize * taskCount);
@@ -834,9 +852,11 @@ void PathOCLRenderThread::SetKernelArgs() {
 	// Set OpenCL kernel arguments
 
 	//--------------------------------------------------------------------------
-	// initFBKernel
+	// samplerKernel
 	//--------------------------------------------------------------------------
+
 	unsigned int argIndex = 0;
+	samplerKernel->setArg(argIndex++, *taskIndicesBuff);
 	samplerKernel->setArg(argIndex++, *tasksBuff);
 	samplerKernel->setArg(argIndex++, *taskStatsBuff);
 	samplerKernel->setArg(argIndex++, *raysBuff);
@@ -846,6 +866,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 		samplerKernel->setArg(argIndex++, samplerWorkGroupSize * stratifiedDataSize, NULL);
 
 	argIndex = 0;
+	advancePathsKernel->setArg(argIndex++, *taskIndicesBuff);
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
@@ -887,6 +908,13 @@ void PathOCLRenderThread::SetKernelArgs() {
 	}
 
 	//--------------------------------------------------------------------------
+	// sortGPUTasksKernel
+	//--------------------------------------------------------------------------
+
+	sortGPUTasksKernel->setArg(0, *taskIndicesBuff);
+	sortGPUTasksKernel->setArg(1, *tasksBuff);
+
+	//--------------------------------------------------------------------------
 	// initFBKernel
 	//--------------------------------------------------------------------------
 
@@ -897,6 +925,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
+	initKernel->setArg(argIndex++, *taskIndicesBuff);
 	initKernel->setArg(argIndex++, *tasksBuff);
 	initKernel->setArg(argIndex++, *taskStatsBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
@@ -932,6 +961,7 @@ void PathOCLRenderThread::Stop() {
 
 	FreeOCLBuffer(&raysBuff);
 	FreeOCLBuffer(&hitsBuff);
+	FreeOCLBuffer(&taskIndicesBuff);
 	FreeOCLBuffer(&tasksBuff);
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&frameBufferBuff);
@@ -1073,6 +1103,10 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 	const unsigned int taskCount = renderThread->renderEngine->taskCount;
 
+	cl_uint numStages = 0;
+	for(unsigned int temp = taskCount; temp > 1; temp >>= 1)
+		++numStages;
+
 	try {
 		double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
@@ -1128,6 +1162,18 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
 							cl::NDRange(taskCount), cl::NDRange(renderThread->advancePathsWorkGroupSize));
+
+					// Sort GPUTasks by state
+					for(cl_uint stage = 0; stage < numStages; ++stage) {
+						renderThread->sortGPUTasksKernel->setArg(2, stage);
+
+						for(cl_uint passOfStage = 0; passOfStage < stage + 1; ++passOfStage) {
+							renderThread->sortGPUTasksKernel->setArg(3, passOfStage);
+
+							oclQueue.enqueueNDRangeKernel(*(renderThread->sortGPUTasksKernel), cl::NullRange,
+								cl::NDRange(taskCount / 2), cl::NDRange(renderThread->sortGPUTasksWorkGroupSize));
+						}
+					}
 				}
 				oclQueue.flush();
 

@@ -24,6 +24,7 @@
 //------------------------------------------------------------------------------
 
 __kernel void Init(
+		__global uint *taskIndices,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
@@ -32,34 +33,35 @@ __kernel void Init(
 		, __local float *localMemTempBuff
 #endif
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = (uint)get_global_id(0);
+	taskIndices[taskIndex] = taskIndex;
 
 	//if (gid == 0)
 	//	printf(\"GPUTask: %d\\n\", sizeof(GPUTask));
 
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
+	__global GPUTask *task = &tasks[taskIndex];
 
 	// Initialize random number generator
 	Seed seed;
-	InitRandomGenerator(PARAM_SEED + gid, &seed);
+	InitRandomGenerator(PARAM_SEED + taskIndex, &seed);
 
 	// Initialize the sample
-	Sampler_Init(gid,
+	Sampler_Init(taskIndex,
 #if (PARAM_SAMPLER_TYPE == 3)
 			localMemTempBuff,
 #endif
 			&seed, &task->sample);
 
 	// Initialize the path
-	GenerateCameraPath(task, &rays[gid], &seed, camera);
+	GenerateCameraPath(task, &rays[taskIndex], &seed, camera);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
 
-	__global GPUTaskStats *taskStat = &taskStats[gid];
+	__global GPUTaskStats *taskStat = &taskStats[taskIndex];
 	taskStat->sampleCount = 0;
 }
 
@@ -82,10 +84,63 @@ __kernel void InitFrameBuffer(
 }
 
 //------------------------------------------------------------------------------
+// State sorting Kernel
+//------------------------------------------------------------------------------
+
+// Based on AMD SDK BitonicSort example
+
+__kernel void SortGPUTasks(
+		__global uint *taskIndices,
+		__global GPUTask *tasks,
+		const uint stage,
+		const uint passOfStage) {
+	uint sortIncreasing = 1;
+	uint threadId = get_global_id(0);
+
+	uint pairDistance = 1 << (stage - passOfStage);
+	uint blockWidth = 2 * pairDistance;
+
+	uint leftId = (threadId % pairDistance)
+			+ (threadId / pairDistance) * blockWidth;
+
+	uint rightId = leftId + pairDistance;
+
+	uint leftElement = taskIndices[leftId];
+	uint rightElement = taskIndices[rightId];
+
+	uint sameDirectionBlockWidth = 1 << stage;
+
+	if ((threadId / sameDirectionBlockWidth) % 2 == 1)
+		sortIncreasing = 1 - sortIncreasing;
+
+	uint leftState = tasks[leftElement].pathState.state;
+	uint rightState = tasks[rightElement].pathState.state;
+
+	uint greater;
+	uint lesser;
+	if (leftState > rightState) {
+		greater = leftElement;
+		lesser = rightElement;
+	} else {
+		greater = rightElement;
+		lesser = leftElement;
+	}
+
+	if (sortIncreasing) {
+		taskIndices[leftId] = lesser;
+		taskIndices[rightId] = greater;
+	} else {
+		taskIndices[leftId] = greater;
+		taskIndices[rightId] = lesser;
+	}
+}
+
+//------------------------------------------------------------------------------
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
 
 __kernel void AdvancePaths(
+		__global uint *taskIndices,
 		__global GPUTask *tasks,
 		__global Ray *rays,
 		__global RayHit *rayHits,
@@ -128,9 +183,9 @@ __kernel void AdvancePaths(
         , __global UV *vertUVs
 #endif
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = taskIndices[get_global_id(0)];
+	__global GPUTask *task = &tasks[taskIndex];
 
-	__global GPUTask *task = &tasks[gid];
 	uint pathState = task->pathState.state;
 
 #if (PARAM_SAMPLER_TYPE == 0)
@@ -143,8 +198,8 @@ __kernel void AdvancePaths(
 
 	__global Sample *sample = &task->sample;
 
-	__global Ray *ray = &rays[gid];
-	__global RayHit *rayHit = &rayHits[gid];
+	__global Ray *ray = &rays[taskIndex];
+	__global RayHit *rayHit = &rayHits[taskIndex];
 	const uint currentTriangleIndex = rayHit->index;
 
 	const float hitPointT = rayHit->t;
