@@ -55,11 +55,11 @@ IF(WIN32)
 	)
 ELSE(WIN32)
 	add_custom_command(
-		OUTPUT pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND cat pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo "\;" >> pathgpu/kernels/pathgpu_kernel.cpp
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
+		COMMAND echo "\;" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
 		MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
 	)
 ENDIF(WIN32)
