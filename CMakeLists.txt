@@ -101,6 +101,9 @@ endif()
 #set (GLUT_LIBRARY_REL "${LuxRays_SOURCE_DIR}/../freeglut/lib/freeglut_static.lib")
 #include_directories(${GLUT_INCLUDE_DIR})
 
+if (LUXRAYS_DISABLE_OPENCL)
+	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+endif()
 
 ###########################################################################
 #
