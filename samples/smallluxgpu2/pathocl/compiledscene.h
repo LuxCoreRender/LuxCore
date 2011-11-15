@@ -83,7 +83,8 @@ public:
 	// Bump mapping
 	unsigned int *meshBumps;
 	float *bumpMapScales;
-
+	// Normal mapping
+	unsigned int *meshNormalMaps;
 
 private:
 	void CompileCamera();
