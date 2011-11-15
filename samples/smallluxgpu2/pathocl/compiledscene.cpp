@@ -34,6 +34,7 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 	meshTexs = NULL;
 	meshBumps = NULL;
 	bumpMapScales = NULL;
+	meshNormalMaps = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -51,6 +52,7 @@ CompiledScene::~CompiledScene() {
 	delete[] meshTexs;
 	delete[] meshBumps;
 	delete[] bumpMapScales;
+	delete[] meshNormalMaps;
 }
 
 void CompiledScene::CompileCamera() {
@@ -679,6 +681,7 @@ void CompiledScene::CompileTextureMaps() {
 	delete[] meshTexs;
 	delete[] meshBumps;
 	delete[] bumpMapScales;
+	delete[] meshNormalMaps;
 
 	//--------------------------------------------------------------------------
 	// Translate mesh texture maps
@@ -809,6 +812,35 @@ void CompiledScene::CompileTextureMaps() {
 			meshBumps = NULL;
 			bumpMapScales = NULL;
 		}
+
+		//----------------------------------------------------------------------
+
+		// Translate mesh normal map indices
+		bool hasNormalMapping = false;
+		meshNormalMaps = new unsigned int[meshCount];
+		for (unsigned int i = 0; i < meshCount; ++i) {
+			NormalMapInstance *nm = scene->objectNormalMaps[i];
+
+			if (nm) {
+				// Look for the index
+				unsigned int index = 0;
+				for (unsigned int j = 0; j < tms.size(); ++j) {
+					if (nm->GetTexMap() == tms[j]) {
+						index = j;
+						break;
+					}
+				}
+
+				meshNormalMaps[i] = index;
+				hasNormalMapping = true;
+			} else
+				meshNormalMaps[i] = 0xffffffffu;
+		}
+
+		if (!hasNormalMapping) {
+			delete[] meshNormalMaps;
+			meshNormalMaps = NULL;
+		}
 	} else {
 		gpuTexMaps.resize(0);
 		rgbTexMem = NULL;
@@ -816,6 +848,7 @@ void CompiledScene::CompileTextureMaps() {
 		meshTexs = NULL;
 		meshBumps = NULL;
 		bumpMapScales = NULL;
+		meshNormalMaps = NULL;
 	}
 
 	const double tEnd = WallClockTime();

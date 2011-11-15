@@ -125,7 +125,10 @@ __kernel void AdvancePaths(
         , __global unsigned int *meshBumpsBuff
 		, __global float *meshBumpsScaleBuff
 #endif
-        , __global UV *vertUVs
+#if defined(PARAM_HAS_NORMALMAPS)
+        , __global unsigned int *meshNormalMapsBuff
+#endif
+		, __global UV *vertUVs
 #endif
 		) {
 	const size_t gid = get_global_id(0);
@@ -244,6 +247,30 @@ __kernel void AdvancePaths(
 				TransformNormal(meshDesc->invTrans, &N);
 #else
 				Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &N);
+#endif
+
+#if defined(PARAM_HAS_NORMALMAPS)
+				// Check it the mesh has a bump map
+				unsigned int normalMapIndex = meshNormalMapsBuff[meshIndex];
+				if (normalMapIndex != 0xffffffffu) {
+					// Apply normal mapping
+					__global TexMap *texMap = &texMapDescBuff[normalMapIndex];
+					const uint texWidth = texMap->width;
+					const uint texHeight = texMap->height;
+
+					Spectrum texColor;
+					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v, &texColor);
+					const float x = 2.f * (texColor.r - 0.5f);
+					const float y = 2.f * (texColor.g - 0.5f);
+					const float z = 2.f * (texColor.b - 0.5f);
+
+					Vector v1, v2;
+					CoordinateSystem(&N, &v1, &v2);
+					N.x = v1.x * x + v2.x * y + N.x * z;
+					N.y = v1.y * x + v2.y * y + N.y * z;
+					N.z = v1.z * x + v2.z * y + N.z * z;
+					Normalize(&N);
+				}
 #endif
 
 #if defined(PARAM_HAS_BUMPMAPS)

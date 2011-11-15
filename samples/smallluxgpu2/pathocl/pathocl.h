@@ -119,6 +119,7 @@ private:
 	cl::Buffer *meshTexsBuff;
 	cl::Buffer *meshBumpsBuff;
 	cl::Buffer *meshBumpsScaleBuff;
+	cl::Buffer *meshNormalMapsBuff;
 	cl::Buffer *uvsBuff;
 
 	luxrays::utils::oclKernelCache *kernelCache;

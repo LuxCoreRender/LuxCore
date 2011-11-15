@@ -93,6 +93,7 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	meshTexsBuff = NULL;
 	meshBumpsBuff = NULL;
 	meshBumpsScaleBuff = NULL;
+	meshNormalMapsBuff = NULL;
 	uvsBuff = NULL;
 
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
@@ -335,6 +336,12 @@ void PathOCLRenderThread::InitTextureMaps() {
 			meshBumpsBuff = NULL;
 			meshBumpsScaleBuff = NULL;
 		}
+
+		if (cscene->meshNormalMaps)
+			AllocOCLBufferRO(&meshNormalMapsBuff, cscene->meshNormalMaps,
+				sizeof(unsigned int) * meshCount, "Mesh NormalMaps index");
+		else
+			meshNormalMapsBuff = NULL;
 	} else {
 		texMapRGBBuff = NULL;
 		texMapAlphaBuff = NULL;
@@ -342,6 +349,7 @@ void PathOCLRenderThread::InitTextureMaps() {
 		meshTexsBuff = NULL;
 		meshBumpsBuff = NULL;
 		meshBumpsScaleBuff = NULL;
+		meshNormalMapsBuff = NULL;
 	}
 }
 
@@ -437,6 +445,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
 	if (meshBumpsBuff)
 		ss << " -D PARAM_HAS_BUMPMAPS";
+	if (meshNormalMapsBuff)
+		ss << " -D PARAM_HAS_NORMALMAPS";
 
 	const PathOCL::Filter *filter = renderEngine->filter;
 	switch (filter->type) {
@@ -883,6 +893,8 @@ void PathOCLRenderThread::SetKernelArgs() {
 			advancePathsKernel->setArg(argIndex++, *meshBumpsBuff);
 			advancePathsKernel->setArg(argIndex++, *meshBumpsScaleBuff);
 		}
+		if (meshNormalMapsBuff)
+			advancePathsKernel->setArg(argIndex++, *meshNormalMapsBuff);
 		advancePathsKernel->setArg(argIndex++, *uvsBuff);
 	}
 
@@ -961,6 +973,9 @@ void PathOCLRenderThread::Stop() {
 			FreeOCLBuffer(&meshBumpsBuff);
 			FreeOCLBuffer(&meshBumpsScaleBuff);
 		}
+
+		if (meshNormalMapsBuff)
+			FreeOCLBuffer(&meshNormalMapsBuff);
 
 		FreeOCLBuffer(&uvsBuff);
 	}
