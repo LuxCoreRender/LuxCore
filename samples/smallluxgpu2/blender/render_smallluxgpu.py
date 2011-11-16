@@ -168,9 +168,9 @@ class SLGBP:
         # Get motion blur parameters
         if scene.slg.cameramotionblur:
             scene.frame_set(scene.frame_current - 1) # Blender now supports sub-frames!
-            SLGBP.camdirBlur = Vector((0, 0, -10)) * scene.camera.matrix_world
+            SLGBP.camdirBlur = scene.camera.matrix_world * Vector((0, 0, -10))
             SLGBP.camlocBlur = scene.camera.matrix_world.to_translation()
-            SLGBP.camupBlur = Vector((0,1,0)) * scene.camera.matrix_world.to_3x3()
+            SLGBP.camupBlur = scene.camera.matrix_world.to_3x3() * Vector((0,1,0))
             scene.frame_set(scene.frame_current + 1)
 
         return True
@@ -257,12 +257,12 @@ class SLGBP:
 
         # Get camera and lookat direction
         cam = scene.camera
-        camdir = Vector((0, 0, -1)) * cam.matrix_world
+        camdir = cam.matrix_world.copy() * Vector((0, 0, -1))
 
         # Camera.location not always updated, but matrix is
         camloc = cam.matrix_world.to_translation()
         scn['scene.camera.lookat'] = '{} {} {} {} {} {}'.format(ff(camloc.x),ff(camloc.y),ff(camloc.z),ff(camdir.x),ff(camdir.y),ff(camdir.z))
-        camup = Vector((0,1,0)) * cam.matrix_world.to_3x3()
+        camup = cam.matrix_world.to_3x3() * Vector((0,1,0))
         scn['scene.camera.up'] = '{} {} {}'.format(ff(camup.x),ff(camup.y),ff(camup.z))
 
         scn['scene.camera.fieldofview'] = format(cam.data.angle*180.0/3.1415926536,'g')
@@ -309,7 +309,7 @@ class SLGBP:
         # Sun lamp
         if SLGBP.sun:
             # We only support one visible sun lamp
-            sundir = Vector((0,0,1)) * SLGBP.sun.matrix_world.to_3x3()
+            sundir = SLGBP.sun.matrix_world.to_3x3() * Vector((0,0,1))
             sky = SLGBP.sun.data.sky
             # If envmap is also defined, only sun component is exported
             if not SLGBP.infinitelight and sky.use_atmosphere:
