@@ -462,8 +462,14 @@ static void motionFunc(int x, int y) {
 
 			session->BeginEdit();
 
-			session->renderConfig->scene->camera->RotateDown(0.04f * distY * ROTATE_STEP);
-			session->renderConfig->scene->camera->RotateRight(0.04f * distX * ROTATE_STEP);
+			if (mouseGrabMode) {
+				session->renderConfig->scene->camera->RotateUp(0.04f * distY * ROTATE_STEP);
+				session->renderConfig->scene->camera->RotateLeft(0.04f * distX * ROTATE_STEP);
+			}
+			else {
+				session->renderConfig->scene->camera->RotateDown(0.04f * distY * ROTATE_STEP);
+				session->renderConfig->scene->camera->RotateRight(0.04f * distX * ROTATE_STEP);
+			};
 
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
@@ -484,8 +490,14 @@ static void motionFunc(int x, int y) {
 
 			session->BeginEdit();
 
-			session->renderConfig->scene->camera->TranslateRight(0.04f * distX * MOVE_STEP);
-			session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * MOVE_STEP);
+			if (mouseGrabMode) {
+				session->renderConfig->scene->camera->TranslateLeft(0.04f * distX * MOVE_STEP);
+				session->renderConfig->scene->camera->TranslateForward(0.04f * distY * MOVE_STEP);
+			}
+			else {
+				session->renderConfig->scene->camera->TranslateRight(0.04f * distX * MOVE_STEP);
+				session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * MOVE_STEP);				
+			}
 
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());

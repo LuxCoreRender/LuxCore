@@ -42,6 +42,10 @@ string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (Lu
 
 RenderSession *session = NULL;
 
+// Mouse "grab" mode. This is the natural way cameras are usually manipulated
+// The flag is off by default but can be turned on by using the -m switch
+
+bool mouseGrabMode = false;
 
 void DebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
@@ -173,16 +177,6 @@ int main(int argc, char *argv[]) {
 	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
 
 	try {
-		SLG_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
-				" -o [configuration file]" << endl <<
-				" -f [scene file]" << endl <<
-				" -w [window width]" << endl <<
-				" -e [window height]" << endl <<
-				" -t [halt time in secs]" << endl <<
-				" -T <enable the telnet server>" << endl <<
-				" -D [property name] [property value]" << endl <<
-				" -d [current directory path]" << endl <<
-				" -h <display this help and exit>");
 
 		// Initialize FreeImage Library
 		FreeImage_Initialise(TRUE);
@@ -196,8 +190,20 @@ int main(int argc, char *argv[]) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...
 
-				if (argv[i][1] == 'h') exit(EXIT_SUCCESS);
-
+				if (argv[i][1] == 'h') {
+					SLG_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
+							" -o [configuration file]" << endl <<
+							" -f [scene file]" << endl <<
+							" -w [window width]" << endl <<
+							" -e [window height]" << endl <<
+							" -t [halt time in secs]" << endl <<
+							" -T <enable the telnet server>" << endl <<
+							" -D [property name] [property value]" << endl <<
+							" -d [current directory path]" << endl <<
+							" -m Makes the mouse operations work in \"grab mode\"" << endl << 
+							" -h <display this help and exit>");
+					exit(EXIT_SUCCESS);
+				}
 				else if (argv[i][1] == 'o') {
 					if (config)
 						throw runtime_error("Used multiple configuration files");
@@ -214,6 +220,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 't') cmdLineProp.SetString("batch.halttime", argv[++i]);
 
 				else if (argv[i][1] == 'T') telnetServerEnabled = true;
+
+				else if (argv[i][1] == 'm') mouseGrabMode = true;
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);
