@@ -80,10 +80,10 @@ public:
 	unsigned int totAlphaTexMem;
 	float *alphaTexMem;
 	unsigned int *meshTexs;
-	// Bump mapping
+	// Compiled BumpMaps
 	unsigned int *meshBumps;
 	float *bumpMapScales;
-	// Normal mapping
+	// Compiled NormalMaps
 	unsigned int *meshNormalMaps;
 
 private:
