@@ -25,8 +25,8 @@
 bl_info = {
     "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
-    "version": (0, 8, 1),
-    "blender": (2, 5, 7),
+    "version": (2, 0, 4),
+    "blender": (2, 6, 0),
     "location": "Render > Engine > SmallLuxGPU",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
     "warning": "",
@@ -39,7 +39,7 @@ import blf
 from mathutils import Matrix, Vector
 import os
 from threading import Lock, Thread
-from time import sleep
+from time import sleep, time
 from telnetlib import Telnet
 from struct import pack
 from itertools import zip_longest
@@ -257,7 +257,7 @@ class SLGBP:
 
         # Get camera and lookat direction
         cam = scene.camera
-        camdir = cam.matrix_world.copy() * Vector((0, 0, -1))
+        camdir = cam.matrix_world * Vector((0, 0, -1))
 
         # Camera.location not always updated, but matrix is
         camloc = cam.matrix_world.to_translation()
@@ -755,26 +755,17 @@ class SLGBP:
 
     # Export SLG scene and render it
     @staticmethod
-    def exportrun(scene, anim, errout):
+    def exportrun(scene, errout):
         sleep(0.25) # Allow time for screen to display last msg
-        while True:
-            if not SLGBP.init(scene, errout):
-                return
-            SLGBP.msg = 'SLG exporting frame: ' + str(scene.frame_current) + " (ESC to abort)"
+        if not SLGBP.init(scene, errout):
+            return
+        SLGBP.msg = 'SLG exporting frame: ' + str(scene.frame_current) + " (ESC to abort)"
+        SLGBP.msgrefresh()
+        SLGBP.export(scene)
+        if not SLGBP.abort:
+            SLGBP.msg = 'SLG rendering frame: ' + str(scene.frame_current) + " (ESC to abort)"
             SLGBP.msgrefresh()
-            SLGBP.export(scene)
-            if not SLGBP.abort:
-                SLGBP.msg = 'SLG rendering frame: ' + str(scene.frame_current) + " (ESC to abort)"
-                SLGBP.msgrefresh()
-                SLGBP.runslg(scene)
-            if not anim:
-                break
-            SLGBP.slgproc.wait()
-            if SLGBP.abort or scene.frame_current+scene.frame_step > scene.frame_end:
-                SLGBP.msg = 'SLG animation render done.'
-                SLGBP.msgrefresh()
-                break
-            scene.frame_set(scene.frame_current+scene.frame_step)
+            SLGBP.runslg(scene)
 
     # Update SLG parameters via telnet interface
     @staticmethod
@@ -866,27 +857,6 @@ class SLGBP:
             sleep(0.5) # param?
             if SLGBP.liveact == 0: break
 
-    # SLG live animation render
-    @staticmethod
-    def liveanimrender(scene):
-        SLGBP.liveanim = True
-        scene.frame_set(scene.frame_start-scene.frame_step)
-        SLGBP.livetrigger(scene, SLGBP.LIVEALL)
-        if scene.slg.cameramotionblur:
-            # Make sure first livetrigger takes place
-            sleep(0.25)
-        while True:
-            scene.frame_set(scene.frame_current+scene.frame_step)
-            SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(scene.frame_current) + " (ESC to abort)"
-            SLGBP.livetrigger(scene, SLGBP.LIVEALL)
-            sleep(scene.slg.batchmodetime)
-            SLGBP.telnet.send('render.stop')
-            SLGBP.telnet.send('image.save')
-            if not SLGBP.live or scene.frame_current+scene.frame_step > scene.frame_end: break
-        SLGBP.msg = 'SLG Live! (ESC to exit)'
-        SLGBP.msgrefresh()
-        SLGBP.liveanim = False
-
 def pre_draw_callback():
     # Prevent simultaneous SLGBP export and View3D update (object matrices sometimes modified during draw, e.g. dupligroups)
     SLGBP.lock.acquire()
@@ -922,13 +892,14 @@ class SLGRender(bpy.types.Operator):
 
     def _error(self, msg):
         self._iserror = True
-        self.report('ERROR', "SLGBP: " + msg)
+        self.report({'ERROR'}, "SLGBP: " + msg)
 
     def _reset(self, context):
         context.region.callback_remove(self._pdcb)
         context.region.callback_remove(self._icb)
         context.area.tag_redraw()
         if self.properties.animation:
+            context.window_manager.event_timer_remove(SLGBP.animtimer)
             SLGBP.thread = None
             if SLGBP.slgproc:
                 if SLGBP.slgproc.poll() == None:
@@ -936,35 +907,52 @@ class SLGRender(bpy.types.Operator):
 
     def modal(self, context, event):
         if SLGBP.thread:
-            if SLGBP.thread.is_alive():
-                if event.type != 'ESC':
-                    return {'PASS_THROUGH'}
+            if event.type == 'ESC':
                 SLGBP.abort = True
-            self._reset(context)
             if self._iserror:
+                self._reset(context)
                 return {'CANCELLED'}
-            elif SLGBP.abort:
-                self.report('WARNING', "SLG export aborted.")
+            if SLGBP.abort:
+                self._reset(context)
+                self.report({'WARNING'}, "SLG export aborted.")
                 return {'CANCELLED'}
+            if self.properties.animation:
+                if event.type == 'TIMER':
+                    # Make sure it's our timer! (camera fly mode triggers same TIMER)
+                    if time() - SLGBP.animlasttime >= context.scene.slg.batchmodetime:
+                        SLGBP.slgproc.wait()
+                        if context.scene.frame_current+context.scene.frame_step > context.scene.frame_end:
+                            self._reset(context)
+                            self.report({'INFO'}, "SLG animation render done.")
+                            return {'FINISHED'}
+                        else:
+                            context.scene.frame_set(context.scene.frame_current+context.scene.frame_step)
+                            SLGBP.thread = Thread(target=SLGBP.exportrun,args=[context.scene, self._error])
+                            SLGBP.thread.start()
+                            return {'PASS_THROUGH'}
+                return {'PASS_THROUGH'}
             else:
-                self.report('INFO', "SLG export done.")
+                if SLGBP.thread.is_alive():
+                    return {'PASS_THROUGH'}
+                self._reset(context)
+                self.report({'INFO'}, "SLG export done.")
                 return {'FINISHED'}
         return {'PASS_THROUGH'}
 
     def invoke(self, context, event):
         if self.properties.animation and not context.scene.slg.enablebatchmode:
-            self.report('ERROR', "SLGBP: Enable batch mode for animations")
+            self.report({'ERROR'}, "SLGBP: Enable batch mode for animations")
             return {'CANCELLED'}
         if SLGBP.live:
-            self.report('ERROR', "SLGBP: Can't export during SLG Live! mode")
+            self.report({'ERROR'}, "SLGBP: Can't export during SLG Live! mode")
             return {'CANCELLED'}
         if SLGBP.thread:
             if SLGBP.thread.is_alive():
-                self.report('ERROR', "SLGBP is busy")
+                self.report({'ERROR'}, "SLGBP is busy")
                 return {'CANCELLED'}
         if SLGBP.slgproc:
             if SLGBP.slgproc.poll() == None:
-                self.report('ERROR', "SLG is already running")
+                self.report({'ERROR'}, "SLG is already running")
                 return {'CANCELLED'}
         if self.properties.animation:
             context.scene.frame_set(context.scene.frame_start)
@@ -978,8 +966,11 @@ class SLGRender(bpy.types.Operator):
         self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
         self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
         SLGBP.msgrefresh()
-        SLGBP.thread = Thread(target=SLGBP.exportrun,args=[context.scene, self.properties.animation, self._error])
+        SLGBP.thread = Thread(target=SLGBP.exportrun,args=[context.scene, self._error])
         SLGBP.thread.start()
+        if self.properties.animation:
+            SLGBP.animlasttime = time()
+            SLGBP.animtimer = context.window_manager.event_timer_add(context.scene.slg.batchmodetime+1, context.window)
         return {'RUNNING_MODAL'}
 
 # SLG Live operator
@@ -990,10 +981,13 @@ class SLGLive(bpy.types.Operator):
 
     def _error(self, msg):
         self._iserror = True
-        self.report('ERROR', "SLGBP: " + msg)
+        self.report({'ERROR'}, "SLGBP: " + msg)
 
     def modal(self, context, event):
         if self._iserror or SLGBP.abort or event.type == 'ESC':
+            if SLGBP.liveanim:
+                context.window_manager.event_timer_remove(SLGBP.animtimer)
+                SLGBP.liveanim = False
             SLGBP.live = False
             SLGBP.telnet.close()
             context.region.callback_remove(self._pdcb)
@@ -1001,6 +995,22 @@ class SLGLive(bpy.types.Operator):
             context.area.tag_redraw()
             bpy.context.user_preferences.edit.use_global_undo = self._undo
             return {'FINISHED'}
+        if SLGBP.liveanim and event.type == 'TIMER':
+            # Make sure it's our timer! (camera fly mode triggers same TIMER)
+            if time() - SLGBP.animlasttime >= context.scene.slg.batchmodetime:
+                SLGBP.animlasttime = time()
+                SLGBP.telnet.send('render.stop')
+                SLGBP.telnet.send('image.save')
+                if context.scene.frame_current+context.scene.frame_step > context.scene.frame_end:
+                    context.window_manager.event_timer_remove(SLGBP.animtimer)
+                    SLGBP.liveanim = False
+                    SLGBP.msg = 'SLG Live! (ESC to exit)'
+                else:
+                    context.scene.frame_set(context.scene.frame_current+context.scene.frame_step)
+                    SLGBP.livetrigger(context.scene, SLGBP.LIVEALL)
+                    SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(context.scene.frame_current) + " (ESC to abort)"
+                SLGBP.msgrefresh()
+            
         return {'PASS_THROUGH'}
 
     @classmethod
@@ -1011,11 +1021,11 @@ class SLGLive(bpy.types.Operator):
     def invoke(self, context, event):
         if SLGBP.thread:
             if SLGBP.thread.is_alive():
-                self.report('ERROR', "SLGBP is busy")
+                self.report({'ERROR'}, "SLGBP is busy")
                 return {'CANCELLED'}
         if SLGBP.slgproc:
             if SLGBP.slgproc.poll() != None:
-                self.report('ERROR', "SLG must be running with telnet interface enabled")
+                self.report({'ERROR'}, "SLG must be running with telnet interface enabled")
                 return {'CANCELLED'}
         self._iserror = False
         context.window_manager.modal_handler_add(self)
@@ -1059,7 +1069,11 @@ class SLGLiveAnim(bpy.types.Operator):
 
     # def execute(self, context):
     def invoke(self, context, event):
-        Thread(target=SLGBP.liveanimrender,args=[context.scene]).start()
+        SLGBP.liveanim = True
+        context.scene.frame_set(context.scene.frame_start)
+        SLGBP.livetrigger(context.scene, SLGBP.LIVEALL)
+        SLGBP.animlasttime = time()
+        SLGBP.animtimer = context.window_manager.event_timer_add(context.scene.slg.batchmodetime+1, context.window)
         return {'FINISHED'}
 
 class SmallLuxGPURender(bpy.types.RenderEngine):
@@ -1187,8 +1201,8 @@ def slg_add_properties():
         items=(("0", "Path", "Path tracing"),
                ("1", "SPPM", "Stochastic Progressive Photon Mapping"),
                ("2", "Direct", "Direct lighting only"),
-               ("3", "PathGPU", "Path tracing using GPU only"),
-               ("4", "PathGPU2", "New Path tracing using GPU only")),
+               ("3", "PathGPU", "Path tracing using OpenCL only"),
+               ("4", "PathGPU2", "New Path tracing using OpenCL only")),
         default="0")
 
     SLGSettings.sampler_type = EnumProperty(name="Sampler Type",
@@ -1782,8 +1796,9 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col = split.column()
             col.prop(slg, "diffusebounce", text="Diffuse Bounces")
             split = layout.split()
+            col = split.column()
             col.prop(slg, "shadowrays", text="Shadow")
-            split = layout.split()
+            #split = layout.split()
             col = split.column()
             col.prop(slg, "sampleperpixel")
             split = layout.split()
@@ -1872,7 +1887,7 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
 def register():
     bpy.utils.register_module(__name__)
     slg_add_properties()
-    bpy.types.DATA_PT_camera.append(slg_lensradius)
+    bpy.types.DATA_PT_camera_dof.append(slg_lensradius)
     bpy.types.MATERIAL_PT_diffuse.append(slg_forceply)
     bpy.types.OBJECT_PT_transform.append(slg_forceinst)
     bpy.types.WORLD_PT_environment_lighting.append(slg_livescn)
@@ -1883,7 +1898,7 @@ def register():
 
 def unregister():
     bpy.types.Scene.RemoveProperty("slg")
-    bpy.types.DATA_PT_camera.remove(slg_lensradius)
+    bpy.types.DATA_PT_camera_dof.remove(slg_lensradius)
     bpy.types.MATERIAL_PT_diffuse.remove(slg_forceply)
     bpy.types.OBJECT_PT_transform.remove(slg_forceinst)
     bpy.types.WORLD_PT_environment_lighting.remove(slg_livescn)
