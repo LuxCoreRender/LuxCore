@@ -146,7 +146,7 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 			isnan(rad->b) || isinf(rad->b) ||
 			isnan(weight) || isinf(weight))
 		printf(\"(NaN/Inf. error: (%f, %f, %f) [%f]\\n\", rad->r, rad->g, rad->b, weight);*/
-#if defined(__APPLE__)
+#if defined(__APPLE_FIX__)
 
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&pixel->c.r, weight * rad->r);
