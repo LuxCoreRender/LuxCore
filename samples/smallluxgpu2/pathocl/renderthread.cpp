@@ -506,7 +506,7 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -fno-alias";
 
 #if defined(__APPLE__)
-	ss << " -D __APPLE__";
+	ss << " -D __APPLE_FIX__";
 #endif
 
 	//--------------------------------------------------------------------------
