@@ -1348,7 +1348,7 @@ void PathGPU2RenderThread::InitRender() {
 	if (deviceDesc->IsAMDPlatform())
 		ss << " -fno-alias";
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(CL_VERSION_1_0)
 	ss << " -D __APPLE_FIX__";
 #endif
 
