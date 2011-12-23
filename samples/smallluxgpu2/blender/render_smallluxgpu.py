@@ -392,9 +392,15 @@ class SLGBP:
         scn = {}
         def objscn(plyn, matn, objn, mat, tm):
             if tm:
-                scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
+                if bpy.app.build_revision > '42815':
+                    scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
+                        ff(tm[0][0]),ff(tm[1][0]),ff(tm[2][0]),ff(tm[3][0]),ff(tm[0][1]),ff(tm[1][1]),ff(tm[2][1]),ff(tm[3][1]),
+                        ff(tm[0][2]),ff(tm[1][2]),ff(tm[2][2]),ff(tm[3][2]),ff(tm[0][3]),ff(tm[1][3]),ff(tm[2][3]),ff(tm[3][3]))
+                else:
+                    scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
                         ff(tm[0][0]),ff(tm[0][1]),ff(tm[0][2]),ff(tm[0][3]),ff(tm[1][0]),ff(tm[1][1]),ff(tm[1][2]),ff(tm[1][3]),
                         ff(tm[2][0]),ff(tm[2][1]),ff(tm[2][2]),ff(tm[2][3]),ff(tm[3][0]),ff(tm[3][1]),ff(tm[3][2]),ff(tm[3][3]))
+
             if not SLGBP.live:
                 scn['scene.objects.{}.{}'.format(matn,objn)] = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,plyn)
                 if scene.slg.vnormals:
