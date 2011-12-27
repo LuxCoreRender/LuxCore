@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Tue Dec 27 13:23:01 2011
+** Created: Tue Dec 27 15:00:08 2011
 **      by: Qt User Interface Compiler version 4.7.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -41,6 +41,8 @@ public:
     QAction *action_Benchmark_OpenCL_CPUs_GPUs;
     QAction *action_Pause;
     QAction *action_Benchmark_OpenCL_CPUs;
+    QAction *action_LuxBall_Sky;
+    QAction *action_Sala;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout_2;
     QSplitter *splitter_2;
@@ -92,6 +94,12 @@ public:
         action_Benchmark_OpenCL_CPUs = new QAction(MainWindow);
         action_Benchmark_OpenCL_CPUs->setObjectName(QString::fromUtf8("action_Benchmark_OpenCL_CPUs"));
         action_Benchmark_OpenCL_CPUs->setCheckable(true);
+        action_LuxBall_Sky = new QAction(MainWindow);
+        action_LuxBall_Sky->setObjectName(QString::fromUtf8("action_LuxBall_Sky"));
+        action_LuxBall_Sky->setCheckable(true);
+        action_Sala = new QAction(MainWindow);
+        action_Sala->setObjectName(QString::fromUtf8("action_Sala"));
+        action_Sala->setCheckable(true);
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
@@ -176,8 +184,10 @@ public:
         menu_Mode->addAction(action_Benchmark_OpenCL_CPUs);
         menu_Mode->addAction(action_Interactive);
         menu_Mode->addAction(action_Pause);
+        menu_Scene->addAction(action_Sala);
         menu_Scene->addAction(action_LuxBall_HDR);
         menu_Scene->addAction(action_LuxBall);
+        menu_Scene->addAction(action_LuxBall_Sky);
 
         retranslateUi(MainWindow);
         QObject::connect(action_Quit, SIGNAL(triggered()), MainWindow, SLOT(exitApp()));
@@ -189,6 +199,8 @@ public:
         QObject::connect(action_Benchmark_OpenCL_GPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkGPUsMode()));
         QObject::connect(action_Pause, SIGNAL(triggered()), MainWindow, SLOT(setPauseMode()));
         QObject::connect(action_Benchmark_OpenCL_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCPUsMode()));
+        QObject::connect(action_LuxBall_Sky, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallSkyScene()));
+        QObject::connect(action_Sala, SIGNAL(triggered()), MainWindow, SLOT(setSalaScene()));
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -208,6 +220,10 @@ public:
         action_Benchmark_OpenCL_CPUs_GPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL CPUs &+ GPUs)", 0, QApplication::UnicodeUTF8));
         action_Pause->setText(QApplication::translate("MainWindow", "&Pause", 0, QApplication::UnicodeUTF8));
         action_Benchmark_OpenCL_CPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL &CPUs-only)", 0, QApplication::UnicodeUTF8));
+        action_LuxBall_Sky->setText(QApplication::translate("MainWindow", "LuxBall S&ky  (262K triangles)", 0, QApplication::UnicodeUTF8));
+        action_LuxBall_Sky->setShortcut(QApplication::translate("MainWindow", "Ctrl+K", 0, QApplication::UnicodeUTF8));
+        action_Sala->setText(QApplication::translate("MainWindow", "&Sala (488K triangles)", 0, QApplication::UnicodeUTF8));
+        action_Sala->setShortcut(QApplication::translate("MainWindow", "Ctrl+A", 0, QApplication::UnicodeUTF8));
         hardwareDevicesLabel->setText(QApplication::translate("MainWindow", "Hardware Devices", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));

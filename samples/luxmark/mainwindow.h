@@ -66,13 +66,14 @@ public:
 	void SetLuxApp(LuxMarkApp *la) { luxFrameBuffer->SetLuxApp(la); }
 
 private:
-	bool event (QEvent *event);
+	bool event(QEvent *event);
 
 	Ui::MainWindow *ui;
 	QGraphicsPixmapItem *luxLogo;
 	LuxFrameBuffer *luxFrameBuffer;
 	unsigned char *frameBuffer;
 	unsigned int fbWidth, fbHeight;
+	QGraphicsSimpleTextItem *authorLabel;
 	QGraphicsSimpleTextItem *screenLabel;
 	QGraphicsRectItem *screenLabelBack;
 	QLabel *statusbarLabel;
@@ -82,8 +83,12 @@ private:
 private slots:
 	void exitApp();
 	void showAbout();
+
 	void setLuxBallScene();
 	void setLuxBallHDRScene();
+	void setLuxBallSkyScene();
+	void setSalaScene();
+
 	void setBenchmarkGPUsMode();
 	void setBenchmarkCPUsGPUsMode();
 	void setBenchmarkCPUsMode();

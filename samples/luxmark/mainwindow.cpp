@@ -31,6 +31,7 @@
 
 #include <QDateTime>
 #include <QTextStream>
+#include <qt4/QtGui/qgraphicsitem.h>
 
 MainWindow *LogWindow = NULL;
 
@@ -84,9 +85,14 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	luxLogo = renderScene->addPixmap(QPixmap(":/images/resources/luxlogo_bg.png"));
 	luxFrameBuffer = new LuxFrameBuffer(QPixmap(":/images/resources/luxlogo_bg.png"));
 	renderScene->addItem(luxFrameBuffer);
+
+	authorLabel = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	renderScene->addItem(authorLabel);
+
 	screenLabelBack = renderScene->addRect(0.f, 0.f, 1.f, 1.f, QPen(), Qt::lightGray);
 	screenLabel = new QGraphicsSimpleTextItem(QString("[Time: 0secs (Wait)]"));
 	renderScene->addItem(screenLabel);
+
 	ui->RenderView->setScene(renderScene);
 
 	frameBuffer = NULL;
@@ -104,6 +110,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 MainWindow::~MainWindow() {
 	delete ui;
 	delete statusbarLabel;
+	delete authorLabel;
 	delete screenLabel;
 	delete screenLabelBack;
 	delete luxFrameBuffer;
@@ -132,12 +139,26 @@ void MainWindow::showAbout() {
 
 void MainWindow::setLuxBallScene() {
 	LM_LOG("Set LuxBall scene");
+	authorLabel->setText(QString("Scene designed by LuxRender project"));
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL);
 }
 
 void MainWindow::setLuxBallHDRScene() {
 	LM_LOG("Set LuxBall HDR scene");
+	authorLabel->setText(QString("Scene designed by LuxRender project"));
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_HDR);
+}
+
+void MainWindow::setLuxBallSkyScene() {
+	LM_LOG("Set LuxBall Sky scene");
+	authorLabel->setText(QString("Scene designed by LuxRender project"));
+	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_SKY);
+}
+
+void MainWindow::setSalaScene() {
+	LM_LOG("Set Sala scene");
+	authorLabel->setText(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	((LuxMarkApp *)qApp)->SetScene(SCENE_SALA);
 }
 
 void MainWindow::setBenchmarkGPUsMode() {
@@ -170,6 +191,7 @@ void MainWindow::setPauseMode() {
 void MainWindow::ShowLogo() {
 	if (luxFrameBuffer->isVisible()) {
 		luxFrameBuffer->hide();
+		authorLabel->hide();
 		screenLabelBack->hide();
 		screenLabel->hide();
 	}
@@ -221,11 +243,25 @@ void MainWindow::SetModeCheck(const int index) {
 
 void MainWindow::SetSceneCheck(const int index) {
 	if (index == 0) {
+		ui->action_Sala->setChecked(true);
+		ui->action_LuxBall_HDR->setChecked(false);
+		ui->action_LuxBall->setChecked(false);
+		ui->action_LuxBall_Sky->setChecked(false);
+	} else if (index == 1) {
+		ui->action_Sala->setChecked(false);
 		ui->action_LuxBall_HDR->setChecked(true);
 		ui->action_LuxBall->setChecked(false);
-	} else if (index == 1) {
+		ui->action_LuxBall_Sky->setChecked(false);
+	} else if (index == 2) {
+		ui->action_Sala->setChecked(false);
 		ui->action_LuxBall_HDR->setChecked(false);
 		ui->action_LuxBall->setChecked(true);
+		ui->action_LuxBall_Sky->setChecked(false);
+	} else if (index == 3) {
+		ui->action_Sala->setChecked(false);
+		ui->action_LuxBall_HDR->setChecked(false);
+		ui->action_LuxBall->setChecked(false);
+		ui->action_LuxBall_Sky->setChecked(true);
 	} else
 		assert(false);
 
@@ -268,6 +304,8 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 
 	if (!luxFrameBuffer->isVisible()) {
 		luxFrameBuffer->show();
+		authorLabel->show();
+
 		qreal w = Max<qreal>(fbWidth, screenLabel->boundingRect().width());
 		qreal h = fbHeight + screenLabel->boundingRect().height();
 		renderScene->setSceneRect(0.f, 0.f, w, h);
@@ -331,6 +369,10 @@ void MainWindow::UpdateScreenLabel(const char *msg, const bool valid) {
 	renderScene->setSceneRect(0.f, 0.f, w, h);
 	luxFrameBuffer->setPos(Max<qreal>(0.f, (w - fbWidth) / 2), 0.f);
 	screenLabelBack->setRect(0.f, fbHeight, w, screenLabel->boundingRect().height());
+
+	// Update author label
+	authorLabel->setBrush(Qt::blue);
+	authorLabel->setPos(Max<qreal>(0.f, (w - fbWidth) / 2), 0.f);
 
 	// Update status bar with the first line of the message
 	QString qMsg(msg);
