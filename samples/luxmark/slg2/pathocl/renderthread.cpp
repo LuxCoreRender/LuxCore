@@ -361,7 +361,6 @@ void PathOCLRenderThread::InitKernels() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 	// Set #define symbols
 	stringstream ss;
@@ -502,9 +501,6 @@ void PathOCLRenderThread::InitKernels() {
 	}
 
 	// Check the OpenCL vendor and use some specific compiler options
-	if (deviceDesc->IsAMDPlatform())
-		ss << " -fno-alias";
-
 #if defined(__APPLE__) && defined(CL_VERSION_1_0)
 	ss << " -D __APPLE_FIX__";
 #endif

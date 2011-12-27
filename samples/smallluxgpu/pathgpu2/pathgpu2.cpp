@@ -1345,9 +1345,6 @@ void PathGPU2RenderThread::InitRender() {
 	}
 
 	// Check the OpenCL vendor and use some specific compiler options
-	if (deviceDesc->IsAMDPlatform())
-		ss << " -fno-alias";
-
 #if defined(__APPLE__) && defined(CL_VERSION_1_0)
 	ss << " -D __APPLE_FIX__";
 #endif
