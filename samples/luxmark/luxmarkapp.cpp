@@ -166,18 +166,22 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		Properties prop;
 		if (app->mode == BENCHMARK_OCL_GPU) {
 			prop.SetString("renderengine.type", "4");
+			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "0");
 			prop.SetString("opencl.gpu.use", "1");
 		} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
 			prop.SetString("renderengine.type", "4");
+			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "1");
 			prop.SetString("opencl.gpu.use", "1");
 		} else if (app->mode == BENCHMARK_OCL_CPU) {
 			prop.SetString("renderengine.type", "4");
+			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "1");
 			prop.SetString("opencl.gpu.use", "0");
 		} else if (app->mode == INTERACTIVE) {
 			prop.SetString("renderengine.type", "4");
+			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "0");
 			prop.SetString("opencl.gpu.use", "1");
 		} else
