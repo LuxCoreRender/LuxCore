@@ -19,12 +19,41 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXMARK_CFG_H
-#define	_LUXMARK_CFG_H
+#ifndef _RENDERSESSION_H
+#define	_RENDERSESSION_H
 
-// The configured options and settings for LuxMark
+#include "smalllux.h"
+#include "renderconfig.h"
+#include "renderengine.h"
 
-#define LUXMARK_VERSION_MAJOR "2"
-#define LUXMARK_VERSION_MINOR "0beta1"
+#include "luxrays/utils/film/nativefilm.h"
 
-#endif	/* _LUXMARK_CFG_H */
+class RenderSession {
+public:
+	RenderSession(RenderConfig *cfg);
+	~RenderSession();
+
+	void Start();
+	void Stop();
+
+	void BeginEdit();
+	void EndEdit();
+
+	bool NeedPeriodicSave();
+	void SaveFilmImage();
+
+	RenderConfig *renderConfig;
+	RenderEngine *renderEngine;
+
+	boost::mutex filmMutex;
+	NativeFilm *film;
+
+	EditActionList editActions;
+
+protected:
+	double lastPeriodicSave, periodiceSaveTime;
+
+	bool started, editMode, periodicSaveEnabled;
+};
+
+#endif	/* _RENDERSESSION_H */

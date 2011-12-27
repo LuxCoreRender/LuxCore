@@ -23,12 +23,10 @@
 
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
-#include "renderconfig.h"
 #include "luxrays/utils/film/film.h"
-#include "path/path.h"
-#include "sppm/sppm.h"
-#include "pathgpu/pathgpu.h"
 #include "resultdialog.h"
+#include "renderengine.h"
+#include "pathocl/pathocl.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -53,7 +51,7 @@ LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
 	engineInitThread = NULL;
 	engineInitDone = false;
 	renderingStartTime = 0.0;
-	renderConfig = NULL;
+	renderSession = NULL;
 	renderRefreshTimer = NULL;
 	hardwareTreeModel = NULL;
 }
@@ -64,7 +62,7 @@ LuxMarkApp::~LuxMarkApp() {
 		engineInitThread->join();
 		delete engineInitThread;
 	}
-	delete renderConfig;
+	delete renderSession;
 	delete mainWin;
 	delete hardwareTreeModel;
 }
@@ -106,8 +104,8 @@ void LuxMarkApp::Stop() {
 	engineInitDone = false;
 
 	// Free the scene if required
-	delete renderConfig;
-	renderConfig = NULL;
+	delete renderSession;
+	renderSession = NULL;
 }
 
 void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
@@ -123,15 +121,13 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 	// Initialize the new mode
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||
-			(mode == BENCHMARK_OCL_CPU) || (mode == BENCHMARK_NATIVE)) {
+			(mode == BENCHMARK_OCL_CPU)) {
 		if (mode == BENCHMARK_OCL_GPU)
 			mainWin->SetModeCheck(0);
 		else if (mode == BENCHMARK_OCL_CPUGPU)
 			mainWin->SetModeCheck(1);
-		else if (mode == BENCHMARK_OCL_CPU)
-			mainWin->SetModeCheck(2);
 		else
-			mainWin->SetModeCheck(3);
+			mainWin->SetModeCheck(2);
 
 		// Update timer
 		renderRefreshTimer = new QTimer();
@@ -164,55 +160,46 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 	try {
 		// Initialize the new mode
-		app->renderConfig = new RenderingConfig(app->sceneName);
+		RenderConfig *renderConfig = new RenderConfig(app->sceneName);
 
 		// Overwrite properties according the current mode
 		Properties prop;
 		if (app->mode == BENCHMARK_OCL_GPU) {
-			prop.SetString("renderengine.type", "3");
-			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("renderengine.type", "4");
 			prop.SetString("opencl.cpu.use", "0");
 			prop.SetString("opencl.gpu.use", "1");
-			prop.SetString("opencl.latency.mode", "1");
-			prop.SetString("sampler.spp", "4");
 		} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
-			prop.SetString("renderengine.type", "3");
-			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("renderengine.type", "4");
 			prop.SetString("opencl.cpu.use", "1");
 			prop.SetString("opencl.gpu.use", "1");
-			prop.SetString("opencl.latency.mode", "1");
-			prop.SetString("sampler.spp", "4");
 		} else if (app->mode == BENCHMARK_OCL_CPU) {
-			prop.SetString("renderengine.type", "3");
-			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("renderengine.type", "4");
 			prop.SetString("opencl.cpu.use", "1");
 			prop.SetString("opencl.gpu.use", "0");
-			prop.SetString("opencl.latency.mode", "1");
-			prop.SetString("sampler.spp", "4");
-		} else if (app->mode == BENCHMARK_NATIVE) {
-			prop.SetString("renderengine.type", "0");
-			stringstream ss;
-			ss << boost::thread::hardware_concurrency();
-			prop.SetString("opencl.nativethread.count", ss.str().c_str());
-			prop.SetString("opencl.cpu.use", "0");
-			prop.SetString("opencl.gpu.use", "0");
-			prop.SetString("opencl.latency.mode", "0");
-			prop.SetString("sampler.spp", "4");
 		} else if (app->mode == INTERACTIVE) {
-			prop.SetString("renderengine.type", "3");
-			prop.SetString("opencl.nativethread.count", "0");
+			prop.SetString("renderengine.type", "4");
 			prop.SetString("opencl.cpu.use", "0");
 			prop.SetString("opencl.gpu.use", "1");
-			prop.SetString("opencl.latency.mode", "1");
-			prop.SetString("sampler.spp", "1");
 		} else
 			assert (false);
 
-		app->renderConfig->cfg.Load(prop);
-		app->renderConfig->Init();
+		renderConfig->cfg.Load(prop);
+		app->renderSession = new RenderSession(renderConfig);
+		// Start the rendering
+		app->renderSession->Start();
 
 		// Initialize hardware information
-		app->hardwareTreeModel = new HardwareTreeModel(app->renderConfig->GetAvailableDeviceDescriptions());
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		if (app->renderSession->renderEngine->GetEngineType() == PATHOCL)
+			app->hardwareTreeModel = new HardwareTreeModel(
+					((PathOCLRenderEngine *)app->renderSession->renderEngine)->GetAvailableDeviceDescriptions());
+		else {
+#endif
+			const vector<DeviceDescription *> devDescs;
+			app->hardwareTreeModel = new HardwareTreeModel(devDescs);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		}
+#endif
 
 		// Done
 		app->renderingStartTime = luxrays::WallClockTime();
@@ -234,53 +221,32 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 	mainWin->SetHadwareTreeModel(hardwareTreeModel);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (renderConfig->GetRenderEngine()->GetEngineType() == PATHGPU) {
-		PathGPURenderEngine *pre = (PathGPURenderEngine *)renderConfig->GetRenderEngine();
-
-		// Need to update the Film
-		pre->UpdateFilm();
-	}
-#endif
+	RenderConfig *renderConfig = renderSession->renderConfig;
+	RenderEngine *renderEngine = renderSession->renderEngine;
+	renderEngine->UpdateFilm();
 
 	// Get the rendered image
-	renderConfig->film->UpdateScreenBuffer();
-	const float *pixels = renderConfig->film->GetScreenBuffer();
+	Film *film = renderSession->film;
+	film->UpdateScreenBuffer();
+	const float *pixels = film->GetScreenBuffer();
 
 	// Update the window
-	mainWin->ShowFrameBuffer(pixels, renderConfig->film->GetWidth(), renderConfig->film->GetHeight());
+	mainWin->ShowFrameBuffer(pixels, film->GetWidth(), film->GetHeight());
 
 	// Update the statistics
 	double raysSec = 0.0;
-	const vector<IntersectionDevice *> &intersectionDevices = renderConfig->GetIntersectionDevices();
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-
-	double sampleSec = 0.0;
-	int renderingTime = 0;
-	
-	switch (renderConfig->GetRenderEngine()->GetEngineType()) {
-		case DIRECTLIGHT:
-		case PATH: {
-			renderingTime = int(renderConfig->film->GetTotalTime());
-			sampleSec = renderConfig->film->GetAvgSampleSec();
-			break;
-		}
-		case SPPM: {
-			SPPMRenderEngine *sre = (SPPMRenderEngine *)renderConfig->GetRenderEngine();
-			renderingTime = int(sre->GetRenderingTime());
-			break;
-		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		case PATHGPU: {
-			PathGPURenderEngine *pre = (PathGPURenderEngine *)renderConfig->GetRenderEngine();
-			renderingTime = int(pre->GetRenderingTime());
-			sampleSec = pre->GetTotalSamplesSec();
-		}
-#endif
-		default:
-			assert (false);
+	if (renderEngine->GetEngineType() == PATHOCL) {
+		const vector<OpenCLIntersectionDevice *> &intersectionDevices =
+			((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
+
+		for (size_t i = 0; i < intersectionDevices.size(); ++i)
+			raysSec += intersectionDevices[i]->GetPerformance();
 	}
+#endif
+
+	double sampleSec = renderEngine->GetTotalSamplesSec();
+	int renderingTime = int(renderEngine->GetRenderingTime());
 
 	// After 120secs of benchmark, show the result dialog
 	bool benchmarkDone = (renderingTime > 120) && (mode != INTERACTIVE);
@@ -301,13 +267,15 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	sprintf(buf, "[Mode: %s][Time: %dsecs%s][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
 			(mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
 				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" : 
-					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" :
-						((mode == BENCHMARK_NATIVE) ? "Native CPUs" : "Interactive"))),
+					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" : "Interactive")),
 			renderingTime, validBuf, int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
 #ifndef LUXRAYS_DISABLE_OPENCL
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) || (mode == BENCHMARK_OCL_CPU)) {
+		const vector<OpenCLIntersectionDevice *> &intersectionDevices =
+			((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
+
 		ss << "\n\nOpenCL rendering devices:";
 		double minPerf = intersectionDevices[0]->GetPerformance();
 		double totalPerf = intersectionDevices[0]->GetPerformance();
@@ -358,13 +326,17 @@ void LuxMarkApp::HandleMouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 				const qreal distX = event->lastPos().x() - mouseGrabLastX;
 				const qreal distY = event->lastPos().y() - mouseGrabLastY;
 
+				RenderConfig *renderConfig = renderSession->renderConfig;
+				renderSession->BeginEdit();
 				renderConfig->scene->camera->RotateDown(0.04f * distY * ROTATE_STEP);
 				renderConfig->scene->camera->RotateRight(0.04f * distX * ROTATE_STEP);
+				renderConfig->scene->camera->Update(
+					renderSession->film->GetWidth(), renderSession->film->GetHeight());
+				renderSession->editActions.AddAction(CAMERA_EDIT);
+				renderSession->EndEdit();
 
 				mouseGrabLastX = event->lastPos().x();
 				mouseGrabLastY = event->lastPos().y();
-
-				renderConfig->ReInit(false);
 				lastMouseUpdate = WallClockTime();
 			}
 		} else if (mouseButton2) {
@@ -373,13 +345,17 @@ void LuxMarkApp::HandleMouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 				const qreal distX = event->lastPos().x() - mouseGrabLastX;
 				const qreal distY = event->lastPos().y() - mouseGrabLastY;
 
+				RenderConfig *renderConfig = renderSession->renderConfig;
+				renderSession->BeginEdit();
 				renderConfig->scene->camera->TranslateRight(0.04f * distX * MOVE_STEP);
 				renderConfig->scene->camera->TranslateBackward(0.04f * distY * MOVE_STEP);
+				renderConfig->scene->camera->Update(
+					renderSession->film->GetWidth(), renderSession->film->GetHeight());
+				renderSession->editActions.AddAction(CAMERA_EDIT);
+				renderSession->EndEdit();
 
 				mouseGrabLastX = event->lastPos().x();
 				mouseGrabLastY = event->lastPos().y();
-
-				renderConfig->ReInit(false);
 				lastMouseUpdate = WallClockTime();
 			}
 		}

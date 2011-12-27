@@ -79,14 +79,6 @@ int HardwareTreeItem::row() const {
 HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs) : QAbstractItemModel() {
 	rootItem = new HardwareTreeItem("Hardware");
 
-	// Native CPU
-	HardwareTreeItem *nativeCPU = new HardwareTreeItem("Native CPU");
-	rootItem->appendChild(nativeCPU);
-
-	std::stringstream ss;
-	ss << "Cores count: " << boost::thread::hardware_concurrency();
-	nativeCPU->appendChild(new HardwareTreeItem(ss.str().c_str()));
-
 	// OpenCL devices
 	HardwareTreeItem *oclDev = new HardwareTreeItem("OpenCL");
 	rootItem->appendChild(oclDev);
@@ -106,7 +98,7 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 			cl::Platform platform = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
 			string name = "[" + platform.getInfo<CL_PLATFORM_VENDOR>() + "] " + odevDesc->GetName();
 			HardwareTreeItem *newNode = new HardwareTreeItem(name.c_str());
-			ss.str("");
+			stringstream ss;
 			ss << "Compute Units: " << odevDesc->GetComputeUnits();
 			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
 			ss.str("");

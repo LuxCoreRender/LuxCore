@@ -19,47 +19,21 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _RENDERENGINE_H
-#define	_RENDERENGINE_H
+#ifndef _SLG_KERNELS_H
+#define	_SLG_KERNELS_H
 
-#include "smalllux.h"
+#include <string>
 
-#include "luxrays/utils/film/film.h"
+namespace luxrays {
 
-enum RenderEngineType {
-	PATH, SPPM, DIRECTLIGHT, PATHGPU
-};
+// Intersection kernels
+extern std::string KernelSource_PathOCL_kernel_core;
+extern std::string KernelSource_PathOCL_kernel_datatypes;
+extern std::string KernelSource_PathOCL_kernel_filters;
+extern std::string KernelSource_PathOCL_kernel_samplers;
+extern std::string KernelSource_PathOCL_kernel_scene;
+extern std::string KernelSource_PathOCL_kernels;
 
-class RenderEngine {
-public:
-	RenderEngine(SLGScene *scn, Film *flm, boost::mutex *flmMutex) {
-		scene = scn;
-		film = flm;
-		filmMutex = flmMutex;
-		started = false;
-	};
-	virtual ~RenderEngine() { };
+}
 
-	virtual void Start() {
-		assert (!started);
-		started = true;
-	}
-    virtual void Interrupt() = 0;
-	virtual void Stop() {
-		assert (started);
-		started = false;
-	}
-
-	virtual unsigned int GetPass() const = 0;
-	virtual unsigned int GetThreadCount() const = 0;
-	virtual RenderEngineType GetEngineType() const = 0;
-
-protected:
-	SLGScene *scene;
-	Film *film;
-	boost::mutex *filmMutex;
-
-	bool started;
-};
-
-#endif	/* _RENDERENGINE_H */
+#endif	/* _SLG_KERNELS_H */
