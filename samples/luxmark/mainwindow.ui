@@ -137,8 +137,10 @@
     <property name="title">
      <string>&amp;Scene</string>
     </property>
+    <addaction name="action_Sala"/>
     <addaction name="action_LuxBall_HDR"/>
     <addaction name="action_LuxBall"/>
+    <addaction name="action_LuxBall_Sky"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Mode"/>
@@ -219,6 +221,28 @@
    </property>
    <property name="text">
     <string>Benchmark (OpenCL &amp;CPUs-only)</string>
+   </property>
+  </action>
+  <action name="action_LuxBall_Sky">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>LuxBall S&amp;ky  (262K triangles)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+K</string>
+   </property>
+  </action>
+  <action name="action_Sala">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Sala (488K triangles)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
    </property>
   </action>
  </widget>
@@ -370,12 +394,46 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_LuxBall_Sky</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setLuxBallSkyScene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_Sala</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setSalaScene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
   <slot>showAbout()</slot>
   <slot>setLuxBallScene()</slot>
   <slot>setLuxBallHDRScene()</slot>
+  <slot>setLuxBallSkyScene()</slot>
+  <slot>setSalaScene()</slot>
   <slot>setBenchmarkGPUsMode()</slot>
   <slot>setInteractiveMode()</slot>
   <slot>setBenchmarkCPUsGPUsMode()</slot>

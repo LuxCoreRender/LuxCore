@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'resultdialog.h'
 **
-** Created: Tue Dec 27 13:23:01 2011
+** Created: Tue Dec 27 14:20:06 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.7.0)
 **
 ** WARNING! All changes made in this file will be lost!

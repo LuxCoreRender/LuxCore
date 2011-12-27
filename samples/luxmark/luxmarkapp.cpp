@@ -80,7 +80,7 @@ void LuxMarkApp::Init(void) {
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
 
-	InitRendering(BENCHMARK_OCL_GPU, SCENE_LUXBALL_HDR);
+	InitRendering(BENCHMARK_OCL_GPU, SCENE_SALA);
 }
 
 void LuxMarkApp::SetMode(LuxMarkAppMode m) {
@@ -114,10 +114,14 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 	Stop();
 
-	if (!strcmp(scnName, SCENE_LUXBALL_HDR))
+	if (!strcmp(scnName, SCENE_SALA))
 		mainWin->SetSceneCheck(0);
-	else if (!strcmp(scnName, SCENE_LUXBALL))
+	else if (!strcmp(scnName, SCENE_LUXBALL_HDR))
 		mainWin->SetSceneCheck(1);
+	else if (!strcmp(scnName, SCENE_LUXBALL))
+		mainWin->SetSceneCheck(2);
+	else if (!strcmp(scnName, SCENE_LUXBALL_SKY))
+		mainWin->SetSceneCheck(3);
 
 	// Initialize the new mode
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||
