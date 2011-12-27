@@ -88,9 +88,6 @@
            <attribute name="headerVisible">
             <bool>false</bool>
            </attribute>
-           <attribute name="headerVisible">
-            <bool>false</bool>
-           </attribute>
           </widget>
          </item>
         </layout>
@@ -133,7 +130,6 @@
     <addaction name="action_Benchmark_OpenCL_GPUs"/>
     <addaction name="action_Benchmark_OpenCL_CPUs_GPUs"/>
     <addaction name="action_Benchmark_OpenCL_CPUs"/>
-    <addaction name="action_Benchmark_Native_CPUs"/>
     <addaction name="action_Interactive"/>
     <addaction name="action_Pause"/>
    </widget>
@@ -209,31 +205,12 @@
     <string>Benchmark (OpenCL CPUs &amp;+ GPUs)</string>
    </property>
   </action>
-  <action name="action_Benchmark_Native_CPUs">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Benchmark (&amp;Native CPUs-only)</string>
-   </property>
-  </action>
   <action name="action_Pause">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
     <string>&amp;Pause</string>
-   </property>
-  </action>
-  <action name="action_Audi_RS8">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Audi RS8 (668K triangles)</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+8</string>
    </property>
   </action>
   <action name="action_Benchmark_OpenCL_CPUs">
@@ -350,22 +327,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>setBenchmarkGPUsMode()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>511</x>
-     <y>383</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>action_Benchmark_Native_CPUs</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>setBenchmarkNativeMode()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>

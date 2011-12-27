@@ -155,11 +155,6 @@ void MainWindow::setBenchmarkCPUsMode() {
 	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_OCL_CPU);
 }
 
-void MainWindow::setBenchmarkNativeMode() {
-	LM_LOG("Set Benchmark Native CPU mode");
-	//((LuxMarkApp *)qApp)->SetMode(BENCHMARK_NATIVE);
-}
-
 void MainWindow::setInteractiveMode() {
 	LM_LOG("Set Interactive mode");
 	((LuxMarkApp *)qApp)->SetMode(INTERACTIVE);
@@ -194,42 +189,30 @@ void MainWindow::SetModeCheck(const int index) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(true);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
-		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 1) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(true);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
-		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 2) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(true);
-		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 3) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
-		ui->action_Benchmark_Native_CPUs->setChecked(true);
-		ui->action_Interactive->setChecked(false);
+		ui->action_Interactive->setChecked(true);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 4) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
-		ui->action_Benchmark_Native_CPUs->setChecked(false);
-		ui->action_Interactive->setChecked(true);
-		ui->action_Pause->setChecked(false);
-	} else if (index == 5) {
-		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
-		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
-		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
-		ui->action_Benchmark_Native_CPUs->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(true);
 	} else

@@ -87,7 +87,6 @@ private slots:
 	void setBenchmarkGPUsMode();
 	void setBenchmarkCPUsGPUsMode();
 	void setBenchmarkCPUsMode();
-	void setBenchmarkNativeMode();
 	void setInteractiveMode();
 	void setPauseMode();
 };

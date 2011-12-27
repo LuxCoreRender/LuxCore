@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Sat Apr 30 12:19:56 2011
+** Created: Tue Dec 27 11:59:37 2011
 **      by: Qt User Interface Compiler version 4.7.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -39,9 +39,7 @@ public:
     QAction *action_LuxBall_HDR;
     QAction *action_LuxBall;
     QAction *action_Benchmark_OpenCL_CPUs_GPUs;
-    QAction *action_Benchmark_Native_CPUs;
     QAction *action_Pause;
-    QAction *action_Audi_RS8;
     QAction *action_Benchmark_OpenCL_CPUs;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout_2;
@@ -88,15 +86,9 @@ public:
         action_Benchmark_OpenCL_CPUs_GPUs = new QAction(MainWindow);
         action_Benchmark_OpenCL_CPUs_GPUs->setObjectName(QString::fromUtf8("action_Benchmark_OpenCL_CPUs_GPUs"));
         action_Benchmark_OpenCL_CPUs_GPUs->setCheckable(true);
-        action_Benchmark_Native_CPUs = new QAction(MainWindow);
-        action_Benchmark_Native_CPUs->setObjectName(QString::fromUtf8("action_Benchmark_Native_CPUs"));
-        action_Benchmark_Native_CPUs->setCheckable(true);
         action_Pause = new QAction(MainWindow);
         action_Pause->setObjectName(QString::fromUtf8("action_Pause"));
         action_Pause->setCheckable(true);
-        action_Audi_RS8 = new QAction(MainWindow);
-        action_Audi_RS8->setObjectName(QString::fromUtf8("action_Audi_RS8"));
-        action_Audi_RS8->setCheckable(true);
         action_Benchmark_OpenCL_CPUs = new QAction(MainWindow);
         action_Benchmark_OpenCL_CPUs->setObjectName(QString::fromUtf8("action_Benchmark_OpenCL_CPUs"));
         action_Benchmark_OpenCL_CPUs->setCheckable(true);
@@ -182,7 +174,6 @@ public:
         menu_Mode->addAction(action_Benchmark_OpenCL_GPUs);
         menu_Mode->addAction(action_Benchmark_OpenCL_CPUs_GPUs);
         menu_Mode->addAction(action_Benchmark_OpenCL_CPUs);
-        menu_Mode->addAction(action_Benchmark_Native_CPUs);
         menu_Mode->addAction(action_Interactive);
         menu_Mode->addAction(action_Pause);
         menu_Scene->addAction(action_LuxBall_HDR);
@@ -196,7 +187,6 @@ public:
         QObject::connect(action_Benchmark_OpenCL_CPUs_GPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCPUsGPUsMode()));
         QObject::connect(action_Interactive, SIGNAL(triggered()), MainWindow, SLOT(setInteractiveMode()));
         QObject::connect(action_Benchmark_OpenCL_GPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkGPUsMode()));
-        QObject::connect(action_Benchmark_Native_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkNativeMode()));
         QObject::connect(action_Pause, SIGNAL(triggered()), MainWindow, SLOT(setPauseMode()));
         QObject::connect(action_Benchmark_OpenCL_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCPUsMode()));
 
@@ -216,10 +206,7 @@ public:
         action_LuxBall->setText(QApplication::translate("MainWindow", "&LuxBall  (262K triangles)", 0, QApplication::UnicodeUTF8));
         action_LuxBall->setShortcut(QApplication::translate("MainWindow", "Ctrl+L", 0, QApplication::UnicodeUTF8));
         action_Benchmark_OpenCL_CPUs_GPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL CPUs &+ GPUs)", 0, QApplication::UnicodeUTF8));
-        action_Benchmark_Native_CPUs->setText(QApplication::translate("MainWindow", "Benchmark (&Native CPUs-only)", 0, QApplication::UnicodeUTF8));
         action_Pause->setText(QApplication::translate("MainWindow", "&Pause", 0, QApplication::UnicodeUTF8));
-        action_Audi_RS8->setText(QApplication::translate("MainWindow", "Audi RS8 (668K triangles)", 0, QApplication::UnicodeUTF8));
-        action_Audi_RS8->setShortcut(QApplication::translate("MainWindow", "Ctrl+8", 0, QApplication::UnicodeUTF8));
         action_Benchmark_OpenCL_CPUs->setText(QApplication::translate("MainWindow", "Benchmark (OpenCL &CPUs-only)", 0, QApplication::UnicodeUTF8));
         hardwareDevicesLabel->setText(QApplication::translate("MainWindow", "Hardware Devices", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
