@@ -225,7 +225,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
 					buildDevice.push_back(oclDevice);
-					program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -fno-alias" : "-I.");
+					program.build(buildDevice, "-I.");
 				} catch (cl::Error err) {
 					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
@@ -289,7 +289,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
 						buildDevice.push_back(oclDevice);
-						program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -fno-alias" : "-I.");
+						program.build(buildDevice, "-I.");
 					} catch (cl::Error err) {
 						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compilation error:\n" << strError.c_str());
@@ -321,7 +321,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
 						buildDevice.push_back(oclDevice);
-						program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -DUSE_IMAGE_STORAGE -fno-alias" : "-I. -DUSE_IMAGE_STORAGE");
+						program.build(buildDevice, "-I. -DUSE_IMAGE_STORAGE");
 					} catch (cl::Error err) {
 						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage compilation error:\n" << strError.c_str());
@@ -491,7 +491,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
 					buildDevice.push_back(oclDevice);
-					program.build(buildDevice, deviceDesc->IsAMDPlatform() ? "-I. -fno-alias" : "-I.");
+					program.build(buildDevice, "-I.");
 				} catch (cl::Error err) {
 					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH compilation error:\n" << strError.c_str());
