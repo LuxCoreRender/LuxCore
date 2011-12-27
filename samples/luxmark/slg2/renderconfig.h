@@ -19,12 +19,30 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXMARK_CFG_H
-#define	_LUXMARK_CFG_H
+#ifndef _RENDERCONFIG_H
+#define	_RENDERCONFIG_H
 
-// The configured options and settings for LuxMark
+#include "smalllux.h"
 
-#define LUXMARK_VERSION_MAJOR "2"
-#define LUXMARK_VERSION_MINOR "0beta1"
+#include <boost/thread/mutex.hpp>
 
-#endif	/* _LUXMARK_CFG_H */
+#include "luxrays/utils/properties.h"
+
+extern string SLG_LABEL;
+
+class RenderConfig {
+public:
+	RenderConfig(const string &fileName);
+	~RenderConfig();
+
+	void SetScreenRefreshInterval(const unsigned int t);
+	unsigned int GetScreenRefreshInterval() const;
+
+	Properties cfg;
+	Scene *scene;
+
+private:
+	unsigned int screenRefreshInterval;
+};
+
+#endif	/* _RENDERCONFIG_H */

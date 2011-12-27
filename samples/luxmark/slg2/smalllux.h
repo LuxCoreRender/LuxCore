@@ -80,12 +80,13 @@ private:
 #define LM_LOG_LUXRAYS(a) { LM_LOG("<FONT COLOR=\"#000000\"><B>[LuxRays]</B></FONT> " << a); }
 #define LM_LOG_SDL(a) { LM_LOG("<FONT COLOR=\"#000000\"><B>[LuxRays::SDL]</B></FONT> " << a); }
 #define LM_LOG_ENGINE(a) { LM_LOG("<FONT COLOR=\"#00ff00\"><B>[RenderEngine]</B></FONT> " << a); }
-#define LM_LOG_CFG(a) { LM_LOG("<FONT COLOR=\"#005500\"><B>[RenderConfig]</B></FONT> " << a); }
+#define LM_LOG_CFG(a) { LM_LOG("<FONT COLOR=\"#009900\"><B>[RenderConfig]</B></FONT> " << a); }
+#define LM_LOG_SESSION(a) { LM_LOG("<FONT COLOR=\"#002200\"><B>[RenderSession]</B></FONT> " << a); }
 
 #define LM_ERROR(a) { if (LogWindow) { std::stringstream _LM_ERR_LOCAL_SS; _LM_ERR_LOCAL_SS << a; qApp->postEvent(LogWindow, new LuxErrorEvent(QString(_LM_ERR_LOCAL_SS.str().c_str()))); }}
 
 enum LuxMarkAppMode {
-	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU,  BENCHMARK_OCL_CPU, BENCHMARK_NATIVE, INTERACTIVE, PAUSE
+	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU,  BENCHMARK_OCL_CPU, INTERACTIVE, PAUSE
 };
 
 #endif	/* _SMALLLUX_H */

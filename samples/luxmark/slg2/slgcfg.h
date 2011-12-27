@@ -19,35 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SCENE_H
-#define	_SCENE_H
+#ifndef _SLG_CFG_H
+#define	_SLG_CFG_H
 
-#include <string>
-#include <iostream>
-#include <fstream>
+// The configured options and settings for SmallLuxGPU
 
-#include "smalllux.h"
-#include "volume.h"
+#define SLG_VERSION_MAJOR "2"
+#define SLG_VERSION_MINOR "0devel4"
 
-#include "luxrays/core/context.h"
-#include "luxrays/utils/core/exttrianglemesh.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-
-typedef enum {
-	ONE_UNIFORM, ALL_UNIFORM
-} DirectLightStrategy;
-
-typedef enum {
-	PROBABILITY, IMPORTANCE
-} RussianRouletteStrategy;
-
-class SLGScene : public Scene {
-public:
-	SLGScene(const string &fileName, Film *film, const int accelType);
-	~SLGScene();
-
-	VolumeIntegrator *volumeIntegrator;
-};
-
-#endif	/* _SCENE_H */
+#endif	/* _SLG_CFG_H */

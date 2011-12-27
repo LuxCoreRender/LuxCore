@@ -157,7 +157,7 @@ void MainWindow::setBenchmarkCPUsMode() {
 
 void MainWindow::setBenchmarkNativeMode() {
 	LM_LOG("Set Benchmark Native CPU mode");
-	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_NATIVE);
+	//((LuxMarkApp *)qApp)->SetMode(BENCHMARK_NATIVE);
 }
 
 void MainWindow::setInteractiveMode() {

@@ -19,8 +19,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
-set(LUXMARK_VERSION_MAJOR 1)
-set(LUXMARK_VERSION_MINOR 1beta1)
+set(LUXMARK_VERSION_MAJOR 2)
+set(LUXMARK_VERSION_MINOR 0beta1)
 
 find_package(Qt4 REQUIRED)
 IF(QT4_FOUND)
@@ -44,25 +44,33 @@ configure_file(
 #
 ###########################################################################
 
-IF(WIN32)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo "#include \"pathgpu/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo std::string luxrays::KernelSource_PathGPU = >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND for /F \"tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\pathgpu\\kernels\\pathgpu_kernel.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cl
-	)
-ELSE(WIN32)
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo \"\#include \\"pathgpu/kernels/kernels.h\\"\" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo "std::string luxrays::KernelSource_PathGPU = " >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		COMMAND echo "\;" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu_kernel.cpp
-		MAIN_DEPENDENCY pathgpu/kernels/pathgpu_kernel.cl
-	)
-ENDIF(WIN32)
+#
+# PathOCL kernel
+#
+SET(KERNELS kernel_core kernel_datatypes kernel_filters kernel_samplers kernel_scene kernels)
+FOREACH(kernel ${KERNELS})
+	STRING(TOLOWER ${kernel} kernel_lowercase)
+
+	IF(WIN32)
+		add_custom_command(
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo "#include \"slg2/pathocl/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo std::string luxrays::KernelSource_PathOCL_${kernel} = >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND for /F \"tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\slg2\\pathocl\\kernels\\pathocl_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cl
+		)
+	ELSE(WIN32)
+		add_custom_command(
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo \"\#include \\"pathocl/kernels/kernels.h\\"\" > ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo "std::string luxrays::KernelSource_PathOCL_${kernel} = " >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND cat pathocl/kernels/pathocl_${kernel_lowercase}.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND echo "\;" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cl
+		)
+	ENDIF(WIN32)
+ENDFOREACH(kernel)
 
 #############################################################################
 #
@@ -83,17 +91,18 @@ set(LUXMARK_SRCS
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #!!! Files copied from SLG, do not edit the files !!!
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	path/path.cpp
-	pathgpu/kernels/pathgpu_kernel.cpp
-	pathgpu/pathgpu.cpp
-	renderconfig.cpp
-	slgscene.cpp
-    sppm/hashgrid.cpp
-    sppm/hybridhashgrid.cpp
-    sppm/hitpoints.cpp
-    sppm/kdtree.cpp
-    sppm/sppm.cpp
-	volume.cpp
+	slg2/renderconfig.cpp
+	slg2/renderengine.cpp
+	slg2/rendersession.cpp
+	slg2/pathocl/kernels/pathocl_kernel_core.cpp
+	slg2/pathocl/kernels/pathocl_kernel_datatypes.cpp
+	slg2/pathocl/kernels/pathocl_kernel_filters.cpp
+	slg2/pathocl/kernels/pathocl_kernel_samplers.cpp
+	slg2/pathocl/kernels/pathocl_kernel_scene.cpp
+	slg2/pathocl/kernels/pathocl_kernels.cpp
+	slg2/pathocl/compiledscene.cpp
+	slg2/pathocl/pathocl.cpp
+	slg2/pathocl/renderthread.cpp
 	)
 set(LUXMARK_MOC
 	aboutdialog.h
@@ -117,6 +126,7 @@ QT4_WRAP_CPP(LUXMARK_MOC_SRCS ${LUXMARK_MOC})
 
 include_directories(${LUXRAYS_INCLUDE_DIR})
 include_directories(".")
+include_directories("slg2")
 link_directories (${LUXRAYS_LIB_DIR})
 
 set(LUXMARK_SRCS

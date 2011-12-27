@@ -19,12 +19,37 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_CFG_H
-#define	_SLG_CFG_H
+#include "renderconfig.h"
 
-// The configured options and settings for SmallLuxGPU
+#include "luxrays/utils/film/film.h"
 
-#define SLG_VERSION_MAJOR "1"
-#define SLG_VERSION_MINOR "7beta1"
+string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
-#endif	/* _SLG_CFG_H */
+RenderConfig::RenderConfig(const string &fileName) {
+	LM_LOG_CFG("Reading configuration file: " << fileName);
+	cfg.LoadFile(fileName);
+
+	LM_LOG_CFG("Configuration: ");
+	vector<string> keys = cfg.GetAllKeys();
+	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
+		LM_LOG_CFG("  " << *i << " = " << cfg.GetString(*i, ""));
+
+	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
+
+	// Create the Scene
+	const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
+	const int accelType = cfg.GetInt("accelerator.type", -1);
+
+	scene = new Scene(sceneFileName, accelType);
+}
+
+RenderConfig::~RenderConfig() {
+	delete scene;
+}
+void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {
+	screenRefreshInterval = t;
+}
+
+unsigned int RenderConfig::GetScreenRefreshInterval() const {
+	return screenRefreshInterval;
+}

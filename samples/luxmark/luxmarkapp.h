@@ -28,7 +28,7 @@
 #include <boost/thread.hpp>
 
 #include "mainwindow.h"
-#include "renderconfig.h"
+#include "rendersession.h"
 #include "hardwaretree.h"
 
 //------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ private:
 	boost::thread *engineInitThread;
 	double renderingStartTime;
 	bool engineInitDone;
-	RenderingConfig *renderConfig;
+	RenderSession *renderSession;
 
 	QTimer *renderRefreshTimer;
 
