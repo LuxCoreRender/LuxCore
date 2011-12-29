@@ -348,7 +348,7 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 	//LM_LOG("Screen updated");
 }
 
-void MainWindow::SetHadwareTreeModel(HardwareTreeModel *treeModel) {
+void MainWindow::SetHardwareTreeModel(HardwareTreeModel *treeModel) {
 	if (!ui->HardwareView->model()) {
 		ui->HardwareView->setModel(treeModel);
 		ui->HardwareView->expandAll();

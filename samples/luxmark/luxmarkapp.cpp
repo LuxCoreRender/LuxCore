@@ -244,7 +244,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	if (!engineInitDone)
 		return;
 
-	mainWin->SetHadwareTreeModel(hardwareTreeModel);
+	mainWin->SetHardwareTreeModel(hardwareTreeModel);
 
 	RenderConfig *renderConfig = renderSession->renderConfig;
 	RenderEngine *renderEngine = renderSession->renderEngine;
