@@ -207,6 +207,13 @@ QVariant HardwareTreeModel::data(const QModelIndex &index, int role) const {
 				return Qt::Unchecked;
 		} else
 			return QVariant();
+	} else if (role == Qt::ForegroundRole) {
+		HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
+
+		if (item->isCheckable())
+			return QVariant(QColor(Qt::blue));
+		else
+			return QVariant();
 	} else
 		return QVariant();
 }
