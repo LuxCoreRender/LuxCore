@@ -132,10 +132,10 @@ endif(NOT LUXRAYS_DISABLE_OPENCL)
 add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/smallppmgpu)
 
-if(BUILD_LUXMARK)
-	message(STATUS "Building LuxMark too - this will require QT4")
+if(BUILD_LUXMARK AND (NOT LUXRAYS_DISABLE_OPENCL))
+	message(STATUS "Building LuxMark too - this will require QT4 and OpenCL")
 	add_subdirectory(samples/luxmark)
-endif(BUILD_LUXMARK)
+endif(BUILD_LUXMARK AND (NOT LUXRAYS_DISABLE_OPENCL))
 
 
 ###########################################################################
