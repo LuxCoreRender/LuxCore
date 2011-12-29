@@ -62,7 +62,7 @@ public:
 	void SetModeCheck(const int index);
 	void SetSceneCheck(const int index);
 	void UpdateScreenLabel(const char *msg, const bool valid);
-	void SetHadwareTreeModel(HardwareTreeModel *treeModel);
+	void SetHardwareTreeModel(HardwareTreeModel *treeModel);
 	void SetLuxApp(LuxMarkApp *la) { luxFrameBuffer->SetLuxApp(la); }
 
 	void Pause();
