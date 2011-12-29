@@ -31,7 +31,7 @@
 
 #include <QDateTime>
 #include <QTextStream>
-#include <qt4/QtGui/qgraphicsitem.h>
+#include <QtGui/qgraphicsitem.h>
 
 MainWindow *LogWindow = NULL;
 
