@@ -210,10 +210,17 @@ QVariant HardwareTreeModel::data(const QModelIndex &index, int role) const {
 	} else if (role == Qt::ForegroundRole) {
 		HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
 
-		if (item->isCheckable())
+		if (item->isCheckable()) {
+			// It is a device node
 			return QVariant(QColor(Qt::blue));
-		else
-			return QVariant();
+		} else {
+			if (item->childCount() == 0) {
+				return QVariant(QColor(Qt::darkGray));
+			} else {
+				// It is a leaf
+				return QVariant();
+			}
+		}
 	} else
 		return QVariant();
 }
