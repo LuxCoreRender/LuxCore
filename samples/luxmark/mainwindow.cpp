@@ -28,10 +28,12 @@
 #include "smalllux.h"
 #include "renderconfig.h"
 #include "luxmarkapp.h"
+#include "slg2/smalllux.h"
 
 #include <QDateTime>
 #include <QTextStream>
 #include <QtGui/qgraphicsitem.h>
+#include <X11/X.h>
 
 MainWindow *LogWindow = NULL;
 
@@ -176,6 +178,11 @@ void MainWindow::setBenchmarkCPUsMode() {
 	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_OCL_CPU);
 }
 
+void MainWindow::setBenchmarkCustomMode() {
+	LM_LOG("Set Benchmark Custom mode");
+	((LuxMarkApp *)qApp)->SetMode(BENCHMARK_OCL_CUSTOM);
+}
+
 void MainWindow::setInteractiveMode() {
 	LM_LOG("Set Interactive mode");
 	((LuxMarkApp *)qApp)->SetMode(INTERACTIVE);
@@ -187,6 +194,11 @@ void MainWindow::setPauseMode() {
 }
 
 //------------------------------------------------------------------------------
+
+void MainWindow::Pause() {
+	setPauseMode();
+	SetModeCheck(5);
+}
 
 void MainWindow::ShowLogo() {
 	if (luxFrameBuffer->isVisible()) {
@@ -211,30 +223,43 @@ void MainWindow::SetModeCheck(const int index) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(true);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_Custom->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 1) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(true);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_Custom->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 2) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(true);
+		ui->action_Benchmark_OpenCL_Custom->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 3) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
-		ui->action_Interactive->setChecked(true);
+		ui->action_Benchmark_OpenCL_Custom->setChecked(true);
+		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(false);
 	} else if (index == 4) {
 		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
 		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_Custom->setChecked(false);
+		ui->action_Benchmark_OpenCL_Custom->setChecked(false);
+		ui->action_Interactive->setChecked(true);
+		ui->action_Pause->setChecked(false);
+	} else if (index == 5) {
+		ui->action_Benchmark_OpenCL_GPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_CPUs_GPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_CPUs->setChecked(false);
+		ui->action_Benchmark_OpenCL_Custom->setChecked(false);
 		ui->action_Interactive->setChecked(false);
 		ui->action_Pause->setChecked(true);
 	} else

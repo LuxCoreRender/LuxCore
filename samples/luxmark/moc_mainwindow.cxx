@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'mainwindow.h'
 **
-** Created: Tue Dec 27 15:24:43 2011
+** Created: Thu Dec 29 16:43:30 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.7.0)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_MainWindow[] = {
        5,       // revision
        0,       // classname
        0,    0, // classinfo
-      11,   14, // methods
+      12,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -41,7 +41,8 @@ static const uint qt_meta_data_MainWindow[] = {
      132,   11,   11,   11, 0x08,
      159,   11,   11,   11, 0x08,
      182,   11,   11,   11, 0x08,
-     203,   11,   11,   11, 0x08,
+     207,   11,   11,   11, 0x08,
+     228,   11,   11,   11, 0x08,
 
        0        // eod
 };
@@ -52,8 +53,8 @@ static const char qt_meta_stringdata_MainWindow[] = {
     "setLuxBallSkyScene()\0setSalaScene()\0"
     "setBenchmarkGPUsMode()\0"
     "setBenchmarkCPUsGPUsMode()\0"
-    "setBenchmarkCPUsMode()\0setInteractiveMode()\0"
-    "setPauseMode()\0"
+    "setBenchmarkCPUsMode()\0setBenchmarkCustomMode()\0"
+    "setInteractiveMode()\0setPauseMode()\0"
 };
 
 const QMetaObject MainWindow::staticMetaObject = {
@@ -94,11 +95,12 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         case 6: setBenchmarkGPUsMode(); break;
         case 7: setBenchmarkCPUsGPUsMode(); break;
         case 8: setBenchmarkCPUsMode(); break;
-        case 9: setInteractiveMode(); break;
-        case 10: setPauseMode(); break;
+        case 9: setBenchmarkCustomMode(); break;
+        case 10: setInteractiveMode(); break;
+        case 11: setPauseMode(); break;
         default: ;
         }
-        _id -= 11;
+        _id -= 12;
     }
     return _id;
 }

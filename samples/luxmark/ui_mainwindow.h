@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Thu Dec 29 12:48:08 2011
+** Created: Thu Dec 29 16:41:36 2011
 **      by: Qt User Interface Compiler version 4.7.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -43,6 +43,7 @@ public:
     QAction *action_Benchmark_OpenCL_CPUs;
     QAction *action_LuxBall_Sky;
     QAction *action_Sala;
+    QAction *action_Benchmark_OpenCL_Custom;
     QWidget *centralwidget;
     QVBoxLayout *verticalLayout_2;
     QSplitter *splitter_2;
@@ -100,6 +101,9 @@ public:
         action_Sala = new QAction(MainWindow);
         action_Sala->setObjectName(QString::fromUtf8("action_Sala"));
         action_Sala->setCheckable(true);
+        action_Benchmark_OpenCL_Custom = new QAction(MainWindow);
+        action_Benchmark_OpenCL_Custom->setObjectName(QString::fromUtf8("action_Benchmark_OpenCL_Custom"));
+        action_Benchmark_OpenCL_Custom->setCheckable(true);
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         centralwidget->setMinimumSize(QSize(160, 120));
@@ -183,6 +187,7 @@ public:
         menu_Mode->addAction(action_Benchmark_OpenCL_GPUs);
         menu_Mode->addAction(action_Benchmark_OpenCL_CPUs_GPUs);
         menu_Mode->addAction(action_Benchmark_OpenCL_CPUs);
+        menu_Mode->addAction(action_Benchmark_OpenCL_Custom);
         menu_Mode->addAction(action_Interactive);
         menu_Mode->addAction(action_Pause);
         menu_Scene->addAction(action_Sala);
@@ -202,6 +207,7 @@ public:
         QObject::connect(action_Benchmark_OpenCL_CPUs, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCPUsMode()));
         QObject::connect(action_LuxBall_Sky, SIGNAL(triggered()), MainWindow, SLOT(setLuxBallSkyScene()));
         QObject::connect(action_Sala, SIGNAL(triggered()), MainWindow, SLOT(setSalaScene()));
+        QObject::connect(action_Benchmark_OpenCL_Custom, SIGNAL(triggered()), MainWindow, SLOT(setBenchmarkCustomMode()));
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -225,6 +231,7 @@ public:
         action_LuxBall_Sky->setShortcut(QApplication::translate("MainWindow", "Ctrl+K", 0, QApplication::UnicodeUTF8));
         action_Sala->setText(QApplication::translate("MainWindow", "&Sala (488K triangles)", 0, QApplication::UnicodeUTF8));
         action_Sala->setShortcut(QApplication::translate("MainWindow", "Ctrl+A", 0, QApplication::UnicodeUTF8));
+        action_Benchmark_OpenCL_Custom->setText(QApplication::translate("MainWindow", "Benchmark (Only &selected devices)", 0, QApplication::UnicodeUTF8));
         hardwareDevicesLabel->setText(QApplication::translate("MainWindow", "Hardware Devices", 0, QApplication::UnicodeUTF8));
         menu_File->setTitle(QApplication::translate("MainWindow", "&File", 0, QApplication::UnicodeUTF8));
         menu_Help->setTitle(QApplication::translate("MainWindow", "&Help", 0, QApplication::UnicodeUTF8));

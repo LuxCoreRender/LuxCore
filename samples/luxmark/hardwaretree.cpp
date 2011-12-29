@@ -22,22 +22,35 @@
 #include <sstream>
 
 #include <boost/thread/thread.hpp>
-#include <qt4/QtCore/qabstractitemmodel.h>
+#include <QtCore/qabstractitemmodel.h>
 
 #include "luxrays/core/context.h"
 #include "luxrays/core/device.h"
 #include "luxrays/core/virtualdevice.h"
 
+#include "slg2/smalllux.h"
 #include "hardwaretree.h"
+#include "mainwindow.h"
 
 //------------------------------------------------------------------------------
 // Hardware tree view
 //------------------------------------------------------------------------------
 
-HardwareTreeItem::HardwareTreeItem(const QVariant &data, bool chkable, HardwareTreeItem *parent) {
+HardwareTreeItem::HardwareTreeItem(const QVariant &data, HardwareTreeItem *parent) {
+	deviceIndex = 0;
 	parentItem = parent;
 	itemData = data;
-	checkable = chkable;
+	checkable = false;
+	checked = false;
+}
+
+HardwareTreeItem::HardwareTreeItem(const int index, const QVariant &data,
+		HardwareTreeItem *parent) {
+	deviceIndex = index;
+	parentItem = parent;
+	itemData = data;
+	checkable = true;
+	checked = true;
 }
 
 HardwareTreeItem::~HardwareTreeItem() {
@@ -78,7 +91,10 @@ int HardwareTreeItem::row() const {
 
 //------------------------------------------------------------------------------
 
-HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs) : QAbstractItemModel() {
+HardwareTreeModel::HardwareTreeModel(MainWindow *w,
+		const vector<DeviceDescription *> &devDescs) : QAbstractItemModel() {
+	win = w;
+
 	rootItem = new HardwareTreeItem("Hardware");
 
 	// OpenCL devices
@@ -91,14 +107,14 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 	oclDev->appendChild(oclGPUDev);
 
 #ifndef LUXRAYS_DISABLE_OPENCL
+	int index = 0;
 	for (size_t i = 0; i < devDescs.size(); ++i) {
 		DeviceDescription *devDesc = devDescs[i];
 
 		if (devDesc->GetType() ==  DEVICE_TYPE_OPENCL) {
 			const OpenCLDeviceDescription *odevDesc = (OpenCLDeviceDescription *)devDesc;
 
-			//HardwareTreeItem *newNode = new HardwareTreeItem(odevDesc->GetName().c_str(), true);
-			HardwareTreeItem *newNode = new HardwareTreeItem(odevDesc->GetName().c_str());
+			HardwareTreeItem *newNode = new HardwareTreeItem(index++, odevDesc->GetName().c_str());
 
 			stringstream ss;
 			cl::Platform platform = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
@@ -147,10 +163,16 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 			ss << "Max. Constant Memory: " << (odevDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>() / 1024) << " Kbytes";
 			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
 
-			if (odevDesc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU)
+			bool isCPU = (odevDesc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU);
+			if (isCPU) {
+				// The default mode is GPU-only
+				newNode->setChecked(false);
 				oclCPUDev->appendChild(newNode);
-			else
+			} else {
+				newNode->setChecked(true);
 				oclGPUDev->appendChild(newNode);
+			}
+			deviceSelection.push_back(!isCPU);
 		}
 	}
 #endif
@@ -178,9 +200,12 @@ QVariant HardwareTreeModel::data(const QModelIndex &index, int role) const {
 	} else if (role ==  Qt::CheckStateRole) {
 		HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
 
-		if (item->isCheckable())
-			return Qt::Checked;
-		else
+		if (item->isCheckable()) {
+			if (item->isChecked())
+				return Qt::Checked;
+			else
+				return Qt::Unchecked;
+		} else
 			return QVariant();
 	} else
 		return QVariant();
@@ -240,4 +265,36 @@ Qt::ItemFlags HardwareTreeModel::flags(const QModelIndex &index) const {
 		return Qt::ItemIsUserCheckable | Qt::ItemIsSelectable | Qt::ItemIsEnabled;
 	else
 		return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}
+
+bool HardwareTreeModel::setData(const QModelIndex &index, const QVariant &value,
+		int role) {
+	if (!index.isValid())
+		return false;
+
+	if (role == Qt::CheckStateRole) {
+		HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
+
+		const bool v = (value == Qt::Checked);
+		if (v != item->isChecked()) {
+			item->setChecked(v);
+
+			// Set pause mode
+			win->Pause();
+
+			deviceSelection[item->getDeviceIndex()] = v;
+		}
+
+		return true;
+	} else
+		return false;
+}
+
+string HardwareTreeModel::getDeviceSelectionString() const {
+	stringstream ss;
+
+	for (size_t i = 0; i < deviceSelection.size(); ++i)
+		ss << (deviceSelection[i] ? "1" : "0");
+
+	return ss.str();
 }

@@ -27,6 +27,7 @@
 #include "resultdialog.h"
 #include "renderengine.h"
 #include "pathocl/pathocl.h"
+#include "slg2/smalllux.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -125,13 +126,15 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 	// Initialize the new mode
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||
-			(mode == BENCHMARK_OCL_CPU)) {
+			(mode == BENCHMARK_OCL_CPU) || (mode == BENCHMARK_OCL_CUSTOM)) {
 		if (mode == BENCHMARK_OCL_GPU)
 			mainWin->SetModeCheck(0);
 		else if (mode == BENCHMARK_OCL_CPUGPU)
 			mainWin->SetModeCheck(1);
-		else
+		else if (mode == BENCHMARK_OCL_CPU)
 			mainWin->SetModeCheck(2);
+		else
+			mainWin->SetModeCheck(3);
 
 		// Update timer
 		renderRefreshTimer = new QTimer();
@@ -183,6 +186,17 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "1");
 			prop.SetString("opencl.gpu.use", "0");
+		} else if (app->mode == BENCHMARK_OCL_CUSTOM) {
+			prop.SetString("renderengine.type", "4");
+			prop.SetString("opencl.kernelcache", "NONE");
+
+			// At the first run, hardwareTreeModel is NULL
+			const string deviceSelection = (app->hardwareTreeModel) ? (app->hardwareTreeModel->getDeviceSelectionString()) : "";
+			if (deviceSelection == "") {
+				prop.SetString("opencl.cpu.use", "0");
+				prop.SetString("opencl.gpu.use", "1");
+			} else
+				prop.SetString("opencl.devices.select", deviceSelection);
 		} else if (app->mode == INTERACTIVE) {
 			prop.SetString("renderengine.type", "4");
 			prop.SetString("opencl.kernelcache", "NONE");
@@ -198,12 +212,12 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		if (!app->hardwareTreeModel) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			if (app->renderSession->renderEngine->GetEngineType() == PATHOCL)
-				app->hardwareTreeModel = new HardwareTreeModel(
+				app->hardwareTreeModel = new HardwareTreeModel(app->mainWin,
 						((PathOCLRenderEngine *)app->renderSession->renderEngine)->GetAvailableDeviceDescriptions());
 			else {
 #endif
 				const vector<DeviceDescription *> devDescs;
-				app->hardwareTreeModel = new HardwareTreeModel(devDescs);
+				app->hardwareTreeModel = new HardwareTreeModel(app->mainWin, devDescs);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			}
 #endif
@@ -277,13 +291,15 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 	sprintf(buf, "[Mode: %s][Time: %dsecs%s][Samples/sec % 6dK][Rays/sec % 6dK on %.1fK tris]",
 			(mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
-				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" : 
-					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" : "Interactive")),
+				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
+					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" :
+						((mode == BENCHMARK_OCL_CUSTOM) ? "OpenCL Custom" : "Interactive"))),
 			renderingTime, validBuf, int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
 #ifndef LUXRAYS_DISABLE_OPENCL
-	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) || (mode == BENCHMARK_OCL_CPU)) {
+	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||
+			(mode == BENCHMARK_OCL_CPU) || (mode == BENCHMARK_OCL_CUSTOM)) {
 		const vector<OpenCLIntersectionDevice *> &intersectionDevices =
 			((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
 

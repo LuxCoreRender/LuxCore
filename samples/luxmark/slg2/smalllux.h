@@ -86,7 +86,7 @@ private:
 #define LM_ERROR(a) { if (LogWindow) { std::stringstream _LM_ERR_LOCAL_SS; _LM_ERR_LOCAL_SS << a; qApp->postEvent(LogWindow, new LuxErrorEvent(QString(_LM_ERR_LOCAL_SS.str().c_str()))); }}
 
 enum LuxMarkAppMode {
-	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU,  BENCHMARK_OCL_CPU, INTERACTIVE, PAUSE
+	BENCHMARK_OCL_GPU, BENCHMARK_OCL_CPUGPU,  BENCHMARK_OCL_CPU, BENCHMARK_OCL_CUSTOM, INTERACTIVE, PAUSE
 };
 
 #endif	/* _SMALLLUX_H */

@@ -133,6 +133,7 @@
     <addaction name="action_Benchmark_OpenCL_GPUs"/>
     <addaction name="action_Benchmark_OpenCL_CPUs_GPUs"/>
     <addaction name="action_Benchmark_OpenCL_CPUs"/>
+    <addaction name="action_Benchmark_OpenCL_Custom"/>
     <addaction name="action_Interactive"/>
     <addaction name="action_Pause"/>
    </widget>
@@ -246,6 +247,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="action_Benchmark_OpenCL_Custom">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Benchmark (Only &amp;selected devices)</string>
    </property>
   </action>
  </widget>
@@ -429,6 +438,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Benchmark_OpenCL_Custom</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setBenchmarkCustomMode()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
@@ -440,7 +465,7 @@
   <slot>setBenchmarkGPUsMode()</slot>
   <slot>setInteractiveMode()</slot>
   <slot>setBenchmarkCPUsGPUsMode()</slot>
-  <slot>setBenchmarkNativeMode()</slot>
+  <slot>setBenchmarkCustomMode()</slot>
   <slot>setPauseMode()</slot>
   <slot>setBenchmarkCPUsMode()</slot>
  </slots>
