@@ -193,21 +193,24 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 
 		renderConfig->cfg.Load(prop);
 		app->renderSession = new RenderSession(renderConfig);
-		// Start the rendering
-		app->renderSession->Start();
 
 		// Initialize hardware information
+		if (!app->hardwareTreeModel) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		if (app->renderSession->renderEngine->GetEngineType() == PATHOCL)
-			app->hardwareTreeModel = new HardwareTreeModel(
-					((PathOCLRenderEngine *)app->renderSession->renderEngine)->GetAvailableDeviceDescriptions());
-		else {
+			if (app->renderSession->renderEngine->GetEngineType() == PATHOCL)
+				app->hardwareTreeModel = new HardwareTreeModel(
+						((PathOCLRenderEngine *)app->renderSession->renderEngine)->GetAvailableDeviceDescriptions());
+			else {
 #endif
-			const vector<DeviceDescription *> devDescs;
-			app->hardwareTreeModel = new HardwareTreeModel(devDescs);
+				const vector<DeviceDescription *> devDescs;
+				app->hardwareTreeModel = new HardwareTreeModel(devDescs);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+			}
+#endif
 		}
-#endif
+
+		// Start the rendering
+		app->renderSession->Start();
 
 		// Done
 		app->renderingStartTime = luxrays::WallClockTime();

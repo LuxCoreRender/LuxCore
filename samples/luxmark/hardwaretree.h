@@ -39,7 +39,7 @@ using namespace luxrays;
 
 class HardwareTreeItem {
 public:
-	HardwareTreeItem(const QVariant &data, HardwareTreeItem *parent = 0);
+	HardwareTreeItem(const QVariant &data, bool chkable = false, HardwareTreeItem *parent = 0);
 	~HardwareTreeItem();
 
 	void appendChild(HardwareTreeItem *child);
@@ -51,10 +51,13 @@ public:
 	int row() const;
 	HardwareTreeItem *parent();
 
+	bool isCheckable() const { return checkable; }
+
 private:
 	QList<HardwareTreeItem *> childItems;
 	QVariant itemData;
 	HardwareTreeItem *parentItem;
+	bool checkable;
 };
 
 class HardwareTreeModel : public QAbstractItemModel {
@@ -70,6 +73,7 @@ public:
 	QModelIndex parent(const QModelIndex &index) const;
 	int rowCount(const QModelIndex &parent = QModelIndex()) const;
 	int columnCount(const QModelIndex &parent = QModelIndex()) const;
+	Qt::ItemFlags flags(const QModelIndex &index) const;
 
 private:
 	HardwareTreeItem *rootItem;

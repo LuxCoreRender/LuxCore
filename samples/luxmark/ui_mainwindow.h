@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'mainwindow.ui'
 **
-** Created: Tue Dec 27 15:00:08 2011
+** Created: Thu Dec 29 12:48:08 2011
 **      by: Qt User Interface Compiler version 4.7.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -143,6 +143,7 @@ public:
         sizePolicy1.setHeightForWidth(HardwareView->sizePolicy().hasHeightForWidth());
         HardwareView->setSizePolicy(sizePolicy1);
         HardwareView->setFrameShape(QFrame::Box);
+        HardwareView->setAnimated(true);
         HardwareView->header()->setVisible(false);
 
         verticalLayout->addWidget(HardwareView);

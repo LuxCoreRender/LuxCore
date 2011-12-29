@@ -324,8 +324,10 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 }
 
 void MainWindow::SetHadwareTreeModel(HardwareTreeModel *treeModel) {
-	if (!ui->HardwareView->model())
+	if (!ui->HardwareView->model()) {
 		ui->HardwareView->setModel(treeModel);
+		ui->HardwareView->expandAll();
+	}
 }
 
 bool MainWindow::event(QEvent *event) {

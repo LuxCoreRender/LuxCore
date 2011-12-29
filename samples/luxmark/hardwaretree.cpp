@@ -22,6 +22,7 @@
 #include <sstream>
 
 #include <boost/thread/thread.hpp>
+#include <qt4/QtCore/qabstractitemmodel.h>
 
 #include "luxrays/core/context.h"
 #include "luxrays/core/device.h"
@@ -33,9 +34,10 @@
 // Hardware tree view
 //------------------------------------------------------------------------------
 
-HardwareTreeItem::HardwareTreeItem(const QVariant &data, HardwareTreeItem *parent) {
+HardwareTreeItem::HardwareTreeItem(const QVariant &data, bool chkable, HardwareTreeItem *parent) {
 	parentItem = parent;
 	itemData = data;
+	checkable = chkable;
 }
 
 HardwareTreeItem::~HardwareTreeItem() {
@@ -85,7 +87,7 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 
 	HardwareTreeItem *oclCPUDev = new HardwareTreeItem("CPUs");
 	oclDev->appendChild(oclCPUDev);
-	HardwareTreeItem *oclGPUDev = new HardwareTreeItem("GPUs");
+	HardwareTreeItem *oclGPUDev = new HardwareTreeItem("GPUs and Accelerators");
 	oclDev->appendChild(oclGPUDev);
 
 #ifndef LUXRAYS_DISABLE_OPENCL
@@ -95,14 +97,54 @@ HardwareTreeModel::HardwareTreeModel(const vector<DeviceDescription *> &devDescs
 		if (devDesc->GetType() ==  DEVICE_TYPE_OPENCL) {
 			const OpenCLDeviceDescription *odevDesc = (OpenCLDeviceDescription *)devDesc;
 
-			cl::Platform platform = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
-			string name = "[" + platform.getInfo<CL_PLATFORM_VENDOR>() + "] " + odevDesc->GetName();
-			HardwareTreeItem *newNode = new HardwareTreeItem(name.c_str());
+			//HardwareTreeItem *newNode = new HardwareTreeItem(odevDesc->GetName().c_str(), true);
+			HardwareTreeItem *newNode = new HardwareTreeItem(odevDesc->GetName().c_str());
+
 			stringstream ss;
+			cl::Platform platform = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
+			ss << "Platform: " << platform.getInfo<CL_PLATFORM_VENDOR>();
+			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
+
+			ss.str("");
+			ss << "Platform Version: " << platform.getInfo<CL_PLATFORM_VERSION>();
+			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
+
+			ss.str("");
+			ss << "Type: ";
+			switch (odevDesc->GetOCLDevice().getInfo<CL_DEVICE_TYPE>()) {
+				case CL_DEVICE_TYPE_CPU:
+					ss << "CPU";
+					break;
+				case CL_DEVICE_TYPE_GPU:
+					ss << "GPU";
+					break;
+				case CL_DEVICE_TYPE_ACCELERATOR:
+					ss << "ACCELERATOR";
+					break;
+				default:
+					ss << "UNKNOWN";
+					break;
+			}
+			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
+
+			ss.str("");
 			ss << "Compute Units: " << odevDesc->GetComputeUnits();
 			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
+
 			ss.str("");
-			ss << "Max. Memory: " << (odevDesc->GetMaxMemory() / 1024) << " Kbytes";
+			ss << "Clock: " << odevDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>() << " MHz";
+			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
+
+			ss.str("");
+			ss << "Max. Global Memory: " << (odevDesc->GetMaxMemory() / 1024) << " Kbytes";
+			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
+
+			ss.str("");
+			ss << "Local Memory: " << (odevDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>() / 1024) << " Kbytes";
+			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
+
+			ss.str("");
+			ss << "Max. Constant Memory: " << (odevDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>() / 1024) << " Kbytes";
 			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
 
 			if (odevDesc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU)
@@ -129,12 +171,19 @@ QVariant HardwareTreeModel::data(const QModelIndex &index, int role) const {
 	if (!index.isValid())
 		return QVariant();
 
-	if (role != Qt::DisplayRole)
+	if (role == Qt::DisplayRole) {
+		HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
+
+		return item->data(index.column());
+	} else if (role ==  Qt::CheckStateRole) {
+		HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
+
+		if (item->isCheckable())
+			return Qt::Checked;
+		else
+			return QVariant();
+	} else
 		return QVariant();
-
-	HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
-
-	return item->data(index.column());
 }
 
 QModelIndex HardwareTreeModel::index(int row, int column, const QModelIndex &parent) const {
@@ -179,4 +228,16 @@ int HardwareTreeModel::rowCount(const QModelIndex &parent) const {
 		parentItem = static_cast<HardwareTreeItem*>(parent.internalPointer());
 
 	return parentItem->childCount();
+}
+
+Qt::ItemFlags HardwareTreeModel::flags(const QModelIndex &index) const {
+	if (!index.isValid())
+		return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+
+	HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
+
+	if (item->isCheckable())
+		return Qt::ItemIsUserCheckable | Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+	else
+		return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
 }

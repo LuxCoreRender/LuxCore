@@ -85,6 +85,9 @@
            <property name="frameShape">
             <enum>QFrame::Box</enum>
            </property>
+           <property name="animated">
+            <bool>true</bool>
+           </property>
            <attribute name="headerVisible">
             <bool>false</bool>
            </attribute>
