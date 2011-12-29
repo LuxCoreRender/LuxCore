@@ -65,6 +65,8 @@ public:
 	void SetHadwareTreeModel(HardwareTreeModel *treeModel);
 	void SetLuxApp(LuxMarkApp *la) { luxFrameBuffer->SetLuxApp(la); }
 
+	void Pause();
+
 private:
 	bool event(QEvent *event);
 
@@ -92,6 +94,7 @@ private slots:
 	void setBenchmarkGPUsMode();
 	void setBenchmarkCPUsGPUsMode();
 	void setBenchmarkCPUsMode();
+	void setBenchmarkCustomMode();
 	void setInteractiveMode();
 	void setPauseMode();
 };

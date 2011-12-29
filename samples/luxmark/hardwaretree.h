@@ -33,14 +33,21 @@
 using namespace std;
 using namespace luxrays;
 
+class MainWindow;
+
 //------------------------------------------------------------------------------
 // Hardware tree view
 //------------------------------------------------------------------------------
 
 class HardwareTreeItem {
 public:
-	HardwareTreeItem(const QVariant &data, bool chkable = false, HardwareTreeItem *parent = 0);
+	HardwareTreeItem(const QVariant &data,
+			HardwareTreeItem *parent = 0);
+	HardwareTreeItem(const int deviceIndex, const QVariant &data,
+			HardwareTreeItem *parent = 0);
 	~HardwareTreeItem();
+
+	int getDeviceIndex() const { return deviceIndex; }
 
 	void appendChild(HardwareTreeItem *child);
 
@@ -52,21 +59,27 @@ public:
 	HardwareTreeItem *parent();
 
 	bool isCheckable() const { return checkable; }
+	bool isChecked() const { return checked; }
+	void setChecked(bool c) { checked = c; }
 
 private:
+	int deviceIndex;
+
 	QList<HardwareTreeItem *> childItems;
 	QVariant itemData;
 	HardwareTreeItem *parentItem;
-	bool checkable;
+
+	bool checkable, checked;
 };
 
 class HardwareTreeModel : public QAbstractItemModel {
 	Q_OBJECT
 
 public:
-	HardwareTreeModel(const vector<DeviceDescription *> &devDescs);
+	HardwareTreeModel(MainWindow *win, const vector<DeviceDescription *> &devDescs);
 	~HardwareTreeModel();
 
+	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
 	QVariant data(const QModelIndex &index, int role) const;
 	QModelIndex index(int row, int column,
 			const QModelIndex &parent = QModelIndex()) const;
@@ -75,8 +88,14 @@ public:
 	int columnCount(const QModelIndex &parent = QModelIndex()) const;
 	Qt::ItemFlags flags(const QModelIndex &index) const;
 
+	string getDeviceSelectionString() const;
+
 private:
+	MainWindow *win;
+
 	HardwareTreeItem *rootItem;
+
+	vector<bool> deviceSelection;
 };
 
 #endif // _HARDWARETREE_H
