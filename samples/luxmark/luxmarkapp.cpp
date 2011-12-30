@@ -331,9 +331,12 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	mainWin->UpdateScreenLabel(ss.str().c_str(), benchmarkDone);
 
 	if (benchmarkDone) {
+		vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(
+				((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices());
+
 		Stop();
 
-		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec);
+		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec, descs);
 		dialog->exec();
 
 		// Go in PAUSE mode

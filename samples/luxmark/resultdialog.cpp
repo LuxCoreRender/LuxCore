@@ -20,10 +20,13 @@
  ***************************************************************************/
 
 #include "luxmarkcfg.h"
+#include "hardwaretree.h"
 #include "resultdialog.h"
 
-ResultDialog::ResultDialog(LuxMarkAppMode mode, const char *sceneName,
-		double sampleSecs, QWidget *parent) : QDialog(parent),
+ResultDialog::ResultDialog(LuxMarkAppMode mode,
+		const char *sceneName, double sampleSecs,
+		vector<BenchmarkDeviceDescription> &descs,
+		QWidget *parent) : QDialog(parent),
 		ui(new Ui::ResultDialog) {
 	ui->setupUi(this);
 
@@ -33,9 +36,17 @@ ResultDialog::ResultDialog(LuxMarkAppMode mode, const char *sceneName,
 					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" :
 						((mode == BENCHMARK_OCL_CUSTOM) ? "OpenCL Custom" : "Interactive"))));
 	ui->sceneLabel->setText(sceneName);
+
+	deviceListModel = new DeviceListModel(descs);
+	ui->deviceListView->setModel(deviceListModel);
+
 	ui->resultLCD->display(int(sampleSecs / 1000.0));
 }
 
 ResultDialog::~ResultDialog() {
 	delete ui;
+	delete deviceListModel;
+}
+
+void ResultDialog::submitResult() {
 }

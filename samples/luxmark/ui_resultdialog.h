@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'resultdialog.ui'
 **
-** Created: Tue Dec 27 13:23:01 2011
+** Created: Fri Dec 30 10:33:04 2011
 **      by: Qt User Interface Compiler version 4.7.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -20,6 +20,7 @@
 #include <QtGui/QHeaderView>
 #include <QtGui/QLCDNumber>
 #include <QtGui/QLabel>
+#include <QtGui/QListView>
 #include <QtGui/QPushButton>
 #include <QtGui/QWidget>
 
@@ -33,17 +34,20 @@ public:
     QLabel *modeLabel;
     QLabel *sceneLabelDesc;
     QLabel *sceneLabel;
+    QLabel *deviceLabel;
+    QListView *deviceListView;
     QLabel *sampleSecLabel;
     QLCDNumber *resultLCD;
     QWidget *widget;
     QGridLayout *gridLayout;
     QPushButton *okButton;
+    QPushButton *submitButton;
 
     void setupUi(QDialog *ResultDialog)
     {
         if (ResultDialog->objectName().isEmpty())
             ResultDialog->setObjectName(QString::fromUtf8("ResultDialog"));
-        ResultDialog->resize(400, 200);
+        ResultDialog->resize(480, 400);
         QIcon icon;
         icon.addFile(QString::fromUtf8(":/images/resources/SLG_luxball_sppm_small.png"), QSize(), QIcon::Normal, QIcon::Off);
         ResultDialog->setWindowIcon(icon);
@@ -83,23 +87,40 @@ public:
 
         formLayout->setWidget(1, QFormLayout::FieldRole, sceneLabel);
 
+        deviceLabel = new QLabel(ResultDialog);
+        deviceLabel->setObjectName(QString::fromUtf8("deviceLabel"));
+        deviceLabel->setAlignment(Qt::AlignCenter);
+
+        formLayout->setWidget(2, QFormLayout::SpanningRole, deviceLabel);
+
+        deviceListView = new QListView(ResultDialog);
+        deviceListView->setObjectName(QString::fromUtf8("deviceListView"));
+        QSizePolicy sizePolicy1(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(2);
+        sizePolicy1.setHeightForWidth(deviceListView->sizePolicy().hasHeightForWidth());
+        deviceListView->setSizePolicy(sizePolicy1);
+        deviceListView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+        formLayout->setWidget(3, QFormLayout::SpanningRole, deviceListView);
+
         sampleSecLabel = new QLabel(ResultDialog);
         sampleSecLabel->setObjectName(QString::fromUtf8("sampleSecLabel"));
         sampleSecLabel->setAlignment(Qt::AlignCenter);
 
-        formLayout->setWidget(2, QFormLayout::SpanningRole, sampleSecLabel);
+        formLayout->setWidget(4, QFormLayout::SpanningRole, sampleSecLabel);
 
         resultLCD = new QLCDNumber(ResultDialog);
         resultLCD->setObjectName(QString::fromUtf8("resultLCD"));
-        QSizePolicy sizePolicy1(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        sizePolicy1.setHorizontalStretch(0);
-        sizePolicy1.setVerticalStretch(1);
-        sizePolicy1.setHeightForWidth(resultLCD->sizePolicy().hasHeightForWidth());
-        resultLCD->setSizePolicy(sizePolicy1);
+        QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(1);
+        sizePolicy2.setHeightForWidth(resultLCD->sizePolicy().hasHeightForWidth());
+        resultLCD->setSizePolicy(sizePolicy2);
         resultLCD->setNumDigits(8);
         resultLCD->setProperty("value", QVariant(123456));
 
-        formLayout->setWidget(3, QFormLayout::SpanningRole, resultLCD);
+        formLayout->setWidget(5, QFormLayout::SpanningRole, resultLCD);
 
         widget = new QWidget(ResultDialog);
         widget->setObjectName(QString::fromUtf8("widget"));
@@ -108,20 +129,28 @@ public:
         gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
         okButton = new QPushButton(widget);
         okButton->setObjectName(QString::fromUtf8("okButton"));
-        QSizePolicy sizePolicy2(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        sizePolicy2.setHorizontalStretch(0);
-        sizePolicy2.setVerticalStretch(0);
-        sizePolicy2.setHeightForWidth(okButton->sizePolicy().hasHeightForWidth());
-        okButton->setSizePolicy(sizePolicy2);
+        QSizePolicy sizePolicy3(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(okButton->sizePolicy().hasHeightForWidth());
+        okButton->setSizePolicy(sizePolicy3);
 
         gridLayout->addWidget(okButton, 0, 0, 1, 1);
 
+        submitButton = new QPushButton(widget);
+        submitButton->setObjectName(QString::fromUtf8("submitButton"));
+        sizePolicy3.setHeightForWidth(submitButton->sizePolicy().hasHeightForWidth());
+        submitButton->setSizePolicy(sizePolicy3);
 
-        formLayout->setWidget(4, QFormLayout::SpanningRole, widget);
+        gridLayout->addWidget(submitButton, 0, 1, 1, 1);
+
+
+        formLayout->setWidget(6, QFormLayout::SpanningRole, widget);
 
 
         retranslateUi(ResultDialog);
         QObject::connect(okButton, SIGNAL(released()), ResultDialog, SLOT(close()));
+        QObject::connect(submitButton, SIGNAL(released()), ResultDialog, SLOT(submitResult()));
 
         QMetaObject::connectSlotsByName(ResultDialog);
     } // setupUi
@@ -133,8 +162,10 @@ public:
         modeLabel->setText(QString());
         sceneLabelDesc->setText(QApplication::translate("ResultDialog", "Scene name:", 0, QApplication::UnicodeUTF8));
         sceneLabel->setText(QString());
+        deviceLabel->setText(QApplication::translate("ResultDialog", "Devices:", 0, QApplication::UnicodeUTF8));
         sampleSecLabel->setText(QApplication::translate("ResultDialog", "Result:", 0, QApplication::UnicodeUTF8));
         okButton->setText(QApplication::translate("ResultDialog", "&Ok", 0, QApplication::UnicodeUTF8));
+        submitButton->setText(QApplication::translate("ResultDialog", "Submit result", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

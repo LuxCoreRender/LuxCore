@@ -25,6 +25,7 @@
 #include <cstddef>
 
 #include "smalllux.h"
+#include "hardwaretree.h"
 
 #include "ui_resultdialog.h"
 
@@ -32,12 +33,20 @@ class ResultDialog : public QDialog {
 	Q_OBJECT
 
 public:
-	ResultDialog(LuxMarkAppMode mode, const char *sceneName,
-			double sampleSecs, QWidget *parent = NULL);
+	ResultDialog(
+			LuxMarkAppMode mode,
+			const char *sceneName,
+			double sampleSecs, 
+			vector<BenchmarkDeviceDescription> &descs,
+			QWidget *parent = NULL);
 	~ResultDialog();
 
 private:
 	Ui::ResultDialog *ui;
+	DeviceListModel *deviceListModel;
+
+private slots:
+	void submitResult();
 };
 
 #endif	/* _RESULTDIALOG_H */

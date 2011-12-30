@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>200</height>
+    <width>480</width>
+    <height>400</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -80,6 +80,29 @@
     </widget>
    </item>
    <item row="2" column="0" colspan="2">
+    <widget class="QLabel" name="deviceLabel">
+     <property name="text">
+      <string>Devices:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="2">
+    <widget class="QListView" name="deviceListView">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>2</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="2">
     <widget class="QLabel" name="sampleSecLabel">
      <property name="text">
       <string>Result:</string>
@@ -89,7 +112,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="2">
+   <item row="5" column="0" colspan="2">
     <widget class="QLCDNumber" name="resultLCD">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -105,7 +128,7 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0" colspan="2">
+   <item row="6" column="0" colspan="2">
     <widget class="QWidget" name="widget" native="true">
      <layout class="QGridLayout" name="gridLayout">
       <property name="margin">
@@ -121,6 +144,19 @@
         </property>
         <property name="text">
          <string>&amp;Ok</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="submitButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Submit result</string>
         </property>
        </widget>
       </item>
@@ -149,5 +185,24 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>submitButton</sender>
+   <signal>released()</signal>
+   <receiver>ResultDialog</receiver>
+   <slot>submitResult()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>274</x>
+     <y>177</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>199</x>
+     <y>99</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
+ <slots>
+  <slot>submitResult()</slot>
+ </slots>
 </ui>
