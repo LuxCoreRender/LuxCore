@@ -90,6 +90,8 @@ int HardwareTreeItem::row() const {
 }
 
 //------------------------------------------------------------------------------
+// HardwareTreeModel
+//------------------------------------------------------------------------------
 
 HardwareTreeModel::HardwareTreeModel(MainWindow *w,
 		const vector<DeviceDescription *> &devDescs) : QAbstractItemModel() {
@@ -311,4 +313,137 @@ string HardwareTreeModel::getDeviceSelectionString() const {
 		ss << (deviceSelection[i] ? "1" : "0");
 
 	return ss.str();
+}
+
+//------------------------------------------------------------------------------
+// DeviceTreeModel
+//------------------------------------------------------------------------------
+
+vector<BenchmarkDeviceDescription> BuildDeviceDescriptions(
+	const vector<OpenCLIntersectionDevice *> &devices) {
+	vector<BenchmarkDeviceDescription> descs;
+
+	for (size_t i = 0; i < devices.size(); ++i) {
+		const OpenCLDeviceDescription *odevDesc = ((OpenCLIntersectionDevice *)devices[i])->GetDeviceDesc();
+		cl::Platform platform = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
+
+		BenchmarkDeviceDescription desc;
+		desc.platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
+		desc.platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
+		desc.deviceName = odevDesc->GetName();
+		switch (odevDesc->GetOCLDevice().getInfo<CL_DEVICE_TYPE>()) {
+			case CL_DEVICE_TYPE_CPU:
+				desc.deviceType = "CPU";
+				break;
+			case CL_DEVICE_TYPE_GPU:
+				desc.deviceType = "GPU";
+				break;
+			case CL_DEVICE_TYPE_ACCELERATOR:
+				desc.deviceType = "ACCELERATOR";
+				break;
+			default:
+				desc.deviceType = "UNKNOWN";
+				break;
+		}
+		desc.units = odevDesc->GetComputeUnits();
+		desc.clock = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
+		desc.globalMem = odevDesc->GetMaxMemory() / 1024;
+		desc.localMem = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>() / 1024;
+		desc.constantMem = odevDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>() / 1024;
+
+		descs.push_back(desc);
+	}
+
+	return descs;
+}
+
+DeviceListModel::DeviceListModel(const vector<BenchmarkDeviceDescription> &descs) :
+			QAbstractItemModel() {
+	rootItem = new HardwareTreeItem("Devices");
+
+#ifndef LUXRAYS_DISABLE_OPENCL
+	for (size_t i = 0; i < descs.size(); ++i) {
+		const BenchmarkDeviceDescription &desc = descs[i];
+
+		stringstream ss;
+		ss << desc.deviceName << " [" << desc.deviceType << ", " <<
+				desc.units << ", " << desc.clock << " MHz]";
+
+		HardwareTreeItem *newNode = new HardwareTreeItem(ss.str().c_str());
+		rootItem->appendChild(newNode);
+	}
+#endif
+}
+
+DeviceListModel::~DeviceListModel() {
+	delete rootItem;
+}
+
+int DeviceListModel::columnCount(const QModelIndex &parent) const {
+	if (parent.isValid())
+		return static_cast<HardwareTreeItem *>(parent.internalPointer())->columnCount();
+	else
+		return rootItem->columnCount();
+}
+
+QVariant DeviceListModel::data(const QModelIndex &index, int role) const {
+	if (!index.isValid())
+		return QVariant();
+
+	if (role == Qt::DisplayRole) {
+		HardwareTreeItem *item = static_cast<HardwareTreeItem *>(index.internalPointer());
+
+		return item->data(index.column());
+	} else if (role == Qt::ForegroundRole) {
+		return QVariant(QColor(Qt::blue));
+	} else
+		return QVariant();
+}
+
+QModelIndex DeviceListModel::index(int row, int column, const QModelIndex &parent) const {
+	if (!hasIndex(row, column, parent))
+		return QModelIndex();
+
+	HardwareTreeItem *parentItem;
+
+	if (!parent.isValid())
+		parentItem = rootItem;
+	else
+		parentItem = static_cast<HardwareTreeItem*>(parent.internalPointer());
+
+	HardwareTreeItem *childItem = parentItem->child(row);
+	if (childItem)
+		return createIndex(row, column, childItem);
+	else
+		return QModelIndex();
+}
+
+QModelIndex DeviceListModel::parent(const QModelIndex &index) const {
+	if (!index.isValid())
+		return QModelIndex();
+
+	HardwareTreeItem *childItem = static_cast<HardwareTreeItem*>(index.internalPointer());
+	HardwareTreeItem *parentItem = childItem->parent();
+
+	if (parentItem == rootItem)
+		return QModelIndex();
+
+	return createIndex(parentItem->row(), 0, parentItem);
+}
+
+int DeviceListModel::rowCount(const QModelIndex &parent) const {
+	HardwareTreeItem *parentItem;
+	if (parent.column() > 0)
+		return 0;
+
+	if (!parent.isValid())
+		parentItem = rootItem;
+	else
+		parentItem = static_cast<HardwareTreeItem*>(parent.internalPointer());
+
+	return parentItem->childCount();
+}
+
+Qt::ItemFlags DeviceListModel::flags(const QModelIndex &index) const {
+	return 0;
 }

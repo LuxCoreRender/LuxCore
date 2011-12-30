@@ -72,6 +72,10 @@ private:
 	bool checkable, checked;
 };
 
+//------------------------------------------------------------------------------
+// HardwareTreeModel
+//------------------------------------------------------------------------------
+
 class HardwareTreeModel : public QAbstractItemModel {
 	Q_OBJECT
 
@@ -96,6 +100,46 @@ private:
 	HardwareTreeItem *rootItem;
 
 	vector<bool> deviceSelection;
+};
+
+//------------------------------------------------------------------------------
+// DeviceTreeModel
+//------------------------------------------------------------------------------
+
+typedef struct {
+	string platformName;
+	string platformVersion;
+	string deviceName;
+	string deviceType;
+	int units;
+	int clock;
+	int globalMem;
+	int localMem;
+	int constantMem;
+} BenchmarkDeviceDescription;
+
+extern vector<BenchmarkDeviceDescription> BuildDeviceDescriptions(
+	const vector<OpenCLIntersectionDevice *> &devices);
+
+class DeviceListModel : public QAbstractItemModel {
+	Q_OBJECT
+
+public:
+	DeviceListModel(const vector<BenchmarkDeviceDescription> &devDescs);
+	~DeviceListModel();
+
+	QVariant data(const QModelIndex &index, int role) const;
+	QModelIndex index(int row, int column,
+			const QModelIndex &parent = QModelIndex()) const;
+	QModelIndex parent(const QModelIndex &index) const;
+	int rowCount(const QModelIndex &parent = QModelIndex()) const;
+	int columnCount(const QModelIndex &parent = QModelIndex()) const;
+	Qt::ItemFlags flags(const QModelIndex &index) const;
+
+private:
+	MainWindow *win;
+
+	HardwareTreeItem *rootItem;
 };
 
 #endif // _HARDWARETREE_H
