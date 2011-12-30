@@ -210,17 +210,13 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 
 		// Initialize hardware information
 		if (!app->hardwareTreeModel) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 			if (app->renderSession->renderEngine->GetEngineType() == PATHOCL)
 				app->hardwareTreeModel = new HardwareTreeModel(app->mainWin,
 						((PathOCLRenderEngine *)app->renderSession->renderEngine)->GetAvailableDeviceDescriptions());
 			else {
-#endif
 				const vector<DeviceDescription *> devDescs;
 				app->hardwareTreeModel = new HardwareTreeModel(app->mainWin, devDescs);
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 			}
-#endif
 		}
 
 		// Start the rendering
@@ -229,10 +225,8 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		// Done
 		app->renderingStartTime = luxrays::WallClockTime();
 		app->engineInitDone = true;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
 		LM_ERROR("OpenCL ERROR: " << err.what() << "(" << err.err() << ")");
-#endif
 	} catch (runtime_error err) {
 		LM_ERROR("RUNTIME ERROR: " << err.what());
 	} catch (exception err) {
@@ -260,7 +254,6 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 	// Update the statistics
 	double raysSec = 0.0;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (renderEngine->GetEngineType() == PATHOCL) {
 		const vector<OpenCLIntersectionDevice *> &intersectionDevices =
 			((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
@@ -268,7 +261,6 @@ void LuxMarkApp::RenderRefreshTimeout() {
 		for (size_t i = 0; i < intersectionDevices.size(); ++i)
 			raysSec += intersectionDevices[i]->GetPerformance();
 	}
-#endif
 
 	double sampleSec = renderEngine->GetTotalSamplesSec();
 	int renderingTime = int(renderEngine->GetRenderingTime());
@@ -297,7 +289,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 			renderingTime, validBuf, int(sampleSec / 1000.0),
 			int(raysSec / 1000.0), renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 	ss << buf;
-#ifndef LUXRAYS_DISABLE_OPENCL
+
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||
 			(mode == BENCHMARK_OCL_CPU) || (mode == BENCHMARK_OCL_CUSTOM)) {
 		const vector<OpenCLIntersectionDevice *> &intersectionDevices =
@@ -327,7 +319,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 			}
 		}
 	}
-#endif
+
 	mainWin->UpdateScreenLabel(ss.str().c_str(), benchmarkDone);
 
 	if (benchmarkDone) {
