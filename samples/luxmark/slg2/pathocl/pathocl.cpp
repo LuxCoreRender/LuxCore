@@ -33,8 +33,6 @@
 
 #include "smalllux.h"
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 #include "pathocl/pathocl.h"
 #include "pathocl/kernels/kernels.h"
 #include "renderconfig.h"
@@ -314,5 +312,3 @@ unsigned int PathOCLRenderEngine::GetPass() const {
 bool PathOCLRenderEngine::IsMaterialCompiled(const MaterialType type) const {
 	return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
 }
-
-#endif

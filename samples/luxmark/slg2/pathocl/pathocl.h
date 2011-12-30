@@ -22,8 +22,6 @@
 #ifndef PATHOCL_H
 #define	PATHOCL_H
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 #include "smalllux.h"
 #include "renderengine.h"
 #include "ocldatatypes.h"
@@ -197,7 +195,5 @@ private:
 
 	bool usePixelAtomics;
 };
-
-#endif
 
 #endif	/* PATHOCL_H */

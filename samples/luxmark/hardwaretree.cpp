@@ -108,7 +108,6 @@ HardwareTreeModel::HardwareTreeModel(MainWindow *w,
 	HardwareTreeItem *oclGPUDev = new HardwareTreeItem("GPUs and Accelerators");
 	oclDev->appendChild(oclGPUDev);
 
-#ifndef LUXRAYS_DISABLE_OPENCL
 	int index = 0;
 	for (size_t i = 0; i < devDescs.size(); ++i) {
 		DeviceDescription *devDesc = devDescs[i];
@@ -177,7 +176,6 @@ HardwareTreeModel::HardwareTreeModel(MainWindow *w,
 			deviceSelection.push_back(!isCPU);
 		}
 	}
-#endif
 }
 
 HardwareTreeModel::~HardwareTreeModel() {
@@ -361,7 +359,6 @@ DeviceListModel::DeviceListModel(const vector<BenchmarkDeviceDescription> &descs
 			QAbstractItemModel() {
 	rootItem = new HardwareTreeItem("Devices");
 
-#ifndef LUXRAYS_DISABLE_OPENCL
 	for (size_t i = 0; i < descs.size(); ++i) {
 		const BenchmarkDeviceDescription &desc = descs[i];
 
@@ -372,7 +369,6 @@ DeviceListModel::DeviceListModel(const vector<BenchmarkDeviceDescription> &descs
 		HardwareTreeItem *newNode = new HardwareTreeItem(ss.str().c_str());
 		rootItem->appendChild(newNode);
 	}
-#endif
 }
 
 DeviceListModel::~DeviceListModel() {
