@@ -65,8 +65,5 @@ private slots:
 	void httpError(QNetworkReply::NetworkError error);
 };
 
-#define SD_LOG(a) { std::stringstream _SD_LOG_LOCAL_SS; _SD_LOG_LOCAL_SS << a;  ProgessMessage(QString(_SD_LOG_LOCAL_SS.str().c_str())); }
-#define SD_LOG_ERROR(a) { SD_LOG("<FONT COLOR=\"#ff0000\">" << a << "</FONT>"); }
-
 #endif	/* _SUBMITDIALOG_H */
 

@@ -188,7 +188,7 @@ template <class T> inline std::string ToString(const T& t) {
 	std::stringstream ss;
 	ss << t;
 	return ss.str();
-	}
+}
 
 template <class T> inline T RoundUp(const T a, const T b) {
 	const unsigned int r = a % b;
