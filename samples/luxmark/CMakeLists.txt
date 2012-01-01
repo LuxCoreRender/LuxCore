@@ -25,7 +25,7 @@ set(LUXMARK_VERSION_MINOR 0beta1)
 find_package(Qt4 REQUIRED)
 IF(QT4_FOUND)
   include(${QT_USE_FILE})
-  include_directories(${QT_INCLUDES})
+  include_directories(${QT_INCLUDES} ${QT_QTNETWORK_INCLUDE_DIR})
 ELSE(QT4_FOUND)
   message(STATUS "Is env variable QTDIR set correctly? Currently: $ENV{QTDIR}")
 ENDIF(QT4_FOUND)
@@ -88,6 +88,7 @@ set(LUXMARK_SRCS
 	main.cpp
 	mainwindow.cpp
     resultdialog.cpp
+	submitdialog.cpp
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #!!! Files copied from SLG, do not edit the files !!!
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -110,11 +111,13 @@ set(LUXMARK_MOC
     hardwaretree.h
 	luxmarkapp.h
     resultdialog.h
+	submitdialog.h
 	)
 set(LUXMARK_UIS
 	aboutdialog.ui
 	mainwindow.ui
     resultdialog.ui
+	submitdialog.ui
 	)
 set(LUXMARK_RCS
 	resources.qrc
@@ -161,7 +164,7 @@ ENDIF(APPLE)
 
 IF(APPLE)
 	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
-	target_link_libraries(LuxMark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+	target_link_libraries(LuxMark luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 	ADD_CUSTOM_COMMAND(
 			TARGET LuxMark POST_BUILD
 				COMMAND rm -rf ${CMAKE_BINARY_DIR}/bin/Release/LuxMark.app/Contents/Resources
@@ -174,7 +177,7 @@ ELSE(APPLE)
 
 	ADD_EXECUTABLE(luxmark ${LUXMARK_SRCS})
 
-	TARGET_LINK_LIBRARIES(luxmark luxrays ${QT_LIBRARIES} ${GLEW_LIBRARY} ${OPENGL_LIBRARY})
+	TARGET_LINK_LIBRARIES(luxmark luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${OPENGL_LIBRARY})
 	TARGET_LINK_LIBRARIES(luxmark ${OpenCL_LIBRARY})
 	TARGET_LINK_LIBRARIES(luxmark ${GLUT_LIBRARY})
 	

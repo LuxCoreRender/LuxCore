@@ -1,4 +1,4 @@
- /***************************************************************************
+/***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
@@ -19,40 +19,54 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "luxmarkcfg.h"
-#include "resultdialog.h"
-#include "submitdialog.h"
+#ifndef _SUBMITDIALOG_H
+#define	_SUBMITDIALOG_H
 
-ResultDialog::ResultDialog(LuxMarkAppMode mode,
-		const char *scnName, const double sampSecs,
-		const vector<BenchmarkDeviceDescription> &ds,
-		QWidget *parent) : QDialog(parent),
-		ui(new Ui::ResultDialog), descs(ds) {
-	sceneName = scnName;
-	sampleSecs = sampSecs;
+#include <cstddef>
 
-	ui->setupUi(this);
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 
-	this->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
-	ui->modeLabel->setText((mode == BENCHMARK_OCL_GPU) ? "OpenCL GPUs" :
-				((mode == BENCHMARK_OCL_CPUGPU) ? "OpenCL CPUs+GPUs" :
-					((mode == BENCHMARK_OCL_CPU) ? "OpenCL CPUs" :
-						((mode == BENCHMARK_OCL_CUSTOM) ? "OpenCL Custom" : "Interactive"))));
-	ui->sceneLabel->setText(sceneName);
+#include "smalllux.h"
+#include "hardwaretree.h"
+#include "ui_submitdialog.h"
 
-	deviceListModel = new DeviceListModel(descs);
-	ui->deviceListView->setModel(deviceListModel);
+class SubmitDialog : public QDialog {
+	Q_OBJECT
 
-	ui->resultLCD->display(int(sampleSecs / 1000.0));
-}
+public:
+	SubmitDialog(
+			const char *sceneName,
+			const double sampleSecs,
+			const vector<BenchmarkDeviceDescription> &descs,
+			QWidget *parent = NULL);
+	~SubmitDialog();
 
-ResultDialog::~ResultDialog() {
-	delete ui;
-	delete deviceListModel;
-}
+private:
+	enum SubmitState { INPUT, SUBMITTING, DONE };
 
-void ResultDialog::submitResult() {
-	SubmitDialog *dialog = new SubmitDialog(sceneName, sampleSecs, descs);
-	dialog->exec();
-	delete dialog;
-}
+	void ProgessMessage(const QString &msg);
+
+	Ui::SubmitDialog *ui;
+
+	const char *sceneName;
+	double sampleSecs;
+	const vector<BenchmarkDeviceDescription> &descs;
+
+	SubmitState state;
+
+	QNetworkAccessManager *manager;
+	QNetworkReply *reply;
+
+private slots:
+	void genericButton();
+	void httpFinished();
+	void httpError(QNetworkReply::NetworkError error);
+};
+
+#define SD_LOG(a) { std::stringstream _SD_LOG_LOCAL_SS; _SD_LOG_LOCAL_SS << a;  ProgessMessage(QString(_SD_LOG_LOCAL_SS.str().c_str())); }
+#define SD_LOG_ERROR(a) { SD_LOG("<FONT COLOR=\"#ff0000\">" << a << "</FONT>"); }
+
+#endif	/* _SUBMITDIALOG_H */
+

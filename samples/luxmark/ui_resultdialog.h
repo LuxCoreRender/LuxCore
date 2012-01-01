@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'resultdialog.ui'
 **
-** Created: Fri Dec 30 10:33:04 2011
+** Created: Sun Jan 1 12:25:23 2012
 **      by: Qt User Interface Compiler version 4.7.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -165,7 +165,7 @@ public:
         deviceLabel->setText(QApplication::translate("ResultDialog", "Devices:", 0, QApplication::UnicodeUTF8));
         sampleSecLabel->setText(QApplication::translate("ResultDialog", "Result:", 0, QApplication::UnicodeUTF8));
         okButton->setText(QApplication::translate("ResultDialog", "&Ok", 0, QApplication::UnicodeUTF8));
-        submitButton->setText(QApplication::translate("ResultDialog", "Submit result", 0, QApplication::UnicodeUTF8));
+        submitButton->setText(QApplication::translate("ResultDialog", "&Submit result", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };
