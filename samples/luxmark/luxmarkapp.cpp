@@ -266,7 +266,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	int renderingTime = int(renderEngine->GetRenderingTime());
 
 	// After 120secs of benchmark, show the result dialog
-	bool benchmarkDone = (renderingTime > 2) && (mode != INTERACTIVE);
+	bool benchmarkDone = (renderingTime > 120) && (mode != INTERACTIVE);
 
 	char buf[512];
 	stringstream ss("");

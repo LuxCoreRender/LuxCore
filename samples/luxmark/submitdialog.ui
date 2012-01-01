@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>480</width>
-    <height>300</height>
+    <width>600</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,7 +33,7 @@
    <item row="0" column="0" colspan="2">
     <widget class="QLabel" name="noteLabel">
      <property name="text">
-      <string>&lt;b&gt;Note:&lt;/b&gt; submiting a result to &lt;a href=&quot;http://www.luxrender.net/luxmark&quot;&gt;www.luxrender.net/luxmark&lt;/a&gt; requires a valid forum account. If you don't have an account, you can create one &lt;a href=&quot;http://www.luxrender.net/forum/ucp.php?mode=register&quot;&gt;here&lt;a/&gt;.</string>
+      <string>&lt;b&gt;Note:&lt;/b&gt; submiting a result to &lt;a href=&quot;http://www.luxrender.net/luxmark&quot;&gt;www.luxrender.net/luxmark&lt;/a&gt; requires a valid forum account. If you don't have an account, you can create one &lt;a href=&quot;http://www.luxrender.net/forum/ucp.php?mode=register&quot;&gt;here&lt;/a&gt;. Account names are case sensitive.</string>
      </property>
      <property name="textFormat">
       <enum>Qt::RichText</enum>
@@ -43,6 +43,9 @@
      </property>
      <property name="wordWrap">
       <bool>true</bool>
+     </property>
+     <property name="indent">
+      <number>-1</number>
      </property>
      <property name="openExternalLinks">
       <bool>true</bool>
@@ -66,12 +69,15 @@
     </widget>
    </item>
    <item row="3" column="1">
-    <widget class="QLineEdit" name="pwdEdit">
+    <widget class="QLineEdit" name="nameEdit">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="echoMode">
+      <enum>QLineEdit::Normal</enum>
      </property>
     </widget>
    </item>
@@ -83,7 +89,7 @@
     </widget>
    </item>
    <item row="4" column="1">
-    <widget class="QLineEdit" name="nameEdit">
+    <widget class="QLineEdit" name="pwdEdit">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
        <horstretch>0</horstretch>
@@ -95,8 +101,25 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QLabel" name="label">
+   <item row="8" column="0">
+    <widget class="QLabel" name="resultNoteLabel">
+     <property name="text">
+      <string>Result note:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="1">
+    <widget class="QPlainTextEdit" name="noteTextEdit">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0" colspan="2">
+    <widget class="QLabel" name="logLabel">
      <property name="text">
       <string>Submission log:</string>
      </property>
@@ -105,14 +128,23 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
+   <item row="12" column="0" colspan="2">
     <widget class="QTextEdit" name="resultText">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="lineWrapMode">
+      <enum>QTextEdit::NoWrap</enum>
+     </property>
      <property name="readOnly">
       <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="9" column="0" colspan="2">
+   <item row="13" column="0" colspan="2">
     <widget class="QWidget" name="widget" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
