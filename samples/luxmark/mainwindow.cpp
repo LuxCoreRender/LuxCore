@@ -88,7 +88,11 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	luxFrameBuffer = new LuxFrameBuffer(QPixmap(":/images/resources/luxlogo_bg.png"));
 	renderScene->addItem(luxFrameBuffer);
 
-	authorLabel = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	renderScene->addItem(authorLabelBack);
+	authorLabelBack->setBrush(Qt::black);
+	authorLabel = new QGraphicsSimpleTextItem(authorLabelBack->text());
+	authorLabel->setBrush(Qt::blue);
 	renderScene->addItem(authorLabel);
 
 	screenLabelBack = renderScene->addRect(0.f, 0.f, 1.f, 1.f, QPen(), Qt::lightGray);
@@ -113,6 +117,7 @@ MainWindow::~MainWindow() {
 	delete ui;
 	delete statusbarLabel;
 	delete authorLabel;
+	delete authorLabelBack;
 	delete screenLabel;
 	delete screenLabelBack;
 	delete luxFrameBuffer;
@@ -141,25 +146,29 @@ void MainWindow::showAbout() {
 
 void MainWindow::setLuxBallScene() {
 	LM_LOG("Set LuxBall scene");
-	authorLabel->setText(QString("Scene designed by LuxRender project"));
+	authorLabelBack->setText(QString("Scene designed by LuxRender project"));
+	authorLabel->setText(authorLabelBack->text());
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL);
 }
 
 void MainWindow::setLuxBallHDRScene() {
 	LM_LOG("Set LuxBall HDR scene");
-	authorLabel->setText(QString("Scene designed by LuxRender project"));
+	authorLabelBack->setText(QString("Scene designed by LuxRender project"));
+	authorLabel->setText(authorLabelBack->text());
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_HDR);
 }
 
 void MainWindow::setLuxBallSkyScene() {
 	LM_LOG("Set LuxBall Sky scene");
-	authorLabel->setText(QString("Scene designed by LuxRender project"));
+	authorLabelBack->setText(QString("Scene designed by LuxRender project"));
+	authorLabel->setText(authorLabelBack->text());
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_SKY);
 }
 
 void MainWindow::setSalaScene() {
 	LM_LOG("Set Sala scene");
-	authorLabel->setText(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	authorLabelBack->setText(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	authorLabel->setText(authorLabelBack->text());
 	((LuxMarkApp *)qApp)->SetScene(SCENE_SALA);
 }
 
@@ -204,6 +213,7 @@ void MainWindow::ShowLogo() {
 	if (luxFrameBuffer->isVisible()) {
 		luxFrameBuffer->hide();
 		authorLabel->hide();
+		authorLabelBack->hide();
 		screenLabelBack->hide();
 		screenLabel->hide();
 	}
@@ -329,6 +339,7 @@ void MainWindow::ShowFrameBuffer(const float *frameBufferFloat,
 
 	if (!luxFrameBuffer->isVisible()) {
 		luxFrameBuffer->show();
+		authorLabelBack->show();
 		authorLabel->show();
 
 		qreal w = Max<qreal>(fbWidth, screenLabel->boundingRect().width());
@@ -391,15 +402,16 @@ void MainWindow::UpdateScreenLabel(const char *msg, const bool valid) {
 	screenLabel->setPos(0.f, fbHeight);
 
 	// Update scene size
-	qreal w = Max<qreal>(fbWidth, screenLabel->boundingRect().width());
-	qreal h = fbHeight + screenLabel->boundingRect().height();
+	const qreal w = Max<qreal>(fbWidth, screenLabel->boundingRect().width());
+	const qreal h = fbHeight + screenLabel->boundingRect().height();
 	renderScene->setSceneRect(0.f, 0.f, w, h);
 	luxFrameBuffer->setPos(Max<qreal>(0.f, (w - fbWidth) / 2), 0.f);
 	screenLabelBack->setRect(0.f, fbHeight, w, screenLabel->boundingRect().height());
 
 	// Update author label
-	authorLabel->setBrush(Qt::blue);
-	authorLabel->setPos(Max<qreal>(0.f, (w - fbWidth) / 2), 0.f);
+	const qreal alh = Max<qreal>(0.f, (w - fbWidth) / 2);
+	authorLabelBack->setPos(alh + 1.f, 1.f);
+	authorLabel->setPos(alh, 0.f);
 
 	// Update status bar with the first line of the message
 	QString qMsg(msg);

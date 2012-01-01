@@ -76,6 +76,7 @@ private:
 	unsigned char *frameBuffer;
 	unsigned int fbWidth, fbHeight;
 	QGraphicsSimpleTextItem *authorLabel;
+	QGraphicsSimpleTextItem *authorLabelBack;
 	QGraphicsSimpleTextItem *screenLabel;
 	QGraphicsRectItem *screenLabelBack;
 	QLabel *statusbarLabel;
