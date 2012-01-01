@@ -27,7 +27,7 @@
 #include "resultdialog.h"
 #include "renderengine.h"
 #include "pathocl/pathocl.h"
-#include "slg2/smalllux.h"
+#include "smalllux.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -266,7 +266,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	int renderingTime = int(renderEngine->GetRenderingTime());
 
 	// After 120secs of benchmark, show the result dialog
-	bool benchmarkDone = (renderingTime > 120) && (mode != INTERACTIVE);
+	bool benchmarkDone = (renderingTime > 2) && (mode != INTERACTIVE);
 
 	char buf[512];
 	stringstream ss("");
@@ -330,6 +330,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec, descs);
 		dialog->exec();
+		delete dialog;
 
 		// Go in PAUSE mode
 		InitRendering(PAUSE, sceneName);

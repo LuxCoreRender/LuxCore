@@ -156,7 +156,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Submit result</string>
+         <string>&amp;Submit result</string>
         </property>
        </widget>
       </item>

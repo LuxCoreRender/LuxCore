@@ -28,7 +28,7 @@
 #include "luxrays/core/device.h"
 #include "luxrays/core/virtualdevice.h"
 
-#include "slg2/smalllux.h"
+#include "smalllux.h"
 #include "hardwaretree.h"
 #include "mainwindow.h"
 

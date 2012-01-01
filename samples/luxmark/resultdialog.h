@@ -36,13 +36,17 @@ public:
 	ResultDialog(
 			LuxMarkAppMode mode,
 			const char *sceneName,
-			double sampleSecs, 
-			vector<BenchmarkDeviceDescription> &descs,
+			const double sampleSecs,
+			const vector<BenchmarkDeviceDescription> &descs,
 			QWidget *parent = NULL);
 	~ResultDialog();
 
 private:
 	Ui::ResultDialog *ui;
+
+	const char *sceneName;
+	double sampleSecs;
+	const vector<BenchmarkDeviceDescription> &descs;
 	DeviceListModel *deviceListModel;
 
 private slots:

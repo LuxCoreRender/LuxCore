@@ -22,18 +22,16 @@
 #include <QTextEdit>
 #include <QGraphicsSceneMouseEvent>
 #include <QDialogButtonBox>
+#include <QDateTime>
+#include <QTextStream>
+#include <QGraphicsItem>
 
 #include "mainwindow.h"
 #include "aboutdialog.h"
 #include "smalllux.h"
 #include "renderconfig.h"
 #include "luxmarkapp.h"
-#include "slg2/smalllux.h"
-
-#include <QDateTime>
-#include <QTextStream>
-#include <QtGui/qgraphicsitem.h>
-#include <X11/X.h>
+#include "smalllux.h"
 
 MainWindow *LogWindow = NULL;
 
@@ -372,13 +370,15 @@ bool MainWindow::event(QEvent *event) {
 
 	// Check if it's one of "our" events
 	if (eventtype == EVT_LUX_LOG_MESSAGE) {
-		QTextStream ss(new QString());
+		QString buf;
+		QTextStream ss(&buf);
 		ss << QDateTime::currentDateTime().toString(tr("yyyy-MM-dd hh:mm:ss")) << " - " <<
 				((LuxLogEvent *)event)->getMessage();
 
 		ui->LogView->append(ss.readAll());
 	} else if (eventtype == EVT_LUX_ERR_MESSAGE) {
-		QTextStream ss(new QString());
+		QString buf;
+		QTextStream ss(&buf);
 		ss << "<FONT COLOR=\"#ff0000\">" << QDateTime::currentDateTime().toString(tr("yyyy-MM-dd hh:mm:ss")) << " - " <<
 				((LuxLogEvent *)event)->getMessage() << "</FONT>";
 
