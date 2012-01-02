@@ -127,9 +127,6 @@ void SubmitDialog::genericButton() {
 		SD_LOG("dev_count = " << devCount.toStdString());
 
 		for (size_t i = 0; i < descs.size(); ++i) {
-			SD_LOG("dev_index = " << i);
-			params.addQueryItem("dev_index[]", ToString(i).c_str());
-
 			SD_LOG("dev_platform_name = " << descs[i].platformName);
 			params.addQueryItem("dev_platform_name[]", QString(descs[i].platformName.c_str()));
 
@@ -141,7 +138,6 @@ void SubmitDialog::genericButton() {
 
 			SD_LOG("dev_type = " << descs[i].deviceType);
 			params.addQueryItem("dev_type[]", QString(descs[i].deviceType.c_str()));
-			params.addQueryItem("dev_user_def_type[]", QString(""));
 
 			SD_LOG("dev_units = " << descs[i].units);
 			params.addQueryItem("dev_units[]", QString(ToString(descs[i].units).c_str()));
