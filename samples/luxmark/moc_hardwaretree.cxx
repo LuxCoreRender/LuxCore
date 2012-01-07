@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'hardwaretree.h'
 **
-** Created: Sun Jan 1 14:25:06 2012
+** Created: Sat Jan 7 18:01:27 2012
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.7.0)
 **
 ** WARNING! All changes made in this file will be lost!
