@@ -86,7 +86,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	luxFrameBuffer = new LuxFrameBuffer(QPixmap(":/images/resources/luxlogo_bg.png"));
 	renderScene->addItem(luxFrameBuffer);
 
-	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG2 by Michael \"neo2068\" Klemm"));
 	renderScene->addItem(authorLabelBack);
 	authorLabelBack->setBrush(Qt::black);
 	authorLabel = new QGraphicsSimpleTextItem(authorLabelBack->text());
@@ -165,7 +165,7 @@ void MainWindow::setLuxBallSkyScene() {
 
 void MainWindow::setSalaScene() {
 	LM_LOG("Set Sala scene");
-	authorLabelBack->setText(QString("Scene designed by Daniel Salazar (http://www.3developer.com)"));
+	authorLabelBack->setText(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG2 by Michael \"neo2068\" Klemm"));
 	authorLabel->setText(authorLabelBack->text());
 	((LuxMarkApp *)qApp)->SetScene(SCENE_SALA);
 }

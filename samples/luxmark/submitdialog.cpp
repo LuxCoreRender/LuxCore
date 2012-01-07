@@ -43,7 +43,7 @@ SubmitDialog::SubmitDialog(const char *scnName,
 	reply = NULL;
 
 	ui->setupUi(this);
-	ui->genericButton->setText("Submit");
+	ui->genericButton->setText("&Submit");
 
 	this->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 }
@@ -68,7 +68,7 @@ void SubmitDialog::genericButton() {
 		// Send the result
 
 		state = SUBMITTING;
-		ui->genericButton->setText("Cancel");
+		ui->genericButton->setText("&Cancel");
 
 		// Data to submit
 		const QString name = ui->nameEdit->text();
@@ -171,7 +171,7 @@ void SubmitDialog::genericButton() {
 
 		SD_LOG_ERROR("Submission aborted");
 		state = INPUT;
-		ui->genericButton->setText("Submit");
+		ui->genericButton->setText("&Submit");
 	} else {
 		// Done
 		this->close();
@@ -185,11 +185,11 @@ void SubmitDialog::httpFinished() {
 	if (result == "OK") {
 		SD_LOG("Result successfully submitted !");
 		state = DONE;
-		ui->genericButton->setText("Done");
+		ui->genericButton->setText("&Done");
 	} else {
 		SD_LOG_ERROR("Submission error: " << result);
 		state = INPUT;
-		ui->genericButton->setText("Submit");
+		ui->genericButton->setText("&Submit");
 	}
 }
 
@@ -210,5 +210,5 @@ void SubmitDialog::httpError(QNetworkReply::NetworkError error) {
 	}
 
 	state = INPUT;
-	ui->genericButton->setText("Submit");
+	ui->genericButton->setText("&Submit");
 }
