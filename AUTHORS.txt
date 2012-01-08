@@ -2,6 +2,6 @@ Authors:
 
 David "Dade" Bucciarelli <davibu.at.interfree.it>
 Alain "Chiaroscuro" Ducharme <>
-Jens Verwiebe <>
+Jens Verwiebe <info.at.jensverwiebe.de>
 Tom "Tomb" Bench <tom.bech.at.gmail.com>
 Amir "foobarbarian" Mohammadkhani-Aminabadi <amir@mohammadkhani.eu>
