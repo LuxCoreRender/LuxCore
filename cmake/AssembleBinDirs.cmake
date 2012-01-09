@@ -123,8 +123,8 @@ IF (WIN32)
 
 ELSE (WIN32)
 
-	set(LUXMARK_LINUX64_BIN_DIR "luxmark-linux64-v1.0")
-	set(LUXMARK_WIN32_BIN_DIR "luxmark-win32-v1.0")
+	set(LUXMARK_LINUX64_BIN_DIR "luxmark-linux64-v2.0beta1")
+	set(LUXMARK_WIN32_BIN_DIR "luxmark-win32-v2.0beta1")
 
 	# Win32
 
