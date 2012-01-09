@@ -15,7 +15,7 @@ more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
 LuxMark
 =======
 
-LuxMark is OpenCL and CPU benchmark based on SLG.
+LuxMark is OpenCL benchmark based on SLG.
 
 Authors
 =======
