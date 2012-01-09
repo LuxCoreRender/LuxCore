@@ -22,6 +22,7 @@
 #include "luxmarkcfg.h"
 #include "resultdialog.h"
 #include "submitdialog.h"
+#include "luxmarkapp.h"
 
 ResultDialog::ResultDialog(LuxMarkAppMode mode,
 		const char *scnName, const double sampSecs,
@@ -44,6 +45,9 @@ ResultDialog::ResultDialog(LuxMarkAppMode mode,
 	ui->deviceListView->setModel(deviceListModel);
 
 	ui->resultLCD->display(int(sampleSecs / 1000.0));
+
+	if ((strcmp(sceneName, SCENE_SALA) != 0) && (strcmp(sceneName, SCENE_LUXBALL_HDR) !=0))
+		ui->submitButton->setEnabled(false);
 }
 
 ResultDialog::~ResultDialog() {
