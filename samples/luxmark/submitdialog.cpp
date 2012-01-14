@@ -107,52 +107,52 @@ void SubmitDialog::genericButton() {
 
 		// Create the http request parameters
 		QUrl params;
-		params.addQueryItem("name", name);
-		params.addQueryItem("password", pwd);
+		params.addEncodedQueryItem("name", QUrl::toPercentEncoding(name));
+		params.addEncodedQueryItem("password", QUrl::toPercentEncoding(pwd));
 
 		SD_LOG("Submitted data:");
-		params.addQueryItem("os", os);
+		params.addEncodedQueryItem("os", QUrl::toPercentEncoding(os));
 		SD_LOG("os = " << os.toStdString());
 
-		params.addQueryItem("scene_name", scene);
+		params.addEncodedQueryItem("scene_name", QUrl::toPercentEncoding(scene));
 		SD_LOG("scene_name = " << scene.toStdString());
 
-		params.addQueryItem("score", score);
+		params.addEncodedQueryItem("score", QUrl::toPercentEncoding(score));
 		SD_LOG("score = " << score.toStdString());
 
-		params.addQueryItem("note", note);
+		params.addEncodedQueryItem("note", QUrl::toPercentEncoding(note));
 		SD_LOG("note = " << note.toStdString());
 
-		params.addQueryItem("dev_count", devCount);
+		params.addEncodedQueryItem("dev_count", QUrl::toPercentEncoding(devCount));
 		SD_LOG("dev_count = " << devCount.toStdString());
 
 		for (size_t i = 0; i < descs.size(); ++i) {
 			SD_LOG("dev_platform_name = " << descs[i].platformName);
-			params.addQueryItem("dev_platform_name[]", QString(descs[i].platformName.c_str()));
+			params.addEncodedQueryItem("dev_platform_name[]", QUrl::toPercentEncoding(QString(descs[i].platformName.c_str())));
 
 			SD_LOG("dev_platform_ver = " << descs[i].platformVersion);
-			params.addQueryItem("dev_platform_ver[]", QString(descs[i].platformVersion.c_str()));
+			params.addEncodedQueryItem("dev_platform_ver[]", QUrl::toPercentEncoding(QString(descs[i].platformVersion.c_str())));
 
 			SD_LOG("dev_name = " << descs[i].deviceName);
-			params.addQueryItem("dev_name[]", QString(descs[i].deviceName.c_str()));
+			params.addEncodedQueryItem("dev_name[]", QUrl::toPercentEncoding(QString(descs[i].deviceName.c_str())));
 
 			SD_LOG("dev_type = " << descs[i].deviceType);
-			params.addQueryItem("dev_type[]", QString(descs[i].deviceType.c_str()));
+			params.addEncodedQueryItem("dev_type[]", QUrl::toPercentEncoding(QString(descs[i].deviceType.c_str())));
 
 			SD_LOG("dev_units = " << descs[i].units);
-			params.addQueryItem("dev_units[]", QString(ToString(descs[i].units).c_str()));
+			params.addEncodedQueryItem("dev_units[]", QUrl::toPercentEncoding(QString(ToString(descs[i].units).c_str())));
 
 			SD_LOG("dev_clock = " << descs[i].clock);
-			params.addQueryItem("dev_clock[]", QString(ToString(descs[i].clock).c_str()));
+			params.addEncodedQueryItem("dev_clock[]", QUrl::toPercentEncoding(QString(ToString(descs[i].clock).c_str())));
 
 			SD_LOG("dev_global_mem = " << descs[i].globalMem);
-			params.addQueryItem("dev_global_mem[]", QString(ToString(descs[i].globalMem).c_str()));
+			params.addEncodedQueryItem("dev_global_mem[]", QUrl::toPercentEncoding(QString(ToString(descs[i].globalMem).c_str())));
 
 			SD_LOG("dev_local_mem = " << descs[i].localMem);
-			params.addQueryItem("dev_local_mem[]", QString(ToString(descs[i].localMem).c_str()));
+			params.addEncodedQueryItem("dev_local_mem[]", QUrl::toPercentEncoding(QString(ToString(descs[i].localMem).c_str())));
 
 			SD_LOG("dev_constant_mem = " << descs[i].localMem);
-			params.addQueryItem("dev_constant_mem[]", QString(ToString(descs[i].localMem).c_str()));
+			params.addEncodedQueryItem("dev_constant_mem[]", QUrl::toPercentEncoding(QString(ToString(descs[i].localMem).c_str())));
 		}
 
 		QByteArray data;
