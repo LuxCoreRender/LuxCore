@@ -20,7 +20,7 @@
 ###########################################################################
 
 set(LUXMARK_VERSION_MAJOR 2)
-set(LUXMARK_VERSION_MINOR 0beta1)
+set(LUXMARK_VERSION_MINOR 0beta2)
 
 find_package(Qt4 REQUIRED)
 IF(QT4_FOUND)

@@ -91,6 +91,7 @@ private slots:
 	void setLuxBallHDRScene();
 	void setLuxBallSkyScene();
 	void setSalaScene();
+	void setRoomScene();
 
 	void setBenchmarkGPUsMode();
 	void setBenchmarkCPUsGPUsMode();

@@ -115,14 +115,16 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 
 	Stop();
 
-	if (!strcmp(scnName, SCENE_SALA))
+	if (!strcmp(scnName, SCENE_ROOM))
 		mainWin->SetSceneCheck(0);
-	else if (!strcmp(scnName, SCENE_LUXBALL_HDR))
+	else if (!strcmp(scnName, SCENE_SALA))
 		mainWin->SetSceneCheck(1);
-	else if (!strcmp(scnName, SCENE_LUXBALL))
+	else if (!strcmp(scnName, SCENE_LUXBALL_HDR))
 		mainWin->SetSceneCheck(2);
-	else if (!strcmp(scnName, SCENE_LUXBALL_SKY))
+	else if (!strcmp(scnName, SCENE_LUXBALL))
 		mainWin->SetSceneCheck(3);
+	else if (!strcmp(scnName, SCENE_LUXBALL_SKY))
+		mainWin->SetSceneCheck(4);
 
 	// Initialize the new mode
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||

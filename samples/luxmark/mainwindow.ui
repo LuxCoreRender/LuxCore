@@ -134,6 +134,7 @@
     <addaction name="action_Benchmark_OpenCL_CPUs_GPUs"/>
     <addaction name="action_Benchmark_OpenCL_CPUs"/>
     <addaction name="action_Benchmark_OpenCL_Custom"/>
+    <addaction name="separator"/>
     <addaction name="action_Interactive"/>
     <addaction name="action_Pause"/>
    </widget>
@@ -141,8 +142,10 @@
     <property name="title">
      <string>&amp;Scene</string>
     </property>
+    <addaction name="action_Room"/>
     <addaction name="action_Sala"/>
     <addaction name="action_LuxBall_HDR"/>
+    <addaction name="separator"/>
     <addaction name="action_LuxBall"/>
     <addaction name="action_LuxBall_Sky"/>
    </widget>
@@ -186,7 +189,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>LuxBall &amp;HDR (262K triangles)</string>
+    <string>LuxBall &amp;HDR (Simple Benchmark: 262K triangles)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -197,7 +200,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;LuxBall  (262K triangles)</string>
+    <string>&amp;LuxBall  (Test: 262K triangles)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
@@ -232,7 +235,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>LuxBall S&amp;ky  (262K triangles)</string>
+    <string>LuxBall S&amp;ky  (Test: 262K triangles)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+K</string>
@@ -243,7 +246,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Sala (488K triangles)</string>
+    <string>&amp;Sala (Medium Benchmark: 488K triangles)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+A</string>
@@ -255,6 +258,17 @@
    </property>
    <property name="text">
     <string>Benchmark (Only &amp;selected devices)</string>
+   </property>
+  </action>
+  <action name="action_Room">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Room (Complex Benchmark: 2016K triangles)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
  </widget>
@@ -454,6 +468,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>action_Room</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setRoomScene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>511</x>
+     <y>383</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>exitApp()</slot>
@@ -468,5 +498,6 @@
   <slot>setBenchmarkCustomMode()</slot>
   <slot>setPauseMode()</slot>
   <slot>setBenchmarkCPUsMode()</slot>
+  <slot>setRoomScene()</slot>
  </slots>
 </ui>

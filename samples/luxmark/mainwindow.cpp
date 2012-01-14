@@ -163,6 +163,13 @@ void MainWindow::setLuxBallSkyScene() {
 	((LuxMarkApp *)qApp)->SetScene(SCENE_LUXBALL_SKY);
 }
 
+void MainWindow::setRoomScene() {
+	LM_LOG("Set Room scene");
+	authorLabelBack->setText(QString("Scene modeling/texturing by Mourelas Konstantinos \"Moure\" (http://moure-portfolio.blogspot.com/) for LuxMark"));
+	authorLabel->setText(authorLabelBack->text());
+	((LuxMarkApp *)qApp)->SetScene(SCENE_ROOM);
+}
+
 void MainWindow::setSalaScene() {
 	LM_LOG("Set Sala scene");
 	authorLabelBack->setText(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG2 by Michael \"neo2068\" Klemm"));
@@ -276,21 +283,31 @@ void MainWindow::SetModeCheck(const int index) {
 
 void MainWindow::SetSceneCheck(const int index) {
 	if (index == 0) {
-		ui->action_Sala->setChecked(true);
+		ui->action_Room->setChecked(true);
+		ui->action_Sala->setChecked(false);
 		ui->action_LuxBall_HDR->setChecked(false);
 		ui->action_LuxBall->setChecked(false);
 		ui->action_LuxBall_Sky->setChecked(false);
 	} else if (index == 1) {
+		ui->action_Room->setChecked(false);
+		ui->action_Sala->setChecked(true);
+		ui->action_LuxBall_HDR->setChecked(false);
+		ui->action_LuxBall->setChecked(false);
+		ui->action_LuxBall_Sky->setChecked(false);
+	} else if (index == 2) {
+		ui->action_Room->setChecked(false);
 		ui->action_Sala->setChecked(false);
 		ui->action_LuxBall_HDR->setChecked(true);
 		ui->action_LuxBall->setChecked(false);
 		ui->action_LuxBall_Sky->setChecked(false);
-	} else if (index == 2) {
+	} else if (index == 3) {
+		ui->action_Room->setChecked(false);
 		ui->action_Sala->setChecked(false);
 		ui->action_LuxBall_HDR->setChecked(false);
 		ui->action_LuxBall->setChecked(true);
 		ui->action_LuxBall_Sky->setChecked(false);
-	} else if (index == 3) {
+	} else if (index == 4) {
+		ui->action_Room->setChecked(false);
 		ui->action_Sala->setChecked(false);
 		ui->action_LuxBall_HDR->setChecked(false);
 		ui->action_LuxBall->setChecked(false);

@@ -46,7 +46,9 @@ ResultDialog::ResultDialog(LuxMarkAppMode mode,
 
 	ui->resultLCD->display(int(sampleSecs / 1000.0));
 
-	if ((strcmp(sceneName, SCENE_SALA) != 0) && (strcmp(sceneName, SCENE_LUXBALL_HDR) !=0))
+	if ((strcmp(sceneName, SCENE_ROOM) != 0) &&
+			(strcmp(sceneName, SCENE_SALA) !=0) &&
+			(strcmp(sceneName, SCENE_LUXBALL_HDR) !=0))
 		ui->submitButton->setEnabled(false);
 }
 

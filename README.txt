@@ -32,6 +32,7 @@ A special thanks goes to:
 - Riku "rikb" Walve for source patches;
 - David "livuxman" Rodr�guez for source patches;
 - Daniel "ZanQdo" Salazar (http://www.3developer.com/) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
+- Mourelas Konstantinos "Moure" (http://moure-portfolio.blogspot.com/) for Room Scene;
 - Nate Robins for glut32.dll;
 - Diego Nehab for PLY reading/writing library;
 - http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;

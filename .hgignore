@@ -5,6 +5,7 @@
 ^doxygen/slg.template
 ^bin/*
 ^doc/*
+^samples/luxmark/scenes/room/*
 ^samples/(benchpixel|benchsimpel|luxmark|smallluxgpu|smallppmgpu)/(Debug|Release)/
 (benchpixel|luxmark|smallluxgpu|smallppmgpu|slg|LUXRAYS|benchsimple)\.dir
 ^src/(Debug|Release)/
