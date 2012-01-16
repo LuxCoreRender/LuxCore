@@ -35,6 +35,7 @@ QBVHAccel::QBVHAccel(const Context *context,
 	mesh = NULL;
 	meshIDs = NULL;
 	meshTriangleIDs = NULL;
+	maxDepth = 0;
 }
 
 QBVHAccel::~QBVHAccel() {
@@ -135,7 +136,7 @@ void QBVHAccel::Init(const Mesh *m) {
 	LR_LOG(ctx, "QBVH completed with " << nNodes << "/" << maxNodes << " nodes");
 	LR_LOG(ctx, "Total QBVH memory usage: " << nNodes * sizeof(QBVHNode) / 1024 << "Kbytes");
 	LR_LOG(ctx, "Total QBVH QuadTriangle count: " << nQuads);
-
+	LR_LOG(ctx, "Max. QBVH Depth: " << maxDepth);
 	// Release temporary memory
 	delete[] primsBboxes;
 	delete[] primsCentroids;
@@ -147,6 +148,8 @@ void QBVHAccel::Init(const Mesh *m) {
 void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
 		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex, int depth) {
+	maxDepth = (depth >= maxDepth) ? depth : maxDepth; // Set depth so we know how much stack we need later.
+
 	// Create a leaf ?
 	//********
 	if (depth > 64 || end - start <= maxPrimsPerLeaf) {
