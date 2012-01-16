@@ -99,7 +99,7 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
 
 	// Check the kind of kernel cache to use
-	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "PERSISTENT");
+	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "NONE");
 	if (type == "PERSISTENT")
 		kernelCache = new luxrays::utils::oclKernelPersistentCache("slg_" + string(SLG_VERSION_MAJOR) + "." + string(SLG_VERSION_MINOR));
 	else if (type == "VOLATILE")

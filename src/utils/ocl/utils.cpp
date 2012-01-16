@@ -278,8 +278,9 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	cl::Platform platform = device.getInfo<CL_DEVICE_PLATFORM>();
 	std::string platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
 	std::string deviceName = device.getInfo<CL_DEVICE_NAME>();
+	std::string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
 	std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
-	std::string dirName = "kernel_cache/" + appName + "/" + platformName + "/" + deviceName;
+	std::string dirName = "kernel_cache/" + appName + "/" + platformName + "/" + deviceName + "/" + deviceUnits;
 	std::string fileName = dirName +"/" +kernelName;
 
 	if (!boost::filesystem::exists(fileName)) {
