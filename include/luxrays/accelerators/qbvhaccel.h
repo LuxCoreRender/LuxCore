@@ -411,6 +411,7 @@ public:
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	const TriangleMesh *GetPreprocessedMesh() const { return preprocessedMesh; }
+	u_int GetMaxDepth() { return maxDepth; }
 
 	friend class MQBVHAccel;
 	friend class OpenCLIntersectionDevice;
@@ -521,6 +522,8 @@ private:
 	const Mesh *mesh;
 	TriangleMeshID *meshIDs;
 	TriangleID *meshTriangleIDs;
+
+	int maxDepth;
 
 	bool initialized;
 };
