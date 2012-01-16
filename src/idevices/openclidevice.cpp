@@ -214,9 +214,9 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 	switch (dataSet->GetAcceleratorType()) {
 		case ACCEL_BVH: {
-			//--------------------------------------------------------------------------
+			//------------------------------------------------------------------
 			// BVH kernel
-			//--------------------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			{
 				// Compile sources
@@ -277,19 +277,57 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			break;
 		}
 		case ACCEL_QBVH: {
-			//--------------------------------------------------------------------------
+			//------------------------------------------------------------------
 			// QBVH kernel
-			//--------------------------------------------------------------------------
+			//------------------------------------------------------------------
+
+			const QBVHAccel *qbvh = (QBVHAccel *)dataSet->accel;
+			if (forceWorkGroupSize > 0) {
+				qbvhWorkGroupSize = forceWorkGroupSize;
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhWorkGroupSize);
+			} else {
+				qbvhWorkGroupSize = 64;
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Using default QBVH work group size: " << qbvhWorkGroupSize);
+			}
+
+			// Check the amount of local memory available and configure the
+			// QBVH node stack size
+			const cl_ulong localMemSize = deviceDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Available local memory: " << (localMemSize / 1024) << "Kbytes");
+
+			const u_int qbvhStackSize = qbvh->maxDepth + 1;
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Max. QBVH node stack size: " << qbvhStackSize);
+
+			// Set the correct worksize & stack size now that we have our tree built:
+			const u_int lg2 = (log(localMemSize / (sizeof(cl_int) * qbvhStackSize)) / log(2));
+			const u_int maxWorkGroups = 1 << lg2; // RayCount needs to be evenly divisible by WorkGroup threads.
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Max. group size for QBVH node stack: " << maxWorkGroups);
+
+			if (qbvhWorkGroupSize > maxWorkGroups) {
+				qbvhWorkGroupSize = maxWorkGroups;
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] WARNING: Not enough local memory available for QBVH node stack. Capping workgroup size to: " << qbvhWorkGroupSize);
+			}
+
+			const cl_ulong requiredLocalMemSize = sizeof(cl_int) * qbvhWorkGroupSize * qbvhStackSize;
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Required local memory for QBVH node stack: " << (requiredLocalMemSize / 1024) << "Kbytes");
+
+			if (requiredLocalMemSize > localMemSize)
+				throw std::runtime_error("Not enough local memory available. A QBVH stack overflow is very likely to occur.");
+
+			//------------------------------------------------------------------
 
 			{
 				// Compile sources
 				{
+					std::stringstream params;
+					params << "-I. -D QBVH_STACK_SIZE=" << qbvhStackSize << " -D QBVH_WORKGROUP_SIZE=" << qbvhWorkGroupSize;
+
 					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
 					cl::Program program = cl::Program(oclContext, source);
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
 						buildDevice.push_back(oclDevice);
-						program.build(buildDevice, "-I.");
+						program.build(buildDevice, params.str().c_str());
 					} catch (cl::Error err) {
 						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compilation error:\n" << strError.c_str());
@@ -298,26 +336,19 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					}
 
 					qbvhKernel = new cl::Kernel(program, "Intersect");
-					qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel work group size: " << qbvhWorkGroupSize);
-
-					qbvhKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhWorkGroupSize);
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhWorkGroupSize);
-
-					if (forceWorkGroupSize > 0) {
-						qbvhWorkGroupSize = forceWorkGroupSize;
-						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhWorkGroupSize);
-					}
 				}
 
 				// Compile QBVH+image storage kernel only if image support is available
 				if (deviceDesc->HasImageSupport() && (deviceDesc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
+					std::stringstream params;
+					params << "-I. -DUSE_IMAGE_STORAGE -D QBVH_STACK_SIZE=" << qbvhStackSize << " -D QBVH_WORKGROUP_SIZE=" << qbvhWorkGroupSize;
+
 					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
 					cl::Program program = cl::Program(oclContext, source);
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
 						buildDevice.push_back(oclDevice);
-						program.build(buildDevice, "-I. -DUSE_IMAGE_STORAGE");
+						program.build(buildDevice, params.str().c_str());
 					} catch (cl::Error err) {
 						cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage compilation error:\n" << strError.c_str());
@@ -326,20 +357,8 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					}
 
 					qbvhImageKernel = new cl::Kernel(program, "Intersect");
-					qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH Image Storage kernel work group size: " << qbvhImageWorkGroupSize);
-
-					qbvhImageKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &qbvhImageWorkGroupSize);
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Suggested work group size: " << qbvhImageWorkGroupSize);
-
-					if (forceWorkGroupSize > 0) {
-						qbvhImageWorkGroupSize = forceWorkGroupSize;
-						LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhImageWorkGroupSize);
-					}
 				}
 			}
-
-			const QBVHAccel *qbvh = (QBVHAccel *)dataSet->accel;
 
 			// Calculate the required image size for the storage
 
@@ -384,47 +403,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					qbvhUseImage = false;
 				}
 			}
-
-			//------------------------------------------------------------------
-			// Check the amount of local memory available and configure the
-			// QBVH node stack size
-			//------------------------------------------------------------------
-
-			const cl_ulong localMemSize = deviceDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Available local memory: " << (localMemSize / 1024) << "Kbytes");
-
-			// Set the correct worksize & stack size now that we have our tree built:
-			const int maxDepth = qbvh->maxDepth + (qbvh->maxDepth - (qbvh->maxDepth % 8));  // DWord align
-			const u_int lg2 = (log(localMemSize / (sizeof(cl_int) * maxDepth)) / log(2));
-			const u_int maxWorkGroups = 1 << lg2; // RayCount needs to be evenly divisible by WorkGroup threads.
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Max. group size for QBVH node stack: " << maxWorkGroups);
-			const u_int qbvhStackSize = maxDepth + 1;
-
-			if (qbvhUseImage) {
-				if (qbvhImageWorkGroupSize > maxWorkGroups) {
-					qbvhImageWorkGroupSize = maxWorkGroups;
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] WARNING: Not enough local memory available for QBVH node stack. Capping workgroup size to: " << qbvhImageWorkGroupSize);
-				}
-
-				const cl_ulong requiredLocalMemSize = sizeof(cl_int) * qbvhImageWorkGroupSize * qbvhStackSize;
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Required local memory for QBVH node stack: " << (requiredLocalMemSize / 1024) << "Kbytes");
-
-				if (requiredLocalMemSize > localMemSize)
-					throw std::runtime_error("Not enough local memory available. A QBVH stack overflow is very likely to occur.");
-			} else {
-				if (qbvhWorkGroupSize > maxWorkGroups) {
-					qbvhWorkGroupSize = maxWorkGroups;
-					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] WARNING: Not enough local memory available for QBVH node stack. Capping workgroup size to: " << qbvhWorkGroupSize);
-				}
-
-				const cl_ulong requiredLocalMemSize = sizeof(cl_int) * qbvhWorkGroupSize * qbvhStackSize;
-				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Required local memory for QBVH node stack: " << (requiredLocalMemSize / 1024) << "Kbytes");
-
-				if (requiredLocalMemSize > localMemSize)
-					throw std::runtime_error("Not enough local memory available. A QBVH stack overflow is very likely to occur.");
-			}
-
-			//------------------------------------------------------------------
 
 			if (qbvhUseImage) {
 				assert (nodeImageWidth < 0x7fff * 7);
@@ -489,8 +467,6 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				// Set arguments
 				qbvhImageKernel->setArg(2, *qbvhImageBuff);
 				qbvhImageKernel->setArg(3, *qbvhTrisImageBuff);
-				qbvhImageKernel->setArg(5, qbvhStackSize * qbvhImageWorkGroupSize * sizeof(cl_int), NULL);
-				qbvhImageKernel->setArg(6, qbvhStackSize);
 			} else {
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH buffer size: " << (sizeof(QBVHNode) * qbvh->nNodes / 1024) << "Kbytes");
 				qbvhBuff = new cl::Buffer(oclContext,
@@ -509,15 +485,13 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				// Set arguments
 				qbvhKernel->setArg(2, *qbvhBuff);
 				qbvhKernel->setArg(3, *qbvhTrisBuff);
-				qbvhKernel->setArg(5, qbvhStackSize * qbvhWorkGroupSize * sizeof(cl_int), NULL);
-				qbvhKernel->setArg(6, qbvhStackSize);
 			}
 			break;
 		}
 		case ACCEL_MQBVH: {
-			//--------------------------------------------------------------------------
+			//------------------------------------------------------------------
 			// MQBVH kernel
-			//--------------------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			// Compile sources
 			{
@@ -776,7 +750,7 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 				qbvhImageKernel->setArg(1, *hitsBuff);
 				qbvhImageKernel->setArg(4, (unsigned int)rayBuffer->GetRayCount());
 				oclQueue->enqueueNDRangeKernel(*qbvhImageKernel, cl::NullRange,
-					cl::NDRange(rayBuffer->GetSize()), cl::NDRange(qbvhImageWorkGroupSize));
+					cl::NDRange(rayBuffer->GetSize()), cl::NDRange(qbvhWorkGroupSize));
 			} else {
 				qbvhKernel->setArg(0, *raysBuff);
 				qbvhKernel->setArg(1, *hitsBuff);
@@ -824,7 +798,7 @@ void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(cl::Buffer &rBuff, cl::Buff
 				qbvhImageKernel->setArg(1, hBuff);
 				qbvhImageKernel->setArg(4, rayCount);
 				oclQueue->enqueueNDRangeKernel(*qbvhImageKernel, cl::NullRange,
-					cl::NDRange(rayCount), cl::NDRange(qbvhImageWorkGroupSize));
+					cl::NDRange(rayCount), cl::NDRange(qbvhWorkGroupSize));
 			} else {
 				qbvhKernel->setArg(0, rBuff);
 				qbvhKernel->setArg(1, hBuff);
