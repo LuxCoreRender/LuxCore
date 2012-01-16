@@ -286,7 +286,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				qbvhWorkGroupSize = forceWorkGroupSize;
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Forced work group size: " << qbvhWorkGroupSize);
 			} else {
-				qbvhWorkGroupSize = 64;
+				qbvhWorkGroupSize = 256;
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Using default QBVH work group size: " << qbvhWorkGroupSize);
 			}
 
