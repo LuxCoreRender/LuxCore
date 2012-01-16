@@ -225,7 +225,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
 					buildDevice.push_back(oclDevice);
-					program.build(buildDevice, "-I.");
+					program.build(buildDevice);
 				} catch (cl::Error err) {
 					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
@@ -296,7 +296,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Available local memory: " << (localMemSize / 1024) << "Kbytes");
 
 			const u_int qbvhStackSize = qbvh->maxDepth + 1;
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Max. QBVH node stack size: " << qbvhStackSize);
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Required QBVH node stack size: " << qbvhStackSize);
 
 			// Set the correct worksize & stack size now that we have our tree built:
 			const u_int lg2 = (log(localMemSize / (sizeof(cl_int) * qbvhStackSize)) / log(2));
@@ -320,7 +320,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				// Compile sources
 				{
 					std::stringstream params;
-					params << "-I. -D QBVH_STACK_SIZE=" << qbvhStackSize << " -D QBVH_WORKGROUP_SIZE=" << qbvhWorkGroupSize;
+					params << "-D QBVH_STACK_SIZE=" << qbvhStackSize << " -D QBVH_WORKGROUP_SIZE=" << qbvhWorkGroupSize;
 
 					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
 					cl::Program program = cl::Program(oclContext, source);
@@ -341,7 +341,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				// Compile QBVH+image storage kernel only if image support is available
 				if (deviceDesc->HasImageSupport() && (deviceDesc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
 					std::stringstream params;
-					params << "-I. -DUSE_IMAGE_STORAGE -D QBVH_STACK_SIZE=" << qbvhStackSize << " -D QBVH_WORKGROUP_SIZE=" << qbvhWorkGroupSize;
+					params << "-D USE_IMAGE_STORAGE -D QBVH_STACK_SIZE=" << qbvhStackSize << " -D QBVH_WORKGROUP_SIZE=" << qbvhWorkGroupSize;
 
 					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
 					cl::Program program = cl::Program(oclContext, source);
@@ -500,7 +500,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
 					buildDevice.push_back(oclDevice);
-					program.build(buildDevice, "-I.");
+					program.build(buildDevice);
 				} catch (cl::Error err) {
 					cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 					LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MQBVH compilation error:\n" << strError.c_str());
