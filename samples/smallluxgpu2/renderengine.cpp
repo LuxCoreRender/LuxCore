@@ -131,10 +131,13 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
 		SLG_LOG("[" << oclIntersectionDevices[i]->GetName() << "]");
 
-	// Check if I have to disable image storage
+	// Check if I have to disable image storage and set max. QBVH stack size
 	const bool frocedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
+	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
+	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i) {
 		oclIntersectionDevices[i]->SetQBVHDisableImageStorage(frocedDisableImageStorage);
+		oclIntersectionDevices[i]->SetQBVHMaxStackSize(qbvhStackSize);
+	}
 
 	// Set the Luxrays SataSet
 	renderConfig->scene->UpdateDataSet(ctx);

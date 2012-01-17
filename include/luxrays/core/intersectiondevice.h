@@ -145,6 +145,10 @@ public:
 		qbvhDisableImageStorage = v;
 	}
 
+	void SetQBVHMaxStackSize(const size_t s) {
+		qbvhStackSize = s;
+	}
+
 	//--------------------------------------------------------------------------
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
@@ -218,6 +222,7 @@ private:
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
 
+	size_t qbvhStackSize;
 	bool reportedPermissionError, qbvhUseImage, qbvhDisableImageStorage, hybridRenderingSupport;
 };
 

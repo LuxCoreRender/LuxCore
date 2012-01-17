@@ -48,6 +48,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	deviceName = (desc->GetName() +"Intersect").c_str();
 	reportedPermissionError = false;
 	qbvhUseImage = false;
+	qbvhStackSize = 24;
 	qbvhDisableImageStorage = false;
 	hybridRenderingSupport = true;
 	intersectionThread = NULL;
@@ -281,9 +282,9 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			// QBVH kernel
 			//------------------------------------------------------------------
 
-			const unsigned int qbvhStackSize = 24;
-
 			{
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH max. stack size: " << qbvhStackSize);
+
 				// Compile sources
 				{
 					std::stringstream params;

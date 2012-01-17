@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
+
 typedef struct {
 	float x, y, z;
 } Point;
@@ -244,6 +246,7 @@ __kernel void Intersect(
     const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 #endif
 
+	//int maxDepth = 0;
 	while (todoNode >= 0) {
 		const int nodeData = nodeStack[todoNode];
 		--todoNode;
@@ -291,6 +294,8 @@ __kernel void Intersect(
 			todoNode += (visit.s1 && !QBVHNode_IsEmpty(children.s1)) ? 1 : 0;
 			nodeStack[todoNode + 1] = children.s0;
 			todoNode += (visit.s0 && !QBVHNode_IsEmpty(children.s0)) ? 1 : 0;
+
+			//maxDepth = max(maxDepth, todoNode);
 		} else {
 			// Perform intersection
 			const uint nbQuadPrimitives = QBVHNode_NbQuadPrimitives(nodeData);
@@ -340,6 +345,8 @@ __kernel void Intersect(
             }
 		}
 	}
+
+	//printf(\"MaxDepth=%02d\\n\", maxDepth);
 
 	// Write result
 	rayHits[gid].t = rayHit.t;
