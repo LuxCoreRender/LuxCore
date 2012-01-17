@@ -188,7 +188,8 @@ __kernel void Intersect(
 		__global QBVHNode *nodes,
 		__global QuadTiangle *quadTris,
 #endif
-		const uint rayCount) {
+		const uint rayCount,
+		__local int *nodeStacks) {
 	// Select the ray to check
 	const int gid = get_global_id(0);
 	if (gid >= rayCount)
@@ -227,7 +228,6 @@ __kernel void Intersect(
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
-	__local int nodeStacks[QBVH_STACK_SIZE * QBVH_WORKGROUP_SIZE];
 	__local int *nodeStack = &nodeStacks[QBVH_STACK_SIZE * get_local_id(0)];
 	nodeStack[0] = 0; // first node to handle: root node
 

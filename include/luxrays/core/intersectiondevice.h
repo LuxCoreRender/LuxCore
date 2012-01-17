@@ -197,7 +197,7 @@ private:
 
 	// QBVH with image storage fields
 	cl::Kernel *qbvhImageKernel;
-	// qbvhWorkGroupSize is used for this kernel too
+	size_t qbvhImageWorkGroupSize;
 
 	cl::Image2D *qbvhImageBuff;
 	cl::Image2D *qbvhTrisImageBuff;
