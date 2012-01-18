@@ -501,9 +501,7 @@ void PathOCLRenderThread::InitKernels() {
 	}
 
 	// Check the OpenCL vendor and use some specific compiler options
-#if defined(__APPLE__) && defined(CL_VERSION_1_0)
-	ss << " -D __APPLE_FIX__";
-#endif
+
 
 	//--------------------------------------------------------------------------
 
