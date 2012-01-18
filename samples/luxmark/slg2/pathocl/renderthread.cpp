@@ -29,6 +29,11 @@
 #include <sstream>
 #include <stdexcept>
 
+#if defined(__APPLE__)
+//OSX version detection
+#include <sys/sysctl.h>
+#endif
+
 #include <boost/thread/mutex.hpp>
 
 #include "smalllux.h"
@@ -502,8 +507,18 @@ void PathOCLRenderThread::InitKernels() {
 
 	// Check the OpenCL vendor and use some specific compiler options
 	
-#if defined(__APPLE__) && defined(CL_VERSION_1_0)
-	ss << " -D __APPLE_FIX__";
+#if defined(__APPLE__) // OSX version detection
+	
+	char t[8];
+	int mib[2];
+	size_t len;
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_OSRELEASE;
+	len = sizeof(t);
+	sysctl(mib, 2, &t, &len, NULL, 0);
+	if(t[0] == 49 && t[1] < 49) // result (darwin) 11 in ascii
+		ss << " -D __APPLE_FIX__";
+
 #endif
 
 	//--------------------------------------------------------------------------
