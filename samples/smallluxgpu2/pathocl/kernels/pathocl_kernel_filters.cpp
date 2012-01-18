@@ -149,7 +149,7 @@ std::string luxrays::KernelSource_PathOCL_kernel_filters =
 "			isnan(weight) || isinf(weight))\n"
 "		printf(\"(NaN/Inf. error: (%f, %f, %f) [%f]\\n\", rad->r, rad->g, rad->b, weight);*/\n"
 "	\n"
-"#ifndef AVAILABLE_MAC_OS_X_VERSION_10_7_AND_LATER\n"
+"#if defined(__APPLE_FIX__)\n"
 "\n"
 "#if defined(PARAM_USE_PIXEL_ATOMICS)\n"
 "	AtomicAdd(&pixel->c.r, weight * rad->r);\n"
