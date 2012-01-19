@@ -940,14 +940,16 @@ void PathOCLRenderThread::Interrupt() {
 void PathOCLRenderThread::Stop() {
 	StopRenderThread();
 
-	// Transfer of the frame buffer
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	oclQueue.enqueueReadBuffer(
-		*frameBufferBuff,
-		CL_TRUE,
-		0,
-		frameBufferBuff->getInfo<CL_MEM_SIZE>(),
-		frameBuffer);
+	if (frameBuffer) {
+		// Transfer of the frame buffer
+		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+		oclQueue.enqueueReadBuffer(
+			*frameBufferBuff,
+			CL_TRUE,
+			0,
+			frameBufferBuff->getInfo<CL_MEM_SIZE>(),
+			frameBuffer);
+	}
 
 	FreeOCLBuffer(&raysBuff);
 	FreeOCLBuffer(&hitsBuff);
