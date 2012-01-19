@@ -247,8 +247,10 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					Spectrum c;
 					float count = 0.f;
 					for (size_t i = 0; i < renderThreads.size(); ++i) {
-						c += renderThreads[i]->frameBuffer[pGPU].c;
-						count += renderThreads[i]->frameBuffer[pGPU].count;
+						if (renderThreads[i]->frameBuffer) {
+							c += renderThreads[i]->frameBuffer[pGPU].c;
+							count += renderThreads[i]->frameBuffer[pGPU].count;
+						}
 					}
 
 					if ((count > 0) && !c.IsNaN()) {
@@ -275,8 +277,10 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					Spectrum c;
 					float count = 0.f;
 					for (size_t i = 0; i < renderThreads.size(); ++i) {
-						c += renderThreads[i]->frameBuffer[pGPU].c;
-						count += renderThreads[i]->frameBuffer[pGPU].count;
+						if (renderThreads[i]->frameBuffer) {
+							c += renderThreads[i]->frameBuffer[pGPU].c;
+							count += renderThreads[i]->frameBuffer[pGPU].count;
+						}
 					}
 
 					if ((count > 0) && !c.IsNaN())
