@@ -1360,7 +1360,7 @@ void PathGPU2RenderThread::InitRender() {
 	mib[1] = KERN_OSRELEASE;
 	len = sizeof(t);
 	sysctl(mib, 2, &t, &len, NULL, 0);
-	if(t[0] == 49 && t[1] < 49) // result (darwin) 11 in ascii
+	if(t[0] == 49 && t[1] < 49) // result < (darwin) 11 in ascii
 		ss << " -D __APPLE_FIX__";
 	
 #endif
