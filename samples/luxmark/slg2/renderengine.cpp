@@ -131,7 +131,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
 		LM_LOG_ENGINE("[" << oclIntersectionDevices[i]->GetName() << "]");
 
-// Check if I have to disable image storage and set max. QBVH stack size
+	// Check if I have to disable image storage and set max. QBVH stack size
 	const bool frocedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
 	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i) {
@@ -141,6 +141,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 
 	// Set the Luxrays SataSet
 	renderConfig->scene->UpdateDataSet(ctx);
+
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	// Disable the support for hybrid rendering

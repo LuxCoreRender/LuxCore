@@ -408,10 +408,9 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 				assert (leafImageWidth < 0x7ff * 10);
 				assert (leafImageHeight < 0xffff);
-
 				{
 					// Convert node indices to image coordinates
-					unsigned int *inodes = new unsigned int[nodeImageWidth * nodeImageHeight * 7 * 4];
+					unsigned int *inodes = new unsigned int[nodeImageWidth * nodeImageHeight * 4];
 					for (size_t i = 0; i < qbvh->nNodes; ++i) {
 						unsigned int *pnodes = (unsigned int *)&qbvh->nodes[i];
 						const size_t offset = i * 7 * 4;
@@ -451,7 +450,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				}
 
 				{
-					unsigned int *iprims = new unsigned int[leafImageWidth * leafImageHeight * 10 * 4];
+					unsigned int *iprims = new unsigned int[leafImageWidth * leafImageHeight * 4];
 					memcpy(iprims, qbvh->prims, sizeof(QuadTriangle) * qbvh->nQuads);
 
 					qbvhTrisImageBuff = new cl::Image2D(oclContext,
@@ -459,7 +458,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 							cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32), leafImageWidth, leafImageHeight, 0, iprims);
 					deviceDesc->usedMemory += qbvhTrisImageBuff->getInfo<CL_MEM_SIZE>();
 
-					delete iprims;
+					delete[] iprims;
 				}
 
 				// Set arguments

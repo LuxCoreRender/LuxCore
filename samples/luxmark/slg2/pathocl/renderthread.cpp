@@ -1091,7 +1091,6 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 
 void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 	//LM_LOG_ENGINE("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
-
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 	const unsigned int taskCount = renderThread->renderEngine->taskCount;
 
