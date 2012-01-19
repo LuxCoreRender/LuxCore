@@ -508,7 +508,7 @@ void PathOCLRenderThread::InitKernels() {
 	// Check the OpenCL vendor and use some specific compiler options
 	
 #if defined(__APPLE__) // OSX version detection
-	
+	{
 	char t[8];
 	int mib[2];
 	size_t len;
@@ -516,9 +516,9 @@ void PathOCLRenderThread::InitKernels() {
 	mib[1] = KERN_OSRELEASE;
 	len = sizeof(t);
 	sysctl(mib, 2, &t, &len, NULL, 0);
-	if(t[0] == 49 && t[1] < 49) // result < (darwin) 11 in ascii
+	if(t[0] == '1' && t[1] < '1') // result < darwin 11
 		ss << " -D __APPLE_FIX__";
-
+	}
 #endif
 
 	//--------------------------------------------------------------------------
