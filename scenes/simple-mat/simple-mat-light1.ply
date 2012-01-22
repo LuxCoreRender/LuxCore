@@ -1,0 +1,22 @@
+ply
+format ascii 1.0
+comment Created by Blender3D 249 - www.blender.org, source file: simple-mat.blend
+element vertex 4
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+property uchar red
+property uchar green
+property uchar blue
+element face 2
+property list uchar uint vertex_indices
+end_header
+-3.579073 -5.996031 5.279146 0.652304 0.594362 -0.470355 255 255 255
+-3.348852 -5.786259 5.863502 0.652304 0.594362 -0.470355 255 255 255
+-2.902866 -6.275723 5.863502 0.652304 0.594362 -0.470355 255 255 255
+-3.133087 -6.485495 5.279146 0.652304 0.594362 -0.470355 255 255 255
+3 0 1 2 
+3 0 2 3 
