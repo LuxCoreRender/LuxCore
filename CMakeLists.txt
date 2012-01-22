@@ -88,10 +88,8 @@ if (NOT GLEW_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required GLEW files - Please check ${GLEW_SEARCH_PATH}")
 endif()
 
-if (NOT LUXRAYS_DISABLE_OPENCL)
-	if (NOT OPENCL_FOUND)
+if (NOT OPENCL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
 	MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files - Please check ${OPENCL_SEARCH_PATH}")
-	endif()
 endif()
 
 if (NOT GLUT_FOUND)
