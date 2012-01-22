@@ -229,7 +229,6 @@ void PathOCLRenderEngine::UpdateFilm() {
 void PathOCLRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-	elapsedTime = WallClockTime() - startTime;
 	const unsigned int imgWidth = film->GetWidth();
 	const unsigned int imgHeight = film->GetHeight();
 
@@ -307,6 +306,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 	}
 
 	samplesCount = totalCount;
+	elapsedTime = WallClockTime() - startTime;
 }
 
 unsigned int PathOCLRenderEngine::GetPass() const {
