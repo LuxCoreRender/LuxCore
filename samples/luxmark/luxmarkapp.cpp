@@ -173,25 +173,21 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 
 		// Overwrite properties according the current mode
 		Properties prop;
+		prop.SetString("renderengine.type", "4");
+		prop.SetString("opencl.kernelcache", "NONE");
 		if (app->mode == BENCHMARK_OCL_GPU) {
-			prop.SetString("renderengine.type", "4");
-			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "0");
 			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("screen.refresh.interval", "1000");
 		} else if (app->mode == BENCHMARK_OCL_CPUGPU) {
-			prop.SetString("renderengine.type", "4");
-			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "1");
 			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("screen.refresh.interval", "1000");
 		} else if (app->mode == BENCHMARK_OCL_CPU) {
-			prop.SetString("renderengine.type", "4");
-			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "1");
 			prop.SetString("opencl.gpu.use", "0");
+			prop.SetString("screen.refresh.interval", "1000");
 		} else if (app->mode == BENCHMARK_OCL_CUSTOM) {
-			prop.SetString("renderengine.type", "4");
-			prop.SetString("opencl.kernelcache", "NONE");
-
 			// At the first run, hardwareTreeModel is NULL
 			const string deviceSelection = (app->hardwareTreeModel) ? (app->hardwareTreeModel->getDeviceSelectionString()) : "";
 			if (deviceSelection == "") {
@@ -199,11 +195,11 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 				prop.SetString("opencl.gpu.use", "1");
 			} else
 				prop.SetString("opencl.devices.select", deviceSelection);
+			prop.SetString("screen.refresh.interval", "1000");
 		} else if (app->mode == INTERACTIVE) {
-			prop.SetString("renderengine.type", "4");
-			prop.SetString("opencl.kernelcache", "NONE");
 			prop.SetString("opencl.cpu.use", "0");
 			prop.SetString("opencl.gpu.use", "1");
+			prop.SetString("screen.refresh.interval", "100");
 		} else
 			assert (false);
 
