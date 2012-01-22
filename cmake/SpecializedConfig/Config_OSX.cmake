@@ -26,8 +26,8 @@ set(OPENCL_INCLUDE_PATH       "${OPENCL_SEARCH_PATH}")
 #set(OPENCL_LIBRARYDIR         "${OPENCL_SEARCH_PATH}")
 
 set(GLEW_SEARCH_PATH          "${OSX_SEARCH_PATH}")
-find_path(GLEW_INCLUDE_DIR glew.h PATHS ${OSX_SEARCH_PATH}//include/GL )
-find_library(GLEW_LIBRARY libGLEW.a PATHS ${OSX_SEARCH_PATH}//lib )
+find_path(GLEW_INCLUDE_DIR glew.h PATHS ${OSX_SEARCH_PATH}/include/GL )
+find_library(GLEW_LIBRARY libGLEW.a PATHS ${OSX_SEARCH_PATH}/lib )
 set(GLEW_FOUND 1)
 
 set(GLUT_SEARCH_PATH          "${CMAKE_OSX_SYSROOT}/System/Library/Frameworks/glut.framework")
