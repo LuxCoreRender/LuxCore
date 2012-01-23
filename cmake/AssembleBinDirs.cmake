@@ -132,6 +132,7 @@ ELSE (WIN32)
 	    COMMAND rm -rf ${LUXMARK_WIN32_BIN_DIR}
 	    COMMAND mkdir ${LUXMARK_WIN32_BIN_DIR}
 	    COMMAND cp -r samples/luxmark/scenes ${LUXMARK_WIN32_BIN_DIR}
+		COMMAND rm -rf ${LUXMARK_WIN32_BIN_DIR}/scenes/room
 	    COMMAND cp samples/luxmark/exe-32bit/*.* ${LUXMARK_WIN32_BIN_DIR}
 		COMMAND mv ${LUXMARK_WIN32_BIN_DIR}/LuxMark.exe ${LUXMARK_WIN32_BIN_DIR}/LuxMark-win32.exe
 	    COMMAND cp AUTHORS.txt COPYING.txt README.txt ${LUXMARK_WIN32_BIN_DIR}
