@@ -154,11 +154,29 @@ void PathOCLRenderEngine::Start() {
 	OCLRenderEngine::StartLockLess();
 
 	samplesCount = 0;
-	elapsedTime = 0.0f;
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
 
+	//--------------------------------------------------------------------------
+	// This is a trick in order to not include scene initialization and
+	// kernel compilation time in the elapsed time for the rendering
+
+	// BeginEdit(); without mutex
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->BeginEdit();
+	OCLRenderEngine::BeginEditLockLess();
+
+	//EndEdit(EditActionList());  without mutex
+	OCLRenderEngine::EndEditLockLess(EditActionList());
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->EndEdit(EditActionList());
+
+	//--------------------------------------------------------------------------
+
+	elapsedTime = 0.0f;
 	startTime = WallClockTime();
 }
 
