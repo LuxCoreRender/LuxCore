@@ -178,6 +178,7 @@ private:
 	void UpdateFilmLockLess();
 
 	mutable boost::mutex engineMutex;
+	boost::barrier *renderStartBarrier;
 
 	CompiledScene *compiledScene;
 

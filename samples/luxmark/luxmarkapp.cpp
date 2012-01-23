@@ -251,13 +251,14 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	mainWin->ShowFrameBuffer(pixels, film->GetWidth(), film->GetHeight());
 
 	// Update the statistics
-	double raysSec = 0.0;
-	if (renderEngine->GetEngineType() == PATHOCL) {
-		const vector<OpenCLIntersectionDevice *> &intersectionDevices =
-			((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
+	const vector<OpenCLIntersectionDevice *> &intersectionDevices =
+		((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
 
-		for (size_t i = 0; i < intersectionDevices.size(); ++i)
-			raysSec += intersectionDevices[i]->GetPerformance();
+	double raysSec = 0.0;
+	vector<double> raysSecs(intersectionDevices.size(), 0.0);
+	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
+		raysSecs[i] = intersectionDevices[i]->GetPerformance();
+		raysSec += raysSecs[i];
 	}
 
 	double sampleSec = renderEngine->GetTotalSamplesSec();
@@ -290,16 +291,13 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 	if ((mode == BENCHMARK_OCL_GPU) || (mode == BENCHMARK_OCL_CPUGPU) ||
 			(mode == BENCHMARK_OCL_CPU) || (mode == BENCHMARK_OCL_CUSTOM)) {
-		const vector<OpenCLIntersectionDevice *> &intersectionDevices =
-			((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
-
 		ss << "\n\nOpenCL rendering devices:";
-		double minPerf = intersectionDevices[0]->GetPerformance();
-		double totalPerf = intersectionDevices[0]->GetPerformance();
+		double minPerf = raysSecs[0];
+		double totalPerf = raysSecs[0];
 		for (size_t i = 1; i < intersectionDevices.size(); ++i) {
 			if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
-				minPerf = min(minPerf, intersectionDevices[i]->GetPerformance());
-				totalPerf += intersectionDevices[i]->GetPerformance();
+				minPerf = min(minPerf, raysSecs[i]);
+				totalPerf += raysSecs[i];
 			}
 		}
 
@@ -308,9 +306,9 @@ void LuxMarkApp::RenderRefreshTimeout() {
 				const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)intersectionDevices[i])->GetDeviceDesc();
 				sprintf(buf, "\n    [%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
 						desc->GetName().c_str(),
-						int(intersectionDevices[i]->GetPerformance() / 1000.0),
-						intersectionDevices[i]->GetPerformance() / minPerf,
-						100.0 * intersectionDevices[i]->GetPerformance() / totalPerf,
+						int(raysSecs[i] / 1000.0),
+						raysSecs[i] / minPerf,
+						100.0 * raysSecs[i] / totalPerf,
 						int(desc->GetUsedMemory() / (1024 * 1024)),
 						int(desc->GetMaxMemory() / (1024 * 1024)));
 				ss << buf;

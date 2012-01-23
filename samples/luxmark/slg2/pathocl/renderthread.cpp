@@ -102,9 +102,10 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	uvsBuff = NULL;
 
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
+	memset(gpuTaskStats, 0, sizeof(PathOCL::GPUTaskStats) * renderEngine->taskCount);
 
 	// Check the kind of kernel cache to use
-	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "PERSISTENT");
+	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "NONE");
 	if (type == "PERSISTENT")
 		kernelCache = new luxrays::utils::oclKernelPersistentCache("slg_" + string(SLG_VERSION_MAJOR) + "." + string(SLG_VERSION_MINOR));
 	else if (type == "VOLATILE")
@@ -1095,6 +1096,10 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 	//LM_LOG_ENGINE("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
 	const unsigned int taskCount = renderThread->renderEngine->taskCount;
+
+	oclQueue.finish();
+	// Wait for the signal to start the rendering
+	renderThread->renderEngine->renderStartBarrier->wait();
 
 	try {
 		double startTime = WallClockTime();

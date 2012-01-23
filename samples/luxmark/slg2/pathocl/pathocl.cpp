@@ -30,6 +30,7 @@
 #include <stdexcept>
 
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/barrier.hpp>
 
 #include "smalllux.h"
 
@@ -123,6 +124,9 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 	// Create and start render threads
 	const size_t renderThreadCount = oclIntersectionDevices.size();
 	LM_LOG_ENGINE("Starting "<< renderThreadCount << " PathOCL render threads");
+
+	renderStartBarrier = new boost::barrier(renderThreadCount + 1);
+
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		PathOCLRenderThread *t = new PathOCLRenderThread(
 				i, seedBase + i * taskCount, i / (float)renderThreadCount,
@@ -139,6 +143,7 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
+	delete renderStartBarrier;
 
 	film->FreeSampleBuffer(sampleBuffer);
 
@@ -158,23 +163,9 @@ void PathOCLRenderEngine::Start() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
 
-	//--------------------------------------------------------------------------
-	// This is a trick in order to not include scene initialization and
-	// kernel compilation time in the elapsed time for the rendering
-
-	// BeginEdit(); without mutex
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
-	OCLRenderEngine::BeginEditLockLess();
-
-	//EndEdit(EditActionList());  without mutex
-	OCLRenderEngine::EndEditLockLess(EditActionList());
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(EditActionList());
-
-	//--------------------------------------------------------------------------
+	// The barrier here is used in order to be sure to start the rendering only
+	// all threads (and related devices) are ready
+	renderStartBarrier->wait();
 
 	elapsedTime = 0.0f;
 	startTime = WallClockTime();
@@ -232,6 +223,8 @@ void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	LM_LOG_ENGINE("[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
 		" T2 = " << int((t3 - t2) * 1000.0) <<
 		" T3 = " << int((t4 - t3) * 1000.0));*/
+
+	renderStartBarrier->wait();
 
 	elapsedTime = 0.0f;
 	startTime = WallClockTime();
