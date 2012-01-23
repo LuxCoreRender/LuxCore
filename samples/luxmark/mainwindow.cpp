@@ -111,7 +111,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	// Disable the Complex benchmark if we are running with 32bit address space
 	if (sizeof(size_t) < 8) {
 		ui->action_Room->setDisabled(true);
-		ui->action_Room->setText(QString("Complex benchmark not avilable on 32bit platform"));
+		ui->action_Room->setText(QString("Complex benchmark not available on 32bit platform"));
 	}
 
 	ShowLogo();
