@@ -30,7 +30,9 @@
 using namespace luxrays;
 using namespace luxrays::sdl;
 
-TextureMap::TextureMap(const std::string &fileName) {
+TextureMap::TextureMap(const std::string &fileName, const float g) {
+	gamma = g;
+
 	SDL_LOG("Reading texture map: " << fileName);
 
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(fileName.c_str(), 0);
@@ -61,9 +63,16 @@ TextureMap::TextureMap(const std::string &fileName) {
 				FIRGBAF *pixel = (FIRGBAF *)bits;
 				for (unsigned int x = 0; x < width; ++x) {
 					const unsigned int offset = x + (height - y - 1) * width;
-					pixels[offset].r = pixel[x].red;
-					pixels[offset].g = pixel[x].green;
-					pixels[offset].b = pixel[x].blue;
+					if (gamma == 1.f) {
+						pixels[offset].r = pixel[x].red;
+						pixels[offset].g = pixel[x].green;
+						pixels[offset].b = pixel[x].blue;
+					} else {
+						// Apply reverse gamma correction
+						pixels[offset].r = powf(pixel[x].red, gamma);
+						pixels[offset].g = powf(pixel[x].green, gamma);
+						pixels[offset].b = powf(pixel[x].blue, gamma);
+					}
 				}
 
 				// Next line
@@ -79,9 +88,17 @@ TextureMap::TextureMap(const std::string &fileName) {
 				FIRGBF *pixel = (FIRGBF *)bits;
 				for (unsigned int x = 0; x < width; ++x) {
 					const unsigned int offset = x + (height - y - 1) * width;
-					pixels[offset].r = pixel[x].red;
-					pixels[offset].g = pixel[x].green;
-					pixels[offset].b = pixel[x].blue;
+
+					if (gamma == 1.f) {
+						pixels[offset].r = pixel[x].red;
+						pixels[offset].g = pixel[x].green;
+						pixels[offset].b = pixel[x].blue;
+					} else {
+						// Apply reverse gamma correction
+						pixels[offset].r = powf(pixel[x].red, gamma);
+						pixels[offset].g = powf(pixel[x].green, gamma);
+						pixels[offset].b = powf(pixel[x].blue, gamma);
+					}
 				}
 
 				// Next line
@@ -98,9 +115,16 @@ TextureMap::TextureMap(const std::string &fileName) {
 				BYTE *pixel = (BYTE *)bits;
 				for (unsigned int x = 0; x < width; ++x) {
 					const unsigned int offset = x + (height - y - 1) * width;
-					pixels[offset].r = pixel[FI_RGBA_RED] / 255.f;
-					pixels[offset].g = pixel[FI_RGBA_GREEN] / 255.f;
-					pixels[offset].b = pixel[FI_RGBA_BLUE] / 255.f;
+
+					if (gamma == 1.f) {
+						pixels[offset].r = pixel[FI_RGBA_RED] / 255.f;
+						pixels[offset].g = pixel[FI_RGBA_GREEN] / 255.f;
+						pixels[offset].b = pixel[FI_RGBA_BLUE] / 255.f;
+					} else {
+						pixels[offset].r = powf(pixel[FI_RGBA_RED] / 255.f, gamma);
+						pixels[offset].g = powf(pixel[FI_RGBA_GREEN] / 255.f, gamma);
+						pixels[offset].b = powf(pixel[FI_RGBA_BLUE] / 255.f, gamma);
+					}
 					alpha[offset] = pixel[FI_RGBA_ALPHA] / 255.f;
 					pixel += 4;
 				}
@@ -117,10 +141,17 @@ TextureMap::TextureMap(const std::string &fileName) {
 			for (unsigned int y = 0; y < height; ++y) {
 				BYTE *pixel = (BYTE *)bits;
 				for (unsigned int x = 0; x < width; ++x) {
-					const unsigned int offest = x + (height - y - 1) * width;
-					pixels[offest].r = pixel[FI_RGBA_RED] / 255.f;
-					pixels[offest].g = pixel[FI_RGBA_GREEN] / 255.f;
-					pixels[offest].b = pixel[FI_RGBA_BLUE] / 255.f;
+					const unsigned int offset = x + (height - y - 1) * width;
+
+					if (gamma == 1.f) {
+						pixels[offset].r = pixel[FI_RGBA_RED] / 255.f;
+						pixels[offset].g = pixel[FI_RGBA_GREEN] / 255.f;
+						pixels[offset].b = pixel[FI_RGBA_BLUE] / 255.f;
+					} else {
+						pixels[offset].r = powf(pixel[FI_RGBA_RED] / 255.f, gamma);
+						pixels[offset].g = powf(pixel[FI_RGBA_GREEN] / 255.f, gamma);
+						pixels[offset].b = powf(pixel[FI_RGBA_BLUE] / 255.f, gamma);
+					}
 					pixel += 3;
 				}
 
@@ -139,9 +170,16 @@ TextureMap::TextureMap(const std::string &fileName) {
 				for (unsigned int x = 0; x < width; ++x) {
 					FreeImage_GetPixelIndex(dib, x, y, &pixel);
 					const unsigned int offest = x + (height - y - 1) * width;
-					pixels[offest].r = pixel / 255.f;
-					pixels[offest].g = pixel / 255.f;
-					pixels[offest].b = pixel / 255.f;
+
+					if (gamma == 1.f) {
+						pixels[offest].r = pixel / 255.f;
+						pixels[offest].g = pixel / 255.f;
+						pixels[offest].b = pixel / 255.f;
+					} else {
+						pixels[offest].r = powf(pixel / 255.f, gamma);
+						pixels[offest].g = powf(pixel / 255.f, gamma);
+						pixels[offest].b = powf(pixel / 255.f, gamma);
+					}
 				}
 
 				// Next line
@@ -162,6 +200,8 @@ TextureMap::TextureMap(const std::string &fileName) {
 }
 
 TextureMap::TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h) {
+	gamma = 1.f;
+
 	pixels = cols;
 	alpha = NULL;
 	width = w;
@@ -171,12 +211,10 @@ TextureMap::TextureMap(Spectrum *cols, const unsigned int w, const unsigned int 
 	DuDv.v = 1.f / height;
 }
 
-TextureMap::~TextureMap() {
-	delete[] pixels;
-	delete[] alpha;
-}
+TextureMap::TextureMap(const std::string& baseFileName, const float g,
+		const float red, const float green, const float blue) {
+	gamma = g;
 
-TextureMap::TextureMap(const std::string& baseFileName, const float red, const float green, const float blue) {
 	SDL_LOG("Creating blank texture from: " << baseFileName);
 
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(baseFileName.c_str(), 0);
@@ -199,13 +237,24 @@ TextureMap::TextureMap(const std::string& baseFileName, const float red, const f
 
 		SDL_LOG("Initializing the texture with " << red << ", " << green << ", " << blue << " for " << numPixels << " pixels");
 		for (unsigned int i = 0; i < numPixels; i++) {
-			pixels[i].r = red;
-			pixels[i].g = green;
-			pixels[i].b = blue;
+			if (gamma == 1.f) {
+				pixels[i].r = red;
+				pixels[i].g = green;
+				pixels[i].b = blue;
+			} else {
+				pixels[i].r = powf(red, gamma);
+				pixels[i].g = powf(green, gamma);
+				pixels[i].b = powf(blue, gamma);
+			}
 		}
 	}
 	DuDv.u = 1.f / width;
 	DuDv.v = 1.f / height;
+}
+
+TextureMap::~TextureMap() {
+	delete[] pixels;
+	delete[] alpha;
 }
 
 void TextureMap::AddAlpha(const std::string &alphaMapFileName) {
@@ -270,20 +319,23 @@ TextureMapCache::~TextureMapCache() {
 		delete it->second;
 }
 
-TextureMap *TextureMapCache::GetTextureMap(const std::string &fileName) {
+TextureMap *TextureMapCache::GetTextureMap(const std::string &fileName, const float gamma) {
 	// Check if the texture map has been already loaded
 	std::map<std::string, TextureMap *>::const_iterator it = maps.find(fileName);
 
 	if (it == maps.end()) {
 		// I have yet to load the file
 
-		TextureMap *tm = new TextureMap(fileName);
+		TextureMap *tm = new TextureMap(fileName, gamma);
 		maps.insert(std::make_pair(fileName, tm));
 
 		return tm;
 	} else {
 		//SDL_LOG("Cached texture map: " << fileName);
-		return it->second;
+		TextureMap *tm = (it->second);
+		if (tm->GetGamma() != gamma)
+			std::runtime_error("Texture map: " + fileName + " can not be used with 2 different gamma");
+		return tm;
 	}
 }
 
@@ -303,17 +355,21 @@ TexMapInstance *TextureMapCache::AddTextureMap(const std::string &fileName, Text
 	return NULL;
 }
 
-TextureMap *TextureMapCache::FindTextureMap(const std::string &fileName) {
+TextureMap *TextureMapCache::FindTextureMap(const std::string &fileName, const float gamma) {
 	// Check if the texture map has been already loaded
 	std::map<std::string, TextureMap *>::const_iterator it = maps.find(fileName);
 	if (it == maps.end())
 		return NULL;
-	else
-		return (it->second);
+	else {
+		TextureMap *tm = (it->second);
+		if (tm->GetGamma() != gamma)
+			std::runtime_error("Texture map: " + fileName + " can not be used with 2 different gamma");
+		return tm;
+	}
 }
 
-TexMapInstance *TextureMapCache::GetTexMapInstance(const std::string &fileName) {
-	TextureMap *tm = GetTextureMap(fileName);
+TexMapInstance *TextureMapCache::GetTexMapInstance(const std::string &fileName, const float gamma) {
+	TextureMap *tm = GetTextureMap(fileName, gamma);
 	TexMapInstance *texm = new TexMapInstance(tm);
 	texInstances.push_back(texm);
 
@@ -321,7 +377,7 @@ TexMapInstance *TextureMapCache::GetTexMapInstance(const std::string &fileName) 
 }
 
 BumpMapInstance *TextureMapCache::GetBumpMapInstance(const std::string &fileName, const float scale) {
-	TextureMap *tm = GetTextureMap(fileName);
+	TextureMap *tm = GetTextureMap(fileName, 1.f);
 	BumpMapInstance *bm = new BumpMapInstance(tm, scale);
 	bumpInstances.push_back(bm);
 
@@ -329,7 +385,7 @@ BumpMapInstance *TextureMapCache::GetBumpMapInstance(const std::string &fileName
 }
 
 NormalMapInstance *TextureMapCache::GetNormalMapInstance(const std::string &fileName) {
-	TextureMap *tm = GetTextureMap(fileName);
+	TextureMap *tm = GetTextureMap(fileName, 1.f);
 	NormalMapInstance *nm = new NormalMapInstance(tm);
 	normalInstances.push_back(nm);
 

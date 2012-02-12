@@ -32,16 +32,19 @@ namespace luxrays { namespace sdl {
 
 class TextureMap {
 public:
-	TextureMap(const std::string &fileName);
+	TextureMap(const std::string &fileName, const float gamma);
 	TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h);
 
 	/**
 	 * Creates a 24-bpp texture with size based on another bitmap, usually an alpha map, and initialized each pixel
 	 * with a given color.
 	 */
-	TextureMap(const std::string& baseFileName, const float red, const float green, const float blue);
+	TextureMap(const std::string& baseFileName, const float gamma,
+		const float red, const float green, const float blue);
 
 	~TextureMap();
+
+	float GetGamma() const { return gamma; }
 
 	const Spectrum GetColor(const UV &uv) const {
 		const float s = uv.u * width - 0.5f;
@@ -62,14 +65,14 @@ public:
 				ds * dt * GetTexel(s0 + 1, t0 + 1);
 	};
 
-  /**
-   * Add an alpha map to a texture that didn't have it built in. This is usually employed to
-   * support separate alpha maps stored as greyscale bitmaps (usualluy jpegs). The format 
-   * comes in handy also when using procedural textures. In this scheme pure white (1.0,1.0,1.0)
-   * means solid and pure black (0,0,0) means transparent. Levels of grey detemine partial transparent
-   * areas.
-   */ 
-  void AddAlpha(const std::string &alphaMap);
+	/**
+	 * Add an alpha map to a texture that didn't have it built in. This is usually employed to
+	 * support separate alpha maps stored as greyscale bitmaps (usualluy jpegs). The format
+	 * comes in handy also when using procedural textures. In this scheme pure white (1.0,1.0,1.0)
+	 * means solid and pure black (0,0,0) means transparent. Levels of grey detemine partial transparent
+	 * areas.
+	*/
+	void AddAlpha(const std::string &alphaMap);
   
 	const bool HasAlpha() const { return alpha != NULL; }
 	float GetAlpha(const UV &uv) const {
@@ -125,6 +128,7 @@ private:
 		return alpha[index];
 	}
 
+	float gamma;
 	unsigned int width, height;
 	Spectrum *pixels;
 	float *alpha;
@@ -169,7 +173,7 @@ public:
 	TextureMapCache();
 	~TextureMapCache();
 
-	TexMapInstance *GetTexMapInstance(const std::string &fileName);
+	TexMapInstance *GetTexMapInstance(const std::string &fileName, const float gamma);
 	BumpMapInstance *GetBumpMapInstance(const std::string &fileName, const float scale);
 	NormalMapInstance *GetNormalMapInstance(const std::string &fileName);
 
@@ -180,7 +184,7 @@ public:
 	 * Method to retrieve an already cached diffuse map. This is used when adding an alpha map
 	 * stored in a separate file.
 	 */
-	TextureMap *FindTextureMap(const std::string &fileName);
+	TextureMap *FindTextureMap(const std::string &fileName, const float gamma);
 
 	/**
 	 * Method used to add an existing texture to the cache. Without this
@@ -189,7 +193,7 @@ public:
 	TexMapInstance *AddTextureMap(const std::string &fileName, TextureMap *tm);
   
 private:
-	TextureMap *GetTextureMap(const std::string &fileName);
+	TextureMap *GetTextureMap(const std::string &fileName, const float gamma);
 
 	std::map<std::string, TextureMap *> maps;
 	std::vector<TexMapInstance *> texInstances;

@@ -185,7 +185,7 @@ Scene::Scene(const std::string &fileName, const int aType) {
 			if (!meshObject->HasUVs())
 				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
-			TexMapInstance *tm = texMapCache->GetTexMapInstance(args.at(1));
+			TexMapInstance *tm = texMapCache->GetTexMapInstance(args.at(1), 2.2f);
 			objectTexMaps.push_back(tm);
 			objectBumpMaps.push_back(NULL);
 			objectNormalMaps.push_back(NULL);
@@ -197,7 +197,8 @@ Scene::Scene(const std::string &fileName, const int aType) {
 				if (!meshObject->HasUVs())
 					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
-				TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap);
+				const float gamma = scnProp->GetFloat(key + ".texmap.gamma", 2.2f);
+				TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma);
 				objectTexMaps.push_back(tm);
 			} else
 				objectTexMaps.push_back(NULL);
@@ -212,12 +213,13 @@ Scene::Scene(const std::string &fileName, const int aType) {
 			if (alphaMap != "") {
 				// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
 				const std::string texMap = scnProp->GetString(key + ".texmap", "");
+				const float gamma = scnProp->GetFloat(key + ".texmap.gamma", 2.2f);
 				TextureMap *tm;
-				if (!(tm = texMapCache->FindTextureMap(texMap))) {
+				if (!(tm = texMapCache->FindTextureMap(texMap, gamma))) {
 					SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
 					// We have an alpha map without a diffuse texture. In this case we need to create
 					// a texture map filled with black
-					tm = new TextureMap(alphaMap, 1.0, 1.0, 1.0);
+					tm = new TextureMap(alphaMap, gamma, 1.0, 1.0, 1.0);
 					tm->AddAlpha(alphaMap);
 					TexMapInstance *tmi = texMapCache->AddTextureMap(alphaMap, tm);
 					// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
@@ -265,7 +267,8 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 	const std::vector<std::string> ilParams = scnProp->GetStringVector("scene.infinitelight.file", "");
 	if (ilParams.size() > 0) {
-		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0));
+		const float gamma = scnProp->GetFloat("scene.infinitelight.gamma", 2.2f);
+		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
 
 		// Check if I have to use InfiniteLightBF method
 		if (scnProp->GetInt("scene.infinitelight.usebruteforce", 0)) {
