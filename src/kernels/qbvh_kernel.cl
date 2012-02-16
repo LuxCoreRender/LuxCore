@@ -230,6 +230,10 @@ __kernel void Intersect(
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
+	// nodeStack leads to a lot of local memory banks conflicts however it has not real
+	// impact on performances (I guess access latency is hiden by other stuff).
+	// Avoiding conflicts is easy to do but it requires to know the work group
+	// size (not worth doing if there are not performance benefits).
 	__local int *nodeStack = &nodeStacks[QBVH_STACK_SIZE * get_local_id(0)];
 	nodeStack[0] = 0; // first node to handle: root node
 

@@ -464,6 +464,11 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				// Set arguments
 				qbvhImageKernel->setArg(2, *qbvhImageBuff);
 				qbvhImageKernel->setArg(3, *qbvhTrisImageBuff);
+				// Check if we have enough local memory
+				if (qbvhStackSize * qbvhImageWorkGroupSize * sizeof(cl_int) >
+						deviceDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+					throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+							" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
 				qbvhImageKernel->setArg(5, qbvhStackSize * qbvhImageWorkGroupSize * sizeof(cl_int), NULL);
 			} else {
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH buffer size: " << (sizeof(QBVHNode) * qbvh->nNodes / 1024) << "Kbytes");
@@ -483,6 +488,12 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 				// Set arguments
 				qbvhKernel->setArg(2, *qbvhBuff);
 				qbvhKernel->setArg(3, *qbvhTrisBuff);
+				// Check if we have enough local memory
+				if (qbvhStackSize * qbvhWorkGroupSize * sizeof(cl_int) >
+						deviceDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+					throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+							" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
+
 				qbvhKernel->setArg(5, qbvhStackSize * qbvhWorkGroupSize * sizeof(cl_int), NULL);
 			}
 			break;

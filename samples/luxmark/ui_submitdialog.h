@@ -1,8 +1,8 @@
 /********************************************************************************
 ** Form generated from reading UI file 'submitdialog.ui'
 **
-** Created: Sun Jan 15 22:19:16 2012
-**      by: Qt User Interface Compiler version 4.7.0
+** Created: Tue Feb 14 22:25:50 2012
+**      by: Qt User Interface Compiler version 4.7.4
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/

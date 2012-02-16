@@ -10,6 +10,7 @@
 (benchpixel|luxmark|smallluxgpu|smallppmgpu|slg|LUXRAYS|benchsimple)\.dir
 ^src/(Debug|Release)/
 ^(Debug|Release|x64)/
+^nbproject/*
 syntax: glob
 *~
 *CMakeFiles
