@@ -252,7 +252,6 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							if (telnetServer->config->scene->infiniteLight &&
 									(telnetServer->config->scene->infiniteLight->GetType() != TYPE_IL_SKY)) {
 								std::ostream respStream(&response);
-								const Spectrum gain = telnetServer->config->scene->infiniteLight->GetGain();
 								respStream << telnetServer->config->scene->infiniteLight->GetShiftU() << " " <<
 										telnetServer->config->scene->infiniteLight->GetShiftV() << "\n";
 								respStream << "OK\n";

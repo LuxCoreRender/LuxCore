@@ -241,7 +241,6 @@ public:
 
 		// Iterate through all eye paths
 		std::cerr << "Building eye paths hit points: " << std::endl;
-		bool done;
 		lastPrintTime = luxrays::WallClockTime();
 		// Note: (todoEyePaths.size() > 0) is extremly slow to execute
 		unsigned int todoEyePathCount = width * height * superSampling * superSampling;
@@ -272,7 +271,6 @@ public:
 				} else {
 					eyePath->depth++;
 					rayBuffer->AddRay(eyePath->ray);
-					done = false;
 					if (rayBuffer->IsFull())
 						break;
 

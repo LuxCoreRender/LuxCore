@@ -95,10 +95,6 @@ int main(int argc, char** argv) {
 	std::cerr << "Usage (select native device): " << argv[0] << " -1" << std::endl;
 	std::cerr << "Usage (select opencl device): " << argv[0] << " <OpenCL device index>" << std::endl;
 
-	int devIndex = -1;
-	if (argc > 1)
-		devIndex = atoi(argv[1]);
-
 	//--------------------------------------------------------------------------
 	// Create the context
 	//--------------------------------------------------------------------------
