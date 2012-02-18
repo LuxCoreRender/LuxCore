@@ -114,16 +114,6 @@ IF(APPLE)
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
 	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
 
-	### This is a hack for xcode to affect default buildtype so it matches copy pathes ###
-	### it does  work in xcode 4.3 due it defaults to "Debug" and needs this mandatory ###
-	### you must change build configuration in xcode4.3 itself until solution is found ###
-
-	if(${XCODE_VERSION} LESS "4.3" AND ${CMAKE_BUILD_TYPE} MATCHES Release)
-		SET(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "limit configs" FORCE) # not valid for xcode 4.3
-	elseif(${CMAKE_BUILD_TYPE} MATCHES Debug)
-		SET(CMAKE_CONFIGURATION_TYPES "Debug" CACHE STRING "limit configs" FORCE) # valid for xcode 4.3
-	endif()
-
 	#OSX-flags by jensverwiebe
 	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
 	
