@@ -118,7 +118,7 @@ IF(APPLE)
 	### it does  work in xcode 4.3 due it defaults to "Debug" and needs this mandatory ###
 	### you must change build configuration in xcode4.3 itself until solution is found ###
 
-	if(${XCODE_VERSION} LESS 4.3 AND ${CMAKE_BUILD_TYPE} MATCHES Release)
+	if(${XCODE_VERSION} LESS "4.3" AND ${CMAKE_BUILD_TYPE} MATCHES Release)
 		SET(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "limit configs" FORCE) # not valid for xcode 4.3
 	elseif(${CMAKE_BUILD_TYPE} MATCHES Debug)
 		SET(CMAKE_CONFIGURATION_TYPES "Debug" CACHE STRING "limit configs" FORCE) # valid for xcode 4.3
@@ -139,6 +139,7 @@ IF(APPLE)
 		MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS ( cmake 2.8 or higher method ): " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
 	ENDIF(CMAKE_VERSION VERSION_LESS 2.8.1)
 	MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_OSX_SYSROOT})
+	MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERSION})
 	MESSAGE(STATUS "BUILD_TYPE : " ${CMAKE_BUILD_TYPE})
 	MESSAGE(STATUS "UPDATE_LUXRAYS_IN_MACOS_REPO : " ${OSX_UPDATE_LUXRAYS_REPO})
 	MESSAGE(STATUS "BUILD_LUXMARK_OSX : " ${OSX_BUILD_LUXMARK})
