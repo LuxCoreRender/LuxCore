@@ -66,7 +66,19 @@ include_directories("${LuxRays_INCLUDE_DIR}")
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
-SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
+
+if(APPLE)
+	### This is a hack for xcode to affect default buildtype so it matches copy pathes ###
+	### it does  work in xcode 4.3 due it defaults to "Debug" and needs this mandatory ###
+	### you must change build configuration in xcode4.3 itself until solution is found ###
+
+	SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
+	if(${XCODE_VERSION} LESS 4.3 AND ${CMAKE_BUILD_TYPE} MATCHES Release)
+		SET(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "limit configs" FORCE) # not valid for xcode 4.3
+	elseif(${CMAKE_BUILD_TYPE} MATCHES Debug)
+		SET(CMAKE_CONFIGURATION_TYPES "Debug" CACHE STRING "limit configs" FORCE) # valid for xcode 4.3
+	endif()
+endif(APPLE)
 
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
