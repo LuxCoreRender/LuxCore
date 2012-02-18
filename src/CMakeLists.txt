@@ -317,7 +317,7 @@ IF(OSX_UPDATE_LUXRAYS_REPO)
 	ADD_CUSTOM_COMMAND(
 	TARGET luxrays POST_BUILD
 	COMMAND rm -rf ${CMAKE_SOURCE_DIR}/../macos/include/LuxRays/luxrays # clean first to assure update
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/release/libluxrays.a ${CMAKE_BINARY_DIR}/../macos/lib/LuxRays
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxrays.a ${CMAKE_BINARY_DIR}/../macos/lib/LuxRays
 	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxrays ${CMAKE_SOURCE_DIR}/../macos/include/LuxRays
 	)
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
