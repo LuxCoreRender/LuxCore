@@ -66,6 +66,7 @@ include_directories("${LuxRays_INCLUDE_DIR}")
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
+SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
 
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
