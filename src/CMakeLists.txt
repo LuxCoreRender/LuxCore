@@ -316,9 +316,9 @@ ENDIF(GCC AND NOT APPLE)
 IF(OSX_UPDATE_LUXRAYS_REPO)
 	ADD_CUSTOM_COMMAND(
 	TARGET luxrays POST_BUILD
-	COMMAND rm -rf ${CMAKE_SOURCE_DIR}/../macos/include/LuxRays/luxrays # clean first to assure update
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxrays.a ${CMAKE_BINARY_DIR}/../macos/lib/LuxRays
-	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxrays ${CMAKE_SOURCE_DIR}/../macos/include/LuxRays
+	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/luxrays # clean first to assure update
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxrays.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
+	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxrays ${OSX_DEPENDENCY_ROOT}/include/LuxRays
 	)
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
 

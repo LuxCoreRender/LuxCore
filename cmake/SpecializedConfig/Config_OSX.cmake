@@ -7,7 +7,10 @@
 
 MESSAGE(STATUS "Using OSX Configuration settings")
 
-set(OSX_SEARCH_PATH     "../macos")
+set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos) # can be macos or usr/local for example
+MESSAGE(STATUS "OSX_DEPENDENCY_ROOT_PATH : " ${OSX_DEPENDENCY_ROOT})
+set(OSX_SEARCH_PATH     ${OSX_DEPENDENCY_ROOT})
+
 if(OSX_BUILD_LUXMARK)
 	set(BUILD_LUXMARK TRUE)
 endif(OSX_BUILD_LUXMARK)
