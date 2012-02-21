@@ -598,8 +598,13 @@ class SLGBP:
                     if scene.slg.vcolors and mesh.vertex_colors.active:
                         vcd = mesh.vertex_colors.active.data
                     uvd = []
-                    if scene.slg.vuvs and mesh.uv_textures.active:
-                        uvd = mesh.uv_textures.active.data
+                    if bpy.app.build_revision >= '44254': # bmesh adaption
+                        if scene.slg.vuvs and mesh.tessface_uv_textures.active:
+                            uvd = mesh.tessface_uv_textures.active.data
+                    else:
+                        if scene.slg.vuvs and mesh.uv_textures.active:
+                            uvd = mesh.uv_textures.active.data
+
                     if obj in instobjs:
                         # Correlate obj mat slots with plymat slots
                         onomat = instobjs[obj]
