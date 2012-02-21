@@ -595,8 +595,12 @@ class SLGBP:
                     else:
                         v = [vert.co[:] for vert in mesh.vertices]
                     vcd = []
-                    if scene.slg.vcolors and mesh.vertex_colors.active:
-                        vcd = mesh.vertex_colors.active.data
+                    if bpy.app.build_revision >= '44254': # bmesh adaption
+                        if scene.slg.vcolors and mesh.tessface_vertex_colors.active:
+                            vcd = mesh.tessface_vertex_colors.active.data
+                    else:
+                        if scene.slg.vcolors and mesh.vertex_colors.active:
+                            vcd = mesh.vertex_colors.active.data
                     uvd = []
                     if bpy.app.build_revision >= '44254': # bmesh adaption
                         if scene.slg.vuvs and mesh.tessface_uv_textures.active:
