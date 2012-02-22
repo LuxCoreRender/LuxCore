@@ -96,25 +96,40 @@ IF(APPLE)
 		ENDIF(CMAKE_VERSION VERSION_LESS 2.8.1)
 	ENDIF(COMMAND cmake_policy)
 
+	########## OS and hardware detection ###########
+
+	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # unix makefile generator does not fill XCODE_VERSION var ! 
+		execute_process(COMMAND xcodebuild -version OUTPUT_VARIABLE XCODE_VERS_BUILDNR )
+		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
+	endif()	
+
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6)
 	if(CMAKE_VERSION VERSION_LESS 2.8.1)
 		SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
 	else(CMAKE_VERSION VERSION_LESS 2.8.1)
 		SET(CMAKE_XCODE_ATTRIBUTE_ARCHS i386\ x86_64)
 	endif(CMAKE_VERSION VERSION_LESS 2.8.1)
-#	SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # moved to main cmakelist atm
 	if(${XCODE_VERSION} LESS 4.3)
 		SET(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
 	else()
 		SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk)
 	endif()	
 #	INCLUDE_DIRECTORIES( ${OSX_DEPENDENCY_ROOT}/include )
+
+	### options
 	option(OSX_BUILD_LUXMARK "Compile LuxMark too" FALSE)
 	option(OSX_UPDATE_LUXRAYS_REPO "Copy LibLuxRays over to macos repo after compile" FALSE)
+
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
 	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
 
-	#OSX-flags by jensverwiebe
+	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # will be set later in XCode
+#		SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE)
+		# Setup binaries output directory in Xcode manner
+		SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
+		SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
+	endif()
+	#### OSX-flags by jensverwiebe
 	set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -fPIC -O3 -ftree-vectorize -msse -msse2 -msse3 -mssse3 -fvariable-expansion-in-unroller")
 	
 	# Do not set "-cl-fast-relaxed-math -cl-mad-enable" as they change the precision and behaviour of floating point math!
@@ -130,7 +145,11 @@ IF(APPLE)
 	ENDIF(CMAKE_VERSION VERSION_LESS 2.8.1)
 	MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_OSX_SYSROOT})
 	MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERSION})
-	MESSAGE(STATUS "BUILD_TYPE : " ${CMAKE_BUILD_TYPE})
+	if(${CMAKE_GENERATOR} MATCHES "Xcode")
+		MESSAGE(STATUS "BUILD_TYPE : Please set in Xcode ALL_BUILD target to aimed type")
+	else()
+		MESSAGE(STATUS "BUILD_TYPE : " ${CMAKE_BUILD_TYPE} " - compile with: make " )
+	endif()
 	MESSAGE(STATUS "UPDATE_LUXRAYS_IN_MACOS_REPO : " ${OSX_UPDATE_LUXRAYS_REPO})
 	MESSAGE(STATUS "BUILD_LUXMARK_OSX : " ${OSX_BUILD_LUXMARK})
 	MESSAGE(STATUS "")
