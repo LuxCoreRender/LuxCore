@@ -17,7 +17,7 @@ IF (WIN32)
 		${PROJECT_SOURCE_DIR}/src/nvgl/glew/include
 		DOC "The directory where GL/glew.h resides")
 	FIND_LIBRARY( GLEW_LIBRARY
-		NAMES glew GLEW glew32 glew32s
+		NAMES glew GLEW glew32 glew32s glew64 glew64s
 		PATHS
 		${GLEW_LIBRARYDIR}
 		${GLEW_ROOT}/lib
