@@ -45,6 +45,33 @@ IF(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
   endif()
 
+	IF(MSVC90)
+		message(STATUS "Version 9")
+		# Whole Program Opt. gui display fixed in cmake 2.8.5
+		# See http://public.kitware.com/Bug/view.php?id=6794
+		# /GL will be used to build the code but the selection is not displayed in the menu
+
+		set(MSVC_RELEASE_COMPILER_FLAGS "/WX- /MP /Ox /Ob2 /Oi /Oy /GT /GL /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Gd /TP /GL /GF /Ot")
+		set(MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS "/Zi")
+
+		set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE}   ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
+		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${MSVC_RELEASE_COMPILER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_COMPILER_FLAGS}")
+		
+		#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
+		#set(MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS "/DEBUG")
+		#set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS} ${MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS}")
+
+		# currently not in release version but should be soon - in meantime linker will inform you about switching this flag automatically because of /GL
+		set(MSVC_RELEASE_LINKER_FLAGS "/LTCG")
+		set(STATIC_LIBRARY_FLAGS_RELEASE "${STATIC_LIBRARY_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS}")
+
+		# Definitions.
+		ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
+		ADD_DEFINITIONS(-D_UNICODE -DUNICODE)
+		ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE)
+
+	ENDIF(MSVC90)
+
 	IF(MSVC10)
 		message(STATUS "Version 10")
 		# Whole Program Opt. gui display fixed in cmake 2.8.5
