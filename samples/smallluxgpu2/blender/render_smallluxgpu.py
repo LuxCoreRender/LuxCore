@@ -289,6 +289,7 @@ class SLGBP:
             if not SLGBP.live:
                 if hasattr(SLGBP.infinitelight.texture.image,'filepath'):
                     scn['scene.infinitelight.file'] = bpy.path.abspath(SLGBP.infinitelight.texture.image.filepath).replace('\\','/')
+                    scn['scene.infinitelight.gamma'] = ff(SLGBP.infinitelight.texture.slg_gamma)
                     portal = [m.name for m in bpy.data.materials if m.use_shadeless]
                     if portal:
                         portalpath = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,portal[0].replace('.','_'))
@@ -409,6 +410,7 @@ class SLGBP:
                     texmap = next((ts for ts in mat.texture_slots if ts and ts.use_map_color_diffuse and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
                     if texmap:
                         scn['scene.objects.{}.{}.texmap'.format(matn,objn)] = bpy.path.abspath(texmap.texture.image.filepath).replace('\\','/')
+                        scn['scene.objects.{}.{}.texmap.gamma'.format(matn,objn)] = ff(texmap.texture.slg_gamma)
                     texbump = next((ts for ts in mat.texture_slots if ts and ts.use_map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
                     if texbump:
                         if texbump.texture.use_normal_map:
@@ -1025,7 +1027,7 @@ class SLGLive(bpy.types.Operator):
                     SLGBP.livetrigger(context.scene, SLGBP.LIVEALL)
                     SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(context.scene.frame_current) + " (ESC to abort)"
                 SLGBP.msgrefresh()
-            
+
         return {'PASS_THROUGH'}
 
     @classmethod
@@ -1085,6 +1087,7 @@ class SLGLiveAnim(bpy.types.Operator):
     # def execute(self, context):
     def invoke(self, context, event):
         SLGBP.liveanim = True
+        SLGBP.msg = 'SLG Live! rendering animation frame: ' + str(context.scene.frame_start) + " (ESC to abort)"
         context.scene.frame_set(context.scene.frame_start)
         SLGBP.livetrigger(context.scene, SLGBP.LIVEALL)
         SLGBP.animlasttime = time()
@@ -1491,6 +1494,11 @@ def slg_add_properties():
         description="SmallLuxGPU - Force export of PLY (mesh data) related to this material",
         default=False)
 
+    # Add SLG Image Texture Gamma
+    bpy.types.ImageTexture.slg_gamma = FloatProperty(name="SLG Gamma",
+        description="SmallLuxGPU gamma input value",
+        default=2.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
+
     # Add Objet Force Instance
     bpy.types.Object.slg_forceinst = BoolProperty(name="SLG Force Instance",
         description="SmallLuxGPU - Force export of instance for this object",
@@ -1549,6 +1557,11 @@ def slg_forceply(self, context):
         if SLGBP.live:
             SLGBP.livemat = context.material
             SLGBP.livetrigger(context.scene, SLGBP.LIVEMTL)
+
+# Add SLG Image Texture Gamma
+def slg_gamma(self, context):
+    if context.scene.render.engine == 'SLG_RENDER':
+        self.layout.split().column().prop(context.texture, "slg_gamma")
 
 # Add Object Force Instance on Object panel
 def slg_forceinst(self, context):
@@ -1907,17 +1920,19 @@ def register():
     bpy.types.OBJECT_PT_transform.append(slg_forceinst)
     bpy.types.WORLD_PT_environment_lighting.append(slg_livescn)
     bpy.types.TEXTURE_PT_mapping.append(slg_livescn)
+    bpy.types.TEXTURE_PT_colors.append(slg_gamma)
     bpy.types.DATA_PT_sunsky.append(slg_livescn)
     bpy.types.VIEW3D_HT_header.append(slg_operators)
     bpy.types.INFO_MT_render.append(slg_rendermenu)
 
 def unregister():
-    bpy.types.Scene.RemoveProperty("slg")
+    del bpy.types.Scene.slg
     bpy.types.DATA_PT_camera_dof.remove(slg_lensradius)
     bpy.types.MATERIAL_PT_diffuse.remove(slg_forceply)
     bpy.types.OBJECT_PT_transform.remove(slg_forceinst)
     bpy.types.WORLD_PT_environment_lighting.remove(slg_livescn)
     bpy.types.TEXTURE_PT_mapping.remove(slg_livescn)
+    bpy.types.TEXTURE_PT_colors.remove(slg_gamma)
     bpy.types.DATA_PT_sunsky.remove(slg_livescn)
     bpy.types.VIEW3D_HT_header.remove(slg_operators)
     bpy.types.INFO_MT_render.remove(slg_rendermenu)
