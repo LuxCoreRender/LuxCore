@@ -28,7 +28,7 @@ ELSE (WIN32)
 		/usr/src/opencl-sdk/include
 		DOC "The directory where CL/cl.h resides")
 	FIND_LIBRARY( OPENCL_LIBRARY
-		NAMES opencl OpenCL
+		NAMES opencl OpenCL 
 		PATHS
 		/usr/lib64
 		/usr/lib
@@ -40,6 +40,7 @@ ELSE (WIN32)
 		${OPENCL_LIBRARYDIR}
 		DOC "The OpenCL library")
 ENDIF (WIN32)
+
 
 IF (OPENCL_INCLUDE_PATH)
 	SET( OPENCL_FOUND 1 CACHE STRING "Set to 1 if OpenCL is found, 0 otherwise")
