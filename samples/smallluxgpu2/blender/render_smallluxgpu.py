@@ -393,8 +393,7 @@ class SLGBP:
         scn = {}
         def objscn(plyn, matn, objn, mat, tm):
             if tm:
-                revstring = '{}' .format(bpy.app.build_revision) # make string from byte
-                if revstring > '42815':
+                if bpy.app.version[1] < 62 : # matrix change between 2.61 and 2.62
                     scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
                         ff(tm[0][0]),ff(tm[1][0]),ff(tm[2][0]),ff(tm[3][0]),ff(tm[0][1]),ff(tm[1][1]),ff(tm[2][1]),ff(tm[3][1]),
                         ff(tm[0][2]),ff(tm[1][2]),ff(tm[2][2]),ff(tm[3][2]),ff(tm[0][3]),ff(tm[1][3]),ff(tm[2][3]),ff(tm[3][3]))
@@ -589,7 +588,6 @@ class SLGBP:
                 except:
                     pass
                 else:
-                    revstring = '{}' .format(bpy.app.build_revision) # make string from byte
                     if type(obj) == bpy.types.Object and obj not in instobjs:
                         print("SLGBP        Xform render mesh: {}".format(obj.name))
                         mesh.transform(obj.matrix_world)
@@ -599,14 +597,14 @@ class SLGBP:
                     else:
                         v = [vert.co[:] for vert in mesh.vertices]
                     vcd = []
-                    if revstring >= '44254': # bmesh adaption
+                    if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0: # bmesh adaption
                         if scene.slg.vcolors and mesh.tessface_vertex_colors.active:
                             vcd = mesh.tessface_vertex_colors.active.data
                     else:
                         if scene.slg.vcolors and mesh.vertex_colors.active:
                             vcd = mesh.vertex_colors.active.data
                     uvd = []
-                    if revstring >= '44254': # bmesh adaption
+                    if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0: # bmesh adaption
                         if scene.slg.vuvs and mesh.tessface_uv_textures.active:
                             uvd = mesh.tessface_uv_textures.active.data
                     else:
