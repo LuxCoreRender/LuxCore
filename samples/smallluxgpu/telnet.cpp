@@ -822,7 +822,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 											vf.at(3), vf.at(7), vf.at(11), vf.at(15));
 									const Transform trans(mat);
 
-									obj->ApplayTransform(trans);
+									obj->ApplyTransform(trans);
 
 									// Check if it is a light source
 									if (scene->objectMaterials[meshIndex]->IsLightSource()) {
