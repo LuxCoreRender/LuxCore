@@ -56,7 +56,7 @@ public:
 	virtual Point *GetVertices() const = 0;
 	virtual Triangle *GetTriangles() const = 0;
 
-	virtual void ApplayTransform(const Transform &trans) = 0;
+	virtual void ApplyTransform(const Transform &trans) = 0;
 };
 
 class TriangleMesh : public Mesh {
@@ -91,7 +91,7 @@ public:
 	Point *GetVertices() const { return vertices; }
 	Triangle *GetTriangles() const { return tris; }
 
-	virtual void ApplayTransform(const Transform &trans);
+	virtual void ApplyTransform(const Transform &trans);
 
 	static TriangleMesh *Merge(
 		const std::deque<Mesh *> &meshes,
@@ -136,7 +136,7 @@ public:
 		return Triangle::Area(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]));
 	}
 
-	virtual void ApplayTransform(const Transform &t) { trans = trans * t; }
+	virtual void ApplyTransform(const Transform &t) { trans = trans * t; }
 
 	const Transform &GetTransformation() const { return trans; }
 	const Transform &GetInvTransformation() const { return invTrans; }
