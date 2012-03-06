@@ -203,10 +203,10 @@ void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 
 	/*SLG_LOG("[DEBUG] EndEdit() =================================");
 	const double t1 = WallClockTime();*/
-	compiledScene->Recompile(editActions);
+	OCLRenderEngine::EndEditLockLess(editActions);
 
 	//const double t2 = WallClockTime();
-	OCLRenderEngine::EndEditLockLess(editActions);
+	compiledScene->Recompile(editActions);
 
 	//const double t3 = WallClockTime();
 	for (size_t i = 0; i < renderThreads.size(); ++i)

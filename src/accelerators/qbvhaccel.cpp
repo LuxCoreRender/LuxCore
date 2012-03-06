@@ -52,7 +52,6 @@ QBVHAccel::~QBVHAccel() {
 	}
 }
 
-
 void QBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
@@ -137,10 +136,13 @@ void QBVHAccel::Init(const Mesh *m) {
 	LR_LOG(ctx, "Total QBVH memory usage: " << nNodes * sizeof(QBVHNode) / 1024 << "Kbytes");
 	LR_LOG(ctx, "Total QBVH QuadTriangle count: " << nQuads);
 	LR_LOG(ctx, "Max. QBVH Depth: " << maxDepth);
+
 	// Release temporary memory
 	delete[] primsBboxes;
 	delete[] primsCentroids;
 	delete[] primsIndexes;
+
+	initialized = true;
 }
 
 /***************************************************/
