@@ -145,6 +145,10 @@ void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const s
 			cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 			oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
 			return;
+		} else {
+			// Free the buffer
+			deviceDesc->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			delete *buff;
 		}
 	}
 
@@ -166,6 +170,10 @@ void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size,
 			// I can reuse the buffer
 			//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer reused for size: " << (size / 1024) << "Kbytes");
 			return;
+		} else {
+			// Free the buffer
+			deviceDesc->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			delete *buff;
 		}
 	}
 
