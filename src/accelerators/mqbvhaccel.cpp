@@ -141,6 +141,8 @@ void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int total
 	nodes = AllocAligned<QBVHNode>(maxNodes);
 
 	Update();
+	
+	initialized = true;
 }
 
 void MQBVHAccel::Update() {

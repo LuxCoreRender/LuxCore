@@ -35,6 +35,8 @@ CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
 	meshBumps = NULL;
 	bumpMapScales = NULL;
 	meshNormalMaps = NULL;
+	
+	meshFirstTriangleOffset = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -102,6 +104,8 @@ void CompiledScene::CompileGeometry() {
 		//----------------------------------------------------------------------
 		// Translate mesh IDs
 		//----------------------------------------------------------------------
+
+		delete[] meshFirstTriangleOffset;
 
 		// This is a bit a trick, it does some assumption about how the merge
 		// of Mesh works
