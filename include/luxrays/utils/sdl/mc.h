@@ -280,8 +280,8 @@ public:
 
 	void SampleDiscrete(float u0, float u1, unsigned int uv[2], float *pdf) const {
 		float pdfs[2];
-		uv[1] = pMarginal->SampleDiscrete(u1, &pdf[1]);
-		uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdf[0]);
+		uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1]);
+		uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0]);
 		*pdf = pdfs[0] * pdfs[1];
 	}
 
