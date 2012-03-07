@@ -128,6 +128,15 @@ template<class T> inline T Mod(T a, T b) {
 	return a;
 }
 
+inline unsigned int Mod(unsigned int a, unsigned int b) {
+	if (b == 0)
+		b = 1;
+		
+	a %= b;
+	
+	return a;
+}	
+	
 inline float Radians(float deg) {
 	return (M_PI / 180.f) * deg;
 }
