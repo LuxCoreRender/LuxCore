@@ -43,6 +43,7 @@ class ToneMapParams {
 public:
 	virtual ToneMapType GetType() const = 0;
 	virtual ToneMapParams *Copy() const = 0;
+	virtual ~ToneMapParams (){}; 
 };
 
 class LinearToneMapParams : public ToneMapParams {
