@@ -69,6 +69,9 @@ __kernel void Init(
 
 __kernel void InitFrameBuffer(
 		__global Pixel *frameBuffer
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		, __global AlphaPixel *alphaFrameBuffer
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= (PARAM_IMAGE_WIDTH + 2) * (PARAM_IMAGE_HEIGHT + 2))
@@ -79,6 +82,12 @@ __kernel void InitFrameBuffer(
 	p->c.g = 0.f;
 	p->c.b = 0.f;
 	p->count = 0.f;
+
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	__global AlphaPixel *ap = &alphaFrameBuffer[gid];
+	ap->alpha = 0.f;
+	ap->count = 0.f;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -130,6 +139,9 @@ __kernel void AdvancePaths(
 #endif
 		, __global UV *vertUVs
 #endif
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		, __global AlphaPixel *alphaFrameBuffer
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -166,10 +178,11 @@ __kernel void AdvancePaths(
 
 	switch (pathState) {
 		case PATH_STATE_NEXT_VERTEX: {
+			uint pathDepth = task->pathState.depth;
+
 			if (currentTriangleIndex != 0xffffffffu) {
 				// Something was hit
 
-				uint pathDepth = task->pathState.depth;
 #if (PARAM_SAMPLER_TYPE == 1) || (PARAM_SAMPLER_TYPE == 3)
 				__global float *sampleData = &sample->u[IDX_BSDF_OFFSET + SAMPLE_SIZE * pathDepth];
 #elif (PARAM_SAMPLER_TYPE == 2)
@@ -715,6 +728,8 @@ Error: Huston, we have a problem !
 #endif
 
 			} else {
+				// Nothing was hit
+
 #if defined(PARAM_HAS_INFINITELIGHT)
 				Spectrum iLe;
 				InfiniteLight_Le(infiniteLight, infiniteLightMap, &iLe, &rayDir);
@@ -753,6 +768,12 @@ Error: Huston, we have a problem !
 				sample->radiance.r += throughput.r * skLe.r;
 				sample->radiance.g += throughput.g * skLe.g;
 				sample->radiance.b += throughput.b * skLe.b;
+#endif
+
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				// TODO: add support for texture alpha channel
+				if (pathDepth == 0)
+					task->pathState.alpha = 0.f;
 #endif
 
 				pathState = PATH_STATE_DONE;
@@ -878,7 +899,15 @@ Error: Huston, we have a problem !
 		seed.s2 = task->seed.s2;
 		seed.s3 = task->seed.s3;
 
-		Sampler_MLT_SplatSample(frameBuffer, &seed, sample);
+		Sampler_MLT_SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			alphaFrameBuffer,
+#endif
+			&seed, sample
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			, task->pathState.alpha
+#endif
+			);
 
 		// Save the seed
 		task->seed.s1 = seed.s1;
@@ -889,14 +918,30 @@ Error: Huston, we have a problem !
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 		Spectrum radiance = sample->radiance;
-		SplatSample(frameBuffer, sample->pixelIndex, &radiance, 1.f);
+		SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			alphaFrameBuffer,
+#endif
+			sample->pixelIndex, &radiance,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			task->pathState.alpha,
+#endif
+			1.f);
 #else
 		__global float *sampleData = &sample->u[0];
 		const float sx = sampleData[IDX_SCREEN_X] - .5f;
 		const float sy = sampleData[IDX_SCREEN_Y] - .5f;
 
 		Spectrum radiance = sample->radiance;
-		SplatSample(frameBuffer, sample->pixelIndex, sx, sy, &radiance, 1.f);
+		SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			alphaFrameBuffer,
+#endif
+			sample->pixelIndex, sx, sy, &radiance,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			task->pathState.alpha,
+#endif
+			1.f);
 #endif
 
 #endif

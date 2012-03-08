@@ -99,6 +99,7 @@ private:
 	cl::Buffer *tasksBuff;
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *frameBufferBuff;
+	cl::Buffer *alphaFrameBufferBuff;
 	cl::Buffer *materialsBuff;
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *triangleIDBuff;
@@ -132,6 +133,7 @@ private:
 	unsigned int threadIndex;
 	PathOCLRenderEngine *renderEngine;
 	PathOCL::Pixel *frameBuffer;
+	PathOCL::AlphaPixel *alphaFrameBuffer;
 
 	// TODO: cleanup
 	unsigned int frameBufferPixelCount;

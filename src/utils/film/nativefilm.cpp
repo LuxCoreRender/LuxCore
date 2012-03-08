@@ -28,6 +28,7 @@ size_t NativeFilm::SampleBufferSize = 4096;
 
 NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) : Film(w, h) {
 	sampleFrameBuffer = NULL;
+	alphaFrameBuffer = NULL;
 	frameBuffer = NULL;
 
 	sampleBuffers.resize(0);
@@ -40,6 +41,7 @@ NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) : Film(w, h) 
 
 NativeFilm::~NativeFilm() {
 	delete sampleFrameBuffer;
+	delete alphaFrameBuffer;
 	delete frameBuffer;
 
 	for (size_t i = 0; i < sampleBuffers.size(); ++i)
@@ -53,10 +55,16 @@ void NativeFilm::Init(const unsigned int w, const unsigned int h) {
 	Film::Init(w, h);
 
 	delete sampleFrameBuffer;
+	delete alphaFrameBuffer;
 	delete frameBuffer;
 
 	sampleFrameBuffer = new SampleFrameBuffer(width, height);
 	sampleFrameBuffer->Clear();
+
+	if (enableAlphaChannel) {
+		alphaFrameBuffer = new AlphaFrameBuffer(width, height);
+		alphaFrameBuffer->Clear();
+	}
 
 	frameBuffer = new FrameBuffer(width, height);
 	frameBuffer->Clear();
@@ -64,6 +72,8 @@ void NativeFilm::Init(const unsigned int w, const unsigned int h) {
 
 void NativeFilm::Reset() {
 	sampleFrameBuffer->Clear();
+	if (enableAlphaChannel)
+		alphaFrameBuffer->Clear();
 	Film::Reset();
 }
 
@@ -221,6 +231,37 @@ void NativeFilm::SplatFiltered(const SampleBufferElem *sampleElem) {
 				continue;
 
 			SplatRadiance(sampleElem->radiance, ix, iy, filterWt);
+		}
+	}
+}
+
+void NativeFilm::SplatFilteredAlpha(const float screenX, const float screenY,
+		const float alpha) {
+	// Compute sample's raster extent
+	const float dImageX = screenX - 0.5f;
+	const float dImageY = screenY - 0.5f;
+	const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
+	const float *lut = filterLUT->GetLUT();
+
+	const int x0 = Ceil2Int(dImageX - filter->xWidth);
+	const int x1 = x0 + filterLUT->GetWidth();
+	const int y0 = Ceil2Int(dImageY - filter->yWidth);
+	const int y1 = y0 + filterLUT->GetHeight();
+
+	for (int iy = y0; iy < y1; ++iy) {
+		if (iy < 0) {
+			lut += filterLUT->GetWidth();
+			continue;
+		} else if(iy >= int(height))
+			break;
+
+		for (int ix = x0; ix < x1; ++ix) {
+			const float filterWt = *lut++;
+
+			if ((ix < 0) || (ix >= int(width)))
+				continue;
+
+			SplatAlpha(alpha, ix, iy, filterWt);
 		}
 	}
 }

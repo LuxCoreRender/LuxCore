@@ -237,21 +237,30 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
+	const bool isAlphaChannelEnabled = film->IsAlphaChannelEnabled();
+
 	switch (film->GetFilterType()) {
 		case FILTER_GAUSSIAN: {
 			SampleBufferElem sbe;
 
 			for (unsigned int y = 0; y < imgHeight; ++y) {
 				unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
-				unsigned int pCPU = y * imgWidth;
 
 				for (unsigned int x = 0; x < imgWidth; ++x) {
+					float alpha = 0.0f;
+					float alphaCount = 0.f;
+
 					Spectrum c;
 					float count = 0.f;
 					for (size_t i = 0; i < renderThreads.size(); ++i) {
 						if (renderThreads[i]->frameBuffer) {
 							c += renderThreads[i]->frameBuffer[pGPU].c;
 							count += renderThreads[i]->frameBuffer[pGPU].count;
+						}
+
+						if (renderThreads[i]->alphaFrameBuffer) {
+							alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
+							alphaCount += renderThreads[i]->alphaFrameBuffer[pGPU].count;
 						}
 					}
 
@@ -264,8 +273,10 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 						film->SplatFiltered(&sbe);
 					}
 
+					if (isAlphaChannelEnabled && (alphaCount > 0) && !isnan(alpha))
+						film->SplatFilteredAlpha(x, y, alpha / alphaCount);
+
 					++pGPU;
-					++pCPU;
 				}
 			}
 			break;
@@ -273,9 +284,11 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 		case FILTER_NONE: {
 			for (unsigned int y = 0; y < imgHeight; ++y) {
 				unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
-				unsigned int pCPU = y * imgWidth;
 
 				for (unsigned int x = 0; x < imgWidth; ++x) {
+					float alpha = 0.0f;
+					float alphaCount = 0.f;
+
 					Spectrum c;
 					float count = 0.f;
 					for (size_t i = 0; i < renderThreads.size(); ++i) {
@@ -283,13 +296,20 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 							c += renderThreads[i]->frameBuffer[pGPU].c;
 							count += renderThreads[i]->frameBuffer[pGPU].count;
 						}
+						
+						if (renderThreads[i]->alphaFrameBuffer) {
+							alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
+							alphaCount += renderThreads[i]->alphaFrameBuffer[pGPU].count;
+						}
 					}
 
 					if ((count > 0) && !c.IsNaN())
 						film->AddRadiance(x, y, c, count);
 
+					if (isAlphaChannelEnabled && (alphaCount > 0) && !isnan(alpha))
+						film->AddAlpha(x, y, alpha, alphaCount);
+
 					++pGPU;
-					++pCPU;
 				}
 			}
 			break;

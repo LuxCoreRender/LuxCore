@@ -133,6 +133,11 @@ protected:
 	virtual const SampleFrameBuffer *GetSampleFrameBuffer() = 0;
 	virtual void AddSampleFrameBuffer(const SampleFrameBuffer *sfb) = 0;
 
+	// This can return NULL if alpha channel is not supported
+	virtual const AlphaFrameBuffer *GetAlphaFrameBuffer() {
+		return NULL;
+	}
+
 	unsigned int width, height;
 	unsigned int pixelCount;
 
