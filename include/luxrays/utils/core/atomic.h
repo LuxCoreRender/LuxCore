@@ -23,6 +23,7 @@
 #ifndef _LUXRAYS_ATOMIC_H
 #define _LUXRAYS_ATOMIC_H
 
+#include <boost/version.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
 
 namespace luxrays {
@@ -43,7 +44,13 @@ inline void AtomicAdd(float *val, const float delta) {
 
 		oldVal.f = *val;
 		newVal.f = oldVal.f + delta;
-	} while (boost::interprocess::detail::atomic_cas32(((boost::uint32_t *)val), newVal.i, oldVal.i) != oldVal.i);
+	} while (
+#if (BOOST_VERSION < 104800)
+		boost::interprocess::detail::atomic_cas32(
+#else
+		boost::interprocess::ipcdetail::atomic_cas32(
+#endif
+			((boost::uint32_t *)val), newVal.i, oldVal.i) != oldVal.i);
 }
 
 inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
@@ -55,14 +62,30 @@ inline void AtomicAdd(unsigned int *val, const unsigned int delta) {
          __asm__ __volatile__("pause\n");
       #endif
       newVal = *val + delta;
-   } while (boost::interprocess::detail::atomic_cas32(((boost::uint32_t*)val), newVal, *val) != *val);
+   } while (
+#if (BOOST_VERSION < 104800)
+		boost::interprocess::detail::atomic_cas32(
 #else
+		boost::interprocess::ipcdetail::atomic_cas32(
+#endif
+		   ((boost::uint32_t*)val), newVal, *val) != *val);
+#else
+
+#if (BOOST_VERSION < 104800)
 	boost::interprocess::detail::atomic_add32(((boost::uint32_t *)val), (boost::uint32_t)delta);
+#else
+	boost::interprocess::ipcdetail::atomic_add32(((boost::uint32_t *)val), (boost::uint32_t)delta);
+#endif
+
 #endif
 }
 
 inline void AtomicInc(unsigned int *val) {
+#if (BOOST_VERSION < 104800)
 	boost::interprocess::detail::atomic_inc32(((boost::uint32_t *)val));
+#else
+	boost::interprocess::ipcdetail::atomic_inc32(((boost::uint32_t *)val));
+#endif
 }
 
 }
