@@ -67,6 +67,10 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	if (gamma != 2.2f)
 		film->InitGammaTable(gamma);
 
+	// Check if I have to enable the alpha channel
+	if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
+		film->EnableAlphaChannel(true);
+
 	film->Init(w, h);
 
 	//--------------------------------------------------------------------------

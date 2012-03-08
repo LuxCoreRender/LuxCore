@@ -51,6 +51,9 @@ void GenerateCameraPath(
 	task->pathState.bouncePdf = 1.f;
 	task->pathState.specularBounce = TRUE;
 #endif
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	task->pathState.alpha = 1.f;
+#endif
 	task->pathState.state = PATH_STATE_NEXT_VERTEX;
 }
 
@@ -292,7 +295,15 @@ __kernel void Sampler(
 	}
 }
 
-void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global Sample *sample) {
+void Sampler_MLT_SplatSample(__global Pixel *frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		__global AlphaPixel *alphaFrameBuffer,
+#endif
+		Seed *seed, __global Sample *sample
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		, const float alpha
+#endif
+		) {
 	uint current = sample->current;
 	uint proposed = sample->proposed;
 
@@ -374,7 +385,15 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			// Debug code: to check sample distribution
 			contrib.r = contrib.g = contrib.b = (consecutiveRejects + 1.f)  * .01f;
 			const uint pixelIndex = PPixelIndexFloat2D(scrX, scrY);
-			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
+			SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alphaFrameBuffer,
+#endif
+				pixelIndex, &contrib,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alpha,
+#endif
+				1.f);
 #endif
 
 			current ^= 1;
@@ -401,7 +420,15 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 			// Debug code: to check sample distribution
 			contrib.r = contrib.g = contrib.b = 1.f * .01f;
 			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
-			SplatSample(frameBuffer, pixelIndex, &contrib, 1.f);
+			SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alphaFrameBuffer,
+#endif
+				pixelIndex, &contrib,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alpha,
+#endif
+				1.f);
 #endif
 		}
 
@@ -413,11 +440,27 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer, Seed *seed, __global S
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
-			SplatSample(frameBuffer, pixelIndex, &contrib, norm);
+			SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alphaFrameBuffer,
+#endif
+				pixelIndex, &contrib,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alpha,
+#endif
+				norm);
 #else
 			float sx, sy;
 			const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
-			SplatSample(frameBuffer, pixelIndex, sx, sy, &contrib, norm);
+			SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alphaFrameBuffer,
+#endif
+				pixelIndex, sx, sy, &contrib,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alpha,
+#endif
+				norm);
 #endif
 		}
 #endif

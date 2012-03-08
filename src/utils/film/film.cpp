@@ -119,69 +119,160 @@ void Film::SaveImpl(const std::string &fileName) {
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fileName.c_str());
 	if (fif != FIF_UNKNOWN) {
 		if ((fif == FIF_HDR) || (fif == FIF_EXR)) {
-			FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
+			const AlphaFrameBuffer *alphaFramebuffer = GetAlphaFrameBuffer();
 
-			if (dib) {
-				unsigned int pitch = FreeImage_GetPitch(dib);
-				BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-				const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
+			if (alphaFramebuffer) {
+				// Save the alpha channel too
+				FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBAF, width, height, 128);
 
-				for (unsigned int y = 0; y < height; ++y) {
-					FIRGBF *pixel = (FIRGBF *)bits;
-					for (unsigned int x = 0; x < width; ++x) {
-						const unsigned int ridx = y * width + x;
-						const SamplePixel *sp = sbe->GetPixel(ridx);
-						const float weight = sp->weight;
+				if (dib) {
+					unsigned int pitch = FreeImage_GetPitch(dib);
+					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+					const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
 
-						if (weight == 0.f) {
-							pixel[x].red = 0.f;
-							pixel[x].green = 0.f;
-							pixel[x].blue = 0.f;
-						} else {
-							pixel[x].red = sp->radiance.r / weight;
-							pixel[x].green =  sp->radiance.g / weight;
-							pixel[x].blue =  sp->radiance.b / weight;
+					for (unsigned int y = 0; y < height; ++y) {
+						FIRGBAF *pixel = (FIRGBAF *)bits;
+						for (unsigned int x = 0; x < width; ++x) {
+							const unsigned int ridx = y * width + x;
+
+							const SamplePixel *sp = sbe->GetPixel(ridx);
+							const float weight = sp->weight;
+							if (weight == 0.f) {
+								pixel[x].red = 0.f;
+								pixel[x].green = 0.f;
+								pixel[x].blue = 0.f;
+							} else {
+								pixel[x].red = sp->radiance.r / weight;
+								pixel[x].green =  sp->radiance.g / weight;
+								pixel[x].blue =  sp->radiance.b / weight;
+							}
+
+							const AlphaPixel *ap = alphaFramebuffer->GetPixel(ridx);
+							const float alphaWeight = ap->weight;
+							if (alphaWeight == 0.f)
+								pixel[x].alpha = 0.f;
+							else
+								pixel[x].alpha = ap->alpha / alphaWeight;
 						}
+
+						// Next line
+						bits += pitch;
 					}
 
-					// Next line
-					bits += pitch;
-				}
+					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+						throw std::runtime_error("Failed image save");
 
-				if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
-					throw std::runtime_error("Failed image save");
+					FreeImage_Unload(dib);
+				} else
+					throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			} else {
+				// No alpha channel available
+				FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
 
-				FreeImage_Unload(dib);
-			} else
-				throw std::runtime_error("Unable to allocate FreeImage HDR image");
+				if (dib) {
+					unsigned int pitch = FreeImage_GetPitch(dib);
+					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+					const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
+
+					for (unsigned int y = 0; y < height; ++y) {
+						FIRGBF *pixel = (FIRGBF *)bits;
+						for (unsigned int x = 0; x < width; ++x) {
+							const unsigned int ridx = y * width + x;
+							const SamplePixel *sp = sbe->GetPixel(ridx);
+							const float weight = sp->weight;
+
+							if (weight == 0.f) {
+								pixel[x].red = 0.f;
+								pixel[x].green = 0.f;
+								pixel[x].blue = 0.f;
+							} else {
+								pixel[x].red = sp->radiance.r / weight;
+								pixel[x].green =  sp->radiance.g / weight;
+								pixel[x].blue =  sp->radiance.b / weight;
+							}
+						}
+
+						// Next line
+						bits += pitch;
+					}
+
+					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+						throw std::runtime_error("Failed image save");
+
+					FreeImage_Unload(dib);
+				} else
+					throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			}
 		} else {
-			FIBITMAP *dib = FreeImage_Allocate(width, height, 24);
+			const AlphaFrameBuffer *alphaFramebuffer = GetAlphaFrameBuffer();
 
-			if (dib) {
-				unsigned int pitch = FreeImage_GetPitch(dib);
-				BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-				const float *pixels = GetScreenBuffer();
+			if (alphaFramebuffer) {
+				// Save the alpha channel too
+				FIBITMAP *dib = FreeImage_Allocate(width, height, 32);
 
-				for (unsigned int y = 0; y < height; ++y) {
-					BYTE *pixel = (BYTE *)bits;
-					for (unsigned int x = 0; x < width; ++x) {
-						const int offset = 3 * (x + y * width);
-						pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
-						pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
-						pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
-						pixel += 3;
+				if (dib) {
+					unsigned int pitch = FreeImage_GetPitch(dib);
+					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+					const float *pixels = GetScreenBuffer();
+					const AlphaPixel *alphaPixels = alphaFramebuffer->GetPixels();
+
+					for (unsigned int y = 0; y < height; ++y) {
+						BYTE *pixel = (BYTE *)bits;
+						for (unsigned int x = 0; x < width; ++x) {
+							const int offset = 3 * (x + y * width);
+							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
+							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
+							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
+
+							const int alphaOffset = (x + y * width);
+							const float alpha = Clamp(
+								alphaPixels[alphaOffset].alpha / alphaPixels[alphaOffset].weight,
+								0.f, 1.f);
+							pixel[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
+
+							pixel += 4;
+						}
+
+						// Next line
+						bits += pitch;
 					}
 
-					// Next line
-					bits += pitch;
-				}
+					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+						throw std::runtime_error("Failed image save");
 
-				if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
-					throw std::runtime_error("Failed image save");
+					FreeImage_Unload(dib);
+				} else
+					throw std::runtime_error("Unable to allocate FreeImage image");
+			} else {
+				// No alpha channel available
+				FIBITMAP *dib = FreeImage_Allocate(width, height, 24);
 
-				FreeImage_Unload(dib);
-			} else
-				throw std::runtime_error("Unable to allocate FreeImage image");
+				if (dib) {
+					unsigned int pitch = FreeImage_GetPitch(dib);
+					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+					const float *pixels = GetScreenBuffer();
+
+					for (unsigned int y = 0; y < height; ++y) {
+						BYTE *pixel = (BYTE *)bits;
+						for (unsigned int x = 0; x < width; ++x) {
+							const int offset = 3 * (x + y * width);
+							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
+							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
+							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
+							pixel += 3;
+						}
+
+						// Next line
+						bits += pitch;
+					}
+
+					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+						throw std::runtime_error("Failed image save");
+
+					FreeImage_Unload(dib);
+				} else
+					throw std::runtime_error("Unable to allocate FreeImage image");
+			}
 		}
 	} else
 		throw std::runtime_error("Image type unknown");

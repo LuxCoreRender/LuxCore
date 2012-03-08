@@ -88,6 +88,9 @@
 
 //#define PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY 1
 
+// (optional)
+//  PARAM_ENABLE_ALPHA_CHANNEL
+
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
@@ -287,6 +290,10 @@ typedef struct {
 	// Radiance to add to the result if light source is visible
 	Spectrum lightRadiance;
 #endif
+
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	float alpha;
+#endif
 } PathState;
 
 // The memory layout of this structure is highly UNoptimized for GPUs !
@@ -309,6 +316,11 @@ typedef struct {
 	Spectrum c;
 	float count;
 } Pixel;
+
+typedef struct {
+	float alpha;
+	float count;
+} AlphaPixel;
 
 //------------------------------------------------------------------------------
 
