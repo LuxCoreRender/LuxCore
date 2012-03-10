@@ -295,6 +295,7 @@ typedef struct {
 #endif
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	uint vertexCount;
 	float alpha;
 #endif
 } PathState;

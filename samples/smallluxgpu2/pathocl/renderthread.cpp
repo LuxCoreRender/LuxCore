@@ -819,8 +819,9 @@ void PathOCLRenderThread::InitRender() {
 		(((areaLightCount > 0) || sunLightBuff) ? sizeof(PathOCL::PathStateDL) : sizeof(PathOCL::PathState)) +
 		//unsigned int diffuseVertexCount;
 		((renderEngine->maxDiffusePathVertexCount < renderEngine->maxPathDepth) ? sizeof(unsigned int) : 0) +
+		//uint vertexCount;
 		//float alpha;
-		(alphaFrameBufferBuff ? sizeof(float) : 0);
+		(alphaFrameBufferBuff ? (sizeof(unsigned int) + sizeof(float)) : 0);
 
 	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<

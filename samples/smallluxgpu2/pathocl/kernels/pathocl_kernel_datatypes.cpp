@@ -297,6 +297,7 @@ std::string luxrays::KernelSource_PathOCL_kernel_datatypes =
 "#endif\n"
 "\n"
 "#if defined(PARAM_ENABLE_ALPHA_CHANNEL)\n"
+"	uint vertexCount;\n"
 "	float alpha;\n"
 "#endif\n"
 "} PathState;\n"
