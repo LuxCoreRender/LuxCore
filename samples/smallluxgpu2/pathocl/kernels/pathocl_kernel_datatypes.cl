@@ -243,6 +243,9 @@ typedef struct {
 
 	float weight;
 	Spectrum currentRadiance;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	float currentAlpha;
+#endif
 
 	float u[2][TOTAL_U_SIZE];
 #elif (PARAM_SAMPLER_TYPE == 3)
