@@ -787,7 +787,9 @@ void PathOCLRenderThread::InitRender() {
 		((renderEngine->sampler->type == PathOCL::METROPOLIS) ? 0 : sizeof(unsigned int)) +
 		uDataSize +
 		// Spectrum radiance;
-		sizeof(Spectrum);
+		sizeof(Spectrum) +
+		// float currentAlpha;
+		(((renderEngine->sampler->type == PathOCL::METROPOLIS) && alphaFrameBufferBuff) ? sizeof(float) : 0);
 
 	stratifiedDataSize = 0;
 	if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
