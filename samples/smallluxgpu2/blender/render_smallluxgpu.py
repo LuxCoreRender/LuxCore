@@ -153,7 +153,7 @@ class SLGBP:
                 # SLG requires extension, force one
                 SLGBP.image_filename += scene.render.file_extension
         else:
-            SLGBP.image_filename = '{}/{}/{}.{}'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname,scene.slg.imageformat)
+            SLGBP.image_filename = '{}/{}/{}{}'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname,scene.render.file_extension)
 
         # Check/create scene directory to hold scene files
         SLGBP.sfullpath = '{}/{}'.format(SLGBP.spath,SLGBP.sname)
@@ -214,6 +214,7 @@ class SLGBP:
             cfg['film.filter.type'] = '0'
         else:
             cfg['film.filter.type'] = scene.slg.film_filter_type
+        cfg['film.alphachannel.enable'] = format(scene.slg.alphachannel, 'b')
         cfg['screen.refresh.interval'] = format(scene.slg.refreshrate)
         cfg['renderengine.type'] = scene.slg.rendering_type
         cfg['sppm.lookup.type'] = scene.slg.sppmlookuptype
@@ -1330,7 +1331,7 @@ def slg_add_properties():
                ("1", "Gaussian", "Gaussian filter")),
         default="1")
 
-    SLGSettings.film_tonemap_type = EnumProperty(
+    SLGSettings.film_tonemap_type = EnumProperty(name="Tonemap Type",
         description="Select the desired film tonemap type",
         items=(("-1", "Tonemapping", "Tonemapping"),
                ("0", "Linear tonemapping", "Linear tonemapping"),
@@ -1376,12 +1377,9 @@ def slg_add_properties():
                ("9", "9x9", "9x9")),
         default="4")
 
-    SLGSettings.imageformat = EnumProperty(name="Image File Format",
-        description="Image file save format, saved with scene files (also Blender intermediary format)",
-        items=(("png", "PNG", "PNG"),
-               ("exr", "OpenEXR", "OpenEXR"),
-               ("jpg", "JPG", "JPG")), # A lot more formats supported...
-        default="png")
+    SLGSettings.alphachannel = BoolProperty(name="Alpha Background",
+        description="Render background as transparent alpha channel in image file",
+        default=False)
 
     SLGSettings.tracedepth = IntProperty(name="Max Path Trace Depth",
         description="Maximum path tracing depth",
@@ -1628,7 +1626,7 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.reinhard_burn",
         "scene.slg.reinhard_prescale",
         "scene.slg.reinhard_postscale",
-        "scene.slg.imageformat",
+        "scene.slg.alphachannel",
         "scene.slg.film_gamma",
         "scene.slg.sppmdirectlight",
         "scene.slg.sppmlookuptype",
@@ -1758,7 +1756,7 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col.prop(slg, "reinhard_postscale")
         split = layout.split()
         col = split.column()
-        col.prop(slg, "imageformat")
+        col.prop(slg, "alphachannel")
         col = split.column()
         col.prop(slg, "film_gamma")
         if slg.rendering_type == '4':
