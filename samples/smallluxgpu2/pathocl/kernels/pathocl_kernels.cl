@@ -502,6 +502,11 @@ __kernel void AdvancePaths(
 						break;
 				}
 
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				if (matType != MAT_NULL)
+					task->pathState.vertexCount += 1;
+#endif
+
 				// Russian roulette
 
 #if (PARAM_SAMPLER_TYPE == 0)
@@ -772,7 +777,7 @@ Error: Huston, we have a problem !
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				// TODO: add support for texture alpha channel
-				if (pathDepth == 0)
+				if (task->pathState.vertexCount == 0)
 					task->pathState.alpha = 0.f;
 #endif
 

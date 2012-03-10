@@ -54,6 +54,7 @@ std::string luxrays::KernelSource_PathOCL_kernel_samplers =
 "	task->pathState.specularBounce = TRUE;\n"
 "#endif\n"
 "#if defined(PARAM_ENABLE_ALPHA_CHANNEL)\n"
+"	task->pathState.vertexCount = 0;\n"
 "	task->pathState.alpha = 1.f;\n"
 "#endif\n"
 "	task->pathState.state = PATH_STATE_NEXT_VERTEX;\n"

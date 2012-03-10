@@ -52,6 +52,7 @@ void GenerateCameraPath(
 	task->pathState.specularBounce = TRUE;
 #endif
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	task->pathState.vertexCount = 0;
 	task->pathState.alpha = 1.f;
 #endif
 	task->pathState.state = PATH_STATE_NEXT_VERTEX;
