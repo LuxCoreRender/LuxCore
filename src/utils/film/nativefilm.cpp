@@ -34,6 +34,8 @@ NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) : Film(w, h) 
 	sampleBuffers.resize(0);
 	freeSampleBuffers.resize(0);
 
+	enableAlphaChannel = false;
+
 	// Initialize Filter LUTs
 	filter = new GaussianFilter(1.5f, 1.5f, 2.f);
 	filterLUTs = new FilterLUTs(*filter, 4);

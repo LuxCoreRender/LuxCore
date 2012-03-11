@@ -70,6 +70,8 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Check if I have to enable the alpha channel
 	if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
 		film->EnableAlphaChannel(true);
+	else
+		film->EnableAlphaChannel(false);
 
 	film->Init(w, h);
 
