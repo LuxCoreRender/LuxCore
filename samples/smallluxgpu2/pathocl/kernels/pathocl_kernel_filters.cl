@@ -189,10 +189,8 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 void Pixel_AddAlpha(__global AlphaPixel *apixel, const float alpha, const float weight) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&apixel->alpha, weight * alpha);
-	AtomicAdd(&pixel->count, weight);
 #else
 	apixel->alpha += weight * alpha;
-	apixel->count += weight;
 #endif
 }
 #endif

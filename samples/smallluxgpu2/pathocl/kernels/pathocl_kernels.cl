@@ -86,7 +86,6 @@ __kernel void InitFrameBuffer(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	__global AlphaPixel *ap = &alphaFrameBuffer[gid];
 	ap->alpha = 0.f;
-	ap->count = 0.f;
 #endif
 }
 

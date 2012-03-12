@@ -88,7 +88,6 @@ std::string luxrays::KernelSource_PathOCL_kernels =
 "#if defined(PARAM_ENABLE_ALPHA_CHANNEL)\n"
 "	__global AlphaPixel *ap = &alphaFrameBuffer[gid];\n"
 "	ap->alpha = 0.f;\n"
-"	ap->count = 0.f;\n"
 "#endif\n"
 "}\n"
 "\n"

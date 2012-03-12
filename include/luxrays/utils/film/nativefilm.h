@@ -69,12 +69,11 @@ public:
 		sp->weight += weight;
 	}
 	
-	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha, const float weight) {
+	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha) {
 		const unsigned int offset = x + y * width;
 		AlphaPixel *ap = &(alphaFrameBuffer->GetPixels()[offset]);
 
 		ap->alpha += alpha;
-		ap->weight += weight;
 	}
 
 	void SplatPreview(const SampleBufferElem *sampleElem);
@@ -117,7 +116,6 @@ protected:
 		AlphaPixel *sp = &(alphaFrameBuffer->GetPixels()[offset]);
 
 		sp->alpha += weight * alpha;
-		sp->weight += weight;
 	}
 
 	SampleFrameBuffer *sampleFrameBuffer;
