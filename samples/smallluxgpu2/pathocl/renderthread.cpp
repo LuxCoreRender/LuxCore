@@ -226,10 +226,8 @@ void PathOCLRenderThread::InitFrameBuffer() {
 	if (renderEngine->film->IsAlphaChannelEnabled()) {
 		alphaFrameBuffer = new PathOCL::AlphaPixel[frameBufferPixelCount];
 
-		for (unsigned int i = 0; i < frameBufferPixelCount; ++i) {
+		for (unsigned int i = 0; i < frameBufferPixelCount; ++i)
 			alphaFrameBuffer[i].alpha = 0.f;
-			alphaFrameBuffer[i].count = 0.f;
-		}
 
 		AllocOCLBufferRW(&alphaFrameBufferBuff, sizeof(PathOCL::AlphaPixel) * frameBufferPixelCount, "Alpha Channel FrameBuffer");
 	}

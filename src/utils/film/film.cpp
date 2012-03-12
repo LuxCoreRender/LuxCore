@@ -61,7 +61,7 @@ void Film::AddFilm(const std::string &filmFile) {
 	if (file.is_open()) {
 		file.exceptions(std::ifstream::eofbit | std::ifstream::failbit | std::ifstream::badbit);
 
-		SampleFrameBuffer sbe(width, height);
+		SampleFrameBuffer samplePixels(width, height);
 
 		unsigned int tag;
 		file.read((char *)&tag, sizeof(unsigned int));
@@ -84,17 +84,17 @@ void Film::AddFilm(const std::string &filmFile) {
 			file.read((char *)&spectrum, sizeof(Spectrum));
 			file.read((char *)&weight, sizeof(float));
 
-			sbe.SetPixel(i, spectrum, weight);
+			samplePixels.SetPixel(i, spectrum, weight);
 		}
 		file.close();
 
-		AddSampleFrameBuffer(&sbe);
+		AddSampleFrameBuffer(&samplePixels);
 	} else
 		throw std::runtime_error("Film file doesn't exist");
 }
 
 void Film::SaveFilm(const std::string &filmFile) {
-	const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
+	const SampleFrameBuffer *samplePixels = GetSampleFrameBuffer();
 
 	std::ofstream file;
 	file.exceptions(std::ifstream::eofbit | std::ifstream::failbit | std::ifstream::badbit);
@@ -106,7 +106,7 @@ void Film::SaveFilm(const std::string &filmFile) {
 	file.write((char *)&height, sizeof(unsigned int));
 
 	for (unsigned int i = 0; i < pixelCount; ++i) {
-		const SamplePixel *sp = sbe->GetPixel(i);
+		const SamplePixel *sp = samplePixels->GetPixel(i);
 
 		file.write((char *)&(sp->radiance), sizeof(Spectrum));
 		file.write((char *)&(sp->weight), sizeof(float));
@@ -128,31 +128,29 @@ void Film::SaveImpl(const std::string &fileName) {
 				if (dib) {
 					unsigned int pitch = FreeImage_GetPitch(dib);
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-					const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
+					const SampleFrameBuffer *samplePixels = GetSampleFrameBuffer();
 
 					for (unsigned int y = 0; y < height; ++y) {
 						FIRGBAF *pixel = (FIRGBAF *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
 							const unsigned int ridx = y * width + x;
 
-							const SamplePixel *sp = sbe->GetPixel(ridx);
+							const SamplePixel *sp = samplePixels->GetPixel(ridx);
 							const float weight = sp->weight;
 							if (weight == 0.f) {
 								pixel[x].red = 0.f;
 								pixel[x].green = 0.f;
 								pixel[x].blue = 0.f;
-							} else {
-								pixel[x].red = sp->radiance.r / weight;
-								pixel[x].green =  sp->radiance.g / weight;
-								pixel[x].blue =  sp->radiance.b / weight;
-							}
-
-							const AlphaPixel *ap = alphaFramebuffer->GetPixel(ridx);
-							const float alphaWeight = ap->weight;
-							if (alphaWeight == 0.f)
 								pixel[x].alpha = 0.f;
-							else
-								pixel[x].alpha = ap->alpha / alphaWeight;
+							} else {
+								const float iw = 1.f / weight;
+								pixel[x].red = sp->radiance.r * iw;
+								pixel[x].green =  sp->radiance.g * iw;
+								pixel[x].blue =  sp->radiance.b * iw;
+
+								const AlphaPixel *ap = alphaFramebuffer->GetPixel(ridx);
+								pixel[x].alpha = ap->alpha * iw;
+							}
 						}
 
 						// Next line
@@ -172,13 +170,12 @@ void Film::SaveImpl(const std::string &fileName) {
 				if (dib) {
 					unsigned int pitch = FreeImage_GetPitch(dib);
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-					const SampleFrameBuffer *sbe = GetSampleFrameBuffer();
+					const SampleFrameBuffer *samplePixels = GetSampleFrameBuffer();
 
 					for (unsigned int y = 0; y < height; ++y) {
 						FIRGBF *pixel = (FIRGBF *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
-							const unsigned int ridx = y * width + x;
-							const SamplePixel *sp = sbe->GetPixel(ridx);
+							const SamplePixel *sp = samplePixels->GetPixel(x, y);
 							const float weight = sp->weight;
 
 							if (weight == 0.f) {
@@ -215,6 +212,7 @@ void Film::SaveImpl(const std::string &fileName) {
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 					const float *pixels = GetScreenBuffer();
 					const AlphaPixel *alphaPixels = alphaFramebuffer->GetPixels();
+					const SampleFrameBuffer *samplePixels = GetSampleFrameBuffer();
 
 					for (unsigned int y = 0; y < height; ++y) {
 						BYTE *pixel = (BYTE *)bits;
@@ -224,11 +222,18 @@ void Film::SaveImpl(const std::string &fileName) {
 							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
 							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
 
-							const int alphaOffset = (x + y * width);
-							const float alpha = Clamp(
-								alphaPixels[alphaOffset].alpha / alphaPixels[alphaOffset].weight,
-								0.f, 1.f);
-							pixel[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
+							const SamplePixel *sp = samplePixels->GetPixel(x, y);
+							const float weight = sp->weight;
+
+							if (weight == 0.f)
+								pixel[FI_RGBA_ALPHA] = (BYTE)0;
+							else {
+								const int alphaOffset = (x + y * width);
+								const float alpha = Clamp(
+									alphaPixels[alphaOffset].alpha / weight,
+									0.f, 1.f);
+								pixel[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
+							}
 
 							pixel += 4;
 						}

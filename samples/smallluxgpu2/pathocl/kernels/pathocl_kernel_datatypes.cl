@@ -323,7 +323,6 @@ typedef struct {
 
 typedef struct {
 	float alpha;
-	float count;
 } AlphaPixel;
 
 //------------------------------------------------------------------------------

@@ -325,7 +325,6 @@ std::string luxrays::KernelSource_PathOCL_kernel_datatypes =
 "\n"
 "typedef struct {\n"
 "	float alpha;\n"
-"	float count;\n"
 "} AlphaPixel;\n"
 "\n"
 "//------------------------------------------------------------------------------\n"

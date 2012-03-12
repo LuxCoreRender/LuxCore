@@ -184,7 +184,6 @@ private:
 
 typedef struct {
 	float alpha;
-	float weight;
 } AlphaPixel;
 
 class AlphaFrameBuffer {
@@ -200,15 +199,13 @@ public:
 	}
 
 	void Clear() {
-		for (unsigned int i = 0; i < width * height; ++i) {
+		for (unsigned int i = 0; i < width * height; ++i)
 			pixels[i].alpha = 0.f;
-			pixels[i].weight = 0.f;
-		}
 	};
 
 	AlphaPixel *GetPixels() const { return pixels; }
 
-	void AddPixel(const unsigned int x, const unsigned int y, const float a, const float w) {
+	void AddPixel(const unsigned int x, const unsigned int y, const float a) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
@@ -216,18 +213,16 @@ public:
 
 		AlphaPixel *pixel = &pixels[x + y * width];
 		pixel->alpha += a;
-		pixel->weight += w;
 	}
 
-	void AddPixel(const unsigned int index, const float a, const float w) {
+	void AddPixel(const unsigned int index, const float a) {
 		assert (index >= 0);
 		assert (index < width * height);
 
 		pixels[index].alpha += a;
-		pixels[index].weight += w;
 	}
 
-	void SetPixel(const unsigned int x, const unsigned int y, const float a, const float w) {
+	void SetPixel(const unsigned int x, const unsigned int y, const float a) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
@@ -235,15 +230,13 @@ public:
 
 		AlphaPixel *pixel = &pixels[x + y * width];
 		pixel->alpha = a;
-		pixel->weight = w;
 	}
 
-	void SetPixel(const unsigned int index, const float a, const float w) {
+	void SetPixel(const unsigned int index, const float a) {
 		assert (index >= 0);
 		assert (index < width * height);
 
 		pixels[index].alpha = a;
-		pixels[index].weight = w;
 	}
 
 	AlphaPixel *GetPixel(const unsigned int x, const unsigned int y) const {
