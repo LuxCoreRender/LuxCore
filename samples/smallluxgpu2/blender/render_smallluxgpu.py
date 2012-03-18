@@ -394,7 +394,7 @@ class SLGBP:
         scn = {}
         def objscn(plyn, matn, objn, mat, tm):
             if tm:
-                if bpy.app.version[1] < 62 : # matrix change between 2.61 and 2.62
+                if bpy.app.version[1] >= 62 : # matrix change between 2.61 and 2.62
                     scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
                         ff(tm[0][0]),ff(tm[1][0]),ff(tm[2][0]),ff(tm[3][0]),ff(tm[0][1]),ff(tm[1][1]),ff(tm[2][1]),ff(tm[3][1]),
                         ff(tm[0][2]),ff(tm[1][2]),ff(tm[2][2]),ff(tm[3][2]),ff(tm[0][3]),ff(tm[1][3]),ff(tm[2][3]),ff(tm[3][3]))
