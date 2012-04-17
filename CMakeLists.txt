@@ -30,6 +30,8 @@ MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
 # Fresh start
 cmake_minimum_required(VERSION 2.8)
 cmake_policy(VERSION 2.8)
+#Remove the following when the version check is at least 2.8.4
+SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 project(LuxRays)
 
