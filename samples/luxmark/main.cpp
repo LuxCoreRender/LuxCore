@@ -30,6 +30,9 @@ int main(int argc, char** argv) {
 	LuxMarkApp app(argc, argv);
 	app.Init();
 
+	// Force C locale
+	setlocale(LC_NUMERIC,"C");
+
 	if (app.mainWin != NULL)
 		return app.exec();
 	else
