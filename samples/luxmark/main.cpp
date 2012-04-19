@@ -28,10 +28,10 @@
 
 static void PrintCmdLineHelp(const QString &cmd) {
 	cerr << "Usage: " << cmd.toAscii().data() << " [options]" << endl <<
-			" --help <display this help and exit>" << endl <<
-			" --scene=<LUXBALL_HDR|SALA|ROOM>" << endl <<
-			" --mode=<BENCHMARK_OCL_GPU|BENCHMARK_OCL_CPUGPU|BENCHMARK_OCL_CPU|INTERACTIVE|PAUSE>" << endl <<
-			" --single-run" << endl;
+			" --help (display this help and exit)" << endl <<
+			" --scene=LUXBALL_HDR|SALA|ROOM (select the scene to use)" << endl <<
+			" --mode=BENCHMARK_OCL_GPU|BENCHMARK_OCL_CPUGPU|BENCHMARK_OCL_CPU|INTERACTIVE|PAUSE (select the mode to use)" << endl <<
+			" --single-run (run the benchmark, print the result to the stdout and exit)" << endl;
 }
 
 int main(int argc, char **argv) {
