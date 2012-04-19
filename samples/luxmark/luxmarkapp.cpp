@@ -42,7 +42,7 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 // LuxMark Qt application
 //------------------------------------------------------------------------------
 
-LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
+LuxMarkApp::LuxMarkApp(int &argc, char **argv) : QApplication(argc, argv) {
 	// Initialize FreeImage Library, it must be done after QApplication() in
 	// order to avoid a crash
 	FreeImage_Initialise(TRUE);
@@ -68,10 +68,7 @@ LuxMarkApp::~LuxMarkApp() {
 	delete hardwareTreeModel;
 }
 
-void LuxMarkApp::Init(void) {
-	// Set numeric format to standard to avoid errors when parsing files
-	setlocale(LC_ALL, "C");
-
+void LuxMarkApp::Init(LuxMarkAppMode mode, const char *scnName) {
 	mainWin = new MainWindow();
 	mainWin->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	mainWin->show();
@@ -81,7 +78,7 @@ void LuxMarkApp::Init(void) {
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
 
-	InitRendering(BENCHMARK_OCL_GPU, SCENE_SALA);
+	InitRendering(mode, scnName);
 }
 
 void LuxMarkApp::SetMode(LuxMarkAppMode m) {

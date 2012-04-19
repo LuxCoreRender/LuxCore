@@ -48,10 +48,10 @@ class LuxMarkApp : public QApplication {
 public:
 	MainWindow *mainWin;
 
-	LuxMarkApp(int argc, char **argv);
+	LuxMarkApp(int &argc, char **argv);
 	~LuxMarkApp();
 	
-	void Init();
+	void Init(LuxMarkAppMode mode, const char *scnName);
 	void Stop();
 
 	void SetMode(LuxMarkAppMode m);
@@ -63,7 +63,7 @@ public:
 private:
 	static void EngineInitThreadImpl(LuxMarkApp *app);
 
-	void InitRendering(LuxMarkAppMode m, const char *scnName);
+	void InitRendering(LuxMarkAppMode mode, const char *scnName);
 
 	LuxMarkAppMode mode;
 	const char *sceneName;
