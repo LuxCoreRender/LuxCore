@@ -29,7 +29,8 @@
 static void PrintCmdLineHelp(const QString &cmd) {
 	cerr << "Usage: " << cmd.toAscii().data() << " [options]" << endl <<
 			" --help <display this help and exit>" << endl <<
-			" --scene=<LUXBALL_HDR|SALA|ROOM>" << endl;
+			" --scene=<LUXBALL_HDR|SALA|ROOM>" << endl <<
+			" --mode=<BENCHMARK_OCL_GPU|BENCHMARK_OCL_CPUGPU|BENCHMARK_OCL_CPU|INTERACTIVE|PAUSE>" << endl;
 }
 
 int main(int argc, char **argv) {
@@ -41,6 +42,7 @@ int main(int argc, char **argv) {
 	QStringList argsList = app.arguments();
 	QRegExp argHelp("--help");
 	QRegExp argScene("--scene=(LUXBALL_HDR|SALA|ROOM)");
+	QRegExp argMode("--mode=(BENCHMARK_OCL_GPU|BENCHMARK_OCL_CPUGPU|BENCHMARK_OCL_CPU|INTERACTIVE|PAUSE)");
 
 	LuxMarkAppMode mode = BENCHMARK_OCL_GPU;
 	const char *scnName = SCENE_SALA;
@@ -62,7 +64,25 @@ int main(int argc, char **argv) {
 				PrintCmdLineHelp(argsList.at(0));
 				exit = true;
 				break;
-			}	
+			}
+		} else if (argMode.indexIn(argsList.at(i)) != -1 ) {   
+            QString scene = argMode.cap(1);
+			if (scene.compare("BENCHMARK_OCL_GPU", Qt::CaseInsensitive) == 0)
+				mode = BENCHMARK_OCL_GPU;
+			else if (scene.compare("BENCHMARK_OCL_CPUGPU", Qt::CaseInsensitive) == 0)
+				mode = BENCHMARK_OCL_CPUGPU;
+			else if (scene.compare("BENCHMARK_OCL_CPU", Qt::CaseInsensitive) == 0)
+				mode = BENCHMARK_OCL_CPU;
+			else if (scene.compare("INTERACTIVE", Qt::CaseInsensitive) == 0)
+				mode = INTERACTIVE;
+			else if (scene.compare("PAUSE", Qt::CaseInsensitive) == 0)
+				mode = PAUSE;
+			else {
+				cerr << "Unknown mode name: " << argMode.cap(1).toAscii().data() << endl;
+				PrintCmdLineHelp(argsList.at(0));
+				exit = true;
+				break;
+			}
         } else {
             cerr << "Unknown argument: " << argsList.at(i).toAscii().data() << endl;
 			PrintCmdLineHelp(argsList.at(0));
