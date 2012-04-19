@@ -26,11 +26,11 @@
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
        <horstretch>1</horstretch>
-       <verstretch>0</verstretch>
+       <verstretch>1</verstretch>
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;b&gt;Note:&lt;/b&gt; submiting a result to &lt;a href=&quot;http://www.luxrender.net/luxmark&quot;&gt;www.luxrender.net/luxmark&lt;/a&gt; requires a valid forum account. If you don't have an account, you can create one &lt;a href=&quot;http://www.luxrender.net/forum/ucp.php?mode=register&quot;&gt;here&lt;/a&gt;. Account names are case sensitive.</string>
+      <string>&lt;b&gt;Note:&lt;/b&gt; submiting a result to &lt;a href=&quot;http://www.luxrender.net/luxmark&quot;&gt;www.luxrender.net/luxmark&lt;/a&gt; requires a valid forum account. If you don't have an account, you can create one &lt;a href=&quot;http://www.luxrender.net/forum/ucp.php?mode=register&quot;&gt;here&lt;/a&gt;. Account names are case sensitive and the account activation can require up to 1 hour.</string>
      </property>
      <property name="textFormat">
       <enum>Qt::RichText</enum>
