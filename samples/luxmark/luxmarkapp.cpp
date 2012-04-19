@@ -48,6 +48,8 @@ LuxMarkApp::LuxMarkApp(int &argc, char **argv) : QApplication(argc, argv) {
 	FreeImage_Initialise(TRUE);
 	FreeImage_SetOutputMessage(FreeImageErrorHandler);
 
+	singleRun = false;
+
 	mainWin = NULL;
 	engineInitThread = NULL;
 	engineInitDone = false;
@@ -68,12 +70,13 @@ LuxMarkApp::~LuxMarkApp() {
 	delete hardwareTreeModel;
 }
 
-void LuxMarkApp::Init(LuxMarkAppMode mode, const char *scnName) {
+void LuxMarkApp::Init(LuxMarkAppMode mode, const char *scnName, const bool single) {
 	mainWin = new MainWindow();
 	mainWin->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	mainWin->show();
 	mainWin->SetLuxApp(this);
 	LogWindow = mainWin;
+	singleRun = single;
 
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
@@ -316,17 +319,24 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	mainWin->UpdateScreenLabel(ss.str().c_str(), benchmarkDone);
 
 	if (benchmarkDone) {
-		vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(
-				((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices());
+		// Check if I'm in single run mode
+		if (singleRun) {
+			cout << int(sampleSec / 1000.0) << endl;
+			
+			exit(EXIT_SUCCESS);
+		} else {
+			vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(
+					((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices());
 
-		Stop();
+			Stop();
 
-		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec, descs);
-		dialog->exec();
-		delete dialog;
+			ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec, descs);
+			dialog->exec();
+			delete dialog;
 
-		// Go in PAUSE mode
-		InitRendering(PAUSE, sceneName);
+			// Go in PAUSE mode
+			InitRendering(PAUSE, sceneName);
+		}
 	}
 }
 

@@ -30,7 +30,8 @@ static void PrintCmdLineHelp(const QString &cmd) {
 	cerr << "Usage: " << cmd.toAscii().data() << " [options]" << endl <<
 			" --help <display this help and exit>" << endl <<
 			" --scene=<LUXBALL_HDR|SALA|ROOM>" << endl <<
-			" --mode=<BENCHMARK_OCL_GPU|BENCHMARK_OCL_CPUGPU|BENCHMARK_OCL_CPU|INTERACTIVE|PAUSE>" << endl;
+			" --mode=<BENCHMARK_OCL_GPU|BENCHMARK_OCL_CPUGPU|BENCHMARK_OCL_CPU|INTERACTIVE|PAUSE>" << endl <<
+			" --single-run" << endl;
 }
 
 int main(int argc, char **argv) {
@@ -38,11 +39,13 @@ int main(int argc, char **argv) {
 
 	// Get the arguments into a list
 	bool exit = false;
+	bool singleRun = false;
 
 	QStringList argsList = app.arguments();
 	QRegExp argHelp("--help");
 	QRegExp argScene("--scene=(LUXBALL_HDR|SALA|ROOM)");
 	QRegExp argMode("--mode=(BENCHMARK_OCL_GPU|BENCHMARK_OCL_CPUGPU|BENCHMARK_OCL_CPU|INTERACTIVE|PAUSE)");
+	QRegExp argSingleRun("--single-run");
 
 	LuxMarkAppMode mode = BENCHMARK_OCL_GPU;
 	const char *scnName = SCENE_SALA;
@@ -83,6 +86,8 @@ int main(int argc, char **argv) {
 				exit = true;
 				break;
 			}
+		} else if (argSingleRun.indexIn(argsList.at(i)) != -1 ) {   
+			singleRun = true;
         } else {
             cerr << "Unknown argument: " << argsList.at(i).toAscii().data() << endl;
 			PrintCmdLineHelp(argsList.at(0));
@@ -94,7 +99,7 @@ int main(int argc, char **argv) {
 	if (exit)
 		return EXIT_SUCCESS;
 	else {
-		app.Init(mode, scnName);
+		app.Init(mode, scnName, singleRun);
 
 		// Force C locale
 		setlocale(LC_NUMERIC,"C");
