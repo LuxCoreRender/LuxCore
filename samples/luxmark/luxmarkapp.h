@@ -51,7 +51,7 @@ public:
 	LuxMarkApp(int &argc, char **argv);
 	~LuxMarkApp();
 	
-	void Init(LuxMarkAppMode mode, const char *scnName);
+	void Init(LuxMarkAppMode mode, const char *scnName, const bool singleRun);
 	void Stop();
 
 	void SetMode(LuxMarkAppMode m);
@@ -67,6 +67,7 @@ private:
 
 	LuxMarkAppMode mode;
 	const char *sceneName;
+	bool singleRun;
 
 	HardwareTreeModel *hardwareTreeModel;
 
