@@ -12,6 +12,7 @@ scene.objects.shell.luxshell = scenes/luxball/luxball-shell.ply
 scene.objects.blacktext.blacktext = scenes/luxball/blacktext.ply
 scene.infinitelight.file = scenes/luxball/sky.exr
 scene.infinitelight.gain = 0.2 0.2 0.2
+scene.infinitelight.gamma = 1.0
 scene.sunlight.dir = 0 -1 0
 scene.sunlight.gain = 3.5 3.5 3.5
 scene.sunlight.relsize = 40.0
