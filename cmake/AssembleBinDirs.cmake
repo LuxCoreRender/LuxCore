@@ -123,8 +123,8 @@ IF (WIN32)
 
 ELSE (WIN32)
 
-	set(LUXMARK_LINUX64_BIN_DIR "luxmark-linux64-v2.0")
-	set(LUXMARK_WIN32_BIN_DIR "luxmark-win32-v2.0")
+	set(LUXMARK_LINUX64_BIN_DIR "luxmark-linux64-v2.1beta1")
+	set(LUXMARK_WIN32_BIN_DIR "luxmark-win32-v2.1beta1")
 
 	# Win32
 	add_custom_command(
@@ -159,7 +159,6 @@ ELSE (WIN32)
 	add_custom_command(
 	    OUTPUT "${LUXMARK_LINUX64_BIN_DIR}.zip"
 	    COMMAND zip -r ${LUXMARK_LINUX64_BIN_DIR}.zip ${LUXMARK_LINUX64_BIN_DIR}
-	    COMMAND rm -rf ${LUXMARK_LINUX64_BIN_DIR}
 	    DEPENDS ${LUXMARK_LINUX64_BIN_DIR}
 	    COMMENT "Building ${LUXMARK_LINUX64_BIN_DIR}.zip")
 	
