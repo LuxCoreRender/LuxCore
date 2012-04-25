@@ -77,7 +77,7 @@ void OpenCLSampleBuffer::CollectStats() const {
 size_t OpenCLPixelDevice::SampleBufferSize = 65536;
 
 OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
-		const unsigned int index) :
+		const size_t index) :
 		PixelDevice(context, DEVICE_TYPE_OPENCL, index) {
 	deviceDesc  = desc;
 	deviceName = (desc->GetName() +"Pixel").c_str();
@@ -252,7 +252,7 @@ void OpenCLPixelDevice::ClearSampleFrameBuffer() {
 	clearSampleFBKernel->setArg(1, height);
 	clearSampleFBKernel->setArg(2, *sampleFrameBuff);
 	oclQueue->enqueueNDRangeKernel(*clearSampleFBKernel, cl::NullRange,
-			cl::NDRange(RoundUp<size_t>(width, 8), RoundUp<size_t>(height, 8)), cl::NDRange(8, 8));
+			cl::NDRange(RoundUp(width, 8u), RoundUp(height, 8u)), cl::NDRange(8, 8));
 }
 
 void OpenCLPixelDevice::ClearFrameBuffer() {
@@ -260,7 +260,7 @@ void OpenCLPixelDevice::ClearFrameBuffer() {
 	clearFBKernel->setArg(1, height);
 	clearFBKernel->setArg(2, *frameBuff);
 	oclQueue->enqueueNDRangeKernel(*clearFBKernel, cl::NullRange,
-			cl::NDRange(RoundUp<size_t>(width, 8), RoundUp<size_t>(height, 8)), cl::NDRange(8, 8));
+			cl::NDRange(RoundUp(width, 8u), RoundUp(height, 8u)), cl::NDRange(8, 8));
 }
 
 void OpenCLPixelDevice::SetGamma(const float gamma) {
@@ -401,7 +401,7 @@ void OpenCLPixelDevice::UpdateFrameBuffer(const ToneMapParams &params) {
 		updateFrameBufferKernel->setArg(4, *gammaTableBuff);
 
 		oclQueue->enqueueNDRangeKernel(*updateFrameBufferKernel, cl::NullRange,
-				cl::NDRange(RoundUp<size_t>(width, 8), RoundUp<size_t>(height, 8)), cl::NDRange(8, 8));
+				cl::NDRange(RoundUp(width, 8u), RoundUp(height, 8u)), cl::NDRange(8, 8));
 
 		oclQueue->enqueueReadBuffer(
 				*frameBuff,

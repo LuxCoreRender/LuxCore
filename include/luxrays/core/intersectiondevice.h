@@ -52,7 +52,7 @@ public:
 	friend class VirtualM2MHardwareIntersectionDevice;
 
 protected:
-	IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index);
+	IntersectionDevice(const Context *context, const DeviceType type, const size_t index);
 	virtual ~IntersectionDevice();
 
 	virtual void SetDataSet(const DataSet *newDataSet);
@@ -64,7 +64,7 @@ protected:
 
 class HardwareIntersectionDevice : public IntersectionDevice {
 protected:
-	HardwareIntersectionDevice(const Context *context, const DeviceType type, const unsigned int index) :
+	HardwareIntersectionDevice(const Context *context, const DeviceType type, const size_t index) :
 		IntersectionDevice(context, type, index) { }
 	virtual ~HardwareIntersectionDevice() { }
 
@@ -80,8 +80,8 @@ protected:
 
 class NativeThreadIntersectionDevice : public IntersectionDevice {
 public:
-	NativeThreadIntersectionDevice(const Context *context, const unsigned int threadIndex,
-			const unsigned int devIndex);
+	NativeThreadIntersectionDevice(const Context *context, const size_t threadIndex,
+			const size_t devIndex);
 	~NativeThreadIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);
@@ -120,7 +120,7 @@ private:
 class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
 public:
 	OpenCLIntersectionDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const unsigned int index, const unsigned int forceWGSize);
+			const size_t index, const unsigned int forceWGSize);
 	~OpenCLIntersectionDevice();
 
 	void SetDataSet(const DataSet *newDataSet);

@@ -177,7 +177,7 @@ public:
 	float SampleContinuous(float u, float *pdf, unsigned int *off = NULL) const {
 		// Find surrounding CDF segments and _offset_
 		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		unsigned int offset = Max<int>(0, ptr - cdf - 1);
+		unsigned int offset = static_cast<unsigned int>(Max(0, static_cast<int>(ptr - cdf - 1)));
 
 		// Compute offset along CDF segment
 		const float du = (u - cdf[offset]) /
@@ -207,7 +207,7 @@ public:
 	unsigned int SampleDiscrete(float u, float *pdf, float *du = NULL) const {
 		// Find surrounding CDF segments and _offset_
 		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		unsigned int offset = Max<int>(0, ptr - cdf - 1);
+		unsigned int offset = static_cast<unsigned int>(Max(0, static_cast<int>(ptr - cdf - 1)));
 
 		// Compute offset along CDF segment
 		if (du)
