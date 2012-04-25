@@ -171,7 +171,7 @@ Scene::Scene(const std::string &fileName, const int aType) {
 			AreaLightMaterial *light = (AreaLightMaterial *)mat;
 			objectMaterials.push_back(mat);
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-				TriangleLight *tl = new TriangleLight(light, objects.size() - 1, i, objects);
+				TriangleLight *tl = new TriangleLight(light, static_cast<unsigned int>(objects.size()) - 1, i, objects);
 				lights.push_back(tl);
 			}
 		} else {
