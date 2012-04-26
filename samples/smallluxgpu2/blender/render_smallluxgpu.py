@@ -46,18 +46,6 @@ from itertools import zip_longest
 from subprocess import Popen
 from math import isnan
 
-# hack for bmesh
-# TODO remove this when obsolete
-def get_mesh_faces_old(mesh):
-	return mesh.faces
-def get_mesh_faces_new(mesh):
-	return mesh.tessfaces
-
-if bpy.app.version[1] >= 62 and bpy.app.version[2] > 1: # bmesh adaption
-	get_mesh_faces = get_mesh_faces_new
-else:
-	get_mesh_faces = get_mesh_faces_old
-
 # SLG Telnet interface
 class SLGTelnet:
     def __init__(self):
@@ -632,8 +620,8 @@ class SLGBP:
                         # Correlate obj mat slots with global mat pool
                         onomat = nomat
                         objmats = [plymats.index(ms.material.name) if ms.material else onomat for ms in obj.material_slots]
-                    mesh_faces = get_mesh_faces(mesh)
-                    for face, vc, uv in zip_longest(mesh_faces,vcd,uvd):
+                    tessfaces = mesh.tessfaces if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0 else mesh.faces # bmesh
+                    for face, vc, uv in zip_longest(tessfaces,vcd,uvd):
                         curmat = objmats[face.material_index] if objmats else onomat
                         # Get vertex colors, if avail
                         if vc:
