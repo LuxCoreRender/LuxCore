@@ -620,7 +620,7 @@ class SLGBP:
                         # Correlate obj mat slots with global mat pool
                         onomat = nomat
                         objmats = [plymats.index(ms.material.name) if ms.material else onomat for ms in obj.material_slots]
-                    tessfaces = mesh.tessfaces if bpy.app.version > (2, 62, 0 ) else mesh.faces # bmesh
+                    tessfaces = mesh.tessfaces if bpy.app.version > (2, 62, 1 ) else mesh.faces # bmesh
                     for face, vc, uv in zip_longest(tessfaces,vcd,uvd):
                         curmat = objmats[face.material_index] if objmats else onomat
                         # Get vertex colors, if avail
