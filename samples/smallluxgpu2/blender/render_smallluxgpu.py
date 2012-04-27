@@ -394,7 +394,7 @@ class SLGBP:
         scn = {}
         def objscn(plyn, matn, objn, mat, tm):
             if tm:
-                if bpy.app.version[1] >= 62 : # matrix change between 2.61 and 2.62
+                if bpy.app.version >= (2, 62, 0 ) : # matrix change between 2.61 and 2.62
                     scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
                         ff(tm[0][0]),ff(tm[1][0]),ff(tm[2][0]),ff(tm[3][0]),ff(tm[0][1]),ff(tm[1][1]),ff(tm[2][1]),ff(tm[3][1]),
                         ff(tm[0][2]),ff(tm[1][2]),ff(tm[2][2]),ff(tm[3][2]),ff(tm[0][3]),ff(tm[1][3]),ff(tm[2][3]),ff(tm[3][3]))
@@ -598,14 +598,14 @@ class SLGBP:
                     else:
                         v = [vert.co[:] for vert in mesh.vertices]
                     vcd = []
-                    if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0: # bmesh adaption
+                    if bpy.app.version > (2, 62, 0 ): # bmesh adaption
                         if scene.slg.vcolors and mesh.tessface_vertex_colors.active:
                             vcd = mesh.tessface_vertex_colors.active.data
                     else:
                         if scene.slg.vcolors and mesh.vertex_colors.active:
                             vcd = mesh.vertex_colors.active.data
                     uvd = []
-                    if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0: # bmesh adaption
+                    if bpy.app.version > (2, 62, 0 ): # bmesh adaption
                         if scene.slg.vuvs and mesh.tessface_uv_textures.active:
                             uvd = mesh.tessface_uv_textures.active.data
                     else:
@@ -620,7 +620,7 @@ class SLGBP:
                         # Correlate obj mat slots with global mat pool
                         onomat = nomat
                         objmats = [plymats.index(ms.material.name) if ms.material else onomat for ms in obj.material_slots]
-                    tessfaces = mesh.tessfaces if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0 else mesh.faces # bmesh
+                    tessfaces = mesh.tessfaces if bpy.app.version > (2, 62, 0 ) else mesh.faces # bmesh
                     for face, vc, uv in zip_longest(tessfaces,vcd,uvd):
                         curmat = objmats[face.material_index] if objmats else onomat
                         # Get vertex colors, if avail
