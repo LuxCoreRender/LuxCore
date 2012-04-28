@@ -440,7 +440,7 @@ class SLGBP:
                             if do.settings.render_type == 'GROUP' and not do.settings.use_whole_group:
                                 if gn != i % ndgos:
                                     continue
-                            if p.alive_state == 'ALIVE' and p.is_exist and (do.point_cache.is_baked or p.is_visible):
+                            if (p.alive_state == 'ALIVE' or do.settings.show_unborn or do.settings.use_dead) and p.is_exist and (do.point_cache.is_baked or p.is_visible):
                                 objn = do.id_data.name.replace('.','_')+'{P}'+str(i)+plyn
                                 if isnan(p.rotation[0]): # Deal with Blender bug...
                                     rm = Matrix()
