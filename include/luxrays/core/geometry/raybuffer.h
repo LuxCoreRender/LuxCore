@@ -95,7 +95,8 @@ public:
 	}
 	
 	size_t AddRays(const Ray *ray, const size_t raysCount) {
-		assert (currentFreeRayIndex + raysCount - 1 < size);
+		assert ((raysCount == 0) || (currentFreeRayIndex + raysCount - 1 < size));
+
 		memcpy(&rays[currentFreeRayIndex], ray, sizeof(Ray) * raysCount);
 
 		const size_t firstIndex = currentFreeRayIndex;
