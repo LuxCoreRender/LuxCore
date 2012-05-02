@@ -394,7 +394,7 @@ class SLGBP:
         scn = {}
         def objscn(plyn, matn, objn, mat, tm):
             if tm:
-                if bpy.app.version[1] >= 62 : # matrix change between 2.61 and 2.62
+                if bpy.app.version >= (2, 62, 0 ) : # matrix change between 2.61 and 2.62
                     scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
                         ff(tm[0][0]),ff(tm[1][0]),ff(tm[2][0]),ff(tm[3][0]),ff(tm[0][1]),ff(tm[1][1]),ff(tm[2][1]),ff(tm[3][1]),
                         ff(tm[0][2]),ff(tm[1][2]),ff(tm[2][2]),ff(tm[3][2]),ff(tm[0][3]),ff(tm[1][3]),ff(tm[2][3]),ff(tm[3][3]))
@@ -440,7 +440,7 @@ class SLGBP:
                             if do.settings.render_type == 'GROUP' and not do.settings.use_whole_group:
                                 if gn != i % ndgos:
                                     continue
-                            if p.alive_state == 'ALIVE' and p.is_exist and (do.point_cache.is_baked or p.is_visible):
+                            if (p.alive_state == 'ALIVE' or do.settings.show_unborn or do.settings.use_dead) and p.is_exist and (do.point_cache.is_baked or p.is_visible):
                                 objn = do.id_data.name.replace('.','_')+'{P}'+str(i)+plyn
                                 if isnan(p.rotation[0]): # Deal with Blender bug...
                                     rm = Matrix()
@@ -598,14 +598,14 @@ class SLGBP:
                     else:
                         v = [vert.co[:] for vert in mesh.vertices]
                     vcd = []
-                    if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0: # bmesh adaption
+                    if bpy.app.version > (2, 62, 0 ): # bmesh adaption
                         if scene.slg.vcolors and mesh.tessface_vertex_colors.active:
                             vcd = mesh.tessface_vertex_colors.active.data
                     else:
                         if scene.slg.vcolors and mesh.vertex_colors.active:
                             vcd = mesh.vertex_colors.active.data
                     uvd = []
-                    if bpy.app.version[1] >= 62 and bpy.app.version[2] > 0: # bmesh adaption
+                    if bpy.app.version > (2, 62, 0 ): # bmesh adaption
                         if scene.slg.vuvs and mesh.tessface_uv_textures.active:
                             uvd = mesh.tessface_uv_textures.active.data
                     else:
@@ -620,7 +620,8 @@ class SLGBP:
                         # Correlate obj mat slots with global mat pool
                         onomat = nomat
                         objmats = [plymats.index(ms.material.name) if ms.material else onomat for ms in obj.material_slots]
-                    for face, vc, uv in zip_longest(mesh.faces,vcd,uvd):
+                    tessfaces = mesh.tessfaces if bpy.app.version > (2, 62, 1 ) else mesh.faces # bmesh
+                    for face, vc, uv in zip_longest(tessfaces,vcd,uvd):
                         curmat = objmats[face.material_index] if objmats else onomat
                         # Get vertex colors, if avail
                         if vc:

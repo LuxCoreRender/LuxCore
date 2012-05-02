@@ -40,7 +40,7 @@ size_t OpenCLIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
-		const unsigned int index,
+		const size_t index,
 		const unsigned int forceWGSize) :
 		HardwareIntersectionDevice(context, DEVICE_TYPE_OPENCL, index) {
 	forceWorkGroupSize = forceWGSize;
@@ -365,12 +365,12 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 			// 7 pixels required for the storage of a QBVH node
 			const size_t nodeImagePixelRequired = qbvh->nNodes * 7;
-			const size_t nodeImageWidth = Min<size_t>(RoundUp<size_t>(sqrtf(nodeImagePixelRequired), 7),  0x7fff);
+			const size_t nodeImageWidth = Min(RoundUp(static_cast<unsigned int>(sqrtf(nodeImagePixelRequired)), 7u),  0x7fffu);
 			const size_t nodeImageHeight = nodeImagePixelRequired / nodeImageWidth + (((nodeImagePixelRequired % nodeImageWidth) == 0) ? 0 : 1);
 
 			// 10 pixels required for the storage of QBVH Triangles
 			const size_t leafPixelRequired = qbvh->nQuads * 10;
-			const size_t leafImageWidth = Min<size_t>(RoundUp<size_t>(sqrtf(leafPixelRequired), 10), 32760);
+			const size_t leafImageWidth = Min(RoundUp(static_cast<unsigned int>(sqrtf(leafPixelRequired)), 10u), 32760u);
 			const size_t leafImageHeight = leafPixelRequired / leafImageWidth + (((leafPixelRequired % leafImageWidth) == 0) ? 0 : 1);
 
 			// Check if I can use image to store the data set
@@ -429,16 +429,16 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 							} else if (QBVHNode::IsLeaf(index)) {
 								int32_t count = QBVHNode::FirstQuadIndex(index) * 10;
 								// "/ 10" in order to not waste bits
-								const unsigned short x = (count % leafImageWidth) / 10;
-								const unsigned short y = count / leafImageWidth;
+								const unsigned short x = static_cast<unsigned short>((count % leafImageWidth) / 10);
+								const unsigned short y = static_cast<unsigned short>(count / leafImageWidth);
 								((int32_t *)inodes)[offset + 6 * 4 + j] =  0x80000000 |
 										(((static_cast<int32_t>(QBVHNode::NbQuadPrimitives(index)) - 1) & 0xf) << 27) |
 										(static_cast<int32_t>((x << 16) | y) & 0x07ffffff);
 							} else {
 								index *= 7;
 								// "/ 7" in order to not waste bits
-								const unsigned short x = (index % nodeImageWidth) / 7;
-								const unsigned short y = index / nodeImageWidth;
+								const unsigned short x = static_cast<unsigned short>((index % nodeImageWidth) / 7);
+								const unsigned short y = static_cast<unsigned short>(index / nodeImageWidth);
 								inodes[offset + 6 * 4 + j] = (x << 16) | y;
 							}
 						}

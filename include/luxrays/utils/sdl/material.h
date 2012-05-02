@@ -392,7 +392,7 @@ public:
 		const Normal &shadeN, const float u0, const float u1) {
 		const float phi = 2.f * M_PI * u0;
 		const float cosTheta = powf(1.f - u1, exponent);
-		const float sinTheta = sqrtf(1.f - cosTheta * cosTheta);
+		const float sinTheta = sqrtf(Max(0.f, 1.f - cosTheta * cosTheta));
 		const float x = cosf(phi) * sinTheta;
 		const float y = sinf(phi) * sinTheta;
 		const float z = cosTheta;

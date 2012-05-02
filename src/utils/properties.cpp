@@ -129,7 +129,7 @@ float Properties::GetFloat(const std::string propName, const float defaultValue)
 	if (s.compare("") == 0)
 		return defaultValue;
 	else
-		return atof(s.c_str());
+		return static_cast<float>(atof(s.c_str()));
 }
 
 std::vector<std::string> Properties::GetStringVector(const std::string propName, const std::string &defaultValue) const {
@@ -227,7 +227,7 @@ std::vector<float> Properties::ConvertToFloatVector(const std::string &values) {
 	std::vector<float> floats;
 	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it) {
 		if (it->length() != 0)
-			floats.push_back(atof(it->c_str()));
+			floats.push_back(static_cast<float>(atof(it->c_str())));
 	}
 
 	return floats;
