@@ -194,7 +194,7 @@ void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int
 		Point mean2(0, 0, 0), var(0, 0, 0);
 		for (unsigned int i = begin; i < end; i++)
 			mean2 += list[i]->bbox.pMax + list[i]->bbox.pMin;
-		mean2 /= end - begin;
+		mean2 /= static_cast<float>(end - begin);
 
 		// Calculate variance
 		for (unsigned int i = begin; i < end; i++) {

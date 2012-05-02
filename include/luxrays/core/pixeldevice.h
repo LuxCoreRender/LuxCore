@@ -115,7 +115,7 @@ public:
 	friend class Context;
 
 protected:
-	PixelDevice(const Context *context, const DeviceType type, const unsigned int index);
+	PixelDevice(const Context *context, const DeviceType type, const size_t index);
 	virtual ~PixelDevice();
 
 	virtual void Start();
@@ -130,8 +130,8 @@ protected:
 
 class NativePixelDevice : public PixelDevice {
 public:
-	NativePixelDevice(const Context *context, const unsigned int threadIndex,
-			const unsigned int devIndex);
+	NativePixelDevice(const Context *context, const size_t threadIndex,
+			const size_t devIndex);
 	~NativePixelDevice();
 
 	void Init(const unsigned int w, const unsigned int h);
@@ -156,12 +156,12 @@ public:
 	unsigned int GetFreeDevBufferCount() {
 		boost::mutex::scoped_lock lock(splatMutex);
 
-		return freeSampleBuffers.size();
+		return static_cast<unsigned int>(freeSampleBuffers.size());
 	}
 	unsigned int GetTotalDevBufferCount() {
 		boost::mutex::scoped_lock lock(splatMutex);
 
-		return sampleBuffers.size();
+		return static_cast<unsigned int>(sampleBuffers.size());
 	}
 
 	static size_t SampleBufferSize;
@@ -237,7 +237,7 @@ private:
 class OpenCLPixelDevice : public PixelDevice {
 public:
 	OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const unsigned int index);
+			const size_t index);
 	~OpenCLPixelDevice();
 
 	void Init(const unsigned int w, const unsigned int h);
@@ -264,12 +264,12 @@ public:
 	unsigned int GetFreeDevBufferCount() {
 		boost::mutex::scoped_lock lock(splatMutex);
 
-		return freeSampleBuffers.size();
+		return static_cast<unsigned int>(freeSampleBuffers.size());
 	}
 	unsigned int GetTotalDevBufferCount() {
 		boost::mutex::scoped_lock lock(splatMutex);
 
-		return sampleBuffers.size();
+		return static_cast<unsigned int>(sampleBuffers.size());
 	}
 
 	static size_t SampleBufferSize;

@@ -69,7 +69,7 @@ public:
 	friend class VirtualM2MHardwareIntersectionDevice;
 
 protected:
-	Device(const Context *context, const DeviceType type, const unsigned int index);
+	Device(const Context *context, const DeviceType type, const size_t index);
 	virtual ~Device();
 
 	virtual void Start();
@@ -78,7 +78,7 @@ protected:
 
 	const Context *deviceContext;
 	DeviceType deviceType;
-	unsigned int deviceIndex;
+	size_t deviceIndex;
 
 	std::string deviceName;
 
@@ -91,7 +91,7 @@ protected:
 
 class NativeThreadDeviceDescription : public DeviceDescription {
 public:
-	NativeThreadDeviceDescription(const std::string deviceName, const unsigned int threadIdx) :
+	NativeThreadDeviceDescription(const std::string deviceName, const size_t threadIdx) :
 		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD), threadIndex(threadIdx) { }
 
 	size_t GetThreadIndex() const { return threadIndex; };
@@ -177,7 +177,7 @@ public:
 protected:
 	static std::string GetDeviceType(const cl_int type);
 	static std::string GetDeviceType(const OpenCLDeviceType type);
-	static OpenCLDeviceType GetOCLDeviceType(const cl_int type);
+	static OpenCLDeviceType GetOCLDeviceType(const cl_device_type type);
 	static void AddDeviceDescs(const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
 		std::vector<DeviceDescription *> &descriptions);
 

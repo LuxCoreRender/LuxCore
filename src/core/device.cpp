@@ -41,11 +41,11 @@ void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescri
 	int cpuIndex = -1;
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
 		if ((cpuIndex == -1) && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD))
-			cpuIndex = i;
+			cpuIndex = (int)i;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if ((gpuIndex == -1) && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) &&
 				(((OpenCLDeviceDescription *)deviceDescriptions[i])->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
-			gpuIndex = i;
+			gpuIndex = (int)i;
 			break;
 		}
 #endif
@@ -94,7 +94,7 @@ std::string DeviceDescription::GetDeviceType(const DeviceType type) {
 // Device
 //------------------------------------------------------------------------------
 
-Device::Device(const Context *context, const DeviceType type, const unsigned int index) :
+Device::Device(const Context *context, const DeviceType type, const size_t index) :
 	deviceContext(context), deviceType(type) {
 	deviceIndex = index;
 	started = false;
@@ -166,7 +166,7 @@ std::string OpenCLDeviceDescription::GetDeviceType(const OpenCLDeviceType type) 
 	}
 }
 
-OpenCLDeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_int type) {
+OpenCLDeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_type type) {
 	switch (type) {
 		case CL_DEVICE_TYPE_ALL:
 			return OCL_DEVICE_TYPE_ALL;
@@ -266,7 +266,7 @@ void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,
 // IntersectionDevice
 //------------------------------------------------------------------------------
 
-IntersectionDevice::IntersectionDevice(const Context *context, const DeviceType type, const unsigned int index) :
+IntersectionDevice::IntersectionDevice(const Context *context, const DeviceType type, const size_t index) :
 	Device(context, type, index) {
 	dataSet = NULL;
 }
@@ -296,7 +296,7 @@ void IntersectionDevice::Start() {
 // PixelDevice
 //------------------------------------------------------------------------------
 
-PixelDevice::PixelDevice(const Context *context, const DeviceType type, const unsigned int index) :
+PixelDevice::PixelDevice(const Context *context, const DeviceType type, const size_t index) :
 	Device(context, type, index) {
 }
 

@@ -178,7 +178,7 @@ public:
 	NormalMapInstance *GetNormalMapInstance(const std::string &fileName);
 
 	void GetTexMaps(std::vector<TextureMap *> &tms);
-	unsigned int GetSize()const { return maps.size(); }
+	unsigned int GetSize()const { return static_cast<unsigned int>(maps.size()); }
 
 	/**
 	 * Method to retrieve an already cached diffuse map. This is used when adding an alpha map

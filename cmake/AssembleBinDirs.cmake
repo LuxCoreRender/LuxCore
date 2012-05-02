@@ -35,7 +35,7 @@ ELSE (WIN32)
 	set(CMAKE_INSTALL_PREFIX .)
 
 	# Windows 32bit
-	set(SLG2_BIN_WIN32_DIR "slg-win32-v2.0devel4")
+	set(SLG2_BIN_WIN32_DIR "slg-win32-v2.0devel5")
 	add_custom_command(
 		OUTPUT "${SLG2_BIN_WIN32_DIR}"
 		COMMAND rm -rf ${SLG2_BIN_WIN32_DIR}
@@ -61,7 +61,7 @@ ELSE (WIN32)
 	add_custom_target(slg2_win32_zip DEPENDS "${SLG2_BIN_WIN32_DIR}.zip")
 
 	# Windows 64bit
-	set(SLG2_BIN_WIN64_DIR "slg-win64-v2.0devel4")
+	set(SLG2_BIN_WIN64_DIR "slg-win64-v2.0devel5")
 	add_custom_command(
 		OUTPUT "${SLG2_BIN_WIN64_DIR}"
 		COMMAND rm -rf ${SLG2_BIN_WIN64_DIR}
@@ -87,7 +87,7 @@ ELSE (WIN32)
 	add_custom_target(slg2_win64_zip DEPENDS "${SLG2_BIN_WIN64_DIR}.zip")
 
 	# Linux 64bit
-	set(SLG2_BIN_LINUX64_DIR "slg-linux64-v2.0devel4")
+	set(SLG2_BIN_LINUX64_DIR "slg-linux64-v2.0devel5")
 	add_custom_command(
 		OUTPUT "${SLG2_BIN_LINUX64_DIR}"
 		COMMAND rm -rf ${SLG2_BIN_LINUX64_DIR}

@@ -46,9 +46,9 @@ public:
 
 	unsigned int GetLightCount(bool skipInfiniteLight = false) const {
 		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight)
-			return lights.size() + 1;
+			return static_cast<unsigned int>(lights.size()) + 1;
 		else
-			return lights.size();
+			return static_cast<unsigned int>(lights.size());
 	}
 
 	LightSource *GetLight(unsigned int index, bool skipInfiniteLight = false) const {
@@ -62,21 +62,22 @@ public:
 	}
 
 	LightSource *SampleAllLights(const float u, float *pdf, bool skipInfiniteLight = false) const {
-		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {
-			const unsigned int lightCount = lights.size() + 1;
-			const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lightCount * u), lights.size());
+		const unsigned int lightsSize = static_cast<unsigned int>(lights.size());
+		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {			
+			const unsigned int lightCount = lightsSize + 1;
+			const unsigned int lightIndex = Min(Floor2UInt(lightCount * u), lightsSize);
 
 			*pdf = 1.f / lightCount;
 
-			if (lightIndex == lights.size())
+			if (lightIndex == lightsSize)
 				return infiniteLight;
 			else
 				return lights[lightIndex];
 		} else {
 			// One Uniform light strategy
-			const unsigned int lightIndex = Min<unsigned int>(Floor2UInt(lights.size() * u), lights.size() - 1);
+			const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
 
-			*pdf = 1.f / lights.size();
+			*pdf = 1.f / lightsSize;
 
 			return lights[lightIndex];
 		}
@@ -84,7 +85,7 @@ public:
 
 	SunLight *GetSunLight() const {
 		// Look for the SunLight
-		for (unsigned int i = 0; i < lights.size(); ++i) {
+		for (unsigned int i = 0; i < static_cast<unsigned int>(lights.size()); ++i) {
 			LightSource *ls = lights[i];
 			if (ls->GetType() == TYPE_SUN)
 				return (SunLight *)ls;

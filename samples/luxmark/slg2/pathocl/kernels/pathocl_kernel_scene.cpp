@@ -474,7 +474,7 @@ std::string luxrays::KernelSource_PathOCL_kernel_scene =
 "		const Vector *shadeN, const float u0, const float u1) {\n"
 "    const float phi = 2.f * M_PI * u0;\n"
 "    const float cosTheta = pow(1.f - u1, exponent);\n"
-"    const float sinTheta = sqrt(1.f - cosTheta * cosTheta);\n"
+"    const float sinTheta = sqrt(max(0.f, 1.f - cosTheta * cosTheta));\n"
 "    const float x = cos(phi) * sinTheta;\n"
 "    const float y = sin(phi) * sinTheta;\n"
 "    const float z = cosTheta;\n"
