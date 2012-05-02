@@ -321,8 +321,8 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	if (benchmarkDone) {
 		// Check if I'm in single run mode
 		if (singleRun) {
-			cout << int(sampleSec / 1000.0) << endl;
-			
+			cout << "Score: " << int(sampleSec / 1000.0) << endl;
+
 			exit(EXIT_SUCCESS);
 		} else {
 			vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(
