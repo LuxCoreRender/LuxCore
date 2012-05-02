@@ -13,3 +13,4 @@ scene.objects.blacktext.blacktext = scenes/luxball/blacktext.ply
 scene.infinitelight.file = scenes/luxball/arch.exr
 scene.infinitelight.gain = 3.0 3.0 3.0
 scene.infinitelight.usebruteforce = 1
+scene.infinitelight.gamma = 1.0
