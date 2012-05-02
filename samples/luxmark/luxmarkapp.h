@@ -60,6 +60,8 @@ public:
 	void HandleMouseMoveEvent(QGraphicsSceneMouseEvent *event);
 	void HandleMousePressEvent(QGraphicsSceneMouseEvent *event);
 
+	bool IsSingleRun() const { return singleRun; }
+
 private:
 	static void EngineInitThreadImpl(LuxMarkApp *app);
 
