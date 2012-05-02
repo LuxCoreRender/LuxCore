@@ -104,6 +104,8 @@ void SubmitDialog::genericButton() {
 		QNetworkRequest request;
 		request.setUrl(QUrl("http://www.luxrender.net/luxmark/submit"));
 		request.setRawHeader("User-Agent", "LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
+		// Const's patch for Qt 4.8.1
+		request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
 		// Create the http request parameters
 		QUrl params;

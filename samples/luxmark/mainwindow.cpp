@@ -408,6 +408,12 @@ bool MainWindow::event(QEvent *event) {
 		ui->LogView->append(ss.readAll());
 
 		((LuxMarkApp *)qApp)->SetMode(PAUSE);
+
+		// If I'm in single-run mode, I have to exit
+		if ((((LuxMarkApp *)qApp))->IsSingleRun()) {
+			cout << "Error: " << ((LuxLogEvent *)event)->getMessage().toStdString() << endl;
+			exit(EXIT_SUCCESS);
+		}
 	}
 
 	if (retval) {

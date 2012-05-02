@@ -42,11 +42,13 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 // LuxMark Qt application
 //------------------------------------------------------------------------------
 
-LuxMarkApp::LuxMarkApp(int argc, char **argv) : QApplication(argc, argv) {
+LuxMarkApp::LuxMarkApp(int &argc, char **argv) : QApplication(argc, argv) {
 	// Initialize FreeImage Library, it must be done after QApplication() in
 	// order to avoid a crash
 	FreeImage_Initialise(TRUE);
 	FreeImage_SetOutputMessage(FreeImageErrorHandler);
+
+	singleRun = false;
 
 	mainWin = NULL;
 	engineInitThread = NULL;
@@ -68,20 +70,18 @@ LuxMarkApp::~LuxMarkApp() {
 	delete hardwareTreeModel;
 }
 
-void LuxMarkApp::Init(void) {
-	// Set numeric format to standard to avoid errors when parsing files
-	setlocale(LC_ALL, "C");
-
+void LuxMarkApp::Init(LuxMarkAppMode mode, const char *scnName, const bool single) {
 	mainWin = new MainWindow();
 	mainWin->setWindowTitle("LuxMark v" LUXMARK_VERSION_MAJOR "." LUXMARK_VERSION_MINOR);
 	mainWin->show();
 	mainWin->SetLuxApp(this);
 	LogWindow = mainWin;
+	singleRun = single;
 
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
 
-	InitRendering(BENCHMARK_OCL_GPU, SCENE_SALA);
+	InitRendering(mode, scnName);
 }
 
 void LuxMarkApp::SetMode(LuxMarkAppMode m) {
@@ -319,17 +319,24 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	mainWin->UpdateScreenLabel(ss.str().c_str(), benchmarkDone);
 
 	if (benchmarkDone) {
-		vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(
-				((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices());
+		// Check if I'm in single run mode
+		if (singleRun) {
+			cout << "Score: " << int(sampleSec / 1000.0) << endl;
 
-		Stop();
+			exit(EXIT_SUCCESS);
+		} else {
+			vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(
+					((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices());
 
-		ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec, descs);
-		dialog->exec();
-		delete dialog;
+			Stop();
 
-		// Go in PAUSE mode
-		InitRendering(PAUSE, sceneName);
+			ResultDialog *dialog = new ResultDialog(mode, sceneName, sampleSec, descs);
+			dialog->exec();
+			delete dialog;
+
+			// Go in PAUSE mode
+			InitRendering(PAUSE, sceneName);
+		}
 	}
 }
 

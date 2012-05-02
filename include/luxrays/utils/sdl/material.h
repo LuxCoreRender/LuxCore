@@ -428,7 +428,7 @@ public:
 		matteFilter = matte.GetKd().Filter();
 		const float metalFilter = metal.GetKr().Filter();
 		totFilter = matteFilter + metalFilter;
-
+		
 		mattePdf = matteFilter / totFilter;
 		metalPdf = metalFilter / totFilter;
 	}

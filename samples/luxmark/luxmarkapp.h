@@ -48,10 +48,10 @@ class LuxMarkApp : public QApplication {
 public:
 	MainWindow *mainWin;
 
-	LuxMarkApp(int argc, char **argv);
+	LuxMarkApp(int &argc, char **argv);
 	~LuxMarkApp();
 	
-	void Init();
+	void Init(LuxMarkAppMode mode, const char *scnName, const bool singleRun);
 	void Stop();
 
 	void SetMode(LuxMarkAppMode m);
@@ -60,13 +60,16 @@ public:
 	void HandleMouseMoveEvent(QGraphicsSceneMouseEvent *event);
 	void HandleMousePressEvent(QGraphicsSceneMouseEvent *event);
 
+	bool IsSingleRun() const { return singleRun; }
+
 private:
 	static void EngineInitThreadImpl(LuxMarkApp *app);
 
-	void InitRendering(LuxMarkAppMode m, const char *scnName);
+	void InitRendering(LuxMarkAppMode mode, const char *scnName);
 
 	LuxMarkAppMode mode;
 	const char *sceneName;
+	bool singleRun;
 
 	HardwareTreeModel *hardwareTreeModel;
 

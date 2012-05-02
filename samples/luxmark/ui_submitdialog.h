@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'submitdialog.ui'
 **
-** Created: Tue Feb 14 22:25:50 2012
+** Created: Thu Apr 19 11:06:28 2012
 **      by: Qt User Interface Compiler version 4.7.4
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -61,7 +61,7 @@ public:
         noteLabel->setObjectName(QString::fromUtf8("noteLabel"));
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         sizePolicy.setHorizontalStretch(1);
-        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setVerticalStretch(1);
         sizePolicy.setHeightForWidth(noteLabel->sizePolicy().hasHeightForWidth());
         noteLabel->setSizePolicy(sizePolicy);
         noteLabel->setTextFormat(Qt::RichText);
@@ -121,19 +121,22 @@ public:
 
         logLabel = new QLabel(SubmitDialog);
         logLabel->setObjectName(QString::fromUtf8("logLabel"));
-        sizePolicy.setHeightForWidth(logLabel->sizePolicy().hasHeightForWidth());
-        logLabel->setSizePolicy(sizePolicy);
+        QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        sizePolicy3.setHorizontalStretch(1);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(logLabel->sizePolicy().hasHeightForWidth());
+        logLabel->setSizePolicy(sizePolicy3);
         logLabel->setAlignment(Qt::AlignCenter);
 
         gridLayout->addWidget(logLabel, 4, 0, 1, 4);
 
         resultText = new QTextEdit(SubmitDialog);
         resultText->setObjectName(QString::fromUtf8("resultText"));
-        QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        sizePolicy3.setHorizontalStretch(1);
-        sizePolicy3.setVerticalStretch(0);
-        sizePolicy3.setHeightForWidth(resultText->sizePolicy().hasHeightForWidth());
-        resultText->setSizePolicy(sizePolicy3);
+        QSizePolicy sizePolicy4(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        sizePolicy4.setHorizontalStretch(1);
+        sizePolicy4.setVerticalStretch(0);
+        sizePolicy4.setHeightForWidth(resultText->sizePolicy().hasHeightForWidth());
+        resultText->setSizePolicy(sizePolicy4);
         resultText->setLineWrapMode(QTextEdit::NoWrap);
         resultText->setReadOnly(true);
 
@@ -141,18 +144,18 @@ public:
 
         widget = new QWidget(SubmitDialog);
         widget->setObjectName(QString::fromUtf8("widget"));
-        sizePolicy.setHeightForWidth(widget->sizePolicy().hasHeightForWidth());
-        widget->setSizePolicy(sizePolicy);
+        sizePolicy3.setHeightForWidth(widget->sizePolicy().hasHeightForWidth());
+        widget->setSizePolicy(sizePolicy3);
         horizontalLayout = new QHBoxLayout(widget);
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
         genericButton = new QPushButton(widget);
         genericButton->setObjectName(QString::fromUtf8("genericButton"));
-        QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        sizePolicy4.setHorizontalStretch(0);
-        sizePolicy4.setVerticalStretch(0);
-        sizePolicy4.setHeightForWidth(genericButton->sizePolicy().hasHeightForWidth());
-        genericButton->setSizePolicy(sizePolicy4);
+        QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        sizePolicy5.setHorizontalStretch(0);
+        sizePolicy5.setVerticalStretch(0);
+        sizePolicy5.setHeightForWidth(genericButton->sizePolicy().hasHeightForWidth());
+        genericButton->setSizePolicy(sizePolicy5);
 
         horizontalLayout->addWidget(genericButton);
 
@@ -173,7 +176,7 @@ public:
     void retranslateUi(QDialog *SubmitDialog)
     {
         SubmitDialog->setWindowTitle(QApplication::translate("SubmitDialog", "Dialog", 0, QApplication::UnicodeUTF8));
-        noteLabel->setText(QApplication::translate("SubmitDialog", "<b>Note:</b> submiting a result to <a href=\"http://www.luxrender.net/luxmark\">www.luxrender.net/luxmark</a> requires a valid forum account. If you don't have an account, you can create one <a href=\"http://www.luxrender.net/forum/ucp.php?mode=register\">here</a>. Account names are case sensitive.", 0, QApplication::UnicodeUTF8));
+        noteLabel->setText(QApplication::translate("SubmitDialog", "<b>Note:</b> submiting a result to <a href=\"http://www.luxrender.net/luxmark\">www.luxrender.net/luxmark</a> requires a valid forum account. If you don't have an account, you can create one <a href=\"http://www.luxrender.net/forum/ucp.php?mode=register\">here</a>. Account names are case sensitive and the account activation can require up to 1 hour.", 0, QApplication::UnicodeUTF8));
         accountNameLabel->setText(QApplication::translate("SubmitDialog", "Account name:", 0, QApplication::UnicodeUTF8));
         accountPwdLabel->setText(QApplication::translate("SubmitDialog", "Account password:", 0, QApplication::UnicodeUTF8));
         resultNoteLabel->setText(QApplication::translate("SubmitDialog", "Result note:", 0, QApplication::UnicodeUTF8));
