@@ -154,7 +154,7 @@ void SubmitDialog::genericButton() {
 			params.addEncodedQueryItem("dev_local_mem[]", QUrl::toPercentEncoding(QString(ToString(descs[i].localMem).c_str())));
 
 			SD_LOG("dev_constant_mem = " << descs[i].localMem);
-			params.addEncodedQueryItem("dev_constant_mem[]", QUrl::toPercentEncoding(QString(ToString(descs[i].localMem).c_str())));
+			params.addEncodedQueryItem("dev_constant_mem[]", QUrl::toPercentEncoding(QString(ToString(descs[i].constantMem).c_str())));
 		}
 
 		QByteArray data;
