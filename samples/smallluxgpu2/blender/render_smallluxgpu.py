@@ -27,7 +27,7 @@ bl_info = {
     "author": "see (SLG) AUTHORS.txt",
     "version": (2, 0, 4),
     "blender": (2, 6, 0),
-    "location": "Render > Engine > SmallLuxGPU",
+    "location": "Info Header > Engine dropdown menu",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
     "warning": "",
     "wiki_url": "http://www.luxrender.net/wiki/index.php?title=Blender_2.5_exporter",
