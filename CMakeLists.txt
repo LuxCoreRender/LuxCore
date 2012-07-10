@@ -35,6 +35,9 @@ SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 project(LuxRays)
 
+# Try to use OpenCL
+SET(LUXRAYS_DISABLE_OPENCL 0)
+
 # Dont overconfigure
 SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limit configs" FORCE)
 
@@ -75,10 +78,6 @@ message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 # Find dependencies
 include(Dependencies)
 
-if (NOT OPENGL_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL files")
-endif()
-
 if (NOT Boost_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
 endif()
@@ -87,16 +86,22 @@ if (NOT FreeImage_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required FreeImage files - Please check ${FREEIMAGE_SEARCH_PATH}")
 endif()
 
-if (NOT GLEW_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required GLEW files - Please check ${GLEW_SEARCH_PATH}")
+if (NOT OPENCL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
+	MESSAGE(ERROR "--> Could not locate required OpenCL files, disabling OpenCL support - Please check ${OPENCL_SEARCH_PATH}")
+	SET(LUXRAYS_DISABLE_OPENCL 1)
 endif()
 
-if (NOT OPENCL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files - Please check ${OPENCL_SEARCH_PATH}")
+if (NOT OPENGL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
+	MESSAGE(ERROR "--> Could not locate required OpenGL files, disabling OpenCL support, disabling samples build")
+	SET(LUXRAYS_DISABLE_OPENCL 1)
+endif()
+
+if (NOT GLEW_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required GLEW files, disabling samples build - Please check ${GLEW_SEARCH_PATH}")
 endif()
 
 if (NOT GLUT_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required GLUT files - Please check ${GLUT_SEARCH_PATH}")
+	MESSAGE(FATAL_ERROR "--> Could not locate required GLUT files, disabling samples build - Please check ${GLUT_SEARCH_PATH}")
 endif()
 
 #set (GLUT_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/../freeglut/include")
@@ -124,21 +129,27 @@ add_subdirectory(src)
 #
 ###########################################################################
 
-add_subdirectory(samples/benchsimple)
-add_subdirectory(samples/smallluxgpu)
-
-if(NOT LUXRAYS_DISABLE_OPENCL)
-	message(STATUS "Building SLG2 too - this will require OpenCL")
-	add_subdirectory(samples/smallluxgpu2)
-endif(NOT LUXRAYS_DISABLE_OPENCL)
-
 add_subdirectory(samples/benchpixel)
-add_subdirectory(samples/smallppmgpu)
+add_subdirectory(samples/benchsimple)
+if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
+	if(NOT LUXRAYS_DISABLE_OPENCL)
+		if(BUILD_LUXMARK)
+			message(STATUS "Building LuxMark too - this will require QT4")
+			add_subdirectory(samples/luxmark)
+		endif(BUILD_LUXMARK)
+		message(STATUS "Building SLG2 too")
+		add_subdirectory(samples/smallluxgpu2)
+	else(NOT LUXRAYS_DISABLE_OPENCL)
+		if(BUILD_LUXMARK)
+			message(WARNING "LuxMark requires OpenCL support, not building")
+		endif(BUILD_LUXMARK)
+		message(WARNING "SLG2 requires OpenCL support, not building")
+	endif(NOT LUXRAYS_DISABLE_OPENCL)
 
-if(BUILD_LUXMARK AND (NOT LUXRAYS_DISABLE_OPENCL))
-	message(STATUS "Building LuxMark too - this will require QT4 and OpenCL")
-	add_subdirectory(samples/luxmark)
-endif(BUILD_LUXMARK AND (NOT LUXRAYS_DISABLE_OPENCL))
+	add_subdirectory(samples/smallluxgpu)
+	add_subdirectory(samples/smallppmgpu)
+endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
+
 
 
 ###########################################################################

@@ -26,6 +26,9 @@ getenv_path(LuxRays_DEPENDENCIES_DIR)
 # Core dependencies
 #######################################################################
 
+# Find threading library
+FIND_PACKAGE(Threads REQUIRED)
+
 # Find FreeImage
 find_package(FreeImage)
 
@@ -94,5 +97,5 @@ set(OPENCL_ROOT                  "${OPENCL_SEARCH_PATH}")
 find_package(OpenCL)
 # OpenCL
 if (OPENCL_FOUND)
-  include_directories(${OPENCL_INCLUDE_PATH})
+	include_directories(${OPENCL_INCLUDE_DIR})
 endif ()
