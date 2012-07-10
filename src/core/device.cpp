@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#if !defined(WIN32) && !defined(__APPLE__)
+#if !defined(LUXRAYS_DISABLE_OPENCL) && !defined(WIN32) && !defined(__APPLE__)
 #include <GL/glx.h>
 #endif
 #include <cstdio>

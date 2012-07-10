@@ -24,8 +24,7 @@ link_directories (${LuxRays_LIB_DIR})
 
 add_executable(benchpixel benchpixel.cpp)
 
-target_link_libraries(benchpixel luxrays ${OPENGL_LIBRARY})
-TARGET_LINK_LIBRARIES(benchpixel ${OpenCL_LIBRARY})
+target_link_libraries(benchpixel luxrays)
 
 # This instructs FREEGLUT to emit a pragma for the static version
 SET_TARGET_PROPERTIES(benchpixel PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)
