@@ -964,7 +964,7 @@ int main(int argc, char *argv[]) {
 				if ((s.length() >= 4) && (s.substr(s.length() - 4) == ".scn")) {
 					sceneFileName = s;
 				} else
-					throw std::runtime_error("Unknow file extension: " + s);
+					throw std::runtime_error("Unknown file extension: " + s);
 			}
 		}
 
