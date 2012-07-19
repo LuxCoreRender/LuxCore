@@ -114,7 +114,7 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	else if (type == "NONE")
 		kernelCache = new luxrays::utils::oclKernelDummyCache();
 	else
-		throw std::runtime_error("Unknow opencl.kernelcache type: " + type);
+		throw std::runtime_error("Unknown opencl.kernelcache type: " + type);
 
 }
 

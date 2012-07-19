@@ -293,7 +293,7 @@ int main(int argc, char *argv[]) {
 						throw runtime_error("Used multiple configuration files");
 					config = new RenderingConfig(s);
 				} else
-					throw runtime_error("Unknow file extension: " + s);
+					throw runtime_error("Unknown file extension: " + s);
 			}
 		}
 
