@@ -143,7 +143,7 @@ IF(APPLE)
 	if(${XCODE_VERSION} VERSION_LESS 4.3)
 		SET(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
 	elseif(${XCODE_VERSION} VERSION_GREATER 4.3)
-		SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk)
+		set(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx10.8) # xcode 4.4-style
 	else()
 		SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk)
 	endif()	
