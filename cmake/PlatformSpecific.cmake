@@ -134,7 +134,7 @@ IF(APPLE)
 		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
 	endif()	
 
-	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6) # keep this @ 10.6 to archieve bw-compatibility by weak-linking !
 	if(CMAKE_VERSION VERSION_LESS 2.8.1)
 		SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
 	else(CMAKE_VERSION VERSION_LESS 2.8.1)
@@ -142,6 +142,8 @@ IF(APPLE)
 	endif(CMAKE_VERSION VERSION_LESS 2.8.1)
 	if(${XCODE_VERSION} VERSION_LESS 4.3)
 		SET(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
+	elseif(${XCODE_VERSION} VERSION_GREATER 4.3)
+		SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk)
 	else()
 		SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk)
 	endif()	
