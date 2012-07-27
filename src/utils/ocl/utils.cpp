@@ -62,7 +62,7 @@ std::string luxrays::utils::oclErrorString(cl_int error) {
 			return "CL_BUILD_PROGRAM_FAILURE";
 		case CL_MAP_FAILURE:
 			return "CL_MAP_FAILURE";
-#ifndef CL_VERSION_1_0
+#ifdef CL_VERSION_1_1
 		case CL_MISALIGNED_SUB_BUFFER_OFFSET:
 			return "CL_MISALIGNED_SUB_BUFFER_OFFSET";
 		case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST:
