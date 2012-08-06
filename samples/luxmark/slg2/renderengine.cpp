@@ -78,6 +78,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
+	const unsigned int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
 	const int oclPlatformIndex = cfg.GetInt("opencl.platform.index", -1);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 
@@ -106,6 +107,8 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 			if (oclDeviceConfig.at(i) == '1') {
 				if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
+				else if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU)
+					desc->SetForceWorkGroupSize(forceCPUWorkSize);
 				selectedDescs.push_back(desc);
 			}
 		} else {
@@ -113,6 +116,8 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 					(useGPUs && desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
 				if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
+				else if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU)
+					desc->SetForceWorkGroupSize(forceCPUWorkSize);
 				selectedDescs.push_back(descs[i]);
 			}
 		}
