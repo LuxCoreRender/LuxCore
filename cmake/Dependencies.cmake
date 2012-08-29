@@ -33,7 +33,7 @@ FIND_PACKAGE(Threads REQUIRED)
 find_package(FreeImage)
 
 if (FreeImage_FOUND)
-  include_directories(${FreeImage_INCLUDE_DIRS})
+	include_directories(SYSTEM ${FreeImage_INCLUDE_DIRS})
 endif ()
 
 # Find Boost
@@ -59,7 +59,7 @@ if (NOT Boost_FOUND)
 endif()
 
 if (Boost_FOUND)
-  include_directories(${Boost_INCLUDE_DIRS})
+	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
   link_directories(${Boost_LIBRARY_DIRS})
   # Don't use old boost versions interfaces
   ADD_DEFINITIONS(-DBOOST_FILESYSTEM_NO_DEPRECATED)
@@ -71,7 +71,7 @@ endif ()
 find_package(OpenGL)
 
 if (OPENGL_FOUND)
-  include_directories(${OPENGL_INCLUDE_PATH})
+	include_directories(SYSTEM ${OPENGL_INCLUDE_PATH})
 endif()
 
 set(GLEW_ROOT                  "${GLEW_SEARCH_PATH}")
@@ -81,7 +81,7 @@ endif()
 
 # GLEW
 if (GLEW_FOUND)
-  include_directories(${GLEW_INCLUDE_PATH})
+	include_directories(SYSTEM ${GLEW_INCLUDE_PATH})
 endif ()
 
 
@@ -90,12 +90,12 @@ find_package(GLUT)
 
 # GLUT
 if (GLUT_FOUND)
-  include_directories(${GLUT_INCLUDE_PATH})
+	include_directories(SYSTEM ${GLUT_INCLUDE_PATH})
 endif ()
 
 set(OPENCL_ROOT                  "${OPENCL_SEARCH_PATH}")
 find_package(OpenCL)
 # OpenCL
 if (OPENCL_FOUND)
-	include_directories(${OPENCL_INCLUDE_DIR})
+	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR})
 endif ()
