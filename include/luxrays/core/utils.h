@@ -51,10 +51,21 @@ typedef unsigned int u_int;
 using std::isinf;
 #endif
 
-#if defined(__APPLE__)
-#include <stdlib.h>
+#if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
+#  include <malloc.h> // for _alloca, memalign
+#  if !defined(WIN32) || defined(__CYGWIN__)
+#    include <alloca.h>
+#  else
+#    define memalign(a,b) _aligned_malloc(b, a)
+#    define alloca _alloca
+#  endif
 #else
-#include <malloc.h>
+#  include <stdlib.h>
+#  if defined(__APPLE__)
+#    define memalign(a,b) valloc(b)
+#  elif defined(__OpenBSD__) || defined(__FreeBSD__)
+#    define memalign(a,b) malloc(b)
+#  endif
 #endif
 
 #include <sstream>
@@ -87,7 +98,7 @@ using std::isinf;
 namespace luxrays {
 
 inline double WallClockTime() {
-#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 	struct timeval t;
 	gettimeofday(&t, NULL);
 
@@ -235,7 +246,7 @@ inline void StringTrim(std::string &str) {
 }
 
 inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
-#if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__)
+#if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 	{
 		const pthread_t tid = (pthread_t)thread->native_handle();
 
@@ -271,11 +282,7 @@ inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
 #endif
 
 template<class T> inline T *AllocAligned(size_t size, std::size_t N = L1_CACHE_LINE_SIZE) {
-#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
-	return static_cast<T *> (_aligned_malloc(size * sizeof (T), N));
-#else // NOBOOK
 	return static_cast<T *> (memalign(N, size * sizeof (T)));
-#endif // NOBOOK
 }
 
 template<class T> inline void FreeAligned(T *ptr) {
