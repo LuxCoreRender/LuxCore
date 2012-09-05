@@ -70,7 +70,7 @@ using std::isinf;
 
 #include <sstream>
 
-#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <stddef.h>
 #include <sys/time.h>
 #elif defined (WIN32)
