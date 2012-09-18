@@ -790,7 +790,7 @@ Error: Huston, we have a problem !
 			if (currentTriangleIndex != 0xffffffffu) {
 				// The shadow ray has hit something
 
-#if defined(PARAM_HAS_TEXTUREMAPS) && defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+#if (defined(PARAM_HAS_TEXTUREMAPS) && defined(PARAM_HAS_ALPHA_TEXTUREMAPS)) || defined(PARAM_ENABLE_MAT_ARCHGLASS)
 				// Check if I have to continue to trace the shadow ray
 
 				const uint pathDepth = task->pathState.depth;
@@ -804,6 +804,7 @@ Error: Huston, we have a problem !
 				__global Material *hitPointMat = &mats[meshMats[meshIndex]];
 				uint matType = hitPointMat->type;
 
+#if defined(PARAM_HAS_TEXTUREMAPS) && defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 				// Interpolate UV coordinates
 				UV uv;
 #if defined(PARAM_ACCEL_MQBVH)
@@ -837,7 +838,7 @@ Error: Huston, we have a problem !
 						}
 					}
 				}
-
+#endif
 				if (matType == MAT_ARCHGLASS) {
 					task->pathState.lightRadiance.r *= hitPointMat->param.archGlass.refrct_r;
 					task->pathState.lightRadiance.g *= hitPointMat->param.archGlass.refrct_g;
