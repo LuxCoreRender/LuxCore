@@ -23,10 +23,14 @@
 #define _LUXRAYS_POINT_H
 
 #include "luxrays/core/geometry/vector.h"
+#include <iostream>
+using std::ostream;
+#include <boost/serialization/access.hpp>
 
 namespace luxrays {
 
 class Point {
+	friend class boost::serialization::access;
 public:
 	// Point Methods
 
@@ -105,6 +109,14 @@ public:
 		return *this;
 	}
 
+	bool operator==(const Point &p) const {
+		return x == p.x && y == p.y && z == p.z;
+	}
+
+	bool operator!=(const Point &p) const {
+		return x != p.x || y != p.y || z != p.z;
+	}
+
 	float operator[](int i) const {
 		return (&x)[i];
 	}
@@ -115,6 +127,15 @@ public:
 
 	// Point Public Data
 	float x, y, z;
+
+private:
+	template<class Archive>
+		void serialize(Archive & ar, const unsigned int version)
+		{
+			ar & x;
+			ar & y;
+			ar & z;
+		}
 };
 
 inline Vector::Vector(const Point &p)

@@ -27,6 +27,7 @@
 namespace luxrays {
 
 class Normal {
+	friend class boost::serialization::access;
 public:
 	// Normal Methods
 
@@ -84,6 +85,14 @@ public:
 		return *this;
 	}
 
+	bool operator==(const Normal &n) const {
+		return x == n.x && y == n.y && z == n.z;
+	}
+
+	bool operator!=(const Normal &n) const {
+		return x != n.x || y != n.y || z != n.z;
+	}
+
 	float LengthSquared() const {
 		return x * x + y * y + z*z;
 	}
@@ -104,6 +113,15 @@ public:
 	}
 	// Normal Public Data
 	float x, y, z;
+
+private:
+	template<class Archive>
+			void serialize(Archive & ar, const unsigned int version)
+			{
+				ar & x;
+				ar & y;
+				ar & z;
+			}
 };
 
 inline Normal operator*(float f, const Normal &n) {
@@ -132,5 +150,9 @@ inline float AbsDot(const Normal &n1, const Normal &n2) {
 }
 
 }
+
+#ifdef _LUXRAYS_VECTOR_H
+#include "luxrays/core/geometry/vector_normal.h"
+#endif
 
 #endif 	/* _LUXRAYS_NORMAL_H */
