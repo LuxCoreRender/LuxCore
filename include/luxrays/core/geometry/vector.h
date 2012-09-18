@@ -23,10 +23,11 @@
 #define _LUXRAYS_VECTOR_H
 
 #include <cmath>
-#include <ostream>
+#include <iostream>
 #include <functional>
 #include <limits>
 #include <algorithm>
+#include <boost/serialization/access.hpp>
 
 #include "luxrays/core/utils.h"
 
@@ -36,6 +37,7 @@ class Point;
 class Normal;
 
 class Vector {
+	friend class boost::serialization::access;
 public:
 	// Vector Public Methods
 
@@ -117,6 +119,15 @@ public:
 
 	// Vector Public Data
 	float x, y, z;
+
+private:
+	template<class Archive>
+			void serialize(Archive & ar, const unsigned int version)
+			{
+				ar & x;
+				ar & y;
+				ar & z;
+			}
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Vector &v) {
@@ -162,9 +173,9 @@ inline Vector SphericalDirection(float sintheta, float costheta, float phi) {
 }
 
 inline Vector SphericalDirection(float sintheta, float costheta, float phi,
-		const Vector &x, const Vector &y, const Vector &z) {
+	const Vector &x, const Vector &y, const Vector &z) {
 	return sintheta * cosf(phi) * x + sintheta * sinf(phi) * y +
-			costheta * z;
+		costheta * z;
 }
 
 inline float SphericalTheta(const Vector &v) {
@@ -180,27 +191,32 @@ inline float CosTheta(const Vector &w) {
 	return w.z;
 }
 
-inline float SinTheta(const Vector &w) {
-	return sqrtf(Max(0.f, 1.f - w.z * w.z));
+inline float SinTheta2(const Vector &w) {
+	return std::max(0.f, 1.f - CosTheta(w) * CosTheta(w));
 }
 
-inline float SinTheta2(const Vector &w) {
-	return 1.f - CosTheta(w) * CosTheta(w);
+inline float SinTheta(const Vector &w) {
+	return sqrtf(SinTheta2(w));
 }
 
 inline float CosPhi(const Vector &w) {
-	return w.x / SinTheta(w);
+	const float sinTheta = SinTheta(w);
+	return sinTheta > 0.f ? Clamp(w.x / sinTheta, -1.f, 1.f) : 1.f;
 }
 
 inline float SinPhi(const Vector &w) {
-	return w.y / SinTheta(w);
+	const float sinTheta = SinTheta(w);
+	return sinTheta > 0.f ? Clamp(w.y / sinTheta, -1.f, 1.f) : 0.f;
 }
 
-inline bool SameHemisphere(const Vector &w,
-		const Vector &wp) {
+inline bool SameHemisphere(const Vector &w, const Vector &wp) {
 	return w.z * wp.z > 0.f;
 }
 
 }
+
+#ifdef _LUXRAYS_NORMAL_H
+#include "luxrays/core/geometry/vector_normal.h"
+#endif
 
 #endif	/* _LUXRAYS_VECTOR_H */
