@@ -55,7 +55,7 @@ public:
 		const std::string &kernelsParameters, const std::string &kernelSource,
 		bool *cached, cl::STRING_CLASS *error) {
 		if (cached)
-			cached = false;
+			*cached = false;
 
 		return ForcedCompile(context, device, kernelsParameters, kernelSource, error);
 	}
