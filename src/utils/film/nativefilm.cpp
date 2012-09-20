@@ -26,7 +26,8 @@ using namespace luxrays::utils;
 
 size_t NativeFilm::SampleBufferSize = 4096;
 
-NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) : Film(w, h) {
+NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) :
+	Film(w, h), convTest(w, h) {
 	sampleFrameBuffer = NULL;
 	alphaFrameBuffer = NULL;
 	frameBuffer = NULL;
@@ -70,6 +71,8 @@ void NativeFilm::Init(const unsigned int w, const unsigned int h) {
 
 	frameBuffer = new FrameBuffer(width, height);
 	frameBuffer->Clear();
+
+	convTest.Reset(width, height);
 }
 
 void NativeFilm::Reset() {
@@ -77,6 +80,8 @@ void NativeFilm::Reset() {
 	if (enableAlphaChannel)
 		alphaFrameBuffer->Clear();
 	Film::Reset();
+
+	// convTest has to be reseted explicitely
 }
 
 void NativeFilm::UpdateScreenBuffer() {
@@ -325,4 +330,12 @@ void NativeFilm::AddSampleFrameBuffer(const SampleFrameBuffer *sfb) {
 		spbase->radiance += sp->radiance;
 		spbase->weight += sp->weight;
 	}
+}
+
+void NativeFilm::ResetConvergenceTest() {
+	convTest.Reset();
+}
+
+unsigned int NativeFilm::RunConvergenceTest() {
+	return convTest.Test((const float *)frameBuffer->GetPixels());
 }

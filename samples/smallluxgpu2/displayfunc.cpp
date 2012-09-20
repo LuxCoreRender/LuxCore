@@ -228,15 +228,13 @@ void timerFunc(int value) {
 		case PATHOCL: {
 			PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
 
-			const unsigned int pass = engine->GetPass();
-
 			double raysSec = 0.0;
 			const vector<OpenCLIntersectionDevice *> &idevices = engine->GetIntersectionDevices();
 			for (size_t i = 0; i < idevices.size(); ++i)
 				raysSec += idevices[i]->GetPerformance();
 
 			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-					pass, engine->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0),
+					engine->GetPass(), engine->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0),
 					session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 			// Need to update the Film
