@@ -162,6 +162,7 @@ public:
 	void UpdateFilm();
 
 	unsigned int GetPass() const;
+	float GetConvergence() const;
 	RenderEngineType GetEngineType() const { return PATHOCL; }
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
@@ -191,6 +192,10 @@ private:
 	double startTime;
 	double elapsedTime;
 	unsigned long long samplesCount;
+
+	float convergence;
+	double lastConvergenceTestTime;
+	unsigned long long lastConvergenceTestSamplesCount;
 
 	PathOCL::Sampler *sampler;
 	PathOCL::Filter *filter;

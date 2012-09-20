@@ -114,7 +114,7 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
-static int BatchMode(double stopTime, unsigned int stopSPP) {
+static int BatchMode(const double stopTime, const unsigned int stopSPP, const float haltthreshold) {
 	RenderConfig *config = session->renderConfig;
 	RenderEngine *engine = session->renderEngine;
 
@@ -129,32 +129,38 @@ static int BatchMode(double stopTime, unsigned int stopSPP) {
 	char buf[512];
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
-		const double now = WallClockTime();
-		const double elapsedTime = now - startTime;
-
-		const unsigned int pass = engine->GetPass();
-
-		if ((stopTime > 0) && (elapsedTime >= stopTime))
-			break;
-		if ((stopSPP > 0) && (pass >= stopSPP))
-			break;
 
 		// Check if periodic save is enabled
 		if (session->NeedPeriodicSave()) {
 			// Time to save the image and film
 			session->SaveFilmImage();
+			lastFilmUpdate =  WallClockTime();
 		} else {
 			// Film update may be required by some render engine to
-			// update statistics and more
+			// update statistics, convergence test and more
 			if (WallClockTime() - lastFilmUpdate > 5.0) {
 				session->renderEngine->UpdateFilm();
-				lastFilmUpdate = WallClockTime();
+				lastFilmUpdate =  WallClockTime();
 			}
 		}
 
+		const double now = WallClockTime();
+		const double elapsedTime = now - startTime;
+		if ((stopTime > 0) && (elapsedTime >= stopTime))
+			break;
+
+		const unsigned int pass = engine->GetPass();
+		if ((stopSPP > 0) && (pass >= stopSPP))
+			break;
+
+		// Convergence test is update inside UpdateFilm()
+		const float convergence = engine->GetConvergence();
+		if ((haltthreshold >= 0.f) && (1.f - convergence <= haltthreshold))
+			break;
+
 		// Print some information about the rendering progress
-		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Avg. samples/sec % 3.2fM on %.1fK tris]",
-				int(elapsedTime), int(stopTime), pass, stopSPP, engine->GetTotalSamplesSec() / 1000000.0,
+		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
+				int(elapsedTime), int(stopTime), pass, stopSPP, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
 				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 		SLG_LOG(buf);
@@ -261,14 +267,15 @@ int main(int argc, char *argv[]) {
 
 		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
 		const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
-		if ((halttime > 0) || (haltspp > 0))
+		const float haltthreshold = config->cfg.GetFloat("batch.haltthreshold", -1.f);
+		if ((halttime > 0) || (haltspp > 0) || (haltthreshold >= 0.f))
 			batchMode = true;
 		else
 			batchMode = false;
 
 		if (batchMode) {
 			session = new RenderSession(config);
-			return BatchMode(halttime, haltspp);
+			return BatchMode(halttime, haltspp, haltthreshold);
 		} else {
 			// It is important to initialize OpenGL before OpenCL
 			// (for OpenGL/OpenCL interoperability)

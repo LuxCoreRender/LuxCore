@@ -29,6 +29,7 @@
 #include "luxrays/core/pixel/filter.h"
 #include "luxrays/core/pixel/framebuffer.h"
 #include "luxrays/core/pixel/samplebuffer.h"
+#include "luxrays/utils/pdiff/Metric.h"
 
 namespace luxrays { namespace utils {
 
@@ -59,6 +60,11 @@ public:
 	}
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
 
+	//--------------------------------------------------------------------------
+	
+	void ResetConvergenceTest();
+	unsigned int RunConvergenceTest();
+	
 	//--------------------------------------------------------------------------
 
 	void AddRadiance(const unsigned int x, const unsigned int y, const Spectrum &radiance, const float weight) {
@@ -127,6 +133,8 @@ protected:
 
 	Filter *filter;
 	FilterLUTs *filterLUTs;
+	
+	ConvergenceTest convTest;
 
 	bool enableAlphaChannel;
 };

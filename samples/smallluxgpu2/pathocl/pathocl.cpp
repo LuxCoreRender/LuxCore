@@ -117,6 +117,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 
 	startTime = 0.0;
 	samplesCount = 0;
+	convergence = 0.f;
 
 	sampleBuffer = film->GetFreeSampleBuffer();
 
@@ -162,6 +163,9 @@ void PathOCLRenderEngine::Start() {
 		renderThreads[i]->Start();
 
 	startTime = WallClockTime();
+	film->ResetConvergenceTest();
+	lastConvergenceTestTime = startTime;
+	lastConvergenceTestSamplesCount = 0;
 }
 
 void PathOCLRenderEngine::Stop() {
@@ -219,6 +223,9 @@ void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 
 	elapsedTime = 0.0f;
 	startTime = WallClockTime();
+	film->ResetConvergenceTest();
+	lastConvergenceTestTime = startTime;
+	lastConvergenceTestSamplesCount = 0;
 }
 
 void PathOCLRenderEngine::UpdateFilm() {
@@ -322,10 +329,30 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 	}
 
 	samplesCount = totalCount;
+
+	const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
+	if (haltthreshold >= 0.f) {
+		// Check if it is time to run the convergence test again
+		const unsigned int pixelCount = imgWidth * imgHeight;
+		const double now = WallClockTime();
+
+		// Do not run the test if we don't have at least 16 new samples per pixel
+		if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * 16) &&
+				((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetScreenRefreshInterval())) {
+			film->UpdateScreenBuffer(); // Required in order to have a valid convergence test
+			convergence = 1.f - film->RunConvergenceTest() / (float)pixelCount;
+			lastConvergenceTestTime = now;
+			lastConvergenceTestSamplesCount = samplesCount;
+		}
+	}
 }
 
 unsigned int PathOCLRenderEngine::GetPass() const {
 	return samplesCount / (film->GetWidth() * film->GetHeight());
+}
+
+float PathOCLRenderEngine::GetConvergence() const {
+	return convergence;
 }
 
 bool PathOCLRenderEngine::IsMaterialCompiled(const MaterialType type) const {
