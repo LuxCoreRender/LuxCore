@@ -332,11 +332,11 @@ unsigned int ConvergenceTest::Test(const float *image) {
 
 	if (reference == NULL) {
 		reference = new float[pixelCount * 3];
-		std::copy(image, image + pixelCount, reference);
+		std::copy(image, image + pixelCount * 3, reference);
 		return pixelCount;
 	} else {
 		const unsigned int count = Yee_Compare(reference, image, NULL, NULL, width, height);
-		std::copy(image, image + pixelCount, reference);
+		std::copy(image, image + pixelCount * 3, reference);
 		return count;
 	}
 }
