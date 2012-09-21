@@ -1,5 +1,5 @@
 /*
-Laplacian Pyramid
+Metric
 Copyright (C) 2006 Yangli Hector Yee
 
 This program is free software; you can redistribute it and/or modify it under the terms of the
@@ -16,31 +16,30 @@ if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 
 // Adapted for LuxRender/LuxRays by Dade
 
-#ifndef _LPYRAMID_H
-#define _LPYRAMID_H
+#ifndef _PDIFF_METRIC_H
+#define _PDIFF_METRIC_H
+
+#include <vector>
 
 namespace luxrays { namespace utils {
 
-#define MAX_PYR_LEVELS 8
-
-class LPyramid
-{
-public:	
-	LPyramid(float *image, int width, int height);
-	virtual ~LPyramid();
-	float Get_Value(int x, int y, int level);
-protected:
-	float *Copy(float *img);
-	void Convolve(float *a, float *b);
-	
-	// Succesively blurred versions of the original image
-	float *Levels[MAX_PYR_LEVELS];
-
-	int Width;
-	int Height;
-};
+// Image comparison metric using Yee's method
+// References: A Perceptual Metric for Production Testing, Hector Yee, Journal of Graphics Tools 2004
+extern unsigned int Yee_Compare(
+		const float *rgbA,
+		const float *rgbB,
+		std::vector<bool> *diff,
+		float *tviBuffer,
+		const unsigned int width,
+		const unsigned int height,
+		const bool LuminanceOnly = false,
+		const float FieldOfView = 45.f,
+		const float Gamma = 2.2f,
+		const float Luminance = 100.f,
+		const float ColorFactor = 1.f,
+		const unsigned int DownSample = 0);
 
 } }
 
-#endif // _LPYRAMID_H
+#endif
 

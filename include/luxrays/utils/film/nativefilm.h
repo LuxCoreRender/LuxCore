@@ -29,7 +29,7 @@
 #include "luxrays/core/pixel/filter.h"
 #include "luxrays/core/pixel/framebuffer.h"
 #include "luxrays/core/pixel/samplebuffer.h"
-#include "luxrays/utils/pdiff/Metric.h"
+#include "luxrays/utils/convtest/convtest.h"
 
 namespace luxrays { namespace utils {
 
