@@ -133,11 +133,12 @@ set(LuxRays_SRC_UTILS_FILM
 )
 SOURCE_GROUP("Source Files\\Utils\\FILM" FILES ${LuxRays_SRC_UTILS_FILM})
 
-set(LuxRays_SRC_UTILS_PDIFF
-	${LuxRays_SOURCE_DIR}/src/utils/pdiff/LPyramid.cpp
-        ${LuxRays_SOURCE_DIR}/src/utils/pdiff/Metric.cpp
+set(LuxRays_SRC_UTILS_CONVTEST
+	${LuxRays_SOURCE_DIR}/src/utils/convtest/pdiff/lpyramid.cpp
+        ${LuxRays_SOURCE_DIR}/src/utils/convtest/pdiff/metric.cpp
+        ${LuxRays_SOURCE_DIR}/src/utils/convtest/convtest.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\PDIFF" FILES ${LuxRays_SRC_UTILS_PDIFF})
+SOURCE_GROUP("Source Files\\Utils\\CONVTEST" FILES ${LuxRays_SRC_UTILS_CONVTEST})
 
 set(LuxRays_SRC_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/extmeshcache.cpp
@@ -172,7 +173,7 @@ set(LuxRays_SRCS
 	${LuxRays_SRCS_PDEVICES}
 	${LuxRays_SRC_UTILS_CORE}
 	${LuxRays_SRC_UTILS_FILM}
-        ${LuxRays_SRC_UTILS_PDIFF}
+        ${LuxRays_SRC_UTILS_CONVTEST}
 	${LuxRays_SRC_UTILS_OCL}
 	${LuxRays_SRC_UTILS_SDL}
 	${LuxRays_SRC_UTILS_PLYMESH}

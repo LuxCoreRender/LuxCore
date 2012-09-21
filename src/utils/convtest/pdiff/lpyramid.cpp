@@ -16,7 +16,7 @@ if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 
 // Adapted for LuxRender/LuxRays by Dade
 
-#include "luxrays/utils/pdiff/LPyramid.h"
+#include "luxrays/utils/convtest/pdiff/lpyramid.h"
 
 using namespace luxrays;
 using namespace luxrays::utils;
