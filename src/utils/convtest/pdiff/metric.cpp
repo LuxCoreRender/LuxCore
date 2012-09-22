@@ -18,8 +18,8 @@ if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 
 #include <cstdio>
 #include <math.h>
-#include "luxrays/utils/pdiff/Metric.h"
-#include "luxrays/utils/pdiff/LPyramid.h"
+#include "luxrays/utils/convtest/pdiff/metric.h"
+#include "luxrays/utils/convtest/pdiff/lpyramid.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265f
@@ -299,44 +299,4 @@ unsigned int luxrays::utils::Yee_Compare(
 	if (bB) delete bB;
 	
 	return pixels_failed;
-}
-
-//------------------------------------------------------------------------------
-// ConvergenceTest class
-//------------------------------------------------------------------------------
-
-ConvergenceTest::ConvergenceTest(const unsigned int w, const unsigned int h) :
-				width(w), height(h), reference(NULL) {
-}
-
-ConvergenceTest::~ConvergenceTest() {
-	delete[] reference;
-}
-
-void ConvergenceTest::Reset() {
-	delete[] reference;
-	reference = NULL;
-	
-}
-
-void ConvergenceTest::Reset(const unsigned int w, const unsigned int h) {
-	width = w;
-	height = h;
-	delete[] reference;
-	reference = NULL;
-	
-}
-
-unsigned int ConvergenceTest::Test(const float *image) {
-	const unsigned int pixelCount = width * height;
-
-	if (reference == NULL) {
-		reference = new float[pixelCount * 3];
-		std::copy(image, image + pixelCount, reference);
-		return pixelCount;
-	} else {
-		const unsigned int count = Yee_Compare(reference, image, NULL, NULL, width, height);
-		std::copy(image, image + pixelCount, reference);
-		return count;
-	}
 }
