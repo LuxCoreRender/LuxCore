@@ -368,7 +368,7 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const Point &p, const
 
 		const float sampleNdotMinusWi = Dot(sampleN, -wi);
 		if ((sampleNdotMinusWi > 0.f) && (N && Dot(*N, wi) > 0.f)) {
-			*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+			*shadowRay = Ray(p, wi);
 			*pdf = distanceSquared / (sampleNdotMinusWi * portalAreas[portalIndex] * portalCount);
 
 			// Using 0.1 instead of 0.0 to cut down fireflies
@@ -405,7 +405,7 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const float u0,
 		RdotN = -RdotN;
 	}
 
-	*ray = Ray(samplePoint, wi, RAY_EPSILON, INFINITY);
+	*ray = Ray(samplePoint, wi);
 	*pdf = INV_TWOPI / (portalAreas[portalIndex] * portalCount);
 
 	// Using 0.01 instead of 0.0 to cut down fireflies
@@ -475,7 +475,7 @@ Spectrum InfiniteLightIS::Sample_L(const Scene *scene, const Point &p, const Nor
 		return Spectrum();
 	}
 
-	*shadowRay = Ray(p, wi, RAY_EPSILON, INFINITY);
+	*shadowRay = Ray(p, wi);
 	*pdf /= (2.f * M_PI * M_PI * sintheta);
 
 	return gain * tex->GetTexMap()->GetColor(UV(uv));
@@ -561,7 +561,7 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Norma
 		return Spectrum();
 	}
 
-	*shadowRay = Ray(p, wi, RAY_EPSILON, distance - RAY_EPSILON);
+	*shadowRay = Ray(p, wi, MachineEpsilon::E(p), distance - MachineEpsilon::E(distance));
 	*pdf = distanceSquared / (sampleNdotMinusWi * area);
 
 	// Using 0.1 instead of 0.0 to cut down fireflies

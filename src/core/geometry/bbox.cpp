@@ -20,6 +20,8 @@
  ***************************************************************************/
 
 #include "luxrays/core/geometry/bbox.h"
+#include "luxrays/core/geometry/normal.h"
+#include "luxrays/core/geometry/ray.h"
 
 namespace luxrays {
 
@@ -59,13 +61,78 @@ BSphere BBox::BoundingSphere() const {
 	return BSphere(c, rad);
 }
 
+Point PlaneClipEdge(const Point &planeOrig, const Normal &planeNormal,
+		const Point &a, const Point &b) {
+	const float distA = Dot(a - planeOrig, planeNormal);
+	const float distB = Dot(b - planeOrig, planeNormal);
+
+	const float s = distA / (distA - distB);
+
+	return Point(a.x + s * (b.x - a.x),
+			a.y + s * (b.y - a.y),
+			a.z + s * (b.z - a.z));
+}
+
+vector<Point> PlaneClipPolygon(const Point &clippingPlaneOrigin,
+		const Normal &clippingPlaneNormal,
+		const vector<Point> &vertexList) {
+	if (vertexList.size() == 0)
+		return vector<Point>();
+
+	vector<Point> outputList;
+	Point S = vertexList[vertexList.size() - 1];
+	for (size_t j = 0; j < vertexList.size(); ++j) {
+		const Point &E = vertexList[j];
+
+		if (Dot(E - clippingPlaneOrigin, clippingPlaneNormal) >= 0.f) {
+			if (Dot(S - clippingPlaneOrigin, clippingPlaneNormal) < 0.f)
+				outputList.push_back(PlaneClipEdge(clippingPlaneOrigin, clippingPlaneNormal, S, E));
+
+			outputList.push_back(E);
+		} else if (Dot(S - clippingPlaneOrigin, clippingPlaneNormal) >= 0.f) {
+			outputList.push_back(PlaneClipEdge(clippingPlaneOrigin, clippingPlaneNormal, S, E));
+		}
+
+		S = E;
+	}
+
+	return outputList;
+}
+
+vector<Point> BBox::ClipPolygon(const vector<Point> &vertexList) const {
+	const Point clippingPlaneOrigin[6] = {
+		pMin,
+		pMin,
+		pMin,
+		pMax,
+		pMax,
+		pMax
+	};
+
+	static const Normal clippingPlaneNormal[6] = {
+		Normal(1.f, 0.f, 0.f),
+		Normal(0.f, 1.f, 0.f),
+		Normal(0.f, 0.f, 1.f),
+		Normal(-1.f, 0.f, 0.f),
+		Normal(0.f, -1.f, 0.f),
+		Normal(0.f, 0.f, -1.f),
+	};
+
+	vector<Point> vlist = vertexList;
+	// For each bounding box plane
+	for (size_t i = 0; i < 6; ++i)
+		vlist = PlaneClipPolygon(clippingPlaneOrigin[i], clippingPlaneNormal[i], vlist);
+
+	return vlist;
+}
+
 // NOTE - lordcrc - BBox::IntersectP relies on IEEE 754 behaviour of infinity and /fp:fast breaks this
 #if defined(WIN32) && !defined(__CYGWIN__)
 #pragma float_control(push)
 #pragma float_control(precise, on)
 #endif
-bool BBox::IntersectP(const Ray &ray, float *hitt0,
-		float *hitt1) const {
+bool BBox::IntersectP(const Ray &ray, float *hitt0, float *hitt1) const
+{
 	float t0 = ray.mint, t1 = ray.maxt;
 	for (int i = 0; i < 3; ++i) {
 		// Update interval for _i_th bounding box slab

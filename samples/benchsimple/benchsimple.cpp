@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
 			} while (ray.d == luxrays::Vector(0.f, 0.f, 0.f)); // Just in case ...
 			ray.d = luxrays::Normalize(ray.d);
 
-			ray.mint = luxrays::RAY_EPSILON;
+			ray.mint = luxrays::MachineEpsilon::E(ray.o);
 			ray.maxt = 1000.f;
 
 			rayBuffer->AddRay(ray);

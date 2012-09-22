@@ -108,7 +108,7 @@ void QBVHAccel::Init(const Mesh *m) {
 
 		// Compute the bounding box for the triangle
 		primsBboxes[i] = triangles[i].WorldBound(verts);
-		primsBboxes[i].Expand(RAY_EPSILON);
+		primsBboxes[i].Expand(MachineEpsilon::E(primsBboxes[i]));
 		primsCentroids[i] = (primsBboxes[i].pMin + primsBboxes[i].pMax) * .5f;
 
 		// Update the global bounding boxes

@@ -22,9 +22,7 @@
 #ifndef _LUXRAYS_BSPHERE_H
 #define _LUXRAYS_BSPHERE_H
 
-#include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
-#include "luxrays/core/geometry/ray.h"
 
 namespace luxrays {
 

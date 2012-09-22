@@ -23,28 +23,29 @@
 #ifndef _LUXRAYS_RAY_H
 #define _LUXRAYS_RAY_H
 
+#include "luxrays/core/epsilon.h"
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 
 namespace luxrays {
 
-extern float RAY_EPSILON;
-
 class  Ray {
 public:
 	// Ray Public Methods
-	Ray() : maxt(std::numeric_limits<float>::infinity()) {
-		mint = RAY_EPSILON;
+	Ray() : maxt(std::numeric_limits<float>::infinity()), time(0.f) {
+		mint = MachineEpsilon::E(1.f);
 	}
 
-	Ray(const Point &origin, const Vector &direction)
-		: o(origin), d(direction), maxt(std::numeric_limits<float>::infinity()) {
-		mint = RAY_EPSILON;
+	Ray(const Point &origin, const Vector &direction) : o(origin),
+		d(direction), maxt(std::numeric_limits<float>::infinity()),
+		time(0.f) {
+		mint = MachineEpsilon::E(origin);
 	}
 
 	Ray(const Point &origin, const Vector &direction,
-		float start, float end = std::numeric_limits<float>::infinity())
-		: o(origin), d(direction), mint(start), maxt(end) { }
+		float start, float end = std::numeric_limits<float>::infinity(),
+		float t = 0.f)
+		: o(origin), d(direction), mint(start), maxt(end), time(t) { }
 
 	Point operator()(float t) const { return o + d * t; }
 	void GetDirectionSigns(int signs[3]) const {
@@ -57,6 +58,7 @@ public:
 	Point o;
 	Vector d;
 	mutable float mint, maxt;
+	float time;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ray &r) {

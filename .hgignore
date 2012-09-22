@@ -17,6 +17,9 @@ syntax: glob
 *CMakeCache.txt
 *Makefile
 *cmake_install.cmake
+moc_*.cxx
+ui_*.h
+qrc_*.cxx
 *.sdf
 *.vcxproj*
 

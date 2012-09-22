@@ -71,7 +71,7 @@ void BVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int totalVe
 		BVHAccelTreeNode *ptr = new BVHAccelTreeNode();
 		ptr->bbox = p[i].WorldBound(v);
 		// NOTE - Ratow - Expand bbox a little to make sure rays collide
-		ptr->bbox.Expand(RAY_EPSILON);
+		ptr->bbox.Expand(MachineEpsilon::E(ptr->bbox));
 		ptr->primitive = i;
 		ptr->leftChild = NULL;
 		ptr->rightSibling = NULL;

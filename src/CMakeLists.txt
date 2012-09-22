@@ -67,6 +67,7 @@ set(LuxRays_SRCS_CORE
 	${LuxRays_SOURCE_DIR}/src/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/core/dataset.cpp
 	${LuxRays_SOURCE_DIR}/src/core/device.cpp
+	${LuxRays_SOURCE_DIR}/src/core/epsilon.cpp
 	${LuxRays_SOURCE_DIR}/src/core/trianglemesh.cpp
 )
 SOURCE_GROUP("Source Files\\Core" FILES ${LuxRays_SRCS_CORE})
@@ -199,6 +200,7 @@ set(LuxRays_HEADERS_LUXRAYS_CORE
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/context.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/dataset.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/device.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/intersectiondevice.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/pixeldevice.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh.h

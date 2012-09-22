@@ -168,7 +168,7 @@ void MQBVHAccel::Update() {
 
 		// Compute the bounding box for the triangle
 		primsBboxes[i] = meshList[i]->GetBBox();
-		primsBboxes[i].Expand(RAY_EPSILON);
+		primsBboxes[i].Expand(MachineEpsilon::E(primsBboxes[i]));
 		primsCentroids[i] = (primsBboxes[i].pMin + primsBboxes[i].pMax) * .5f;
 
 		// Update the global bounding boxes

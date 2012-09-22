@@ -753,7 +753,7 @@ void PathGPURenderThread::InitRender() {
 			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << RAY_EPSILON << "f" <<
+			" -D PARAM_RAY_EPSILON=" << MachineEpsilon::E(1.f) << "f" <<
 			" -D PARAM_CLIP_YON=" << scene->camera->GetClipYon() << "f" <<
 			" -D PARAM_CLIP_HITHER=" << scene->camera->GetClipHither() << "f" <<
 			" -D PARAM_SEED=" << seed <<

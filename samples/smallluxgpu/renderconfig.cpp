@@ -67,7 +67,11 @@ void RenderingConfig::Init() {
 	const string oclIntersectionDeviceConfig = cfg.GetString("opencl.devices.select", "");
 	const int oclPixelDeviceConfig = cfg.GetInt("opencl.pixeldevice.select", -1);
 	const unsigned int oclDeviceThreads = cfg.GetInt("opencl.renderthread.count", 0);
-	luxrays::RAY_EPSILON = cfg.GetFloat("scene.epsilon", luxrays::RAY_EPSILON);
+	const float epsilon = cfg.GetFloat("scene.epsilon", 0.f);
+	if (epsilon > 0.f) {
+		luxrays::MachineEpsilon::SetMin(epsilon);
+		luxrays::MachineEpsilon::SetMax(epsilon);
+	}
 	periodiceSaveTime = cfg.GetFloat("batch.periodicsave", 0.f);
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);

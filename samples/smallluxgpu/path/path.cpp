@@ -330,7 +330,8 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 				const float alpha = map->GetAlpha(triUV);
 
 				if ((alpha == 0.0f) || ((alpha < 1.f) && (sample.GetLazyValue() > alpha))) {
-					pathRay = Ray(pathRay(rayHit->t), pathRay.d, RAY_EPSILON, pathRay.maxt - rayHit->t);
+					const Point o(pathRay(rayHit->t));
+					pathRay = Ray(o, pathRay.d, MachineEpsilon::E(o), pathRay.maxt - rayHit->t);
 					state = NEXT_VERTEX;
 					tracedShadowRayCount = 0;
 					return;

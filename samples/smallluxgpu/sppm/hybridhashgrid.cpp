@@ -197,7 +197,7 @@ void HybridHashGrid::HashCell::AddFlux(const Point &hitPoint, const Vector &wi,
 					continue;
 
 				const float dot = Dot(hp->normal, wi);
-				if (dot <= RAY_EPSILON)
+				if (dot <= MachineEpsilon::E(1.f))
 					continue;
 
 				AtomicInc(&hp->accumPhotonCount);
