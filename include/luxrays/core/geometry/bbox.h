@@ -55,6 +55,8 @@ public:
 				Max(p1.z, p2.z));
 	}
 
+	friend bool Overlaps(BBox &result, const BBox &b1, const BBox &b2);
+
 	bool Overlaps(const BBox &b) const {
 		const bool x = (pMax.x >= b.pMin.x) && (pMin.x <= b.pMax.x);
 		const bool y = (pMax.y >= b.pMin.y) && (pMin.y <= b.pMax.y);
