@@ -49,6 +49,20 @@ BBox Union(const BBox &b, const BBox &b2) {
 	return ret;
 }
 
+bool Overlaps(BBox &result, const BBox &b1, const BBox &b2) {
+	if (!b1.Overlaps(b2))
+		return false;
+	
+	result.pMin.x = Max(b1.pMin.x, b2.pMin.x);
+	result.pMin.y = Max(b1.pMin.y, b2.pMin.y);
+	result.pMin.z = Max(b1.pMin.z, b2.pMin.z);
+	result.pMax.x = Min(b1.pMax.x, b2.pMax.x);
+	result.pMax.y = Min(b1.pMax.y, b2.pMax.y);
+	result.pMax.z = Min(b1.pMax.z, b2.pMax.z);
+
+	return true;
+}
+
 void BBox::BoundingSphere(Point *c, float *rad) const {
 	*c = .5f * (pMin + pMax);
 	*rad = Inside(*c) ? Distance(*c, pMax) : 0.f;
