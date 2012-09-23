@@ -169,9 +169,7 @@ BBox Transform::operator()(const BBox &b) const {
 }
 
 Transform Transform::operator*(const Transform &t2) const {
-	Matrix4x4 m1 = Matrix4x4::Mul(m, t2.m);
-	Matrix4x4 m2 = Matrix4x4::Mul(t2.mInv, mInv);
-	return Transform(m1, m2);
+	return Transform(m * t2.m, t2.mInv * mInv);
 }
 
 void TransformAccordingNormal(const Normal &nn, const Vector &woL, Vector *woW) {
