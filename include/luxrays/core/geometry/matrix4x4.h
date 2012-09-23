@@ -59,14 +59,14 @@ public:
 		os << " ] ";
 	}
 
-	static Matrix4x4 Mul(const Matrix4x4 &m1, const Matrix4x4 &m2) {
+	Matrix4x4 operator*(const Matrix4x4 &mat) const {
 		float r[4][4];
 		for (int i = 0; i < 4; ++i)
 			for (int j = 0; j < 4; ++j)
-				r[i][j] = m1.m[i][0] * m2.m[0][j] +
-					m1.m[i][1] * m2.m[1][j] +
-					m1.m[i][2] * m2.m[2][j] +
-					m1.m[i][3] * m2.m[3][j];
+				r[i][j] = m[i][0] * mat.m[0][j] +
+					m[i][1] * mat.m[1][j] +
+					m[i][2] * mat.m[2][j] +
+					m[i][3] * mat.m[3][j];
 
 		return Matrix4x4(r);
 	}
