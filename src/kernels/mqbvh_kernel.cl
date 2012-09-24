@@ -30,7 +30,7 @@ typedef struct {
 typedef struct {
 	Point o;
 	Vector d;
-	float mint, maxt;
+	float mint, maxt, time;
 } Ray;
 
 typedef struct {
