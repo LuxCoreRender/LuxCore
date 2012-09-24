@@ -78,7 +78,7 @@ protected:
 // Native thread devices
 //------------------------------------------------------------------------------
 
-class NativeThreadIntersectionDevice : public IntersectionDevice {
+class NativeThreadIntersectionDevice : public HardwareIntersectionDevice {
 public:
 	NativeThreadIntersectionDevice(const Context *context, const size_t threadIndex,
 			const size_t devIndex);
@@ -96,17 +96,22 @@ public:
 	RayBuffer *PopRayBuffer();
 
 	double GetLoad() const {
-		return 1.0;
+		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
 	}
-
-	void Intersect(RayBuffer *rayBuffer);
 
 	static size_t RayBufferSize;
 
 	friend class Context;
 
+protected:
+	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue);
+
 private:
-	RayBufferSingleQueue doneRayBufferQueue;
+	static void IntersectionThread(NativeThreadIntersectionDevice *renderDevice);
+	boost::thread *intersectionThread;
+	RayBufferQueueO2O rayBufferQueue;
+	RayBufferQueue *externalRayBufferQueue;
+	bool reportedPermissionError;
 };
 
 //------------------------------------------------------------------------------

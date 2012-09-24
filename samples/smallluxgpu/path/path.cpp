@@ -722,7 +722,8 @@ void PathNativeRenderThread::RenderThreadImpl(PathNativeRenderThread *renderThre
 		while (!boost::this_thread::interruption_requested()) {
 			rayBuffer->Reset();
 			pathIntegrator->FillRayBuffer(rayBuffer);
-			intersectionDevice->Intersect(rayBuffer);
+			intersectionDevice->PushRayBuffer(rayBuffer);
+			intersectionDevice->PopRayBuffer();
 			pathIntegrator->AdvancePaths(rayBuffer);
 		}
 
