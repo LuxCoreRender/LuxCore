@@ -33,72 +33,126 @@ using namespace luxrays;
 size_t NativeThreadIntersectionDevice::RayBufferSize = 512;
 
 NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(const Context *context,
-		const size_t threadIndex, const size_t devIndex) :
-			IntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
+	const size_t threadIndex, const size_t devIndex) :
+	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex)
+{
 	char buf[64];
 	sprintf(buf, "NativeIntersectThread-%03d", (int)threadIndex);
 	deviceName = std::string(buf);
+	reportedPermissionError = false;
+	externalRayBufferQueue = NULL;
+	intersectionThread = NULL;
 }
 
-NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
+NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice()
+{
 	if (started)
 		Stop();
+	delete intersectionThread;
 }
 
-void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
+void NativeThreadIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue)
+{
+	assert (!started);
+
+	externalRayBufferQueue = queue;
+}
+
+void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet)
+{
 	IntersectionDevice::SetDataSet(newDataSet);
 }
 
-void NativeThreadIntersectionDevice::Start() {
+void NativeThreadIntersectionDevice::Start()
+{
 	IntersectionDevice::Start();
+
+	// Create the thread for the rendering
+	intersectionThread = new boost::thread(boost::bind(NativeThreadIntersectionDevice::IntersectionThread, this));
+
+	// Set intersectionThread priority
+	bool res = SetThreadRRPriority(intersectionThread);
+	if (res && !reportedPermissionError) {
+		LR_LOG(deviceContext, "[NativeThread device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
+		reportedPermissionError = true;
+	}
 }
 
-void NativeThreadIntersectionDevice::Interrupt() {
+void NativeThreadIntersectionDevice::Interrupt()
+{
 	assert (started);
+
+	intersectionThread->interrupt();
 }
 
-void NativeThreadIntersectionDevice::Stop() {
+void NativeThreadIntersectionDevice::Stop()
+{
 	IntersectionDevice::Stop();
 
-	doneRayBufferQueue.Clear();
+	intersectionThread->interrupt();
+	intersectionThread->join();
+	delete intersectionThread;
+	intersectionThread = NULL;
+
+	if (!externalRayBufferQueue)
+		rayBufferQueue.Clear();
 }
 
-RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
+RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer()
+{
 	return NewRayBuffer(RayBufferSize);
 }
 
-RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer(const size_t size) {
-	return new RayBuffer(size);
+RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer(const size_t size)
+{
+	return new RayBuffer(RoundUpPow2<size_t>(size));
 }
 
-void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
-	Intersect(rayBuffer);
-
-	doneRayBufferQueue.Push(rayBuffer);
-}
-
-void NativeThreadIntersectionDevice::Intersect(RayBuffer *rayBuffer) {
+void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer)
+{
 	assert (started);
+	assert (!externalRayBufferQueue);
 
-	const double t1 = WallClockTime();
+	rayBufferQueue.PushToDo(rayBuffer, 0);
+}
 
-	// Trace rays
-	const Ray *rb = rayBuffer->GetRayBuffer();
-	RayHit *hb = rayBuffer->GetHitBuffer();
-	const size_t rayCount = rayBuffer->GetRayCount();
-	for (unsigned int i = 0; i < rayCount; ++i) {
-		hb[i].SetMiss();
-		dataSet->Intersect(&rb[i], &hb[i]);
+RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer()
+{
+	assert (started);
+	assert (!externalRayBufferQueue);
+
+	return rayBufferQueue.PopDone(0);
+}
+
+void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersectionDevice *renderDevice)
+{
+	LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "] Rendering thread started");
+
+	try {
+		RayBufferQueue *queue = renderDevice->externalRayBufferQueue ?
+			renderDevice->externalRayBufferQueue : &(renderDevice->rayBufferQueue);
+
+		const double startTime = WallClockTime();
+		while (!boost::this_thread::interruption_requested()) {
+			const double t1 = WallClockTime();
+			RayBuffer *rayBuffer = queue->PopToDo();
+			renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
+			// Trace rays
+			const Ray *rb = rayBuffer->GetRayBuffer();
+			RayHit *hb = rayBuffer->GetHitBuffer();
+			const size_t rayCount = rayBuffer->GetRayCount();
+			for (unsigned int i = 0; i < rayCount; ++i) {
+				hb[i].SetMiss();
+				renderDevice->dataSet->Intersect(&rb[i], &hb[i]);
+			}
+			renderDevice->statsTotalRayCount += rayCount;
+			queue->PushDone(rayBuffer);
+
+			renderDevice->statsDeviceTotalTime = WallClockTime() - startTime;
+		}
+
+		LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "] Rendering thread halted");
+	} catch (boost::thread_interrupted) {
+		LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "] Rendering thread halted");
 	}
-
-	const double t2 = WallClockTime();
-
-	statsTotalRayCount += rayCount;
-	statsDeviceTotalTime += t2 - t1;
-}
-
-RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer() {
-	assert (started);
-
-	return doneRayBufferQueue.Pop();
 }

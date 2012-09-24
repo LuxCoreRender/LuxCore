@@ -241,11 +241,6 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(cons
 	assert (!started);
 	assert (deviceDescs.size() > 0);
 
-	for (size_t i = 0; i < deviceDescs.size(); ++i) {
-		if (deviceDescs[i]->GetType() != DEVICE_TYPE_OPENCL)
-			throw std::runtime_error("Virtual devices are supported only over hardware based intersection devices");
-	}
-
 	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs);
 	// OpenCL are the only HardwareIntersectionDevice supported at the moment
 	std::vector<HardwareIntersectionDevice *> realHDevices;
@@ -265,10 +260,6 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2OIntersectionDevices(cons
 		std::vector<DeviceDescription *> &deviceDescs) {
 	assert (!started);
 	assert (deviceDescs.size() == 1);
-
-	// OpenCL are the only HardwareIntersectionDevice supported at the moment
-	if (deviceDescs[0]->GetType() != DEVICE_TYPE_OPENCL)
-		throw std::runtime_error("Virtual devices are supported only over hardware based intersection devices");
 
 	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs);
 	VirtualM2OHardwareIntersectionDevice *m2oDevice = new VirtualM2OHardwareIntersectionDevice(count, (HardwareIntersectionDevice *)realDevices[0]);
