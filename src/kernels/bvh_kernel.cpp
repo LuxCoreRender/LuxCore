@@ -34,7 +34,7 @@ std::string luxrays::KernelSource_BVH =
 "typedef struct {\n"
 "	Point o;\n"
 "	Vector d;\n"
-"	float mint, maxt;\n"
+"	float mint, maxt, time;\n"
 "} Ray;\n"
 "\n"
 "typedef struct {\n"
