@@ -59,7 +59,8 @@ public:
 	Vector d;
 	mutable float mint, maxt;
 	float time;
-#define _LUXRAYS_RAY_OCLDEFINE "typedef struct { Point o; Vector d; float mint, maxt, time; } Ray;\n"
+	float pad[3]; // Add padding to avoid size discrepancies with OpenCL
+#define _LUXRAYS_RAY_OCLDEFINE "typedef struct { Point o; Vector d; float mint, maxt, time, pad[3]; } Ray;\n"
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ray &r) {
