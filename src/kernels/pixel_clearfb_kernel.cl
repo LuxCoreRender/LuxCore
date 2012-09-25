@@ -19,10 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef struct {
-	float r, g, b;
-} Spectrum;
-
 typedef Spectrum Pixel;
 
 __kernel __attribute__((reqd_work_group_size(8, 8, 1))) void PixelClearFB(

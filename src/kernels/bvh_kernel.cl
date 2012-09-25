@@ -22,34 +22,6 @@
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 typedef struct {
-	float x, y, z;
-} Point;
-
-typedef struct {
-	float x, y, z;
-} Vector;
-
-typedef struct {
-	Point o;
-	Vector d;
-	float mint, maxt, time;
-} Ray;
-
-typedef struct {
-	float t;
-	float b1, b2; // Barycentric coordinates of the hit point
-	unsigned int index;
-} RayHit;
-
-typedef struct {
-	unsigned int v[3];
-} Triangle;
-
-typedef struct {
-	Point pMin, pMax;
-} BBox;
-
-typedef struct {
 	BBox bbox;
 	unsigned int primitive;
 	unsigned int skipIndex;

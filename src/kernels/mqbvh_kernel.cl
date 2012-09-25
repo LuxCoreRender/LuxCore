@@ -19,30 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef struct {
-	float x, y, z;
-} Point;
-
-typedef struct {
-	float x, y, z;
-} Vector;
-
-typedef struct {
-	Point o;
-	Vector d;
-	float mint, maxt, time;
-} Ray;
-
-typedef struct {
-	float t;
-	float b1, b2; // Barycentric coordinates of the hit point
-	uint index;
-} RayHit;
-
-typedef struct {
-	Point pMin, pMax;
-} BBox;
-
 typedef struct QuadRay {
 	float4 ox, oy, oz;
 	float4 dx, dy, dz;
@@ -60,10 +36,6 @@ typedef struct {
 	float4 bboxes[2][3];
 	int4 children;
 } QBVHNode;
-
-typedef struct {
-    float m[4][4];
-} Matrix4x4;
 
 void TransformP(Point *ptrans, Point *p, __global Matrix4x4 *m) {
     const float x = p->x;

@@ -27,20 +27,6 @@
 #define Gaussian2x2_invXWidth (1.f / Gaussian2x2_xWidth)
 #define Gaussian2x2_invYWidth (1.f / Gaussian2x2_invXWidth)
 
-typedef struct {
-	float r, g, b;
-} Spectrum;
-
-typedef struct {
-	Spectrum radiance;
-	float weight;
-} SamplePixel;
-
-typedef struct {
-	float screenX, screenY;
-	Spectrum radiance;
-} SampleBufferElem;
-
 int Ceil2Int(const float val) {
 	return (int)ceil(val);
 }
