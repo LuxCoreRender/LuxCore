@@ -41,6 +41,7 @@ public:
 	// BSphere Public Data
 	Point center;
 	float rad;
+#define _LUXRAYS_BSPHERE_OCLDEFINE "typedef struct { Point center; float rad; } BSphere;\n"
 };
 
 inline std::ostream &operator<<(std::ostream &os, const BSphere &s) {

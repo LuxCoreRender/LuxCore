@@ -29,6 +29,7 @@ namespace luxrays {
 typedef struct {
 	float screenX, screenY;
 	Spectrum radiance;
+#define _LUXRAYS_SAMPLEBUFFERELEM_OCLDEFINE "typedef struct { float screenX, screenY; Spectrum radiance; } SampleBufferElem;\n"
 } SampleBufferElem;
 
 class SampleBuffer {

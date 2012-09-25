@@ -29,6 +29,7 @@ namespace luxrays {
 typedef struct {
 	Spectrum radiance;
 	float weight;
+#define _LUXRAYS_SAMPLEPIXEL_OCLDEFINE "typedef struct { Spectrum radiance; float weight; } SamplePixel;\n"
 } SamplePixel;
 
 class SampleFrameBuffer {

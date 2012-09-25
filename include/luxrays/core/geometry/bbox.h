@@ -124,6 +124,7 @@ public:
 
 	// BBox Public Data
 	Point pMin, pMax;
+#define _LUXRAYS_BBOX_OCLDEFINE "typedef struct { Point pMin, pMax; } BBox;\n"
 };
 
 extern BBox Union(const BBox &b, const Point &p);

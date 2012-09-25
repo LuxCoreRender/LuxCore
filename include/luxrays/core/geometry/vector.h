@@ -119,6 +119,7 @@ public:
 
 	// Vector Public Data
 	float x, y, z;
+#define _LUXRAYS_VECTOR_OCLDEFINE "typedef struct { float x, y, z; } Vector;\n"
 
 private:
 	template<class Archive>
