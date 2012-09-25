@@ -76,7 +76,6 @@ SOURCE_GROUP("Source Files\\Core" FILES ${LuxRays_SRCS_CORE})
 set(LuxRays_SRCS_CORE_GEOMETRY
 	${LuxRays_SOURCE_DIR}/src/core/geometry/bbox.cpp
 	${LuxRays_SOURCE_DIR}/src/core/geometry/matrix4x4.cpp
-	${LuxRays_SOURCE_DIR}/src/core/geometry/ray.cpp
 	${LuxRays_SOURCE_DIR}/src/core/geometry/transform.cpp
 )
 SOURCE_GROUP("Source Files\\Core\\Geometry" FILES ${LuxRays_SRCS_CORE_GEOMETRY})
