@@ -21,20 +21,6 @@
 
 // NOTE: this kernel assume samples do not overlap
 
-typedef struct {
-	float r, g, b;
-} Spectrum;
-
-typedef struct {
-	Spectrum radiance;
-	float weight;
-} SamplePixel;
-
-typedef struct {
-	float screenX, screenY;
-	Spectrum radiance;
-} SampleBufferElem;
-
 int Ceil2Int(const float val) {
 	return (int)ceil(val);
 }

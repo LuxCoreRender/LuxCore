@@ -21,20 +21,6 @@
 
 // NOTE: this kernel assume samples do not overlap
 
-typedef struct {
-	float r, g, b;
-} Spectrum;
-
-typedef struct {
-	Spectrum radiance;
-	float weight;
-} SamplePixel;
-
-typedef struct {
-	float screenX, screenY;
-	Spectrum radiance;
-} SampleBufferElem;
-
 void AddSample(__global SamplePixel *sp, const float4 sample) {
     __global float4 *p = (__global float4 *)sp;
     *p += sample;

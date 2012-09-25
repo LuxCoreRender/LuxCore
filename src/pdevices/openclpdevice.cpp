@@ -185,7 +185,12 @@ OpenCLPixelDevice::~OpenCLPixelDevice() {
 void OpenCLPixelDevice::CompileKernel(cl::Context &ctx, cl::Device &device, const std::string &src,
 		const char *kernelName, cl::Kernel **kernel) {
 	// Compile sources
-	cl::Program::Sources source(1, std::make_pair(src.c_str(), src.length()));
+	std::string code(
+		_LUXRAYS_SPECTRUM_OCLDEFINE
+		_LUXRAYS_SAMPLEPIXEL_OCLDEFINE
+		_LUXRAYS_SAMPLEBUFFERELEM_OCLDEFINE);
+	code += src;
+	cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 	cl::Program program = cl::Program(ctx, source);
 	try {
 		VECTOR_CLASS<cl::Device> buildDevice;

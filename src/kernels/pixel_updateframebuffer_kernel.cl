@@ -19,15 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef struct {
-	float r, g, b;
-} Spectrum;
-
-typedef struct {
-	Spectrum radiance;
-	float weight;
-} SamplePixel;
-
 typedef Spectrum Pixel;
 
 #define GAMMA_TABLE_SIZE 1024u

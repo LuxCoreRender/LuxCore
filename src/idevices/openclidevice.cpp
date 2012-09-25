@@ -221,7 +221,15 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 			{
 				// Compile sources
-				cl::Program::Sources source(1, std::make_pair(KernelSource_BVH.c_str(), KernelSource_BVH.length()));
+				std::string code(
+					_LUXRAYS_POINT_OCLDEFINE
+					_LUXRAYS_VECTOR_OCLDEFINE
+					_LUXRAYS_RAY_OCLDEFINE
+					_LUXRAYS_RAYHIT_OCLDEFINE
+					_LUXRAYS_TRIANGLE_OCLDEFINE
+					_LUXRAYS_BBOX_OCLDEFINE);
+				code += KernelSource_BVH;
+				cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 				cl::Program program = cl::Program(oclContext, source);
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
@@ -291,7 +299,14 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					std::stringstream params;
 					params << "-D QBVH_STACK_SIZE=" << qbvhStackSize;
 
-					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
+					std::string code(
+						_LUXRAYS_POINT_OCLDEFINE
+						_LUXRAYS_VECTOR_OCLDEFINE
+						_LUXRAYS_RAY_OCLDEFINE
+						_LUXRAYS_RAYHIT_OCLDEFINE
+						_LUXRAYS_BBOX_OCLDEFINE);
+					code += KernelSource_QBVH;
+					cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 					cl::Program program = cl::Program(oclContext, source);
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
@@ -327,7 +342,14 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 					std::stringstream params;
 					params << "-D USE_IMAGE_STORAGE -D QBVH_STACK_SIZE=" << qbvhStackSize;
 
-					cl::Program::Sources source(1, std::make_pair(KernelSource_QBVH.c_str(), KernelSource_QBVH.length()));
+					std::string code(
+						_LUXRAYS_POINT_OCLDEFINE
+						_LUXRAYS_VECTOR_OCLDEFINE
+						_LUXRAYS_RAY_OCLDEFINE
+						_LUXRAYS_RAYHIT_OCLDEFINE
+						_LUXRAYS_BBOX_OCLDEFINE);
+					code += KernelSource_QBVH;
+					cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 					cl::Program program = cl::Program(oclContext, source);
 					try {
 						VECTOR_CLASS<cl::Device> buildDevice;
@@ -508,7 +530,15 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 
 			// Compile sources
 			{
-				cl::Program::Sources source(1, std::make_pair(KernelSource_MQBVH.c_str(), KernelSource_MQBVH.length()));
+				std::string code(
+					_LUXRAYS_POINT_OCLDEFINE
+					_LUXRAYS_VECTOR_OCLDEFINE
+					_LUXRAYS_RAY_OCLDEFINE
+					_LUXRAYS_RAYHIT_OCLDEFINE
+					_LUXRAYS_BBOX_OCLDEFINE
+					_LUXRAYS_MATRIX4X4_OCLDEFINE);
+				code += KernelSource_MQBVH;
+				cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 				cl::Program program = cl::Program(oclContext, source);
 				try {
 					VECTOR_CLASS<cl::Device> buildDevice;
