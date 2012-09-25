@@ -59,6 +59,7 @@ public:
 	Vector d;
 	mutable float mint, maxt;
 	float time;
+#define _LUXRAYS_RAY_OCLDEFINE "typedef struct { Point o; Vector d; float mint, maxt, time; } Ray;\n"
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ray &r) {
@@ -71,6 +72,7 @@ public:
 	float t;
 	float b1, b2; // Barycentric coordinates of the hit point
 	unsigned int index;
+#define _LUXRAYS_RAYHIT_OCLDEFINE "typedef struct { float t, b1, b2; unsigned int index; } RayHit;\n"
 
 	void SetMiss() { index = 0xffffffffu; };
 	bool Miss() const { return (index == 0xffffffffu); };

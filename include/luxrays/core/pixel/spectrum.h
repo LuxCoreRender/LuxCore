@@ -132,6 +132,7 @@ public:
 	}
 
 	float r, g, b;
+#define _LUXRAYS_SPECTRUM_OCLDEFINE "typedef struct { float r, g, b; } Spectrum;\n"
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Spectrum &v) {

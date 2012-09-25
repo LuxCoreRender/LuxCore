@@ -84,6 +84,7 @@ public:
 
 	// UV Public Data
 	float u, v;
+#define _LUXRAYS_UV_OCLDEFINE "typedef struct { float u,v; } UV;\n"
 };
 
 inline std::ostream & operator<<(std::ostream &os, const UV &v) {

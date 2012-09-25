@@ -117,6 +117,7 @@ public:
 	}
 
 	unsigned int v[3];
+#define _LUXRAYS_TRIANGLE_OCLDEFINE "typedef struct { unsigned int v[3]; } Triangle;\n"
 };
 
 inline std::ostream & operator<<(std::ostream &os, const Triangle &tri) {
