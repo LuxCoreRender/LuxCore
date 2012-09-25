@@ -127,11 +127,11 @@ FOREACH(kernel ${KERNELS})
 		)
 	ELSE(WIN32)
 		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND echo "std::string luxrays::KernelSource_PathGPU2_${kernel} = " >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu2_${kernel_lowercase}.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu2_${kernel_lowercase}.cpp
-			COMMAND echo "\;" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu/kernels/pathgpu2_${kernel_lowercase}.cpp
+			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND echo \"\#include \\"pathgpu2/kernels/kernels.h\\"\" > ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND echo "std::string luxrays::KernelSource_PathGPU2_${kernel} = " >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
+			COMMAND echo "\;" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cpp
 			MAIN_DEPENDENCY pathgpu2/kernels/pathgpu2_${kernel_lowercase}.cl
 		)
 	ENDIF(WIN32)
