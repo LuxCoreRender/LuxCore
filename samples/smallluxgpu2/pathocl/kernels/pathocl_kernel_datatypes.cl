@@ -125,40 +125,6 @@ Error: PARAM_HAS_SUNLIGHT requires PARAM_DIRECT_LIGHT_SAMPLING !
 //------------------------------------------------------------------------------
 
 typedef struct {
-	float u, v;
-} UV;
-
-typedef struct {
-	float r, g, b;
-} Spectrum;
-
-typedef struct {
-	float x, y, z;
-} Point;
-
-typedef struct {
-	float x, y, z;
-} Vector;
-
-typedef struct {
-	uint v0, v1, v2;
-} Triangle;
-
-typedef struct {
-	Point o;
-	Vector d;
-	float mint, maxt;
-} Ray;
-
-typedef struct {
-	float t;
-	float b1, b2; // Barycentric coordinates of the hit point
-	uint index;
-} RayHit;
-
-//------------------------------------------------------------------------------
-
-typedef struct {
 	unsigned int s1, s2, s3;
 } Seed;
 

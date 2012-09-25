@@ -528,9 +528,20 @@ void PathOCLRenderThread::InitKernels() {
 
 		// Compile sources
 		stringstream ssKernel;
-		ssKernel << KernelSource_PathOCL_kernel_datatypes << KernelSource_PathOCL_kernel_core <<
-				 KernelSource_PathOCL_kernel_filters << KernelSource_PathOCL_kernel_scene <<
-				KernelSource_PathOCL_kernel_samplers << KernelSource_PathOCL_kernels;
+		ssKernel <<
+			_LUXRAYS_UV_OCLDEFINE
+			_LUXRAYS_SPECTRUM_OCLDEFINE
+			_LUXRAYS_POINT_OCLDEFINE
+			_LUXRAYS_VECTOR_OCLDEFINE
+			_LUXRAYS_TRIANGLE_OCLDEFINE
+			_LUXRAYS_RAY_OCLDEFINE
+			_LUXRAYS_RAYHIT_OCLDEFINE <<
+			KernelSource_PathOCL_kernel_datatypes <<
+			KernelSource_PathOCL_kernel_core <<
+			KernelSource_PathOCL_kernel_filters <<
+			KernelSource_PathOCL_kernel_scene <<
+			KernelSource_PathOCL_kernel_samplers <<
+			KernelSource_PathOCL_kernels;
 		string kernelSource = ssKernel.str();
 
 		LM_LOG_ENGINE("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);

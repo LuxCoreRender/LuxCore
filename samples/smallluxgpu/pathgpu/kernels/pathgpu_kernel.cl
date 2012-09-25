@@ -92,38 +92,6 @@
 //------------------------------------------------------------------------------
 
 typedef struct {
-	float u, v;
-} UV;
-
-typedef struct {
-	float r, g, b;
-} Spectrum;
-
-typedef struct {
-	float x, y, z;
-} Point;
-
-typedef struct {
-	float x, y, z;
-} Vector;
-
-typedef struct {
-	uint v0, v1, v2;
-} Triangle;
-
-typedef struct {
-	Point o;
-	Vector d;
-	float mint, maxt;
-} Ray;
-
-typedef struct {
-	float t;
-	float b1, b2; // Barycentric coordinates of the hit point
-	uint index;
-} RayHit;
-
-typedef struct {
 	uint s1, s2, s3;
 } Seed;
 
@@ -740,9 +708,9 @@ void Mesh_InterpolateColor(__global Spectrum *colors, __global Triangle *triangl
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
-	C->r = b0 * colors[tri->v0].r + b1 * colors[tri->v1].r + b2 * colors[tri->v2].r;
-	C->g = b0 * colors[tri->v0].g + b1 * colors[tri->v1].g + b2 * colors[tri->v2].g;
-	C->b = b0 * colors[tri->v0].b + b1 * colors[tri->v1].b + b2 * colors[tri->v2].b;
+	C->r = b0 * colors[tri->v[0]].r + b1 * colors[tri->v[1]].r + b2 * colors[tri->v[2]].r;
+	C->g = b0 * colors[tri->v[0]].g + b1 * colors[tri->v[1]].g + b2 * colors[tri->v[2]].g;
+	C->b = b0 * colors[tri->v[0]].b + b1 * colors[tri->v[1]].b + b2 * colors[tri->v[2]].b;
 }
 
 void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,
@@ -750,9 +718,9 @@ void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangl
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
-	N->x = b0 * normals[tri->v0].x + b1 * normals[tri->v1].x + b2 * normals[tri->v2].x;
-	N->y = b0 * normals[tri->v0].y + b1 * normals[tri->v1].y + b2 * normals[tri->v2].y;
-	N->z = b0 * normals[tri->v0].z + b1 * normals[tri->v1].z + b2 * normals[tri->v2].z;
+	N->x = b0 * normals[tri->v[0]].x + b1 * normals[tri->v[1]].x + b2 * normals[tri->v[2]].x;
+	N->y = b0 * normals[tri->v[0]].y + b1 * normals[tri->v[1]].y + b2 * normals[tri->v[2]].y;
+	N->z = b0 * normals[tri->v[0]].z + b1 * normals[tri->v[1]].z + b2 * normals[tri->v[2]].z;
 
 	Normalize(N);
 }
@@ -762,8 +730,8 @@ void Mesh_InterpolateUV(__global UV *uvs, __global Triangle *triangles,
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
-	uv->u = b0 * uvs[tri->v0].u + b1 * uvs[tri->v1].u + b2 * uvs[tri->v2].u;
-	uv->v = b0 * uvs[tri->v0].v + b1 * uvs[tri->v1].v + b2 * uvs[tri->v2].v;
+	uv->u = b0 * uvs[tri->v[0]].u + b1 * uvs[tri->v[1]].u + b2 * uvs[tri->v[2]].u;
+	uv->v = b0 * uvs[tri->v[0]].v + b1 * uvs[tri->v[1]].v + b2 * uvs[tri->v[2]].v;
 }
 
 //------------------------------------------------------------------------------

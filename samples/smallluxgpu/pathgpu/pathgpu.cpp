@@ -844,7 +844,17 @@ void PathGPURenderThread::InitRender() {
 		kernelsParameters = newKernelParameters;
 
 		// Compile sources
-		cl::Program::Sources source(1, std::make_pair(KernelSource_PathGPU.c_str(), KernelSource_PathGPU.length()));
+		std::string code(
+			_LUXRAYS_UV_OCLDEFINE
+			_LUXRAYS_SPECTRUM_OCLDEFINE
+			_LUXRAYS_POINT_OCLDEFINE
+			_LUXRAYS_VECTOR_OCLDEFINE
+			_LUXRAYS_TRIANGLE_OCLDEFINE
+			_LUXRAYS_RAY_OCLDEFINE
+			_LUXRAYS_RAYHIT_OCLDEFINE
+			);
+		code += KernelSource_PathGPU;
+		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 
 		try {

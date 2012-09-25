@@ -1371,9 +1371,20 @@ void PathGPU2RenderThread::InitRender() {
 
 		// Compile sources
 		stringstream ssKernel;
-		ssKernel << KernelSource_PathGPU2_kernel_datatypes << KernelSource_PathGPU2_kernel_core <<
-				 KernelSource_PathGPU2_kernel_filters << KernelSource_PathGPU2_kernel_scene <<
-				KernelSource_PathGPU2_kernel_samplers << KernelSource_PathGPU2_kernels;
+		ssKernel <<
+			_LUXRAYS_UV_OCLDEFINE
+			_LUXRAYS_SPECTRUM_OCLDEFINE
+			_LUXRAYS_POINT_OCLDEFINE
+			_LUXRAYS_VECTOR_OCLDEFINE
+			_LUXRAYS_TRIANGLE_OCLDEFINE
+			_LUXRAYS_RAY_OCLDEFINE
+			_LUXRAYS_RAYHIT_OCLDEFINE <<
+			KernelSource_PathGPU2_kernel_datatypes <<
+			KernelSource_PathGPU2_kernel_core <<
+			KernelSource_PathGPU2_kernel_filters <<
+			KernelSource_PathGPU2_kernel_scene <<
+			KernelSource_PathGPU2_kernel_samplers <<
+			KernelSource_PathGPU2_kernels;
 		string kernelSource = ssKernel.str();
 
 		cl::Program::Sources source(1, std::make_pair(kernelSource.c_str(), kernelSource.length()));

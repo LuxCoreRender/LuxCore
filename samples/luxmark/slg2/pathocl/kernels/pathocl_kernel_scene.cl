@@ -216,9 +216,9 @@ void Mesh_InterpolateColor(__global Spectrum *colors, __global Triangle *triangl
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
-	C->r = b0 * colors[tri->v0].r + b1 * colors[tri->v1].r + b2 * colors[tri->v2].r;
-	C->g = b0 * colors[tri->v0].g + b1 * colors[tri->v1].g + b2 * colors[tri->v2].g;
-	C->b = b0 * colors[tri->v0].b + b1 * colors[tri->v1].b + b2 * colors[tri->v2].b;
+	C->r = b0 * colors[tri->v[0]].r + b1 * colors[tri->v[1]].r + b2 * colors[tri->v[2]].r;
+	C->g = b0 * colors[tri->v[0]].g + b1 * colors[tri->v[1]].g + b2 * colors[tri->v[2]].g;
+	C->b = b0 * colors[tri->v[0]].b + b1 * colors[tri->v[1]].b + b2 * colors[tri->v[2]].b;
 }
 
 void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,
@@ -226,9 +226,9 @@ void Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangl
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
-	N->x = b0 * normals[tri->v0].x + b1 * normals[tri->v1].x + b2 * normals[tri->v2].x;
-	N->y = b0 * normals[tri->v0].y + b1 * normals[tri->v1].y + b2 * normals[tri->v2].y;
-	N->z = b0 * normals[tri->v0].z + b1 * normals[tri->v1].z + b2 * normals[tri->v2].z;
+	N->x = b0 * normals[tri->v[0]].x + b1 * normals[tri->v[1]].x + b2 * normals[tri->v[2]].x;
+	N->y = b0 * normals[tri->v[0]].y + b1 * normals[tri->v[1]].y + b2 * normals[tri->v[2]].y;
+	N->z = b0 * normals[tri->v[0]].z + b1 * normals[tri->v[1]].z + b2 * normals[tri->v[2]].z;
 
 	Normalize(N);
 }
@@ -238,17 +238,17 @@ void Mesh_InterpolateUV(__global UV *uvs, __global Triangle *triangles,
 	__global Triangle *tri = &triangles[triIndex];
 
 	const float b0 = 1.f - b1 - b2;
-	uv->u = b0 * uvs[tri->v0].u + b1 * uvs[tri->v1].u + b2 * uvs[tri->v2].u;
-	uv->v = b0 * uvs[tri->v0].v + b1 * uvs[tri->v1].v + b2 * uvs[tri->v2].v;
+	uv->u = b0 * uvs[tri->v[0]].u + b1 * uvs[tri->v[1]].u + b2 * uvs[tri->v[2]].u;
+	uv->v = b0 * uvs[tri->v[0]].v + b1 * uvs[tri->v[1]].v + b2 * uvs[tri->v[2]].v;
 }
 
 float Mesh_Area(__global Point *verts, __global Triangle *triangles,
 		const uint triIndex) {
 	__global Triangle *tri = &triangles[triIndex];
 
-	const __global Point *pp0 = &verts[tri->v0];
-	const __global Point *pp1 = &verts[tri->v1];
-	const __global Point *pp2 = &verts[tri->v2];
+	const __global Point *pp0 = &verts[tri->v[0]];
+	const __global Point *pp1 = &verts[tri->v[1]];
+	const __global Point *pp2 = &verts[tri->v[2]];
 
 	const float4 p0 = (float4)(pp0->x, pp0->y, pp0->z, 0.f);
 	const float4 p1 = (float4)(pp1->x, pp1->y, pp1->z, 0.f);
@@ -261,11 +261,11 @@ float InstanceMesh_Area(__global float (*m)[4], __global Point *verts,
 		__global Triangle *triangles, const uint triIndex) {
 	__global Triangle *tri = &triangles[triIndex];
 
-	Point pp0 = verts[tri->v0];
+	Point pp0 = verts[tri->v[0]];
 	TransformPoint(m, &pp0);
-	Point pp1 = verts[tri->v1];
+	Point pp1 = verts[tri->v[1]];
 	TransformPoint(m, &pp1);
-	Point pp2 = verts[tri->v2];
+	Point pp2 = verts[tri->v[2]];
 	TransformPoint(m, &pp2);
 
 	const float4 p0 = (float4)(pp0.x, pp0.y, pp0.z, 0.f);
