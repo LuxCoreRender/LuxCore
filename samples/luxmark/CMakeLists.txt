@@ -170,8 +170,7 @@ IF(APPLE)
 			TARGET LuxMark POST_BUILD
 				COMMAND rm -rf ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources
 				COMMAND mkdir ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources
-				COMMAND cp ${OSX_DEPENDENCY_ROOT}/icons/luxrender.icns ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources/
-				COMMAND mv ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources/luxrender.icns ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources/LuxMark.icns
+				COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/osx-bundle/LuxMark.icns ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources/
 #				COMMAND macdeployqt ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app ### bundling Qt frameworks ###
 				)
 ELSE(APPLE)
