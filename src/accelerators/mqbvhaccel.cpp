@@ -39,7 +39,7 @@ MQBVHAccel::~MQBVHAccel() {
 		delete[] meshTriangleIDs;
 		delete[] meshIDs;
 		delete[] leafsOffset;
-		delete[] leafsInvTransform;
+		delete[] leafsTransform;
 		delete[] leafs;
 
 		for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.begin(); it != accels.end(); it++)
@@ -62,7 +62,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int total
 	LR_LOG(ctx, "MQBVH leaf count: " << nLeafs);
 
 	leafs = new QBVHAccel*[nLeafs];
-	leafsInvTransform = new const Transform*[nLeafs];
+	leafsTransform = new const Transform*[nLeafs];
 	leafsOffset = new unsigned int[nLeafs];
 	meshIDs = new TriangleMeshID[totalTriangleCount];
 	meshTriangleIDs = new TriangleID[totalTriangleCount];
@@ -82,7 +82,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int total
 				leafs[i]->Init(meshList[i]);
 				accels[meshList[i]] = leafs[i];
 
-				leafsInvTransform[i] = NULL;
+				leafsTransform[i] = NULL;
 				break;
 			}
 			case TYPE_TRIANGLE_INSTANCE: {
@@ -101,7 +101,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int total
 					leafs[i] = it->second;
 				}
 
-				leafsInvTransform[i] = &itm->GetInvTransformation();
+				leafsTransform[i] = &itm->GetTransformation();
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
@@ -119,7 +119,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int total
 					leafs[i] = it->second;
 				}
 
-				leafsInvTransform[i] = &eitm->GetInvTransformation();
+				leafsTransform[i] = &eitm->GetTransformation();
 				break;
 			}
 			default:
@@ -496,8 +496,8 @@ bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			const unsigned int leafIndex = QBVHNode::FirstQuadIndex(leafData);
 			QBVHAccel *qbvh = leafs[leafIndex];
 
-			if (leafsInvTransform[leafIndex]) {
-				Ray r = (*leafsInvTransform[leafIndex])(*ray);
+			if (leafsTransform[leafIndex]) {
+				Ray r = (*leafsTransform[leafIndex]) / (*ray);
 				RayHit rh;
 				rh.SetMiss();
 				if (qbvh->Intersect(&r, &rh)) {

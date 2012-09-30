@@ -62,8 +62,9 @@ public:
 class TriangleMesh : public Mesh {
 public:
 	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris) {
+	TriangleMesh(const unsigned int meshVertCount,
+		const unsigned int meshTriCount, Point *meshVertices,
+		Triangle *meshTris) {
 		assert (meshVertCount > 0);
 		assert (meshTriCount > 0);
 		assert (meshVertices != NULL);
@@ -117,7 +118,6 @@ public:
 		assert (mesh != NULL);
 
 		trans = t;
-		invTrans = t.GetInverse();
 		mesh = m;
 	};
 	virtual ~InstanceTriangleMesh() { };
@@ -127,9 +127,11 @@ public:
 	unsigned int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
 	BBox GetBBox() const {
-		return trans(mesh->GetBBox());
+		return trans * mesh->GetBBox();
 	}
-	Point GetVertex(const unsigned int vertIndex) const { return trans(mesh->GetVertex(vertIndex)); }
+	Point GetVertex(const unsigned int vertIndex) const {
+		return trans * mesh->GetVertex(vertIndex);
+	}
 	float GetTriangleArea(const unsigned int triIndex) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
@@ -139,13 +141,12 @@ public:
 	virtual void ApplyTransform(const Transform &t) { trans = trans * t; }
 
 	const Transform &GetTransformation() const { return trans; }
-	const Transform &GetInvTransformation() const { return invTrans; }
 	Point *GetVertices() const { return mesh->GetVertices(); }
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	TriangleMesh *GetTriangleMesh() const { return mesh; };
 
 protected:
-	Transform trans, invTrans;
+	Transform trans;
 	TriangleMesh *mesh;
 };
 

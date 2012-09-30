@@ -81,7 +81,7 @@ private:
 	u_int nLeafs;
 	std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)> accels;
 	QBVHAccel **leafs;
-	const Transform **leafsInvTransform;
+	const Transform **leafsTransform;
 	unsigned int *leafsOffset;
 	TriangleMeshID *meshIDs;
 	TriangleID *meshTriangleIDs;

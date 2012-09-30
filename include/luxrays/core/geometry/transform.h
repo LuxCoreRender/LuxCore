@@ -35,136 +35,129 @@ namespace luxrays {
 class Transform {
 public:
 	// Transform Public Methods
-	Transform() {
-		// Lotus - use the preallocated identity matrix because it will never be changed
-		m = mInv = MAT_IDENTITY;
-	}
+	Transform() : m(MAT_IDENTITY), mInv(MAT_IDENTITY) { }
 
-	Transform(float mat[4][4]) {
-		Matrix4x4 o(mat[0][0], mat[0][1], mat[0][2], mat[0][3],
-				mat[1][0], mat[1][1], mat[1][2], mat[1][3],
-				mat[2][0], mat[2][1], mat[2][2], mat[2][3],
-				mat[3][0], mat[3][1], mat[3][2], mat[3][3]);
-		m = o;
-		mInv = m.Inverse();
-	}
+	Transform(float mat[4][4]) : m(mat) { mInv = m.Inverse(); }
 
-	Transform(const Matrix4x4 &mat) {
-		m = mat;
-		mInv = m.Inverse();
-	}
+	Transform(const Matrix4x4 &mat) : m(mat) { mInv = m.Inverse(); }
 
-	Transform(const Matrix4x4 &mat,
-			const Matrix4x4 &minv) {
-		m = mat;
-		mInv = minv;
-	}
+	Transform(const Matrix4x4 &mat, const Matrix4x4 &minv) :
+		m(mat), mInv(minv) { }
 
 	friend std::ostream &operator<<(std::ostream &, const Transform &);
 
-	Transform GetInverse() const {
-		return Transform(mInv, m);
-	}
+	Transform GetInverse() const { return Transform(mInv, m); }
 
-	Matrix4x4 GetMatrix() const {
-		return m;
-	}
+	Matrix4x4 GetMatrix() const { return m; }
 	bool HasScale() const;
-	inline Point operator()(const Point &pt) const;
-	inline void operator()(const Point &pt, Point *ptrans) const;
-	inline Vector operator()(const Vector &v) const;
-	inline void operator()(const Vector &v, Vector *vt) const;
-	inline Normal operator()(const Normal &) const;
-	inline void operator()(const Normal &, Normal *nt) const;
-	inline Ray operator()(const Ray &r) const;
-	inline void operator()(const Ray &r, Ray *rt) const;
-	BBox operator()(const BBox &b) const;
-	Transform operator*(const Transform &t2) const;
 	bool SwapsHandedness() const;
+	Transform operator*(const Transform &t2) const {
+		return Transform(m * t2.m, t2.mInv * mInv);
+	}
 
-private:
-	// Transform Private Data
+
+	// Transform Data kept public so that transforms of new objects are
+	// easily added
 	Matrix4x4 m, mInv;
 
+private:
+	// Transform private static data
 	static const Matrix4x4 MAT_IDENTITY;
 };
 
-inline Point Transform::operator()(const Point &pt) const {
-	const float x = pt.x, y = pt.y, z = pt.z;
-	const float xp = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3];
-	const float yp = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3];
-	const float zp = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3];
-	const float wp = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3];
-
-	//	BOOST_ASSERT(wp != 0);
-	if (wp == 1.) return Point(xp, yp, zp);
-	else return Point(xp, yp, zp) / wp;
+inline bool Transform::SwapsHandedness() const
+{
+	const float det = ((m.m[0][0] *
+		(m.m[1][1] * m.m[2][2] - m.m[1][2] * m.m[2][1])) -
+		(m.m[0][1] *
+		(m.m[1][0] * m.m[2][2] - m.m[1][2] * m.m[2][0])) +
+		(m.m[0][2] *
+		(m.m[1][0] * m.m[2][1] - m.m[1][1] * m.m[2][0])));
+	return det < 0.f;
 }
 
-inline void Transform::operator()(const Point &pt, Point *ptrans) const {
+inline Point operator*(const Transform &t, const Point &pt)
+{
 	const float x = pt.x, y = pt.y, z = pt.z;
-	ptrans->x = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3];
-	ptrans->y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3];
-	ptrans->z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3];
+	const Matrix4x4 &m = t.m;
+	const Point pr(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3],
+		m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3],
+		m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3]);
 	const float w = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3];
-	if (w != 1.) *ptrans /= w;
+	if (w != 1.f)
+		return pr / w;
+	else
+		return pr;
 }
 
-inline Vector Transform::operator()(const Vector &v) const {
+inline Point operator/(const Transform &t, const Point &pt)
+{
+	const float x = pt.x, y = pt.y, z = pt.z;
+	const Matrix4x4 &m = t.mInv;
+	const Point pr(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3],
+		m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3],
+		m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3]);
+	const float w = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3];
+	if (w != 1.f)
+		return pr / w;
+	else
+		return pr;
+}
+
+inline Vector operator*(const Transform &t, const Vector &v)
+{
 	const float x = v.x, y = v.y, z = v.z;
+	const Matrix4x4 &m = t.m;
 	return Vector(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
 			m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
 			m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
 }
 
-inline void Transform::operator()(const Vector &v,
-		Vector *vt) const {
+inline Vector operator/(const Transform &t, const Vector &v)
+{
 	const float x = v.x, y = v.y, z = v.z;
-	vt->x = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z;
-	vt->y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z;
-	vt->z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z;
+	const Matrix4x4 &m = t.mInv;
+	return Vector(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
+			m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
+			m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
 }
 
-inline Normal Transform::operator()(const Normal &n) const {
+inline Normal operator*(const Transform &t, const Normal &n)
+{
 	const float x = n.x, y = n.y, z = n.z;
+	const Matrix4x4 &mInv = t.mInv;
 	return Normal(mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z,
 			mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
 			mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
 }
 
-inline void Transform::operator()(const Normal &n,
-		Normal *nt) const {
+inline Normal operator/(const Transform &t, const Normal &n)
+{
 	const float x = n.x, y = n.y, z = n.z;
-	nt->x = mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z;
-	nt->y = mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z;
-	nt->z = mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z;
+	const Matrix4x4 &mInv = t.m;
+	return Normal(mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z,
+			mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
+			mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
 }
 
-inline bool Transform::SwapsHandedness() const {
-	const float det = ((m.m[0][0] *
-			(m.m[1][1] * m.m[2][2] -
-			m.m[1][2] * m.m[2][1])) -
-			(m.m[0][1] *
-			(m.m[1][0] * m.m[2][2] -
-			m.m[1][2] * m.m[2][0])) +
-			(m.m[0][2] *
-			(m.m[1][0] * m.m[2][1] -
-			m.m[1][1] * m.m[2][0])));
-	return det < 0.f;
+inline Ray operator*(const Transform &t, const Ray &r)
+{
+	return Ray(t * r.o, t * r.d, r.mint, r.maxt, r.time);
 }
 
-inline Ray Transform::operator()(const Ray &r) const {
-	Ray ret((*this)(r.o), (*this)(r.d), r.mint, r.maxt);
-
-	return ret;
+inline Ray operator/(const Transform &t, const Ray &r)
+{
+	return Ray(t / r.o, t / r.d, r.mint, r.maxt, r.time);
 }
 
-inline void Transform::operator()(const Ray &r,
-		Ray *rt) const {
-	(*this)(r.o, &rt->o);
-	(*this)(r.d, &rt->d);
-	rt->mint = r.mint;
-	rt->maxt = r.maxt;
+inline BBox operator*(const Transform &t, const BBox &b)
+{
+	return BBox(t * b.pMin, t * b.pMax);
+}
+
+inline BBox operator/(const Transform &t, const BBox &b)
+{
+	return BBox(t / b.pMin, t / b.pMax);
 }
 
 Transform Translate(const Vector &delta);

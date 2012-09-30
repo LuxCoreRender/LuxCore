@@ -92,7 +92,7 @@ public:
 
 		Vector p = target - orig;
 		Transform t = luxrays::Rotate(angle, axis);
-		target = orig + t(p);
+		target = orig + t * p;
 	}
 
 	void Update(const unsigned int filmWidth, const unsigned int filmHeight) {
@@ -157,8 +157,7 @@ public:
 			c2w = CameraToWorld;
 
         Point Pras(screenX, filmHeight - screenY - 1.f, 0);
-        Point Pcamera;
-        RasterToCamera(Pras, &Pcamera);
+        Point Pcamera(RasterToCamera * Pras);
 
         ray->o = Pcamera;
         ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
@@ -184,7 +183,7 @@ public:
         ray->mint = MachineEpsilon::E(ray->o);
         ray->maxt = (clipYon - clipHither) / ray->d.z;
 
-        c2w(*ray, ray);
+        *ray = c2w * *ray;
 	}
 
 	const Matrix4x4 GetRasterToCameraMatrix() const {

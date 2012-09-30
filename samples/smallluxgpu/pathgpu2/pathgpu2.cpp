@@ -192,7 +192,6 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 				}
 
 				memcpy(currentMeshDesc.trans, imesh->GetTransformation().GetMatrix().m, sizeof(float[4][4]));
-				memcpy(currentMeshDesc.invTrans, imesh->GetInvTransformation().GetMatrix().m, sizeof(float[4][4]));
 				mesh = imesh->GetExtTriangleMesh();
 			} else {
 				currentMeshDesc = newMeshDesc;
