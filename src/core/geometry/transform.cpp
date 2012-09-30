@@ -155,23 +155,6 @@ bool Transform::HasScale() const {
 		return false;*/
 }
 
-BBox Transform::operator()(const BBox &b) const {
-	const Transform &M = *this;
-	BBox ret(M(Point(b.pMin.x, b.pMin.y, b.pMin.z)));
-	ret = Union(ret, M(Point(b.pMax.x, b.pMin.y, b.pMin.z)));
-	ret = Union(ret, M(Point(b.pMin.x, b.pMax.y, b.pMin.z)));
-	ret = Union(ret, M(Point(b.pMin.x, b.pMin.y, b.pMax.z)));
-	ret = Union(ret, M(Point(b.pMin.x, b.pMax.y, b.pMax.z)));
-	ret = Union(ret, M(Point(b.pMax.x, b.pMax.y, b.pMin.z)));
-	ret = Union(ret, M(Point(b.pMax.x, b.pMin.y, b.pMax.z)));
-	ret = Union(ret, M(Point(b.pMax.x, b.pMax.y, b.pMax.z)));
-	return ret;
-}
-
-Transform Transform::operator*(const Transform &t2) const {
-	return Transform(m * t2.m, t2.mInv * mInv);
-}
-
 void TransformAccordingNormal(const Normal &nn, const Vector &woL, Vector *woW) {
 	Vector sn, tn;
 	float zz = sqrtf(1.f - nn.z * nn.z);

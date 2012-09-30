@@ -650,8 +650,8 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 			// Upload QBVH leafs transformations
 			Matrix4x4 *invTrans = new Matrix4x4[mqbvh->nLeafs];
 			for (unsigned int i = 0; i < mqbvh->nLeafs; ++i) {
-				if (mqbvh->leafsInvTransform[i])
-					invTrans[i] = mqbvh->leafsInvTransform[i]->GetMatrix();
+				if (mqbvh->leafsTransform[i])
+					invTrans[i] = mqbvh->leafsTransform[i]->mInv;
 				else
 					invTrans[i] = Matrix4x4();
 			}
@@ -697,8 +697,8 @@ void OpenCLIntersectionDevice::UpdateDataSet() {
 			// Upload QBVH leafs transformations
 			Matrix4x4 *invTrans = new Matrix4x4[mqbvh->nLeafs];
 			for (unsigned int i = 0; i < mqbvh->nLeafs; ++i) {
-				if (mqbvh->leafsInvTransform[i])
-					invTrans[i] = mqbvh->leafsInvTransform[i]->GetMatrix();
+				if (mqbvh->leafsTransform[i])
+					invTrans[i] = mqbvh->leafsTransform[i]->mInv;
 				else
 					invTrans[i] = Matrix4x4();
 			}

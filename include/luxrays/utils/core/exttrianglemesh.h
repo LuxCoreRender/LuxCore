@@ -161,7 +161,6 @@ public:
 		assert (m != NULL);
 
 		trans = t;
-		invTrans = t.GetInverse();
 		mesh = m;
 	}
 	~ExtInstanceTriangleMesh() { };
@@ -169,7 +168,9 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
 
-	Point GetVertex(const unsigned index) const { return trans(mesh->GetVertex(index)); }
+	Point GetVertex(const unsigned index) const {
+		return trans * mesh->GetVertex(index);
+	}
 	float GetTriangleArea(const unsigned int triIndex) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
@@ -179,20 +180,24 @@ public:
 	unsigned int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
 	BBox GetBBox() const {
-		return trans(mesh->GetBBox());
+		return trans * mesh->GetBBox();
 	}
 
 	bool HasNormals() const { return mesh->HasNormals(); }
 	bool HasColors() const { return mesh->HasColors(); }
 	bool HasUVs() const { return mesh->HasUVs(); }
 
-	Normal GetNormal(const unsigned index) const { return Normalize(trans(mesh->GetNormal(index))); }
-	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return Normalize(trans(mesh->GetNormal(triIndex, vertIndex))); }
+	Normal GetNormal(const unsigned index) const {
+		return Normalize(trans * mesh->GetNormal(index));
+	}
+	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const {
+		return Normalize(trans * mesh->GetNormal(triIndex, vertIndex));
+	}
 	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
 	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }
 
 	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
-		return Normalize(trans(mesh->InterpolateTriNormal(index, b1, b2)));
+		return Normalize(trans * mesh->InterpolateTriNormal(index, b1, b2));
 	}
 
 	Spectrum InterpolateTriColor(const unsigned int index, const float b0, const float b1, const float b2) const {
@@ -209,23 +214,21 @@ public:
 
 	void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
 		mesh->Sample(index, u0, u1, p , b0, b1, b2);
-		*p = trans(*p);
+		*p = trans * (*p);
 	}
 
 	virtual void ApplyTransform(const Transform &t) { trans = trans * t; }
 
 	const Transform &GetTransformation() const { return trans; }
-	const Transform &GetInvTransformation() const { return invTrans; }
 	void SetTransformation(const Transform &t) {
 		trans = t;
-		invTrans = t.GetInverse();
 	}
 	Point *GetVertices() const { return mesh->GetVertices(); }
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
 
 private:
-	Transform trans, invTrans;
+	Transform trans;
 	ExtTriangleMesh *mesh;
 };
 
