@@ -54,6 +54,9 @@ public:
 	Transform operator*(const Transform &t2) const {
 		return Transform(m * t2.m, t2.mInv * mInv);
 	}
+	Transform operator/(const Transform &t2) const {
+		return Transform(m * t2.mInv, t2.m * mInv);
+	}
 
 
 	// Transform Data kept public so that transforms of new objects are
