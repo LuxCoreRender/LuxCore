@@ -56,6 +56,7 @@ protected:
 	virtual ~IntersectionDevice();
 
 	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void UpdateDataSet() { }
 	virtual void Start();
 
 	const DataSet *dataSet;
@@ -70,6 +71,10 @@ protected:
 
 	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue) = 0;
 
+	virtual double GetLoad() const {
+		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
+	}
+
 	friend class VirtualM2OHardwareIntersectionDevice;
 	friend class VirtualM2MHardwareIntersectionDevice;
 };
@@ -80,24 +85,20 @@ protected:
 
 class NativeThreadIntersectionDevice : public HardwareIntersectionDevice {
 public:
-	NativeThreadIntersectionDevice(const Context *context, const size_t threadIndex,
-			const size_t devIndex);
-	~NativeThreadIntersectionDevice();
+	NativeThreadIntersectionDevice(const Context *context,
+		const size_t threadIndex, const size_t devIndex);
+	virtual ~NativeThreadIntersectionDevice();
 
-	void SetDataSet(const DataSet *newDataSet);
-	void Start();
-	void Interrupt();
-	void Stop();
+	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void Start();
+	virtual void Interrupt();
+	virtual void Stop();
 
-	RayBuffer *NewRayBuffer();
-	RayBuffer *NewRayBuffer(const size_t size);
-	size_t GetQueueSize() { return 0; }
-	void PushRayBuffer(RayBuffer *rayBuffer);
-	RayBuffer *PopRayBuffer();
-
-	double GetLoad() const {
-		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
-	}
+	virtual RayBuffer *NewRayBuffer();
+	virtual RayBuffer *NewRayBuffer(const size_t size);
+	virtual size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
+	virtual void PushRayBuffer(RayBuffer *rayBuffer);
+	virtual RayBuffer *PopRayBuffer();
 
 	static size_t RayBufferSize;
 
@@ -122,36 +123,133 @@ private:
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+class OpenCLKernel {
+public:
+	OpenCLKernel(OpenCLIntersectionDevice *dev) : device(dev), kernel(NULL),
+		stackSize(24) { }
+	virtual ~OpenCLKernel() { delete kernel; }
+
+	virtual void FreeBuffers() = 0;
+	virtual void SetDataSet(const DataSet *newDataSet) = 0;
+	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const unsigned int rayCount) = 0;
+
+	void SetMaxStackSize(const size_t s) { stackSize = s; }
+
+protected:
+	OpenCLIntersectionDevice *device;
+	cl::Kernel *kernel;
+	size_t workGroupSize;
+	size_t stackSize;
+};
+
+class OpenCLBVHKernel : public OpenCLKernel {
+public:
+	OpenCLBVHKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
+		vertsBuff(NULL), trisBuff(NULL), bvhBuff(NULL) { }
+	virtual ~OpenCLBVHKernel() { FreeBuffers(); }
+
+	virtual void FreeBuffers();
+	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const unsigned int rayCount);
+
+protected:
+	// BVH fields
+	cl::Buffer *vertsBuff;
+	cl::Buffer *trisBuff;
+	cl::Buffer *bvhBuff;
+};
+
+class OpenCLQBVHKernel : public OpenCLKernel {
+public:
+	OpenCLQBVHKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
+		trisBuff(NULL), qbvhBuff(NULL) { }
+	virtual ~OpenCLQBVHKernel() { FreeBuffers(); }
+
+	virtual void FreeBuffers();
+	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const unsigned int rayCount);
+
+protected:
+	// QBVH fields
+	cl::Buffer *trisBuff;
+	cl::Buffer *qbvhBuff;
+};
+
+class OpenCLQBVHImageKernel : public OpenCLKernel {
+public:
+	OpenCLQBVHImageKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
+		trisBuff(NULL), qbvhBuff(NULL) { }
+	virtual ~OpenCLQBVHImageKernel() { FreeBuffers(); }
+
+	virtual void FreeBuffers();
+	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const unsigned int rayCount);
+
+protected:
+	// QBVH with image storage fields
+	cl::Image2D *trisBuff;
+	cl::Image2D *qbvhBuff;
+};
+
+class OpenCLMQBVHKernel : public OpenCLKernel {
+public:
+	OpenCLMQBVHKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
+		mqbvhBuff(NULL), memMapBuff(NULL), leafBuff(NULL),
+		leafQuadTrisBuff(NULL), invTransBuff(NULL),
+		trisOffsetBuff(NULL) { }
+	virtual ~OpenCLMQBVHKernel() { FreeBuffers(); }
+
+	virtual void FreeBuffers();
+	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void UpdateDataSet(const DataSet *newDataSet);
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const unsigned int rayCount);
+
+protected:
+	// MQBVH fields
+	cl::Buffer *mqbvhBuff;
+	cl::Buffer *memMapBuff;
+	cl::Buffer *leafBuff;
+	cl::Buffer *leafQuadTrisBuff;
+	cl::Buffer *invTransBuff;
+	cl::Buffer *trisOffsetBuff;
+};
+
 class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
 public:
-	OpenCLIntersectionDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const size_t index, const unsigned int forceWGSize);
-	~OpenCLIntersectionDevice();
+	OpenCLIntersectionDevice(const Context *context,
+		OpenCLDeviceDescription *desc, const size_t index,
+		const unsigned int forceWGSize);
+	virtual ~OpenCLIntersectionDevice();
 
-	void SetDataSet(const DataSet *newDataSet);
-	void Start();
-	void Interrupt();
-	void Stop();
+	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void Start();
+	virtual void Interrupt();
+	virtual void Stop();
 
-	RayBuffer *NewRayBuffer();
-	RayBuffer *NewRayBuffer(const size_t size);
-	size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
-	void PushRayBuffer(RayBuffer *rayBuffer);
-	RayBuffer *PopRayBuffer();
-
-	const OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-
-	double GetLoad() const {
-		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
-	}
+	virtual RayBuffer *NewRayBuffer();
+	virtual RayBuffer *NewRayBuffer(const size_t size);
+	virtual size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
+	virtual void PushRayBuffer(RayBuffer *rayBuffer);
+	virtual RayBuffer *PopRayBuffer();
 
 	// OpenCL Device specific methods
+	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+
 	void SetQBVHDisableImageStorage(const bool v) {
 		qbvhDisableImageStorage = v;
 	}
 
-	void SetQBVHMaxStackSize(const size_t s) {
-		qbvhStackSize = s;
+	void SetMaxStackSize(const size_t s) {
+		stackSize = s;
 	}
 
 	//--------------------------------------------------------------------------
@@ -173,8 +271,8 @@ public:
 	static size_t RayBufferSize;
 
 protected:
-	void SetExternalRayBufferQueue(RayBufferQueue *queue);
-	void UpdateDataSet();
+	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue);
+	virtual void UpdateDataSet();
 
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
@@ -183,43 +281,14 @@ private:
 	void FreeDataSetBuffers();
 
 	unsigned int forceWorkGroupSize;
+	size_t stackSize;
 	OpenCLDeviceDescription *deviceDesc;
 	boost::thread *intersectionThread;
 
 	// OpenCL items
 	cl::CommandQueue *oclQueue;
 
-	// BVH fields
-	cl::Kernel *bvhKernel;
-	size_t bvhWorkGroupSize;
-	cl::Buffer *vertsBuff;
-	cl::Buffer *trisBuff;
-	cl::Buffer *bvhBuff;
-
-	// QBVH fields
-
-	// QBVH with normal storage fields
-	cl::Kernel *qbvhKernel;
-	size_t qbvhWorkGroupSize;
-	cl::Buffer *qbvhBuff;
-	cl::Buffer *qbvhTrisBuff;
-
-	// QBVH with image storage fields
-	cl::Kernel *qbvhImageKernel;
-	size_t qbvhImageWorkGroupSize;
-
-	cl::Image2D *qbvhImageBuff;
-	cl::Image2D *qbvhTrisImageBuff;
-
-	// MQBVH fields
-	cl::Kernel *mqbvhKernel;
-	size_t mqbvhWorkGroupSize;
-	cl::Buffer *mqbvhBuff;
-	cl::Buffer *mqbvhMemMapBuff;
-	cl::Buffer *mqbvhLeafBuff;
-	cl::Buffer *mqbvhLeafQuadTrisBuff;
-	cl::Buffer *mqbvhInvTransBuff;
-	cl::Buffer *mqbvhTrisOffsetBuff;
+	OpenCLKernel *kernel;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
@@ -227,7 +296,6 @@ private:
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
 
-	size_t qbvhStackSize;
 	bool reportedPermissionError, qbvhUseImage, qbvhDisableImageStorage, hybridRenderingSupport;
 };
 

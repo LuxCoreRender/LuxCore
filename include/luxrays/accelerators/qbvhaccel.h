@@ -411,7 +411,11 @@ public:
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	const TriangleMesh *GetPreprocessedMesh() const { return preprocessedMesh; }
-	u_int GetMaxDepth() { return maxDepth; }
+	u_int GetMaxDepth() const { return maxDepth; }
+	u_int GetNNodes() const { return nNodes; }
+	const QBVHNode *GetTree() const { return nodes; }
+	u_int GetNQuads() const { return nQuads; }
+	const QuadTriangle *GetQuads() const { return prims; }
 
 	friend class MQBVHAccel;
 	friend class OpenCLIntersectionDevice;
