@@ -49,6 +49,14 @@ public:
 	const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
 	const TriangleID GetMeshTriangleID(const unsigned int index) const { return meshTriangleIDs[index]; }
 	const TriangleID *GetMeshTriangleIDTable() const { return meshTriangleIDs; }
+	unsigned int GetNNodes() const { return nNodes; }
+	QBVHNode *GetTree() const { return nodes; }
+	const std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)> &GetAccels() const { return accels; }
+	unsigned int GetNLeafs() const { return nLeafs; }
+	QBVHAccel **GetLeafs() const { return leafs; }
+	const Transform **GetTransforms() const { return leafsTransform; }
+	const unsigned int *GetLeafsOffsets() const { return leafsOffset; }
+
 
 	bool Intersect(const Ray *ray, RayHit *hit) const;
 

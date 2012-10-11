@@ -141,7 +141,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i) {
 		oclIntersectionDevices[i]->SetQBVHDisableImageStorage(frocedDisableImageStorage);
-		oclIntersectionDevices[i]->SetQBVHMaxStackSize(qbvhStackSize);
+		oclIntersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
 	}
 
 	// Set the Luxrays SataSet
