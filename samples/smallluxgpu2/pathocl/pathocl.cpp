@@ -63,6 +63,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 	maxDiffusePathVertexCount = cfg.GetInt("path.maxdiffusebounce", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+	epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 
 	//--------------------------------------------------------------------------
 	// Sampler

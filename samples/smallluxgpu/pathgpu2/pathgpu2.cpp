@@ -1221,7 +1221,7 @@ void PathGPU2RenderThread::InitRender() {
 			" -D PARAM_TASK_COUNT=" << taskCount <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << MachineEpsilon::E(1.f) << "f" <<
+			" -D PARAM_RAY_EPSILON=" << renderEngine->epsilon << "f" <<
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
@@ -1788,6 +1788,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+	epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 
 	//--------------------------------------------------------------------------
 	// Sampler

@@ -173,6 +173,7 @@ public:
 
 	int rrDepth;
 	float rrImportanceCap;
+	float epsilon;
 
 private:
 	void UpdateFilmLockLess();
