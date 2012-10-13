@@ -281,6 +281,7 @@ public:
 
 	int rrDepth;
 	float rrImportanceCap;
+	float epsilon;
 
 private:
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;

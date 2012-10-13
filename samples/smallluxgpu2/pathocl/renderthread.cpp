@@ -398,7 +398,7 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_TASK_COUNT=" << renderEngine->taskCount <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << luxrays::MachineEpsilon::E(1.f) << "f" <<
+			" -D PARAM_RAY_EPSILON=" << renderEngine->epsilon << "f" <<
 			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT=" << renderEngine->maxDiffusePathVertexCount <<

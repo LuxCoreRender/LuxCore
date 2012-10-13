@@ -753,7 +753,7 @@ void PathGPURenderThread::InitRender() {
 			" -D PARAM_PATH_COUNT=" << PATHGPU_PATH_COUNT <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << MachineEpsilon::E(1.f) << "f" <<
+			" -D PARAM_RAY_EPSILON=" << renderEngine->epsilon << "f" <<
 			" -D PARAM_CLIP_YON=" << scene->camera->GetClipYon() << "f" <<
 			" -D PARAM_CLIP_HITHER=" << scene->camera->GetClipHither() << "f" <<
 			" -D PARAM_SEED=" << seed <<
@@ -1355,6 +1355,7 @@ PathGPURenderEngine::PathGPURenderEngine(SLGScene *scn, Film *flm, boost::mutex 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 3);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 2);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+	epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 
 	startTime = 0.0;
 	samplesCount = 0;
