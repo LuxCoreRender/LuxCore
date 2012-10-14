@@ -155,12 +155,24 @@ inline Ray operator/(const Transform &t, const Ray &r)
 
 inline BBox operator*(const Transform &t, const BBox &b)
 {
-	return BBox(t * b.pMin, t * b.pMax);
+	return Union(Union(Union(Union(Union(Union(BBox(t * b.pMin, t * b.pMax),
+		t * Point(b.pMax.x, b.pMin.y, b.pMin.z)),
+		t * Point(b.pMin.x, b.pMax.y, b.pMin.z)),
+		t * Point(b.pMin.x, b.pMin.y, b.pMax.z)),
+		t * Point(b.pMax.x, b.pMax.y, b.pMin.z)),
+		t * Point(b.pMax.x, b.pMin.y, b.pMax.z)),
+		t * Point(b.pMin.x, b.pMax.y, b.pMax.z));
 }
 
 inline BBox operator/(const Transform &t, const BBox &b)
 {
-	return BBox(t / b.pMin, t / b.pMax);
+	return Union(Union(Union(Union(Union(Union(BBox(t / b.pMin, t / b.pMax),
+		t / Point(b.pMax.x, b.pMin.y, b.pMin.z)),
+		t / Point(b.pMin.x, b.pMax.y, b.pMin.z)),
+		t / Point(b.pMin.x, b.pMin.y, b.pMax.z)),
+		t / Point(b.pMax.x, b.pMax.y, b.pMin.z)),
+		t / Point(b.pMax.x, b.pMin.y, b.pMax.z)),
+		t / Point(b.pMin.x, b.pMax.y, b.pMax.z));
 }
 
 Transform Translate(const Vector &delta);
