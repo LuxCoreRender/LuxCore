@@ -254,7 +254,7 @@ void Path::AdvancePath(PathRenderEngine *renderEngine, Sampler *sampler, const R
 			(depth >= renderEngine->maxPathDepth)) {
 		if (missed && scene->infiniteLight && (scene->useInfiniteLightBruteForce || specularBounce)) {
 			// Add the light emitted by the infinite light
-			radiance += scene->infiniteLight->Le(pathRay.d) * throughput;
+			radiance += scene->infiniteLight->Le(scene, pathRay.d) * throughput;
 		}
 
 		// Hit nothing/only shadow rays/maxdepth, terminate the path

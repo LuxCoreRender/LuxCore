@@ -145,12 +145,12 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		// Initialize the light path
 		float pdf;
 		Ray nextEventRay;
-		Spectrum flux = light->Sample_L(scene,
+		Spectrum radiance = light->Sample_L(scene,
 			rndGen->floatValue(), rndGen->floatValue(),
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 			&pdf, &nextEventRay);
-		flux /= pdf * lpdf;
-		//unsigned int depth = 0;
+		radiance /= pdf * lpdf;
+		int depth = 0;
 
 		{
 			// Try to connect the light path vertex with the eye
@@ -158,34 +158,159 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 			const float distance = eyeDir.Length();
 			eyeDir /= distance;
 
-			//float eyePdf;
-			//Spectrum eyeFlux = light->Sample_f(nextEventRay.o, eyeDir, &eyePdf);
-			Spectrum eyeFlux(1.f, 1.f, 1.f);
+			const Spectrum eyeRadiance = light->Le(scene, -eyeDir);
+			if (!eyeRadiance.Black()) {
+				Ray eyeRay(nextEventRay.o, eyeDir);
+				eyeRay.maxt = distance;
 
-			Ray eyeRay(nextEventRay.o, eyeDir);
-			eyeRay.maxt = distance;
+				RayHit eyeRayHit;
+				if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+					// Nothing was hit, the light vertex is visible
 
-			RayHit eyeRayHit;
-			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-				// Nothing was hit, the light vertex is visible
-
-				float scrX, scrY;
-				if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY))
-					renderThread->SplatSample(scrX, scrY, eyeFlux);
+					float scrX, scrY;
+					if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY))
+						renderThread->SplatSample(scrX, scrY, eyeRadiance);
+				}
 			}
 		}
 
 		// Trace the path
-		/*do {
+		do {
+			RayHit nextEventRayHit;
+			if (scene->dataSet->Intersect(&nextEventRay, &nextEventRayHit)) {
+				// Something was hit
 
-			
-			Ray eyeRay(nextEventRay.o, eyeDir);
+				const unsigned int currentTriangleIndex = nextEventRayHit.index;
+				const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
 
-			RayHit eyeRayHit;
-			if (!scene->dataSet->Intersect(eyeRay, &eyeRayHit)) {
-				// Nothing was hit, the light vertex is visible
+				// Get the triangle
+				const ExtMesh *mesh = scene->objects[currentMeshIndex];
+				const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
+
+				// Get the material
+				const Material *triMat = scene->objectMaterials[currentMeshIndex];
+
+				// Check if it is a light source
+				if (triMat->IsLightSource()) {
+					// SLG light sources are like black bodies
+					break;
+				}
+
+				// Interpolate face normal
+				Normal N = mesh->InterpolateTriNormal(triIndex, nextEventRayHit.b1, nextEventRayHit.b2);
+
+				const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
+				const Point hitPoint = nextEventRay(nextEventRayHit.t);
+				const Vector wi = -nextEventRay.d;
+
+				Spectrum surfaceColor;
+				if (mesh->HasColors())
+					surfaceColor = mesh->InterpolateTriColor(triIndex, nextEventRayHit.b1, nextEventRayHit.b2);
+				else
+					surfaceColor = Spectrum(1.f, 1.f, 1.f);
+
+				// Check if I have to apply texture mapping or normal mapping
+				TexMapInstance *tm = scene->objectTexMaps[currentMeshIndex];
+				BumpMapInstance *bm = scene->objectBumpMaps[currentMeshIndex];
+				NormalMapInstance *nm = scene->objectNormalMaps[currentMeshIndex];
+				if (tm || bm || nm) {
+					// Interpolate UV coordinates if required
+					const UV triUV = mesh->InterpolateTriUV(triIndex, nextEventRayHit.b1, nextEventRayHit.b2);
+
+					// Check if there is an assigned texture map
+					if (tm) {
+						const TextureMap *map = tm->GetTexMap();
+
+						// Apply texture mapping
+						surfaceColor *= map->GetColor(triUV);
+
+						// Check if the texture map has an alpha channel
+						if (map->HasAlpha()) {
+							const float alpha = map->GetAlpha(triUV);
+
+							if ((alpha == 0.0f) || ((alpha < 1.f) && (rndGen->floatValue() > alpha))) {
+								// It is a pass-through material, continue to trace the ray
+								nextEventRay.mint = nextEventRayHit.t + MachineEpsilon::E(nextEventRayHit.t);
+								nextEventRay.maxt = std::numeric_limits<float>::infinity();
+								++depth;
+								continue;
+							}
+						}
+					}
+
+					// Check if there is an assigned bump/normal map
+					if (bm || nm) {
+						if (nm) {
+							// Apply normal mapping
+							const Spectrum color = nm->GetTexMap()->GetColor(triUV);
+
+							const float x = 2.f * (color.r - 0.5f);
+							const float y = 2.f * (color.g - 0.5f);
+							const float z = 2.f * (color.b - 0.5f);
+
+							Vector v1, v2;
+							CoordinateSystem(Vector(N), &v1, &v2);
+							N = Normalize(Normal(
+									v1.x * x + v2.x * y + N.x * z,
+									v1.y * x + v2.y * y + N.y * z,
+									v1.z * x + v2.z * y + N.z * z));
+						}
+
+						if (bm) {
+							// Apply bump mapping
+							const TextureMap *map = bm->GetTexMap();
+							const UV &dudv = map->GetDuDv();
+
+							const float b0 = map->GetColor(triUV).Filter();
+
+							const UV uvdu(triUV.u + dudv.u, triUV.v);
+							const float bu = map->GetColor(uvdu).Filter();
+
+							const UV uvdv(triUV.u, triUV.v + dudv.v);
+							const float bv = map->GetColor(uvdv).Filter();
+
+							const float scale = bm->GetScale();
+							const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
+
+							Vector v1, v2;
+							CoordinateSystem(Vector(N), &v1, &v2);
+							N = Normalize(Normal(
+									v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
+									v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
+									v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
+						}
+					}
+				}
+
+				// Flip the normal if required
+				Normal shadeN = (Dot(nextEventRay.d, N) > 0.f) ? -N : N;
+
+				// Try to connect the light path vertex with the eye
+				Vector eyeDir(scene->camera->orig - hitPoint);
+				const float distance = eyeDir.Length();
+				eyeDir /= distance;
+
+				const Spectrum eyeRadiance = radiance * triSurfMat->f(wi, eyeDir, shadeN);
+				if (!eyeRadiance.Black()) {
+					Ray eyeRay(hitPoint, eyeDir);
+					eyeRay.mint = .5f;
+					eyeRay.maxt = distance;
+
+					RayHit eyeRayHit;
+					if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+						// Nothing was hit, the light vertex is visible
+
+						float scrX, scrY;
+						if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY))
+							renderThread->SplatSample(scrX, scrY, eyeRadiance);
+					}
+				}
+				break;
+			} else {
+				// Ray lost in space...
+				break;
 			}
-		} while (depth < renderEngine->maxPathDepth);*/
+		} while (depth < renderEngine->maxPathDepth);
 	}
 
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");

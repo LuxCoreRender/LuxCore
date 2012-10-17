@@ -124,7 +124,7 @@ void SkyLight::Init() {
 	zenith_y /= PerezBase(perez_y, 0, thetaS);
 }
 
-Spectrum SkyLight::Le(const Vector &dir) const {
+Spectrum SkyLight::Le(const Scene *scene, const Vector &dir) const {
 	const float theta = SphericalTheta(dir);
 	const float phi = SphericalPhi(dir);
 
@@ -228,7 +228,7 @@ void SunLight::SetGain(const Spectrum &g) {
 	gain = g;
 }
 
-Spectrum SunLight::Le(const Vector &dir) const {
+Spectrum SunLight::Le(const Scene *scene, const Vector &dir) const {
 	if((cosThetaMax < 1.f) && (Dot(dir,-sundir) > cosThetaMax))
 		return suncolor;
 	else
@@ -277,7 +277,7 @@ InfiniteLight::InfiniteLight(TexMapInstance *tx) {
 	shiftV = 0.f;
 }
 
-Spectrum InfiniteLight::Le(const Vector &dir) const {
+Spectrum InfiniteLight::Le(const Scene *scene, const Vector &dir) const {
 	const UV uv(1.f - SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
 	return gain * tex->GetTexMap()->GetColor(uv);
 }
@@ -297,14 +297,14 @@ Spectrum InfiniteLight::Sample_L(const Scene *scene, const Point &p, const Norma
 				v1.z * wi.x + v2.z * wi.y + N->z * wi.z);
 		*shadowRay = Ray(p, wi);
 
-		return Le(wi);
+		return Le(scene, wi);
 	} else {
 		Vector wi = UniformSampleSphere(u0, u1);
 
 		*shadowRay = Ray(p, wi);
 		*pdf = 1.f / (4.f * M_PI);
 
-		return Le(wi);
+		return Le(scene, wi);
 	}
 }
 
@@ -325,7 +325,7 @@ Spectrum InfiniteLight::Sample_L(const Scene *scene, const float u0, const float
 	const float costheta = AbsDot(toCenter, ray->d);
 	*pdf = costheta / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
-	return Le(-ray->d);
+	return Le(scene, -ray->d);
 }
 
 //------------------------------------------------------------------------------
@@ -375,7 +375,7 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const Point &p, const
 			if (*pdf <= 0.1f)
 				continue;
 
-			return Le(wi);
+			return Le(scene, wi);
 		}
 
 		if (++portalIndex >= portalCount)
@@ -414,7 +414,7 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const float u0,
 		return Spectrum();
 	}
 
-	return Le(wi) * RdotN;
+	return Le(scene, wi) * RdotN;
 }
 
 //------------------------------------------------------------------------------
@@ -602,4 +602,18 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float
 		return mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
 	else
 		return lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
+}
+
+Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
+	const ExtMesh *mesh = scene->objects[meshIndex];
+	const Normal &sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
+
+	const float RdotN = Dot(-dir, sampleN);
+	if (RdotN < 0.f)
+		return Spectrum();
+
+	if (mesh->HasColors())
+		return M_PI * mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
+	else
+		return M_PI * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color	
 }

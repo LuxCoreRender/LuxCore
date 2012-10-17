@@ -344,7 +344,7 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 						HitPoint &hp = (*hitPoints)[eyePath->pixelIndex];
 						hp.type = CONSTANT_COLOR;
 						if (scene->infiniteLight)
-							hp.throughput = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
+							hp.throughput = scene->infiniteLight->Le(scene, eyePath->ray.d) * eyePath->throughput;
 						else
 							hp.throughput = Spectrum();
 

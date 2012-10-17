@@ -297,7 +297,7 @@ public:
 						hp.scrX = eyePath->scrX;
 						hp.scrY = eyePath->scrY;
 						if (scene->infiniteLight)
-							hp.throughput = scene->infiniteLight->Le(eyePath->ray.d) * eyePath->throughput;
+							hp.throughput = scene->infiniteLight->Le(scene, eyePath->ray.d) * eyePath->throughput;
 						else
 							hp.throughput = luxrays::Spectrum();
 

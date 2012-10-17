@@ -49,6 +49,8 @@ public:
 
 	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
 		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const = 0;
+
+	virtual Spectrum Le(const Scene *scene, const Vector &dir) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -80,7 +82,7 @@ public:
 
 	virtual void Preprocess() { }
 
-	virtual Spectrum Le(const Vector &dir) const;
+	virtual Spectrum Le(const Scene *scene, const Vector &dir) const;
 
 	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
@@ -160,7 +162,7 @@ public:
 	void SetSunDir(const Vector &dir) { sundir = dir; }
 	const Vector &GetSunDir() const { return sundir; }
 
-	virtual Spectrum Le(const Vector &dir) const;
+	virtual Spectrum Le(const Scene *scene, const Vector &dir) const;
 	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
 
 	void GetInitData(float *thetaSData, float *phiSData,
@@ -208,7 +210,7 @@ public:
 	void SetGain(const Spectrum &g);
 	const Spectrum GetGain() const { return gain; }
 
-	Spectrum Le(const Vector &dir) const;
+	Spectrum Le(const Scene *scene, const Vector &dir) const;
 
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
@@ -263,6 +265,7 @@ public:
 	Spectrum Sample_L(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		const float u4, float *pdf, Ray *ray) const;
+	Spectrum Le(const Scene *scene, const Vector &dir) const;
 
 	void Init(const std::vector<ExtMesh *> &objs);
 	unsigned int GetMeshIndex() const { return meshIndex; }
