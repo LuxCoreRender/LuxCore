@@ -888,7 +888,7 @@ void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *e
 		sizeof(Ray) * rayBuffer->GetRayCount(),
 		rayBuffer->GetRayBuffer());
 
-	EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, rayBuffer->GetRayCount());
+	EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, rayBuffer->GetSize());
 
 	// Download the results
 	oclQueue->enqueueReadBuffer(*hitsBuff, CL_FALSE, 0,
