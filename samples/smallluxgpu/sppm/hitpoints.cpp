@@ -275,7 +275,7 @@ void HitPoints::SetHitPoints(RandomGenerator *rndGen,
 		const unsigned int y = i / width;
 		const float scrX = x + rndGen->floatValue() - 0.5f;
 		const float scrY = y + rndGen->floatValue() - 0.5f;
-		scene->camera->GenerateRay(scrX, scrY, width, height, &eyePath->ray,
+		scene->camera->GenerateRay(scrX, scrY, &eyePath->ray,
 				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
 		eyePath->state = NEXT_VERTEX;

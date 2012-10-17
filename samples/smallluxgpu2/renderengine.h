@@ -29,7 +29,8 @@
 #include "luxrays/utils/film/nativefilm.h"
 
 enum RenderEngineType {
-	PATHOCL
+	PATHOCL,
+	LIGHTCPU
 };
 
 class RenderEngine {
@@ -94,6 +95,7 @@ public:
 
 		StartLockLess();
 	}
+
 	virtual void Stop() {
 		boost::unique_lock<boost::mutex> lock(engineMutex);
 

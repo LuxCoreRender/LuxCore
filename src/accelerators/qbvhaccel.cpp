@@ -393,6 +393,8 @@ void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
 /***************************************************/
 
 bool QBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
+	rayHit->SetMiss();
+
 	//------------------------------
 	// Prepare the ray for intersection
 	QuadRay ray4(*ray);

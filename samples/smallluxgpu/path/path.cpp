@@ -78,8 +78,7 @@ void Path::Init(PathRenderEngine *renderEngine, Sampler *sampler) {
 	sampler->GetNextSample(&sample);
 
 	renderEngine->scene->camera->GenerateRay(
-		sample.screenX, sample.screenY,
-		renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), &pathRay,
+		sample.screenX, sample.screenY, &pathRay,
 		sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample), sampler->GetLazyValue(&sample));
 	state = EYE_VERTEX;
 	depth = 0;

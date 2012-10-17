@@ -275,7 +275,7 @@ bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	unsigned int stopNode = bvhTree[0].skipIndex; // Non-existent
 	bool hit = false;
 	rayHit->t = std::numeric_limits<float>::infinity();
-	rayHit->index = 0xffffffffu;
+	rayHit->SetMiss();
 	RayHit triangleHit;
 
 	const Point *vertices = preprocessedMesh->GetVertices();

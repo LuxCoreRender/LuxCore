@@ -227,7 +227,7 @@ public:
 
 						eyePath->scrX = x + (sx + rndGen->floatValue()) * invSuperSampling - 0.5f;
 						eyePath->scrY = y + (sy + rndGen->floatValue()) * invSuperSampling - 0.5f;
-						scene->camera->GenerateRay(eyePath->scrX, eyePath->scrY, width, height, &eyePath->ray,
+						scene->camera->GenerateRay(eyePath->scrX, eyePath->scrY, &eyePath->ray,
 								rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
 						eyePath->depth = 0;

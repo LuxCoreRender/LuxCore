@@ -95,8 +95,11 @@ public:
 		target = orig + t * p;
 	}
 
-	void Update(const unsigned int filmWidth, const unsigned int filmHeight) {
-		// Used to move trnslate the camera
+	void Update(const unsigned int w, const unsigned int h) {
+		filmWidth = w;
+		filmHeight = h;
+
+		// Used to move translate the camera
 		dir = target - orig;
 		dir = Normalize(dir);
 
@@ -114,10 +117,10 @@ public:
 			mbDeltaUp = mbUp - up;
 		} else {
 			Transform WorldToCamera = LookAt(orig, target, up);
-			CameraToWorld = WorldToCamera.GetInverse();
+			cameraToWorld = WorldToCamera.GetInverse();
 		}
 
-		Transform CameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
+		Transform cameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
 
 		const float frame =  float(filmWidth) / float(filmHeight);
 		float screen[4];
@@ -132,17 +135,19 @@ public:
 			screen[2] = -1.f / frame;
 			screen[3] = 1.f / frame;
 		}
-		Transform ScreenToRaster =
+		Transform screenToRaster =
 				Scale(float(filmWidth), float(filmHeight), 1.f) *
 				Scale(1.f / (screen[1] - screen[0]), 1.f / (screen[2] - screen[3]), 1.f) *
 				luxrays::Translate(Vector(-screen[0], -screen[3], 0.f));
 
-		RasterToCamera = CameraToScreen.GetInverse() * ScreenToRaster.GetInverse();
+		rasterToCamera = cameraToScreen.GetInverse() * screenToRaster.GetInverse();
+
+		Transform screenToWorld = cameraToWorld * cameraToScreen.GetInverse();
+		rasterToWorld = screenToWorld * screenToRaster.GetInverse();
 	}
 
 	void GenerateRay(
-		const float screenX, const float screenY,
-		const unsigned int filmWidth, const unsigned int filmHeight,
+		const float filmX, const float filmY,
 		Ray *ray, const float u1, const float u2, const float u3) const {
 		Transform c2w;
 		if (motionBlur) {
@@ -154,10 +159,10 @@ public:
 			Transform WorldToCamera = LookAt(sampledOrig, sampledTarget, sampledUp);
 			c2w = WorldToCamera.GetInverse();
 		} else
-			c2w = CameraToWorld;
+			c2w = cameraToWorld;
 
-        Point Pras(screenX, filmHeight - screenY - 1.f, 0);
-        Point Pcamera(RasterToCamera * Pras);
+        Point Pras(filmX, filmHeight - filmY - 1.f, 0);
+        Point Pcamera(rasterToCamera * Pras);
 
         ray->o = Pcamera;
         ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
@@ -186,12 +191,28 @@ public:
         *ray = c2w * *ray;
 	}
 
+	bool GetSamplePosition(const Point &p, const Vector &wi,
+		float distance, float *x, float *y) const {
+		const float cosi = Dot(wi, dir);
+		if (cosi <= 0.f || (!isinf(distance) && (distance * cosi < clipHither ||
+			distance * cosi > clipYon)))
+			return false;
+
+		const Point pO(rasterToWorld / (p + (lensRadius > 0.f ?
+			wi * (focalDistance / cosi) : wi)));
+
+		*x = pO.x;
+		*y = filmHeight - 1 - pO.y;
+
+		return true;
+	}
+
 	const Matrix4x4 GetRasterToCameraMatrix() const {
-		return RasterToCamera.GetMatrix();
+		return rasterToCamera.GetMatrix();
 	}
 
 	const Matrix4x4 GetCameraToWorldMatrix() const {
-		return CameraToWorld.GetMatrix();
+		return cameraToWorld.GetMatrix();
 	}
 
 	float GetClipYon() const { return clipYon; }
@@ -208,9 +229,11 @@ public:
 	Vector mbUp;
 
 private:
+	u_int filmWidth, filmHeight;
+
 	// Calculated values
 	Vector dir, x, y;
-	Transform RasterToCamera, CameraToWorld;
+	Transform rasterToCamera, rasterToWorld, cameraToWorld;
 
 	Vector mbDeltaOrig, mbDeltaTarget, mbDeltaUp;
 };
