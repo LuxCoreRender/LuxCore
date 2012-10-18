@@ -1166,7 +1166,7 @@ void PathGPURenderThread::UpdatePixelBuffer(const unsigned int screenRefreshInte
 	for (;;) {
 		for (unsigned int i = 0; i < 4; ++i) {
 			// Trace rays
-			intersectionDevice->EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, PATHGPU_PATH_COUNT);
+			intersectionDevice->EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, PATHGPU_PATH_COUNT, NULL, NULL);
 
 			// Advance paths
 			if (triLightsBuff) {
@@ -1296,7 +1296,7 @@ void PathGPURenderThread::RenderThreadImpl(PathGPURenderThread *renderThread) {
 				for (unsigned int i = 0; i < 4; ++i) {
 					// Trace rays
 					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
-							*(renderThread->hitsBuff), PATHGPU_PATH_COUNT);
+							*(renderThread->hitsBuff), PATHGPU_PATH_COUNT, NULL, NULL);
 
 					// Advance paths
 					if (renderThread->triLightsBuff) {

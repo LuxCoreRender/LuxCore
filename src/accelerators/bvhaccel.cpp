@@ -96,7 +96,8 @@ public:
 		unsigned int nn, cl::Buffer *b);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 	// BVH fields
 	cl::Buffer *vertsBuff;
@@ -134,14 +135,16 @@ void OpenCLBVHKernel::SetBuffers(cl::Buffer *v,
 	kernel->setArg(6, *bvhBuff);
 }
 
-void OpenCLBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
-	cl::Buffer &hBuff, const unsigned int rayCount)
+void OpenCLBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+	const unsigned int rayCount, const VECTOR_CLASS<cl::Event> *events,
+	cl::Event *event)
 {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(7, rayCount);
 	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
-		cl::NDRange(rayCount), cl::NDRange(workGroupSize));
+		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
+		event);
 }
 
 OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,

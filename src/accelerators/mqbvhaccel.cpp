@@ -91,7 +91,8 @@ public:
 		cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o);
 	virtual void UpdateDataSet(const DataSet *newDataSet);
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 protected:
 	// MQBVH fields
@@ -185,14 +186,16 @@ void OpenCLMQBVHKernel::UpdateDataSet(const DataSet *newDataSet) {
 	kernel->setArg(2, *mqbvhBuff);
 }
 
-void OpenCLMQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
-	cl::Buffer &hBuff, const unsigned int rayCount)
+void OpenCLMQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+	const unsigned int rayCount, const VECTOR_CLASS<cl::Event> *events,
+	cl::Event *event)
 {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(3, rayCount);
 	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
-		cl::NDRange(rayCount), cl::NDRange(workGroupSize));
+		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
+		event);
 }
 
 OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,

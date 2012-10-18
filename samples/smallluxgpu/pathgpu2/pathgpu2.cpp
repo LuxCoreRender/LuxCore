@@ -1735,7 +1735,7 @@ void PathGPU2RenderThread::RenderThreadImpl(PathGPU2RenderThread *renderThread) 
 
 					// Trace rays
 					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
-								*(renderThread->hitsBuff), taskCount);
+								*(renderThread->hitsBuff), taskCount, NULL, NULL);
 
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,

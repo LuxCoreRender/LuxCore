@@ -96,7 +96,8 @@ public:
 	void SetBuffers(cl::Buffer *trisBuff, cl::Buffer *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 protected:
 	// QBVH fields
@@ -171,7 +172,8 @@ public:
 	void SetBuffers(cl::Image2D *trisBuff, cl::Image2D *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 protected:
 	// QBVH with image storage fields
@@ -209,14 +211,16 @@ void OpenCLQBVHKernel::SetBuffers(cl::Buffer *t, cl::Buffer *q)
 	kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
 }
 
-void OpenCLQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
-	cl::Buffer &hBuff, const unsigned int rayCount)
+void OpenCLQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+	const unsigned int rayCount, const VECTOR_CLASS<cl::Event> *events,
+	cl::Event *event)
 {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(4, rayCount);
 	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
-		cl::NDRange(rayCount), cl::NDRange(workGroupSize));
+		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
+		event);
 }
 
 void OpenCLQBVHImageKernel::FreeBuffers()
@@ -249,13 +253,15 @@ void OpenCLQBVHImageKernel::SetBuffers(cl::Image2D *t, cl::Image2D *q)
 }
 
 void OpenCLQBVHImageKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
-	cl::Buffer &hBuff, const unsigned int rayCount)
+	cl::Buffer &hBuff, const unsigned int rayCount,
+	const VECTOR_CLASS<cl::Event> *events, cl::Event *event)
 {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(4, rayCount);
 	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
-		cl::NDRange(rayCount), cl::NDRange(workGroupSize));
+		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
+		event);
 }
 
 OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,

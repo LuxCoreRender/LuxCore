@@ -132,7 +132,8 @@ public:
 	virtual void FreeBuffers() = 0;
 	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount) = 0;
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
 
 	void SetMaxStackSize(const size_t s) { stackSize = s; }
 
@@ -184,7 +185,9 @@ public:
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
 	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
-	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff, const unsigned int rayCount);
+	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 	friend class Context;
 
@@ -197,7 +200,9 @@ protected:
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 
-	void TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event);
+	void TraceRayBuffer(RayBuffer *rayBuffer,
+		VECTOR_CLASS<cl::Event> &readEvent,
+		VECTOR_CLASS<cl::Event> &traceEvent, cl::Event *event);
 	void FreeDataSetBuffers();
 
 	unsigned int forceWorkGroupSize;
