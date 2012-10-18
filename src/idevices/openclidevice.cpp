@@ -176,25 +176,29 @@ void OpenCLIntersectionDevice::Stop() {
 	}
 }
 
-void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event) {
+void OpenCLIntersectionDevice::TraceRayBuffer(RayBuffer *rayBuffer,
+	VECTOR_CLASS<cl::Event> &readEvent, VECTOR_CLASS<cl::Event> &traceEvent,
+	cl::Event *event) {
 	// Upload the rays to the GPU
 	oclQueue->enqueueWriteBuffer(*raysBuff, CL_FALSE, 0,
 		sizeof(Ray) * rayBuffer->GetRayCount(),
-		rayBuffer->GetRayBuffer());
+		rayBuffer->GetRayBuffer(), NULL, &(readEvent[0]));
 
-	EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, rayBuffer->GetSize());
+	EnqueueTraceRayBuffer(*raysBuff, *hitsBuff, rayBuffer->GetSize(),
+		&readEvent, &(traceEvent[0]));
 
 	// Download the results
 	oclQueue->enqueueReadBuffer(*hitsBuff, CL_FALSE, 0,
 		sizeof(RayHit) * rayBuffer->GetRayCount(),
-		rayBuffer->GetHitBuffer(), NULL, event);
+		rayBuffer->GetHitBuffer(), &traceEvent, event);
 }
 
 void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(cl::Buffer &rBuff,
-	cl::Buffer &hBuff, const unsigned int rayCount)
+	cl::Buffer &hBuff, const unsigned int rayCount,
+	const VECTOR_CLASS<cl::Event> *events, cl::Event *event)
 {
 	if (kernel) {
-		kernel->EnqueueRayBuffer(rBuff, hBuff, rayCount);
+		kernel->EnqueueRayBuffer(rBuff, hBuff, rayCount, events, event);
 		statsTotalRayCount += rayCount;
 	}
 }
@@ -217,10 +221,14 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 			switch(count) {
 				case 1: {
 					// Only one ray buffer to trace available
-					cl::Event event;
-					renderDevice->TraceRayBuffer(rayBuffer0, &event);
+					VECTOR_CLASS<cl::Event> readEvent0(1);
+					VECTOR_CLASS<cl::Event> traceEvent0(1);
+					cl::Event event0;
+					renderDevice->TraceRayBuffer(rayBuffer0,
+						readEvent0, traceEvent0,
+						&event0);
 
-					event.wait();
+					event0.wait();
 					queue->PushDone(rayBuffer0);
 
 					renderDevice->statsDeviceTotalTime = WallClockTime() - startTime;
@@ -230,12 +238,20 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 					// At least 2 ray buffers to trace
 
 					// Trace 0 ray buffer
+					VECTOR_CLASS<cl::Event> readEvent0(1);
+					VECTOR_CLASS<cl::Event> traceEvent0(1);
 					cl::Event event0;
-					renderDevice->TraceRayBuffer(rayBuffer0, &event0);
+					renderDevice->TraceRayBuffer(rayBuffer0,
+						readEvent0, traceEvent0,
+						&event0);
 
 					// Trace 1 ray buffer
+					VECTOR_CLASS<cl::Event> readEvent1(1);
+					VECTOR_CLASS<cl::Event> traceEvent1(1);
 					cl::Event event1;
-					renderDevice->TraceRayBuffer(rayBuffer1, &event1);
+					renderDevice->TraceRayBuffer(rayBuffer1,
+						readEvent1, traceEvent1,
+						&event1);
 
 					// Pop 0 ray buffer
 					event0.wait();
@@ -252,16 +268,28 @@ void OpenCLIntersectionDevice::IntersectionThread(OpenCLIntersectionDevice *rend
 					// At least 3 ray buffers to trace
 
 					// Trace 0 ray buffer
+					VECTOR_CLASS<cl::Event> readEvent0(1);
+					VECTOR_CLASS<cl::Event> traceEvent0(1);
 					cl::Event event0;
-					renderDevice->TraceRayBuffer(rayBuffer0, &event0);
+					renderDevice->TraceRayBuffer(rayBuffer0,
+						readEvent0, traceEvent0,
+						&event0);
 
 					// Trace 1 ray buffer
+					VECTOR_CLASS<cl::Event> readEvent1(1);
+					VECTOR_CLASS<cl::Event> traceEvent1(1);
 					cl::Event event1;
-					renderDevice->TraceRayBuffer(rayBuffer1, &event1);
+					renderDevice->TraceRayBuffer(rayBuffer1,
+						readEvent1, traceEvent1,
+						&event1);
 
 					// Trace 2 ray buffer
+					VECTOR_CLASS<cl::Event> readEvent2(1);
+					VECTOR_CLASS<cl::Event> traceEvent2(1);
 					cl::Event event2;
-					renderDevice->TraceRayBuffer(rayBuffer2, &event2);
+					renderDevice->TraceRayBuffer(rayBuffer2,
+						readEvent2, traceEvent2,
+						&event2);
 
 					// Pop 0 ray buffer
 					event0.wait();
