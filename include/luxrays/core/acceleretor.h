@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_ACCELERETOR_H
-#define	_LUXRAYS_ACCELERETOR_H
+#ifndef _LUXRAYS_ACCELERATOR_H
+#define	_LUXRAYS_ACCELERATOR_H
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/trianglemesh.h"
@@ -31,12 +31,18 @@ typedef enum {
 	ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH
 } AcceleratorType;
 
+class OpenCLKernel;
+class OpenCLIntersectionDevice;
+
 class Accelerator {
 public:
 	Accelerator() { }
 	virtual ~Accelerator() { }
 
 	virtual AcceleratorType GetType() const = 0;
+
+	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
+		unsigned int stackSize, bool disableImageStorage) const = 0;
 
 	virtual void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount, const unsigned int totalTriangleCount) = 0;
 	virtual const TriangleMeshID GetMeshID(const unsigned int index) const = 0;
@@ -49,4 +55,4 @@ public:
 
 }
 
-#endif	/* _LUXRAYS_ACCELERETOR_H */
+#endif	/* _LUXRAYS_ACCELERATOR_H */

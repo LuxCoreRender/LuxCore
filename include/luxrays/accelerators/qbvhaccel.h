@@ -386,39 +386,37 @@ public:
 	/**
 	   to free the memory.
 	*/
-	~QBVHAccel();
+	virtual ~QBVHAccel();
 
-	/**
-	   to get the world bbox.
-	   @return
-	*/
-	BBox WorldBound() const { return worldBound; }
-
-	AcceleratorType GetType() const { return ACCEL_QBVH; }
-	void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
+	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
+	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
+		unsigned int stackSize, bool disableImageStorage) const;
+	virtual void Init(const std::deque<Mesh *> &meshes,
+		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 
-	const TriangleMeshID GetMeshID(const unsigned int index) const { return meshIDs[index]; }
-	const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
-	const TriangleID GetMeshTriangleID(const unsigned int index) const { return meshTriangleIDs[index]; }
-	const TriangleID *GetMeshTriangleIDTable() const { return meshTriangleIDs; }
+	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
+		return meshIDs[index];
+	}
+	virtual const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
+	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
+		return meshTriangleIDs[index];
+	}
+	virtual const TriangleID *GetMeshTriangleIDTable() const {
+		return meshTriangleIDs;
+	}
 
 	/**
 	   Intersect a ray in world space against the
 	   primitive and fills in an Intersection object.
 	*/
+	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	bool Intersect(const Ray *ray, RayHit *hit) const;
-
-	const TriangleMesh *GetPreprocessedMesh() const { return preprocessedMesh; }
-	u_int GetMaxDepth() const { return maxDepth; }
-	u_int GetNNodes() const { return nNodes; }
-	const QBVHNode *GetTree() const { return nodes; }
-	u_int GetNQuads() const { return nQuads; }
-	const QuadTriangle *GetQuads() const { return prims; }
+	const TriangleMesh *GetPreprocessedMesh() const {
+		return preprocessedMesh;
+	}
 
 	friend class MQBVHAccel;
-	friend class OpenCLIntersectionDevice;
 
 private:
 	// A special initialization method used only by MQBVHAccel
@@ -430,20 +428,20 @@ private:
 	*/
 	void BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
-		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex,
-		int depth);
+		const BBox &centroidsBbox, int32_t parentIndex,
+		int32_t childIndex, int depth);
 	
 	/**
 	   Create a leaf using the traditional QBVH layout
 	*/
-	void CreateTempLeaf(int32_t parentIndex, int32_t childIndex, u_int start, u_int end,
-		const BBox &nodeBbox);
+	void CreateTempLeaf(int32_t parentIndex, int32_t childIndex,
+		u_int start, u_int end, const BBox &nodeBbox);
 
 	/**
 	   Create an intermediate node
 	*/
-	inline int32_t CreateIntermediateNode(int32_t parentIndex, int32_t childIndex,
-		const BBox &nodeBbox) {
+	inline int32_t CreateIntermediateNode(int32_t parentIndex,
+		int32_t childIndex, const BBox &nodeBbox) {
 		int32_t index = nNodes++; // increment after assignment
 		if (nNodes >= maxNodes) {
 			QBVHNode *newNodes = AllocAligned<QBVHNode>(2 * maxNodes);
