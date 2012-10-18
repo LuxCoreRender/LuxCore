@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/acceleretor.h"
+#include "luxrays/core/accelerator.h"
 
 namespace luxrays {
 

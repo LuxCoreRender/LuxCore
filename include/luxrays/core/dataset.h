@@ -25,7 +25,7 @@
 #include <deque>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/acceleretor.h"
+#include "luxrays/core/accelerator.h"
 #include "luxrays/core/trianglemesh.h"
 
 namespace luxrays {

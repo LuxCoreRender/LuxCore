@@ -196,7 +196,7 @@ SOURCE_GROUP("Header Files\\Accelerators" FILES ${LuxRays_HEADERS_LUXRAYS_ACCELE
 
 
 set(LuxRays_HEADERS_LUXRAYS_CORE
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/acceleretor.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/accelerator.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/context.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/dataset.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/device.h

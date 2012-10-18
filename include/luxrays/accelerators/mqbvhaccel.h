@@ -27,7 +27,7 @@
 #include <boost/cstdint.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/acceleretor.h"
+#include "luxrays/core/accelerator.h"
 #include "luxrays/accelerators/qbvhaccel.h"
 
 using boost::int32_t;
