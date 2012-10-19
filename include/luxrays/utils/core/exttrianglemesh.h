@@ -45,6 +45,8 @@ public:
 	virtual Spectrum GetColor(const unsigned int vertIndex) const = 0;
 	virtual UV GetUV(const unsigned int vertIndex) const = 0;
 
+	virtual void GetTriUV(const unsigned int index, const Point &hitPoint, float *b0, float *b1) const = 0;
+
 	virtual Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const = 0;
 	virtual Spectrum InterpolateTriColor(const unsigned int index, const float b0, const float b1, const float b2) const = 0;
 	virtual Spectrum InterpolateTriColor(const unsigned int index, const float b1, const float b2) const = 0;
@@ -110,6 +112,11 @@ public:
 	Spectrum GetColor(const unsigned int vertIndex) const { return colors[vertIndex]; }
 	UV GetUV(const unsigned int vertIndex) const { return uvs[vertIndex]; }
 
+	void GetTriUV(const unsigned int index, const Point &hitPoint, float *b0, float *b1) const {
+		const Triangle &tri = tris[index];
+		tri.GetUV(vertices, hitPoint, b0, b1);
+	}
+	
 	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
 		const Triangle &tri = tris[index];
 		const float b0 = 1.f - b1 - b2;
@@ -195,6 +202,12 @@ public:
 	}
 	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
 	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }
+
+	void GetTriUV(const unsigned int index, const Point &hitPoint, float *b0, float *b1) const {
+		const Triangle &tri = mesh->GetTriangles()[index];
+
+		Triangle::GetUV(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]), hitPoint, b0, b1);
+	}
 
 	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
 		return Normalize(trans * mesh->InterpolateTriNormal(index, b1, b2));

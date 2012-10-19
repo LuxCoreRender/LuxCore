@@ -96,11 +96,14 @@ inline Vector UniformSampleSphere(const float u1, const float u2) {
 	return Vector(x, y, z);
 }
 
-inline Vector CosineSampleHemisphere(const float u1, const float u2) {
+inline Vector CosineSampleHemisphere(const float u1, const float u2, float *pdf = NULL) {
 	Vector ret;
 	ConcentricSampleDisk(u1, u2, &ret.x, &ret.y);
 	ret.z = sqrtf(Max(0.f, 1.f - ret.x * ret.x - ret.y * ret.y));
 
+	if (pdf)
+		*pdf = ret.z * INV_PI;
+	
 	return ret;
 }
 

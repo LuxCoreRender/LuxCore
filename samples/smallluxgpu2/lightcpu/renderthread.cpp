@@ -139,17 +139,16 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 
 	while (!boost::this_thread::interruption_requested()) {
 		// Select one light source
-		float lpdf;
-		const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lpdf);
+		float lightPickPdf;
+		const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
 
 		// Initialize the light path
-		float pdf;
+		float lightEmitPdf;
 		Ray nextEventRay;
-		Spectrum radiance = light->Sample_L(scene,
-			rndGen->floatValue(), rndGen->floatValue(),
-			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-			&pdf, &nextEventRay);
-		radiance /= pdf * lpdf;
+		Spectrum radiance = light->Emit(scene,
+			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
+		radiance /= lightEmitPdf * lightPickPdf;
 		int depth = 0;
 
 		{
@@ -158,8 +157,8 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 			const float distance = eyeDir.Length();
 			eyeDir /= distance;
 
-			const Spectrum eyeRadiance = light->Le(scene, -eyeDir);
-			if (!eyeRadiance.Black()) {
+			const Spectrum radiance = light->GetRadiance(scene, -eyeDir, nextEventRay.o);
+			if (!radiance.Black()) {
 				Ray eyeRay(nextEventRay.o, eyeDir);
 				eyeRay.maxt = distance;
 
@@ -169,7 +168,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 
 					float scrX, scrY;
 					if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY))
-						renderThread->SplatSample(scrX, scrY, eyeRadiance);
+						renderThread->SplatSample(scrX, scrY, radiance);
 				}
 			}
 		}

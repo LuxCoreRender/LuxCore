@@ -19,6 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include "luxrays/core/geometry/frame.h"
 #include "luxrays/utils/sdl/light.h"
 #include "luxrays/utils/sdl/spd.h"
 #include "luxrays/utils/sdl/data/sun_spect.h"
@@ -539,6 +540,7 @@ TriangleLight::TriangleLight(const AreaLightMaterial *mat, const unsigned int ms
 void TriangleLight::Init(const std::vector<ExtMesh *> &objs) {
 	const ExtMesh *mesh = objs[meshIndex];
 	area = mesh->GetTriangleArea(triIndex);
+	invArea = 1.f / area;
 }
 
 Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
@@ -616,4 +618,67 @@ Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
 		return M_PI * mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
 	else
 		return M_PI * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color	
+}
+
+//--------------------------------------------------------------------------
+// New interface
+//--------------------------------------------------------------------------
+
+Spectrum TriangleLight::Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA) const {
+	const ExtMesh *mesh = scene->objects[meshIndex];
+
+	// Origin
+	float b0, b1, b2;
+	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
+
+	// Build the local frame		
+	Frame frame(mesh->InterpolateTriNormal(triIndex, b0, b1));
+
+	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+	*emissionPdfW *= invArea;
+
+	// Cannot really not emit the particle, so just bias it to the correct angle
+	localDirOut.z = Max(localDirOut.z, DEFAULT_EPSILON_STATIC);
+
+	// Direction
+	*dir = frame.ToWorld(localDirOut);
+
+	if (directPdfA)
+		*directPdfA = area;
+
+	return lightMaterial->GetGain() * localDirOut.z;
+}
+
+Spectrum TriangleLight::GetRadiance(const Scene *scene,
+		const Vector &dir,
+		const Point &hitPoint,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	const ExtMesh *mesh = scene->objects[meshIndex];
+
+	// Get the u and v coordinates of the hit point
+	float b0, b1;
+	mesh->GetTriUV(triIndex, hitPoint, &b0, &b1);
+
+	if ((b0 < 0.f) || (b0 > 1.f) || (b1 < 0.f) || (b1 > 1.f))
+		return Spectrum(0.f);
+
+	// Build the local frame
+	Frame frame(mesh->InterpolateTriNormal(triIndex, b0, b1));
+
+	const float cosOutL = Max(0.f, Dot(frame.Normal(), -dir));
+
+	if(cosOutL == 0.f)
+		return Spectrum(0.f);
+
+	if(directPdfA)
+		*directPdfA = invArea;
+
+	if(emissionPdfW)
+		*emissionPdfW = Max(0.f, Dot(frame.Normal(), -dir)) * invArea * INV_PI;
+
+	return lightMaterial->GetGain();
 }
