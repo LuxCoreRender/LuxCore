@@ -112,8 +112,26 @@ public:
 		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 	}
 
+	void GetUV(const Point *verts, const Point &hitPoint, float *b0, float *b1) const {
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+
+		GetUV(p0, p1, p2, hitPoint, b0, b1);
+	}
+
 	static float Area(const Point &p0, const Point &p1, const Point &p2) {
 		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
+	}
+
+	static void GetUV(const Point &p0, const Point &p1, const Point &p2,
+		const Point &hitPoint, float *b0, float *b1) {
+		const Vector e0 = hitPoint - p0;
+		const Vector e1 = p1 - p0;
+		const Vector e2 = p2 - p0;
+
+		*b0 = Dot(e1, e0);
+		*b1 = Dot(e2, e0);
 	}
 
 	unsigned int v[3];

@@ -44,6 +44,10 @@ public:
 
 	virtual bool IsAreaLight() const { return false; }
 
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
 	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
 
@@ -51,6 +55,26 @@ public:
 		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const = 0;
 
 	virtual Spectrum Le(const Scene *scene, const Vector &dir) const = 0;
+	
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	// Emits particle from the light
+	virtual Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL) const {
+		throw std::runtime_error("Internal error, called LightSource::Emit()");
+	}
+
+	virtual Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const {
+		throw std::runtime_error("Internal error, called LightSource::GetRadiance()");
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -260,6 +284,15 @@ public:
 	void SetMaterial(const AreaLightMaterial *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
 
+	void Init(const std::vector<ExtMesh *> &objs);
+	unsigned int GetMeshIndex() const { return meshIndex; }
+	unsigned int GetTriIndex() const { return triIndex; }
+	float GetArea() const { return area; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
 	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
 	Spectrum Sample_L(const Scene *scene,
@@ -267,15 +300,26 @@ public:
 		const float u4, float *pdf, Ray *ray) const;
 	Spectrum Le(const Scene *scene, const Vector &dir) const;
 
-	void Init(const std::vector<ExtMesh *> &objs);
-	unsigned int GetMeshIndex() const { return meshIndex; }
-	unsigned int GetTriIndex() const { return triIndex; }
-	float GetArea() const { return area; }
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	// Emits particle from the light
+	Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL) const;
+
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const;
 
 private:
 	const AreaLightMaterial *lightMaterial;
 	unsigned int meshIndex, triIndex;
-	float area;
+	float area, invArea;
 };
 
 } }
