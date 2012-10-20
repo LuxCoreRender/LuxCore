@@ -635,7 +635,7 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
 
 	// Build the local frame		
-	Frame frame(mesh->InterpolateTriNormal(triIndex, b0, b1));
+	Frame frame(mesh->InterpolateTriNormal(triIndex, b1, b2));
 
 	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
 	*emissionPdfW *= invArea;
@@ -660,14 +660,12 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	const ExtMesh *mesh = scene->objects[meshIndex];
 
 	// Get the u and v coordinates of the hit point
-	float b0, b1;
-	mesh->GetTriUV(triIndex, hitPoint, &b0, &b1);
-
-	if ((b0 < 0.f) || (b0 > 1.f) || (b1 < 0.f) || (b1 > 1.f))
+	float b1, b2;
+	if (!mesh->GetTriUV(triIndex, hitPoint, &b1, &b2))
 		return Spectrum(0.f);
 
 	// Build the local frame
-	Frame frame(mesh->InterpolateTriNormal(triIndex, b0, b1));
+	Frame frame(mesh->InterpolateTriNormal(triIndex, b1, b2));
 
 	const float cosOutL = Max(0.f, Dot(frame.Normal(), -dir));
 
