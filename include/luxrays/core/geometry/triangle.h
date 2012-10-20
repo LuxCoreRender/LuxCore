@@ -112,26 +112,44 @@ public:
 		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 	}
 
-	void GetUV(const Point *verts, const Point &hitPoint, float *b0, float *b1) const {
+	bool GetUV(const Point *verts, const Point &hitPoint, float *b1, float *b2) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
 
-		GetUV(p0, p1, p2, hitPoint, b0, b1);
+		return GetUV(p0, p1, p2, hitPoint, b1, b2);
 	}
 
 	static float Area(const Point &p0, const Point &p1, const Point &p2) {
 		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
 	}
 
-	static void GetUV(const Point &p0, const Point &p1, const Point &p2,
-		const Point &hitPoint, float *b0, float *b1) {
-		const Vector e0 = hitPoint - p0;
-		const Vector e1 = p1 - p0;
-		const Vector e2 = p2 - p0;
+	static bool GetUV(const Point &p0, const Point &p1, const Point &p2,
+			const Point &hitPoint, float *b1, float *b2) {
+		const Vector u = p1 - p0;
+		const Vector v = p2 - p0;
+		const Vector w = hitPoint - p0;
 
-		*b0 = Dot(e1, e0);
-		*b1 = Dot(e2, e0);
+		const Vector vCrossW = Cross(v, w);
+		const Vector vCrossU = Cross(v, u);
+
+		if (Dot(vCrossW, vCrossU) < 0.f)
+			return false;
+
+		const Vector uCrossW = Cross(u, w);
+		const Vector uCrossV = Cross(u, v);
+
+		if (Dot(uCrossW, uCrossV) < 0.f)
+			return false;
+
+		const float denom = uCrossV.Length();
+		const float r = vCrossW.Length() / denom;
+		const float t = uCrossW.Length() / denom;
+		
+		*b1 = r;
+		*b2 = t;
+
+		return ((r <= 1) && (t <= 1) && (r + t <= 1.f));
 	}
 
 	unsigned int v[3];
