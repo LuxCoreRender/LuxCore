@@ -303,6 +303,20 @@ private:
 	Distribution1D *pMarginal;
 };
 
+//------------------------------------------------------------------------------
+// Utilities for converting PDF between Area (A) and Solid angle (W)
+// WtoA = PdfW * cosine / distance_squared
+// AtoW = PdfA * distance_squared / cosine
+//------------------------------------------------------------------------------
+
+inline float PdfWtoA(const float pdfW, const float dist, const float cosThere) {
+    return pdfW * fabs(cosThere) / (dist * dist);
+}
+
+inline float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
+    return pdfA * dist * dist / fabs(cosThere);
+}
+
 } }
 
 #endif	/* _LUXRAYS_SDL_MC_H */

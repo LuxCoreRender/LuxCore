@@ -69,7 +69,7 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, NativeFilm *flm, 
 	renderConfig->scene->UpdateDataSet(ctx);
 
 	// Create and start render threads
-	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	SLG_LOG("Starting "<< renderThreadCount << " LightCPU render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		LightCPURenderThread *t = new LightCPURenderThread(i, seedBase + i, this);
@@ -158,14 +158,17 @@ void LightCPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
 		ctx->UpdateDataSet();
 	}
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+
+	film->Reset();
 
 	elapsedTime = 0.0f;
 	startTime = WallClockTime();
 	film->ResetConvergenceTest();
 	lastConvergenceTestTime = startTime;
 	lastConvergenceTestSamplesCount = 0;
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->EndEdit(editActions);
 }
 
 void LightCPURenderEngine::UpdateFilm() {
