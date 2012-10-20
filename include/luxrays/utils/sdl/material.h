@@ -108,7 +108,10 @@ public:
 	bool IsSpecular() const { return false; }
 
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		return KdOverPI;
+		if (Dot(N, wi) > 0.f)
+			return KdOverPI;
+		else
+			return Spectrum(0.f);
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,

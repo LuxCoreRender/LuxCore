@@ -100,6 +100,10 @@ void NativeFilm::UpdateScreenBuffer() {
 					p[i].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
 					p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
 					p[i].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
+				} else {
+					p[i].r = 0.f;
+					p[i].g = 0.f;
+					p[i].b = 0.f;
 				}
 			}
 			break;
@@ -310,9 +314,9 @@ void NativeFilm::SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffe
 	Film::SplatSampleBuffer(preview, sampleBuffer);
 
 	if (preview)
-		AddSampleBuffer(filterType, sampleBuffer);
-	else
 		AddSampleBuffer(FILTER_PREVIEW, sampleBuffer);
+	else
+		AddSampleBuffer(filterType, sampleBuffer);
 }
 
 void NativeFilm::Save(const std::string &fileName) {

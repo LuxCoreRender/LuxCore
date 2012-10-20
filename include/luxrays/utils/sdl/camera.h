@@ -38,6 +38,9 @@ public:
 	~PerspectiveCamera() {
 	}
 
+	const Vector &GetDir() const { return dir; }
+	const float GetPixelArea() const { return pixelArea; }
+
 	void TranslateLeft(const float k) {
 		Vector t = -k * Normalize(x);
 		Translate(t);
@@ -108,6 +111,11 @@ public:
 
 		y = Cross(x, dir);
 		y = Normalize(y);
+
+		const float tanHalfAngle = tanf(fieldOfView * M_PI / 360.f);
+		const float pixelWidth = tanHalfAngle / filmWidth;
+		const float pixelHeight = tanHalfAngle / filmHeight;
+        pixelArea = pixelWidth * pixelHeight;
 
 		// Used to generate rays
 
@@ -232,6 +240,7 @@ private:
 	u_int filmWidth, filmHeight;
 
 	// Calculated values
+	float pixelArea;
 	Vector dir, x, y;
 	Transform rasterToCamera, rasterToWorld, cameraToWorld;
 
