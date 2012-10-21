@@ -121,6 +121,10 @@ public:
 		return isnan(r) || isnan(g) || isnan(b);
 	}
 
+	bool IsInf() const {
+		return isinf(r) || isinf(g) || isinf(b);
+	}
+
 	float Y() const {
 		return 0.212671f * r + 0.715160f * g + 0.072169f * b;
 	}

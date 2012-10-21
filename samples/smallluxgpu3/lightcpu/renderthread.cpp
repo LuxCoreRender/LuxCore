@@ -101,6 +101,8 @@ void LightCPURenderThread::EndEdit(const EditActionList &editActions) {
 }
 
 void LightCPURenderThread::SplatSample(const float scrX, const float scrY, const Spectrum &radiance) {
+	assert (!radiance.IsNaN() && !radiance.IsInf());
+
 	sampleBuffer->SplatSample(scrX, scrY, radiance);
 
 	if (sampleBuffer->IsFull()) {
@@ -148,9 +150,12 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		Spectrum lightPathFlux = light->Emit(scene,
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
+		if ((lightEmitPdf == 0.f) || lightPathFlux.Black())
+			continue;
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
+		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+		
 		int depth = 0;
-
 		{
 			// Try to connect the light path vertex with the eye
 			Vector eyeDir(scene->camera->orig - nextEventRay.o);
@@ -328,6 +333,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 					break;
 
 				lightPathFlux *= Dot(shadeN, wo) * f / fPdf;
+				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 				/*if (depth > renderEngine->rrDepth) {
 					// Russian Roulette
