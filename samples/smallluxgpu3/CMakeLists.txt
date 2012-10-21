@@ -19,8 +19,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
-set(SLG_VERSION_MAJOR 2)
-set(SLG_VERSION_MINOR 0devel6)
+set(SLG_VERSION_MAJOR 3)
+set(SLG_VERSION_MINOR 0devel1)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -135,11 +135,13 @@ set(SMALLLUXGPU_SRCS
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
 	pathocl/renderthread.cpp
+	lightcpu/lightcpu.cpp
+	lightcpu/renderthread.cpp
 	)
 
-add_executable(slg2 ${SMALLLUXGPU_SRCS})
+add_executable(slg3 ${SMALLLUXGPU_SRCS})
 
-TARGET_LINK_LIBRARIES(slg2 luxrays ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+TARGET_LINK_LIBRARIES(slg3 luxrays ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 
 # This instructs FREEGLUT to emit a pragma for the static version
-SET_TARGET_PROPERTIES(slg2 PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)
+SET_TARGET_PROPERTIES(slg3 PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)

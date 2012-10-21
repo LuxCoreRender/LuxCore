@@ -19,12 +19,45 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_CFG_H
-#define	_SLG_CFG_H
+#ifndef _SMALLLUX_H
+#define	_SMALLLUX_H
 
-// The configured options and settings for SmallLuxGPU
+#include <cmath>
+#include <sstream>
+#include <fstream>
+#include <iostream>
+#include <cstddef>
 
-#define SLG_VERSION_MAJOR "2"
-#define SLG_VERSION_MINOR "0devel6"
+#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
+#include <stddef.h>
+#include <sys/time.h>
+#elif defined (WIN32)
+#include <windows.h>
+#else
+	Unsupported Platform !!!
+#endif
 
-#endif	/* _SLG_CFG_H */
+#include "luxrays/luxrays.h"
+#include "luxrays/core/utils.h"
+#include "luxrays/utils/sdl/scene.h"
+#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/core/atomic.h"
+
+#include "slgcfg.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+extern string SLG_LABEL;
+
+class RenderSession;
+extern RenderSession *session;
+
+extern void DebugHandler(const char *msg);
+extern void SLGDebugHandler(const char *msg);
+
+#define SLG_LOG(a) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; SLGDebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); }
+
+#endif	/* _SMALLLUX_H */

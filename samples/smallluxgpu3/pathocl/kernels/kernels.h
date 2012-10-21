@@ -19,12 +19,21 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_CFG_H
-#define	_SLG_CFG_H
+#ifndef _SLG_KERNELS_H
+#define	_SLG_KERNELS_H
 
-// The configured options and settings for SmallLuxGPU
+#include <string>
 
-#define SLG_VERSION_MAJOR "2"
-#define SLG_VERSION_MINOR "0devel6"
+namespace luxrays {
 
-#endif	/* _SLG_CFG_H */
+// Intersection kernels
+extern std::string KernelSource_PathOCL_kernel_core;
+extern std::string KernelSource_PathOCL_kernel_datatypes;
+extern std::string KernelSource_PathOCL_kernel_filters;
+extern std::string KernelSource_PathOCL_kernel_samplers;
+extern std::string KernelSource_PathOCL_kernel_scene;
+extern std::string KernelSource_PathOCL_kernels;
+
+}
+
+#endif	/* _SLG_KERNELS_H */
