@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/acceleretor.h"
+#include "luxrays/core/accelerator.h"
 
 namespace luxrays {
 
@@ -49,29 +49,41 @@ public:
 	BVHAccel(const Context *context,
 			const unsigned int treetype, const int csamples, const int icost,
 			const int tcost, const float ebonus);
-	~BVHAccel();
+	virtual ~BVHAccel();
 
-	AcceleratorType GetType() const { return ACCEL_BVH; }
-	void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
+	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
+	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
+		unsigned int stackSize, bool disableImageStorage) const;
+	virtual void Init(const std::deque<Mesh *> &meshes,
+		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 
-	const TriangleMeshID GetMeshID(const unsigned int index) const { return preprocessedMeshIDs[index]; }
-	const TriangleMeshID *GetMeshIDTable() const { return preprocessedMeshIDs; }
-	const TriangleID GetMeshTriangleID(const unsigned int index) const { return preprocessedMeshTriangleIDs[index]; }
-	const TriangleID *GetMeshTriangleIDTable() const { return preprocessedMeshTriangleIDs; }
+	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
+		return preprocessedMeshIDs[index];
+	}
+	virtual const TriangleMeshID *GetMeshIDTable() const {
+		return preprocessedMeshIDs;
+	}
+	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
+		return preprocessedMeshTriangleIDs[index];
+	}
+	virtual const TriangleID *GetMeshTriangleIDTable() const {
+		return preprocessedMeshTriangleIDs;
+	}
 
-	bool Intersect(const Ray *ray, RayHit *hit) const;
+	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	const TriangleMesh *GetPreprocessedMesh() const { return preprocessedMesh; }
-	unsigned int GetNNodes() const { return nNodes; }
-	const BVHAccelArrayNode *GetTree() const { return bvhTree; }
-
-	friend class OpenCLIntersectionDevice;
+	const TriangleMesh *GetPreprocessedMesh() const {
+		return preprocessedMesh;
+	}
 
 private:
 	// BVHAccel Private Methods
-	BVHAccelTreeNode *BuildHierarchy(std::vector<BVHAccelTreeNode *> &list, unsigned int begin, unsigned int end, unsigned int axis);
-	void FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int begin, unsigned int end, float *splitValue, unsigned int *bestAxis);
+	BVHAccelTreeNode *BuildHierarchy(std::vector<BVHAccelTreeNode *> &list,
+		unsigned int begin, unsigned int end, unsigned int axis);
+	void FindBestSplit(std::vector<BVHAccelTreeNode *> &list,
+		unsigned int begin, unsigned int end, float *splitValue,
+		unsigned int *bestAxis);
 	unsigned int BuildArray(BVHAccelTreeNode *node, unsigned int offset);
 	void FreeHierarchy(BVHAccelTreeNode *node);
 

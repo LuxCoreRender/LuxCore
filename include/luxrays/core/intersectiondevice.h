@@ -130,10 +130,10 @@ public:
 	virtual ~OpenCLKernel() { delete kernel; }
 
 	virtual void FreeBuffers() = 0;
-	virtual void SetDataSet(const DataSet *newDataSet) = 0;
 	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount) = 0;
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
 
 	void SetMaxStackSize(const size_t s) { stackSize = s; }
 
@@ -142,85 +142,6 @@ protected:
 	cl::Kernel *kernel;
 	size_t workGroupSize;
 	size_t stackSize;
-};
-
-class OpenCLBVHKernel : public OpenCLKernel {
-public:
-	OpenCLBVHKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
-		vertsBuff(NULL), trisBuff(NULL), bvhBuff(NULL) { }
-	virtual ~OpenCLBVHKernel() { FreeBuffers(); }
-
-	virtual void FreeBuffers();
-	virtual void SetDataSet(const DataSet *newDataSet);
-	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
-
-protected:
-	// BVH fields
-	cl::Buffer *vertsBuff;
-	cl::Buffer *trisBuff;
-	cl::Buffer *bvhBuff;
-};
-
-class OpenCLQBVHKernel : public OpenCLKernel {
-public:
-	OpenCLQBVHKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
-		trisBuff(NULL), qbvhBuff(NULL) { }
-	virtual ~OpenCLQBVHKernel() { FreeBuffers(); }
-
-	virtual void FreeBuffers();
-	virtual void SetDataSet(const DataSet *newDataSet);
-	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
-
-protected:
-	// QBVH fields
-	cl::Buffer *trisBuff;
-	cl::Buffer *qbvhBuff;
-};
-
-class OpenCLQBVHImageKernel : public OpenCLKernel {
-public:
-	OpenCLQBVHImageKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
-		trisBuff(NULL), qbvhBuff(NULL) { }
-	virtual ~OpenCLQBVHImageKernel() { FreeBuffers(); }
-
-	virtual void FreeBuffers();
-	virtual void SetDataSet(const DataSet *newDataSet);
-	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
-
-protected:
-	// QBVH with image storage fields
-	cl::Image2D *trisBuff;
-	cl::Image2D *qbvhBuff;
-};
-
-class OpenCLMQBVHKernel : public OpenCLKernel {
-public:
-	OpenCLMQBVHKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
-		mqbvhBuff(NULL), memMapBuff(NULL), leafBuff(NULL),
-		leafQuadTrisBuff(NULL), invTransBuff(NULL),
-		trisOffsetBuff(NULL) { }
-	virtual ~OpenCLMQBVHKernel() { FreeBuffers(); }
-
-	virtual void FreeBuffers();
-	virtual void SetDataSet(const DataSet *newDataSet);
-	virtual void UpdateDataSet(const DataSet *newDataSet);
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount);
-
-protected:
-	// MQBVH fields
-	cl::Buffer *mqbvhBuff;
-	cl::Buffer *memMapBuff;
-	cl::Buffer *leafBuff;
-	cl::Buffer *leafQuadTrisBuff;
-	cl::Buffer *invTransBuff;
-	cl::Buffer *trisOffsetBuff;
 };
 
 class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
@@ -244,8 +165,8 @@ public:
 	// OpenCL Device specific methods
 	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
 
-	void SetQBVHDisableImageStorage(const bool v) {
-		qbvhDisableImageStorage = v;
+	void DisableImageStorage(const bool v) {
+		disableImageStorage = v;
 	}
 
 	void SetMaxStackSize(const size_t s) {
@@ -264,7 +185,9 @@ public:
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
 	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
-	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff, const unsigned int rayCount);
+	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 	friend class Context;
 
@@ -277,7 +200,9 @@ protected:
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 
-	void TraceRayBuffer(RayBuffer *rayBuffer, cl::Event *event);
+	void TraceRayBuffer(RayBuffer *rayBuffer,
+		VECTOR_CLASS<cl::Event> &readEvent,
+		VECTOR_CLASS<cl::Event> &traceEvent, cl::Event *event);
 	void FreeDataSetBuffers();
 
 	unsigned int forceWorkGroupSize;
@@ -296,7 +221,7 @@ private:
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
 
-	bool reportedPermissionError, qbvhUseImage, qbvhDisableImageStorage, hybridRenderingSupport;
+	bool reportedPermissionError, disableImageStorage, hybridRenderingSupport;
 };
 
 #endif
