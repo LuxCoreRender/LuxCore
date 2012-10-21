@@ -74,7 +74,7 @@ public:
 	}
 
 	Spectrum operator*(float f) const {
-		return Spectrum(f*r, f*g, f * b);
+		return Spectrum(f * r, f * g, f * b);
 	}
 
 	Spectrum & operator*=(float f) {

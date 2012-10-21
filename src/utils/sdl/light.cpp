@@ -620,9 +620,9 @@ Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
 		return M_PI * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color	
 }
 
-//--------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // New interface
-//--------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 Spectrum TriangleLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
@@ -676,7 +676,7 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 		*directPdfA = invArea;
 
 	if(emissionPdfW)
-		*emissionPdfW = Max(0.f, Dot(frame.Normal(), -dir)) * invArea * INV_PI;
+		*emissionPdfW = cosOutL * INV_PI * invArea;
 
 	return lightMaterial->GetGain();
 }

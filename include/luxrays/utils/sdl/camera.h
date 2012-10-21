@@ -112,11 +112,6 @@ public:
 		y = Cross(x, dir);
 		y = Normalize(y);
 
-		const float tanHalfAngle = tanf(fieldOfView * M_PI / 360.f);
-		const float pixelWidth = tanHalfAngle / filmWidth;
-		const float pixelHeight = tanHalfAngle / filmHeight;
-        pixelArea = pixelWidth * pixelHeight;
-
 		// Used to generate rays
 
 		if (motionBlur) {
@@ -152,6 +147,11 @@ public:
 
 		Transform screenToWorld = cameraToWorld * cameraToScreen.GetInverse();
 		rasterToWorld = screenToWorld * screenToRaster.GetInverse();
+
+		const float tanAngle = 2.f * tanf(Radians(fieldOfView) / 2.f);// * clipHither;
+		const float xPixelWidth = tanAngle * (screen[1] - screen[0]) / 2.f;
+		const float yPixelHeight = tanAngle * (screen[3] - screen[2]) / 2.f;
+		pixelArea = xPixelWidth * yPixelHeight;
 	}
 
 	void GenerateRay(

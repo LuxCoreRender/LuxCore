@@ -162,19 +162,19 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 				Ray eyeRay(nextEventRay.o, eyeDir);
 				eyeRay.maxt = distance;
 
-				RayHit eyeRayHit;
-				if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-					// Nothing was hit, the light vertex is visible
-
-					float scrX, scrY;
-					if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY))
+				float scrX, scrY;
+				if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY)) {
+					RayHit eyeRayHit;
+					if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+						// Nothing was hit, the light vertex is visible
 						renderThread->SplatSample(scrX, scrY, radiance);
+					}
+					// TODO: NULL material and alpha channel support
 				}
-				// TODO: NULL material and alpha channel support
 			}
 		}
 
-		// Trace the path
+		// Trace the light path
 		do {
 			RayHit nextEventRayHit;
 			if (scene->dataSet->Intersect(&nextEventRay, &nextEventRayHit)) {
@@ -286,32 +286,37 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 				const float WIdotN = Dot(wi, N);
 				Normal shadeN = (WIdotN > 0.f) ? N : -N;
 
-				lightPathFlux *= fabs(WIdotN);
-
 				// Try to connect the light path vertex with the eye
 				Vector eyeDir(scene->camera->orig - hitPoint);
-				const float distance = eyeDir.Length();
-				eyeDir /= distance;
+				const float cameraDistance = eyeDir.Length();
+				eyeDir /= cameraDistance;
 
-				const Spectrum matF = triSurfMat->f(wi, eyeDir, shadeN);
-				if (!matF.Black()) {
+				const Spectrum bsdfEval = triSurfMat->Evaluate(wi, eyeDir, shadeN);
+				if (!bsdfEval.Black()) {
 					Ray eyeRay(hitPoint, eyeDir);
-					eyeRay.maxt = distance;
+					eyeRay.maxt = cameraDistance;
 
-					RayHit eyeRayHit;
-					if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-						// Nothing was hit, the light vertex is visible
-						
-						float scrX, scrY;
-						if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY)) {
+					float scrX, scrY;
+					if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, cameraDistance, &scrX, &scrY)) {
+						RayHit eyeRayHit;
+						if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+							// Nothing was hit, the light path vertex is visible
 							const float cosToCamera = Dot(shadeN, eyeDir);
 							const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
+
+							/*const float pixelEyeDistance = scene->camera->clipHither / cosAtCamera;
+							const float fluxToRadianceFactor = pixelEyeDistance * pixelEyeDistance /
+								(cosAtCamera * cosAtCamera * scene->camera->GetPixelArea());
+							const float G = cosToCamera * cosAtCamera / (pixelEyeDistance *  pixelEyeDistance);
+
+							renderThread->SplatSample(scrX, scrY, lightPathFlux * fluxToRadianceFactor * G * bsdfEval);*/
+
 							const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 								scene->camera->GetPixelArea());
-							const float cameraPdfA = PdfWtoA(cameraPdfW, distance, cosToCamera);
+							const float cameraPdfA = PdfWtoA(cameraPdfW, cameraDistance, cosToCamera);
 							const float fluxToRadianceFactor = cameraPdfA;
 
-							renderThread->SplatSample(scrX, scrY, 0.00001f*lightPathFlux * fluxToRadianceFactor * matF);
+							renderThread->SplatSample(scrX, scrY, lightPathFlux * fluxToRadianceFactor * bsdfEval);
 						}
 					}
 					// TODO: NULL material and alpha channel support
@@ -323,10 +328,9 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 
 				float fPdf;
 				Vector wo;
-				bool specularBounce;
-				const Spectrum f = triSurfMat->Sample_f(wi, &wo, N, shadeN,
+				const Spectrum f = triSurfMat->Sample(wi, &wo, N, shadeN,
 						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-						false, &fPdf, specularBounce);
+						&fPdf);
 				if ((fPdf <= 0.f) || f.Black())
 					break;
 
