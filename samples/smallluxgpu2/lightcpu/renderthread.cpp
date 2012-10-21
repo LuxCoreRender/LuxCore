@@ -304,13 +304,6 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 							const float cosToCamera = Dot(shadeN, eyeDir);
 							const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
 
-							/*const float pixelEyeDistance = scene->camera->clipHither / cosAtCamera;
-							const float fluxToRadianceFactor = pixelEyeDistance * pixelEyeDistance /
-								(cosAtCamera * cosAtCamera * scene->camera->GetPixelArea());
-							const float G = cosToCamera * cosAtCamera / (pixelEyeDistance *  pixelEyeDistance);
-
-							renderThread->SplatSample(scrX, scrY, lightPathFlux * fluxToRadianceFactor * G * bsdfEval);*/
-
 							const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 								scene->camera->GetPixelArea());
 							const float cameraPdfA = PdfWtoA(cameraPdfW, cameraDistance, cosToCamera);
