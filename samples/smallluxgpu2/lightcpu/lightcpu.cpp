@@ -63,6 +63,8 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, NativeFilm *flm, 
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 
+	film->EnablePerScreenNormalization(true);
+
 	// Create LuxRays context
 	const int oclPlatformIndex = cfg.GetInt("opencl.platform.index", -1);
 	ctx = new Context(DebugHandler, oclPlatformIndex);
@@ -95,13 +97,13 @@ void LightCPURenderEngine::StartLockLess() {
 	samplesCount = 0;
 	elapsedTime = 0.0f;
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
-
 	startTime = WallClockTime();
 	film->ResetConvergenceTest();
 	lastConvergenceTestTime = startTime;
 	lastConvergenceTestSamplesCount = 0;
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Start();
 }
 
 void LightCPURenderEngine::StopLockLess() {

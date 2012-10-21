@@ -89,10 +89,28 @@ class SurfaceMaterial : public Material {
 public:
 	bool IsLightSource() const { return false; }
 
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
 	virtual Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const = 0;
 	virtual Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N,
 		const Normal &shadeN, const float u0, const float u1,  const float u2,
 		const bool onlySpecular, float *pdf, bool &specularBounce) const = 0;
+
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+	
+	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, const Normal &N) const {
+		throw std::runtime_error("Internal error, called SurfaceMaterial::Evaluate()");
+	}
+
+	virtual Spectrum Sample(const Vector &wo, Vector *wi, const Normal &N,
+		const Normal &shadeN, const float u0, const float u1,  const float u2,
+		float *pdf) const {
+		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
+	}
 };
 
 class MatteMaterial : public SurfaceMaterial {
@@ -106,6 +124,12 @@ public:
 
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return false; }
+
+	const Spectrum &GetKd() const { return Kd; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
 
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		if (Dot(N, wi) > 0.f)
@@ -148,7 +172,35 @@ public:
 		return KdOverPI;
 	}
 
-	const Spectrum &GetKd() const { return Kd; }
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+	
+	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, const Normal &N) const {
+		if (Dot(N, wi) > 0.f)
+			return KdOverPI;
+		else
+			return Spectrum(0.f);
+	}
+
+	virtual Spectrum Sample(const Vector &wo, Vector *wi, const Normal &N,
+		const Normal &shadeN, const float u0, const float u1,  const float u2,
+		float *pdf) const {
+		Vector dir = CosineSampleHemisphere(u0, u1);
+		*pdf = dir.z * INV_PI;
+
+		Vector v1, v2;
+		CoordinateSystem(Vector(shadeN), &v1, &v2);
+
+		dir = Vector(
+				v1.x * dir.x + v2.x * dir.y + shadeN.x * dir.z,
+				v1.y * dir.x + v2.y * dir.y + shadeN.y * dir.z,
+				v1.z * dir.x + v2.z * dir.y + shadeN.z * dir.z);
+
+		(*wi) = dir;
+
+		return KdOverPI;
+	}
 
 private:
 	Spectrum Kd, KdOverPI;

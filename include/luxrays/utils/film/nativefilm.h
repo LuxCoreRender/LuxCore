@@ -46,6 +46,7 @@ public:
 	void Reset();
 	void UpdateScreenBuffer();
 
+
 	const float *GetScreenBuffer() const;
 
 	SampleBuffer *GetFreeSampleBuffer();
@@ -59,6 +60,7 @@ public:
 		enableAlphaChannel = alphaChannel;
 	}
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
+	void EnablePerScreenNormalization(const bool enable) { usePerScreenNormalization = enable; };
 
 	//--------------------------------------------------------------------------
 	
@@ -136,7 +138,7 @@ protected:
 	
 	ConvergenceTest convTest;
 
-	bool enableAlphaChannel;
+	bool enableAlphaChannel, usePerScreenNormalization;
 };
 
 } }

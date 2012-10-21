@@ -36,6 +36,7 @@ NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) :
 	freeSampleBuffers.resize(0);
 
 	enableAlphaChannel = false;
+	usePerScreenNormalization = false;
 
 	// Initialize Filter LUTs
 	filter = new GaussianFilter(1.5f, 1.5f, 2.f);
@@ -91,15 +92,23 @@ void NativeFilm::UpdateScreenBuffer() {
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
+			const float perScreenNormalizationFactor = tm.scale * pixelCount / (float)statsTotalSampleCount;
+
 			for (unsigned int i = 0; i < pixelCount; ++i) {
 				const float weight = sp[i].weight;
 
 				if (weight > 0.f) {
-					const float invWeight = tm.scale / weight;
+					if (usePerScreenNormalization) {
+						p[i].r = Radiance2PixelFloat(sp[i].radiance.r * perScreenNormalizationFactor);
+						p[i].g = Radiance2PixelFloat(sp[i].radiance.g * perScreenNormalizationFactor);
+						p[i].b = Radiance2PixelFloat(sp[i].radiance.b * perScreenNormalizationFactor);						
+					} else {
+						const float invWeight = tm.scale / weight;
 
-					p[i].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
-					p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
-					p[i].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
+						p[i].r = Radiance2PixelFloat(sp[i].radiance.r * invWeight);
+						p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
+						p[i].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
+					}
 				} else {
 					p[i].r = 0.f;
 					p[i].g = 0.f;
@@ -119,16 +128,20 @@ void NativeFilm::UpdateScreenBuffer() {
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
+			const float perScreenNormalizationFactor = pixelCount / (float)statsTotalSampleCount;
 
-			// Use the frame buffer as temporary storage and calculate the avarage luminance
+			// Use the frame buffer as temporary storage and calculate the average luminance
 			float Ywa = 0.f;
+
 			for (unsigned int i = 0; i < pixelCount; ++i) {
 				const float weight = sp[i].weight;
+				Spectrum rgb = sp[i].radiance;
 
-				if (weight > 0.f) {
-					const float invWeight = 1.f / weight;
-
-					Spectrum rgb = sp[i].radiance * invWeight;
+				if ((weight > 0.f) && !rgb.IsNaN()) {
+					if (usePerScreenNormalization)
+						rgb *= perScreenNormalizationFactor;
+					else
+						rgb /= weight;
 
 					// Convert to XYZ color space
 					p[i].r = 0.412453f * rgb.r + 0.357580f * rgb.g + 0.180423f * rgb.b;
@@ -136,6 +149,10 @@ void NativeFilm::UpdateScreenBuffer() {
 					p[i].b = 0.019334f * rgb.r + 0.119193f * rgb.g + 0.950227f * rgb.b;
 
 					Ywa += p[i].g;
+				} else {
+					p[i].r = 0.f;
+					p[i].g = 0.f;
+					p[i].b = 0.f;
 				}
 			}
 			Ywa /= pixelCount;
