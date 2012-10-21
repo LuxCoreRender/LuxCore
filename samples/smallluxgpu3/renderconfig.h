@@ -19,12 +19,28 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_CFG_H
-#define	_SLG_CFG_H
+#ifndef _RENDERCONFIG_H
+#define	_RENDERCONFIG_H
 
-// The configured options and settings for SmallLuxGPU
+#include "smalllux.h"
 
-#define SLG_VERSION_MAJOR "2"
-#define SLG_VERSION_MINOR "0devel6"
+#include <boost/thread/mutex.hpp>
 
-#endif	/* _SLG_CFG_H */
+#include "luxrays/utils/properties.h"
+
+class RenderConfig {
+public:
+	RenderConfig(const string &fileName);
+	~RenderConfig();
+
+	void SetScreenRefreshInterval(const unsigned int t);
+	unsigned int GetScreenRefreshInterval() const;
+
+	Properties cfg;
+	Scene *scene;
+
+private:
+	unsigned int screenRefreshInterval;
+};
+
+#endif	/* _RENDERCONFIG_H */

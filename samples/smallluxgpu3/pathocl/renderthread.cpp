@@ -1216,7 +1216,7 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 
 					// Trace rays
 					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
-								*(renderThread->hitsBuff), taskCount, NULL, NULL);
+								*(renderThread->hitsBuff), taskCount);
 
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,

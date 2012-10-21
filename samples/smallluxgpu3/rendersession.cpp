@@ -21,6 +21,7 @@
 
 #include "rendersession.h"
 #include "pathocl/pathocl.h"
+#include "lightcpu/lightcpu.h"
 
 #include "luxrays/utils/film/pixeldevicefilm.h"
 
@@ -86,6 +87,9 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	switch (renderEngineType) {
 		case 4:
 			renderEngine = new PathOCLRenderEngine(renderConfig, film, &filmMutex);
+			break;
+		case 5:
+			renderEngine = new LightCPURenderEngine(renderConfig, film, &filmMutex);
 			break;
 		default:
 			throw runtime_error("Unknown renderengine.type");

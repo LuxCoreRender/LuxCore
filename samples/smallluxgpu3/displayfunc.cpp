@@ -40,6 +40,7 @@
 
 #include "luxrays/utils/film/film.h"
 #include "pathocl/pathocl.h"
+#include "lightcpu/lightcpu.h"
 #include "rendersession.h"
 
 bool OSDPrintHelp = false;
@@ -235,6 +236,17 @@ void timerFunc(int value) {
 
 			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
 					engine->GetPass(), engine->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0),
+					session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+			// Need to update the Film
+			engine->UpdateFilm();
+			break;
+		}
+		case LIGHTCPU: {
+			LightCPURenderEngine *engine = (LightCPURenderEngine *)session->renderEngine;
+
+			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][%.1fK tris]",
+					engine->GetPass(), engine->GetTotalSamplesSec() / 1000000.0,
 					session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 			// Need to update the Film

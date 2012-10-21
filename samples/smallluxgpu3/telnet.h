@@ -19,12 +19,28 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_CFG_H
-#define	_SLG_CFG_H
+#ifndef _TELNET_H
+#define	_TELNET_H
 
-// The configured options and settings for SmallLuxGPU
+#include "smalllux.h"
+#include "rendersession.h"
 
-#define SLG_VERSION_MAJOR "2"
-#define SLG_VERSION_MINOR "0devel6"
+class TelnetServer {
+public:
+	TelnetServer(const unsigned int serverPort, RenderSession *renderSession);
+	~TelnetServer();
 
-#endif	/* _SLG_CFG_H */
+private:
+	enum ServerState {
+		RUN, EDIT
+	};
+
+	static void ServerThreadImpl(TelnetServer *telnetServer);
+
+	const unsigned int port;
+	boost::thread *serverThread;
+
+	RenderSession *session;
+};
+
+#endif	/* _TELNET_H */

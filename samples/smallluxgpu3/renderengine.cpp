@@ -140,7 +140,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mut
 	const bool frocedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
 	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i) {
-		oclIntersectionDevices[i]->DisableImageStorage(frocedDisableImageStorage);
+		oclIntersectionDevices[i]->SetQBVHDisableImageStorage(frocedDisableImageStorage);
 		oclIntersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
 	}
 

@@ -139,11 +139,14 @@ if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 		endif(BUILD_LUXMARK)
 		message(STATUS "Building SLG2 too")
 		add_subdirectory(samples/smallluxgpu2)
+		message(STATUS "Building SLG3 too")
+		add_subdirectory(samples/smallluxgpu3)
 	else(NOT LUXRAYS_DISABLE_OPENCL)
 		if(BUILD_LUXMARK)
 			message(WARNING "LuxMark requires OpenCL support, not building")
 		endif(BUILD_LUXMARK)
 		message(WARNING "SLG2 requires OpenCL support, not building")
+		message(WARNING "SLG3 requires OpenCL support, not building")
 	endif(NOT LUXRAYS_DISABLE_OPENCL)
 
 	add_subdirectory(samples/smallluxgpu)
@@ -157,4 +160,5 @@ endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 # For non win32 we'll have to copy everything to a single dir
 #
 ###########################################################################
+
 INCLUDE(AssembleBinDirs)
