@@ -153,7 +153,7 @@ void RenderingConfig::Init() {
 	// Check if I have to disable image storage
 	const bool frocedDisableImageStorage = (accelType == 2);
 	for (size_t i = 0; i < intersectionGPUDevices.size(); ++i)
-		((OpenCLIntersectionDevice *)intersectionGPUDevices[i])->SetQBVHDisableImageStorage(frocedDisableImageStorage);
+		((OpenCLIntersectionDevice *)intersectionGPUDevices[i])->DisableImageStorage(frocedDisableImageStorage);
 #endif
 
 	// Set the Luxrays SataSet
