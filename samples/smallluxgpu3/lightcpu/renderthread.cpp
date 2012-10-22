@@ -147,40 +147,59 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		// Initialize the light path
 		float lightEmitPdf;
 		Ray nextEventRay;
+		Normal shadeN;
 		Spectrum lightPathFlux = light->Emit(scene,
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
+			&nextEventRay.o, &nextEventRay.d, &shadeN, &lightEmitPdf);
 		if ((lightEmitPdf == 0.f) || lightPathFlux.Black())
 			continue;
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
 		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
-		{
-			// Try to connect the light path vertex with the eye
-			Vector eyeDir(scene->camera->orig - nextEventRay.o);
-			const float distance = eyeDir.Length();
-			eyeDir /= distance;
-
-			const Spectrum radiance = light->GetRadiance(scene, -eyeDir, nextEventRay.o);
-			if (!radiance.Black()) {
-				Ray eyeRay(nextEventRay.o, eyeDir);
-				eyeRay.maxt = distance;
-
-				float scrX, scrY;
-				if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, distance, &scrX, &scrY)) {
-					RayHit eyeRayHit;
-					if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-						// Nothing was hit, the light vertex is visible
-						renderThread->SplatSample(scrX, scrY, radiance);
-					}
-					// TODO: NULL material and alpha channel support
-				}
-			}
-		}
-
 		// Trace the light path
 		int depth = 0;
+		SurfaceMaterial *surfMat = NULL;
 		do {
+			//--------------------------------------------------------------
+			// Try to connect the light path vertex with the eye
+			//--------------------------------------------------------------
+
+			Vector eyeDir(scene->camera->orig - nextEventRay.o);
+			const float cameraDistance = eyeDir.Length();
+			eyeDir /= cameraDistance;
+
+			Spectrum bsdfEval;
+			if (surfMat == NULL) {
+				if (Dot(eyeDir, shadeN) > 0.f)
+					bsdfEval = Spectrum(1.f, 1.f, 1.f);
+				else
+					bsdfEval = Spectrum(0.f);
+			} else
+				bsdfEval = surfMat->Evaluate(-nextEventRay.d, eyeDir, shadeN);
+
+			if (!bsdfEval.Black()) {
+				Ray eyeRay(nextEventRay.o, eyeDir);
+				eyeRay.maxt = cameraDistance;
+
+				float scrX, scrY;
+				if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, cameraDistance, &scrX, &scrY)) {
+					RayHit eyeRayHit;
+					if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+						// Nothing was hit, the light path vertex is visible
+						const float cosToCamera = Dot(shadeN, eyeDir);
+						const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
+
+						const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
+							scene->camera->GetPixelArea());
+						const float cameraPdfA = PdfWtoA(cameraPdfW, cameraDistance, cosToCamera);
+						const float fluxToRadianceFactor = cameraPdfA;
+
+						renderThread->SplatSample(scrX, scrY, lightPathFlux * fluxToRadianceFactor * bsdfEval);
+					}
+				}
+				// TODO: NULL material and alpha channel support
+			}
+
 			RayHit nextEventRayHit;
 			if (scene->dataSet->Intersect(&nextEventRay, &nextEventRayHit)) {
 				// Something was hit
@@ -204,7 +223,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 				// Interpolate face normal
 				Normal N = mesh->InterpolateTriNormal(triIndex, nextEventRayHit.b1, nextEventRayHit.b2);
 
-				const SurfaceMaterial *triSurfMat = (SurfaceMaterial *)triMat;
+				surfMat = (SurfaceMaterial *)triMat;
 				const Point hitPoint = nextEventRay(nextEventRayHit.t);
 
 				Spectrum surfaceColor;
@@ -287,38 +306,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 				}
 
 				// Flip the normal if required
-				const Vector wi = -nextEventRay.d;
-				const float WIdotN = Dot(wi, N);
-				Normal shadeN = (WIdotN > 0.f) ? N : -N;
-
-				// Try to connect the light path vertex with the eye
-				Vector eyeDir(scene->camera->orig - hitPoint);
-				const float cameraDistance = eyeDir.Length();
-				eyeDir /= cameraDistance;
-
-				const Spectrum bsdfEval = triSurfMat->Evaluate(wi, eyeDir, shadeN);
-				if (!bsdfEval.Black()) {
-					Ray eyeRay(hitPoint, eyeDir);
-					eyeRay.maxt = cameraDistance;
-
-					float scrX, scrY;
-					if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, cameraDistance, &scrX, &scrY)) {
-						RayHit eyeRayHit;
-						if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-							// Nothing was hit, the light path vertex is visible
-							const float cosToCamera = Dot(shadeN, eyeDir);
-							const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
-
-							const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-								scene->camera->GetPixelArea());
-							const float cameraPdfA = PdfWtoA(cameraPdfW, cameraDistance, cosToCamera);
-							const float fluxToRadianceFactor = cameraPdfA;
-
-							renderThread->SplatSample(scrX, scrY, lightPathFlux * fluxToRadianceFactor * bsdfEval);
-						}
-					}
-					// TODO: NULL material and alpha channel support
-				}
+				shadeN = (Dot(-nextEventRay.d, N) > 0.f) ? N : -N;
 
 				//--------------------------------------------------------------
 				// Build the next vertex path ray
@@ -326,7 +314,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 
 				float fPdf;
 				Vector wo;
-				const Spectrum f = triSurfMat->Sample(wi, &wo, N, shadeN,
+				const Spectrum f = surfMat->Sample(-nextEventRay.d, &wo, N, shadeN,
 						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 						&fPdf);
 				if ((fPdf <= 0.f) || f.Black())
