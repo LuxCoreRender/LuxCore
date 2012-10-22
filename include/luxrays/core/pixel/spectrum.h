@@ -32,8 +32,16 @@ namespace luxrays {
 class Spectrum {
 public:
 	// Spectrum Public Methods
-	Spectrum(const float _r = 0.f, const float _g = 0.f, const float _b = 0.f)
-	: r(_r), g(_g), b(_b) {
+	Spectrum(const float rr, const float gg, const float bb)
+		: r(rr), g(gg), b(bb) {
+	}
+
+	Spectrum(const float v)
+		: r(v), g(v), b(v) {
+	}
+
+	Spectrum()
+		: r(0.f), g(0.f), b(0.f) {
 	}
 
 	Spectrum operator+(const Spectrum &v) const {

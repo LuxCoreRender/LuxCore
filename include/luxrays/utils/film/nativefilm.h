@@ -39,13 +39,12 @@ namespace luxrays { namespace utils {
 
 class NativeFilm : public Film {
 public:
-	NativeFilm(const unsigned int w, const unsigned int h);
+	NativeFilm(const unsigned int w, const unsigned int h, const bool perScreenNorm);
 	virtual ~NativeFilm();
 
 	void Init(const unsigned int w, const unsigned int h);
 	void Reset();
 	void UpdateScreenBuffer();
-
 
 	const float *GetScreenBuffer() const;
 
@@ -60,7 +59,8 @@ public:
 		enableAlphaChannel = alphaChannel;
 	}
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
-	void EnablePerScreenNormalization(const bool enable) { usePerScreenNormalization = enable; };
+
+	void AddFilm(const NativeFilm &film);
 
 	//--------------------------------------------------------------------------
 	
@@ -68,6 +68,8 @@ public:
 	unsigned int RunConvergenceTest();
 	
 	//--------------------------------------------------------------------------
+
+	void AddSampleCount(const unsigned int count) { ++statsTotalSampleCount; }
 
 	void AddRadiance(const unsigned int x, const unsigned int y, const Spectrum &radiance, const float weight) {
 		const unsigned int offset = x + y * width;
@@ -85,8 +87,11 @@ public:
 	}
 
 	void SplatPreview(const SampleBufferElem *sampleElem);
-	void SplatFiltered(const SampleBufferElem *sampleElem);
-	void SplatFilteredAlpha(const float x, const float y, const float a);
+	void SplatFiltered(const SampleBufferElem *sampleElem) {
+		SplatFiltered(sampleElem->screenX, sampleElem->screenY, sampleElem->radiance);
+	}
+	void SplatFiltered(const float screenX, const float screenY, const Spectrum &radiance);
+	void SplatFilteredAlpha(const float screenX, const float screenY, const float a);
 
 	static size_t SampleBufferSize;
 
@@ -138,7 +143,7 @@ protected:
 	
 	ConvergenceTest convTest;
 
-	bool enableAlphaChannel, usePerScreenNormalization;
+	bool enableAlphaChannel;
 };
 
 } }

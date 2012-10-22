@@ -43,7 +43,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = new NativeFilm(w, h);
+	film = new NativeFilm(w, h, false);
 
 	const int filterType = cfg.GetInt("film.filter.type", 1);
 	if (filterType == 0)

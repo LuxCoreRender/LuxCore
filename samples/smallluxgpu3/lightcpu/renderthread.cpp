@@ -52,6 +52,7 @@ LightCPURenderThread::LightCPURenderThread(const unsigned int index, const unsig
 	threadIndex = index;
 	seed = seedBase;
 	renderEngine = re;
+	threadFilm = NULL;
 }
 
 LightCPURenderThread::~LightCPURenderThread() {
@@ -59,6 +60,8 @@ LightCPURenderThread::~LightCPURenderThread() {
 		EndEdit(EditActionList());
 	if (started)
 		Stop();
+
+	delete threadFilm;
 }
 
 void LightCPURenderThread::Start() {
@@ -79,6 +82,10 @@ void LightCPURenderThread::Stop() {
 }
 
 void LightCPURenderThread::StartRenderThread() {
+	delete threadFilm;
+	threadFilm = new NativeFilm(renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), true);
+	threadFilm->Init(renderEngine->film->GetWidth(), renderEngine->film->GetHeight());
+
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(LightCPURenderThread::RenderThreadImpl, this));
 }
@@ -100,23 +107,6 @@ void LightCPURenderThread::EndEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
-void LightCPURenderThread::SplatSample(const float scrX, const float scrY, const Spectrum &radiance) {
-	assert (!radiance.IsNaN() && !radiance.IsInf());
-
-	sampleBuffer->SplatSample(scrX, scrY, radiance);
-
-	if (sampleBuffer->IsFull()) {
-		NativeFilm *film = renderEngine->film;
-
-		// Film::SplatSampleBuffer() is not thread safe
-		boost::unique_lock<boost::mutex> lock(*(renderEngine->filmMutex));
-		film->SplatSampleBuffer(false, sampleBuffer);
-
-		// Get a new empty buffer
-		sampleBuffer = film->GetFreeSampleBuffer();
-	}
-}
-
 void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) {
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 
@@ -127,19 +117,14 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 	LightCPURenderEngine *renderEngine = renderThread->renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
-	NativeFilm *film = renderEngine->film;
-
-	{
-		// Film::GetFreeSampleBuffer() is not thread safe
-		boost::unique_lock<boost::mutex> lock(*(renderEngine->filmMutex));
-		renderThread->sampleBuffer = film->GetFreeSampleBuffer();
-	}
 
 	//--------------------------------------------------------------------------
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
 	while (!boost::this_thread::interruption_requested()) {
+		renderThread->threadFilm->AddSampleCount(1);
+
 		// Select one light source
 		float lightPickPdf;
 		const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
@@ -194,7 +179,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 						const float cameraPdfA = PdfWtoA(cameraPdfW, cameraDistance, cosToCamera);
 						const float fluxToRadianceFactor = cameraPdfA;
 
-						renderThread->SplatSample(scrX, scrY, lightPathFlux * fluxToRadianceFactor * bsdfEval);
+						renderThread->threadFilm->SplatFiltered(scrX, scrY, lightPathFlux * fluxToRadianceFactor * bsdfEval);
 					}
 				}
 				// TODO: NULL material and alpha channel support
@@ -343,10 +328,4 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 	}
 
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
-
-	if (renderThread->sampleBuffer)	{
-		// Film::GetFreeSampleBuffer() is not thread safe
-		boost::unique_lock<boost::mutex> lock(*(renderEngine->filmMutex));
-		film->FreeSampleBuffer(renderThread->sampleBuffer);
-	}
 }

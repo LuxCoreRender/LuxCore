@@ -155,6 +155,8 @@ static void PrintHelpAndSettings() {
 			PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 			break;
 		}
+		case LIGHTCPU:
+			break;
 		default:
 			assert (false);
 	}

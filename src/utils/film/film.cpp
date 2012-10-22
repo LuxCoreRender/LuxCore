@@ -24,9 +24,10 @@
 using namespace luxrays;
 using namespace luxrays::utils;
 
-Film::Film(const unsigned int w, const unsigned int h) {
+Film::Film(const unsigned int w, const unsigned int h, const bool perScreenNorm) {
 	filterType = FILTER_GAUSSIAN;
 	toneMapParams = new LinearToneMapParams();
+	usePerScreenNormalization = perScreenNorm;
 
 	InitGammaTable();
 	Init(w, h);
