@@ -92,7 +92,7 @@ void NativeFilm::UpdateScreenBuffer() {
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
-			const float perScreenNormalizationFactor = tm.scale * pixelCount / (float)statsTotalSampleCount;
+			const float perScreenNormalizationFactor = tm.scale / (float)statsTotalSampleCount;
 
 			for (unsigned int i = 0; i < pixelCount; ++i) {
 				const float weight = sp[i].weight;
@@ -128,7 +128,7 @@ void NativeFilm::UpdateScreenBuffer() {
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
-			const float perScreenNormalizationFactor = pixelCount / (float)statsTotalSampleCount;
+			const float perScreenNormalizationFactor = 1.f / (float)statsTotalSampleCount;
 
 			// Use the frame buffer as temporary storage and calculate the average luminance
 			float Ywa = 0.f;

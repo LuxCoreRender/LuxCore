@@ -154,8 +154,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 			continue;
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
 		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
-		
-		int depth = 0;
+
 		{
 			// Try to connect the light path vertex with the eye
 			Vector eyeDir(scene->camera->orig - nextEventRay.o);
@@ -180,6 +179,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		}
 
 		// Trace the light path
+		int depth = 0;
 		do {
 			RayHit nextEventRayHit;
 			if (scene->dataSet->Intersect(&nextEventRay, &nextEventRayHit)) {
