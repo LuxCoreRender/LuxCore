@@ -626,7 +626,7 @@ Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
 
 Spectrum TriangleLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *orig, Vector *dir,
+		Point *orig, Vector *dir, Normal *normal,
 		float *emissionPdfW, float *directPdfA) const {
 	const ExtMesh *mesh = scene->objects[meshIndex];
 
@@ -634,8 +634,9 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	float b0, b1, b2;
 	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
 
-	// Build the local frame		
-	Frame frame(mesh->InterpolateTriNormal(triIndex, b1, b2));
+	// Build the local frame
+	*normal = mesh->InterpolateTriNormal(triIndex, b1, b2);
+	Frame frame(*normal);
 
 	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
 	*emissionPdfW *= invArea;
