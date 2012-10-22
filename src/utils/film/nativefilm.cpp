@@ -26,8 +26,8 @@ using namespace luxrays::utils;
 
 size_t NativeFilm::SampleBufferSize = 4096;
 
-NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) :
-	Film(w, h), convTest(w, h) {
+NativeFilm::NativeFilm(const unsigned int w, const unsigned int h, const bool perScreenNorm) :
+	Film(w, h, perScreenNorm), convTest(w, h) {
 	sampleFrameBuffer = NULL;
 	alphaFrameBuffer = NULL;
 	frameBuffer = NULL;
@@ -36,7 +36,6 @@ NativeFilm::NativeFilm(const unsigned int w, const unsigned int h) :
 	freeSampleBuffers.resize(0);
 
 	enableAlphaChannel = false;
-	usePerScreenNormalization = false;
 
 	// Initialize Filter LUTs
 	filter = new GaussianFilter(1.5f, 1.5f, 2.f);
@@ -83,6 +82,33 @@ void NativeFilm::Reset() {
 	Film::Reset();
 
 	// convTest has to be reseted explicitely
+}
+
+void NativeFilm::AddFilm(const NativeFilm &film) {
+	// TODO: add alpha buffer support
+	SamplePixel *spDst = sampleFrameBuffer->GetPixels();
+	SamplePixel *spSrc = film.sampleFrameBuffer->GetPixels();
+
+	if (usePerScreenNormalization) {
+		if (film.usePerScreenNormalization) {
+			// TODO
+		} else {
+			// TODO
+		}
+	} else {
+		if (film.usePerScreenNormalization) {
+			statsTotalSampleCount += film.statsTotalSampleCount;
+			for (unsigned int i = 0; i < pixelCount; ++i) {
+				spDst[i].radiance += spSrc[i].radiance;
+				spDst[i].weight += film.statsTotalSampleCount;
+			}
+		} else {
+			for (unsigned int i = 0; i < pixelCount; ++i) {
+				spDst[i].radiance += spSrc[i].radiance;
+				spDst[i].weight += spSrc[i].weight;
+			}
+		}
+	}
 }
 
 void NativeFilm::UpdateScreenBuffer() {
@@ -233,11 +259,11 @@ void NativeFilm::SplatPreview(const SampleBufferElem *sampleElem) {
 			SplatRadiance(sampleElem->radiance, x, y, 0.01f);
 }
 
-void NativeFilm::SplatFiltered(const SampleBufferElem *sampleElem) {
+void NativeFilm::SplatFiltered(const float screenX, const float screenY, const Spectrum &radiance) {
 	// Compute sample's raster extent
-	const float dImageX = sampleElem->screenX - 0.5f;
-	const float dImageY = sampleElem->screenY - 0.5f;
-	const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleElem->screenX), dImageY - floorf(sampleElem->screenY));
+	const float dImageX = screenX - 0.5f;
+	const float dImageY = screenY - 0.5f;
+	const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
 	const float *lut = filterLUT->GetLUT();
 
 	const int x0 = Ceil2Int(dImageX - filter->xWidth);
@@ -258,7 +284,7 @@ void NativeFilm::SplatFiltered(const SampleBufferElem *sampleElem) {
 			if ((ix < 0) || (ix >= int(width)))
 				continue;
 
-			SplatRadiance(sampleElem->radiance, ix, iy, filterWt);
+			SplatRadiance(radiance, ix, iy, filterWt);
 		}
 	}
 }

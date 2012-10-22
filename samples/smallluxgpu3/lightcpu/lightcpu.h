@@ -63,6 +63,7 @@ private:
 	SampleBuffer *sampleBuffer;
 
 	boost::thread *renderThread;
+	NativeFilm *threadFilm;
 
 	bool started, editMode, reportedPermissionError;
 };

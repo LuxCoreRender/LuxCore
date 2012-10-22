@@ -25,7 +25,7 @@ using namespace luxrays;
 using namespace luxrays::utils;
 
 PixelDeviceFilm::PixelDeviceFilm(Context *context, const unsigned int w,
-			const unsigned int h, DeviceDescription *deviceDesc) : Film(w, h) {
+			const unsigned int h, DeviceDescription *deviceDesc) : Film(w, h, false) {
 	ctx = context;
 
 	std::vector<DeviceDescription *> descs;

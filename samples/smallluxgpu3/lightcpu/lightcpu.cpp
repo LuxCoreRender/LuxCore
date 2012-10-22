@@ -63,8 +63,6 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, NativeFilm *flm, 
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 
-	film->EnablePerScreenNormalization(true);
-
 	// Create LuxRays context
 	const int oclPlatformIndex = cfg.GetInt("opencl.platform.index", -1);
 	ctx = new Context(DebugHandler, oclPlatformIndex);
@@ -160,9 +158,6 @@ void LightCPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
 		ctx->UpdateDataSet();
 	}
 
-
-	film->Reset();
-
 	elapsedTime = 0.0f;
 	startTime = WallClockTime();
 	film->ResetConvergenceTest();
@@ -183,6 +178,15 @@ void LightCPURenderEngine::UpdateFilm() {
 void LightCPURenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
+	elapsedTime = WallClockTime() - startTime;
+	film->Reset();
+
+	// Merge the all thread films
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		film->AddFilm(*(renderThreads[i]->threadFilm));
+	samplesCount = film->GetTotalSampleCount();
+
+	// Convergence test
 	const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
 	if (haltthreshold >= 0.f) {
 		// Check if it is time to run the convergence test again

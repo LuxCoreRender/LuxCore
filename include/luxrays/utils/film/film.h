@@ -52,7 +52,7 @@ namespace luxrays { namespace utils {
 
 class Film {
 public:
-	Film(const unsigned int w, const unsigned int h);
+	Film(const unsigned int w, const unsigned int h, const bool perScreenNorm);
 	virtual ~Film();
 
 	virtual void Init(const unsigned int w, const unsigned int h);
@@ -90,8 +90,10 @@ public:
 	virtual SampleBuffer *GetFreeSampleBuffer() = 0;
 	virtual void FreeSampleBuffer(SampleBuffer *sampleBuffer) = 0;
 	virtual void SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffer) {
-		// Update statistics
-		statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
+		if (!usePerScreenNormalization) {
+			// Update statistics
+			statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
+		}
 	}
 
 	unsigned int GetWidth() const { return width; }
@@ -148,6 +150,8 @@ protected:
 
 	FilterType filterType;
 	ToneMapParams *toneMapParams;
+	
+	bool usePerScreenNormalization;
 };
 
 } }
