@@ -360,7 +360,7 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const Point &p, const
 		Point samplePoint;
 		float b0, b1, b2;
 		portals->Sample(portalIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
-		const Normal sampleN = portals->GetNormal(portalIndex, 0);
+		const Normal sampleN = portals->GetGeometryNormal(portalIndex);
 
 		// Check if the portal is visible
 		Vector wi = samplePoint - p;
@@ -397,7 +397,7 @@ Spectrum InfiniteLightPortal::Sample_L(const Scene *scene, const float u0,
 	Point samplePoint;
 	float b0, b1, b2;
 	portals->Sample(portalIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = portals->GetNormal(portalIndex, 0);
+	const Normal &sampleN = portals->GetGeometryNormal(portalIndex);
 
 	Vector wi = UniformSampleSphere(u2, u3);
 	float RdotN = Dot(wi, sampleN);
@@ -550,7 +550,7 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Norma
 	Point samplePoint;
 	float b0, b1, b2;
 	mesh->Sample(triIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = mesh->GetNormal(triIndex, 0);
+	const Normal &sampleN = mesh->GetGeometryNormal(triIndex);
 
 	Vector wi = samplePoint - p;
 	const float distanceSquared = wi.LengthSquared();
@@ -588,7 +588,7 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float
 	mesh->Sample(triIndex, u0, u1, &orig, &b0, &b1, &b2);
 
 	// Ray direction
-	const Normal &sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
+	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 	Vector dir = UniformSampleSphere(u2, u3);
 	float RdotN = Dot(dir, sampleN);
 	if (RdotN < 0.f) {
@@ -608,7 +608,7 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float
 
 Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
 	const ExtMesh *mesh = scene->objects[meshIndex];
-	const Normal &sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
+	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 
 	const float RdotN = Dot(-dir, sampleN);
 	if (RdotN < 0.f)

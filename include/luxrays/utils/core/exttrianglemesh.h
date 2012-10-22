@@ -40,8 +40,9 @@ public:
 	virtual bool HasColors() const = 0;
 	virtual bool HasUVs() const = 0;
 
-	virtual Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const = 0;
-	virtual Normal GetNormal(const unsigned int vertIndex) const = 0;
+	virtual Normal GetGeometryNormal(const unsigned int triIndex) const = 0;
+	virtual Normal GetShadeNormal(const unsigned int triIndex, const unsigned int vertIndex) const = 0;
+	virtual Normal GetShadeNormal(const unsigned int vertIndex) const = 0;
 	virtual Spectrum GetColor(const unsigned int vertIndex) const = 0;
 	virtual UV GetUV(const unsigned int vertIndex) const = 0;
 
@@ -107,8 +108,11 @@ public:
 
 	Point GetVertex(const unsigned int vertIndex) const { return vertices[vertIndex]; }
 	float GetTriangleArea(const unsigned int triIndex) const { return tris[triIndex].Area(vertices); }
-	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return normals[tris[triIndex].v[vertIndex]]; }
-	Normal GetNormal(const unsigned int vertIndex) const { return normals[vertIndex]; }
+	Normal GetGeometryNormal(const unsigned int triIndex) const {
+		return tris[triIndex].GetGeometryNormal(vertices);
+	}
+	Normal GetShadeNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return normals[tris[triIndex].v[vertIndex]]; }
+	Normal GetShadeNormal(const unsigned int vertIndex) const { return normals[vertIndex]; }
 	Spectrum GetColor(const unsigned int vertIndex) const { return colors[vertIndex]; }
 	UV GetUV(const unsigned int vertIndex) const { return uvs[vertIndex]; }
 
@@ -194,11 +198,14 @@ public:
 	bool HasColors() const { return mesh->HasColors(); }
 	bool HasUVs() const { return mesh->HasUVs(); }
 
-	Normal GetNormal(const unsigned index) const {
-		return Normalize(trans * mesh->GetNormal(index));
+	Normal GetGeometryNormal(const unsigned int triIndex) const {
+		return Normalize(trans * mesh->GetGeometryNormal(triIndex));
 	}
-	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const {
-		return Normalize(trans * mesh->GetNormal(triIndex, vertIndex));
+	Normal GetShadeNormal(const unsigned index) const {
+		return Normalize(trans * mesh->GetShadeNormal(index));
+	}
+	Normal GetShadeNormal(const unsigned int triIndex, const unsigned int vertIndex) const {
+		return Normalize(trans * mesh->GetShadeNormal(triIndex, vertIndex));
 	}
 	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
 	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }

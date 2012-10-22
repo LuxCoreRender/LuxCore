@@ -97,7 +97,15 @@ public:
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
 
-		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
+		return Area(p0, p1, p2);
+	}
+
+	Normal GetGeometryNormal(const Point *verts) const {
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+
+		return Normal(Normalize(Cross(p1 - p0, p2 - p0)));
 	}
 
 	void Sample(const Point *verts, const float u0,

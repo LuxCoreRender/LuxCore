@@ -68,7 +68,7 @@ public:
 	MaterialType GetType() const { return AREALIGHT; }
 
 	Spectrum Le(const ExtMesh *mesh, const unsigned triIndex, const Vector &wo) const {
-		Normal sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
+		Normal sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 
 		if (Dot(sampleN, wo) <= 0.f)
 			return Spectrum();
