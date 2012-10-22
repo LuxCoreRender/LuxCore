@@ -141,6 +141,7 @@ set(LuxRays_SRC_UTILS_CONVTEST
 SOURCE_GROUP("Source Files\\Utils\\CONVTEST" FILES ${LuxRays_SRC_UTILS_CONVTEST})
 
 set(LuxRays_SRC_UTILS_SDL
+	${LuxRays_SOURCE_DIR}/src/utils/sdl/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/light.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/scene.cpp
@@ -173,7 +174,7 @@ set(LuxRays_SRCS
 	${LuxRays_SRCS_PDEVICES}
 	${LuxRays_SRC_UTILS_CORE}
 	${LuxRays_SRC_UTILS_FILM}
-        ${LuxRays_SRC_UTILS_CONVTEST}
+	${LuxRays_SRC_UTILS_CONVTEST}
 	${LuxRays_SRC_UTILS_OCL}
 	${LuxRays_SRC_UTILS_SDL}
 	${LuxRays_SRC_UTILS_PLYMESH}

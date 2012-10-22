@@ -223,7 +223,7 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 				//--------------------------------------------------------------
 
 				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					normals.push_back(mesh->GetNormal(j));
+					normals.push_back(mesh->GetGeometryNormal(j));
 
 				//----------------------------------------------------------------------
 				// Translate vertex uvs
@@ -340,7 +340,7 @@ void PathGPU2RenderThread::InitRenderGeometry() {
 			ExtMesh *mesh = scene->objects[i];
 
 			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				normals[nIndex++] = mesh->GetNormal(j);
+				normals[nIndex++] = mesh->GetGeometryNormal(j);
 		}
 
 		cerr << "[PathGPU2RenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * verticesCount / 1024) << "Kbytes" << endl;
@@ -733,7 +733,7 @@ void PathGPU2RenderThread::InitRender() {
 				tals[index].v1 = mesh->GetVertex(tri->v[1]);
 				tals[index].v2 = mesh->GetVertex(tri->v[2]);
 
-				tals[index].normal = mesh->GetNormal(tri->v[0]);
+				tals[index].normal = mesh->GetGeometryNormal(tri->v[0]);
 
 				tals[index].area = tl->GetArea();
 

@@ -43,6 +43,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/pixel/samplebuffer.h"
 #include "luxrays/utils/core/randomgen.h"
+#include "luxrays/utils/sdl/bsdf.h"
 
 //------------------------------------------------------------------------------
 // LightCPURenderThread
@@ -132,10 +133,10 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		// Initialize the light path
 		float lightEmitPdf;
 		Ray nextEventRay;
-		Normal shadeN;
+		Normal lightN;
 		Spectrum lightPathFlux = light->Emit(scene,
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-			&nextEventRay.o, &nextEventRay.d, &shadeN, &lightEmitPdf);
+			&nextEventRay.o, &nextEventRay.d, &lightN, &lightEmitPdf);
 		if ((lightEmitPdf == 0.f) || lightPathFlux.Black())
 			continue;
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
@@ -143,7 +144,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 
 		// Trace the light path
 		int depth = 0;
-		SurfaceMaterial *surfMat = NULL;
+		BSDF bsdf;
 		do {
 			//--------------------------------------------------------------
 			// Try to connect the light path vertex with the eye
@@ -153,14 +154,19 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 			const float cameraDistance = eyeDir.Length();
 			eyeDir /= cameraDistance;
 
+			// Check if the current vertex is the first one
 			Spectrum bsdfEval;
-			if (surfMat == NULL) {
-				if (Dot(eyeDir, shadeN) > 0.f)
+			Normal currentVertexN;
+			if (bsdf.IsEmpty()) {
+				currentVertexN = lightN;
+				if (Dot(eyeDir, lightN) > 0.f)
 					bsdfEval = Spectrum(1.f, 1.f, 1.f);
 				else
 					bsdfEval = Spectrum(0.f);
-			} else
-				bsdfEval = surfMat->Evaluate(-nextEventRay.d, eyeDir, shadeN);
+			} else {
+				currentVertexN = bsdf.shadeN;
+				bsdfEval = bsdf.Evaluate(-nextEventRay.d, eyeDir);
+			}
 
 			if (!bsdfEval.Black()) {
 				Ray eyeRay(nextEventRay.o, eyeDir);
@@ -171,7 +177,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 					RayHit eyeRayHit;
 					if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
 						// Nothing was hit, the light path vertex is visible
-						const float cosToCamera = Dot(shadeN, eyeDir);
+						const float cosToCamera = Dot(currentVertexN, eyeDir);
 						const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
 
 						const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -188,124 +194,36 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 			RayHit nextEventRayHit;
 			if (scene->dataSet->Intersect(&nextEventRay, &nextEventRayHit)) {
 				// Something was hit
-
-				const unsigned int currentTriangleIndex = nextEventRayHit.index;
-				const unsigned int currentMeshIndex = scene->dataSet->GetMeshID(currentTriangleIndex);
-
-				// Get the triangle
-				const ExtMesh *mesh = scene->objects[currentMeshIndex];
-				const unsigned int triIndex = scene->dataSet->GetMeshTriangleID(currentTriangleIndex);
-
-				// Get the material
-				const Material *triMat = scene->objectMaterials[currentMeshIndex];
+				bsdf.Init(true, *scene, nextEventRay, nextEventRayHit, rndGen->floatValue());
 
 				// Check if it is a light source
-				if (triMat->IsLightSource()) {
+				if (bsdf.IsLightSource()) {
 					// SLG light sources are like black bodies
 					break;
 				}
 
-				// Interpolate face normal
-				Normal N = mesh->InterpolateTriNormal(triIndex, nextEventRayHit.b1, nextEventRayHit.b2);
-
-				surfMat = (SurfaceMaterial *)triMat;
-				const Point hitPoint = nextEventRay(nextEventRayHit.t);
-
-				Spectrum surfaceColor;
-				if (mesh->HasColors())
-					surfaceColor = mesh->InterpolateTriColor(triIndex, nextEventRayHit.b1, nextEventRayHit.b2);
-				else
-					surfaceColor = Spectrum(1.f, 1.f, 1.f);
-
-				// Check if I have to apply texture mapping or normal mapping
-				TexMapInstance *tm = scene->objectTexMaps[currentMeshIndex];
-				BumpMapInstance *bm = scene->objectBumpMaps[currentMeshIndex];
-				NormalMapInstance *nm = scene->objectNormalMaps[currentMeshIndex];
-				if (tm || bm || nm) {
-					// Interpolate UV coordinates if required
-					const UV triUV = mesh->InterpolateTriUV(triIndex, nextEventRayHit.b1, nextEventRayHit.b2);
-
-					// Check if there is an assigned texture map
-					if (tm) {
-						const TextureMap *map = tm->GetTexMap();
-
-						// Apply texture mapping
-						surfaceColor *= map->GetColor(triUV);
-
-						// Check if the texture map has an alpha channel
-						if (map->HasAlpha()) {
-							const float alpha = map->GetAlpha(triUV);
-
-							if ((alpha == 0.0f) || ((alpha < 1.f) && (rndGen->floatValue() > alpha))) {
-								// It is a pass-through material, continue to trace the ray
-								nextEventRay.mint = nextEventRayHit.t + MachineEpsilon::E(nextEventRayHit.t);
-								nextEventRay.maxt = std::numeric_limits<float>::infinity();
-								++depth;
-								continue;
-							}
-						}
-					}
-
-					// Check if there is an assigned bump/normal map
-					if (bm || nm) {
-						if (nm) {
-							// Apply normal mapping
-							const Spectrum color = nm->GetTexMap()->GetColor(triUV);
-
-							const float x = 2.f * (color.r - 0.5f);
-							const float y = 2.f * (color.g - 0.5f);
-							const float z = 2.f * (color.b - 0.5f);
-
-							Vector v1, v2;
-							CoordinateSystem(Vector(N), &v1, &v2);
-							N = Normalize(Normal(
-									v1.x * x + v2.x * y + N.x * z,
-									v1.y * x + v2.y * y + N.y * z,
-									v1.z * x + v2.z * y + N.z * z));
-						}
-
-						if (bm) {
-							// Apply bump mapping
-							const TextureMap *map = bm->GetTexMap();
-							const UV &dudv = map->GetDuDv();
-
-							const float b0 = map->GetColor(triUV).Filter();
-
-							const UV uvdu(triUV.u + dudv.u, triUV.v);
-							const float bu = map->GetColor(uvdu).Filter();
-
-							const UV uvdv(triUV.u, triUV.v + dudv.v);
-							const float bv = map->GetColor(uvdv).Filter();
-
-							const float scale = bm->GetScale();
-							const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
-
-							Vector v1, v2;
-							CoordinateSystem(Vector(N), &v1, &v2);
-							N = Normalize(Normal(
-									v1.x * bump.x + v2.x * bump.y + N.x * bump.z,
-									v1.y * bump.x + v2.y * bump.y + N.y * bump.z,
-									v1.z * bump.x + v2.z * bump.y + N.z * bump.z));
-						}
-					}
+				// Check if it is pass-through point
+				if (bsdf.IsPassThrough()) {
+					// It is a pass-through material, continue to trace the ray
+					nextEventRay.mint = nextEventRayHit.t + MachineEpsilon::E(nextEventRayHit.t);
+					nextEventRay.maxt = std::numeric_limits<float>::infinity();
+					++depth;
+					continue;
 				}
 
-				// Flip the normal if required
-				shadeN = (Dot(-nextEventRay.d, N) > 0.f) ? N : -N;
-
-				//--------------------------------------------------------------
+				///--------------------------------------------------------------
 				// Build the next vertex path ray
 				//--------------------------------------------------------------
 
-				float fPdf;
+				float bsdfPdf;
 				Vector wo;
-				const Spectrum f = surfMat->Sample(-nextEventRay.d, &wo, N, shadeN,
+				const Spectrum bsdfSample = bsdf.Sample(-nextEventRay.d, &wo,
 						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-						&fPdf);
-				if ((fPdf <= 0.f) || f.Black())
+						&bsdfPdf);
+				if ((bsdfPdf <= 0.f) || bsdfSample.Black())
 					break;
 
-				lightPathFlux *= Dot(shadeN, wo) * f / fPdf;
+				lightPathFlux *= Dot(bsdf.shadeN, wo) * bsdfSample / bsdfPdf;
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 				/*if (depth > renderEngine->rrDepth) {
@@ -317,7 +235,7 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 						break;
 				}*/
 
-				nextEventRay = Ray(hitPoint, wo);
+				nextEventRay = Ray(bsdf.hitPoint, wo);
 
 				++depth;
 			} else {
