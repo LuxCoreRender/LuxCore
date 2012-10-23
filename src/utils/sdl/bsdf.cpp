@@ -19,13 +19,16 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include "luxrays/core/geometry/frame.h"
+
+
 #include "luxrays/utils/sdl/bsdf.h"
 
 namespace luxrays { namespace sdl {
 
-void BSDF::Init(const bool l2e, const Scene &scene, const Ray &ray,
+void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float u0) {
-	fromLightToEye = l2e;
+	fromLight = fromL;
 	isPassThrough = false;
 	isLightSource = false;
 
@@ -129,8 +132,45 @@ void BSDF::Init(const bool l2e, const Scene &scene, const Ray &ray,
 		}
 	}
 
-	// Flip the normal if required
-	shadeN = (Dot(-ray.d, shadeN) > 0.f) ? shadeN : -shadeN;
+	frame.SetFromZ(shadeN);
+}
+
+Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
+		BSDFEvent *event) const{
+	const float dotLightDirNG = Dot(lightDir, geometryN);
+	const float dotEyeDirNG = Dot(eyeDir, geometryN);
+
+	const float sideTest = (fabsf(dotLightDirNG) < DEFAULT_EPSILON_STATIC) ? 0.f : (dotEyeDirNG * dotLightDirNG);
+	if (sideTest > 0.f)
+		*event = REFLECT;
+	else if (sideTest < 0.f)
+		*event = TRANSMIT;
+	else {
+		*event = NONE;
+		return Spectrum(0.f);
+	}
+
+	Vector localLightDir = frame.ToLocal(lightDir);
+	Vector localEyeDir = frame.ToLocal(eyeDir);
+	Spectrum result = surfMat->Evaluate(localLightDir, localEyeDir, event);
+
+	const float dotLightDirNS = Dot(lightDir, shadeN);
+	return fromLight ? (result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG))) : result;
+}
+
+Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, BSDFEvent *event) const {
+	Vector localFixedDir = frame.ToLocal(fixedDir);
+	Vector localSampledDir;
+	Spectrum result = surfMat->Sample(localFixedDir, &localSampledDir, u0, u1, u2, pdf, event);
+	*sampledDir = frame.ToWorld(localSampledDir);
+
+	/*if (fixedFromLight && !result.Black()) {
+		// Adjoint BSDF
+		return result * AbsDot(*sampledDir, shadeN) / AbsDot(*sampledDir, geometryN);
+	} else*/
+		return result;
 }
 
 } }

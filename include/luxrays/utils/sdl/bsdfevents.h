@@ -19,62 +19,24 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-// The code of this class is based on Tomas Davidovic's SmallVCM
-// (http://www.davidovic.cz and http://www.smallvcm.com)
+#ifndef _LUXRAYS_SDL_BSDFEVENTS_H
+#define	_LUXRAYS_SDL_BSDFEVENTS_H
 
-#ifndef _LUXRAYS_FRAME_H
-#define	_LUXRAYS_FRAME_H
+namespace luxrays { namespace sdl {
 
-#include "luxrays/core/geometry/vector.h"
-
-namespace luxrays {
-
-class Frame {
-public:
-	Frame() {
-		X = Vector(1.f, 0.f, 0.f);
-		Y = Vector(0.f, 1.f, 0.f);
-		Z = Vector(0.f, 0.f, 1.f);
-	};
-
-	Frame(const Vector &x, const Vector &y, const Vector &z) : X(x), Y(y), Z(z) {
-	}
-
-	Frame(const Vector &z) {
-		SetFromZ(z);
-	}
-
-	Frame(const Normal &z) {
-		SetFromZ(Vector(z));
-	}
-
-	void SetFromZ(const Normal &z) {
-		SetFromZ(Vector(z)); 
-	}
-
-	void SetFromZ(const Vector &z) {
-		Vector tmpZ = Z = Normalize(z);
-		Vector tmpX = (std::abs(tmpZ.x) > 0.99f) ? Vector(0, 1, 0) : Vector(1, 0, 0);
-		Y = Normalize(Cross(tmpZ, tmpX));
-		X = Cross(Y, tmpZ);
-	}
-
-	Vector ToWorld(const Vector &a) const {
-		return X * a.x + Y * a.y + Z * a.z;
-	}
-
-	Vector ToLocal(const Vector &a) const {
-		return Vector(Dot(a, X), Dot(a, Y), Dot(a, Z));
-	}
-
-	const Vector &Binormal() const { return X; }
-	const Vector &Tangent() const { return Y; }
-	const Vector &Normal() const { return Z; }
-
-	Vector X, Y, Z;
+enum BSDFEventType {
+	NONE     = 0,
+	DIFFUSE  = 1,
+	GLOSSY   = 2,
+	REFLECT  = 4,
+	TRANSMIT = 8,
+	SPECULAR = (REFLECT | TRANSMIT),
+	NON_SPECULAR = (DIFFUSE  | GLOSSY),
+	ALL          = (SPECULAR | NON_SPECULAR)
 };
 
-}
+typedef int BSDFEvent;
 
-#endif	/* FRAME_H */
+} }
 
+#endif	/* _LUXRAYS_SDL_BSDFEVENTS_H */
