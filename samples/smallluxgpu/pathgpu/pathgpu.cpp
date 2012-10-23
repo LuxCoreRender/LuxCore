@@ -394,7 +394,7 @@ void PathGPURenderThread::InitRender() {
 				tals[index].v1 = mesh->GetVertex(tri->v[1]);
 				tals[index].v2 = mesh->GetVertex(tri->v[2]);
 
-				tals[index].normal = mesh->GetGeometryNormal(tri->v[0]);
+				tals[index].normal = mesh->GetGeometryNormal(tl->GetTriIndex());
 
 				tals[index].area = tl->GetArea();
 
@@ -551,7 +551,7 @@ void PathGPURenderThread::InitRender() {
 		ExtMesh *mesh = scene->objects[i];
 
 		for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-			normals[nIndex++] = mesh->GetGeometryNormal(j);
+			normals[nIndex++] = mesh->GetShadeNormal(j);
 	}
 
 	cerr << "[PathGPURenderThread::" << threadIndex << "] Normals buffer size: " << (sizeof(Normal) * normalsCount / 1024) << "Kbytes" << endl;

@@ -178,7 +178,7 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					normals.push_back(mesh->GetGeometryNormal(j));
+					normals.push_back(mesh->GetShadeNormal(j));
 
 				//----------------------------------------------------------------------
 				// Translate vertex uvs
@@ -223,7 +223,7 @@ void CompiledScene::CompileGeometry() {
 			ExtMesh *mesh = scene->objects[i];
 
 			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				normals.push_back(mesh->GetGeometryNormal(j));
+				normals.push_back(mesh->GetShadeNormal(j));
 		}
 
 		//----------------------------------------------------------------------
@@ -526,7 +526,7 @@ void CompiledScene::CompileAreaLights() {
 				cpl->v1 = mesh->GetVertex(tri->v[1]);
 				cpl->v2 = mesh->GetVertex(tri->v[2]);
 
-				cpl->normal = mesh->GetGeometryNormal(tri->v[0]);
+				cpl->normal = mesh->GetGeometryNormal(tl->GetTriIndex());
 
 				cpl->area = tl->GetArea();
 

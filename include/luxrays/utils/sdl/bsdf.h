@@ -22,23 +22,14 @@
 #ifndef _LUXRAYS_SDL_BSDF_H
 #define	_LUXRAYS_SDL_BSDF_H
 
+#include "luxrays/core/geometry/frame.h"
 #include "luxrays/utils/sdl/scene.h"
+#include "luxrays/utils/sdl/bsdfevents.h"
 
 namespace luxrays { namespace sdl {
 
 class BSDF {
 public:
-	enum Events {
-		NONE     = 0,
-		DIFFUSE  = 1,
-        GLOSSY   = 2,
-        REFLECT  = 4,
-        REFRACT  = 8,
-        SPECULAR = (REFLECT | REFRACT),
-        NON_SPECULAR = (DIFFUSE  | GLOSSY),
-        ALL          = (SPECULAR | NON_SPECULAR)
-    };
-
 	// An empty BSDF
 	BSDF() : material(NULL) { };
 
@@ -48,33 +39,30 @@ public:
 		Init(l2e, scene, ray, rayHit, u0);
 	}
 
-	void Init(const bool fromLightToEye, const Scene &scene, const Ray &ray,
+	void Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float u0);
 
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsPassThrough() const { return isPassThrough; }
 	bool IsLightSource() const { return isLightSource; }
-	
-	Spectrum Evaluate(const Vector &wi, const Vector &wo) {
-		return surfMat->Evaluate(wi, wo, shadeN);
-	}
 
-	Spectrum Sample(const Vector &wi, Vector *wo,
+	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir,
+		BSDFEvent *event) const ;
+	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf) const {
-		return surfMat->Sample(wi, wo, geometryN, shadeN, u0, u1, u2, pdf);
-	}
+		float *pdf, BSDFEvent *event) const;
 
 	Point hitPoint;
 	Normal geometryN;
 	Normal shadeN;
 	Spectrum surfaceColor;
 
-public:
+private:
 	const Material *material;
 	const SurfaceMaterial *surfMat; // != NULL only if it isn't an area light
+	Frame frame;
 
-	bool fromLightToEye, isPassThrough, isLightSource;
+	bool fromLight, isPassThrough, isLightSource;
 };
 	
 } }

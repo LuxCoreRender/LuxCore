@@ -24,6 +24,7 @@
 
 #include <vector>
 
+#include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/mc.h"
 
@@ -102,13 +103,13 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 	
-	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, const Normal &N) const {
+	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, BSDFEvent *event) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Evaluate()");
 	}
 
-	virtual Spectrum Sample(const Vector &wo, Vector *wi, const Normal &N,
-		const Normal &shadeN, const float u0, const float u1,  const float u2,
-		float *pdf) const {
+	virtual Spectrum Sample(const Vector &wo, Vector *wi,
+		const float u0, const float u1,  const float u2,
+		float *pdf, BSDFEvent *event) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
 	}
 };
@@ -176,28 +177,28 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 	
-	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, const Normal &N) const {
-		if (Dot(N, wi) > 0.f)
-			return KdOverPI;
-		else
-			return Spectrum(0.f);
+	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event) const {
+		*event |= DIFFUSE;
+
+		if ((*event & TRANSMIT) ||
+				(fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
+				(fabsf(eyeDir.z) < DEFAULT_EPSILON_STATIC))
+            return Spectrum(0.f);
+
+		return KdOverPI;
 	}
 
-	virtual Spectrum Sample(const Vector &wo, Vector *wi, const Normal &N,
-		const Normal &shadeN, const float u0, const float u1,  const float u2,
-		float *pdf) const {
-		Vector dir = CosineSampleHemisphere(u0, u1);
-		*pdf = dir.z * INV_PI;
+	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, BSDFEvent *event) const {
+		*event = DIFFUSE | REFLECT;
 
-		Vector v1, v2;
-		CoordinateSystem(Vector(shadeN), &v1, &v2);
+		*eyeDir = Sgn(lightDir.z) * CosineSampleHemisphere(u0, u1);
+		if ((fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
+				(fabsf(eyeDir->z) < DEFAULT_EPSILON_STATIC))
+            return Spectrum(0.f);
 
-		dir = Vector(
-				v1.x * dir.x + v2.x * dir.y + shadeN.x * dir.z,
-				v1.y * dir.x + v2.y * dir.y + shadeN.y * dir.z,
-				v1.z * dir.x + v2.z * dir.y + shadeN.z * dir.z);
-
-		(*wi) = dir;
+		*pdf = fabsf(eyeDir->z) * INV_PI;
 
 		return KdOverPI;
 	}
