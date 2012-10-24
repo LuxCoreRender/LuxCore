@@ -240,6 +240,27 @@ public:
 
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+	
+	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event) const {
+		*event |= SPECULAR;
+
+		return Spectrum(0.f);
+	}
+
+	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, BSDFEvent *event) const {
+		*event = SPECULAR | REFLECT;
+
+		*eyeDir = Vector(-lightDir.x, -lightDir.y, lightDir.z);
+		*pdf = 1.f;
+
+		return Kr;
+	}
+
 private:
 	Spectrum Kr;
 	bool reflectionSpecularBounce;

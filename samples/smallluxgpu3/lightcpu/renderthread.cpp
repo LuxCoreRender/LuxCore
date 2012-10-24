@@ -133,9 +133,10 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		// Initialize the light path
 		float lightEmitPdf;
 		Ray nextEventRay;
+		Normal lightN;
 		Spectrum lightPathFlux = light->Emit(scene,
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
+			&nextEventRay.o, &nextEventRay.d, &lightN, &lightEmitPdf);
 		if ((lightEmitPdf == 0.f) || lightPathFlux.Black())
 			continue;
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
@@ -147,32 +148,34 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 
 		{
 			Vector eyeDir(scene->camera->orig - nextEventRay.o);
-			const float eyeDistance = eyeDir.Length();
-			eyeDir /= eyeDistance;
+			if (Dot(eyeDir, lightN) > 0.f) {
+				const float eyeDistance = eyeDir.Length();
+				eyeDir /= eyeDistance;
 
-			Ray eyeRay(nextEventRay.o, eyeDir);
-			eyeRay.maxt = eyeDistance;
+				Ray eyeRay(nextEventRay.o, eyeDir);
+				eyeRay.maxt = eyeDistance;
 
-			float scrX, scrY;
-			if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, eyeDistance, &scrX, &scrY)) {
-				RayHit eyeRayHit;
-				if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-					// Nothing was hit, the light path vertex is visible
+				float scrX, scrY;
+				if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, eyeDistance, &scrX, &scrY)) {
+					RayHit eyeRayHit;
+					if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+						// Nothing was hit, the light path vertex is visible
 
-					// cosToCamera is already included in lightPathFlux when
-					// connecting a vertex on the light
-					const float cosToCamera =  1.f;
-					const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
+						// cosToCamera is already included in lightPathFlux when
+						// connecting a vertex on the light
+						const float cosToCamera =  1.f;
+						const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
 
-					const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-						scene->camera->GetPixelArea());
-					const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-					const float fluxToRadianceFactor = cameraPdfA;
+						const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
+							scene->camera->GetPixelArea());
+						const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
+						const float fluxToRadianceFactor = cameraPdfA;
 
-					renderThread->threadFilm->SplatFiltered(scrX, scrY, lightPathFlux * fluxToRadianceFactor);
+						renderThread->threadFilm->SplatFiltered(scrX, scrY, lightPathFlux * fluxToRadianceFactor);
+					}
 				}
+				// TODO: NULL material and alpha channel support
 			}
-			// TODO: NULL material and alpha channel support
 		}
 
 		// Trace the light path
@@ -253,17 +256,17 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 				if ((bsdfPdf <= 0.f) || bsdfSample.Black())
 					break;
 
-				lightPathFlux *= Dot(bsdf.geometryN, sampledDir) * bsdfSample / bsdfPdf;
-				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
-
-				/*if (depth > renderEngine->rrDepth) {
+				if (depth >= renderEngine->rrDepth) {
 					// Russian Roulette
-					const float prob = Max(lightPathRadiance.Filter(), renderEngine->rrImportanceCap);
+					const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
 					if (prob >= rndGen->floatValue())
-						lightPathRadiance /= prob;
+						bsdfPdf *= prob;
 					else
 						break;
-				}*/
+				}
+
+				lightPathFlux *= Dot(bsdf.geometryN, sampledDir) * bsdfSample / bsdfPdf;
+				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 				nextEventRay = Ray(bsdf.hitPoint, sampledDir);
 				++depth;
