@@ -157,9 +157,9 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 	// Adjoint BSDF
 	if (fromLight) {
 		const float dotLightDirNS = Dot(lightDir, shadeN);
-		return result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG));
+		return surfaceColor * result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG));
 	} else
-		return result;
+		return surfaceColor * result;
 }
 
 Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
@@ -174,9 +174,9 @@ Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 	if (fromLight) {
 		const float dotLightDirNG = localFixedDir.z;
 		const float dotLightDirNS = Dot(fixedDir, shadeN);
-		return result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG));
+		return surfaceColor * result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG));
 	} else
-		return result;
+		return surfaceColor * result;
 }
 
 } }
