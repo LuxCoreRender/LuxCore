@@ -33,8 +33,7 @@ namespace luxrays { namespace sdl {
 class Scene;
 
 enum LightSourceType {
-	TYPE_IL_BF, TYPE_IL_PORTAL, TYPE_IL_IS, TYPE_IL_SKY,
-	TYPE_SUN, TYPE_TRIANGLE
+	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
 };
 
 class LightSource {
@@ -87,6 +86,8 @@ public:
 	InfiniteLight(TexMapInstance *tx);
 	virtual ~InfiniteLight() { }
 
+	LightSourceType GetType() const { return TYPE_IL; }
+
 	virtual void SetGain(const Spectrum &g) {
 		gain = g;
 	}
@@ -118,54 +119,6 @@ protected:
 	TexMapInstance *tex;
 	float shiftU, shiftV;
 	Spectrum gain;
-};
-
-class InfiniteLightBF : public InfiniteLight {
-public:
-	InfiniteLightBF(TexMapInstance *tx) : InfiniteLight(tx) { }
-
-	LightSourceType GetType() const { return TYPE_IL_BF; }
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-		*pdf = 0;
-		return Spectrum();
-	}
-};
-
-class InfiniteLightPortal : public InfiniteLight {
-public:
-	InfiniteLightPortal(TexMapInstance *tx, const std::string &portalFileName);
-	~InfiniteLightPortal();
-
-	LightSourceType GetType() const { return TYPE_IL_PORTAL; }
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
-
-private:
-	ExtTriangleMesh *portals;
-	std::vector<float> portalAreas;
-};
-
-class InfiniteLightIS : public InfiniteLight {
-public:
-	InfiniteLightIS(TexMapInstance *tx);
-	~InfiniteLightIS() { delete uvDistrib; }
-
-	LightSourceType GetType() const { return TYPE_IL_IS; }
-
-	void Preprocess();
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
-
-private:
-	Distribution2D *uvDistrib;
 };
 
 //------------------------------------------------------------------------------

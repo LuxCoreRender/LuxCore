@@ -266,26 +266,15 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	//--------------------------------------------------------------------------
 
 	const std::vector<std::string> ilParams = scnProp->GetStringVector("scene.infinitelight.file", "");
+	bool infiniteLightDefined ;
 	if (ilParams.size() > 0) {
 		const float gamma = scnProp->GetFloat("scene.infinitelight.gamma", 2.2f);
 		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
 
-		// Check if I have to use InfiniteLightBF method
-		if (scnProp->GetInt("scene.infinitelight.usebruteforce", 0)) {
-			SDL_LOG("Using brute force infinite light sampling");
-			infiniteLight = new InfiniteLightBF(tex);
-			useInfiniteLightBruteForce = true;
-		} else {
-			if (ilParams.size() == 2)
-				infiniteLight = new InfiniteLightPortal(tex, ilParams.at(1));
-			else
-				infiniteLight = new InfiniteLightIS(tex);
+		InfiniteLight *infiniteLight = new InfiniteLight(tex);
 
-			// Add the infinite light to the list of light sources
-			lights.push_back(infiniteLight);
-
-			useInfiniteLightBruteForce = false;
-		}
+		// Add the infinite light to the list of light sources
+		lights.push_back(infiniteLight);
 
 		std::vector<float> vf = GetParameters(*scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
 		infiniteLight->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
@@ -294,10 +283,9 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		infiniteLight->SetShift(vf.at(0), vf.at(1));
 
 		infiniteLight->Preprocess();
-	} else {
-		infiniteLight = NULL;
-		useInfiniteLightBruteForce = false;
-	}
+		infiniteLightDefined = true;
+	} else
+		infiniteLightDefined = false;
 
 	//--------------------------------------------------------------------------
 	// Check if there is a SkyLight defined
@@ -305,7 +293,7 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 	const std::vector<std::string> silParams = scnProp->GetStringVector("scene.skylight.dir", "");
 	if (silParams.size() > 0) {
-		if (infiniteLight)
+		if (infiniteLightDefined)
 			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
 
 		std::vector<float> sdir = GetParameters(*scnProp, "scene.skylight.dir", 3, "0.0 0.0 1.0");
@@ -313,11 +301,8 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		std::vector<float> gain = GetParameters(*scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
 		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		infiniteLight = sl;
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->Init();
-
-		useInfiniteLightBruteForce = true;
 	}
 
 	//--------------------------------------------------------------------------
@@ -348,8 +333,6 @@ Scene::~Scene() {
 
 	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
 		delete *l;
-	if (useInfiniteLightBruteForce)
-		delete infiniteLight;
 
 	delete dataSet;
 
