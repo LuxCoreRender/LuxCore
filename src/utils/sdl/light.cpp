@@ -681,3 +681,17 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 
 	return lightMaterial->GetGain();
 }
+
+Spectrum TriangleLight::Evaluate(const Scene *scene, const Vector &dir) const {
+	const ExtMesh *mesh = scene->objects[meshIndex];
+	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
+
+	const float RdotN = Dot(-dir, sampleN);
+	if (RdotN < 0.f)
+		return Spectrum();
+
+	if (mesh->HasColors())
+		return M_PI * mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
+	else
+		return M_PI * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color	
+}

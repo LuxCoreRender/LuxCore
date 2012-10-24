@@ -315,6 +315,8 @@ public:
 			const Point &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
+	
+	Spectrum Evaluate(const Scene *scene, const Vector &dir) const;
 
 private:
 	const AreaLightMaterial *lightMaterial;
