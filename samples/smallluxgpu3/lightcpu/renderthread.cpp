@@ -133,10 +133,9 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		// Initialize the light path
 		float lightEmitPdf;
 		Ray nextEventRay;
-		Normal lightN; // TODO: remove
 		Spectrum lightPathFlux = light->Emit(scene,
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-			&nextEventRay.o, &nextEventRay.d, &lightN, &lightEmitPdf);
+			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
 		if ((lightEmitPdf == 0.f) || lightPathFlux.Black())
 			continue;
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
