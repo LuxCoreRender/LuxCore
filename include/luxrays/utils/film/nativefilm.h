@@ -25,10 +25,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/utils/film/film.h"
-#include "luxrays/core/pixel/samplebuffer.h"
-#include "luxrays/core/pixel/filter.h"
-#include "luxrays/core/pixel/framebuffer.h"
-#include "luxrays/core/pixel/samplebuffer.h"
+#include "luxrays/utils/film/filter.h"
 #include "luxrays/utils/convtest/convtest.h"
 
 namespace luxrays { namespace utils {
@@ -47,11 +44,6 @@ public:
 	void UpdateScreenBuffer();
 
 	const float *GetScreenBuffer() const;
-
-	SampleBuffer *GetFreeSampleBuffer();
-	void FreeSampleBuffer(SampleBuffer *sampleBuffer);
-
-	void SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffer);
 
 	void Save(const std::string &fileName);
 
@@ -86,23 +78,14 @@ public:
 		ap->alpha += alpha;
 	}
 
-	void SplatPreview(const SampleBufferElem *sampleElem);
-	void SplatFiltered(const SampleBufferElem *sampleElem) {
-		SplatFiltered(sampleElem->screenX, sampleElem->screenY, sampleElem->radiance);
-	}
 	void SplatFiltered(const float screenX, const float screenY, const Spectrum &radiance);
 	void SplatFilteredAlpha(const float screenX, const float screenY, const float a);
-
-	static size_t SampleBufferSize;
 
 protected:
 	const SampleFrameBuffer *GetSampleFrameBuffer() {
 		return sampleFrameBuffer;
 	}
-
 	void AddSampleFrameBuffer(const SampleFrameBuffer *sfb);
-
-	void AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer);
 
 	const AlphaFrameBuffer *GetAlphaFrameBuffer() {
 		return alphaFrameBuffer;
@@ -134,9 +117,6 @@ protected:
 	SampleFrameBuffer *sampleFrameBuffer;
 	AlphaFrameBuffer *alphaFrameBuffer;
 	FrameBuffer *frameBuffer;
-
-	std::vector<SampleBuffer *> sampleBuffers;
-	std::deque<SampleBuffer *> freeSampleBuffers;
 
 	Filter *filter;
 	FilterLUTs *filterLUTs;

@@ -60,7 +60,6 @@ private:
 	unsigned int threadIndex;
 	unsigned int seed;
 	LightCPURenderEngine *renderEngine;
-	SampleBuffer *sampleBuffer;
 
 	boost::thread *renderThread;
 	NativeFilm *threadFilm;

@@ -38,9 +38,8 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/pixel/samplebuffer.h"
-#include "luxrays/core/pixeldevice.h"
-#include "luxrays/core/pixel/samplebuffer.h"
+#include "luxrays/utils/film/tonemapping.h"
+#include "luxrays/utils/film/framebuffer.h"
 
 namespace luxrays { namespace utils {
 
@@ -86,15 +85,6 @@ public:
 
 	virtual void UpdateScreenBuffer() = 0;
 	virtual const float *GetScreenBuffer() const = 0;
-
-	virtual SampleBuffer *GetFreeSampleBuffer() = 0;
-	virtual void FreeSampleBuffer(SampleBuffer *sampleBuffer) = 0;
-	virtual void SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffer) {
-		if (!usePerScreenNormalization) {
-			// Update statistics
-			statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
-		}
-	}
 
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }

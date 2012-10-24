@@ -23,6 +23,7 @@
 #define	_LUXRAYS_SDL_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/utils/core/spectrum.h"
 
 namespace luxrays { namespace sdl {
 

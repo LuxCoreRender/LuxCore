@@ -20,8 +20,8 @@
  *   and Lux Renderer website : http://www.luxrender.net                   *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_SPECTRUM_H
-#define _LUXRAYS_SPECTRUM_H
+#ifndef _LUXRAYS_SPECTRUM_H_H
+#define _LUXRAYS_SPECTRUM_H_H
 
 #include <ostream>
 
@@ -30,8 +30,16 @@ namespace luxrays {
 class Spectrum {
 public:
 	// Spectrum Public Methods
-	Spectrum(float _r = 0.f, float _g = 0.f, float _b = 0.f)
-	: r(_r), g(_g), b(_b) {
+	Spectrum(const float rr, const float gg, const float bb)
+		: r(rr), g(gg), b(bb) {
+	}
+
+	Spectrum(const float v)
+		: r(v), g(v), b(v) {
+	}
+
+	Spectrum()
+		: r(0.f), g(0.f), b(0.f) {
 	}
 
 	Spectrum operator+(const Spectrum &v) const {
@@ -72,7 +80,7 @@ public:
 	}
 
 	Spectrum operator*(float f) const {
-		return Spectrum(f*r, f*g, f * b);
+		return Spectrum(f * r, f * g, f * b);
 	}
 
 	Spectrum & operator*=(float f) {
@@ -116,10 +124,25 @@ public:
 	}
 
 	bool IsNaN() const {
-		return (isnan(r) || isnan(g) || isnan(b));
+		return isnan(r) || isnan(g) || isnan(b);
+	}
+
+	bool IsInf() const {
+		return isinf(r) || isinf(g) || isinf(b);
+	}
+
+	float Y() const {
+		return 0.212671f * r + 0.715160f * g + 0.072169f * b;
+	}
+
+	void Clamp() {
+		luxrays::Clamp(r, 0.f, 1.f);
+		luxrays::Clamp(g, 0.f, 1.f);
+		luxrays::Clamp(b, 0.f, 1.f);
 	}
 
 	float r, g, b;
+#define _LUXRAYS_SPECTRUM_OCLDEFINE "typedef struct { float r, g, b; } Spectrum;\n"
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Spectrum &v) {

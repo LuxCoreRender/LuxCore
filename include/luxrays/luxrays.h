@@ -52,7 +52,6 @@ typedef unsigned long u_long;
 #include "luxrays/core/geometry/raybuffer.h"
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/geometry/triangle.h"
-#include "luxrays/core/pixel/samplebuffer.h"
 
 /*! \namespace luxrays
  *
@@ -64,7 +63,6 @@ class Context;
 class DataSet;
 class IntersectionDevice;
 class Mesh;
-class PixelDevice;
 class TriangleMesh;
 class VirtualM2OHardwareIntersectionDevice;
 class VirtualM2MHardwareIntersectionDevice;

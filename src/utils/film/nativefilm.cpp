@@ -24,16 +24,11 @@
 using namespace luxrays;
 using namespace luxrays::utils;
 
-size_t NativeFilm::SampleBufferSize = 4096;
-
 NativeFilm::NativeFilm(const unsigned int w, const unsigned int h, const bool perScreenNorm) :
 	Film(w, h, perScreenNorm), convTest(w, h) {
 	sampleFrameBuffer = NULL;
 	alphaFrameBuffer = NULL;
 	frameBuffer = NULL;
-
-	sampleBuffers.resize(0);
-	freeSampleBuffers.resize(0);
 
 	enableAlphaChannel = false;
 
@@ -46,9 +41,6 @@ NativeFilm::~NativeFilm() {
 	delete sampleFrameBuffer;
 	delete alphaFrameBuffer;
 	delete frameBuffer;
-
-	for (size_t i = 0; i < sampleBuffers.size(); ++i)
-		delete sampleBuffers[i];
 
 	delete filterLUTs;
 	delete filter;
@@ -219,46 +211,6 @@ const float *NativeFilm::GetScreenBuffer() const {
 	return (const float *)frameBuffer->GetPixels();
 }
 
-SampleBuffer *NativeFilm::GetFreeSampleBuffer() {
-	// Look for a free buffer
-	if (freeSampleBuffers.size() > 0) {
-		SampleBuffer *sb = freeSampleBuffers.front();
-		freeSampleBuffers.pop_front();
-
-		sb->Reset();
-		return sb;
-	} else {
-		// Need to allocate a new buffer
-		SampleBuffer *sb = new SampleBuffer(SampleBufferSize);
-
-		sampleBuffers.push_back(sb);
-
-		return sb;
-	}
-}
-
-void NativeFilm::FreeSampleBuffer(SampleBuffer *sampleBuffer) {
-	freeSampleBuffers.push_back(sampleBuffer);
-}
-
-void NativeFilm::SplatPreview(const SampleBufferElem *sampleElem) {
-	const int splatSize = 4;
-
-	// Compute sample's raster extent
-	float dImageX = sampleElem->screenX - 0.5f;
-	float dImageY = sampleElem->screenY - 0.5f;
-	int x0 = Ceil2Int(dImageX - splatSize);
-	int x1 = Floor2Int(dImageX + splatSize);
-	int y0 = Ceil2Int(dImageY - splatSize);
-	int y1 = Floor2Int(dImageY + splatSize);
-	if (x1 < x0 || y1 < y0 || x1 < 0 || y1 < 0)
-		return;
-
-	for (u_int y = static_cast<u_int>(Max<int>(y0, 0)); y <= static_cast<u_int>(Min<int>(y1, height - 1)); ++y)
-		for (u_int x = static_cast<u_int>(Max<int>(x0, 0)); x <= static_cast<u_int>(Min<int>(x1, width - 1)); ++x)
-			SplatRadiance(sampleElem->radiance, x, y, 0.01f);
-}
-
 void NativeFilm::SplatFiltered(const float screenX, const float screenY, const Spectrum &radiance) {
 	// Compute sample's raster extent
 	const float dImageX = screenX - 0.5f;
@@ -318,48 +270,6 @@ void NativeFilm::SplatFilteredAlpha(const float screenX, const float screenY,
 			SplatAlpha(alpha, ix, iy, filterWt);
 		}
 	}
-}
-
-void NativeFilm::AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer) {
-	switch (type) {
-		case FILTER_GAUSSIAN: {
-			const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
-			for (unsigned int i = 0; i < sampleBuffer->GetSampleCount(); ++i)
-				SplatFiltered(&sbe[i]);
-			break;
-		}
-		case FILTER_PREVIEW: {
-			const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
-			for (unsigned int i = 0; i < sampleBuffer->GetSampleCount(); ++i)
-				SplatPreview(&sbe[i]);
-			break;
-		}
-		case FILTER_NONE: {
-			const SampleBufferElem *sbe = sampleBuffer->GetSampleBuffer();
-			for (unsigned int i = 0; i < sampleBuffer->GetSampleCount(); ++i) {
-				const SampleBufferElem *sampleElem = &sbe[i];
-				const int x = (int)sampleElem->screenX;
-				const int y = (int)sampleElem->screenY;
-
-				SplatRadiance(sampleElem->radiance, x, y);
-			}
-			break;
-		}
-		default:
-			assert (false);
-			break;
-	}
-
-	freeSampleBuffers.push_back(sampleBuffer);
-}
-
-void NativeFilm::SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffer) {
-	Film::SplatSampleBuffer(preview, sampleBuffer);
-
-	if (preview)
-		AddSampleBuffer(FILTER_PREVIEW, sampleBuffer);
-	else
-		AddSampleBuffer(filterType, sampleBuffer);
 }
 
 void NativeFilm::Save(const std::string &fileName) {

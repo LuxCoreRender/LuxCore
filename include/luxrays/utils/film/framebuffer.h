@@ -19,12 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _FRAMEBUFFER_H
-#define	_FRAMEBUFFER_H
+#ifndef _LUXRAYS_UTILS_FRAMEBUFFER_H
+#define	_LUXRAYS_UTILS_FRAMEBUFFER_H
 
-#include "luxrays/core/pixel/spectrum.h"
+#include "luxrays/utils/core/spectrum.h"
 
-namespace luxrays {
+namespace luxrays { namespace utils {
 
 typedef struct {
 	Spectrum radiance;
@@ -265,7 +265,7 @@ private:
 	AlphaPixel *pixels;
 };
 
-}
+} }
 
-#endif	/* _FRAMEBUFFER_H */
+#endif	/* _LUXRAYS_UTILS_FRAMEBUFFER_H */
 

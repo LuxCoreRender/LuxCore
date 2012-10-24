@@ -188,7 +188,6 @@ private:
 	CompiledScene *compiledScene;
 
 	vector<PathOCLRenderThread *> renderThreads;
-	SampleBuffer *sampleBuffer;
 
 	double startTime;
 	double elapsedTime;
