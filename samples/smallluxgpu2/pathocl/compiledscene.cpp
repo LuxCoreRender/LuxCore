@@ -558,26 +558,7 @@ void CompiledScene::CompileInfiniteLight() {
 
 	const double tStart = WallClockTime();
 
-	InfiniteLight *il = NULL;
-	if (scene->infiniteLight && (
-			(scene->infiniteLight->GetType() == TYPE_IL_BF) ||
-			(scene->infiniteLight->GetType() == TYPE_IL_PORTAL) ||
-			(scene->infiniteLight->GetType() == TYPE_IL_IS)))
-		il = scene->infiniteLight;
-	else {
-		// Look for the infinite light
-
-		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			LightSource *l = scene->lights[i];
-
-			if ((l->GetType() == TYPE_IL_BF) || (l->GetType() == TYPE_IL_PORTAL) ||
-					(l->GetType() == TYPE_IL_IS)) {
-				il = (InfiniteLight *)l;
-				break;
-			}
-		}
-	}
-
+	InfiniteLight *il = (InfiniteLight *)scene->GetLight(TYPE_IL);
 	if (il) {
 		infiniteLight = new PathOCL::InfiniteLight();
 
@@ -646,22 +627,7 @@ void CompiledScene::CompileSkyLight() {
 	// Check if there is an sky light source
 	//--------------------------------------------------------------------------
 
-	SkyLight *sl = NULL;
-
-	if (scene->infiniteLight && (scene->infiniteLight->GetType() == TYPE_IL_SKY))
-		sl = (SkyLight *)scene->infiniteLight;
-	else {
-		// Look for the sky light
-		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			LightSource *l = scene->lights[i];
-
-			if (l->GetType() == TYPE_IL_SKY) {
-				sl = (SkyLight *)l;
-				break;
-			}
-		}
-	}
-
+	SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
 	if (sl) {
 		skyLight = new PathOCL::SkyLight();
 

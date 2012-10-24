@@ -44,51 +44,30 @@ public:
 
 	int GetAccelType() const { return accelType; }
 
-	unsigned int GetLightCount(bool skipInfiniteLight = false) const {
-		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight)
-			return static_cast<unsigned int>(lights.size()) + 1;
-		else
-			return static_cast<unsigned int>(lights.size());
+	unsigned int GetLightCount() const {
+		return static_cast<unsigned int>(lights.size());
 	}
 
-	LightSource *GetLight(unsigned int index, bool skipInfiniteLight = false) const {
-		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {
-			if (index == lights.size())
-				return infiniteLight;
-			else
-				return lights[index];
-		} else
-			return lights[index];
+	LightSource *GetLight(unsigned int index) const {
+		return lights[index];
 	}
 
 	LightSource *SampleAllLights(const float u, float *pdf, bool skipInfiniteLight = false) const {
 		const unsigned int lightsSize = static_cast<unsigned int>(lights.size());
-		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {			
-			const unsigned int lightCount = lightsSize + 1;
-			const unsigned int lightIndex = Min(Floor2UInt(lightCount * u), lightsSize);
+		// One Uniform light strategy
+		const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
 
-			*pdf = 1.f / lightCount;
+		*pdf = 1.f / lightsSize;
 
-			if (lightIndex == lightsSize)
-				return infiniteLight;
-			else
-				return lights[lightIndex];
-		} else {
-			// One Uniform light strategy
-			const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
-
-			*pdf = 1.f / lightsSize;
-
-			return lights[lightIndex];
-		}
+		return lights[lightIndex];
 	}
 
-	SunLight *GetSunLight() const {
+	LightSource *GetLight(const LightSourceType lightType) const {
 		// Look for the SunLight
 		for (unsigned int i = 0; i < static_cast<unsigned int>(lights.size()); ++i) {
 			LightSource *ls = lights[i];
-			if (ls->GetType() == TYPE_SUN)
-				return (SunLight *)ls;
+			if (ls->GetType() == lightType)
+				return ls;
 		}
 
 		return NULL;
@@ -113,8 +92,6 @@ public:
 	std::vector<NormalMapInstance *> objectNormalMaps; // One for each object
 
 	std::vector<LightSource *> lights; // One for each light source
-	InfiniteLight *infiniteLight;
-	bool useInfiniteLightBruteForce;
 
 	DataSet *dataSet;
 
