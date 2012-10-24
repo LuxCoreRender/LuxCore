@@ -107,7 +107,7 @@ void LightCPURenderThread::EndEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
-static void ConnectToEye(const Scene *scene, Film *film,
+static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 		Vector eyeDir, const float eyeDistance,
 		const Point &hitPoint, const Normal &geometryN, const Spectrum bsdfEval,
 		const Spectrum &flux) {
@@ -117,27 +117,41 @@ static void ConnectToEye(const Scene *scene, Film *film,
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, eyeDistance, &scrX, &scrY)) {
-			RayHit eyeRayHit;
-			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-				// Nothing was hit, the light path vertex is visible
+			for (;;) {
+				RayHit eyeRayHit;
+				if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+					// Nothing was hit, the light path vertex is visible
 
-				// cosToCamera is already included when connecting a vertex on the light
-				const float cosToCamera = Dot(geometryN, eyeDir);
-				const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
+					// cosToCamera is already included when connecting a vertex on the light
+					const float cosToCamera = Dot(geometryN, eyeDir);
+					const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
 
-				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-					scene->camera->GetPixelArea());
-				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				const float fluxToRadianceFactor = cameraPdfA;
+					const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
+						scene->camera->GetPixelArea());
+					const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
+					const float fluxToRadianceFactor = cameraPdfA;
 
-				film->SplatFiltered(scrX, scrY, flux * fluxToRadianceFactor * bsdfEval);
+					film->SplatFiltered(scrX, scrY, flux * fluxToRadianceFactor * bsdfEval);
+					break;
+				} else {
+					// Check if it is a pass through point
+					BSDF bsdf(true, *scene, eyeRay, eyeRayHit, u0);
+
+					// Check if it is pass-through point
+					if (bsdf.IsPassThrough()) {
+						// It is a pass-through material, continue to trace the ray
+						eyeRay.mint = eyeRayHit.t + MachineEpsilon::E(eyeRayHit.t);
+						eyeRay.maxt = std::numeric_limits<float>::infinity();
+						continue;
+					}
+					break;
+				}
 			}
 		}
-		// TODO: NULL material and alpha channel support
 	}
 }
 
-static void ConnectToEye(const Scene *scene, Film *film, const BSDF &bsdf,
+static void ConnectToEye(const Scene *scene, Film *film, const float u0, const BSDF &bsdf,
 		const Vector &lightDir, const Spectrum flux) {
 	Vector eyeDir(scene->camera->orig - bsdf.hitPoint);
 	const float eyeDistance = eyeDir.Length();
@@ -146,7 +160,7 @@ static void ConnectToEye(const Scene *scene, Film *film, const BSDF &bsdf,
 	BSDFEvent event;
 	Spectrum bsdfEval = bsdf.Evaluate(lightDir, eyeDir, &event);
 
-	ConnectToEye(scene, film, eyeDir, eyeDistance, bsdf.hitPoint, bsdf.geometryN, bsdfEval, flux);
+	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, bsdf.hitPoint, bsdf.geometryN, bsdfEval, flux);
 }
 
 void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) {
@@ -188,10 +202,12 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 		//----------------------------------------------------------------------
 
 		Vector eyeDir(scene->camera->orig - nextEventRay.o);
-		const float eyeDistance = eyeDir.Length();
-		eyeDir /= eyeDistance;
-		ConnectToEye(scene, renderThread->threadFilm, eyeDir, eyeDistance,
-				nextEventRay.o, lightN, lightPathFlux, Spectrum(1.f, 1.f, 1.f));
+		if (Dot(eyeDir, lightN) > 0.f) {
+			const float eyeDistance = eyeDir.Length();
+			eyeDir /= eyeDistance;
+			ConnectToEye(scene, renderThread->threadFilm, rndGen->floatValue(), eyeDir, eyeDistance,
+					nextEventRay.o, lightN, lightPathFlux, Spectrum(1.f, 1.f, 1.f));
+		}
 
 		//----------------------------------------------------------------------
 		// Trace the light path
@@ -221,7 +237,8 @@ void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) 
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, renderThread->threadFilm, bsdf, -nextEventRay.d, lightPathFlux);
+				ConnectToEye(scene, renderThread->threadFilm, rndGen->floatValue(),
+						bsdf, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
 					break;
