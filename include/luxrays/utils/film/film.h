@@ -38,8 +38,10 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/utils/film/filter.h"
 #include "luxrays/utils/film/tonemapping.h"
 #include "luxrays/utils/film/framebuffer.h"
+#include "luxrays/utils/convtest/convtest.h"
 
 namespace luxrays { namespace utils {
 
@@ -52,11 +54,16 @@ namespace luxrays { namespace utils {
 class Film {
 public:
 	Film(const unsigned int w, const unsigned int h, const bool perScreenNorm);
-	virtual ~Film();
+	~Film();
 
-	virtual void Init(const unsigned int w, const unsigned int h);
+	void Init(const unsigned int w, const unsigned int h);
+	void InitGammaTable(const float gamma = 2.2f);
+	void Reset();
 
-	virtual void InitGammaTable(const float gamma = 2.2f);
+	void EnableAlphaChannel(const bool alphaChannel) {
+		enableAlphaChannel = alphaChannel;
+	}
+	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
 
 	void SetFilterType(const FilterType filter) {
 		filterType = filter;
@@ -70,21 +77,13 @@ public:
 		toneMapParams = params.Copy();
 	}
 
-	void AddFilm(const std::string &filmFile);
-	void SaveFilm(const std::string &filmFile);
+	void AddFilm(const Film &film);
 
-	void StartSampleTime() {
-		statsStartSampleTime = WallClockTime();
+	void SaveScreenBuffer(const std::string &filmFile);
+	void UpdateScreenBuffer();
+	const float *GetScreenBuffer() const {
+		return (const float *)frameBuffer->GetPixels();
 	}
-
-	virtual void Reset() {
-		statsTotalSampleCount = 0;
-		statsAvgSampleSec = 0.0;
-		statsStartSampleTime = WallClockTime();
-	}
-
-	virtual void UpdateScreenBuffer() = 0;
-	virtual const float *GetScreenBuffer() const = 0;
 
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
@@ -103,11 +102,34 @@ public:
 		return statsTotalSampleCount / GetTotalTime();
 	}
 
-	virtual void Save(const std::string &fileName) = 0;
+	//--------------------------------------------------------------------------
+	
+	void ResetConvergenceTest();
+	unsigned int RunConvergenceTest();
+	
+	//--------------------------------------------------------------------------
 
-protected:
-	void SaveImpl(const std::string &fileName);
+	void AddSampleCount(const unsigned int count) { ++statsTotalSampleCount; }
 
+	void AddRadiance(const unsigned int x, const unsigned int y, const Spectrum &radiance, const float weight) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+
+		sp->radiance += radiance;
+		sp->weight += weight;
+	}
+	
+	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha) {
+		const unsigned int offset = x + y * width;
+		AlphaPixel *ap = &(alphaFrameBuffer->GetPixels()[offset]);
+
+		ap->alpha += alpha;
+	}
+
+	void SplatFiltered(const float screenX, const float screenY, const Spectrum &radiance);
+	void SplatFilteredAlpha(const float screenX, const float screenY, const float a);
+
+private:
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
 		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
@@ -122,12 +144,27 @@ protected:
 		return Spectrum(Radiance2PixelFloat(c.r), Radiance2PixelFloat(c.g), Radiance2PixelFloat(c.b));
 	}
 
-	virtual const SampleFrameBuffer *GetSampleFrameBuffer() = 0;
-	virtual void AddSampleFrameBuffer(const SampleFrameBuffer *sfb) = 0;
+	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
 
-	// This can return NULL if alpha channel is not supported
-	virtual const AlphaFrameBuffer *GetAlphaFrameBuffer() {
-		return NULL;
+		sp->radiance += weight * radiance;
+		sp->weight += weight;
+	}
+
+	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+
+		sp->radiance += radiance;
+		sp->weight += 1.f;
+	}
+
+	void SplatAlpha(const float alpha, const unsigned int x, const unsigned int y, const float weight) {
+		const unsigned int offset = x + y * width;
+		AlphaPixel *sp = &(alphaFrameBuffer->GetPixels()[offset]);
+
+		sp->alpha += weight * alpha;
 	}
 
 	unsigned int width, height;
@@ -140,8 +177,17 @@ protected:
 
 	FilterType filterType;
 	ToneMapParams *toneMapParams;
+
+	SampleFrameBuffer *sampleFrameBuffer;
+	AlphaFrameBuffer *alphaFrameBuffer;
+	FrameBuffer *frameBuffer;
+
+	Filter *filter;
+	FilterLUTs *filterLUTs;
 	
-	bool usePerScreenNormalization;
+	ConvergenceTest convTest;
+
+	bool enableAlphaChannel, usePerScreenNormalization;
 };
 
 } }

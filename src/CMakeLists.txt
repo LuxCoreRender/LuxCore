@@ -115,7 +115,6 @@ SOURCE_GROUP("Source Files\\Utils\\core" FILES ${LuxRays_SRC_UTILS_CORE})
 
 set(LuxRays_SRC_UTILS_FILM
 	${LuxRays_SOURCE_DIR}/src/utils/film/film.cpp
-	${LuxRays_SOURCE_DIR}/src/utils/film/nativefilm.cpp
 )
 SOURCE_GROUP("Source Files\\Utils\\FILM" FILES ${LuxRays_SRC_UTILS_FILM})
 
@@ -234,7 +233,6 @@ set(LuxRays_HEADERS_LUXRAYS_UTILS_FILM
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/film.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/framebuffer.h
-	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/nativefilm.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/tonemapping.h
 )
 SOURCE_GROUP("Header Files\\Utils\\Film" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_FILM})
