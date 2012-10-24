@@ -23,8 +23,6 @@
 #include "pathocl/pathocl.h"
 #include "lightcpu/lightcpu.h"
 
-#include "luxrays/utils/film/pixeldevicefilm.h"
-
 RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig = rcfg;
 	started = false;

@@ -41,7 +41,6 @@
 #include "lightcpu/lightcpu.h"
 #include "renderconfig.h"
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/core/pixel/samplebuffer.h"
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/sdl/bsdf.h"
 

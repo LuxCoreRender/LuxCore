@@ -41,7 +41,6 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
-#include "luxrays/core/pixel/samplebuffer.h"
 
 //------------------------------------------------------------------------------
 // PathOCLRenderEngine
@@ -120,8 +119,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, bo
 	samplesCount = 0;
 	convergence = 0.f;
 
-	sampleBuffer = film->GetFreeSampleBuffer();
-
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 
 	// Create and start render threads
@@ -143,8 +140,6 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
-
-	film->FreeSampleBuffer(sampleBuffer);
 
 	delete sampler;
 	delete filter;
@@ -249,8 +244,6 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	switch (film->GetFilterType()) {
 		case FILTER_GAUSSIAN: {
-			SampleBufferElem sbe;
-
 			for (unsigned int y = 0; y < imgHeight; ++y) {
 				unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
 
@@ -269,12 +262,8 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					}
 
 					if ((count > 0) && !c.IsNaN()) {
-						sbe.screenX = x;
-						sbe.screenY = y;
 						c /= count;
-						sbe.radiance = c;
-
-						film->SplatFiltered(&sbe);
+						film->SplatFiltered(x, y, c);
 
 						if (isAlphaChannelEnabled && !isnan(alpha))
 							film->SplatFilteredAlpha(x, y, alpha / count);

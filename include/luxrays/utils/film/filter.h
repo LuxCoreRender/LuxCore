@@ -19,10 +19,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _FILTER_H
-#define	_FILTER_H
+#ifndef _LUXRAYS_UTILS_FILTER_H
+#define	_LUXRAYS_UTILS_FILTER_H
 
-namespace luxrays {
+namespace luxrays { namespace utils {
 
 //------------------------------------------------------------------------------
 // Filters
@@ -183,6 +183,6 @@ private:
 	FilterLUT **luts;
 };
 
-}
+} }
 
-#endif	/* _FILTER_H */
+#endif	/* _LUXRAYS_UTILS_FILTER_H */

@@ -22,8 +22,6 @@
 #include "rendersession.h"
 #include "pathocl/pathocl.h"
 
-#include "luxrays/utils/film/pixeldevicefilm.h"
-
 RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig = rcfg;
 	started = false;
@@ -42,7 +40,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = new NativeFilm(w, h);
+	film = new NativeFilm(w, h, false);
 
 	const int filterType = cfg.GetInt("film.filter.type", 1);
 	if (filterType == 0)

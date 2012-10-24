@@ -23,6 +23,7 @@
 #define	_LUXRAYS_SDL_LIGHT_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/texmap.h"
 #include "luxrays/utils/sdl/material.h"

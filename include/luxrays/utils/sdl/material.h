@@ -24,6 +24,7 @@
 
 #include <vector>
 
+#include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/mc.h"

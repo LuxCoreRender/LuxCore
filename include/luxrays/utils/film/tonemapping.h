@@ -19,22 +19,67 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef Spectrum Pixel;
+#ifndef _LUXRAYS_UTILS_TONEMAPPING_H
+#define	_LUXRAYS_UTILS_TONEMAPPING_H
 
-__kernel __attribute__((reqd_work_group_size(8, 8, 1))) void PixelClearFB(
-	const unsigned int width,
-	const unsigned int height,
-    __global Pixel *frameBuffer) {
-    const unsigned int px = get_global_id(0);
-    if(px >= width)
-        return;
-    const unsigned int py = get_global_id(1);
-    if(py >= height)
-        return;
-	const unsigned int offset = px + py * width;
+namespace luxrays {
 
-	__global Pixel *p = &frameBuffer[offset];
-	p->r = 0.f;
-	p->g = 0.f;
-	p->b = 0.f;
+//------------------------------------------------------------------------------
+// Tonemapping
+//------------------------------------------------------------------------------
+
+typedef enum {
+	TONEMAP_LINEAR, TONEMAP_REINHARD02
+} ToneMapType;
+
+class ToneMapParams {
+public:
+	virtual ToneMapType GetType() const = 0;
+	virtual ToneMapParams *Copy() const = 0;
+	virtual ~ToneMapParams (){}; 
+};
+
+class LinearToneMapParams : public ToneMapParams {
+public:
+	LinearToneMapParams(const float s = 1.f) {
+		scale = s;
+	}
+
+	ToneMapType GetType() const { return TONEMAP_LINEAR; }
+
+	ToneMapParams *Copy() const {
+		return new LinearToneMapParams(scale);
+	}
+
+	float scale;
+};
+
+class Reinhard02ToneMapParams : public ToneMapParams {
+public:
+	Reinhard02ToneMapParams(const float preS = 1.f, const float postS = 1.2f,
+			const float b = 3.75f) {
+		preScale = preS;
+		postScale = postS;
+		burn = b;
+	}
+
+	ToneMapType GetType() const { return TONEMAP_REINHARD02; }
+
+	ToneMapParams *Copy() const {
+		return new Reinhard02ToneMapParams(preScale, postScale, burn);
+	}
+
+	float preScale, postScale, burn;
+};
+
+//------------------------------------------------------------------------------
+// Filtering
+//------------------------------------------------------------------------------
+
+typedef enum {
+	FILTER_NONE, FILTER_PREVIEW, FILTER_GAUSSIAN
+} FilterType;
+
 }
+
+#endif	/* _LUXRAYS_UTILS_TONEMAPPING_H */

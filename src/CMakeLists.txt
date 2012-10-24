@@ -26,7 +26,7 @@
 #
 ###########################################################################
 
-SET(KERNELS BVH QBVH MQBVH Pixel_ClearFB Pixel_ClearSampleFB Pixel_UpdateFrameBuffer Pixel_AddSampleBuffer Pixel_AddSampleBufferPreview Pixel_AddSampleBufferGaussian2x2)
+SET(KERNELS BVH QBVH MQBVH)
 FOREACH(kernel ${KERNELS})
 	STRING(TOLOWER ${kernel} kernel_lowercase)
 	IF(WIN32)
@@ -99,21 +99,8 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/pixel_addsamplebuffer_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/pixel_addsamplebufferpreview_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/pixel_addsamplebuffergaussian2x2_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/pixel_clearfb_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/pixel_clearsamplefb_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/pixel_updateframebuffer_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
-
-
-set(LuxRays_SRCS_PDEVICES
-	${LuxRays_SOURCE_DIR}/src/pdevices/nativepdevice.cpp
-	${LuxRays_SOURCE_DIR}/src/pdevices/openclpdevice.cpp
-)
-SOURCE_GROUP("Source Files\\PDevices" FILES ${LuxRays_SRCS_PDEVICES})	
 
 
 set(LuxRays_SRC_UTILS
@@ -129,7 +116,6 @@ SOURCE_GROUP("Source Files\\Utils\\core" FILES ${LuxRays_SRC_UTILS_CORE})
 set(LuxRays_SRC_UTILS_FILM
 	${LuxRays_SOURCE_DIR}/src/utils/film/film.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/film/nativefilm.cpp
-	${LuxRays_SOURCE_DIR}/src/utils/film/pixeldevicefilm.cpp
 )
 SOURCE_GROUP("Source Files\\Utils\\FILM" FILES ${LuxRays_SRC_UTILS_FILM})
 
@@ -171,7 +157,6 @@ set(LuxRays_SRCS
 	${LuxRays_SRCS_CORE_GEOMETRY}
 	${LuxRays_SRCS_IDEVICES}
 	${LuxRays_SRCS_KERNELS}
-	${LuxRays_SRCS_PDEVICES}
 	${LuxRays_SRC_UTILS_CORE}
 	${LuxRays_SRC_UTILS_FILM}
 	${LuxRays_SRC_UTILS_CONVTEST}
@@ -203,7 +188,6 @@ set(LuxRays_HEADERS_LUXRAYS_CORE
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/device.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/intersectiondevice.h
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/pixeldevice.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/virtualdevice.h
@@ -225,15 +209,6 @@ set(LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_normal.h
 )
 SOURCE_GROUP("Header Files\\Core\\Geometry" FILES ${LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY})
-
-set(LuxRays_HEADERS_LUXRAYS_CORE_PIXEL
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/pixel/filter.h
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/pixel/framebuffer.h
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/pixel/samplebuffer.h
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/pixel/spectrum.h
-)
-SOURCE_GROUP("Header Files\\Core\\Pixel" FILES ${LuxRays_HEADERS_LUXRAYS_CORE_PIXEL})
-
 
 set(LuxRays_HEADERS_LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/kernels/kernels.h
@@ -257,6 +232,10 @@ SOURCE_GROUP("Header Files\\Utils\\Core" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_C
 
 set(LuxRays_HEADERS_LUXRAYS_UTILS_FILM
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/film.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/framebuffer.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/nativefilm.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/tonemapping.h
 )
 SOURCE_GROUP("Header Files\\Utils\\Film" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_FILM})
 
@@ -292,7 +271,6 @@ set(LuxRays_HEADERS
 	${LuxRays_HEADERS_LUXRAYS_ACCELERATORS}
 	${LuxRays_HEADERS_LUXRAYS_CORE}
 	${LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY}
-	${LuxRays_HEADERS_LUXRAYS_CORE_PIXEL}
 	${LuxRays_HEADERS_LUXRAYS_KERNELS}
 	${LuxRays_HEADERS_LUXRAYS_UTILS}
 	${LuxRays_HEADERS_LUXRAYS_UTILS_CORE}
