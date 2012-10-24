@@ -40,7 +40,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = new NativeFilm(w, h, false);
+	film = new Film(w, h, false);
 
 	const int filterType = cfg.GetInt("film.filter.type", 1);
 	if (filterType == 0)
@@ -152,5 +152,5 @@ void RenderSession::SaveFilmImage() {
 	// Save the film
 	const string fileName = renderConfig->cfg.GetString("image.filename", "image.png");
 	film->UpdateScreenBuffer();
-	film->Save(fileName);
+	film->SaveScreenBuffer(fileName);
 }

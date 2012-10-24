@@ -82,7 +82,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 					RenderSession *session = telnetServer->session;
 					Scene *scene = session->renderConfig->scene;
-					NativeFilm *film = session->film;
+					Film *film = session->film;
 
 					if (command == "exit")
 						exit = true;

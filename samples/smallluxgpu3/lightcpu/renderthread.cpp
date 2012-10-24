@@ -83,7 +83,7 @@ void LightCPURenderThread::Stop() {
 
 void LightCPURenderThread::StartRenderThread() {
 	delete threadFilm;
-	threadFilm = new NativeFilm(renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), true);
+	threadFilm = new Film(renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), true);
 	threadFilm->Init(renderEngine->film->GetWidth(), renderEngine->film->GetHeight());
 
 	// Create the thread for the rendering
@@ -107,7 +107,7 @@ void LightCPURenderThread::EndEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
-static void ConnectToEye(const Scene *scene, NativeFilm *film,
+static void ConnectToEye(const Scene *scene, Film *film,
 		Vector eyeDir, const float eyeDistance,
 		const Point &hitPoint, const Normal &geometryN, const Spectrum bsdfEval,
 		const Spectrum &flux) {
@@ -137,7 +137,7 @@ static void ConnectToEye(const Scene *scene, NativeFilm *film,
 	}
 }
 
-static void ConnectToEye(const Scene *scene, NativeFilm *film, const BSDF &bsdf,
+static void ConnectToEye(const Scene *scene, Film *film, const BSDF &bsdf,
 		const Vector &lightDir, const Spectrum flux) {
 	Vector eyeDir(scene->camera->orig - bsdf.hitPoint);
 	const float eyeDistance = eyeDir.Length();

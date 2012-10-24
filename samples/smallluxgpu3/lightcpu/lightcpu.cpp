@@ -41,7 +41,7 @@
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mutex *flmMutex) :
+LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		RenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 

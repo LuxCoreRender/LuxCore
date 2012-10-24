@@ -62,7 +62,7 @@ private:
 	LightCPURenderEngine *renderEngine;
 
 	boost::thread *renderThread;
-	NativeFilm *threadFilm;
+	Film *threadFilm;
 
 	bool started, editMode, reportedPermissionError;
 };
@@ -73,7 +73,7 @@ private:
 
 class LightCPURenderEngine : public RenderEngine {
 public:
-	LightCPURenderEngine(RenderConfig *cfg, NativeFilm *flm, boost::mutex *flmMutex);
+	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~LightCPURenderEngine();
 
 	void Start() {
