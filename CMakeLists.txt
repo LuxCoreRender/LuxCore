@@ -129,7 +129,6 @@ add_subdirectory(src)
 #
 ###########################################################################
 
-add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/benchsimple)
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	if(NOT LUXRAYS_DISABLE_OPENCL)
@@ -147,7 +146,6 @@ if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	endif(NOT LUXRAYS_DISABLE_OPENCL)
 
 	add_subdirectory(samples/smallluxgpu3)
-	add_subdirectory(samples/smallppmgpu)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 
