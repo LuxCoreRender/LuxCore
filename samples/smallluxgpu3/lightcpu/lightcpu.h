@@ -64,7 +64,7 @@ private:
 	boost::thread *renderThread;
 	Film *threadFilm;
 
-	bool started, editMode, reportedPermissionError;
+	bool started, editMode;
 };
 
 //------------------------------------------------------------------------------

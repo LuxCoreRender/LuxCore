@@ -21,6 +21,8 @@
 
 #include "renderengine.h"
 #include "renderconfig.h"
+#include "pathocl/pathocl.h"
+#include "lightcpu/lightcpu.h"
 
 #include "luxrays/core/intersectiondevice.h"
 
@@ -43,7 +45,6 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 }
 
 RenderEngine::~RenderEngine() {
-std::cout<<"=================1\n";
 	if (editMode)
 		EndEdit(EditActionList());
 	if (started)
@@ -163,6 +164,18 @@ void RenderEngine::UpdateFilm() {
 				lastConvergenceTestSamplesCount = samplesCount;
 			}
 		}
+	}
+}
+
+RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
+		RenderConfig *renderConfig, Film *film, boost::mutex *filmMutex) {
+	switch (engineType) {
+		case PATHOCL:
+			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
+		case LIGHTCPU:
+			return new LightCPURenderEngine(renderConfig, film, filmMutex);
+		default:
+			throw runtime_error("Unknown render engine type");
 	}
 }
 

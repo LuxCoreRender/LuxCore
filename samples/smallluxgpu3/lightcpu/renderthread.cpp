@@ -52,6 +52,8 @@ LightCPURenderThread::LightCPURenderThread(const unsigned int index, const unsig
 	threadIndex = index;
 	seed = seedBase;
 	renderEngine = re;
+	started = false;
+	editMode = false;
 	threadFilm = NULL;
 }
 

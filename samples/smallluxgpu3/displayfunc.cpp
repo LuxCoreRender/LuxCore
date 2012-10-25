@@ -92,7 +92,8 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "t", "toggle tonemapping");
 	PrintHelpString(320, fontOffset, "n, m", "dec./inc. the screen refresh");
 	fontOffset -= 15;
-	PrintHelpString(320, fontOffset, "0", "OpenCL path tracing");
+	PrintHelpString(15, fontOffset, "1", "OpenCL path tracing");
+	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -370,10 +371,12 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->film->SetToneMapParams(params);
 			}
 			break;
-		/*case '0':
-			config->SetRenderingEngineType(PATHOCL);
-			glutTimerFunc(config->GetScreenRefreshInterval(), timerFunc, 0);
-			break;*/
+		case '1':
+			session->SetRenderingEngineType(PATHOCL);
+			break;
+		case '2':
+			session->SetRenderingEngineType(LIGHTCPU);
+			break;
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;

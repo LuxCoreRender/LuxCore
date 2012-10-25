@@ -79,19 +79,8 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	//--------------------------------------------------------------------------
 
 	// Check the kind of render engine to start
-	const int renderEngineType = cfg.GetInt("renderengine.type", 4);
-
-	// Create and start the render engine
-	switch (renderEngineType) {
-		case 4:
-			renderEngine = new PathOCLRenderEngine(renderConfig, film, &filmMutex);
-			break;
-		case 5:
-			renderEngine = new LightCPURenderEngine(renderConfig, film, &filmMutex);
-			break;
-		default:
-			throw runtime_error("Unknown renderengine.type");
-	}
+	const RenderEngineType renderEngineType = (RenderEngineType)cfg.GetInt("renderengine.type", (int)PATHOCL);
+	renderEngine = RenderEngine::AllocRenderEngine(renderEngineType, renderConfig, film, &filmMutex);
 }
 
 RenderSession::~RenderSession() {
@@ -138,6 +127,20 @@ void RenderSession::EndEdit() {
 	SLG_LOG("[RenderSession] Edit actions: " << editActions);
 	renderEngine->EndEdit(editActions);
 	editMode = false;
+}
+
+void RenderSession::SetRenderingEngineType(const RenderEngineType engineType) {
+	if (engineType != renderEngine->GetEngineType()) {
+		Stop();
+
+		delete renderEngine;
+
+		film->Reset();
+		renderEngine = RenderEngine::AllocRenderEngine(engineType,
+				renderConfig, film, &filmMutex);
+
+		Start();
+	}
 }
 
 bool RenderSession::NeedPeriodicSave() {
