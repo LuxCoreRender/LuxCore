@@ -39,6 +39,8 @@ public:
 	void BeginEdit();
 	void EndEdit();
 
+	void SetRenderingEngineType(const RenderEngineType engineType);
+
 	bool NeedPeriodicSave();
 	void SaveFilmImage();
 

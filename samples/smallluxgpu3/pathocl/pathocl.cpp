@@ -131,7 +131,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
-std::cout<<"=================2\n";
 	if (editMode)
 		EndEdit(EditActionList());
 	if (started)

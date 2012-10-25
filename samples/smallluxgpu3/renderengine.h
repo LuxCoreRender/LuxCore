@@ -29,8 +29,8 @@
 #include "luxrays/utils/film/film.h"
 
 enum RenderEngineType {
-	PATHOCL,
-	LIGHTCPU
+	PATHOCL  = 4,
+	LIGHTCPU = 5
 };
 
 //------------------------------------------------------------------------------
@@ -59,6 +59,9 @@ public:
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
 	double GetRenderingTime() const { return elapsedTime; }
+
+	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
+		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 protected:
 	virtual void StartLockLess() = 0;
