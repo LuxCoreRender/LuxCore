@@ -34,37 +34,136 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	filmMutex = flmMutex;
 	started = false;
 	editMode = false;
+
+	// Create LuxRays context
+	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
+	ctx = new Context(DebugHandler, oclPlatformIndex);
+
+	renderConfig->scene->UpdateDataSet(ctx);
 }
 
 RenderEngine::~RenderEngine() {
+std::cout<<"=================1\n";
 	if (editMode)
-		EndEditLockLess(EditActionList());
+		EndEdit(EditActionList());
 	if (started)
-		StopLockLess();
+		Stop();
+
+	delete ctx;
 }
 
-void RenderEngine::StartLockLess() {
+void RenderEngine::Start() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
 	assert (!started);
 	started = true;
+
+	ctx->Start();
+
+	StartLockLess();
+
+	samplesCount = 0;
+	elapsedTime = 0.0f;
+
+	startTime = WallClockTime();
+	film->ResetConvergenceTest();
+	lastConvergenceTestTime = startTime;
+	lastConvergenceTestSamplesCount = 0;	
 }
 
-void RenderEngine::StopLockLess() {
+void RenderEngine::Stop() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
+	StopLockLess();
+
 	assert (started);
 	started = false;
+
+	ctx->Stop();
+
+	UpdateFilmLockLess();
 }
 
-void RenderEngine::BeginEditLockLess() {
+void RenderEngine::BeginEdit() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
 	assert (started);
 	assert (!editMode);
-
 	editMode = true;
+
+	BeginEditLockLess();
+
+	// Stop all intersection devices
+	ctx->Stop();
 }
 
-void RenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void RenderEngine::EndEdit(const EditActionList &editActions) {
 	assert (started);
 	assert (editMode);
 
+	bool dataSetUpdated;
+	if (editActions.Has(GEOMETRY_EDIT) ||
+			((renderConfig->scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH) &&
+			editActions.Has(INSTANCE_TRANS_EDIT))) {
+		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
+		ctx->SetDataSet(NULL);
+
+		// For all other accelerator, I have to rebuild the DataSet
+		renderConfig->scene->UpdateDataSet(ctx);
+
+		// Set the Luxrays SataSet
+		ctx->SetDataSet(renderConfig->scene->dataSet);
+
+		dataSetUpdated = true;
+	} else
+		dataSetUpdated = false;
+
+	// Restart all intersection devices
+	ctx->Start();
+
+	if (!dataSetUpdated &&
+			(renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) &&
+			editActions.Has(INSTANCE_TRANS_EDIT)) {
+		// Update the DataSet
+		ctx->UpdateDataSet();
+	}
+
+	elapsedTime = 0.0f;
+	startTime = WallClockTime();
+	film->ResetConvergenceTest();
+	lastConvergenceTestTime = startTime;
+	lastConvergenceTestSamplesCount = 0;
+
 	editMode = false;
+
+	EndEditLockLess(editActions);
+}
+
+void RenderEngine::UpdateFilm() {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
+	if (started) {
+		elapsedTime = WallClockTime() - startTime;
+		UpdateFilmLockLess();
+
+		const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
+		if (haltthreshold >= 0.f) {
+			// Check if it is time to run the convergence test again
+			const unsigned int imgWidth = film->GetWidth();
+			const unsigned int imgHeight = film->GetHeight();
+			const unsigned int pixelCount = imgWidth * imgHeight;
+			const double now = WallClockTime();
+
+			// Do not run the test if we don't have at least 16 new samples per pixel
+			if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * 16) &&
+					((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetScreenRefreshInterval())) {
+				film->UpdateScreenBuffer(); // Required in order to have a valid convergence test
+				convergence = 1.f - film->RunConvergenceTest() / (float)pixelCount;
+				lastConvergenceTestTime = now;
+				lastConvergenceTestSamplesCount = samplesCount;
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -79,11 +178,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
 	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
 	const unsigned int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
-	const int oclPlatformIndex = cfg.GetInt("opencl.platform.index", -1);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
-
-	// Create LuxRays context
-	ctx = new Context(DebugHandler, oclPlatformIndex);
 
 	// Start OpenCL devices
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
@@ -151,60 +246,4 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 	// Disable the support for hybrid rendering
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
 		oclIntersectionDevices[i]->SetHybridRenderingSupport(false);
-}
-
-OCLRenderEngine::~OCLRenderEngine() {
-	if (editMode)
-		EndEditLockLess(EditActionList());
-	if (started)
-		StopLockLess();
-}
-
-void OCLRenderEngine::StartLockLess() {
-	RenderEngine::StartLockLess();
-
-	ctx->Start();
-}
-
-void OCLRenderEngine::StopLockLess() {
-	RenderEngine::StopLockLess();
-
-	ctx->Stop();
-}
-
-void OCLRenderEngine::BeginEditLockLess() {
-	RenderEngine::BeginEditLockLess();
-
-	// Stop all intersection devices
-	ctx->Stop();
-}
-
-void OCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	RenderEngine::EndEditLockLess(editActions);
-
-	bool dataSetUpdated;
-	if (editActions.Has(GEOMETRY_EDIT) ||
-			((renderConfig->scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH) &&
-			editActions.Has(INSTANCE_TRANS_EDIT))) {
-		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
-		ctx->SetDataSet(NULL);
-
-		// For all other accelerator, I have to rebuild the DataSet
-		renderConfig->scene->UpdateDataSet(ctx);
-
-		// Set the Luxrays SataSet
-		ctx->SetDataSet(renderConfig->scene->dataSet);
-
-		dataSetUpdated = true;
-	} else
-		dataSetUpdated = false;
-
-	// Restart all intersection devices
-	ctx->Start();
-
-	if (!dataSetUpdated && (renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) &&
-			editActions.Has(INSTANCE_TRANS_EDIT)) {
-		// Update the DataSet
-		ctx->UpdateDataSet();
-	}
 }

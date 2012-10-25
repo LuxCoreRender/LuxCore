@@ -33,100 +33,83 @@ enum RenderEngineType {
 	LIGHTCPU
 };
 
+//------------------------------------------------------------------------------
+// Base class for render engines
+//------------------------------------------------------------------------------
+
 class RenderEngine {
 public:
 	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RenderEngine();
 
-	virtual void Start() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
+	void Start();
+	void Stop();
+	void BeginEdit();
+	void EndEdit(const EditActionList &editActions);
 
-		StartLockLess();
-	}
-	virtual void Stop() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StopLockLess();
-	}
-
-	virtual void BeginEdit() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		BeginEditLockLess();
-	}
-
-	virtual void EndEdit(const EditActionList &editActions) {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		EndEditLockLess(editActions);
-	}
-
-	virtual void UpdateFilm() = 0;
+	void UpdateFilm();
 
 	virtual RenderEngineType GetEngineType() const = 0;
-	virtual unsigned int GetPass() const = 0;
-	virtual float GetConvergence() const = 0;
-	virtual double GetTotalSamplesSec() const = 0;
-	virtual double GetRenderingTime() const = 0;
+
+	unsigned int GetPass() const {
+		return samplesCount / (film->GetWidth() * film->GetHeight());
+	}
+	float GetConvergence() const { return convergence; }
+	double GetTotalSamplesSec() const {
+		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
+	}
+	double GetRenderingTime() const { return elapsedTime; }
 
 protected:
-	void StartLockLess();
-	void StopLockLess();
+	virtual void StartLockLess() = 0;
+	virtual void StopLockLess() = 0;
 
-	void BeginEditLockLess();
-	void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginEditLockLess() = 0;
+	virtual void EndEditLockLess(const EditActionList &editActions) = 0;
+
+	virtual void UpdateFilmLockLess() = 0;
 
 	boost::mutex engineMutex;
+	Context *ctx;
 
 	RenderConfig *renderConfig;
 	Film *film;
 	boost::mutex *filmMutex;
 
+	double startTime, elapsedTime;
+	unsigned long long samplesCount;
+
+	float convergence;
+	double lastConvergenceTestTime;
+	unsigned long long lastConvergenceTestSamplesCount;
+
 	bool started, editMode;
 };
+
+//------------------------------------------------------------------------------
+// Base class for OpenCL render engines
+//------------------------------------------------------------------------------
 
 class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~OCLRenderEngine();
-
-	virtual void Start() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StartLockLess();
-	}
-
-	virtual void Stop() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StopLockLess();
-	}
-
-	virtual void BeginEdit() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		BeginEditLockLess();
-	}
-
-	virtual void EndEdit(const EditActionList &editActions) {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		EndEditLockLess(editActions);
-	}
 
 	const vector<OpenCLIntersectionDevice *> &GetIntersectionDevices() const {
 		return oclIntersectionDevices;
 	}
 
 protected:
-	void StartLockLess();
-	void StopLockLess();
-
-	void BeginEditLockLess();
-	void EndEditLockLess(const EditActionList &editActions);
-
-	Context *ctx;
 	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
+};
+
+//------------------------------------------------------------------------------
+// Base class for CPU render engines
+//------------------------------------------------------------------------------
+
+class CPURenderEngine : public RenderEngine {
+public:
+	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+		RenderEngine(cfg, flm, flmMutex) { }
 };
 
 #endif	/* _RENDERENGINE_H */
