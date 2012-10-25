@@ -39,7 +39,7 @@ BBox TriangleMesh::GetBBox() const {
 
 void TriangleMesh::ApplyTransform(const Transform &trans) {
 	for (unsigned int i = 0; i < vertCount; ++i)
-		vertices[i] = trans * vertices[i];
+		vertices[i] *= trans;
 }
 
 TriangleMesh *TriangleMesh::Merge(

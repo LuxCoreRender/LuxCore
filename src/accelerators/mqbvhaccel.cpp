@@ -802,7 +802,8 @@ bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			QBVHAccel *qbvh = leafs[leafIndex];
 
 			if (leafsTransform[leafIndex]) {
-				Ray r = (*leafsTransform[leafIndex]) / (*ray);
+				Ray r(Inverse(*leafsTransform[leafIndex]) *
+					(*ray));
 				RayHit rh;
 				rh.SetMiss();
 				if (qbvh->Intersect(&r, &rh)) {

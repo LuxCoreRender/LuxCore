@@ -31,6 +31,16 @@
 
 namespace luxrays {
 
+class Transform;
+
+class InvTransform {
+public:
+	const Transform &ref;
+protected:
+	InvTransform(const Transform &t) : ref(t) { }
+	friend InvTransform Inverse(const Transform &t);
+};
+
 // Transform Declarations
 class Transform {
 public:
@@ -44,9 +54,9 @@ public:
 	Transform(const Matrix4x4 &mat, const Matrix4x4 &minv) :
 		m(mat), mInv(minv) { }
 
-	friend std::ostream &operator<<(std::ostream &, const Transform &);
+	Transform(const InvTransform &t) : m(t.ref.mInv), mInv(t.ref.m) { }
 
-	Transform GetInverse() const { return Transform(mInv, m); }
+	friend std::ostream &operator<<(std::ostream &, const Transform &);
 
 	Matrix4x4 GetMatrix() const { return m; }
 	bool HasScale() const;
@@ -67,6 +77,16 @@ private:
 	// Transform private static data
 	static const Matrix4x4 MAT_IDENTITY;
 };
+
+inline InvTransform Inverse(const Transform &t)
+{
+	return InvTransform(t);
+}
+
+inline const Transform &Inverse(const InvTransform &t)
+{
+	return t.ref;
+}
 
 inline bool Transform::SwapsHandedness() const
 {
@@ -93,10 +113,23 @@ inline Point operator*(const Transform &t, const Point &pt)
 		return pr;
 }
 
-inline Point operator/(const Transform &t, const Point &pt)
+inline Point &operator*=(Point &pt, const Transform &t)
 {
 	const float x = pt.x, y = pt.y, z = pt.z;
-	const Matrix4x4 &m = t.mInv;
+	const Matrix4x4 &m = t.m;
+	pt.x = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3];
+	pt.y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3];
+	pt.z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3];
+	const float w = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3];
+	if (w != 1.f)
+		pt /= w;
+	return pt;
+}
+
+inline Point operator*(const InvTransform &t, const Point &pt)
+{
+	const float x = pt.x, y = pt.y, z = pt.z;
+	const Matrix4x4 &m = t.ref.mInv;
 	const Point pr(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3],
 		m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3],
 		m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3]);
@@ -107,22 +140,55 @@ inline Point operator/(const Transform &t, const Point &pt)
 		return pr;
 }
 
+inline Point &operator*=(Point &pt, const InvTransform &t)
+{
+	const float x = pt.x, y = pt.y, z = pt.z;
+	const Matrix4x4 &m = t.ref.mInv;
+	pt.x = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z + m.m[0][3];
+	pt.y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z + m.m[1][3];
+	pt.z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z + m.m[2][3];
+	const float w = m.m[3][0] * x + m.m[3][1] * y + m.m[3][2] * z + m.m[3][3];
+	if (w != 1.f)
+		pt /= w;
+	return pt;
+}
+
 inline Vector operator*(const Transform &t, const Vector &v)
 {
 	const float x = v.x, y = v.y, z = v.z;
 	const Matrix4x4 &m = t.m;
 	return Vector(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
-			m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
-			m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
+		m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
+		m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
 }
 
-inline Vector operator/(const Transform &t, const Vector &v)
+inline Vector &operator*=(Vector &v, const Transform &t)
 {
 	const float x = v.x, y = v.y, z = v.z;
-	const Matrix4x4 &m = t.mInv;
+	const Matrix4x4 &m = t.m;
+	v.x = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z;
+	v.y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z;
+	v.z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z;
+	return v;
+}
+
+inline Vector operator*(const InvTransform &t, const Vector &v)
+{
+	const float x = v.x, y = v.y, z = v.z;
+	const Matrix4x4 &m = t.ref.mInv;
 	return Vector(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
-			m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
-			m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
+		m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
+		m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
+}
+
+inline Vector &operator*=(Vector &v, const InvTransform &t)
+{
+	const float x = v.x, y = v.y, z = v.z;
+	const Matrix4x4 &m = t.ref.mInv;
+	v.x = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z;
+	v.y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z;
+	v.z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z;
+	return v;
 }
 
 inline Normal operator*(const Transform &t, const Normal &n)
@@ -130,17 +196,37 @@ inline Normal operator*(const Transform &t, const Normal &n)
 	const float x = n.x, y = n.y, z = n.z;
 	const Matrix4x4 &mInv = t.mInv;
 	return Normal(mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z,
-			mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
-			mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
+		mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
+		mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
 }
 
-inline Normal operator/(const Transform &t, const Normal &n)
+inline Normal &operator*=(Normal &n, const Transform &t)
 {
 	const float x = n.x, y = n.y, z = n.z;
-	const Matrix4x4 &mInv = t.m;
+	const Matrix4x4 &mInv = t.mInv;
+	n.x = mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z;
+	n.y = mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z;
+	n.z = mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z;
+	return n;
+}
+
+inline Normal operator*(const InvTransform &t, const Normal &n)
+{
+	const float x = n.x, y = n.y, z = n.z;
+	const Matrix4x4 &mInv = t.ref.m;
 	return Normal(mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z,
-			mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
-			mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
+		mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z,
+		mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z);
+}
+
+inline Normal &operator*=(Normal &n, const InvTransform &t)
+{
+	const float x = n.x, y = n.y, z = n.z;
+	const Matrix4x4 &mInv = t.ref.m;
+	n.x = mInv.m[0][0] * x + mInv.m[1][0] * y + mInv.m[2][0] * z;
+	n.y = mInv.m[0][1] * x + mInv.m[1][1] * y + mInv.m[2][1] * z;
+	n.z = mInv.m[0][2] * x + mInv.m[1][2] * y + mInv.m[2][2] * z;
+	return n;
 }
 
 inline Ray operator*(const Transform &t, const Ray &r)
@@ -148,9 +234,23 @@ inline Ray operator*(const Transform &t, const Ray &r)
 	return Ray(t * r.o, t * r.d, r.mint, r.maxt, r.time);
 }
 
-inline Ray operator/(const Transform &t, const Ray &r)
+inline Ray &operator*=(Ray &r, const Transform &t)
 {
-	return Ray(t / r.o, t / r.d, r.mint, r.maxt, r.time);
+	r.o *= t;
+	r.d *= t;
+	return r;
+}
+
+inline Ray operator*(const InvTransform &t, const Ray &r)
+{
+	return Ray(t * r.o, t * r.d, r.mint, r.maxt, r.time);
+}
+
+inline Ray &operator*=(Ray &r, const InvTransform &t)
+{
+	r.o *= t;
+	r.d *= t;
+	return r;
 }
 
 inline BBox operator*(const Transform &t, const BBox &b)
@@ -164,15 +264,15 @@ inline BBox operator*(const Transform &t, const BBox &b)
 		t * Point(b.pMin.x, b.pMax.y, b.pMax.z));
 }
 
-inline BBox operator/(const Transform &t, const BBox &b)
+inline BBox operator*(const InvTransform &t, const BBox &b)
 {
-	return Union(Union(Union(Union(Union(Union(BBox(t / b.pMin, t / b.pMax),
-		t / Point(b.pMax.x, b.pMin.y, b.pMin.z)),
-		t / Point(b.pMin.x, b.pMax.y, b.pMin.z)),
-		t / Point(b.pMin.x, b.pMin.y, b.pMax.z)),
-		t / Point(b.pMax.x, b.pMax.y, b.pMin.z)),
-		t / Point(b.pMax.x, b.pMin.y, b.pMax.z)),
-		t / Point(b.pMin.x, b.pMax.y, b.pMax.z));
+	return Union(Union(Union(Union(Union(Union(BBox(t * b.pMin, t * b.pMax),
+		t * Point(b.pMax.x, b.pMin.y, b.pMin.z)),
+		t * Point(b.pMin.x, b.pMax.y, b.pMin.z)),
+		t * Point(b.pMin.x, b.pMin.y, b.pMax.z)),
+		t * Point(b.pMax.x, b.pMax.y, b.pMin.z)),
+		t * Point(b.pMax.x, b.pMin.y, b.pMax.z)),
+		t * Point(b.pMin.x, b.pMax.y, b.pMax.z));
 }
 
 Transform Translate(const Vector &delta);

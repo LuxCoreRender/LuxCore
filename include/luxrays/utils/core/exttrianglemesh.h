@@ -214,7 +214,7 @@ public:
 
 	void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
 		mesh->Sample(index, u0, u1, p , b0, b1, b2);
-		*p = trans * (*p);
+		*p *= trans;
 	}
 
 	virtual void ApplyTransform(const Transform &t) { trans = trans * t; }

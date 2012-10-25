@@ -114,7 +114,7 @@ public:
 			mbDeltaUp = mbUp - up;
 		} else {
 			Transform WorldToCamera = LookAt(orig, target, up);
-			CameraToWorld = WorldToCamera.GetInverse();
+			CameraToWorld = Inverse(WorldToCamera);
 		}
 
 		Transform CameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
@@ -137,7 +137,7 @@ public:
 				Scale(1.f / (screen[1] - screen[0]), 1.f / (screen[2] - screen[3]), 1.f) *
 				luxrays::Translate(Vector(-screen[0], -screen[3], 0.f));
 
-		RasterToCamera = CameraToScreen.GetInverse() * ScreenToRaster.GetInverse();
+		RasterToCamera = Inverse(ScreenToRaster * CameraToScreen);
 	}
 
 	void GenerateRay(
@@ -152,7 +152,7 @@ public:
 
 			// Build the CameraToWorld transformation
 			Transform WorldToCamera = LookAt(sampledOrig, sampledTarget, sampledUp);
-			c2w = WorldToCamera.GetInverse();
+			c2w = Inverse(WorldToCamera);
 		} else
 			c2w = CameraToWorld;
 
@@ -183,7 +183,7 @@ public:
         ray->mint = MachineEpsilon::E(ray->o);
         ray->maxt = (clipYon - clipHither) / ray->d.z;
 
-        *ray = c2w * *ray;
+        *ray *= c2w;
 	}
 
 	const Matrix4x4 GetRasterToCameraMatrix() const {
