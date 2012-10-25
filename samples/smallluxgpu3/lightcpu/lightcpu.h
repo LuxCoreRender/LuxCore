@@ -96,9 +96,6 @@ private:
 	void UpdateFilmLockLess();
 
 	vector<LightCPURenderThread *> renderThreads;
-
-	double startTime, elapsedTime;
-	unsigned long long samplesCount;
 };
 
 #endif	/* LIGHTCPU_H */
