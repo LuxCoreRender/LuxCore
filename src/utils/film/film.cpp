@@ -27,13 +27,14 @@ using namespace luxrays::utils;
 Film::Film(const unsigned int w, const unsigned int h, const bool perScreenNorm) : convTest(w, h) {
 	filterType = FILTER_GAUSSIAN;
 	toneMapParams = new LinearToneMapParams();
-	usePerScreenNormalization = perScreenNorm;
 
 	sampleFrameBuffer = NULL;
 	alphaFrameBuffer = NULL;
 	frameBuffer = NULL;
 
 	enableAlphaChannel = false;
+	usePerScreenNormalization = perScreenNorm;
+	enabledOverlappedScreenBufferUpdate = true;
 
 	InitGammaTable();
 	Init(w, h);
@@ -315,7 +316,7 @@ void Film::UpdateScreenBuffer() {
 						p[i].g = Radiance2PixelFloat(sp[i].radiance.g * invWeight);
 						p[i].b = Radiance2PixelFloat(sp[i].radiance.b * invWeight);
 					}
-				} else {
+				} else if (enabledOverlappedScreenBufferUpdate) {
 					p[i].r = 0.f;
 					p[i].g = 0.f;
 					p[i].b = 0.f;

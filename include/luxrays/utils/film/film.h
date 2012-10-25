@@ -64,6 +64,9 @@ public:
 		enableAlphaChannel = alphaChannel;
 	}
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
+	void EnableOverlappedScreenBufferUpdate(const bool overlappedScreenBufferUpdate) {
+		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
+	}
 
 	void SetFilterType(const FilterType filter) {
 		filterType = filter;
@@ -187,7 +190,8 @@ private:
 	
 	ConvergenceTest convTest;
 
-	bool enableAlphaChannel, usePerScreenNormalization;
+	bool enableAlphaChannel, usePerScreenNormalization,
+		enabledOverlappedScreenBufferUpdate;
 };
 
 } }
