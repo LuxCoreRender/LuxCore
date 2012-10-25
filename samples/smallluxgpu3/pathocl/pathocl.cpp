@@ -115,10 +115,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 
 	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
 
-	startTime = 0.0;
-	samplesCount = 0;
-	convergence = 0.f;
-
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 
 	// Create and start render threads
@@ -133,10 +129,11 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
+std::cout<<"=================2\n";
 	if (editMode)
-		EndEditLockLess(EditActionList());
+		EndEdit(EditActionList());
 	if (started)
-		StopLockLess();
+		Stop();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
@@ -145,96 +142,40 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 	delete filter;
 }
 
-void PathOCLRenderEngine::Start() {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
-
+void PathOCLRenderEngine::StartLockLess() {
 	compiledScene = new CompiledScene(renderConfig, film);
-
-	OCLRenderEngine::StartLockLess();
-
-	samplesCount = 0;
-	elapsedTime = 0.0f;
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();
-
-	startTime = WallClockTime();
-	film->ResetConvergenceTest();
-	lastConvergenceTestTime = startTime;
-	lastConvergenceTestSamplesCount = 0;
 }
 
-void PathOCLRenderEngine::Stop() {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
-
+void PathOCLRenderEngine::StopLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Stop();
 
-	UpdateFilmLockLess();
-
-	OCLRenderEngine::StopLockLess();
-
 	delete compiledScene;
 	compiledScene = NULL;
 }
 
-void PathOCLRenderEngine::BeginEdit() {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
-
-	/*SLG_LOG("[DEBUG] BeginEdit() =================================");
-	const double t1 = WallClockTime();*/
+void PathOCLRenderEngine::BeginEditLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->BeginEdit();
-
-	//const double t2 = WallClockTime();
-	OCLRenderEngine::BeginEditLockLess();
-
-	/*const double t3 = WallClockTime();
-	SLG_LOG("[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
-		" T2 = " << int((t3 - t2) * 1000.0));*/
 }
 
-void PathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
-
-	/*SLG_LOG("[DEBUG] EndEdit() =================================");
-	const double t1 = WallClockTime();*/
-	OCLRenderEngine::EndEditLockLess(editActions);
-
-	//const double t2 = WallClockTime();
+void PathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
 	compiledScene->Recompile(editActions);
 
-	//const double t3 = WallClockTime();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->EndEdit(editActions);
-
-	/*const double t4 = WallClockTime();
-	SLG_LOG("[DEBUG] T1 = " << int((t2 - t1) * 1000.0) <<
-		" T2 = " << int((t3 - t2) * 1000.0) <<
-		" T3 = " << int((t4 - t3) * 1000.0));*/
-
-	elapsedTime = 0.0f;
-	startTime = WallClockTime();
-	film->ResetConvergenceTest();
-	lastConvergenceTestTime = startTime;
-	lastConvergenceTestSamplesCount = 0;
-}
-
-void PathOCLRenderEngine::UpdateFilm() {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
-
-	if (started)
-		UpdateFilmLockLess();
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-	elapsedTime = WallClockTime() - startTime;
 	const unsigned int imgWidth = film->GetWidth();
 	const unsigned int imgHeight = film->GetHeight();
 
@@ -319,34 +260,6 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 	}
 
 	samplesCount = totalCount;
-
-	const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
-	if (haltthreshold >= 0.f) {
-		// Check if it is time to run the convergence test again
-		const unsigned int pixelCount = imgWidth * imgHeight;
-		const double now = WallClockTime();
-
-		// Do not run the test if we don't have at least 16 new samples per pixel
-		if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * 16) &&
-				((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetScreenRefreshInterval())) {
-			film->UpdateScreenBuffer(); // Required in order to have a valid convergence test
-			convergence = 1.f - film->RunConvergenceTest() / (float)pixelCount;
-			lastConvergenceTestTime = now;
-			lastConvergenceTestSamplesCount = samplesCount;
-		}
-	}
-}
-
-unsigned int PathOCLRenderEngine::GetPass() const {
-	return samplesCount / (film->GetWidth() * film->GetHeight());
-}
-
-float PathOCLRenderEngine::GetConvergence() const {
-	return convergence;
-}
-
-bool PathOCLRenderEngine::IsMaterialCompiled(const MaterialType type) const {
-	return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
 }
 
 #endif

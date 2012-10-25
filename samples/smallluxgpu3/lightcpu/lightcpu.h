@@ -71,44 +71,12 @@ private:
 // Light tracing CPU render engine
 //------------------------------------------------------------------------------
 
-class LightCPURenderEngine : public RenderEngine {
+class LightCPURenderEngine : public CPURenderEngine {
 public:
 	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~LightCPURenderEngine();
 
-	void Start() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StartLockLess();
-	}
-	
-	void Stop() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		StopLockLess();
-	}
-
-	void BeginEdit() {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		BeginEditLockLess();
-	}
-
-	void EndEdit(const EditActionList &editActions) {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
-
-		EndEditLockLess(editActions);
-	}
-
-	void UpdateFilm();
-
-	unsigned int GetPass() const;
-	float GetConvergence() const;
 	RenderEngineType GetEngineType() const { return LIGHTCPU; }
-	double GetTotalSamplesSec() const {
-		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
-	}
-	double GetRenderingTime() const { return elapsedTime; }
 
 	friend class LightCPURenderThread;
 
@@ -117,10 +85,6 @@ public:
 
 	int rrDepth;
 	float rrImportanceCap;
-
-	float convergence;
-	double lastConvergenceTestTime;
-	unsigned long long lastConvergenceTestSamplesCount;
 
 private:
 	void StartLockLess();
@@ -131,15 +95,10 @@ private:
 
 	void UpdateFilmLockLess();
 
-	mutable boost::mutex engineMutex;
-
 	vector<LightCPURenderThread *> renderThreads;
 
-	double startTime;
-	double elapsedTime;
+	double startTime, elapsedTime;
 	unsigned long long samplesCount;
-
-	Context *ctx;
 };
 
 #endif	/* LIGHTCPU_H */

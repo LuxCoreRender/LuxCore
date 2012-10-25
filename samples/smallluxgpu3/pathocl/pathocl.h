@@ -153,23 +153,11 @@ public:
 	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLRenderEngine();
 
-	void Start();
-	void Stop();
-
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
-
-	void UpdateFilm();
-
-	unsigned int GetPass() const;
-	float GetConvergence() const;
 	RenderEngineType GetEngineType() const { return PATHOCL; }
-	double GetTotalSamplesSec() const {
-		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
-	}
-	double GetRenderingTime() const { return elapsedTime; }
 
-	bool IsMaterialCompiled(const MaterialType type) const;
+	bool IsMaterialCompiled(const MaterialType type) const {
+		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
+	}
 
 	friend class PathOCLRenderThread;
 
@@ -181,21 +169,17 @@ public:
 	float epsilon;
 
 private:
-	void UpdateFilmLockLess();
+	void StartLockLess();
+	void StopLockLess();
 
-	mutable boost::mutex engineMutex;
+	void BeginEditLockLess();
+	void EndEditLockLess(const EditActionList &editActions);
+
+	void UpdateFilmLockLess();
 
 	CompiledScene *compiledScene;
 
 	vector<PathOCLRenderThread *> renderThreads;
-
-	double startTime;
-	double elapsedTime;
-	unsigned long long samplesCount;
-
-	float convergence;
-	double lastConvergenceTestTime;
-	unsigned long long lastConvergenceTestSamplesCount;
 
 	PathOCL::Sampler *sampler;
 	PathOCL::Filter *filter;
