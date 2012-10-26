@@ -32,6 +32,8 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	isPassThrough = false;
 	isLightSource = false;
 
+	hitPoint = ray(rayHit.t);
+
 	const unsigned int currentTriangleIndex = rayHit.index;
 	const unsigned int currentMeshIndex = scene.dataSet->GetMeshID(currentTriangleIndex);
 
@@ -45,12 +47,12 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	// Check if it is a light source
 	if (material->IsLightSource()) {
 		isLightSource = true;
+		lightSource = scene.triangleLightSource[currentTriangleIndex];
 		// SLG light sources are like black bodies
 		return;
 	}
 
 	surfMat = (const SurfaceMaterial *)material;
-	hitPoint = ray(rayHit.t);
 
 	if (mesh->HasColors())
 		surfaceColor = mesh->InterpolateTriColor(triIndex, rayHit.b1, rayHit.b2);
@@ -179,11 +181,13 @@ Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 		return surfaceColor * result;
 }
 
-Spectrum BSDF::GetEmittedRadiance(const Vector &dir) const {
-	if (isLightSource) {
-		return ((LightMaterial *)material)->Le(mesh, triIndex, dir);
-	} else
-		return Spectrum(0.f);
+Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
+			const Vector &dir,
+			float *directPdfA,
+			float *emissionPdfW) const {
+	return isLightSource ? 
+		lightSource->GetRadiance(scene, dir, hitPoint, directPdfA, emissionPdfW) :
+		Spectrum(0.f);
 }
 
 } }

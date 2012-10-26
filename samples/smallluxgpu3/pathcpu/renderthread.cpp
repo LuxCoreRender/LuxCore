@@ -56,7 +56,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
 		int depth = 0;
-		
+		bool lastSpecular = true;
 		Spectrum radiance(0.f);
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		while (depth <= renderEngine->maxPathDepth) {
@@ -68,8 +68,16 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					// Check if it is a light source
 					if (bsdf.IsLightSource()) {
 						// Check if it is a an area light
-						const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(-eyeRay.d);
-						radiance += pathThrouput * emittedRadiance;
+						float directPdfA;
+						const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene,
+							-eyeRay.d, &directPdfA);
+
+						float weight = 1.f;
+						if(depth > 0 && !lastSpecular)
+							weight = PdfAtoW(directPdfA, eyeRayHit.t,
+									Dot(-eyeRay.d, bsdf.shadeN));
+						
+						radiance += pathThrouput * weight * emittedRadiance;
 
 						// SLG light sources are like black bodies
 						break;
@@ -105,7 +113,8 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 							break;
 					}*/
 
-					pathThrouput *= bsdfSample / bsdfPdf;
+					lastSpecular = ((event & SPECULAR) != 0);
+					pathThrouput *= Dot(sampledDir, bsdf.shadeN) * bsdfSample / bsdfPdf;
 					assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
 					eyeRay = Ray(bsdf.hitPoint, sampledDir);
