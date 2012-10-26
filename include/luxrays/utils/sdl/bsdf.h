@@ -45,6 +45,7 @@ public:
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsPassThrough() const { return isPassThrough; }
 	bool IsLightSource() const { return isLightSource; }
+	bool IsDelta() const { return surfMat->IsSpecular(); }
 
 	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir,
 		BSDFEvent *event) const ;

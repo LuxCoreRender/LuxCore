@@ -187,7 +187,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						break;
 				}
 
-				lightPathFlux *= Dot(bsdf.geometryN, sampledDir) * bsdfSample / bsdfPdf;
+				lightPathFlux *= AbsDot(bsdf.shadeN, sampledDir) * bsdfSample / bsdfPdf;
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 				nextEventRay = Ray(bsdf.hitPoint, sampledDir);

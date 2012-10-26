@@ -29,6 +29,42 @@
 // PathCPU RenderThread
 //------------------------------------------------------------------------------
 
+static Spectrum DirectLightSampling(const Scene *scene, RandomGenerator *rndGen,
+		const Spectrum &pathThrouput, const BSDF &bsdf, const Vector &eyeDir) {
+	if (!bsdf.IsDelta()) {
+		// Pick a light source to sample
+		float lightPickPdf;
+		const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
+
+		Vector lightRayDir;
+		float distance, directPdfW;
+		Spectrum lightRadiance = light->Illuminate(scene, bsdf.hitPoint,
+				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+				&lightRayDir, &distance, &directPdfW);
+
+		if (!lightRadiance.Black()) {
+			BSDFEvent event;
+			const Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, eyeDir, &event);
+
+			if (!bsdfEval.Black()) {
+				Ray shadowRay(bsdf.hitPoint, lightRayDir,
+						MachineEpsilon::E(bsdf.hitPoint),
+						distance - MachineEpsilon::E(distance));
+				RayHit shadowRayHit;
+				if (!scene->dataSet->Intersect(&shadowRay, &shadowRayHit)) {
+					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
+					const float factor = cosThetaToLight / (lightPickPdf * directPdfW);
+
+					return pathThrouput * lightRadiance * factor *bsdfEval;
+				}
+				// TODO: pass through support
+			}
+		}
+	}
+	
+	return Spectrum();
+}
+
 void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread started");
 
@@ -66,8 +102,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					BSDF bsdf(false, *scene, eyeRay, eyeRayHit, rndGen->floatValue());
 
 					// Check if it is a light source
-					if (bsdf.IsLightSource()) {
-						// Check if it is a an area light
+					if (bsdf.IsLightSource() && lastSpecular) {
 						float directPdfA;
 						const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene,
 							-eyeRay.d, &directPdfA);
@@ -91,9 +126,15 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						continue;
 					}
 
-					//--------------------------------------------------------------
+					//----------------------------------------------------------
+					// Direct light sampling
+					//----------------------------------------------------------
+
+					radiance += DirectLightSampling(scene, rndGen, pathThrouput, bsdf, -eyeRay.d);
+
+					//----------------------------------------------------------
 					// Build the next vertex path ray
-					//--------------------------------------------------------------
+					//----------------------------------------------------------
 
 					float bsdfPdf;
 					Vector sampledDir;
@@ -104,17 +145,17 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					if ((bsdfPdf <= 0.f) || bsdfSample.Black())
 						break;
 
-					/*if (depth >= renderEngine->rrDepth) {
+					if (depth >= renderEngine->rrDepth) {
 						// Russian Roulette
 						const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
 						if (prob >= rndGen->floatValue())
 							bsdfPdf *= prob;
 						else
 							break;
-					}*/
+					}
 
 					lastSpecular = ((event & SPECULAR) != 0);
-					pathThrouput *= Dot(sampledDir, bsdf.shadeN) * bsdfSample / bsdfPdf;
+					pathThrouput *= AbsDot(sampledDir, bsdf.shadeN) * bsdfSample / bsdfPdf;
 					assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
 					eyeRay = Ray(bsdf.hitPoint, sampledDir);

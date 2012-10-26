@@ -68,11 +68,18 @@ public:
 		throw std::runtime_error("Internal error, called LightSource::Emit()");
 	}
 
+	// Illuminates a point in the scene
+    virtual Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL) const {
+		throw std::runtime_error("Internal error, called LightSource::Illuminate()");
+	}
+
+	// Returns radiance for ray hitting the light source
 	virtual Spectrum GetRadiance(const Scene *scene,
-			const Vector &dir,
-			const Point &hitPoint,
-			float *directPdfA = NULL,
-			float *emissionPdfW = NULL) const {
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const {
 		throw std::runtime_error("Internal error, called LightSource::GetRadiance()");
 	}
 };
@@ -258,19 +265,22 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 
-	// Emits particle from the light
+
 	Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *pos, Vector *dir, Normal *normal,
 		float *emissionPdfW, float *directPdfA = NULL) const;
+
+	Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL) const;
 
 	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir,
 			const Point &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
-	
-	Spectrum Evaluate(const Scene *scene, const Vector &dir) const;
 
 private:
 	const AreaLightMaterial *lightMaterial;

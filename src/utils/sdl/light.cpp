@@ -431,7 +431,7 @@ Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
 
 Spectrum TriangleLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *orig, Vector *dir, Normal *normal,
+		Point *orig, Vector *dir, Normal *N,
 		float *emissionPdfW, float *directPdfA) const {
 	const ExtMesh *mesh = scene->objects[meshIndex];
 
@@ -440,8 +440,8 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
 
 	// Build the local frame
-	*normal = mesh->InterpolateTriNormal(triIndex, b1, b2);
-	Frame frame(*normal);
+	*N = mesh->GetGeometryNormal(triIndex);
+	Frame frame(*N);
 
 	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
 	*emissionPdfW *= invArea;
@@ -458,6 +458,37 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	return lightMaterial->GetGain() * localDirOut.z;
 }
 
+Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW) const {
+	const ExtMesh *mesh = scene->objects[meshIndex];
+
+	Point samplePoint;
+	float b0, b1, b2;
+	mesh->Sample(triIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	const Normal &sampleN = mesh->GetGeometryNormal(triIndex);
+
+	*dir = samplePoint - p;
+	const float distanceSquared = dir->LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir /= (*distance);
+
+	const float cosThetaAtLight = Dot(sampleN, -(*dir));
+	if (cosThetaAtLight < DEFAULT_EPSILON_STATIC)
+		return Spectrum();
+
+	*directPdfW = invArea * distanceSquared / cosThetaAtLight;
+
+	if (emissionPdfW)
+		*emissionPdfW = invArea * cosThetaAtLight * INV_PI;
+
+	if (mesh->HasColors())
+		return mesh->GetColor(triIndex) * lightMaterial->GetGain(); // Light sources are supposed to have flat color
+	else
+		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
+}
+
 Spectrum TriangleLight::GetRadiance(const Scene *scene,
 		const Vector &dir,
 		const Point &hitPoint,
@@ -468,33 +499,19 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	// Get the u and v coordinates of the hit point
 	float b1, b2;
 	if (!mesh->GetTriUV(triIndex, hitPoint, &b1, &b2))
-		return Spectrum(0.f);
+		return Spectrum();
 
 	const Normal geometryN = mesh->GetGeometryNormal(triIndex);
 	const float cosOutL = Dot(geometryN, dir);
 
-	if(cosOutL <= 0.f)
-		return Spectrum(0.f);
+	if (cosOutL <= 0.f)
+		return Spectrum();
 
-	if(directPdfA)
+	if (directPdfA)
 		*directPdfA = invArea;
 
-	if(emissionPdfW)
+	if (emissionPdfW)
 		*emissionPdfW = cosOutL * INV_PI * invArea;
 
 	return lightMaterial->GetGain();
-}
-
-Spectrum TriangleLight::Evaluate(const Scene *scene, const Vector &dir) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
-
-	const float RdotN = Dot(-dir, sampleN);
-	if (RdotN < 0.f)
-		return Spectrum();
-
-	if (mesh->HasColors())
-		return M_PI * mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
-	else
-		return M_PI * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color	
 }

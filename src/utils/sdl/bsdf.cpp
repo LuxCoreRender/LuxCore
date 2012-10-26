@@ -149,7 +149,7 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 		*event = TRANSMIT;
 	else {
 		*event = NONE;
-		return Spectrum(0.f);
+		return Spectrum();
 	}
 
 	Vector localLightDir = frame.ToLocal(lightDir);

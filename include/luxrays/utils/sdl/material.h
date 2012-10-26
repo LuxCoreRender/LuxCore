@@ -137,7 +137,7 @@ public:
 		if (Dot(N, wi) > 0.f)
 			return KdOverPI;
 		else
-			return Spectrum(0.f);
+			return Spectrum();
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
@@ -184,7 +184,7 @@ public:
 		if ((*event & TRANSMIT) ||
 				(fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
 				(fabsf(eyeDir.z) < DEFAULT_EPSILON_STATIC))
-            return Spectrum(0.f);
+            return Spectrum();
 
 		return KdOverPI;
 	}
@@ -197,7 +197,7 @@ public:
 		*eyeDir = Sgn(lightDir.z) * CosineSampleHemisphere(u0, u1);
 		if ((fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
 				(fabsf(eyeDir->z) < DEFAULT_EPSILON_STATIC))
-            return Spectrum(0.f);
+            return Spectrum();
 
 		*pdf = fabsf(eyeDir->z) * INV_PI;
 
@@ -248,7 +248,7 @@ public:
 	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event) const {
 		*event |= SPECULAR;
 
-		return Spectrum(0.f);
+		return Spectrum();
 	}
 
 	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
