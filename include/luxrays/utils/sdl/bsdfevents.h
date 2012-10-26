@@ -28,11 +28,9 @@ enum BSDFEventType {
 	NONE     = 0,
 	DIFFUSE  = 1,
 	GLOSSY   = 2,
-	REFLECT  = 4,
-	TRANSMIT = 8,
-	SPECULAR = (REFLECT | TRANSMIT),
-	NON_SPECULAR = (DIFFUSE  | GLOSSY),
-	ALL          = (SPECULAR | NON_SPECULAR)
+	SPECULAR = 4,
+	REFLECT  = 8,
+	TRANSMIT = 16
 };
 
 typedef int BSDFEvent;
