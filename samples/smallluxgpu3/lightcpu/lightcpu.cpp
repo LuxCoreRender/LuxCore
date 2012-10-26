@@ -42,7 +42,7 @@
 //------------------------------------------------------------------------------
 
 LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex) {
+		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl) {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
@@ -55,59 +55,4 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
-
-	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
-
-	// Create and start render threads
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
-	SLG_LOG("Starting "<< renderThreadCount << " LightCPU render threads");
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		LightCPURenderThread *t = new LightCPURenderThread(i, seedBase + i, this);
-		renderThreads.push_back(t);
-	}
-}
-
-LightCPURenderEngine::~LightCPURenderEngine() {
-	if (editMode)
-		EndEdit(EditActionList());
-	if (started)
-		Stop();
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		delete renderThreads[i];
-}
-
-void LightCPURenderEngine::StartLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
-}
-
-void LightCPURenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
-}
-
-void LightCPURenderEngine::BeginEditLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
-}
-
-void LightCPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
-}
-
-void LightCPURenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-	film->Reset();
-
-	// Merge the all thread films
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		film->AddFilm(*(renderThreads[i]->threadFilm));
-	samplesCount = film->GetTotalSampleCount();
 }

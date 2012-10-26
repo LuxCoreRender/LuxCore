@@ -45,69 +45,8 @@
 #include "luxrays/utils/sdl/bsdf.h"
 
 //------------------------------------------------------------------------------
-// LightCPURenderThread
+// LightCPU RenderThread
 //------------------------------------------------------------------------------
-
-LightCPURenderThread::LightCPURenderThread(const unsigned int index, const unsigned int seedBase, LightCPURenderEngine *re) {
-	threadIndex = index;
-	seed = seedBase;
-	renderEngine = re;
-	started = false;
-	editMode = false;
-	threadFilm = NULL;
-}
-
-LightCPURenderThread::~LightCPURenderThread() {
-	if (editMode)
-		EndEdit(EditActionList());
-	if (started)
-		Stop();
-
-	delete threadFilm;
-}
-
-void LightCPURenderThread::Start() {
-	started = true;
-
-	StartRenderThread();
-}
-
-void LightCPURenderThread::Interrupt() {
-	if (renderThread)
-		renderThread->interrupt();
-}
-
-void LightCPURenderThread::Stop() {
-	StopRenderThread();
-
-	started = false;
-}
-
-void LightCPURenderThread::StartRenderThread() {
-	delete threadFilm;
-	threadFilm = new Film(renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), true);
-	threadFilm->Init(renderEngine->film->GetWidth(), renderEngine->film->GetHeight());
-
-	// Create the thread for the rendering
-	renderThread = new boost::thread(boost::bind(LightCPURenderThread::RenderThreadImpl, this));
-}
-
-void LightCPURenderThread::StopRenderThread() {
-	if (renderThread) {
-		renderThread->interrupt();
-		renderThread->join();
-		delete renderThread;
-		renderThread = NULL;
-	}
-}
-
-void LightCPURenderThread::BeginEdit() {
-	StopRenderThread();
-}
-
-void LightCPURenderThread::EndEdit(const EditActionList &editActions) {
-	StartRenderThread();
-}
 
 static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 		Vector eyeDir, const float eyeDistance,
@@ -165,14 +104,14 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0, const B
 	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, bsdf.hitPoint, bsdf.geometryN, bsdfEval, flux);
 }
 
-void LightCPURenderThread::RenderThreadImpl(LightCPURenderThread *renderThread) {
+void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	LightCPURenderEngine *renderEngine = renderThread->renderEngine;
+	LightCPURenderEngine *renderEngine = (LightCPURenderEngine *)renderThread->renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
 
