@@ -173,10 +173,13 @@ Scene::Scene(const std::string &fileName, const int aType) {
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 				TriangleLight *tl = new TriangleLight(light, static_cast<unsigned int>(objects.size()) - 1, i, objects);
 				lights.push_back(tl);
+				triangleLightSource.push_back(tl);
 			}
 		} else {
 			SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
 			objectMaterials.push_back(surfMat);
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+				triangleLightSource.push_back(NULL);
 		}
 
 		// [old deprecated syntax] Check if there is a texture map associated to the object
@@ -333,6 +336,8 @@ Scene::~Scene() {
 
 	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
 		delete *l;
+	for (std::vector<Material *>::const_iterator m = materials.begin(); m != materials.end(); ++m)
+		delete *m;
 
 	delete dataSet;
 

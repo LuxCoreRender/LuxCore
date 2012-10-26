@@ -470,12 +470,10 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	if (!mesh->GetTriUV(triIndex, hitPoint, &b1, &b2))
 		return Spectrum(0.f);
 
-	// Build the local frame
-	Frame frame(mesh->InterpolateTriNormal(triIndex, b1, b2));
+	const Normal geometryN = mesh->GetGeometryNormal(triIndex);
+	const float cosOutL = Dot(geometryN, dir);
 
-	const float cosOutL = Max(0.f, Dot(frame.Normal(), -dir));
-
-	if(cosOutL == 0.f)
+	if(cosOutL <= 0.f)
 		return Spectrum(0.f);
 
 	if(directPdfA)

@@ -51,7 +51,10 @@ public:
 	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdf, BSDFEvent *event) const;
-	Spectrum GetEmittedRadiance(const Vector &dir) const ;
+	Spectrum GetEmittedRadiance(const Scene *scene,
+			const Vector &dir,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const ;
 
 	Point hitPoint;
 	Normal geometryN;
@@ -64,6 +67,7 @@ private:
 
 	const Material *material;
 	const SurfaceMaterial *surfMat; // != NULL only if it isn't an area light
+	const LightSource *lightSource; // != NULL only if it is an area light
 	Frame frame;
 
 	bool fromLight, isPassThrough, isLightSource;
