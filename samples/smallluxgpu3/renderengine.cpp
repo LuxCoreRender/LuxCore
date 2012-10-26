@@ -260,3 +260,135 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
 		oclIntersectionDevices[i]->SetHybridRenderingSupport(false);
 }
+
+//------------------------------------------------------------------------------
+// CPURenderEngine
+//------------------------------------------------------------------------------
+
+CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+			void (* threadFunc)(CPURenderThread *)) :
+		RenderEngine(cfg, flm, flmMutex) {
+	renderThreadFunc = threadFunc;
+
+	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
+
+	// Create and start render threads
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
+	for (unsigned int i = 0; i < renderThreadCount; ++i) {
+		CPURenderThread *t = new CPURenderThread(i, seedBase + i, threadFunc, this);
+		renderThreads.push_back(t);
+	}
+}
+
+CPURenderEngine::~CPURenderEngine() {
+	if (editMode)
+		EndEdit(EditActionList());
+	if (started)
+		Stop();
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		delete renderThreads[i];
+}
+
+void CPURenderEngine::StartLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Start();
+}
+
+void CPURenderEngine::StopLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Stop();
+}
+
+void CPURenderEngine::BeginEditLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->BeginEdit();
+}
+
+void CPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->EndEdit(editActions);
+}
+
+void CPURenderEngine::UpdateFilmLockLess() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	film->Reset();
+
+	// Merge the all thread films
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		film->AddFilm(*(renderThreads[i]->threadFilm));
+	samplesCount = film->GetTotalSampleCount();
+}
+
+//------------------------------------------------------------------------------
+// CPURenderThread
+//------------------------------------------------------------------------------
+
+CPURenderThread::CPURenderThread(const unsigned int index, const unsigned int seedVal,
+			void (* threadFunc)(CPURenderThread *), CPURenderEngine *engine) {
+	threadIndex = index;
+	seed = seedVal;
+	renderThreadFunc = threadFunc;
+	renderEngine = engine;
+	started = false;
+	editMode = false;
+	threadFilm = NULL;
+}
+
+CPURenderThread::~CPURenderThread() {
+	if (editMode)
+		EndEdit(EditActionList());
+	if (started)
+		Stop();
+
+	delete threadFilm;
+}
+
+void CPURenderThread::Start() {
+	started = true;
+
+	StartRenderThread();
+}
+
+void CPURenderThread::Interrupt() {
+	if (renderThread)
+		renderThread->interrupt();
+}
+
+void CPURenderThread::Stop() {
+	StopRenderThread();
+
+	started = false;
+}
+
+void CPURenderThread::StartRenderThread() {
+	delete threadFilm;
+	threadFilm = new Film(renderEngine->film->GetWidth(), renderEngine->film->GetHeight(), true);
+	threadFilm->Init(renderEngine->film->GetWidth(), renderEngine->film->GetHeight());
+
+	// Create the thread for the rendering
+	renderThread = new boost::thread(boost::bind(renderThreadFunc, this));
+}
+
+void CPURenderThread::StopRenderThread() {
+	if (renderThread) {
+		renderThread->interrupt();
+		renderThread->join();
+		delete renderThread;
+		renderThread = NULL;
+	}
+}
+
+void CPURenderThread::BeginEdit() {
+	StopRenderThread();
+}
+
+void CPURenderThread::EndEdit(const EditActionList &editActions) {
+	StartRenderThread();
+}

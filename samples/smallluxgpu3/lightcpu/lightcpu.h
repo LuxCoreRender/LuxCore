@@ -30,55 +30,14 @@
 class LightCPURenderEngine;
 
 //------------------------------------------------------------------------------
-// Light tracing CPU-only render threads
-//------------------------------------------------------------------------------
-
-class LightCPURenderThread {
-public:
-	LightCPURenderThread(const unsigned int index, const unsigned int seedBase,
-			LightCPURenderEngine *re);
-	~LightCPURenderThread();
-
-	void Start();
-    void Interrupt();
-	void Stop();
-
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
-
-	friend class LightCPURenderEngine;
-
-private:
-	static void RenderThreadImpl(LightCPURenderThread *renderThread);
-
-	void StartRenderThread();
-	void StopRenderThread();
-
-	void InitRender();
-	void SplatSample(const float scrX, const float scrY, const Spectrum &radiance);
-
-	unsigned int threadIndex;
-	unsigned int seed;
-	LightCPURenderEngine *renderEngine;
-
-	boost::thread *renderThread;
-	Film *threadFilm;
-
-	bool started, editMode;
-};
-
-//------------------------------------------------------------------------------
 // Light tracing CPU render engine
 //------------------------------------------------------------------------------
 
 class LightCPURenderEngine : public CPURenderEngine {
 public:
 	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~LightCPURenderEngine();
 
 	RenderEngineType GetEngineType() const { return LIGHTCPU; }
-
-	friend class LightCPURenderThread;
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
@@ -87,15 +46,7 @@ public:
 	float rrImportanceCap;
 
 private:
-	void StartLockLess();
-	void StopLockLess();
-
-	void BeginEditLockLess();
-	void EndEditLockLess(const EditActionList &editActions);
-
-	void UpdateFilmLockLess();
-
-	vector<LightCPURenderThread *> renderThreads;
+	static void RenderThreadFuncImpl(CPURenderThread *thread);
 };
 
 #endif	/* LIGHTCPU_H */

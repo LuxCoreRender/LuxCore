@@ -62,7 +62,7 @@ public:
 
 	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
-
+	
 protected:
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;
@@ -109,10 +109,62 @@ protected:
 // Base class for CPU render engines
 //------------------------------------------------------------------------------
 
+class CPURenderEngine;
+
+class CPURenderThread {
+public:
+	CPURenderThread(const unsigned int index, const unsigned int seedBase,
+			void (* threadFunc)(CPURenderThread *), CPURenderEngine *re);
+	~CPURenderThread();
+
+	void Start();
+	void Interrupt();
+	void Stop();
+
+	void BeginEdit();
+	void EndEdit(const EditActionList &editActions);
+
+	void StartRenderThread();
+	void StopRenderThread();
+
+	void InitRender();
+	void SplatSample(const float scrX, const float scrY, const Spectrum &radiance);
+
+	friend class CPURenderEngine;
+
+	// NOTE: all the fields are public so they can be accessed by renderThreadFunc()
+
+	unsigned int threadIndex;
+	unsigned int seed;
+	void (* renderThreadFunc)(CPURenderThread *);
+	CPURenderEngine *renderEngine;
+	
+
+	boost::thread *renderThread;
+	Film *threadFilm;
+
+	bool started, editMode;
+};
+
 class CPURenderEngine : public RenderEngine {
 public:
-	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
-		RenderEngine(cfg, flm, flmMutex) { }
+	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+			void (* threadFunc)(CPURenderThread *));
+	~CPURenderEngine();
+
+	friend class CPURenderThread;
+
+protected:
+	void StartLockLess();
+	void StopLockLess();
+
+	void BeginEditLockLess();
+	void EndEditLockLess(const EditActionList &editActions);
+
+	void UpdateFilmLockLess();
+
+	vector<CPURenderThread *> renderThreads;
+	void (* renderThreadFunc)(CPURenderThread *renderThread);
 };
 
 #endif	/* _RENDERENGINE_H */
