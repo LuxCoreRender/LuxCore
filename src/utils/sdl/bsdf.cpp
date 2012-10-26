@@ -36,8 +36,8 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	const unsigned int currentMeshIndex = scene.dataSet->GetMeshID(currentTriangleIndex);
 
 	// Get the triangle
-	const ExtMesh *mesh = scene.objects[currentMeshIndex];
-	const unsigned int triIndex = scene.dataSet->GetMeshTriangleID(currentTriangleIndex);
+	mesh = scene.objects[currentMeshIndex];
+	triIndex = scene.dataSet->GetMeshTriangleID(currentTriangleIndex);
 
 	// Get the material
 	material = scene.objectMaterials[currentMeshIndex];
@@ -177,6 +177,13 @@ Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 		return surfaceColor * result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG));
 	} else
 		return surfaceColor * result;
+}
+
+Spectrum BSDF::GetEmittedRadiance(const Vector &dir) const {
+	if (isLightSource) {
+		return ((LightMaterial *)material)->Le(mesh, triIndex, dir);
+	} else
+		return Spectrum(0.f);
 }
 
 } }

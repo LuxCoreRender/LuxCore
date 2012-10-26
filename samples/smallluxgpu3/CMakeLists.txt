@@ -137,6 +137,8 @@ set(SMALLLUXGPU_SRCS
 	pathocl/renderthread.cpp
 	lightcpu/lightcpu.cpp
 	lightcpu/renderthread.cpp
+	pathcpu/pathcpu.cpp
+	pathcpu/renderthread.cpp
 	)
 
 add_executable(slg3 ${SMALLLUXGPU_SRCS})

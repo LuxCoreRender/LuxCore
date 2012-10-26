@@ -41,6 +41,7 @@
 #include "luxrays/utils/film/film.h"
 #include "pathocl/pathocl.h"
 #include "lightcpu/lightcpu.h"
+#include "pathcpu/pathcpu.h"
 #include "rendersession.h"
 
 bool OSDPrintHelp = false;
@@ -94,6 +95,8 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "1", "OpenCL path tracing");
 	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "3", "CPU  path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -157,6 +160,7 @@ static void PrintHelpAndSettings() {
 			break;
 		}
 		case LIGHTCPU:
+		case PATHCPU:
 			break;
 		default:
 			assert (false);
@@ -245,8 +249,9 @@ void timerFunc(int value) {
 			engine->UpdateFilm();
 			break;
 		}
-		case LIGHTCPU: {
-			LightCPURenderEngine *engine = (LightCPURenderEngine *)session->renderEngine;
+		case LIGHTCPU:
+		case PATHCPU: {
+			CPURenderEngine *engine = (CPURenderEngine *)session->renderEngine;
 
 			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][%.1fK tris]",
 					engine->GetPass(), engine->GetTotalSamplesSec() / 1000000.0,
@@ -376,6 +381,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case '2':
 			session->SetRenderingEngineType(LIGHTCPU);
+			break;
+		case '3':
+			session->SetRenderingEngineType(PATHCPU);
 			break;
 		case 'o': {
 #if defined(WIN32)

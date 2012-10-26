@@ -77,7 +77,7 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 
 	convTest.Reset(width, height);
 
-	statsTotalSampleCount = 0;
+	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
 
@@ -97,7 +97,7 @@ void Film::Reset() {
 
 	// convTest has to be reseted explicitely
 
-	statsTotalSampleCount = 0;
+	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
@@ -110,12 +110,14 @@ void Film::AddFilm(const Film &film) {
 	if (usePerScreenNormalization) {
 		if (film.usePerScreenNormalization) {
 			// TODO
+			throw std::runtime_error("Internal error in Film::AddFilm()");
 		} else {
 			// TODO
+			throw std::runtime_error("Internal error in Film::AddFilm()");
 		}
 	} else {
+		statsTotalSampleCount += film.statsTotalSampleCount;
 		if (film.usePerScreenNormalization) {
-			statsTotalSampleCount += film.statsTotalSampleCount;
 			for (unsigned int i = 0; i < pixelCount; ++i) {
 				spDst[i].radiance += spSrc[i].radiance;
 				spDst[i].weight += film.statsTotalSampleCount;
@@ -299,7 +301,7 @@ void Film::UpdateScreenBuffer() {
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
-			const float perScreenNormalizationFactor = tm.scale / (float)statsTotalSampleCount;
+			const float perScreenNormalizationFactor = tm.scale / statsTotalSampleCount;
 
 			for (unsigned int i = 0; i < pixelCount; ++i) {
 				const float weight = sp[i].weight;
@@ -335,7 +337,7 @@ void Film::UpdateScreenBuffer() {
 			const SamplePixel *sp = sampleFrameBuffer->GetPixels();
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
-			const float perScreenNormalizationFactor = 1.f / (float)statsTotalSampleCount;
+			const float perScreenNormalizationFactor = 1.f / statsTotalSampleCount;
 
 			// Use the frame buffer as temporary storage and calculate the average luminance
 			float Ywa = 0.f;

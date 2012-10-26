@@ -19,39 +19,30 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <iomanip>
-#include <string.h>
-#include <string>
-#include <sstream>
-#include <stdexcept>
-
-#include <boost/thread/mutex.hpp>
+#ifndef _PATHCPU_H
+#define	_PATHCPU_H
 
 #include "smalllux.h"
-#include "renderconfig.h"
-#include "lightcpu/lightcpu.h"
-#include "luxrays/core/geometry/transform.h"
+#include "renderengine.h"
 
 //------------------------------------------------------------------------------
-// PathOCLRenderEngine
+// Path tracing CPU render engine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl, false, true) {
-	const Properties &cfg = renderConfig->cfg;
+class PathCPURenderEngine : public CPURenderEngine {
+public:
+	PathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
+	RenderEngineType GetEngineType() const { return PATHCPU; }
 
-	maxPathDepth = cfg.GetInt("light.maxdepth", cfg.GetInt("path.maxdepth", 5));
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", 0.125f));
-	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
-	MachineEpsilon::SetMin(epsilon);
-	MachineEpsilon::SetMax(epsilon);
-}
+	// Signed because of the delta parameter
+	int maxPathDepth;
+
+	int rrDepth;
+	float rrImportanceCap;
+
+private:
+	static void RenderThreadFuncImpl(CPURenderThread *thread);
+};
+
+#endif	/* _PATHCPU_H */

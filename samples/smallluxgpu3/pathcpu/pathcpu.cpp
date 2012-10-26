@@ -33,24 +33,25 @@
 
 #include "smalllux.h"
 #include "renderconfig.h"
-#include "lightcpu/lightcpu.h"
+#include "pathcpu/pathcpu.h"
 #include "luxrays/core/geometry/transform.h"
+
 
 //------------------------------------------------------------------------------
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl, false, true) {
+PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl, true, false) {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.GetInt("light.maxdepth", cfg.GetInt("path.maxdepth", 5));
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", 0.125f));
+	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
+	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
 	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
