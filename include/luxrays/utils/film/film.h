@@ -90,7 +90,7 @@ public:
 
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
-	unsigned int GetTotalSampleCount() const { return statsTotalSampleCount; }
+	double GetTotalSampleCount() const { return statsTotalSampleCount; }
 	double GetTotalTime() const {
 		return WallClockTime() - statsStartSampleTime;
 	}
@@ -112,7 +112,7 @@ public:
 	
 	//--------------------------------------------------------------------------
 
-	void AddSampleCount(const unsigned int count) { ++statsTotalSampleCount; }
+	void AddSampleCount(const double count) { statsTotalSampleCount += 1.f; }
 
 	void AddRadiance(const unsigned int x, const unsigned int y, const Spectrum &radiance, const float weight) {
 		const unsigned int offset = x + y * width;
@@ -173,8 +173,7 @@ private:
 	unsigned int width, height;
 	unsigned int pixelCount;
 
-	unsigned int statsTotalSampleCount;
-	double statsStartSampleTime, statsAvgSampleSec;
+	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
 	float gammaTable[GAMMA_TABLE_SIZE];
 

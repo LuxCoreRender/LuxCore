@@ -19,27 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <iomanip>
-#include <string.h>
-#include <string>
-#include <sstream>
-#include <stdexcept>
-
-#if defined(__APPLE__)
-//OSX version detection
-#include <sys/utsname.h>
-#endif
-
-#include <boost/thread/mutex.hpp>
-
-#include "smalllux.h"
-
-#include "lightcpu/lightcpu.h"
 #include "renderconfig.h"
+#include "lightcpu/lightcpu.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/sdl/bsdf.h"
@@ -120,7 +101,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	while (!boost::this_thread::interruption_requested()) {
-		renderThread->threadFilm->AddSampleCount(1);
+		renderThread->threadFilmPSN->AddSampleCount(1);
 
 		// Select one light source
 		float lightPickPdf;
@@ -146,7 +127,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		if (Dot(eyeDir, lightN) > 0.f) {
 			const float eyeDistance = eyeDir.Length();
 			eyeDir /= eyeDistance;
-			ConnectToEye(scene, renderThread->threadFilm, rndGen->floatValue(), eyeDir, eyeDistance,
+			ConnectToEye(scene, renderThread->threadFilmPSN, rndGen->floatValue(), eyeDir, eyeDistance,
 					nextEventRay.o, lightN, lightPathFlux, Spectrum(1.f, 1.f, 1.f));
 		}
 
@@ -178,13 +159,13 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, renderThread->threadFilm, rndGen->floatValue(),
+				ConnectToEye(scene, renderThread->threadFilmPSN, rndGen->floatValue(),
 						bsdf, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
 					break;
 				
-				///--------------------------------------------------------------
+				//--------------------------------------------------------------
 				// Build the next vertex path ray
 				//--------------------------------------------------------------
 

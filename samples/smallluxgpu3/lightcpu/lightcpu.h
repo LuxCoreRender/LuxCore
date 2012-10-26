@@ -19,15 +19,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef LIGHTCPU_H
-#define	LIGHTCPU_H
+#ifndef _LIGHTCPU_H
+#define	_LIGHTCPU_H
 
 #include "smalllux.h"
 #include "renderengine.h"
-
-#include <boost/thread/thread.hpp>
-
-class LightCPURenderEngine;
 
 //------------------------------------------------------------------------------
 // Light tracing CPU render engine
@@ -49,4 +45,4 @@ private:
 	static void RenderThreadFuncImpl(CPURenderThread *thread);
 };
 
-#endif	/* LIGHTCPU_H */
+#endif	/* _LIGHTCPU_H */

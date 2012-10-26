@@ -30,7 +30,8 @@
 
 enum RenderEngineType {
 	PATHOCL  = 4,
-	LIGHTCPU = 5
+	LIGHTCPU = 5,
+	PATHCPU = 6
 };
 
 //------------------------------------------------------------------------------
@@ -113,8 +114,9 @@ class CPURenderEngine;
 
 class CPURenderThread {
 public:
-	CPURenderThread(const unsigned int index, const unsigned int seedBase,
-			void (* threadFunc)(CPURenderThread *), CPURenderEngine *re);
+	CPURenderThread(CPURenderEngine *engine, const unsigned int index,
+			const unsigned int seedVal, void (* threadFunc)(CPURenderThread *),
+			const bool perPixelNormalizationFilm, const bool perScreenNormalizationFilm);
 	~CPURenderThread();
 
 	void Start();
@@ -138,18 +140,20 @@ public:
 	unsigned int seed;
 	void (* renderThreadFunc)(CPURenderThread *);
 	CPURenderEngine *renderEngine;
-	
 
 	boost::thread *renderThread;
-	Film *threadFilm;
+	Film *threadFilmPPN; // Per-Pixel-Normalization Film
+	Film *threadFilmPSN; // Per-Screen-Normalization Film
 
 	bool started, editMode;
+	bool usePerPixelNormalizationFilm, usePerScreenNormalizationFilm;
 };
 
 class CPURenderEngine : public RenderEngine {
 public:
 	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-			void (* threadFunc)(CPURenderThread *));
+			void (* threadFunc)(CPURenderThread *),
+			const bool perPixelNormalizationFilm, const bool perScreenNormalizationFilm);
 	~CPURenderEngine();
 
 	friend class CPURenderThread;

@@ -51,6 +51,7 @@ public:
 	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdf, BSDFEvent *event) const;
+	Spectrum GetEmittedRadiance(const Vector &dir) const ;
 
 	Point hitPoint;
 	Normal geometryN;
@@ -58,6 +59,9 @@ public:
 	Spectrum surfaceColor;
 
 private:
+	const ExtMesh *mesh;
+	unsigned int triIndex;
+
 	const Material *material;
 	const SurfaceMaterial *surfMat; // != NULL only if it isn't an area light
 	Frame frame;

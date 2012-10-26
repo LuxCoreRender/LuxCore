@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef PATHOCL_H
-#define	PATHOCL_H
+#ifndef _PATHOCL_H
+#define	_PATHOCL_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -191,4 +191,4 @@ private:
 
 #endif
 
-#endif	/* PATHOCL_H */
+#endif	/* _PATHOCL_H */
