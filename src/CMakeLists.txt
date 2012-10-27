@@ -127,6 +127,7 @@ SOURCE_GROUP("Source Files\\Utils\\CONVTEST" FILES ${LuxRays_SRC_UTILS_CONVTEST}
 
 set(LuxRays_SRC_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/bsdf.cpp
+	${LuxRays_SOURCE_DIR}/src/utils/sdl/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/light.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/scene.cpp
@@ -223,6 +224,7 @@ SOURCE_GROUP("Header Files\\Utils" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS})
 set(LuxRays_HEADERS_LUXRAYS_UTILS_CORE
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/atomic.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/exttrianglemesh.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/mc.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/spectrum.h
 )
@@ -248,7 +250,6 @@ set(LuxRays_HEADERS_LUXRAYS_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/extmeshcache.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/material.h
-	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/mc.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/scene.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/spd.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/texmap.h

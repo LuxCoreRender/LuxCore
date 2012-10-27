@@ -32,23 +32,22 @@
 //------------------------------------------------------------------------------
 
 static void ConnectToEye(const Scene *scene, Film *film, const float u0,
-		Vector eyeDir, const float eyeDistance,
-		const Point &hitPoint, const Normal &geometryN, const Spectrum bsdfEval,
+		Vector eyeDir, const float eyeDistance, const Point &lensPoint,
+		const Point &hitPoint, const Normal &shadeN, const Spectrum bsdfEval,
 		const Spectrum &flux) {
 	if (!bsdfEval.Black()) {
-		Ray eyeRay(hitPoint, eyeDir);
-		eyeRay.maxt = eyeDistance;
+		Ray eyeRay(lensPoint, eyeDir);
+		eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
 
 		float scrX, scrY;
-		if (scene->camera->GetSamplePosition(eyeRay.o, -eyeRay.d, eyeDistance, &scrX, &scrY)) {
+		if (scene->camera->GetSamplePosition(hitPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
 			for (;;) {
 				RayHit eyeRayHit;
 				if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
 					// Nothing was hit, the light path vertex is visible
 
-					// cosToCamera is already included when connecting a vertex on the light
-					const float cosToCamera = Dot(geometryN, eyeDir);
-					const float cosAtCamera = Dot(scene->camera->GetDir(), -eyeDir);
+					const float cosToCamera = Dot(shadeN, -eyeDir);
+					const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
 					const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 						scene->camera->GetPixelArea());
@@ -75,16 +74,20 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 	}
 }
 
-static void ConnectToEye(const Scene *scene, Film *film, const float u0, const BSDF &bsdf,
-		const Vector &lightDir, const Spectrum flux) {
-	Vector eyeDir(scene->camera->orig - bsdf.hitPoint);
-	const float eyeDistance = eyeDir.Length();
-	eyeDir /= eyeDistance;
+static void ConnectToEye(const Scene *scene, Film *film,
+		const float u0,	const float u1, const float u2, const float u3,
+		const BSDF &bsdf, const Vector &lightDir, const Spectrum flux) {
+	Point lensPoint;
+	if (scene->camera->SampleW(u0, u1, u2, &lensPoint)) {
+		Vector eyeDir(bsdf.hitPoint - lensPoint);
+		const float eyeDistance = eyeDir.Length();
+		eyeDir /= eyeDistance;
 
-	BSDFEvent event;
-	Spectrum bsdfEval = bsdf.Evaluate(lightDir, eyeDir, &event);
+		BSDFEvent event;
+		Spectrum bsdfEval = bsdf.Evaluate(lightDir, -eyeDir, &event);
 
-	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, bsdf.hitPoint, bsdf.geometryN, bsdfEval, flux);
+		ConnectToEye(scene, film, u3, eyeDir, eyeDistance, lensPoint, bsdf.hitPoint, bsdf.shadeN, bsdfEval, flux);
+	}
 }
 
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -126,17 +129,20 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		// Try to connect the light vertex directly with the eye
 		//----------------------------------------------------------------------
 
-		Vector eyeDir(scene->camera->orig - nextEventRay.o);
-		if (Dot(eyeDir, lightN) > 0.f) {
-			const float eyeDistance = eyeDir.Length();
-			eyeDir /= eyeDistance;
+		Point lensPoint;
+		if (scene->camera->SampleW(rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), &lensPoint)) {
+			Vector eyeDir(nextEventRay.o - lensPoint);
+			if (Dot(-eyeDir, lightN) > 0.f) {
+				const float eyeDistance = eyeDir.Length();
+				eyeDir /= eyeDistance;
 
-			float emissionPdfW;
-			Spectrum lightRadiance = light->GetRadiance(scene, eyeDir, nextEventRay.o, NULL, &emissionPdfW);
-			lightRadiance /= emissionPdfW;
+				float emissionPdfW;
+				Spectrum lightRadiance = light->GetRadiance(scene, -eyeDir, nextEventRay.o, NULL, &emissionPdfW);
+				lightRadiance /= emissionPdfW;
 
-			ConnectToEye(scene, film, rndGen->floatValue(), eyeDir, eyeDistance,
-					nextEventRay.o, lightN, Spectrum(1.f, 1.f, 1.f), lightRadiance);
+				ConnectToEye(scene, film, rndGen->floatValue(), eyeDir, eyeDistance, lensPoint,
+						nextEventRay.o, lightN, Spectrum(1.f, 1.f, 1.f), lightRadiance);
+			}
 		}
 
 		//----------------------------------------------------------------------
@@ -167,7 +173,8 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, film, rndGen->floatValue(),
+				ConnectToEye(scene, film, rndGen->floatValue(), rndGen->floatValue(),
+						rndGen->floatValue(), rndGen->floatValue(),
 						bsdf, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
