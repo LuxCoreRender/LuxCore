@@ -376,7 +376,7 @@ Spectrum InfiniteLight::Illuminate(const Scene *scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
-	return GetRadiance(scene, *dir, p);
+	return GetRadiance(scene, -(*dir), p);
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene *scene,
@@ -392,7 +392,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene *scene,
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
-	const UV uv(1.f - SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
+	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI + shiftU, SphericalTheta(-dir) * INV_PI + shiftV);
 	return gain * tex->GetTexMap()->GetColor(uv);
 }
 
@@ -515,6 +515,8 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	Frame frame(*N);
 
 	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+	if (*emissionPdfW == 0.f)
+		return Spectrum();
 	*emissionPdfW *= invArea;
 
 	// Cannot really not emit the particle, so just bias it to the correct angle

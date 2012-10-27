@@ -97,13 +97,14 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	LightCPURenderEngine *renderEngine = (LightCPURenderEngine *)renderThread->renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
+	Film *film = renderThread->threadFilmPSN;
 
 	//--------------------------------------------------------------------------
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
 	while (!boost::this_thread::interruption_requested()) {
-		renderThread->threadFilmPSN->AddSampleCount(1);
+		film->AddSampleCount(1);
 
 		// Select one light source
 		float lightPickPdf;
@@ -116,7 +117,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		Spectrum lightPathFlux = light->Emit(scene,
 			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 			&nextEventRay.o, &nextEventRay.d, &lightN, &lightEmitPdf);
-		if ((lightEmitPdf == 0.f) || lightPathFlux.Black())
+		if (lightPathFlux.Black())
 			continue;
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
 		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
@@ -129,8 +130,13 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		if (Dot(eyeDir, lightN) > 0.f) {
 			const float eyeDistance = eyeDir.Length();
 			eyeDir /= eyeDistance;
-			ConnectToEye(scene, renderThread->threadFilmPSN, rndGen->floatValue(), eyeDir, eyeDistance,
-					nextEventRay.o, lightN, lightPathFlux, Spectrum(1.f, 1.f, 1.f));
+
+			float emissionPdfW;
+			Spectrum lightRadiance = light->GetRadiance(scene, eyeDir, nextEventRay.o, NULL, &emissionPdfW);
+			lightRadiance /= emissionPdfW;
+
+			ConnectToEye(scene, film, rndGen->floatValue(), eyeDir, eyeDistance,
+					nextEventRay.o, lightN, Spectrum(1.f, 1.f, 1.f), lightRadiance);
 		}
 
 		//----------------------------------------------------------------------
@@ -161,7 +167,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, renderThread->threadFilmPSN, rndGen->floatValue(),
+				ConnectToEye(scene, film, rndGen->floatValue(),
 						bsdf, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
