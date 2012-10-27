@@ -269,26 +269,25 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	//--------------------------------------------------------------------------
 
 	const std::vector<std::string> ilParams = scnProp->GetStringVector("scene.infinitelight.file", "");
-	bool infiniteLightDefined ;
 	if (ilParams.size() > 0) {
 		const float gamma = scnProp->GetFloat("scene.infinitelight.gamma", 2.2f);
 		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
 
-		InfiniteLight *infiniteLight = new InfiniteLight(tex);
+		InfiniteLight *il = new InfiniteLight(tex);
 
 		// Add the infinite light to the list of light sources
-		lights.push_back(infiniteLight);
+		lights.push_back(il);
+		infiniteLight = il;
 
 		std::vector<float> vf = GetParameters(*scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
-		infiniteLight->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
+		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
 		vf = GetParameters(*scnProp, "scene.infinitelight.shift", 2, "0.0 0.0");
-		infiniteLight->SetShift(vf.at(0), vf.at(1));
+		il->SetShift(vf.at(0), vf.at(1));
 
-		infiniteLight->Preprocess();
-		infiniteLightDefined = true;
+		il->Preprocess();
 	} else
-		infiniteLightDefined = false;
+		infiniteLight = NULL;
 
 	//--------------------------------------------------------------------------
 	// Check if there is a SkyLight defined
@@ -296,7 +295,7 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 	const std::vector<std::string> silParams = scnProp->GetStringVector("scene.skylight.dir", "");
 	if (silParams.size() > 0) {
-		if (infiniteLightDefined)
+		if (infiniteLight)
 			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
 
 		std::vector<float> sdir = GetParameters(*scnProp, "scene.skylight.dir", 3, "0.0 0.0 1.0");
@@ -306,6 +305,8 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->Init();
+
+		infiniteLight = sl;
 	}
 
 	//--------------------------------------------------------------------------
