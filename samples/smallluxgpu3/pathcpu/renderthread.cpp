@@ -63,12 +63,12 @@ static Spectrum DirectLightSampling(const Scene *scene, RandomGenerator *rndGen,
 					if (!lastSpecular) {
 						weight = PowerHeuristic(directPdfW * lightPickPdf, bsdfPdfW);
 
-						/*if (rrImportanceCap > 0.f) {
+						if (rrImportanceCap > 0.f) {
 							// Russian Roulette
 							const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
 							if (prob > rndGen->floatValue())
 								bsdfEval *= prob;
-						}*/
+						}
 					} else
 						weight = 1.f;
 

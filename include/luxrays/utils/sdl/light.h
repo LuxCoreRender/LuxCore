@@ -91,15 +91,15 @@ public:
 class InfiniteLight : public LightSource {
 public:
 	InfiniteLight(TexMapInstance *tx);
-	virtual ~InfiniteLight() { }
+	~InfiniteLight() { }
 
 	LightSourceType GetType() const { return TYPE_IL; }
 
-	virtual void SetGain(const Spectrum &g) {
+	void SetGain(const Spectrum &g) {
 		gain = g;
 	}
 
-	virtual Spectrum GetGain() const {
+	Spectrum GetGain() const {
 		return gain;
 	}
 
@@ -113,14 +113,36 @@ public:
 
 	const TexMapInstance *GetTexture() const { return tex; }
 
-	virtual void Preprocess() { }
+	void Preprocess() { }
 
-	virtual Spectrum Le(const Scene *scene, const Vector &dir) const;
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
 
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
+	Spectrum Le(const Scene *scene, const Vector &dir) const;
+
+	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
+	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
 		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
+
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir, Normal *normal,
+		float *emissionPdfW, float *directPdfA = NULL) const;
+
+    Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL) const;
+
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 protected:
 	TexMapInstance *tex;

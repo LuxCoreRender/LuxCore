@@ -46,7 +46,7 @@ public:
 
 	virtual bool IsLightSource() const = 0;
 	virtual bool IsDiffuse() const = 0;
-	virtual bool IsSpecular() const = 0;
+	virtual bool IsSpecular() const = 0; // TODO: rename to IsDelta
 	virtual bool IsShadowTransparent() const { return false; }
 
 	virtual Spectrum GetSahdowTransparency() const {
@@ -228,6 +228,12 @@ public:
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
+	const Spectrum &GetKr() const { return Kr; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		throw std::runtime_error("Internal error, called MirrorMaterial::f()");
 	}
@@ -245,15 +251,14 @@ public:
 		return Kr;
 	}
 
-	const Spectrum &GetKr() const { return Kr; }
-
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
 	//--------------------------------------------------------------------------
 	// New interface
 	//--------------------------------------------------------------------------
-	
-	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event) const {
+
+	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const {
 		*event |= SPECULAR;
 
 		return Spectrum();
