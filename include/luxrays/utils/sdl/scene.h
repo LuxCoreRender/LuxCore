@@ -63,7 +63,7 @@ public:
 		return NULL;
 	}
 
-	LightSource *SampleAllLights(const float u, float *pdf, bool skipInfiniteLight = false) const {
+	LightSource *SampleAllLights(const float u, float *pdf) const {
 		const unsigned int lightsSize = static_cast<unsigned int>(lights.size());
 
 		// One Uniform light strategy
@@ -72,6 +72,10 @@ public:
 		*pdf = 1.f / lightsSize;
 
 		return lights[lightIndex];
+	}
+
+	float PickLightPdf() const {
+		return 1.f / lights.size();
 	}
 
 	void UpdateDataSet(Context *ctx);

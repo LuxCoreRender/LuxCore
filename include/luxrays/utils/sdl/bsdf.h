@@ -48,10 +48,10 @@ public:
 	bool IsDelta() const { return surfMat->IsSpecular(); }
 
 	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir,
-		BSDFEvent *event) const ;
+		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, BSDFEvent *event) const;
+		float *pdfW, BSDFEvent *event) const;
 	Spectrum GetEmittedRadiance(const Scene *scene,
 			const Vector &dir,
 			float *directPdfA = NULL,

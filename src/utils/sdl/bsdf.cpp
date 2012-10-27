@@ -20,8 +20,6 @@
  ***************************************************************************/
 
 #include "luxrays/core/geometry/frame.h"
-
-
 #include "luxrays/utils/sdl/bsdf.h"
 
 namespace luxrays { namespace sdl {
@@ -44,6 +42,10 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	// Get the material
 	material = scene.objectMaterials[currentMeshIndex];
 
+	// Interpolate face normal
+	geometryN = mesh->GetGeometryNormal(triIndex);
+	shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
+
 	// Check if it is a light source
 	if (material->IsLightSource()) {
 		isLightSource = true;
@@ -58,10 +60,6 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 		surfaceColor = mesh->InterpolateTriColor(triIndex, rayHit.b1, rayHit.b2);
 	else
 		surfaceColor = Spectrum(1.f, 1.f, 1.f);
-
-	// Interpolate face normal
-	geometryN = mesh->GetGeometryNormal(triIndex);
-	shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
 
 	// Check if I have to apply texture mapping or normal mapping
 	TexMapInstance *tm = scene.objectTexMaps[currentMeshIndex];
@@ -138,7 +136,7 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 }
 
 Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
-		BSDFEvent *event) const{
+		BSDFEvent *event, float *directPdfW, float *reversePdfW) const {
 	const float dotLightDirNG = Dot(lightDir, geometryN);
 	const float dotEyeDirNG = Dot(eyeDir, geometryN);
 
@@ -154,7 +152,8 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
-	Spectrum result = surfMat->Evaluate(localLightDir, localEyeDir, event);
+	Spectrum result = surfMat->Evaluate(localLightDir, localEyeDir, event,
+			directPdfW, reversePdfW);
 
 	// Adjoint BSDF
 	if (fromLight) {
@@ -166,10 +165,10 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 
 Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event) const {
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
-	Spectrum result = surfMat->Sample(localFixedDir, &localSampledDir, u0, u1, u2, pdf, event);
+	Spectrum result = surfMat->Sample(localFixedDir, &localSampledDir, u0, u1, u2, pdfW, event);
 	*sampledDir = frame.ToWorld(localSampledDir);
 
 	// Adjoint BSDF

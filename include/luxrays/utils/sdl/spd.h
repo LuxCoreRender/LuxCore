@@ -27,7 +27,7 @@
 #include <cstddef>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/utils/sdl/mc.h"
+#include "luxrays/utils/core/mc.h"
 #include "luxrays/utils/core/spectrum.h"
 
 namespace luxrays { namespace sdl {

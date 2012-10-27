@@ -25,6 +25,8 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/sdl/bsdf.h"
 
+// TODO: DOF support
+
 //------------------------------------------------------------------------------
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
@@ -181,7 +183,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				if (depth >= renderEngine->rrDepth) {
 					// Russian Roulette
 					const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-					if (prob >= rndGen->floatValue())
+					if (prob > rndGen->floatValue())
 						bsdfPdf *= prob;
 					else
 						break;
