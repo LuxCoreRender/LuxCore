@@ -139,64 +139,82 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit eyeRayHit;
-			if (scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-				// Something was hit
-				BSDF bsdf(false, *scene, eyeRay, eyeRayHit, rndGen->floatValue());
-
-				// Check if it is a light source
-				if (bsdf.IsLightSource()) {
-					radiance += DirectHitLightSampling(scene, lastSpecular,
-							pathThrouput, -eyeRay.d, eyeRayHit.t, bsdf, lastPdfW);
-
-					// SLG light sources are like black bodies
-					break;
-				}
-
-				// Check if it is pass-through point
-				if (bsdf.IsPassThrough()) {
-					// It is a pass-through material, continue to trace the ray
-					eyeRay.mint = eyeRayHit.t + MachineEpsilon::E(eyeRayHit.t);
-					eyeRay.maxt = std::numeric_limits<float>::infinity();
-					continue;
-				}
-
-				//----------------------------------------------------------
-				// Direct light sampling
-				//----------------------------------------------------------
-
-				radiance += DirectLightSampling(scene, rndGen, lastSpecular,
-						pathThrouput, bsdf, -eyeRay.d,
-						(depth >= renderEngine->rrDepth) ? renderEngine->rrImportanceCap : -1.f);
-
-				//----------------------------------------------------------
-				// Build the next vertex path ray
-				//----------------------------------------------------------
-
-				Vector sampledDir;
-				BSDFEvent event;
-				const Spectrum bsdfSample = bsdf.Sample(-eyeRay.d, &sampledDir,
-						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-						&lastPdfW, &event);
-				if ((lastPdfW <= 0.f) || bsdfSample.Black())
+			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+				if (!scene->infiniteLight)
 					break;
 
-				if ((depth >= renderEngine->rrDepth) && !lastSpecular) {
-					// Russian Roulette
-					const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-					if (prob > rndGen->floatValue())
-						lastPdfW *= prob;
-					else
-						break;
-				}
+				float directPdfW;
+				Spectrum lightRadiance = scene->infiniteLight->GetRadiance(
+						scene, eyeRay.d, Point(), &directPdfW);
+				if (lightRadiance.Black())
+					break;
 
-				lastSpecular = ((event & SPECULAR) != 0);
-				pathThrouput *= AbsDot(sampledDir, bsdf.shadeN) * bsdfSample / lastPdfW;
-				assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
+				float weight;
+				if(!lastSpecular) {
+					const float lightPickProb = scene->PickLightPdf();
+					weight = BalanceHeuristic(lastPdfW, directPdfW * lightPickProb);
+				} else
+					weight = 1.f;
 
-				eyeRay = Ray(bsdf.hitPoint, sampledDir);
-				++depth;
-			} else
+				radiance += pathThrouput * weight * lightRadiance;
 				break;
+			}
+
+			// Something was hit
+			BSDF bsdf(false, *scene, eyeRay, eyeRayHit, rndGen->floatValue());
+
+			// Check if it is a light source
+			if (bsdf.IsLightSource()) {
+				radiance += DirectHitLightSampling(scene, lastSpecular,
+						pathThrouput, -eyeRay.d, eyeRayHit.t, bsdf, lastPdfW);
+
+				// SLG light sources are like black bodies
+				break;
+			}
+
+			// Check if it is pass-through point
+			if (bsdf.IsPassThrough()) {
+				// It is a pass-through material, continue to trace the ray
+				eyeRay.mint = eyeRayHit.t + MachineEpsilon::E(eyeRayHit.t);
+				eyeRay.maxt = std::numeric_limits<float>::infinity();
+				continue;
+			}
+
+			//----------------------------------------------------------
+			// Direct light sampling
+			//----------------------------------------------------------
+
+			radiance += DirectLightSampling(scene, rndGen, lastSpecular,
+					pathThrouput, bsdf, -eyeRay.d,
+					(depth >= renderEngine->rrDepth) ? renderEngine->rrImportanceCap : -1.f);
+
+			//----------------------------------------------------------
+			// Build the next vertex path ray
+			//----------------------------------------------------------
+
+			Vector sampledDir;
+			BSDFEvent event;
+			const Spectrum bsdfSample = bsdf.Sample(-eyeRay.d, &sampledDir,
+					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+					&lastPdfW, &event);
+			if ((lastPdfW <= 0.f) || bsdfSample.Black())
+				break;
+
+			if ((depth >= renderEngine->rrDepth) && !lastSpecular) {
+				// Russian Roulette
+				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
+				if (prob > rndGen->floatValue())
+					lastPdfW *= prob;
+				else
+					break;
+			}
+
+			lastSpecular = ((event & SPECULAR) != 0);
+			pathThrouput *= AbsDot(sampledDir, bsdf.shadeN) * bsdfSample / lastPdfW;
+			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
+
+			eyeRay = Ray(bsdf.hitPoint, sampledDir);
+			++depth;
 		}
 
 		assert (!radiance.IsNaN() && !radiance.IsInf());

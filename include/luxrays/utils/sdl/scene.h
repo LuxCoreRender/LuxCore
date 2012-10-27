@@ -87,6 +87,7 @@ public:
 	ExtMeshCache *extMeshCache; // Mesh objects
 	TextureMapCache *texMapCache; // Texture maps
 
+	LightSource *infiniteLight; // A SLG scene can have only one infinite light
 	std::vector<LightSource *> lights; // One for each light source
 	std::vector<Material *> materials; // All materials (one for each light source)
 	std::map<std::string, size_t> materialIndices; // All materials indices

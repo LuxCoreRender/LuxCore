@@ -351,6 +351,7 @@ Spectrum InfiniteLight::Emit(const Scene *scene,
 	// Construct ray between p1 and p2
 	*orig = p1;
 	*dir = Normalize(p2 - p1);
+	*N = Normal(*dir);
 
 	// Compute InfiniteAreaLight ray weight
 	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
@@ -358,7 +359,7 @@ Spectrum InfiniteLight::Emit(const Scene *scene,
 	if (directPdfA)
 		*directPdfA = INV_PI * .25f;
 
-	return GetRadiance(scene, -(*dir), p2);
+	return GetRadiance(scene, *dir, p2);
 }
 
 Spectrum InfiniteLight::Illuminate(const Scene *scene, const Point &p,
@@ -375,7 +376,7 @@ Spectrum InfiniteLight::Illuminate(const Scene *scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
-	return GetRadiance(scene, -(*dir), p);
+	return GetRadiance(scene, *dir, p);
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene *scene,
