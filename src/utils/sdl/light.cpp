@@ -278,6 +278,10 @@ InfiniteLight::InfiniteLight(TexMapInstance *tx) {
 	shiftV = 0.f;
 }
 
+//------------------------------------------------------------------------------
+// Old interface
+//------------------------------------------------------------------------------
+
 Spectrum InfiniteLight::Le(const Scene *scene, const Vector &dir) const {
 	const UV uv(1.f - SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
 	return gain * tex->GetTexMap()->GetColor(uv);
@@ -330,6 +334,68 @@ Spectrum InfiniteLight::Sample_L(const Scene *scene, const float u0, const float
 }
 
 //------------------------------------------------------------------------------
+// New interface
+//------------------------------------------------------------------------------
+
+Spectrum InfiniteLight::Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *orig, Vector *dir, Normal *N,
+		float *emissionPdfW, float *directPdfA) const {
+	// Choose two points p1 and p2 on scene bounding sphere
+	const Point worldCenter = scene->dataSet->GetBSphere().center;
+	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+
+	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
+	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+
+	// Construct ray between p1 and p2
+	*orig = p1;
+	*dir = Normalize(p2 - p1);
+
+	// Compute InfiniteAreaLight ray weight
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = INV_PI * .25f;
+
+	return GetRadiance(scene, -(*dir), p2);
+}
+
+Spectrum InfiniteLight::Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW) const {
+	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+
+	*dir = UniformSampleSphere(u0, u1);
+	*distance = worldRadius;
+
+	*directPdfW = INV_PI * .25f;
+
+	if (emissionPdfW)
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	return GetRadiance(scene, -(*dir), p);
+}
+
+Spectrum InfiniteLight::GetRadiance(const Scene *scene,
+		const Vector &dir,
+		const Point &hitPoint,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	if (directPdfA)
+		*directPdfA = INV_PI * .25f;
+
+	if (emissionPdfW) {
+		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	}
+
+	const UV uv(1.f - SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
+	return gain * tex->GetTexMap()->GetColor(uv);
+}
+
+//------------------------------------------------------------------------------
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
@@ -347,6 +413,10 @@ void TriangleLight::Init(const std::vector<ExtMesh *> &objs) {
 	area = mesh->GetTriangleArea(triIndex);
 	invArea = 1.f / area;
 }
+
+//------------------------------------------------------------------------------
+// Old interface
+//------------------------------------------------------------------------------
 
 Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
 		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
