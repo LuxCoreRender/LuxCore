@@ -303,18 +303,30 @@ private:
 	Distribution1D *pMarginal;
 };
 
-//------------------------------------------------------------------------------
-// Utilities for converting PDF between Area (A) and Solid angle (W)
-// WtoA = PdfW * cosine / distance_squared
-// AtoW = PdfA * distance_squared / cosine
-//------------------------------------------------------------------------------
-
 inline float PdfWtoA(const float pdfW, const float dist, const float cosThere) {
     return pdfW * fabs(cosThere) / (dist * dist);
 }
 
 inline float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
     return pdfA * dist * dist / fabs(cosThere);
+}
+
+inline float BalanceHeuristic(const u_int nf, const float fPdf, const u_int ng, const float gPdf) {
+	return (nf * fPdf) / (nf * fPdf + ng * gPdf);
+}
+
+inline float BalanceHeuristic(const float fPdf, const float gPdf) {
+	return fPdf / (fPdf + gPdf);
+}
+
+inline float PowerHeuristic(const u_int nf, const float fPdf, const u_int ng, const float gPdf) {
+	const float f = nf * fPdf, g = ng * gPdf;
+	return (f * f) / (f * f + g * g);
+}
+
+inline float PowerHeuristic(const float fPdf, const float gPdf) {
+	const float f = fPdf, g = gPdf;
+	return (f * f) / (f * f + g * g);
 }
 
 } }

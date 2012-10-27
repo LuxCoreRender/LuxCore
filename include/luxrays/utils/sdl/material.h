@@ -27,7 +27,7 @@
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
-#include "luxrays/utils/sdl/mc.h"
+#include "luxrays/utils/core/mc.h"
 
 namespace luxrays { namespace sdl {
 
@@ -104,13 +104,14 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 	
-	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, BSDFEvent *event) const {
+	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Evaluate()");
 	}
 
 	virtual Spectrum Sample(const Vector &wo, Vector *wi,
 		const float u0, const float u1,  const float u2,
-		float *pdf, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
 	}
 };
@@ -178,7 +179,8 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 	
-	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event) const {
+	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const {
 		*event |= DIFFUSE;
 
 		if ((*event & TRANSMIT) ||
@@ -186,12 +188,18 @@ public:
 				(fabsf(eyeDir.z) < DEFAULT_EPSILON_STATIC))
             return Spectrum();
 
+		if(directPdfW)
+            *directPdfW = Max(0.f, fabsf(eyeDir.z * INV_PI));
+
+        if(reversePdfW)
+            *reversePdfW = Max(0.f, fabsf(lightDir.z * INV_PI));
+
 		return KdOverPI;
 	}
 
 	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event) const {
 		*event = DIFFUSE | REFLECT;
 
 		*eyeDir = Sgn(lightDir.z) * CosineSampleHemisphere(u0, u1);
@@ -199,7 +207,7 @@ public:
 				(fabsf(eyeDir->z) < DEFAULT_EPSILON_STATIC))
             return Spectrum();
 
-		*pdf = fabsf(eyeDir->z) * INV_PI;
+		*pdfW = fabsf(eyeDir->z) * INV_PI;
 
 		return KdOverPI;
 	}

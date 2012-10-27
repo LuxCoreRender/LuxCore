@@ -23,7 +23,7 @@
 #define	_LUXRAYS_SDL_CAMERA_H
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/utils/sdl/mc.h"
+#include "luxrays/utils/core/mc.h"
 
 namespace luxrays { namespace sdl {
 
