@@ -114,7 +114,7 @@ static Spectrum DirectHitInfiniteLight(const Scene *scene,
 
 	float directPdfW;
 	Spectrum lightRadiance = scene->infiniteLight->GetRadiance(
-			scene, eyeDir, Point(), &directPdfW);
+			scene, -eyeDir, Point(), &directPdfW);
 	if (lightRadiance.Black())
 		return Spectrum();
 
