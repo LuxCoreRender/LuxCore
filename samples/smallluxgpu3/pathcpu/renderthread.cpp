@@ -83,7 +83,7 @@ static Spectrum DirectLightSampling(const Scene *scene, RandomGenerator *rndGen,
 }
 
 static Spectrum DirectHitLightSampling(const Scene *scene,
-		const bool lastspecular, const Spectrum &pathThrouput,
+		const bool lastSpecular, const Spectrum &pathThrouput,
 		const Vector &eyeDir, const float distance,
 		const BSDF &bsdf, const float lastPdfW) {
 	float directPdfA;
@@ -92,7 +92,7 @@ static Spectrum DirectHitLightSampling(const Scene *scene,
 
 	if (!emittedRadiance.Black()) {
 		float weight;
-		if (!lastspecular) {
+		if (!lastSpecular) {
 			const float lightPickProb = scene->PickLightPdf();
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(eyeDir, bsdf.shadeN));
@@ -104,6 +104,28 @@ static Spectrum DirectHitLightSampling(const Scene *scene,
 		return  pathThrouput * weight * emittedRadiance;
 	} else
 		return Spectrum();
+}
+
+static Spectrum DirectHitInfiniteLight(const Scene *scene,
+		const bool lastSpecular, const Spectrum &pathThrouput,
+		const Vector &eyeDir, const float lastPdfW) {
+	if (!scene->infiniteLight)
+		return Spectrum();
+
+	float directPdfW;
+	Spectrum lightRadiance = scene->infiniteLight->GetRadiance(
+			scene, eyeDir, Point(), &directPdfW);
+	if (lightRadiance.Black())
+		return Spectrum();
+
+	float weight;
+	if(!lastSpecular) {
+		const float lightPickProb = scene->PickLightPdf();
+		weight = BalanceHeuristic(lastPdfW, directPdfW * lightPickProb);
+	} else
+		weight = 1.f;
+
+	return pathThrouput * weight * lightRadiance;
 }
 
 void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -140,23 +162,8 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit eyeRayHit;
 			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-				if (!scene->infiniteLight)
-					break;
-
-				float directPdfW;
-				Spectrum lightRadiance = scene->infiniteLight->GetRadiance(
-						scene, eyeRay.d, Point(), &directPdfW);
-				if (lightRadiance.Black())
-					break;
-
-				float weight;
-				if(!lastSpecular) {
-					const float lightPickProb = scene->PickLightPdf();
-					weight = BalanceHeuristic(lastPdfW, directPdfW * lightPickProb);
-				} else
-					weight = 1.f;
-
-				radiance += pathThrouput * weight * lightRadiance;
+				radiance += DirectHitInfiniteLight(scene, lastSpecular,
+						pathThrouput, eyeRay.d, lastPdfW);
 				break;
 			}
 
