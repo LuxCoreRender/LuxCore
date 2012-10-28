@@ -27,6 +27,17 @@
 
 #include "luxrays/core/intersectiondevice.h"
 
+const string &RenderEngineType2String(const RenderEngineType type) {
+	switch (type) {
+		case PATHOCL:
+			return "Path OpenCL";
+		case LIGHTCPU:
+			return "Light CPU";
+		case PATHCPU:
+			return "Path CPU";
+	}
+}
+
 //------------------------------------------------------------------------------
 // RenderEngine
 //------------------------------------------------------------------------------

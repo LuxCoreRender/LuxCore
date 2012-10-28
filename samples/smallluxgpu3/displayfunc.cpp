@@ -117,7 +117,8 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Tonemapping %s]",
+	sprintf(buf, "[Render engine %s][Tone mapping %s]",
+			RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
 			(session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
