@@ -33,7 +33,7 @@
 
 static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 		Vector eyeDir, const float eyeDistance, const Point &lensPoint,
-		const Normal &shadeN, const Spectrum bsdfEval,
+		const Normal &shadeN, const Spectrum &bsdfEval,
 		const Spectrum &flux) {
 	if (!bsdfEval.Black()) {
 		Ray eyeRay(lensPoint, eyeDir);
@@ -75,7 +75,7 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 }
 
 static void ConnectToEye(const Scene *scene, Film *film, const float u0,
-		const BSDF &bsdf, const Point &lensPoint, const Vector &lightDir, const Spectrum flux) {
+		const BSDF &bsdf, const Point &lensPoint, const Vector &lightDir, const Spectrum &flux) {
 	Vector eyeDir(bsdf.hitPoint - lensPoint);
 	const float eyeDistance = eyeDir.Length();
 	eyeDir /= eyeDistance;
@@ -84,6 +84,32 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 	Spectrum bsdfEval = bsdf.Evaluate(lightDir, -eyeDir, &event);
 
 	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
+}
+
+static Spectrum DirectHitLightSampling(const Scene *scene,
+		const Vector &eyeDir, const float distance,
+		const BSDF &bsdf) {
+	float directPdfA;
+	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene,
+		eyeDir, &directPdfA);
+
+	if (!emittedRadiance.Black()) {
+		return emittedRadiance;
+	} else
+		return Spectrum();
+}
+
+static Spectrum DirectHitInfiniteLight(const Scene *scene, const Vector &eyeDir) {
+	if (!scene->infiniteLight)
+		return Spectrum();
+
+	float directPdfW;
+	Spectrum lightRadiance = scene->infiniteLight->GetRadiance(
+			scene, -eyeDir, Point(), &directPdfW);
+	if (lightRadiance.Black())
+		return Spectrum();
+
+	return lightRadiance;
 }
 
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -96,14 +122,18 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	LightCPURenderEngine *renderEngine = (LightCPURenderEngine *)renderThread->renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
-	Film *film = renderThread->threadFilmPSN;
+	PerspectiveCamera *camera = scene->camera;
+	Film *lightFilm = renderThread->threadFilmPSN;
+	Film *eyeFilm = renderThread->threadFilmPPN;
+	const unsigned int filmWidth = eyeFilm->GetWidth();
+	const unsigned int filmHeight = eyeFilm->GetHeight();
 
 	//--------------------------------------------------------------------------
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
 	while (!boost::this_thread::interruption_requested()) {
-		film->AddSampleCount(1);
+		lightFilm->AddSampleCount(1);
 
 		// Select one light source
 		float lightPickPdf;
@@ -121,30 +151,44 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		lightPathFlux /= lightEmitPdf * lightPickPdf;
 		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
-		//----------------------------------------------------------------------
-		// Try to connect the light vertex directly with the eye
-		//----------------------------------------------------------------------
-
+		// Sample a point on the camera lens
 		Point lensPoint;
 		if (!scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
 				rndGen->floatValue(), &lensPoint))
 			continue;
 
+		//----------------------------------------------------------------------
+		// I don't try to connect the light vertex directly with the eye
+		// because InfiniteLight::Emit() returns a point on the scene bounding
+		// sphere. Instead, I trace a ray from the camera like in BiDir.
+		// This is also a good why to test the Per-Pixel-Normalization and
+		// the Per-Screen-Normalization Buffers used by BiDir.
+		//----------------------------------------------------------------------
+
 		{
-			Vector eyeDir(nextEventRay.o - lensPoint);
-			if (Dot(-eyeDir, lightN) > 0.f) {
-				const float eyeDistance = eyeDir.Length();
-				eyeDir /= eyeDistance;
+			Ray eyeRay;
+			const float screenX = min(rndGen->floatValue() * filmWidth, (float)(filmWidth - 1));
+			const float screenY = min(rndGen->floatValue() * filmHeight, (float)(filmHeight - 1));
+			camera->GenerateRay(screenX, screenY, &eyeRay,
+				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
-				float emissionPdfW;
-				Spectrum lightRadiance = light->GetRadiance(scene, -eyeDir, nextEventRay.o, NULL, &emissionPdfW);
-				lightRadiance /= emissionPdfW;
+			Spectrum radiance;
+			RayHit eyeRayHit;
+			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit))
+				radiance = DirectHitInfiniteLight(scene, eyeRay.d);
+			else {
+				// Something was hit
+				BSDF bsdf(false, *scene, eyeRay, eyeRayHit, rndGen->floatValue());
 
-				ConnectToEye(scene, film, rndGen->floatValue(), eyeDir, eyeDistance, lensPoint,
-						lightN, Spectrum(1.f, 1.f, 1.f), lightRadiance);
+				// Check if it is a light source
+				if (bsdf.IsLightSource())
+					radiance = DirectHitLightSampling(scene, -eyeRay.d, eyeRayHit.t, bsdf);
 			}
-		}
 
+			if (!radiance.Black())
+				eyeFilm->SplatFiltered(screenX, screenY, radiance);
+		}
+		
 		//----------------------------------------------------------------------
 		// Trace the light path
 		//----------------------------------------------------------------------
@@ -173,7 +217,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, film, rndGen->floatValue(),
+				ConnectToEye(scene, lightFilm, rndGen->floatValue(),
 						bsdf, lensPoint, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
