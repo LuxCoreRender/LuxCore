@@ -25,7 +25,9 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/sdl/bsdf.h"
 
-// TODO: DOF support
+// TODO: fix merge film eye/light buffers
+// TODO: alpha buffer support
+// TODO: merge ConnectToEye()
 
 //------------------------------------------------------------------------------
 // LightCPU RenderThread
@@ -54,7 +56,8 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 					const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
 					const float fluxToRadianceFactor = cameraPdfA;
 
-					film->SplatFiltered(scrX, scrY, flux * fluxToRadianceFactor * bsdfEval);
+					film->SplatFiltered(PER_SCREEN_NORMALIZED, scrX, scrY,
+							flux * fluxToRadianceFactor * bsdfEval);
 					break;
 				} else {
 					// Check if it is a pass through point
@@ -123,17 +126,16 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
-	Film *lightFilm = renderThread->threadFilmPSN;
-	Film *eyeFilm = renderThread->threadFilmPPN;
-	const unsigned int filmWidth = eyeFilm->GetWidth();
-	const unsigned int filmHeight = eyeFilm->GetHeight();
+	Film *film = renderThread->threadFilm;
+	const unsigned int filmWidth = film->GetWidth();
+	const unsigned int filmHeight = film->GetHeight();
 
 	//--------------------------------------------------------------------------
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
 	while (!boost::this_thread::interruption_requested()) {
-		lightFilm->AddSampleCount(1);
+		film->AddSampleCount(PER_SCREEN_NORMALIZED, 1.0);
 
 		// Select one light source
 		float lightPickPdf;
@@ -161,7 +163,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		// I don't try to connect the light vertex directly with the eye
 		// because InfiniteLight::Emit() returns a point on the scene bounding
 		// sphere. Instead, I trace a ray from the camera like in BiDir.
-		// This is also a good why to test the Per-Pixel-Normalization and
+		// This is also a good why to test the Film Per-Pixel-Normalization and
 		// the Per-Screen-Normalization Buffers used by BiDir.
 		//----------------------------------------------------------------------
 
@@ -185,8 +187,10 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					radiance = DirectHitLightSampling(scene, -eyeRay.d, eyeRayHit.t, bsdf);
 			}
 
-			if (!radiance.Black())
-				eyeFilm->SplatFiltered(screenX, screenY, radiance);
+			if (!radiance.Black()) {
+				film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.0);
+				film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
+			}
 		}
 		
 		//----------------------------------------------------------------------
@@ -217,7 +221,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, lightFilm, rndGen->floatValue(),
+				ConnectToEye(scene, film, rndGen->floatValue(),
 						bsdf, lensPoint, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)

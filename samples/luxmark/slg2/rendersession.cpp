@@ -40,7 +40,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = new Film(w, h, false);
+	film = new Film(w, h, true, false, true);
 
 	const int filterType = cfg.GetInt("film.filter.type", 1);
 	if (filterType == 0)

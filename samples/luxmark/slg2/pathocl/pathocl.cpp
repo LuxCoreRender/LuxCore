@@ -259,7 +259,8 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 					if ((count > 0) && !c.IsNaN()) {
 						c /= count;
-						film->SplatFiltered(x, y, c);
+						film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
+						film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c);
 					}
 
 					++pGPU;
@@ -283,8 +284,10 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 						}
 					}
 
-					if ((count > 0) && !c.IsNaN())
-						film->AddRadiance(x, y, c, count);
+					if ((count > 0) && !c.IsNaN()) {
+						film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
+						film->AddRadiance(PER_PIXEL_NORMALIZED, x, y, c, count);
+					}
 
 					++pGPU;
 					++pCPU;
