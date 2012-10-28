@@ -24,8 +24,10 @@
 
 #include <vector>
 
+#include "luxrays/utils/core/spectrum.h"
+#include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
-#include "luxrays/utils/sdl/mc.h"
+#include "luxrays/utils/core/mc.h"
 
 namespace luxrays { namespace sdl {
 
@@ -44,7 +46,7 @@ public:
 
 	virtual bool IsLightSource() const = 0;
 	virtual bool IsDiffuse() const = 0;
-	virtual bool IsSpecular() const = 0;
+	virtual bool IsSpecular() const = 0; // TODO: rename to IsDelta
 	virtual bool IsShadowTransparent() const { return false; }
 
 	virtual Spectrum GetSahdowTransparency() const {
@@ -68,7 +70,7 @@ public:
 	MaterialType GetType() const { return AREALIGHT; }
 
 	Spectrum Le(const ExtMesh *mesh, const unsigned triIndex, const Vector &wo) const {
-		Normal sampleN = mesh->GetNormal(triIndex, 0); // Light sources are supposed to be flat
+		Normal sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 
 		if (Dot(sampleN, wo) <= 0.f)
 			return Spectrum();
@@ -89,10 +91,29 @@ class SurfaceMaterial : public Material {
 public:
 	bool IsLightSource() const { return false; }
 
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
 	virtual Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const = 0;
 	virtual Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N,
 		const Normal &shadeN, const float u0, const float u1,  const float u2,
 		const bool onlySpecular, float *pdf, bool &specularBounce) const = 0;
+
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+	
+	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const {
+		throw std::runtime_error("Internal error, called SurfaceMaterial::Evaluate()");
+	}
+
+	virtual Spectrum Sample(const Vector &wo, Vector *wi,
+		const float u0, const float u1,  const float u2,
+		float *pdfW, BSDFEvent *event) const {
+		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
+	}
 };
 
 class MatteMaterial : public SurfaceMaterial {
@@ -107,8 +128,17 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return false; }
 
+	const Spectrum &GetKd() const { return Kd; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		return KdOverPI;
+		if (Dot(N, wi) > 0.f)
+			return KdOverPI;
+		else
+			return Spectrum();
 	}
 
 	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
@@ -145,7 +175,42 @@ public:
 		return KdOverPI;
 	}
 
-	const Spectrum &GetKd() const { return Kd; }
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+	
+	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const {
+		*event |= DIFFUSE;
+
+		if ((*event & TRANSMIT) ||
+				(fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
+				(fabsf(eyeDir.z) < DEFAULT_EPSILON_STATIC))
+            return Spectrum();
+
+		if(directPdfW)
+            *directPdfW = Max(0.f, fabsf(eyeDir.z * INV_PI));
+
+        if(reversePdfW)
+            *reversePdfW = Max(0.f, fabsf(lightDir.z * INV_PI));
+
+		return KdOverPI;
+	}
+
+	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
+		const float u0, const float u1,  const float u2,
+		float *pdfW, BSDFEvent *event) const {
+		*event = DIFFUSE | REFLECT;
+
+		*eyeDir = Sgn(lightDir.z) * CosineSampleHemisphere(u0, u1);
+		if ((fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
+				(fabsf(eyeDir->z) < DEFAULT_EPSILON_STATIC))
+            return Spectrum();
+
+		*pdfW = fabsf(eyeDir->z) * INV_PI;
+
+		return KdOverPI;
+	}
 
 private:
 	Spectrum Kd, KdOverPI;
@@ -162,6 +227,12 @@ public:
 
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
+
+	const Spectrum &GetKr() const { return Kr; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
 
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		throw std::runtime_error("Internal error, called MirrorMaterial::f()");
@@ -180,9 +251,29 @@ public:
 		return Kr;
 	}
 
-	const Spectrum &GetKr() const { return Kr; }
-
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
+
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const {
+		*event |= SPECULAR;
+
+		return Spectrum();
+	}
+
+	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, BSDFEvent *event) const {
+		*event = SPECULAR | REFLECT;
+
+		*eyeDir = Vector(-lightDir.x, -lightDir.y, lightDir.z);
+		*pdf = 1.f;
+
+		return Kr;
+	}
 
 private:
 	Spectrum Kr;

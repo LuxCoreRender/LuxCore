@@ -28,6 +28,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/triangle.h"
 #include "luxrays/core/trianglemesh.h"
+#include "luxrays/utils/core/spectrum.h"
 
 namespace luxrays {
 
@@ -40,10 +41,13 @@ public:
 	virtual bool HasColors() const = 0;
 	virtual bool HasUVs() const = 0;
 
-	virtual Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const = 0;
-	virtual Normal GetNormal(const unsigned int vertIndex) const = 0;
+	virtual Normal GetGeometryNormal(const unsigned int triIndex) const = 0;
+	virtual Normal GetShadeNormal(const unsigned int triIndex, const unsigned int vertIndex) const = 0;
+	virtual Normal GetShadeNormal(const unsigned int vertIndex) const = 0;
 	virtual Spectrum GetColor(const unsigned int vertIndex) const = 0;
 	virtual UV GetUV(const unsigned int vertIndex) const = 0;
+
+	virtual bool GetTriUV(const unsigned int index, const Point &hitPoint, float *b1, float *b2) const = 0;
 
 	virtual Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const = 0;
 	virtual Spectrum InterpolateTriColor(const unsigned int index, const float b0, const float b1, const float b2) const = 0;
@@ -105,11 +109,19 @@ public:
 
 	Point GetVertex(const unsigned int vertIndex) const { return vertices[vertIndex]; }
 	float GetTriangleArea(const unsigned int triIndex) const { return tris[triIndex].Area(vertices); }
-	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return normals[tris[triIndex].v[vertIndex]]; }
-	Normal GetNormal(const unsigned int vertIndex) const { return normals[vertIndex]; }
+	Normal GetGeometryNormal(const unsigned int triIndex) const {
+		return tris[triIndex].GetGeometryNormal(vertices);
+	}
+	Normal GetShadeNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return normals[tris[triIndex].v[vertIndex]]; }
+	Normal GetShadeNormal(const unsigned int vertIndex) const { return normals[vertIndex]; }
 	Spectrum GetColor(const unsigned int vertIndex) const { return colors[vertIndex]; }
 	UV GetUV(const unsigned int vertIndex) const { return uvs[vertIndex]; }
 
+	bool GetTriUV(const unsigned int index, const Point &hitPoint, float *b1, float *b2) const {
+		const Triangle &tri = tris[index];
+		return tri.GetUV(vertices, hitPoint, b1, b2);
+	}
+	
 	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
 		const Triangle &tri = tris[index];
 		const float b0 = 1.f - b1 - b2;
@@ -187,14 +199,23 @@ public:
 	bool HasColors() const { return mesh->HasColors(); }
 	bool HasUVs() const { return mesh->HasUVs(); }
 
-	Normal GetNormal(const unsigned index) const {
-		return Normalize(trans * mesh->GetNormal(index));
+	Normal GetGeometryNormal(const unsigned int triIndex) const {
+		return Normalize(trans * mesh->GetGeometryNormal(triIndex));
 	}
-	Normal GetNormal(const unsigned int triIndex, const unsigned int vertIndex) const {
-		return Normalize(trans * mesh->GetNormal(triIndex, vertIndex));
+	Normal GetShadeNormal(const unsigned index) const {
+		return Normalize(trans * mesh->GetShadeNormal(index));
+	}
+	Normal GetShadeNormal(const unsigned int triIndex, const unsigned int vertIndex) const {
+		return Normalize(trans * mesh->GetShadeNormal(triIndex, vertIndex));
 	}
 	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
 	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }
+
+	bool GetTriUV(const unsigned int index, const Point &hitPoint, float *b1, float *b2) const {
+		const Triangle &tri = mesh->GetTriangles()[index];
+
+		return Triangle::GetUV(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]), hitPoint, b1, b2);
+	}
 
 	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
 		return Normalize(trans * mesh->InterpolateTriNormal(index, b1, b2));

@@ -41,14 +41,14 @@ if(DOXYGEN_FOUND)
         message(STATUS "Found Doxygen and generating SLG documentation")
 
         # Generate doxygen.template
-        set(DOXYGEN_SLG_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/../../doxygen/slg.template)
+        set(DOXYGEN_SLG_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/../../doxygen/slg2.template)
         configure_file(
           "${DOXYGEN_SLG_TEMPLATE}.in"
           "${DOXYGEN_SLG_TEMPLATE}"
           )
 
-        set(DOXYGEN_SLG_INPUT ${CMAKE_CURRENT_BINARY_DIR}/../../doxygen-slg.conf)
-        set(DOXYGEN_SLG_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/../../doc/slg)
+        set(DOXYGEN_SLG_INPUT ${CMAKE_CURRENT_BINARY_DIR}/../../doxygen-slg2.conf)
+        set(DOXYGEN_SLG_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/../../doc/slg2)
         set(DOXYGEN_SLG_OUTPUT ${DOXYGEN_OUTPUT_DIR}/html/index.html)
 
         message(STATUS "Doxygen SLG output:" ${DOXYGEN_SLG_OUTPUT})
@@ -61,9 +61,9 @@ if(DOXYGEN_FOUND)
         add_custom_command(
             OUTPUT ${DOXYGEN_SLG_OUTPUT}
             # Creating custom doxygen-slg.conf
-			COMMAND mkdir -p ${DOXYGEN_SLG_OUTPUT_DIR}
+            COMMAND mkdir -p ${DOXYGEN_SLG_OUTPUT_DIR}
             COMMAND cp ${DOXYGEN_SLG_TEMPLATE} ${DOXYGEN_SLG_INPUT}
-            COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../samples/smallluxgpu >> ${DOXYGEN_SLG_INPUT}
+            COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../samples/smallluxgpu2 >> ${DOXYGEN_SLG_INPUT}
             COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_SLG_OUTPUT_DIR} >> ${DOXYGEN_SLG_INPUT}
             COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_SLG_INPUT}
             # Launch doxygen

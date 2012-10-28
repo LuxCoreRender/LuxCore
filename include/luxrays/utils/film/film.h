@@ -38,9 +38,10 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/pixel/samplebuffer.h"
-#include "luxrays/core/pixeldevice.h"
-#include "luxrays/core/pixel/samplebuffer.h"
+#include "luxrays/utils/film/filter.h"
+#include "luxrays/utils/film/tonemapping.h"
+#include "luxrays/utils/film/framebuffer.h"
+#include "luxrays/utils/convtest/convtest.h"
 
 namespace luxrays { namespace utils {
 
@@ -52,12 +53,20 @@ namespace luxrays { namespace utils {
 
 class Film {
 public:
-	Film(const unsigned int w, const unsigned int h);
-	virtual ~Film();
+	Film(const unsigned int w, const unsigned int h, const bool perScreenNorm);
+	~Film();
 
-	virtual void Init(const unsigned int w, const unsigned int h);
+	void Init(const unsigned int w, const unsigned int h);
+	void InitGammaTable(const float gamma = 2.2f);
+	void Reset();
 
-	virtual void InitGammaTable(const float gamma = 2.2f);
+	void EnableAlphaChannel(const bool alphaChannel) {
+		enableAlphaChannel = alphaChannel;
+	}
+	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
+	void EnableOverlappedScreenBufferUpdate(const bool overlappedScreenBufferUpdate) {
+		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
+	}
 
 	void SetFilterType(const FilterType filter) {
 		filterType = filter;
@@ -71,32 +80,17 @@ public:
 		toneMapParams = params.Copy();
 	}
 
-	void AddFilm(const std::string &filmFile);
-	void SaveFilm(const std::string &filmFile);
+	void AddFilm(const Film &film);
 
-	void StartSampleTime() {
-		statsStartSampleTime = WallClockTime();
-	}
-
-	virtual void Reset() {
-		statsTotalSampleCount = 0;
-		statsAvgSampleSec = 0.0;
-		statsStartSampleTime = WallClockTime();
-	}
-
-	virtual void UpdateScreenBuffer() = 0;
-	virtual const float *GetScreenBuffer() const = 0;
-
-	virtual SampleBuffer *GetFreeSampleBuffer() = 0;
-	virtual void FreeSampleBuffer(SampleBuffer *sampleBuffer) = 0;
-	virtual void SplatSampleBuffer(const bool preview, SampleBuffer *sampleBuffer) {
-		// Update statistics
-		statsTotalSampleCount += (unsigned int)sampleBuffer->GetSampleCount();
+	void SaveScreenBuffer(const std::string &filmFile);
+	void UpdateScreenBuffer();
+	const float *GetScreenBuffer() const {
+		return (const float *)frameBuffer->GetPixels();
 	}
 
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
-	unsigned int GetTotalSampleCount() const { return statsTotalSampleCount; }
+	double GetTotalSampleCount() const { return statsTotalSampleCount; }
 	double GetTotalTime() const {
 		return WallClockTime() - statsStartSampleTime;
 	}
@@ -111,11 +105,34 @@ public:
 		return statsTotalSampleCount / GetTotalTime();
 	}
 
-	virtual void Save(const std::string &fileName) = 0;
+	//--------------------------------------------------------------------------
+	
+	void ResetConvergenceTest();
+	unsigned int RunConvergenceTest();
+	
+	//--------------------------------------------------------------------------
 
-protected:
-	void SaveImpl(const std::string &fileName);
+	void AddSampleCount(const double count) { statsTotalSampleCount += 1.f; }
 
+	void AddRadiance(const unsigned int x, const unsigned int y, const Spectrum &radiance, const float weight) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+
+		sp->radiance += radiance;
+		sp->weight += weight;
+	}
+	
+	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha) {
+		const unsigned int offset = x + y * width;
+		AlphaPixel *ap = &(alphaFrameBuffer->GetPixels()[offset]);
+
+		ap->alpha += alpha;
+	}
+
+	void SplatFiltered(const float screenX, const float screenY, const Spectrum &radiance);
+	void SplatFilteredAlpha(const float screenX, const float screenY, const float a);
+
+private:
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
 		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
@@ -130,24 +147,50 @@ protected:
 		return Spectrum(Radiance2PixelFloat(c.r), Radiance2PixelFloat(c.g), Radiance2PixelFloat(c.b));
 	}
 
-	virtual const SampleFrameBuffer *GetSampleFrameBuffer() = 0;
-	virtual void AddSampleFrameBuffer(const SampleFrameBuffer *sfb) = 0;
+	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
 
-	// This can return NULL if alpha channel is not supported
-	virtual const AlphaFrameBuffer *GetAlphaFrameBuffer() {
-		return NULL;
+		sp->radiance += weight * radiance;
+		sp->weight += weight;
+	}
+
+	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y) {
+		const unsigned int offset = x + y * width;
+		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+
+		sp->radiance += radiance;
+		sp->weight += 1.f;
+	}
+
+	void SplatAlpha(const float alpha, const unsigned int x, const unsigned int y, const float weight) {
+		const unsigned int offset = x + y * width;
+		AlphaPixel *sp = &(alphaFrameBuffer->GetPixels()[offset]);
+
+		sp->alpha += weight * alpha;
 	}
 
 	unsigned int width, height;
 	unsigned int pixelCount;
 
-	unsigned int statsTotalSampleCount;
-	double statsStartSampleTime, statsAvgSampleSec;
+	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
 	float gammaTable[GAMMA_TABLE_SIZE];
 
 	FilterType filterType;
 	ToneMapParams *toneMapParams;
+
+	SampleFrameBuffer *sampleFrameBuffer;
+	AlphaFrameBuffer *alphaFrameBuffer;
+	FrameBuffer *frameBuffer;
+
+	Filter *filter;
+	FilterLUTs *filterLUTs;
+	
+	ConvergenceTest convTest;
+
+	bool enableAlphaChannel, usePerScreenNormalization,
+		enabledOverlappedScreenBufferUpdate;
 };
 
 } }
