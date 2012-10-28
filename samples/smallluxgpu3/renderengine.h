@@ -34,6 +34,8 @@ enum RenderEngineType {
 	PATHCPU = 6
 };
 
+extern const string &RenderEngineType2String(const RenderEngineType type);
+
 //------------------------------------------------------------------------------
 // Base class for render engines
 //------------------------------------------------------------------------------
