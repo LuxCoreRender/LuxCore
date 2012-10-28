@@ -27,7 +27,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 
-const string &RenderEngineType2String(const RenderEngineType type) {
+const string RenderEngineType2String(const RenderEngineType type) {
 	switch (type) {
 		case PATHOCL:
 			return "Path OpenCL";
@@ -35,6 +35,8 @@ const string &RenderEngineType2String(const RenderEngineType type) {
 			return "Light CPU";
 		case PATHCPU:
 			return "Path CPU";
+		default:
+			return "UNKNOWN";
 	}
 }
 
@@ -281,7 +283,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 
 CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm,
 			boost::mutex *flmMutex, void (* threadFunc)(CPURenderThread *),
-			const bool perPixelNormalizationFilm, const bool perScreenNormalizationFilm) :
+			const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer) :
 		RenderEngine(cfg, flm, flmMutex) {
 	renderThreadFunc = threadFunc;
 
@@ -292,7 +294,7 @@ CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm,
 	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
 	for (unsigned int i = 0; i < renderThreadCount; ++i) {
 		CPURenderThread *t = new CPURenderThread(this, i, seedBase + i, threadFunc,
-				perPixelNormalizationFilm, perScreenNormalizationFilm);
+				enablePerPixelNormBuffer, enablePerScreenNormBuffer);
 		renderThreads.push_back(t);
 	}
 }
@@ -338,10 +340,8 @@ void CPURenderEngine::UpdateFilmLockLess() {
 
 	// Merge the all thread films
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		if (renderThreads[i]->threadFilmPPN)
-			film->AddFilm(*(renderThreads[i]->threadFilmPPN));
-		if (renderThreads[i]->threadFilmPSN)
-			film->AddFilm(*(renderThreads[i]->threadFilmPSN));
+		if (renderThreads[i]->threadFilm)
+			film->AddFilm(*(renderThreads[i]->threadFilm));
 	}
 	samplesCount = film->GetTotalSampleCount();
 }
@@ -352,7 +352,7 @@ void CPURenderEngine::UpdateFilmLockLess() {
 
 CPURenderThread::CPURenderThread(CPURenderEngine *engine, const unsigned int index,
 			const unsigned int seedVal, void (* threadFunc)(CPURenderThread *),
-			const bool perPixelNormalizationFilm, const bool perScreenNormalizationFilm) {
+			const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) {
 	threadIndex = index;
 	seed = seedVal;
 	renderThreadFunc = threadFunc;
@@ -360,10 +360,9 @@ CPURenderThread::CPURenderThread(CPURenderEngine *engine, const unsigned int ind
 	started = false;
 	editMode = false;
 
-	threadFilmPPN = NULL;
-	threadFilmPSN = NULL;
-	usePerPixelNormalizationFilm = perPixelNormalizationFilm;
-	usePerScreenNormalizationFilm = perScreenNormalizationFilm;
+	threadFilm = NULL;
+	enablePerPixelNormBuffer = enablePerPixelNormBuf;
+	enablePerScreenNormBuffer = enablePerScreenNormBuf;
 }
 
 CPURenderThread::~CPURenderThread() {
@@ -372,8 +371,7 @@ CPURenderThread::~CPURenderThread() {
 	if (started)
 		Stop();
 
-	delete threadFilmPPN;
-	delete threadFilmPSN;
+	delete threadFilm;
 }
 
 void CPURenderThread::Start() {
@@ -397,17 +395,10 @@ void CPURenderThread::StartRenderThread() {
 	const unsigned int filmWidth = renderEngine->film->GetWidth();
 	const unsigned int filmHeight = renderEngine->film->GetHeight();
 
-	if (usePerPixelNormalizationFilm) {
-		delete threadFilmPPN;
-		threadFilmPPN = new Film(filmWidth, filmHeight, false);
-		threadFilmPPN->Init(filmWidth, filmHeight);
-	}
-
-	if (usePerScreenNormalizationFilm) {
-		delete threadFilmPSN;
-		threadFilmPSN = new Film(filmWidth, filmHeight, true);
-		threadFilmPSN->Init(filmWidth, filmHeight);
-	}
+	delete threadFilm;
+	threadFilm = new Film(filmWidth, filmHeight,
+			enablePerPixelNormBuffer, enablePerScreenNormBuffer, false);
+	threadFilm->Init(filmWidth, filmHeight);
 
 	// Create the thread for the rendering
 	renderThread = new boost::thread(boost::bind(renderThreadFunc, this));

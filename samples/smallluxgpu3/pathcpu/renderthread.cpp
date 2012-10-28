@@ -26,6 +26,9 @@
 #include "luxrays/utils/sdl/bsdf.h"
 #include "luxrays/utils/core/mc.h"
 
+// TODO: alpha buffer support
+// TODO: pass through support
+
 //------------------------------------------------------------------------------
 // PathCPU RenderThread
 //------------------------------------------------------------------------------
@@ -139,7 +142,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
 	PerspectiveCamera *camera = renderEngine->renderConfig->scene->camera;
-	Film * film = renderThread->threadFilmPPN;
+	Film * film = renderThread->threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 
@@ -226,8 +229,8 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		assert (!radiance.IsNaN() && !radiance.IsInf());
 
-		film->AddSampleCount(1.f);
-		film->SplatFiltered(screenX, screenY, radiance);
+		film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
+		film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
 	}
 
 	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread halted");

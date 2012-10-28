@@ -54,4 +54,6 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
+
+	film->EnableOverlappedScreenBufferUpdate(false);
 }

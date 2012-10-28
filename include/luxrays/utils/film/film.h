@@ -45,6 +45,11 @@
 
 namespace luxrays { namespace utils {
 
+enum FilmBufferType {
+	PER_PIXEL_NORMALIZED = 0,
+	PER_SCREEN_NORMALIZED = 1
+};
+
 //------------------------------------------------------------------------------
 // Base class for all Film implementation
 //------------------------------------------------------------------------------
@@ -53,7 +58,10 @@ namespace luxrays { namespace utils {
 
 class Film {
 public:
-	Film(const unsigned int w, const unsigned int h, const bool perScreenNorm);
+	Film(const unsigned int w, const unsigned int h,
+			const bool enablePerPixelNormalizedBuffer,
+			const bool enablePerScreenNormalizedBuffer,
+			const bool enableFrameBuffer);
 	~Film();
 
 	void Init(const unsigned int w, const unsigned int h);
@@ -61,6 +69,9 @@ public:
 	void Reset();
 
 	void EnableAlphaChannel(const bool alphaChannel) {
+		// Alpha buffer uses the weights in PER_PIXEL_NORMALIZED buffer
+		assert (enablePerPixelNormalizedBuffer);
+
 		enableAlphaChannel = alphaChannel;
 	}
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
@@ -88,51 +99,56 @@ public:
 		return (const float *)frameBuffer->GetPixels();
 	}
 
+	//--------------------------------------------------------------------------
+
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
-	double GetTotalSampleCount() const { return statsTotalSampleCount; }
+	double GetTotalSampleCount() const {
+		return statsTotalSampleCount[PER_PIXEL_NORMALIZED] +
+				statsTotalSampleCount[PER_SCREEN_NORMALIZED];
+	}
 	double GetTotalTime() const {
 		return WallClockTime() - statsStartSampleTime;
 	}
 	double GetAvgSampleSec() {
-		/*const double elapsedTime = WallClockTime() - statsStartSampleTime;
-		const double k = (elapsedTime < 10.0) ? 1.0 : (1.0 / (2.5 * elapsedTime));
-		statsAvgSampleSec = k * statsTotalSampleCount / elapsedTime +
-				(1.0 - k) * statsAvgSampleSec;
-
-		return statsAvgSampleSec;*/
-
-		return statsTotalSampleCount / GetTotalTime();
+		return GetTotalSampleCount() / GetTotalTime();
 	}
 
 	//--------------------------------------------------------------------------
-	
+
 	void ResetConvergenceTest();
 	unsigned int RunConvergenceTest();
-	
+
 	//--------------------------------------------------------------------------
 
-	void AddSampleCount(const double count) { statsTotalSampleCount += 1.f; }
+	void AddSampleCount(const FilmBufferType type, const double count = 1.0) {
+		statsTotalSampleCount[type] += count;
+	}
 
-	void AddRadiance(const unsigned int x, const unsigned int y, const Spectrum &radiance, const float weight) {
-		const unsigned int offset = x + y * width;
-		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+	void AddRadiance(const FilmBufferType type, const unsigned int x, const unsigned int y,
+		const Spectrum &radiance, const float weight = 1.f) {
+		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
 
 		sp->radiance += radiance;
 		sp->weight += weight;
 	}
-	
-	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha) {
-		const unsigned int offset = x + y * width;
-		AlphaPixel *ap = &(alphaFrameBuffer->GetPixels()[offset]);
 
-		ap->alpha += alpha;
+	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha,
+		const float weight = 1.f) {
+		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
+
+		ap->alpha += weight * alpha;
 	}
 
-	void SplatFiltered(const float screenX, const float screenY, const Spectrum &radiance);
-	void SplatFilteredAlpha(const float screenX, const float screenY, const float a);
+	void SplatFiltered(const FilmBufferType type, const float screenX,
+		const float screenY, const Spectrum &radiance);
+	void SplatFilteredAlpha(const float screenX, const float screenY,
+		const float a);
 
 private:
+	void UpdateScreenBufferImpl(const ToneMapType type);
+	void MergeBuffers(Pixel *p) const;
+
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
 		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
@@ -143,54 +159,35 @@ private:
 		return gammaTable[index];
 	}
 
-	Spectrum Radiance2Pixel(const Spectrum& c) const {
-		return Spectrum(Radiance2PixelFloat(c.r), Radiance2PixelFloat(c.g), Radiance2PixelFloat(c.b));
+	Pixel Radiance2Pixel(const Spectrum& c) const {
+		return Spectrum(
+				Radiance2PixelFloat(c.r),
+				Radiance2PixelFloat(c.g),
+				Radiance2PixelFloat(c.b));
 	}
 
-	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y, const float weight) {
-		const unsigned int offset = x + y * width;
-		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
+	unsigned int width, height, pixelCount;
 
-		sp->radiance += weight * radiance;
-		sp->weight += weight;
-	}
-
-	void SplatRadiance(const Spectrum radiance, const unsigned int x, const unsigned int y) {
-		const unsigned int offset = x + y * width;
-		SamplePixel *sp = &(sampleFrameBuffer->GetPixels()[offset]);
-
-		sp->radiance += radiance;
-		sp->weight += 1.f;
-	}
-
-	void SplatAlpha(const float alpha, const unsigned int x, const unsigned int y, const float weight) {
-		const unsigned int offset = x + y * width;
-		AlphaPixel *sp = &(alphaFrameBuffer->GetPixels()[offset]);
-
-		sp->alpha += weight * alpha;
-	}
-
-	unsigned int width, height;
-	unsigned int pixelCount;
-
-	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
+	double statsTotalSampleCount[2], statsStartSampleTime, statsAvgSampleSec;
 
 	float gammaTable[GAMMA_TABLE_SIZE];
 
 	FilterType filterType;
 	ToneMapParams *toneMapParams;
 
-	SampleFrameBuffer *sampleFrameBuffer;
+	// Two sample buffers, one PER_PIXEL_NORMALIZED and the other PER_SCREEN_NORMALIZED
+	SampleFrameBuffer *sampleFrameBuffer[2];
 	AlphaFrameBuffer *alphaFrameBuffer;
 	FrameBuffer *frameBuffer;
 
+	ConvergenceTest *convTest;
+
 	Filter *filter;
 	FilterLUTs *filterLUTs;
-	
-	ConvergenceTest convTest;
 
-	bool enableAlphaChannel, usePerScreenNormalization,
-		enabledOverlappedScreenBufferUpdate;
+	bool enableAlphaChannel, enabledOverlappedScreenBufferUpdate,
+		enablePerPixelNormalizedBuffer, enablePerScreenNormalizedBuffer,
+		enableFrameBuffer;
 };
 
 } }

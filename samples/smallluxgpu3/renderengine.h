@@ -34,7 +34,7 @@ enum RenderEngineType {
 	PATHCPU = 6
 };
 
-extern const string &RenderEngineType2String(const RenderEngineType type);
+extern const string RenderEngineType2String(const RenderEngineType type);
 
 //------------------------------------------------------------------------------
 // Base class for render engines
@@ -118,7 +118,7 @@ class CPURenderThread {
 public:
 	CPURenderThread(CPURenderEngine *engine, const unsigned int index,
 			const unsigned int seedVal, void (* threadFunc)(CPURenderThread *),
-			const bool perPixelNormalizationFilm, const bool perScreenNormalizationFilm);
+			const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer);
 	~CPURenderThread();
 
 	void Start();
@@ -144,18 +144,17 @@ public:
 	CPURenderEngine *renderEngine;
 
 	boost::thread *renderThread;
-	Film *threadFilmPPN; // Per-Pixel-Normalization Film
-	Film *threadFilmPSN; // Per-Screen-Normalization Film
+	Film *threadFilm;
 
 	bool started, editMode;
-	bool usePerPixelNormalizationFilm, usePerScreenNormalizationFilm;
+	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
 };
 
 class CPURenderEngine : public RenderEngine {
 public:
 	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 			void (* threadFunc)(CPURenderThread *),
-			const bool perPixelNormalizationFilm, const bool perScreenNormalizationFilm);
+			const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer);
 	~CPURenderEngine();
 
 	friend class CPURenderThread;
