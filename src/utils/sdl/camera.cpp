@@ -41,14 +41,8 @@ void PerspectiveCamera::Update(const unsigned int w, const unsigned int h) {
 
 	// Used to generate rays
 
-	if (motionBlur) {
-		mbDeltaOrig = mbOrig - orig;
-		mbDeltaTarget = mbTarget - target;
-		mbDeltaUp = mbUp - up;
-	} else {
-		Transform WorldToCamera = LookAt(orig, target, up);
-		cameraToWorld = WorldToCamera.GetInverse();
-	}
+	Transform WorldToCamera = LookAt(orig, target, up);
+	cameraToWorld = WorldToCamera.GetInverse();
 
 	Transform cameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
 
@@ -84,18 +78,6 @@ void PerspectiveCamera::Update(const unsigned int w, const unsigned int h) {
 void PerspectiveCamera::GenerateRay(
 	const float filmX, const float filmY,
 	Ray *ray, const float u1, const float u2, const float u3) const {
-	Transform c2w;
-	if (motionBlur) {
-		const Point sampledOrig = orig + mbDeltaOrig * u3;
-		const Point sampledTarget = target + mbDeltaTarget * u3;
-		const Vector sampledUp = Normalize(up + mbDeltaUp * u3);
-
-		// Build the CameraToWorld transformation
-		Transform WorldToCamera = LookAt(sampledOrig, sampledTarget, sampledUp);
-		c2w = WorldToCamera.GetInverse();
-	} else
-		c2w = cameraToWorld;
-
 	const Point Pras(filmX, filmHeight - filmY - 1.f, 0.f);
 	const Point Pcamera(rasterToCamera * Pras);
 
@@ -123,7 +105,7 @@ void PerspectiveCamera::GenerateRay(
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither) / ray->d.z;
 
-	*ray = c2w * *ray;
+	*ray = cameraToWorld * *ray;
 }
 
 bool PerspectiveCamera::GetSamplePosition(const Point &p, const Vector &wi,
@@ -142,28 +124,16 @@ bool PerspectiveCamera::GetSamplePosition(const Point &p, const Vector &wi,
 	return true;
 }
 
-bool PerspectiveCamera::SampleW(const float u1, const float u2,
+bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 		const float u3, Point *lensp) const {
-	Transform c2w;
-	if (motionBlur) {
-		const Point sampledOrig = orig + mbDeltaOrig * u3;
-		const Point sampledTarget = target + mbDeltaTarget * u3;
-		const Vector sampledUp = Normalize(up + mbDeltaUp * u3);
-
-		// Build the CameraToWorld transformation
-		Transform WorldToCamera = LookAt(sampledOrig, sampledTarget, sampledUp);
-		c2w = WorldToCamera.GetInverse();
-	} else
-		c2w = cameraToWorld;
-
 	Point lensPoint(0.f, 0.f, 0.f);
 	if (lensRadius > 0.f) {
 		ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
 		lensPoint.x *= lensRadius;
 		lensPoint.y *= lensRadius;
 	}
-
-	*lensp = c2w * lensPoint;
+		
+	*lensp = cameraToWorld * lensPoint;
 
 	return true;
 }

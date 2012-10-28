@@ -62,18 +62,6 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	camera->lensRadius = scnProp->GetFloat("scene.camera.lensradius", 0.f);
 	camera->focalDistance = scnProp->GetFloat("scene.camera.focaldistance", 10.f);
 	camera->fieldOfView = scnProp->GetFloat("scene.camera.fieldofview", 45.f);
-  
-	// Check if camera motion blur is enabled
-	if (scnProp->GetInt("scene.camera.motionblur.enable", 0)) {
-		camera->motionBlur = true;
-
-		vf = GetParameters(*scnProp, "scene.camera.motionblur.lookat", 6, "10.0 1.0 0.0  0.0 1.0 0.0");
-		camera->mbOrig = Point(vf.at(0), vf.at(1), vf.at(2));
-		camera->mbTarget = Point(vf.at(3), vf.at(4), vf.at(5));
-
-		vf = GetParameters(*scnProp, "scene.camera.motionblur.up", 3, "0.0 0.0 0.1");
-		camera->mbUp = Vector(vf.at(0), vf.at(1), vf.at(2));
-	}
 
 	//--------------------------------------------------------------------------
 	// Read all materials

@@ -31,9 +31,7 @@ class PerspectiveCamera {
 public:
 	PerspectiveCamera(const Point &o, const Point &t, const Vector &u) :
 		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
-		lensRadius(0.f), focalDistance(10.f) {
-		motionBlur = false;
-	}
+		lensRadius(0.f), focalDistance(10.f) { }
 
 	~PerspectiveCamera() {
 	}
@@ -62,11 +60,6 @@ public:
 	}
 
 	void Translate(const Vector &t) {
-		if (motionBlur) {
-			mbOrig = orig;
-			mbTarget = target;
-		}
-
 		orig += t;
 		target += t;
 	}
@@ -88,11 +81,6 @@ public:
 	}
 
 	void Rotate(const float angle, const Vector &axis) {
-		if (motionBlur) {
-			mbOrig = orig;
-			mbTarget = target;
-		}
-
 		Vector p = target - orig;
 		Transform t = luxrays::Rotate(angle, axis);
 		target = orig + t * p;
@@ -106,7 +94,7 @@ public:
 	bool GetSamplePosition(const Point &p, const Vector &wi,
 		float distance, float *x, float *y) const;
 
-	bool SampleW(const float u1, const float u2, const float u3,
+	bool SampleLens(const float u1, const float u2, const float u3,
 		Point *lensPoint) const;
 	void ClampRay(Ray *ray) const {
 		const float cosi = Dot(ray->d, dir);
@@ -130,11 +118,6 @@ public:
 	Vector up;
 	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
-	// For camera motion blur
-	bool motionBlur;
-	Point mbOrig, mbTarget;
-	Vector mbUp;
-
 private:
 	u_int filmWidth, filmHeight;
 
@@ -142,8 +125,6 @@ private:
 	float pixelArea;
 	Vector dir, x, y;
 	Transform rasterToCamera, rasterToWorld, cameraToWorld;
-
-	Vector mbDeltaOrig, mbDeltaTarget, mbDeltaUp;
 };
 
 } }

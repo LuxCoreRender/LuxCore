@@ -78,7 +78,7 @@ static void ConnectToEye(const Scene *scene, Film *film,
 		const float u0,	const float u1, const float u2, const float u3,
 		const BSDF &bsdf, const Vector &lightDir, const Spectrum flux) {
 	Point lensPoint;
-	if (scene->camera->SampleW(u0, u1, u2, &lensPoint)) {
+	if (scene->camera->SampleLens(u0, u1, u2, &lensPoint)) {
 		Vector eyeDir(bsdf.hitPoint - lensPoint);
 		const float eyeDistance = eyeDir.Length();
 		eyeDir /= eyeDistance;
@@ -130,7 +130,8 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		//----------------------------------------------------------------------
 
 		Point lensPoint;
-		if (scene->camera->SampleW(rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), &lensPoint)) {
+		if (scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
+				rndGen->floatValue(), &lensPoint)) {
 			Vector eyeDir(nextEventRay.o - lensPoint);
 			if (Dot(-eyeDir, lightN) > 0.f) {
 				const float eyeDistance = eyeDir.Length();
