@@ -104,12 +104,12 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 	
-	virtual Spectrum Evaluate(const Vector &wo, const Vector &wi, BSDFEvent *event,
+	virtual Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Evaluate()");
 	}
 
-	virtual Spectrum Sample(const Vector &wo, Vector *wi,
+	virtual Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, BSDFEvent *event) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
@@ -197,19 +197,20 @@ public:
 		return KdOverPI;
 	}
 
-	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
+	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, BSDFEvent *event) const {
 		*event = DIFFUSE | REFLECT;
 
-		*eyeDir = Sgn(lightDir.z) * CosineSampleHemisphere(u0, u1);
-		if ((fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
-				(fabsf(eyeDir->z) < DEFAULT_EPSILON_STATIC))
+		*sampledDir = Sgn(fixedDir.z) * CosineSampleHemisphere(u0, u1);
+		if ((fabsf(fixedDir.z) < DEFAULT_EPSILON_STATIC) ||
+				(fabsf(sampledDir->z) < DEFAULT_EPSILON_STATIC))
             return Spectrum();
 
-		*pdfW = fabsf(eyeDir->z) * INV_PI;
+		const float cosSampleDir = fabsf(sampledDir->z);
+		*pdfW = cosSampleDir * INV_PI;
 
-		return KdOverPI;
+		return KdOverPI * cosSampleDir;
 	}
 
 private:
@@ -264,12 +265,12 @@ public:
 		return Spectrum();
 	}
 
-	Spectrum Sample(const Vector &lightDir, Vector *eyeDir,
+	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdf, BSDFEvent *event) const {
 		*event = SPECULAR | REFLECT;
 
-		*eyeDir = Vector(-lightDir.x, -lightDir.y, lightDir.z);
+		*sampledDir = Vector(-fixedDir.x, -fixedDir.y, fixedDir.z);
 		*pdf = 1.f;
 
 		return Kr;

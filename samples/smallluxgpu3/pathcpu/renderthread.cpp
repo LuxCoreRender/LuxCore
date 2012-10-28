@@ -217,7 +217,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			}
 
 			lastSpecular = ((event & SPECULAR) != 0);
-			pathThrouput *= AbsDot(sampledDir, bsdf.shadeN) * bsdfSample / lastPdfW;
+			pathThrouput *= bsdfSample / lastPdfW;
 			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
 			eyeRay = Ray(bsdf.hitPoint, sampledDir);
