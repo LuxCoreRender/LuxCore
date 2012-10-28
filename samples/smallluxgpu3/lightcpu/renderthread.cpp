@@ -74,20 +74,16 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 	}
 }
 
-static void ConnectToEye(const Scene *scene, Film *film,
-		const float u0,	const float u1, const float u2, const float u3,
-		const BSDF &bsdf, const Vector &lightDir, const Spectrum flux) {
-	Point lensPoint;
-	if (scene->camera->SampleLens(u0, u1, u2, &lensPoint)) {
-		Vector eyeDir(bsdf.hitPoint - lensPoint);
-		const float eyeDistance = eyeDir.Length();
-		eyeDir /= eyeDistance;
+static void ConnectToEye(const Scene *scene, Film *film, const float u0,
+		const BSDF &bsdf, const Point &lensPoint, const Vector &lightDir, const Spectrum flux) {
+	Vector eyeDir(bsdf.hitPoint - lensPoint);
+	const float eyeDistance = eyeDir.Length();
+	eyeDir /= eyeDistance;
 
-		BSDFEvent event;
-		Spectrum bsdfEval = bsdf.Evaluate(lightDir, -eyeDir, &event);
+	BSDFEvent event;
+	Spectrum bsdfEval = bsdf.Evaluate(lightDir, -eyeDir, &event);
 
-		ConnectToEye(scene, film, u3, eyeDir, eyeDistance, lensPoint, bsdf.hitPoint, bsdf.shadeN, bsdfEval, flux);
-	}
+	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, lensPoint, bsdf.hitPoint, bsdf.shadeN, bsdfEval, flux);
 }
 
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -130,8 +126,11 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		//----------------------------------------------------------------------
 
 		Point lensPoint;
-		if (scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
-				rndGen->floatValue(), &lensPoint)) {
+		if (!scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
+				rndGen->floatValue(), &lensPoint))
+			continue;
+
+		{
 			Vector eyeDir(nextEventRay.o - lensPoint);
 			if (Dot(-eyeDir, lightN) > 0.f) {
 				const float eyeDistance = eyeDir.Length();
@@ -174,9 +173,8 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, film, rndGen->floatValue(), rndGen->floatValue(),
-						rndGen->floatValue(), rndGen->floatValue(),
-						bsdf, -nextEventRay.d, lightPathFlux);
+				ConnectToEye(scene, film, rndGen->floatValue(),
+						bsdf, lensPoint, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
 					break;
