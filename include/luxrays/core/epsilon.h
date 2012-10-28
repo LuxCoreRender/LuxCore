@@ -40,7 +40,7 @@ namespace luxrays {
 #define DEFAULT_EPSILON_MAX 1e-1f
 #define DEFAULT_EPSILON_STATIC 1e-5f
 
-// This corrisponde to about 1e-5f for values near 1.f
+// This is about 1e-5f for values near 1.f
 #define DEFAULT_EPSILON_DISTANCE_FROM_VALUE 0x80u
 
 class MachineEpsilon {

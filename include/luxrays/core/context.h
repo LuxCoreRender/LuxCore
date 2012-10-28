@@ -103,12 +103,6 @@ public:
 	 */
 	const std::vector<VirtualM2MHardwareIntersectionDevice *> &GetVirtualM2MIntersectionDevices() const;
 
-	/*!	\brief Return a list of all pixel device created within the Context.
-	 *
-	 *	\return the vector of all PixelDevice in the Context.
-	 */
-	const std::vector<PixelDevice *> &GetPixelDevices() const;
-
 	/*!	\brief Create an IntersectionDevice within the Context.
 	 *
 	 *	\param deviceDesc is a DeviceDescription vector of the devices to create
@@ -145,14 +139,6 @@ public:
 	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
 		std::vector<DeviceDescription *> &deviceDescs);
 
-	/*!	\brief Create an PixelDevice within the Context.
-	 *
-	 *	\param deviceDesc is a DeviceDescription vector of the devices to create
-	 *
-	 *	\return the vector of all PixelDevice created.
-	 */
-	std::vector<PixelDevice *> AddPixelDevices(std::vector<DeviceDescription *> &deviceDescs);
-
 	//--------------------------------------------------------------------------
 	// Methods dedicated to DataSet definition
 	//--------------------------------------------------------------------------
@@ -185,7 +171,6 @@ public:
 
 private:
 	std::vector<IntersectionDevice *> CreateIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc);
-	std::vector<PixelDevice *> CreatePixelDevices(std::vector<DeviceDescription *> &deviceDesc);
 
 	LuxRaysDebugHandler debugHandler;
 
@@ -199,9 +184,6 @@ private:
 	// Virtual intersection devices
 	std::vector<VirtualM2MHardwareIntersectionDevice *> m2mDevices;
 	std::vector<VirtualM2OHardwareIntersectionDevice *> m2oDevices;
-
-	// All pixel devices
-	std::vector<PixelDevice *> pdevices;
 
 	bool started;
 };

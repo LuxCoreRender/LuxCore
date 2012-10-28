@@ -28,7 +28,7 @@
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(RenderConfig *cfg, NativeFilm *flm, boost::mutex *flmMutex) {
+RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) {
 	renderConfig = cfg;
 	film = flm;
 	filmMutex = flmMutex;
@@ -71,7 +71,7 @@ void RenderEngine::EndEditLockLess(const EditActionList &editActions) {
 // OCLRenderEngine
 //------------------------------------------------------------------------------
 
-OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, NativeFilm *flm, boost::mutex *flmMutex) :
+OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 
