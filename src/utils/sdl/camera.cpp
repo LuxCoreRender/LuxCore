@@ -132,7 +132,7 @@ bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 		lensPoint.x *= lensRadius;
 		lensPoint.y *= lensRadius;
 	}
-		
+
 	*lensp = cameraToWorld * lensPoint;
 
 	return true;

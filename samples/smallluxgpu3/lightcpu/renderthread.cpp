@@ -33,14 +33,14 @@
 
 static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 		Vector eyeDir, const float eyeDistance, const Point &lensPoint,
-		const Point &hitPoint, const Normal &shadeN, const Spectrum bsdfEval,
+		const Normal &shadeN, const Spectrum bsdfEval,
 		const Spectrum &flux) {
 	if (!bsdfEval.Black()) {
 		Ray eyeRay(lensPoint, eyeDir);
 		eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
 
 		float scrX, scrY;
-		if (scene->camera->GetSamplePosition(hitPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
+		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
 			for (;;) {
 				RayHit eyeRayHit;
 				if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
@@ -83,7 +83,7 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 	BSDFEvent event;
 	Spectrum bsdfEval = bsdf.Evaluate(lightDir, -eyeDir, &event);
 
-	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, lensPoint, bsdf.hitPoint, bsdf.shadeN, bsdfEval, flux);
+	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
 }
 
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -141,7 +141,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				lightRadiance /= emissionPdfW;
 
 				ConnectToEye(scene, film, rndGen->floatValue(), eyeDir, eyeDistance, lensPoint,
-						nextEventRay.o, lightN, Spectrum(1.f, 1.f, 1.f), lightRadiance);
+						lightN, Spectrum(1.f, 1.f, 1.f), lightRadiance);
 			}
 		}
 
