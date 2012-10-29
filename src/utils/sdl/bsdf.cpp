@@ -165,10 +165,11 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 
 Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdfW, BSDFEvent *event) const {
+		float *pdfW, float *cosSampleDir, BSDFEvent *event) const {
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
-	Spectrum result = surfMat->Sample(localFixedDir, &localSampledDir, u0, u1, u2, pdfW, event);
+	Spectrum result = surfMat->Sample(localFixedDir, &localSampledDir, u0, u1, u2,
+			pdfW, cosSampleDir, event);
 	*sampledDir = frame.ToWorld(localSampledDir);
 
 	// Adjoint BSDF

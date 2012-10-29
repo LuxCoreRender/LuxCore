@@ -111,7 +111,7 @@ public:
 
 	virtual Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdfW, BSDFEvent *event) const {
+		float *pdfW, float *cosSampleDir, BSDFEvent *event) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
 	}
 };
@@ -199,18 +199,18 @@ public:
 
 	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdfW, BSDFEvent *event) const {
+		float *pdfW, float *cosSampleDir, BSDFEvent *event) const {
 		*event = DIFFUSE | REFLECT;
 
 		*sampledDir = Sgn(fixedDir.z) * CosineSampleHemisphere(u0, u1);
+		*cosSampleDir = fabsf(sampledDir->z);
 		if ((fabsf(fixedDir.z) < DEFAULT_EPSILON_STATIC) ||
-				(fabsf(sampledDir->z) < DEFAULT_EPSILON_STATIC))
+				(*cosSampleDir < DEFAULT_EPSILON_STATIC))
             return Spectrum();
 
-		const float cosSampleDir = fabsf(sampledDir->z);
-		*pdfW = cosSampleDir * INV_PI;
+		*pdfW = INV_PI * (*cosSampleDir);
 
-		return KdOverPI * cosSampleDir;
+		return KdOverPI;
 	}
 
 private:
@@ -267,13 +267,15 @@ public:
 
 	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, BSDFEvent *event) const {
+		float *pdf, float *cosSampleDir, BSDFEvent *event) const {
 		*event = SPECULAR | REFLECT;
 
 		*sampledDir = Vector(-fixedDir.x, -fixedDir.y, fixedDir.z);
 		*pdf = 1.f;
 
-		return Kr;
+		*cosSampleDir = fabsf(sampledDir->z);
+		// The cosSampleDir is used to compensate the other one used inside the integrator
+		return Kr / (*cosSampleDir);
 	}
 
 private:
