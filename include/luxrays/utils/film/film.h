@@ -139,15 +139,15 @@ public:
 	}
 
 	void AddRadiance(const FilmBufferType type, const unsigned int x, const unsigned int y,
-		const Spectrum &radiance, const float weight = 1.f) {
+		const Spectrum &radiance, const float weight) {
 		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
 
-		sp->radiance += radiance;
+		sp->radiance += weight * radiance;
 		sp->weight += weight;
 	}
 
 	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha,
-		const float weight = 1.f) {
+		const float weight) {
 		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
 
 		ap->alpha += weight * alpha;

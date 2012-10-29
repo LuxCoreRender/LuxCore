@@ -298,7 +298,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 						film->AddRadiance(PER_PIXEL_NORMALIZED, x, y, c, count);
 
 						if (isAlphaChannelEnabled && !isnan(alpha))
-							film->AddAlpha(x, y, alpha / count);
+							film->AddAlpha(x, y, alpha / count, 1.f);
 					}
 
 					++pGPU;
