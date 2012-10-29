@@ -68,6 +68,10 @@ public:
 	void InitGammaTable(const float gamma = 2.2f);
 	void Reset();
 
+	//--------------------------------------------------------------------------
+	// Dynamic settings
+	//--------------------------------------------------------------------------
+
 	void EnableAlphaChannel(const bool alphaChannel) {
 		// Alpha buffer uses the weights in PER_PIXEL_NORMALIZED buffer
 		assert (enablePerPixelNormalizedBuffer);
@@ -75,13 +79,13 @@ public:
 		enableAlphaChannel = alphaChannel;
 	}
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
+
 	void EnableOverlappedScreenBufferUpdate(const bool overlappedScreenBufferUpdate) {
 		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
 	}
+	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
-	void SetFilterType(const FilterType filter) {
-		filterType = filter;
-	}
+	void SetFilterType(const FilterType filter);
 	FilterType GetFilterType() const { return filterType; }
 
 	const ToneMapParams *GetToneMapParams() const { return toneMapParams; }
@@ -90,6 +94,15 @@ public:
 
 		toneMapParams = params.Copy();
 	}
+
+	void CopyDynamicSettings(const Film &film) {
+		EnableAlphaChannel(film.IsAlphaChannelEnabled());
+		SetFilterType(film.GetFilterType());
+		SetToneMapParams(*(film.GetToneMapParams()));
+		EnableOverlappedScreenBufferUpdate(film.IsOverlappedScreenBufferUpdate());
+	}
+
+	//--------------------------------------------------------------------------
 
 	void AddFilm(const Film &film);
 

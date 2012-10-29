@@ -121,7 +121,12 @@ bool PerspectiveCamera::GetSamplePosition(const Point &p, const Vector &wi,
 	*x = pO.x;
 	*y = filmHeight - 1 - pO.y;
 
-	return true;
+	// Check if we are inside the image plane
+	if ((*x < 0.f) || (*x >= filmWidth) ||
+			(*y < 0.f) || (*y >= filmHeight))
+		return false;
+	else
+		return true;
 }
 
 bool PerspectiveCamera::SampleLens(const float u1, const float u2,

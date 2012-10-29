@@ -28,9 +28,6 @@ Film::Film(const unsigned int w, const unsigned int h,
 			const bool enablePerPixelNormBuffer,
 			const bool enablePerScreenNormBuffer,
 			const bool enableFrameBuf) {
-	filterType = FILTER_GAUSSIAN;
-	toneMapParams = new LinearToneMapParams();
-
 	sampleFrameBuffer[PER_PIXEL_NORMALIZED] = NULL;
 	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
 	alphaFrameBuffer = NULL;
@@ -43,12 +40,14 @@ Film::Film(const unsigned int w, const unsigned int h,
 	enablePerScreenNormalizedBuffer = enablePerScreenNormBuffer;
 	enableFrameBuffer = enableFrameBuf;
 
+	filter = NULL;
+	filterLUTs = NULL;
+	SetFilterType(FILTER_GAUSSIAN);
+
+	toneMapParams = new LinearToneMapParams();
+
 	InitGammaTable();
 	Init(w, h);
-
-	// Initialize Filter LUTs
-	filter = new GaussianFilter(1.5f, 1.5f, 2.f);
-	filterLUTs = new FilterLUTs(*filter, 4);
 }
 
 Film::~Film() {
@@ -111,6 +110,28 @@ void Film::InitGammaTable(const float gamma) {
 		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / gamma);
 }
 
+void Film::SetFilterType(const FilterType type) {
+	delete filterLUTs;
+	delete filter;
+
+	filterType = type;
+
+	// Initialize Filter LUTs
+	switch (type) {
+		case FILTER_NONE:
+			filter = NULL;
+			filterLUTs = NULL;
+			break;
+		case FILTER_GAUSSIAN:
+			filter = new GaussianFilter(1.5f, 1.5f, 2.f);
+			filterLUTs = new FilterLUTs(*filter, 4);
+			break;
+		default:
+			assert (false);
+			break;
+	}
+}
+
 void Film::Reset() {
 	if (enablePerPixelNormalizedBuffer)
 		sampleFrameBuffer[PER_PIXEL_NORMALIZED]->Clear();
@@ -167,7 +188,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 	if (fif != FIF_UNKNOWN) {
 		if ((fif == FIF_HDR) || (fif == FIF_EXR)) {
 			// In order to merge the 2 sample buffers
-			UpdateScreenBufferImpl(NONE);
+			UpdateScreenBufferImpl(TONEMAP_NONE);
 
 			if (alphaFrameBuffer) {
 				// Save the alpha channel too
@@ -326,7 +347,7 @@ void Film::UpdateScreenBuffer() {
 
 void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 	switch (type) {
-		case NONE: {
+		case TONEMAP_NONE: {
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
 
@@ -385,7 +406,7 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 			// Merge PER_PIXEL_NORMALIZED and PER_SCREEN_NORMALIZED buffers and
 			// do linear tonemapping
 
-			if (enablePerPixelNormalizedBuffer) {
+			if (enablePerPixelNormalizedBuffer && (statsTotalSampleCount[PER_PIXEL_NORMALIZED] > 0.0)) {
 				const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
 				for (unsigned int i = 0; i < pixelCount; ++i) {
 					const float weight = sp[i].weight;
@@ -531,62 +552,78 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 
 void Film::SplatFiltered(const FilmBufferType type, const float screenX,
 		const float screenY, const Spectrum &radiance) {
-	// Compute sample's raster extent
-	const float dImageX = screenX - 0.5f;
-	const float dImageY = screenY - 0.5f;
-	const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
-	const float *lut = filterLUT->GetLUT();
+	if (filterType == FILTER_NONE) {
+		const int x = Ceil2Int(screenX - 0.5f);
+		const int y = Ceil2Int(screenY - 0.5f);
 
-	const int x0 = Ceil2Int(dImageX - filter->xWidth);
-	const int x1 = x0 + filterLUT->GetWidth();
-	const int y0 = Ceil2Int(dImageY - filter->yWidth);
-	const int y1 = y0 + filterLUT->GetHeight();
+		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
+			AddRadiance(type, x, y, radiance);
+	} else {
+		// Compute sample's raster extent
+		const float dImageX = screenX - 0.5f;
+		const float dImageY = screenY - 0.5f;
+		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
+		const float *lut = filterLUT->GetLUT();
 
-	for (int iy = y0; iy < y1; ++iy) {
-		if (iy < 0) {
-			lut += filterLUT->GetWidth();
-			continue;
-		} else if(iy >= int(height))
-			break;
+		const int x0 = Ceil2Int(dImageX - filter->xWidth);
+		const int x1 = x0 + filterLUT->GetWidth();
+		const int y0 = Ceil2Int(dImageY - filter->yWidth);
+		const int y1 = y0 + filterLUT->GetHeight();
 
-		for (int ix = x0; ix < x1; ++ix) {
-			const float filterWt = *lut++;
-
-			if ((ix < 0) || (ix >= int(width)))
+		for (int iy = y0; iy < y1; ++iy) {
+			if (iy < 0) {
+				lut += filterLUT->GetWidth();
 				continue;
+			} else if(iy >= (int)height)
+				break;
 
-			AddRadiance(type, ix, iy, filterWt * radiance, filterWt);
+			for (int ix = x0; ix < x1; ++ix) {
+				const float filterWt = *lut++;
+
+				if ((ix < 0) || (ix >= (int)width))
+					continue;
+
+				AddRadiance(type, ix, iy, filterWt * radiance, filterWt);
+			}
 		}
 	}
 }
 
 void Film::SplatFilteredAlpha(const float screenX, const float screenY,
 		const float alpha) {
-	// Compute sample's raster extent
-	const float dImageX = screenX - 0.5f;
-	const float dImageY = screenY - 0.5f;
-	const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
-	const float *lut = filterLUT->GetLUT();
+	if (filterType == FILTER_NONE) {
+	const int x = Ceil2Int(screenX - 0.5f);
+		const int y = Ceil2Int(screenY - 0.5f);
 
-	const int x0 = Ceil2Int(dImageX - filter->xWidth);
-	const int x1 = x0 + filterLUT->GetWidth();
-	const int y0 = Ceil2Int(dImageY - filter->yWidth);
-	const int y1 = y0 + filterLUT->GetHeight();
+		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
+			AddAlpha((int)screenX, (int)screenY, alpha);
+	} else {
+		// Compute sample's raster extent
+		const float dImageX = screenX - 0.5f;
+		const float dImageY = screenY - 0.5f;
+		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
+		const float *lut = filterLUT->GetLUT();
 
-	for (int iy = y0; iy < y1; ++iy) {
-		if (iy < 0) {
-			lut += filterLUT->GetWidth();
-			continue;
-		} else if(iy >= int(height))
-			break;
+		const int x0 = Ceil2Int(dImageX - filter->xWidth);
+		const int x1 = x0 + filterLUT->GetWidth();
+		const int y0 = Ceil2Int(dImageY - filter->yWidth);
+		const int y1 = y0 + filterLUT->GetHeight();
 
-		for (int ix = x0; ix < x1; ++ix) {
-			const float filterWt = *lut++;
-
-			if ((ix < 0) || (ix >= int(width)))
+		for (int iy = y0; iy < y1; ++iy) {
+			if (iy < 0) {
+				lut += filterLUT->GetWidth();
 				continue;
+			} else if(iy >= (int)height)
+				break;
 
-			AddAlpha(ix, iy, filterWt * alpha, filterWt);
+			for (int ix = x0; ix < x1; ++ix) {
+				const float filterWt = *lut++;
+
+				if ((ix < 0) || (ix >= (int)width))
+					continue;
+
+				AddAlpha(ix, iy, filterWt * alpha, filterWt);
+			}
 		}
 	}
 }
