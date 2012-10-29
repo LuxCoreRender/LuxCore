@@ -29,6 +29,7 @@
 // TODO: alpha buffer support
 // TODO: merge ConnectToEye()
 // TODO: fix sample count stat
+// TODO: change "if ((bsdfPdf <= 0.f) || bsdfSample.Black())" in "if (bsdfSample.Black())"
 
 //------------------------------------------------------------------------------
 // LightCPU RenderThread
@@ -188,10 +189,10 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					radiance = DirectHitLightSampling(scene, -eyeRay.d, eyeRayHit.t, bsdf);
 			}
 
-			if (!radiance.Black()) {
-				film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.0);
-				film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
-			}
+			// Add a sample even if it is black in order to avoid aliasing problems
+			// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
+			film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.0);
+			film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
 		}
 		
 		//----------------------------------------------------------------------

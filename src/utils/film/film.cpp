@@ -170,7 +170,7 @@ void Film::AddFilm(const Film &film) {
 
 		for (unsigned int i = 0; i < pixelCount; ++i) {
 			spDst[i].radiance += spSrc[i].radiance;
-			spDst[i].weight += film.statsTotalSampleCount[PER_PIXEL_NORMALIZED];
+			spDst[i].weight += spSrc[i].weight;
 		}
 	}
 
@@ -557,7 +557,7 @@ void Film::SplatFiltered(const FilmBufferType type, const float screenX,
 		const int y = Ceil2Int(screenY - 0.5f);
 
 		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-			AddRadiance(type, x, y, radiance);
+			AddRadiance(type, x, y, radiance, 1.f);
 	} else {
 		// Compute sample's raster extent
 		const float dImageX = screenX - 0.5f;
@@ -583,7 +583,7 @@ void Film::SplatFiltered(const FilmBufferType type, const float screenX,
 				if ((ix < 0) || (ix >= (int)width))
 					continue;
 
-				AddRadiance(type, ix, iy, filterWt * radiance, filterWt);
+				AddRadiance(type, ix, iy, radiance, filterWt);
 			}
 		}
 	}
@@ -596,7 +596,7 @@ void Film::SplatFilteredAlpha(const float screenX, const float screenY,
 		const int y = Ceil2Int(screenY - 0.5f);
 
 		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-			AddAlpha((int)screenX, (int)screenY, alpha);
+			AddAlpha((int)screenX, (int)screenY, alpha, 1.f);
 	} else {
 		// Compute sample's raster extent
 		const float dImageX = screenX - 0.5f;
@@ -622,7 +622,7 @@ void Film::SplatFilteredAlpha(const float screenX, const float screenY,
 				if ((ix < 0) || (ix >= (int)width))
 					continue;
 
-				AddAlpha(ix, iy, filterWt * alpha, filterWt);
+				AddAlpha(ix, iy, alpha, filterWt);
 			}
 		}
 	}
