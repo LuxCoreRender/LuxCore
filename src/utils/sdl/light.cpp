@@ -366,17 +366,30 @@ Spectrum InfiniteLight::Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW) const {
+	const Point worldCenter = scene->dataSet->GetBSphere().center;
 	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
 
 	*dir = UniformSampleSphere(u0, u1);
-	*distance = worldRadius;
 
-	*directPdfW = INV_PI * .25f;
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const Point emisPoint(p + (*distance) * (*dir));
+	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+	const float cosThetaAtLight = Dot(emisNormal, -(*dir));
+	if (cosThetaAtLight < DEFAULT_EPSILON_STATIC)
+		return Spectrum();
+
+	*directPdfW =  INV_PI * .25f;
 
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
-	return GetRadiance(scene, -(*dir), p);
+	return GetRadiance(scene, -(*dir), emisPoint);
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene *scene,
@@ -511,7 +524,7 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
 
 	// Build the local frame
-	*N = mesh->GetGeometryNormal(triIndex);
+	*N = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 	Frame frame(*N);
 
 	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
@@ -526,7 +539,7 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	*dir = frame.ToWorld(localDirOut);
 
 	if (directPdfA)
-		*directPdfA = area;
+		*directPdfA = invArea;
 
 	return lightMaterial->GetGain() * localDirOut.z;
 }
@@ -540,7 +553,7 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 	Point samplePoint;
 	float b0, b1, b2;
 	mesh->Sample(triIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = mesh->GetGeometryNormal(triIndex);
+	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 
 	*dir = samplePoint - p;
 	const float distanceSquared = dir->LengthSquared();
@@ -574,17 +587,17 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	if (!mesh->GetTriUV(triIndex, hitPoint, &b1, &b2))
 		return Spectrum();
 
-	const Normal geometryN = mesh->GetGeometryNormal(triIndex);
-	const float cosOutL = Dot(geometryN, dir);
+	const Normal geometryN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 
-	if (cosOutL <= 0.f)
+	const float cosOutLight = Dot(geometryN, dir);
+	if (cosOutLight <= 0.f)
 		return Spectrum();
 
 	if (directPdfA)
 		*directPdfA = invArea;
 
 	if (emissionPdfW)
-		*emissionPdfW = cosOutL * INV_PI * invArea;
+		*emissionPdfW = cosOutLight * INV_PI * invArea;
 
 	return lightMaterial->GetGain();
 }

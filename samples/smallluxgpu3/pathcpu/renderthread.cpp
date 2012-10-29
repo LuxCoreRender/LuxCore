@@ -26,16 +26,20 @@
 #include "luxrays/utils/sdl/bsdf.h"
 #include "luxrays/utils/core/mc.h"
 
+// TODO: check bumpmap scene
+// TODO: restore RR
+// TODO: use only brute force to sample infinitelight
+// TODO: translated image when rendering with PathGPU
 // TODO: alpha buffer support
 // TODO: pass through support
+// TODO: pass the result as a pointer in DirectLightSampling()/DirectHitLightSampling()
 
 //------------------------------------------------------------------------------
 // PathCPU RenderThread
 //------------------------------------------------------------------------------
 
 static Spectrum DirectLightSampling(const Scene *scene, RandomGenerator *rndGen,
-		const bool lastSpecular, const Spectrum &pathThrouput,
-		const BSDF &bsdf, const Vector &eyeDir,
+		const Spectrum &pathThrouput, const BSDF &bsdf, const Vector &eyeDir,
 		const float rrImportanceCap) {
 	if (!bsdf.IsDelta()) {
 		// Pick a light source to sample
@@ -60,22 +64,18 @@ static Spectrum DirectLightSampling(const Scene *scene, RandomGenerator *rndGen,
 				RayHit shadowRayHit;
 				if (!scene->dataSet->Intersect(&shadowRay, &shadowRayHit)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
-					const float factor = cosThetaToLight / (lightPickPdf * directPdfW);
+					const float factor = cosThetaToLight / (directPdfW * lightPickPdf);
 
-					float weight;
-					if (!lastSpecular) {
-						weight = PowerHeuristic(directPdfW * lightPickPdf, bsdfPdfW);
+					const float weight = PowerHeuristic(directPdfW * lightPickPdf, bsdfPdfW);
 
-						if (rrImportanceCap > 0.f) {
-							// Russian Roulette
-							const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
-							if (prob > rndGen->floatValue())
-								bsdfEval *= prob;
-						}
-					} else
-						weight = 1.f;
+					if (rrImportanceCap > 0.f) {
+						// Russian Roulette
+						const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
+						if (prob > rndGen->floatValue())
+							bsdfEval *= prob;
+					}
 
-					return pathThrouput * lightRadiance * (weight * factor * bsdfEval);
+					return (weight * factor) * pathThrouput * lightRadiance * bsdfEval;
 				}
 				// TODO: pass through support
 			}
@@ -124,7 +124,7 @@ static Spectrum DirectHitInfiniteLight(const Scene *scene,
 	float weight;
 	if(!lastSpecular) {
 		const float lightPickProb = scene->PickLightPdf();
-		weight = BalanceHeuristic(lastPdfW, directPdfW * lightPickProb);
+		weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 	} else
 		weight = 1.f;
 
@@ -159,12 +159,13 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		int depth = 1;
 		bool lastSpecular = true;
-		float lastPdfW;
+		float lastPdfW = 1.f;
 		Spectrum radiance(0.f);
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit eyeRayHit;
 			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+				// Nothing was hit, look for infinitelight
 				radiance += DirectHitInfiniteLight(scene, lastSpecular,
 						pathThrouput, eyeRay.d, lastPdfW);
 				break;
@@ -190,23 +191,23 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				continue;
 			}
 
-			//----------------------------------------------------------
+			//------------------------------------------------------------------
 			// Direct light sampling
-			//----------------------------------------------------------
+			//------------------------------------------------------------------
 
-			radiance += DirectLightSampling(scene, rndGen, lastSpecular,
-					pathThrouput, bsdf, -eyeRay.d,
+			radiance += DirectLightSampling(scene, rndGen, pathThrouput, bsdf, -eyeRay.d,
 					(depth >= renderEngine->rrDepth) ? renderEngine->rrImportanceCap : -1.f);
 
-			//----------------------------------------------------------
+			//------------------------------------------------------------------
 			// Build the next vertex path ray
-			//----------------------------------------------------------
+			//------------------------------------------------------------------
 
 			Vector sampledDir;
 			BSDFEvent event;
+			float cosSampleDir;
 			const Spectrum bsdfSample = bsdf.Sample(-eyeRay.d, &sampledDir,
 					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-					&lastPdfW, &event);
+					&lastPdfW, &cosSampleDir, &event);
 			if ((lastPdfW <= 0.f) || bsdfSample.Black())
 				break;
 
@@ -220,7 +221,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			}
 
 			lastSpecular = ((event & SPECULAR) != 0);
-			pathThrouput *= bsdfSample / lastPdfW;
+			pathThrouput *= bsdfSample * (cosSampleDir / lastPdfW);
 			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
 			eyeRay = Ray(bsdf.hitPoint, sampledDir);

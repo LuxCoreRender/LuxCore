@@ -25,9 +25,8 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/sdl/bsdf.h"
 
-// TODO: fix merge film eye/light buffers
+// TODO: check NaN on luxball scene
 // TODO: alpha buffer support
-// TODO: merge ConnectToEye()
 // TODO: fix sample count stat
 // TODO: change "if ((bsdfPdf <= 0.f) || bsdfSample.Black())" in "if (bsdfSample.Black())"
 
@@ -236,9 +235,10 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				float bsdfPdf;
 				Vector sampledDir;
 				BSDFEvent event;
+				float cosSampleDir;
 				const Spectrum bsdfSample = bsdf.Sample(-nextEventRay.d, &sampledDir,
 						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-						&bsdfPdf, &event);
+						&bsdfPdf, &cosSampleDir, &event);
 				if ((bsdfPdf <= 0.f) || bsdfSample.Black())
 					break;
 
@@ -251,7 +251,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						break;
 				}
 
-				lightPathFlux *= bsdfSample / bsdfPdf;
+				lightPathFlux *= bsdfSample * (cosSampleDir / bsdfPdf);
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 				nextEventRay = Ray(bsdf.hitPoint, sampledDir);
