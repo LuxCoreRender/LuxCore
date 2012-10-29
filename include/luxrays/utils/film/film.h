@@ -160,7 +160,7 @@ public:
 
 private:
 	void UpdateScreenBufferImpl(const ToneMapType type);
-	void MergeBuffers(Pixel *p) const;
+	void MergeSampleBuffers(Pixel *p, vector<bool> &frameBufferMask) const;
 
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
