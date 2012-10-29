@@ -28,6 +28,7 @@
 // TODO: fix merge film eye/light buffers
 // TODO: alpha buffer support
 // TODO: merge ConnectToEye()
+// TODO: fix sample count stat
 
 //------------------------------------------------------------------------------
 // LightCPU RenderThread

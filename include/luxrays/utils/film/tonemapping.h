@@ -29,7 +29,7 @@ namespace luxrays {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	NONE, TONEMAP_LINEAR, TONEMAP_REINHARD02
+	TONEMAP_NONE, TONEMAP_LINEAR, TONEMAP_REINHARD02
 } ToneMapType;
 
 class ToneMapParams {
@@ -77,7 +77,7 @@ public:
 //------------------------------------------------------------------------------
 
 typedef enum {
-	FILTER_NONE, FILTER_PREVIEW, FILTER_GAUSSIAN
+	FILTER_NONE, FILTER_GAUSSIAN
 } FilterType;
 
 }

@@ -117,6 +117,8 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 
+	film->EnableOverlappedScreenBufferUpdate(true);
+
 	// Create and start render threads
 	const size_t renderThreadCount = oclIntersectionDevices.size();
 	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");

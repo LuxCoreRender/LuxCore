@@ -55,4 +55,6 @@ PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
+
+	film->EnableOverlappedScreenBufferUpdate(true);
 }

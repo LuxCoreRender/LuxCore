@@ -398,6 +398,7 @@ void CPURenderThread::StartRenderThread() {
 	delete threadFilm;
 	threadFilm = new Film(filmWidth, filmHeight,
 			enablePerPixelNormBuffer, enablePerScreenNormBuffer, false);
+	threadFilm->CopyDynamicSettings(*(renderEngine->film));
 	threadFilm->Init(filmWidth, filmHeight);
 
 	// Create the thread for the rendering
