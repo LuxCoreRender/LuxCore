@@ -43,6 +43,7 @@ public:
 	virtual LightSourceType GetType() const = 0;
 
 	virtual bool IsAreaLight() const { return false; }
+	virtual bool IsEnvironmental() const { return false; }
 
 	//--------------------------------------------------------------------------
 	// Old interface
@@ -94,6 +95,7 @@ public:
 	~InfiniteLight() { }
 
 	LightSourceType GetType() const { return TYPE_IL; }
+	virtual bool IsEnvironmental() const { return true; }
 
 	void SetGain(const Spectrum &g) {
 		gain = g;
@@ -162,6 +164,7 @@ public:
 	void Init();
 
 	LightSourceType GetType() const { return TYPE_IL_SKY; }
+	virtual bool IsEnvironmental() const { return true; }
 
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }

@@ -100,7 +100,7 @@ public:
 		const float cosi = Dot(ray->d, dir);
 		ray->mint = Max(ray->mint, clipHither / cosi);
 		ray->maxt = Min(ray->maxt, clipYon / cosi);
-		}
+	}
 
 	const Matrix4x4 GetRasterToCameraMatrix() const {
 		return rasterToCamera.GetMatrix();

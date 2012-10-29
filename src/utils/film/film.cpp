@@ -345,104 +345,72 @@ void Film::UpdateScreenBuffer() {
 	UpdateScreenBufferImpl(toneMapParams->GetType());
 }
 
+void Film::MergeSampleBuffers(Pixel *p, vector<bool> &frameBufferMask) const {
+	const unsigned int pixelCount = width * height;
+
+	// Merge PER_PIXEL_NORMALIZED and PER_SCREEN_NORMALIZED buffers
+
+	if (enablePerPixelNormalizedBuffer && (statsTotalSampleCount[PER_PIXEL_NORMALIZED] > 0.0)) {
+		const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			const float weight = sp[i].weight;
+
+			if (weight > 0.f) {
+				p[i] = sp[i].radiance / weight;
+				frameBufferMask[i] = true;
+			}
+		}
+	}
+
+	if (enablePerScreenNormalizedBuffer && (statsTotalSampleCount[PER_SCREEN_NORMALIZED] > 0.0)) {
+		const SamplePixel *sp = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
+		const float factor = 1.f / statsTotalSampleCount[PER_SCREEN_NORMALIZED];
+
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			const float weight = sp[i].weight;
+
+			if (weight > 0.f) {
+				if (frameBufferMask[i])
+					p[i] += sp[i].radiance * factor;
+				else
+					p[i] = sp[i].radiance * factor;
+				frameBufferMask[i] = true;
+			}
+		}
+	}
+
+	if (!enabledOverlappedScreenBufferUpdate) {
+		for (unsigned int i = 0; i < pixelCount; ++i) {
+			if (!frameBufferMask[i]) {
+				p[i].r = 0.f;
+				p[i].g = 0.f;
+				p[i].b = 0.f;
+			}
+		}
+	}
+}
+
 void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 	switch (type) {
 		case TONEMAP_NONE: {
 			Pixel *p = frameBuffer->GetPixels();
-			const unsigned int pixelCount = width * height;
-
 			vector<bool> frameBufferMask(pixelCount, false);
 
-			// Merge PER_PIXEL_NORMALIZED and PER_SCREEN_NORMALIZED buffers and
-			// do linear tonemapping
-	
-			if (enablePerPixelNormalizedBuffer) {
-				const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					const float weight = sp[i].weight;
-
-					if (weight > 0.f) {
-						p[i] = sp[i].radiance / weight;
-						frameBufferMask[i] = true;
-					}
-				}
-			}
-
-			if (enablePerScreenNormalizedBuffer &&  statsTotalSampleCount[PER_SCREEN_NORMALIZED] > 0.0) {
-				const SamplePixel *sp = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
-				const float factor = 1.f / statsTotalSampleCount[PER_SCREEN_NORMALIZED];
-
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					const float weight = sp[i].weight;
-
-					if (weight > 0.f) {
-						if (frameBufferMask[i])
-							p[i] += sp[i].radiance * factor;
-						else
-							p[i] = sp[i].radiance * factor;
-						frameBufferMask[i] = true;
-					}
-				}
-			}
-
-			if (!enabledOverlappedScreenBufferUpdate) {
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					if (!frameBufferMask[i]) {
-						p[i].r = 0.f;
-						p[i].g = 0.f;
-						p[i].b = 0.f;
-					}
-				}
-			}
+			MergeSampleBuffers(p, frameBufferMask);
 			break;
 		}
 		case TONEMAP_LINEAR: {
 			const LinearToneMapParams &tm = (LinearToneMapParams &)(*toneMapParams);
 			Pixel *p = frameBuffer->GetPixels();
 			const unsigned int pixelCount = width * height;
-
 			vector<bool> frameBufferMask(pixelCount, false);
 
-			// Merge PER_PIXEL_NORMALIZED and PER_SCREEN_NORMALIZED buffers and
-			// do linear tonemapping
+			MergeSampleBuffers(p, frameBufferMask);
 
-			if (enablePerPixelNormalizedBuffer && (statsTotalSampleCount[PER_PIXEL_NORMALIZED] > 0.0)) {
-				const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					const float weight = sp[i].weight;
-
-					if (weight > 0.f) {
-						p[i] = Radiance2Pixel(sp[i].radiance * (tm.scale / weight));
-						frameBufferMask[i] = true;
-					}
-				}
-			}
-
-			if (enablePerScreenNormalizedBuffer && (statsTotalSampleCount[PER_SCREEN_NORMALIZED] > 0.0)) {
-				const SamplePixel *sp = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
-				const float factor = tm.scale / statsTotalSampleCount[PER_SCREEN_NORMALIZED];
-
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					const float weight = sp[i].weight;
-
-					if (weight > 0.f) {
-						if (frameBufferMask[i])
-							p[i] += Radiance2Pixel(sp[i].radiance * factor);
-						else
-							p[i] = Radiance2Pixel(sp[i].radiance * factor);
-						frameBufferMask[i] = true;
-					}
-				}
-			}
-
-			if (!enabledOverlappedScreenBufferUpdate) {
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					if (!frameBufferMask[i]) {
-						p[i].r = 0.f;
-						p[i].g = 0.f;
-						p[i].b = 0.f;
-					}
-				}
+			// Gamma correction
+			for (unsigned int i = 0; i < pixelCount; ++i) {
+				if (frameBufferMask[i])
+					p[i] = Radiance2Pixel(tm.scale * p[i]);
 			}
 			break;
 		}
@@ -458,48 +426,7 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 			const unsigned int pixelCount = width * height;
 
 			vector<bool> frameBufferMask(pixelCount, false);
-
-			// Merge PER_PIXEL_NORMALIZED and PER_SCREEN_NORMALIZED buffers and
-			// do linear tonemapping
-	
-			if (enablePerPixelNormalizedBuffer) {
-				const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					const float weight = sp[i].weight;
-
-					if (weight > 0.f) {
-						p[i] = sp[i].radiance / weight;
-						frameBufferMask[i] = true;
-					}
-				}
-			}
-
-			if (enablePerScreenNormalizedBuffer &&  statsTotalSampleCount[PER_SCREEN_NORMALIZED] > 0.0) {
-				const SamplePixel *sp = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
-				const float factor = 1.f / statsTotalSampleCount[PER_SCREEN_NORMALIZED];
-
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					const float weight = sp[i].weight;
-
-					if (weight > 0.f) {
-						if (frameBufferMask[i])
-							p[i] += sp[i].radiance * factor;
-						else
-							p[i] = sp[i].radiance * factor;
-						frameBufferMask[i] = true;
-					}
-				}
-			}
-
-			if (!enabledOverlappedScreenBufferUpdate) {
-				for (unsigned int i = 0; i < pixelCount; ++i) {
-					if (!frameBufferMask[i]) {
-						p[i].r = 0.f;
-						p[i].g = 0.f;
-						p[i].b = 0.f;
-					}
-				}
-			}
+			MergeSampleBuffers(p, frameBufferMask);
 
 			// Use the frame buffer as temporary storage and calculate the average luminance
 			float Ywa = 0.f;
@@ -527,20 +454,22 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 			const float pScale = postScale * preScale * alpha / Ywa;
 
 			for (unsigned int i = 0; i < pixelCount; ++i) {
-				Spectrum xyz = p[i];
+				if (frameBufferMask[i]) {
+					Spectrum xyz = p[i];
 
-				const float ys = xyz.g;
-				xyz *= pScale * (1.f + ys * invY2) / (1.f + ys);
+					const float ys = xyz.g;
+					xyz *= pScale * (1.f + ys * invY2) / (1.f + ys);
 
-				// Convert back to RGB color space
-				p[i].r =  3.240479f * xyz.r - 1.537150f * xyz.g - 0.498535f * xyz.b;
-				p[i].g = -0.969256f * xyz.r + 1.875991f * xyz.g + 0.041556f * xyz.b;
-				p[i].b =  0.055648f * xyz.r - 0.204043f * xyz.g + 1.057311f * xyz.b;
+					// Convert back to RGB color space
+					p[i].r =  3.240479f * xyz.r - 1.537150f * xyz.g - 0.498535f * xyz.b;
+					p[i].g = -0.969256f * xyz.r + 1.875991f * xyz.g + 0.041556f * xyz.b;
+					p[i].b =  0.055648f * xyz.r - 0.204043f * xyz.g + 1.057311f * xyz.b;
 
-				// Gamma correction
-				p[i].r = Radiance2PixelFloat(p[i].r);
-				p[i].g = Radiance2PixelFloat(p[i].g);
-				p[i].b = Radiance2PixelFloat(p[i].b);
+					// Gamma correction
+					p[i].r = Radiance2PixelFloat(p[i].r);
+					p[i].g = Radiance2PixelFloat(p[i].g);
+					p[i].b = Radiance2PixelFloat(p[i].b);
+				}
 			}
 			break;
 		}
