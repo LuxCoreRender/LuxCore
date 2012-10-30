@@ -43,6 +43,17 @@ public:
 
 private:
 	static void RenderThreadFuncImpl(CPURenderThread *thread);
+
+	void ConnectToEye(Film *film, const float u0,
+			const Vector &eyeDir, const float eyeDistance, const Point &lensPoint,
+			const Normal &shadeN, const Spectrum &bsdfEval,
+			const Spectrum &flux);
+	void ConnectToEye(Film *film, const float u0,
+			const BSDF &bsdf, const Point &lensPoint, const Vector &lightDir,
+			const Spectrum &flux);
+
+	void DirectHitLightSampling(const Vector &eyeDir, const BSDF &bsdf, Spectrum *radiance);
+	void DirectHitInfiniteLight(const Vector &eyeDir, Spectrum *radiance);
 };
 
 #endif	/* _LIGHTCPU_H */

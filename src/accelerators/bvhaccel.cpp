@@ -439,7 +439,7 @@ bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	unsigned int currentNode = 0; // Root Node
 	unsigned int stopNode = bvhTree[0].skipIndex; // Non-existent
 	bool hit = false;
-	rayHit->t = std::numeric_limits<float>::infinity();
+	rayHit->t = ray->maxt;
 	rayHit->SetMiss();
 	RayHit triangleHit;
 
