@@ -170,8 +170,12 @@ Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
+
 	Spectrum result = surfMat->Sample(localFixedDir, &localSampledDir, u0, u1, u2,
 			pdfW, cosSampledDir, event);
+	if (result.Black())
+		return result;
+
 	*sampledDir = frame.ToWorld(localSampledDir);
 
 	// Adjoint BSDF

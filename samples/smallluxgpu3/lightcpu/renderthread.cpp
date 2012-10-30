@@ -23,7 +23,6 @@
 #include "lightcpu/lightcpu.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/randomgen.h"
-#include "luxrays/utils/sdl/bsdf.h"
 
 // TODO: check NaN on luxball scene
 // TODO: alpha buffer support
@@ -34,51 +33,39 @@
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
 
-static void ConnectToEye(const Scene *scene, Film *film, const float u0,
-		Vector eyeDir, const float eyeDistance, const Point &lensPoint,
+void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
+		const Vector &eyeDir, const float eyeDistance, const Point &lensPoint,
 		const Normal &shadeN, const Spectrum &bsdfEval,
 		const Spectrum &flux) {
+	Scene *scene = renderConfig->scene;
+
 	if (!bsdfEval.Black()) {
 		Ray eyeRay(lensPoint, eyeDir);
 		eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
-			for (;;) {
-				RayHit eyeRayHit;
-				if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
-					// Nothing was hit, the light path vertex is visible
+			RayHit eyeRayHit;
+			BSDF bsdf;
+			if (!SceneIntersect(true, u0, &eyeRay, &eyeRayHit, &bsdf)) {
+				// Nothing was hit, the light path vertex is visible
 
-					const float cosToCamera = Dot(shadeN, -eyeDir);
-					const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
+				const float cosToCamera = Dot(shadeN, -eyeDir);
+				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
-					const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-						scene->camera->GetPixelArea());
-					const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-					const float fluxToRadianceFactor = cameraPdfA;
+				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
+					scene->camera->GetPixelArea());
+				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
+				const float fluxToRadianceFactor = cameraPdfA;
 
-					film->SplatFiltered(PER_SCREEN_NORMALIZED, scrX, scrY,
-							flux * fluxToRadianceFactor * bsdfEval);
-					break;
-				} else {
-					// Check if it is a pass through point
-					BSDF bsdf(true, *scene, eyeRay, eyeRayHit, u0);
-
-					// Check if it is pass-through point
-					if (bsdf.IsPassThrough()) {
-						// It is a pass-through material, continue to trace the ray
-						eyeRay.mint = eyeRayHit.t + MachineEpsilon::E(eyeRayHit.t);
-						eyeRay.maxt = std::numeric_limits<float>::infinity();
-						continue;
-					}
-					break;
-				}
+				film->SplatFiltered(PER_SCREEN_NORMALIZED, scrX, scrY,
+						flux * fluxToRadianceFactor * bsdfEval);
 			}
 		}
 	}
 }
 
-static void ConnectToEye(const Scene *scene, Film *film, const float u0,
+void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 		const BSDF &bsdf, const Point &lensPoint, const Vector &lightDir, const Spectrum &flux) {
 	Vector eyeDir(bsdf.hitPoint - lensPoint);
 	const float eyeDistance = eyeDir.Length();
@@ -87,14 +74,13 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 	BSDFEvent event;
 	Spectrum bsdfEval = bsdf.Evaluate(lightDir, -eyeDir, &event);
 
-	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
+	ConnectToEye(film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
 }
 
-static void DirectHitLightSampling(const Scene *scene,
-		const Vector &eyeDir, const float distance,
+void LightCPURenderEngine::DirectHitLightSampling(const Vector &eyeDir,
 		const BSDF &bsdf, Spectrum *radiance) {
 	float directPdfA;
-	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene,
+	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(renderConfig->scene,
 		eyeDir, &directPdfA);
 	if (emittedRadiance.Black())
 		return;
@@ -102,8 +88,9 @@ static void DirectHitLightSampling(const Scene *scene,
 	*radiance += emittedRadiance;
 }
 
-static void DirectHitInfiniteLight(const Scene *scene, const Vector &eyeDir,
+void LightCPURenderEngine::DirectHitInfiniteLight(const Vector &eyeDir,
 		Spectrum *radiance) {
+	Scene *scene = renderConfig->scene;
 	if (!scene->infiniteLight)
 		return;
 
@@ -177,15 +164,14 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			Spectrum radiance;
 			RayHit eyeRayHit;
-			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit))
-				DirectHitInfiniteLight(scene, eyeRay.d, &radiance);
-			else {
-				// Something was hit
-				BSDF bsdf(false, *scene, eyeRay, eyeRayHit, rndGen->floatValue());
-
-				// Check if it is a light source
+			BSDF bsdf;
+			if (!renderEngine->SceneIntersect(false, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf)) {
+				// Nothing was hit, check infinitelight
+				renderEngine->DirectHitInfiniteLight(eyeRay.d, &radiance);
+			} else {
+				// Something was hit, check if it is a light source
 				if (bsdf.IsLightSource())
-					DirectHitLightSampling(scene, -eyeRay.d, eyeRayHit.t, bsdf, &radiance);
+					renderEngine->DirectHitLightSampling(-eyeRay.d,bsdf, &radiance);
 			}
 
 			// Add a sample even if it is black in order to avoid aliasing problems
@@ -193,7 +179,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.0);
 			film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
 		}
-		
+
 		//----------------------------------------------------------------------
 		// Trace the light path
 		//----------------------------------------------------------------------
@@ -222,7 +208,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				ConnectToEye(scene, film, rndGen->floatValue(),
+				renderEngine->ConnectToEye(film, rndGen->floatValue(),
 						bsdf, lensPoint, -nextEventRay.d, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)

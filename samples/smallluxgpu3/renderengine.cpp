@@ -26,6 +26,7 @@
 #include "pathcpu/pathcpu.h"
 
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/utils/sdl/bsdf.h"
 
 const string RenderEngineType2String(const RenderEngineType type) {
 	switch (type) {
@@ -344,6 +345,31 @@ void CPURenderEngine::UpdateFilmLockLess() {
 			film->AddFilm(*(renderThreads[i]->threadFilm));
 	}
 	samplesCount = film->GetTotalSampleCount();
+}
+
+bool CPURenderEngine::SceneIntersect(const bool fromLight, const float u0,
+		Ray *ray, RayHit *rayHit, BSDF *bsdf) const {
+	Scene *scene = renderConfig->scene;
+
+	for (;;) {
+		if (!scene->dataSet->Intersect(ray, rayHit)) {
+			// Nothing was hit
+			return false;
+		} else {
+			// Check if it is a pass through point
+			bsdf->Init(fromLight, *scene, *ray, *rayHit, u0);
+
+			// Check if it is pass-through point
+			if (bsdf->IsPassThrough()) {
+				// It is a pass-through material, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+
+				continue;
+			}
+
+			return true;
+		}
+	}
 }
 
 //------------------------------------------------------------------------------

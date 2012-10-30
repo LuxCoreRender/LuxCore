@@ -26,29 +26,29 @@
 #include "luxrays/utils/sdl/bsdf.h"
 #include "luxrays/utils/core/mc.h"
 
-// TODO: check bumpmap scene
 // TODO: use only brute force to sample infinitelight
 // TODO: alpha buffer support
-// TODO: pass through support
-// TODO: pass the result as a pointer in DirectLightSampling()/DirectHitLightSampling()
 
 //------------------------------------------------------------------------------
 // PathCPU RenderThread
 //------------------------------------------------------------------------------
 
-static void DirectLightSampling(const Scene *scene, RandomGenerator *rndGen,
+void PathCPURenderEngine::DirectLightSampling(
+		const float u0, const float u1, const float u2, const float u3,
+		const float u4, const float u5,
 		const Spectrum &pathThrouput, const BSDF &bsdf, const Vector &eyeDir,
-		const float rrImportanceCap, Spectrum *radiance) {
+		const int depth, Spectrum *radiance) {
+	Scene *scene = renderConfig->scene;
+	
 	if (!bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
+		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW;
 		Spectrum lightRadiance = light->Illuminate(scene, bsdf.hitPoint,
-				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-				&lightRayDir, &distance, &directPdfW);
+				u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 
 		if (!lightRadiance.Black()) {
 			BSDFEvent event;
@@ -60,31 +60,33 @@ static void DirectLightSampling(const Scene *scene, RandomGenerator *rndGen,
 						MachineEpsilon::E(bsdf.hitPoint),
 						distance - MachineEpsilon::E(distance));
 				RayHit shadowRayHit;
-				if (!scene->dataSet->Intersect(&shadowRay, &shadowRayHit)) {
+				BSDF shadowBsdf;
+				if (!SceneIntersect(false, u5, &shadowRay, &shadowRayHit, &shadowBsdf)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
 					const float factor = cosThetaToLight / (directPdfW * lightPickPdf);
 
 					const float weight = PowerHeuristic(directPdfW * lightPickPdf, bsdfPdfW);
 
-					if (rrImportanceCap > 0.f) {
+					if (depth >= rrDepth) {
 						// Russian Roulette
 						const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
-						if (prob > rndGen->floatValue())
+						if (prob > u4)
 							bsdfEval *= prob;
 					}
 
 					*radiance += (weight * factor) * pathThrouput * lightRadiance * bsdfEval;
 				}
-				// TODO: pass through support
 			}
 		}
 	}
 }
 
-static void DirectHitLightSampling(const Scene *scene,
+void PathCPURenderEngine::DirectHitLightSampling(
 		const bool lastSpecular, const Spectrum &pathThrouput,
 		const Vector &eyeDir, const float distance,
 		const BSDF &bsdf, const float lastPdfW, Spectrum *radiance) {
+	Scene *scene = renderConfig->scene;
+
 	float directPdfA;
 	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene,
 		eyeDir, &directPdfA);
@@ -104,9 +106,11 @@ static void DirectHitLightSampling(const Scene *scene,
 	}
 }
 
-static void DirectHitInfiniteLight(const Scene *scene,
+void PathCPURenderEngine::DirectHitInfiniteLight(
 		const bool lastSpecular, const Spectrum &pathThrouput,
 		const Vector &eyeDir, const float lastPdfW, Spectrum *radiance) {
+	Scene *scene = renderConfig->scene;
+
 	if (!scene->infiniteLight)
 		return;
 
@@ -135,7 +139,6 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	PathCPURenderEngine *renderEngine = (PathCPURenderEngine *)renderThread->renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
-	Scene *scene = renderEngine->renderConfig->scene;
 	PerspectiveCamera *camera = renderEngine->renderConfig->scene->camera;
 	Film * film = renderThread->threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
@@ -157,41 +160,37 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		float lastPdfW = 1.f;
 		Spectrum radiance(0.f);
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
+		BSDF bsdf;
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit eyeRayHit;
-			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit)) {
+			if (!renderEngine->SceneIntersect(false, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf)) {
 				// Nothing was hit, look for infinitelight
-				DirectHitInfiniteLight(scene, lastSpecular,
-						pathThrouput, eyeRay.d, lastPdfW, &radiance);
+				renderEngine->DirectHitInfiniteLight(lastSpecular, pathThrouput, eyeRay.d,
+						lastPdfW, &radiance);
 				break;
 			}
 
 			// Something was hit
-			BSDF bsdf(false, *scene, eyeRay, eyeRayHit, rndGen->floatValue());
 
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
-				DirectHitLightSampling(scene, lastSpecular, pathThrouput,
+				renderEngine->DirectHitLightSampling(lastSpecular, pathThrouput,
 						-eyeRay.d, eyeRayHit.t, bsdf, lastPdfW, &radiance);
 
 				// SLG light sources are like black bodies
 				break;
 			}
 
-			// Check if it is pass-through point
-			if (bsdf.IsPassThrough()) {
-				// It is a pass-through material, continue to trace the ray
-				eyeRay.mint = eyeRayHit.t + MachineEpsilon::E(eyeRayHit.t);
-				eyeRay.maxt = std::numeric_limits<float>::infinity();
-				continue;
-			}
+			// Note: pass-through check is done inside SceneIntersect()
 
 			//------------------------------------------------------------------
 			// Direct light sampling
 			//------------------------------------------------------------------
 
-			DirectLightSampling(scene, rndGen, pathThrouput, bsdf, -eyeRay.d,
-					(depth >= renderEngine->rrDepth) ? renderEngine->rrImportanceCap : -1.f, &radiance);
+			renderEngine->DirectLightSampling(rndGen->floatValue(), rndGen->floatValue(),
+					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+					rndGen->floatValue(), pathThrouput, bsdf, -eyeRay.d,
+					depth, &radiance);
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray

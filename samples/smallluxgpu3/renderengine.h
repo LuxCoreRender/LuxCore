@@ -27,6 +27,7 @@
 #include "editaction.h"
 
 #include "luxrays/utils/film/film.h"
+#include "luxrays/utils/sdl/bsdf.h"
 
 enum RenderEngineType {
 	PATHOCL  = 4,
@@ -167,6 +168,10 @@ protected:
 	void EndEditLockLess(const EditActionList &editActions);
 
 	void UpdateFilmLockLess();
+
+	// Utility functions
+	bool SceneIntersect(const bool fromLight, const float u0,
+		Ray *ray, RayHit *rayHit, BSDF *bsdf) const;
 
 	vector<CPURenderThread *> renderThreads;
 	void (* renderThreadFunc)(CPURenderThread *renderThread);
