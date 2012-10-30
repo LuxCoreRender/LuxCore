@@ -461,10 +461,7 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Norma
 		return Spectrum();
 	}
 
-	if (mesh->HasColors())
-		return mesh->GetColor(triIndex) * lightMaterial->GetGain(); // Light sources are supposed to have flat color
-	else
-		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
+	return lightMaterial->GetGain();
 }
 
 Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float u1,
@@ -489,10 +486,7 @@ Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float
 
 	*pdf = INV_TWOPI / area;
 
-	if (mesh->HasColors())
-		return mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
-	else
-		return lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
+	return lightMaterial->GetGain() * RdotN;
 }
 
 Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
@@ -503,10 +497,7 @@ Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
 	if (RdotN < 0.f)
 		return Spectrum();
 
-	if (mesh->HasColors())
-		return M_PI * mesh->GetColor(triIndex) * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color
-	else
-		return M_PI * lightMaterial->GetGain() * RdotN; // Light sources are supposed to have flat color	
+	return M_PI * lightMaterial->GetGain() * RdotN;	
 }
 
 //------------------------------------------------------------------------------
@@ -569,10 +560,7 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = invArea * cosThetaAtLight * INV_PI;
 
-	if (mesh->HasColors())
-		return mesh->GetColor(triIndex) * lightMaterial->GetGain(); // Light sources are supposed to have flat color
-	else
-		return lightMaterial->GetGain(); // Light sources are supposed to have flat color
+	return lightMaterial->GetGain();
 }
 
 Spectrum TriangleLight::GetRadiance(const Scene *scene,
