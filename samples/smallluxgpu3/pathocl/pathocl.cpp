@@ -206,10 +206,11 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					if ((count > 0) && !c.IsNaN()) {
 						c /= count;
 						film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
-						film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c);
+						// -.5f is to align correctly the pixel after the splat
+						film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f, c);
 
 						if (isAlphaChannelEnabled && !isnan(alpha))
-							film->SplatFilteredAlpha(x, y, alpha / count);
+							film->SplatFilteredAlpha(x - .5f, y - .5f, alpha / count);
 					}
 
 					++pGPU;

@@ -28,7 +28,6 @@
 
 // TODO: check bumpmap scene
 // TODO: use only brute force to sample infinitelight
-// TODO: translated image when rendering with PathGPU
 // TODO: alpha buffer support
 // TODO: pass through support
 // TODO: pass the result as a pointer in DirectLightSampling()/DirectHitLightSampling()
