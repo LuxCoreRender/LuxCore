@@ -40,6 +40,10 @@ namespace luxrays {
 #define DEFAULT_EPSILON_MAX 1e-1f
 #define DEFAULT_EPSILON_STATIC 1e-5f
 
+// An epsilon that can be used as threshold for cos(theta). For instance:
+// if (Dot(N, LightDir) < DEFAULT_COS_EPSILON_STATIC) return Spectrum();
+#define DEFAULT_COS_EPSILON_STATIC 1e-4f
+
 // This is about 1e-5f for values near 1.f
 #define DEFAULT_EPSILON_DISTANCE_FROM_VALUE 0x80u
 

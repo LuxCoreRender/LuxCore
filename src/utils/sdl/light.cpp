@@ -381,7 +381,7 @@ Spectrum InfiniteLight::Illuminate(const Scene *scene, const Point &p,
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
 	const float cosThetaAtLight = Dot(emisNormal, -(*dir));
-	if (cosThetaAtLight < DEFAULT_EPSILON_STATIC)
+	if (cosThetaAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*directPdfW =  INV_PI * .25f;
@@ -524,7 +524,7 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	*emissionPdfW *= invArea;
 
 	// Cannot really not emit the particle, so just bias it to the correct angle
-	localDirOut.z = Max(localDirOut.z, DEFAULT_EPSILON_STATIC);
+	localDirOut.z = Max(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
 
 	// Direction
 	*dir = frame.ToWorld(localDirOut);
@@ -552,7 +552,7 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 	*dir /= (*distance);
 
 	const float cosThetaAtLight = Dot(sampleN, -(*dir));
-	if (cosThetaAtLight < DEFAULT_EPSILON_STATIC)
+	if (cosThetaAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*directPdfW = invArea * distanceSquared / cosThetaAtLight;
