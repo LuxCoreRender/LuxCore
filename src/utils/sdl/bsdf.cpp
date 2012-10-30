@@ -55,11 +55,7 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	}
 
 	surfMat = (const SurfaceMaterial *)material;
-
-	if (mesh->HasColors())
-		surfaceColor = mesh->InterpolateTriColor(triIndex, rayHit.b1, rayHit.b2);
-	else
-		surfaceColor = Spectrum(1.f, 1.f, 1.f);
+	surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
 	// Check if I have to apply texture mapping or normal mapping
 	TexMapInstance *tm = scene.objectTexMaps[currentMeshIndex];

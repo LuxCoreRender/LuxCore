@@ -75,10 +75,7 @@ public:
 		if (Dot(sampleN, wo) <= 0.f)
 			return Spectrum();
 
-		if (mesh->HasColors())
-			return mesh->GetColor(triIndex) * gain; // Light sources are supposed to have flat color
-		else
-			return gain; // Light sources are supposed to have flat color
+		return gain; // Light sources are supposed to have flat color
 	}
 
 	const Spectrum &GetGain() const { return gain; }
