@@ -90,30 +90,30 @@ static void ConnectToEye(const Scene *scene, Film *film, const float u0,
 	ConnectToEye(scene, film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
 }
 
-static Spectrum DirectHitLightSampling(const Scene *scene,
+static void DirectHitLightSampling(const Scene *scene,
 		const Vector &eyeDir, const float distance,
-		const BSDF &bsdf) {
+		const BSDF &bsdf, Spectrum *radiance) {
 	float directPdfA;
 	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene,
 		eyeDir, &directPdfA);
+	if (emittedRadiance.Black())
+		return;
 
-	if (!emittedRadiance.Black()) {
-		return emittedRadiance;
-	} else
-		return Spectrum();
+	*radiance += emittedRadiance;
 }
 
-static Spectrum DirectHitInfiniteLight(const Scene *scene, const Vector &eyeDir) {
+static void DirectHitInfiniteLight(const Scene *scene, const Vector &eyeDir,
+		Spectrum *radiance) {
 	if (!scene->infiniteLight)
-		return Spectrum();
+		return;
 
 	float directPdfW;
 	Spectrum lightRadiance = scene->infiniteLight->GetRadiance(
 			scene, -eyeDir, Point(), &directPdfW);
 	if (lightRadiance.Black())
-		return Spectrum();
+		return;
 
-	return lightRadiance;
+	*radiance +=  lightRadiance;
 }
 
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -178,14 +178,14 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			Spectrum radiance;
 			RayHit eyeRayHit;
 			if (!scene->dataSet->Intersect(&eyeRay, &eyeRayHit))
-				radiance = DirectHitInfiniteLight(scene, eyeRay.d);
+				DirectHitInfiniteLight(scene, eyeRay.d, &radiance);
 			else {
 				// Something was hit
 				BSDF bsdf(false, *scene, eyeRay, eyeRayHit, rndGen->floatValue());
 
 				// Check if it is a light source
 				if (bsdf.IsLightSource())
-					radiance = DirectHitLightSampling(scene, -eyeRay.d, eyeRayHit.t, bsdf);
+					DirectHitLightSampling(scene, -eyeRay.d, eyeRayHit.t, bsdf, &radiance);
 			}
 
 			// Add a sample even if it is black in order to avoid aliasing problems

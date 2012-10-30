@@ -301,6 +301,7 @@ void Matte_Sample_f(__global MatteParam *mat, const Vector *wo, Vector *wi,
 	if (dir.z <= 0.0001f)
 		*pdf = 0.f;
 	else {
+                // TODO: this should be mat * INV_PI
 		f->r = mat->r;
 		f->g = mat->g;
 		f->b = mat->b;
