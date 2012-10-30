@@ -51,7 +51,7 @@ public:
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdfW, float *cosSampleDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	Spectrum GetEmittedRadiance(const Scene *scene,
 			const Vector &dir,
 			float *directPdfA = NULL,
