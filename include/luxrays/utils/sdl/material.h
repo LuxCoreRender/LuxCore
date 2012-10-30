@@ -180,16 +180,16 @@ public:
 		float *directPdfW, float *reversePdfW) const {
 		*event |= DIFFUSE;
 
-		if ((*event & TRANSMIT) ||
-				(fabsf(lightDir.z) < DEFAULT_EPSILON_STATIC) ||
-				(fabsf(eyeDir.z) < DEFAULT_EPSILON_STATIC))
+		if (((*event) & TRANSMIT) ||
+				(fabsf(lightDir.z) < DEFAULT_COS_EPSILON_STATIC) ||
+				(fabsf(eyeDir.z) < DEFAULT_COS_EPSILON_STATIC))
             return Spectrum();
 
 		if(directPdfW)
-            *directPdfW = Max(0.f, fabsf(eyeDir.z * INV_PI));
+            *directPdfW = fabsf(eyeDir.z * INV_PI);
 
         if(reversePdfW)
-            *reversePdfW = Max(0.f, fabsf(lightDir.z * INV_PI));
+            *reversePdfW = fabsf(lightDir.z * INV_PI);
 
 		return KdOverPI;
 	}
@@ -199,10 +199,13 @@ public:
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 		*event = DIFFUSE | REFLECT;
 
+		if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+			return Spectrum();
+			
 		*sampledDir = Sgn(fixedDir.z) * CosineSampleHemisphere(u0, u1);
+
 		*cosSampledDir = fabsf(sampledDir->z);
-		if ((fabsf(fixedDir.z) < DEFAULT_EPSILON_STATIC) ||
-				(*cosSampledDir < DEFAULT_EPSILON_STATIC))
+		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
             return Spectrum();
 
 		*pdfW = INV_PI * (*cosSampledDir);

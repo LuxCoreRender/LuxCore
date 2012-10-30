@@ -134,9 +134,14 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 		BSDFEvent *event, float *directPdfW, float *reversePdfW) const {
 	const float dotLightDirNG = Dot(lightDir, geometryN);
+	const float absDotLightDirNG = fabsf(dotLightDirNG);
 	const float dotEyeDirNG = Dot(eyeDir, geometryN);
+	const float absDotEyeDirNG = fabsf(dotEyeDirNG);
 
-	const float sideTest = (fabsf(dotLightDirNG) < DEFAULT_EPSILON_STATIC) ? 0.f : (dotEyeDirNG * dotLightDirNG);
+	if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) || (absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
+		return Spectrum();
+
+	const float sideTest = dotEyeDirNG * dotLightDirNG;
 	if (sideTest > 0.f)
 		*event = REFLECT;
 	else if (sideTest < 0.f)
@@ -153,8 +158,9 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 
 	// Adjoint BSDF
 	if (fromLight) {
-		const float dotLightDirNS = Dot(lightDir, shadeN);
-		return surfaceColor * result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG));
+		const float absDotLightDirNS = AbsDot(lightDir, shadeN);
+		const float absDotEyeDirNS = AbsDot(eyeDir, shadeN);
+		return surfaceColor * result * ((absDotLightDirNS * absDotEyeDirNG) / (absDotEyeDirNS * absDotLightDirNG));
 	} else
 		return surfaceColor * result;
 }
@@ -170,9 +176,11 @@ Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 
 	// Adjoint BSDF
 	if (fromLight) {
-		const float dotLightDirNG = localFixedDir.z;
-		const float dotLightDirNS = Dot(fixedDir, shadeN);
-		return surfaceColor * result * (fabsf(dotLightDirNS) / fabsf(dotLightDirNG));
+		const float absDotFixedDirNS = fabsf(localFixedDir.z);
+		const float absDotSampledDirNS = fabsf(localSampledDir.z);
+		const float absDotFixedDirNG = AbsDot(fixedDir, geometryN);
+		const float absDotSampledDirNG = AbsDot(*sampledDir, geometryN);
+		return surfaceColor * result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
 	} else
 		return surfaceColor * result;
 }

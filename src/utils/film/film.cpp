@@ -481,6 +481,11 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 
 void Film::SplatFiltered(const FilmBufferType type, const float screenX,
 		const float screenY, const Spectrum &radiance) {
+	assert (!radiance.IsNaN() && !radiance.IsInf());
+
+	if (radiance.IsNaN() || radiance.IsInf())
+		return;
+
 	if (filterType == FILTER_NONE) {
 		const int x = Ceil2Int(screenX - 0.5f);
 		const int y = Ceil2Int(screenY - 0.5f);
@@ -520,6 +525,11 @@ void Film::SplatFiltered(const FilmBufferType type, const float screenX,
 
 void Film::SplatFilteredAlpha(const float screenX, const float screenY,
 		const float alpha) {
+	assert (!isnan(alpha) && !isinf(alpha));
+
+	if (isnan(alpha) || isinf(alpha))
+		return;
+
 	if (filterType == FILTER_NONE) {
 	const int x = Ceil2Int(screenX - 0.5f);
 		const int y = Ceil2Int(screenY - 0.5f);
