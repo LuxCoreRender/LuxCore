@@ -106,7 +106,6 @@ Spectrum GlassMaterial::Evaluate(const bool fromLight, const bool into,
 	return Spectrum();
 }
 
-// TODO: handle fromLight = true !!!
 Spectrum GlassMaterial::Sample(const bool fromLight,
 	const Vector &fixedDir, Vector *sampledDir,
 	const float u0, const float u1,  const float u2,
@@ -123,8 +122,9 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 	const float nc = ousideIor;
 	const float nt = ior;
 	const float nnt = into ? (nc / nt) : (nt / nc);
+	const float nnt2 = nnt * nnt;
 	const float ddn = Dot(rayDir, shadeN);
-	const float cos2t = 1.f - nnt * nnt * (1.f - ddn * ddn);
+	const float cos2t = 1.f - nnt2 * (1.f - ddn * ddn);
 
 	// Total internal reflection
 	if (cos2t < 0.f) {
@@ -164,7 +164,10 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*cosSampledDir = fabsf(sampledDir->z);
 		*pdf = 1.f;
 
-		return Krefrct / (*cosSampledDir);
+		if (fromLight)
+			return Krefrct * (nnt2 / (*cosSampledDir));
+		else
+			return Krefrct / (*cosSampledDir);
 	} else if (u0 < P) {
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
@@ -178,6 +181,9 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*cosSampledDir = fabsf(sampledDir->z);
 		*pdf = (1.f - P) / Tr;
 
-		return Krefrct / (*cosSampledDir);
+		if (fromLight)
+			return Krefrct * (nnt2 / (*cosSampledDir));
+		else
+			return Krefrct / (*cosSampledDir);
 	}
 }
