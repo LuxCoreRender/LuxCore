@@ -133,6 +133,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*cosSampledDir = fabsf(sampledDir->z);
 		*pdf = 1.f;
 
+		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return Krefl / (*cosSampledDir);
 	}
 
@@ -156,6 +157,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 			*cosSampledDir = fabsf(sampledDir->z);
 			*pdf = 1.f;
 
+			// The cosSampledDir is used to compensate the other one used inside the integrator
 			return Krefl / (*cosSampledDir);
 		}
 	} else if (Re == 0.f) {
@@ -174,6 +176,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*cosSampledDir = fabsf(sampledDir->z);
 		*pdf = P / Re;
 
+		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return Krefl / (*cosSampledDir);
 	} else {
 		*event = SPECULAR | TRANSMIT;
@@ -181,9 +184,61 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*cosSampledDir = fabsf(sampledDir->z);
 		*pdf = (1.f - P) / Tr;
 
+		// The cosSampledDir is used to compensate the other one used inside the integrator
 		if (fromLight)
 			return Krefrct * (nnt2 / (*cosSampledDir));
 		else
 			return Krefrct / (*cosSampledDir);
+	}
+}
+
+//------------------------------------------------------------------------------
+// Architectural glass
+//------------------------------------------------------------------------------
+
+Spectrum ArchGlassMaterial::Evaluate(const bool fromLight, const bool into,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	*event = SPECULAR | TRANSMIT;
+
+	return Spectrum();
+}
+
+Spectrum ArchGlassMaterial::Sample(const bool fromLight,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float u2,
+	float *pdf, float *cosSampledDir, BSDFEvent *event) const {
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+
+	if (!into) {
+		// Architectural glass has not internal reflections
+		*event = SPECULAR | TRANSMIT;
+		*sampledDir = -fixedDir;
+		*cosSampledDir = fabsf(sampledDir->z);
+		*pdf = 1.f;
+
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return Ktrans / (*cosSampledDir);
+	} else {
+		// RR to choose if reflect the ray or go trough the glass
+		const float comp = u0 * totFilter;
+		if (comp > transFilter) {
+			*event = SPECULAR | REFLECT;
+			*sampledDir = Vector(-fixedDir.x, -fixedDir.y, fixedDir.z);
+			*cosSampledDir = fabsf(sampledDir->z);
+			*pdf = reflPdf;
+
+			// The cosSampledDir is used to compensate the other one used inside the integrator
+			return Krefl / (*cosSampledDir);
+		} else {
+			*event = SPECULAR | TRANSMIT;
+			*sampledDir = -fixedDir;
+			*cosSampledDir = fabsf(sampledDir->z);
+			*pdf = transPdf;
+
+			// The cosSampledDir is used to compensate the other one used inside the integrator
+			return Ktrans / (*cosSampledDir);
+		}
 	}
 }
