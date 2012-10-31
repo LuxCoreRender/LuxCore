@@ -161,6 +161,7 @@ void RenderEngine::UpdateFilm() {
 	if (started) {
 		elapsedTime = WallClockTime() - startTime;
 		UpdateFilmLockLess();
+		UpdateSamplesCount();
 
 		const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
 		if (haltthreshold >= 0.f) {
@@ -344,7 +345,6 @@ void CPURenderEngine::UpdateFilmLockLess() {
 		if (renderThreads[i]->threadFilm)
 			film->AddFilm(*(renderThreads[i]->threadFilm));
 	}
-	samplesCount = film->GetTotalSampleCount();
 }
 
 bool CPURenderEngine::SceneIntersect(const bool fromLight, const float u0,
