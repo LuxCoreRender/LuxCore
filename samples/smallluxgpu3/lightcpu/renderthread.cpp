@@ -42,7 +42,8 @@ void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
 			RayHit eyeRayHit;
 			BSDF bsdf;
-			if (!SceneIntersect(true, u0, &eyeRay, &eyeRayHit, &bsdf)) {
+			Spectrum connectionThroughput;
+			if (!SceneIntersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				const float cosToCamera = Dot(shadeN, -eyeDir);
@@ -54,7 +55,7 @@ void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 				const float fluxToRadianceFactor = cameraPdfA;
 
 				film->SplatFiltered(PER_SCREEN_NORMALIZED, scrX, scrY,
-						flux * fluxToRadianceFactor * bsdfEval);
+						connectionThroughput * flux * fluxToRadianceFactor * bsdfEval);
 			}
 		}
 	}
@@ -159,11 +160,11 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			camera->GenerateRay(screenX, screenY, &eyeRay,
 				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
-			Spectrum radiance;
+			Spectrum radiance, connectionThroughput;
 			RayHit eyeRayHit;
 			BSDF bsdf;
 			const bool somethingWasHit = renderEngine->SceneIntersect(
-				false, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf);
+				false, true, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 			if (!somethingWasHit) {
 				// Nothing was hit, check infinitelight
 				renderEngine->DirectHitInfiniteLight(eyeRay.d, &radiance);
@@ -172,6 +173,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				if (bsdf.IsLightSource())
 					renderEngine->DirectHitLightSampling(-eyeRay.d,bsdf, &radiance);
 			}
+			radiance *= connectionThroughput;
 
 			// Add a sample even if it is black in order to avoid aliasing problems
 			// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
@@ -188,9 +190,12 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit nextEventRayHit;
 			BSDF bsdf;
-			if (renderEngine->SceneIntersect(true, rndGen->floatValue(),
-					&nextEventRay, &nextEventRayHit, &bsdf)) {
+			Spectrum connectionThroughput;
+			if (renderEngine->SceneIntersect(true, true, rndGen->floatValue(),
+					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
+				
+				lightPathFlux *= connectionThroughput;
 
 				// Check if it is a light source
 				if (bsdf.IsLightSource()) {

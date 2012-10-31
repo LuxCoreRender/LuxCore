@@ -49,7 +49,7 @@ public:
 	virtual bool IsSpecular() const = 0; // TODO: rename to IsDelta
 	virtual bool IsShadowTransparent() const { return false; }
 
-	virtual Spectrum GetSahdowTransparency() const {
+	virtual const Spectrum &GetSahdowTransparency() const {
 		throw std::runtime_error("Internal error, called Material::GetSahdowTransparency()");
 	}
 };
@@ -180,7 +180,7 @@ public:
 	
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-		float *directPdfW, float *reversePdfW) const;
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
@@ -233,7 +233,7 @@ public:
 
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-		float *directPdfW, float *reversePdfW) const;
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
@@ -409,7 +409,7 @@ public:
 
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-		float *directPdfW, float *reversePdfW) const;
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
@@ -567,10 +567,18 @@ public:
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 	bool IsShadowTransparent() const { return true; }
+	const Spectrum &GetSahdowTransparency() const { return Ktrans; }
 
-	Spectrum GetSahdowTransparency() const {
-		return Ktrans;
-	}
+	const Spectrum &GetKrefl() const { return Krefl; }
+	const Spectrum &GetKrefrct() const { return Ktrans; }
+	const float GetTransFilter() const { return transFilter; }
+	const float GetTotFilter() const { return totFilter; }
+	const float GetReflPdf() const { return reflPdf; }
+	const float GetTransPdf() const { return transPdf; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
 
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		throw std::runtime_error("Internal error, called ArchGlassMaterial::f()");
@@ -609,14 +617,20 @@ public:
 		}
 	}
 
-	const Spectrum &GetKrefl() const { return Krefl; }
-	const Spectrum &GetKrefrct() const { return Ktrans; }
-	const float GetTransFilter() const { return transFilter; }
-	const float GetTotFilter() const { return totFilter; }
-	const float GetReflPdf() const { return reflPdf; }
-	const float GetTransPdf() const { return transPdf; }
 	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
+
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Krefl, Ktrans;

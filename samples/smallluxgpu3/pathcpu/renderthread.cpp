@@ -60,7 +60,8 @@ void PathCPURenderEngine::DirectLightSampling(
 						distance - MachineEpsilon::E(distance));
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
-				if (!SceneIntersect(false, u5, &shadowRay, &shadowRayHit, &shadowBsdf)) {
+				Spectrum connectionThroughput;
+				if (!SceneIntersect(false, false, u5, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
 					const float factor = cosThetaToLight / (directPdfW * lightPickPdf);
 
@@ -73,7 +74,7 @@ void PathCPURenderEngine::DirectLightSampling(
 							bsdfEval *= prob;
 					}
 
-					*radiance += (weight * factor) * pathThrouput * lightRadiance * bsdfEval;
+					*radiance += (weight * factor) * pathThrouput * connectionThroughput * lightRadiance * bsdfEval;
 				}
 			}
 		}
@@ -162,15 +163,18 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		BSDF bsdf;
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit eyeRayHit;
-			if (!renderEngine->SceneIntersect(false, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf)) {
+			Spectrum connectionThroughput;
+			if (!renderEngine->SceneIntersect(false, true, rndGen->floatValue(), &eyeRay,
+					&eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
-				renderEngine->DirectHitInfiniteLight(lastSpecular, pathThrouput, eyeRay.d,
+				renderEngine->DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, eyeRay.d,
 						lastPdfW, &radiance);
 
 				if (depth == 1)
 					film->SplatFilteredAlpha(screenX, screenY, 0.f);
 				break;
 			}
+			pathThrouput *= connectionThroughput;
 
 			// Something was hit
 			if (depth == 1)

@@ -46,6 +46,11 @@ public:
 	bool IsPassThrough() const { return isPassThrough; }
 	bool IsLightSource() const { return isLightSource; }
 	bool IsDelta() const { return surfMat->IsSpecular(); }
+	bool IsShadowTransparent() const { return surfMat->IsShadowTransparent(); }
+
+	const Spectrum &GetSahdowTransparency() const {
+		return surfMat->GetSahdowTransparency();
+	}
 
 	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
