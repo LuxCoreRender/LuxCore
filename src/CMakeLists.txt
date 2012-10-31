@@ -130,6 +130,7 @@ set(LuxRays_SRC_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/light.cpp
+        ${LuxRays_SOURCE_DIR}/src/utils/sdl/material.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/spd.cpp

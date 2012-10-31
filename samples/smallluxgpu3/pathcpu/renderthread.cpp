@@ -210,6 +210,8 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			if (bsdfSample.Black())
 				break;
 
+			lastSpecular = ((event & SPECULAR) != 0);
+
 			if ((depth >= renderEngine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
 				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
@@ -219,7 +221,6 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					break;
 			}
 
-			lastSpecular = ((event & SPECULAR) != 0);
 			pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
 			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
