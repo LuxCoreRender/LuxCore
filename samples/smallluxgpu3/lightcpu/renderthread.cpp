@@ -24,7 +24,6 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/randomgen.h"
 
-// TODO: check NaN on luxball scene
 // TODO: alpha buffer support
 // TODO: fix sample count stat
 // TODO: change "if ((bsdfPdf <= 0.f) || bsdfSample.Black())" in "if (bsdfSample.Black())"
@@ -122,8 +121,10 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
+	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
 		film->AddSampleCount(PER_SCREEN_NORMALIZED, 1.0);
+		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1;
 
 		// Select one light source
 		float lightPickPdf;

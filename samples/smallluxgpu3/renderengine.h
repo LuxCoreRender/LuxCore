@@ -76,6 +76,10 @@ protected:
 
 	virtual void UpdateFilmLockLess() = 0;
 
+	virtual void UpdateSamplesCount() {
+		samplesCount = film->GetTotalSampleCount();
+	}
+
 	boost::mutex engineMutex;
 	Context *ctx;
 
@@ -84,11 +88,11 @@ protected:
 	boost::mutex *filmMutex;
 
 	double startTime, elapsedTime;
-	unsigned long long samplesCount;
+	double samplesCount;
 
 	float convergence;
 	double lastConvergenceTestTime;
-	unsigned long long lastConvergenceTestSamplesCount;
+	double lastConvergenceTestSamplesCount;
 
 	bool started, editMode;
 };
@@ -161,13 +165,13 @@ public:
 	friend class CPURenderThread;
 
 protected:
-	void StartLockLess();
-	void StopLockLess();
+	virtual void StartLockLess();
+	virtual void StopLockLess();
 
-	void BeginEditLockLess();
-	void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginEditLockLess();
+	virtual void EndEditLockLess(const EditActionList &editActions);
 
-	void UpdateFilmLockLess();
+	virtual void UpdateFilmLockLess();
 
 	// Utility functions
 	bool SceneIntersect(const bool fromLight, const float u0,

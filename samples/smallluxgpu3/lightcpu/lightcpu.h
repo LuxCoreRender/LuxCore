@@ -44,6 +44,19 @@ public:
 private:
 	static void RenderThreadFuncImpl(CPURenderThread *thread);
 
+	void StartLockLess() {
+		threadSamplesCount.resize(renderThreads.size(), 0.0);
+
+		CPURenderEngine::StartLockLess();
+	}
+
+	void UpdateSamplesCount() {
+		double count = 0.0;
+		for (size_t i = 0; i < renderThreads.size(); ++i)
+			count += threadSamplesCount[i];
+		samplesCount = count;
+	}
+
 	void ConnectToEye(Film *film, const float u0,
 			const Vector &eyeDir, const float eyeDistance, const Point &lensPoint,
 			const Normal &shadeN, const Spectrum &bsdfEval,
@@ -54,6 +67,8 @@ private:
 
 	void DirectHitLightSampling(const Vector &eyeDir, const BSDF &bsdf, Spectrum *radiance);
 	void DirectHitInfiniteLight(const Vector &eyeDir, Spectrum *radiance);
+
+	vector<double> threadSamplesCount;
 };
 
 #endif	/* _LIGHTCPU_H */
