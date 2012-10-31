@@ -527,11 +527,11 @@ void Film::SplatFilteredAlpha(const float screenX, const float screenY,
 		const float alpha) {
 	assert (!isnan(alpha) && !isinf(alpha));
 
-	if (isnan(alpha) || isinf(alpha))
+	if (!enableAlphaChannel || isnan(alpha) || isinf(alpha))
 		return;
 
 	if (filterType == FILTER_NONE) {
-	const int x = Ceil2Int(screenX - 0.5f);
+		const int x = Ceil2Int(screenX - 0.5f);
 		const int y = Ceil2Int(screenY - 0.5f);
 
 		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
