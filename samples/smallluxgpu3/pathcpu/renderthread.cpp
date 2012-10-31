@@ -27,7 +27,6 @@
 #include "luxrays/utils/core/mc.h"
 
 // TODO: use only brute force to sample infinitelight
-// TODO: alpha buffer support
 
 //------------------------------------------------------------------------------
 // PathCPU RenderThread
@@ -167,10 +166,16 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Nothing was hit, look for infinitelight
 				renderEngine->DirectHitInfiniteLight(lastSpecular, pathThrouput, eyeRay.d,
 						lastPdfW, &radiance);
+
+				if (depth == 1)
+					film->SplatFilteredAlpha(screenX, screenY, 0.f);
 				break;
 			}
 
 			// Something was hit
+			if (depth == 1)
+				film->SplatFilteredAlpha(screenX, screenY, 1.f);
+
 
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
