@@ -24,8 +24,6 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/randomgen.h"
 
-// TODO: alpha buffer support
-
 //------------------------------------------------------------------------------
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
@@ -164,7 +162,9 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			Spectrum radiance;
 			RayHit eyeRayHit;
 			BSDF bsdf;
-			if (!renderEngine->SceneIntersect(false, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf)) {
+			const bool somethingWasHit = renderEngine->SceneIntersect(
+				false, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf);
+			if (!somethingWasHit) {
 				// Nothing was hit, check infinitelight
 				renderEngine->DirectHitInfiniteLight(eyeRay.d, &radiance);
 			} else {
@@ -177,6 +177,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
 			film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.0);
 			film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
+			film->SplatFilteredAlpha(screenX, screenY, somethingWasHit ? 1.f : 0.f);
 		}
 
 		//----------------------------------------------------------------------
