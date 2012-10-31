@@ -142,10 +142,11 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 		return Spectrum();
 
 	const float sideTest = dotEyeDirNG * dotLightDirNG;
+	bool into;
 	if (sideTest > 0.f)
-		*event = REFLECT;
+		into = true;
 	else if (sideTest < 0.f)
-		*event = TRANSMIT;
+		into = false;
 	else {
 		*event = NONE;
 		return Spectrum();
@@ -153,8 +154,8 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
-	Spectrum result = surfMat->Evaluate(localLightDir, localEyeDir, event,
-			directPdfW, reversePdfW);
+	Spectrum result = surfMat->Evaluate(fromLight, into, localLightDir, localEyeDir,
+			event, directPdfW, reversePdfW);
 
 	// Adjoint BSDF
 	if (fromLight) {
@@ -171,7 +172,8 @@ Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
 
-	Spectrum result = surfMat->Sample(localFixedDir, &localSampledDir, u0, u1, u2,
+	Spectrum result = surfMat->Sample(fromLight,
+			localFixedDir, &localSampledDir, u0, u1, u2,
 			pdfW, cosSampledDir, event);
 	if (result.Black())
 		return result;

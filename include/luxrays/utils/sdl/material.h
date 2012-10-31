@@ -101,12 +101,14 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 	
-	virtual Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Evaluate()");
 	}
 
-	virtual Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
+	virtual Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
@@ -176,42 +178,13 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 	
-	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-		float *directPdfW, float *reversePdfW) const {
-		*event |= DIFFUSE;
-
-		if (((*event) & TRANSMIT) ||
-				(fabsf(lightDir.z) < DEFAULT_COS_EPSILON_STATIC) ||
-				(fabsf(eyeDir.z) < DEFAULT_COS_EPSILON_STATIC))
-            return Spectrum();
-
-		if(directPdfW)
-            *directPdfW = fabsf(eyeDir.z * INV_PI);
-
-        if(reversePdfW)
-            *reversePdfW = fabsf(lightDir.z * INV_PI);
-
-		return KdOverPI;
-	}
-
-	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
-		*event = DIFFUSE | REFLECT;
-
-		if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-			return Spectrum();
-			
-		*sampledDir = Sgn(fixedDir.z) * CosineSampleHemisphere(u0, u1);
-
-		*cosSampledDir = fabsf(sampledDir->z);
-		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-            return Spectrum();
-
-		*pdfW = INV_PI * (*cosSampledDir);
-
-		return KdOverPI;
-	}
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Kd, KdOverPI;
@@ -258,25 +231,13 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 
-	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-		float *directPdfW, float *reversePdfW) const {
-		*event |= SPECULAR;
-
-		return Spectrum();
-	}
-
-	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const {
-		*event = SPECULAR | REFLECT;
-
-		*sampledDir = Vector(-fixedDir.x, -fixedDir.y, fixedDir.z);
-		*pdf = 1.f;
-
-		*cosSampledDir = fabsf(sampledDir->z);
-		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Kr / (*cosSampledDir);
-	}
+		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Kr;
@@ -359,6 +320,16 @@ public:
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
 
+	const Spectrum &GetKrefl() const { return Krefl; }
+	const Spectrum &GetKrefrct() const { return Krefrct; }
+	const float GetOutsideIOR() const { return ousideIor; }
+	const float GetIOR() const { return ior; }
+	const float GetR0() const { return R0; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		throw std::runtime_error("Internal error, called GlassMaterial::f()");
 	}
@@ -429,13 +400,20 @@ public:
 		}
 	}
 
-	const Spectrum &GetKrefl() const { return Krefl; }
-	const Spectrum &GetKrefrct() const { return Krefrct; }
-	const float GetOutsideIOR() const { return ousideIor; }
-	const float GetIOR() const { return ior; }
-	const float GetR0() const { return R0; }
 	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
+
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Krefl, Krefrct;
