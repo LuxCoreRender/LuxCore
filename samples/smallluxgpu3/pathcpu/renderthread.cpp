@@ -202,7 +202,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			const Spectrum bsdfSample = bsdf.Sample(-eyeRay.d, &sampledDir,
 					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 					&lastPdfW, &cosSampledDir, &event);
-			if ((lastPdfW <= 0.f) || bsdfSample.Black())
+			if (bsdfSample.Black())
 				break;
 
 			if ((depth >= renderEngine->rrDepth) && !lastSpecular) {

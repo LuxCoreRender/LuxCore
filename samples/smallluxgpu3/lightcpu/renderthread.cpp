@@ -25,8 +25,6 @@
 #include "luxrays/utils/core/randomgen.h"
 
 // TODO: alpha buffer support
-// TODO: fix sample count stat
-// TODO: change "if ((bsdfPdf <= 0.f) || bsdfSample.Black())" in "if (bsdfSample.Black())"
 
 //------------------------------------------------------------------------------
 // LightCPU RenderThread
