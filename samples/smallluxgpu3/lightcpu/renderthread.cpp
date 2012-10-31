@@ -183,25 +183,19 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		//----------------------------------------------------------------------
 		// Trace the light path
 		//----------------------------------------------------------------------
+
 		int depth = 1;
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit nextEventRayHit;
-			if (scene->dataSet->Intersect(&nextEventRay, &nextEventRayHit)) {
+			BSDF bsdf;
+			if (renderEngine->SceneIntersect(true, rndGen->floatValue(),
+					&nextEventRay, &nextEventRayHit, &bsdf)) {
 				// Something was hit
-				BSDF bsdf(true, *scene, nextEventRay, nextEventRayHit, rndGen->floatValue());
 
 				// Check if it is a light source
 				if (bsdf.IsLightSource()) {
 					// SLG light sources are like black bodies
 					break;
-				}
-
-				// Check if it is pass-through point
-				if (bsdf.IsPassThrough()) {
-					// It is a pass-through material, continue to trace the ray
-					nextEventRay.mint = nextEventRayHit.t + MachineEpsilon::E(nextEventRayHit.t);
-					nextEventRay.maxt = std::numeric_limits<float>::infinity();
-					continue;
 				}
 
 				//--------------------------------------------------------------
