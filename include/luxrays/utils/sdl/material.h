@@ -79,16 +79,12 @@ public:
 
 	virtual Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-		float *directPdfW = NULL, float *reversePdfW = NULL) const {
-		throw std::runtime_error("Internal error, called SurfaceMaterial::Evaluate()");
-	}
+		float *directPdfW = NULL, float *reversePdfW = NULL) const = 0;
 
 	virtual Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
-		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
-	}
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -109,55 +105,6 @@ public:
 
 	const Spectrum &GetKd() const { return Kd; }
 
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		if (Dot(N, wi) > 0.f)
-			return KdOverPI;
-		else
-			return Spectrum();
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		if (onlySpecular) {
-			*pdf = 0.f;
-			return Spectrum();
-		}
-
-		Vector dir = CosineSampleHemisphere(u0, u1);
-		*pdf = dir.z * INV_PI;
-
-		Vector v1, v2;
-		CoordinateSystem(Vector(shadeN), &v1, &v2);
-
-		dir = Vector(
-				v1.x * dir.x + v2.x * dir.y + shadeN.x * dir.z,
-				v1.y * dir.x + v2.y * dir.y + shadeN.y * dir.z,
-				v1.z * dir.x + v2.z * dir.y + shadeN.z * dir.z);
-
-		(*wi) = dir;
-
-		const float dp = Dot(shadeN, *wi);
-		// Using 0.0001 instead of 0.0 to cut down fireflies
-		if (dp <= 0.0001f) {
-			*pdf = 0.f;
-			return Spectrum();
-		}
-		*pdf /=  dp;
-
-		specularBounce = false;
-
-		return KdOverPI;
-	}
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
-	
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
@@ -187,33 +134,7 @@ public:
 	bool IsSpecular() const { return true; }
 
 	const Spectrum &GetKr() const { return Kr; }
-
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		throw std::runtime_error("Internal error, called MirrorMaterial::f()");
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		const Vector dir = -wo;
-		const float dp = Dot(shadeN, dir);
-		(*wi) = dir - (2.f * dp) * Vector(shadeN);
-
-		specularBounce = reflectionSpecularBounce;
-		*pdf = 1.f;
-
-		return Kr;
-	}
-
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
@@ -255,36 +176,6 @@ public:
 	float GetTotFilter() const { return totFilter; }
 	float GetMattePdf() const { return mattePdf; }
 	float GetMirrorPdf() const { return mirrorPdf; }
-
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		return matte.f(wo, wi, N) * mattePdf;
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		const float comp = u2 * totFilter;
-
-		if (onlySpecular || (comp > matteFilter)) {
-			const Spectrum f = mirror.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
-			*pdf *= mirrorPdf;
-
-			return f;
-		} else {
-			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
-			*pdf *= mattePdf;
-
-			return f;
-		}
-	}
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
@@ -334,86 +225,8 @@ public:
 	const float GetIOR() const { return ior; }
 	const float GetR0() const { return R0; }
 
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		throw std::runtime_error("Internal error, called GlassMaterial::f()");
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		const Vector rayDir = -wo;
-		const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
-
-		// Ray from outside going in ?
-		const bool into = (Dot(N, shadeN) > 0.f);
-
-		const float nc = ousideIor;
-		const float nt = ior;
-		const float nnt = into ? (nc / nt) : (nt / nc);
-		const float ddn = Dot(rayDir, shadeN);
-		const float cos2t = 1.f - nnt * nnt * (1.f - ddn * ddn);
-
-		// Total internal reflection
-		if (cos2t < 0.f) {
-			(*wi) = reflDir;
-			*pdf = 1.f;
-			specularBounce = reflectionSpecularBounce;
-
-			return Krefl;
-		}
-
-		const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrtf(cos2t));
-		const Vector nkk = kk * Vector(N);
-		const Vector transDir = Normalize(nnt * rayDir - nkk);
-
-		const float c = 1.f - (into ? -ddn : Dot(transDir, N));
-
-		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
-		const float Tr = 1.f - Re;
-		const float P = .25f + .5f * Re;
-
-		if (Tr == 0.f) {
-			if (Re == 0.f) {
-				*pdf = 0.f;
-				return Spectrum();
-			} else {
-				(*wi) = reflDir;
-				*pdf = 1.f;
-				specularBounce = reflectionSpecularBounce;
-
-				return Krefl;
-			}
-		} else if (Re == 0.f) {
-			(*wi) = transDir;
-			*pdf = 1.f;
-			specularBounce = transmitionSpecularBounce;
-
-			return Krefrct;
-		} else if (u0 < P) {
-			(*wi) = reflDir;
-			*pdf = P / Re;
-			specularBounce = reflectionSpecularBounce;
-
-			return Krefl;
-		} else {
-			(*wi) = transDir;
-			*pdf = (1.f - P) / Tr;
-			specularBounce = transmitionSpecularBounce;
-
-			return Krefrct;
-		}
-	}
-
 	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
@@ -488,27 +301,6 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
-	/*Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		return matte.f(wo, wi, N) * mattePdf;
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		const float comp = u2 * totFilter;
-
-		if (onlySpecular || (comp > matteFilter)) {
-			const Spectrum f = metal.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
-			*pdf *= metalPdf;
-
-			return f;
-		} else {
-			const Spectrum f = matte.Sample_f(wo, wi, N, shadeN, u0, u1, u2, onlySpecular, pdf, specularBounce);
-			*pdf *= mattePdf;
-
-			return f;
-		}
-	}*/
 	const MatteMaterial &GetMatte() const { return matte; }
 	const MetalMaterial &GetMetal() const { return metal; }
 	float GetMatteFilter() const { return matteFilter; }
@@ -566,53 +358,8 @@ public:
 	const float GetReflPdf() const { return reflPdf; }
 	const float GetTransPdf() const { return transPdf; }
 
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		throw std::runtime_error("Internal error, called ArchGlassMaterial::f()");
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		// Ray from outside going in ?
-		const bool into = (Dot(N, shadeN) > 0.f);
-
-		if (!into) {
-			// No internal reflections
-			(*wi) = -wo;
-			*pdf = 1.f;
-			specularBounce = reflectionSpecularBounce;
-
-			return Ktrans;
-		} else {
-			// RR to choose if reflect the ray or go trough the glass
-			const float comp = u0 * totFilter;
-			if (comp > transFilter) {
-				const Vector mwo = -wo;
-				(*wi) = mwo - (2.f * Dot(N, mwo)) * Vector(N);
-				*pdf = reflPdf;
-				specularBounce = reflectionSpecularBounce;
-
-				return Krefl;
-			} else {
-				(*wi) = -wo;
-				*pdf = transPdf;
-				specularBounce = transmitionSpecularBounce;
-
-				return Ktrans;
-			}
-		}
-	}
-
 	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
@@ -650,71 +397,11 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
-	/*Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		// Schilick's approximation
-		const float c = 1.f - Dot(wo, N);
-		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
-
-		const float P = .25f + .5f * Re;
-
-		return KdiffOverPI * (1.f - Re) / (1.f - P);
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		// Schilick's approximation
-		const float c = 1.f - Dot(wo, shadeN);
-		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
-
-		const float P = .25f + .5f * Re;
-
-		if (onlySpecular || (u2 < P)) {
-			(*wi) = MetalMaterial::GlossyReflection(wo, exponent, shadeN, u0, u1);
-			*pdf = P / Re;
-			specularBounce = reflectionSpecularBounce;
-
-			return Re * Krefl;
-		} else {
-			Vector dir = CosineSampleHemisphere(u0, u1);
-			*pdf = dir.z * INV_PI;
-
-			Vector v1, v2;
-			CoordinateSystem(Vector(shadeN), &v1, &v2);
-
-			dir = Vector(
-					v1.x * dir.x + v2.x * dir.y + shadeN.x * dir.z,
-					v1.y * dir.x + v2.y * dir.y + shadeN.y * dir.z,
-					v1.z * dir.x + v2.z * dir.y + shadeN.z * dir.z);
-
-			(*wi) = dir;
-
-			const float dp = Dot(shadeN, *wi);
-			// Using 0.0001 instead of 0.0 to cut down fireflies
-			if (dp <= 0.0001f) {
-				*pdf = 0.f;
-				return Spectrum();
-			}
-			*pdf /=  dp;
-
-			const float iRe = 1.f - Re;
-			*pdf *= (1.f - P) / iRe;
-			specularBounce = false;
-
-			return iRe * Kdiff;
-
-		}
-	}*/
-
 	const Spectrum &GetKrefl() const { return Krefl; }
 	const Spectrum &GetKd() const { return Kdiff; }
 	float GetExp() const { return exponent; }
 	float GetR0() const { return R0; }
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
