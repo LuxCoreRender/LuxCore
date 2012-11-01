@@ -37,7 +37,7 @@ Spectrum MatteMaterial::Evaluate(const bool fromLight, const bool into,
 	if (!into ||
 			(fabsf(lightDir.z) < DEFAULT_COS_EPSILON_STATIC) ||
 			(fabsf(eyeDir.z) < DEFAULT_COS_EPSILON_STATIC))
-		return Spectrum();
+			return Spectrum();
 
 	if(directPdfW)
 		*directPdfW = fabsf(eyeDir.z * INV_PI);
@@ -297,7 +297,9 @@ Spectrum MetalMaterial::Evaluate(const bool fromLight, const bool into,
 
 Vector MetalMaterial::GlossyReflection(const Vector &fixedDir, const float exponent,
 		const float u0, const float u1) {
-	const Normal shadeN(0.f, 0.f, 1.f);
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+	const Vector shadeN(0.f, 0.f, into ? 1.f : -1.f);
 
 	const float phi = 2.f * M_PI * u0;
 	const float cosTheta = powf(1.f - u1, exponent);
@@ -379,5 +381,72 @@ Spectrum MatteMetalMaterial::Sample(const bool fromLight,
 		*pdf *= mattePdf;
 
 		return result;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Alloy material
+//------------------------------------------------------------------------------
+
+Spectrum AlloyMaterial::Evaluate(const bool fromLight, const bool into,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	*event = DIFFUSE | REFLECT;
+
+	// Schilick's approximation
+	const float c = 1.f - fabsf(lightDir.z);
+	const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+	const float P = .25f + .5f * Re;
+
+	// TODO
+	if(directPdfW)
+		*directPdfW = (1.f - P) / (1.f - Re);
+
+	// TODO
+	if(reversePdfW)
+		*reversePdfW = (1.f - P) / (1.f - Re);
+
+	return KdiffOverPI;
+}
+
+Spectrum AlloyMaterial::Sample(const bool fromLight,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float u2,
+	float *pdf, float *cosSampledDir, BSDFEvent *event) const {
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+	const Vector shadeN(0.f, 0.f, into ? 1.f : -1.f);
+
+	// Schilick's approximation
+	const float c = 1.f - Dot(fixedDir, shadeN);
+	const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+	const float P = .25f + .5f * Re;
+
+	if (u2 < P) {
+		*sampledDir = MetalMaterial::GlossyReflection(fixedDir, exponent, u0, u1);
+		*pdf = P / Re;
+
+		*event = SPECULAR | REFLECT;
+		*cosSampledDir = fabsf(sampledDir->z);
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return Re * Krefl / (*cosSampledDir);
+	} else {
+		*event = DIFFUSE | REFLECT;
+
+		*sampledDir = CosineSampleHemisphere(u0, u1);
+		if (fabsf(sampledDir->z) < DEFAULT_COS_EPSILON_STATIC)
+			return Spectrum();
+
+		*pdf = fabsf(sampledDir->z) * INV_PI;
+		
+		const float iRe = 1.f - Re;
+		*pdf *= (1.f - P) / iRe;
+
+		*cosSampledDir = fabsf(sampledDir->z);
+
+		return iRe * Kdiff;
+
 	}
 }

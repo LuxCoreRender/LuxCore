@@ -712,6 +712,18 @@ public:
 	float GetR0() const { return R0; }
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+
 private:
 	Spectrum Krefl;
 	Spectrum Kdiff, KdiffOverPI;
