@@ -332,7 +332,7 @@ Spectrum MetalMaterial::Sample(const bool fromLight,
 
 	*sampledDir = GlossyReflection(fixedDir, exponent, u0, u1);
 
-	if (sampledDir->z > 0.f) {
+	if (sampledDir->z * fixedDir.z > 0.f) {
 		*pdf = 1.f;
 
 		*cosSampledDir = fabsf(sampledDir->z);
@@ -340,4 +340,44 @@ Spectrum MetalMaterial::Sample(const bool fromLight,
 		return Kr / (*cosSampledDir);
 	} else
 		return Spectrum();
+}
+
+//------------------------------------------------------------------------------
+// MatteMetal material
+//------------------------------------------------------------------------------
+
+Spectrum MatteMetalMaterial::Evaluate(const bool fromLight, const bool into,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	Spectrum result = matte.Evaluate(fromLight, into, lightDir, eyeDir, event,
+			directPdfW, reversePdfW);
+
+	if (directPdfW)
+		*directPdfW *= mattePdf;
+	if (reversePdfW)
+		*reversePdfW *= mattePdf;
+
+	return result;
+}
+
+Spectrum MatteMetalMaterial::Sample(const bool fromLight,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float u2,
+	float *pdf, float *cosSampledDir, BSDFEvent *event) const {
+	// Here, I assume u2 isn't used in other Sample()
+	const float comp = u2 * totFilter;
+
+	if (comp > matteFilter) {
+		const Spectrum result = metal.Sample(fromLight, fixedDir, sampledDir,
+				u0, u1, u2, pdf, cosSampledDir, event);
+		*pdf *= metalPdf;
+
+		return result;
+	} else {
+		const Spectrum result = matte.Sample(fromLight, fixedDir, sampledDir,
+				u0, u1, u2, pdf, cosSampledDir, event);
+		*pdf *= mattePdf;
+
+		return result;
+	}
 }

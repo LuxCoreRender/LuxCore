@@ -468,7 +468,7 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// MetalMetal material
+// MatteMetal material
 //------------------------------------------------------------------------------
 
 class MatteMetalMaterial : public SurfaceMaterial {
@@ -515,6 +515,14 @@ public:
 	float GetTotFilter() const { return totFilter; }
 	float GetMattePdf() const { return mattePdf; }
 	float GetMetalPdf() const { return metalPdf; }
+
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	MatteMaterial matte;
