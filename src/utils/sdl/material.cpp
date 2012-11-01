@@ -26,7 +26,7 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 
 //------------------------------------------------------------------------------
-// Matte
+// Matte material
 //------------------------------------------------------------------------------
 
 Spectrum MatteMaterial::Evaluate(const bool fromLight, const bool into,
@@ -69,7 +69,7 @@ Spectrum MatteMaterial::Sample(const bool fromLight,
 }
 
 //------------------------------------------------------------------------------
-// Mirror
+// Mirror material
 //------------------------------------------------------------------------------
 
 Spectrum MirrorMaterial::Evaluate(const bool fromLight, const bool into,
@@ -95,7 +95,47 @@ Spectrum MirrorMaterial::Sample(const bool fromLight,
 }
 
 //------------------------------------------------------------------------------
-// Glass
+// MatteMirror material
+//------------------------------------------------------------------------------
+
+Spectrum MatteMirrorMaterial::Evaluate(const bool fromLight, const bool into,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	Spectrum result = matte.Evaluate(fromLight, into, lightDir, eyeDir, event,
+			directPdfW, reversePdfW);
+
+	if (directPdfW)
+		*directPdfW *= mattePdf;
+	if (reversePdfW)
+		*reversePdfW *= mattePdf;
+
+	return result;
+}
+
+Spectrum MatteMirrorMaterial::Sample(const bool fromLight,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float u2,
+	float *pdf, float *cosSampledDir, BSDFEvent *event) const {
+	// Here, I assume u2 isn't used in other Sample()
+	const float comp = u2 * totFilter;
+
+	if (comp > matteFilter) {
+		const Spectrum result = mirror.Sample(fromLight, fixedDir, sampledDir,
+				u0, u1, u2, pdf, cosSampledDir, event);
+		*pdf *= mirrorPdf;
+
+		return result;
+	} else {
+		const Spectrum result = matte.Sample(fromLight, fixedDir, sampledDir,
+				u0, u1, u2, pdf, cosSampledDir, event);
+		*pdf *= mattePdf;
+
+		return result;
+	}
+}
+
+//------------------------------------------------------------------------------
+// Glass material
 //------------------------------------------------------------------------------
 
 Spectrum GlassMaterial::Evaluate(const bool fromLight, const bool into,
@@ -193,7 +233,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 }
 
 //------------------------------------------------------------------------------
-// Architectural glass
+// Architectural glass material
 //------------------------------------------------------------------------------
 
 Spectrum ArchGlassMaterial::Evaluate(const bool fromLight, const bool into,

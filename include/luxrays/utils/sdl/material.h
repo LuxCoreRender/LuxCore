@@ -59,8 +59,6 @@ public:
 	bool IsLightSource() const { return true; }
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return false; }
-
-	virtual Spectrum Le(const ExtMesh *mesh, const unsigned triIndex, const Vector &wo) const = 0;
 };
 
 class AreaLightMaterial : public LightMaterial {
@@ -68,15 +66,6 @@ public:
 	AreaLightMaterial(const Spectrum &col) { gain = col; }
 
 	MaterialType GetType() const { return AREALIGHT; }
-
-	Spectrum Le(const ExtMesh *mesh, const unsigned triIndex, const Vector &wo) const {
-		Normal sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
-
-		if (Dot(sampleN, wo) <= 0.f)
-			return Spectrum();
-
-		return gain; // Light sources are supposed to have flat color
-	}
 
 	const Spectrum &GetGain() const { return gain; }
 
@@ -88,19 +77,6 @@ class SurfaceMaterial : public Material {
 public:
 	bool IsLightSource() const { return false; }
 
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	virtual Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const = 0;
-	virtual Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N,
-		const Normal &shadeN, const float u0, const float u1,  const float u2,
-		const bool onlySpecular, float *pdf, bool &specularBounce) const = 0;
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
-	
 	virtual Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const {
@@ -114,6 +90,10 @@ public:
 		throw std::runtime_error("Internal error, called SurfaceMaterial::Sample()");
 	}
 };
+
+//------------------------------------------------------------------------------
+// Matte material
+//------------------------------------------------------------------------------
 
 class MatteMaterial : public SurfaceMaterial {
 public:
@@ -190,6 +170,10 @@ private:
 	Spectrum Kd, KdOverPI;
 };
 
+//------------------------------------------------------------------------------
+// Mirror material
+//------------------------------------------------------------------------------
+
 class MirrorMaterial : public SurfaceMaterial {
 public:
 	MirrorMaterial(const Spectrum &refl, bool reflSpecularBounce) {
@@ -244,6 +228,10 @@ private:
 	bool reflectionSpecularBounce;
 };
 
+//------------------------------------------------------------------------------
+// MatteMirror material
+//------------------------------------------------------------------------------
+
 class MatteMirrorMaterial : public SurfaceMaterial {
 public:
 	MatteMirrorMaterial(const Spectrum &col, const Spectrum refl, bool reflSpecularBounce) :
@@ -260,6 +248,17 @@ public:
 
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
+
+	const MatteMaterial &GetMatte() const { return matte; }
+	const MirrorMaterial &GetMirror() const { return mirror; }
+	float GetMatteFilter() const { return matteFilter; }
+	float GetTotFilter() const { return totFilter; }
+	float GetMattePdf() const { return mattePdf; }
+	float GetMirrorPdf() const { return mirrorPdf; }
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
 
 	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		return matte.f(wo, wi, N) * mattePdf;
@@ -283,18 +282,27 @@ public:
 		}
 	}
 
-	const MatteMaterial &GetMatte() const { return matte; }
-	const MirrorMaterial &GetMirror() const { return mirror; }
-	float GetMatteFilter() const { return matteFilter; }
-	float GetTotFilter() const { return totFilter; }
-	float GetMattePdf() const { return mattePdf; }
-	float GetMirrorPdf() const { return mirrorPdf; }
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	MatteMaterial matte;
 	MirrorMaterial mirror;
 	float matteFilter, totFilter, mattePdf, mirrorPdf;
 };
+
+//------------------------------------------------------------------------------
+// Glass material
+//------------------------------------------------------------------------------
 
 class GlassMaterial : public SurfaceMaterial {
 public:
@@ -422,6 +430,10 @@ private:
 	bool reflectionSpecularBounce, transmitionSpecularBounce;
 };
 
+//------------------------------------------------------------------------------
+// Metal material
+//------------------------------------------------------------------------------
+
 class MetalMaterial : public SurfaceMaterial {
 public:
 	MetalMaterial(const Spectrum &refl, const float exp, bool reflSpecularBounce) {
@@ -544,6 +556,10 @@ private:
 	float matteFilter, totFilter, mattePdf, metalPdf;
 };
 
+//------------------------------------------------------------------------------
+// Architectural glass material
+//------------------------------------------------------------------------------
+
 class ArchGlassMaterial : public SurfaceMaterial {
 public:
 	ArchGlassMaterial(const Spectrum &refl, const Spectrum &refrct,
@@ -637,6 +653,10 @@ private:
 	float transFilter, totFilter, reflPdf, transPdf;
 	bool reflectionSpecularBounce, transmitionSpecularBounce;
 };
+
+//------------------------------------------------------------------------------
+// Alloy material
+//------------------------------------------------------------------------------
 
 class AlloyMaterial : public SurfaceMaterial {
 public:

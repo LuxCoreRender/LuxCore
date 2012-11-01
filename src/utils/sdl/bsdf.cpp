@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "luxrays/core/geometry/frame.h"
 #include "luxrays/utils/sdl/bsdf.h"
+#include "luxrays/utils/sdl/scene.h"
 
 namespace luxrays { namespace sdl {
 

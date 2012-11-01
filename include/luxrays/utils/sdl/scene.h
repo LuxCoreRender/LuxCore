@@ -32,7 +32,7 @@
 #include "luxrays/utils/sdl/material.h"
 #include "luxrays/utils/sdl/texmap.h"
 #include "luxrays/utils/sdl/extmeshcache.h"
-
+#include "luxrays/utils/sdl/bsdf.h"
 #include "luxrays/utils/properties.h"
 
 namespace luxrays { namespace sdl {
@@ -51,6 +51,9 @@ public:
 			const Point &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
+	bool Intersect(const bool fromLight, const bool stopOnArchGlass,
+		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf,
+		Spectrum *connectionThroughput) const;
 
 	void UpdateDataSet(Context *ctx);
 
