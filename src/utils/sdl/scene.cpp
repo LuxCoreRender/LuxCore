@@ -263,17 +263,14 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 		InfiniteLight *il = new InfiniteLight(tex);
 
-		// Add the infinite light to the list of light sources
-		lights.push_back(il);
-		infiniteLight = il;
-
 		std::vector<float> vf = GetParameters(*scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
 		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
 		vf = GetParameters(*scnProp, "scene.infinitelight.shift", 2, "0.0 0.0");
 		il->SetShift(vf.at(0), vf.at(1));
-
 		il->Preprocess();
+
+		infiniteLight = il;
 	} else
 		infiniteLight = NULL;
 
@@ -292,7 +289,7 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->Init();
+		sl->Preprocess();
 
 		infiniteLight = sl;
 	}
@@ -308,12 +305,13 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		const float relSize = scnProp->GetFloat("scene.sunlight.relsize", 1.0f);
 		std::vector<float> gain = GetParameters(*scnProp, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
 
-		SunLight *sunLight = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		sunLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sunLight->Init();
+		SunLight *sl = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sl->Preprocess();
 
-		lights.push_back(sunLight);
-	}
+		sunLight = sl;
+	} else
+		sunLight = NULL;
 
 	//--------------------------------------------------------------------------
 
@@ -322,6 +320,8 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 Scene::~Scene() {
 	delete camera;
+	delete infiniteLight;
+	delete sunLight;
 
 	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
 		delete *l;
@@ -438,4 +438,83 @@ Material *Scene::CreateMaterial(const std::string &propName, const Properties &p
 		return new AlloyMaterial(Kdiff, Krfl, vf.at(6), vf.at(7), vf.at(8) != 0.f);
 	} else
 		throw std::runtime_error("Unknown material type " + matType);
+}
+
+LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
+	if (infiniteLight && (lightType == infiniteLight->GetType()))
+			return infiniteLight;
+	if (sunLight && (lightType == TYPE_SUN))
+			return sunLight;
+
+	for (unsigned int i = 0; i < static_cast<unsigned int>(lights.size()); ++i) {
+		LightSource *ls = lights[i];
+		if (ls->GetType() == lightType)
+			return ls;
+	}
+
+	return NULL;
+}
+
+LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
+	unsigned int lightsSize = static_cast<unsigned int>(lights.size());
+	if (infiniteLight)
+		++lightsSize;
+	if (sunLight)
+		++lightsSize;
+
+	// One Uniform light strategy
+	const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
+	*pdf = 1.f / lightsSize;
+
+	if (infiniteLight) {
+		if (sunLight) {
+			if (lightIndex == lightsSize - 1)
+				return sunLight;
+			else if (lightIndex == lightsSize - 2)
+				return infiniteLight;
+			else
+				return lights[lightIndex];
+		} else {
+			if (lightIndex == lightsSize - 1)
+				return infiniteLight;
+			else
+				return lights[lightIndex];
+		}
+	} else {
+		if (sunLight) {
+			if (lightIndex == lightsSize - 1)
+				return sunLight;
+			else
+				return lights[lightIndex];
+		} else
+			return lights[lightIndex];
+	}
+}
+
+float Scene::PickLightPdf() const {
+	unsigned int lightsSize = static_cast<unsigned int>(lights.size());
+	if (infiniteLight)
+		++lightsSize;
+	if (sunLight)
+		++lightsSize;
+
+	return 1.f / lightsSize;
+}
+
+Spectrum Scene::GetEnvLightsRadiance(const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA,
+			float *emissionPdfW) const {
+	Spectrum radiance;
+	if (infiniteLight)
+		radiance += infiniteLight->GetRadiance(this, dir, hitPoint, directPdfA, emissionPdfW);
+	if (sunLight)
+		radiance += sunLight->GetRadiance(this, dir, hitPoint, directPdfA, emissionPdfW);
+
+	if (directPdfA)
+		*directPdfA *= PickLightPdf();
+	if (emissionPdfW)
+		*emissionPdfW *= PickLightPdf();
+
+	return radiance;
 }

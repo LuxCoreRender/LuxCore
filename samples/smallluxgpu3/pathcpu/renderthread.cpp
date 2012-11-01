@@ -110,22 +110,15 @@ void PathCPURenderEngine::DirectHitLightSampling(
 void PathCPURenderEngine::DirectHitInfiniteLight(
 		const bool lastSpecular, const Spectrum &pathThrouput,
 		const Vector &eyeDir, const float lastPdfW, Spectrum *radiance) {
-	Scene *scene = renderConfig->scene;
-
-	if (!scene->infiniteLight)
-		return;
-
 	float directPdfW;
-	Spectrum lightRadiance = scene->infiniteLight->GetRadiance(
-			scene, -eyeDir, Point(), &directPdfW);
+	Spectrum lightRadiance = renderConfig->scene->GetEnvLightsRadiance(-eyeDir, Point(), &directPdfW);
 	if (lightRadiance.Black())
 		return;
 
 	float weight;
-	if(!lastSpecular) {
-		const float lightPickProb = scene->PickLightPdf();
-		weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
-	} else
+	if(!lastSpecular)
+		weight = PowerHeuristic(lastPdfW, directPdfW);
+	else
 		weight = 1.f;
 
 	*radiance += pathThrouput * weight * lightRadiance;

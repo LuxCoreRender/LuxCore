@@ -558,7 +558,7 @@ void CompiledScene::CompileInfiniteLight() {
 
 	const double tStart = WallClockTime();
 
-	InfiniteLight *il = (InfiniteLight *)scene->GetLight(TYPE_IL);
+	InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 	if (il) {
 		infiniteLight = new PathOCL::InfiniteLight();
 
@@ -627,7 +627,7 @@ void CompiledScene::CompileSkyLight() {
 	// Check if there is an sky light source
 	//--------------------------------------------------------------------------
 
-	SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
+	SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 	if (sl) {
 		skyLight = new PathOCL::SkyLight();
 
