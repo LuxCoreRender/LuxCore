@@ -518,3 +518,41 @@ Spectrum Scene::GetEnvLightsRadiance(const Vector &dir,
 
 	return radiance;
 }
+
+bool Scene::Intersect(const bool fromLight, const bool stopOnArchGlass,
+		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf, Spectrum *connectionThroughput) const {
+	*connectionThroughput = Spectrum(1.f, 1.f, 1.f);
+	for (;;) {
+		if (!dataSet->Intersect(ray, rayHit)) {
+			// Nothing was hit
+			return false;
+		} else {
+			// Check if it is a pass through point
+			bsdf->Init(fromLight, *this, *ray, *rayHit, u0);
+
+			// Check if it is pass-through point
+			if (bsdf->IsPassThrough()) {
+				// It is a pass-through material, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+
+				continue;
+			}
+
+			// Check if it is a light source
+			if (bsdf->IsLightSource())
+				return true;
+
+			// Check if it is architectural glass
+			if (!stopOnArchGlass && bsdf->IsShadowTransparent()) {
+				*connectionThroughput *= bsdf->GetSahdowTransparency();
+
+				// It is a shadow transparent material, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+
+				continue;
+			}
+
+			return true;
+		}
+	}
+}

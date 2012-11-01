@@ -173,10 +173,6 @@ protected:
 
 	virtual void UpdateFilmLockLess();
 
-	// Utility functions
-	bool SceneIntersect(const bool fromLight,  const bool stopOnArchGlass, const float u0,
-		Ray *ray, RayHit *rayHit, BSDF *bsdf, Spectrum *connectionThroughput) const;
-
 	vector<CPURenderThread *> renderThreads;
 	void (* renderThreadFunc)(CPURenderThread *renderThread);
 };
