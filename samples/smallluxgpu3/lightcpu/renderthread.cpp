@@ -73,19 +73,6 @@ void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 	ConnectToEye(film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
 }
 
-void LightCPURenderEngine::DirectHitLightSampling(const Vector &eyeDir,
-		const BSDF &bsdf, Spectrum *radiance) {
-	float directPdfA;
-	*radiance += bsdf.GetEmittedRadiance(renderConfig->scene,
-		eyeDir, &directPdfA);
-}
-
-void LightCPURenderEngine::DirectHitInfiniteLight(const Vector &eyeDir,
-		Spectrum *radiance) {
-	float directPdfW;
-	*radiance += renderConfig->scene->GetEnvLightsRadiance(-eyeDir, Point(), &directPdfW);
-}
-
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread started");
 
@@ -154,11 +141,11 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				false, true, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 			if (!somethingWasHit) {
 				// Nothing was hit, check infinite lights (including sun)
-				renderEngine->DirectHitInfiniteLight(eyeRay.d, &radiance);
+				radiance += scene->GetEnvLightsRadiance(-eyeRay.d, Point());
 			} else {
 				// Something was hit, check if it is a light source
 				if (bsdf.IsLightSource())
-					renderEngine->DirectHitLightSampling(-eyeRay.d, bsdf, &radiance);
+					radiance += bsdf.GetEmittedRadiance(scene, -eyeRay.d);
 			}
 			radiance *= connectionThroughput;
 
