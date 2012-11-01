@@ -303,7 +303,6 @@ std::string luxrays::KernelSource_PathOCL_kernel_scene =
 "	if (dir.z <= 0.0001f)\n"
 "		*pdf = 0.f;\n"
 "	else {\n"
-"                // TODO: this should be mat * INV_PI\n"
 "		f->r = mat->r;\n"
 "		f->g = mat->g;\n"
 "		f->b = mat->b;\n"

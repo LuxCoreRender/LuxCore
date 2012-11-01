@@ -51,7 +51,7 @@ public:
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsPassThrough() const { return isPassThrough; }
 	bool IsLightSource() const { return isLightSource; }
-	bool IsDelta() const { return surfMat->IsSpecular(); }
+	bool IsDelta() const { return !surfMat->IsDiffuse(); }
 	bool IsShadowTransparent() const { return surfMat->IsShadowTransparent(); }
 
 	const Spectrum &GetSahdowTransparency() const {
