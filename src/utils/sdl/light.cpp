@@ -325,53 +325,6 @@ void SunLight::SetGain(const Spectrum &g) {
 	gain = g;
 }
 
-//------------------------------------------------------------------------------
-// Old interface
-//------------------------------------------------------------------------------
-
-Spectrum SunLight::Le(const Scene *scene, const Vector &dir) const {
-	if((cosThetaMax < 1.f) && (Dot(dir,-sunDir) > cosThetaMax))
-		return sunColor;
-	else
-		return Spectrum();
-}
-
-Spectrum SunLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
-	const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-	if (N && Dot(*N, -sunDir) > 0.0f) {
-		*pdf = 0.0f;
-		return Spectrum();
-	}
-
-	Vector wi = UniformSampleCone(u0, u1, cosThetaMax, x, y, sunDir);
-	*shadowRay = Ray(p, wi);
-
-	*pdf = UniformConePdf(cosThetaMax);
-
-	return sunColor;
-}
-
-Spectrum SunLight::Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
-	// Choose point on disk oriented toward infinite light direction
-	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
-
-	float d1, d2;
-	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	Point Pdisk = worldCenter + worldRadius * (d1 * x + d2 * y);
-
-	// Set ray origin and direction for infinite light ray
-	*ray = Ray(Pdisk + worldRadius * sunDir, -UniformSampleCone(u2, u3, cosThetaMax, x, y, sunDir));
-	*pdf = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
-
-	return sunColor;
-}
-
-//------------------------------------------------------------------------------
-// New interface
-//------------------------------------------------------------------------------
-
 Spectrum SunLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *orig, Vector *dir, Normal *N,
@@ -453,82 +406,6 @@ void TriangleLight::Init(const std::vector<ExtMesh *> &objs) {
 	area = mesh->GetTriangleArea(triIndex);
 	invArea = 1.f / area;
 }
-
-//------------------------------------------------------------------------------
-// Old interface
-//------------------------------------------------------------------------------
-
-Spectrum TriangleLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-
-	Point samplePoint;
-	float b0, b1, b2;
-	mesh->Sample(triIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = mesh->GetGeometryNormal(triIndex);
-
-	Vector wi = samplePoint - p;
-	const float distanceSquared = wi.LengthSquared();
-	const float distance = sqrtf(distanceSquared);
-	wi /= distance;
-
-	const float sampleNdotMinusWi = Dot(sampleN, -wi);
-	if ((sampleNdotMinusWi <= 0.f) || (N && Dot(*N, wi) <= 0.f)) {
-		*pdf = 0.f;
-		return Spectrum();
-	}
-
-	*shadowRay = Ray(p, wi, MachineEpsilon::E(p), distance - MachineEpsilon::E(distance));
-	*pdf = distanceSquared / (sampleNdotMinusWi * area);
-
-	// Using 0.1 instead of 0.0 to cut down fireflies
-	if (*pdf <= 0.1f) {
-		*pdf = 0.f;
-		return Spectrum();
-	}
-
-	return lightMaterial->GetGain();
-}
-
-Spectrum TriangleLight::Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-
-	// Ray origin
-	float b0, b1, b2;
-	Point orig;
-	mesh->Sample(triIndex, u0, u1, &orig, &b0, &b1, &b2);
-
-	// Ray direction
-	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
-	Vector dir = UniformSampleSphere(u2, u3);
-	float RdotN = Dot(dir, sampleN);
-	if (RdotN < 0.f) {
-		dir *= -1.f;
-		RdotN = -RdotN;
-	}
-
-	*ray = Ray(orig, dir);
-
-	*pdf = INV_TWOPI / area;
-
-	return lightMaterial->GetGain() * RdotN;
-}
-
-Spectrum TriangleLight::Le(const Scene *scene, const Vector &dir) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
-
-	const float RdotN = Dot(-dir, sampleN);
-	if (RdotN < 0.f)
-		return Spectrum();
-
-	return M_PI * lightMaterial->GetGain() * RdotN;	
-}
-
-//------------------------------------------------------------------------------
-// New interface
-//------------------------------------------------------------------------------
 
 Spectrum TriangleLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
