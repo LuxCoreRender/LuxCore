@@ -43,7 +43,7 @@ void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 			RayHit eyeRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			if (!SceneIntersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
+			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				const float cosToCamera = Dot(shadeN, -eyeDir);
@@ -136,7 +136,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			Spectrum radiance, connectionThroughput;
 			RayHit eyeRayHit;
 			BSDF bsdf;
-			const bool somethingWasHit = renderEngine->SceneIntersect(
+			const bool somethingWasHit = scene->Intersect(
 				false, true, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 			if (!somethingWasHit) {
 				// Nothing was hit, check infinite lights (including sun)
@@ -164,7 +164,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			if (renderEngine->SceneIntersect(true, true, rndGen->floatValue(),
+			if (scene->Intersect(true, true, rndGen->floatValue(),
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				

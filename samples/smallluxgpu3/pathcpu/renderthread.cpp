@@ -61,7 +61,7 @@ void PathCPURenderEngine::DirectLightSampling(
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
-				if (!SceneIntersect(false, false, u5, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				if (!scene->Intersect(false, false, u5, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
 					const float factor = cosThetaToLight / (directPdfW * lightPickPdf);
 
@@ -132,7 +132,8 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	PathCPURenderEngine *renderEngine = (PathCPURenderEngine *)renderThread->renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
-	PerspectiveCamera *camera = renderEngine->renderConfig->scene->camera;
+	Scene *scene = renderEngine->renderConfig->scene;
+	PerspectiveCamera *camera = scene->camera;
 	Film * film = renderThread->threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
@@ -157,7 +158,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		while (depth <= renderEngine->maxPathDepth) {
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!renderEngine->SceneIntersect(false, true, rndGen->floatValue(), &eyeRay,
+			if (!scene->Intersect(false, true, rndGen->floatValue(), &eyeRay,
 					&eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 				renderEngine->DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, eyeRay.d,

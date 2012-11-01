@@ -22,11 +22,17 @@
 #ifndef _LUXRAYS_SDL_BSDF_H
 #define	_LUXRAYS_SDL_BSDF_H
 
+#include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/frame.h"
-#include "luxrays/utils/sdl/scene.h"
+#include "luxrays/utils/core/spectrum.h"
+#include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/bsdfevents.h"
+#include "luxrays/utils/sdl/material.h"
+#include "luxrays/utils/sdl/light.h"
 
 namespace luxrays { namespace sdl {
+
+class Scene;
 
 class BSDF {
 public:
