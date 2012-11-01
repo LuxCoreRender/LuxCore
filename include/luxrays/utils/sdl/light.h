@@ -36,6 +36,10 @@ enum LightSourceType {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
 };
 
+//------------------------------------------------------------------------------
+// LightSource implementation
+//------------------------------------------------------------------------------
+
 class LightSource {
 public:
 	LightSource() { }
@@ -71,7 +75,7 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// InfiniteLightBase
+// InfiniteLightBase implementation
 //------------------------------------------------------------------------------
 
 class InfiniteLightBase : public LightSource {
@@ -110,7 +114,7 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-// InfiniteLight
+// InfiniteLight implementation
 //------------------------------------------------------------------------------
 
 class InfiniteLight : public InfiniteLightBase {
@@ -129,21 +133,6 @@ public:
 	float GetShiftV() const { return shiftV; }
 
 	const TexMapInstance *GetTexture() const { return tex; }
-
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum Le(const Scene *scene, const Vector &dir) const;
-
-	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir, const Point &hitPoint,
@@ -238,21 +227,6 @@ public:
 		*suncolorData = sunColor;
 	}
 
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum Le(const Scene *scene, const Vector &dir) const;
-
-	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
-
 	Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *pos, Vector *dir, Normal *normal,
@@ -302,21 +276,6 @@ public:
 	unsigned int GetMeshIndex() const { return meshIndex; }
 	unsigned int GetTriIndex() const { return triIndex; }
 	float GetArea() const { return area; }
-
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
-		const float u4, float *pdf, Ray *ray) const;
-	Spectrum Le(const Scene *scene, const Vector &dir) const;
-
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
