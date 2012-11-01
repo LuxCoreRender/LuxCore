@@ -19,25 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <iomanip>
-#include <string.h>
-#include <string>
-#include <sstream>
-#include <stdexcept>
-
-#if defined(__APPLE__)
-//OSX version detection
-#include <sys/utsname.h>
-#endif
-
-#include <boost/thread/mutex.hpp>
-
 #include "smalllux.h"
-
 #include "pathocl/pathocl.h"
 #include "pathocl/kernels/kernels.h"
 #include "renderconfig.h"

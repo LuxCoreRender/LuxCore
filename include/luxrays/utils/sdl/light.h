@@ -220,13 +220,6 @@ public:
 	void SetGain(const Spectrum &g);
 	const Spectrum GetGain() const { return gain; }
 
-	Spectrum Le(const Scene *scene, const Vector &dir) const;
-
-	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
-
 	void GetInitData(Vector *xData, Vector *yData,
 		float *thetaSData, float *phiSData, float *VData,
 		float *cosThetaMaxData, float *sin2ThetaMaxData,
@@ -238,8 +231,39 @@ public:
 		*VData = V;
 		*cosThetaMaxData = cosThetaMax;
 		*sin2ThetaMaxData = sin2ThetaMax;
-		*suncolorData = suncolor;
+		*suncolorData = sunColor;
 	}
+
+	//--------------------------------------------------------------------------
+	// Old interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Le(const Scene *scene, const Vector &dir) const;
+
+	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
+		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
+	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
+		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
+
+	//--------------------------------------------------------------------------
+	// New interface
+	//--------------------------------------------------------------------------
+
+	Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir, Normal *normal,
+		float *emissionPdfW, float *directPdfA = NULL) const;
+
+	Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL) const;
+
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const;
 
 protected:
 	Vector sundir;
@@ -250,7 +274,7 @@ protected:
 	Vector x, y;
 	float thetaS, phiS, V;
 	float cosThetaMax, sin2ThetaMax;
-	Spectrum suncolor;
+	Spectrum sunColor;
 };
 
 //------------------------------------------------------------------------------
@@ -289,7 +313,6 @@ public:
 	//--------------------------------------------------------------------------
 	// New interface
 	//--------------------------------------------------------------------------
-
 
 	Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,

@@ -222,16 +222,20 @@ void SunLight::Init() {
 
 	RegularSPD LSPD(Ldata, 350,800,91);
 	// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is for compatibility with past scene
-	suncolor = gain * LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
+	sunColor = gain * LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
 }
 
 void SunLight::SetGain(const Spectrum &g) {
 	gain = g;
 }
 
+//------------------------------------------------------------------------------
+// Old interface
+//------------------------------------------------------------------------------
+
 Spectrum SunLight::Le(const Scene *scene, const Vector &dir) const {
 	if((cosThetaMax < 1.f) && (Dot(dir,-sundir) > cosThetaMax))
-		return suncolor;
+		return sunColor;
 	else
 		return Spectrum();
 }
@@ -248,7 +252,7 @@ Spectrum SunLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
 
 	*pdf = UniformConePdf(cosThetaMax);
 
-	return suncolor;
+	return sunColor;
 }
 
 Spectrum SunLight::Sample_L(const Scene *scene, const float u0, const float u1,
@@ -265,7 +269,69 @@ Spectrum SunLight::Sample_L(const Scene *scene, const float u0, const float u1,
 	*ray = Ray(Pdisk + worldRadius * sundir, -UniformSampleCone(u2, u3, cosThetaMax, x, y, sundir));
 	*pdf = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 
-	return suncolor;
+	return sunColor;
+}
+
+//------------------------------------------------------------------------------
+// New interface
+//------------------------------------------------------------------------------
+
+Spectrum SunLight::Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *orig, Vector *dir, Normal *N,
+		float *emissionPdfW, float *directPdfA) const {
+	// Choose point on disk oriented toward infinite light direction
+	const Point worldCenter = scene->dataSet->GetBSphere().center;
+	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+
+	float d1, d2;
+	ConcentricSampleDisk(u0, u1, &d1, &d2);
+	Point Pdisk = worldCenter + worldRadius * (d1 * x + d2 * y);
+
+	// Set ray origin and direction for infinite light ray
+	*orig = Pdisk + worldRadius * sundir;
+	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, sundir);
+	*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = UniformConePdf(cosThetaMax);
+
+	return sunColor;
+}
+
+Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW) const {
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, sundir);
+	*distance = std::numeric_limits<float>::infinity();
+	*directPdfW = UniformConePdf(cosThetaMax);
+
+	if (emissionPdfW) {
+		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+	}
+	
+	return sunColor;
+}
+
+Spectrum SunLight::GetRadiance(const Scene *scene,
+		const Vector &dir,
+		const Point &hitPoint,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	if ((cosThetaMax < 1.f) && (Dot(dir, -sundir) > cosThetaMax)) {
+		if (directPdfA)
+			*directPdfA = UniformConePdf(cosThetaMax);
+
+		if (emissionPdfW) {
+			const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+			*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+		}
+
+		return sunColor;
+	} else
+		return Spectrum();
 }
 
 //------------------------------------------------------------------------------
