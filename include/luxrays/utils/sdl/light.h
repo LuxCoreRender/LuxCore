@@ -53,7 +53,7 @@ public:
 	// Emits particle from the light
 	virtual Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *pos, Vector *dir, Normal *normal,
+		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL) const {
 		throw std::runtime_error("Internal error, called LightSource::Emit()");
 	}
@@ -97,7 +97,7 @@ public:
 
 	Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *pos, Vector *dir, Normal *normal,
+		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL) const;
 
     Spectrum Illuminate(const Scene *scene, const Point &p,
@@ -229,7 +229,7 @@ public:
 
 	Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *pos, Vector *dir, Normal *normal,
+		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL) const;
 
 	Spectrum Illuminate(const Scene *scene, const Point &p,
@@ -279,7 +279,7 @@ public:
 
 	Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *pos, Vector *dir, Normal *normal,
+		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL) const;
 
 	Spectrum Illuminate(const Scene *scene, const Point &p,
