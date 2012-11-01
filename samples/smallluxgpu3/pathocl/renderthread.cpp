@@ -28,6 +28,11 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/utils/ocl/utils.h"
 
+#if defined(__APPLE__)
+//OSX version detection
+#include <sys/utsname.h>
+#endif
+
 //------------------------------------------------------------------------------
 // PathOCLRenderThread
 //------------------------------------------------------------------------------
