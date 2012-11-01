@@ -282,3 +282,62 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight,
 		}
 	}
 }
+
+//------------------------------------------------------------------------------
+// Metal material
+//------------------------------------------------------------------------------
+
+Spectrum MetalMaterial::Evaluate(const bool fromLight, const bool into,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	*event = SPECULAR | REFLECT;
+
+	return Spectrum();
+}
+
+Vector MetalMaterial::GlossyReflection(const Vector &fixedDir, const float exponent,
+		const float u0, const float u1) {
+	const Normal shadeN(0.f, 0.f, 1.f);
+
+	const float phi = 2.f * M_PI * u0;
+	const float cosTheta = powf(1.f - u1, exponent);
+	const float sinTheta = sqrtf(Max(0.f, 1.f - cosTheta * cosTheta));
+	const float x = cosf(phi) * sinTheta;
+	const float y = sinf(phi) * sinTheta;
+	const float z = cosTheta;
+
+	const Vector dir = -fixedDir;
+	const float dp = Dot(shadeN, dir);
+	const Vector w = dir - (2.f * dp) * Vector(shadeN);
+
+	Vector u;
+	if (fabsf(shadeN.x) > .1f) {
+		const Vector a(0.f, 1.f, 0.f);
+		u = Cross(a, w);
+	} else {
+		const Vector a(1.f, 0.f, 0.f);
+		u = Cross(a, w);
+	}
+	u = Normalize(u);
+	Vector v = Cross(w, u);
+
+	return x * u + y * v + z * w;
+}
+
+Spectrum MetalMaterial::Sample(const bool fromLight,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float u2,
+	float *pdf, float *cosSampledDir, BSDFEvent *event) const {
+	*event = SPECULAR | REFLECT;
+
+	*sampledDir = GlossyReflection(fixedDir, exponent, u0, u1);
+
+	if (sampledDir->z > 0.f) {
+		*pdf = 1.f;
+
+		*cosSampledDir = fabsf(sampledDir->z);
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return Kr / (*cosSampledDir);
+	} else
+		return Spectrum();
+}

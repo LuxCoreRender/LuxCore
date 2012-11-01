@@ -446,64 +446,30 @@ public:
 
 	bool IsDiffuse() const { return false; }
 	bool IsSpecular() const { return true; }
-
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
-		throw std::runtime_error("Internal error, called MetalMaterial::f()");
-	}
-
-	Spectrum Sample_f(const Vector &wo, Vector *wi, const Normal &N, const Normal &shadeN,
-		const float u0, const float u1,  const float u2, const bool onlySpecular,
-		float *pdf, bool &specularBounce) const {
-		(*wi) = GlossyReflection(wo, exponent, shadeN, u0, u1);
-
-		if (Dot(*wi, shadeN) > 0.f) {
-			specularBounce = reflectionSpecularBounce;
-			*pdf = 1.f;
-
-			return Kr;
-		} else {
-			*pdf = 0.f;
-
-			return Spectrum();
-		}
-	}
-
+	
 	const Spectrum &GetKr() const { return Kr; }
 	float GetExp() const { return exponent; }
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
-	static Vector GlossyReflection(const Vector &wo, const float exponent,
-		const Normal &shadeN, const float u0, const float u1) {
-		const float phi = 2.f * M_PI * u0;
-		const float cosTheta = powf(1.f - u1, exponent);
-		const float sinTheta = sqrtf(Max(0.f, 1.f - cosTheta * cosTheta));
-		const float x = cosf(phi) * sinTheta;
-		const float y = sinf(phi) * sinTheta;
-		const float z = cosTheta;
+	Spectrum Evaluate(const bool fromLight, const bool into,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
 
-		const Vector dir = -wo;
-		const float dp = Dot(shadeN, dir);
-		const Vector w = dir - (2.f * dp) * Vector(shadeN);
-
-		Vector u;
-		if (fabsf(shadeN.x) > .1f) {
-			const Vector a(0.f, 1.f, 0.f);
-			u = Cross(a, w);
-		} else {
-			const Vector a(1.f, 0.f, 0.f);
-			u = Cross(a, w);
-		}
-		u = Normalize(u);
-		Vector v = Cross(w, u);
-
-		return x * u + y * v + z * w;
-	}
-
+	static Vector GlossyReflection(const Vector &fixedDir, const float exponent,
+			const float u0, const float u1);
 private:
 	Spectrum Kr;
 	float exponent;
 	bool reflectionSpecularBounce;
 };
+
+//------------------------------------------------------------------------------
+// MetalMetal material
+//------------------------------------------------------------------------------
 
 class MatteMetalMaterial : public SurfaceMaterial {
 public:
@@ -522,7 +488,7 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
+	/*Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		return matte.f(wo, wi, N) * mattePdf;
 	}
 
@@ -542,7 +508,7 @@ public:
 
 			return f;
 		}
-	}
+	}*/
 	const MatteMaterial &GetMatte() const { return matte; }
 	const MetalMaterial &GetMetal() const { return metal; }
 	float GetMatteFilter() const { return matteFilter; }
@@ -676,7 +642,7 @@ public:
 	bool IsDiffuse() const { return true; }
 	bool IsSpecular() const { return true; }
 
-	Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
+	/*Spectrum f(const Vector &wo, const Vector &wi, const Normal &N) const {
 		// Schilick's approximation
 		const float c = 1.f - Dot(wo, N);
 		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
@@ -730,7 +696,7 @@ public:
 			return iRe * Kdiff;
 
 		}
-	}
+	}*/
 
 	const Spectrum &GetKrefl() const { return Krefl; }
 	const Spectrum &GetKd() const { return Kdiff; }
