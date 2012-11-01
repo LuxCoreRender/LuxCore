@@ -34,7 +34,7 @@ using namespace luxrays::sdl;
 
 Spectrum InfiniteLightBase::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *orig, Vector *dir, Normal *N,
+		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA) const {
 	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
@@ -46,7 +46,6 @@ Spectrum InfiniteLightBase::Emit(const Scene *scene,
 	// Construct ray between p1 and p2
 	*orig = p1;
 	*dir = Normalize(p2 - p1);
-	*N = Normal(Normalize(worldCenter - p1));
 
 	// Compute InfiniteAreaLight ray weight
 	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
@@ -328,7 +327,7 @@ void SunLight::SetGain(const Spectrum &g) {
 
 Spectrum SunLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *orig, Vector *dir, Normal *N,
+		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA) const {
 	// Choose point on disk oriented toward infinite light direction
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
@@ -415,7 +414,7 @@ void TriangleLight::Init(const std::vector<ExtMesh *> &objs) {
 
 Spectrum TriangleLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
-		Point *orig, Vector *dir, Normal *N,
+		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA) const {
 	const ExtMesh *mesh = scene->objects[meshIndex];
 
@@ -424,8 +423,8 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
 
 	// Build the local frame
-	*N = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
-	Frame frame(*N);
+	const Normal N = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
+	Frame frame(N);
 
 	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
 	if (*emissionPdfW == 0.f)
