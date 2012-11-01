@@ -261,8 +261,9 @@ void SunLight::Preprocess() {
 	const float sunRadius = 695500.f;
 	const float sunMeanDistance = 149600000.f;
 
-	if (relSize * sunRadius <= sunMeanDistance) {
-		sin2ThetaMax = relSize * sunRadius / sunMeanDistance;
+	const float sunSize = relSize * sunRadius;
+	if (sunSize <= sunMeanDistance) {
+		sin2ThetaMax = sunSize / sunMeanDistance;
 		sin2ThetaMax *= sin2ThetaMax;
 		cosThetaMax = sqrtf(1.f - sin2ThetaMax);
 	} else {
@@ -353,6 +354,11 @@ Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW) const {
 	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, sunDir);
+
+	// Check if the point can be inside the sun cone of light
+	if (Dot(*dir, sunDir) <= cosThetaMax)
+		return Spectrum();
+
 	*distance = std::numeric_limits<float>::infinity();
 	*directPdfW = UniformConePdf(cosThetaMax);
 
@@ -372,7 +378,7 @@ Spectrum SunLight::GetRadiance(const Scene *scene,
 	// Make the sun visible only if relsize has been changed (in order
 	// to avoid fireflies).
 	if (relSize > 5.f) {
-		if ((cosThetaMax < 1.f) && (Dot(dir, -sunDir) > cosThetaMax)) {
+		if ((cosThetaMax < 1.f) && (Dot(-dir, sunDir) > cosThetaMax)) {
 			if (directPdfA)
 				*directPdfA = UniformConePdf(cosThetaMax);
 
