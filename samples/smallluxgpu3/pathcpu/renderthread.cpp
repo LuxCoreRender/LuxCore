@@ -27,7 +27,6 @@
 #include "luxrays/utils/core/mc.h"
 
 // TODO: use only brute force to sample infinitelight
-// TODO: write BSDF::Illuminate()
 
 //------------------------------------------------------------------------------
 // PathCPU RenderThread
