@@ -38,28 +38,13 @@ enum LightSourceType {
 
 class LightSource {
 public:
+	LightSource() { }
 	virtual ~LightSource() { }
 
 	virtual LightSourceType GetType() const = 0;
 
 	virtual bool IsAreaLight() const { return false; }
 	virtual bool IsEnvironmental() const { return false; }
-
-	//--------------------------------------------------------------------------
-	// Old interface
-	//--------------------------------------------------------------------------
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
-
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const = 0;
-
-	virtual Spectrum Le(const Scene *scene, const Vector &dir) const = 0;
-	
-	//--------------------------------------------------------------------------
-	// New interface
-	//--------------------------------------------------------------------------
 
 	// Emits particle from the light
 	virtual Spectrum Emit(const Scene *scene,
@@ -86,16 +71,17 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// InfiniteLight implementations
+// InfiniteLightBase
 //------------------------------------------------------------------------------
 
-class InfiniteLight : public LightSource {
+class InfiniteLightBase : public LightSource {
 public:
-	InfiniteLight(TexMapInstance *tx);
-	~InfiniteLight() { }
+	InfiniteLightBase() : gain(1.f, 1.f, 1.f) { }
+	~InfiniteLightBase() { }
 
-	LightSourceType GetType() const { return TYPE_IL; }
-	virtual bool IsEnvironmental() const { return true; }
+	virtual void Preprocess() { }
+
+	bool IsEnvironmental() const { return true; }
 
 	void SetGain(const Spectrum &g) {
 		gain = g;
@@ -104,6 +90,35 @@ public:
 	Spectrum GetGain() const {
 		return gain;
 	}
+
+	Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir, Normal *normal,
+		float *emissionPdfW, float *directPdfA = NULL) const;
+
+    Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL) const;
+
+	virtual Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
+
+protected:
+	Spectrum gain;
+};
+
+//------------------------------------------------------------------------------
+// InfiniteLight
+//------------------------------------------------------------------------------
+
+class InfiniteLight : public InfiniteLightBase {
+public:
+	InfiniteLight(TexMapInstance *tx);
+	~InfiniteLight() { }
+
+	LightSourceType GetType() const { return TYPE_IL; }
 
 	void SetShift(const float su, const float sv) {
 		shiftU = su;
@@ -114,8 +129,6 @@ public:
 	float GetShiftV() const { return shiftV; }
 
 	const TexMapInstance *GetTexture() const { return tex; }
-
-	void Preprocess() { }
 
 	//--------------------------------------------------------------------------
 	// Old interface
@@ -132,48 +145,33 @@ public:
 	// New interface
 	//--------------------------------------------------------------------------
 
-	Spectrum Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
-		Point *pos, Vector *dir, Normal *normal,
-		float *emissionPdfW, float *directPdfA = NULL) const;
-
-    Spectrum Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
-        Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW = NULL) const;
-
 	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir, const Point &hitPoint,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
-protected:
+private:
 	TexMapInstance *tex;
 	float shiftU, shiftV;
-	Spectrum gain;
 };
 
 //------------------------------------------------------------------------------
-// Sunsky implementation
+// Sky implementation
 //------------------------------------------------------------------------------
 
-class SkyLight : public InfiniteLight {
+class SkyLight : public InfiniteLightBase {
 public:
 	SkyLight(float turbidity, const Vector &sundir);
 	virtual ~SkyLight() { }
 
-	void Init();
+	void Preprocess();
 
 	LightSourceType GetType() const { return TYPE_IL_SKY; }
-	virtual bool IsEnvironmental() const { return true; }
 
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
 
 	void SetSunDir(const Vector &dir) { sundir = dir; }
 	const Vector &GetSunDir() const { return sundir; }
-
-	virtual Spectrum Le(const Scene *scene, const Vector &dir) const;
-	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
 
 	void GetInitData(float *thetaSData, float *phiSData,
 		float *zenith_YData, float *zenith_xData, float *zenith_yData,
@@ -190,7 +188,13 @@ public:
 		}
 	}
 
-protected:
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+private:
+	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
+
 	Vector sundir;
 	float turbidity;
 	float thetaS;
@@ -201,10 +205,10 @@ protected:
 
 class SunLight : public LightSource {
 public:
-	SunLight(float turbidity, float relSize, const Vector &sundir);
+	SunLight(float turbidity, float relSize, const Vector &sunDir);
 	virtual ~SunLight() { }
 
-	void Init();
+	void Preprocess();
 
 	LightSourceType GetType() const { return TYPE_SUN; }
 
@@ -214,8 +218,8 @@ public:
 	void SetRelSize(const float s) { relSize = s; }
 	float GetRelSize() const { return relSize; }
 
-	const Vector &GetDir() const { return sundir; }
-	void SetDir(const Vector &dir) { sundir = Normalize(dir); }
+	const Vector &GetDir() const { return sunDir; }
+	void SetDir(const Vector &dir) { sunDir = Normalize(dir); }
 
 	void SetGain(const Spectrum &g);
 	const Spectrum GetGain() const { return gain; }
@@ -265,8 +269,8 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
-protected:
-	Vector sundir;
+private:
+	Vector sunDir;
 	Spectrum gain;
 	float turbidity;
 	float relSize;

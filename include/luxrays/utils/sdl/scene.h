@@ -44,39 +44,13 @@ public:
 
 	int GetAccelType() const { return accelType; }
 
-	unsigned int GetLightCount() const {
-		return static_cast<unsigned int>(lights.size());
-	}
-
-	LightSource *GetLight(unsigned int index) const {
-		return lights[index];
-	}
-
-	LightSource *GetLight(const LightSourceType lightType) const {
-		// Look for the SunLight
-		for (unsigned int i = 0; i < static_cast<unsigned int>(lights.size()); ++i) {
-			LightSource *ls = lights[i];
-			if (ls->GetType() == lightType)
-				return ls;
-		}
-
-		return NULL;
-	}
-
-	LightSource *SampleAllLights(const float u, float *pdf) const {
-		const unsigned int lightsSize = static_cast<unsigned int>(lights.size());
-
-		// One Uniform light strategy
-		const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
-
-		*pdf = 1.f / lightsSize;
-
-		return lights[lightIndex];
-	}
-
-	float PickLightPdf() const {
-		return 1.f / lights.size();
-	}
+	LightSource *GetLightByType(const LightSourceType lightType) const;
+	LightSource *SampleAllLights(const float u, float *pdf) const;
+	float PickLightPdf() const;
+	Spectrum GetEnvLightsRadiance(const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const;
 
 	void UpdateDataSet(Context *ctx);
 
@@ -88,7 +62,9 @@ public:
 	TextureMapCache *texMapCache; // Texture maps
 
 	LightSource *infiniteLight; // A SLG scene can have only one infinite light
-	std::vector<LightSource *> lights; // One for each light source
+	LightSource *sunLight;
+	std::vector<LightSource *> lights; // One for each light source (doesn't include light/infinite light)
+
 	std::vector<Material *> materials; // All materials (one for each light source)
 	std::map<std::string, size_t> materialIndices; // All materials indices
 	std::vector<ExtMesh *> objects; // All objects

@@ -218,7 +218,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
 						} else if (property == "scene.infinitelight.gain") {
-							InfiniteLight *il = (InfiniteLight *)scene->GetLight(TYPE_IL);
+							InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 							if (il) {
 								std::ostream respStream(&response);
 								const Spectrum gain = il->GetGain();
@@ -230,7 +230,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								SLG_LOG("[Telnet server] No InfiniteLight defined: " << property);
 							}
 						} else if (property == "scene.infinitelight.shift") {
-							InfiniteLight *il = (InfiniteLight *)scene->GetLight(TYPE_IL);
+							InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 							if (il) {
 								std::ostream respStream(&response);
 								respStream << il->GetShiftU() << " " <<
@@ -242,7 +242,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								SLG_LOG("[Telnet server] No InfiniteLight defined: " << property);
 							}
 						} else if (property == "scene.skylight.dir") {
-							SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
+							SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 							if (sl) {
 								std::ostream respStream(&response);
 								const Vector &dir = sl->GetSunDir();
@@ -254,7 +254,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 							}
 						} else if (property == "scene.skylight.gain") {
-							SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
+							SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 							if (sl) {
 								std::ostream respStream(&response);
 								const Spectrum gain = sl->GetGain();
@@ -266,7 +266,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								SLG_LOG("[Telnet server] No SkyLight defined: " << property);
 							}
 						} else if (property == "scene.skylight.turbidity") {
-							SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
+							SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 							if (sl) {
 								std::ostream respStream(&response);
 								respStream << sl->GetTubidity() << "\n";
@@ -278,7 +278,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							}
 						} else if (property == "scene.sunlight.turbidity") {
 							// Look for the SunLight
-							SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+							SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 							if (sl) {
 								std::ostream respStream(&response);
 								respStream << sl->GetTubidity() << "\n";
@@ -290,7 +290,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							}
 						} else if (property == "scene.sunlight.relsize") {
 							// Look for the SunLight
-							SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+							SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 							if (sl) {
 								std::ostream respStream(&response);
 								respStream << sl->GetRelSize() << "\n";
@@ -302,7 +302,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							}
 						} else if (property == "scene.sunlight.dir") {
 							// Look for the SunLight
-							SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+							SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 							if (sl) {
 								std::ostream respStream(&response);
 								const Vector &dir = sl->GetDir();
@@ -315,7 +315,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							}
 						} else if (property == "scene.sunlight.gain") {
 							// Look for the SunLight
-							SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+							SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 							if (sl) {
 								std::ostream respStream(&response);
 								const Spectrum &gain = sl->GetGain();
@@ -533,7 +533,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.infinitelight.gain") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									InfiniteLight *il = (InfiniteLight *)scene->GetLight(TYPE_IL);
+									InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 									if (il) {
 										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
@@ -552,7 +552,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.infinitelight.shift") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									InfiniteLight *il = (InfiniteLight *)scene->GetLight(TYPE_IL);
+									InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 									if (il) {
 										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0");
 										il->SetShift(vf.at(0), vf.at(1));
@@ -570,12 +570,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.skylight.dir") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
+									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
 										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 1.0");
 										Vector dir(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetSunDir(dir);
-										sl->Init();
+										sl->Preprocess();
 										session->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -590,7 +590,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.skylight.gain") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
+									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
 										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
@@ -609,10 +609,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.skylight.turbidity") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									SkyLight *sl = (SkyLight *)scene->GetLight(TYPE_IL_SKY);
+									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
 										sl->SetTurbidity(prop.GetFloat(propertyName, 2.2f));
-										sl->Init();
+										sl->Preprocess();
 										session->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -627,10 +627,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.sunlight.turbidity") {
 								if (state == EDIT) {
 									// Look for the SunLight
-									SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
 										sl->SetTurbidity(prop.GetFloat(propertyName, 2.2f));
-										sl->Init();
+										sl->Preprocess();
 										session->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -645,10 +645,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.sunlight.relsize") {
 								if (state == EDIT) {
 									// Look for the SunLight
-									SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
 										sl->SetRelSize(prop.GetFloat(propertyName, 1.f));
-										sl->Init();
+										sl->Preprocess();
 										session->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -663,12 +663,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.sunlight.dir") {
 								if (state == EDIT) {
 									// Look for the SunLight
-									SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
 										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 1.0");
 										Vector dir(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetDir(dir);
-										sl->Init();
+										sl->Preprocess();
 										session->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -683,12 +683,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.sunlight.gain") {
 								if (state == EDIT) {
 									// Look for the SunLight
-									SunLight *sl = (SunLight *)scene->GetLight(TYPE_SUN);
+									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
 										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetGain(gain);
-										sl->Init();
+										sl->Preprocess();
 										session->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);

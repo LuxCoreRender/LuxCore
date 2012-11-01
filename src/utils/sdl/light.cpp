@@ -29,15 +29,101 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 
 //------------------------------------------------------------------------------
+// InfiniteLightBase
+//------------------------------------------------------------------------------
+
+Spectrum InfiniteLightBase::Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *orig, Vector *dir, Normal *N,
+		float *emissionPdfW, float *directPdfA) const {
+	// Choose two points p1 and p2 on scene bounding sphere
+	const Point worldCenter = scene->dataSet->GetBSphere().center;
+	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+
+	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
+	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+
+	// Construct ray between p1 and p2
+	*orig = p1;
+	*dir = Normalize(p2 - p1);
+	*N = Normal(Normalize(worldCenter - p1));
+
+	// Compute InfiniteAreaLight ray weight
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = INV_PI * .25f;
+
+	return GetRadiance(scene, *dir, p2);
+}
+
+Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW) const {
+	const Point worldCenter = scene->dataSet->GetBSphere().center;
+	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+
+	*dir = UniformSampleSphere(u0, u1);
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const Point emisPoint(p + (*distance) * (*dir));
+	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+	const float cosThetaAtLight = Dot(emisNormal, -(*dir));
+	if (cosThetaAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
+	*directPdfW =  INV_PI * .25f;
+
+	if (emissionPdfW)
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	return GetRadiance(scene, -(*dir), emisPoint);
+}
+
+//------------------------------------------------------------------------------
+// InfiniteLight
+//------------------------------------------------------------------------------
+
+InfiniteLight::InfiniteLight(TexMapInstance *tx) {
+	tex = tx;
+	shiftU = 0.f;
+	shiftV = 0.f;
+}
+
+Spectrum InfiniteLight::GetRadiance(const Scene *scene,
+		const Vector &dir,
+		const Point &hitPoint,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	if (directPdfA)
+		*directPdfA = INV_PI * .25f;
+
+	if (emissionPdfW) {
+		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	}
+
+	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI + shiftU, SphericalTheta(-dir) * INV_PI + shiftV);
+	return gain * tex->GetTexMap()->GetColor(uv);
+}
+
+//------------------------------------------------------------------------------
 // SkyLight
 //------------------------------------------------------------------------------
 
-float PerezBase(const float lam[6], float theta, float gamma) {
+static float PerezBase(const float lam[6], float theta, float gamma) {
 	return (1.f + lam[1] * expf(lam[2] / cosf(theta))) *
 		(1.f + lam[3] * expf(lam[4] * gamma)  + lam[5] * cosf(gamma) * cosf(gamma));
 }
 
-inline float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
+static inline float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
 	const float cospsi = sinf(thetav) * sinf(theta) * cosf(phi - phiv) + cosf(thetav) * cosf(theta);
 	if (cospsi >= 1.f)
 		return 0.f;
@@ -46,7 +132,7 @@ inline float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
 	return acosf(cospsi);
 }
 
-void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
+static void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 	float X, Z;
 	
 	if (y != 0.f)
@@ -65,15 +151,12 @@ void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 	s->b =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
 }
 
-SkyLight::SkyLight(float turb, const Vector &sd) : InfiniteLight(NULL) {
+SkyLight::SkyLight(float turb, const Vector &sd) {
 	turbidity = turb;
 	sundir = Normalize(sd);
-	gain = Spectrum(1.0f, 1.0f, 1.0f);
-
-	Init();
 }
 
-void SkyLight::Init() {
+void SkyLight::Preprocess() {
 	thetaS = SphericalTheta(sundir);
 	phiS = SphericalPhi(sundir);
 
@@ -125,19 +208,9 @@ void SkyLight::Init() {
 	zenith_y /= PerezBase(perez_y, 0, thetaS);
 }
 
-Spectrum SkyLight::Le(const Scene *scene, const Vector &dir) const {
-	const float theta = SphericalTheta(dir);
-	const float phi = SphericalPhi(dir);
-
-	Spectrum s;
-	GetSkySpectralRadiance(theta, phi, &s);
-
-	return gain * s;
-}
-
 void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const {
-	// add bottom half of hemisphere with horizon colour
-	const float theta_fin = Min<float>(theta, (M_PI * 0.5f) - 0.001f);
+	// Add bottom half of hemisphere with horizon colour
+	const float theta_fin = Min<float>(theta, (M_PI * .5f) - .001f);
 	const float gamma = RiAngleBetween(theta, phi, thetaS, phiS);
 
 	// Compute xyY values
@@ -148,17 +221,40 @@ void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectr
 	ChromaticityToSpectrum(Y, x, y, spect);
 }
 
-SunLight::SunLight(float turb, float size, const Vector &sd) : LightSource() {
-	turbidity = turb;
-	sundir = Normalize(sd);
-	gain = Spectrum(1.0f, 1.0f, 1.0f);
-	relSize = size;
+Spectrum SkyLight::GetRadiance(const Scene *scene,
+		const Vector &dir,
+		const Point &hitPoint,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	const float theta = SphericalTheta(-dir);
+	const float phi = SphericalPhi(-dir);
+	Spectrum s;
+	GetSkySpectralRadiance(theta, phi, &s);
 
-	Init();
+	if (directPdfA)
+		*directPdfA = INV_PI * .25f;
+
+	if (emissionPdfW) {
+		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * s;
 }
 
-void SunLight::Init() {
-	CoordinateSystem(sundir, &x, &y);
+//------------------------------------------------------------------------------
+// SunLight
+//------------------------------------------------------------------------------
+
+SunLight::SunLight(float turb, float size, const Vector &sd) : LightSource() {
+	turbidity = turb;
+	sunDir = Normalize(sd);
+	gain = Spectrum(1.0f, 1.0f, 1.0f);
+	relSize = size;
+}
+
+void SunLight::Preprocess() {
+	CoordinateSystem(sunDir, &x, &y);
 
 	// Values from NASA Solar System Exploration page
 	// http://solarsystem.nasa.gov/planets/profile.cfm?Object=Sun&Display=Facts&System=Metric
@@ -174,7 +270,7 @@ void SunLight::Init() {
 		sin2ThetaMax = 1.f;
 	}
 
-	Vector wh = Normalize(sundir);
+	Vector wh = Normalize(sunDir);
 	phiS = SphericalPhi(wh);
 	thetaS = SphericalTheta(wh);
 
@@ -234,7 +330,7 @@ void SunLight::SetGain(const Spectrum &g) {
 //------------------------------------------------------------------------------
 
 Spectrum SunLight::Le(const Scene *scene, const Vector &dir) const {
-	if((cosThetaMax < 1.f) && (Dot(dir,-sundir) > cosThetaMax))
+	if((cosThetaMax < 1.f) && (Dot(dir,-sunDir) > cosThetaMax))
 		return sunColor;
 	else
 		return Spectrum();
@@ -242,12 +338,12 @@ Spectrum SunLight::Le(const Scene *scene, const Vector &dir) const {
 
 Spectrum SunLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
 	const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-	if (N && Dot(*N, -sundir) > 0.0f) {
+	if (N && Dot(*N, -sunDir) > 0.0f) {
 		*pdf = 0.0f;
 		return Spectrum();
 	}
 
-	Vector wi = UniformSampleCone(u0, u1, cosThetaMax, x, y, sundir);
+	Vector wi = UniformSampleCone(u0, u1, cosThetaMax, x, y, sunDir);
 	*shadowRay = Ray(p, wi);
 
 	*pdf = UniformConePdf(cosThetaMax);
@@ -266,7 +362,7 @@ Spectrum SunLight::Sample_L(const Scene *scene, const float u0, const float u1,
 	Point Pdisk = worldCenter + worldRadius * (d1 * x + d2 * y);
 
 	// Set ray origin and direction for infinite light ray
-	*ray = Ray(Pdisk + worldRadius * sundir, -UniformSampleCone(u2, u3, cosThetaMax, x, y, sundir));
+	*ray = Ray(Pdisk + worldRadius * sunDir, -UniformSampleCone(u2, u3, cosThetaMax, x, y, sunDir));
 	*pdf = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 
 	return sunColor;
@@ -289,8 +385,8 @@ Spectrum SunLight::Emit(const Scene *scene,
 	Point Pdisk = worldCenter + worldRadius * (d1 * x + d2 * y);
 
 	// Set ray origin and direction for infinite light ray
-	*orig = Pdisk + worldRadius * sundir;
-	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, sundir);
+	*orig = Pdisk + worldRadius * sunDir;
+	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, sunDir);
 	*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
@@ -303,7 +399,7 @@ Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW) const {
-	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, sundir);
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, sunDir);
 	*distance = std::numeric_limits<float>::infinity();
 	*directPdfW = UniformConePdf(cosThetaMax);
 
@@ -320,159 +416,23 @@ Spectrum SunLight::GetRadiance(const Scene *scene,
 		const Point &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if ((cosThetaMax < 1.f) && (Dot(dir, -sundir) > cosThetaMax)) {
-		if (directPdfA)
-			*directPdfA = UniformConePdf(cosThetaMax);
+	// Make the sun visible only if relsize has been changed (in order
+	// to avoid fireflies).
+	if (relSize > 5.f) {
+		if ((cosThetaMax < 1.f) && (Dot(dir, -sunDir) > cosThetaMax)) {
+			if (directPdfA)
+				*directPdfA = UniformConePdf(cosThetaMax);
 
-		if (emissionPdfW) {
-			const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
-			*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+			if (emissionPdfW) {
+				const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+				*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+			}
+
+			return sunColor;
 		}
-
-		return sunColor;
-	} else
-		return Spectrum();
-}
-
-//------------------------------------------------------------------------------
-// InfiniteLight
-//------------------------------------------------------------------------------
-
-InfiniteLight::InfiniteLight(TexMapInstance *tx) {
-	tex = tx;
-	shiftU = 0.f;
-	shiftV = 0.f;
-}
-
-//------------------------------------------------------------------------------
-// Old interface
-//------------------------------------------------------------------------------
-
-Spectrum InfiniteLight::Le(const Scene *scene, const Vector &dir) const {
-	const UV uv(1.f - SphericalPhi(dir) * INV_TWOPI + shiftU, SphericalTheta(dir) * INV_PI + shiftV);
-	return gain * tex->GetTexMap()->GetColor(uv);
-}
-
-Spectrum InfiniteLight::Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-	if (N) {
-		Vector wi = CosineSampleHemisphere(u0, u1);
-		*pdf = wi.z * INV_PI;
-
-		Vector v1, v2;
-		CoordinateSystem(Vector(*N), &v1, &v2);
-
-		wi = Vector(
-				v1.x * wi.x + v2.x * wi.y + N->x * wi.z,
-				v1.y * wi.x + v2.y * wi.y + N->y * wi.z,
-				v1.z * wi.x + v2.z * wi.y + N->z * wi.z);
-		*shadowRay = Ray(p, wi);
-
-		return Le(scene, wi);
-	} else {
-		Vector wi = UniformSampleSphere(u0, u1);
-
-		*shadowRay = Ray(p, wi);
-		*pdf = 1.f / (4.f * M_PI);
-
-		return Le(scene, wi);
-	}
-}
-
-Spectrum InfiniteLight::Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const {
-	// Choose two points p1 and p2 on scene bounding sphere
-	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
-
-	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
-	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
-
-	// Construct ray between p1 and p2
-	*ray = Ray(p1, Normalize(p2 - p1));
-
-	// Compute InfiniteAreaLight ray weight
-	Vector toCenter = Normalize(worldCenter - p1);
-	const float costheta = AbsDot(toCenter, ray->d);
-	*pdf = costheta / (4.f * M_PI * M_PI * worldRadius * worldRadius);
-
-	return Le(scene, -ray->d);
-}
-
-//------------------------------------------------------------------------------
-// New interface
-//------------------------------------------------------------------------------
-
-Spectrum InfiniteLight::Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
-		Point *orig, Vector *dir, Normal *N,
-		float *emissionPdfW, float *directPdfA) const {
-	// Choose two points p1 and p2 on scene bounding sphere
-	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
-
-	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
-	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
-
-	// Construct ray between p1 and p2
-	*orig = p1;
-	*dir = Normalize(p2 - p1);
-	*N = Normal(Normalize(worldCenter - p1));
-
-	// Compute InfiniteAreaLight ray weight
-	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
-
-	if (directPdfA)
-		*directPdfA = INV_PI * .25f;
-
-	return GetRadiance(scene, *dir, p2);
-}
-
-Spectrum InfiniteLight::Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
-        Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW) const {
-	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
-
-	*dir = UniformSampleSphere(u0, u1);
-
-	const Vector toCenter(worldCenter - p);
-	const float centerDistance = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
-		centerDistance + approach * approach));
-
-	const Point emisPoint(p + (*distance) * (*dir));
-	const Normal emisNormal(Normalize(worldCenter - emisPoint));
-
-	const float cosThetaAtLight = Dot(emisNormal, -(*dir));
-	if (cosThetaAtLight < DEFAULT_COS_EPSILON_STATIC)
-		return Spectrum();
-
-	*directPdfW =  INV_PI * .25f;
-
-	if (emissionPdfW)
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
-
-	return GetRadiance(scene, -(*dir), emisPoint);
-}
-
-Spectrum InfiniteLight::GetRadiance(const Scene *scene,
-		const Vector &dir,
-		const Point &hitPoint,
-		float *directPdfA,
-		float *emissionPdfW) const {
-	if (directPdfA)
-		*directPdfA = INV_PI * .25f;
-
-	if (emissionPdfW) {
-		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
-	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI + shiftU, SphericalTheta(-dir) * INV_PI + shiftV);
-	return gain * tex->GetTexMap()->GetColor(uv);
+	return Spectrum();
 }
 
 //------------------------------------------------------------------------------
