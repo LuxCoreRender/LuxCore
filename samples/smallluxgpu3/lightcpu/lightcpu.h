@@ -57,11 +57,11 @@ private:
 		samplesCount = count;
 	}
 
-	void ConnectToEye(Film *film, const float u0,
+	float ConnectToEye(Film *film, const float u0,
 			const Vector &eyeDir, const float eyeDistance, const Point &lensPoint,
 			const Normal &shadeN, const Spectrum &bsdfEval,
 			const Spectrum &flux);
-	void ConnectToEye(Film *film, const float u0,
+	float ConnectToEye(Film *film, const float u0,
 			const BSDF &bsdf, const Point &lensPoint,
 			const Spectrum &flux);
 
