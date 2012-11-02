@@ -29,21 +29,16 @@ using namespace luxrays::sdl;
 // Matte material
 //------------------------------------------------------------------------------
 
-Spectrum MatteMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum MatteMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	*event = DIFFUSE | REFLECT;
 
-	if (!into ||
-			(fabsf(lightDir.z) < DEFAULT_COS_EPSILON_STATIC) ||
-			(fabsf(eyeDir.z) < DEFAULT_COS_EPSILON_STATIC))
-			return Spectrum();
-
 	if(directPdfW)
-		*directPdfW = fabsf(eyeDir.z * INV_PI);
+		*directPdfW = fabsf(lightDir.z * INV_PI);
 
 	if(reversePdfW)
-		*reversePdfW = fabsf(lightDir.z * INV_PI);
+		*reversePdfW = fabsf(eyeDir.z * INV_PI);
 
 	return KdOverPI;
 }
@@ -72,7 +67,7 @@ Spectrum MatteMaterial::Sample(const bool fromLight,
 // Mirror material
 //------------------------------------------------------------------------------
 
-Spectrum MirrorMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum MirrorMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	*event = SPECULAR | REFLECT;
@@ -98,10 +93,10 @@ Spectrum MirrorMaterial::Sample(const bool fromLight,
 // MatteMirror material
 //------------------------------------------------------------------------------
 
-Spectrum MatteMirrorMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum MatteMirrorMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	Spectrum result = matte.Evaluate(fromLight, into, lightDir, eyeDir, event,
+	Spectrum result = matte.Evaluate(fromLight, lightDir, eyeDir, event,
 			directPdfW, reversePdfW);
 
 	if (directPdfW)
@@ -138,7 +133,7 @@ Spectrum MatteMirrorMaterial::Sample(const bool fromLight,
 // Glass material
 //------------------------------------------------------------------------------
 
-Spectrum GlassMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum GlassMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	*event = SPECULAR | REFLECT;
@@ -236,7 +231,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 // Architectural glass material
 //------------------------------------------------------------------------------
 
-Spectrum ArchGlassMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum ArchGlassMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	*event = SPECULAR | TRANSMIT;
@@ -287,7 +282,7 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight,
 // Metal material
 //------------------------------------------------------------------------------
 
-Spectrum MetalMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum MetalMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	*event = SPECULAR | REFLECT;
@@ -348,10 +343,10 @@ Spectrum MetalMaterial::Sample(const bool fromLight,
 // MatteMetal material
 //------------------------------------------------------------------------------
 
-Spectrum MatteMetalMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum MatteMetalMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	Spectrum result = matte.Evaluate(fromLight, into, lightDir, eyeDir, event,
+	Spectrum result = matte.Evaluate(fromLight, lightDir, eyeDir, event,
 			directPdfW, reversePdfW);
 
 	if (directPdfW)
@@ -388,7 +383,7 @@ Spectrum MatteMetalMaterial::Sample(const bool fromLight,
 // Alloy material
 //------------------------------------------------------------------------------
 
-Spectrum AlloyMaterial::Evaluate(const bool fromLight, const bool into,
+Spectrum AlloyMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	*event = DIFFUSE | REFLECT;
