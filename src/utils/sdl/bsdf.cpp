@@ -31,6 +31,7 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	isLightSource = false;
 
 	hitPoint = ray(rayHit.t);
+	fixedDir = -ray.d;
 
 	const unsigned int currentTriangleIndex = rayHit.index;
 	const unsigned int currentMeshIndex = scene.dataSet->GetMeshID(currentTriangleIndex);
@@ -131,8 +132,11 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	frame.SetFromZ(shadeN);
 }
 
-Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
+Spectrum BSDF::Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW, float *reversePdfW) const {
+	const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
+	const Vector &lightDir = fromLight ? fixedDir : generatedDir;
+
 	const float dotLightDirNG = Dot(lightDir, geometryN);
 	const float absDotLightDirNG = fabsf(dotLightDirNG);
 	const float dotEyeDirNG = Dot(eyeDir, geometryN);
@@ -165,7 +169,7 @@ Spectrum BSDF::Evaluate(const Vector &lightDir, const Vector &eyeDir,
 		return surfaceColor * result;
 }
 
-Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
+Spectrum BSDF::Sample(Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	Vector localFixedDir = frame.ToLocal(fixedDir);
@@ -191,12 +195,11 @@ Spectrum BSDF::Sample(const Vector &fixedDir, Vector *sampledDir,
 }
 
 Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
-			const Vector &dir,
 			float *directPdfA,
 			float *emissionPdfW) const {
 	return isLightSource ? 
-		lightSource->GetRadiance(scene, dir, hitPoint, directPdfA, emissionPdfW) :
-		Spectrum(0.f);
+		lightSource->GetRadiance(scene, fixedDir, hitPoint, directPdfA, emissionPdfW) :
+		Spectrum();
 }
 
 } }

@@ -62,13 +62,13 @@ void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 }
 
 void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
-		const BSDF &bsdf, const Point &lensPoint, const Vector &lightDir, const Spectrum &flux) {
+		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux) {
 	Vector eyeDir(bsdf.hitPoint - lensPoint);
 	const float eyeDistance = eyeDir.Length();
 	eyeDir /= eyeDistance;
 
 	BSDFEvent event;
-	Spectrum bsdfEval = bsdf.Evaluate(lightDir, -eyeDir, &event);
+	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
 	ConnectToEye(film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
 }
@@ -144,7 +144,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			} else {
 				// Something was hit, check if it is a light source
 				if (bsdf.IsLightSource())
-					radiance += bsdf.GetEmittedRadiance(scene, -eyeRay.d);
+					radiance += bsdf.GetEmittedRadiance(scene);
 			}
 			radiance *= connectionThroughput;
 
@@ -181,7 +181,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				//--------------------------------------------------------------
 
 				renderEngine->ConnectToEye(film, rndGen->floatValue(),
-						bsdf, lensPoint, -nextEventRay.d, lightPathFlux);
+						bsdf, lensPoint, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
 					break;
@@ -194,7 +194,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				Vector sampledDir;
 				BSDFEvent event;
 				float cosSampleDir;
-				const Spectrum bsdfSample = bsdf.Sample(-nextEventRay.d, &sampledDir,
+				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 						&bsdfPdf, &cosSampleDir, &event);
 				if ((bsdfPdf <= 0.f) || bsdfSample.Black())

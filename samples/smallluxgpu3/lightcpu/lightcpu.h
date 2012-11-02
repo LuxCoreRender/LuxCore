@@ -62,7 +62,7 @@ private:
 			const Normal &shadeN, const Spectrum &bsdfEval,
 			const Spectrum &flux);
 	void ConnectToEye(Film *film, const float u0,
-			const BSDF &bsdf, const Point &lensPoint, const Vector &lightDir,
+			const BSDF &bsdf, const Point &lensPoint,
 			const Spectrum &flux);
 
 	void DirectHitLightSampling(const Vector &eyeDir, const BSDF &bsdf, Spectrum *radiance);
