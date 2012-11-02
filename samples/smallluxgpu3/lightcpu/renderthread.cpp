@@ -28,7 +28,7 @@
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
 
-void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
+float LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 		const Vector &eyeDir, const float eyeDistance, const Point &lensPoint,
 		const Normal &shadeN, const Spectrum &bsdfEval,
 		const Spectrum &flux) {
@@ -54,14 +54,17 @@ void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
 				const float fluxToRadianceFactor = cameraPdfA;
 
-				film->SplatFiltered(PER_SCREEN_NORMALIZED, scrX, scrY,
-						connectionThroughput * flux * fluxToRadianceFactor * bsdfEval);
+				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
+				film->SplatFiltered(PER_SCREEN_NORMALIZED, scrX, scrY, radiance);
+				return radiance.Y();
 			}
 		}
 	}
+
+	return 0.f;
 }
 
-void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
+float LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux) {
 	Vector eyeDir(bsdf.hitPoint - lensPoint);
 	const float eyeDistance = eyeDir.Length();
@@ -70,7 +73,7 @@ void LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 	BSDFEvent event;
 	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
-	ConnectToEye(film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
+	return ConnectToEye(film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
 }
 
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -88,24 +91,33 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 
+	// Setup the sampler
+	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen);
+	const unsigned int sampleSize = 
+		10 + // To generate the initial light vertex and trace eye ray
+		renderEngine->maxPathDepth * 6; // For each light vertex
+	sampler->RequestSamples(sampleSize);
+
 	//--------------------------------------------------------------------------
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
 	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
+		float sampleLuminance = 0.f; // Used by the Sampler (i.e. Metropolis)
+
 		film->AddSampleCount(PER_SCREEN_NORMALIZED, 1.0);
 		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1;
 
 		// Select one light source
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
+		const LightSource *light = scene->SampleAllLights(sampler->GetSample(0), &lightPickPdf);
 
 		// Initialize the light path
 		float lightEmitPdf;
 		Ray nextEventRay;
 		Spectrum lightPathFlux = light->Emit(scene,
-			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+			sampler->GetSample(1), sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
 		if (lightPathFlux.Black())
 			continue;
@@ -128,16 +140,16 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		{
 			Ray eyeRay;
-			const float screenX = min(rndGen->floatValue() * filmWidth, (float)(filmWidth - 1));
-			const float screenY = min(rndGen->floatValue() * filmHeight, (float)(filmHeight - 1));
+			const float screenX = min(sampler->GetSample(5) * filmWidth, (float)(filmWidth - 1));
+			const float screenY = min(sampler->GetSample(6) * filmHeight, (float)(filmHeight - 1));
 			camera->GenerateRay(screenX, screenY, &eyeRay,
-				rndGen->floatValue(), rndGen->floatValue());
+				sampler->GetSample(7), sampler->GetSample(8));
 
 			Spectrum radiance, connectionThroughput;
 			RayHit eyeRayHit;
 			BSDF bsdf;
 			const bool somethingWasHit = scene->Intersect(
-				false, true, rndGen->floatValue(), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
+				false, true, sampler->GetSample(9), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 			if (!somethingWasHit) {
 				// Nothing was hit, check infinite lights (including sun)
 				radiance += scene->GetEnvLightsRadiance(-eyeRay.d, Point());
@@ -153,6 +165,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.0);
 			film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
 			film->SplatFilteredAlpha(screenX, screenY, somethingWasHit ? 1.f : 0.f);
+			sampleLuminance += radiance.Y();
 		}
 
 		//----------------------------------------------------------------------
@@ -161,10 +174,12 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		int depth = 1;
 		while (depth <= renderEngine->maxPathDepth) {
+			const unsigned int sampleOffset = 9 + (depth - 1) * renderEngine->maxPathDepth;
+
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(true, true, rndGen->floatValue(),
+			if (scene->Intersect(true, true, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				
@@ -180,7 +195,8 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				renderEngine->ConnectToEye(film, rndGen->floatValue(),
+				sampleLuminance += renderEngine->ConnectToEye(film,
+						sampler->GetSample(sampleOffset + 1),
 						bsdf, lensPoint, lightPathFlux);
 
 				if (depth >= renderEngine->maxPathDepth)
@@ -195,7 +211,9 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				BSDFEvent event;
 				float cosSampleDir;
 				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-						rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+						sampler->GetSample(sampleOffset + 2),
+						sampler->GetSample(sampleOffset + 3),
+						sampler->GetSample(sampleOffset + 4),
 						&bsdfPdf, &cosSampleDir, &event);
 				if ((bsdfPdf <= 0.f) || bsdfSample.Black())
 					break;
@@ -203,7 +221,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				if (depth >= renderEngine->rrDepth) {
 					// Russian Roulette
 					const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-					if (prob > rndGen->floatValue())
+					if (prob > sampler->GetSample(sampleOffset + 5))
 						bsdfPdf *= prob;
 					else
 						break;
@@ -219,6 +237,8 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				break;
 			}
 		}
+
+		sampler->NextSample(sampleLuminance);
 	}
 
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");

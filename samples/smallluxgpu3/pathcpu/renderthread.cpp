@@ -155,11 +155,13 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	while (!boost::this_thread::interruption_requested()) {
+		float sampleLuminance = 0.f; // Used by the Sampler (i.e. Metropolis)
+
 		Ray eyeRay;
-		const float screenX = min(rndGen->floatValue() * filmWidth, (float)(filmWidth - 1));
-		const float screenY = min(rndGen->floatValue() * filmHeight, (float)(filmHeight - 1));
+		const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+		const float screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(screenX, screenY, &eyeRay,
-			rndGen->floatValue(), rndGen->floatValue());
+			sampler->GetSample(2), sampler->GetSample(3));
 
 		int depth = 1;
 		bool lastSpecular = true;
@@ -168,9 +170,11 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		BSDF bsdf;
 		while (depth <= renderEngine->maxPathDepth) {
+			const unsigned int sampleOffset = 9 + (depth - 1) * renderEngine->maxPathDepth;
+
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(false, true, rndGen->floatValue(), &eyeRay,
+			if (!scene->Intersect(false, true, sampler->GetSample(sampleOffset), &eyeRay,
 					&eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 				renderEngine->DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, eyeRay.d,
@@ -202,10 +206,13 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			// Direct light sampling
 			//------------------------------------------------------------------
 
-			renderEngine->DirectLightSampling(rndGen->floatValue(), rndGen->floatValue(),
-					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-					rndGen->floatValue(), pathThrouput, bsdf,
-					depth, &radiance);
+			renderEngine->DirectLightSampling(sampler->GetSample(sampleOffset + 1),
+					sampler->GetSample(sampleOffset + 2),
+					sampler->GetSample(sampleOffset + 3),
+					sampler->GetSample(sampleOffset + 4),
+					sampler->GetSample(sampleOffset + 5),
+					sampler->GetSample(sampleOffset + 6),
+					pathThrouput, bsdf, depth, &radiance);
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray
@@ -215,7 +222,9 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			BSDFEvent event;
 			float cosSampledDir;
 			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
+					sampler->GetSample(sampleOffset + 7),
+					sampler->GetSample(sampleOffset + 8),
+					sampler->GetSample(sampleOffset + 9),
 					&lastPdfW, &cosSampledDir, &event);
 			if (bsdfSample.Black())
 				break;
@@ -225,7 +234,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			if ((depth >= renderEngine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
 				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-				if (prob > rndGen->floatValue())
+				if (prob > sampler->GetSample(sampleOffset + 10))
 					lastPdfW *= prob;
 				else
 					break;
@@ -242,6 +251,9 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
 		film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
+		sampleLuminance += radiance.Y();
+
+		sampler->NextSample(sampleLuminance);
 	}
 
 	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread halted");
