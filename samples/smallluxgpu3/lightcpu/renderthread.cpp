@@ -115,7 +115,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		// Sample a point on the camera lens
 		Point lensPoint;
 		if (!scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
-				rndGen->floatValue(), &lensPoint))
+				&lensPoint))
 			continue;
 
 		//----------------------------------------------------------------------
@@ -131,7 +131,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			const float screenX = min(rndGen->floatValue() * filmWidth, (float)(filmWidth - 1));
 			const float screenY = min(rndGen->floatValue() * filmHeight, (float)(filmHeight - 1));
 			camera->GenerateRay(screenX, screenY, &eyeRay,
-				rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
+				rndGen->floatValue(), rndGen->floatValue());
 
 			Spectrum radiance, connectionThroughput;
 			RayHit eyeRayHit;

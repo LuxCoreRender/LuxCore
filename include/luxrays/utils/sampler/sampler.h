@@ -19,51 +19,45 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "renderconfig.h"
+#ifndef _LUXRAYS_SAMPLER_H
+#define	_LUXRAYS_SAMPLER_H
 
-#include "luxrays/utils/film/film.h"
+#include <string>
 
-RenderConfig::RenderConfig(const string &fileName) {
-	SLG_LOG("Reading configuration file: " << fileName);
-	cfg.LoadFile(fileName);
+#include "luxrays/luxrays.h"
+#include "luxrays/utils/core/randomgen.h"
 
-	SLG_LOG("Configuration: ");
-	vector<string> keys = cfg.GetAllKeys();
-	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
-		SLG_LOG("  " << *i << " = " << cfg.GetString(*i, ""));
+namespace luxrays { namespace utils {
 
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
+class Sampler {
+public:
+	Sampler() { };
+	virtual ~Sampler() { }
+	
+	virtual void RequestSamples(const unsigned int size) = 0;
 
-	// Create the Scene
-	const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
-	const int accelType = cfg.GetInt("accelerator.type", -1);
+	virtual float GetSample(const unsigned int index) = 0;
+	virtual void NextSample(const float currentSampleLuminance) = 0;
+};
 
-	scene = new Scene(sceneFileName, accelType);
-}
+//------------------------------------------------------------------------------
+// Random sampler
+//------------------------------------------------------------------------------
 
-RenderConfig::~RenderConfig() {
-	delete scene;
-}
-void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {
-	screenRefreshInterval = t;
-}
+class InlinedRandomSampler : public Sampler {
+public:
+	InlinedRandomSampler(RandomGenerator *rnd) : rndGen(rnd) { };
+	~InlinedRandomSampler() { }
 
-unsigned int RenderConfig::GetScreenRefreshInterval() const {
-	return screenRefreshInterval;
-}
+	void RequestSamples(const unsigned int size) { };
 
-Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen) const {
-	//--------------------------------------------------------------------------
-	// Sampler
-	//--------------------------------------------------------------------------
+	float GetSample(const unsigned int index) { return rndGen->floatValue(); }
+	void NextSample(const float currentSampleLuminance) { }
 
-	const string samplerTypeName = cfg.GetString("sampler.type",
-			cfg.GetString("path.sampler.type", "INLINED_RANDOM"));
-	if ((samplerTypeName.compare("INLINED_RANDOM") == 0) ||
-			(samplerTypeName.compare("RANDOM") == 0))
-		return new InlinedRandomSampler(rndGen);
-	else
-		throw std::runtime_error("Unknown sampler.type");
+private:
+	RandomGenerator *rndGen;
+};
 
-	return NULL;
-}
+} }
+
+#endif	/* _LUXRAYS_SDL_BSDF_H */

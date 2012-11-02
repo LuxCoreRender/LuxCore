@@ -77,7 +77,7 @@ void PerspectiveCamera::Update(const unsigned int w, const unsigned int h) {
 
 void PerspectiveCamera::GenerateRay(
 	const float filmX, const float filmY,
-	Ray *ray, const float u1, const float u2, const float u3) const {
+	Ray *ray, const float u1, const float u2) const {
 	const Point Pras(filmX, filmHeight - filmY - 1.f, 0.f);
 	const Point Pcamera(rasterToCamera * Pras);
 
@@ -130,7 +130,7 @@ bool PerspectiveCamera::GetSamplePosition(const Point &p, const Vector &wi,
 }
 
 bool PerspectiveCamera::SampleLens(const float u1, const float u2,
-		const float u3, Point *lensp) const {
+		Point *lensp) const {
 	Point lensPoint(0.f, 0.f, 0.f);
 	if (lensRadius > 0.f) {
 		ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);

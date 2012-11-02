@@ -90,11 +90,11 @@ public:
 
 	void GenerateRay(
 		const float filmX, const float filmY,
-		Ray *ray, const float u1, const float u2, const float u3) const;
+		Ray *ray, const float u1, const float u2) const;
 	bool GetSamplePosition(const Point &p, const Vector &wi,
 		float distance, float *x, float *y) const;
 
-	bool SampleLens(const float u1, const float u2, const float u3,
+	bool SampleLens(const float u1, const float u2,
 		Point *lensPoint) const;
 	void ClampRay(Ray *ray) const {
 		const float cosi = Dot(ray->d, dir);

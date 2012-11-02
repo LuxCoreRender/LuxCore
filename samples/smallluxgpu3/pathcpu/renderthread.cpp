@@ -23,8 +23,9 @@
 #include "pathcpu/pathcpu.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/randomgen.h"
-#include "luxrays/utils/sdl/bsdf.h"
 #include "luxrays/utils/core/mc.h"
+#include "luxrays/utils/sdl/bsdf.h"
+#include "luxrays/utils/sampler/sampler.h"
 
 // TODO: use only brute force to sample infinitelight
 
@@ -142,6 +143,13 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 
+	// Setup the sampler
+	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen);
+	const unsigned int sampleSize = 
+		4 + // To generate the initial ray
+		renderEngine->maxPathDepth * 11; // For each path vertex
+	sampler->RequestSamples(sampleSize);
+
 	//--------------------------------------------------------------------------
 	// Trace paths
 	//--------------------------------------------------------------------------
@@ -151,7 +159,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		const float screenX = min(rndGen->floatValue() * filmWidth, (float)(filmWidth - 1));
 		const float screenY = min(rndGen->floatValue() * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(screenX, screenY, &eyeRay,
-			rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
+			rndGen->floatValue(), rndGen->floatValue());
 
 		int depth = 1;
 		bool lastSpecular = true;

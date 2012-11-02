@@ -68,23 +68,23 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	 const string samplerTypeName = cfg.GetString("path.sampler.type", "INLINED_RANDOM");
-	 if (samplerTypeName.compare("INLINED_RANDOM") == 0)
-		 sampler = new PathOCL::InlinedRandomSampler();
-	 else if (samplerTypeName.compare("RANDOM") == 0)
-		 sampler = new PathOCL::RandomSampler();
-	 else if (samplerTypeName.compare("STRATIFIED") == 0) {
-		 const unsigned int xSamples = cfg.GetInt("path.sampler.xsamples", 3);
-		 const unsigned int ySamples = cfg.GetInt("path.sampler.ysamples", 3);
+	const string samplerTypeName = cfg.GetString("path.sampler.type", "INLINED_RANDOM");
+	if (samplerTypeName.compare("INLINED_RANDOM") == 0)
+		sampler = new PathOCL::InlinedRandomSampler();
+	else if (samplerTypeName.compare("RANDOM") == 0)
+		sampler = new PathOCL::RandomSampler();
+	else if (samplerTypeName.compare("STRATIFIED") == 0) {
+		const unsigned int xSamples = cfg.GetInt("path.sampler.xsamples", 3);
+		const unsigned int ySamples = cfg.GetInt("path.sampler.ysamples", 3);
 
-		 sampler = new PathOCL::StratifiedSampler(xSamples, ySamples);
-	 } else if (samplerTypeName.compare("METROPOLIS") == 0) {
-		 const float rate = cfg.GetFloat("path.sampler.largesteprate", .4f);
-		 const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
-		 const float mutationrate = cfg.GetFloat("path.sampler.imagemutationrate", .1f);
+		sampler = new PathOCL::StratifiedSampler(xSamples, ySamples);
+	} else if (samplerTypeName.compare("METROPOLIS") == 0) {
+		const float rate = cfg.GetFloat("path.sampler.largesteprate", .4f);
+		const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
+		const float mutationrate = cfg.GetFloat("path.sampler.imagemutationrate", .1f);
 
-		 sampler = new PathOCL::MetropolisSampler(rate, reject, mutationrate);
-	 } else
+		sampler = new PathOCL::MetropolisSampler(rate, reject, mutationrate);
+	} else
 		throw std::runtime_error("Unknown path.sampler.type");
 
 	//--------------------------------------------------------------------------
