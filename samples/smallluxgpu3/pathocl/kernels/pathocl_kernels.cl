@@ -637,7 +637,7 @@ Error: Huston, we have a problem !
 
 					const float mPdf = directLightPdf * dp * INV_PI;
 					const float pdf = (dp <= 0.f) ? 0.f :
-						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * directLightPdf * matPdf / (dp * lightSourceCount));
+						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * matPdf / (dp * lightSourceCount));
 					if (pdf > 0.f) {
 						Spectrum throughputLightDir = prevThroughput;
 #if defined(PARAM_HAS_TEXTUREMAPS)

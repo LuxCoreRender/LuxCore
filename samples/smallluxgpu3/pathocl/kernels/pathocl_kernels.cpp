@@ -639,7 +639,7 @@ std::string luxrays::KernelSource_PathOCL_kernels =
 "\n"
 "					const float mPdf = directLightPdf * dp * INV_PI;\n"
 "					const float pdf = (dp <= 0.f) ? 0.f :\n"
-"						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * directLightPdf * matPdf / (dp * lightSourceCount));\n"
+"						(PowerHeuristic(1, lPdf, 1, mPdf) * lightPdf * matPdf / (dp * lightSourceCount));\n"
 "					if (pdf > 0.f) {\n"
 "						Spectrum throughputLightDir = prevThroughput;\n"
 "#if defined(PARAM_HAS_TEXTUREMAPS)\n"
