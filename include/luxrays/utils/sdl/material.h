@@ -45,8 +45,7 @@ public:
 	virtual MaterialType GetType() const = 0;
 
 	virtual bool IsLightSource() const = 0;
-	virtual bool IsDiffuse() const = 0;
-	virtual bool IsSpecular() const = 0; // TODO: rename to IsDelta
+	virtual bool IsDelta() const = 0;
 	virtual bool IsShadowTransparent() const { return false; }
 
 	virtual const Spectrum &GetSahdowTransparency() const {
@@ -57,8 +56,7 @@ public:
 class LightMaterial : public Material {
 public:
 	bool IsLightSource() const { return true; }
-	bool IsDiffuse() const { return false; }
-	bool IsSpecular() const { return false; }
+	bool IsDelta() const { return false; }
 };
 
 class AreaLightMaterial : public LightMaterial {
@@ -76,6 +74,7 @@ private:
 class SurfaceMaterial : public Material {
 public:
 	bool IsLightSource() const { return false; }
+	bool IsDelta() const { return false; }
 
 	virtual Spectrum Evaluate(const bool fromLight, const bool into,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
@@ -99,9 +98,6 @@ public:
 	}
 
 	MaterialType GetType() const { return MATTE; }
-
-	bool IsDiffuse() const { return true; }
-	bool IsSpecular() const { return false; }
 
 	const Spectrum &GetKd() const { return Kd; }
 
@@ -130,8 +126,7 @@ public:
 
 	MaterialType GetType() const { return MIRROR; }
 
-	bool IsDiffuse() const { return false; }
-	bool IsSpecular() const { return true; }
+	bool IsDelta() const { return true; }
 
 	const Spectrum &GetKr() const { return Kr; }
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
@@ -166,9 +161,6 @@ public:
 	}
 
 	MaterialType GetType() const { return MATTEMIRROR; }
-
-	bool IsDiffuse() const { return true; }
-	bool IsSpecular() const { return true; }
 
 	const MatteMaterial &GetMatte() const { return matte; }
 	const MirrorMaterial &GetMirror() const { return mirror; }
@@ -216,8 +208,7 @@ public:
 
 	MaterialType GetType() const { return GLASS; }
 
-	bool IsDiffuse() const { return false; }
-	bool IsSpecular() const { return true; }
+	bool IsDelta() const { return true; }
 
 	const Spectrum &GetKrefl() const { return Krefl; }
 	const Spectrum &GetKrefrct() const { return Krefrct; }
@@ -256,9 +247,6 @@ public:
 	}
 
 	MaterialType GetType() const { return METAL; }
-
-	bool IsDiffuse() const { return false; }
-	bool IsSpecular() const { return true; }
 	
 	const Spectrum &GetKr() const { return Kr; }
 	float GetExp() const { return exponent; }
@@ -297,9 +285,6 @@ public:
 	}
 
 	MaterialType GetType() const { return MATTEMETAL; }
-
-	bool IsDiffuse() const { return true; }
-	bool IsSpecular() const { return true; }
 
 	const MatteMaterial &GetMatte() const { return matte; }
 	const MetalMaterial &GetMetal() const { return metal; }
@@ -346,8 +331,7 @@ public:
 
 	MaterialType GetType() const { return ARCHGLASS; }
 
-	bool IsDiffuse() const { return false; }
-	bool IsSpecular() const { return true; }
+	bool IsDelta() const { return true; }
 	bool IsShadowTransparent() const { return true; }
 	const Spectrum &GetSahdowTransparency() const { return Ktrans; }
 
@@ -393,9 +377,6 @@ public:
 	}
 
 	MaterialType GetType() const { return ALLOY; }
-
-	bool IsDiffuse() const { return true; }
-	bool IsSpecular() const { return true; }
 
 	const Spectrum &GetKrefl() const { return Krefl; }
 	const Spectrum &GetKd() const { return Kdiff; }
