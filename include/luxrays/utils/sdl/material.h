@@ -47,6 +47,7 @@ public:
 	virtual bool IsLightSource() const = 0;
 	virtual bool IsDelta() const = 0;
 	virtual bool IsShadowTransparent() const { return false; }
+	virtual BSDFEvent GetEventTypes() const = 0;
 
 	virtual const Spectrum &GetSahdowTransparency() const {
 		throw std::runtime_error("Internal error, called Material::GetSahdowTransparency()");
@@ -57,6 +58,7 @@ class LightMaterial : public Material {
 public:
 	bool IsLightSource() const { return true; }
 	bool IsDelta() const { return false; }
+	BSDFEvent GetEventTypes() const { return NONE; };
 };
 
 class AreaLightMaterial : public LightMaterial {
@@ -76,7 +78,7 @@ public:
 	bool IsLightSource() const { return false; }
 	bool IsDelta() const { return false; }
 
-	virtual Spectrum Evaluate(const bool fromLight, const bool into,
+	virtual Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const = 0;
 
@@ -98,10 +100,11 @@ public:
 	}
 
 	MaterialType GetType() const { return MATTE; }
+	BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
 	const Spectrum &GetKd() const { return Kd; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
@@ -125,13 +128,14 @@ public:
 	}
 
 	MaterialType GetType() const { return MIRROR; }
+	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT; };
 
 	bool IsDelta() const { return true; }
 
 	const Spectrum &GetKr() const { return Kr; }
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
@@ -161,6 +165,7 @@ public:
 	}
 
 	MaterialType GetType() const { return MATTEMIRROR; }
+	BSDFEvent GetEventTypes() const { return DIFFUSE | SPECULAR | REFLECT; };
 
 	const MatteMaterial &GetMatte() const { return matte; }
 	const MirrorMaterial &GetMirror() const { return mirror; }
@@ -169,7 +174,7 @@ public:
 	float GetMattePdf() const { return mattePdf; }
 	float GetMirrorPdf() const { return mirrorPdf; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
@@ -207,6 +212,7 @@ public:
 	}
 
 	MaterialType GetType() const { return GLASS; }
+	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
 
 	bool IsDelta() const { return true; }
 
@@ -219,7 +225,7 @@ public:
 	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
@@ -247,12 +253,13 @@ public:
 	}
 
 	MaterialType GetType() const { return METAL; }
+	BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 	
 	const Spectrum &GetKr() const { return Kr; }
 	float GetExp() const { return exponent; }
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
@@ -285,6 +292,7 @@ public:
 	}
 
 	MaterialType GetType() const { return MATTEMETAL; }
+	BSDFEvent GetEventTypes() const { return DIFFUSE | GLOSSY | REFLECT; };
 
 	const MatteMaterial &GetMatte() const { return matte; }
 	const MetalMaterial &GetMetal() const { return metal; }
@@ -293,7 +301,7 @@ public:
 	float GetMattePdf() const { return mattePdf; }
 	float GetMetalPdf() const { return metalPdf; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
@@ -330,6 +338,7 @@ public:
 	}
 
 	MaterialType GetType() const { return ARCHGLASS; }
+	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
 
 	bool IsDelta() const { return true; }
 	bool IsShadowTransparent() const { return true; }
@@ -345,7 +354,7 @@ public:
 	bool HasReflSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 	bool HasRefrctSpecularBounceEnabled() const { return transmitionSpecularBounce; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
@@ -377,6 +386,7 @@ public:
 	}
 
 	MaterialType GetType() const { return ALLOY; }
+	BSDFEvent GetEventTypes() const { return DIFFUSE | GLOSSY | REFLECT; };
 
 	const Spectrum &GetKrefl() const { return Krefl; }
 	const Spectrum &GetKd() const { return Kdiff; }
@@ -384,7 +394,7 @@ public:
 	float GetR0() const { return R0; }
 	bool HasSpecularBounceEnabled() const { return reflectionSpecularBounce; }
 
-	Spectrum Evaluate(const bool fromLight, const bool into,
+	Spectrum Evaluate(const bool fromLight,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight,
