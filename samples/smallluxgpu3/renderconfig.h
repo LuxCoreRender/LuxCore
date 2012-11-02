@@ -27,6 +27,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/sampler/sampler.h"
 
 class RenderConfig {
 public:
@@ -36,6 +37,8 @@ public:
 	void SetScreenRefreshInterval(const unsigned int t);
 	unsigned int GetScreenRefreshInterval() const;
 
+	Sampler *AllocSampler(RandomGenerator *rndGen) const;
+	
 	Properties cfg;
 	Scene *scene;
 
