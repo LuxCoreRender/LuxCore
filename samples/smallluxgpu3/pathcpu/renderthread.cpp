@@ -61,11 +61,14 @@ void PathCPURenderEngine::DirectLightSampling(
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
+				// Check if the light source is visible
 				if (!scene->Intersect(false, false, u5, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
-					const float factor = cosThetaToLight / (directPdfW * lightPickPdf);
+					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
-					const float weight = PowerHeuristic(directPdfW * lightPickPdf, bsdfPdfW);
+					// MIS between direct light sampling and BSDF sampling
+					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
 					if (depth >= rrDepth) {
 						// Russian Roulette
@@ -97,6 +100,7 @@ void PathCPURenderEngine::DirectHitLightSampling(
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.fixedDir, bsdf.shadeN));
 
+			// MIS between BSDF sampling and direct light sampling
 			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 		} else
 			weight = 1.f;
@@ -114,9 +118,10 @@ void PathCPURenderEngine::DirectHitInfiniteLight(
 		return;
 
 	float weight;
-	if(!lastSpecular)
+	if(!lastSpecular) {
+		// MIS between BSDF sampling and direct light sampling
 		weight = PowerHeuristic(lastPdfW, directPdfW);
-	else
+	} else
 		weight = 1.f;
 
 	*radiance += pathThrouput * weight * lightRadiance;

@@ -141,7 +141,7 @@ public:
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Kr;
@@ -180,7 +180,7 @@ public:
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	MatteMaterial matte;
@@ -231,7 +231,7 @@ public:
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Krefl, Krefrct;
@@ -265,7 +265,7 @@ public:
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 	static Vector GlossyReflection(const Vector &fixedDir, const float exponent,
 			const float u0, const float u1);
@@ -307,7 +307,7 @@ public:
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	MatteMaterial matte;
@@ -360,7 +360,7 @@ public:
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Krefl, Ktrans;
@@ -400,7 +400,7 @@ public:
 	Spectrum Sample(const bool fromLight,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
-		float *pdf, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 
 private:
 	Spectrum Krefl;
