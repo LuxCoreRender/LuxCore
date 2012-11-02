@@ -58,16 +58,18 @@ public:
 		return surfMat->GetSahdowTransparency();
 	}
 
-	Spectrum Evaluate(const Vector &lightDir, const Vector &eyeDir,
+	Spectrum Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	Spectrum Sample(const Vector &fixedDir, Vector *sampledDir,
+	Spectrum Sample(Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	Spectrum GetEmittedRadiance(const Scene *scene,
-			const Vector &dir,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const ;
 
+	// The incoming direction. It is the eyeDir when fromLight = false and
+	// lightDir when fromLight = true
+	Vector fixedDir;
 	Point hitPoint;
 	Normal geometryN;
 	Normal shadeN;

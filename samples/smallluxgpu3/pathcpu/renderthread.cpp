@@ -35,7 +35,7 @@
 void PathCPURenderEngine::DirectLightSampling(
 		const float u0, const float u1, const float u2, const float u3,
 		const float u4, const float u5,
-		const Spectrum &pathThrouput, const BSDF &bsdf, const Vector &eyeDir,
+		const Spectrum &pathThrouput, const BSDF &bsdf,
 		const int depth, Spectrum *radiance) {
 	Scene *scene = renderConfig->scene;
 	
@@ -52,7 +52,7 @@ void PathCPURenderEngine::DirectLightSampling(
 		if (!lightRadiance.Black()) {
 			BSDFEvent event;
 			float bsdfPdfW;
-			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, eyeDir, &event, &bsdfPdfW);
+			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
 			if (!bsdfEval.Black()) {
 				Ray shadowRay(bsdf.hitPoint, lightRayDir,
@@ -83,20 +83,19 @@ void PathCPURenderEngine::DirectLightSampling(
 
 void PathCPURenderEngine::DirectHitLightSampling(
 		const bool lastSpecular, const Spectrum &pathThrouput,
-		const Vector &eyeDir, const float distance,
-		const BSDF &bsdf, const float lastPdfW, Spectrum *radiance) {
+		const float distance, const BSDF &bsdf, const float lastPdfW,
+		Spectrum *radiance) {
 	Scene *scene = renderConfig->scene;
 
 	float directPdfA;
-	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene,
-		eyeDir, &directPdfA);
+	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene, &directPdfA);
 
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!lastSpecular) {
 			const float lightPickProb = scene->PickLightPdf();
 			const float directPdfW = PdfAtoW(directPdfA, distance,
-				AbsDot(eyeDir, bsdf.shadeN));
+				AbsDot(bsdf.fixedDir, bsdf.shadeN));
 
 			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 		} else
@@ -178,7 +177,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
 				renderEngine->DirectHitLightSampling(lastSpecular, pathThrouput,
-						-eyeRay.d, eyeRayHit.t, bsdf, lastPdfW, &radiance);
+						eyeRayHit.t, bsdf, lastPdfW, &radiance);
 
 				// SLG light sources are like black bodies
 				break;
@@ -192,7 +191,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			renderEngine->DirectLightSampling(rndGen->floatValue(), rndGen->floatValue(),
 					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
-					rndGen->floatValue(), pathThrouput, bsdf, -eyeRay.d,
+					rndGen->floatValue(), pathThrouput, bsdf,
 					depth, &radiance);
 
 			//------------------------------------------------------------------
@@ -202,7 +201,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			Vector sampledDir;
 			BSDFEvent event;
 			float cosSampledDir;
-			const Spectrum bsdfSample = bsdf.Sample(-eyeRay.d, &sampledDir,
+			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 					rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue(),
 					&lastPdfW, &cosSampledDir, &event);
 			if (bsdfSample.Black())

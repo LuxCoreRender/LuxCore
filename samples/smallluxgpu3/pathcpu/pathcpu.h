@@ -45,14 +45,13 @@ private:
 	static void RenderThreadFuncImpl(CPURenderThread *thread);
 
 	void DirectLightSampling(const float u0, const float u1, const float u2,
-			const float u3, const float u4,	const float u5,	const Spectrum &pathThrouput,
-			const BSDF &bsdf, const Vector &eyeDir, const int depth,
+			const float u3, const float u4,	const float u5,
+			const Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
 			Spectrum *radiance);
 
-	void DirectHitLightSampling(
-	const bool lastSpecular, const Spectrum &pathThrouput,
-		const Vector &eyeDir, const float distance,
-		const BSDF &bsdf, const float lastPdfW, Spectrum *radiance);
+	void DirectHitLightSampling(const bool lastSpecular,
+			const Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
+			const float lastPdfW, Spectrum *radiance);
 
 	void DirectHitInfiniteLight(const bool lastSpecular, const Spectrum &pathThrouput,
 			const Vector &eyeDir, const float lastPdfW, Spectrum *radiance);
