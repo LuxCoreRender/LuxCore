@@ -49,13 +49,11 @@ Spectrum MatteMaterial::Sample(const bool fromLight,
 	if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	*sampledDir = Sgn(fixedDir.z) * CosineSampleHemisphere(u0, u1);
+	*sampledDir = Sgn(fixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
 
 	*cosSampledDir = fabsf(sampledDir->z);
 	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
-
-	*pdfW = INV_PI * (*cosSampledDir);
 
 	*event = DIFFUSE | REFLECT;
 	return KdOverPI;
@@ -173,8 +171,8 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 	const Vector transDir = Normalize(nnt * rayDir - nkk);
 
 	const float c = 1.f - (into ? -ddn : Dot(transDir, N));
-
-	const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+	const float c2 = c * c;
+	const float Re = R0 + (1.f - R0) * c2 * c2 * c;
 	const float Tr = 1.f - Re;
 	const float P = .25f + .5f * Re;
 
@@ -377,19 +375,26 @@ Spectrum AlloyMaterial::Evaluate(const bool fromLight,
 	float *directPdfW, float *reversePdfW) const {
 	*event = DIFFUSE | REFLECT;
 
-	// Schilick's approximation
-	const float c = 1.f - fabsf(lightDir.z);
-	const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+	if(directPdfW) {
+		// Schlick's approximation
+		const float c = 1.f - fabsf(eyeDir.z);
+		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
 
-	const float P = .25f + .5f * Re;
+		const float P = .25f + .5f * Re;
+		const float iP = 1.f - P;
+		*directPdfW = fabsf(lightDir.z) * INV_PI * iP;
+	}
 
-	// TODO
-	if(directPdfW)
-		*directPdfW = (1.f - P) / (1.f - Re);
+	if(reversePdfW) {
+		// Schlick's approximation
+		const float c = 1.f - fabsf(lightDir.z);
+		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
 
-	// TODO
-	if(reversePdfW)
-		*reversePdfW = (1.f - P) / (1.f - Re);
+		const float P = .25f + .5f * Re;
+		const float iP = 1.f - P;
+		*reversePdfW = fabsf(eyeDir.z) * INV_PI * iP;
+	}
+
 
 	return KdiffOverPI;
 }
@@ -402,9 +407,10 @@ Spectrum AlloyMaterial::Sample(const bool fromLight,
 	const bool into = (fixedDir.z > 0.f);
 	const Vector shadeN(0.f, 0.f, into ? 1.f : -1.f);
 
-	// Schilick's approximation
+	// Schlick's approximation
 	const float c = 1.f - Dot(fixedDir, shadeN);
-	const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+	const float c2 = c * c;
+	const float Re = R0 + (1.f - R0) * c2 * c2 * c;
 
 	const float P = .25f + .5f * Re;
 
@@ -412,25 +418,23 @@ Spectrum AlloyMaterial::Sample(const bool fromLight,
 		*sampledDir = MetalMaterial::GlossyReflection(fixedDir, exponent, u0, u1);
 		*pdfW = P / Re;
 
-		*event = SPECULAR | REFLECT;
+		*event = GLOSSY | REFLECT;
 		*cosSampledDir = fabsf(sampledDir->z);
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Re * Krefl / (*cosSampledDir);
+		return Krefl / (*cosSampledDir);
 	} else {
 		*event = DIFFUSE | REFLECT;
 
-		*sampledDir = CosineSampleHemisphere(u0, u1);
+		*sampledDir = CosineSampleHemisphere(u0, u1, pdfW);
 		if (fabsf(sampledDir->z) < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
-
-		*pdfW = fabsf(sampledDir->z) * INV_PI;
 		
+		const float iP = 1.f - P;
 		const float iRe = 1.f - Re;
-		*pdfW *= (1.f - P) / iRe;
+		*pdfW *= iP / iRe;
 
 		*cosSampledDir = fabsf(sampledDir->z);
-
-		return iRe * Kdiff;
+		return KdiffOverPI;
 
 	}
 }
