@@ -154,8 +154,8 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	// Trace paths
 	//--------------------------------------------------------------------------
 
-	SampleResult sampleResult;
-	sampleResult.type = PER_PIXEL_NORMALIZED;
+	vector<SampleResult> sampleResults(1);
+	sampleResults[0].type = PER_PIXEL_NORMALIZED;
 	while (!boost::this_thread::interruption_requested()) {
 		float alpha = 1.f;
 
@@ -248,11 +248,11 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		assert (!radiance.IsNaN() && !radiance.IsInf());
 
-		sampleResult.screenX = screenX;
-		sampleResult.screenY = screenY;
-		sampleResult.radiance = radiance;
-		sampleResult.alpha = alpha;
-		sampler->NextSample(&sampleResult, 1);
+		sampleResults[0].screenX = screenX;
+		sampleResults[0].screenY = screenY;
+		sampleResults[0].radiance = radiance;
+		sampleResults[0].alpha = alpha;
+		sampler->NextSample(sampleResults);
 	}
 
 	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread halted");
