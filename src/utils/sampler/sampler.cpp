@@ -28,7 +28,7 @@ namespace luxrays { namespace utils {
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
-/*MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm, const unsigned int maxRej,
+MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm, const unsigned int maxRej,
 		const float pLarge, const float imgRange) : Sampler(rnd, flm),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageRange(imgRange),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL) {
@@ -76,55 +76,51 @@ void MetropolisSampler::RequestSamples(const unsigned int size) {
 	currentSamples = new float[sampleSize];
 	currentSampleStamps = new unsigned int[sampleSize];
 
-	stamp = 0;
 	totalLuminance = 0.;
 	sampleCount = 0.;
-	
-	ResetData();
+
+	isLargeMuattion = true;
+	weight = 0.f;
+	consecRejects = 0;
+	currentLuminance = 0.;
+	std::fill(sampleStamps, sampleStamps + sampleSize, 0);
+	stamp = 1;
+	currentStamp = 1;
+	currentSampleResult.resize(0);
 }
 
 float MetropolisSampler::GetSample(const unsigned int index) {
-	if (stamp == 0) {
-		const float s = rndGen->floatValue();
-		samples[index] = s;
+	unsigned int sampleStamp = sampleStamps[index];
 
-		return s;
-	} else {
-		const float sampleStamp = sampleStamps[index];
+	float s;
+	if (sampleStamp == 0) {
+		s = rndGen->floatValue();
+		sampleStamp = 1;
+	} else
+		s = samples[index];
 
-		float s;
-		if (sampleStamp == 0)
-			s = rndGen->floatValue();
-		else
-			s = samples[index];
+	// Mutate the sample up to the currentStamp
+	for (unsigned int i = sampleStamp; i < stamp; ++i)
+		s = Mutate(s, rndGen->floatValue());
 
-		// Mutate the sample up to the currentStamp
-		for (unsigned int i = sampleStamp; i < stamp; ++i)
-			s = Mutate(s, rndGen->floatValue());
+	samples[index] = s;
+	sampleStamps[index] = stamp;
 
-		samples[index] = s;
-
-		return s;
-	}
+	return s;
 }
 
-void MetropolisSampler::NextSample(const SampleResult *sampleResults, const unsigned int size) {
+void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
+	film->AddSampleCount(1.f);
+
 	// Calculate the sample result luminance
 	float newLuminance = 0.f;
-	for (unsigned int i = 0; i < size; ++i) {
-		SampleResult *sampleResult = &sampleResults[i];
-		const float luminance = sampleResult
+	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
+		const float luminance = sr->radiance.Y();
+		assert (!isnan(luminance) && !isinf(luminance));
 
-		if 
+		if ((luminance >= 0.f) &&!isnan(luminance) && !isinf(luminance))
+			newLuminance += luminance;
 	}
-	
-	if (sampleResult2)
-		newLuminance = sampleResult1->radiance.Y() + sampleResult2->radiance.Y();
-	else
-		newLuminance = sampleResult1->radiance.Y();
-	newLuminance = (!isnan(newLuminance) && !isinf(newLuminance)) ?
-		newLuminance : 0.f;
-	assert (!isnan(newLuminance) && !isinf(newLuminance));
 
 	if (isLargeMuattion) {
 		totalLuminance += newLuminance;
@@ -145,16 +141,12 @@ void MetropolisSampler::NextSample(const SampleResult *sampleResults, const unsi
 
 	// Try or force accepting of the new sample
 	if ((accProb == 1.f) || (rndGen->floatValue() < accProb)) {
-		// Add accumulated contribution of previous reference sample
+		// Add accumulated SampleResult of previous reference sample
 		const float norm = weight / (currentLuminance / meanIntensity + largeMutationProbability);
 		if (norm > 0.f) {
-			film->AddSampleCount(currentSampleResult1->type, 1.f);
-			film->SplatFiltered(currentSampleResult1->type, currentSampleResult1->screenX, currentSampleResult1->screenY,
-					norm * currentSampleResult1->radiance);
-			if (currentSampleResult2) {
-				film->AddSampleCount(currentSampleResult2->type, 1.f);
-				film->SplatFiltered(currentSampleResult2->type, currentSampleResult2->screenX, currentSampleResult2->screenY,
-						norm * currentSampleResult2->radiance);
+			for (vector<SampleResult>::const_iterator sr = currentSampleResult.begin(); sr < currentSampleResult.end(); ++sr) {
+				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, norm);
+				film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha, norm);
 			}
 		}
 
@@ -162,37 +154,35 @@ void MetropolisSampler::NextSample(const SampleResult *sampleResults, const unsi
 		weight = newWeight;
 		currentStamp = stamp;
 		currentLuminance = newLuminance;
-		Swap(currentSamples, samples);
-		Swap(currentSampleStamps, sampleStamps);
-		currentSampleResult1 = sampleResult1;
-		currentSampleResult2 = sampleResult2;
+		std::copy(samples, samples + sampleSize, currentSamples);
+		std::copy(sampleStamps, sampleStamps + sampleSize, currentSampleStamps);
+		currentSampleResult = sampleResults;
 
 		consecRejects = 0;
 	} else {
 		// Add contribution of new sample before rejecting it
 		const float norm = newWeight / (newLuminance / meanIntensity + largeMutationProbability);
 		if (norm > 0.f) {
-			film->AddSampleCount(sampleResult1->type, 1.f);
-			film->SplatFiltered(sampleResult1->type, sampleResult1->screenX, sampleResult1->screenY,
-					norm * sampleResult1->radiance);
-			if (sampleResult2) {
-				film->AddSampleCount(sampleResult2->type, 1.f);
-				film->SplatFiltered(sampleResult2->type, sampleResult2->screenX, sampleResult2->screenY,
-						norm * sampleResult2->radiance);
+			for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
+				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, norm * sr->radiance, norm);
+				film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha, norm);
 			}
 		}
 
 		// Restart from previous reference
 		stamp = currentStamp;
+		std::copy(currentSamples, currentSamples + sampleSize, samples);
+		std::copy(currentSampleStamps, currentSampleStamps + sampleSize, sampleStamps);
 
 		++consecRejects;
 	}
 
 	isLargeMuattion = (rndGen->floatValue() < largeMutationProbability);
 	if (isLargeMuattion) {
-		ResetData();
+		stamp = 1;
+		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
 	} else
 		++stamp;
-}*/
+}
 
 } }

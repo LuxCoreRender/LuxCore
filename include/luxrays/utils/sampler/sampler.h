@@ -80,7 +80,7 @@ public:
 	void NextSample(const vector<SampleResult> &sampleResults) {
 		film->AddSampleCount(1.f);
 
-		for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
+		for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
 			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance);
 			film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha);
 		}
@@ -91,7 +91,7 @@ public:
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
-/*class MetropolisSampler : public Sampler {
+class MetropolisSampler : public Sampler {
 public:
 	MetropolisSampler(RandomGenerator *rnd, Film *film, const unsigned int maxRej,
 			const float pLarge, const float imgRange);
@@ -101,20 +101,9 @@ public:
 
 	float GetSample(const unsigned int index);
 
-	void NextSample(const SampleResult *sampleResults, const unsigned int size);
+	void NextSample(const vector<SampleResult> &sampleResults);
 
 private:
-	void ResetData() {
-		weight = 0.f;
-		consecRejects = 0;
-		currentLuminance = 0.;
-		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
-		stamp = 0;
-		currentStamp = 0;
-		currentSampleResult.resize(0);
-		isLargeMuattion = true;
-	}
-
 	unsigned int maxRejects;
 	float largeMutationProbability, imageRange;
 
@@ -136,7 +125,7 @@ private:
 	vector<SampleResult> currentSampleResult;
 
 	bool isLargeMuattion;
-};*/
+};
 
 } }
 

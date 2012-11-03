@@ -153,9 +153,9 @@ public:
 	}
 
 	void SplatFiltered(const FilmBufferType type, const float screenX,
-		const float screenY, const Spectrum &radiance);
+		const float screenY, const Spectrum &radiance, const float weight = 1.f);
 	void SplatFilteredAlpha(const float screenX, const float screenY,
-		const float a);
+		const float a, const float weight = 1.f);
 
 private:
 	void UpdateScreenBufferImpl(const ToneMapType type);
