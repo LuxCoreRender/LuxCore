@@ -93,6 +93,8 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "t", "toggle tonemapping");
 	PrintHelpString(320, fontOffset, "n, m", "dec./inc. the screen refresh");
 	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "i", "switch sampler");
+	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "1", "OpenCL path tracing");
 	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
 	fontOffset -= 15;
@@ -117,8 +119,10 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Render engine %s][Tone mapping %s]",
+	sprintf(buf, "[Render engine %s][Sampler %s][Tone mapping %s]",
 			RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
+			session->renderConfig->cfg.GetString("sampler.type",
+				session->renderConfig->cfg.GetString("path.sampler.type", "INLINED_RANDOM")).c_str(),
 			(session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
@@ -350,6 +354,18 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'h':
 			OSDPrintHelp = (!OSDPrintHelp);
+			break;
+		case 'i':
+			if (session->renderConfig->cfg.GetString("sampler.type",
+					session->renderConfig->cfg.GetString("path.sampler.type", "INLINED_RANDOM")) == "INLINED_RANDOM") {
+				session->renderConfig->cfg.SetString("sampler.type", "METROPOLIS");
+				session->renderConfig->cfg.SetString("path.sampler.type", "METROPOLIS");
+			} else {
+				session->renderConfig->cfg.SetString("sampler.type", "INLINED_RANDOM");
+				session->renderConfig->cfg.SetString("path.sampler.type", "INLINED_RANDOM");				
+			}
+			session->Stop();
+			session->Start();
 			break;
 		case 'n': {
 			const unsigned int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
