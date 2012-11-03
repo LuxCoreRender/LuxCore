@@ -62,7 +62,16 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film) const {
 	if ((samplerTypeName.compare("INLINED_RANDOM") == 0) ||
 			(samplerTypeName.compare("RANDOM") == 0))
 		return new InlinedRandomSampler(rndGen, film);
-	else
+	else if (samplerTypeName.compare("METROPOLIS") == 0) {
+		const float rate = cfg.GetFloat("sampler.largesteprate",
+				cfg.GetFloat("path.sampler.largesteprate", .4f));
+		const float reject = cfg.GetFloat("sampler.maxconsecutivereject",
+				cfg.GetFloat("path.sampler.maxconsecutivereject", 512));
+		const float mutationrate = cfg.GetFloat("sampler.imagemutationrate",
+				cfg.GetFloat("path.sampler.imagemutationrate", .1f));
+
+		return new MetropolisSampler(rndGen, film, reject, rate, mutationrate);
+	} else
 		throw std::runtime_error("Unknown sampler.type");
 
 	return NULL;
