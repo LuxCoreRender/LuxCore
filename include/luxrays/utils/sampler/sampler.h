@@ -78,8 +78,7 @@ public:
 
 	float GetSample(const unsigned int index) { return rndGen->floatValue(); }
 	void NextSample(const vector<SampleResult> &sampleResults) {
-		film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
-		film->AddSampleCount(PER_SCREEN_NORMALIZED, 1.f);
+		film->AddSampleCount(1.f);
 
 		for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance);

@@ -117,8 +117,7 @@ public:
 	unsigned int GetWidth() const { return width; }
 	unsigned int GetHeight() const { return height; }
 	double GetTotalSampleCount() const {
-		return statsTotalSampleCount[PER_PIXEL_NORMALIZED] +
-				statsTotalSampleCount[PER_SCREEN_NORMALIZED];
+		return statsTotalSampleCount;
 	}
 	double GetTotalTime() const {
 		return WallClockTime() - statsStartSampleTime;
@@ -134,8 +133,8 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	void AddSampleCount(const FilmBufferType type, const double count = 1.0) {
-		statsTotalSampleCount[type] += count;
+	void AddSampleCount(const double count) {
+		statsTotalSampleCount += count;
 	}
 
 	void AddRadiance(const FilmBufferType type, const unsigned int x, const unsigned int y,
@@ -181,7 +180,7 @@ private:
 
 	unsigned int width, height, pixelCount;
 
-	double statsTotalSampleCount[2], statsStartSampleTime, statsAvgSampleSec;
+	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
 	float gammaTable[GAMMA_TABLE_SIZE];
 
