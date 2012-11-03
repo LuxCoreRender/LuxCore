@@ -52,7 +52,7 @@ unsigned int RenderConfig::GetScreenRefreshInterval() const {
 	return screenRefreshInterval;
 }
 
-Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen) const {
+Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film) const {
 	//--------------------------------------------------------------------------
 	// Sampler
 	//--------------------------------------------------------------------------
@@ -61,7 +61,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen) const {
 			cfg.GetString("path.sampler.type", "INLINED_RANDOM"));
 	if ((samplerTypeName.compare("INLINED_RANDOM") == 0) ||
 			(samplerTypeName.compare("RANDOM") == 0))
-		return new InlinedRandomSampler(rndGen);
+		return new InlinedRandomSampler(rndGen, film);
 	else
 		throw std::runtime_error("Unknown sampler.type");
 

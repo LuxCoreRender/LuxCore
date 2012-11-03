@@ -26,18 +26,50 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/randomgen.h"
+#include "luxrays/utils/film/film.h"
 
 namespace luxrays { namespace utils {
 
+typedef struct {
+	FilmBufferType type;
+	float screenX, screenY;
+	Spectrum radiance;
+	float alpha;
+} SampleResult;
+
+inline SampleResult *AllocSampleResult(vector<SampleResult> *sampleResults, unsigned int *size) {
+	*size += 1;
+
+	if (*size > sampleResults->size())
+		sampleResults->resize(*size);
+
+	return &((*sampleResults)[*size - 1]);
+}
+
+inline void AddSampleResult(vector<SampleResult> *sampleResults, unsigned int *size, const FilmBufferType type,
+	const float screenX, const float screenY, const Spectrum &radiance, const float alpha) {
+	SampleResult *sr = AllocSampleResult(sampleResults, size);
+	sr->type = type;
+	sr->screenX = screenX;
+	sr->screenY = screenY;
+	sr->radiance = radiance;
+	sr->alpha = alpha;
+}
+
 class Sampler {
 public:
-	Sampler() { };
+	Sampler(RandomGenerator *rnd, Film *flm);
 	virtual ~Sampler() { }
 	
 	virtual void RequestSamples(const unsigned int size) = 0;
 
+	// index 0 and 1 are always image X and image Y
 	virtual float GetSample(const unsigned int index) = 0;
-	virtual void NextSample(const float currentSampleLuminance) = 0;
+	virtual void NextSample(const SampleResult *sampleResults, const unsigned int size) = 0;
+
+protected:
+	RandomGenerator *rndGen;
+	Film *film;
 };
 
 //------------------------------------------------------------------------------
@@ -46,17 +78,79 @@ public:
 
 class InlinedRandomSampler : public Sampler {
 public:
-	InlinedRandomSampler(RandomGenerator *rnd) : rndGen(rnd) { };
+	InlinedRandomSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm) { }
 	~InlinedRandomSampler() { }
 
 	void RequestSamples(const unsigned int size) { };
 
 	float GetSample(const unsigned int index) { return rndGen->floatValue(); }
-	void NextSample(const float currentSampleLuminance) { }
+	void NextSample(const SampleResult *sampleResults, const unsigned int size) {
+		film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
+		film->AddSampleCount(PER_SCREEN_NORMALIZED, 1.f);
+
+		for (unsigned int i = 0; i < size; ++i) {
+			const SampleResult *sr = &sampleResults[i];
+			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance);
+			film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha);
+		}
+	}
+};
+
+//------------------------------------------------------------------------------
+// Metropolis sampler
+//------------------------------------------------------------------------------
+
+/*class MetropolisSampler : public Sampler {
+public:
+	MetropolisSampler(RandomGenerator *rnd, Film *film, const unsigned int maxRej,
+			const float pLarge, const float imgRange);
+	~MetropolisSampler();
+
+	void RequestSamples(const unsigned int size);
+
+	float GetSample(const unsigned int index);
+	void NextSample(const float currentSampleLuminance);
+
+	void NextSample(SampleResult *sampleResult) {
+		NextSample(sampleResult, NULL);
+	}
+	void NextSample(SampleResult *sampleResult1, SampleResult *sampleResult2);
 
 private:
-	RandomGenerator *rndGen;
-};
+	void ResetData() {
+		weight = 0.f;
+		consecRejects = 0;
+		currentLuminance = 0.;
+		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
+		stamp = 0;
+		currentStamp = 0;
+		currentSampleResult1 = NULL;
+		currentSampleResult2 = NULL;
+		isLargeMuattion = true;
+	}
+
+	unsigned int maxRejects;
+	float largeMutationProbability, imageRange;
+
+	unsigned int sampleSize;
+	float *samples;
+	unsigned int *sampleStamps;
+
+	double totalLuminance, sampleCount;
+
+	float weight;
+	unsigned int consecRejects;
+	unsigned int stamp;
+
+	// Data saved for the current sample
+	unsigned int currentStamp;
+	double currentLuminance;
+	float *currentSamples;
+	unsigned int *currentSampleStamps;
+	SampleResult *currentSampleResult1, *currentSampleResult2;
+
+	bool isLargeMuattion;
+};*/
 
 } }
 

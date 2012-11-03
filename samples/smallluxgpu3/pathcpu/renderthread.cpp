@@ -144,7 +144,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	const unsigned int filmHeight = film->GetHeight();
 
 	// Setup the sampler
-	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen);
+	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleSize = 
 		4 + // To generate the initial ray
 		renderEngine->maxPathDepth * 11; // For each path vertex
@@ -154,8 +154,10 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	// Trace paths
 	//--------------------------------------------------------------------------
 
+	SampleResult sampleResult;
+	sampleResult.type = PER_PIXEL_NORMALIZED;
 	while (!boost::this_thread::interruption_requested()) {
-		float sampleLuminance = 0.f; // Used by the Sampler (i.e. Metropolis)
+		float alpha = 1.f;
 
 		Ray eyeRay;
 		const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
@@ -181,15 +183,12 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						lastPdfW, &radiance);
 
 				if (depth == 1)
-					film->SplatFilteredAlpha(screenX, screenY, 0.f);
+					alpha = 0.f;
 				break;
 			}
 			pathThrouput *= connectionThroughput;
 
 			// Something was hit
-			if (depth == 1)
-				film->SplatFilteredAlpha(screenX, screenY, 1.f);
-
 
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
@@ -249,11 +248,11 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		assert (!radiance.IsNaN() && !radiance.IsInf());
 
-		film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
-		film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
-		sampleLuminance += radiance.Y();
-
-		sampler->NextSample(sampleLuminance);
+		sampleResult.screenX = screenX;
+		sampleResult.screenY = screenY;
+		sampleResult.radiance = radiance;
+		sampleResult.alpha = alpha;
+		sampler->NextSample(&sampleResult, 1);
 	}
 
 	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread halted");
