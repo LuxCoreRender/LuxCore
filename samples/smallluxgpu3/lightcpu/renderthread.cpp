@@ -30,7 +30,7 @@
 
 void LightCPURenderEngine::ConnectToEye(const float u0,
 		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
-		vector<SampleResult> *sampleResults, unsigned int *sampleResultsSize) {
+		vector<SampleResult> &sampleResults) {
 	Scene *scene = renderConfig->scene;
 
 	Vector eyeDir(bsdf.hitPoint - lensPoint);
@@ -62,7 +62,7 @@ void LightCPURenderEngine::ConnectToEye(const float u0,
 
 				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
 
-				AddSampleResult(sampleResults, sampleResultsSize, PER_SCREEN_NORMALIZED, scrX, scrY,
+				AddSampleResult(sampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
 						radiance, 1.f);
 			}
 		}
@@ -96,11 +96,10 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults;
-	unsigned int sampleResultsSize;
 	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
 		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1;
-		sampleResultsSize = 0;
+		sampleResults.resize(0);
 
 		// Select one light source
 		float lightPickPdf;
@@ -122,7 +121,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		if (!scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
 				&lensPoint)) {
 
-			sampler->NextSample(&sampleResults[0], sampleResultsSize);
+			sampler->NextSample(sampleResults);
 			continue;
 		}
 
@@ -158,7 +157,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			// Add a sample even if it is black in order to avoid aliasing problems
 			// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
-			AddSampleResult(&sampleResults, &sampleResultsSize, PER_PIXEL_NORMALIZED,
+			AddSampleResult(sampleResults, PER_PIXEL_NORMALIZED,
 					screenX, screenY, radiance, somethingWasHit ? 1.f : 0.f);
 		}
 
@@ -190,7 +189,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				//--------------------------------------------------------------
 
 				renderEngine->ConnectToEye(sampler->GetSample(sampleOffset + 1),
-						bsdf, lensPoint, lightPathFlux, &sampleResults, &sampleResultsSize);
+						bsdf, lensPoint, lightPathFlux, sampleResults);
 
 				if (depth >= renderEngine->maxPathDepth)
 					break;
@@ -231,7 +230,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			}
 		}
 
-		sampler->NextSample(&sampleResults[0], sampleResultsSize);
+		sampler->NextSample(sampleResults);
 	}
 
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");

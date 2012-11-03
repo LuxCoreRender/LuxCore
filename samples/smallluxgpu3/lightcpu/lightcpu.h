@@ -59,7 +59,7 @@ private:
 
 	void ConnectToEye(const float u0,
 			const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
-			vector<SampleResult> *sampleResults, unsigned int *sampleResultsSize);
+			vector<SampleResult> &sampleResults);
 
 	vector<double> threadSamplesCount;
 };

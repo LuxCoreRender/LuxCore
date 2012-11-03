@@ -37,35 +37,28 @@ typedef struct {
 	float alpha;
 } SampleResult;
 
-inline SampleResult *AllocSampleResult(vector<SampleResult> *sampleResults, unsigned int *size) {
-	*size += 1;
-
-	if (*size > sampleResults->size())
-		sampleResults->resize(*size);
-
-	return &((*sampleResults)[*size - 1]);
-}
-
-inline void AddSampleResult(vector<SampleResult> *sampleResults, unsigned int *size, const FilmBufferType type,
+inline void AddSampleResult(vector<SampleResult> &sampleResults, const FilmBufferType type,
 	const float screenX, const float screenY, const Spectrum &radiance, const float alpha) {
-	SampleResult *sr = AllocSampleResult(sampleResults, size);
-	sr->type = type;
-	sr->screenX = screenX;
-	sr->screenY = screenY;
-	sr->radiance = radiance;
-	sr->alpha = alpha;
+	SampleResult sr;
+	sr.type = type;
+	sr.screenX = screenX;
+	sr.screenY = screenY;
+	sr.radiance = radiance;
+	sr.alpha = alpha;
+
+	sampleResults.push_back(sr);
 }
 
 class Sampler {
 public:
-	Sampler(RandomGenerator *rnd, Film *flm);
+	Sampler(RandomGenerator *rnd, Film *flm) : rndGen(rnd), film(flm) { }
 	virtual ~Sampler() { }
 	
 	virtual void RequestSamples(const unsigned int size) = 0;
 
 	// index 0 and 1 are always image X and image Y
 	virtual float GetSample(const unsigned int index) = 0;
-	virtual void NextSample(const SampleResult *sampleResults, const unsigned int size) = 0;
+	virtual void NextSample(const vector<SampleResult> &sampleResults) = 0;
 
 protected:
 	RandomGenerator *rndGen;
@@ -84,12 +77,11 @@ public:
 	void RequestSamples(const unsigned int size) { };
 
 	float GetSample(const unsigned int index) { return rndGen->floatValue(); }
-	void NextSample(const SampleResult *sampleResults, const unsigned int size) {
+	void NextSample(const vector<SampleResult> &sampleResults) {
 		film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
 		film->AddSampleCount(PER_SCREEN_NORMALIZED, 1.f);
 
-		for (unsigned int i = 0; i < size; ++i) {
-			const SampleResult *sr = &sampleResults[i];
+		for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance);
 			film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha);
 		}
@@ -109,12 +101,8 @@ public:
 	void RequestSamples(const unsigned int size);
 
 	float GetSample(const unsigned int index);
-	void NextSample(const float currentSampleLuminance);
 
-	void NextSample(SampleResult *sampleResult) {
-		NextSample(sampleResult, NULL);
-	}
-	void NextSample(SampleResult *sampleResult1, SampleResult *sampleResult2);
+	void NextSample(const SampleResult *sampleResults, const unsigned int size);
 
 private:
 	void ResetData() {
@@ -124,8 +112,7 @@ private:
 		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
 		stamp = 0;
 		currentStamp = 0;
-		currentSampleResult1 = NULL;
-		currentSampleResult2 = NULL;
+		currentSampleResult.resize(0);
 		isLargeMuattion = true;
 	}
 
@@ -147,7 +134,7 @@ private:
 	double currentLuminance;
 	float *currentSamples;
 	unsigned int *currentSampleStamps;
-	SampleResult *currentSampleResult1, *currentSampleResult2;
+	vector<SampleResult> currentSampleResult;
 
 	bool isLargeMuattion;
 };*/

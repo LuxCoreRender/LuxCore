@@ -24,9 +24,6 @@
 
 namespace luxrays { namespace utils {
 
-Sampler::Sampler(RandomGenerator *rnd, Film *flm) : rndGen(rnd), film(flm) {
-}
-
 //------------------------------------------------------------------------------
 // Metropolis sampler
 //------------------------------------------------------------------------------
@@ -111,9 +108,16 @@ float MetropolisSampler::GetSample(const unsigned int index) {
 	}
 }
 
-void MetropolisSampler::NextSample(SampleResult *sampleResult1, SampleResult *sampleResult2) {
+void MetropolisSampler::NextSample(const SampleResult *sampleResults, const unsigned int size) {
 	// Calculate the sample result luminance
-	float newLuminance;
+	float newLuminance = 0.f;
+	for (unsigned int i = 0; i < size; ++i) {
+		SampleResult *sampleResult = &sampleResults[i];
+		const float luminance = sampleResult
+
+		if 
+	}
+	
 	if (sampleResult2)
 		newLuminance = sampleResult1->radiance.Y() + sampleResult2->radiance.Y();
 	else
