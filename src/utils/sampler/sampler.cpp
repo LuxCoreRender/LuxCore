@@ -44,30 +44,35 @@ MetropolisSampler::~MetropolisSampler() {
 // Mutate a value in the range [0-1]
 static float Mutate(const float x, const float randomValue) {
 	static const float s1 = 1.f / 512.f, s2 = 1.f / 16.f;
+
 	const float dx = s1 / (s1 / s2 + fabsf(2.f * randomValue - 1.f)) -
 			s1 / (s1 / s2 + 1.f);
+
 	if (randomValue < 0.5f) {
-		float x1 = x + dx;
-		return (x1 < 1.f) ? x1 : x1 - 1.f;
+		float mutatedX = x + dx;
+		return (mutatedX < 1.f) ? mutatedX : mutatedX - 1.f;
 	} else {
-		float x1 = x - dx;
-		return (x1 < 0.f) ? x1 + 1.f : x1;
+		float mutatedX = x - dx;
+		return (mutatedX < 0.f) ? mutatedX + 1.f : mutatedX;
 	}
 }
 
-// Mutate a value in the range [min-max]
-//static float MutateScaled(const float x, const float randomValue, const float mini, const float maxi, const float range) {
-//	static const float s1 = 32.f;
-//	const float dx = range / (s1 / (1.f + s1) + (s1 * s1) / (1.f + s1) *
-//			fabsf(2.f * randomValue - 1.f)) - range / s1;
-//	if (randomValue < 0.5f) {
-//		float x1 = x + dx;
-//		return (x1 < maxi) ? x1 : x1 - maxi + mini;
-//	} else {
-//		float x1 = x - dx;
-//		return (x1 < mini) ? x1 - mini + maxi : x1;
-//	}
-//}
+// Mutate a value max. by a range value
+float MutateScaled(const float x, const float range, const float randomValue) {
+	static const float s1 = 32.f;
+	
+	const float dx = range / (s1 / (1.f + s1) + (s1 * s1) / (1.f + s1) *
+		fabs(2.f * randomValue - 1.f)) - range / s1;
+
+	float mutatedX = x;
+	if (randomValue < 0.5f) {
+		mutatedX += dx;
+		return (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
+	} else {
+		mutatedX -= dx;
+		return (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
+	}
+}
 
 void MetropolisSampler::RequestSamples(const unsigned int size) {
 	sampleSize = size;
@@ -100,8 +105,14 @@ float MetropolisSampler::GetSample(const unsigned int index) {
 		s = samples[index];
 
 	// Mutate the sample up to the currentStamp
-	for (unsigned int i = sampleStamp; i < stamp; ++i)
-		s = Mutate(s, rndGen->floatValue());
+	if ((index == 0) || (index == 1)) {
+		// 0 and 1 are used for image X/Y
+		for (unsigned int i = sampleStamp; i < stamp; ++i)
+			s = MutateScaled(s, imageRange, rndGen->floatValue());
+	} else {
+		for (unsigned int i = sampleStamp; i < stamp; ++i)
+			s = Mutate(s, rndGen->floatValue());
+	}
 
 	samples[index] = s;
 	sampleStamps[index] = stamp;
