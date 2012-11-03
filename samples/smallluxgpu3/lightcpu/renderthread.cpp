@@ -86,9 +86,11 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	// Setup the sampler
 	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
+	const unsigned int sampleBootSize = 10;
+	const unsigned int sampleStepSize = 6;
 	const unsigned int sampleSize = 
-		10 + // To generate the initial light vertex and trace eye ray
-		renderEngine->maxPathDepth * 6; // For each light vertex
+		sampleBootSize + // To generate the initial light vertex and trace eye ray
+		renderEngine->maxPathDepth * sampleStepSize; // For each light vertex
 	sampler->RequestSamples(sampleSize);
 
 	//--------------------------------------------------------------------------
@@ -167,7 +169,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		int depth = 1;
 		while (depth <= renderEngine->maxPathDepth) {
-			const unsigned int sampleOffset = 9 + (depth - 1) * renderEngine->maxPathDepth;
+			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit nextEventRayHit;
 			BSDF bsdf;

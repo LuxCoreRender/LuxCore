@@ -145,9 +145,11 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	// Setup the sampler
 	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
+	const unsigned int sampleBootSize = 4;
+	const unsigned int sampleStepSize = 11;
 	const unsigned int sampleSize = 
-		4 + // To generate the initial ray
-		renderEngine->maxPathDepth * 11; // For each path vertex
+		sampleBootSize + // To generate eye ray
+		renderEngine->maxPathDepth * sampleStepSize; // For each path vertex
 	sampler->RequestSamples(sampleSize);
 
 	//--------------------------------------------------------------------------
@@ -172,7 +174,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		BSDF bsdf;
 		while (depth <= renderEngine->maxPathDepth) {
-			const unsigned int sampleOffset = 9 + (depth - 1) * renderEngine->maxPathDepth;
+			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
