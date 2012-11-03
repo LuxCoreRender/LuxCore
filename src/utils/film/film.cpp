@@ -96,8 +96,7 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 		convTest = new ConvergenceTest(width, height);
 	}
 
-	statsTotalSampleCount[PER_PIXEL_NORMALIZED] = 0.0;
-	statsTotalSampleCount[PER_SCREEN_NORMALIZED] = 0.0;
+	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
 
@@ -142,16 +141,15 @@ void Film::Reset() {
 
 	// convTest has to be reseted explicitely
 
-	statsTotalSampleCount[PER_PIXEL_NORMALIZED] = 0.0;
-	statsTotalSampleCount[PER_SCREEN_NORMALIZED] = 0.0;
+	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
 
 void Film::AddFilm(const Film &film) {
-	if (enablePerPixelNormalizedBuffer && film.enablePerPixelNormalizedBuffer) {
-		statsTotalSampleCount[PER_PIXEL_NORMALIZED] += film.statsTotalSampleCount[PER_PIXEL_NORMALIZED];
+	statsTotalSampleCount += film.statsTotalSampleCount;
 
+	if (enablePerPixelNormalizedBuffer && film.enablePerPixelNormalizedBuffer) {
 		SamplePixel *spDst = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
 		SamplePixel *spSrc = film.sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
 
@@ -161,10 +159,7 @@ void Film::AddFilm(const Film &film) {
 		}
 	}
 
-	if (enablePerScreenNormalizedBuffer && film.enablePerScreenNormalizedBuffer &&
-			(film.statsTotalSampleCount[PER_SCREEN_NORMALIZED] > 0.0)) {
-		statsTotalSampleCount[PER_SCREEN_NORMALIZED] += film.statsTotalSampleCount[PER_SCREEN_NORMALIZED];
-
+	if (enablePerScreenNormalizedBuffer && film.enablePerScreenNormalizedBuffer) {
 		SamplePixel *spDst = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
 		SamplePixel *spSrc = film.sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
 
@@ -350,7 +345,7 @@ void Film::MergeSampleBuffers(Pixel *p, vector<bool> &frameBufferMask) const {
 
 	// Merge PER_PIXEL_NORMALIZED and PER_SCREEN_NORMALIZED buffers
 
-	if (enablePerPixelNormalizedBuffer && (statsTotalSampleCount[PER_PIXEL_NORMALIZED] > 0.0)) {
+	if (enablePerPixelNormalizedBuffer) {
 		const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
 		for (unsigned int i = 0; i < pixelCount; ++i) {
 			const float weight = sp[i].weight;
@@ -362,9 +357,9 @@ void Film::MergeSampleBuffers(Pixel *p, vector<bool> &frameBufferMask) const {
 		}
 	}
 
-	if (enablePerScreenNormalizedBuffer && (statsTotalSampleCount[PER_SCREEN_NORMALIZED] > 0.0)) {
+	if (enablePerScreenNormalizedBuffer) {
 		const SamplePixel *sp = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
-		const float factor = 1.f / statsTotalSampleCount[PER_SCREEN_NORMALIZED];
+		const float factor = 1.f / statsTotalSampleCount;
 
 		for (unsigned int i = 0; i < pixelCount; ++i) {
 			const float weight = sp[i].weight;

@@ -205,7 +205,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 					if ((count > 0) && !c.IsNaN()) {
 						c /= count;
-						film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
+						film->AddSampleCount(1.f);
 						// -.5f is to align correctly the pixel after the splat
 						film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f, c);
 
@@ -237,7 +237,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					}
 
 					if ((count > 0) && !c.IsNaN()) {
-						film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.f);
+						film->AddSampleCount(1.f);
 						film->AddRadiance(PER_PIXEL_NORMALIZED, x, y, c / count, count);
 
 						if (isAlphaChannelEnabled && !isnan(alpha))
