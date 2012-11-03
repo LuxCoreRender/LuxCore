@@ -28,11 +28,17 @@
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
 
-float LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
-		const Vector &eyeDir, const float eyeDistance, const Point &lensPoint,
-		const Normal &shadeN, const Spectrum &bsdfEval,
-		const Spectrum &flux) {
+void LightCPURenderEngine::ConnectToEye(const float u0,
+		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
+		vector<SampleResult> *sampleResults, unsigned int *sampleResultsSize) {
 	Scene *scene = renderConfig->scene;
+
+	Vector eyeDir(bsdf.hitPoint - lensPoint);
+	const float eyeDistance = eyeDir.Length();
+	eyeDir /= eyeDistance;
+
+	BSDFEvent event;
+	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
 	if (!bsdfEval.Black()) {
 		Ray eyeRay(lensPoint, eyeDir);
@@ -41,12 +47,12 @@ float LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
 			RayHit eyeRayHit;
-			BSDF bsdf;
+			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
+			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				const float cosToCamera = Dot(shadeN, -eyeDir);
+				const float cosToCamera = Dot(bsdf.shadeN, -eyeDir);
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -55,25 +61,12 @@ float LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
 				const float fluxToRadianceFactor = cameraPdfA;
 
 				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-				film->SplatFiltered(PER_SCREEN_NORMALIZED, scrX, scrY, radiance);
-				return radiance.Y();
+
+				AddSampleResult(sampleResults, sampleResultsSize, PER_SCREEN_NORMALIZED, scrX, scrY,
+						radiance, 1.f);
 			}
 		}
 	}
-
-	return 0.f;
-}
-
-float LightCPURenderEngine::ConnectToEye(Film *film, const float u0,
-		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux) {
-	Vector eyeDir(bsdf.hitPoint - lensPoint);
-	const float eyeDistance = eyeDir.Length();
-	eyeDir /= eyeDistance;
-
-	BSDFEvent event;
-	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
-
-	return ConnectToEye(film, u0, eyeDir, eyeDistance, lensPoint, bsdf.shadeN, bsdfEval, flux);
 }
 
 void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
@@ -92,7 +85,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	const unsigned int filmHeight = film->GetHeight();
 
 	// Setup the sampler
-	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen);
+	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleSize = 
 		10 + // To generate the initial light vertex and trace eye ray
 		renderEngine->maxPathDepth * 6; // For each light vertex
@@ -102,22 +95,22 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	// Trace light paths
 	//--------------------------------------------------------------------------
 
+	vector<SampleResult> sampleResults;
+	unsigned int sampleResultsSize;
 	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
-		float sampleLuminance = 0.f; // Used by the Sampler (i.e. Metropolis)
-
-		film->AddSampleCount(PER_SCREEN_NORMALIZED, 1.0);
 		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1;
+		sampleResultsSize = 0;
 
 		// Select one light source
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(sampler->GetSample(0), &lightPickPdf);
+		const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
 
 		// Initialize the light path
 		float lightEmitPdf;
 		Ray nextEventRay;
 		Spectrum lightPathFlux = light->Emit(scene,
-			sampler->GetSample(1), sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4),
+			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
 		if (lightPathFlux.Black())
 			continue;
@@ -127,8 +120,11 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		// Sample a point on the camera lens
 		Point lensPoint;
 		if (!scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
-				&lensPoint))
+				&lensPoint)) {
+
+			sampler->NextSample(&sampleResults[0], sampleResultsSize);
 			continue;
+		}
 
 		//----------------------------------------------------------------------
 		// I don't try to connect the light vertex directly with the eye
@@ -162,10 +158,8 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			// Add a sample even if it is black in order to avoid aliasing problems
 			// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
-			film->AddSampleCount(PER_PIXEL_NORMALIZED, 1.0);
-			film->SplatFiltered(PER_PIXEL_NORMALIZED, screenX, screenY, radiance);
-			film->SplatFilteredAlpha(screenX, screenY, somethingWasHit ? 1.f : 0.f);
-			sampleLuminance += radiance.Y();
+			AddSampleResult(&sampleResults, &sampleResultsSize, PER_PIXEL_NORMALIZED,
+					screenX, screenY, radiance, somethingWasHit ? 1.f : 0.f);
 		}
 
 		//----------------------------------------------------------------------
@@ -195,9 +189,8 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				sampleLuminance += renderEngine->ConnectToEye(film,
-						sampler->GetSample(sampleOffset + 1),
-						bsdf, lensPoint, lightPathFlux);
+				renderEngine->ConnectToEye(sampler->GetSample(sampleOffset + 1),
+						bsdf, lensPoint, lightPathFlux, &sampleResults, &sampleResultsSize);
 
 				if (depth >= renderEngine->maxPathDepth)
 					break;
@@ -238,7 +231,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			}
 		}
 
-		sampler->NextSample(sampleLuminance);
+		sampler->NextSample(&sampleResults[0], sampleResultsSize);
 	}
 
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");

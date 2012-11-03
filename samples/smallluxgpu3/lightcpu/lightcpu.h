@@ -57,16 +57,9 @@ private:
 		samplesCount = count;
 	}
 
-	float ConnectToEye(Film *film, const float u0,
-			const Vector &eyeDir, const float eyeDistance, const Point &lensPoint,
-			const Normal &shadeN, const Spectrum &bsdfEval,
-			const Spectrum &flux);
-	float ConnectToEye(Film *film, const float u0,
-			const BSDF &bsdf, const Point &lensPoint,
-			const Spectrum &flux);
-
-	void DirectHitLightSampling(const Vector &eyeDir, const BSDF &bsdf, Spectrum *radiance);
-	void DirectHitInfiniteLight(const Vector &eyeDir, Spectrum *radiance);
+	void ConnectToEye(const float u0,
+			const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
+			vector<SampleResult> *sampleResults, unsigned int *sampleResultsSize);
 
 	vector<double> threadSamplesCount;
 };

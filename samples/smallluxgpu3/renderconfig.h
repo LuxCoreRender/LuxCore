@@ -37,7 +37,7 @@ public:
 	void SetScreenRefreshInterval(const unsigned int t);
 	unsigned int GetScreenRefreshInterval() const;
 
-	Sampler *AllocSampler(RandomGenerator *rndGen) const;
+	Sampler *AllocSampler(RandomGenerator *rndGen, Film *film) const;
 	
 	Properties cfg;
 	Scene *scene;

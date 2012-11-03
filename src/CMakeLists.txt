@@ -116,27 +116,32 @@ SOURCE_GROUP("Source Files\\Utils\\core" FILES ${LuxRays_SRC_UTILS_CORE})
 set(LuxRays_SRC_UTILS_FILM
 	${LuxRays_SOURCE_DIR}/src/utils/film/film.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\FILM" FILES ${LuxRays_SRC_UTILS_FILM})
+SOURCE_GROUP("Source Files\\Utils\\film" FILES ${LuxRays_SRC_UTILS_FILM})
 
 set(LuxRays_SRC_UTILS_CONVTEST
 	${LuxRays_SOURCE_DIR}/src/utils/convtest/pdiff/lpyramid.cpp
         ${LuxRays_SOURCE_DIR}/src/utils/convtest/pdiff/metric.cpp
         ${LuxRays_SOURCE_DIR}/src/utils/convtest/convtest.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\CONVTEST" FILES ${LuxRays_SRC_UTILS_CONVTEST})
+SOURCE_GROUP("Source Files\\Utils\\convtest" FILES ${LuxRays_SRC_UTILS_CONVTEST})
+
+set(LuxRays_SRC_UTILS_SAMPLER
+	${LuxRays_SOURCE_DIR}/src/utils/sampler/sampler.cpp
+)
+SOURCE_GROUP("Source Files\\Utils\\sampler" FILES ${LuxRays_SRC_UTILS_SAMPLER})
 
 set(LuxRays_SRC_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/light.cpp
-        ${LuxRays_SOURCE_DIR}/src/utils/sdl/material.cpp
+	${LuxRays_SOURCE_DIR}/src/utils/sdl/material.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/spd.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/texmap.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\SDL" FILES ${LuxRays_SRC_UTILS_SDL})	
+SOURCE_GROUP("Source Files\\Utils\\sdl" FILES ${LuxRays_SRC_UTILS_SDL})	
 
 set(LuxRays_SRC_UTILS_PLYMESH
 	${LuxRays_SOURCE_DIR}/src/utils/plymesh/rply.cpp
@@ -163,6 +168,7 @@ set(LuxRays_SRCS
 	${LuxRays_SRC_UTILS_CONVTEST}
 	${LuxRays_SRC_UTILS_OCL}
 	${LuxRays_SRC_UTILS_SDL}
+	${LuxRays_SRC_UTILS_SAMPLER}
 	${LuxRays_SRC_UTILS_PLYMESH}
 	${LuxRays_SRC_UTILS}
 )
