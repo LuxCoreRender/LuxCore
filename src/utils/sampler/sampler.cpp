@@ -31,7 +31,8 @@ namespace luxrays { namespace utils {
 MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm, const unsigned int maxRej,
 		const float pLarge, const float imgRange) : Sampler(rnd, flm),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageRange(imgRange),
-		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL) {
+		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
+		cooldown(true) {
 }
 
 MetropolisSampler::~MetropolisSampler() {
@@ -84,7 +85,7 @@ void MetropolisSampler::RequestSamples(const unsigned int size) {
 	totalLuminance = 0.;
 	sampleCount = 0.;
 
-	isLargeMuattion = true;
+	isLargeMutation = true;
 	weight = 0.f;
 	consecRejects = 0;
 	currentLuminance = 0.;
@@ -133,7 +134,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			newLuminance += luminance;
 	}
 
-	if (isLargeMuattion) {
+	if (isLargeMutation) {
 		totalLuminance += newLuminance;
 		sampleCount += 1.;
 	}
@@ -141,19 +142,23 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	const float meanIntensity = (totalLuminance > 0.) ?
 		static_cast<float>(totalLuminance / sampleCount) : 1.f;
 
+	// Define the probability of large mutations. It is 50% if we are still
+	// inside the cooldown phase.
+	const float currentLargeMutationProbability = (cooldown) ? .5f : largeMutationProbability;
+
 	// Calculate accept probability from old and new image sample
 	float accProb;
 	if ((currentLuminance > 0.f) && (consecRejects < maxRejects))
 		accProb = Min<float>(1.f, newLuminance / currentLuminance);
 	else
 		accProb = 1.f;
-	const float newWeight = accProb + (isLargeMuattion ? 1.f : 0.f);
+	const float newWeight = accProb + (isLargeMutation ? 1.f : 0.f);
 	weight += 1.f - accProb;
 
 	// Try or force accepting of the new sample
 	if ((accProb == 1.f) || (rndGen->floatValue() < accProb)) {
 		// Add accumulated SampleResult of previous reference sample
-		const float norm = weight / (currentLuminance / meanIntensity + largeMutationProbability);
+		const float norm = weight / (currentLuminance / meanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f) {
 			for (vector<SampleResult>::const_iterator sr = currentSampleResult.begin(); sr < currentSampleResult.end(); ++sr) {
 				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, norm);
@@ -172,7 +177,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		consecRejects = 0;
 	} else {
 		// Add contribution of new sample before rejecting it
-		const float norm = newWeight / (newLuminance / meanIntensity + largeMutationProbability);
+		const float norm = newWeight / (newLuminance / meanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f) {
 			for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
 				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, norm * sr->radiance, norm);
@@ -188,8 +193,19 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		++consecRejects;
 	}
 
-	isLargeMuattion = (rndGen->floatValue() < largeMutationProbability);
-	if (isLargeMuattion) {
+	// Cooldown is used in order to not have problems in the estimation of meanIntensity
+	// when 
+	if (cooldown) {
+		// Check if it is time to end the cooldown
+		if (sampleCount > film->GetWidth() * film->GetHeight()) {
+			cooldown = false;
+			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
+		} else
+			isLargeMutation = (rndGen->floatValue() < .5f);
+	} else
+		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
+
+	if (isLargeMutation) {
 		stamp = 1;
 		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
 	} else

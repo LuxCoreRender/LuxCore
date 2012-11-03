@@ -124,7 +124,7 @@ private:
 	unsigned int *currentSampleStamps;
 	vector<SampleResult> currentSampleResult;
 
-	bool isLargeMuattion;
+	bool isLargeMutation, cooldown;
 };
 
 } }
