@@ -19,30 +19,69 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <boost/thread/mutex.hpp>
+#ifndef _BIDIRCPU_H
+#define	_BIDIRCPU_H
 
 #include "smalllux.h"
-#include "renderconfig.h"
-#include "pathcpu/pathcpu.h"
+#include "renderengine.h"
 
 //------------------------------------------------------------------------------
-// PathCPURenderEngine
+// Bidirectional path tracing CPU render engine
 //------------------------------------------------------------------------------
 
-PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl, true, false) {
-	const Properties &cfg = renderConfig->cfg;
+typedef struct {
+	BSDF bsdf;
+	Spectrum throughput;
+	int depth;
 
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
+	float d0;
+} PathVertex;
 
-	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
-	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
-	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
-	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
-	MachineEpsilon::SetMin(epsilon);
-	MachineEpsilon::SetMax(epsilon);
+class BiDirCPURenderEngine : public CPURenderEngine {
+public:
+	BiDirCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	film->EnableOverlappedScreenBufferUpdate(true);
-}
+	RenderEngineType GetEngineType() const { return BIDIRCPU; }
+
+	// Signed because of the delta parameter
+	int maxEyePathDepth, maxLightPathDepth;
+
+	int rrDepth;
+	float rrImportanceCap;
+
+private:
+	static void RenderThreadFuncImpl(CPURenderThread *thread);
+
+	void StartLockLess() {
+		threadSamplesCount.resize(renderThreads.size(), 0.0);
+
+		CPURenderEngine::StartLockLess();
+	}
+
+	void UpdateSamplesCount() {
+		double count = 0.0;
+		for (size_t i = 0; i < renderThreads.size(); ++i)
+			count += threadSamplesCount[i];
+		samplesCount = count;
+	}
+
+	void DirectLightSampling(const float u0, const float u1, const float u2,
+			const float u3, const float u4,	const float u5,
+			const Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
+			Spectrum *radiance);
+
+	void DirectHitLightSampling(const bool lastSpecular,
+			const Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
+			const float lastPdfW, Spectrum *radiance);
+
+	void DirectHitInfiniteLight(const bool lastSpecular, const Spectrum &pathThrouput,
+			const Vector &eyeDir, const float lastPdfW, Spectrum *radiance);
+
+	void ConnectToEye(const unsigned int pixelCount, 
+		const PathVertex &lightVertex, const float u0,
+		const Point &lensPoint, vector<SampleResult> &sampleResults);
+
+	vector<double> threadSamplesCount;
+};
+
+#endif	/* _BIDIRCPU_H */

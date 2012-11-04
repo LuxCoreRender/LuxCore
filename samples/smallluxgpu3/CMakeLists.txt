@@ -126,6 +126,8 @@ set(SMALLLUXGPU_SRCS
 	renderengine.cpp
 	displayfunc.cpp
 	telnet.cpp
+	bidircpu/bidircpu.cpp
+	bidircpu/renderthread.cpp
 	pathocl/kernels/pathocl_kernel_core.cpp
 	pathocl/kernels/pathocl_kernel_datatypes.cpp
 	pathocl/kernels/pathocl_kernel_filters.cpp

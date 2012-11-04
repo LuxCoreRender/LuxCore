@@ -21,8 +21,8 @@
 
 #include "renderconfig.h"
 #include "lightcpu/lightcpu.h"
-#include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/randomgen.h"
+#include "luxrays/utils/sampler/sampler.h"
 
 //------------------------------------------------------------------------------
 // LightCPU RenderThread
@@ -86,7 +86,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	// Setup the sampler
 	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
-	const unsigned int sampleBootSize = 10;
+	const unsigned int sampleBootSize = 12;
 	const unsigned int sampleStepSize = 6;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
@@ -101,28 +101,27 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
 		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1;
-		sampleResults.resize(0);
+		sampleResults.clear();
 
 		// Select one light source
 		float lightPickPdf;
 		const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
 
 		// Initialize the light path
-		float lightEmitPdf;
+		float lightEmitPdfW;
 		Ray nextEventRay;
 		Spectrum lightPathFlux = light->Emit(scene,
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6),
-			&nextEventRay.o, &nextEventRay.d, &lightEmitPdf);
+			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
 		if (lightPathFlux.Black())
 			continue;
-		lightPathFlux /= lightEmitPdf * lightPickPdf;
+		lightPathFlux /= lightEmitPdfW * lightPickPdf;
 		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
+		if (!scene->camera->SampleLens(sampler->GetSample(7), sampler->GetSample(8),
 				&lensPoint)) {
-
 			sampler->NextSample(sampleResults);
 			continue;
 		}
@@ -137,16 +136,16 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		{
 			Ray eyeRay;
-			const float screenX = min(sampler->GetSample(5) * filmWidth, (float)(filmWidth - 1));
-			const float screenY = min(sampler->GetSample(6) * filmHeight, (float)(filmHeight - 1));
+			const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+			const float screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 			camera->GenerateRay(screenX, screenY, &eyeRay,
-				sampler->GetSample(7), sampler->GetSample(8));
+				sampler->GetSample(9), sampler->GetSample(10));
 
 			Spectrum radiance, connectionThroughput;
 			RayHit eyeRayHit;
 			BSDF bsdf;
 			const bool somethingWasHit = scene->Intersect(
-				false, true, sampler->GetSample(9), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
+				false, true, sampler->GetSample(11), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 			if (!somethingWasHit) {
 				// Nothing was hit, check infinite lights (including sun)
 				radiance += scene->GetEnvLightsRadiance(-eyeRay.d, Point());
@@ -178,13 +177,13 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				
-				lightPathFlux *= connectionThroughput;
-
 				// Check if it is a light source
 				if (bsdf.IsLightSource()) {
 					// SLG light sources are like black bodies
 					break;
 				}
+
+				lightPathFlux *= connectionThroughput;
 
 				//--------------------------------------------------------------
 				// Try to connect the light path vertex with the eye

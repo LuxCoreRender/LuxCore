@@ -22,10 +22,9 @@
 #include "smalllux.h"
 #include "renderconfig.h"
 #include "lightcpu/lightcpu.h"
-#include "luxrays/core/geometry/transform.h"
 
 //------------------------------------------------------------------------------
-// PathOCLRenderEngine
+// LightCPURenderEngine
 //------------------------------------------------------------------------------
 
 LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
@@ -43,5 +42,5 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
 
-	film->EnableOverlappedScreenBufferUpdate(false);
+	film->EnableOverlappedScreenBufferUpdate(true);
 }

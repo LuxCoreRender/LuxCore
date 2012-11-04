@@ -32,7 +32,8 @@
 enum RenderEngineType {
 	PATHOCL  = 4,
 	LIGHTCPU = 5,
-	PATHCPU = 6
+	PATHCPU = 6,
+	BIDIRCPU = 7
 };
 
 extern const string RenderEngineType2String(const RenderEngineType type);

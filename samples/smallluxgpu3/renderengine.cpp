@@ -24,6 +24,7 @@
 #include "pathocl/pathocl.h"
 #include "lightcpu/lightcpu.h"
 #include "pathcpu/pathcpu.h"
+#include "bidircpu/bidircpu.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
@@ -36,6 +37,8 @@ const string RenderEngineType2String(const RenderEngineType type) {
 			return "Light CPU";
 		case PATHCPU:
 			return "Path CPU";
+		case BIDIRCPU:
+			return "BiDir CPU";
 		default:
 			return "UNKNOWN";
 	}
@@ -192,6 +195,8 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			return new LightCPURenderEngine(renderConfig, film, filmMutex);
 		case PATHCPU:
 			return new PathCPURenderEngine(renderConfig, film, filmMutex);
+		case BIDIRCPU:
+			return new BiDirCPURenderEngine(renderConfig, film, filmMutex);
 		default:
 			throw runtime_error("Unknown render engine type");
 	}

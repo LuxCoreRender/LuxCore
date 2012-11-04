@@ -21,7 +21,6 @@
 
 #include "renderconfig.h"
 #include "pathcpu/pathcpu.h"
-#include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/core/mc.h"
 #include "luxrays/utils/sdl/bsdf.h"

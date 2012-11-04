@@ -255,7 +255,8 @@ void timerFunc(int value) {
 			break;
 		}
 		case LIGHTCPU:
-		case PATHCPU: {
+		case PATHCPU:
+		case BIDIRCPU: {
 			CPURenderEngine *engine = (CPURenderEngine *)session->renderEngine;
 
 			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][%.1fK tris]",
@@ -401,6 +402,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case '3':
 			session->SetRenderingEngineType(PATHCPU);
+			break;
+		case '4':
+			session->SetRenderingEngineType(BIDIRCPU);
 			break;
 		case 'o': {
 #if defined(WIN32)
