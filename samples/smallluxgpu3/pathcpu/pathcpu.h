@@ -49,7 +49,7 @@ private:
 			const Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
 			Spectrum *radiance);
 
-	void DirectHitLightSampling(const bool lastSpecular,
+	void DirectHitFiniteLight(const bool lastSpecular,
 			const Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
 			const float lastPdfW, Spectrum *radiance);
 

@@ -84,7 +84,7 @@ void PathCPURenderEngine::DirectLightSampling(
 	}
 }
 
-void PathCPURenderEngine::DirectHitLightSampling(
+void PathCPURenderEngine::DirectHitFiniteLight(
 		const bool lastSpecular, const Spectrum &pathThrouput,
 		const float distance, const BSDF &bsdf, const float lastPdfW,
 		Spectrum *radiance) {
@@ -169,7 +169,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		int depth = 1;
 		bool lastSpecular = true;
 		float lastPdfW = 1.f;
-		Spectrum radiance(0.f);
+		Spectrum radiance;
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		BSDF bsdf;
 		while (depth <= renderEngine->maxPathDepth) {
@@ -193,7 +193,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
-				renderEngine->DirectHitLightSampling(lastSpecular, pathThrouput,
+				renderEngine->DirectHitFiniteLight(lastSpecular, pathThrouput,
 						eyeRayHit.t, bsdf, lastPdfW, &radiance);
 
 				// SLG light sources are like black bodies
