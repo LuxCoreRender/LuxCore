@@ -19,27 +19,26 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <boost/thread/mutex.hpp>
-
 #include "smalllux.h"
 #include "renderconfig.h"
-#include "pathcpu/pathcpu.h"
+#include "bidircpu/bidircpu.h"
 
 //------------------------------------------------------------------------------
-// PathCPURenderEngine
+// BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl, true, false) {
+BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl, true, true) {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
-	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
-	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
+	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
+	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
+	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", 0.125f));
 	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
