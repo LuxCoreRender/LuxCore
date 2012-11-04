@@ -62,7 +62,7 @@ public:
     virtual Spectrum Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW = NULL) const {
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const {
 		throw std::runtime_error("Internal error, called LightSource::Illuminate()");
 	}
 
@@ -103,7 +103,7 @@ public:
     Spectrum Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW = NULL) const;
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	virtual Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir, const Point &hitPoint,
@@ -235,7 +235,7 @@ public:
 	Spectrum Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW = NULL) const;
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir,
@@ -285,7 +285,7 @@ public:
 	Spectrum Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW = NULL) const;
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir,

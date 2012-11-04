@@ -33,10 +33,10 @@ Spectrum MatteMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	if(directPdfW)
-		*directPdfW = fabsf(lightDir.z * INV_PI);
+		*directPdfW = fabsf((fromLight ? eyeDir.z : lightDir.z) * INV_PI);
 
 	if(reversePdfW)
-		*reversePdfW = fabsf(eyeDir.z * INV_PI);
+		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
 
 	*event = DIFFUSE | REFLECT;
 	return KdOverPI;

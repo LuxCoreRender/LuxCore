@@ -59,7 +59,7 @@ Spectrum InfiniteLightBase::Emit(const Scene *scene,
 Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW) const {
+		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
 	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
 
@@ -74,9 +74,11 @@ Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
 	const Point emisPoint(p + (*distance) * (*dir));
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
-	const float cosThetaAtLight = Dot(emisNormal, -(*dir));
-	if (cosThetaAtLight < DEFAULT_COS_EPSILON_STATIC)
+	const float cosAtLight = Dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
 
 	*directPdfW =  INV_PI * .25f;
 
@@ -351,15 +353,19 @@ Spectrum SunLight::Emit(const Scene *scene,
 Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW) const {
+		float *emissionPdfW, float *cosThetaAtLight) const {
 	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, sunDir);
 
 	// Check if the point can be inside the sun cone of light
-	if (Dot(*dir, sunDir) <= cosThetaMax)
+	const float cosAtLight = Dot(sunDir, *dir);
+	if (cosAtLight <= cosThetaMax)
 		return Spectrum();
 
 	*distance = std::numeric_limits<float>::infinity();
 	*directPdfW = UniformConePdf(cosThetaMax);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
 
 	if (emissionPdfW) {
 		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
@@ -446,7 +452,7 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW) const {
+		float *emissionPdfW, float *cosThetaAtLight) const {
 	const ExtMesh *mesh = scene->objects[meshIndex];
 
 	Point samplePoint;
@@ -459,14 +465,17 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 	*distance = sqrtf(distanceSquared);
 	*dir /= (*distance);
 
-	const float cosThetaAtLight = Dot(sampleN, -(*dir));
-	if (cosThetaAtLight < DEFAULT_COS_EPSILON_STATIC)
+	const float cosAtLight = Dot(sampleN, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	*directPdfW = invArea * distanceSquared / cosThetaAtLight;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
+
+	*directPdfW = invArea * distanceSquared / cosAtLight;
 
 	if (emissionPdfW)
-		*emissionPdfW = invArea * cosThetaAtLight * INV_PI;
+		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
 	return lightMaterial->GetGain();
 }
