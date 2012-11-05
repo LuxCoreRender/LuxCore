@@ -35,7 +35,7 @@ using namespace luxrays::sdl;
 Spectrum InfiniteLightBase::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA) const {
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
 	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
@@ -52,6 +52,9 @@ Spectrum InfiniteLightBase::Emit(const Scene *scene,
 
 	if (directPdfA)
 		*directPdfA = INV_PI * .25f;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 
 	return GetRadiance(scene, *dir, p2);
 }
@@ -330,7 +333,7 @@ void SunLight::SetGain(const Spectrum &g) {
 Spectrum SunLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA) const {
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Choose point on disk oriented toward infinite light direction
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
 	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
@@ -346,6 +349,9 @@ Spectrum SunLight::Emit(const Scene *scene,
 
 	if (directPdfA)
 		*directPdfA = UniformConePdf(cosThetaMax);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(sunDir, *dir);
 
 	return sunColor;
 }
@@ -421,7 +427,7 @@ void TriangleLight::Init(const std::vector<ExtMesh *> &objs) {
 Spectrum TriangleLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA) const {
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	const ExtMesh *mesh = scene->objects[meshIndex];
 
 	// Origin
@@ -445,6 +451,9 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 
 	if (directPdfA)
 		*directPdfA = invArea;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = localDirOut.z;
 
 	return lightMaterial->GetGain() * localDirOut.z;
 }

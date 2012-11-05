@@ -34,7 +34,7 @@ typedef struct {
 	Spectrum throughput;
 	int depth;
 
-	float d0;
+	float d0, d1vc;
 } PathVertex;
 
 class BiDirCPURenderEngine : public CPURenderEngine {
