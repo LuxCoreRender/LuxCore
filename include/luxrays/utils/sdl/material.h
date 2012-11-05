@@ -86,6 +86,9 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const = 0;
+
+	virtual void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -111,6 +114,8 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
 
 private:
 	Spectrum Kd, KdOverPI;
@@ -142,6 +147,13 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
+	}
 
 private:
 	Spectrum Kr;
@@ -181,6 +193,8 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
 
 private:
 	MatteMaterial matte;
@@ -232,6 +246,13 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
+	}
 
 private:
 	Spectrum Krefl, Krefrct;
@@ -266,6 +287,13 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
+	}
 
 	static Vector GlossyReflection(const Vector &fixedDir, const float exponent,
 			const float u0, const float u1);
@@ -308,6 +336,8 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
 
 private:
 	MatteMaterial matte;
@@ -361,6 +391,13 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
+	}
 
 private:
 	Spectrum Krefl, Ktrans;
@@ -401,6 +438,8 @@ public:
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
 
 private:
 	Spectrum Krefl;

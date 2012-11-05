@@ -191,6 +191,15 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 		return surfaceColor * result;
 }
 
+void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) const {
+	const Vector &eyeDir = fromLight ? sampledDir : fixedDir;
+	const Vector &lightDir = fromLight ? fixedDir : sampledDir;
+	Vector localLightDir = frame.ToLocal(lightDir);
+	Vector localEyeDir = frame.ToLocal(eyeDir);
+
+	surfMat->Pdf(fromLight, localLightDir, localEyeDir, directPdfW, reversePdfW);
+}
+
 Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
 			float *directPdfA,
 			float *emissionPdfW) const {
