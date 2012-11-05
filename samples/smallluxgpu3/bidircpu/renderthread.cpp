@@ -204,7 +204,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	vector<PathVertex> eyePathVertices;
 	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
-		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1;
+		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1.0;
 		sampleResults.clear();
 		lightPathVertices.clear();
 		eyePathVertices.clear();
@@ -293,7 +293,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 							sampler->GetSample(sampleOffset + 3),
 							sampler->GetSample(sampleOffset + 4),
 							&bsdfPdfW, &cosSampledDir, &event);
-					if ((bsdfPdfW <= 0.f) || bsdfSample.Black())
+					if (bsdfSample.Black())
 						break;
 
 					float bsdfRevPdfW;

@@ -122,7 +122,7 @@ float MetropolisSampler::GetSample(const unsigned int index) {
 }
 
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
-	film->AddSampleCount(1.f);
+	film->AddSampleCount(1.0);
 
 	// Calculate the sample result luminance
 	float newLuminance = 0.f;

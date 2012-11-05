@@ -100,7 +100,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	vector<SampleResult> sampleResults;
 	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
-		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1;
+		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1.0;
 		sampleResults.clear();
 
 		// Select one light source
@@ -113,8 +113,10 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		Spectrum lightPathFlux = light->Emit(scene,
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
-		if (lightPathFlux.Black())
+		if (lightPathFlux.Black()) {
+			sampler->NextSample(sampleResults);
 			continue;
+		}
 		lightPathFlux /= lightEmitPdfW * lightPickPdf;
 		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
@@ -194,7 +196,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 				if (depth >= renderEngine->maxPathDepth)
 					break;
-				
+
 				//--------------------------------------------------------------
 				// Build the next vertex path ray
 				//--------------------------------------------------------------
@@ -208,7 +210,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						sampler->GetSample(sampleOffset + 3),
 						sampler->GetSample(sampleOffset + 4),
 						&bsdfPdf, &cosSampleDir, &event);
-				if ((bsdfPdf <= 0.f) || bsdfSample.Black())
+				if (bsdfSample.Black())
 					break;
 
 				if (depth >= renderEngine->rrDepth) {
