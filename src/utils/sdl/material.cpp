@@ -32,10 +32,10 @@ using namespace luxrays::sdl;
 Spectrum MatteMaterial::Evaluate(const bool fromLight,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	if(directPdfW)
+	if (directPdfW)
 		*directPdfW = fabsf((fromLight ? eyeDir.z : lightDir.z) * INV_PI);
 
-	if(reversePdfW)
+	if (reversePdfW)
 		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
 
 	*event = DIFFUSE | REFLECT;
@@ -57,6 +57,15 @@ Spectrum MatteMaterial::Sample(const bool fromLight,
 
 	*event = DIFFUSE | REFLECT;
 	return KdOverPI;
+}
+
+void MatteMaterial::Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = fabsf((fromLight ? eyeDir.z : lightDir.z) * INV_PI);
+
+	if (reversePdfW)
+		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
 }
 
 //------------------------------------------------------------------------------
@@ -122,6 +131,17 @@ Spectrum MatteMirrorMaterial::Sample(const bool fromLight,
 
 		return result;
 	}
+}
+
+void MatteMirrorMaterial::Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	matte.Pdf(fromLight, lightDir, eyeDir, directPdfW, reversePdfW);
+
+	if (directPdfW)
+		*directPdfW *= mattePdf;
+
+	if (reversePdfW)
+		*reversePdfW *= mattePdf;
 }
 
 //------------------------------------------------------------------------------
@@ -366,6 +386,17 @@ Spectrum MatteMetalMaterial::Sample(const bool fromLight,
 	}
 }
 
+void MatteMetalMaterial::Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	matte.Pdf(fromLight, lightDir, eyeDir, directPdfW, reversePdfW);
+
+	if (directPdfW)
+		*directPdfW *= mattePdf;
+
+	if (reversePdfW)
+		*reversePdfW *= mattePdf;
+}
+
 //------------------------------------------------------------------------------
 // Alloy material
 //------------------------------------------------------------------------------
@@ -375,7 +406,7 @@ Spectrum AlloyMaterial::Evaluate(const bool fromLight,
 	float *directPdfW, float *reversePdfW) const {
 	*event = DIFFUSE | REFLECT;
 
-	if(directPdfW) {
+	if (directPdfW) {
 		// Schlick's approximation
 		const float c = 1.f - fabsf(eyeDir.z);
 		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
@@ -385,7 +416,7 @@ Spectrum AlloyMaterial::Evaluate(const bool fromLight,
 		*directPdfW = fabsf(lightDir.z) * INV_PI * iP;
 	}
 
-	if(reversePdfW) {
+	if (reversePdfW) {
 		// Schlick's approximation
 		const float c = 1.f - fabsf(lightDir.z);
 		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
@@ -436,5 +467,28 @@ Spectrum AlloyMaterial::Sample(const bool fromLight,
 		*cosSampledDir = fabsf(sampledDir->z);
 		return KdiffOverPI;
 
+	}
+}
+
+void AlloyMaterial::Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	if (directPdfW) {
+		// Schlick's approximation
+		const float c = 1.f - fabsf(eyeDir.z);
+		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+		const float P = .25f + .5f * Re;
+		const float iP = 1.f - P;
+		*directPdfW = fabsf(lightDir.z) * INV_PI * iP;
+	}
+
+	if (reversePdfW) {
+		// Schlick's approximation
+		const float c = 1.f - fabsf(lightDir.z);
+		const float Re = R0 + (1.f - R0) * c * c * c * c * c;
+
+		const float P = .25f + .5f * Re;
+		const float iP = 1.f - P;
+		*reversePdfW = fabsf(eyeDir.z) * INV_PI * iP;
 	}
 }

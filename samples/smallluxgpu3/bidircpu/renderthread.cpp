@@ -423,10 +423,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				break;
 
 			float bsdfRevPdfW;
-			if (event & SPECULAR) {
-				// TODO
-				bsdfRevPdfW = 0.f;
-			} else
+			if (event & SPECULAR)
+				eyeVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
+			else
 				bsdfRevPdfW = bsdfPdfW;
 
 			/*if ((eyeVertex.depth >= renderEngine->rrDepth) && !lastSpecular) {
