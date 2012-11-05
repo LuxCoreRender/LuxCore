@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 			luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
 		} else {
 			// Use selected device
-			luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
+			luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
 			if ((devIndex < 0) || (devIndex >= int(deviceDescs.size()))) {
 				std::cerr << "Wrong OpenCL device index" << std::endl;
 				return (EXIT_FAILURE);

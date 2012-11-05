@@ -1849,7 +1849,7 @@ PathGPU2RenderEngine::PathGPU2RenderEngine(SLGScene *scn, Film *flm, boost::mute
 
 	// Look for OpenCL devices
 	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
-		if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL)
+		if (intersectionDevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL)
 			oclIntersectionDevices.push_back((OpenCLIntersectionDevice *)intersectionDevices[i]);
 	}
 

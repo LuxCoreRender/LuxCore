@@ -266,7 +266,7 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, buff);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (pdevices[0]->GetType() == DEVICE_TYPE_OPENCL) {
+	if (pdevices[0]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 		OpenCLPixelDevice *dev = (OpenCLPixelDevice *)pdevices[0];
 		const OpenCLDeviceDescription *desc = dev->GetDeviceDesc();
 		sprintf(buff, "[Mem %dM/%dM][Free buffers % 2d/%d]",
@@ -310,7 +310,7 @@ static void PrintHelpAndSettings() {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 				// Check if it is an OpenCL device
-				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+				if (idevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 					const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
 					sprintf(buff, "[Mem %dM/%dM]", int(desc->GetUsedMemory() / (1024 * 1024)),
 							int(desc->GetMaxMemory() / (1024 * 1024)));
@@ -331,7 +331,7 @@ static void PrintHelpAndSettings() {
 			double minPerf = idevices[0]->GetPerformance();
 			double totalPerf = idevices[0]->GetPerformance();
 			for (size_t i = 1; i < idevices.size(); ++i) {
-				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+				if (idevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 					minPerf = min(minPerf, idevices[i]->GetPerformance());
 					totalPerf += idevices[i]->GetPerformance();
 				}
@@ -345,7 +345,7 @@ static void PrintHelpAndSettings() {
 
 			for (size_t i = 0; i < deviceCount; ++i) {
 				// Check if it is an OpenCL device
-				if (idevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+				if (idevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 					const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
 					sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
 							idevices[i]->GetName().c_str(),

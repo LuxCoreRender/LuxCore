@@ -36,19 +36,19 @@ namespace luxrays {
 // DeviceDescription
 //------------------------------------------------------------------------------
 
-void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescriptions) {
+void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescriptions)
+{
 	int gpuIndex = -1;
 	int cpuIndex = -1;
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		if ((cpuIndex == -1) && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD))
+		if ((cpuIndex == -1) && (deviceDescriptions[i]->GetType() &
+			DEVICE_TYPE_NATIVE_THREAD))
 			cpuIndex = (int)i;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		else if ((gpuIndex == -1) && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) &&
-				(((OpenCLDeviceDescription *)deviceDescriptions[i])->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
+		else if ((gpuIndex == -1) && (deviceDescriptions[i]->GetType() &
+			DEVICE_TYPE_OPENCL_GPU)) {
 			gpuIndex = (int)i;
 			break;
 		}
-#endif
 	}
 
 	if (gpuIndex != -1) {
@@ -64,10 +64,13 @@ void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescri
 }
 
 void DeviceDescription::Filter(const DeviceType type,
-		std::vector<DeviceDescription *> &deviceDescriptions) {
+	std::vector<DeviceDescription *> &deviceDescriptions)
+{
+	if (type == DEVICE_TYPE_ALL)
+		return;
 	size_t i = 0;
 	while (i < deviceDescriptions.size()) {
-		if ((type != DEVICE_TYPE_ALL) && (deviceDescriptions[i]->GetType() != type)) {
+		if ((deviceDescriptions[i]->GetType() & type) == 0) {
 			// Remove the device from the list
 			deviceDescriptions.erase(deviceDescriptions.begin() + i);
 		} else
@@ -75,14 +78,23 @@ void DeviceDescription::Filter(const DeviceType type,
 	}
 }
 
-std::string DeviceDescription::GetDeviceType(const DeviceType type) {
+std::string DeviceDescription::GetDeviceType(const DeviceType type)
+{
 	switch (type) {
 		case DEVICE_TYPE_ALL:
 			return "ALL";
 		case DEVICE_TYPE_NATIVE_THREAD:
 			return "NATIVE_THREAD";
-		case DEVICE_TYPE_OPENCL:
-			return "OPENCL";
+		case DEVICE_TYPE_OPENCL_ALL:
+			return "OPENCL_ALL";
+		case DEVICE_TYPE_OPENCL_DEFAULT:
+			return "OPENCL_DEFAULT";
+		case DEVICE_TYPE_OPENCL_CPU:
+			return "OPENCL_CPU";
+		case DEVICE_TYPE_OPENCL_GPU:
+			return "OPENCL_GPU";
+		case DEVICE_TYPE_OPENCL_UNKNOWN:
+			return "OPENCL_UNKNOWN";
 		case DEVICE_TYPE_VIRTUAL:
 			return "VIRTUAL";
 		default:
@@ -151,51 +163,33 @@ std::string OpenCLDeviceDescription::GetDeviceType(const cl_int type) {
 	}
 }
 
-std::string OpenCLDeviceDescription::GetDeviceType(const OpenCLDeviceType type) {
-	switch (type) {
-		case OCL_DEVICE_TYPE_ALL:
-			return "ALL";
-		case OCL_DEVICE_TYPE_DEFAULT:
-			return "DEFAULT";
-		case OCL_DEVICE_TYPE_CPU:
-			return "CPU";
-		case OCL_DEVICE_TYPE_GPU:
-			return "GPU";
-		default:
-			return "UNKNOWN";
-	}
-}
-
-OpenCLDeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_type type) {
+DeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_type type)
+{
 	switch (type) {
 		case CL_DEVICE_TYPE_ALL:
-			return OCL_DEVICE_TYPE_ALL;
+			return DEVICE_TYPE_OPENCL_ALL;
 		case CL_DEVICE_TYPE_DEFAULT:
-			return OCL_DEVICE_TYPE_DEFAULT;
+			return DEVICE_TYPE_OPENCL_DEFAULT;
 		case CL_DEVICE_TYPE_CPU:
-			return OCL_DEVICE_TYPE_CPU;
+			return DEVICE_TYPE_OPENCL_CPU;
 		case CL_DEVICE_TYPE_GPU:
-			return OCL_DEVICE_TYPE_GPU;
+			return DEVICE_TYPE_OPENCL_GPU;
 		default:
-			return OCL_DEVICE_TYPE_UNKNOWN;
+			return DEVICE_TYPE_OPENCL_UNKNOWN;
 	}
 }
 
-void OpenCLDeviceDescription::AddDeviceDescs(
-	const cl::Platform &oclPlatform, const OpenCLDeviceType filter,
-	std::vector<DeviceDescription *> &descriptions) {
+void OpenCLDeviceDescription::AddDeviceDescs(const cl::Platform &oclPlatform,
+	const DeviceType filter, std::vector<DeviceDescription *> &descriptions)
+{
 	// Get the list of devices available on the platform
 	VECTOR_CLASS<cl::Device> oclDevices;
 	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
 
 	// Build the descriptions
 	for (size_t i = 0; i < oclDevices.size(); ++i) {
-		OpenCLDeviceType type = GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>());
-
-		if ((filter == OCL_DEVICE_TYPE_ALL) || (filter == type)) {
-			OpenCLDeviceDescription *desc = new OpenCLDeviceDescription(oclDevices[i], i);
-			descriptions.push_back(desc);
-		}
+		if (filter & GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>()));
+			descriptions.push_back(new OpenCLDeviceDescription(oclDevices[i], i));
 	}
 }
 
@@ -244,31 +238,16 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 	return *oclContext;
 }
 
-void OpenCLDeviceDescription::Filter(const OpenCLDeviceType type,
-		std::vector<DeviceDescription *> &deviceDescriptions) {
-	if (type == OCL_DEVICE_TYPE_ALL)
-		return;
-
-	size_t i = 0;
-	while (i < deviceDescriptions.size()) {
-		if ((deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL) &&
-				(((OpenCLDeviceDescription *)deviceDescriptions[i])->GetOpenCLType() != type)) {
-			// Remove the device from the list
-			deviceDescriptions.erase(deviceDescriptions.begin() + i);
-		} else
-			++i;
-	}
-}
-
 #endif
 
 //------------------------------------------------------------------------------
 // IntersectionDevice
 //------------------------------------------------------------------------------
 
-IntersectionDevice::IntersectionDevice(const Context *context, const DeviceType type, const size_t index) :
-	Device(context, type, index) {
-	dataSet = NULL;
+IntersectionDevice::IntersectionDevice(const Context *context,
+	const DeviceType type, const size_t index) :
+	Device(context, type, index), dataSet(NULL), forceWorkGroupSize(0)
+{
 }
 
 IntersectionDevice::~IntersectionDevice() {

@@ -89,7 +89,7 @@ void RenderingConfig::Init() {
 		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
 		film = new PixelDeviceFilm(ctx, w, h, descs[0]);
 	} else {
-		DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
+		DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, descs);
 		film = new PixelDeviceFilm(ctx, w, h, descs[oclPixelDeviceConfig]);
 	}
 
@@ -283,7 +283,7 @@ void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 	const unsigned int forceGPUWorkSize, const unsigned int oclDeviceThreads, const string &oclDeviceConfig) {
 
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_OPENCL, descs);
+	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, descs);
 
 	// Device info
 	bool haveSelectionString = (oclDeviceConfig.length() > 0);
@@ -301,14 +301,14 @@ void RenderingConfig::SetUpOpenCLDevices(const bool useCPUs, const bool useGPUs,
 
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
-				if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)
+				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				selectedDescs.push_back(desc);
 			}
 		} else {
-			if ((useCPUs && desc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU) ||
-					(useGPUs && desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)) {
-				if (desc->GetOpenCLType() == OCL_DEVICE_TYPE_GPU)
+			if ((useCPUs && desc->GetType() == DEVICE_TYPE_OPENCL_CPU) ||
+					(useGPUs && desc->GetType() == DEVICE_TYPE_OPENCL_GPU)) {
+				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				selectedDescs.push_back(descs[i]);
 			}

@@ -78,7 +78,7 @@ size_t OpenCLPixelDevice::SampleBufferSize = 65536;
 
 OpenCLPixelDevice::OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
 		const size_t index) :
-		PixelDevice(context, DEVICE_TYPE_OPENCL, index) {
+		PixelDevice(context, desc->type, index) {
 	deviceDesc  = desc;
 	deviceName = (desc->GetName() +"Pixel").c_str();
 

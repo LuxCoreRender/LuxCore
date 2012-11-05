@@ -47,6 +47,13 @@ public:
 	}
 	virtual double GetLoad() const = 0;
 
+	void SetMaxStackSize(const size_t s) {
+		stackSize = s;
+	}
+
+	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
+	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
+
 	friend class Context;
 	friend class VirtualM2OHardwareIntersectionDevice;
 	friend class VirtualM2MHardwareIntersectionDevice;
@@ -61,11 +68,16 @@ protected:
 
 	const DataSet *dataSet;
 	double statsStartTime, statsTotalRayCount, statsDeviceIdleTime, statsDeviceTotalTime;
+
+	size_t stackSize;
+
+	mutable unsigned int forceWorkGroupSize;
 };
 
 class HardwareIntersectionDevice : public IntersectionDevice {
 protected:
-	HardwareIntersectionDevice(const Context *context, const DeviceType type, const size_t index) :
+	HardwareIntersectionDevice(const Context *context,
+		const DeviceType type, const size_t index) :
 		IntersectionDevice(context, type, index) { }
 	virtual ~HardwareIntersectionDevice() { }
 
@@ -169,10 +181,6 @@ public:
 		disableImageStorage = v;
 	}
 
-	void SetMaxStackSize(const size_t s) {
-		stackSize = s;
-	}
-
 	//--------------------------------------------------------------------------
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
@@ -184,7 +192,6 @@ public:
 	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
 	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
-	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
 		const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
@@ -205,8 +212,6 @@ private:
 		VECTOR_CLASS<cl::Event> &traceEvent, cl::Event *event);
 	void FreeDataSetBuffers();
 
-	unsigned int forceWorkGroupSize;
-	size_t stackSize;
 	OpenCLDeviceDescription *deviceDesc;
 	boost::thread *intersectionThread;
 

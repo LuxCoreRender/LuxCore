@@ -112,7 +112,7 @@ HardwareTreeModel::HardwareTreeModel(MainWindow *w,
 	for (size_t i = 0; i < devDescs.size(); ++i) {
 		DeviceDescription *devDesc = devDescs[i];
 
-		if (devDesc->GetType() ==  DEVICE_TYPE_OPENCL) {
+		if (devDesc->GetType() &  DEVICE_TYPE_OPENCL_ALL) {
 			const OpenCLDeviceDescription *odevDesc = (OpenCLDeviceDescription *)devDesc;
 
 			HardwareTreeItem *newNode = new HardwareTreeItem(index++, odevDesc->GetName().c_str());
@@ -164,7 +164,7 @@ HardwareTreeModel::HardwareTreeModel(MainWindow *w,
 			ss << "Max. Constant Memory: " << (odevDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>() / 1024) << " Kbytes";
 			newNode->appendChild(new HardwareTreeItem(ss.str().c_str()));
 
-			bool isCPU = (odevDesc->GetOpenCLType() == OCL_DEVICE_TYPE_CPU);
+			bool isCPU = (odevDesc->GetType() == DEVICE_TYPE_OPENCL_CPU);
 			if (isCPU) {
 				// The default mode is GPU-only
 				newNode->setChecked(false);

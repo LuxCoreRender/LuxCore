@@ -295,14 +295,14 @@ void LuxMarkApp::RenderRefreshTimeout() {
 		double minPerf = raysSecs[0];
 		double totalPerf = raysSecs[0];
 		for (size_t i = 1; i < intersectionDevices.size(); ++i) {
-			if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+			if (intersectionDevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 				minPerf = min(minPerf, raysSecs[i]);
 				totalPerf += raysSecs[i];
 			}
 		}
 
 		for (size_t i = 0; i < intersectionDevices.size(); ++i) {
-			if (intersectionDevices[i]->GetType() == DEVICE_TYPE_OPENCL) {
+			if (intersectionDevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 				const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)intersectionDevices[i])->GetDeviceDesc();
 				sprintf(buf, "\n    [%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
 						desc->GetName().c_str(),

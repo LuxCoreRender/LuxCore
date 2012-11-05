@@ -38,7 +38,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		OpenCLDeviceDescription *desc,
 		const size_t index,
 		const unsigned int forceWGSize) :
-		HardwareIntersectionDevice(context, DEVICE_TYPE_OPENCL, index),
+		HardwareIntersectionDevice(context, desc->type, index),
 		oclQueue(new cl::CommandQueue(desc->GetOCLContext(),
 		desc->GetOCLDevice())), kernel(NULL)
 {
