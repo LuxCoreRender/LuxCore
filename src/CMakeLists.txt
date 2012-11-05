@@ -285,6 +285,14 @@ set(LuxRays_HEADERS_LUXRAYS_UTILS_SDL_DATA
 )
 SOURCE_GROUP("Header Files\\Utils\\SDL\\Data" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_SDL_DATA})
 
+set(LuxRays_HEADERS_LUXRAYS_OPENCL
+	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/device.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/intersectiondevice.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/pixeldevice.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/opencl.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/utils.h
+)
+SOURCE_GROUP("Header Files\\OpenCL" FILES ${LuxRays_HEADERS_LUXRAYS_OPENCL})
 
 set(LuxRays_HEADERS
 	${LuxRays_HEADERS_LUXRAYS}
@@ -293,6 +301,7 @@ set(LuxRays_HEADERS
 	${LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY}
 	${LuxRays_HEADERS_LUXRAYS_CORE_PIXEL}
 	${LuxRays_HEADERS_LUXRAYS_KERNELS}
+	${LuxRays_HEADERS_LUXRAYS_OPENCL}
 	${LuxRays_HEADERS_LUXRAYS_UTILS}
 	${LuxRays_HEADERS_LUXRAYS_UTILS_CORE}
 	${LuxRays_HEADERS_LUXRAYS_UTILS_FILM}
