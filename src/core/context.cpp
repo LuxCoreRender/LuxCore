@@ -26,9 +26,14 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
-#include "luxrays/core/device.h"
-#include "luxrays/core/virtualdevice.h"
+#ifdef LUXRAYS_DISABLE_OPENCL
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixeldevice.h"
+#else
+#include "luxrays/opencl/intersectiondevice.h"
+#include "luxrays/opencl/pixeldevice.h"
+#endif
+#include "luxrays/core/virtualdevice.h"
 
 using namespace luxrays;
 

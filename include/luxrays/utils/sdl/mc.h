@@ -22,9 +22,10 @@
 #ifndef _LUXRAYS_SDL_MC_H
 #define	_LUXRAYS_SDL_MC_H
 
-#include <string.h>
+#include <cstring>
+#include <cmath>
 
-#include "luxrays/luxrays.h"
+#include "luxrays/core/geometry/vector.h"
 
 namespace luxrays { namespace sdl {
 

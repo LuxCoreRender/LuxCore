@@ -37,6 +37,8 @@
 namespace luxrays {
 
 
+#define RAYBUFFER_SIZE 65536
+
 class RayBuffer {
 public:
 	RayBuffer(const size_t bufferSize) : size(bufferSize), currentFreeRayIndex(0) {

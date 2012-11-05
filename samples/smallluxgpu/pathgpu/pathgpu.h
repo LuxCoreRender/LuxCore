@@ -27,7 +27,7 @@
 #include "smalllux.h"
 #include "slgscene.h"
 #include "renderengine.h"
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/opencl/intersectiondevice.h"
 
 #include <boost/thread/thread.hpp>
 

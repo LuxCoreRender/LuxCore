@@ -22,7 +22,7 @@
 #include "renderengine.h"
 #include "renderconfig.h"
 
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/opencl/intersectiondevice.h"
 
 //------------------------------------------------------------------------------
 // RenderEngine

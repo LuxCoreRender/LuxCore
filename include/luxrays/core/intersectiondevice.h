@@ -24,6 +24,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/device.h"
+#include "luxrays/core/geometry/raybuffer.h"
 
 namespace luxrays {
 
@@ -126,110 +127,6 @@ private:
 	RayBufferQueue *externalRayBufferQueue;
 	bool reportedPermissionError;
 };
-
-//------------------------------------------------------------------------------
-// OpenCL devices
-//------------------------------------------------------------------------------
-
-#define OPENCL_RAYBUFFER_SIZE 65536
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-class OpenCLKernel {
-public:
-	OpenCLKernel(OpenCLIntersectionDevice *dev) : device(dev), kernel(NULL),
-		stackSize(24) { }
-	virtual ~OpenCLKernel() { delete kernel; }
-
-	virtual void FreeBuffers() = 0;
-	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
-
-	void SetMaxStackSize(const size_t s) { stackSize = s; }
-
-protected:
-	OpenCLIntersectionDevice *device;
-	cl::Kernel *kernel;
-	size_t workGroupSize;
-	size_t stackSize;
-};
-
-class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
-public:
-	OpenCLIntersectionDevice(const Context *context,
-		OpenCLDeviceDescription *desc, const size_t index,
-		const unsigned int forceWGSize);
-	virtual ~OpenCLIntersectionDevice();
-
-	virtual void SetDataSet(const DataSet *newDataSet);
-	virtual void Start();
-	virtual void Interrupt();
-	virtual void Stop();
-
-	virtual RayBuffer *NewRayBuffer();
-	virtual RayBuffer *NewRayBuffer(const size_t size);
-	virtual size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
-	virtual void PushRayBuffer(RayBuffer *rayBuffer);
-	virtual RayBuffer *PopRayBuffer();
-
-	// OpenCL Device specific methods
-	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-
-	void DisableImageStorage(const bool v) {
-		disableImageStorage = v;
-	}
-
-	//--------------------------------------------------------------------------
-	// Interface for GPU only applications
-	//--------------------------------------------------------------------------
-
-	void SetHybridRenderingSupport(const bool v) {
-		assert (!started);
-		hybridRenderingSupport = v;
-	}
-	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
-	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
-	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
-	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
-		const unsigned int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
-
-	friend class Context;
-
-	static size_t RayBufferSize;
-
-protected:
-	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue);
-	virtual void UpdateDataSet();
-
-private:
-	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
-
-	void TraceRayBuffer(RayBuffer *rayBuffer,
-		VECTOR_CLASS<cl::Event> &readEvent,
-		VECTOR_CLASS<cl::Event> &traceEvent, cl::Event *event);
-	void FreeDataSetBuffers();
-
-	OpenCLDeviceDescription *deviceDesc;
-	boost::thread *intersectionThread;
-
-	// OpenCL items
-	cl::CommandQueue *oclQueue;
-
-	OpenCLKernel *kernel;
-
-	cl::Buffer *raysBuff;
-	cl::Buffer *hitsBuff;
-
-	RayBufferQueueO2O rayBufferQueue;
-	RayBufferQueue *externalRayBufferQueue;
-
-	bool reportedPermissionError, disableImageStorage, hybridRenderingSupport;
-};
-
-#endif
 
 }
 

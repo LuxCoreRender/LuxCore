@@ -19,43 +19,16 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_H
-#define	_LUXRAYS_H
+#ifndef _LUXRAYS_OPENCL_H
+#define	_LUXRAYS_OPENCL_H
 
-#include "luxrays/cfg.h"
+#define __CL_ENABLE_EXCEPTIONS
 
-typedef unsigned char u_char;
-typedef unsigned short u_short;
-typedef unsigned int u_int;
-typedef unsigned long u_long;
+#if defined(__APPLE__)
+#include <OpenCL/cl.hpp>
+#else
+#include <CL/cl.hpp>
+#endif
 
+#endif	/* _LUXRAYS_OPENCL_H */
 
-/*! \namespace luxrays
- *
- * \brief The LuxRays core classes are defined within this namespace.
- */
-namespace luxrays {
-class Accelerator;
-class BBox;
-class Context;
-class DataSet;
-class IntersectionDevice;
-class Mesh;
-class Normal;
-class PixelDevice;
-class Point;
-class Ray;
-class RayBuffer;
-class RayBufferQueue;
-class RayBufferQueueO2O;
-class SampleBuffer;
-class Spectrum;
-class Triangle;
-class TriangleMesh;
-class UV;
-class Vector;
-class VirtualM2MHardwareIntersectionDevice;
-class VirtualM2OHardwareIntersectionDevice;
-}
-
-#endif	/* _LUXRAYS_H */

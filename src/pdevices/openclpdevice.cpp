@@ -19,11 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include <cstdio>
 #include <algorithm>
 
 #include "luxrays/kernels/kernels.h"
-#include "luxrays/core/pixeldevice.h"
+#include "luxrays/opencl/device.h"
+#include "luxrays/opencl/pixeldevice.h"
 #include "luxrays/core/context.h"
 
 using namespace luxrays;
@@ -31,8 +34,6 @@ using namespace luxrays;
 //------------------------------------------------------------------------------
 // OpenCL PixelDevice
 //------------------------------------------------------------------------------
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 OpenCLSampleBuffer::OpenCLSampleBuffer(OpenCLPixelDevice *dev, const size_t bufferSize) : SampleBuffer(bufferSize) {
 	device = dev;

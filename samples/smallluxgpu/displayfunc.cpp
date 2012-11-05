@@ -44,6 +44,9 @@
 #include "sppm/sppm.h"
 #include "pathgpu/pathgpu.h"
 #include "pathgpu2/pathgpu2.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/opencl/pixeldevice.h"
+#endif
 
 RenderingConfig *config;
 

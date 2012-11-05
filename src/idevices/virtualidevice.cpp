@@ -21,7 +21,6 @@
 
 #include <cstdio>
 
-#include "luxrays/core/device.h"
 #include "luxrays/core/virtualdevice.h"
 
 using namespace luxrays;
@@ -30,7 +29,7 @@ using namespace luxrays;
 // Virtual Many To One Hardware Device
 //------------------------------------------------------------------------------
 
-size_t VirtualM2OHardwareIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
+size_t VirtualM2OHardwareIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
 
 VirtualM2OHardwareIntersectionDevice::VirtualM2OHardwareIntersectionDevice(const size_t count,
 		HardwareIntersectionDevice *device) {
@@ -198,7 +197,7 @@ RayBuffer *VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::PopRayB
 // Virtual Many To Many Hardware Device
 //------------------------------------------------------------------------------
 
-size_t VirtualM2MHardwareIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
+size_t VirtualM2MHardwareIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
 
 VirtualM2MHardwareIntersectionDevice::VirtualM2MHardwareIntersectionDevice(const size_t count,
 		const std::vector<HardwareIntersectionDevice *> &devices) :

@@ -28,6 +28,9 @@
 #include <stdexcept>
 
 #include "luxrays/core/pixel/samplebuffer.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/opencl/opencl.h"
+#endif
 
 #include "smalllux.h"
 #include "path/path.h"
