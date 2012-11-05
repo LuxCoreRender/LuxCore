@@ -29,9 +29,63 @@
 // BiDirCPU RenderThread
 //------------------------------------------------------------------------------
 
+void BiDirCPURenderEngine::ConnectVertices(
+		const PathVertex &eyeVertex, const PathVertex &lightVertex,
+		SampleResult *eyeSampleResult, const float u0) const {
+	Scene *scene = renderConfig->scene;
+
+	Vector eyeDir(lightVertex.bsdf.hitPoint - eyeVertex.bsdf.hitPoint);
+	const float eyeDistance2 = eyeDir.LengthSquared();
+	const float eyeDistance = sqrtf(eyeDistance2);
+	eyeDir /= eyeDistance;
+
+	// Check eye vertex BSDF
+	float eyeBsdfPdfW, eyeBsdfRevPdfW;
+	BSDFEvent eyeEvent;
+	Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(eyeDir, &eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW);
+
+	if (!eyeBsdfEval.Black()) {
+		// Check light vertex BSDF
+		float lightBsdfPdfW, lightBsdfRevPdfW;
+		BSDFEvent lightEvent;
+		Spectrum lightBsdfEval = eyeVertex.bsdf.Evaluate(eyeDir, &lightEvent, &lightBsdfPdfW, &lightBsdfRevPdfW);
+
+		if (!lightBsdfEval.Black()) {
+			// Check the 2 surfaces can see each other
+			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.shadeN, eyeDir);
+			const float cosThetaAtLight = Dot(lightVertex.bsdf.shadeN, -eyeDir);
+			const float geometryTerm = cosThetaAtLight * cosThetaAtLight / eyeDistance2;
+			if (geometryTerm <= 0.f)
+				return;
+
+			// Trace  ray between the two vertices
+			Ray eyeRay(eyeVertex.bsdf.hitPoint, eyeDir);
+			eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
+			RayHit eyeRayHit;
+			BSDF bsdfConn;
+			Spectrum connectionThroughput;
+			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+				// Nothing was hit, the light path vertex is visible
+
+				// Convert pdfs to area pdf
+				const float eyeBsdfPdfA = PdfWtoA(eyeBsdfPdfW, eyeDistance, cosThetaAtLight);
+				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  eyeDistance, cosThetaAtCamera);
+
+				// MIS weights
+				const float lightWeight = eyeBsdfPdfA * (lightVertex.d0 + lightVertex.d1vc * lightBsdfRevPdfW);
+				const float eyeWeight = lightBsdfPdfA * (eyeVertex.d0 + eyeVertex.d1vc * eyeBsdfRevPdfW);
+
+				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
+
+				eyeSampleResult->radiance += (misWeight * geometryTerm) * eyeBsdfEval * lightBsdfEval;
+			}
+		}
+	}
+}
+
 void BiDirCPURenderEngine::ConnectToEye(const unsigned int pixelCount, 
 		const PathVertex &lightVertex, const float u0,
-		const Point &lensPoint, vector<SampleResult> &sampleResults) {
+		const Point &lensPoint, vector<SampleResult> &sampleResults) const {
 	Scene *scene = renderConfig->scene;
 
 	Vector eyeDir(lightVertex.bsdf.hitPoint - lensPoint);
@@ -78,7 +132,7 @@ void BiDirCPURenderEngine::DirectLightSampling(
 		const float u0, const float u1, const float u2, const float u3,
 		const float u4, const float u5,
 		const PathVertex &eyeVertex,
-		Spectrum *radiance) {
+		Spectrum *radiance) const {
 	Scene *scene = renderConfig->scene;
 	
 	if (!eyeVertex.bsdf.IsDelta()) {
@@ -131,7 +185,7 @@ void BiDirCPURenderEngine::DirectLightSampling(
 	}
 }
 
-void BiDirCPURenderEngine::DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance) {
+void BiDirCPURenderEngine::DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance) const {
 	Scene *scene = renderConfig->scene;
 
 	float directPdfA, emissionPdfW;
@@ -154,7 +208,7 @@ void BiDirCPURenderEngine::DirectHitFiniteLight(const PathVertex &eyeVertex, Spe
 }
 
 void BiDirCPURenderEngine::DirectHitInfiniteLight(const PathVertex &eyeVertex,
-		Spectrum *radiance) {
+		Spectrum *radiance) const {
 	float directPdfA, emissionPdfW;
 	Spectrum lightRadiance = renderConfig->scene->GetEnvLightsRadiance(eyeVertex.bsdf.fixedDir,
 			Point(), &directPdfA, &emissionPdfW);
@@ -192,7 +246,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleBootSize = 9;
 	const unsigned int sampleLightStepSize = 6;
-	const unsigned int sampleEyeStepSize = 11;
+	const unsigned int sampleEyeStepSize = 12;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		renderEngine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
@@ -408,6 +462,17 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					eyeVertex, &eyeSampleResult.radiance);
 
 			//------------------------------------------------------------------
+			// Connect vertex path ray with all light path vertices
+			//------------------------------------------------------------------
+
+			if (!eyeVertex.bsdf.IsDelta()) {
+				for (vector<PathVertex>::const_iterator lightPathVertex = lightPathVertices.begin();
+						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
+					renderEngine->ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
+							sampler->GetSample(sampleOffset + 7));
+			}
+
+			//------------------------------------------------------------------
 			// Build the next vertex path ray
 			//------------------------------------------------------------------
 
@@ -415,9 +480,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			BSDFEvent event;
 			float cosSampledDir, bsdfPdfW;
 			const Spectrum bsdfSample = eyeVertex.bsdf.Sample(&sampledDir,
-					sampler->GetSample(sampleOffset + 7),
 					sampler->GetSample(sampleOffset + 8),
 					sampler->GetSample(sampleOffset + 9),
+					sampler->GetSample(sampleOffset + 10),
 					&bsdfPdfW, &cosSampledDir, &event);
 			if (bsdfSample.Black())
 				break;
@@ -431,7 +496,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			/*if ((eyeVertex.depth >= renderEngine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
 				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-				if (prob > sampler->GetSample(sampleOffset + 10))
+				if (prob > sampler->GetSample(sampleOffset + 11))
 					lastPdfW *= prob;
 				else
 					break;

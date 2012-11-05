@@ -68,14 +68,16 @@ private:
 	void DirectLightSampling(
 		const float u0, const float u1, const float u2, const float u3,
 		const float u4, const float u5,
-		const PathVertex &eyeVertex, Spectrum *radiance);
-	void DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance);
+		const PathVertex &eyeVertex, Spectrum *radiance) const;
+	void DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance) const;
 	void DirectHitInfiniteLight(const PathVertex &eyeVertex,
-		Spectrum *radiance);
+		Spectrum *radiance) const;
 
 	void ConnectToEye(const unsigned int pixelCount, 
 		const PathVertex &lightVertex, const float u0,
-		const Point &lensPoint, vector<SampleResult> &sampleResults);
+		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
+	void ConnectVertices(const PathVertex &eyeVertex, const PathVertex &lightVertex,
+		SampleResult *eyeSampleResult, const float u0) const;
 
 	vector<double> threadSamplesCount;
 };
