@@ -48,6 +48,7 @@ class Ray;
 class RayBuffer;
 class RayBufferQueue;
 class RayBufferQueueO2O;
+class RayHit;
 class SampleBuffer;
 class Spectrum;
 class Triangle;
