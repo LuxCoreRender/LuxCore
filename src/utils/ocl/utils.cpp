@@ -28,7 +28,8 @@
 #include <boost/filesystem.hpp>
 #include <string.h>
 
-#include "luxrays/utils/ocl/utils.h"
+#include "luxrays/opencl/utils.h"
+#include "luxrays/core/utils.h"
 
 using namespace luxrays;
 using namespace luxrays::utils;

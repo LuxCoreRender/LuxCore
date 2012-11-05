@@ -28,6 +28,8 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/triangle.h"
 #include "luxrays/core/trianglemesh.h"
+#include "luxrays/core/pixel/spectrum.h"
+#include "luxrays/core/geometry/uv.h"
 
 namespace luxrays {
 

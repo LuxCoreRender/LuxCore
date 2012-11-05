@@ -28,6 +28,7 @@
 #include "luxrays/core/device.h"
 #include "luxrays/core/pixel/framebuffer.h"
 #include "luxrays/core/pixel/filter.h"
+#include "luxrays/core/pixel/samplebuffer.h"
 
 namespace luxrays {
 
@@ -207,117 +208,6 @@ private:
 	Filter *filter;
 	FilterLUTs *filterLUTs;
 };
-
-//------------------------------------------------------------------------------
-// OpenCL device
-//------------------------------------------------------------------------------
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-class OpenCLPixelDevice;
-
-class OpenCLSampleBuffer : public SampleBuffer {
-public:
-	OpenCLSampleBuffer(OpenCLPixelDevice *dev, const size_t bufferSize);
-	~OpenCLSampleBuffer();
-
-	void Write() const;
-	void Wait() const;
-	void CollectStats() const;
-
-	cl::Buffer *GetOCLBuffer() { return oclBuffer; }
-	cl::Event *GetOCLEvent() { return &oclEvent; }
-
-private:
-	OpenCLPixelDevice *device;
-	cl::Buffer *oclBuffer;
-	cl::Event oclEvent;
-};
-
-class OpenCLPixelDevice : public PixelDevice {
-public:
-	OpenCLPixelDevice(const Context *context, OpenCLDeviceDescription *desc,
-			const size_t index);
-	~OpenCLPixelDevice();
-
-	void Init(const unsigned int w, const unsigned int h);
-	void ClearFrameBuffer();
-	void ClearSampleFrameBuffer();
-	void SetGamma(const float gamma = 2.2f);
-
-	void Start();
-	void Interrupt();
-	void Stop();
-
-	SampleBuffer *GetFreeSampleBuffer();
-	void FreeSampleBuffer(SampleBuffer *sampleBuffer);
-	void AddSampleBuffer(const FilterType type, SampleBuffer *sampleBuffer);
-
-	void Merge(const SampleFrameBuffer *sfb);
-	const SampleFrameBuffer *GetSampleFrameBuffer() const;
-
-	void UpdateFrameBuffer(const ToneMapParams &params);
-	const FrameBuffer *GetFrameBuffer() const { return frameBuffer; }
-
-	const OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-
-	unsigned int GetFreeDevBufferCount() {
-		boost::mutex::scoped_lock lock(splatMutex);
-
-		return static_cast<unsigned int>(freeSampleBuffers.size());
-	}
-	unsigned int GetTotalDevBufferCount() {
-		boost::mutex::scoped_lock lock(splatMutex);
-
-		return static_cast<unsigned int>(sampleBuffers.size());
-	}
-
-	static size_t SampleBufferSize;
-
-	friend class Context;
-	friend class OpenCLSampleBuffer;
-
-private:
-	static const unsigned int GammaTableSize = 1024;
-	static const unsigned int FilterTableSize = 16;
-
-	void CompileKernel(cl::Context &ctx, cl::Device &device, const std::string &src,
-		const char *kernelName, cl::Kernel **kernel);
-
-	OpenCLDeviceDescription *deviceDesc;
-	SampleFrameBuffer *sampleFrameBuffer;
-	FrameBuffer *frameBuffer;
-
-	boost::mutex splatMutex;
-
-	// OpenCL items
-	cl::CommandQueue *oclQueue;
-
-	// Kernels
-	cl::Kernel *clearFBKernel;
-	size_t clearFBWorkGroupSize;
-
-	cl::Kernel *clearSampleFBKernel;
-	cl::Kernel *addSampleBufferKernel;
-	cl::Kernel *addSampleBufferPreviewKernel;
-	cl::Kernel *addSampleBufferGaussian2x2Kernel;
-	cl::Kernel *updateFrameBufferKernel;
-
-	// Buffers
-	cl::Buffer *sampleFrameBuff;
-	cl::Buffer *frameBuff;
-
-	std::vector<OpenCLSampleBuffer *> sampleBuffers;
-	std::deque<OpenCLSampleBuffer *> freeSampleBuffers;
-
-	cl::Buffer *gammaTableBuff;
-	cl::Buffer *filterTableBuff;
-
-	float gammaTable[GammaTableSize];
-	float Gaussian2x2_filterTable[FilterTableSize * FilterTableSize];
-};
-
-#endif
 
 }
 

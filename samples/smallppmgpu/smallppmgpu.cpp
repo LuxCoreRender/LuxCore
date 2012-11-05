@@ -51,6 +51,9 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixel/framebuffer.h"
 #include "luxrays/utils/film/pixeldevicefilm.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/opencl/opencl.h"
+#endif
 
 #define MAX_EYE_PATH_DEPTH 16
 #define MAX_PHOTON_PATH_DEPTH 16

@@ -19,14 +19,15 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _OCL_UTILS_H
-#define	_OCL_UTILS_H
+#ifndef _LUXRAYS_OPENCL_UTILS_H
+#define	_LUXRAYS_OPENCL_UTILS_H
 
 #include <string>
-
-#include "luxrays/luxrays.h"
+#include <map>
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
+#include "luxrays/opencl/opencl.h"
 
 namespace luxrays { namespace utils {
 
@@ -95,4 +96,4 @@ private:
 
 #endif
 
-#endif	/* _OCL_UTILS_H */
+#endif	/* _LUXRAYS_OPENCL_UTILS_H */

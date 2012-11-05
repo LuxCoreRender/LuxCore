@@ -45,7 +45,6 @@
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/pixel/samplebuffer.h"
-#include "luxrays/utils/ocl/utils.h"
 
 //------------------------------------------------------------------------------
 // PathOCLRenderThread

@@ -22,6 +22,8 @@
 #ifndef _LUXRAYS_UV_H
 #define _LUXRAYS_UV_H
 
+#include <ostream>
+
 namespace luxrays {
 
 class UV {

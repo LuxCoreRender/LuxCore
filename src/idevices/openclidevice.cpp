@@ -21,9 +21,9 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/opencl/intersectiondevice.h"
 #include "luxrays/core/context.h"
-#include "luxrays/utils/ocl/utils.h"
+#include "luxrays/opencl/utils.h"
 
 using namespace luxrays;
 
@@ -31,7 +31,7 @@ using namespace luxrays;
 // OpenCL IntersectionDevice
 //------------------------------------------------------------------------------
 
-size_t OpenCLIntersectionDevice::RayBufferSize = OPENCL_RAYBUFFER_SIZE;
+size_t OpenCLIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
 
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		const Context *context,

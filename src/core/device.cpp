@@ -25,10 +25,15 @@
 #include <cstdio>
 using std::sprintf;
 
+#ifdef LUXRAYS_DISABLE_OPENCL
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/pixeldevice.h"
-#include "luxrays/core/context.h"
+#else
+#include "luxrays/opencl/intersectiondevice.h"
+#include "luxrays/opencl/pixeldevice.h"
 #include "luxrays/kernels/kernels.h"
+#endif
+#include "luxrays/core/context.h"
 
 namespace luxrays {
 

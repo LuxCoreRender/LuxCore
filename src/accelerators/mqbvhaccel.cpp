@@ -23,8 +23,12 @@
 #include "luxrays/core/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
+#ifdef LUXRAYS_DISABLE_OPENCL
 #include "luxrays/core/intersectiondevice.h"
+#else
+#include "luxrays/opencl/intersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
+#endif
 
 namespace luxrays {
 
