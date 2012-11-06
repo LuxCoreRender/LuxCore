@@ -518,12 +518,12 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			// New MIS weights
 			if (event & SPECULAR) {
-				lightVertex.d0 = 0.f;
-				lightVertex.d1vc *= (cosSampledDir / bsdfPdfW) * bsdfRevPdfW;
+				eyeVertex.d0 = 0.f;
+				eyeVertex.d1vc *= (cosSampledDir / bsdfPdfW) * bsdfRevPdfW;
 			} else {
-				lightVertex.d0 = 1.f / bsdfPdfW;
-				lightVertex.d1vc = (cosSampledDir / bsdfPdfW) * (lightVertex.d1vc *
-						bsdfRevPdfW + lightVertex.d0);
+				eyeVertex.d0 = 1.f / bsdfPdfW;
+				eyeVertex.d1vc = (cosSampledDir / bsdfPdfW) * (eyeVertex.d1vc *
+						bsdfRevPdfW + eyeVertex.d0);
 			}
 
 			eyeRay = Ray(eyeVertex.bsdf.hitPoint, sampledDir);
