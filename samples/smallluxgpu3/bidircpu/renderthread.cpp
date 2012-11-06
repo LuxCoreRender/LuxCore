@@ -383,9 +383,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						lightVertex.d0 = 0.f;
 						lightVertex.d1vc *= (cosSampledDir / bsdfPdfW) * bsdfRevPdfW;
 					} else {
-						lightVertex.d0 = 1.f / bsdfPdfW;
 						lightVertex.d1vc = (cosSampledDir / bsdfPdfW) * (lightVertex.d1vc *
 								bsdfRevPdfW + lightVertex.d0);
+						lightVertex.d0 = 1.f / bsdfPdfW;
 					}
 
 					nextEventRay = Ray(lightVertex.bsdf.hitPoint, sampledDir);
@@ -523,9 +523,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				eyeVertex.d0 = 0.f;
 				eyeVertex.d1vc *= (cosSampledDir / bsdfPdfW) * bsdfRevPdfW;
 			} else {
-				eyeVertex.d0 = 1.f / bsdfPdfW;
 				eyeVertex.d1vc = (cosSampledDir / bsdfPdfW) * (eyeVertex.d1vc *
 						bsdfRevPdfW + eyeVertex.d0);
+				eyeVertex.d0 = 1.f / bsdfPdfW;
 			}
 
 			eyeRay = Ray(eyeVertex.bsdf.hitPoint, sampledDir);
