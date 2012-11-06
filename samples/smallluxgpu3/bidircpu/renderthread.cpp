@@ -210,8 +210,10 @@ void BiDirCPURenderEngine::DirectHitFiniteLight(const PathVertex &eyeVertex, Spe
 
 void BiDirCPURenderEngine::DirectHitInfiniteLight(const PathVertex &eyeVertex,
 		Spectrum *radiance) const {
+	Scene *scene = renderConfig->scene;
+
 	float directPdfA, emissionPdfW;
-	Spectrum lightRadiance = renderConfig->scene->GetEnvLightsRadiance(eyeVertex.bsdf.fixedDir,
+	Spectrum lightRadiance = scene->GetEnvLightsRadiance(eyeVertex.bsdf.fixedDir,
 			Point(), &directPdfA, &emissionPdfW);
 	if (lightRadiance.Black())
 		return;
@@ -221,7 +223,7 @@ void BiDirCPURenderEngine::DirectHitInfiniteLight(const PathVertex &eyeVertex,
 		return;
 	}
 
-	const float lightPickPdf = renderConfig->scene->PickLightPdf();
+	const float lightPickPdf = scene->PickLightPdf();
 	directPdfA *= lightPickPdf;
 	emissionPdfW *= lightPickPdf;
 
@@ -360,9 +362,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 					float bsdfRevPdfW;
 					if (event & SPECULAR)
-						lightVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
-					else
 						bsdfRevPdfW = bsdfPdfW;
+					else
+						lightVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
 
 					/*if (lightVertex.depth >= renderEngine->rrDepth) {
 						// Russian Roulette
@@ -500,9 +502,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			float bsdfRevPdfW;
 			if (event & SPECULAR)
-				eyeVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
-			else
 				bsdfRevPdfW = bsdfPdfW;
+			else
+				eyeVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
 
 			/*if ((eyeVertex.depth >= renderEngine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
