@@ -287,7 +287,10 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
 		if (!lightVertex.throughput.Black()) {
-			lightVertex.throughput /= lightEmitPdfW * lightPickPdf;
+			lightEmitPdfW *= lightPickPdf;
+			lightDirectPdfW *= lightPickPdf;
+
+			lightVertex.throughput /= lightEmitPdfW;
 			assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
 
 			// I don't store the light vertex 0 because direct lighting will take
@@ -328,8 +331,8 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						//------------------------------------------------------
 						// Try to connect the light path vertex with the eye
 						//------------------------------------------------------
-						renderEngine->ConnectToEye(pixelCount, lightVertex, sampler->GetSample(sampleOffset + 1),
-								lensPoint, sampleResults);
+//						renderEngine->ConnectToEye(pixelCount, lightVertex, sampler->GetSample(sampleOffset + 1),
+//								lensPoint, sampleResults);
 					}
 
 					if (lightVertex.depth >= renderEngine->maxLightPathDepth)
@@ -351,12 +354,10 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						break;
 
 					float bsdfRevPdfW;
-					if (event & SPECULAR) {
-						// TODO
-						bsdfRevPdfW = 0.f;
-					} else
+					if (event & SPECULAR)
+						lightVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
+					else
 						bsdfRevPdfW = bsdfPdfW;
-					
 
 					/*if (lightVertex.depth >= renderEngine->rrDepth) {
 						// Russian Roulette
@@ -422,7 +423,12 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			if (!scene->Intersect(false, true, sampler->GetSample(sampleOffset), &eyeRay,
 					&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
+
+				// This is a trick, you can not have a BSDF of something that has
+				// not been hit. DirectHitInfiniteLight must be aware of this.
+				eyeVertex.bsdf.fixedDir = -eyeRay.d;
 				eyeVertex.throughput *= connectionThroughput;
+
 				renderEngine->DirectHitInfiniteLight(eyeVertex, &eyeSampleResult.radiance);
 
 				if (eyeVertex.depth == 1)
@@ -465,12 +471,12 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			// Connect vertex path ray with all light path vertices
 			//------------------------------------------------------------------
 
-			if (!eyeVertex.bsdf.IsDelta()) {
-				for (vector<PathVertex>::const_iterator lightPathVertex = lightPathVertices.begin();
-						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
-					renderEngine->ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
-							sampler->GetSample(sampleOffset + 7));
-			}
+//			if (!eyeVertex.bsdf.IsDelta()) {
+//				for (vector<PathVertex>::const_iterator lightPathVertex = lightPathVertices.begin();
+//						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
+//					renderEngine->ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
+//							sampler->GetSample(sampleOffset + 7));
+//			}
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray
