@@ -67,6 +67,20 @@ void BiDirCPURenderEngine::ConnectVertices(
 			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
+				if (eyeVertex.depth >= rrDepth) {
+					// Russian Roulette
+					const float prob = Max(eyeBsdfEval.Filter(), rrImportanceCap);
+					eyeBsdfPdfW *= prob;
+					eyeBsdfRevPdfW *= prob;
+				}
+
+				if (lightVertex.depth >= rrDepth) {
+					// Russian Roulette
+					const float prob = Max(lightBsdfEval.Filter(), rrImportanceCap);
+					lightBsdfPdfW *= prob;
+					lightBsdfRevPdfW *= prob;
+				}
+
 				// Convert pdfs to area pdf
 				const float eyeBsdfPdfA = PdfWtoA(eyeBsdfPdfW, eyeDistance, cosThetaAtLight);
 				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  eyeDistance, cosThetaAtCamera);
@@ -108,6 +122,13 @@ void BiDirCPURenderEngine::ConnectToEye(const unsigned int pixelCount,
 			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
+				if (lightVertex.depth >= rrDepth) {
+					// Russian Roulette
+					const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
+					bsdfPdfW *= prob;
+					bsdfRevPdfW *= prob;
+				}
+
 				const float cosToCamera = Dot(lightVertex.bsdf.shadeN, -eyeDir);
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
@@ -129,8 +150,8 @@ void BiDirCPURenderEngine::ConnectToEye(const unsigned int pixelCount,
 }
 
 void BiDirCPURenderEngine::DirectLightSampling(
-		const float u0, const float u1, const float u2, const float u3,
-		const float u4, const float u5,
+		const float u0, const float u1, const float u2,
+		const float u3, const float u4,
 		const PathVertex &eyeVertex,
 		Spectrum *radiance) const {
 	Scene *scene = renderConfig->scene;
@@ -159,7 +180,14 @@ void BiDirCPURenderEngine::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				if (!scene->Intersect(false, false, u5, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				if (!scene->Intersect(false, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+					if (eyeVertex.depth >= rrDepth) {
+						// Russian Roulette
+						const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
+						bsdfPdfW *= prob;
+						bsdfRevPdfW *= prob;
+					}
+
 					const float cosThetaToLight = AbsDot(lightRayDir, eyeVertex.bsdf.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 
@@ -170,13 +198,6 @@ void BiDirCPURenderEngine::DirectLightSampling(
 					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
-
-					/*if (eyeVertex.depth >= rrDepth) {
-						// Russian Roulette
-						const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
-						if (prob > u4)
-							bsdfEval *= prob;
-					}*/
 
 					*radiance += (misWeight * factor) * eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
 				}
@@ -253,7 +274,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleBootSize = 9;
 	const unsigned int sampleLightStepSize = 6;
-	const unsigned int sampleEyeStepSize = 12;
+	const unsigned int sampleEyeStepSize = 11;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		renderEngine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
@@ -366,14 +387,15 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					else
 						lightVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
 
-					/*if (lightVertex.depth >= renderEngine->rrDepth) {
+					if (lightVertex.depth >= renderEngine->rrDepth) {
 						// Russian Roulette
 						const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-						if (prob > sampler->GetSample(sampleOffset + 5))
-							bsdfPdf *= prob;
-						else
+						if (sampler->GetSample(sampleOffset + 5) < prob) {
+							bsdfPdfW *= prob;
+							bsdfRevPdfW *= prob;
+						} else
 							break;
-					}*/
+					}
 
 					lightVertex.throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
 					assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
@@ -471,7 +493,6 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					sampler->GetSample(sampleOffset + 6),
 					eyeVertex, &eyeSampleResult.radiance);
 
 			//------------------------------------------------------------------
@@ -482,7 +503,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				for (vector<PathVertex>::const_iterator lightPathVertex = lightPathVertices.begin();
 						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
 					renderEngine->ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
-							sampler->GetSample(sampleOffset + 7));
+							sampler->GetSample(sampleOffset + 6));
 			}
 
 			//------------------------------------------------------------------
@@ -493,9 +514,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			BSDFEvent event;
 			float cosSampledDir, bsdfPdfW;
 			const Spectrum bsdfSample = eyeVertex.bsdf.Sample(&sampledDir,
+					sampler->GetSample(sampleOffset + 7),
 					sampler->GetSample(sampleOffset + 8),
 					sampler->GetSample(sampleOffset + 9),
-					sampler->GetSample(sampleOffset + 10),
 					&bsdfPdfW, &cosSampledDir, &event);
 			if (bsdfSample.Black())
 				break;
@@ -506,14 +527,15 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			else
 				eyeVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
 
-			/*if ((eyeVertex.depth >= renderEngine->rrDepth) && !lastSpecular) {
+			if (eyeVertex.depth >= renderEngine->rrDepth) {
 				// Russian Roulette
 				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-				if (prob > sampler->GetSample(sampleOffset + 11))
-					lastPdfW *= prob;
-				else
+				if (prob > sampler->GetSample(sampleOffset + 10)) {
+					bsdfPdfW *= prob;
+					bsdfRevPdfW *= prob;
+				} else
 					break;
-			}*/
+			}
 
 			eyeVertex.throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
 			assert (!eyeVertex.throughput.IsNaN() && !eyeVertex.throughput.IsInf());
