@@ -325,7 +325,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					// Update the new light vertex
 					lightVertex.throughput *= connectionThroughput;
 					// Infinite lights use MIS based on solid angle instead of area
-					if((lightVertex.depth > 1) || light->IsEnvironmental())
+					if((lightVertex.depth > 1) || !light->IsEnvironmental())
                         lightVertex.d0 *= nextEventRayHit.t * nextEventRayHit.t;
 					const float invCosTheta = 1.f / AbsDot(lightVertex.bsdf.shadeN, nextEventRay.d);
                     lightVertex.d0 *= invCosTheta;
