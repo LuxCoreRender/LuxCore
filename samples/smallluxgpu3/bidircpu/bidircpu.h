@@ -66,8 +66,8 @@ private:
 	}
 
 	void DirectLightSampling(
-		const float u0, const float u1, const float u2, const float u3,
-		const float u4, const float u5,
+		const float u0, const float u1, const float u2,
+		const float u3, const float u4,
 		const PathVertex &eyeVertex, Spectrum *radiance) const;
 	void DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance) const;
 	void DirectHitInfiniteLight(const PathVertex &eyeVertex,

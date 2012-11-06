@@ -216,7 +216,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				if (depth >= renderEngine->rrDepth) {
 					// Russian Roulette
 					const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-					if (prob > sampler->GetSample(sampleOffset + 5))
+					if (sampler->GetSample(sampleOffset + 5) < prob)
 						bsdfPdf *= prob;
 					else
 						break;
