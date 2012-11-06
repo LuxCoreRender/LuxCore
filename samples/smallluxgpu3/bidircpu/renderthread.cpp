@@ -161,14 +161,14 @@ void BiDirCPURenderEngine::DirectLightSampling(
 				// Check if the light source is visible
 				if (!scene->Intersect(false, false, u5, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, eyeVertex.bsdf.shadeN);
+					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 
 					// emissionPdfA / directPdfA = emissionPdfW / directPdfW
-					const float weightLight  = bsdfPdfW / (lightPickPdf * directPdfW);
+					const float weightLight  = bsdfPdfW / directLightSamplingPdfW;
 					const float weightCamera = (emissionPdfW * cosThetaToLight / (directPdfW * cosThetaAtLight)) *
 						(eyeVertex.d0 + eyeVertex.d1vc * bsdfRevPdfW);
 					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
-					
-					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
 					/*if (eyeVertex.depth >= rrDepth) {
@@ -190,7 +190,6 @@ void BiDirCPURenderEngine::DirectHitFiniteLight(const PathVertex &eyeVertex, Spe
 
 	float directPdfA, emissionPdfW;
 	const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW);
-
 	if (lightRadiance.Black())
 		return;
 	
@@ -198,8 +197,10 @@ void BiDirCPURenderEngine::DirectHitFiniteLight(const PathVertex &eyeVertex, Spe
 		*radiance += eyeVertex.throughput * lightRadiance;
 		return;
 	}
-	
-	directPdfA *= scene->PickLightPdf();
+
+	const float lightPickPdf = scene->PickLightPdf();
+	directPdfA *= lightPickPdf;
+	emissionPdfW *= lightPickPdf;
 
 	// MIS weight
 	const float misWeight = 1.f / (directPdfA * eyeVertex.d0 + emissionPdfW * eyeVertex.d1vc + 1.f); // Balance heuristic (MIS)
@@ -219,7 +220,11 @@ void BiDirCPURenderEngine::DirectHitInfiniteLight(const PathVertex &eyeVertex,
 		*radiance += eyeVertex.throughput * lightRadiance;
 		return;
 	}
- 
+
+	const float lightPickPdf = renderConfig->scene->PickLightPdf();
+	directPdfA *= lightPickPdf;
+	emissionPdfW *= lightPickPdf;
+
 	// MIS weight
 	const float misWeight = 1.f / (directPdfA * eyeVertex.d0 + emissionPdfW * eyeVertex.d1vc + 1.f); // Balance heuristic (MIS)
 
@@ -331,8 +336,8 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 						//------------------------------------------------------
 						// Try to connect the light path vertex with the eye
 						//------------------------------------------------------
-//						renderEngine->ConnectToEye(pixelCount, lightVertex, sampler->GetSample(sampleOffset + 1),
-//								lensPoint, sampleResults);
+						renderEngine->ConnectToEye(pixelCount, lightVertex, sampler->GetSample(sampleOffset + 1),
+								lensPoint, sampleResults);
 					}
 
 					if (lightVertex.depth >= renderEngine->maxLightPathDepth)
@@ -471,12 +476,12 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			// Connect vertex path ray with all light path vertices
 			//------------------------------------------------------------------
 
-//			if (!eyeVertex.bsdf.IsDelta()) {
-//				for (vector<PathVertex>::const_iterator lightPathVertex = lightPathVertices.begin();
-//						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
-//					renderEngine->ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
-//							sampler->GetSample(sampleOffset + 7));
-//			}
+			if (!eyeVertex.bsdf.IsDelta()) {
+				for (vector<PathVertex>::const_iterator lightPathVertex = lightPathVertices.begin();
+						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
+					renderEngine->ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
+							sampler->GetSample(sampleOffset + 7));
+			}
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray
