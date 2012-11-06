@@ -193,7 +193,7 @@ void OpenCLDeviceDescription::AddDeviceDescs(const cl::Platform &oclPlatform,
 
 	// Build the descriptions
 	for (size_t i = 0; i < oclDevices.size(); ++i) {
-		if (filter & GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>()));
+		if (filter & GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>()))
 			descriptions.push_back(new OpenCLDeviceDescription(oclDevices[i], i));
 	}
 }

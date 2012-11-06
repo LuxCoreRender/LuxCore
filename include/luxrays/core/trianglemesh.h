@@ -24,6 +24,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <deque>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/triangle.h"
