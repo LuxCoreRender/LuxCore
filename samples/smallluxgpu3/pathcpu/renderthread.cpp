@@ -33,8 +33,8 @@
 //------------------------------------------------------------------------------
 
 void PathCPURenderEngine::DirectLightSampling(
-		const float u0, const float u1, const float u2, const float u3,
-		const float u4, const float u5,
+		const float u0, const float u1, const float u2,
+		const float u3, const float u4,
 		const Spectrum &pathThrouput, const BSDF &bsdf,
 		const int depth, Spectrum *radiance) {
 	Scene *scene = renderConfig->scene;
@@ -62,20 +62,18 @@ void PathCPURenderEngine::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				if (!scene->Intersect(false, false, u5, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				if (!scene->Intersect(false, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
-					// MIS between direct light sampling and BSDF sampling
-					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
-
 					if (depth >= rrDepth) {
 						// Russian Roulette
-						const float prob = Max(bsdfEval.Filter(), rrImportanceCap);
-						if (prob > u4)
-							bsdfEval *= prob;
+						bsdfPdfW *= Max(bsdfEval.Filter(), rrImportanceCap);
 					}
+
+					// MIS between direct light sampling and BSDF sampling
+					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
 					*radiance += (weight * factor) * pathThrouput * connectionThroughput * lightRadiance * bsdfEval;
 				}
@@ -145,7 +143,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	// Setup the sampler
 	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleBootSize = 4;
-	const unsigned int sampleStepSize = 11;
+	const unsigned int sampleStepSize = 10;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		renderEngine->maxPathDepth * sampleStepSize; // For each path vertex
@@ -211,7 +209,6 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					sampler->GetSample(sampleOffset + 6),
 					pathThrouput, bsdf, depth, &radiance);
 
 			//------------------------------------------------------------------
@@ -222,9 +219,9 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			BSDFEvent event;
 			float cosSampledDir;
 			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+					sampler->GetSample(sampleOffset + 6),
 					sampler->GetSample(sampleOffset + 7),
 					sampler->GetSample(sampleOffset + 8),
-					sampler->GetSample(sampleOffset + 9),
 					&lastPdfW, &cosSampledDir, &event);
 			if (bsdfSample.Black())
 				break;
@@ -234,7 +231,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			if ((depth >= renderEngine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
 				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-				if (prob > sampler->GetSample(sampleOffset + 10))
+				if (sampler->GetSample(sampleOffset + 9) < prob)
 					lastPdfW *= prob;
 				else
 					break;
