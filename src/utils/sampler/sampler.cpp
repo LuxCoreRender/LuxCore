@@ -96,6 +96,8 @@ void MetropolisSampler::RequestSamples(const unsigned int size) {
 }
 
 float MetropolisSampler::GetSample(const unsigned int index) {
+	assert (index < sampleSize);
+
 	unsigned int sampleStamp = sampleStamps[index];
 
 	float s;
