@@ -127,13 +127,21 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 
 	// Calculate the sample result luminance
+	const unsigned int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
 	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 		const float luminance = sr->radiance.Y();
 		assert (!isnan(luminance) && !isinf(luminance));
 
-		if ((luminance >= 0.f) &&!isnan(luminance) && !isinf(luminance))
-			newLuminance += luminance;
+		if ((luminance >= 0.f) &&!isnan(luminance) && !isinf(luminance)) {
+			if (sr->type == PER_SCREEN_NORMALIZED) {
+				// This is required because the way camera pixel area is expressed (i.e. normalized
+				// coordinates Vs pixels). I should probably fix the source of the problem
+				// instead of this workaround.
+				newLuminance += luminance / pixelCount;
+			} else
+				newLuminance += luminance;
+		}
 	}
 
 	if (isLargeMutation) {
@@ -199,7 +207,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	// when 
 	if (cooldown) {
 		// Check if it is time to end the cooldown
-		if (sampleCount > film->GetWidth() * film->GetHeight()) {
+		if (sampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else
