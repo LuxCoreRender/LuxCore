@@ -19,6 +19,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM (http://www.davidovic.cz
+// and http://www.smallvcm.com)
+
 #include "renderconfig.h"
 #include "bidircpu/bidircpu.h"
 #include "luxrays/utils/core/randomgen.h"

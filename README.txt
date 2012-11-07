@@ -41,6 +41,6 @@ A special thanks goes to:
 - zlib authors http://www.zlib.net/ (not used anymore);
 - OpenEXR authors http://www.openexr.com/ (not used anymore);
 - FreeImage open source image library. See http://freeimage.sourceforge.net for details;
-- Tomas Davidovic (http://www.davidovic.cz) for SmallVCM, an endless source of hints
+- Tomas Davidovic (http://www.davidovic.cz and http://www.smallvcm.com) for SmallVCM, an endless source of hints
 
 This software is released under GPL License (see COPYING.txt file).
