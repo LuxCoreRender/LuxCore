@@ -127,7 +127,7 @@ set(SMALLLUXGPU_SRCS
 	displayfunc.cpp
 	telnet.cpp
 	bidircpu/bidircpu.cpp
-	bidircpu/renderthread.cpp
+	bidircpu/bidircputhread.cpp
 	pathocl/kernels/pathocl_kernel_core.cpp
 	pathocl/kernels/pathocl_kernel_datatypes.cpp
 	pathocl/kernels/pathocl_kernel_filters.cpp
@@ -136,11 +136,11 @@ set(SMALLLUXGPU_SRCS
 	pathocl/kernels/pathocl_kernels.cpp
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
-	pathocl/renderthread.cpp
+	pathocl/pathoclthread.cpp
 	lightcpu/lightcpu.cpp
-	lightcpu/renderthread.cpp
+	lightcpu/lightcputhread.cpp
 	pathcpu/pathcpu.cpp
-	pathcpu/renderthread.cpp
+	pathcpu/pathcputhread.cpp
 	)
 
 add_executable(slg3 ${SMALLLUXGPU_SRCS})

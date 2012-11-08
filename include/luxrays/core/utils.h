@@ -47,7 +47,9 @@ using std::isnan;
 typedef unsigned int u_int;
 #endif
 
-#if defined(__APPLE__)
+#if defined(WIN32)
+#define isinf(f) (!_finite((f)))
+#else
 using std::isinf;
 #endif
 
