@@ -159,7 +159,7 @@ void TransformAccordingNormal(const Normal &nn, const Vector &woL, Vector *woW) 
 	Vector sn, tn;
 	float zz = sqrtf(1.f - nn.z * nn.z);
 	sn.z = 0.f;
-	if (fabs(zz) < 1e-6f) {
+	if (fabsf(zz) < 1e-6f) {
 		sn.x = 1.f;
 		sn.y = 0.f;
 	} else {

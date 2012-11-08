@@ -62,18 +62,6 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	camera->lensRadius = scnProp->GetFloat("scene.camera.lensradius", 0.f);
 	camera->focalDistance = scnProp->GetFloat("scene.camera.focaldistance", 10.f);
 	camera->fieldOfView = scnProp->GetFloat("scene.camera.fieldofview", 45.f);
-  
-	// Check if camera motion blur is enabled
-	if (scnProp->GetInt("scene.camera.motionblur.enable", 0)) {
-		camera->motionBlur = true;
-
-		vf = GetParameters(*scnProp, "scene.camera.motionblur.lookat", 6, "10.0 1.0 0.0  0.0 1.0 0.0");
-		camera->mbOrig = Point(vf.at(0), vf.at(1), vf.at(2));
-		camera->mbTarget = Point(vf.at(3), vf.at(4), vf.at(5));
-
-		vf = GetParameters(*scnProp, "scene.camera.motionblur.up", 3, "0.0 0.0 0.1");
-		camera->mbUp = Vector(vf.at(0), vf.at(1), vf.at(2));
-	}
 
 	//--------------------------------------------------------------------------
 	// Read all materials
@@ -173,10 +161,13 @@ Scene::Scene(const std::string &fileName, const int aType) {
 			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 				TriangleLight *tl = new TriangleLight(light, static_cast<unsigned int>(objects.size()) - 1, i, objects);
 				lights.push_back(tl);
+				triangleLightSource.push_back(tl);
 			}
 		} else {
 			SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
 			objectMaterials.push_back(surfMat);
+			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+				triangleLightSource.push_back(NULL);
 		}
 
 		// [old deprecated syntax] Check if there is a texture map associated to the object
@@ -270,34 +261,18 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		const float gamma = scnProp->GetFloat("scene.infinitelight.gamma", 2.2f);
 		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
 
-		// Check if I have to use InfiniteLightBF method
-		if (scnProp->GetInt("scene.infinitelight.usebruteforce", 0)) {
-			SDL_LOG("Using brute force infinite light sampling");
-			infiniteLight = new InfiniteLightBF(tex);
-			useInfiniteLightBruteForce = true;
-		} else {
-			if (ilParams.size() == 2)
-				infiniteLight = new InfiniteLightPortal(tex, ilParams.at(1));
-			else
-				infiniteLight = new InfiniteLightIS(tex);
-
-			// Add the infinite light to the list of light sources
-			lights.push_back(infiniteLight);
-
-			useInfiniteLightBruteForce = false;
-		}
+		InfiniteLight *il = new InfiniteLight(tex);
 
 		std::vector<float> vf = GetParameters(*scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
-		infiniteLight->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
+		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
 		vf = GetParameters(*scnProp, "scene.infinitelight.shift", 2, "0.0 0.0");
-		infiniteLight->SetShift(vf.at(0), vf.at(1));
+		il->SetShift(vf.at(0), vf.at(1));
+		il->Preprocess();
 
-		infiniteLight->Preprocess();
-	} else {
+		infiniteLight = il;
+	} else
 		infiniteLight = NULL;
-		useInfiniteLightBruteForce = false;
-	}
 
 	//--------------------------------------------------------------------------
 	// Check if there is a SkyLight defined
@@ -313,11 +288,10 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		std::vector<float> gain = GetParameters(*scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
 		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		infiniteLight = sl;
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->Init();
+		sl->Preprocess();
 
-		useInfiniteLightBruteForce = true;
+		infiniteLight = sl;
 	}
 
 	//--------------------------------------------------------------------------
@@ -331,12 +305,13 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		const float relSize = scnProp->GetFloat("scene.sunlight.relsize", 1.0f);
 		std::vector<float> gain = GetParameters(*scnProp, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
 
-		SunLight *sunLight = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		sunLight->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sunLight->Init();
+		SunLight *sl = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sl->Preprocess();
 
-		lights.push_back(sunLight);
-	}
+		sunLight = sl;
+	} else
+		sunLight = NULL;
 
 	//--------------------------------------------------------------------------
 
@@ -345,11 +320,13 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 Scene::~Scene() {
 	delete camera;
+	delete infiniteLight;
+	delete sunLight;
 
 	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
 		delete *l;
-	if (useInfiniteLightBruteForce)
-		delete infiniteLight;
+	for (std::vector<Material *>::const_iterator m = materials.begin(); m != materials.end(); ++m)
+		delete *m;
 
 	delete dataSet;
 
@@ -461,4 +438,121 @@ Material *Scene::CreateMaterial(const std::string &propName, const Properties &p
 		return new AlloyMaterial(Kdiff, Krfl, vf.at(6), vf.at(7), vf.at(8) != 0.f);
 	} else
 		throw std::runtime_error("Unknown material type " + matType);
+}
+
+LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
+	if (infiniteLight && (lightType == infiniteLight->GetType()))
+			return infiniteLight;
+	if (sunLight && (lightType == TYPE_SUN))
+			return sunLight;
+
+	for (unsigned int i = 0; i < static_cast<unsigned int>(lights.size()); ++i) {
+		LightSource *ls = lights[i];
+		if (ls->GetType() == lightType)
+			return ls;
+	}
+
+	return NULL;
+}
+
+LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
+	unsigned int lightsSize = static_cast<unsigned int>(lights.size());
+	if (infiniteLight)
+		++lightsSize;
+	if (sunLight)
+		++lightsSize;
+
+	// One Uniform light strategy
+	const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
+	*pdf = 1.f / lightsSize;
+
+	if (infiniteLight) {
+		if (sunLight) {
+			if (lightIndex == lightsSize - 1)
+				return sunLight;
+			else if (lightIndex == lightsSize - 2)
+				return infiniteLight;
+			else
+				return lights[lightIndex];
+		} else {
+			if (lightIndex == lightsSize - 1)
+				return infiniteLight;
+			else
+				return lights[lightIndex];
+		}
+	} else {
+		if (sunLight) {
+			if (lightIndex == lightsSize - 1)
+				return sunLight;
+			else
+				return lights[lightIndex];
+		} else
+			return lights[lightIndex];
+	}
+}
+
+float Scene::PickLightPdf() const {
+	unsigned int lightsSize = static_cast<unsigned int>(lights.size());
+	if (infiniteLight)
+		++lightsSize;
+	if (sunLight)
+		++lightsSize;
+
+	return 1.f / lightsSize;
+}
+
+Spectrum Scene::GetEnvLightsRadiance(const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA,
+			float *emissionPdfW) const {
+	Spectrum radiance;
+	if (infiniteLight)
+		radiance += infiniteLight->GetRadiance(this, dir, hitPoint, directPdfA, emissionPdfW);
+	if (sunLight)
+		radiance += sunLight->GetRadiance(this, dir, hitPoint, directPdfA, emissionPdfW);
+
+	if (directPdfA)
+		*directPdfA *= PickLightPdf();
+	if (emissionPdfW)
+		*emissionPdfW *= PickLightPdf();
+
+	return radiance;
+}
+
+bool Scene::Intersect(const bool fromLight, const bool stopOnArchGlass,
+		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf, Spectrum *connectionThroughput) const {
+	*connectionThroughput = Spectrum(1.f, 1.f, 1.f);
+	for (;;) {
+		if (!dataSet->Intersect(ray, rayHit)) {
+			// Nothing was hit
+			return false;
+		} else {
+			// Check if it is a pass through point
+			bsdf->Init(fromLight, *this, *ray, *rayHit, u0);
+
+			// Check if it is pass-through point
+			if (bsdf->IsPassThrough()) {
+				// It is a pass-through material, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+
+				continue;
+			}
+
+			// Check if it is a light source
+			if (bsdf->IsLightSource())
+				return true;
+
+			// Check if it is architectural glass
+			if (!stopOnArchGlass && bsdf->IsShadowTransparent()) {
+				*connectionThroughput *= bsdf->GetSahdowTransparency();
+
+				// It is a shadow transparent material, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+
+				continue;
+			}
+
+			return true;
+		}
+	}
 }
