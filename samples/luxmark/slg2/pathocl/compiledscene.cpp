@@ -174,7 +174,7 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					normals.push_back(mesh->GetNormal(j));
+					normals.push_back(mesh->GetShadeNormal(j));
 
 				//----------------------------------------------------------------------
 				// Translate vertex uvs
@@ -219,7 +219,7 @@ void CompiledScene::CompileGeometry() {
 			ExtMesh *mesh = scene->objects[i];
 
 			for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				normals.push_back(mesh->GetNormal(j));
+				normals.push_back(mesh->GetShadeNormal(j));
 		}
 
 		//----------------------------------------------------------------------
@@ -522,7 +522,7 @@ void CompiledScene::CompileAreaLights() {
 				cpl->v1 = mesh->GetVertex(tri->v[1]);
 				cpl->v2 = mesh->GetVertex(tri->v[2]);
 
-				cpl->normal = mesh->GetNormal(tri->v[0]);
+				cpl->normal = mesh->GetShadeNormal(tri->v[0]);
 
 				cpl->area = tl->GetArea();
 
@@ -554,26 +554,7 @@ void CompiledScene::CompileInfiniteLight() {
 
 	const double tStart = WallClockTime();
 
-	InfiniteLight *il = NULL;
-	if (scene->infiniteLight && (
-			(scene->infiniteLight->GetType() == TYPE_IL_BF) ||
-			(scene->infiniteLight->GetType() == TYPE_IL_PORTAL) ||
-			(scene->infiniteLight->GetType() == TYPE_IL_IS)))
-		il = scene->infiniteLight;
-	else {
-		// Look for the infinite light
-
-		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			LightSource *l = scene->lights[i];
-
-			if ((l->GetType() == TYPE_IL_BF) || (l->GetType() == TYPE_IL_PORTAL) ||
-					(l->GetType() == TYPE_IL_IS)) {
-				il = (InfiniteLight *)l;
-				break;
-			}
-		}
-	}
-
+	InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 	if (il) {
 		infiniteLight = new PathOCL::InfiniteLight();
 
@@ -605,18 +586,7 @@ void CompiledScene::CompileSunLight() {
 	// Check if there is an sun light source
 	//--------------------------------------------------------------------------
 
-	SunLight *sl = NULL;
-
-	// Look for the sun light
-	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-		LightSource *l = scene->lights[i];
-
-		if (l->GetType() == TYPE_SUN) {
-			sl = (SunLight *)l;
-			break;
-		}
-	}
-
+	SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 	if (sl) {
 		sunLight = new PathOCL::SunLight();
 
@@ -642,22 +612,7 @@ void CompiledScene::CompileSkyLight() {
 	// Check if there is an sky light source
 	//--------------------------------------------------------------------------
 
-	SkyLight *sl = NULL;
-
-	if (scene->infiniteLight && (scene->infiniteLight->GetType() == TYPE_IL_SKY))
-		sl = (SkyLight *)scene->infiniteLight;
-	else {
-		// Look for the sky light
-		for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-			LightSource *l = scene->lights[i];
-
-			if (l->GetType() == TYPE_IL_SKY) {
-				sl = (SkyLight *)l;
-				break;
-			}
-		}
-	}
-
+	SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 	if (sl) {
 		skyLight = new PathOCL::SkyLight();
 

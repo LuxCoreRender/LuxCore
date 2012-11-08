@@ -23,7 +23,7 @@
 #define	_LUXRAYS_SDL_CAMERA_H
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/utils/sdl/mc.h"
+#include "luxrays/utils/core/mc.h"
 
 namespace luxrays { namespace sdl {
 
@@ -31,12 +31,13 @@ class PerspectiveCamera {
 public:
 	PerspectiveCamera(const Point &o, const Point &t, const Vector &u) :
 		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
-		lensRadius(0.f), focalDistance(10.f) {
-		motionBlur = false;
-	}
+		lensRadius(0.f), focalDistance(10.f) { }
 
 	~PerspectiveCamera() {
 	}
+
+	const Vector &GetDir() const { return dir; }
+	const float GetPixelArea() const { return pixelArea; }
 
 	void TranslateLeft(const float k) {
 		Vector t = -k * Normalize(x);
@@ -59,11 +60,6 @@ public:
 	}
 
 	void Translate(const Vector &t) {
-		if (motionBlur) {
-			mbOrig = orig;
-			mbTarget = target;
-		}
-
 		orig += t;
 		target += t;
 	}
@@ -85,113 +81,33 @@ public:
 	}
 
 	void Rotate(const float angle, const Vector &axis) {
-		if (motionBlur) {
-			mbOrig = orig;
-			mbTarget = target;
-		}
-
 		Vector p = target - orig;
 		Transform t = luxrays::Rotate(angle, axis);
 		target = orig + t * p;
 	}
 
-	void Update(const unsigned int filmWidth, const unsigned int filmHeight) {
-		// Used to move trnslate the camera
-		dir = target - orig;
-		dir = Normalize(dir);
-
-		x = Cross(dir, up);
-		x = Normalize(x);
-
-		y = Cross(x, dir);
-		y = Normalize(y);
-
-		// Used to generate rays
-
-		if (motionBlur) {
-			mbDeltaOrig = mbOrig - orig;
-			mbDeltaTarget = mbTarget - target;
-			mbDeltaUp = mbUp - up;
-		} else {
-			Transform WorldToCamera = LookAt(orig, target, up);
-			CameraToWorld = Inverse(WorldToCamera);
-		}
-
-		Transform CameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
-
-		const float frame =  float(filmWidth) / float(filmHeight);
-		float screen[4];
-		if (frame < 1.f) {
-			screen[0] = -frame;
-			screen[1] = frame;
-			screen[2] = -1.f;
-			screen[3] = 1.f;
-		} else {
-			screen[0] = -1.f;
-			screen[1] = 1.f;
-			screen[2] = -1.f / frame;
-			screen[3] = 1.f / frame;
-		}
-		Transform ScreenToRaster =
-				Scale(float(filmWidth), float(filmHeight), 1.f) *
-				Scale(1.f / (screen[1] - screen[0]), 1.f / (screen[2] - screen[3]), 1.f) *
-				luxrays::Translate(Vector(-screen[0], -screen[3], 0.f));
-
-		RasterToCamera = Inverse(ScreenToRaster * CameraToScreen);
-	}
+	void Update(const unsigned int w, const unsigned int h);
 
 	void GenerateRay(
-		const float screenX, const float screenY,
-		const unsigned int filmWidth, const unsigned int filmHeight,
-		Ray *ray, const float u1, const float u2, const float u3) const {
-		Transform c2w;
-		if (motionBlur) {
-			const Point sampledOrig = orig + mbDeltaOrig * u3;
-			const Point sampledTarget = target + mbDeltaTarget * u3;
-			const Vector sampledUp = Normalize(up + mbDeltaUp * u3);
+		const float filmX, const float filmY,
+		Ray *ray, const float u1, const float u2) const;
+	bool GetSamplePosition(const Point &p, const Vector &wi,
+		float distance, float *x, float *y) const;
 
-			// Build the CameraToWorld transformation
-			Transform WorldToCamera = LookAt(sampledOrig, sampledTarget, sampledUp);
-			c2w = Inverse(WorldToCamera);
-		} else
-			c2w = CameraToWorld;
-
-        Point Pras(screenX, filmHeight - screenY - 1.f, 0);
-        Point Pcamera(RasterToCamera * Pras);
-
-        ray->o = Pcamera;
-        ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
-
-		// Modify ray for depth of field
-		if (lensRadius > 0.f) {
-			// Sample point on lens
-			float lensU, lensV;
-			ConcentricSampleDisk(u1, u2, &lensU, &lensV);
-			lensU *= lensRadius;
-			lensV *= lensRadius;
-
-			// Compute point on plane of focus
-			const float ft = (focalDistance - clipHither) / ray->d.z;
-			Point Pfocus = (*ray)(ft);
-			// Update ray for effect of lens
-			ray->o.x += lensU * (focalDistance - clipHither) / focalDistance;
-			ray->o.y += lensV * (focalDistance - clipHither) / focalDistance;
-			ray->d = Pfocus - ray->o;
-		}
-
-        ray->d = Normalize(ray->d);
-        ray->mint = MachineEpsilon::E(ray->o);
-        ray->maxt = (clipYon - clipHither) / ray->d.z;
-
-        *ray *= c2w;
+	bool SampleLens(const float u1, const float u2,
+		Point *lensPoint) const;
+	void ClampRay(Ray *ray) const {
+		const float cosi = Dot(ray->d, dir);
+		ray->mint = Max(ray->mint, clipHither / cosi);
+		ray->maxt = Min(ray->maxt, clipYon / cosi);
 	}
 
 	const Matrix4x4 GetRasterToCameraMatrix() const {
-		return RasterToCamera.GetMatrix();
+		return rasterToCamera.GetMatrix();
 	}
 
 	const Matrix4x4 GetCameraToWorldMatrix() const {
-		return CameraToWorld.GetMatrix();
+		return cameraToWorld.GetMatrix();
 	}
 
 	float GetClipYon() const { return clipYon; }
@@ -202,17 +118,13 @@ public:
 	Vector up;
 	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
-	// For camera motion blur
-	bool motionBlur;
-	Point mbOrig, mbTarget;
-	Vector mbUp;
-
 private:
-	// Calculated values
-	Vector dir, x, y;
-	Transform RasterToCamera, CameraToWorld;
+	u_int filmWidth, filmHeight;
 
-	Vector mbDeltaOrig, mbDeltaTarget, mbDeltaUp;
+	// Calculated values
+	float pixelArea;
+	Vector dir, x, y;
+	Transform rasterToCamera, rasterToWorld, cameraToWorld;
 };
 
 } }

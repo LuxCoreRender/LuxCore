@@ -26,6 +26,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/vector.h"
+#include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/geometry/bbox.h"
 
@@ -101,7 +102,15 @@ public:
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
 
-		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
+		return Area(p0, p1, p2);
+	}
+
+	Normal GetGeometryNormal(const Point *verts) const {
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+
+		return Normal(Normalize(Cross(p1 - p0, p2 - p0)));
 	}
 
 	void Sample(const Point *verts, const float u0,
@@ -116,8 +125,44 @@ public:
 		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 	}
 
+	bool GetUV(const Point *verts, const Point &hitPoint, float *b1, float *b2) const {
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+
+		return GetUV(p0, p1, p2, hitPoint, b1, b2);
+	}
+
 	static float Area(const Point &p0, const Point &p1, const Point &p2) {
 		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
+	}
+
+	static bool GetUV(const Point &p0, const Point &p1, const Point &p2,
+			const Point &hitPoint, float *b1, float *b2) {
+		const Vector u = p1 - p0;
+		const Vector v = p2 - p0;
+		const Vector w = hitPoint - p0;
+
+		const Vector vCrossW = Cross(v, w);
+		const Vector vCrossU = Cross(v, u);
+
+		if (Dot(vCrossW, vCrossU) < 0.f)
+			return false;
+
+		const Vector uCrossW = Cross(u, w);
+		const Vector uCrossV = Cross(u, v);
+
+		if (Dot(uCrossW, uCrossV) < 0.f)
+			return false;
+
+		const float denom = uCrossV.Length();
+		const float r = vCrossW.Length() / denom;
+		const float t = uCrossW.Length() / denom;
+		
+		*b1 = r;
+		*b2 = t;
+
+		return ((r <= 1) && (t <= 1) && (r + t <= 1.f));
 	}
 
 	unsigned int v[3];

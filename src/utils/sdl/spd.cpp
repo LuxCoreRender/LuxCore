@@ -21,7 +21,7 @@
 
 #include "luxrays/utils/sdl/spd.h"
 #include "luxrays/utils/sdl/data/xyzbasis.h"
-#include "luxrays/core/pixel/spectrum.h"
+#include "luxrays/utils/core/spectrum.h"
 
 using namespace luxrays;
 using namespace luxrays::sdl;
