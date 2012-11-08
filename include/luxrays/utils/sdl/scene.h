@@ -32,67 +32,28 @@
 #include "luxrays/utils/sdl/material.h"
 #include "luxrays/utils/sdl/texmap.h"
 #include "luxrays/utils/sdl/extmeshcache.h"
-
+#include "luxrays/utils/sdl/bsdf.h"
 #include "luxrays/utils/properties.h"
 
 namespace luxrays { namespace sdl {
 
 class Scene {
 public:
-	Scene(const std::string &fileName, const int aType = -1);
+	Scene(const std::string &fileName, const int accType = -1);
 	~Scene();
 
 	int GetAccelType() const { return accelType; }
 
-	unsigned int GetLightCount(bool skipInfiniteLight = false) const {
-		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight)
-			return static_cast<unsigned int>(lights.size()) + 1;
-		else
-			return static_cast<unsigned int>(lights.size());
-	}
-
-	LightSource *GetLight(unsigned int index, bool skipInfiniteLight = false) const {
-		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {
-			if (index == lights.size())
-				return infiniteLight;
-			else
-				return lights[index];
-		} else
-			return lights[index];
-	}
-
-	LightSource *SampleAllLights(const float u, float *pdf, bool skipInfiniteLight = false) const {
-		const unsigned int lightsSize = static_cast<unsigned int>(lights.size());
-		if (!skipInfiniteLight && useInfiniteLightBruteForce && infiniteLight) {			
-			const unsigned int lightCount = lightsSize + 1;
-			const unsigned int lightIndex = Min(Floor2UInt(lightCount * u), lightsSize);
-
-			*pdf = 1.f / lightCount;
-
-			if (lightIndex == lightsSize)
-				return infiniteLight;
-			else
-				return lights[lightIndex];
-		} else {
-			// One Uniform light strategy
-			const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
-
-			*pdf = 1.f / lightsSize;
-
-			return lights[lightIndex];
-		}
-	}
-
-	SunLight *GetSunLight() const {
-		// Look for the SunLight
-		for (unsigned int i = 0; i < static_cast<unsigned int>(lights.size()); ++i) {
-			LightSource *ls = lights[i];
-			if (ls->GetType() == TYPE_SUN)
-				return (SunLight *)ls;
-		}
-
-		return NULL;
-	}
+	LightSource *GetLightByType(const LightSourceType lightType) const;
+	LightSource *SampleAllLights(const float u, float *pdf) const;
+	float PickLightPdf() const;
+	Spectrum GetEnvLightsRadiance(const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const;
+	bool Intersect(const bool fromLight, const bool stopOnArchGlass,
+		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf,
+		Spectrum *connectionThroughput) const;
 
 	void UpdateDataSet(Context *ctx);
 
@@ -100,21 +61,24 @@ public:
 
 	PerspectiveCamera *camera;
 
-	std::vector<Material *> materials; // All materials
 	ExtMeshCache *extMeshCache; // Mesh objects
 	TextureMapCache *texMapCache; // Texture maps
-	std::map<std::string, size_t> materialIndices; // All materials indices
 
+	LightSource *infiniteLight; // A SLG scene can have only one infinite light
+	LightSource *sunLight;
+	std::vector<LightSource *> lights; // One for each light source (doesn't include light/infinite light)
+
+	std::vector<Material *> materials; // All materials (one for each light source)
+	std::map<std::string, size_t> materialIndices; // All materials indices
 	std::vector<ExtMesh *> objects; // All objects
 	std::map<std::string, size_t> objectIndices; // All object indices
+
 	std::vector<Material *> objectMaterials; // One for each object
 	std::vector<TexMapInstance *> objectTexMaps; // One for each object
 	std::vector<BumpMapInstance *> objectBumpMaps; // One for each object
 	std::vector<NormalMapInstance *> objectNormalMaps; // One for each object
 
-	std::vector<LightSource *> lights; // One for each light source
-	InfiniteLight *infiniteLight;
-	bool useInfiniteLightBruteForce;
+	std::vector<LightSource *> triangleLightSource; // One for each triangle
 
 	DataSet *dataSet;
 

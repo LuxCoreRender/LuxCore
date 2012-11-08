@@ -1,7 +1,7 @@
 scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
 scene.materials.light.mat_light = 16. 16. 16.
 scene.objects.mat_light.mat_light = scenes/bump/mat_light.ply
-scene.materials.matte.mat_red = 0.8 0. 0.008214
+scene.materials.matte.mat_red = 0.8 0.0 0.0
 scene.objects.mat_red.mat_red = scenes/bump/mat_red.ply
 scene.objects.mat_red.mat_red.bumpmap = scenes/bump/map2.png
 #scene.objects.mat_red.mat_red.normalmap = scenes/bump/normal.png

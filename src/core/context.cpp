@@ -28,10 +28,8 @@
 #include "luxrays/core/context.h"
 #ifdef LUXRAYS_DISABLE_OPENCL
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/core/pixeldevice.h"
 #else
 #include "luxrays/opencl/intersectiondevice.h"
-#include "luxrays/opencl/pixeldevice.h"
 #endif
 #include "luxrays/core/virtualdevice.h"
 
@@ -111,9 +109,6 @@ Context::~Context() {
 	for (size_t i = 0; i < m2oDevices.size(); ++i)
 		delete m2oDevices[i];
 
-	for (size_t i = 0; i < pdevices.size(); ++i)
-		delete pdevices[i];
-
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
 }
@@ -149,8 +144,6 @@ void Context::Start() {
 
 	for (size_t i = 0; i < idevices.size(); ++i)
 		idevices[i]->Start();
-	for (size_t i = 0; i < pdevices.size(); ++i)
-		pdevices[i]->Start();
 
 	started = true;
 }
@@ -160,9 +153,6 @@ void Context::Interrupt() {
 
 	for (size_t i = 0; i < idevices.size(); ++i)
 		idevices[i]->Interrupt();
-	for (size_t i = 0; i < pdevices.size(); ++i)
-		pdevices[i]->Interrupt();
-
 }
 
 void Context::Stop() {
@@ -172,8 +162,6 @@ void Context::Stop() {
 
 	for (size_t i = 0; i < idevices.size(); ++i)
 		idevices[i]->Stop();
-	for (size_t i = 0; i < pdevices.size(); ++i)
-		pdevices[i]->Stop();
 
 	started = false;
 }
@@ -192,10 +180,6 @@ const std::vector<VirtualM2OHardwareIntersectionDevice *> &Context::GetVirtualM2
 
 const std::vector<VirtualM2MHardwareIntersectionDevice *> &Context::GetVirtualM2MIntersectionDevices() const {
 	return m2mDevices;
-}
-
-const std::vector<PixelDevice *> &Context::GetPixelDevices() const {
-	return pdevices;
 }
 
 std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc) {
@@ -276,46 +260,4 @@ std::vector<IntersectionDevice *> Context::AddVirtualM2OIntersectionDevices(cons
 		idevices.push_back(m2oDevice->GetVirtualDevice(i));
 
 	return realDevices;
-}
-
-std::vector<PixelDevice *> Context::CreatePixelDevices(std::vector<DeviceDescription *> &deviceDesc) {
-	assert (!started);
-
-	LR_LOG(this, "Creating " << deviceDesc.size() << " pixel device(s)");
-
-	std::vector<PixelDevice *> newDevices;
-	for (size_t i = 0; i < deviceDesc.size(); ++i) {
-		LR_LOG(this, "Allocating pixel device " << i << ": " << deviceDesc[i]->GetName() <<
-				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
-
-		PixelDevice *device;
-		if (deviceDesc[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
-			// Nathive thread devices
-			const NativeThreadDeviceDescription *ntvDeviceDesc = (const NativeThreadDeviceDescription *)deviceDesc[i];
-			device = new NativePixelDevice(this, ntvDeviceDesc->GetThreadIndex(), i);
-		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		else if (deviceDesc[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
-			// OpenCL devices
-			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLPixelDevice(this, oclDeviceDesc, i);
-		}
-#endif
-		else
-			assert (false);
-
-		newDevices.push_back(device);
-	}
-
-	return newDevices;
-}
-
-std::vector<PixelDevice *> Context::AddPixelDevices(std::vector<DeviceDescription *> &deviceDesc) {
-	assert (!started);
-
-	std::vector<PixelDevice *> newDevices = CreatePixelDevices(deviceDesc);
-	for (size_t i = 0; i < newDevices.size(); ++i)
-		pdevices.push_back(newDevices[i]);
-
-	return newDevices;
 }

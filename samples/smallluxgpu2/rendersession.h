@@ -26,7 +26,7 @@
 #include "renderconfig.h"
 #include "renderengine.h"
 
-#include "luxrays/utils/film/nativefilm.h"
+#include "luxrays/utils/film/film.h"
 
 class RenderSession {
 public:
@@ -46,7 +46,7 @@ public:
 	RenderEngine *renderEngine;
 
 	boost::mutex filmMutex;
-	NativeFilm *film;
+	Film *film;
 
 	EditActionList editActions;
 
