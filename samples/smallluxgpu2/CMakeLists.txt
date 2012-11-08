@@ -134,7 +134,7 @@ set(SMALLLUXGPU_SRCS
 	pathocl/kernels/pathocl_kernels.cpp
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
-	pathocl/renderthread.cpp
+	pathocl/pathoclthread.cpp
 	)
 
 add_executable(slg2 ${SMALLLUXGPU_SRCS})

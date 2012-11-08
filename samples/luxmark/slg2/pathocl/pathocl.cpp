@@ -286,7 +286,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 					if ((count > 0) && !c.IsNaN()) {
 						film->AddSampleCount(1.f);
-						film->AddRadiance(PER_PIXEL_NORMALIZED, x, y, c, count);
+						film->AddRadiance(PER_PIXEL_NORMALIZED, x, y, c / count, count);
 					}
 
 					++pGPU;
