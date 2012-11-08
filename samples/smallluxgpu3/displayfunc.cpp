@@ -101,6 +101,7 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "3", "CPU path tracing");
+	PrintHelpString(320, fontOffset, "4", "CPU bidirectional path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
