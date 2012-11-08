@@ -590,18 +590,7 @@ void CompiledScene::CompileSunLight() {
 	// Check if there is an sun light source
 	//--------------------------------------------------------------------------
 
-	SunLight *sl = NULL;
-
-	// Look for the sun light
-	for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-		LightSource *l = scene->lights[i];
-
-		if (l->GetType() == TYPE_SUN) {
-			sl = (SunLight *)l;
-			break;
-		}
-	}
-
+	SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 	if (sl) {
 		sunLight = new PathOCL::SunLight();
 
