@@ -351,7 +351,7 @@ Spectrum SunLight::Emit(const Scene *scene,
 		*directPdfA = UniformConePdf(cosThetaMax);
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(sunDir, *dir);
+		*cosThetaAtLight = Dot(sunDir, -(*dir));
 
 	return sunColor;
 }
