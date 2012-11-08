@@ -129,7 +129,6 @@ add_subdirectory(src)
 #
 ###########################################################################
 
-add_subdirectory(samples/benchpixel)
 add_subdirectory(samples/benchsimple)
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	if(NOT LUXRAYS_DISABLE_OPENCL)
@@ -146,10 +145,8 @@ if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 		message(WARNING "SLG2 requires OpenCL support, not building")
 	endif(NOT LUXRAYS_DISABLE_OPENCL)
 
-	add_subdirectory(samples/smallluxgpu)
-	add_subdirectory(samples/smallppmgpu)
+	add_subdirectory(samples/smallluxgpu3)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
-
 
 
 ###########################################################################
@@ -157,4 +154,5 @@ endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 # For non win32 we'll have to copy everything to a single dir
 #
 ###########################################################################
+
 INCLUDE(AssembleBinDirs)

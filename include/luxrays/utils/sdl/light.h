@@ -23,6 +23,7 @@
 #define	_LUXRAYS_SDL_LIGHT_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/texmap.h"
 #include "luxrays/utils/sdl/material.h"
@@ -32,41 +33,96 @@ namespace luxrays { namespace sdl {
 class Scene;
 
 enum LightSourceType {
-	TYPE_IL_BF, TYPE_IL_PORTAL, TYPE_IL_IS, TYPE_IL_SKY,
-	TYPE_SUN, TYPE_TRIANGLE
+	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
 };
+
+//------------------------------------------------------------------------------
+// LightSource implementation
+//------------------------------------------------------------------------------
 
 class LightSource {
 public:
+	LightSource() { }
 	virtual ~LightSource() { }
 
 	virtual LightSourceType GetType() const = 0;
 
 	virtual bool IsAreaLight() const { return false; }
+	virtual bool IsEnvironmental() const { return false; }
 
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const = 0;
+	// Emits particle from the light
+	virtual Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const {
+		throw std::runtime_error("Internal error, called LightSource::Emit()");
+	}
 
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const = 0;
+	// Illuminates a point in the scene
+    virtual Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const {
+		throw std::runtime_error("Internal error, called LightSource::Illuminate()");
+	}
+
+	// Returns radiance for ray hitting the light source
+	virtual Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const {
+		throw std::runtime_error("Internal error, called LightSource::GetRadiance()");
+	}
 };
 
 //------------------------------------------------------------------------------
-// InfiniteLight implementations
+// InfiniteLightBase implementation
 //------------------------------------------------------------------------------
 
-class InfiniteLight : public LightSource {
+class InfiniteLightBase : public LightSource {
 public:
-	InfiniteLight(TexMapInstance *tx);
-	virtual ~InfiniteLight() { }
+	InfiniteLightBase() : gain(1.f, 1.f, 1.f) { }
+	~InfiniteLightBase() { }
 
-	virtual void SetGain(const Spectrum &g) {
+	virtual void Preprocess() { }
+
+	bool IsEnvironmental() const { return true; }
+
+	void SetGain(const Spectrum &g) {
 		gain = g;
 	}
 
-	virtual Spectrum GetGain() const {
+	Spectrum GetGain() const {
 		return gain;
 	}
+
+	Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
+
+protected:
+	Spectrum gain;
+};
+
+//------------------------------------------------------------------------------
+// InfiniteLight implementation
+//------------------------------------------------------------------------------
+
+class InfiniteLight : public InfiniteLightBase {
+public:
+	InfiniteLight(TexMapInstance *tx);
+	~InfiniteLight() { }
+
+	LightSourceType GetType() const { return TYPE_IL; }
 
 	void SetShift(const float su, const float sv) {
 		shiftU = su;
@@ -78,79 +134,25 @@ public:
 
 	const TexMapInstance *GetTexture() const { return tex; }
 
-	virtual void Preprocess() { }
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
-	virtual Spectrum Le(const Vector &dir) const;
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
-
-protected:
+private:
 	TexMapInstance *tex;
 	float shiftU, shiftV;
-	Spectrum gain;
-};
-
-class InfiniteLightBF : public InfiniteLight {
-public:
-	InfiniteLightBF(TexMapInstance *tx) : InfiniteLight(tx) { }
-
-	LightSourceType GetType() const { return TYPE_IL_BF; }
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const {
-		*pdf = 0;
-		return Spectrum();
-	}
-};
-
-class InfiniteLightPortal : public InfiniteLight {
-public:
-	InfiniteLightPortal(TexMapInstance *tx, const std::string &portalFileName);
-	~InfiniteLightPortal();
-
-	LightSourceType GetType() const { return TYPE_IL_PORTAL; }
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
-
-private:
-	ExtTriangleMesh *portals;
-	std::vector<float> portalAreas;
-};
-
-class InfiniteLightIS : public InfiniteLight {
-public:
-	InfiniteLightIS(TexMapInstance *tx);
-	~InfiniteLightIS() { delete uvDistrib; }
-
-	LightSourceType GetType() const { return TYPE_IL_IS; }
-
-	void Preprocess();
-
-	virtual Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	virtual Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3, const float u4, float *pdf, Ray *ray) const;
-
-private:
-	Distribution2D *uvDistrib;
 };
 
 //------------------------------------------------------------------------------
-// Sunsky implementation
+// Sky implementation
 //------------------------------------------------------------------------------
 
-class SkyLight : public InfiniteLight {
+class SkyLight : public InfiniteLightBase {
 public:
 	SkyLight(float turbidity, const Vector &sundir);
 	virtual ~SkyLight() { }
 
-	void Init();
+	void Preprocess();
 
 	LightSourceType GetType() const { return TYPE_IL_SKY; }
 
@@ -159,9 +161,6 @@ public:
 
 	void SetSunDir(const Vector &dir) { sundir = dir; }
 	const Vector &GetSunDir() const { return sundir; }
-
-	virtual Spectrum Le(const Vector &dir) const;
-	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
 
 	void GetInitData(float *thetaSData, float *phiSData,
 		float *zenith_YData, float *zenith_xData, float *zenith_yData,
@@ -178,7 +177,13 @@ public:
 		}
 	}
 
-protected:
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir, const Point &hitPoint,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+private:
+	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
+
 	Vector sundir;
 	float turbidity;
 	float thetaS;
@@ -189,10 +194,10 @@ protected:
 
 class SunLight : public LightSource {
 public:
-	SunLight(float turbidity, float relSize, const Vector &sundir);
+	SunLight(float turbidity, float relSize, const Vector &sunDir);
 	virtual ~SunLight() { }
 
-	void Init();
+	void Preprocess();
 
 	LightSourceType GetType() const { return TYPE_SUN; }
 
@@ -202,18 +207,11 @@ public:
 	void SetRelSize(const float s) { relSize = s; }
 	float GetRelSize() const { return relSize; }
 
-	const Vector &GetDir() const { return sundir; }
-	void SetDir(const Vector &dir) { sundir = Normalize(dir); }
+	const Vector &GetDir() const { return sunDir; }
+	void SetDir(const Vector &dir) { sunDir = Normalize(dir); }
 
 	void SetGain(const Spectrum &g);
 	const Spectrum GetGain() const { return gain; }
-
-	Spectrum Le(const Vector &dir) const;
-
-	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene, const float u0, const float u1,
-		const float u2, const float u3,	const float u4, float *pdf, Ray *ray) const;
 
 	void GetInitData(Vector *xData, Vector *yData,
 		float *thetaSData, float *phiSData, float *VData,
@@ -226,11 +224,27 @@ public:
 		*VData = V;
 		*cosThetaMaxData = cosThetaMax;
 		*sin2ThetaMaxData = sin2ThetaMax;
-		*suncolorData = suncolor;
+		*suncolorData = sunColor;
 	}
 
-protected:
-	Vector sundir;
+	Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+	Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const;
+
+private:
+	Vector sunDir;
 	Spectrum gain;
 	float turbidity;
 	float relSize;
@@ -238,7 +252,7 @@ protected:
 	Vector x, y;
 	float thetaS, phiS, V;
 	float cosThetaMax, sin2ThetaMax;
-	Spectrum suncolor;
+	Spectrum sunColor;
 };
 
 //------------------------------------------------------------------------------
@@ -258,21 +272,31 @@ public:
 	void SetMaterial(const AreaLightMaterial *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
 
-	Spectrum Sample_L(const Scene *scene, const Point &p, const Normal *N,
-		const float u0, const float u1, const float u2, float *pdf, Ray *shadowRay) const;
-	Spectrum Sample_L(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
-		const float u4, float *pdf, Ray *ray) const;
-
 	void Init(const std::vector<ExtMesh *> &objs);
 	unsigned int GetMeshIndex() const { return meshIndex; }
 	unsigned int GetTriIndex() const { return triIndex; }
 	float GetArea() const { return area; }
 
+	Spectrum Emit(const Scene *scene,
+		const float u0, const float u1, const float u2, const float u3,
+		Point *pos, Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+	Spectrum Illuminate(const Scene *scene, const Point &p,
+		const float u0, const float u1, const float u2,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	Spectrum GetRadiance(const Scene *scene,
+			const Vector &dir,
+			const Point &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const;
+
 private:
 	const AreaLightMaterial *lightMaterial;
 	unsigned int meshIndex, triIndex;
-	float area;
+	float area, invArea;
 };
 
 } }

@@ -76,30 +76,6 @@ static int NormalCB(p_ply_argument argument) {
 	return 1;
 }
 
-// rply color callback
-static int ColorCB(p_ply_argument argument) {
-	long userIndex = 0;
-	void *userData = NULL;
-	ply_get_argument_user_data(argument, &userData, &userIndex);
-
-	Spectrum *c = *static_cast<Spectrum **> (userData);
-
-	long colIndex;
-	ply_get_argument_element(argument, NULL, &colIndex);
-
-	if (userIndex == 0)
-		c[colIndex].r =
-			static_cast<float>(ply_get_argument_value(argument) / 255.0);
-	else if (userIndex == 1)
-		c[colIndex].g =
-			static_cast<float>(ply_get_argument_value(argument) / 255.0);
-	else if (userIndex == 2)
-		c[colIndex].b =
-			static_cast<float>(ply_get_argument_value(argument) / 255.0);
-
-	return 1;
-}
-
 // rply uv callback
 static int UVCB(p_ply_argument argument) {
 	long userIndex = 0;
@@ -184,21 +160,12 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		throw std::runtime_error(ss.str());
 	}
 
-	Spectrum *c;
-	long plyNbColors = ply_set_read_cb(plyfile, "vertex", "red", ColorCB, &c, 0);
-	ply_set_read_cb(plyfile, "vertex", "green", ColorCB, &c, 1);
-	ply_set_read_cb(plyfile, "vertex", "blue", ColorCB, &c, 2);
-
 	UV *uv;
 	long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
 	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
 
 	p = new Point[plyNbVerts];
 	vi = new Triangle[plyNbTris];
-	if (plyNbColors == 0)
-		c = NULL;
-	else
-		c = new Spectrum[plyNbVerts];
 	n = new Normal[plyNbVerts];
 	if (plyNbUVs == 0)
 		uv = NULL;
@@ -211,7 +178,6 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 		delete[] p;
 		delete[] vi;
-		delete[] c;
 		delete[] n;
 		delete[] uv;
 
@@ -225,7 +191,6 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	Point *vertices = p;
 	Triangle *triangles = vi;
 	Normal *vertNormals = n;
-	Spectrum *vertColors = c;
 	UV *vertUV = uv;
 
 	if (!usePlyNormals) {
@@ -257,7 +222,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		}
 	}
 
-	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertColors, vertUV);
+	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertUV);
 }
 
 BBox ExtTriangleMesh::GetBBox() const {

@@ -784,17 +784,20 @@ void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
 
 /***************************************************/
 
-bool QBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
+bool QBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
+	Ray ray(*initialRay);
+	rayHit->SetMiss();
+
 	//------------------------------
 	// Prepare the ray for intersection
-	QuadRay ray4(*ray);
+	QuadRay ray4(ray);
 	__m128 invDir[3];
-	invDir[0] = _mm_set1_ps(1.f / ray->d.x);
-	invDir[1] = _mm_set1_ps(1.f / ray->d.y);
-	invDir[2] = _mm_set1_ps(1.f / ray->d.z);
+	invDir[0] = _mm_set1_ps(1.f / ray.d.x);
+	invDir[1] = _mm_set1_ps(1.f / ray.d.y);
+	invDir[2] = _mm_set1_ps(1.f / ray.d.z);
 
 	int signs[3];
-	ray->GetDirectionSigns(signs);
+	ray.GetDirectionSigns(signs);
 
 	//------------------------------
 	// Main loop
@@ -891,7 +894,7 @@ bool QBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			const u_int offset = QBVHNode::FirstQuadIndex(leafData);
 
 			for (u_int primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber)
-				prims[primNumber].Intersect(ray4, *ray, rayHit);
+				prims[primNumber].Intersect(ray4, ray, rayHit);
 		}//end of the else
 	}
 
