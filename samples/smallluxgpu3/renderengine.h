@@ -33,7 +33,8 @@ enum RenderEngineType {
 	PATHOCL  = 4,
 	LIGHTCPU = 5,
 	PATHCPU = 6,
-	BIDIRCPU = 7
+	BIDIRCPU = 7,
+	BIDIRHYBRID = 8
 };
 
 extern const string RenderEngineType2String(const RenderEngineType type);
@@ -106,12 +107,8 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	const vector<OpenCLIntersectionDevice *> &GetIntersectionDevices() const {
-		return oclIntersectionDevices;
-	}
-
 protected:
-	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
+	vector<DeviceDescription *> selectedDeviceDescs;
 };
 
 //------------------------------------------------------------------------------
