@@ -93,6 +93,94 @@ __kernel void InitFrameBuffer(
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
 
+#if defined(PARAM_HAS_TEXTUREMAPS)
+
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
+__global Spectrum *GetRGBAddress(const uint page, const uint offset
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
+                , __global Spectrum *texMapRGBBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
+                , __global Spectrum *texMapRGBBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
+                , __global Spectrum *texMapRGBBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
+                , __global Spectrum *texMapRGBBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
+                , __global Spectrum *texMapRGBBuff4
+#endif
+    ) {
+    switch (page) {
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
+        case 1:
+            return &texMapRGBBuff1[offset];
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
+        case 2:
+            return &texMapRGBBuff2[offset];
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
+        case 3:
+            return &texMapRGBBuff3[offset];
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
+        case 4:
+            return &texMapRGBBuff4[offset];
+#endif
+        default:
+        case 0:
+            return &texMapRGBBuff0[offset];
+    }
+}
+#endif
+
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_0)
+__global float *GetAlphaAddress(const uint page, const uint offset
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_0)
+                , __global float *texMapAlphaBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_1)
+                , __global float *texMapAlphaBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_2)
+                , __global float *texMapAlphaBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_3)
+                , __global float *texMapAlphaBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_4)
+                , __global float *texMapAlphaBuff4
+#endif
+    ) {
+    switch (page) {
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_1)
+        case 1:
+            return &texMapAlphaBuff1[offset];
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_2)
+        case 2:
+            return &texMapAlphaBuff2[offset];
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_3)
+        case 3:
+            return &texMapAlphaBuff3[offset];
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_4)
+        case 4:
+            return &texMapAlphaBuff4[offset];
+#endif
+        default:
+        case 0:
+            return &texMapAlphaBuff0[offset];
+    }
+}
+#endif
+
+#endif
+
 __kernel void AdvancePaths(
 		__global GPUTask *tasks,
 		__global Ray *rays,
@@ -123,9 +211,37 @@ __kernel void AdvancePaths(
 		, __global TriangleLight *triLights
 #endif
 #if defined(PARAM_HAS_TEXTUREMAPS)
-        , __global Spectrum *texMapRGBBuff
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
+                , __global Spectrum *texMapRGBBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
+                , __global Spectrum *texMapRGBBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
+                , __global Spectrum *texMapRGBBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
+                , __global Spectrum *texMapRGBBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
+                , __global Spectrum *texMapRGBBuff4
+#endif
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
-		, __global float *texMapAlphaBuff
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_0)
+                , __global float *texMapAlphaBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_1)
+                , __global float *texMapAlphaBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_2)
+                , __global float *texMapAlphaBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_3)
+                , __global float *texMapAlphaBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_4)
+                , __global float *texMapAlphaBuff4
+#endif
 #endif
         , __global TexMap *texMapDescBuff
         , __global unsigned int *meshTexsBuff
@@ -219,8 +335,25 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 					// Check if it has an alpha channel
-					if (texMap->alphaOffset != 0xffffffffu) {
-						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
+					if (texMap->alphaPage != 0xffffffffu) {
+                                                __global float *address = GetAlphaAddress(texMap->alphaPage, texMap->alphaPageOffset
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_0)
+                                                    , texMapAlphaBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_1)
+                                                    , texMapAlphaBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_2)
+                                                    , texMapAlphaBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_3)
+                                                    , texMapAlphaBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_4)
+                                                    , texMapAlphaBuff4
+#endif
+                                                    );
+						const float alpha = TexMap_GetAlpha(address, texMap->width, texMap->height, uv.u, uv.v);
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);
@@ -236,7 +369,24 @@ __kernel void AdvancePaths(
 #endif
 
 					Spectrum texColor;
-					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texMap->width, texMap->height, uv.u, uv.v, &texColor);
+                                        __global Spectrum *address = GetRGBAddress(texMap->rgbPage, texMap->rgbPageOffset
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
+                                            , texMapRGBBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
+                                            , texMapRGBBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
+                                            , texMapRGBBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
+                                            , texMapRGBBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
+                                            , texMapRGBBuff4
+#endif
+                                            );
+					TexMap_GetColor(address, texMap->width, texMap->height, uv.u, uv.v, &texColor);
 
 					shadeColor.r = texColor.r;
 					shadeColor.g = texColor.g;
@@ -271,7 +421,24 @@ __kernel void AdvancePaths(
 					const uint texHeight = texMap->height;
 
 					Spectrum texColor;
-					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v, &texColor);
+                                        __global Spectrum *address = GetRGBAddress(texMap->rgbPage, texMap->rgbPageOffset
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
+                                            , texMapRGBBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
+                                            , texMapRGBBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
+                                            , texMapRGBBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
+                                            , texMapRGBBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
+                                            , texMapRGBBuff4
+#endif
+                                            );
+					TexMap_GetColor(address, texWidth, texHeight, uv.u, uv.v, &texColor);
 					const float x = 2.f * (texColor.r - 0.5f);
 					const float y = 2.f * (texColor.g - 0.5f);
 					const float z = 2.f * (texColor.b - 0.5f);
@@ -299,13 +466,30 @@ __kernel void AdvancePaths(
 					dudv.v = 1.f / texHeight;
 
 					Spectrum texColor;
-					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v, &texColor);
+                                        __global Spectrum *address = GetRGBAddress(texMap->rgbPage, texMap->rgbPageOffset
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
+                                            , texMapRGBBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
+                                            , texMapRGBBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
+                                            , texMapRGBBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
+                                            , texMapRGBBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
+                                            , texMapRGBBuff4
+#endif
+                                            );
+					TexMap_GetColor(address, texWidth, texHeight, uv.u, uv.v, &texColor);
 					const float b0 = Spectrum_Y(&texColor);
 
-					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u + dudv.u, uv.v, &texColor);
+					TexMap_GetColor(address, texWidth, texHeight, uv.u + dudv.u, uv.v, &texColor);
 					const float bu = Spectrum_Y(&texColor);
 
-					TexMap_GetColor(&texMapRGBBuff[texMap->rgbOffset], texWidth, texHeight, uv.u, uv.v + dudv.v, &texColor);
+					TexMap_GetColor(address, texWidth, texHeight, uv.u, uv.v + dudv.v, &texColor);
 					const float bv = Spectrum_Y(&texColor);
 
 					const float scale = meshBumpsScaleBuff[meshIndex];
@@ -823,8 +1007,25 @@ Error: Huston, we have a problem !
 					__global TexMap *texMap = &texMapDescBuff[texIndex];
 
 					// Check if it has an alpha channel
-					if (texMap->alphaOffset != 0xffffffffu) {
-						const float alpha = TexMap_GetAlpha(&texMapAlphaBuff[texMap->alphaOffset], texMap->width, texMap->height, uv.u, uv.v);
+					if (texMap->alphaPage != 0xffffffffu) {
+                                            __global float *address = GetAlphaAddress(texMap->alphaPage, texMap->alphaPageOffset
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_0)
+                                                    , texMapAlphaBuff0
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_1)
+                                                    , texMapAlphaBuff1
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_2)
+                                                    , texMapAlphaBuff2
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_3)
+                                                    , texMapAlphaBuff3
+#endif
+#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_4)
+                                                    , texMapAlphaBuff4
+#endif
+                                                    );
+						const float alpha = TexMap_GetAlpha(address, texMap->width, texMap->height, uv.u, uv.v);
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);

@@ -41,6 +41,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
+#include "luxrays/opencl/intersectiondevice.h"
 
 //------------------------------------------------------------------------------
 // PathOCLRenderEngine
@@ -58,6 +59,16 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 65536));
 	SLG_LOG("[PathOCLRenderThread] OpenCL task count: " << taskCount);
 
+	if (cfg.IsDefined("opencl.memory.maxpagesize"))
+		maxMemPageSize = cfg.GetSize("opencl.memory.maxpagesize", 512 * 1024 * 1024);
+	else {
+		// Look for the max. page size allowed
+		maxMemPageSize = oclIntersectionDevices[0]->GetDeviceDesc()->GetMaxMemory();
+		for (u_int i = 1; i < oclIntersectionDevices.size(); ++i)
+			maxMemPageSize = Min(maxMemPageSize, oclIntersectionDevices[i]->GetDeviceDesc()->GetMaxMemory());
+	}
+	SLG_LOG("[PathOCLRenderThread] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
+	
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	maxDiffusePathVertexCount = cfg.GetInt("path.maxdiffusebounce", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
@@ -144,7 +155,7 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 }
 
 void PathOCLRenderEngine::StartLockLess() {
-	compiledScene = new CompiledScene(renderConfig, film);
+	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();

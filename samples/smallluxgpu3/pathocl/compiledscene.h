@@ -24,21 +24,22 @@
 
 #include "smalllux.h"
 #include "ocldatatypes.h"
-#include "renderconfig.h"
 #include "editaction.h"
 
 #include "luxrays/utils/film/film.h"
+#include "luxrays/utils/sdl/scene.h"
 
 class CompiledScene {
 public:
-	CompiledScene(RenderConfig *cfg, Film *flm);
+	CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS);
 	~CompiledScene();
 
 	void Recompile(const EditActionList &editActions);
 	bool IsMaterialCompiled(const MaterialType type) const;
 
-	RenderConfig *renderConfig;
+	Scene *scene;
 	Film *film;
+	unsigned int maxMemPageSize;
 
 	// Compiled Camera
 	PathOCL::Camera camera;
@@ -75,10 +76,9 @@ public:
 
 	// Compiled TextureMaps
 	vector<PathOCL::TexMap> gpuTexMaps;
-	unsigned int totRGBTexMem;
-	Spectrum *rgbTexMem;
-	unsigned int totAlphaTexMem;
-	float *alphaTexMem;
+	unsigned int totRGBTexMem, totAlphaTexMem;
+	vector<vector<Spectrum> > rgbTexMemBlocks;
+	vector<vector<float> > alphaTexMemBlocks;
 	unsigned int *meshTexs;
 	// Compiled BumpMaps
 	unsigned int *meshBumps;

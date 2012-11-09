@@ -123,6 +123,15 @@ int Properties::GetInt(const std::string propName, const int defaultValue) const
 		return atoi(s.c_str());
 }
 
+size_t Properties::GetSize(const std::string propName, const size_t defaultValue) const {
+	std::string s = GetString(propName, "");
+
+	if (s.compare("") == 0)
+		return defaultValue;
+	else
+		return atoll(s.c_str());
+}
+
 float Properties::GetFloat(const std::string propName, const float defaultValue) const {
 	std::string s = GetString(propName, "");
 
