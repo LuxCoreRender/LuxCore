@@ -114,8 +114,8 @@ private:
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *areaLightsBuff;
-	cl::Buffer *texMapRGBBuff;
-	cl::Buffer *texMapAlphaBuff;
+	vector<cl::Buffer *> texMapRGBBuff;
+	vector<cl::Buffer *> texMapAlphaBuff;
 	cl::Buffer *texMapDescBuff;
 	cl::Buffer *meshTexsBuff;
 	cl::Buffer *meshBumpsBuff;
@@ -199,6 +199,7 @@ private:
 
 	unsigned int taskCount;
 
+	size_t maxMemPageSize;
 	bool usePixelAtomics;
 };
 

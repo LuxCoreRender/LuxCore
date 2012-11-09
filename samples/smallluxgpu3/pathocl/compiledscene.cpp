@@ -21,16 +21,17 @@
 
 #include"compiledscene.h"
 
-CompiledScene::CompiledScene(RenderConfig *cfg, Film *flm) {
-	renderConfig = cfg;
+CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
+	scene = scn;
 	film = flm;
+	maxMemPageSize = (unsigned int)Min<size_t>(maxMemPageS, 0xffffffffu);
 
 	infiniteLight = NULL;
 	infiniteLightMap = NULL;
 	sunLight = NULL;
 	skyLight = NULL;
-	rgbTexMem = NULL;
-	alphaTexMem = NULL;
+	rgbTexMemBlocks.resize(0);
+	alphaTexMemBlocks.resize(0);
 	meshTexs = NULL;
 	meshBumps = NULL;
 	bumpMapScales = NULL;
@@ -49,8 +50,6 @@ CompiledScene::~CompiledScene() {
 	// infiniteLightMap memory is handled from another class
 	delete sunLight;
 	delete skyLight;
-	delete[] rgbTexMem;
-	delete[] alphaTexMem;
 	delete[] meshTexs;
 	delete[] meshBumps;
 	delete[] bumpMapScales;
@@ -63,8 +62,6 @@ void CompiledScene::CompileCamera() {
 	//--------------------------------------------------------------------------
 	// Camera definition
 	//--------------------------------------------------------------------------
-
-	Scene *scene = renderConfig->scene;
 
 	camera.yon = scene->camera->clipYon;
 	camera.hither = scene->camera->clipHither;
@@ -80,8 +77,6 @@ static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
 
 void CompiledScene::CompileGeometry() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Geometry");
-
-	Scene *scene = renderConfig->scene;
 
 	const unsigned int verticesCount = scene->dataSet->GetTotalVertexCount();
 	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
@@ -290,8 +285,6 @@ void CompiledScene::CompileGeometry() {
 void CompiledScene::CompileMaterials() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
 
-	Scene *scene = renderConfig->scene;
-
 	//--------------------------------------------------------------------------
 	// Translate material definitions
 	//--------------------------------------------------------------------------
@@ -497,8 +490,6 @@ void CompiledScene::CompileMaterials() {
 void CompiledScene::CompileAreaLights() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile AreaLights");
 
-	Scene *scene = renderConfig->scene;
-
 	//--------------------------------------------------------------------------
 	// Translate area lights
 	//--------------------------------------------------------------------------
@@ -548,8 +539,6 @@ void CompiledScene::CompileAreaLights() {
 void CompiledScene::CompileInfiniteLight() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
 
-	Scene *scene = renderConfig->scene;
-
 	delete infiniteLight;
 
 	//--------------------------------------------------------------------------
@@ -582,8 +571,6 @@ void CompiledScene::CompileInfiniteLight() {
 void CompiledScene::CompileSunLight() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SunLight");
 
-	Scene *scene = renderConfig->scene;
-
 	delete sunLight;
 
 	//--------------------------------------------------------------------------
@@ -608,8 +595,6 @@ void CompiledScene::CompileSunLight() {
 void CompiledScene::CompileSkyLight() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SkyLight");
 
-	Scene *scene = renderConfig->scene;
-
 	delete skyLight;
 
 	//--------------------------------------------------------------------------
@@ -631,11 +616,9 @@ void CompiledScene::CompileSkyLight() {
 void CompiledScene::CompileTextureMaps() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile TextureMaps");
 
-	Scene *scene = renderConfig->scene;
-
 	gpuTexMaps.resize(0);
-	delete[] rgbTexMem;
-	delete[] alphaTexMem;
+	rgbTexMemBlocks.resize(0);
+	alphaTexMemBlocks.resize(0);
 	delete[] meshTexs;
 	delete[] meshBumps;
 	delete[] bumpMapScales;
@@ -667,37 +650,78 @@ void CompiledScene::CompileTextureMaps() {
 		gpuTexMaps.resize(tms.size());
 
 		if (totRGBTexMem > 0) {
-			unsigned int rgbOffset = 0;
-			rgbTexMem = new Spectrum[totRGBTexMem];
+			rgbTexMemBlocks.resize(1);
 
 			for (unsigned int i = 0; i < tms.size(); ++i) {
 				TextureMap *tm = tms[i];
 				const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
+				const unsigned int texSize = pixelCount * sizeof(Spectrum);
 
-				memcpy(&rgbTexMem[rgbOffset], tm->GetPixels(), pixelCount * sizeof(Spectrum));
-				gpuTexMaps[i].rgbOffset = rgbOffset;
-				rgbOffset += pixelCount;
+				if (texSize > maxMemPageSize)
+					throw std::runtime_error("The RGB channels of a texture map are too big to fit in a single block of memory");
+
+				bool found = false;
+				unsigned int page;
+				for (unsigned int j = 0; j < rgbTexMemBlocks.size(); ++j) {
+					// Check if it fits in the this page
+					if (texSize + rgbTexMemBlocks[j].size() * sizeof(Spectrum) <= maxMemPageSize) {
+						found = true;
+						page = j;
+						break;
+					}
+				}
+
+				if (!found) {
+					// Add a new page
+					rgbTexMemBlocks.push_back(vector<Spectrum>());
+					page = rgbTexMemBlocks.size() - 1;
+				}
+
+				gpuTexMaps[i].rgbPage = page;
+				gpuTexMaps[i].rgbPageOffset = (unsigned int)rgbTexMemBlocks[page].size();
+				rgbTexMemBlocks[page].insert(rgbTexMemBlocks[page].end(), tm->GetPixels(), tm->GetPixels() + pixelCount);
 			}
-		} else
-			rgbTexMem = NULL;
+		}
 
 		if (totAlphaTexMem > 0) {
-			unsigned int alphaOffset = 0;
-			alphaTexMem = new float[totAlphaTexMem];
+			alphaTexMemBlocks.resize(1);
 
 			for (unsigned int i = 0; i < tms.size(); ++i) {
 				TextureMap *tm = tms[i];
-				const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
-
+				
 				if (tm->HasAlpha()) {
-					memcpy(&alphaTexMem[alphaOffset], tm->GetAlphas(), pixelCount * sizeof(float));
-					gpuTexMaps[i].alphaOffset = alphaOffset;
-					alphaOffset += pixelCount;
-				} else
-					gpuTexMaps[i].alphaOffset = 0xffffffffu;
+					const unsigned int pixelCount = tm->GetWidth() * tm->GetHeight();
+					const unsigned int texSize = pixelCount * sizeof(float);
+
+					if (texSize > maxMemPageSize)
+						throw std::runtime_error("The alpha channel of a texture map is too big to fit in a single block of memory");
+
+					bool found = false;
+					unsigned int page;
+					for (unsigned int j = 0; j < alphaTexMemBlocks.size(); ++j) {
+						// Check if it fits in the this page
+						if (texSize + alphaTexMemBlocks[j].size() * sizeof(float) <= maxMemPageSize) {
+							found = true;
+							page = j;
+							break;
+						}
+					}
+
+					if (!found) {
+						// Add a new page
+						alphaTexMemBlocks.push_back(vector<float>());
+						page = alphaTexMemBlocks.size() - 1;
+					}
+
+					gpuTexMaps[i].alphaPage = page;
+					gpuTexMaps[i].alphaPageOffset = (unsigned int)alphaTexMemBlocks[page].size();
+					alphaTexMemBlocks[page].insert(alphaTexMemBlocks[page].end(), tm->GetAlphas(), tm->GetAlphas() + pixelCount);
+				} else {
+					gpuTexMaps[i].alphaPage = 0xffffffffu;
+					gpuTexMaps[i].alphaPageOffset = 0xffffffffu;
+				}
 			}
-		} else
-			alphaTexMem = NULL;
+		}
 
 		//----------------------------------------------------------------------
 
@@ -801,13 +825,20 @@ void CompiledScene::CompileTextureMaps() {
 		}
 	} else {
 		gpuTexMaps.resize(0);
-		rgbTexMem = NULL;
-		alphaTexMem = NULL;
+		rgbTexMemBlocks.resize(0);
+		alphaTexMemBlocks.resize(0);
 		meshTexs = NULL;
 		meshBumps = NULL;
 		bumpMapScales = NULL;
 		meshNormalMaps = NULL;
 	}
+
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps RGB channel page count: " << rgbTexMemBlocks.size());
+	for (unsigned int i = 0; i < rgbTexMemBlocks.size(); ++i)
+		SLG_LOG("[PathOCLRenderThread::CompiledScene]  RGB channel page " << i << " size: " << rgbTexMemBlocks[i].size() * sizeof(Spectrum) / 1024 << "Kbytes");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps Alpha channel page count: " << alphaTexMemBlocks.size());
+	for (unsigned int i = 0; i < alphaTexMemBlocks.size(); ++i)
+		SLG_LOG("[PathOCLRenderThread::CompiledScene]  Alpha channel page " << i << " size: " << alphaTexMemBlocks[i].size() * sizeof(float) / 1024 << "Kbytes");
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

@@ -282,7 +282,8 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef struct {
-	unsigned int rgbOffset, alphaOffset;
+	unsigned int rgbPage, rgbPageOffset;
+	unsigned int alphaPage, alphaPageOffset;
 	unsigned int width, height;
 } TexMap;
 

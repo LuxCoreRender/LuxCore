@@ -82,8 +82,6 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
 	areaLightsBuff = NULL;
-	texMapRGBBuff = NULL;
-	texMapAlphaBuff = NULL;
 	texMapDescBuff = NULL;
 	meshTexsBuff = NULL;
 	meshBumpsBuff = NULL;
@@ -324,17 +322,23 @@ void PathOCLRenderThread::InitTextureMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if ((cscene->totRGBTexMem > 0) || (cscene->totAlphaTexMem > 0)) {
-		if (cscene->totRGBTexMem > 0)
-			AllocOCLBufferRO(&texMapRGBBuff, cscene->rgbTexMem,
-				sizeof(Spectrum) * cscene->totRGBTexMem, "TexMaps");
-		else
-			texMapRGBBuff = NULL;
+		if (cscene->totRGBTexMem > 0) {
+			texMapRGBBuff.resize(cscene->rgbTexMemBlocks.size());
+			for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i) {
+				AllocOCLBufferRO(&(texMapRGBBuff[i]), &(cscene->rgbTexMemBlocks[i][0]),
+						sizeof(Spectrum) * cscene->rgbTexMemBlocks[i].size(), "TexMaps");
+			}
+		} else
+			texMapRGBBuff.resize(0);
 
-		if (cscene->totAlphaTexMem > 0)
-			AllocOCLBufferRO(&texMapAlphaBuff, cscene->alphaTexMem,
-				sizeof(float) * cscene->totAlphaTexMem, "TexMaps Alpha Channel");
-		else
-			texMapAlphaBuff = NULL;
+		if (cscene->totAlphaTexMem > 0) {
+			texMapAlphaBuff.resize(cscene->alphaTexMemBlocks.size());
+			for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i) {
+				AllocOCLBufferRO(&(texMapAlphaBuff[i]), &(cscene->alphaTexMemBlocks[i][0]),
+						sizeof(Spectrum) * cscene->alphaTexMemBlocks[i].size(), "TexMaps Alpha Channel");
+			}
+		} else
+			texMapAlphaBuff.resize(0);
 
 		AllocOCLBufferRO(&texMapDescBuff, &cscene->gpuTexMaps[0],
 				sizeof(PathOCL::TexMap) * cscene->gpuTexMaps.size(), "TexMaps description");
@@ -360,8 +364,8 @@ void PathOCLRenderThread::InitTextureMaps() {
 		else
 			meshNormalMapsBuff = NULL;
 	} else {
-		texMapRGBBuff = NULL;
-		texMapAlphaBuff = NULL;
+		texMapRGBBuff.resize(0);
+		texMapAlphaBuff.resize(0);
 		texMapDescBuff = NULL;
 		meshTexsBuff = NULL;
 		meshBumpsBuff = NULL;
@@ -455,10 +459,20 @@ void PathOCLRenderThread::InitKernels() {
 				;
 	}
 
-	if (texMapRGBBuff || texMapAlphaBuff)
+	if ((texMapRGBBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
 		ss << " -D PARAM_HAS_TEXTUREMAPS";
-	if (texMapAlphaBuff)
+		for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
+			ss << " -D PARAM_TEXTUREMAPS_RGB_PAGE_" << i;
+		if (cscene->rgbTexMemBlocks.size() > 5)
+			throw std::runtime_error("Too many memory pages required for RGB channels of a texture maps");
+	}
+	if (texMapAlphaBuff.size() > 0) {
 		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
+		for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
+			ss << " -D PARAM_TEXTUREMAPS_ALPHA_PAGE_" << i;
+		if (cscene->alphaTexMemBlocks.size() > 5)
+			throw std::runtime_error("Too many memory pages required for alpha channel of a texture maps");
+	}
 	if (meshBumpsBuff)
 		ss << " -D PARAM_HAS_BUMPMAPS";
 	if (meshNormalMapsBuff)
@@ -765,7 +779,7 @@ void PathOCLRenderThread::InitRender() {
 		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_TEX_ALPHA,
-		((texMapAlphaBuff) ? sizeof(float) : 0) +
+		((texMapAlphaBuff.size() > 0) ? sizeof(float) : 0) +
 		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
 		sizeof(float) * 3 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
@@ -797,7 +811,7 @@ void PathOCLRenderThread::InitRender() {
 				// stratifiedDof2D
 				((scene->camera->lensRadius > 0.f) ? (sizeof(float) * s->xSamples * s->ySamples * 2) : 0) +
 				// stratifiedAlpha1D
-				((texMapAlphaBuff) ? (sizeof(float) * s->xSamples) : 0) +
+				((texMapAlphaBuff.size() > 0) ? (sizeof(float) * s->xSamples) : 0) +
 				// stratifiedBSDF2D
 				sizeof(float) * s->xSamples * s->ySamples * 2 +
 				// stratifiedBSDF1D
@@ -880,6 +894,7 @@ void PathOCLRenderThread::InitRender() {
 
 void PathOCLRenderThread::SetKernelArgs() {
 	// Set OpenCL kernel arguments
+	CompiledScene *cscene = renderEngine->compiledScene;
 
 	//--------------------------------------------------------------------------
 	// samplerKernel & advancePathsKernel
@@ -920,11 +935,11 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
 	if (areaLightsBuff)
 		advancePathsKernel->setArg(argIndex++, *areaLightsBuff);
-	if (texMapRGBBuff)
-		advancePathsKernel->setArg(argIndex++, *texMapRGBBuff);
-	if (texMapAlphaBuff)
-		advancePathsKernel->setArg(argIndex++, *texMapAlphaBuff);
-	if (texMapRGBBuff || texMapAlphaBuff) {
+	for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
+		advancePathsKernel->setArg(argIndex++, *(texMapRGBBuff[i]));
+	for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
+		advancePathsKernel->setArg(argIndex++, *(texMapAlphaBuff[i]));
+	if ((cscene->rgbTexMemBlocks.size() > 0) || (cscene->alphaTexMemBlocks.size() > 0)) {
 		advancePathsKernel->setArg(argIndex++, *texMapDescBuff);
 		advancePathsKernel->setArg(argIndex++, *meshTexsBuff);
 		if (meshBumpsBuff) {
@@ -1018,9 +1033,11 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&skyLightBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&areaLightsBuff);
-	FreeOCLBuffer(&texMapRGBBuff);
-	FreeOCLBuffer(&texMapAlphaBuff);
-	if (texMapRGBBuff || texMapAlphaBuff) {
+	for (u_int i = 0; i < texMapRGBBuff.size(); ++i)
+		FreeOCLBuffer(&texMapRGBBuff[i]);
+	for (u_int i = 0; i < texMapAlphaBuff.size(); ++i)
+		FreeOCLBuffer(&texMapAlphaBuff[i]);
+	if ((texMapAlphaBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
 		FreeOCLBuffer(&texMapDescBuff);
 		FreeOCLBuffer(&meshTexsBuff);
 
