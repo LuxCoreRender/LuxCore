@@ -103,6 +103,8 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "3", "CPU path tracing");
 	PrintHelpString(320, fontOffset, "4", "CPU bidirectional path tracing");
 	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "5", "Hybrid bidirectional path tracing");
+	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
 	fontOffset -= 15;
@@ -241,6 +243,13 @@ void reshapeFunc(int newWidth, int newHeight) {
 
 void timerFunc(int value) {
 	switch (session->renderEngine->GetEngineType()) {
+		case BIDIRHYBRID: {
+			OCLRenderEngine *engine = (OCLRenderEngine *)session->renderEngine;
+
+			// Need to update the Film
+			engine->UpdateFilm();
+			break;
+		}
 		case PATHOCL: {
 			PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
 
@@ -408,6 +417,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case '4':
 			session->SetRenderingEngineType(BIDIRCPU);
+			break;
+		case '5':
+			session->SetRenderingEngineType(BIDIRHYBRID);
 			break;
 		case 'o': {
 #if defined(WIN32)

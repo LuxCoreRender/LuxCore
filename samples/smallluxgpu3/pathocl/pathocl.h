@@ -139,7 +139,7 @@ private:
 	unsigned int frameBufferPixelCount;
 	size_t stratifiedDataSize;
 
-	bool started, editMode, reportedPermissionError;
+	bool started, editMode;
 
 	PathOCL::GPUTaskStats *gpuTaskStats;
 };
@@ -154,6 +154,10 @@ public:
 	virtual ~PathOCLRenderEngine();
 
 	RenderEngineType GetEngineType() const { return PATHOCL; }
+
+	const vector<OpenCLIntersectionDevice *> &GetIntersectionDevices() const {
+		return oclIntersectionDevices;
+	}
 
 	bool IsMaterialCompiled(const MaterialType type) const {
 		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
@@ -177,7 +181,7 @@ private:
 
 	void UpdateFilmLockLess();
 
-	virtual void UpdateSamplesCount() {
+	void UpdateSamplesCount() {
 		// Update the sample count statistic
 		unsigned long long totalCount = 0;
 		for (size_t i = 0; i < renderThreads.size(); ++i) {
@@ -190,6 +194,7 @@ private:
 		samplesCount = totalCount;
 	}
 
+	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	CompiledScene *compiledScene;
 
 	vector<PathOCLRenderThread *> renderThreads;

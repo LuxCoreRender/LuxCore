@@ -25,6 +25,7 @@
 #include "lightcpu/lightcpu.h"
 #include "pathcpu/pathcpu.h"
 #include "bidircpu/bidircpu.h"
+#include "bidirhybrid/bidirhybrid.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/opencl/intersectiondevice.h"
@@ -32,14 +33,20 @@
 
 const string RenderEngineType2String(const RenderEngineType type) {
 	switch (type) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case PATHOCL:
 			return "Path OpenCL";
+#endif
 		case LIGHTCPU:
 			return "Light CPU";
 		case PATHCPU:
 			return "Path CPU";
 		case BIDIRCPU:
 			return "BiDir CPU";
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case BIDIRHYBRID:
+			return "BiDir Hybrid OpenCL";
+#endif
 		default:
 			return "UNKNOWN";
 	}
@@ -190,14 +197,20 @@ void RenderEngine::UpdateFilm() {
 RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *renderConfig, Film *film, boost::mutex *filmMutex) {
 	switch (engineType) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case PATHOCL:
 			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
+#endif
 		case LIGHTCPU:
 			return new LightCPURenderEngine(renderConfig, film, filmMutex);
 		case PATHCPU:
 			return new PathCPURenderEngine(renderConfig, film, filmMutex);
 		case BIDIRCPU:
 			return new BiDirCPURenderEngine(renderConfig, film, filmMutex);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case BIDIRHYBRID:
+			return new BiDirHybridRenderEngine(renderConfig, film, filmMutex);
+#endif
 		default:
 			throw runtime_error("Unknown render engine type");
 	}
@@ -230,8 +243,6 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 		throw runtime_error(ss.str().c_str());
 	}
 
-	std::vector<DeviceDescription *> selectedDescs;
-
 	for (size_t i = 0; i < descs.size(); ++i) {
 		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[i];
 
@@ -241,7 +252,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
-				selectedDescs.push_back(desc);
+				selectedDeviceDescs.push_back(desc);
 			}
 		} else {
 			if ((useCPUs && desc->GetType() == DEVICE_TYPE_OPENCL_CPU) ||
@@ -250,39 +261,13 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
-				selectedDescs.push_back(descs[i]);
+				selectedDeviceDescs.push_back(descs[i]);
 			}
 		}
 	}
 
-	if (selectedDescs.size() == 0)
+	if (selectedDeviceDescs.size() == 0)
 		throw runtime_error("No OpenCL device selected or available");
-
-	// Allocate devices
-	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDescs);
-
-	for (size_t i = 0; i < devs.size(); ++i)
-		oclIntersectionDevices.push_back((OpenCLIntersectionDevice *)devs[i]);
-
-	SLG_LOG("OpenCL Devices used:");
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		SLG_LOG("[" << oclIntersectionDevices[i]->GetName() << "]");
-
-	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool frocedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
-	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i) {
-		oclIntersectionDevices[i]->DisableImageStorage(frocedDisableImageStorage);
-		oclIntersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
-	}
-
-	// Set the Luxrays SataSet
-	renderConfig->scene->UpdateDataSet(ctx);
-	ctx->SetDataSet(renderConfig->scene->dataSet);
-
-	// Disable the support for hybrid rendering
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		oclIntersectionDevices[i]->SetHybridRenderingSupport(false);
 }
 
 //------------------------------------------------------------------------------

@@ -45,7 +45,6 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigne
 	intersectionDevice = device;
 	samplingStart = samplStart;
 	seed = seedBase;
-	reportedPermissionError = false;
 
 	renderThread = NULL;
 
