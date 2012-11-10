@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/utils.h"
@@ -129,7 +130,7 @@ size_t Properties::GetSize(const std::string propName, const size_t defaultValue
 	if (s.compare("") == 0)
 		return defaultValue;
 	else
-		return atol(s.c_str());
+		return boost::lexical_cast<size_t>(s);
 }
 
 float Properties::GetFloat(const std::string propName, const float defaultValue) const {
