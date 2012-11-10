@@ -129,7 +129,7 @@ size_t Properties::GetSize(const std::string propName, const size_t defaultValue
 	if (s.compare("") == 0)
 		return defaultValue;
 	else
-		return atoll(s.c_str());
+		return atol(s.c_str());
 }
 
 float Properties::GetFloat(const std::string propName, const float defaultValue) const {
