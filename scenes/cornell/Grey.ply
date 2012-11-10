@@ -1,0 +1,16 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: cornell.blend
+element vertex 4
+property float x
+property float y
+property float z
+element face 2
+property list uchar uint vertex_indices
+end_header
+-3.430000 2.274369 5.465127
+-3.430000 3.324369 5.464290
+-2.130000 3.324369 5.464290
+-2.130000 2.274369 5.465127
+3 0 1 2
+3 0 2 3
