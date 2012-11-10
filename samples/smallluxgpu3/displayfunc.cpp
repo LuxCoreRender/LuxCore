@@ -45,6 +45,7 @@
 #include "lightcpu/lightcpu.h"
 #include "pathcpu/pathcpu.h"
 #include "rendersession.h"
+#include "bidirhybrid/bidirhybrid.h"
 
 bool OSDPrintHelp = false;
 
@@ -135,9 +136,10 @@ static void PrintHelpAndSettings() {
 
 	// Intersection devices
 	switch (session->renderEngine->GetEngineType()) {
+		case BIDIRHYBRID:
 		case PATHOCL: {
-			PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
-			const vector<OpenCLIntersectionDevice *> &idevices = engine->GetIntersectionDevices();
+			OCLRenderEngine *engine = (OCLRenderEngine *)session->renderEngine;
+			const vector<IntersectionDevice *> &idevices = engine->GetRealIntersectionDevices();
 
 			double minPerf = idevices[0]->GetPerformance();
 			double totalPerf = idevices[0]->GetPerformance();
@@ -169,6 +171,7 @@ static void PrintHelpAndSettings() {
 			PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 			break;
 		}
+		case BIDIRCPU:
 		case LIGHTCPU:
 		case PATHCPU:
 			break;
@@ -243,18 +246,12 @@ void reshapeFunc(int newWidth, int newHeight) {
 
 void timerFunc(int value) {
 	switch (session->renderEngine->GetEngineType()) {
-		case BIDIRHYBRID: {
+		case BIDIRHYBRID:
+		case PATHOCL: {
 			OCLRenderEngine *engine = (OCLRenderEngine *)session->renderEngine;
 
-			// Need to update the Film
-			engine->UpdateFilm();
-			break;
-		}
-		case PATHOCL: {
-			PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
-
 			double raysSec = 0.0;
-			const vector<OpenCLIntersectionDevice *> &idevices = engine->GetIntersectionDevices();
+			const vector<IntersectionDevice *> &idevices = engine->GetRealIntersectionDevices();
 			for (size_t i = 0; i < idevices.size(); ++i)
 				raysSec += idevices[i]->GetPerformance();
 

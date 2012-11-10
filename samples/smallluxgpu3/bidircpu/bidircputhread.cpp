@@ -282,7 +282,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	// Setup the sampler
 	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
-	const unsigned int sampleBootSize = 9;
+	const unsigned int sampleBootSize = 11;
 	const unsigned int sampleLightStepSize = 6;
 	const unsigned int sampleEyeStepSize = 11;
 	const unsigned int sampleSize = 
@@ -303,7 +303,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!scene->camera->SampleLens(rndGen->floatValue(), rndGen->floatValue(),
+		if (!camera->SampleLens(sampler->GetSample(3), sampler->GetSample(4),
 				&lensPoint)) {
 			sampler->NextSample(sampleResults);
 			continue;
@@ -322,7 +322,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 		Ray nextEventRay;
 		lightVertex.throughput = light->Emit(scene,
-			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6),
+			sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
 		if (!lightVertex.throughput.Black()) {
 			lightEmitPdfW *= lightPickPdf;
@@ -442,7 +442,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		eyeSampleResult.screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 		eyeSampleResult.screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
-			sampler->GetSample(7), sampler->GetSample(8));
+			sampler->GetSample(9), sampler->GetSample(10));
 
 		eyeVertex.bsdf.fixedDir = -eyeRay.d;
 		eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
@@ -568,6 +568,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		sampler->NextSample(sampleResults);
 	}
+
+	delete sampler;
+	delete rndGen;
 
 	//SLG_LOG("[BiDirCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 }

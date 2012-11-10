@@ -130,6 +130,7 @@ set(SMALLLUXGPU_SRCS
 	bidircpu/bidircputhread.cpp
 	bidirhybrid/bidirhybrid.cpp
 	bidirhybrid/bidirhybridthread.cpp
+	bidirhybrid/bidirstate.cpp
 	pathocl/kernels/pathocl_kernel_core.cpp
 	pathocl/kernels/pathocl_kernel_datatypes.cpp
 	pathocl/kernels/pathocl_kernel_filters.cpp

@@ -24,13 +24,33 @@
 
 #include "smalllux.h"
 #include "renderengine.h"
-#include "bidirhybrid/bidirhybrid.h"
+#include "bidircpu/bidircpu.h"
+
+class BiDirHybridRenderEngine;
+class BiDirHybridRenderThread;
+
+class BiDirState {
+public:
+	BiDirState(BiDirHybridRenderEngine *renderEngine, Film *film, RandomGenerator *rndGen);
+	~BiDirState();
+
+	void GenerateRays(BiDirHybridRenderThread *renderThread);
+	void CollectResults(BiDirHybridRenderThread *renderThread);
+
+private:
+	void ConnectToEye(BiDirHybridRenderThread *renderThread,
+			const unsigned int pixelCount, const PathVertex &lightVertex,
+			const float u0,	const Point &lensPoint);
+
+	Sampler *sampler;
+
+	vector<float> sampleValue; // Used for pass-through sampling
+	vector<SampleResult> sampleResults;
+};
 
 //------------------------------------------------------------------------------
 // Bidirectional path tracing hybrid render threads
 //------------------------------------------------------------------------------
-
-class BiDirHybridRenderEngine;
 
 class BiDirHybridRenderThread {
 public:
@@ -45,6 +65,7 @@ public:
 	void BeginEdit();
 	void EndEdit(const EditActionList &editActions);
 
+	friend class BiDirState;
 	friend class BiDirHybridRenderEngine;
 
 private:
@@ -53,7 +74,11 @@ private:
 	void StartRenderThread();
 	void StopRenderThread();
 
+	size_t PushRay(const Ray &ray);
+	void PopRay(const Ray **ray, const RayHit **rayHit);
+
 	boost::thread *renderThread;
+	Film *threadFilm;
 
 	IntersectionDevice *intersectionDevice;
 
@@ -61,6 +86,13 @@ private:
 	BiDirHybridRenderEngine *renderEngine;
 	double samplesCount;
 
+	unsigned int pendingRayBuffers;
+	RayBuffer *currentRayBufferToSend;
+	deque<RayBuffer *> rayBufferToSendQueue;
+
+	RayBuffer *currentReiceivedRayBuffer;
+	size_t currentReiceivedRayBufferIndex;
+	
 	bool started, editMode;
 };
 
@@ -75,12 +107,17 @@ public:
 
 	RenderEngineType GetEngineType() const { return BIDIRHYBRID; }
 
+	const vector<IntersectionDevice *> &GetRealIntersectionDevices() const {
+		return realDevices;
+	}
+
 	// Signed because of the delta parameter
 	int maxEyePathDepth, maxLightPathDepth;
 
 	int rrDepth;
 	float rrImportanceCap;
 
+	friend class BiDirState;
 	friend class BiDirHybridRenderThread;
 
 private:
@@ -99,7 +136,8 @@ private:
 		samplesCount = count;
 	}
 
-	vector<IntersectionDevice *> devices;
+	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
+	vector<IntersectionDevice *> realDevices;
 	vector<BiDirHybridRenderThread *> renderThreads;
 };
 

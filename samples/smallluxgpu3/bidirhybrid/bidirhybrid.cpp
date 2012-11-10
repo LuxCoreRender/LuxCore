@@ -52,14 +52,18 @@ BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, 
 	// Create render threads
 	//--------------------------------------------------------------------------
 
-	const size_t renderThreadCount = 2 * boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	if (selectedDeviceDescs.size() == 1) {
 		// Only one intersection device, use a M2O device
-		devices = ctx->AddVirtualM2OIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+		realDevices = ctx->AddVirtualM2OIntersectionDevices(renderThreadCount, selectedDeviceDescs);
 	} else {
 		// Multiple intersection devices, use a M2M device
-		devices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+		realDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
 	}
+	devices = ctx->GetIntersectionDevices();
+
+	// Set the Luxrays DataSet
+	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
 	SLG_LOG("Starting "<< renderThreadCount << " BiDir hybrid render threads");
@@ -101,6 +105,15 @@ void BiDirHybridRenderEngine::EndEditLockLess(const EditActionList &editActions)
 }
 
 void BiDirHybridRenderEngine::UpdateFilmLockLess() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	film->Reset();
+
+	// Merge the all thread films
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (renderThreads[i]->threadFilm)
+			film->AddFilm(*(renderThreads[i]->threadFilm));
+	}
 }
 
 #endif

@@ -42,11 +42,16 @@ BiDirHybridRenderThread::BiDirHybridRenderThread(const unsigned int index,
 	seed = seedBase;
 
 	renderThread = NULL;
+	threadFilm = NULL;
 
 	threadIndex = index;
 	renderEngine = re;
 
 	samplesCount = 0.0;
+
+	pendingRayBuffers = 0;
+	currentRayBufferToSend = NULL;
+	currentReiceivedRayBuffer = NULL;
 
 	started = false;
 	editMode = false;
@@ -57,6 +62,8 @@ BiDirHybridRenderThread::~BiDirHybridRenderThread() {
 		EndEdit(EditActionList());
 	if (started)
 		Stop();
+
+	delete threadFilm;
 }
 
 void BiDirHybridRenderThread::Start() {
@@ -75,6 +82,14 @@ void BiDirHybridRenderThread::Stop() {
 }
 
 void BiDirHybridRenderThread::StartRenderThread() {
+	const unsigned int filmWidth = renderEngine->film->GetWidth();
+	const unsigned int filmHeight = renderEngine->film->GetHeight();
+
+	delete threadFilm;
+	threadFilm = new Film(filmWidth, filmHeight, true, true, false);
+	threadFilm->CopyDynamicSettings(*(renderEngine->film));
+	threadFilm->Init(filmWidth, filmHeight);
+
 	samplesCount = 0.0;
 
 	// Create the thread for the rendering
@@ -101,18 +116,108 @@ void BiDirHybridRenderThread::EndEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
+size_t BiDirHybridRenderThread::PushRay(const Ray &ray) {
+	// Check if I have a valid currentRayBuffer
+	if (!currentRayBufferToSend) {
+		if (rayBufferToSendQueue.size() == 0) {
+			// I have to allocate a new RayBuffer
+			currentRayBufferToSend = intersectionDevice->NewRayBuffer();
+		} else {
+			// I can reuse one in queue
+			currentRayBufferToSend = rayBufferToSendQueue.front();
+			rayBufferToSendQueue.pop_front();
+		}
+	}
+
+	const size_t index = currentRayBufferToSend->AddRay(ray);
+
+	// Check if the buffer is now full
+	if (currentRayBufferToSend->IsFull()) {
+		// Send the work to the device
+		intersectionDevice->PushRayBuffer(currentRayBufferToSend);
+		currentRayBufferToSend = NULL;
+		++pendingRayBuffers;
+	}
+
+	return index;
+}
+
+void BiDirHybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
+	// Check if I have to get  the results out of intersection device
+	if (!currentReiceivedRayBuffer) {
+		currentReiceivedRayBuffer = intersectionDevice->PopRayBuffer();
+		--pendingRayBuffers;
+		currentReiceivedRayBufferIndex = 0;
+	} else if (currentReiceivedRayBufferIndex >= currentReiceivedRayBuffer->GetSize()) {
+		// All the results in the RayBuffer has been elaborated
+		currentReiceivedRayBuffer->Reset();
+		rayBufferToSendQueue.push_back(currentReiceivedRayBuffer);
+
+		// Get a new buffer
+		currentReiceivedRayBuffer = intersectionDevice->PopRayBuffer();
+		--pendingRayBuffers;
+		currentReiceivedRayBufferIndex = 0;
+	}
+
+	*ray = currentReiceivedRayBuffer->GetRay(currentReiceivedRayBufferIndex);
+	*rayHit = currentReiceivedRayBuffer->GetRayHit(currentReiceivedRayBufferIndex++);
+}
+
 void BiDirHybridRenderThread::RenderThreadImpl(BiDirHybridRenderThread *renderThread) {
-	SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
+	//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
+
+	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 
 	try {
+		const u_int incrementStep = 4096;
+
+		// Initialize the first states
+		vector<BiDirState *> states(incrementStep);
+		for (u_int i = 0; i < states.size(); ++i)
+			states[i] = new BiDirState(renderEngine, renderThread->threadFilm, rndGen);
+
+		u_int generateIndex = 0;
+		u_int collectIndex = 0;
 		while (!boost::this_thread::interruption_requested()) {
+			// Generate new rays up to the point to have 2 pending buffers
+			while (renderThread->pendingRayBuffers < 2) {
+				states[generateIndex]->GenerateRays(renderThread);
+
+				generateIndex = (generateIndex + 1) % states.size();
+				if (generateIndex == collectIndex) {
+					//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Increasing states size by " << incrementStep);
+					//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] State size: " << states.size());
+
+					// Insert a set of new states and continue
+					states.insert(states.begin() + generateIndex, incrementStep, NULL);
+					for (u_int i = generateIndex; i < generateIndex + incrementStep; ++i)
+						states[i] = new BiDirState(renderEngine, renderThread->threadFilm, rndGen);
+					collectIndex += incrementStep;
+				}
+			}
+			
+			//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] State size: " << states.size());
+			//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] generateIndex: " << generateIndex);
+			//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] collectIndex: " << collectIndex);
+
+			// Collect rays up to the point to have only 1 pending buffer
+			while (renderThread->pendingRayBuffers > 1) {
+				states[collectIndex]->CollectResults(renderThread);
+
+				collectIndex = (collectIndex + 1) % states.size();
+			}
 		}
 
-		SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
+		//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 	} catch (cl::Error err) {
 		SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << luxrays::utils::oclErrorString(err.err()) << ")");
 	}
+	
+	// TODO: delete stuff
+
+	delete rndGen;
 }

@@ -107,6 +107,8 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
+	virtual const vector<IntersectionDevice *> &GetRealIntersectionDevices() const = 0;
+
 protected:
 	vector<DeviceDescription *> selectedDeviceDescs;
 };

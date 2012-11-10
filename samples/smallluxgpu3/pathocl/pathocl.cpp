@@ -74,7 +74,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	}
 
 	// Set the Luxrays SataSet
-	renderConfig->scene->UpdateDataSet(ctx);
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	// Disable the support for hybrid rendering on all devices

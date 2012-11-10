@@ -149,7 +149,7 @@ public:
 	void UpdateDataSet();
 
 	//--------------------------------------------------------------------------
-	// Methods dedicated to Context mangement (i.e. start/stop, etc.)
+	// Methods dedicated to Context management (i.e. start/stop, etc.)
 	//--------------------------------------------------------------------------
 
 	void Start();

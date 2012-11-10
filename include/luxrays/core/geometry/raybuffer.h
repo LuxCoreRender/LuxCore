@@ -107,6 +107,10 @@ public:
 		return firstIndex;
 	}
 
+	const Ray *GetRay(const size_t index) const {
+		return &rays[index];
+	}
+
 	const RayHit *GetRayHit(const size_t index) const {
 		return &rayHits[index];
 	}

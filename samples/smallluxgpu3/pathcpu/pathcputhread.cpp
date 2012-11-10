@@ -253,5 +253,8 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		sampler->NextSample(sampleResults);
 	}
 
+	delete sampler;
+	delete rndGen;
+
 	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread halted");
 }

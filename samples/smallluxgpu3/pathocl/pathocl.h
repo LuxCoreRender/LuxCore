@@ -155,8 +155,9 @@ public:
 
 	RenderEngineType GetEngineType() const { return PATHOCL; }
 
-	const vector<OpenCLIntersectionDevice *> &GetIntersectionDevices() const {
-		return oclIntersectionDevices;
+	const vector<IntersectionDevice *> &GetRealIntersectionDevices() const {
+		// PathOCL uses only real devices
+		return ctx->GetIntersectionDevices();
 	}
 
 	bool IsMaterialCompiled(const MaterialType type) const {

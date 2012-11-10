@@ -122,7 +122,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!scene->camera->SampleLens(sampler->GetSample(7), sampler->GetSample(8),
+		if (!camera->SampleLens(sampler->GetSample(7), sampler->GetSample(8),
 				&lensPoint)) {
 			sampler->NextSample(sampleResults);
 			continue;
@@ -235,6 +235,9 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 		sampler->NextSample(sampleResults);
 	}
+
+	delete sampler;
+	delete rndGen;
 
 	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
 }
