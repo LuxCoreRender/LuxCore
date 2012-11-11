@@ -99,7 +99,8 @@ void BiDirCPURenderEngine::ConnectVertices(
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
-				eyeSampleResult->radiance += (misWeight * geometryTerm) * eyeBsdfEval * lightBsdfEval;
+				eyeSampleResult->radiance += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
+						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
 		}
 	}
@@ -293,13 +294,11 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	vector<SampleResult> sampleResults;
 	vector<PathVertex> lightPathVertices;
-	vector<PathVertex> eyePathVertices;
 	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
 		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1.0;
 		sampleResults.clear();
 		lightPathVertices.clear();
-		eyePathVertices.clear();
 
 		// Sample a point on the camera lens
 		Point lensPoint;

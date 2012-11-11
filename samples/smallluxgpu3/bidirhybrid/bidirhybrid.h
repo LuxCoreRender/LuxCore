@@ -38,14 +38,34 @@ public:
 	void CollectResults(BiDirHybridRenderThread *renderThread);
 
 private:
+	void DirectLightSampling(BiDirHybridRenderThread *renderThread,
+		const float u0, const float u1, const float u2,
+		const float u3, const float u4,
+		const PathVertex &eyeVertex);
+	void DirectHitFiniteLight(BiDirHybridRenderThread *renderThread,
+			const PathVertex &eyeVertex, Spectrum *radiance) const;
+	void DirectHitInfiniteLight(BiDirHybridRenderThread *renderThread,
+		const PathVertex &eyeVertex, Spectrum *radiance) const;
+
+	void ConnectVertices(BiDirHybridRenderThread *renderThread,
+		const PathVertex &eyeVertex, const PathVertex &lightVertex,
+		const float u0);
 	void ConnectToEye(BiDirHybridRenderThread *renderThread,
 			const unsigned int pixelCount, const PathVertex &lightVertex,
 			const float u0,	const Point &lensPoint);
 
 	Sampler *sampler;
 
-	vector<float> sampleValue; // Used for pass-through sampling
-	vector<SampleResult> sampleResults;
+	// Light tracing results
+	vector<float> lightSampleValue; // Used for pass-through sampling
+	vector<SampleResult> lightSampleResults;
+
+	// Eye tracing results
+	u_int eyeScreenX, eyeScreenY;
+	float eyeAlpha;
+	Spectrum eyeRadiance;
+	vector<float> eyeSampleValue; // Used for pass-through sampling
+	vector<Spectrum> eyeSampleRadiance;
 };
 
 //------------------------------------------------------------------------------
