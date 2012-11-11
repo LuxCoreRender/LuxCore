@@ -108,7 +108,7 @@ private:
 
 	unsigned int pendingRayBuffers;
 	RayBuffer *currentRayBufferToSend;
-	deque<RayBuffer *> rayBufferToSendQueue;
+	deque<RayBuffer *> freeRayBuffers;
 
 	RayBuffer *currentReiceivedRayBuffer;
 	size_t currentReiceivedRayBufferIndex;
