@@ -119,13 +119,13 @@ void BiDirHybridRenderThread::EndEdit(const EditActionList &editActions) {
 size_t BiDirHybridRenderThread::PushRay(const Ray &ray) {
 	// Check if I have a valid currentRayBuffer
 	if (!currentRayBufferToSend) {
-		if (rayBufferToSendQueue.size() == 0) {
+		if (freeRayBuffers.size() == 0) {
 			// I have to allocate a new RayBuffer
 			currentRayBufferToSend = intersectionDevice->NewRayBuffer();
 		} else {
 			// I can reuse one in queue
-			currentRayBufferToSend = rayBufferToSendQueue.front();
-			rayBufferToSendQueue.pop_front();
+			currentRayBufferToSend = freeRayBuffers.front();
+			freeRayBuffers.pop_front();
 		}
 	}
 
@@ -151,7 +151,7 @@ void BiDirHybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 	} else if (currentReiceivedRayBufferIndex >= currentReiceivedRayBuffer->GetSize()) {
 		// All the results in the RayBuffer has been elaborated
 		currentReiceivedRayBuffer->Reset();
-		rayBufferToSendQueue.push_back(currentReiceivedRayBuffer);
+		freeRayBuffers.push_back(currentReiceivedRayBuffer);
 
 		// Get a new buffer
 		currentReiceivedRayBuffer = intersectionDevice->PopRayBuffer();
@@ -165,15 +165,16 @@ void BiDirHybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 
 void BiDirHybridRenderThread::RenderThreadImpl(BiDirHybridRenderThread *renderThread) {
 	//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
+	boost::this_thread::disable_interruption di;
 
 	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
 
-	try {
-		const u_int incrementStep = 4096;
+	const u_int incrementStep = 4096;
+	vector<BiDirState *> states(incrementStep);
 
+	try {
 		// Initialize the first states
-		vector<BiDirState *> states(incrementStep);
 		for (u_int i = 0; i < states.size(); ++i)
 			states[i] = new BiDirState(renderEngine, renderThread->threadFilm, rndGen);
 
@@ -200,13 +201,18 @@ void BiDirHybridRenderThread::RenderThreadImpl(BiDirHybridRenderThread *renderTh
 			//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] State size: " << states.size());
 			//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] generateIndex: " << generateIndex);
 			//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] collectIndex: " << collectIndex);
+			//SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] pendingRayBuffers: " << renderThread->pendingRayBuffers);
 
 			// Collect rays up to the point to have only 1 pending buffer
 			while (renderThread->pendingRayBuffers > 1) {
 				states[collectIndex]->CollectResults(renderThread);
-
-				collectIndex = (collectIndex + 1) % states.size();
 				renderThread->samplesCount += 1.0;
+
+				const u_int newCollectIndex = (collectIndex + 1) % states.size();
+				// A safety-check, it should never happen
+				if (newCollectIndex == generateIndex)
+					break;
+				collectIndex = newCollectIndex;
 			}
 		}
 
@@ -217,8 +223,29 @@ void BiDirHybridRenderThread::RenderThreadImpl(BiDirHybridRenderThread *renderTh
 		SLG_LOG("[BiDirHybridRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << luxrays::utils::oclErrorString(err.err()) << ")");
 	}
-	
-	// TODO: delete stuff
 
+	// Clean current ray buffers
+	if (renderThread->currentRayBufferToSend) {
+		renderThread->currentRayBufferToSend->Reset();
+		renderThread->freeRayBuffers.push_back(renderThread->currentRayBufferToSend);
+		renderThread->currentRayBufferToSend = NULL;
+	}
+	if (renderThread->currentReiceivedRayBuffer) {
+		renderThread->currentReiceivedRayBuffer->Reset();
+		renderThread->freeRayBuffers.push_back(renderThread->currentReiceivedRayBuffer);
+		renderThread->currentReiceivedRayBuffer = NULL;
+	}
+
+	// Free all states
+	for (u_int i = 0; i < states.size(); ++i)
+		delete states[i];
 	delete rndGen;
+
+	// Remove all pending ray buffers
+	while (renderThread->pendingRayBuffers > 0) {
+		RayBuffer *rayBuffer = renderThread->intersectionDevice->PopRayBuffer();
+		--(renderThread->pendingRayBuffers);
+		rayBuffer->Reset();
+		renderThread->freeRayBuffers.push_back(rayBuffer);
+	}
 }
