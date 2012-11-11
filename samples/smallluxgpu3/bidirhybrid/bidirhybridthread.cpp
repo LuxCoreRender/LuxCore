@@ -206,6 +206,7 @@ void BiDirHybridRenderThread::RenderThreadImpl(BiDirHybridRenderThread *renderTh
 				states[collectIndex]->CollectResults(renderThread);
 
 				collectIndex = (collectIndex + 1) % states.size();
+				renderThread->samplesCount += 1.0;
 			}
 		}
 
