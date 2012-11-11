@@ -61,7 +61,7 @@ private:
 	vector<SampleResult> lightSampleResults;
 
 	// Eye tracing results
-	u_int eyeScreenX, eyeScreenY;
+	float eyeScreenX, eyeScreenY;
 	float eyeAlpha;
 	Spectrum eyeRadiance;
 	vector<float> eyeSampleValue; // Used for pass-through sampling

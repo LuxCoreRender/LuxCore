@@ -303,18 +303,18 @@ void BiDirState::GenerateRays(BiDirHybridRenderThread *renderThread) {
 	const unsigned int sampleLightStepSize = 6;
 	const unsigned int sampleEyeStepSize = 11;
 
-	lightSampleResults.clear();
+	lightSampleValue.clear();
 	lightSampleResults.clear();
 	eyeSampleValue.clear();
 	eyeSampleRadiance.clear();
-
-	vector<PathVertex> lightPathVertices;
 
 	// Sample a point on the camera lens
 	Point lensPoint;
 	if (!camera->SampleLens(sampler->GetSample(3), sampler->GetSample(4),
 			&lensPoint))
 		return;
+
+	vector<PathVertex> lightPathVertices;
 
 	//----------------------------------------------------------------------
 	// Trace light path

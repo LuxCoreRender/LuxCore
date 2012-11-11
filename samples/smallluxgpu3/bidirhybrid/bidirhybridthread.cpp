@@ -181,8 +181,8 @@ void BiDirHybridRenderThread::RenderThreadImpl(BiDirHybridRenderThread *renderTh
 		u_int generateIndex = 0;
 		u_int collectIndex = 0;
 		while (!boost::this_thread::interruption_requested()) {
-			// Generate new rays up to the point to have 2 pending buffers
-			while (renderThread->pendingRayBuffers < 2) {
+			// Generate new rays up to the point to have 3 pending buffers
+			while (renderThread->pendingRayBuffers < 3) {
 				states[generateIndex]->GenerateRays(renderThread);
 
 				generateIndex = (generateIndex + 1) % states.size();
