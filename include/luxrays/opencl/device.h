@@ -41,6 +41,7 @@ public:
 		deviceIndex(devIndex),
 		computeUnits(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()),
 		maxMemory(device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>()),
+		maxAllocSizeMemory(device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>()),
 		usedMemory(0),
 		oclDevice(device),
 		oclContext(NULL),
@@ -53,6 +54,7 @@ public:
 	size_t GetDeviceIndex() const { return deviceIndex; }
 	int GetComputeUnits() const { return computeUnits; }
 	size_t GetMaxMemory() const { return maxMemory; }
+	size_t GetMaxMemoryAllocSize() const { return maxAllocSizeMemory; }
 	size_t GetUsedMemory() const { return usedMemory; }
 	void AllocMemory(size_t s) const { usedMemory += s; }
 	void FreeMemory(size_t s) const { usedMemory -= s; }
@@ -91,7 +93,7 @@ protected:
 
 	size_t deviceIndex;
 	int computeUnits;
-	size_t maxMemory;
+	size_t maxMemory, maxAllocSizeMemory;
 	mutable size_t usedMemory;
 
 private:

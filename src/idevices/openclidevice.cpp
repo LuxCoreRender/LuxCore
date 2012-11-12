@@ -40,8 +40,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		const unsigned int forceWGSize) :
 		HardwareIntersectionDevice(context, desc->type, index),
 		oclQueue(new cl::CommandQueue(desc->GetOCLContext(),
-		desc->GetOCLDevice())), kernel(NULL)
-{
+		desc->GetOCLDevice())), kernel(NULL) {
 	forceWorkGroupSize = forceWGSize;
 	stackSize = 24;
 	deviceDesc = desc;
