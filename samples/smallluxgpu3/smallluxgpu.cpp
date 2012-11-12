@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
 		bool batchMode = false;
 		bool telnetServerEnabled = false;
 		Properties cmdLineProp;
-		RenderConfig *config = NULL;
+		string configFileName;
 		for (int i = 1; i < argc; i++) {
 			if (argv[i][0] == '-') {
 				// I should check for out of range array index...
@@ -218,10 +218,10 @@ int main(int argc, char *argv[]) {
 					exit(EXIT_SUCCESS);
 				}
 				else if (argv[i][1] == 'o') {
-					if (config)
+					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
 
-					config = new RenderConfig(argv[++i]);
+					configFileName = string(argv[++i]);
 				}
 
 				else if (argv[i][1] == 'e') cmdLineProp.SetString("image.height", argv[++i]);
@@ -250,21 +250,18 @@ int main(int argc, char *argv[]) {
 			} else {
 				string s = argv[i];
 				if ((s.length() >= 4) && (s.substr(s.length() - 4) == ".cfg")) {
-					if (config)
+					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
-					config = new RenderConfig(s);
+					configFileName = s;
 				} else
 					throw runtime_error("Unknown file extension: " + s);
 			}
 		}
 
-		if (!config)
-			config = new RenderConfig("scenes/luxball/render-fast.cfg");
+		if (configFileName.compare("") == 0)
+			configFileName = "scenes/luxball/render-fast.cfg";
 
-		// Overtwirte properties with the one defined on command line
-		// NOTE: few properties like accelerator.type, etc. (the one used
-		// in RenderConfig() constructor can not be overwritten.
-		config->cfg.Load(cmdLineProp);
+		RenderConfig *config = new RenderConfig(configFileName, &cmdLineProp);
 
 		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
 		const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
