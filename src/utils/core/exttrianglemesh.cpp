@@ -225,6 +225,44 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertUV);
 }
 
+//------------------------------------------------------------------------------
+// ExtTriangleMesh
+//------------------------------------------------------------------------------
+
+ExtTriangleMesh::ExtTriangleMesh(ExtTriangleMesh *mesh) {
+	assert (mesh != NULL);
+
+	vertCount = mesh->vertCount;
+	triCount = mesh->triCount;
+	vertices = mesh->vertices;
+	tris = mesh->tris;
+
+	normals = mesh->normals;
+	triNormals = mesh->triNormals;
+	uvs = mesh->uvs;
+}
+
+ExtTriangleMesh::ExtTriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
+		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV) {
+	assert (meshVertCount > 0);
+	assert (meshTriCount > 0);
+	assert (meshVertices != NULL);
+	assert (meshTris != NULL);
+
+	vertCount = meshVertCount;
+	triCount = meshTriCount;
+	vertices = meshVertices;
+	tris = meshTris;
+
+	normals = meshNormals;
+	uvs = meshUV;
+
+	// Compute all triangle normals
+	triNormals = new Normal[triCount];
+	for (u_int i = 0; i < triCount; ++i)
+		triNormals[i] = tris[i].GetGeometryNormal(vertices);;
+}
+
 BBox ExtTriangleMesh::GetBBox() const {
 	BBox bbox;
 	for (unsigned int i = 0; i < vertCount; ++i)

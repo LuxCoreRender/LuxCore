@@ -58,37 +58,15 @@ public:
 
 class ExtTriangleMesh : public ExtMesh {
 public:
-	ExtTriangleMesh(ExtTriangleMesh *mesh) {
-		assert (mesh != NULL);
-
-		vertCount = mesh->vertCount;
-		triCount = mesh->triCount;
-		vertices = mesh->vertices;
-		tris = mesh->tris;
-
-		normals = mesh->normals;
-		uvs = mesh->uvs;
-	}
+	ExtTriangleMesh(ExtTriangleMesh *mesh);
 	ExtTriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, UV *meshUV = NULL) {
-		assert (meshVertCount > 0);
-		assert (meshTriCount > 0);
-		assert (meshVertices != NULL);
-		assert (meshTris != NULL);
-
-		vertCount = meshVertCount;
-		triCount = meshTriCount;
-		vertices = meshVertices;
-		tris = meshTris;
-
-		normals = meshNormals;
-		uvs = meshUV;
-	}
+			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, UV *meshUV = NULL);
 	~ExtTriangleMesh() { };
 	void Delete() {
 		delete[] vertices;
 		delete[] tris;
 		delete[] normals;
+		delete[] triNormals;
 		delete[] uvs;
 	}
 
@@ -103,7 +81,7 @@ public:
 	Point GetVertex(const unsigned int vertIndex) const { return vertices[vertIndex]; }
 	float GetTriangleArea(const unsigned int triIndex) const { return tris[triIndex].Area(vertices); }
 	Normal GetGeometryNormal(const unsigned int triIndex) const {
-		return tris[triIndex].GetGeometryNormal(vertices);
+		return triNormals[triIndex];
 	}
 	Normal GetShadeNormal(const unsigned int triIndex, const unsigned int vertIndex) const { return normals[tris[triIndex].v[vertIndex]]; }
 	Normal GetShadeNormal(const unsigned int vertIndex) const { return normals[vertIndex]; }
@@ -143,7 +121,8 @@ private:
 	unsigned int triCount;
 	Point *vertices;
 	Triangle *tris;
-	Normal *normals;
+	Normal *normals; // Vertices normals
+	Normal *triNormals; // Triangle normals
 	UV *uvs;
 };
 
