@@ -31,27 +31,6 @@
 #include "luxrays/opencl/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
 
-const string RenderEngineType2String(const RenderEngineType type) {
-	switch (type) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case PATHOCL:
-			return "Path OpenCL";
-#endif
-		case LIGHTCPU:
-			return "Light CPU";
-		case PATHCPU:
-			return "Path CPU";
-		case BIDIRCPU:
-			return "BiDir CPU";
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case BIDIRHYBRID:
-			return "BiDir Hybrid OpenCL";
-#endif
-		default:
-			return "UNKNOWN";
-	}
-}
-
 //------------------------------------------------------------------------------
 // RenderEngine
 //------------------------------------------------------------------------------
@@ -191,6 +170,45 @@ void RenderEngine::UpdateFilm() {
 				lastConvergenceTestSamplesCount = samplesCount;
 			}
 		}
+	}
+}
+
+RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if ((type.compare("4") == 0) || (type.compare("PATHOCL") == 0))
+		return PATHOCL;
+#endif
+	if ((type.compare("5") == 0) || (type.compare("LIGHTCPU") == 0))
+		return LIGHTCPU;
+	if ((type.compare("6") == 0) || (type.compare("PATHCPU") == 0))
+		return PATHCPU;
+	if ((type.compare("7") == 0) || (type.compare("BIDIRCPU") == 0))
+		return BIDIRCPU;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if ((type.compare("8") == 0) || (type.compare("BIDIRHYBRID") == 0))
+		return BIDIRHYBRID;
+#endif
+	throw runtime_error("Unknown render engine type: " + type);
+}
+
+const string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
+	switch (type) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case PATHOCL:
+			return "PATHOCL";
+#endif
+		case LIGHTCPU:
+			return "LIGHTCPU";
+		case PATHCPU:
+			return "PATHCPU";
+		case BIDIRCPU:
+			return "BIDIRCPU";
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case BIDIRHYBRID:
+			return "BIDIRHYBRID";
+#endif
+		default:
+			throw runtime_error("Unknown render engine type: " + type);
 	}
 }
 

@@ -25,6 +25,31 @@
 namespace luxrays { namespace utils {
 
 //------------------------------------------------------------------------------
+// Sampler
+//------------------------------------------------------------------------------
+
+SamplerType Sampler::String2SamplerType(const std::string &type) {
+	if ((type.compare("INLINED_RANDOM") == 0) ||
+			(type.compare("RANDOM") == 0))
+		return RANDOM;
+	if (type.compare("METROPOLIS") == 0)
+		return METROPOLIS;
+
+	throw std::runtime_error("Unknown sampler type: " + type);
+}
+
+const std::string Sampler::SamplerType2String(const SamplerType type) {
+	switch (type) {
+		case RANDOM:
+			return "RANDOM";
+		case METROPOLIS:
+			return "METROPOLIS";
+		default:
+			throw std::runtime_error("Unknown sampler type: " + type);	
+	}
+}
+
+//------------------------------------------------------------------------------
 // Metropolis sampler
 //------------------------------------------------------------------------------
 

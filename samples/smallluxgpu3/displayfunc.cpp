@@ -126,7 +126,7 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Render engine %s][Sampler %s][Tone mapping %s]",
-			RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
+			RenderEngine::RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
 			session->renderConfig->cfg.GetString("sampler.type",
 				session->renderConfig->cfg.GetString("path.sampler.type", "INLINED_RANDOM")).c_str(),
 			(session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");

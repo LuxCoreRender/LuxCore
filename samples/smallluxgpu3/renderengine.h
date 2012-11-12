@@ -37,8 +37,6 @@ enum RenderEngineType {
 	BIDIRHYBRID = 8
 };
 
-extern const string RenderEngineType2String(const RenderEngineType type);
-
 //------------------------------------------------------------------------------
 // Base class for render engines
 //------------------------------------------------------------------------------
@@ -66,6 +64,8 @@ public:
 	}
 	double GetRenderingTime() const { return elapsedTime; }
 
+	static RenderEngineType String2RenderEngineType(const string &type);
+	static const string RenderEngineType2String(const RenderEngineType type);
 	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 	
