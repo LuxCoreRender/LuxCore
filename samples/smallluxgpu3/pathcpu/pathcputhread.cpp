@@ -133,7 +133,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	PathCPURenderEngine *renderEngine = (PathCPURenderEngine *)renderThread->renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
+	RandomGenerator *rndGen = new RandomGenerator(renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
 	Film * film = renderThread->threadFilm;

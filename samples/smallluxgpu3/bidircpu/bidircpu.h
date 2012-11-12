@@ -55,15 +55,13 @@ private:
 	static void RenderThreadFuncImpl(CPURenderThread *thread);
 
 	void StartLockLess() {
-		threadSamplesCount.resize(renderThreads.size(), 0.0);
-
 		CPURenderEngine::StartLockLess();
 	}
 
 	void UpdateSamplesCount() {
 		double count = 0.0;
 		for (size_t i = 0; i < renderThreads.size(); ++i)
-			count += threadSamplesCount[i];
+			count += renderThreads[i]->samplesCount;
 		samplesCount = count;
 	}
 
@@ -80,8 +78,6 @@ private:
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
 	void ConnectVertices(const PathVertex &eyeVertex, const PathVertex &lightVertex,
 		SampleResult *eyeSampleResult, const float u0) const;
-
-	vector<double> threadSamplesCount;
 };
 
 #endif	/* _BIDIRCPU_H */

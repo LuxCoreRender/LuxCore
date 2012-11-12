@@ -722,8 +722,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 									// Check if the material type is one of the already enabled
 									if (session->renderEngine->GetEngineType() == PATHOCL) {
-										PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
-										if (!engine->IsMaterialCompiled(newMat->GetType()))
+										if (!session->renderEngine->IsMaterialCompiled(newMat->GetType()))
 											session->editActions.AddAction(MATERIAL_TYPES_EDIT);
 									}
 

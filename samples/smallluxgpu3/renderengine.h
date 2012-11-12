@@ -55,6 +55,10 @@ public:
 
 	virtual RenderEngineType GetEngineType() const = 0;
 
+	virtual bool IsMaterialCompiled(const MaterialType type) const {
+		return true;
+	}
+
 	unsigned int GetPass() const {
 		return samplesCount / (film->GetWidth() * film->GetHeight());
 	}
@@ -62,13 +66,18 @@ public:
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
+	double GetTotalRaysSec() const;
 	double GetRenderingTime() const { return elapsedTime; }
 
 	static RenderEngineType String2RenderEngineType(const string &type);
 	static const string RenderEngineType2String(const RenderEngineType type);
 	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
-	
+
+	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
+		return intersectionDevices;
+	}
+
 protected:
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;
@@ -97,6 +106,7 @@ protected:
 	double lastConvergenceTestSamplesCount;
 
 	bool started, editMode;
+	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -106,8 +116,6 @@ protected:
 class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-
-	virtual const vector<IntersectionDevice *> &GetRealIntersectionDevices() const = 0;
 
 protected:
 	vector<DeviceDescription *> selectedDeviceDescs;
@@ -121,9 +129,11 @@ class CPURenderEngine;
 
 class CPURenderThread {
 public:
-	CPURenderThread(CPURenderEngine *engine, const unsigned int index,
-			const unsigned int seedVal, void (* threadFunc)(CPURenderThread *),
-			const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer);
+	CPURenderThread(CPURenderEngine *engine, IntersectionDevice *dev,
+		const unsigned int seedVal,
+		void (* threadFunc)(CPURenderThread *),
+		const bool enablePerPixelNormBuffer,
+		const bool enablePerScreenNormBuffer);
 	~CPURenderThread();
 
 	void Start();
@@ -143,7 +153,7 @@ public:
 
 	// NOTE: all the fields are public so they can be accessed by renderThreadFunc()
 
-	unsigned int threadIndex;
+	IntersectionDevice *device;
 	unsigned int seed;
 	void (* renderThreadFunc)(CPURenderThread *);
 	CPURenderEngine *renderEngine;
@@ -153,6 +163,8 @@ public:
 
 	bool started, editMode;
 	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
+
+	double samplesCount;
 };
 
 class CPURenderEngine : public RenderEngine {

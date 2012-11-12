@@ -234,6 +234,14 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 	}
 }
 
+double RenderEngine::GetTotalRaysSec() const
+{
+	double raysSec = 0.;
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+	return raysSec;
+}
+
 //------------------------------------------------------------------------------
 // OCLRenderEngine
 //------------------------------------------------------------------------------
@@ -262,7 +270,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 	}
 
 	for (size_t i = 0; i < descs.size(); ++i) {
-		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[i];
+		DeviceDescription *desc = descs[i];
 
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
@@ -293,19 +301,42 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 //------------------------------------------------------------------------------
 
 CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm,
-			boost::mutex *flmMutex, void (* threadFunc)(CPURenderThread *),
-			const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer) :
-		RenderEngine(cfg, flm, flmMutex) {
+	boost::mutex *flmMutex, void (* threadFunc)(CPURenderThread *),
+	const bool enablePerPixelNormBuffer,
+	const bool enablePerScreenNormBuffer) :
+	RenderEngine(cfg, flm, flmMutex)
+{
 	renderThreadFunc = threadFunc;
+	samplesCount = 0.;
 
 	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
+
+	// Start native devices
+	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
+	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
+
+	if (descs.size() == 0)
+		throw runtime_error("No CPU device selected or available");
+
+	// Allocate devices
+	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(descs);
+
+	// Check if I have to set max. QBVH stack size
+	const size_t qbvhStackSize = cfg->cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
+	SLG_LOG("CPU Devices used:");
+	for (size_t i = 0; i < devs.size(); ++i) {
+		SLG_LOG("[" << devs[i]->GetName() << "]");
+		devs[i]->SetMaxStackSize(qbvhStackSize);
+		intersectionDevices.push_back(devs[i]);
+	}
 
 	// Create and start render threads
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
 	for (unsigned int i = 0; i < renderThreadCount; ++i) {
-		CPURenderThread *t = new CPURenderThread(this, i, seedBase + i, threadFunc,
-				enablePerPixelNormBuffer, enablePerScreenNormBuffer);
+		CPURenderThread *t = new CPURenderThread(this, devs[i],
+			seedBase + i, threadFunc,
+			enablePerPixelNormBuffer, enablePerScreenNormBuffer);
 		renderThreads.push_back(t);
 	}
 }
@@ -360,10 +391,12 @@ void CPURenderEngine::UpdateFilmLockLess() {
 // CPURenderThread
 //------------------------------------------------------------------------------
 
-CPURenderThread::CPURenderThread(CPURenderEngine *engine, const unsigned int index,
-			const unsigned int seedVal, void (* threadFunc)(CPURenderThread *),
-			const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) {
-	threadIndex = index;
+CPURenderThread::CPURenderThread(CPURenderEngine *engine,
+	IntersectionDevice *dev, const unsigned int seedVal,
+	void (* threadFunc)(CPURenderThread *),
+	const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf)
+{
+	device = dev;
 	seed = seedVal;
 	renderThreadFunc = threadFunc;
 	renderEngine = engine;

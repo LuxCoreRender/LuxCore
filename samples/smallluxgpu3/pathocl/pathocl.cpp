@@ -58,28 +58,25 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 
 	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
-	for (size_t i = 0; i < devs.size(); ++i)
-		oclIntersectionDevices.push_back((OpenCLIntersectionDevice *)devs[i]);
-
-	SLG_LOG("OpenCL Devices used:");
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		SLG_LOG("[" << oclIntersectionDevices[i]->GetName() << "]");
 
 	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool frocedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
+	const bool forcedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
 	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i) {
-		oclIntersectionDevices[i]->DisableImageStorage(frocedDisableImageStorage);
-		oclIntersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
+	SLG_LOG("OpenCL Devices used:");
+	for (size_t i = 0; i < devs.size(); ++i) {
+		SLG_LOG("[" << devs[i]->GetName() << "]");
+		devs[i]->SetMaxStackSize(qbvhStackSize);
+		intersectionDevices.push_back(devs[i]);
+
+		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
+		oclIntersectionDevice->DisableImageStorage(forcedDisableImageStorage);
+		// Disable the support for hybrid rendering
+		oclIntersectionDevice->SetHybridRenderingSupport(false);
 	}
 
 	// Set the Luxrays SataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
-	// Disable the support for hybrid rendering on all devices
-	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		oclIntersectionDevices[i]->SetHybridRenderingSupport(false);
-	
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
@@ -91,9 +88,9 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		maxMemPageSize = cfg.GetSize("opencl.memory.maxpagesize", 512 * 1024 * 1024);
 	else {
 		// Look for the max. page size allowed
-		maxMemPageSize = oclIntersectionDevices[0]->GetDeviceDesc()->GetMaxMemoryAllocSize();
-		for (u_int i = 1; i < oclIntersectionDevices.size(); ++i)
-			maxMemPageSize = Min(maxMemPageSize, oclIntersectionDevices[i]->GetDeviceDesc()->GetMaxMemoryAllocSize());
+		maxMemPageSize = ((OpenCLIntersectionDevice *)(intersectionDevices[0]))->GetDeviceDesc()->GetMaxMemoryAllocSize();
+		for (u_int i = 1; i < intersectionDevices.size(); ++i)
+			maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
 	}
 	SLG_LOG("[PathOCLRenderThread] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 	
@@ -162,12 +159,13 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	// Create and start render threads
 	//--------------------------------------------------------------------------
 
-	const size_t renderThreadCount = oclIntersectionDevices.size();
+	const size_t renderThreadCount = intersectionDevices.size();
 	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
-		PathOCLRenderThread *t = new PathOCLRenderThread(
-				i, seedBase + i * taskCount, i / (float)renderThreadCount,
-				oclIntersectionDevices[i], this);
+		PathOCLRenderThread *t = new PathOCLRenderThread(i,
+			seedBase + i * taskCount, i / (float)renderThreadCount,
+			(OpenCLIntersectionDevice *)(intersectionDevices[i]),
+			this);
 		renderThreads.push_back(t);
 	}
 }

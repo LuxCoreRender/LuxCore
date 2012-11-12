@@ -77,7 +77,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	LightCPURenderEngine *renderEngine = (LightCPURenderEngine *)renderThread->renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
+	RandomGenerator *rndGen = new RandomGenerator(renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
 	Film *film = renderThread->threadFilm;
@@ -98,9 +98,9 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults;
-	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
+	renderThread->samplesCount = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
-		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1.0;
+		renderThread->samplesCount += 1.0;
 		sampleResults.clear();
 
 		// Select one light source
