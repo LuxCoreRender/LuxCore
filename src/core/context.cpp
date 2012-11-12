@@ -88,6 +88,8 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 				desc->GetComputeUnits());
 			LR_LOG(this, "Device " << i << " OpenCL max allocable memory: " <<
 				desc->GetMaxMemory() / (1024 * 1024) << "MBytes");
+			LR_LOG(this, "Device " << i << " OpenCL max allocable memory block size: " <<
+				desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes");
 		}
 #endif
 		else

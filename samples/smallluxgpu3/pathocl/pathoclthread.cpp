@@ -675,7 +675,6 @@ void PathOCLRenderThread::InitRender() {
 	Scene *scene = renderEngine->renderConfig->scene;
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 	double tStart, tEnd;
@@ -839,10 +838,10 @@ void PathOCLRenderThread::InitRender() {
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes");
 
 	// Check if the task buffer is too big
-	if (oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() < gpuTaksSize * taskCount) {
+	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < gpuTaksSize * taskCount) {
 		stringstream ss;
 		ss << "The GPUTask buffer is too big for this device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() <<
+				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
 				"): try to reduce opencl.task.count and/or path.maxdepth and/or to change Sampler";
 		throw std::runtime_error(ss.str());
 	}

@@ -91,9 +91,9 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		maxMemPageSize = cfg.GetSize("opencl.memory.maxpagesize", 512 * 1024 * 1024);
 	else {
 		// Look for the max. page size allowed
-		maxMemPageSize = oclIntersectionDevices[0]->GetDeviceDesc()->GetMaxMemory();
+		maxMemPageSize = oclIntersectionDevices[0]->GetDeviceDesc()->GetMaxMemoryAllocSize();
 		for (u_int i = 1; i < oclIntersectionDevices.size(); ++i)
-			maxMemPageSize = Min(maxMemPageSize, oclIntersectionDevices[i]->GetDeviceDesc()->GetMaxMemory());
+			maxMemPageSize = Min(maxMemPageSize, oclIntersectionDevices[i]->GetDeviceDesc()->GetMaxMemoryAllocSize());
 	}
 	SLG_LOG("[PathOCLRenderThread] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 	
