@@ -23,9 +23,11 @@
 
 #include "luxrays/utils/film/film.h"
 
-RenderConfig::RenderConfig(const string &fileName) {
+RenderConfig::RenderConfig(const string &fileName, const Properties *additionalProperties) {
 	SLG_LOG("Reading configuration file: " << fileName);
 	cfg.LoadFile(fileName);
+	if (additionalProperties)
+		cfg.Load(*additionalProperties);
 
 	SLG_LOG("Configuration: ");
 	vector<string> keys = cfg.GetAllKeys();

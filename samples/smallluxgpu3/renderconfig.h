@@ -31,7 +31,7 @@
 
 class RenderConfig {
 public:
-	RenderConfig(const string &fileName);
+	RenderConfig(const string &fileName, const Properties *additionalProperties);
 	~RenderConfig();
 
 	void SetScreenRefreshInterval(const unsigned int t);
