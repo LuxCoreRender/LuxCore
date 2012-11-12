@@ -113,14 +113,13 @@ void OpenCLBVHKernel::FreeBuffers()
 {
 	delete kernel;
 	kernel = NULL;
-	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-	deviceDesc->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 	delete vertsBuff;
 	vertsBuff = NULL;
-	deviceDesc->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
 	delete trisBuff;
 	trisBuff = NULL;
-	deviceDesc->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
 	delete bvhBuff;
 	bvhBuff = NULL;
 }
@@ -151,15 +150,14 @@ void OpenCLBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
 		event);
 }
 
-OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
+OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 	unsigned int stackSize, bool disableImageStorage) const
 {
-	OpenCLBVHKernel *kernel = new OpenCLBVHKernel(dev);
+	OpenCLBVHKernel *kernel = new OpenCLBVHKernel(device);
 
-	const Context *deviceContext = dev->GetContext();
-	cl::Context &oclContext = dev->GetOpenCLContext();
-	const std::string &deviceName(dev->GetName());
-	OpenCLDeviceDescription *deviceDesc = dev->GetDeviceDesc();
+	const Context *deviceContext = device->GetContext();
+	cl::Context &oclContext = device->GetOpenCLContext();
+	const std::string &deviceName(device->GetName());
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] Vertices buffer size: " <<
 		(sizeof(Point) * preprocessedMesh->GetTotalVertexCount() / 1024) <<
@@ -168,7 +166,7 @@ OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(Point) * preprocessedMesh->GetTotalVertexCount(),
 		preprocessedMesh->GetVertices());
-	deviceDesc->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] Triangle indices buffer size: " <<
@@ -178,7 +176,7 @@ OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(Triangle) * preprocessedMesh->GetTotalTriangleCount(),
 		preprocessedMesh->GetTriangles());
-	deviceDesc->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] BVH buffer size: " <<
@@ -188,7 +186,7 @@ OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(BVHAccelArrayNode) * nNodes,
 		(void*)bvhTree);
-	deviceDesc->AllocMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
 
 	kernel->SetBuffers(vertsBuff, preprocessedMesh->GetTotalTriangleCount(),
 		trisBuff, nNodes, bvhBuff);

@@ -50,13 +50,16 @@ typedef enum {
 
 class DeviceDescription {
 public:
-	DeviceDescription() { }
 	DeviceDescription(const std::string deviceName,
 		const DeviceType deviceType) :
 		name(deviceName), type(deviceType) { }
+	virtual ~DeviceDescription() { }
 
 	const std::string &GetName() const { return name; }
 	const DeviceType GetType() const { return type; };
+	virtual int GetComputeUnits() const { return 1; }
+	virtual size_t GetMaxMemory() const { return 0; }
+	virtual size_t GetMaxMemoryAllocSize() const { return 0; }
 
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
@@ -80,6 +83,10 @@ public:
 
 	virtual bool IsRunning() const { return started; };
 
+	size_t GetUsedMemory() const { return usedMemory; }
+	void AllocMemory(size_t s) const { usedMemory += s; }
+	void FreeMemory(size_t s) const { usedMemory -= s; }
+
 	friend class Context;
 	friend class VirtualM2OHardwareIntersectionDevice;
 	friend class VirtualM2MHardwareIntersectionDevice;
@@ -99,6 +106,8 @@ protected:
 	std::string deviceName;
 
 	bool started;
+
+	mutable size_t usedMemory;
 };
 
 //------------------------------------------------------------------------------

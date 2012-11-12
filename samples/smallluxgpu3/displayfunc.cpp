@@ -154,14 +154,13 @@ static void PrintHelpAndSettings() {
 
 			char buff[512];
 			for (size_t i = 0; i < deviceCount; ++i) {
-				const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
 				sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
 						idevices[i]->GetName().c_str(),
 						int(idevices[i]->GetPerformance() / 1000.0),
 						idevices[i]->GetPerformance() / minPerf,
 						100.0 * idevices[i]->GetPerformance() / totalPerf,
-						int(desc->GetUsedMemory() / (1024 * 1024)),
-						int(desc->GetMaxMemory() / (1024 * 1024)));
+						int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
+						int(((OpenCLIntersectionDevice *)(idevices[i]))->GetDeviceDesc()->GetMaxMemory() / (1024 * 1024)));
 				glRasterPos2i(20, offset);
 				PrintString(GLUT_BITMAP_8_BY_13, buff);
 				offset += 15;

@@ -72,28 +72,21 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 
 	// Print device info
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_NATIVE_THREAD) {
-			LR_LOG(this, "Device " << i << " NativeThread name: " <<
-					deviceDescriptions[i]->GetName());
-		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		else if (deviceDescriptions[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
-			OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
-			LR_LOG(this, "Device " << i << " OpenCL name: " <<
-				desc->GetName());
+		DeviceDescription *desc = deviceDescriptions[i];
+		LR_LOG(this, "Device " << i << " name: " <<
+			desc->GetName());
 
-			LR_LOG(this, "Device " << i << " OpenCL type: " <<
-				DeviceDescription::GetDeviceType(desc->GetType()));
-			LR_LOG(this, "Device " << i << " OpenCL units: " <<
-				desc->GetComputeUnits());
-			LR_LOG(this, "Device " << i << " OpenCL max allocable memory: " <<
-				desc->GetMaxMemory() / (1024 * 1024) << "MBytes");
-			LR_LOG(this, "Device " << i << " OpenCL max allocable memory block size: " <<
-				desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes");
-		}
-#endif
-		else
-			assert (false);
+		LR_LOG(this, "Device " << i << " type: " <<
+			DeviceDescription::GetDeviceType(desc->GetType()));
+
+		LR_LOG(this, "Device " << i << " compute units: " <<
+			desc->GetComputeUnits());
+
+		LR_LOG(this, "Device " << i << " max allocable memory: " <<
+			desc->GetMaxMemory() / (1024 * 1024) << "MBytes");
+
+		LR_LOG(this, "Device " << i << " max allocable memory block size: " <<
+			desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes");
 	}
 }
 
