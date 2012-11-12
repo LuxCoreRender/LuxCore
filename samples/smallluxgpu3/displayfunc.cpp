@@ -135,48 +135,35 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(20, fontOffset);
 
 	// Intersection devices
-	switch (session->renderEngine->GetEngineType()) {
-		case BIDIRHYBRID:
-		case PATHOCL: {
-			OCLRenderEngine *engine = (OCLRenderEngine *)session->renderEngine;
-			const vector<IntersectionDevice *> &idevices = engine->GetRealIntersectionDevices();
+	const vector<IntersectionDevice *> &idevices = session->renderEngine->GetIntersectionDevices();
 
-			double minPerf = idevices[0]->GetPerformance();
-			double totalPerf = idevices[0]->GetPerformance();
-			for (size_t i = 1; i < idevices.size(); ++i) {
-				minPerf = min(minPerf, idevices[i]->GetPerformance());
-				totalPerf += idevices[i]->GetPerformance();
-			}
-
-			glColor3f(1.0f, 0.5f, 0.f);
-			int offset = 45;
-			size_t deviceCount = idevices.size();
-
-			char buff[512];
-			for (size_t i = 0; i < deviceCount; ++i) {
-				sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-						idevices[i]->GetName().c_str(),
-						int(idevices[i]->GetPerformance() / 1000.0),
-						idevices[i]->GetPerformance() / minPerf,
-						100.0 * idevices[i]->GetPerformance() / totalPerf,
-						int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
-						int(((OpenCLIntersectionDevice *)(idevices[i]))->GetDeviceDesc()->GetMaxMemory() / (1024 * 1024)));
-				glRasterPos2i(20, offset);
-				PrintString(GLUT_BITMAP_8_BY_13, buff);
-				offset += 15;
-			}
-
-			glRasterPos2i(15, offset);
-			PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
-			break;
-		}
-		case BIDIRCPU:
-		case LIGHTCPU:
-		case PATHCPU:
-			break;
-		default:
-			assert (false);
+	double minPerf = idevices[0]->GetPerformance();
+	double totalPerf = idevices[0]->GetPerformance();
+	for (size_t i = 1; i < idevices.size(); ++i) {
+		minPerf = min(minPerf, idevices[i]->GetPerformance());
+		totalPerf += idevices[i]->GetPerformance();
 	}
+
+	glColor3f(1.0f, 0.5f, 0.f);
+	int offset = 45;
+	size_t deviceCount = idevices.size();
+
+	char buff[512];
+	for (size_t i = 0; i < deviceCount; ++i) {
+		sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+			idevices[i]->GetName().c_str(),
+			int(idevices[i]->GetPerformance() / 1000.0),
+			idevices[i]->GetPerformance() / minPerf,
+			100.0 * idevices[i]->GetPerformance() / totalPerf,
+			int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
+			int(idevices[i]->GetMaxMemory() / (1024 * 1024)));
+		glRasterPos2i(20, offset);
+		PrintString(GLUT_BITMAP_8_BY_13, buff);
+		offset += 15;
+	}
+
+	glRasterPos2i(15, offset);
+	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 }
 
 static void PrintCaptions() {
@@ -243,41 +230,16 @@ void reshapeFunc(int newWidth, int newHeight) {
 	}
 }
 
-void timerFunc(int value) {
-	switch (session->renderEngine->GetEngineType()) {
-		case BIDIRHYBRID:
-		case PATHOCL: {
-			OCLRenderEngine *engine = (OCLRenderEngine *)session->renderEngine;
+void timerFunc(int value)
+{
+	sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4fK on %.1fK tris]",
+		session->renderEngine->GetPass(),
+		session->renderEngine->GetTotalSamplesSec() / 1000000.0,
+		session->renderEngine->GetTotalRaysSec() / 1000.0,
+		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
-			double raysSec = 0.0;
-			const vector<IntersectionDevice *> &idevices = engine->GetRealIntersectionDevices();
-			for (size_t i = 0; i < idevices.size(); ++i)
-				raysSec += idevices[i]->GetPerformance();
-
-			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-					engine->GetPass(), engine->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0),
-					session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-			// Need to update the Film
-			engine->UpdateFilm();
-			break;
-		}
-		case LIGHTCPU:
-		case PATHCPU:
-		case BIDIRCPU: {
-			CPURenderEngine *engine = (CPURenderEngine *)session->renderEngine;
-
-			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][%.1fK tris]",
-					engine->GetPass(), engine->GetTotalSamplesSec() / 1000000.0,
-					session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-			// Need to update the Film
-			engine->UpdateFilm();
-			break;
-		}
-		default:
-			assert (false);
-	}
+	// Need to update the Film
+	session->renderEngine->UpdateFilm();
 
 	// Check if periodic save is enabled
 	if (session->NeedPeriodicSave()) {

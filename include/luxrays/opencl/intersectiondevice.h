@@ -72,6 +72,9 @@ public:
 
 	// OpenCL Device specific methods
 	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	virtual size_t GetMaxMemory() const {
+		return deviceDesc->GetMaxMemory();
+	}
 
 	void DisableImageStorage(const bool v) {
 		disableImageStorage = v;

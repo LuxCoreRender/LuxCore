@@ -155,12 +155,7 @@ public:
 
 	RenderEngineType GetEngineType() const { return PATHOCL; }
 
-	const vector<IntersectionDevice *> &GetRealIntersectionDevices() const {
-		// PathOCL uses only real devices
-		return ctx->GetIntersectionDevices();
-	}
-
-	bool IsMaterialCompiled(const MaterialType type) const {
+	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
 	}
 
@@ -195,7 +190,6 @@ private:
 		samplesCount = totalCount;
 	}
 
-	vector<OpenCLIntersectionDevice *> oclIntersectionDevices;
 	CompiledScene *compiledScene;
 
 	vector<PathOCLRenderThread *> renderThreads;

@@ -273,7 +273,7 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	BiDirCPURenderEngine *renderEngine = (BiDirCPURenderEngine *)renderThread->renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(renderThread->threadIndex + renderThread->seed);
+	RandomGenerator *rndGen = new RandomGenerator(renderThread->seed);
 	Scene *scene = renderEngine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
 	Film *film = renderThread->threadFilm;
@@ -294,9 +294,9 @@ void BiDirCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 	vector<SampleResult> sampleResults;
 	vector<PathVertex> lightPathVertices;
-	renderEngine->threadSamplesCount[renderThread->threadIndex] = 0.0;
+	renderEngine->samplesCount = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
-		renderEngine->threadSamplesCount[renderThread->threadIndex] += 1.0;
+		renderEngine->samplesCount += 1.0;
 		sampleResults.clear();
 		lightPathVertices.clear();
 

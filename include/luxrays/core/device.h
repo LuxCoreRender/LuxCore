@@ -83,6 +83,7 @@ public:
 
 	virtual bool IsRunning() const { return started; };
 
+	virtual size_t GetMaxMemory() const { return 0; }
 	size_t GetUsedMemory() const { return usedMemory; }
 	void AllocMemory(size_t s) const { usedMemory += s; }
 	void FreeMemory(size_t s) const { usedMemory -= s; }

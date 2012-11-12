@@ -127,10 +127,6 @@ public:
 
 	RenderEngineType GetEngineType() const { return BIDIRHYBRID; }
 
-	const vector<IntersectionDevice *> &GetRealIntersectionDevices() const {
-		return realDevices;
-	}
-
 	// Signed because of the delta parameter
 	int maxEyePathDepth, maxLightPathDepth;
 
@@ -157,7 +153,6 @@ private:
 	}
 
 	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
-	vector<IntersectionDevice *> realDevices;
 	vector<BiDirHybridRenderThread *> renderThreads;
 };
 

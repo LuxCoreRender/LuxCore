@@ -55,10 +55,10 @@ BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, 
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	if (selectedDeviceDescs.size() == 1) {
 		// Only one intersection device, use a M2O device
-		realDevices = ctx->AddVirtualM2OIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+		intersectionDevices = ctx->AddVirtualM2OIntersectionDevices(renderThreadCount, selectedDeviceDescs);
 	} else {
 		// Multiple intersection devices, use a M2M device
-		realDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+		intersectionDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
 	}
 	devices = ctx->GetIntersectionDevices();
 
