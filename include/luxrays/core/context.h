@@ -120,7 +120,8 @@ public:
 	 *	\param count is the number of virtual devices to create.
 	 *	\param deviceDescs is a DeviceDescription vector of the devices used by virtual devices.
 	 *
-	 *	\return the vector of all virtual IntersectionDevice created.
+	 *	\return the vector of all real IntersectionDevice created from deviceDescs. They are
+	 * deleted once the virtual M2M device is deleted.
 	 */
 	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
 		std::vector<DeviceDescription *> &deviceDescs);
@@ -132,9 +133,11 @@ public:
 	 *	the routing of the work forward to the GPU and backward is handled by LuxRays.
 	 *
 	 *	\param count is the number of virtual devices to create.
-	 *	\param deviceDescs is a DeviceDescription vector of the devices used by virtual devices.
+	 *	\param deviceDescs is a DeviceDescription vector of the devices used by virtual
+	 * devices (for M2O devices, the size must be 1).
 	 *
-	 *	\return the vector of all virtual IntersectionDevice created.
+	 *	\return the vector of all real IntersectionDevice created from deviceDescs (for
+	 * M2O device, the size is always 1). It is deleted once the virtual M2M device is deleted.
 	 */
 	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
 		std::vector<DeviceDescription *> &deviceDescs);

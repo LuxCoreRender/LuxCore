@@ -90,6 +90,7 @@ RenderSession::~RenderSession() {
 	if (started)
 		Stop();
 
+	delete renderEngine;
 	delete film;
 	delete renderConfig;
 }

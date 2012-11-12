@@ -46,6 +46,8 @@ VirtualM2OHardwareIntersectionDevice::~VirtualM2OHardwareIntersectionDevice() {
 
 	for (size_t i = 0; i < devs.size(); ++i)
 		RemoveVirtualDevice(devs[i]);
+
+	delete realDevice;
 }
 
 IntersectionDevice *VirtualM2OHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
@@ -222,6 +224,9 @@ VirtualM2MHardwareIntersectionDevice::~VirtualM2MHardwareIntersectionDevice() {
 	// The virtual devices must always be removed in reverse order
 	for (size_t i = 0; i < devs.size(); ++i)
 		RemoveVirtualDevice(devs[devs.size() - i - 1]);
+
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		delete realDevices[i];
 }
 
 IntersectionDevice *VirtualM2MHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
