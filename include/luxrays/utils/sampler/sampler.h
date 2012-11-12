@@ -50,16 +50,29 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const Film
 	sampleResults.push_back(sr);
 }
 
+//------------------------------------------------------------------------------
+// Sampler
+//------------------------------------------------------------------------------
+
+enum SamplerType {
+	RANDOM  = 0,
+	METROPOLIS = 1
+};
+
 class Sampler {
 public:
 	Sampler(RandomGenerator *rnd, Film *flm) : rndGen(rnd), film(flm) { }
 	virtual ~Sampler() { }
-	
+
+	virtual SamplerType GetType() const = 0;
 	virtual void RequestSamples(const unsigned int size) = 0;
 
 	// index 0 and 1 are always image X and image Y
 	virtual float GetSample(const unsigned int index) = 0;
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
+
+	static SamplerType String2SamplerType(const std::string &type);
+	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
 	RandomGenerator *rndGen;
@@ -75,7 +88,8 @@ public:
 	InlinedRandomSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm) { }
 	~InlinedRandomSampler() { }
 
-	void RequestSamples(const unsigned int size) { };
+	SamplerType GetType() const { return RANDOM; }
+	void RequestSamples(const unsigned int size) { }
 
 	float GetSample(const unsigned int index) { return rndGen->floatValue(); }
 	void NextSample(const std::vector<SampleResult> &sampleResults) {
@@ -98,6 +112,7 @@ public:
 			const float pLarge, const float imgRange);
 	~MetropolisSampler();
 
+	SamplerType GetType() const { return METROPOLIS; }
 	void RequestSamples(const unsigned int size);
 
 	float GetSample(const unsigned int index);

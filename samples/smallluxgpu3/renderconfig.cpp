@@ -57,22 +57,22 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film) const {
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	const string samplerTypeName = cfg.GetString("sampler.type",
-			cfg.GetString("path.sampler.type", "INLINED_RANDOM"));
-	if ((samplerTypeName.compare("INLINED_RANDOM") == 0) ||
-			(samplerTypeName.compare("RANDOM") == 0))
-		return new InlinedRandomSampler(rndGen, film);
-	else if (samplerTypeName.compare("METROPOLIS") == 0) {
-		const float rate = cfg.GetFloat("sampler.largesteprate",
-				cfg.GetFloat("path.sampler.largesteprate", .4f));
-		const float reject = cfg.GetFloat("sampler.maxconsecutivereject",
-				cfg.GetFloat("path.sampler.maxconsecutivereject", 512));
-		const float mutationrate = cfg.GetFloat("sampler.imagemutationrate",
-				cfg.GetFloat("path.sampler.imagemutationrate", .1f));
+	const SamplerType samplerType = Sampler::String2SamplerType(cfg.GetString("sampler.type",
+			cfg.GetString("path.sampler.type", "INLINED_RANDOM")));
+	switch (samplerType) {
+		case RANDOM:
+			return new InlinedRandomSampler(rndGen, film);
+		case METROPOLIS: {
+			const float rate = cfg.GetFloat("sampler.largesteprate",
+					cfg.GetFloat("path.sampler.largesteprate", .4f));
+			const float reject = cfg.GetFloat("sampler.maxconsecutivereject",
+					cfg.GetFloat("path.sampler.maxconsecutivereject", 512));
+			const float mutationrate = cfg.GetFloat("sampler.imagemutationrate",
+					cfg.GetFloat("path.sampler.imagemutationrate", .1f));
 
-		return new MetropolisSampler(rndGen, film, reject, rate, mutationrate);
-	} else
-		throw std::runtime_error("Unknown sampler.type");
-
-	return NULL;
+			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate);
+		}
+		default:
+			throw std::runtime_error("Unknown sampler.type: " + samplerType);
+	}
 }

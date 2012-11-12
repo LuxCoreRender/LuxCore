@@ -25,6 +25,8 @@
 #include "smalllux.h"
 #include "renderengine.h"
 
+#include "luxrays/utils/sdl/bsdf.h"
+
 //------------------------------------------------------------------------------
 // Bidirectional path tracing CPU render engine
 //------------------------------------------------------------------------------
