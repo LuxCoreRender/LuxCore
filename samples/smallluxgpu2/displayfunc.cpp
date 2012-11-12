@@ -143,7 +143,7 @@ static void PrintHelpAndSettings() {
 						int(idevices[i]->GetPerformance() / 1000.0),
 						idevices[i]->GetPerformance() / minPerf,
 						100.0 * idevices[i]->GetPerformance() / totalPerf,
-						int(desc->GetUsedMemory() / (1024 * 1024)),
+						int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
 						int(desc->GetMaxMemory() / (1024 * 1024)));
 				glRasterPos2i(20, offset);
 				PrintString(GLUT_BITMAP_8_BY_13, buff);

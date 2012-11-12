@@ -39,25 +39,23 @@ public:
 		DeviceDescription(device.getInfo<CL_DEVICE_NAME>().c_str(),
 			GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE>())),
 		deviceIndex(devIndex),
-		computeUnits(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()),
-		maxMemory(device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>()),
-		maxAllocSizeMemory(device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>()),
-		usedMemory(0),
-		oclDevice(device),
-		oclContext(NULL),
+		oclDevice(device), oclContext(NULL),
 		enableOpenGLInterop(false) { }
 
-	~OpenCLDeviceDescription() {
+	virtual ~OpenCLDeviceDescription() {
 		delete oclContext;
 	}
 
 	size_t GetDeviceIndex() const { return deviceIndex; }
-	int GetComputeUnits() const { return computeUnits; }
-	size_t GetMaxMemory() const { return maxMemory; }
-	size_t GetMaxMemoryAllocSize() const { return maxAllocSizeMemory; }
-	size_t GetUsedMemory() const { return usedMemory; }
-	void AllocMemory(size_t s) const { usedMemory += s; }
-	void FreeMemory(size_t s) const { usedMemory -= s; }
+	virtual int GetComputeUnits() const {
+		return oclDevice.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+	}
+	virtual size_t GetMaxMemory() const {
+		return oclDevice.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+	}
+	virtual size_t GetMaxMemoryAllocSize() const {
+		return oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
+	}
 
 	bool HasImageSupport() const { return oclDevice.getInfo<CL_DEVICE_IMAGE_SUPPORT>() != 0 ; }
 	size_t GetImage2DMaxWidth() const { return oclDevice.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(); }
@@ -92,9 +90,6 @@ protected:
 		std::vector<DeviceDescription *> &descriptions);
 
 	size_t deviceIndex;
-	int computeUnits;
-	size_t maxMemory, maxAllocSizeMemory;
-	mutable size_t usedMemory;
 
 private:
 	mutable cl::Device oclDevice;

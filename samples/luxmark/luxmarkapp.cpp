@@ -309,7 +309,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 						int(raysSecs[i] / 1000.0),
 						raysSecs[i] / minPerf,
 						100.0 * raysSecs[i] / totalPerf,
-						int(desc->GetUsedMemory() / (1024 * 1024)),
+						int(intersectionDevices[i]->GetUsedMemory() / (1024 * 1024)),
 						int(desc->GetMaxMemory() / (1024 * 1024)));
 				ss << buf;
 			}

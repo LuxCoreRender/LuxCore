@@ -113,6 +113,7 @@ Device::Device(const Context *context, const DeviceType type, const size_t index
 	deviceContext(context), deviceType(type) {
 	deviceIndex = index;
 	started = false;
+	usedMemory = 0;
 }
 
 Device::~Device() {

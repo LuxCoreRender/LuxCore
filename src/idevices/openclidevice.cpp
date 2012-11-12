@@ -93,10 +93,10 @@ RayBuffer *OpenCLIntersectionDevice::PopRayBuffer() {
 void OpenCLIntersectionDevice::FreeDataSetBuffers() {
 	// Check if I have to free something from previous DataSet
 	if (dataSet) {
-		deviceDesc->FreeMemory(raysBuff->getInfo<CL_MEM_SIZE>());
+		FreeMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 		delete raysBuff;
 		raysBuff = NULL;
-		deviceDesc->FreeMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
+		FreeMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 		delete hitsBuff;
 		hitsBuff = NULL;
 	}
@@ -120,14 +120,14 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 		(sizeof(Ray) * RayBufferSize / 1024) << "Kbytes");
 	raysBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY,
 		sizeof(Ray) * RayBufferSize);
-	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
+	AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] Ray hits buffer size: " <<
 		(sizeof(RayHit) * RayBufferSize / 1024) << "Kbytes");
 	hitsBuff = new cl::Buffer(oclContext, CL_MEM_WRITE_ONLY,
 		sizeof(RayHit) * RayBufferSize);
-	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
+	AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
 	kernel = dataSet->GetAccelerator()->NewOpenCLKernel(this,
 		stackSize, disableImageStorage);

@@ -189,11 +189,10 @@ void OpenCLQBVHKernel::FreeBuffers()
 {
 	delete kernel;
 	kernel = NULL;
-	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-	deviceDesc->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
 	delete trisBuff;
 	trisBuff = NULL;
-	deviceDesc->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
 	delete qbvhBuff;
 	qbvhBuff = NULL;
 }
@@ -231,11 +230,10 @@ void OpenCLQBVHImageKernel::FreeBuffers()
 {
 	delete kernel;
 	kernel = NULL;
-	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-	deviceDesc->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
 	delete trisBuff;
 	trisBuff = NULL;
-	deviceDesc->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
 	delete qbvhBuff;
 	qbvhBuff = NULL;
 }
@@ -268,13 +266,13 @@ void OpenCLQBVHImageKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
 		event);
 }
 
-OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
+OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 	unsigned int stackSize, bool disableImageStorage) const
 {
-	const Context *deviceContext = dev->GetContext();
-	cl::Context &oclContext = dev->GetOpenCLContext();
-	const std::string &deviceName(dev->GetName());
-	OpenCLDeviceDescription *deviceDesc = dev->GetDeviceDesc();
+	const Context *deviceContext = device->GetContext();
+	cl::Context &oclContext = device->GetOpenCLContext();
+	const std::string &deviceName(device->GetName());
+	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
 	bool useImage = true;
 	size_t nodeWidth, nodeHeight, leafWidth, leafHeight;
 	// Check if I can use image to store the data set
@@ -332,7 +330,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		}
 	}
 	if (useImage) {
-		OpenCLQBVHImageKernel *kernel = new OpenCLQBVHImageKernel(dev,
+		OpenCLQBVHImageKernel *kernel = new OpenCLQBVHImageKernel(device,
 			stackSize);
 
 		unsigned int *inodes = new unsigned int[nodeWidth * nodeHeight * 4];
@@ -369,7 +367,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32),
 			nodeWidth, nodeHeight, 0, inodes);
-		deviceDesc->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+		device->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
 		delete[] inodes;
 
 		unsigned int *iprims = new unsigned int[leafWidth * leafHeight * 4];
@@ -378,14 +376,15 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			cl::ImageFormat(CL_RGBA, CL_UNSIGNED_INT32),
 			leafWidth, leafHeight, 0, iprims);
-		deviceDesc->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+		device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
 		delete[] iprims;
 
 		// Set buffers
 		kernel->SetBuffers(trisBuff, qbvhBuff);
 		return kernel;
 	} else {
-		OpenCLQBVHKernel *kernel = new OpenCLQBVHKernel(dev, stackSize);
+		OpenCLQBVHKernel *kernel = new OpenCLQBVHKernel(device,
+			stackSize);
 
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 			"] QBVH buffer size: " <<
@@ -393,7 +392,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		cl::Buffer *qbvhBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(QBVHNode) * nNodes, nodes);
-		deviceDesc->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+		device->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
 
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 			"] QuadTriangle buffer size: " <<
@@ -401,7 +400,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		cl::Buffer *trisBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(QuadTriangle) * nQuads, prims);
-		deviceDesc->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+		device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
 
 		// Set buffers
 		kernel->SetBuffers(trisBuff, qbvhBuff);

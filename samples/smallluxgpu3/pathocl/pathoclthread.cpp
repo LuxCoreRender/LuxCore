@@ -122,7 +122,6 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 }
 
 void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 	if (*buff) {
 		// Check the size of the already allocated buffer
 
@@ -135,7 +134,7 @@ void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const s
 			return;
 		} else {
 			// Free the buffer
-			deviceDesc->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
 			delete *buff;
 		}
 	}
@@ -146,11 +145,10 @@ void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const s
 	*buff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			size, src);
-	deviceDesc->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
 }
 
 void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 	if (*buff) {
 		// Check the size of the already allocated buffer
 
@@ -160,7 +158,7 @@ void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size,
 			return;
 		} else {
 			// Free the buffer
-			deviceDesc->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
 			delete *buff;
 		}
 	}
@@ -171,14 +169,13 @@ void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size,
 	*buff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			size);
-	deviceDesc->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
 }
 
 void PathOCLRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
 	if (*buff) {
-		const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
-		deviceDesc->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+		intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
 		delete *buff;
 		*buff = NULL;
 	}
@@ -675,7 +672,6 @@ void PathOCLRenderThread::InitRender() {
 	Scene *scene = renderEngine->renderConfig->scene;
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-	const OpenCLDeviceDescription *deviceDesc = intersectionDevice->GetDeviceDesc();
 
 	double tStart, tEnd;
 
@@ -749,13 +745,13 @@ void PathOCLRenderThread::InitRender() {
 	raysBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(Ray) * taskCount);
-	deviceDesc->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * taskCount / 1024) << "Kbytes");
 	hitsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(RayHit) * taskCount);
-	deviceDesc->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
 	tEnd = WallClockTime();
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -849,7 +845,7 @@ void PathOCLRenderThread::InitRender() {
 	tasksBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			gpuTaksSize * taskCount);
-	deviceDesc->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
@@ -859,7 +855,7 @@ void PathOCLRenderThread::InitRender() {
 	taskStatsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			sizeof(PathOCL::GPUTaskStats) * taskCount);
-	deviceDesc->AllocMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
+	intersectionDevice->AllocMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
 	// Compile kernels

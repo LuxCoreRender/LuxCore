@@ -112,23 +112,22 @@ void OpenCLMQBVHKernel::FreeBuffers()
 {
 	delete kernel;
 	kernel = NULL;
-	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-	deviceDesc->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
 	delete mqbvhBuff;
 	mqbvhBuff = NULL;
-	deviceDesc->FreeMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
 	delete memMapBuff;
 	memMapBuff = NULL;
-	deviceDesc->FreeMemory(leafBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(leafBuff->getInfo<CL_MEM_SIZE>());
 	delete leafBuff;
 	leafBuff = NULL;
-	deviceDesc->FreeMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
 	delete leafQuadTrisBuff;
 	leafQuadTrisBuff = NULL;
-	deviceDesc->FreeMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
 	delete invTransBuff;
 	invTransBuff = NULL;
-	deviceDesc->FreeMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
 	delete trisOffsetBuff;
 	trisOffsetBuff = NULL;
 }
@@ -179,13 +178,13 @@ void OpenCLMQBVHKernel::UpdateDataSet(const DataSet *newDataSet) {
 	delete invTrans;
 
 	// Update MQBVH nodes
-	deviceDesc->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
 	delete mqbvhBuff;
 
 	mqbvhBuff = new cl::Buffer(deviceDesc->GetOCLContext(),
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(QBVHNode) * mqbvh->GetNNodes(), mqbvh->GetTree());
-	deviceDesc->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
 
 	kernel->setArg(2, *mqbvhBuff);
 }
@@ -202,14 +201,13 @@ void OpenCLMQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
 		event);
 }
 
-OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
+OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 	unsigned int stackSize, bool disableImageStorage) const
 {
-	OpenCLMQBVHKernel *kernel = new OpenCLMQBVHKernel(dev);
-	const Context *deviceContext = dev->GetContext();
-	cl::Context &oclContext = dev->GetOpenCLContext();
-	const std::string &deviceName(dev->GetName());
-	OpenCLDeviceDescription *deviceDesc = dev->GetDeviceDesc();
+	OpenCLMQBVHKernel *kernel = new OpenCLMQBVHKernel(device);
+	const Context *deviceContext = device->GetContext();
+	cl::Context &oclContext = device->GetOpenCLContext();
+	const std::string &deviceName(device->GetName());
 	// TODO: remove the following limitation
 	// NOTE: this code is somewhat limited to 32bit address space of the OpenCL device
 
@@ -219,7 +217,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 	cl::Buffer *mqbvhBuff = new cl::Buffer(oclContext,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(QBVHNode) * nNodes, nodes);
-	deviceDesc->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
 
 	// Calculate the size of memory to allocate
 	unsigned int totalNodesCount = 0;
@@ -243,7 +241,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		(totalNodesCount * sizeof(QBVHNode) / 1024) << "Kbytes");
 	cl::Buffer *leafBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY,
 		totalNodesCount * sizeof(QBVHNode));
-	deviceDesc->AllocMemory(leafBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(leafBuff->getInfo<CL_MEM_SIZE>());
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] MQBVH QuadTriangle buffer size: " <<
@@ -251,7 +249,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 	cl::Buffer *leafQuadTrisBuff = new cl::Buffer(oclContext,
 		CL_MEM_READ_ONLY,
 		totalQuadTrisCount * sizeof(QuadTriangle));
-	deviceDesc->AllocMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
 
 	unsigned int *memMap = new unsigned int[nLeafs * 2];
 	for (unsigned int i = 0; i < nLeafs; ++i) {
@@ -265,7 +263,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 	cl::Buffer *memMapBuff = new cl::Buffer(oclContext,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		nLeafs * sizeof(unsigned int) * 2, memMap);
-	deviceDesc->AllocMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
 	delete memMap;
 
 	// Upload QBVH leafs
@@ -275,7 +273,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		const QBVHAccel *qbvh = it->second;
 
 		const size_t nodesMemSize = sizeof(QBVHNode) * qbvh->nNodes;
-		dev->GetOpenCLQueue().enqueueWriteBuffer(
+		device->GetOpenCLQueue().enqueueWriteBuffer(
 			*leafBuff,
 			CL_FALSE,
 			nodesMemOffset,
@@ -284,7 +282,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		nodesMemOffset += nodesMemSize;
 
 		const size_t quadTrisMemSize = sizeof(QuadTriangle) * qbvh->nQuads;
-		dev->GetOpenCLQueue().enqueueWriteBuffer(
+		device->GetOpenCLQueue().enqueueWriteBuffer(
 			*leafQuadTrisBuff,
 			CL_FALSE,
 			quadTrisMemOffset,
@@ -308,7 +306,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 	cl::Buffer *invTransBuff = new cl::Buffer(oclContext,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		invTransMemSize, invTrans);
-	deviceDesc->AllocMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
 	delete invTrans;
 
 	// Upload primitive offsets
@@ -318,7 +316,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 	cl::Buffer *trisOffsetBuff = new cl::Buffer(oclContext,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(unsigned int) * nLeafs, leafsOffset);
-	deviceDesc->AllocMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
+	device->AllocMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
 
 	kernel->SetBuffers(mqbvhBuff, leafBuff, leafQuadTrisBuff, memMapBuff,
 		invTransBuff, trisOffsetBuff);
