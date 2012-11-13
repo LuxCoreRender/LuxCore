@@ -38,9 +38,7 @@
 #include "displayfunc.h"
 #include "renderconfig.h"
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/opencl/intersectiondevice.h"
-#endif
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/film/film.h"
 
 #include "pathocl/pathocl.h"
@@ -100,18 +98,14 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "i", "switch sampler");
 	fontOffset -= 15;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	PrintHelpString(15, fontOffset, "1", "OpenCL path tracing");
-#endif
 	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "3", "CPU path tracing");
 	PrintHelpString(320, fontOffset, "4", "CPU bidirectional path tracing");
 	fontOffset -= 15;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	PrintHelpString(15, fontOffset, "5", "Hybrid bidirectional path tracing");
 	fontOffset -= 15;
-#endif
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
 	fontOffset -= 15;
@@ -140,41 +134,36 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if ((session->renderEngine->GetEngineType() == PATHOCL) ||
-		(session->renderEngine->GetEngineType() == BIDIRHYBRID)) {
-		// Intersection devices
-		const vector<IntersectionDevice *> &idevices = ((OCLRenderEngine *)session->renderEngine)->GetIntersectionDevices();
+	// Intersection devices
+	const vector<IntersectionDevice *> &idevices = session->renderEngine->GetIntersectionDevices();
 
-		double minPerf = idevices[0]->GetPerformance();
-		double totalPerf = idevices[0]->GetPerformance();
-		for (size_t i = 1; i < idevices.size(); ++i) {
-			minPerf = min(minPerf, idevices[i]->GetPerformance());
-			totalPerf += idevices[i]->GetPerformance();
-		}
-
-		glColor3f(1.0f, 0.5f, 0.f);
-		int offset = 45;
-		size_t deviceCount = idevices.size();
-
-		char buff[512];
-		for (size_t i = 0; i < deviceCount; ++i) {
-			sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-				idevices[i]->GetName().c_str(),
-				int(idevices[i]->GetPerformance() / 1000.0),
-				idevices[i]->GetPerformance() / minPerf,
-				100.0 * idevices[i]->GetPerformance() / totalPerf,
-				int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
-				int(idevices[i]->GetMaxMemory() / (1024 * 1024)));
-			glRasterPos2i(20, offset);
-			PrintString(GLUT_BITMAP_8_BY_13, buff);
-			offset += 15;
-		}
-
-		glRasterPos2i(15, offset);
-		PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
+	double minPerf = idevices[0]->GetPerformance();
+	double totalPerf = idevices[0]->GetPerformance();
+	for (size_t i = 1; i < idevices.size(); ++i) {
+		minPerf = min(minPerf, idevices[i]->GetPerformance());
+		totalPerf += idevices[i]->GetPerformance();
 	}
-#endif
+
+	glColor3f(1.0f, 0.5f, 0.f);
+	int offset = 45;
+	size_t deviceCount = idevices.size();
+
+	char buff[512];
+	for (size_t i = 0; i < deviceCount; ++i) {
+		sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+			idevices[i]->GetName().c_str(),
+			int(idevices[i]->GetPerformance() / 1000.0),
+			idevices[i]->GetPerformance() / minPerf,
+			100.0 * idevices[i]->GetPerformance() / totalPerf,
+			int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
+			int(idevices[i]->GetMaxMemory() / (1024 * 1024)));
+		glRasterPos2i(20, offset);
+		PrintString(GLUT_BITMAP_8_BY_13, buff);
+		offset += 15;
+	}
+
+	glRasterPos2i(15, offset);
+	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 }
 
 static void PrintCaptions() {
@@ -242,22 +231,11 @@ void reshapeFunc(int newWidth, int newHeight) {
 }
 
 void timerFunc(int value) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if ((session->renderEngine->GetEngineType() == PATHOCL) ||
-		(session->renderEngine->GetEngineType() == BIDIRHYBRID)) {
-		sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-			session->renderEngine->GetPass(),
-			session->renderEngine->GetTotalSamplesSec() / 1000000.0,
-			int(((OCLRenderEngine *)session->renderEngine)->GetTotalRaysSec() / 1000.0),
-			session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
-	} else
-#endif
-	{
-		sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][%.1fK tris]",
-			session->renderEngine->GetPass(),
-			session->renderEngine->GetTotalSamplesSec() / 1000000.0,
-			session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
-	}
+	sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
+		session->renderEngine->GetPass(),
+		session->renderEngine->GetTotalSamplesSec() / 1000000.0,
+		int(session->renderEngine->GetTotalRaysSec() / 1000.0),
+		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
 
 	// Need to update the Film
 	session->renderEngine->UpdateFilm();
@@ -385,11 +363,9 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->film->SetToneMapParams(params);
 			}
 			break;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '1':
 			session->SetRenderingEngineType(PATHOCL);
 			break;
-#endif
 		case '2':
 			session->SetRenderingEngineType(LIGHTCPU);
 			break;
@@ -399,11 +375,9 @@ void keyFunc(unsigned char key, int x, int y) {
 		case '4':
 			session->SetRenderingEngineType(BIDIRCPU);
 			break;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '5':
 			session->SetRenderingEngineType(BIDIRHYBRID);
 			break;
-#endif
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;

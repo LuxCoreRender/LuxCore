@@ -22,8 +22,6 @@
 #ifndef _BIDIRHYBRID_H
 #define	_BIDIRHYBRID_H
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 #include "smalllux.h"
 #include "renderengine.h"
 #include "bidircpu/bidircpu.h"
@@ -108,7 +106,5 @@ private:
 		return new BiDirHybridRenderThread(this, index, seedVal, device);
 	}
 };
-
-#endif
 
 #endif	/* _BIDIRHYBRID_H */

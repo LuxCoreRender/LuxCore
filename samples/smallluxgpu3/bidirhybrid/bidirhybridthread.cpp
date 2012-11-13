@@ -19,8 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 #include "smalllux.h"
 #include "renderconfig.h"
 #include "bidirhybrid/bidirhybrid.h"
@@ -41,5 +39,3 @@ BiDirHybridRenderThread::BiDirHybridRenderThread(BiDirHybridRenderEngine *engine
 		const u_int index, const u_int seedVal, IntersectionDevice *device) :
 		HybridRenderThread(engine, index, seedVal, device) {
 }
-
-#endif
