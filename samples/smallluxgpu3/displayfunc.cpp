@@ -38,7 +38,9 @@
 #include "displayfunc.h"
 #include "renderconfig.h"
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/opencl/intersectiondevice.h"
+#endif
 #include "luxrays/utils/film/film.h"
 
 #include "pathocl/pathocl.h"
@@ -98,14 +100,18 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "i", "switch sampler");
 	fontOffset -= 15;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	PrintHelpString(15, fontOffset, "1", "OpenCL path tracing");
+#endif
 	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "3", "CPU path tracing");
 	PrintHelpString(320, fontOffset, "4", "CPU bidirectional path tracing");
 	fontOffset -= 15;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	PrintHelpString(15, fontOffset, "5", "Hybrid bidirectional path tracing");
 	fontOffset -= 15;
+#endif
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
 	fontOffset -= 15;
@@ -134,6 +140,7 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((session->renderEngine->GetEngineType() == PATHOCL) ||
 		(session->renderEngine->GetEngineType() == BIDIRHYBRID)) {
 		// Intersection devices
@@ -167,6 +174,7 @@ static void PrintHelpAndSettings() {
 		glRasterPos2i(15, offset);
 		PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 	}
+#endif
 }
 
 static void PrintCaptions() {
@@ -234,6 +242,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 }
 
 void timerFunc(int value) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((session->renderEngine->GetEngineType() == PATHOCL) ||
 		(session->renderEngine->GetEngineType() == BIDIRHYBRID)) {
 		sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4fK on %.1fK tris]",
@@ -241,7 +250,9 @@ void timerFunc(int value) {
 			session->renderEngine->GetTotalSamplesSec() / 1000000.0,
 			((OCLRenderEngine *)session->renderEngine)->GetTotalRaysSec() / 1000.0,
 			session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-	} else {
+	} else
+#endif
+	{
 		sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][%.1fK tris]",
 			session->renderEngine->GetPass(),
 			session->renderEngine->GetTotalSamplesSec() / 1000000.0,
@@ -374,9 +385,11 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->film->SetToneMapParams(params);
 			}
 			break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '1':
 			session->SetRenderingEngineType(PATHOCL);
 			break;
+#endif
 		case '2':
 			session->SetRenderingEngineType(LIGHTCPU);
 			break;
@@ -386,9 +399,11 @@ void keyFunc(unsigned char key, int x, int y) {
 		case '4':
 			session->SetRenderingEngineType(BIDIRCPU);
 			break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '5':
 			session->SetRenderingEngineType(BIDIRHYBRID);
 			break;
+#endif
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;

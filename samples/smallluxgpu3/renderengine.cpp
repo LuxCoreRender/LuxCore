@@ -28,8 +28,11 @@
 #include "bidirhybrid/bidirhybrid.h"
 
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/opencl/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/opencl/intersectiondevice.h"
+#endif
 
 //------------------------------------------------------------------------------
 // RenderEngine
@@ -236,67 +239,6 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 }
 
 //------------------------------------------------------------------------------
-// OCLRenderEngine
-//------------------------------------------------------------------------------
-
-OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-	RenderEngine(rcfg, flm, flmMutex) {
-	const Properties &cfg = renderConfig->cfg;
-
-	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
-	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
-	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const unsigned int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
-	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
-
-	// Start OpenCL devices
-	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, descs);
-
-	// Device info
-	bool haveSelectionString = (oclDeviceConfig.length() > 0);
-	if (haveSelectionString && (oclDeviceConfig.length() != descs.size())) {
-		stringstream ss;
-		ss << "OpenCL device selection string has the wrong length, must be " <<
-				descs.size() << " instead of " << oclDeviceConfig.length();
-		throw runtime_error(ss.str().c_str());
-	}
-
-	for (size_t i = 0; i < descs.size(); ++i) {
-		DeviceDescription *desc = descs[i];
-
-		if (haveSelectionString) {
-			if (oclDeviceConfig.at(i) == '1') {
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
-					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
-					desc->SetForceWorkGroupSize(forceCPUWorkSize);
-				selectedDeviceDescs.push_back(desc);
-			}
-		} else {
-			if ((useCPUs && desc->GetType() == DEVICE_TYPE_OPENCL_CPU) ||
-					(useGPUs && desc->GetType() == DEVICE_TYPE_OPENCL_GPU)) {
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
-					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
-					desc->SetForceWorkGroupSize(forceCPUWorkSize);
-				selectedDeviceDescs.push_back(descs[i]);
-			}
-		}
-	}
-
-	if (selectedDeviceDescs.size() == 0)
-		throw runtime_error("No OpenCL device selected or available");
-}
-
-double OCLRenderEngine::GetTotalRaysSec() const {
-	double raysSec = 0.;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-	return raysSec;
-}
-
-//------------------------------------------------------------------------------
 // CPURenderThread
 //------------------------------------------------------------------------------
 
@@ -433,3 +375,68 @@ void CPURenderEngine::UpdateFilmLockLess() {
 			film->AddFilm(*(renderThreads[i]->threadFilm));
 	}
 }
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+//------------------------------------------------------------------------------
+// OCLRenderEngine
+//------------------------------------------------------------------------------
+
+OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+	RenderEngine(rcfg, flm, flmMutex) {
+	const Properties &cfg = renderConfig->cfg;
+
+	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
+	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
+	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
+	const unsigned int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
+	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
+
+	// Start OpenCL devices
+	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
+	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, descs);
+
+	// Device info
+	bool haveSelectionString = (oclDeviceConfig.length() > 0);
+	if (haveSelectionString && (oclDeviceConfig.length() != descs.size())) {
+		stringstream ss;
+		ss << "OpenCL device selection string has the wrong length, must be " <<
+				descs.size() << " instead of " << oclDeviceConfig.length();
+		throw runtime_error(ss.str().c_str());
+	}
+
+	for (size_t i = 0; i < descs.size(); ++i) {
+		DeviceDescription *desc = descs[i];
+
+		if (haveSelectionString) {
+			if (oclDeviceConfig.at(i) == '1') {
+				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
+					desc->SetForceWorkGroupSize(forceGPUWorkSize);
+				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
+					desc->SetForceWorkGroupSize(forceCPUWorkSize);
+				selectedDeviceDescs.push_back(desc);
+			}
+		} else {
+			if ((useCPUs && desc->GetType() == DEVICE_TYPE_OPENCL_CPU) ||
+					(useGPUs && desc->GetType() == DEVICE_TYPE_OPENCL_GPU)) {
+				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
+					desc->SetForceWorkGroupSize(forceGPUWorkSize);
+				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
+					desc->SetForceWorkGroupSize(forceCPUWorkSize);
+				selectedDeviceDescs.push_back(descs[i]);
+			}
+		}
+	}
+
+	if (selectedDeviceDescs.size() == 0)
+		throw runtime_error("No OpenCL device selected or available");
+}
+
+double OCLRenderEngine::GetTotalRaysSec() const {
+	double raysSec = 0.;
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+	return raysSec;
+}
+
+#endif

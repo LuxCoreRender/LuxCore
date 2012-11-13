@@ -22,6 +22,8 @@
 #ifndef _COMPILEDSESSION_H
 #define	_COMPILEDSESSION_H
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "smalllux.h"
 #include "ocldatatypes.h"
 #include "editaction.h"
@@ -96,5 +98,7 @@ private:
 	void CompileSkyLight();
 	void CompileTextureMaps();
 };
+
+#endif
 
 #endif	/* _COMPILEDSESSION_H */

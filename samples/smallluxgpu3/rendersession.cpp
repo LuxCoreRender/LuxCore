@@ -80,7 +80,13 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	// Check the kind of render engine to start
 	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(
-		cfg.GetString("renderengine.type", "PATHOCL"));
+		cfg.GetString("renderengine.type",
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+			"PATHOCL"
+#else
+			"PATHCPU"
+#endif
+		));
 	renderEngine = RenderEngine::AllocRenderEngine(renderEngineType, renderConfig, film, &filmMutex);
 }
 

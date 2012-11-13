@@ -22,6 +22,8 @@
 #ifndef _OCLDATATYPES_H
 #define	_OCLDATATYPES_H
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "smalllux.h"
 
 namespace PathOCL {
@@ -306,5 +308,6 @@ typedef struct {
 
 }
 
+#endif
 
 #endif	/* _OCLDATATYPES_H */

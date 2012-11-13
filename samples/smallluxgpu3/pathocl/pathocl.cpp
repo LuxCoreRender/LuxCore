@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -32,8 +34,6 @@
 #include <boost/thread/mutex.hpp>
 
 #include "smalllux.h"
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "pathocl/pathocl.h"
 #include "pathocl/kernels/kernels.h"
