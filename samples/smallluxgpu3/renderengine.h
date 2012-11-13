@@ -30,15 +30,11 @@
 #include "luxrays/utils/sdl/bsdf.h"
 
 enum RenderEngineType {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	PATHOCL  = 4,
-#endif
 	LIGHTCPU = 5,
 	PATHCPU = 6,
-	BIDIRCPU = 7
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	, BIDIRHYBRID = 8
-#endif
+	BIDIRCPU = 7,
+	BIDIRHYBRID = 8
 };
 
 //------------------------------------------------------------------------------
@@ -70,12 +66,17 @@ public:
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
+	double GetTotalRaysSec() const;
 	double GetRenderingTime() const { return elapsedTime; }
 
 	static RenderEngineType String2RenderEngineType(const string &type);
 	static const string RenderEngineType2String(const RenderEngineType type);
 	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+
+	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
+		return intersectionDevices;
+	}
 
 protected:
 	virtual void StartLockLess() = 0;
@@ -106,6 +107,8 @@ protected:
 	double lastConvergenceTestSamplesCount;
 
 	bool started, editMode;
+
+	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -173,25 +176,17 @@ protected:
 	vector<CPURenderThread *> renderThreads;
 };
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 //------------------------------------------------------------------------------
 // Base class for OpenCL render engines
 //------------------------------------------------------------------------------
 
 class OCLRenderEngine : public RenderEngine {
 public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-
-	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
-		return intersectionDevices;
-	}
-
-	double GetTotalRaysSec() const;
+	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+		bool fatal = true);
 
 protected:
 	vector<DeviceDescription *> selectedDeviceDescs;
-	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -286,7 +281,5 @@ protected:
 	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
 	vector<HybridRenderThread *> renderThreads;
 };
-
-#endif
 
 #endif	/* _RENDERENGINE_H */

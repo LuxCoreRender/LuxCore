@@ -30,9 +30,7 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/opencl/intersectiondevice.h"
-#endif
+#include "luxrays/core/intersectiondevice.h"
 
 //------------------------------------------------------------------------------
 // RenderEngine
@@ -60,6 +58,13 @@ RenderEngine::~RenderEngine() {
 		Stop();
 
 	delete ctx;
+}
+
+double RenderEngine::GetTotalRaysSec() const {
+	double raysSec = 0.;
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+	return raysSec;
 }
 
 void RenderEngine::Start() {
@@ -178,39 +183,31 @@ void RenderEngine::UpdateFilm() {
 }
 
 RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((type.compare("4") == 0) || (type.compare("PATHOCL") == 0))
 		return PATHOCL;
-#endif
 	if ((type.compare("5") == 0) || (type.compare("LIGHTCPU") == 0))
 		return LIGHTCPU;
 	if ((type.compare("6") == 0) || (type.compare("PATHCPU") == 0))
 		return PATHCPU;
 	if ((type.compare("7") == 0) || (type.compare("BIDIRCPU") == 0))
 		return BIDIRCPU;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((type.compare("8") == 0) || (type.compare("BIDIRHYBRID") == 0))
 		return BIDIRHYBRID;
-#endif
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
 const string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
 	switch (type) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case PATHOCL:
 			return "PATHOCL";
-#endif
 		case LIGHTCPU:
 			return "LIGHTCPU";
 		case PATHCPU:
 			return "PATHCPU";
 		case BIDIRCPU:
 			return "BIDIRCPU";
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case BIDIRHYBRID:
 			return "BIDIRHYBRID";
-#endif
 		default:
 			throw runtime_error("Unknown render engine type: " + type);
 	}
@@ -219,20 +216,20 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *renderConfig, Film *film, boost::mutex *filmMutex) {
 	switch (engineType) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case PATHOCL:
-			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
-#endif
 		case LIGHTCPU:
 			return new LightCPURenderEngine(renderConfig, film, filmMutex);
+		case PATHOCL:
+#ifndef LUXRAYS_DISABLE_OPENCL
+			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
+#else
+			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
+#endif
 		case PATHCPU:
 			return new PathCPURenderEngine(renderConfig, film, filmMutex);
 		case BIDIRCPU:
 			return new BiDirCPURenderEngine(renderConfig, film, filmMutex);
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case BIDIRHYBRID:
 			return new BiDirHybridRenderEngine(renderConfig, film, filmMutex);
-#endif
 		default:
 			throw runtime_error("Unknown render engine type");
 	}
@@ -321,6 +318,25 @@ CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flm
 	RenderEngine(cfg, flm, flmMutex) {
 	samplesCount = 0.0;
 
+	// Start native devices
+	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
+	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
+
+	if (descs.size() == 0)
+		throw runtime_error("No CPU device selected or available");
+
+	// Allocate devices
+	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(descs);
+
+	// Check if I have to set max. QBVH stack size
+	const size_t qbvhStackSize = cfg->cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
+	SLG_LOG("CPU Devices used:");
+	for (size_t i = 0; i < devs.size(); ++i) {
+		SLG_LOG("[" << devs[i]->GetName() << "]");
+		devs[i]->SetMaxStackSize(qbvhStackSize);
+		intersectionDevices.push_back(devs[i]);
+	}
+
 	// Create and start render threads
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
@@ -376,14 +392,13 @@ void CPURenderEngine::UpdateFilmLockLess() {
 	}
 }
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 //------------------------------------------------------------------------------
 // OCLRenderEngine
 //------------------------------------------------------------------------------
 
-OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-	RenderEngine(rcfg, flm, flmMutex) {
+OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
+	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex)
+{
 	const Properties &cfg = renderConfig->cfg;
 
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
@@ -428,15 +443,8 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 		}
 	}
 
-	if (selectedDeviceDescs.size() == 0)
+	if (fatal && selectedDeviceDescs.size() == 0)
 		throw runtime_error("No OpenCL device selected or available");
-}
-
-double OCLRenderEngine::GetTotalRaysSec() const {
-	double raysSec = 0.;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-	return raysSec;
 }
 
 //------------------------------------------------------------------------------
@@ -640,10 +648,13 @@ void HybridRenderThread::RenderFunc() {
 		//SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error err) {
+	}
+#ifndef LUXRAYS_DISABLE_OPENCL
+	catch (cl::Error err) {
 		SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << luxrays::utils::oclErrorString(err.err()) << ")");
 	}
+#endif
 
 	// Clean current ray buffers
 	if (currentRayBufferToSend) {
@@ -675,12 +686,21 @@ void HybridRenderThread::RenderFunc() {
 // HybridRenderEngine
 //------------------------------------------------------------------------------
 
-HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		OCLRenderEngine(rcfg, flm, flmMutex) {
+HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
+	boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex, false)
+{
 	//--------------------------------------------------------------------------
 	// Create the intersection devices and render threads
 	//--------------------------------------------------------------------------
 
+	if (selectedDeviceDescs.empty()) {
+		SLG_LOG("No OpenCL device found, falling back to CPU rendering");
+		selectedDeviceDescs = ctx->GetAvailableDeviceDescriptions();
+		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD,
+			selectedDeviceDescs);
+		if (selectedDeviceDescs.empty())
+			throw runtime_error("No native CPU device found");
+	}
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	if (selectedDeviceDescs.size() == 1) {
 		// Only one intersection device, use a M2O device
@@ -736,5 +756,3 @@ void HybridRenderEngine::UpdateFilmLockLess() {
 			film->AddFilm(*(renderThreads[i]->threadFilm));
 	}
 }
-
-#endif

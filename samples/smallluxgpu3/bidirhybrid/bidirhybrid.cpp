@@ -22,8 +22,6 @@
 #include "smalllux.h"
 #include "renderconfig.h"
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 #include "bidirhybrid/bidirhybrid.h"
 
 //------------------------------------------------------------------------------
@@ -48,5 +46,3 @@ BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, 
 
 	film->EnableOverlappedScreenBufferUpdate(true);
 }
-
-#endif

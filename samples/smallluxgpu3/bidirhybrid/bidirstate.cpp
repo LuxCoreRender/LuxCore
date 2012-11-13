@@ -19,8 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
 #include "smalllux.h"
 #include "renderconfig.h"
 #include "bidirhybrid/bidirhybrid.h"
@@ -646,5 +644,3 @@ void BiDirState::CollectResults(HybridRenderThread *renderThread) {
 
 	sampler->NextSample(validSampleResults);
 }
-
-#endif

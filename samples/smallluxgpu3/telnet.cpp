@@ -719,13 +719,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 									// Create new material
 									Material *newMat = Scene::CreateMaterial(propertyName, prop);
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 									// Check if the material type is one of the already enabled
-									if (session->renderEngine->GetEngineType() == PATHOCL) {
-										if (!session->renderEngine->IsMaterialCompiled(newMat->GetType()))
-											session->editActions.AddAction(MATERIAL_TYPES_EDIT);
-									}
-#endif
+									if (!session->renderEngine->IsMaterialCompiled(newMat->GetType()))
+										session->editActions.AddAction(MATERIAL_TYPES_EDIT);
 									// Check if both are light sources
 									if (oldMat->IsLightSource()) {
 										if (!newMat->IsLightSource())
