@@ -57,7 +57,7 @@ public:
 	friend class PathOCLRenderEngine;
 
 private:
-	static void RenderThreadImpl(PathOCLRenderThread *renderThread);
+	void RenderThreadImpl();
 
 	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc);
 	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc);
