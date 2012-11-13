@@ -121,7 +121,7 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 		// For all other accelerator, I have to rebuild the DataSet
 		renderConfig->scene->UpdateDataSet(ctx);
 
-		// Set the Luxrays SataSet
+		// Set the LuxRays SataSet
 		ctx->SetDataSet(renderConfig->scene->dataSet);
 
 		dataSetUpdated = true;
@@ -340,7 +340,7 @@ CPURenderEngine::~CPURenderEngine() {
 void CPURenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (!renderThreads[i])
-			renderThreads[i] = NewRenderThread(this, i, seedBase + i);
+			renderThreads[i] = NewRenderThread(i, seedBase + i);
 		renderThreads[i]->Start();
 	}
 }
@@ -437,6 +437,304 @@ double OCLRenderEngine::GetTotalRaysSec() const {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		raysSec += intersectionDevices[i]->GetPerformance();
 	return raysSec;
+}
+
+//------------------------------------------------------------------------------
+// HybridRenderState
+//------------------------------------------------------------------------------
+
+HybridRenderState::HybridRenderState(HybridRenderEngine *renderEngine,
+		Film *film, RandomGenerator *rndGen) {
+	// Setup the sampler
+	sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
+}
+
+HybridRenderState::~HybridRenderState() {
+	delete sampler;
+}
+
+//------------------------------------------------------------------------------
+// HybridRenderThread
+//------------------------------------------------------------------------------
+
+HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
+		const unsigned int index, const unsigned int seedBase,
+		IntersectionDevice *device) {
+	intersectionDevice = device;
+	seed = seedBase;
+
+	renderThread = NULL;
+	threadFilm = NULL;
+
+	threadIndex = index;
+	renderEngine = re;
+
+	samplesCount = 0.0;
+
+	pendingRayBuffers = 0;
+	currentRayBufferToSend = NULL;
+	currentReiceivedRayBuffer = NULL;
+
+	started = false;
+	editMode = false;
+}
+
+HybridRenderThread::~HybridRenderThread() {
+	if (editMode)
+		EndEdit(EditActionList());
+	if (started)
+		Stop();
+
+	delete threadFilm;
+}
+
+void HybridRenderThread::Start() {
+	started = true;
+	StartRenderThread();
+}
+
+void HybridRenderThread::Interrupt() {
+	if (renderThread)
+		renderThread->interrupt();
+}
+
+void HybridRenderThread::Stop() {
+	StopRenderThread();
+	started = false;
+}
+
+void HybridRenderThread::StartRenderThread() {
+	const unsigned int filmWidth = renderEngine->film->GetWidth();
+	const unsigned int filmHeight = renderEngine->film->GetHeight();
+
+	delete threadFilm;
+	threadFilm = new Film(filmWidth, filmHeight, true, true, false);
+	threadFilm->CopyDynamicSettings(*(renderEngine->film));
+	threadFilm->Init(filmWidth, filmHeight);
+
+	samplesCount = 0.0;
+
+	// Create the thread for the rendering
+	renderThread = AllocRenderThread();
+}
+
+void HybridRenderThread::StopRenderThread() {
+	if (renderThread) {
+		renderThread->interrupt();
+		renderThread->join();
+		delete renderThread;
+		renderThread = NULL;
+	}
+}
+
+void HybridRenderThread::BeginEdit() {
+	StopRenderThread();
+}
+
+void HybridRenderThread::EndEdit(const EditActionList &editActions) {
+	// Reset statistics in order to be more accurate
+	intersectionDevice->ResetPerformaceStats();
+
+	StartRenderThread();
+}
+
+size_t HybridRenderThread::PushRay(const Ray &ray) {
+	// Check if I have a valid currentRayBuffer
+	if (!currentRayBufferToSend) {
+		if (freeRayBuffers.size() == 0) {
+			// I have to allocate a new RayBuffer
+			currentRayBufferToSend = intersectionDevice->NewRayBuffer();
+		} else {
+			// I can reuse one in queue
+			currentRayBufferToSend = freeRayBuffers.front();
+			freeRayBuffers.pop_front();
+		}
+	}
+
+	const size_t index = currentRayBufferToSend->AddRay(ray);
+
+	// Check if the buffer is now full
+	if (currentRayBufferToSend->IsFull()) {
+		// Send the work to the device
+		intersectionDevice->PushRayBuffer(currentRayBufferToSend);
+		currentRayBufferToSend = NULL;
+		++pendingRayBuffers;
+	}
+
+	return index;
+}
+
+void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
+	// Check if I have to get  the results out of intersection device
+	if (!currentReiceivedRayBuffer) {
+		currentReiceivedRayBuffer = intersectionDevice->PopRayBuffer();
+		--pendingRayBuffers;
+		currentReiceivedRayBufferIndex = 0;
+	} else if (currentReiceivedRayBufferIndex >= currentReiceivedRayBuffer->GetSize()) {
+		// All the results in the RayBuffer has been elaborated
+		currentReiceivedRayBuffer->Reset();
+		freeRayBuffers.push_back(currentReiceivedRayBuffer);
+
+		// Get a new buffer
+		currentReiceivedRayBuffer = intersectionDevice->PopRayBuffer();
+		--pendingRayBuffers;
+		currentReiceivedRayBufferIndex = 0;
+	}
+
+	*ray = currentReiceivedRayBuffer->GetRay(currentReiceivedRayBufferIndex);
+	*rayHit = currentReiceivedRayBuffer->GetRayHit(currentReiceivedRayBufferIndex++);
+}
+
+void HybridRenderThread::RenderFunc() {
+	//SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread started");
+	boost::this_thread::disable_interruption di;
+
+	RandomGenerator *rndGen = new RandomGenerator(threadIndex + seed);
+
+	const u_int incrementStep = 4096;
+	vector<HybridRenderState *> states(incrementStep);
+
+	try {
+		// Initialize the first states
+		for (u_int i = 0; i < states.size(); ++i)
+			states[i] = AllocRenderState(rndGen);
+
+		u_int generateIndex = 0;
+		u_int collectIndex = 0;
+		while (!boost::this_thread::interruption_requested()) {
+			// Generate new rays up to the point to have 3 pending buffers
+			while (pendingRayBuffers < 3) {
+				states[generateIndex]->GenerateRays(this);
+
+				generateIndex = (generateIndex + 1) % states.size();
+				if (generateIndex == collectIndex) {
+					//SLG_LOG("[HybridRenderThread::" << threadIndex << "] Increasing states size by " << incrementStep);
+					//SLG_LOG("[HybridRenderThread::" << threadIndex << "] State size: " << states.size());
+
+					// Insert a set of new states and continue
+					states.insert(states.begin() + generateIndex, incrementStep, NULL);
+					for (u_int i = generateIndex; i < generateIndex + incrementStep; ++i)
+						states[i] = AllocRenderState(rndGen);
+					collectIndex += incrementStep;
+				}
+			}
+			
+			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] State size: " << states.size());
+			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] generateIndex: " << generateIndex);
+			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] collectIndex: " << collectIndex);
+			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] pendingRayBuffers: " << pendingRayBuffers);
+
+			// Collect rays up to the point to have only 1 pending buffer
+			while (pendingRayBuffers > 1) {
+				states[collectIndex]->CollectResults(this);
+				samplesCount += 1.0;
+
+				const u_int newCollectIndex = (collectIndex + 1) % states.size();
+				// A safety-check, it should never happen
+				if (newCollectIndex == generateIndex)
+					break;
+				collectIndex = newCollectIndex;
+			}
+		}
+
+		//SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread halted");
+	} catch (boost::thread_interrupted) {
+		SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread halted");
+	} catch (cl::Error err) {
+		SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
+				"(" << luxrays::utils::oclErrorString(err.err()) << ")");
+	}
+
+	// Clean current ray buffers
+	if (currentRayBufferToSend) {
+		currentRayBufferToSend->Reset();
+		freeRayBuffers.push_back(currentRayBufferToSend);
+		currentRayBufferToSend = NULL;
+	}
+	if (currentReiceivedRayBuffer) {
+		currentReiceivedRayBuffer->Reset();
+		freeRayBuffers.push_back(currentReiceivedRayBuffer);
+		currentReiceivedRayBuffer = NULL;
+	}
+
+	// Free all states
+	for (u_int i = 0; i < states.size(); ++i)
+		delete states[i];
+	delete rndGen;
+
+	// Remove all pending ray buffers
+	while (pendingRayBuffers > 0) {
+		RayBuffer *rayBuffer = intersectionDevice->PopRayBuffer();
+		--(pendingRayBuffers);
+		rayBuffer->Reset();
+		freeRayBuffers.push_back(rayBuffer);
+	}
+}
+
+//------------------------------------------------------------------------------
+// HybridRenderEngine
+//------------------------------------------------------------------------------
+
+HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		OCLRenderEngine(rcfg, flm, flmMutex) {
+	//--------------------------------------------------------------------------
+	// Create the intersection devices and render threads
+	//--------------------------------------------------------------------------
+
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	if (selectedDeviceDescs.size() == 1) {
+		// Only one intersection device, use a M2O device
+		intersectionDevices = ctx->AddVirtualM2OIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+	} else {
+		// Multiple intersection devices, use a M2M device
+		intersectionDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+	}
+	devices = ctx->GetIntersectionDevices();
+
+	// Set the LuxRays DataSet
+	ctx->SetDataSet(renderConfig->scene->dataSet);
+
+	SLG_LOG("Starting "<< renderThreadCount << " BiDir hybrid render threads");
+	renderThreads.resize(renderThreadCount, NULL);
+}
+
+void HybridRenderEngine::StartLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (!renderThreads[i])
+			renderThreads[i] = NewRenderThread(i, seedBase + i, devices[i]);
+		renderThreads[i]->Start();
+	}
+}
+
+void HybridRenderEngine::StopLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Stop();
+}
+
+void HybridRenderEngine::BeginEditLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->BeginEdit();
+}
+
+void HybridRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->EndEdit(editActions);
+}
+
+void HybridRenderEngine::UpdateFilmLockLess() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	film->Reset();
+
+	// Merge the all thread films
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (renderThreads[i]->threadFilm)
+			film->AddFilm(*(renderThreads[i]->threadFilm));
+	}
 }
 
 #endif

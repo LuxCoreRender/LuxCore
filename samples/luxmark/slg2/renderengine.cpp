@@ -144,7 +144,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 		oclIntersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
 	}
 
-	// Set the Luxrays SataSet
+	// Set the LuxRays SataSet
 	renderConfig->scene->UpdateDataSet(ctx);
 
 	ctx->SetDataSet(renderConfig->scene->dataSet);
@@ -193,7 +193,7 @@ void OCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
 		// For all other accelerator, I have to rebuild the DataSet
 		renderConfig->scene->UpdateDataSet(ctx);
 
-		// Set the Luxrays SataSet
+		// Set the LuxRays SataSet
 		ctx->SetDataSet(renderConfig->scene->dataSet);
 
 		dataSetUpdated = true;

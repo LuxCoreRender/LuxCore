@@ -28,6 +28,11 @@
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
 
+LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
+		const u_int index, const u_int seedVal) :
+		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) {
+}
+
 void LightCPURenderThread::ConnectToEye(const float u0,
 		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
 		vector<SampleResult> &sampleResults) {

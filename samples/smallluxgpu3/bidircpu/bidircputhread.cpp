@@ -37,6 +37,11 @@ static inline float MIS(const float a) {
 	return a * a; // Power heuristic
 }
 
+BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
+		const u_int index, const u_int seedVal) :
+		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) {
+}
+
 void BiDirCPURenderThread::ConnectVertices(
 		const PathVertex &eyeVertex, const PathVertex &lightVertex,
 		SampleResult *eyeSampleResult, const float u0) const {
