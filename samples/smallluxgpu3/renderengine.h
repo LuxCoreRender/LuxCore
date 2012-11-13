@@ -160,8 +160,7 @@ public:
 	friend class CPURenderThread;
 
 protected:
-	virtual CPURenderThread *NewRenderThread(CPURenderEngine *engine,
-		const u_int index, const u_int seedVal) = 0;
+	virtual CPURenderThread *NewRenderThread(const u_int index, const u_int seedVal) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
@@ -193,6 +192,99 @@ public:
 protected:
 	vector<DeviceDescription *> selectedDeviceDescs;
 	vector<IntersectionDevice *> intersectionDevices;
+};
+
+//------------------------------------------------------------------------------
+// Base class for Hybrid render engines
+//------------------------------------------------------------------------------
+
+class HybridRenderThread;
+class HybridRenderEngine;
+
+class HybridRenderState {
+public:
+	HybridRenderState(HybridRenderEngine *renderEngine, Film *film, RandomGenerator *rndGen);
+	virtual ~HybridRenderState();
+
+	virtual void GenerateRays(HybridRenderThread *renderThread) = 0;
+	virtual void CollectResults(HybridRenderThread *renderThread) = 0;
+
+	friend class HybridRenderThread;
+	friend class HybridRenderEngine;
+
+protected:
+	Sampler *sampler;
+};
+
+class HybridRenderThread {
+public:
+	HybridRenderThread(HybridRenderEngine *re, const unsigned int index,
+			const unsigned int seedBase, IntersectionDevice *device);
+	~HybridRenderThread();
+
+	void Start();
+    void Interrupt();
+	void Stop();
+
+	void BeginEdit();
+	void EndEdit(const EditActionList &editActions);
+
+	friend class HybridRenderState;
+	friend class HybridRenderEngine;
+
+protected:
+	virtual HybridRenderState *AllocRenderState(RandomGenerator *rndGen) = 0;
+	virtual boost::thread *AllocRenderThread() = 0;
+
+	void RenderFunc();
+
+	void StartRenderThread();
+	void StopRenderThread();
+
+	size_t PushRay(const Ray &ray);
+	void PopRay(const Ray **ray, const RayHit **rayHit);
+
+	boost::thread *renderThread;
+	Film *threadFilm;
+
+	IntersectionDevice *intersectionDevice;
+
+	unsigned int threadIndex, seed;
+	HybridRenderEngine *renderEngine;
+	double samplesCount;
+
+	unsigned int pendingRayBuffers;
+	RayBuffer *currentRayBufferToSend;
+	deque<RayBuffer *> freeRayBuffers;
+
+	RayBuffer *currentReiceivedRayBuffer;
+	size_t currentReiceivedRayBufferIndex;
+	
+	bool started, editMode;
+};
+
+class HybridRenderEngine : public OCLRenderEngine {
+public:
+	HybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	virtual ~HybridRenderEngine() { }
+
+	friend class HybridRenderState;
+	friend class HybridRenderThread;
+
+protected:
+	virtual HybridRenderThread *NewRenderThread(const u_int index,
+			const u_int seedVal, IntersectionDevice *device) = 0;
+
+	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	virtual void BeginEditLockLess();
+	virtual void EndEditLockLess(const EditActionList &editActions);
+
+	virtual void UpdateFilmLockLess();
+
+	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
+	vector<HybridRenderThread *> renderThreads;
 };
 
 #endif

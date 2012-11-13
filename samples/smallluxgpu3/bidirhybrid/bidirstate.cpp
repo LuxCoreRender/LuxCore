@@ -43,9 +43,8 @@ static inline float MIS(const float a) {
 }
 
 BiDirState::BiDirState(BiDirHybridRenderEngine *renderEngine,
-		Film *film, RandomGenerator *rndGen) {
+		Film *film, RandomGenerator *rndGen) : HybridRenderState(renderEngine, film, rndGen) {
 	// Setup the sampler
-	sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleBootSize = 11;
 	const unsigned int sampleLightStepSize = 6;
 	const unsigned int sampleEyeStepSize = 11;
@@ -56,14 +55,11 @@ BiDirState::BiDirState(BiDirHybridRenderEngine *renderEngine,
 	sampler->RequestSamples(sampleSize);
 }
 
-BiDirState::~BiDirState() {
-	delete sampler;
-}
-
-void BiDirState::ConnectVertices(BiDirHybridRenderThread *renderThread,
+void BiDirState::ConnectVertices(HybridRenderThread *renderThread,
 		const PathVertex &eyeVertex, const PathVertex &lightVertex,
 		const float u0) {
-	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 
 	Vector eyeDir(lightVertex.bsdf.hitPoint - eyeVertex.bsdf.hitPoint);
 	const float eyeDistance2 = eyeDir.LengthSquared();
@@ -122,17 +118,18 @@ void BiDirState::ConnectVertices(BiDirHybridRenderThread *renderThread,
 
 			// Add the ray to trace and the result
 			eyeSampleValue.push_back(u0);
-			renderThread->PushRay(eyeRay);
+			thread->PushRay(eyeRay);
 			eyeSampleRadiance.push_back(radiance);
 		}
 	}
 }
 
-void BiDirState::ConnectToEye(BiDirHybridRenderThread *renderThread,
+void BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 		const unsigned int pixelCount, 
 		const PathVertex &lightVertex, const float u0,
 		const Point &lensPoint) {
-	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
 
 	Vector eyeDir(lightVertex.bsdf.hitPoint - lensPoint);
@@ -171,18 +168,19 @@ void BiDirState::ConnectToEye(BiDirHybridRenderThread *renderThread,
 
 			// Add the ray to trace and the result
 			lightSampleValue.push_back(u0);
-			renderThread->PushRay(eyeRay);
+			thread->PushRay(eyeRay);
 			AddSampleResult(lightSampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
 					radiance, 1.f);
 		}
 	}
 }
 
-void BiDirState::DirectLightSampling(BiDirHybridRenderThread *renderThread,
+void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const PathVertex &eyeVertex) {
-	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
 	
 	if (!eyeVertex.bsdf.IsDelta()) {
@@ -228,16 +226,17 @@ void BiDirState::DirectLightSampling(BiDirHybridRenderThread *renderThread,
 
 				// Add the ray to trace and the result
 				eyeSampleValue.push_back(u4);
-				renderThread->PushRay(shadowRay);
+				thread->PushRay(shadowRay);
 				eyeSampleRadiance.push_back(radiance);
 			}
 		}
 	}
 }
 
-void BiDirState::DirectHitFiniteLight(BiDirHybridRenderThread *renderThread,
+void BiDirState::DirectHitFiniteLight(HybridRenderThread *renderThread,
 		const PathVertex &eyeVertex, Spectrum *radiance) const {
-	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
 
 	float directPdfA, emissionPdfW;
@@ -261,9 +260,10 @@ void BiDirState::DirectHitFiniteLight(BiDirHybridRenderThread *renderThread,
 	*radiance += eyeVertex.throughput * misWeight * lightRadiance;
 }
 
-void BiDirState::DirectHitInfiniteLight(BiDirHybridRenderThread *renderThread,
+void BiDirState::DirectHitInfiniteLight(HybridRenderThread *renderThread,
 		const PathVertex &eyeVertex, Spectrum *radiance) const {
-	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
 
 	float directPdfA, emissionPdfW;
@@ -288,15 +288,16 @@ void BiDirState::DirectHitInfiniteLight(BiDirHybridRenderThread *renderThread,
 	*radiance += eyeVertex.throughput * misWeight * lightRadiance;
 }
 
-void BiDirState::GenerateRays(BiDirHybridRenderThread *renderThread) {
+void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
-	Film *film = renderThread->threadFilm;
+	Film *film = thread->threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 	const unsigned int pixelCount = filmWidth * filmHeight;
@@ -606,11 +607,12 @@ static bool ValidResult(Scene *scene, const Ray *ray, const RayHit *rayHit,
 	}
 }
 
-void BiDirState::CollectResults(BiDirHybridRenderThread *renderThread) {
+void BiDirState::CollectResults(HybridRenderThread *renderThread) {
 	if (lightSampleResults.size() + eyeSampleRadiance.size() == 0)
 		sampler->NextSample(lightSampleResults);
 
-	BiDirHybridRenderEngine *renderEngine = renderThread->renderEngine;
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
 
 	vector<SampleResult> validSampleResults;
@@ -619,7 +621,7 @@ void BiDirState::CollectResults(BiDirHybridRenderThread *renderThread) {
 	for (u_int i = 0; i < lightSampleResults.size(); ++i) {
 		const Ray *ray;
 		const RayHit *rayHit;
-		renderThread->PopRay(&ray, &rayHit);
+		thread->PopRay(&ray, &rayHit);
 
 		if (ValidResult(scene, ray, rayHit, lightSampleValue[i], &lightSampleResults[i].radiance))
 			validSampleResults.push_back(lightSampleResults[i]);
@@ -635,7 +637,7 @@ void BiDirState::CollectResults(BiDirHybridRenderThread *renderThread) {
 	for (u_int i = 0; i < eyeSampleRadiance.size(); ++i) {
 		const Ray *ray;
 		const RayHit *rayHit;
-		renderThread->PopRay(&ray, &rayHit);
+		thread->PopRay(&ray, &rayHit);
 
 		if (ValidResult(scene, ray, rayHit, eyeSampleValue[i], &eyeSampleRadiance[i]))
 			eyeSampleResult.radiance += eyeSampleRadiance[i];

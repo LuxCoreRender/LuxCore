@@ -245,18 +245,18 @@ void timerFunc(int value) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if ((session->renderEngine->GetEngineType() == PATHOCL) ||
 		(session->renderEngine->GetEngineType() == BIDIRHYBRID)) {
-		sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4fK on %.1fK tris]",
+		sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
 			session->renderEngine->GetPass(),
 			session->renderEngine->GetTotalSamplesSec() / 1000000.0,
-			((OCLRenderEngine *)session->renderEngine)->GetTotalRaysSec() / 1000.0,
-			session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			int(((OCLRenderEngine *)session->renderEngine)->GetTotalRaysSec() / 1000.0),
+			session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
 	} else
 #endif
 	{
 		sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][%.1fK tris]",
 			session->renderEngine->GetPass(),
 			session->renderEngine->GetTotalSamplesSec() / 1000000.0,
-			session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+			session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
 	}
 
 	// Need to update the Film

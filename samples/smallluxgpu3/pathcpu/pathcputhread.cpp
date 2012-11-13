@@ -32,6 +32,11 @@
 // PathCPU RenderThread
 //------------------------------------------------------------------------------
 
+PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
+		const u_int index, const u_int seedVal) :
+		CPURenderThread(engine, index, seedVal, true, false) {
+}
+
 void PathCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,

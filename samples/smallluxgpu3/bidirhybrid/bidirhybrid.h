@@ -28,35 +28,35 @@
 #include "renderengine.h"
 #include "bidircpu/bidircpu.h"
 
-class BiDirHybridRenderEngine;
-class BiDirHybridRenderThread;
+//------------------------------------------------------------------------------
+// Bidirectional path tracing hybrid render engine
+//------------------------------------------------------------------------------
 
-class BiDirState {
+class BiDirHybridRenderEngine;
+
+class BiDirState : public HybridRenderState {
 public:
 	BiDirState(BiDirHybridRenderEngine *renderEngine, Film *film, RandomGenerator *rndGen);
-	~BiDirState();
 
-	void GenerateRays(BiDirHybridRenderThread *renderThread);
-	void CollectResults(BiDirHybridRenderThread *renderThread);
+	void GenerateRays(HybridRenderThread *renderThread);
+	void CollectResults(HybridRenderThread *renderThread);
 
 private:
-	void DirectLightSampling(BiDirHybridRenderThread *renderThread,
+	void DirectLightSampling(HybridRenderThread *renderThread,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const PathVertex &eyeVertex);
-	void DirectHitFiniteLight(BiDirHybridRenderThread *renderThread,
+	void DirectHitFiniteLight(HybridRenderThread *renderThread,
 			const PathVertex &eyeVertex, Spectrum *radiance) const;
-	void DirectHitInfiniteLight(BiDirHybridRenderThread *renderThread,
+	void DirectHitInfiniteLight(HybridRenderThread *renderThread,
 		const PathVertex &eyeVertex, Spectrum *radiance) const;
 
-	void ConnectVertices(BiDirHybridRenderThread *renderThread,
+	void ConnectVertices(HybridRenderThread *renderThread,
 		const PathVertex &eyeVertex, const PathVertex &lightVertex,
 		const float u0);
-	void ConnectToEye(BiDirHybridRenderThread *renderThread,
+	void ConnectToEye(HybridRenderThread *renderThread,
 			const unsigned int pixelCount, const PathVertex &lightVertex,
 			const float u0,	const Point &lensPoint);
-
-	Sampler *sampler;
 
 	// Light tracing results
 	vector<float> lightSampleValue; // Used for pass-through sampling
@@ -70,62 +70,26 @@ private:
 	vector<Spectrum> eyeSampleRadiance;
 };
 
-//------------------------------------------------------------------------------
-// Bidirectional path tracing hybrid render threads
-//------------------------------------------------------------------------------
-
-class BiDirHybridRenderThread {
+class BiDirHybridRenderThread : public HybridRenderThread {
 public:
-	BiDirHybridRenderThread(const unsigned int index, const unsigned int seedBase,
-			IntersectionDevice *device, BiDirHybridRenderEngine *re);
-	~BiDirHybridRenderThread();
-
-	void Start();
-    void Interrupt();
-	void Stop();
-
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
+	BiDirHybridRenderThread(BiDirHybridRenderEngine *engine, const u_int index,
+			const u_int seedVal, IntersectionDevice *device);
 
 	friend class BiDirState;
 	friend class BiDirHybridRenderEngine;
 
 private:
-	static void RenderThreadImpl(BiDirHybridRenderThread *renderThread);
-
-	void StartRenderThread();
-	void StopRenderThread();
-
-	size_t PushRay(const Ray &ray);
-	void PopRay(const Ray **ray, const RayHit **rayHit);
-
-	boost::thread *renderThread;
-	Film *threadFilm;
-
-	IntersectionDevice *intersectionDevice;
-
-	unsigned int threadIndex, seed;
-	BiDirHybridRenderEngine *renderEngine;
-	double samplesCount;
-
-	unsigned int pendingRayBuffers;
-	RayBuffer *currentRayBufferToSend;
-	deque<RayBuffer *> freeRayBuffers;
-
-	RayBuffer *currentReiceivedRayBuffer;
-	size_t currentReiceivedRayBufferIndex;
-	
-	bool started, editMode;
+	HybridRenderState *AllocRenderState(RandomGenerator *rndGen) {
+		return new BiDirState((BiDirHybridRenderEngine *)renderEngine, threadFilm, rndGen);
+	}
+	boost::thread *AllocRenderThread() {
+		return new boost::thread(&BiDirHybridRenderThread::RenderFunc, this);
+	}
 };
 
-//------------------------------------------------------------------------------
-// Bidirectional path tracing hybrid render engine
-//------------------------------------------------------------------------------
-
-class BiDirHybridRenderEngine : public OCLRenderEngine {
+class BiDirHybridRenderEngine : public HybridRenderEngine {
 public:
 	BiDirHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	~BiDirHybridRenderEngine();
 
 	RenderEngineType GetEngineType() const { return BIDIRHYBRID; }
 
@@ -139,23 +103,10 @@ public:
 	friend class BiDirHybridRenderThread;
 
 private:
-	void StartLockLess();
-	void StopLockLess();
-
-	void BeginEditLockLess();
-	void EndEditLockLess(const EditActionList &editActions);
-
-	void UpdateFilmLockLess();
-
-	void UpdateSamplesCount() {
-		double count = 0.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			count += renderThreads[i]->samplesCount;
-		samplesCount = count;
+	HybridRenderThread *NewRenderThread(const u_int index, const u_int seedVal,
+			IntersectionDevice *device) {
+		return new BiDirHybridRenderThread(this, index, seedVal, device);
 	}
-
-	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
-	vector<BiDirHybridRenderThread *> renderThreads;
 };
 
 #endif

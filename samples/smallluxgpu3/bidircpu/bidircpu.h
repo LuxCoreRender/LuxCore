@@ -43,8 +43,7 @@ class BiDirCPURenderEngine;
 
 class BiDirCPURenderThread : public CPURenderThread {
 public:
-	BiDirCPURenderThread(CPURenderEngine *engine, const u_int index, const u_int seedVal) :
-		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) { }
+	BiDirCPURenderThread(BiDirCPURenderEngine *engine, const u_int index, const u_int seedVal);
 
 	friend class BiDirCPURenderEngine;
 
@@ -85,9 +84,8 @@ public:
 	friend class BiDirCPURenderThread;
 
 private:
-	CPURenderThread *NewRenderThread(CPURenderEngine *engine,
-		const u_int index, const u_int seedVal) {
-		return new BiDirCPURenderThread(engine, index, seedVal);
+	CPURenderThread *NewRenderThread(const u_int index, const u_int seedVal) {
+		return new BiDirCPURenderThread(this, index, seedVal);
 	}
 
 	void UpdateSamplesCount() {

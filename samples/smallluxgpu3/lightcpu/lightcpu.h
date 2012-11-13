@@ -33,8 +33,7 @@ class LightCPURenderEngine;
 
 class LightCPURenderThread : public CPURenderThread {
 public:
-	LightCPURenderThread(CPURenderEngine *engine, const u_int index, const u_int seedVal) :
-		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) { }
+	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index, const u_int seedVal);
 
 	friend class LightCPURenderEngine;
 
@@ -65,9 +64,8 @@ public:
 	friend class LightCPURenderThread;
 
 private:
-	CPURenderThread *NewRenderThread(CPURenderEngine *engine,
-		const u_int index, const unsigned int seedVal) {
-		return new LightCPURenderThread(engine, index, seedVal);
+	CPURenderThread *NewRenderThread(const u_int index, const unsigned int seedVal) {
+		return new LightCPURenderThread(this, index, seedVal);
 	}
 
 	void UpdateSamplesCount() {

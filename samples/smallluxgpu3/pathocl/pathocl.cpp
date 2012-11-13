@@ -73,7 +73,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		oclIntersectionDevice->SetHybridRenderingSupport(false);
 	}
 
-	// Set the Luxrays SataSet
+	// Set the LuxRays SataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	//--------------------------------------------------------------------------

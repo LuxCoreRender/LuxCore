@@ -31,7 +31,7 @@
 //------------------------------------------------------------------------------
 
 BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		OCLRenderEngine(rcfg, flm, flmMutex) {
+		HybridRenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
@@ -47,73 +47,6 @@ BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, 
 	MachineEpsilon::SetMax(epsilon);
 
 	film->EnableOverlappedScreenBufferUpdate(true);
-
-	//--------------------------------------------------------------------------
-	// Create render threads
-	//--------------------------------------------------------------------------
-
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
-	if (selectedDeviceDescs.size() == 1) {
-		// Only one intersection device, use a M2O device
-		intersectionDevices = ctx->AddVirtualM2OIntersectionDevices(renderThreadCount, selectedDeviceDescs);
-	} else {
-		// Multiple intersection devices, use a M2M device
-		intersectionDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
-	}
-	devices = ctx->GetIntersectionDevices();
-
-	// Set the Luxrays DataSet
-	ctx->SetDataSet(renderConfig->scene->dataSet);
-
-	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
-	SLG_LOG("Starting "<< renderThreadCount << " BiDir hybrid render threads");
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		BiDirHybridRenderThread *t = new BiDirHybridRenderThread(i, seedBase + i, devices[i], this);
-		renderThreads.push_back(t);
-	}
-}
-
-BiDirHybridRenderEngine::~BiDirHybridRenderEngine() {
-	if (editMode)
-		EndEdit(EditActionList());
-	if (started)
-		Stop();
-}
-
-void BiDirHybridRenderEngine::StartLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
-}
-
-void BiDirHybridRenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
-}
-
-void BiDirHybridRenderEngine::BeginEditLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
-}
-
-void BiDirHybridRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
-}
-
-void BiDirHybridRenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-	film->Reset();
-
-	// Merge the all thread films
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		if (renderThreads[i]->threadFilm)
-			film->AddFilm(*(renderThreads[i]->threadFilm));
-	}
 }
 
 #endif
