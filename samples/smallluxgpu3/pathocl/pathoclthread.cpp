@@ -331,7 +331,7 @@ void PathOCLRenderThread::InitTextureMaps() {
 			texMapAlphaBuff.resize(cscene->alphaTexMemBlocks.size());
 			for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i) {
 				AllocOCLBufferRO(&(texMapAlphaBuff[i]), &(cscene->alphaTexMemBlocks[i][0]),
-						sizeof(Spectrum) * cscene->alphaTexMemBlocks[i].size(), "TexMaps Alpha Channel");
+						sizeof(float) * cscene->alphaTexMemBlocks[i].size(), "TexMaps Alpha Channel");
 			}
 		} else
 			texMapAlphaBuff.resize(0);
