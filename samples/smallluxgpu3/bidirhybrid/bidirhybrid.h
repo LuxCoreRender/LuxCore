@@ -22,6 +22,8 @@
 #ifndef _BIDIRHYBRID_H
 #define	_BIDIRHYBRID_H
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "smalllux.h"
 #include "renderengine.h"
 #include "bidircpu/bidircpu.h"
@@ -155,5 +157,7 @@ private:
 	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
 	vector<BiDirHybridRenderThread *> renderThreads;
 };
+
+#endif
 
 #endif	/* _BIDIRHYBRID_H */

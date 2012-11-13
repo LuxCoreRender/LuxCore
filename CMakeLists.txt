@@ -35,9 +35,6 @@ SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 project(LuxRays)
 
-# Try to use OpenCL
-SET(LUXRAYS_DISABLE_OPENCL 0)
-
 # Dont overconfigure
 SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limit configs" FORCE)
 

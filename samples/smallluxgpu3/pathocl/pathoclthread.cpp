@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "smalllux.h"
 #include "pathocl/pathocl.h"
 #include "pathocl/kernels/kernels.h"
@@ -1263,3 +1265,5 @@ void PathOCLRenderThread::RenderThreadImpl() {
 			alphaFrameBuffer);
 	}
 }
+
+#endif

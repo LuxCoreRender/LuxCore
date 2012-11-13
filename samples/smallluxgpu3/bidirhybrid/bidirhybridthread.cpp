@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include "smalllux.h"
 #include "renderconfig.h"
 #include "bidirhybrid/bidirhybrid.h"
@@ -249,3 +251,5 @@ void BiDirHybridRenderThread::RenderThreadImpl(BiDirHybridRenderThread *renderTh
 		renderThread->freeRayBuffers.push_back(rayBuffer);
 	}
 }
+
+#endif

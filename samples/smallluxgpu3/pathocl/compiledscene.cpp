@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 #include"compiledscene.h"
 
 CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
@@ -889,3 +891,5 @@ bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
 			break;
 	}
 }
+
+#endif

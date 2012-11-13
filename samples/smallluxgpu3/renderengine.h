@@ -30,11 +30,15 @@
 #include "luxrays/utils/sdl/bsdf.h"
 
 enum RenderEngineType {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	PATHOCL  = 4,
+#endif
 	LIGHTCPU = 5,
 	PATHCPU = 6,
-	BIDIRCPU = 7,
-	BIDIRHYBRID = 8
+	BIDIRCPU = 7
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	, BIDIRHYBRID = 8
+#endif
 };
 
 //------------------------------------------------------------------------------
@@ -105,25 +109,6 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-// Base class for OpenCL render engines
-//------------------------------------------------------------------------------
-
-class OCLRenderEngine : public RenderEngine {
-public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-
-	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
-		return intersectionDevices;
-	}
-
-	double GetTotalRaysSec() const;
-
-protected:
-	vector<DeviceDescription *> selectedDeviceDescs;
-	vector<IntersectionDevice *> intersectionDevices;
-};
-
-//------------------------------------------------------------------------------
 // Base class for CPU render engines
 //------------------------------------------------------------------------------
 
@@ -188,5 +173,28 @@ protected:
 
 	vector<CPURenderThread *> renderThreads;
 };
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+//------------------------------------------------------------------------------
+// Base class for OpenCL render engines
+//------------------------------------------------------------------------------
+
+class OCLRenderEngine : public RenderEngine {
+public:
+	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+
+	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
+		return intersectionDevices;
+	}
+
+	double GetTotalRaysSec() const;
+
+protected:
+	vector<DeviceDescription *> selectedDeviceDescs;
+	vector<IntersectionDevice *> intersectionDevices;
+};
+
+#endif
 
 #endif	/* _RENDERENGINE_H */

@@ -293,8 +293,10 @@ int main(int argc, char *argv[]) {
 			} else
 				RunGlut();
 		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
 		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << luxrays::utils::oclErrorString(err.err()) << ")");
+#endif
 	} catch (runtime_error err) {
 		SLG_LOG("RUNTIME ERROR: " << err.what());
 	} catch (exception err) {
