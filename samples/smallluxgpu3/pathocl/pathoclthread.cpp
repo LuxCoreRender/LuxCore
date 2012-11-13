@@ -1054,7 +1054,7 @@ void PathOCLRenderThread::Stop() {
 
 void PathOCLRenderThread::StartRenderThread() {
 	// Create the thread for the rendering
-	renderThread = new boost::thread(boost::bind(PathOCLRenderThread::RenderThreadImpl, this));
+	renderThread = new boost::thread(&PathOCLRenderThread::RenderThreadImpl, this);
 }
 
 void PathOCLRenderThread::StopRenderThread() {
@@ -1148,50 +1148,50 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
-void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
-	//SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread started");
+void PathOCLRenderThread::RenderThreadImpl() {
+	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	cl::CommandQueue &oclQueue = renderThread->intersectionDevice->GetOpenCLQueue();
-	const unsigned int taskCount = renderThread->renderEngine->taskCount;
+	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+	const unsigned int taskCount = renderEngine->taskCount;
 
 	try {
 		double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
-			/*if(renderThread->threadIndex == 0)
+			/*if(threadIndex == 0)
 				cerr<< "[DEBUG] =================================");*/
 
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
-				*(renderThread->frameBufferBuff),
+				*frameBufferBuff,
 				CL_FALSE,
 				0,
-				renderThread->frameBufferBuff->getInfo<CL_MEM_SIZE>(),
-				renderThread->frameBuffer);
+				frameBufferBuff->getInfo<CL_MEM_SIZE>(),
+				frameBuffer);
 
 			// Check if I have to transfer the alpha channel too
-			if (renderThread->alphaFrameBufferBuff) {
+			if (alphaFrameBufferBuff) {
 				// Async. transfer of the alpha channel
 				oclQueue.enqueueReadBuffer(
-					*(renderThread->alphaFrameBufferBuff),
+					*alphaFrameBufferBuff,
 					CL_FALSE,
 					0,
-					renderThread->alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
-					renderThread->alphaFrameBuffer);
+					alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
+					alphaFrameBuffer);
 			}
 
 			// Async. transfer of GPU task statistics
 			oclQueue.enqueueReadBuffer(
-				*(renderThread->taskStatsBuff),
+				*(taskStatsBuff),
 				CL_FALSE,
 				0,
 				sizeof(PathOCL::GPUTaskStats) * taskCount,
-				renderThread->gpuTaskStats);
+				gpuTaskStats);
 
 			for (;;) {
 				cl::Event event;
 
 				// Decide how many kernels to enqueue
-				const unsigned int screenRefreshInterval = renderThread->renderEngine->renderConfig->GetScreenRefreshInterval();
+				const unsigned int screenRefreshInterval = renderEngine->renderConfig->GetScreenRefreshInterval();
 
 				unsigned int iterations;
 				if (screenRefreshInterval <= 100)
@@ -1206,29 +1206,29 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 				for (unsigned int i = 0; i < iterations; ++i) {
 					// Generate the samples and paths
 					if (i == 0)
-						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
-								cl::NDRange(taskCount), cl::NDRange(renderThread->samplerWorkGroupSize),
+						oclQueue.enqueueNDRangeKernel(*samplerKernel, cl::NullRange,
+								cl::NDRange(taskCount), cl::NDRange(samplerWorkGroupSize),
 								NULL, &event);
 					else
-						oclQueue.enqueueNDRangeKernel(*(renderThread->samplerKernel), cl::NullRange,
-								cl::NDRange(taskCount), cl::NDRange(renderThread->samplerWorkGroupSize));
+						oclQueue.enqueueNDRangeKernel(*samplerKernel, cl::NullRange,
+								cl::NDRange(taskCount), cl::NDRange(samplerWorkGroupSize));
 
 					// Trace rays
-					renderThread->intersectionDevice->EnqueueTraceRayBuffer(*(renderThread->raysBuff),
-								*(renderThread->hitsBuff), taskCount, NULL, NULL);
+					intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
+								*(hitsBuff), taskCount, NULL, NULL);
 
 					// Advance to next path state
-					oclQueue.enqueueNDRangeKernel(*(renderThread->advancePathsKernel), cl::NullRange,
-							cl::NDRange(taskCount), cl::NDRange(renderThread->advancePathsWorkGroupSize));
+					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
+							cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 				}
 				oclQueue.flush();
 
 				event.wait();
 				const double elapsedTime = WallClockTime() - startTime;
 
-				/*if(renderThread->threadIndex == 0)
+				/*if(threadIndex == 0)
 					cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 <<
-							"ms (screenRefreshInterval: " << renderThread->renderEngine->screenRefreshInterval << ")");*/
+							"ms (screenRefreshInterval: " << renderEngine->screenRefreshInterval << ")");*/
 
 				if ((elapsedTime * 1000.0 > (double)screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
@@ -1238,28 +1238,28 @@ void PathOCLRenderThread::RenderThreadImpl(PathOCLRenderThread *renderThread) {
 			startTime = WallClockTime();
 		}
 
-		//SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
+		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
-		SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (cl::Error err) {
-		SLG_LOG("[PathOCLRenderThread::" << renderThread->threadIndex << "] Rendering thread ERROR: " << err.what() <<
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << luxrays::utils::oclErrorString(err.err()) << ")");
 	}
 
 	oclQueue.enqueueReadBuffer(
-			*(renderThread->frameBufferBuff),
+			*frameBufferBuff,
 			CL_TRUE,
 			0,
-			renderThread->frameBufferBuff->getInfo<CL_MEM_SIZE>(),
-			renderThread->frameBuffer);
-	
+			frameBufferBuff->getInfo<CL_MEM_SIZE>(),
+			frameBuffer);
+
 	// Check if I have to transfer the alpha channel too
-	if (renderThread->alphaFrameBufferBuff) {
+	if (alphaFrameBufferBuff) {
 		oclQueue.enqueueReadBuffer(
-			*(renderThread->alphaFrameBufferBuff),
+			*alphaFrameBufferBuff,
 			CL_TRUE,
 			0,
-			renderThread->alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
-			renderThread->alphaFrameBuffer);
+			alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
+			alphaFrameBuffer);
 	}
 }
