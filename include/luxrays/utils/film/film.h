@@ -75,7 +75,7 @@ public:
 
 	void EnableAlphaChannel(const bool alphaChannel) {
 		// Alpha buffer uses the weights in PER_PIXEL_NORMALIZED buffer
-		assert (enablePerPixelNormalizedBuffer);
+		assert (!alphaChannel || (alphaChannel && enablePerPixelNormalizedBuffer));
 
 		enableAlphaChannel = alphaChannel;
 	}

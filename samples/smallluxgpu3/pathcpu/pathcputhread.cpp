@@ -32,12 +32,13 @@
 // PathCPU RenderThread
 //------------------------------------------------------------------------------
 
-void PathCPURenderEngine::DirectLightSampling(
+void PathCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThrouput, const BSDF &bsdf,
 		const int depth, Spectrum *radiance) {
-	Scene *scene = renderConfig->scene;
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
 	
 	if (!bsdf.IsDelta()) {
 		// Pick a light source to sample
@@ -67,9 +68,9 @@ void PathCPURenderEngine::DirectLightSampling(
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
-					if (depth >= rrDepth) {
+					if (depth >= engine->rrDepth) {
 						// Russian Roulette
-						bsdfPdfW *= Max(bsdfEval.Filter(), rrImportanceCap);
+						bsdfPdfW *= Max(bsdfEval.Filter(), engine->rrImportanceCap);
 					}
 
 					// MIS between direct light sampling and BSDF sampling
@@ -82,11 +83,12 @@ void PathCPURenderEngine::DirectLightSampling(
 	}
 }
 
-void PathCPURenderEngine::DirectHitFiniteLight(
+void PathCPURenderThread::DirectHitFiniteLight(
 		const bool lastSpecular, const Spectrum &pathThrouput,
 		const float distance, const BSDF &bsdf, const float lastPdfW,
 		Spectrum *radiance) {
-	Scene *scene = renderConfig->scene;
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
 
 	float directPdfA;
 	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene, &directPdfA);
@@ -107,11 +109,14 @@ void PathCPURenderEngine::DirectHitFiniteLight(
 	}
 }
 
-void PathCPURenderEngine::DirectHitInfiniteLight(
+void PathCPURenderThread::DirectHitInfiniteLight(
 		const bool lastSpecular, const Spectrum &pathThrouput,
 		const Vector &eyeDir, const float lastPdfW, Spectrum *radiance) {
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+
 	float directPdfW;
-	Spectrum lightRadiance = renderConfig->scene->GetEnvLightsRadiance(-eyeDir, Point(), &directPdfW);
+	Spectrum lightRadiance = scene->GetEnvLightsRadiance(-eyeDir, Point(), &directPdfW);
 	if (lightRadiance.Black())
 		return;
 
@@ -125,28 +130,28 @@ void PathCPURenderEngine::DirectHitInfiniteLight(
 	*radiance += pathThrouput * weight * lightRadiance;
 }
 
-void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
-	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread started");
+void PathCPURenderThread::RenderFunc() {
+	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	PathCPURenderEngine *renderEngine = (PathCPURenderEngine *)renderThread->renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(renderThread->seed);
-	Scene *scene = renderEngine->renderConfig->scene;
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+	RandomGenerator *rndGen = new RandomGenerator(seed);
+	Scene *scene = engine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
-	Film * film = renderThread->threadFilm;
+	Film * film = threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 
 	// Setup the sampler
-	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleBootSize = 4;
 	const unsigned int sampleStepSize = 10;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate eye ray
-		renderEngine->maxPathDepth * sampleStepSize; // For each path vertex
+		engine->maxPathDepth * sampleStepSize; // For each path vertex
 	sampler->RequestSamples(sampleSize);
 
 	//--------------------------------------------------------------------------
@@ -170,7 +175,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		Spectrum radiance;
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		BSDF bsdf;
-		while (depth <= renderEngine->maxPathDepth) {
+		while (depth <= engine->maxPathDepth) {
 			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit eyeRayHit;
@@ -178,7 +183,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			if (!scene->Intersect(false, true, sampler->GetSample(sampleOffset), &eyeRay,
 					&eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
-				renderEngine->DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, eyeRay.d,
+				DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, eyeRay.d,
 						lastPdfW, &radiance);
 
 				if (depth == 1)
@@ -191,7 +196,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
-				renderEngine->DirectHitFiniteLight(lastSpecular, pathThrouput,
+				DirectHitFiniteLight(lastSpecular, pathThrouput,
 						eyeRayHit.t, bsdf, lastPdfW, &radiance);
 
 				// SLG light sources are like black bodies
@@ -204,7 +209,7 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 			// Direct light sampling
 			//------------------------------------------------------------------
 
-			renderEngine->DirectLightSampling(sampler->GetSample(sampleOffset + 1),
+			DirectLightSampling(sampler->GetSample(sampleOffset + 1),
 					sampler->GetSample(sampleOffset + 2),
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
@@ -228,9 +233,9 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 
 			lastSpecular = ((event & SPECULAR) != 0);
 
-			if ((depth >= renderEngine->rrDepth) && !lastSpecular) {
+			if ((depth >= engine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
-				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
+				const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
 				if (sampler->GetSample(sampleOffset + 9) < prob)
 					lastPdfW *= prob;
 				else
@@ -256,5 +261,5 @@ void PathCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	delete sampler;
 	delete rndGen;
 
-	//SLG_LOG("[PathCPURenderEngine::" << renderThread->threadIndex << "] Rendering thread halted");
+	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

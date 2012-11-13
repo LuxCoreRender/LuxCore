@@ -28,10 +28,11 @@
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
 
-void LightCPURenderEngine::ConnectToEye(const float u0,
+void LightCPURenderThread::ConnectToEye(const float u0,
 		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
 		vector<SampleResult> &sampleResults) {
-	Scene *scene = renderConfig->scene;
+	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
 
 	Vector eyeDir(bsdf.hitPoint - lensPoint);
 	const float eyeDistance = eyeDir.Length();
@@ -69,28 +70,28 @@ void LightCPURenderEngine::ConnectToEye(const float u0,
 	}
 }
 
-void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
-	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread started");
+void LightCPURenderThread::RenderFunc() {
+	//SLG_LOG("[LightCPURenderThread::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	LightCPURenderEngine *renderEngine = (LightCPURenderEngine *)renderThread->renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(renderThread->seed);
-	Scene *scene = renderEngine->renderConfig->scene;
+	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
+	RandomGenerator *rndGen = new RandomGenerator(seed);
+	Scene *scene = engine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
-	Film *film = renderThread->threadFilm;
+	Film *film = threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 
 	// Setup the sampler
-	Sampler *sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film);
 	const unsigned int sampleBootSize = 12;
 	const unsigned int sampleStepSize = 6;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
-		renderEngine->maxPathDepth * sampleStepSize; // For each light vertex
+		engine->maxPathDepth * sampleStepSize; // For each light vertex
 	sampler->RequestSamples(sampleSize);
 
 	//--------------------------------------------------------------------------
@@ -98,9 +99,9 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults;
-	renderThread->samplesCount = 0.0;
+	samplesCount = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
-		renderThread->samplesCount += 1.0;
+		samplesCount += 1.0;
 		sampleResults.clear();
 
 		// Select one light source
@@ -169,7 +170,7 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 		//----------------------------------------------------------------------
 
 		int depth = 1;
-		while (depth <= renderEngine->maxPathDepth) {
+		while (depth <= engine->maxPathDepth) {
 			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit nextEventRayHit;
@@ -191,10 +192,10 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
-				renderEngine->ConnectToEye(sampler->GetSample(sampleOffset + 1),
+				ConnectToEye(sampler->GetSample(sampleOffset + 1),
 						bsdf, lensPoint, lightPathFlux, sampleResults);
 
-				if (depth >= renderEngine->maxPathDepth)
+				if (depth >= engine->maxPathDepth)
 					break;
 
 				//--------------------------------------------------------------
@@ -213,9 +214,9 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 				if (bsdfSample.Black())
 					break;
 
-				if (depth >= renderEngine->rrDepth) {
+				if (depth >= engine->rrDepth) {
 					// Russian Roulette
-					const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
+					const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
 					if (sampler->GetSample(sampleOffset + 5) < prob)
 						bsdfPdf *= prob;
 					else
@@ -239,5 +240,5 @@ void LightCPURenderEngine::RenderThreadFuncImpl(CPURenderThread *renderThread) {
 	delete sampler;
 	delete rndGen;
 
-	//SLG_LOG("[LightCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
+	//SLG_LOG("[LightCPURenderThread::" << threadIndex << "] Rendering thread halted");
 }

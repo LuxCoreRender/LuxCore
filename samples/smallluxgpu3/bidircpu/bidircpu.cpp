@@ -28,7 +28,7 @@
 //------------------------------------------------------------------------------
 
 BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex, RenderThreadFuncImpl, true, true) {
+		CPURenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------

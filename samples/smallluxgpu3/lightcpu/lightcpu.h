@@ -29,6 +29,27 @@
 // Light tracing CPU render engine
 //------------------------------------------------------------------------------
 
+class LightCPURenderEngine;
+
+class LightCPURenderThread : public CPURenderThread {
+public:
+	LightCPURenderThread(CPURenderEngine *engine, const u_int index, const u_int seedVal) :
+		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) { }
+
+	friend class LightCPURenderEngine;
+
+private:
+	boost::thread *AllocRenderThread() { return new boost::thread(&LightCPURenderThread::RenderFunc, this); }
+
+	void RenderFunc();
+
+	void ConnectToEye(const float u0,
+			const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
+			vector<SampleResult> &sampleResults);
+
+	double samplesCount;
+};
+
 class LightCPURenderEngine : public CPURenderEngine {
 public:
 	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
@@ -41,27 +62,23 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
+	friend class LightCPURenderThread;
+
 private:
-	static void RenderThreadFuncImpl(CPURenderThread *thread);
-
-	void StartLockLess() {
-		threadSamplesCount.resize(renderThreads.size(), 0.0);
-
-		CPURenderEngine::StartLockLess();
+	CPURenderThread *NewRenderThread(CPURenderEngine *engine,
+		const u_int index, const unsigned int seedVal) {
+		return new LightCPURenderThread(engine, index, seedVal);
 	}
 
 	void UpdateSamplesCount() {
 		double count = 0.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			count += threadSamplesCount[i];
+		for (size_t i = 0; i < renderThreads.size(); ++i) {
+			LightCPURenderThread *thread = (LightCPURenderThread *)renderThreads[i];
+			if (thread)
+				count += thread->samplesCount;
+		}
 		samplesCount = count;
 	}
-
-	void ConnectToEye(const float u0,
-			const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
-			vector<SampleResult> &sampleResults);
-
-	vector<double> threadSamplesCount;
 };
 
 #endif	/* _LIGHTCPU_H */
