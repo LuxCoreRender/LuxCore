@@ -29,20 +29,19 @@
 // Path tracing CPU render engine
 //------------------------------------------------------------------------------
 
-class PathCPURenderEngine : public CPURenderEngine {
+class PathCPURenderEngine;
+
+class PathCPURenderThread : public CPURenderThread {
 public:
-	PathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathCPURenderThread(CPURenderEngine *engine, const u_int index, const u_int seedVal) :
+		CPURenderThread(engine, index, seedVal, true, false) { }
 
-	RenderEngineType GetEngineType() const { return PATHCPU; }
-
-	// Signed because of the delta parameter
-	int maxPathDepth;
-
-	int rrDepth;
-	float rrImportanceCap;
+	friend class PathCPURenderEngine;
 
 private:
-	static void RenderThreadFuncImpl(CPURenderThread *thread);
+	boost::thread *AllocRenderThread() { return new boost::thread(&PathCPURenderThread::RenderFunc, this); }
+
+	void RenderFunc();
 
 	void DirectLightSampling(const float u0, const float u1,
 			const float u2, const float u3, const float u4,
@@ -55,6 +54,27 @@ private:
 
 	void DirectHitInfiniteLight(const bool lastSpecular, const Spectrum &pathThrouput,
 			const Vector &eyeDir, const float lastPdfW, Spectrum *radiance);
+};
+
+class PathCPURenderEngine : public CPURenderEngine {
+public:
+	PathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+
+	RenderEngineType GetEngineType() const { return PATHCPU; }
+
+	// Signed because of the delta parameter
+	int maxPathDepth;
+
+	int rrDepth;
+	float rrImportanceCap;
+
+	friend class PathCPURenderThread;
+
+private:
+	CPURenderThread *NewRenderThread(CPURenderEngine *engine,
+		const u_int index, const u_int seedVal) {
+		return new PathCPURenderThread(engine, index, seedVal);
+	}
 };
 
 #endif	/* _PATHCPU_H */

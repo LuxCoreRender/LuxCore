@@ -39,6 +39,7 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	renderConfig = cfg;
 	film = flm;
 	filmMutex = flmMutex;
+	seedBase = (unsigned int)(WallClockTime() / 1000.0);
 	started = false;
 	editMode = false;
 
@@ -234,14 +235,6 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 	}
 }
 
-double RenderEngine::GetTotalRaysSec() const
-{
-	double raysSec = 0.;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-	return raysSec;
-}
-
 //------------------------------------------------------------------------------
 // OCLRenderEngine
 //------------------------------------------------------------------------------
@@ -296,95 +289,11 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 		throw runtime_error("No OpenCL device selected or available");
 }
 
-//------------------------------------------------------------------------------
-// CPURenderEngine
-//------------------------------------------------------------------------------
-
-CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm,
-	boost::mutex *flmMutex, void (* threadFunc)(CPURenderThread *),
-	const bool enablePerPixelNormBuffer,
-	const bool enablePerScreenNormBuffer) :
-	RenderEngine(cfg, flm, flmMutex)
-{
-	renderThreadFunc = threadFunc;
-	samplesCount = 0.;
-
-	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
-
-	// Start native devices
-	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-
-	if (descs.size() == 0)
-		throw runtime_error("No CPU device selected or available");
-
-	// Allocate devices
-	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(descs);
-
-	// Check if I have to set max. QBVH stack size
-	const size_t qbvhStackSize = cfg->cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
-	SLG_LOG("CPU Devices used:");
-	for (size_t i = 0; i < devs.size(); ++i) {
-		SLG_LOG("[" << devs[i]->GetName() << "]");
-		devs[i]->SetMaxStackSize(qbvhStackSize);
-		intersectionDevices.push_back(devs[i]);
-	}
-
-	// Create and start render threads
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
-	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
-	for (unsigned int i = 0; i < renderThreadCount; ++i) {
-		CPURenderThread *t = new CPURenderThread(this, devs[i],
-			seedBase + i, threadFunc,
-			enablePerPixelNormBuffer, enablePerScreenNormBuffer);
-		renderThreads.push_back(t);
-	}
-}
-
-CPURenderEngine::~CPURenderEngine() {
-	if (editMode)
-		EndEdit(EditActionList());
-	if (started)
-		Stop();
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		delete renderThreads[i];
-}
-
-void CPURenderEngine::StartLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
-}
-
-void CPURenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
-}
-
-void CPURenderEngine::BeginEditLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
-}
-
-void CPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
-}
-
-void CPURenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-	film->Reset();
-
-	// Merge the all thread films
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		if (renderThreads[i]->threadFilm)
-			film->AddFilm(*(renderThreads[i]->threadFilm));
-	}
+double OCLRenderEngine::GetTotalRaysSec() const {
+	double raysSec = 0.;
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		raysSec += intersectionDevices[i]->GetPerformance();
+	return raysSec;
 }
 
 //------------------------------------------------------------------------------
@@ -392,13 +301,10 @@ void CPURenderEngine::UpdateFilmLockLess() {
 //------------------------------------------------------------------------------
 
 CPURenderThread::CPURenderThread(CPURenderEngine *engine,
-	IntersectionDevice *dev, const unsigned int seedVal,
-	void (* threadFunc)(CPURenderThread *),
-	const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf)
-{
-	device = dev;
+		const u_int index, const unsigned int seedVal,
+		const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) {
+	threadIndex = index;
 	seed = seedVal;
-	renderThreadFunc = threadFunc;
 	renderEngine = engine;
 	started = false;
 	editMode = false;
@@ -445,7 +351,7 @@ void CPURenderThread::StartRenderThread() {
 	threadFilm->Init(filmWidth, filmHeight);
 
 	// Create the thread for the rendering
-	renderThread = new boost::thread(boost::bind(renderThreadFunc, this));
+	renderThread = AllocRenderThread();
 }
 
 void CPURenderThread::StopRenderThread() {
@@ -463,4 +369,67 @@ void CPURenderThread::BeginEdit() {
 
 void CPURenderThread::EndEdit(const EditActionList &editActions) {
 	StartRenderThread();
+}
+
+//------------------------------------------------------------------------------
+// CPURenderEngine
+//------------------------------------------------------------------------------
+
+CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+	RenderEngine(cfg, flm, flmMutex) {
+	samplesCount = 0.0;
+
+	// Create and start render threads
+	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
+	renderThreads.resize(renderThreadCount, NULL);
+}
+
+CPURenderEngine::~CPURenderEngine() {
+	if (editMode)
+		EndEdit(EditActionList());
+	if (started)
+		Stop();
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		delete renderThreads[i];
+}
+
+void CPURenderEngine::StartLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (!renderThreads[i])
+			renderThreads[i] = NewRenderThread(this, i, seedBase + i);
+		renderThreads[i]->Start();
+	}
+}
+
+void CPURenderEngine::StopLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Stop();
+}
+
+void CPURenderEngine::BeginEditLockLess() {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->BeginEdit();
+}
+
+void CPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->EndEdit(editActions);
+}
+
+void CPURenderEngine::UpdateFilmLockLess() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	film->Reset();
+
+	// Merge the all thread films
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (renderThreads[i] && renderThreads[i]->threadFilm)
+			film->AddFilm(*(renderThreads[i]->threadFilm));
+	}
 }

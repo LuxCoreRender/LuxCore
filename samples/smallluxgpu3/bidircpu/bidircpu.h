@@ -39,6 +39,37 @@ typedef struct {
 	float d0, d1vc;
 } PathVertex;
 
+class BiDirCPURenderEngine;
+
+class BiDirCPURenderThread : public CPURenderThread {
+public:
+	BiDirCPURenderThread(CPURenderEngine *engine, const u_int index, const u_int seedVal) :
+		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) { }
+
+	friend class BiDirCPURenderEngine;
+
+private:
+	boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
+
+	void RenderFunc();
+
+	void DirectLightSampling(
+		const float u0, const float u1, const float u2,
+		const float u3, const float u4,
+		const PathVertex &eyeVertex, Spectrum *radiance) const;
+	void DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance) const;
+	void DirectHitInfiniteLight(const PathVertex &eyeVertex,
+		Spectrum *radiance) const;
+
+	void ConnectToEye(const unsigned int pixelCount, 
+		const PathVertex &BiDirVertex, const float u0,
+		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
+	void ConnectVertices(const PathVertex &eyeVertex, const PathVertex &BiDirVertex,
+		SampleResult *eyeSampleResult, const float u0) const;
+
+	double samplesCount;
+};
+
 class BiDirCPURenderEngine : public CPURenderEngine {
 public:
 	BiDirCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
@@ -51,33 +82,23 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
-private:
-	static void RenderThreadFuncImpl(CPURenderThread *thread);
+	friend class BiDirCPURenderThread;
 
-	void StartLockLess() {
-		CPURenderEngine::StartLockLess();
+private:
+	CPURenderThread *NewRenderThread(CPURenderEngine *engine,
+		const u_int index, const u_int seedVal) {
+		return new BiDirCPURenderThread(engine, index, seedVal);
 	}
 
 	void UpdateSamplesCount() {
 		double count = 0.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			count += renderThreads[i]->samplesCount;
+		for (size_t i = 0; i < renderThreads.size(); ++i) {
+			BiDirCPURenderThread *thread = (BiDirCPURenderThread *)renderThreads[i];
+			if (thread)
+				count += thread->samplesCount;
+		}
 		samplesCount = count;
 	}
-
-	void DirectLightSampling(
-		const float u0, const float u1, const float u2,
-		const float u3, const float u4,
-		const PathVertex &eyeVertex, Spectrum *radiance) const;
-	void DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance) const;
-	void DirectHitInfiniteLight(const PathVertex &eyeVertex,
-		Spectrum *radiance) const;
-
-	void ConnectToEye(const unsigned int pixelCount, 
-		const PathVertex &lightVertex, const float u0,
-		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
-	void ConnectVertices(const PathVertex &eyeVertex, const PathVertex &lightVertex,
-		SampleResult *eyeSampleResult, const float u0) const;
 };
 
 #endif	/* _BIDIRCPU_H */

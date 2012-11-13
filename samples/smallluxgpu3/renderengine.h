@@ -66,17 +66,12 @@ public:
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
-	double GetTotalRaysSec() const;
 	double GetRenderingTime() const { return elapsedTime; }
 
 	static RenderEngineType String2RenderEngineType(const string &type);
 	static const string RenderEngineType2String(const RenderEngineType type);
 	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
-
-	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
-		return intersectionDevices;
-	}
 
 protected:
 	virtual void StartLockLess() = 0;
@@ -97,6 +92,7 @@ protected:
 	RenderConfig *renderConfig;
 	Film *film;
 	boost::mutex *filmMutex;
+	u_int seedBase;
 
 	double startTime, elapsedTime;
 	double samplesCount;
@@ -106,7 +102,6 @@ protected:
 	double lastConvergenceTestSamplesCount;
 
 	bool started, editMode;
-	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -117,8 +112,15 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
+	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
+		return intersectionDevices;
+	}
+
+	double GetTotalRaysSec() const;
+
 protected:
 	vector<DeviceDescription *> selectedDeviceDescs;
+	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -129,33 +131,31 @@ class CPURenderEngine;
 
 class CPURenderThread {
 public:
-	CPURenderThread(CPURenderEngine *engine, IntersectionDevice *dev,
-		const unsigned int seedVal,
-		void (* threadFunc)(CPURenderThread *),
+	CPURenderThread(CPURenderEngine *engine,
+		const u_int index, const u_int seedVal,
 		const bool enablePerPixelNormBuffer,
 		const bool enablePerScreenNormBuffer);
-	~CPURenderThread();
+	virtual ~CPURenderThread();
 
-	void Start();
-	void Interrupt();
-	void Stop();
+	virtual void Start();
+	virtual void Interrupt();
+	virtual void Stop();
 
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
-
-	void StartRenderThread();
-	void StopRenderThread();
-
-	void InitRender();
-	void SplatSample(const float scrX, const float scrY, const Spectrum &radiance);
+	virtual void BeginEdit();
+	virtual void EndEdit(const EditActionList &editActions);
 
 	friend class CPURenderEngine;
 
-	// NOTE: all the fields are public so they can be accessed by renderThreadFunc()
+protected:
+	virtual boost::thread *AllocRenderThread() = 0;
 
-	IntersectionDevice *device;
-	unsigned int seed;
-	void (* renderThreadFunc)(CPURenderThread *);
+	virtual void StartRenderThread();
+	virtual void StopRenderThread();
+
+	virtual void RenderFunc() = 0;
+
+	u_int threadIndex;
+	u_int seed;
 	CPURenderEngine *renderEngine;
 
 	boost::thread *renderThread;
@@ -169,14 +169,15 @@ public:
 
 class CPURenderEngine : public RenderEngine {
 public:
-	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-			void (* threadFunc)(CPURenderThread *),
-			const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer);
+	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPURenderEngine();
 
 	friend class CPURenderThread;
 
 protected:
+	virtual CPURenderThread *NewRenderThread(CPURenderEngine *engine,
+		const u_int index, const u_int seedVal) = 0;
+
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
@@ -186,7 +187,6 @@ protected:
 	virtual void UpdateFilmLockLess();
 
 	vector<CPURenderThread *> renderThreads;
-	void (* renderThreadFunc)(CPURenderThread *renderThread);
 };
 
 #endif	/* _RENDERENGINE_H */
