@@ -37,6 +37,6 @@ CBiDirHybridRenderEngine::CBiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	eyePathCount = cfg.GetInt("path.count", 20);
-	lightPathCount = cfg.GetInt("light.count", 5);
+	eyePathCount = cfg.GetInt("cbidir.eye.count", 20);
+	lightPathCount = cfg.GetInt("cbidir.light.count", 5);
 }

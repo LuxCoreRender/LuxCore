@@ -33,6 +33,7 @@
 class BiDirHybridRenderEngine;
 
 typedef struct {
+	u_int lightPathVertexConnections;
 	float screenX, screenY;
 	float alpha;
 	Spectrum radiance;
@@ -63,7 +64,7 @@ protected:
 			const u_int eyePathIndex,
 			const PathVertex &eyeVertex, const PathVertex &lightVertex,
 			const float u0);
-	void ConnectToEye(HybridRenderThread *renderThread,
+	bool ConnectToEye(HybridRenderThread *renderThread,
 			const unsigned int pixelCount, const PathVertex &lightVertex,
 			const float u0,	const Point &lensPoint);
 

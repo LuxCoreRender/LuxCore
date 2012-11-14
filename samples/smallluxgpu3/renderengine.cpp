@@ -693,8 +693,7 @@ void HybridRenderThread::RenderFunc() {
 //------------------------------------------------------------------------------
 
 HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
-	boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex, false)
-{
+	boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex, false) {
 	//--------------------------------------------------------------------------
 	// Create the intersection devices and render threads
 	//--------------------------------------------------------------------------
