@@ -111,13 +111,9 @@ void BiDirState::ConnectVertices(HybridRenderThread *renderThread,
 			// MIS weights
 			const float lightWeight = eyeBsdfPdfA * (lightVertex.d0 + lightVertex.d1vc * lightBsdfRevPdfW);
 			const float eyeWeight = lightBsdfPdfA * (eyeVertex.d0 + eyeVertex.d1vc * eyeBsdfRevPdfW);
+			const float misWeight = 1.f / (renderEngine->lightPathCount * (lightWeight + 1.f + eyeWeight));
 
-			const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
-
-			// This is 1.0 for standard BiDir
-			const float cobinatorialScaleFactor = 1.f / (renderEngine->lightPathCount * renderEngine->eyePathCount);
-			
-			const Spectrum radiance = (cobinatorialScaleFactor * misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
+			const Spectrum radiance = (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						lightBsdfEval * lightVertex.throughput;
 
 			// Add the ray to trace and the result
@@ -166,12 +162,11 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 			const float fluxToRadianceFactor = cameraPdfA;
 
 			// MIS weight (cameraPdfA must be expressed normalized device coordinate)
-			const float weight = 1.f / (MIS(cameraPdfA / pixelCount) *
-				(lightVertex.d0 + lightVertex.d1vc * MIS(bsdfRevPdfW)) + 1.f); // Balance heuristic (MIS)
-			// This is 1.0 for standard BiDir
-			const float cobinatorialScaleFactor = 1.f / (renderEngine->lightPathCount * renderEngine->eyePathCount);
+			const float lightWeight = MIS(cameraPdfA / pixelCount) *
+				(lightVertex.d0 + lightVertex.d1vc * MIS(bsdfRevPdfW));
+			const float misWeight = 1.f / (renderEngine->lightPathCount * renderEngine->eyePathCount * (lightWeight + 1.f));
 
-			const Spectrum radiance = (cobinatorialScaleFactor * weight) * lightVertex.throughput * fluxToRadianceFactor * bsdfEval;
+			const Spectrum radiance = misWeight * lightVertex.throughput * fluxToRadianceFactor * bsdfEval;
 
 			// Add the ray to trace and the result
 			lightSampleValue.push_back(u0);
@@ -265,10 +260,10 @@ void BiDirState::DirectHitFiniteLight(HybridRenderThread *renderThread,
 	emissionPdfW *= lightPickPdf;
 
 	// MIS weight
-	const float misWeight = 1.f / (MIS(directPdfA) * eyeVertex.d0 +
-		MIS(emissionPdfW) * eyeVertex.d1vc + 1.f);
+	const float weightCamera = (MIS(directPdfA) * eyeVertex.d0 + MIS(emissionPdfW) * eyeVertex.d1vc);
+	const float misWeight = 1.f / (weightCamera + 1.f);
 
-	*radiance += eyeVertex.throughput * misWeight * lightRadiance;
+	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
 }
 
 void BiDirState::DirectHitInfiniteLight(HybridRenderThread *renderThread,
@@ -293,8 +288,8 @@ void BiDirState::DirectHitInfiniteLight(HybridRenderThread *renderThread,
 	emissionPdfW *= lightPickPdf;
 
 	// MIS weight
-	const float misWeight = 1.f / (MIS(directPdfA) * eyeVertex.d0 +
-		MIS(emissionPdfW) * eyeVertex.d1vc + 1.f);
+	const float weightCamera = (MIS(directPdfA) * eyeVertex.d0 + MIS(emissionPdfW) * eyeVertex.d1vc);
+	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += eyeVertex.throughput * misWeight * lightRadiance;
 }
@@ -470,8 +465,8 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 			return;
 
 		//----------------------------------------------------------------------
-		// Trace all connections between all light paths and the current eye
-		// position
+		// Trace all connections between all light paths and the first eye
+		// vertex
 		//----------------------------------------------------------------------
 
 		for (u_int lightPathIndex = 0; lightPathIndex < lightPaths.size(); ++lightPathIndex) {
