@@ -19,34 +19,22 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
-#include "renderconfig.h"
+#ifndef _CBIDIRHYBRID_H
+#define	_CBIDIRHYBRID_H
 
+#include "smalllux.h"
+#include "renderengine.h"
 #include "bidirhybrid/bidirhybrid.h"
 
 //------------------------------------------------------------------------------
-// BiDirCPURenderEngine
+// Combinatorial Bidirectional path tracing hybrid render engine
 //------------------------------------------------------------------------------
 
-BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		HybridRenderEngine(rcfg, flm, flmMutex) {
-	const Properties &cfg = renderConfig->cfg;
+class CBiDirHybridRenderEngine : public BiDirHybridRenderEngine {
+public:
+	CBiDirHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
+	RenderEngineType GetEngineType() const { return CBIDIRHYBRID; }
+};
 
-	// For classic BiDir, the count is always 1
-	eyePathCount = 1;
-	lightPathCount = 1;
-
-	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", 0.125f));
-	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
-	MachineEpsilon::SetMin(epsilon);
-	MachineEpsilon::SetMax(epsilon);
-
-	film->EnableOverlappedScreenBufferUpdate(true);
-}
+#endif	/* _CBIDIRHYBRID_H */

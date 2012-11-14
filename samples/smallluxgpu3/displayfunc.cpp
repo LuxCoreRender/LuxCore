@@ -46,6 +46,7 @@
 #include "pathcpu/pathcpu.h"
 #include "rendersession.h"
 #include "bidirhybrid/bidirhybrid.h"
+#include "cbidirhybrid/cbidirhybrid.h"
 
 bool OSDPrintHelp = false;
 
@@ -377,6 +378,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case '5':
 			session->SetRenderingEngineType(BIDIRHYBRID);
+			break;
+		case '6':
+			session->SetRenderingEngineType(CBIDIRHYBRID);
 			break;
 		case 'o': {
 #if defined(WIN32)

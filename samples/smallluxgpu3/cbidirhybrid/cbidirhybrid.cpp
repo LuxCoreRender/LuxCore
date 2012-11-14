@@ -22,31 +22,21 @@
 #include "smalllux.h"
 #include "renderconfig.h"
 
-#include "bidirhybrid/bidirhybrid.h"
+#include "cbidirhybrid/cbidirhybrid.h"
+#include "cbidirhybrid.h"
 
 //------------------------------------------------------------------------------
-// BiDirCPURenderEngine
+// CBiDirHybridRenderEngine
 //------------------------------------------------------------------------------
 
-BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		HybridRenderEngine(rcfg, flm, flmMutex) {
+CBiDirHybridRenderEngine::CBiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		BiDirHybridRenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	// For classic BiDir, the count is always 1
-	eyePathCount = 1;
-	lightPathCount = 1;
-
-	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", 0.125f));
-	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
-	MachineEpsilon::SetMin(epsilon);
-	MachineEpsilon::SetMax(epsilon);
-
-	film->EnableOverlappedScreenBufferUpdate(true);
+	eyePathCount = cfg.GetInt("path.count", 20);
+	lightPathCount = cfg.GetInt("light.count", 5);
 }

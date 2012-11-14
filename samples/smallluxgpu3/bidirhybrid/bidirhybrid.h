@@ -32,26 +32,37 @@
 
 class BiDirHybridRenderEngine;
 
+typedef struct {
+	float screenX, screenY;
+	float alpha;
+	Spectrum radiance;
+	vector<float> sampleValue; // Used for pass-through sampling
+	vector<Spectrum> sampleRadiance;
+} BiDirEyeSampleResult;
+
 class BiDirState : public HybridRenderState {
 public:
 	BiDirState(BiDirHybridRenderEngine *renderEngine, Film *film, RandomGenerator *rndGen);
+	virtual ~BiDirState() { }
 
-	void GenerateRays(HybridRenderThread *renderThread);
-	void CollectResults(HybridRenderThread *renderThread);
+	virtual void GenerateRays(HybridRenderThread *renderThread);
+	virtual double CollectResults(HybridRenderThread *renderThread);
 
-private:
+protected:
 	void DirectLightSampling(HybridRenderThread *renderThread,
-		const float u0, const float u1, const float u2,
-		const float u3, const float u4,
-		const PathVertex &eyeVertex);
+			const u_int eyePathIndex,
+			const float u0, const float u1, const float u2,
+			const float u3, const float u4,
+			const PathVertex &eyeVertex);
 	void DirectHitFiniteLight(HybridRenderThread *renderThread,
 			const PathVertex &eyeVertex, Spectrum *radiance) const;
 	void DirectHitInfiniteLight(HybridRenderThread *renderThread,
-		const PathVertex &eyeVertex, Spectrum *radiance) const;
+			const PathVertex &eyeVertex, Spectrum *radiance) const;
 
 	void ConnectVertices(HybridRenderThread *renderThread,
-		const PathVertex &eyeVertex, const PathVertex &lightVertex,
-		const float u0);
+			const u_int eyePathIndex,
+			const PathVertex &eyeVertex, const PathVertex &lightVertex,
+			const float u0);
 	void ConnectToEye(HybridRenderThread *renderThread,
 			const unsigned int pixelCount, const PathVertex &lightVertex,
 			const float u0,	const Point &lensPoint);
@@ -60,12 +71,9 @@ private:
 	vector<float> lightSampleValue; // Used for pass-through sampling
 	vector<SampleResult> lightSampleResults;
 
-	// Eye tracing results
-	float eyeScreenX, eyeScreenY;
-	float eyeAlpha;
-	Spectrum eyeRadiance;
-	vector<float> eyeSampleValue; // Used for pass-through sampling
-	vector<Spectrum> eyeSampleRadiance;
+	// Eye tracing results: I use a vector because of CBiDir. With standard BiDir,
+	// the size of the vector is just 1.
+	vector<BiDirEyeSampleResult>  eyeSampleResults;
 };
 
 class BiDirHybridRenderThread : public HybridRenderThread {
@@ -90,6 +98,9 @@ public:
 	BiDirHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return BIDIRHYBRID; }
+
+	// For classic BiDir, the count is always 1
+	u_int eyePathCount, lightPathCount;
 
 	// Signed because of the delta parameter
 	int maxEyePathDepth, maxLightPathDepth;

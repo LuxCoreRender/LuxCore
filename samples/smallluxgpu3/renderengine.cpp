@@ -26,6 +26,7 @@
 #include "pathcpu/pathcpu.h"
 #include "bidircpu/bidircpu.h"
 #include "bidirhybrid/bidirhybrid.h"
+#include "cbidirhybrid/cbidirhybrid.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
@@ -193,6 +194,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return BIDIRCPU;
 	if ((type.compare("8") == 0) || (type.compare("BIDIRHYBRID") == 0))
 		return BIDIRHYBRID;
+	if ((type.compare("9") == 0) || (type.compare("CBIDIRHYBRID") == 0))
+		return CBIDIRHYBRID;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -208,6 +211,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "BIDIRCPU";
 		case BIDIRHYBRID:
 			return "BIDIRHYBRID";
+		case CBIDIRHYBRID:
+			return "CBIDIRHYBRID";
 		default:
 			throw runtime_error("Unknown render engine type: " + type);
 	}
@@ -230,6 +235,8 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			return new BiDirCPURenderEngine(renderConfig, film, filmMutex);
 		case BIDIRHYBRID:
 			return new BiDirHybridRenderEngine(renderConfig, film, filmMutex);
+		case CBIDIRHYBRID:
+			return new CBiDirHybridRenderEngine(renderConfig, film, filmMutex);
 		default:
 			throw runtime_error("Unknown render engine type");
 	}
@@ -634,8 +641,7 @@ void HybridRenderThread::RenderFunc() {
 
 			// Collect rays up to the point to have only 1 pending buffer
 			while (pendingRayBuffers > 1) {
-				states[collectIndex]->CollectResults(this);
-				samplesCount += 1.0;
+				samplesCount += states[collectIndex]->CollectResults(this);
 
 				const u_int newCollectIndex = (collectIndex + 1) % states.size();
 				// A safety-check, it should never happen
