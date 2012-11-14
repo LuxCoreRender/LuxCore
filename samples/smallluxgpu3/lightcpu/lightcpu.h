@@ -45,8 +45,6 @@ private:
 	void ConnectToEye(const float u0,
 			const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
 			vector<SampleResult> &sampleResults);
-
-	double samplesCount;
 };
 
 class LightCPURenderEngine : public CPURenderEngine {
@@ -66,16 +64,6 @@ public:
 private:
 	CPURenderThread *NewRenderThread(const u_int index, const unsigned int seedVal) {
 		return new LightCPURenderThread(this, index, seedVal);
-	}
-
-	void UpdateSamplesCount() {
-		double count = 0.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i) {
-			LightCPURenderThread *thread = (LightCPURenderThread *)renderThreads[i];
-			if (thread)
-				count += thread->samplesCount;
-		}
-		samplesCount = count;
 	}
 };
 

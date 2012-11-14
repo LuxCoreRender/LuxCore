@@ -38,6 +38,7 @@ public:
 	virtual RayBuffer *PopRayBuffer() = 0;
 	virtual size_t GetQueueSize() = 0;
 
+	double GetTotalRaysCount() const { return statsTotalRayCount; }
 	double GetPerformance() const {
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
 		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalRayCount / statsTotalRayTime);

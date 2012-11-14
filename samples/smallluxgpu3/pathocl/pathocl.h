@@ -176,19 +176,7 @@ private:
 	void EndEditLockLess(const EditActionList &editActions);
 
 	void UpdateFilmLockLess();
-
-	void UpdateSamplesCount() {
-		// Update the sample count statistic
-		unsigned long long totalCount = 0;
-		for (size_t i = 0; i < renderThreads.size(); ++i) {
-			PathOCL::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
-
-			for (size_t i = 0; i < taskCount; ++i)
-				totalCount += stats[i].sampleCount;
-		}
-
-		samplesCount = totalCount;
-	}
+	void UpdateCounters();
 
 	CompiledScene *compiledScene;
 

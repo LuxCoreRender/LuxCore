@@ -294,4 +294,23 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 	}
 }
 
+void PathOCLRenderEngine::UpdateCounters() {
+	// Update the sample count statistic
+	unsigned long long totalCount = 0;
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		PathOCL::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
+
+		for (size_t i = 0; i < taskCount; ++i)
+			totalCount += stats[i].sampleCount;
+	}
+
+	samplesCount = totalCount;
+
+	// Update the ray count statistic
+	totalCount = 0.0;
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		totalCount += intersectionDevices[i]->GetTotalRaysCount();
+	raysCount = totalCount;
+}
+
 #endif

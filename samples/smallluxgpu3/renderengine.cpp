@@ -61,13 +61,6 @@ RenderEngine::~RenderEngine() {
 	delete ctx;
 }
 
-double RenderEngine::GetTotalRaysSec() const {
-	double raysSec = 0.;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		raysSec += intersectionDevices[i]->GetPerformance();
-	return raysSec;
-}
-
 void RenderEngine::Start() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
@@ -161,7 +154,7 @@ void RenderEngine::UpdateFilm() {
 	if (started) {
 		elapsedTime = WallClockTime() - startTime;
 		UpdateFilmLockLess();
-		UpdateSamplesCount();
+		UpdateCounters();
 
 		const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
 		if (haltthreshold >= 0.f) {
@@ -252,6 +245,10 @@ CPURenderThread::CPURenderThread(CPURenderEngine *engine,
 	threadIndex = index;
 	seed = seedVal;
 	renderEngine = engine;
+	
+	samplesCount = 0.0;
+	raysCount = 0.0;
+
 	started = false;
 	editMode = false;
 
@@ -296,6 +293,9 @@ void CPURenderThread::StartRenderThread() {
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
 	threadFilm->Init(filmWidth, filmHeight);
 
+	samplesCount = 0.0;
+	raysCount = 0.0;
+
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
 }
@@ -324,25 +324,7 @@ void CPURenderThread::EndEdit(const EditActionList &editActions) {
 CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
 	samplesCount = 0.0;
-
-	// Start native devices
-	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, descs);
-
-	if (descs.size() == 0)
-		throw runtime_error("No CPU device selected or available");
-
-	// Allocate devices
-	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(descs);
-
-	// Check if I have to set max. QBVH stack size
-	const size_t qbvhStackSize = cfg->cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
-	SLG_LOG("CPU Devices used:");
-	for (size_t i = 0; i < devs.size(); ++i) {
-		SLG_LOG("[" << devs[i]->GetName() << "]");
-		devs[i]->SetMaxStackSize(qbvhStackSize);
-		intersectionDevices.push_back(devs[i]);
-	}
+	raysCount = 0.0;
 
 	// Create and start render threads
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
@@ -399,13 +381,23 @@ void CPURenderEngine::UpdateFilmLockLess() {
 	}
 }
 
+void CPURenderEngine::UpdateCounters() {
+	// Update the sample count statistic
+	samplesCount = film->GetTotalSampleCount();
+
+	// Update the ray count statistic
+	double totalCount = 0.0;
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		totalCount += renderThreads[i]->raysCount;
+	raysCount = totalCount;
+}
+
 //------------------------------------------------------------------------------
 // OCLRenderEngine
 //------------------------------------------------------------------------------
 
 OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
-	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex)
-{
+	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
@@ -633,7 +625,7 @@ void HybridRenderThread::RenderFunc() {
 					collectIndex += incrementStep;
 				}
 			}
-			
+
 			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] State size: " << states.size());
 			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] generateIndex: " << generateIndex);
 			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] collectIndex: " << collectIndex);
@@ -760,4 +752,19 @@ void HybridRenderEngine::UpdateFilmLockLess() {
 		if (renderThreads[i]->threadFilm)
 			film->AddFilm(*(renderThreads[i]->threadFilm));
 	}
+}
+
+void HybridRenderEngine::UpdateCounters() {
+	// Update the sample count statistic
+	double totalCount = 0.0;
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		totalCount += renderThreads[i]->samplesCount;
+
+	samplesCount = totalCount;
+
+	// Update the ray count statistic
+	totalCount = 0.0;
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		totalCount += intersectionDevices[i]->GetTotalRaysCount();
+	raysCount = totalCount;
 }

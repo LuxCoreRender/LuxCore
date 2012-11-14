@@ -30,7 +30,7 @@
 
 LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
 		const u_int index, const u_int seedVal) :
-		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) {
+		CPURenderThread(engine, index, seedVal, true, true) {
 }
 
 void LightCPURenderThread::ConnectToEye(const float u0,
@@ -55,6 +55,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
+			++raysCount;
 			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -152,6 +153,7 @@ void LightCPURenderThread::RenderFunc() {
 			Spectrum radiance, connectionThroughput;
 			RayHit eyeRayHit;
 			BSDF bsdf;
+			++raysCount;
 			const bool somethingWasHit = scene->Intersect(
 				false, true, sampler->GetSample(11), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 			if (!somethingWasHit) {
@@ -181,6 +183,7 @@ void LightCPURenderThread::RenderFunc() {
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
+			++raysCount;
 			if (scene->Intersect(true, true, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit

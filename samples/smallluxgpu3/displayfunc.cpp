@@ -136,36 +136,41 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 
-	// Intersection devices
-	const vector<IntersectionDevice *> &idevices = session->renderEngine->GetIntersectionDevices();
+	OCLRenderEngine *oclEngine = dynamic_cast<OCLRenderEngine *>(session->renderEngine);
+	if (oclEngine) {
+		// OCLRenderEngine are the only one to use intersection devices
 
-	double minPerf = idevices[0]->GetPerformance();
-	double totalPerf = idevices[0]->GetPerformance();
-	for (size_t i = 1; i < idevices.size(); ++i) {
-		minPerf = min(minPerf, idevices[i]->GetPerformance());
-		totalPerf += idevices[i]->GetPerformance();
+		// Intersection devices
+		const vector<IntersectionDevice *> &idevices = oclEngine->GetIntersectionDevices();
+
+		double minPerf = idevices[0]->GetPerformance();
+		double totalPerf = idevices[0]->GetPerformance();
+		for (size_t i = 1; i < idevices.size(); ++i) {
+			minPerf = min(minPerf, idevices[i]->GetPerformance());
+			totalPerf += idevices[i]->GetPerformance();
+		}
+
+		glColor3f(1.0f, 0.5f, 0.f);
+		int offset = 45;
+		size_t deviceCount = idevices.size();
+
+		char buff[512];
+		for (size_t i = 0; i < deviceCount; ++i) {
+			sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+				idevices[i]->GetName().c_str(),
+				int(idevices[i]->GetPerformance() / 1000.0),
+				idevices[i]->GetPerformance() / minPerf,
+				100.0 * idevices[i]->GetPerformance() / totalPerf,
+				int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
+				int(idevices[i]->GetMaxMemory() / (1024 * 1024)));
+			glRasterPos2i(20, offset);
+			PrintString(GLUT_BITMAP_8_BY_13, buff);
+			offset += 15;
+		}
+
+		glRasterPos2i(15, offset);
+		PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 	}
-
-	glColor3f(1.0f, 0.5f, 0.f);
-	int offset = 45;
-	size_t deviceCount = idevices.size();
-
-	char buff[512];
-	for (size_t i = 0; i < deviceCount; ++i) {
-		sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-			idevices[i]->GetName().c_str(),
-			int(idevices[i]->GetPerformance() / 1000.0),
-			idevices[i]->GetPerformance() / minPerf,
-			100.0 * idevices[i]->GetPerformance() / totalPerf,
-			int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
-			int(idevices[i]->GetMaxMemory() / (1024 * 1024)));
-		glRasterPos2i(20, offset);
-		PrintString(GLUT_BITMAP_8_BY_13, buff);
-		offset += 15;
-	}
-
-	glRasterPos2i(15, offset);
-	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 }
 
 static void PrintCaptions() {
