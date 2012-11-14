@@ -67,17 +67,13 @@ public:
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
-	double GetTotalRaysSec() const;
+	double GetTotalRaysSec() const { return (elapsedTime == 0.0) ? 0.0 : (raysCount / elapsedTime); }
 	double GetRenderingTime() const { return elapsedTime; }
 
 	static RenderEngineType String2RenderEngineType(const string &type);
 	static const string RenderEngineType2String(const RenderEngineType type);
 	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
 		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
-
-	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
-		return intersectionDevices;
-	}
 
 protected:
 	virtual void StartLockLess() = 0;
@@ -87,10 +83,7 @@ protected:
 	virtual void EndEditLockLess(const EditActionList &editActions) = 0;
 
 	virtual void UpdateFilmLockLess() = 0;
-
-	virtual void UpdateSamplesCount() {
-		samplesCount = film->GetTotalSampleCount();
-	}
+	virtual void UpdateCounters() = 0;
 
 	boost::mutex engineMutex;
 	Context *ctx;
@@ -101,15 +94,13 @@ protected:
 	u_int seedBase;
 
 	double startTime, elapsedTime;
-	double samplesCount;
+	double samplesCount, raysCount;
 
 	float convergence;
 	double lastConvergenceTestTime;
 	double lastConvergenceTestSamplesCount;
 
 	bool started, editMode;
-
-	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -150,10 +141,11 @@ protected:
 	boost::thread *renderThread;
 	Film *threadFilm;
 
+	// Thread counters
+	mutable double samplesCount, raysCount;
+
 	bool started, editMode;
 	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
-
-	double samplesCount;
 };
 
 class CPURenderEngine : public RenderEngine {
@@ -173,6 +165,7 @@ protected:
 	virtual void EndEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess();
+	virtual void UpdateCounters();
 
 	vector<CPURenderThread *> renderThreads;
 };
@@ -186,8 +179,13 @@ public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
 
+	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
+		return intersectionDevices;
+	}
+
 protected:
 	vector<DeviceDescription *> selectedDeviceDescs;
+	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -278,15 +276,7 @@ protected:
 	virtual void EndEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess();
-
-	virtual void UpdateSamplesCount() {
-		// Update the sample count statistic
-		double totalCount = 0.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i)
-			totalCount += renderThreads[i]->samplesCount;
-
-		samplesCount = totalCount;
-	}
+	virtual void UpdateCounters();
 
 	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
 	vector<HybridRenderThread *> renderThreads;

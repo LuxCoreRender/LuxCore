@@ -68,6 +68,7 @@ void PathCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
+				++raysCount;
 				if (!scene->Intersect(false, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
@@ -185,6 +186,7 @@ void PathCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
+			++raysCount;
 			if (!scene->Intersect(false, true, sampler->GetSample(sampleOffset), &eyeRay,
 					&eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight

@@ -78,6 +78,7 @@ void BiDirCPURenderThread::ConnectVertices(
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
+			++raysCount;
 			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -135,6 +136,7 @@ void BiDirCPURenderThread::ConnectToEye(const unsigned int pixelCount,
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
+			++raysCount;
 			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -197,6 +199,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
+				++raysCount;
 				if (!scene->Intersect(false, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					if (eyeVertex.depth >= engine->rrDepth) {
 						// Russian Roulette
@@ -352,6 +355,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				RayHit nextEventRayHit;
 				Spectrum connectionThroughput;
+				++raysCount;
 				if (scene->Intersect(true, true, sampler->GetSample(sampleOffset),
 						&nextEventRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 					// Something was hit
@@ -468,6 +472,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
+			++raysCount;
 			if (!scene->Intersect(false, true, sampler->GetSample(sampleOffset), &eyeRay,
 					&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
