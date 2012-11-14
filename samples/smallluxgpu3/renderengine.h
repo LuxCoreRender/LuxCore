@@ -34,7 +34,8 @@ enum RenderEngineType {
 	LIGHTCPU = 5,
 	PATHCPU = 6,
 	BIDIRCPU = 7,
-	BIDIRHYBRID = 8
+	BIDIRHYBRID = 8,
+	CBIDIRHYBRID = 9
 };
 
 //------------------------------------------------------------------------------
@@ -202,7 +203,7 @@ public:
 	virtual ~HybridRenderState();
 
 	virtual void GenerateRays(HybridRenderThread *renderThread) = 0;
-	virtual void CollectResults(HybridRenderThread *renderThread) = 0;
+	virtual double CollectResults(HybridRenderThread *renderThread) = 0;
 
 	friend class HybridRenderThread;
 	friend class HybridRenderEngine;
@@ -277,6 +278,15 @@ protected:
 	virtual void EndEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess();
+
+	virtual void UpdateSamplesCount() {
+		// Update the sample count statistic
+		double totalCount = 0.0;
+		for (size_t i = 0; i < renderThreads.size(); ++i)
+			totalCount += renderThreads[i]->samplesCount;
+
+		samplesCount = totalCount;
+	}
 
 	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
 	vector<HybridRenderThread *> renderThreads;
