@@ -101,8 +101,8 @@ void BiDirCPURenderThread::ConnectVertices(
 				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  eyeDistance, cosThetaAtCamera);
 
 				// MIS weights
-				const float lightWeight = eyeBsdfPdfA * (lightVertex.d0 + lightVertex.d1vc * lightBsdfRevPdfW);
-				const float eyeWeight = lightBsdfPdfA * (eyeVertex.d0 + eyeVertex.d1vc * eyeBsdfRevPdfW);
+				const float lightWeight = eyeBsdfPdfA * (lightVertex.dVCM + lightVertex.dVC * MIS(lightBsdfRevPdfW));
+				const float eyeWeight = lightBsdfPdfA * (eyeVertex.dVCM + eyeVertex.dVC * MIS(eyeBsdfRevPdfW));
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
@@ -156,9 +156,11 @@ void BiDirCPURenderThread::ConnectToEye(const unsigned int pixelCount,
 				const float fluxToRadianceFactor = cameraPdfA;
 
 				// MIS weight (cameraPdfA must be expressed normalized device coordinate)
-				const float weight = 1.f / (MIS(cameraPdfA / pixelCount) *
-					(lightVertex.d0 + lightVertex.d1vc * MIS(bsdfRevPdfW)) + 1.f); // Balance heuristic (MIS)
-				const Spectrum radiance = weight * connectionThroughput * lightVertex.throughput * fluxToRadianceFactor * bsdfEval;
+				const float weightLight = MIS(cameraPdfA / pixelCount) *
+					(lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
+				const float misWeight = 1.f / (weightLight + 1.f);
+
+				const Spectrum radiance = misWeight * connectionThroughput * lightVertex.throughput * fluxToRadianceFactor * bsdfEval;
 
 				AddSampleResult(sampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
 						radiance, 1.f);
@@ -212,9 +214,9 @@ void BiDirCPURenderThread::DirectLightSampling(
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 
 					// emissionPdfA / directPdfA = emissionPdfW / directPdfW
-					const float weightLight  = MIS(bsdfPdfW / directLightSamplingPdfW);
+					const float weightLight = MIS(bsdfPdfW / directLightSamplingPdfW);
 					const float weightCamera = MIS(emissionPdfW * cosThetaToLight / (directPdfW * cosThetaAtLight)) *
-						(eyeVertex.d0 + eyeVertex.d1vc * MIS(bsdfRevPdfW));
+						(eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
 					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
@@ -245,8 +247,9 @@ void BiDirCPURenderThread::DirectHitFiniteLight(const PathVertex &eyeVertex, Spe
 	emissionPdfW *= lightPickPdf;
 
 	// MIS weight
-	const float misWeight = 1.f / (MIS(directPdfA) * eyeVertex.d0 +
-		MIS(emissionPdfW) * eyeVertex.d1vc + 1.f);
+	const float weightCamera = MIS(directPdfA) * eyeVertex.dVCM +
+		MIS(emissionPdfW) * eyeVertex.dVC;
+	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += eyeVertex.throughput * misWeight * lightRadiance;
 }
@@ -272,8 +275,9 @@ void BiDirCPURenderThread::DirectHitInfiniteLight(const PathVertex &eyeVertex,
 	emissionPdfW *= lightPickPdf;
 
 	// MIS weight
-	const float misWeight = 1.f / (MIS(directPdfA) * eyeVertex.d0 +
-		MIS(emissionPdfW) * eyeVertex.d1vc + 1.f);
+	const float weightCamera = MIS(directPdfA) * eyeVertex.dVCM +
+		MIS(emissionPdfW) * eyeVertex.dVC;
+	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += eyeVertex.throughput * misWeight * lightRadiance;
 }
@@ -345,9 +349,9 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			// I don't store the light vertex 0 because direct lighting will take
 			// care of this kind of paths
-			lightVertex.d0 = MIS(lightDirectPdfW / lightEmitPdfW);
+			lightVertex.dVCM = MIS(lightDirectPdfW / lightEmitPdfW);
 			const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
-            lightVertex.d1vc = MIS(usedCosLight / lightEmitPdfW);
+            lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);
 
 			lightVertex.depth = 1;
 			while (lightVertex.depth <= engine->maxLightPathDepth) {
@@ -370,10 +374,10 @@ void BiDirCPURenderThread::RenderFunc() {
 					lightVertex.throughput *= connectionThroughput;
 					// Infinite lights use MIS based on solid angle instead of area
 					if((lightVertex.depth > 1) || !light->IsEnvironmental())
-                        lightVertex.d0 *= MIS(nextEventRayHit.t * nextEventRayHit.t);
-					const float factor = MIS(1.f / AbsDot(lightVertex.bsdf.shadeN, nextEventRay.d));
-                    lightVertex.d0 *= factor;
-					lightVertex.d1vc *= factor;
+                        lightVertex.dVCM *= MIS(nextEventRayHit.t * nextEventRayHit.t);
+					const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.shadeN, nextEventRay.d));
+                    lightVertex.dVCM *= factor;
+					lightVertex.dVC *= factor;
 
 					// Store the vertex only if it isn't specular
 					if (!lightVertex.bsdf.IsDelta()) {
@@ -425,12 +429,12 @@ void BiDirCPURenderThread::RenderFunc() {
 
 					// New MIS weights
 					if (event & SPECULAR) {
-						lightVertex.d0 = 0.f;
-						lightVertex.d1vc *= (cosSampledDir / bsdfPdfW) * bsdfRevPdfW;
+						lightVertex.dVCM = 0.f;
+						lightVertex.dVC *= MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
 					} else {
-						lightVertex.d1vc = (cosSampledDir / bsdfPdfW) * (lightVertex.d1vc *
-								bsdfRevPdfW + lightVertex.d0);
-						lightVertex.d0 = 1.f / bsdfPdfW;
+						lightVertex.dVC = MIS(cosSampledDir / bsdfPdfW) * (lightVertex.dVC *
+								MIS(bsdfRevPdfW) + lightVertex.dVCM);
+						lightVertex.dVCM = MIS(1.f / bsdfPdfW);
 					}
 
 					nextEventRay = Ray(lightVertex.bsdf.hitPoint, sampledDir);
@@ -462,8 +466,8 @@ void BiDirCPURenderThread::RenderFunc() {
 		const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 		const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 			scene->camera->GetPixelArea() * pixelCount);
-		eyeVertex.d0 = MIS(1.f / cameraPdfW);
-		eyeVertex.d1vc = 0.f;
+		eyeVertex.dVCM = MIS(1.f / cameraPdfW);
+		eyeVertex.dVC = 0.f;
 
 		eyeVertex.depth = 1;
 		while (eyeVertex.depth <= engine->maxEyePathDepth) {
@@ -493,10 +497,10 @@ void BiDirCPURenderThread::RenderFunc() {
 			// Something was hit
 
 			// Update MIS constants
-			eyeVertex.d0 *= MIS(eyeRayHit.t * eyeRayHit.t);
-			const float factor = MIS(1.f / AbsDot(eyeVertex.bsdf.shadeN, eyeVertex.bsdf.fixedDir));
-			eyeVertex.d0 *= factor;
-			eyeVertex.d1vc *= factor;
+			eyeVertex.dVCM *= MIS(eyeRayHit.t * eyeRayHit.t);
+			const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.shadeN, eyeVertex.bsdf.fixedDir));
+			eyeVertex.dVCM *= factor;
+			eyeVertex.dVC *= factor;
 
 			// Check if it is a light source
 			if (eyeVertex.bsdf.IsLightSource()) {
@@ -566,12 +570,12 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			// New MIS weights
 			if (event & SPECULAR) {
-				eyeVertex.d0 = 0.f;
-				eyeVertex.d1vc *= MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
+				eyeVertex.dVCM = 0.f;
+				eyeVertex.dVC *= MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
 			} else {
-				eyeVertex.d1vc = MIS(cosSampledDir / bsdfPdfW) * (eyeVertex.d1vc *
-						MIS(bsdfRevPdfW) + eyeVertex.d0);
-				eyeVertex.d0 = MIS(1.f / bsdfPdfW);
+				eyeVertex.dVC = MIS(cosSampledDir / bsdfPdfW) * (eyeVertex.dVC *
+						MIS(bsdfRevPdfW) + eyeVertex.dVCM);
+				eyeVertex.dVCM = MIS(1.f / bsdfPdfW);
 			}
 
 			eyeRay = Ray(eyeVertex.bsdf.hitPoint, sampledDir);
