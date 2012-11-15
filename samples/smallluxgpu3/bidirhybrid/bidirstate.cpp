@@ -165,7 +165,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 			// MIS weight (cameraPdfA must be expressed normalized device coordinate)
 			const float weightLight = MIS(cameraPdfA / pixelCount) *
 					(lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
-			const float misWeight = 1.f / (renderEngine->lightPathCount * renderEngine->eyePathCount * (weightLight + 1.f));
+			const float misWeight = 1.f / (renderEngine->lightPathCount * (weightLight + 1.f));
 
 			const Spectrum radiance = misWeight * lightVertex.throughput * fluxToRadianceFactor * bsdfEval;
 
@@ -472,19 +472,25 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 		// vertex
 		//----------------------------------------------------------------------
 
-		for (u_int lightPathIndex = 0; lightPathIndex < lightPaths.size(); ++lightPathIndex) {
-			const u_int lightPathSampleOffset = renderEngine->eyePathCount * (sampleEyeBootSize + renderEngine->maxEyePathDepth * sampleEyeStepSize) +
-				lightPathIndex * (sampleLightBootSize + renderEngine->maxLightPathDepth * sampleLightStepSize);
+		if (eyePathIndex == 0) {
+			// As suggested in the CBDPT paper (paragraph 3.2). I do connect the light vertices
+			// only with the first eye vertex of the first path. This because, in a pinhole camera,
+			// all the first vertices are the same (they are slightly different only if the lens radius
+			// is > 0.0).
+			for (u_int lightPathIndex = 0; lightPathIndex < lightPaths.size(); ++lightPathIndex) {
+				const u_int lightPathSampleOffset = renderEngine->eyePathCount * (sampleEyeBootSize + renderEngine->maxEyePathDepth * sampleEyeStepSize) +
+					lightPathIndex * (sampleLightBootSize + renderEngine->maxLightPathDepth * sampleLightStepSize);
 
-			for (u_int lightVertexIndex = 0; lightVertexIndex < lightPaths[lightPathIndex].size(); ++lightVertexIndex) {
-				const unsigned int lightVertexSampleOffset = lightPathSampleOffset + sampleLightBootSize + lightVertexIndex * sampleLightStepSize;
+				for (u_int lightVertexIndex = 0; lightVertexIndex < lightPaths[lightPathIndex].size(); ++lightVertexIndex) {
+					const unsigned int lightVertexSampleOffset = lightPathSampleOffset + sampleLightBootSize + lightVertexIndex * sampleLightStepSize;
 
-				//--------------------------------------------------------------
-				// Try to connect the light path vertex with the eye
-				//--------------------------------------------------------------
-				if (ConnectToEye(renderThread, pixelCount, lightPaths[lightPathIndex][lightVertexIndex],
-						sampler->GetSample(lightVertexSampleOffset + 1), lensPoint))
-					eyeSampleResults[eyePathIndex].lightPathVertexConnections += 1;
+					//--------------------------------------------------------------
+					// Try to connect the light path vertex with the eye
+					//--------------------------------------------------------------
+					if (ConnectToEye(renderThread, pixelCount, lightPaths[lightPathIndex][lightVertexIndex],
+							sampler->GetSample(lightVertexSampleOffset + 1), lensPoint))
+						eyeSampleResults[eyePathIndex].lightPathVertexConnections += 1;
+				}
 			}
 		}
 
@@ -697,5 +703,6 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 
 	sampler->NextSample(validSampleResults);
 
+	// This is a very raw (and somewhat boosted) approximation
 	return renderEngine->eyePathCount * renderEngine->lightPathCount;
 }
