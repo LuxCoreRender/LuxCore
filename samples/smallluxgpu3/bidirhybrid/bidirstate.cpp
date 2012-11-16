@@ -240,17 +240,20 @@ void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 	}
 }
 
-void BiDirState::DirectHitFiniteLight(HybridRenderThread *renderThread,
-		const PathVertex &eyeVertex, Spectrum *radiance) const {
+void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
+		const bool finiteLightSource, const PathVertex &eyeVertex,
+		Spectrum *radiance) const {
 	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
 	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
 
 	float directPdfA, emissionPdfW;
-	const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW);
+	const Spectrum lightRadiance = (finiteLightSource) ?
+		eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW) :
+		scene->GetEnvLightsRadiance(eyeVertex.bsdf.fixedDir, Point(), &directPdfA, &emissionPdfW);
 	if (lightRadiance.Black())
 		return;
-	
+
 	if (eyeVertex.depth == 1) {
 		*radiance += eyeVertex.throughput * lightRadiance;
 		return;
@@ -266,35 +269,6 @@ void BiDirState::DirectHitFiniteLight(HybridRenderThread *renderThread,
 	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
-}
-
-void BiDirState::DirectHitInfiniteLight(HybridRenderThread *renderThread,
-		const PathVertex &eyeVertex, Spectrum *radiance) const {
-	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
-	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
-	Scene *scene = renderEngine->renderConfig->scene;
-
-	float directPdfA, emissionPdfW;
-	Spectrum lightRadiance = scene->GetEnvLightsRadiance(eyeVertex.bsdf.fixedDir,
-			Point(), &directPdfA, &emissionPdfW);
-	if (lightRadiance.Black())
-		return;
-
-	if (eyeVertex.depth == 1) {
-		*radiance += eyeVertex.throughput * lightRadiance;
-		return;
-	}
-
-	const float lightPickPdf = scene->PickLightPdf();
-	directPdfA *= lightPickPdf;
-	emissionPdfW *= lightPickPdf;
-
-	// MIS weight
-	const float weightCamera = MIS(directPdfA) * eyeVertex.dVCM +
-		MIS(emissionPdfW) * eyeVertex.dVC;
-	const float misWeight = 1.f / (weightCamera + 1.f);
-
-	*radiance += eyeVertex.throughput * misWeight * lightRadiance;
 }
 
 void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
@@ -526,7 +500,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 				eyeVertex.bsdf.fixedDir = -eyeRay.d;
 				eyeVertex.throughput *= connectionThroughput;
 
-				DirectHitInfiniteLight(renderThread, eyeVertex, &eyeSampleResults[eyePathIndex].radiance);
+				DirectHitLight(renderThread, false, eyeVertex, &eyeSampleResults[eyePathIndex].radiance);
 
 				if (eyeVertex.depth == 1)
 					eyeSampleResults[eyePathIndex].alpha = 0.f;
@@ -544,7 +518,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 			// Check if it is a light source
 			if (eyeVertex.bsdf.IsLightSource()) {
-				DirectHitFiniteLight(renderThread, eyeVertex, &eyeSampleResults[eyePathIndex].radiance);
+				DirectHitLight(renderThread, true, eyeVertex, &eyeSampleResults[eyePathIndex].radiance);
 
 				// SLG light sources are like black bodies
 				break;
