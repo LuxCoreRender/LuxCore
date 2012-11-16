@@ -55,10 +55,6 @@ protected:
 			const float u0, const float u1, const float u2,
 			const float u3, const float u4,
 			const PathVertex &eyeVertex);
-	void DirectHitFiniteLight(HybridRenderThread *renderThread,
-			const PathVertex &eyeVertex, Spectrum *radiance) const;
-	void DirectHitInfiniteLight(HybridRenderThread *renderThread,
-			const PathVertex &eyeVertex, Spectrum *radiance) const;
 	void DirectHitLight(HybridRenderThread *renderThread,
 		const bool finiteLightSource, const PathVertex &eyeVertex,
 		Spectrum *radiance) const;
@@ -70,6 +66,10 @@ protected:
 	bool ConnectToEye(HybridRenderThread *renderThread,
 			const unsigned int pixelCount, const PathVertex &lightVertex,
 			const float u0,	const Point &lensPoint);
+
+	bool Bounce(HybridRenderThread *renderThread,
+			Sampler *sampler, const u_int sampleOffset,
+			PathVertex *pathVertex, Ray *nextEventRay) const;
 
 	// Light tracing results
 	vector<float> lightSampleValue; // Used for pass-through sampling
