@@ -46,9 +46,9 @@ BiDirState::BiDirState(BiDirHybridRenderEngine *renderEngine,
 
 	// Setup the sampler
 	const unsigned int sampleEyeBootSize = 6;
+	const unsigned int sampleEyeStepSize = 11;
 	const unsigned int sampleLightBootSize = 5;
 	const unsigned int sampleLightStepSize = 6;
-	const unsigned int sampleEyeStepSize = 11;
 	const unsigned int sampleSize = 
 		renderEngine->eyePathCount * (sampleEyeBootSize + renderEngine->maxEyePathDepth * sampleEyeStepSize) + // For each eye path and eye vertex
 		renderEngine->lightPathCount * (sampleLightBootSize + renderEngine->maxLightPathDepth * sampleLightStepSize); // For each light path and light vertex
@@ -338,9 +338,9 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 	// Copied from BiDirState constructor
 	const unsigned int sampleEyeBootSize = 6;
+	const unsigned int sampleEyeStepSize = 11;
 	const unsigned int sampleLightBootSize = 5;
 	const unsigned int sampleLightStepSize = 6;
-	const unsigned int sampleEyeStepSize = 11;
 
 	lightSampleValue.clear();
 	lightSampleResults.clear();
