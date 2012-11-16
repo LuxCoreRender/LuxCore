@@ -271,6 +271,57 @@ void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
 	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
 }
 
+bool BiDirState::Bounce(HybridRenderThread *renderThread,
+		Sampler *sampler, const u_int sampleOffset,
+		PathVertex *pathVertex, Ray *nextEventRay) const {
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
+
+	Vector sampledDir;
+	BSDFEvent event;
+	float bsdfPdfW, cosSampledDir;
+	const Spectrum bsdfSample = pathVertex->bsdf.Sample(&sampledDir,
+			sampler->GetSample(sampleOffset),
+			sampler->GetSample(sampleOffset + 1),
+			sampler->GetSample(sampleOffset + 2),
+			&bsdfPdfW, &cosSampledDir, &event);
+	if (bsdfSample.Black())
+		return false;
+
+	float bsdfRevPdfW;
+	if (event & SPECULAR)
+		bsdfRevPdfW = bsdfPdfW;
+	else
+		pathVertex->bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
+
+	if (pathVertex->depth >= renderEngine->rrDepth) {
+		// Russian Roulette
+		const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
+		if (sampler->GetSample(sampleOffset + 3) < prob) {
+			bsdfPdfW *= prob;
+			bsdfRevPdfW *= prob;
+		} else
+			return false;
+	}
+
+	pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
+	assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
+
+	// New MIS weights
+	if (event & SPECULAR) {
+		pathVertex->dVCM = 0.f;
+		pathVertex->dVC *= MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
+	} else {
+		pathVertex->dVC = MIS(cosSampledDir / bsdfPdfW) * (pathVertex->dVC *
+				MIS(bsdfRevPdfW) + pathVertex->dVCM);
+		pathVertex->dVCM = MIS(1.f / bsdfPdfW);
+	}
+
+	*nextEventRay = Ray(pathVertex->bsdf.hitPoint, sampledDir);
+
+	return true;
+}
+
 void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -320,11 +371,11 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 		// Initialize the light path
 		PathVertex lightVertex;
 		float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
-		Ray nextEventRay;
+		Ray lightRay;
 		lightVertex.throughput = light->Emit(scene,
 				sampler->GetSample(lightPathSampleOffset + 1), sampler->GetSample(lightPathSampleOffset + 2),
 				sampler->GetSample(lightPathSampleOffset + 3), sampler->GetSample(lightPathSampleOffset + 4),
-				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
+				&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
 		if (!lightVertex.throughput.Black()) {
 			lightEmitPdfW *= lightPickPdf;
 			lightDirectPdfW *= lightPickPdf;
@@ -345,7 +396,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 				RayHit nextEventRayHit;
 				Spectrum connectionThroughput;
 				if (scene->Intersect(true, true, sampler->GetSample(lightVertexSampleOffset),
-						&nextEventRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
+						&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 					// Something was hit
 
 					// Check if it is a light source
@@ -359,7 +410,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 					// Infinite lights use MIS based on solid angle instead of area
 					if((lightVertex.depth > 1) || !light->IsEnvironmental())
                         lightVertex.dVCM *= MIS(nextEventRayHit.t * nextEventRayHit.t);
-					const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.shadeN, nextEventRay.d));
+					const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.shadeN, lightRay.d));
                     lightVertex.dVCM *= factor;
 					lightVertex.dVC *= factor;
 
@@ -374,47 +425,10 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 					// Build the next vertex path ray
 					//----------------------------------------------------------
 
-					Vector sampledDir;
-					BSDFEvent event;
-					float bsdfPdfW, cosSampledDir;
-					const Spectrum bsdfSample = lightVertex.bsdf.Sample(&sampledDir,
-							sampler->GetSample(lightVertexSampleOffset + 2),
-							sampler->GetSample(lightVertexSampleOffset + 3),
-							sampler->GetSample(lightVertexSampleOffset + 4),
-							&bsdfPdfW, &cosSampledDir, &event);
-					if (bsdfSample.Black())
+					if (!Bounce(renderThread, sampler, lightVertexSampleOffset + 2,
+							&lightVertex, &lightRay))
 						break;
 
-					float bsdfRevPdfW;
-					if (event & SPECULAR)
-						bsdfRevPdfW = bsdfPdfW;
-					else
-						lightVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
-
-					if (lightVertex.depth >= renderEngine->rrDepth) {
-						// Russian Roulette
-						const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-						if (sampler->GetSample(lightVertexSampleOffset + 5) < prob) {
-							bsdfPdfW *= prob;
-							bsdfRevPdfW *= prob;
-						} else
-							break;
-					}
-
-					lightVertex.throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
-					assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
-
-					// New MIS weights
-					if (event & SPECULAR) {
-						lightVertex.dVCM = 0.f;
-						lightVertex.dVC *= MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
-					} else {
-						lightVertex.dVC = MIS(cosSampledDir / bsdfPdfW) * (lightVertex.dVC *
-								MIS(bsdfRevPdfW) + lightVertex.dVCM);
-						lightVertex.dVCM = MIS(1.f / bsdfPdfW);
-					}
-
-					nextEventRay = Ray(lightVertex.bsdf.hitPoint, sampledDir);
 					++(lightVertex.depth);
 				} else {
 					// Ray lost in space...
@@ -555,47 +569,10 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 			// Build the next vertex path ray
 			//------------------------------------------------------------------
 
-			Vector sampledDir;
-			BSDFEvent event;
-			float cosSampledDir, bsdfPdfW;
-			const Spectrum bsdfSample = eyeVertex.bsdf.Sample(&sampledDir,
-					sampler->GetSample(eyeVertexSampleOffset + 7),
-					sampler->GetSample(eyeVertexSampleOffset + 8),
-					sampler->GetSample(eyeVertexSampleOffset + 9),
-					&bsdfPdfW, &cosSampledDir, &event);
-			if (bsdfSample.Black())
+			if (!Bounce(renderThread, sampler, eyeVertexSampleOffset + 7,
+					&eyeVertex, &eyeRay))
 				break;
 
-			float bsdfRevPdfW;
-			if (event & SPECULAR)
-				bsdfRevPdfW = bsdfPdfW;
-			else
-				eyeVertex.bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
-
-			if (eyeVertex.depth >= renderEngine->rrDepth) {
-				// Russian Roulette
-				const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
-				if (prob > sampler->GetSample(eyeVertexSampleOffset + 10)) {
-					bsdfPdfW *= prob;
-					bsdfRevPdfW *= prob;
-				} else
-					break;
-			}
-
-			eyeVertex.throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
-			assert (!eyeVertex.throughput.IsNaN() && !eyeVertex.throughput.IsInf());
-
-			// New MIS weights
-			if (event & SPECULAR) {
-				eyeVertex.dVCM = 0.f;
-				eyeVertex.dVC *= MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
-			} else {
-				eyeVertex.dVC = MIS(cosSampledDir / bsdfPdfW) * (eyeVertex.dVC *
-						MIS(bsdfRevPdfW) + eyeVertex.dVCM);
-				eyeVertex.dVCM = MIS(1.f / bsdfPdfW);
-			}
-
-			eyeRay = Ray(eyeVertex.bsdf.hitPoint, sampledDir);
 			++(eyeVertex.depth);
 		}
 	}

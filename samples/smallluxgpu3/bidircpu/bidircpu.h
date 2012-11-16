@@ -67,6 +67,9 @@ private:
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
 	void ConnectVertices(const PathVertex &eyeVertex, const PathVertex &BiDirVertex,
 		SampleResult *eyeSampleResult, const float u0) const;
+	
+	bool Bounce(Sampler *sampler, const u_int sampleOffset,
+		PathVertex *pathVertex, Ray *nextEventRay) const;
 
 	double samplesCount;
 };
