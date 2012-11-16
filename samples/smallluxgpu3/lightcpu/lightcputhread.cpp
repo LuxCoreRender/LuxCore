@@ -76,6 +76,78 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 	}
 }
 
+void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults) {
+	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+	PerspectiveCamera *camera = scene->camera;
+	Film *film = threadFilm;
+	const unsigned int filmWidth = film->GetWidth();
+	const unsigned int filmHeight = film->GetHeight();
+
+	// Sample offsets
+	const unsigned int sampleBootSize = 11;
+	const unsigned int sampleEyeStepSize = 4;
+
+	Ray eyeRay;
+	const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+	const float screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+	camera->GenerateRay(screenX, screenY, &eyeRay,
+		sampler->GetSample(9), sampler->GetSample(10));
+
+	Spectrum radiance, eyePathThroughput(1.f, 1.f, 1.f);
+	int depth = 1;
+	while (depth <= engine->maxPathDepth) {
+		const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleEyeStepSize;
+
+		RayHit eyeRayHit;
+		BSDF bsdf;
+		Spectrum connectionThroughput;
+		++raysCount;
+		const bool somethingWasHit = scene->Intersect(
+			false, true, sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
+		if (!somethingWasHit) {
+			// Nothing was hit, check infinite lights (including sun)
+			radiance = eyePathThroughput * connectionThroughput * scene->GetEnvLightsRadiance(-eyeRay.d, Point());
+			break;
+		} else {
+			// Something was hit, check if it is a light source
+			if (bsdf.IsLightSource()) {
+				radiance = eyePathThroughput * connectionThroughput * bsdf.GetEmittedRadiance(scene);
+				break;
+			} else {
+				// Check if it is a specular bounce
+
+				float bsdfPdf;
+				Vector sampledDir;
+				BSDFEvent event;
+				float cosSampleDir;
+				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+						sampler->GetSample(sampleOffset + 1),
+						sampler->GetSample(sampleOffset + 2),
+						sampler->GetSample(sampleOffset + 3),
+						&bsdfPdf, &cosSampleDir, &event);
+				if (bsdfSample.Black() || ((depth == 1) && !(event & SPECULAR)))
+					break;
+
+				// If depth = 1 and it is a specular bounce, I continue to trace the
+				// eye path looking for a light source
+
+				eyePathThroughput *= connectionThroughput * bsdfSample * (cosSampleDir / bsdfPdf);
+				assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
+
+				eyeRay = Ray(bsdf.hitPoint, sampledDir);
+				
+				++depth;
+			}
+		}
+	}
+
+	// Add a sample even if it is black in order to avoid aliasing problems
+	// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
+	AddSampleResult(*sampleResults, PER_PIXEL_NORMALIZED,
+			screenX, screenY, radiance, (depth == 1) ? 1.f : 0.f);
+}
+
 void LightCPURenderThread::RenderFunc() {
 	//SLG_LOG("[LightCPURenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -88,16 +160,16 @@ void LightCPURenderThread::RenderFunc() {
 	Scene *scene = engine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
 	Film *film = threadFilm;
-	const unsigned int filmWidth = film->GetWidth();
-	const unsigned int filmHeight = film->GetHeight();
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film);
-	const unsigned int sampleBootSize = 12;
-	const unsigned int sampleStepSize = 6;
+	const unsigned int sampleBootSize = 11;
+	const unsigned int sampleEyeStepSize = 4;
+	const unsigned int sampleLightStepSize = 6;
 	const unsigned int sampleSize = 
-		sampleBootSize + // To generate the initial light vertex and trace eye ray
-		engine->maxPathDepth * sampleStepSize; // For each light vertex
+		sampleBootSize + // To generate the initial setup
+		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
+		engine->maxPathDepth * sampleLightStepSize; // For each light vertex
 	sampler->RequestSamples(sampleSize);
 
 	//--------------------------------------------------------------------------
@@ -143,34 +215,7 @@ void LightCPURenderThread::RenderFunc() {
 		// the Per-Screen-Normalization Buffers used by BiDir.
 		//----------------------------------------------------------------------
 
-		{
-			Ray eyeRay;
-			const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-			const float screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-			camera->GenerateRay(screenX, screenY, &eyeRay,
-				sampler->GetSample(9), sampler->GetSample(10));
-
-			Spectrum radiance, connectionThroughput;
-			RayHit eyeRayHit;
-			BSDF bsdf;
-			++raysCount;
-			const bool somethingWasHit = scene->Intersect(
-				false, true, sampler->GetSample(11), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
-			if (!somethingWasHit) {
-				// Nothing was hit, check infinite lights (including sun)
-				radiance += scene->GetEnvLightsRadiance(-eyeRay.d, Point());
-			} else {
-				// Something was hit, check if it is a light source
-				if (bsdf.IsLightSource())
-					radiance += bsdf.GetEmittedRadiance(scene);
-			}
-			radiance *= connectionThroughput;
-
-			// Add a sample even if it is black in order to avoid aliasing problems
-			// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
-			AddSampleResult(sampleResults, PER_PIXEL_NORMALIZED,
-					screenX, screenY, radiance, somethingWasHit ? 1.f : 0.f);
-		}
+		TraceEyePath(sampler, &sampleResults);
 
 		//----------------------------------------------------------------------
 		// Trace the light path
@@ -178,7 +223,8 @@ void LightCPURenderThread::RenderFunc() {
 
 		int depth = 1;
 		while (depth <= engine->maxPathDepth) {
-			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
+			const unsigned int sampleOffset = sampleBootSize + sampleEyeStepSize * engine->maxPathDepth +
+				(depth - 1) * sampleLightStepSize;
 
 			RayHit nextEventRayHit;
 			BSDF bsdf;

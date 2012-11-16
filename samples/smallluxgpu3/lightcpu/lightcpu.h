@@ -45,6 +45,7 @@ private:
 	void ConnectToEye(const float u0,
 			const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
 			vector<SampleResult> &sampleResults);
+	void TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults);
 };
 
 class LightCPURenderEngine : public CPURenderEngine {
