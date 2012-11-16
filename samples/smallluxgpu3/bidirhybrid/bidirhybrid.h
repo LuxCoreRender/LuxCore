@@ -59,6 +59,9 @@ protected:
 			const PathVertex &eyeVertex, Spectrum *radiance) const;
 	void DirectHitInfiniteLight(HybridRenderThread *renderThread,
 			const PathVertex &eyeVertex, Spectrum *radiance) const;
+	void DirectHitLight(HybridRenderThread *renderThread,
+		const bool finiteLightSource, const PathVertex &eyeVertex,
+		Spectrum *radiance) const;
 
 	void ConnectVertices(HybridRenderThread *renderThread,
 			const u_int eyePathIndex,

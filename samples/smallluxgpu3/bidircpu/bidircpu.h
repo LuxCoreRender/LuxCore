@@ -59,9 +59,8 @@ private:
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const PathVertex &eyeVertex, Spectrum *radiance) const;
-	void DirectHitFiniteLight(const PathVertex &eyeVertex, Spectrum *radiance) const;
-	void DirectHitInfiniteLight(const PathVertex &eyeVertex,
-		Spectrum *radiance) const;
+	void DirectHitLight(const bool finiteLightSource,
+		const PathVertex &eyeVertex, Spectrum *radiance) const;
 
 	void ConnectToEye(const unsigned int pixelCount, 
 		const PathVertex &BiDirVertex, const float u0,
