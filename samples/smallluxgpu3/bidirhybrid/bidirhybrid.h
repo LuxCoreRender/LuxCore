@@ -57,17 +57,19 @@ protected:
 			const float u3, const float u4,
 			const PathVertex &eyeVertex);
 	void DirectHitLight(HybridRenderThread *renderThread,
-		const bool finiteLightSource, const PathVertex &eyeVertex,
-		Spectrum *radiance) const;
+			const bool finiteLightSource, const PathVertex &eyeVertex,
+			Spectrum *radiance) const;
 
+	bool ConnectToEye(HybridRenderThread *renderThread,
+			const PathVertex &lightVertex, const float u0,
+			const Point &lensPoint);
 	void ConnectVertices(HybridRenderThread *renderThread,
 			const u_int eyePathIndex,
 			const PathVertex &eyeVertex, const PathVertex &lightVertex,
 			const float u0);
-	bool ConnectToEye(HybridRenderThread *renderThread,
-			const unsigned int pixelCount, const PathVertex &lightVertex,
-			const float u0,	const Point &lensPoint);
 
+	void TraceLightPath(HybridRenderThread *renderThread, Sampler *sampler,
+			const u_int lightPathIndex, vector<vector<PathVertex> > &lightPaths);
 	bool Bounce(HybridRenderThread *renderThread,
 			Sampler *sampler, const u_int sampleOffset,
 			PathVertex *pathVertex, Ray *nextEventRay) const;

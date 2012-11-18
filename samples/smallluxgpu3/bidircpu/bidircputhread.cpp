@@ -37,6 +37,10 @@ static inline float MIS(const float a) {
 	return a * a; // Power heuristic
 }
 
+const unsigned int sampleBootSize = 11;
+const unsigned int sampleLightStepSize = 6;
+const unsigned int sampleEyeStepSize = 11;
+
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device, const u_int seedVal) :
 		CPURenderThread(engine, index, device, seedVal, true, true), samplesCount(0.0) {
@@ -112,8 +116,7 @@ void BiDirCPURenderThread::ConnectVertices(
 	}
 }
 
-void BiDirCPURenderThread::ConnectToEye(const unsigned int pixelCount, 
-		const PathVertex &lightVertex, const float u0,
+void BiDirCPURenderThread::ConnectToEye(const PathVertex &lightVertex, const float u0,
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -154,6 +157,7 @@ void BiDirCPURenderThread::ConnectToEye(const unsigned int pixelCount,
 				const float fluxToRadianceFactor = cameraPdfA;
 
 				// MIS weight (cameraPdfA must be expressed normalized device coordinate)
+				const unsigned int pixelCount = threadFilm->GetWidth() * threadFilm->GetHeight();
 				const float weightLight = MIS(cameraPdfA / pixelCount) *
 					(lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
 				const float misWeight = 1.f / (weightLight + 1.f);
@@ -254,6 +258,93 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
 }
 
+void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
+		const Point &lensPoint,
+		vector<PathVertex> &lightPathVertices,
+		vector<SampleResult> &sampleResults) const {
+	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+
+	// Select one light source
+	float lightPickPdf;
+	const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
+
+	// Initialize the light path
+	PathVertex lightVertex;
+	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
+	Ray lightRay;
+	lightVertex.throughput = light->Emit(scene,
+		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8),
+		&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
+	if (!lightVertex.throughput.Black()) {
+		lightEmitPdfW *= lightPickPdf;
+		lightDirectPdfW *= lightPickPdf;
+
+		lightVertex.throughput /= lightEmitPdfW;
+		assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
+
+		// I don't store the light vertex 0 because direct lighting will take
+		// care of this kind of paths
+		lightVertex.dVCM = MIS(lightDirectPdfW / lightEmitPdfW);
+		const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
+		lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);
+
+		lightVertex.depth = 1;
+		while (lightVertex.depth <= engine->maxLightPathDepth) {
+			const unsigned int sampleOffset = sampleBootSize + (lightVertex.depth - 1) * sampleLightStepSize;
+
+			RayHit nextEventRayHit;
+			Spectrum connectionThroughput;
+			if (scene->Intersect(device, true, true, sampler->GetSample(sampleOffset),
+					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
+				// Something was hit
+
+				// Check if it is a light source
+				if (lightVertex.bsdf.IsLightSource()) {
+					// SLG light sources are like black bodies
+					break;
+				}
+
+				// Update the new light vertex
+				lightVertex.throughput *= connectionThroughput;
+				// Infinite lights use MIS based on solid angle instead of area
+				if((lightVertex.depth > 1) || !light->IsEnvironmental())
+					lightVertex.dVCM *= MIS(nextEventRayHit.t * nextEventRayHit.t);
+				const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.shadeN, lightRay.d));
+				lightVertex.dVCM *= factor;
+				lightVertex.dVC *= factor;
+
+				// Store the vertex only if it isn't specular
+				if (!lightVertex.bsdf.IsDelta()) {
+					lightPathVertices.push_back(lightVertex);
+
+					//------------------------------------------------------
+					// Try to connect the light path vertex with the eye
+					//------------------------------------------------------
+
+					ConnectToEye(lightVertex, sampler->GetSample(sampleOffset + 1),
+							lensPoint, sampleResults);
+				}
+
+				if (lightVertex.depth >= engine->maxLightPathDepth)
+					break;
+
+				//----------------------------------------------------------
+				// Build the next vertex path ray
+				//----------------------------------------------------------
+
+				if (!Bounce(sampler, sampleOffset + 2, &lightVertex, &lightRay))
+					break;
+
+				++(lightVertex.depth);
+			} else {
+				// Ray lost in space...
+				break;
+			}
+		}
+	}
+}
+
 bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 		PathVertex *pathVertex, Ray *nextEventRay) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
@@ -322,9 +413,6 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film);
-	const unsigned int sampleBootSize = 11;
-	const unsigned int sampleLightStepSize = 6;
-	const unsigned int sampleEyeStepSize = 11;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
@@ -350,85 +438,8 @@ void BiDirCPURenderThread::RenderFunc() {
 		// Trace light path
 		//----------------------------------------------------------------------
 
-		// Select one light source
-		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
-
-		// Initialize the light path
-		PathVertex lightVertex;
-		float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
-		Ray lightRay;
-		lightVertex.throughput = light->Emit(scene,
-			sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8),
-			&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
-		if (!lightVertex.throughput.Black()) {
-			lightEmitPdfW *= lightPickPdf;
-			lightDirectPdfW *= lightPickPdf;
-
-			lightVertex.throughput /= lightEmitPdfW;
-			assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
-
-			// I don't store the light vertex 0 because direct lighting will take
-			// care of this kind of paths
-			lightVertex.dVCM = MIS(lightDirectPdfW / lightEmitPdfW);
-			const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
-            lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);
-
-			lightVertex.depth = 1;
-			while (lightVertex.depth <= engine->maxLightPathDepth) {
-				const unsigned int sampleOffset = sampleBootSize + (lightVertex.depth - 1) * sampleLightStepSize;
-
-				RayHit nextEventRayHit;
-				Spectrum connectionThroughput;
-				if (scene->Intersect(device, true, true, sampler->GetSample(sampleOffset),
-						&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
-					// Something was hit
-
-					// Check if it is a light source
-					if (lightVertex.bsdf.IsLightSource()) {
-						// SLG light sources are like black bodies
-						break;
-					}
-
-					// Update the new light vertex
-					lightVertex.throughput *= connectionThroughput;
-					// Infinite lights use MIS based on solid angle instead of area
-					if((lightVertex.depth > 1) || !light->IsEnvironmental())
-                        lightVertex.dVCM *= MIS(nextEventRayHit.t * nextEventRayHit.t);
-					const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.shadeN, lightRay.d));
-                    lightVertex.dVCM *= factor;
-					lightVertex.dVC *= factor;
-
-					// Store the vertex only if it isn't specular
-					if (!lightVertex.bsdf.IsDelta()) {
-						lightPathVertices.push_back(lightVertex);
-
-						//------------------------------------------------------
-						// Try to connect the light path vertex with the eye
-						//------------------------------------------------------
-
-						ConnectToEye(pixelCount, lightVertex, sampler->GetSample(sampleOffset + 1),
-								lensPoint, sampleResults);
-					}
-
-					if (lightVertex.depth >= engine->maxLightPathDepth)
-						break;
-
-					//----------------------------------------------------------
-					// Build the next vertex path ray
-					//----------------------------------------------------------
-
-					if (!Bounce(sampler, sampleOffset + 2, &lightVertex, &lightRay))
-						break;
-
-					++(lightVertex.depth);
-				} else {
-					// Ray lost in space...
-					break;
-				}
-			}
-		}
-
+		TraceLightPath(sampler, lensPoint, lightPathVertices, sampleResults);
+		
 		//----------------------------------------------------------------------
 		// Trace eye path
 		//----------------------------------------------------------------------
