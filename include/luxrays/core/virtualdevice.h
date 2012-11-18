@@ -59,6 +59,15 @@ private:
 
 		void PushRayBufferDone(RayBuffer *rayBuffer);
 
+		bool TraceRay(const Ray *ray, RayHit *rayHit) {
+			// Update this device statistics
+			statsTotalSerialRayCount += 1.0;
+
+			// Using the underlay real device mostly to account for
+			// statsTotalSerialRayCount statistics
+			return virtualDevice->realDevice->TraceRay(ray, rayHit);
+		}
+
 		double GetLoad() const { return virtualDevice->realDevice->GetLoad(); }
 
 		void SetDataSet(const DataSet *newDataSet);
@@ -115,6 +124,16 @@ private:
 
 		void PushRayBufferDone(RayBuffer *rayBuffer);
 
+		bool TraceRay(const Ray *ray, RayHit *rayHit) {
+			// Update this device statistics
+			statsTotalSerialRayCount += 1.0;
+
+			// Using the underlay real devices mostly to account for
+			// statsTotalSerialRayCount statistics
+			traceRayRealDeviceIndex = (traceRayRealDeviceIndex + 1) % virtualDevice->realDevices.size();
+			return virtualDevice->realDevices[traceRayRealDeviceIndex]->TraceRay(ray, rayHit);
+		}
+
 		double GetLoad() const { return 1.0; }
 
 		friend class VirtualM2MHardwareIntersectionDevice;
@@ -131,6 +150,9 @@ private:
 		VirtualM2MHardwareIntersectionDevice *virtualDevice;
 
 		size_t pendingRayBuffers;
+		// This is used to spread the TraceRay() calls uniformly over
+		// all real devices
+		u_int traceRayRealDeviceIndex;
 	};
 
 	size_t virtualDeviceCount;

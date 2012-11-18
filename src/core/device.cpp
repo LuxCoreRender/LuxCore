@@ -270,7 +270,8 @@ void IntersectionDevice::Start() {
 	Device::Start();
 
 	statsStartTime = WallClockTime();
-	statsTotalRayCount = 0.0;
+	statsTotalSerialRayCount = 0.0;
+	statsTotalDataParallelRayCount = 0.0;
 	statsDeviceIdleTime = 0.0;
 	statsDeviceTotalTime = 0.0;
 }

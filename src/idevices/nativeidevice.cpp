@@ -140,7 +140,7 @@ void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersection
 				hb[i].SetMiss();
 				renderDevice->dataSet->Intersect(&rb[i], &hb[i]);
 			}
-			renderDevice->statsTotalRayCount += rayCount;
+			renderDevice->statsTotalDataParallelRayCount += rayCount;
 			queue->PushDone(rayBuffer);
 
 			renderDevice->statsDeviceTotalTime = WallClockTime() - startTime;

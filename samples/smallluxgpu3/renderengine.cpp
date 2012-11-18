@@ -777,6 +777,11 @@ void HybridRenderEngine::UpdateCounters() {
 	double totalCount = 0.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		totalCount += renderThreads[i]->samplesCount;
-
 	samplesCount = totalCount;
+
+	// Update the ray count statistic
+	totalCount = 0.0;
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		totalCount += renderThreads[i]->device->GetTotalRaysCount();
+	raysCount = totalCount;
 }

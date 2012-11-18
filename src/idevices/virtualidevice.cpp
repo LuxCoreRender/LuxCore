@@ -190,7 +190,7 @@ RayBuffer *VirtualM2OHardwareIntersectionDevice::VirtualM2ODevHInstance::PopRayB
 	RayBuffer *rayBuffer = virtualDevice->rayBufferQueue.PopDone(instanceIndex);
 	--pendingRayBuffers;
 
-	statsTotalRayCount += rayBuffer->GetRayCount();
+	statsTotalDataParallelRayCount += rayBuffer->GetRayCount();
 
 	return rayBuffer;
 }
@@ -282,6 +282,8 @@ VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::VirtualM2MDevHInst
 
 	instanceIndex = index;
 	virtualDevice = device;
+
+	traceRayRealDeviceIndex = 0;
 }
 
 VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::~VirtualM2MDevHInstance() {
@@ -364,7 +366,7 @@ RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PopRayB
 	RayBuffer *rayBuffer = virtualDevice->rayBufferQueue.PopDone(instanceIndex);
 	--pendingRayBuffers;
 
-	statsTotalRayCount += rayBuffer->GetRayCount();
+	statsTotalDataParallelRayCount += rayBuffer->GetRayCount();
 
 	return rayBuffer;
 }
