@@ -61,6 +61,14 @@ public:
 	virtual void PushRayBuffer(RayBuffer *rayBuffer) = 0;
 	virtual RayBuffer *PopRayBuffer() = 0;
 
+	// This method can be used to save resources by disabling the support
+	// for PushRayBuffer()/PopRayBuffer() interface. Note: this is really
+	// useful only with HardwareIntersectionDevice
+	void SetDataParallelSupport(const bool v) {
+		assert (!started);
+		dataParallelSupport = v;
+	}
+
 	//--------------------------------------------------------------------------
 	// Serial interface: to trace a single ray (on the CPU)
 	//--------------------------------------------------------------------------
@@ -88,6 +96,8 @@ protected:
 	size_t stackSize;
 
 	mutable unsigned int forceWorkGroupSize;
+
+	bool dataParallelSupport;
 };
 
 class HardwareIntersectionDevice : public IntersectionDevice {

@@ -70,7 +70,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
 		oclIntersectionDevice->DisableImageStorage(forcedDisableImageStorage);
 		// Disable the support for hybrid rendering
-		oclIntersectionDevice->SetHybridRenderingSupport(false);
+		oclIntersectionDevice->SetDataParallelSupport(false);
 	}
 
 	// Set the LuxRays SataSet
