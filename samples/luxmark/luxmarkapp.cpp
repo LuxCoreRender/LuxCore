@@ -257,7 +257,7 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	double raysSec = 0.0;
 	vector<double> raysSecs(intersectionDevices.size(), 0.0);
 	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
-		raysSecs[i] = intersectionDevices[i]->GetPerformance();
+		raysSecs[i] = intersectionDevices[i]->GetTotalPerformance();
 		raysSec += raysSecs[i];
 	}
 

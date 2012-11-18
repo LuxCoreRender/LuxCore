@@ -139,11 +139,11 @@ static void PrintHelpAndSettings() {
 	// Intersection devices
 	const vector<IntersectionDevice *> &idevices = session->renderEngine->GetIntersectionDevices();
 
-	double minPerf = idevices[0]->GetPerformance();
-	double totalPerf = idevices[0]->GetPerformance();
+	double minPerf = idevices[0]->GetTotalPerformance();
+	double totalPerf = idevices[0]->GetTotalPerformance();
 	for (size_t i = 1; i < idevices.size(); ++i) {
-		minPerf = min(minPerf, idevices[i]->GetPerformance());
-		totalPerf += idevices[i]->GetPerformance();
+		minPerf = min(minPerf, idevices[i]->GetTotalPerformance());
+		totalPerf += idevices[i]->GetTotalPerformance();
 	}
 
 	glColor3f(1.0f, 0.5f, 0.f);
@@ -152,11 +152,13 @@ static void PrintHelpAndSettings() {
 
 	char buff[512];
 	for (size_t i = 0; i < deviceCount; ++i) {
-		sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
+		sprintf(buff, "[%s][Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
 			idevices[i]->GetName().c_str(),
-			int(idevices[i]->GetPerformance() / 1000.0),
-			idevices[i]->GetPerformance() / minPerf,
-			100.0 * idevices[i]->GetPerformance() / totalPerf,
+			int(idevices[i]->GetTotalPerformance() / 1000.0),
+				int(idevices[i]->GetSerialPerformance() / 1000.0),
+				int(idevices[i]->GetDataParallelPerformance() / 1000.0),
+			idevices[i]->GetTotalPerformance() / minPerf,
+			100.0 * idevices[i]->GetTotalPerformance() / totalPerf,
 			int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
 			int(idevices[i]->GetMaxMemory() / (1024 * 1024)));
 		glRasterPos2i(20, offset);

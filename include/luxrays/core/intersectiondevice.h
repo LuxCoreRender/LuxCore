@@ -34,23 +34,36 @@ public:
 
 	virtual size_t GetQueueSize() = 0;
 
-	double GetTotalRaysCount() const { return statsTotalRayCount; }
-	double GetPerformance() const {
-		const double statsTotalRayTime = WallClockTime() - statsStartTime;
-		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalRayCount / statsTotalRayTime);
-	}
-	void ResetPerformaceStats() {
-		statsStartTime = WallClockTime();
-		statsTotalRayCount = 0;
-	}
-	virtual double GetLoad() const = 0;
-
 	void SetMaxStackSize(const size_t s) {
 		stackSize = s;
 	}
 
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
+
+	//--------------------------------------------------------------------------
+	// Statistics
+	//--------------------------------------------------------------------------
+
+	double GetTotalRaysCount() const { return statsTotalSerialRayCount + statsTotalDataParallelRayCount; }
+	double GetTotalPerformance() const {
+		const double statsTotalRayTime = WallClockTime() - statsStartTime;
+		return (statsTotalRayTime == 0.0) ?	1.0 : ((statsTotalSerialRayCount + statsTotalDataParallelRayCount) / statsTotalRayTime);
+	}
+	double GetSerialPerformance() const {
+		const double statsTotalRayTime = WallClockTime() - statsStartTime;
+		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalSerialRayCount / statsTotalRayTime);
+	}
+	double GetDataParallelPerformance() const {
+		const double statsTotalRayTime = WallClockTime() - statsStartTime;
+		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalDataParallelRayCount / statsTotalRayTime);
+	}
+	void ResetPerformaceStats() {
+		statsStartTime = WallClockTime();
+		statsTotalSerialRayCount = 0.0;
+		statsTotalDataParallelRayCount = 0.0;
+	}
+	virtual double GetLoad() const = 0;
 
 	//--------------------------------------------------------------------------
 	// Data parallel interface: to trace large set of rays (from the CPU)
@@ -74,10 +87,10 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual bool TraceRay(const Ray *ray, RayHit *rayHit) {
-		++statsTotalRayCount;
+		statsTotalSerialRayCount += 1.0;
 		return dataSet->Intersect(ray, rayHit);
 	}
-	
+
 	friend class Context;
 	friend class VirtualM2OHardwareIntersectionDevice;
 	friend class VirtualM2MHardwareIntersectionDevice;
@@ -91,9 +104,8 @@ protected:
 	virtual void Start();
 
 	const DataSet *dataSet;
-	// NOTE: statsTotalRayCount may not be accurate if you are using data parallel
-	// and serial interface at the same time
-	double statsStartTime, statsTotalRayCount, statsDeviceIdleTime, statsDeviceTotalTime;
+	double statsStartTime, statsTotalSerialRayCount, statsTotalDataParallelRayCount,
+		statsDeviceIdleTime, statsDeviceTotalTime;
 
 	size_t stackSize;
 

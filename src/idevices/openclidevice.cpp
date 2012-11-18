@@ -196,7 +196,7 @@ void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(cl::Buffer &rBuff,
 	const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	if (kernel) {
 		kernel->EnqueueRayBuffer(rBuff, hBuff, rayCount, events, event);
-		statsTotalRayCount += rayCount;
+		statsTotalDataParallelRayCount += rayCount;
 	}
 }
 

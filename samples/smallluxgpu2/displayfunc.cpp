@@ -124,11 +124,11 @@ static void PrintHelpAndSettings() {
 			PathOCLRenderEngine *engine = (PathOCLRenderEngine *)session->renderEngine;
 			const vector<OpenCLIntersectionDevice *> &idevices = engine->GetIntersectionDevices();
 
-			double minPerf = idevices[0]->GetPerformance();
-			double totalPerf = idevices[0]->GetPerformance();
+			double minPerf = idevices[0]->GetTotalPerformance();
+			double totalPerf = idevices[0]->GetTotalPerformance();
 			for (size_t i = 1; i < idevices.size(); ++i) {
-				minPerf = min(minPerf, idevices[i]->GetPerformance());
-				totalPerf += idevices[i]->GetPerformance();
+				minPerf = min(minPerf, idevices[i]->GetTotalPerformance());
+				totalPerf += idevices[i]->GetTotalPerformance();
 			}
 
 			glColor3f(1.0f, 0.5f, 0.f);
@@ -140,9 +140,9 @@ static void PrintHelpAndSettings() {
 				const OpenCLDeviceDescription *desc = ((OpenCLIntersectionDevice *)idevices[i])->GetDeviceDesc();
 				sprintf(buff, "[%s][Rays/sec % 3dK][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
 						idevices[i]->GetName().c_str(),
-						int(idevices[i]->GetPerformance() / 1000.0),
-						idevices[i]->GetPerformance() / minPerf,
-						100.0 * idevices[i]->GetPerformance() / totalPerf,
+						int(idevices[i]->GetTotalPerformance() / 1000.0),
+						idevices[i]->GetTotalPerformance() / minPerf,
+						100.0 * idevices[i]->GetTotalPerformance() / totalPerf,
 						int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
 						int(desc->GetMaxMemory() / (1024 * 1024)));
 				glRasterPos2i(20, offset);
@@ -231,7 +231,7 @@ void timerFunc(int value) {
 			double raysSec = 0.0;
 			const vector<OpenCLIntersectionDevice *> &idevices = engine->GetIntersectionDevices();
 			for (size_t i = 0; i < idevices.size(); ++i)
-				raysSec += idevices[i]->GetPerformance();
+				raysSec += idevices[i]->GetTotalPerformance();
 
 			sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
 					engine->GetPass(), engine->GetTotalSamplesSec() / 1000000.0, int(raysSec / 1000.0),
