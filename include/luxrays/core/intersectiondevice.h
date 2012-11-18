@@ -32,10 +32,6 @@ class IntersectionDevice : public Device {
 public:
 	const DataSet *GetDataSet() const { return dataSet; }
 
-	virtual RayBuffer *NewRayBuffer() = 0;
-	virtual RayBuffer *NewRayBuffer(const size_t size) = 0;
-	virtual void PushRayBuffer(RayBuffer *rayBuffer) = 0;
-	virtual RayBuffer *PopRayBuffer() = 0;
 	virtual size_t GetQueueSize() = 0;
 
 	double GetTotalRaysCount() const { return statsTotalRayCount; }
@@ -56,6 +52,24 @@ public:
 	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
 
+	//--------------------------------------------------------------------------
+	// Data parallel interface: to trace large set of rays (from the CPU)
+	//--------------------------------------------------------------------------
+
+	virtual RayBuffer *NewRayBuffer() = 0;
+	virtual RayBuffer *NewRayBuffer(const size_t size) = 0;
+	virtual void PushRayBuffer(RayBuffer *rayBuffer) = 0;
+	virtual RayBuffer *PopRayBuffer() = 0;
+
+	//--------------------------------------------------------------------------
+	// Serial interface: to trace a single ray (on the CPU)
+	//--------------------------------------------------------------------------
+
+	virtual bool TraceRay(const Ray *ray, RayHit *rayHit) {
+		++statsTotalRayCount;
+		return dataSet->Intersect(ray, rayHit);
+	}
+	
 	friend class Context;
 	friend class VirtualM2OHardwareIntersectionDevice;
 	friend class VirtualM2MHardwareIntersectionDevice;

@@ -33,8 +33,8 @@
 //------------------------------------------------------------------------------
 
 PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
-		const u_int index, const u_int seedVal) :
-		CPURenderThread(engine, index, seedVal, true, false) {
+		const u_int index, IntersectionDevice *device, const u_int seedVal) :
+		CPURenderThread(engine, index, device, seedVal, true, false) {
 }
 
 void PathCPURenderThread::DirectLightSampling(
@@ -68,8 +68,8 @@ void PathCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				++raysCount;
-				if (!scene->Intersect(false, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				if (!scene->Intersect(device, false, false, u4, &shadowRay,
+						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
@@ -186,9 +186,8 @@ void PathCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			++raysCount;
-			if (!scene->Intersect(false, true, sampler->GetSample(sampleOffset), &eyeRay,
-					&eyeRayHit, &bsdf, &connectionThroughput)) {
+			if (!scene->Intersect(device, false, true, sampler->GetSample(sampleOffset),
+					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 				DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, eyeRay.d,
 						lastPdfW, &radiance);

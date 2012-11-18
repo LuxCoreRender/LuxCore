@@ -305,7 +305,7 @@ bool BiDirState::Bounce(HybridRenderThread *renderThread,
 	}
 
 	pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
-	assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
+	assert (!pathVertex->throughput.IsNaN() && !pathVertex->throughput.IsInf());
 
 	// New MIS weights
 	if (event & SPECULAR) {
@@ -395,7 +395,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 				RayHit nextEventRayHit;
 				Spectrum connectionThroughput;
-				if (scene->Intersect(true, true, sampler->GetSample(lightVertexSampleOffset),
+				if (scene->Intersect(thread->device, true, true, sampler->GetSample(lightVertexSampleOffset),
 						&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 					// Something was hit
 
@@ -505,8 +505,8 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(false, true, sampler->GetSample(eyeVertexSampleOffset), &eyeRay,
-					&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
+			if (!scene->Intersect(thread->device, false, true, sampler->GetSample(eyeVertexSampleOffset),
+					&eyeRay, &eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 
 				// This is a trick, you can not have a BSDF of something that has
@@ -538,7 +538,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 				break;
 			}
 
-			// Note: pass-through check is done inside SceneIntersect()
+			// Note: pass-through check is done inside Scene::Intersect()
 
 			//------------------------------------------------------------------
 			// Direct light sampling
@@ -580,11 +580,15 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 	//SLG_LOG("[BiDirState::" << renderThread->threadIndex << "] Generated rays: " << lightSampleResults.size() + eyeSampleRadiance.size());
 }
 
-static bool ValidResult(Scene *scene, const Ray *ray, const RayHit *rayHit,
+bool BiDirState::ValidResult(BiDirHybridRenderThread *renderThread,
+		const Ray *ray, const RayHit *rayHit,
 		const float u0, Spectrum *radiance) {
 	if (rayHit->Miss())
 		return true;
 	else {
+		BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)renderThread->renderEngine;
+		Scene *scene = renderEngine->renderConfig->scene;
+
 		// I have to check if it is an hit over a pass-through point
 		BSDF bsdf(false, // true or false, here, doesn't really matter
 				*scene, *ray, *rayHit, u0);
@@ -598,7 +602,7 @@ static bool ValidResult(Scene *scene, const Ray *ray, const RayHit *rayHit,
 			newRay.mint = rayHit->t + MachineEpsilon::E(rayHit->t);
 			RayHit newRayHit;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(false, // true or false, here, doesn't really matter
+			if (scene->Intersect(renderThread->device, false, // true or false, here, doesn't really matter
 					true, u0, &newRay, &newRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				return false;
@@ -614,8 +618,7 @@ static bool ValidResult(Scene *scene, const Ray *ray, const RayHit *rayHit,
 double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
 	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
-	Scene *scene = renderEngine->renderConfig->scene;
-
+	
 	vector<SampleResult> validSampleResults;
 
 	// Elaborate the RayHit results for each eye paths
@@ -629,7 +632,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 			const RayHit *rayHit;
 			thread->PopRay(&ray, &rayHit);
 
-			if (ValidResult(scene, ray, rayHit, lightSampleValue[currentLightSampleResultsIndex],
+			if (ValidResult(thread, ray, rayHit, lightSampleValue[currentLightSampleResultsIndex],
 					&lightSampleResults[currentLightSampleResultsIndex].radiance))
 				validSampleResults.push_back(lightSampleResults[currentLightSampleResultsIndex]);
 
@@ -645,7 +648,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 			const RayHit *rayHit;
 			thread->PopRay(&ray, &rayHit);
 
-			if (ValidResult(scene, ray, rayHit, eyeSampleResults[eyePathIndex].sampleValue[i],
+			if (ValidResult(thread, ray, rayHit, eyeSampleResults[eyePathIndex].sampleValue[i],
 					&eyeSampleResults[eyePathIndex].sampleRadiance[i]))
 				eyeSampleResult.radiance += eyeSampleResults[eyePathIndex].sampleRadiance[i];
 		}

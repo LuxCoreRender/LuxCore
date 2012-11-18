@@ -60,6 +60,10 @@ public:
 		return true;
 	}
 
+	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
+		return intersectionDevices;
+	}
+
 	unsigned int GetPass() const {
 		return samplesCount / (film->GetWidth() * film->GetHeight());
 	}
@@ -87,6 +91,8 @@ protected:
 
 	boost::mutex engineMutex;
 	Context *ctx;
+	vector<DeviceDescription *> selectedDeviceDescs;
+	vector<IntersectionDevice *> intersectionDevices;
 
 	RenderConfig *renderConfig;
 	Film *film;
@@ -112,9 +118,8 @@ class CPURenderEngine;
 class CPURenderThread {
 public:
 	CPURenderThread(CPURenderEngine *engine,
-		const u_int index, const u_int seedVal,
-		const bool enablePerPixelNormBuffer,
-		const bool enablePerScreenNormBuffer);
+		const u_int index, IntersectionDevice *dev, const u_int seedVal,
+		const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer);
 	virtual ~CPURenderThread();
 
 	virtual void Start();
@@ -140,9 +145,10 @@ protected:
 
 	boost::thread *renderThread;
 	Film *threadFilm;
+	IntersectionDevice *device;
 
 	// Thread counters
-	mutable double samplesCount, raysCount;
+	mutable double samplesCount;
 
 	bool started, editMode;
 	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
@@ -156,7 +162,8 @@ public:
 	friend class CPURenderThread;
 
 protected:
-	virtual CPURenderThread *NewRenderThread(const u_int index, const u_int seedVal) = 0;
+	virtual CPURenderThread *NewRenderThread(const u_int index,
+			IntersectionDevice *device, const u_int seedVal) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
@@ -178,14 +185,6 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
-
-	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
-		return intersectionDevices;
-	}
-
-protected:
-	vector<DeviceDescription *> selectedDeviceDescs;
-	vector<IntersectionDevice *> intersectionDevices;
 };
 
 //------------------------------------------------------------------------------
@@ -213,7 +212,7 @@ protected:
 class HybridRenderThread {
 public:
 	HybridRenderThread(HybridRenderEngine *re, const unsigned int index,
-			const unsigned int seedBase, IntersectionDevice *device);
+			IntersectionDevice *device, const unsigned int seedBase);
 	~HybridRenderThread();
 
 	void Start();
@@ -240,8 +239,7 @@ protected:
 
 	boost::thread *renderThread;
 	Film *threadFilm;
-
-	IntersectionDevice *intersectionDevice;
+	IntersectionDevice *device;
 
 	unsigned int threadIndex, seed;
 	HybridRenderEngine *renderEngine;
@@ -267,7 +265,7 @@ public:
 
 protected:
 	virtual HybridRenderThread *NewRenderThread(const u_int index,
-			const u_int seedVal, IntersectionDevice *device) = 0;
+			IntersectionDevice *device, const u_int seedVal) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
