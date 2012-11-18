@@ -29,8 +29,8 @@
 //------------------------------------------------------------------------------
 
 LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
-		const u_int index, const u_int seedVal) :
-		CPURenderThread(engine, index, seedVal, true, true) {
+		const u_int index, IntersectionDevice *device, const u_int seedVal) :
+		CPURenderThread(engine, index, device, seedVal, true, true) {
 }
 
 void LightCPURenderThread::ConnectToEye(const float u0,
@@ -55,8 +55,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			++raysCount;
-			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			if (!scene->Intersect(device, true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				const float cosToCamera = Dot(bsdf.shadeN, -eyeDir);
@@ -102,9 +101,8 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 		RayHit eyeRayHit;
 		BSDF bsdf;
 		Spectrum connectionThroughput;
-		++raysCount;
-		const bool somethingWasHit = scene->Intersect(
-			false, true, sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
+		const bool somethingWasHit = scene->Intersect(device, false, true,
+				sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
 			radiance = eyePathThroughput * connectionThroughput * scene->GetEnvLightsRadiance(-eyeRay.d, Point());
@@ -229,8 +227,7 @@ void LightCPURenderThread::RenderFunc() {
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			++raysCount;
-			if (scene->Intersect(true, true, sampler->GetSample(sampleOffset),
+			if (scene->Intersect(device, true, true, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				

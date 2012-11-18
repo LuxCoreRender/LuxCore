@@ -38,8 +38,8 @@ static inline float MIS(const float a) {
 }
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
-		const u_int index, const u_int seedVal) :
-		CPURenderThread(engine, index, seedVal, true, true), samplesCount(0.0) {
+		const u_int index, IntersectionDevice *device, const u_int seedVal) :
+		CPURenderThread(engine, index, device, seedVal, true, true), samplesCount(0.0) {
 }
 
 void BiDirCPURenderThread::ConnectVertices(
@@ -78,8 +78,7 @@ void BiDirCPURenderThread::ConnectVertices(
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			++raysCount;
-			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			if (!scene->Intersect(device, true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (eyeVertex.depth >= engine->rrDepth) {
@@ -136,8 +135,7 @@ void BiDirCPURenderThread::ConnectToEye(const unsigned int pixelCount,
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			++raysCount;
-			if (!scene->Intersect(true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			if (!scene->Intersect(device, true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (lightVertex.depth >= engine->rrDepth) {
@@ -201,8 +199,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				++raysCount;
-				if (!scene->Intersect(false, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				if (!scene->Intersect(device, false, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					if (eyeVertex.depth >= engine->rrDepth) {
 						// Russian Roulette
 						const float prob = Max(bsdfEval.Filter(), engine->rrImportanceCap);
@@ -289,7 +286,7 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 	}
 
 	pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
-	assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
+	assert (!pathVertex->throughput.IsNaN() && !pathVertex->throughput.IsInf());
 
 	// New MIS weights
 	if (event & SPECULAR) {
@@ -383,8 +380,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				RayHit nextEventRayHit;
 				Spectrum connectionThroughput;
-				++raysCount;
-				if (scene->Intersect(true, true, sampler->GetSample(sampleOffset),
+				if (scene->Intersect(device, true, true, sampler->GetSample(sampleOffset),
 						&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 					// Something was hit
 
@@ -463,8 +459,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			++raysCount;
-			if (!scene->Intersect(false, true, sampler->GetSample(sampleOffset), &eyeRay,
+			if (!scene->Intersect(device, false, true, sampler->GetSample(sampleOffset), &eyeRay,
 					&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 

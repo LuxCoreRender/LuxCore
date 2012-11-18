@@ -30,6 +30,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/scene.h"
+#include "luxrays/core/intersectiondevice.h"
 
 using namespace luxrays;
 using namespace luxrays::sdl;
@@ -519,11 +520,11 @@ Spectrum Scene::GetEnvLightsRadiance(const Vector &dir,
 	return radiance;
 }
 
-bool Scene::Intersect(const bool fromLight, const bool stopOnArchGlass,
+bool Scene::Intersect(IntersectionDevice *device, const bool fromLight, const bool stopOnArchGlass,
 		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf, Spectrum *connectionThroughput) const {
 	*connectionThroughput = Spectrum(1.f, 1.f, 1.f);
 	for (;;) {
-		if (!dataSet->Intersect(ray, rayHit)) {
+		if (!device->TraceRay(ray, rayHit)) {
 			// Nothing was hit
 			return false;
 		} else {

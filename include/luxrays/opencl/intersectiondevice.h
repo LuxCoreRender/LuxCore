@@ -91,6 +91,11 @@ public:
 	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
 	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
+
+	//--------------------------------------------------------------------------
+	// Data parallel interface: to trace large set of rays directly from the GPU
+	//--------------------------------------------------------------------------
+
 	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
 		const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);

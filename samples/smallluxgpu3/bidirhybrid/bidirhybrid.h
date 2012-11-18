@@ -30,6 +30,7 @@
 // Bidirectional path tracing hybrid render engine
 //------------------------------------------------------------------------------
 
+class BiDirHybridRenderThread;
 class BiDirHybridRenderEngine;
 
 typedef struct {
@@ -78,12 +79,17 @@ protected:
 	// Eye tracing results: I use a vector because of CBiDir. With standard BiDir,
 	// the size of the vector is just 1.
 	vector<BiDirEyeSampleResult>  eyeSampleResults;
+
+private:
+	bool ValidResult(BiDirHybridRenderThread *renderThread,
+		const Ray *ray, const RayHit *rayHit,
+		const float u0, Spectrum *radiance);
 };
 
 class BiDirHybridRenderThread : public HybridRenderThread {
 public:
 	BiDirHybridRenderThread(BiDirHybridRenderEngine *engine, const u_int index,
-			const u_int seedVal, IntersectionDevice *device);
+			IntersectionDevice *device, const u_int seedVal);
 
 	friend class BiDirState;
 	friend class BiDirHybridRenderEngine;
@@ -116,9 +122,9 @@ public:
 	friend class BiDirHybridRenderThread;
 
 private:
-	HybridRenderThread *NewRenderThread(const u_int index, const u_int seedVal,
-			IntersectionDevice *device) {
-		return new BiDirHybridRenderThread(this, index, seedVal, device);
+	HybridRenderThread *NewRenderThread(const u_int index, IntersectionDevice *device,
+			const u_int seedVal) {
+		return new BiDirHybridRenderThread(this, index, device, seedVal);
 	}
 };
 

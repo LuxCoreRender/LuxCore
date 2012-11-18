@@ -33,7 +33,8 @@ class PathCPURenderEngine;
 
 class PathCPURenderThread : public CPURenderThread {
 public:
-	PathCPURenderThread(PathCPURenderEngine *engine, const u_int index, const u_int seedVal);
+	PathCPURenderThread(PathCPURenderEngine *engine, const u_int index,
+			IntersectionDevice *device, const u_int seedVal);
 
 	friend class PathCPURenderEngine;
 
@@ -70,8 +71,9 @@ public:
 	friend class PathCPURenderThread;
 
 private:
-	CPURenderThread *NewRenderThread(const u_int index, const u_int seedVal) {
-		return new PathCPURenderThread(this, index, seedVal);
+	CPURenderThread *NewRenderThread(const u_int index,
+			IntersectionDevice *device, const u_int seedVal) {
+		return new PathCPURenderThread(this, index, device, seedVal);
 	}
 };
 

@@ -33,7 +33,8 @@ class LightCPURenderEngine;
 
 class LightCPURenderThread : public CPURenderThread {
 public:
-	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index, const u_int seedVal);
+	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index,
+			IntersectionDevice *device, const u_int seedVal);
 
 	friend class LightCPURenderEngine;
 
@@ -63,8 +64,9 @@ public:
 	friend class LightCPURenderThread;
 
 private:
-	CPURenderThread *NewRenderThread(const u_int index, const unsigned int seedVal) {
-		return new LightCPURenderThread(this, index, seedVal);
+	CPURenderThread *NewRenderThread(const u_int index,
+			IntersectionDevice *device, const unsigned int seedVal) {
+		return new LightCPURenderThread(this, index, device, seedVal);
 	}
 };
 

@@ -240,14 +240,14 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 //------------------------------------------------------------------------------
 
 CPURenderThread::CPURenderThread(CPURenderEngine *engine,
-		const u_int index, const unsigned int seedVal,
+		const u_int index, IntersectionDevice *dev, const unsigned int seedVal,
 		const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) {
 	threadIndex = index;
 	seed = seedVal;
 	renderEngine = engine;
+	device = dev;
 	
 	samplesCount = 0.0;
-	raysCount = 0.0;
 
 	started = false;
 	editMode = false;
@@ -294,7 +294,6 @@ void CPURenderThread::StartRenderThread() {
 	threadFilm->Init(filmWidth, filmHeight);
 
 	samplesCount = 0.0;
-	raysCount = 0.0;
 
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
@@ -324,9 +323,23 @@ void CPURenderThread::EndEdit(const EditActionList &editActions) {
 CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
 	samplesCount = 0.0;
-	raysCount = 0.0;
 
+	//--------------------------------------------------------------------------
+	// Allocate devices
+	//--------------------------------------------------------------------------
+
+	selectedDeviceDescs = ctx->GetAvailableDeviceDescriptions();
+	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, selectedDeviceDescs);
+
+	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
+
+	// Set the LuxRays SataSet
+	ctx->SetDataSet(renderConfig->scene->dataSet);
+
+	//--------------------------------------------------------------------------
 	// Create and start render threads
+	//--------------------------------------------------------------------------
+
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
 	renderThreads.resize(renderThreadCount, NULL);
@@ -345,7 +358,7 @@ CPURenderEngine::~CPURenderEngine() {
 void CPURenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (!renderThreads[i])
-			renderThreads[i] = NewRenderThread(i, seedBase + i);
+			renderThreads[i] = NewRenderThread(i, intersectionDevices[i], seedBase + i);
 		renderThreads[i]->Start();
 	}
 }
@@ -388,7 +401,7 @@ void CPURenderEngine::UpdateCounters() {
 	// Update the ray count statistic
 	double totalCount = 0.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		totalCount += renderThreads[i]->raysCount;
+		totalCount += renderThreads[i]->device->GetTotalRaysCount();
 	raysCount = totalCount;
 }
 
@@ -465,9 +478,9 @@ HybridRenderState::~HybridRenderState() {
 //------------------------------------------------------------------------------
 
 HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
-		const unsigned int index, const unsigned int seedBase,
-		IntersectionDevice *device) {
-	intersectionDevice = device;
+		const unsigned int index, IntersectionDevice *dev,
+		const unsigned int seedBase) {
+	device = dev;
 	seed = seedBase;
 
 	renderThread = NULL;
@@ -540,7 +553,7 @@ void HybridRenderThread::BeginEdit() {
 
 void HybridRenderThread::EndEdit(const EditActionList &editActions) {
 	// Reset statistics in order to be more accurate
-	intersectionDevice->ResetPerformaceStats();
+	device->ResetPerformaceStats();
 
 	StartRenderThread();
 }
@@ -550,7 +563,7 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 	if (!currentRayBufferToSend) {
 		if (freeRayBuffers.size() == 0) {
 			// I have to allocate a new RayBuffer
-			currentRayBufferToSend = intersectionDevice->NewRayBuffer();
+			currentRayBufferToSend = device->NewRayBuffer();
 		} else {
 			// I can reuse one in queue
 			currentRayBufferToSend = freeRayBuffers.front();
@@ -563,7 +576,7 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 	// Check if the buffer is now full
 	if (currentRayBufferToSend->IsFull()) {
 		// Send the work to the device
-		intersectionDevice->PushRayBuffer(currentRayBufferToSend);
+		device->PushRayBuffer(currentRayBufferToSend);
 		currentRayBufferToSend = NULL;
 		++pendingRayBuffers;
 	}
@@ -574,7 +587,7 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 	// Check if I have to get  the results out of intersection device
 	if (!currentReiceivedRayBuffer) {
-		currentReiceivedRayBuffer = intersectionDevice->PopRayBuffer();
+		currentReiceivedRayBuffer = device->PopRayBuffer();
 		--pendingRayBuffers;
 		currentReiceivedRayBufferIndex = 0;
 	} else if (currentReiceivedRayBufferIndex >= currentReiceivedRayBuffer->GetSize()) {
@@ -583,7 +596,7 @@ void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 		freeRayBuffers.push_back(currentReiceivedRayBuffer);
 
 		// Get a new buffer
-		currentReiceivedRayBuffer = intersectionDevice->PopRayBuffer();
+		currentReiceivedRayBuffer = device->PopRayBuffer();
 		--pendingRayBuffers;
 		currentReiceivedRayBufferIndex = 0;
 	}
@@ -673,7 +686,7 @@ void HybridRenderThread::RenderFunc() {
 
 	// Remove all pending ray buffers
 	while (pendingRayBuffers > 0) {
-		RayBuffer *rayBuffer = intersectionDevice->PopRayBuffer();
+		RayBuffer *rayBuffer = device->PopRayBuffer();
 		--(pendingRayBuffers);
 		rayBuffer->Reset();
 		freeRayBuffers.push_back(rayBuffer);
@@ -718,7 +731,7 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 void HybridRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (!renderThreads[i])
-			renderThreads[i] = NewRenderThread(i, seedBase + i, devices[i]);
+			renderThreads[i] = NewRenderThread(i, devices[i], seedBase + i);
 		renderThreads[i]->Start();
 	}
 }
@@ -761,10 +774,4 @@ void HybridRenderEngine::UpdateCounters() {
 		totalCount += renderThreads[i]->samplesCount;
 
 	samplesCount = totalCount;
-
-	// Update the ray count statistic
-	totalCount = 0.0;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		totalCount += intersectionDevices[i]->GetTotalRaysCount();
-	raysCount = totalCount;
 }

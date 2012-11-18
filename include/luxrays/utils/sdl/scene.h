@@ -51,9 +51,10 @@ public:
 			const Point &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
-	bool Intersect(const bool fromLight, const bool stopOnArchGlass,
-		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf,
-		Spectrum *connectionThroughput) const;
+	bool Intersect(IntersectionDevice *device,	
+		const bool fromLight, const bool stopOnArchGlass,
+		const float u0, Ray *ray, RayHit *rayHit,
+		BSDF *bsdf, Spectrum *connectionThroughput) const;
 
 	void UpdateDataSet(Context *ctx);
 
