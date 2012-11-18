@@ -151,7 +151,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 
 	// Disable the support for hybrid rendering
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i)
-		oclIntersectionDevices[i]->SetHybridRenderingSupport(false);
+		oclIntersectionDevices[i]->SetDataParallelSupport(false);
 }
 
 OCLRenderEngine::~OCLRenderEngine() {

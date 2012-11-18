@@ -333,6 +333,11 @@ CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
+	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
+		// Disable the support for hybrid rendering in order to not waste resource
+		intersectionDevices[i]->SetDataParallelSupport(false);
+	}
+
 	// Set the LuxRays SataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 

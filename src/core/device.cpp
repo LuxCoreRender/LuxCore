@@ -250,8 +250,8 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 
 IntersectionDevice::IntersectionDevice(const Context *context,
 	const DeviceType type, const size_t index) :
-	Device(context, type, index), dataSet(NULL), forceWorkGroupSize(0)
-{
+	Device(context, type, index), dataSet(NULL), forceWorkGroupSize(0),
+	dataParallelSupport(true) {
 }
 
 IntersectionDevice::~IntersectionDevice() {

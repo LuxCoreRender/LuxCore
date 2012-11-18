@@ -47,7 +47,6 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	deviceName = (desc->GetName() +"Intersect").c_str();
 	reportedPermissionError = false;
 	disableImageStorage = false;
-	hybridRenderingSupport = true;
 	intersectionThread = NULL;
 
 	externalRayBufferQueue = NULL;
@@ -141,7 +140,7 @@ void OpenCLIntersectionDevice::UpdateDataSet() {
 void OpenCLIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
-	if (hybridRenderingSupport) {
+	if (dataParallelSupport) {
 		// Create the thread for the rendering
 		intersectionThread = new boost::thread(boost::bind(OpenCLIntersectionDevice::IntersectionThread, this));
 
@@ -157,14 +156,14 @@ void OpenCLIntersectionDevice::Start() {
 void OpenCLIntersectionDevice::Interrupt() {
 	assert (started);
 
-	if (hybridRenderingSupport)
+	if (dataParallelSupport)
 		intersectionThread->interrupt();
 }
 
 void OpenCLIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 
-	if (hybridRenderingSupport) {
+	if (dataParallelSupport) {
 		intersectionThread->interrupt();
 		intersectionThread->join();
 		delete intersectionThread;

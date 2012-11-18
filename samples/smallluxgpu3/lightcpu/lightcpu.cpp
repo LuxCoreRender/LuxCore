@@ -30,7 +30,7 @@
 LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPURenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
-
+	
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
