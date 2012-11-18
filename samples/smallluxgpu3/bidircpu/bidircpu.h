@@ -63,12 +63,14 @@ private:
 	void DirectHitLight(const bool finiteLightSource,
 		const PathVertex &eyeVertex, Spectrum *radiance) const;
 
-	void ConnectToEye(const unsigned int pixelCount, 
-		const PathVertex &BiDirVertex, const float u0,
-		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
 	void ConnectVertices(const PathVertex &eyeVertex, const PathVertex &BiDirVertex,
 		SampleResult *eyeSampleResult, const float u0) const;
-	
+	void ConnectToEye(const PathVertex &BiDirVertex, const float u0,
+		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
+
+	void TraceLightPath(Sampler *sampler, const Point &lensPoint,
+		vector<PathVertex> &lightPathVertices,
+		vector<SampleResult> &sampleResults) const;
 	bool Bounce(Sampler *sampler, const u_int sampleOffset,
 		PathVertex *pathVertex, Ray *nextEventRay) const;
 
