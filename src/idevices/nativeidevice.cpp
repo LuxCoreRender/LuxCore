@@ -34,8 +34,7 @@ size_t NativeThreadIntersectionDevice::RayBufferSize = 512;
 
 NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(const Context *context,
 	const size_t threadIndex, const size_t devIndex) :
-	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex)
-{
+	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
 	char buf[64];
 	sprintf(buf, "NativeIntersectThread-%03d", (int)threadIndex);
 	deviceName = std::string(buf);
@@ -44,88 +43,84 @@ NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(const Context *co
 	intersectionThread = NULL;
 }
 
-NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice()
-{
+NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
 	if (started)
 		Stop();
 	delete intersectionThread;
 }
 
-void NativeThreadIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue)
-{
+void NativeThreadIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue) {
 	assert (!started);
 
 	externalRayBufferQueue = queue;
 }
 
-void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet)
-{
+void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 }
 
-void NativeThreadIntersectionDevice::Start()
-{
+void NativeThreadIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
-	// Create the thread for the rendering
-	intersectionThread = new boost::thread(boost::bind(NativeThreadIntersectionDevice::IntersectionThread, this));
+	if (dataParallelSupport) {
+		// Create the thread for the rendering
+		intersectionThread = new boost::thread(boost::bind(NativeThreadIntersectionDevice::IntersectionThread, this));
 
-	// Set intersectionThread priority
-	bool res = SetThreadRRPriority(intersectionThread);
-	if (res && !reportedPermissionError) {
-		LR_LOG(deviceContext, "[NativeThread device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
-		reportedPermissionError = true;
+		// Set intersectionThread priority
+		bool res = SetThreadRRPriority(intersectionThread);
+		if (res && !reportedPermissionError) {
+			LR_LOG(deviceContext, "[NativeThread device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
+			reportedPermissionError = true;
+		}
 	}
 }
 
-void NativeThreadIntersectionDevice::Interrupt()
-{
+void NativeThreadIntersectionDevice::Interrupt() {
 	assert (started);
 
-	intersectionThread->interrupt();
+	if (dataParallelSupport)
+		intersectionThread->interrupt();
 }
 
-void NativeThreadIntersectionDevice::Stop()
-{
+void NativeThreadIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 
-	intersectionThread->interrupt();
-	intersectionThread->join();
-	delete intersectionThread;
-	intersectionThread = NULL;
+	if (dataParallelSupport) {
+		intersectionThread->interrupt();
+		intersectionThread->join();
+		delete intersectionThread;
+		intersectionThread = NULL;
 
-	if (!externalRayBufferQueue)
-		rayBufferQueue.Clear();
+		if (!externalRayBufferQueue)
+			rayBufferQueue.Clear();
+	}
 }
 
-RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer()
-{
+RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer() {
 	return NewRayBuffer(RayBufferSize);
 }
 
-RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer(const size_t size)
-{
+RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer(const size_t size) {
 	return new RayBuffer(RoundUpPow2<size_t>(size));
 }
 
-void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer)
-{
+void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
 	assert (started);
 	assert (!externalRayBufferQueue);
+	assert (dataParallelSupport);
 
 	rayBufferQueue.PushToDo(rayBuffer, 0);
 }
 
-RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer()
-{
+RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer() {
 	assert (started);
 	assert (!externalRayBufferQueue);
+	assert (dataParallelSupport);
 
 	return rayBufferQueue.PopDone(0);
 }
 
-void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersectionDevice *renderDevice)
-{
+void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersectionDevice *renderDevice) {
 	LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "] Rendering thread started");
 
 	try {

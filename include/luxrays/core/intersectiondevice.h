@@ -91,6 +91,8 @@ protected:
 	virtual void Start();
 
 	const DataSet *dataSet;
+	// NOTE: statsTotalRayCount may not be accurate if you are using data parallel
+	// and serial interface at the same time
 	double statsStartTime, statsTotalRayCount, statsDeviceIdleTime, statsDeviceTotalTime;
 
 	size_t stackSize;
@@ -150,6 +152,7 @@ private:
 	boost::thread *intersectionThread;
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
+
 	bool reportedPermissionError;
 };
 
