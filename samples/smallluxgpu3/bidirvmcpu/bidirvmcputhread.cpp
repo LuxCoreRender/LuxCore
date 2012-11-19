@@ -51,7 +51,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 	pixelCount = filmWidth * filmHeight;
-	samplesCount = 0.0;
 
 	// Setup the samplers
 	vector<Sampler *> samplers(engine->lightPathCount, NULL);
@@ -66,9 +65,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		samplers[i] = sampler;
 	}
 
-	// Vertex merging start radius
-	float radius = engine->baseRadius;
-
+	u_int iteration = 0;
 	vector<vector<SampleResult> > samplesResults(samplers.size());
 	vector<vector<PathVertexVM> > lightPathsVertices(samplers.size());
 	vector<Point> lensPoints(samplers.size());
@@ -80,14 +77,16 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		}
 
 		// Setup vertex merging
-		radius *= 1.f - engine->radiusAlpha;
+		float radius = engine->baseRadius;
+        radius /= powf(float(iteration + 1), .5f * (1.f - engine->radiusAlpha));
 		radius = Max(radius, DEFAULT_EPSILON_STATIC);
 		const float radius2 = radius * radius;
 
-		vmNormalization = 1.f / (radius2 * M_PI * engine->lightPathCount);
+		const float vmFactor = M_PI * radius2 * engine->lightPathCount;
+		vmNormalization = 1.f / vmFactor;
 
-		const float etaVCM = (M_PI * radius2) * engine->lightPathCount;
-		misVmWeightFactor = (engine->lightPathCount > 0) ? MIS(etaVCM) : 0.f;
+		const float etaVCM = vmFactor;
+		misVmWeightFactor = MIS(etaVCM);
 		misVcWeightFactor = MIS(1.f / etaVCM);
 
 		//----------------------------------------------------------------------
@@ -109,6 +108,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		//----------------------------------------------------------------------
 		// Store all light path vertices in the k-NN accelerator
 		//----------------------------------------------------------------------
+
+		HashGrid hashGrid(lightPathsVertices, radius);
 
 		//----------------------------------------------------------------------
 		// Trace all eye paths
@@ -181,9 +182,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				// Note: pass-through check is done inside SceneIntersect()
 
-				//------------------------------------------------------------------
+				//--------------------------------------------------------------
 				// Direct light sampling
-				//------------------------------------------------------------------
+				//--------------------------------------------------------------
 
 				DirectLightSampling(sampler->GetSample(sampleOffset + 1),
 						sampler->GetSample(sampleOffset + 2),
@@ -192,20 +193,26 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						sampler->GetSample(sampleOffset + 5),
 						eyeVertex, &eyeSampleResult.radiance);
 
-				//------------------------------------------------------------------
-				// Connect vertex path ray with all light path vertices
-				//------------------------------------------------------------------
-
 				if (!eyeVertex.bsdf.IsDelta()) {
+					//----------------------------------------------------------
+					// Connect vertex path ray with all light path vertices
+					//----------------------------------------------------------
+
 					for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
 							lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
 						ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
 								sampler->GetSample(sampleOffset + 6));
+
+					//----------------------------------------------------------
+					// Vertex Merging step
+					//----------------------------------------------------------
+
+					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiance);
 				}
 
-				//------------------------------------------------------------------
+				//--------------------------------------------------------------
 				// Build the next vertex path ray
-				//------------------------------------------------------------------
+				//--------------------------------------------------------------
 
 				if (!Bounce(sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
 					break;
@@ -214,8 +221,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			}
 
 			samplesResults[samplerIndex].push_back(eyeSampleResult);
-
-			samplers[samplerIndex]->NextSample(samplesResults[samplerIndex]);
 		}
 
 		//----------------------------------------------------------------------
@@ -224,6 +229,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 		for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex)
 			samplers[samplerIndex]->NextSample(samplesResults[samplerIndex]);
+
+		++iteration;
 	}
 
 	for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex)

@@ -253,8 +253,6 @@ CPURenderThread::CPURenderThread(CPURenderEngine *engine,
 	seed = seedVal;
 	renderEngine = engine;
 	device = dev;
-	
-	samplesCount = 0.0;
 
 	started = false;
 	editMode = false;
@@ -300,8 +298,6 @@ void CPURenderThread::StartRenderThread() {
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
 	threadFilm->Init(filmWidth, filmHeight);
 
-	samplesCount = 0.0;
-
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
 }
@@ -329,7 +325,6 @@ void CPURenderThread::EndEdit(const EditActionList &editActions) {
 
 CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
-	samplesCount = 0.0;
 
 	//--------------------------------------------------------------------------
 	// Allocate devices

@@ -31,12 +31,38 @@
 //------------------------------------------------------------------------------
 
 class BiDirVMCPURenderEngine;
+class BiDirVMCPURenderThread;
+
+class HashGrid {
+public:
+	HashGrid(vector<vector<PathVertexVM> > &pathsVertices, const float radius);
+	~HashGrid();
+
+	void Process(const BiDirVMCPURenderThread *thread,
+		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
+
+private:
+	u_int Hash(const int ix, const int iy, const int iz) const {
+		return (u_int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % gridSize;
+	}
+	/*u_int Hash(const int ix, const int iy, const int iz) const {
+		return (u_int)((ix * 997 + iy) * 443 + iz) % gridSize;
+	}*/
+
+	float radius2;
+	u_int gridSize;
+	float invCellSize;
+	BBox vertexBBox;
+
+	vector<list<PathVertexVM *> *> grid;
+};
 
 class BiDirVMCPURenderThread : public BiDirCPURenderThread {
 public:
 	BiDirVMCPURenderThread(BiDirVMCPURenderEngine *engine, const u_int index,
 			IntersectionDevice *device, const u_int seedVal);
 
+	friend class HashGrid;
 	friend class BiDirVMCPURenderEngine;
 
 private:
