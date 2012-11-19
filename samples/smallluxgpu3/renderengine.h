@@ -35,7 +35,8 @@ enum RenderEngineType {
 	PATHCPU = 6,
 	BIDIRCPU = 7,
 	BIDIRHYBRID = 8,
-	CBIDIRHYBRID = 9
+	CBIDIRHYBRID = 9,
+	BIDIRVMCPU = 10
 };
 
 //------------------------------------------------------------------------------
@@ -243,6 +244,8 @@ protected:
 
 	unsigned int threadIndex, seed;
 	HybridRenderEngine *renderEngine;
+	u_int pixelCount;
+
 	double samplesCount;
 
 	unsigned int pendingRayBuffers;

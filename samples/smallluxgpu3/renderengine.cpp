@@ -27,6 +27,7 @@
 #include "bidircpu/bidircpu.h"
 #include "bidirhybrid/bidirhybrid.h"
 #include "cbidirhybrid/cbidirhybrid.h"
+#include "bidirvmcpu/bidirvmcpu.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
@@ -189,6 +190,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return BIDIRHYBRID;
 	if ((type.compare("9") == 0) || (type.compare("CBIDIRHYBRID") == 0))
 		return CBIDIRHYBRID;
+	if ((type.compare("10") == 0) || (type.compare("BIDIRVMCPU") == 0))
+		return BIDIRVMCPU;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -206,6 +209,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "BIDIRHYBRID";
 		case CBIDIRHYBRID:
 			return "CBIDIRHYBRID";
+		case BIDIRVMCPU:
+			return "BIDIRVMCPU";
 		default:
 			throw runtime_error("Unknown render engine type: " + type);
 	}
@@ -230,6 +235,8 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			return new BiDirHybridRenderEngine(renderConfig, film, filmMutex);
 		case CBIDIRHYBRID:
 			return new CBiDirHybridRenderEngine(renderConfig, film, filmMutex);
+		case BIDIRVMCPU:
+			return new BiDirVMCPURenderEngine(renderConfig, film, filmMutex);
 		default:
 			throw runtime_error("Unknown render engine type");
 	}
@@ -613,6 +620,11 @@ void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 void HybridRenderThread::RenderFunc() {
 	//SLG_LOG("[HybridRenderThread::" << threadIndex << "] Rendering thread started");
 	boost::this_thread::disable_interruption di;
+
+	Film *film = threadFilm;
+	const unsigned int filmWidth = film->GetWidth();
+	const unsigned int filmHeight = film->GetHeight();
+	pixelCount = filmWidth * filmHeight;
 
 	RandomGenerator *rndGen = new RandomGenerator(threadIndex + seed);
 
