@@ -163,8 +163,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 			const float fluxToRadianceFactor = cameraPdfA;
 
 			// MIS weight (cameraPdfA must be expressed normalized device coordinate)
-			const unsigned int pixelCount = thread->threadFilm->GetWidth() * thread->threadFilm->GetHeight();
-			const float weightLight = MIS(cameraPdfA / pixelCount) *
+			const float weightLight = MIS(cameraPdfA / thread->pixelCount) *
 					(lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
 			const float misWeight = 1.f / (renderEngine->lightPathCount * (weightLight + 1.f));
 
@@ -419,7 +418,6 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 	Film *film = thread->threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
-	const unsigned int pixelCount = filmWidth * filmHeight;
 
 	lightSampleValue.clear();
 	lightSampleResults.clear();
@@ -500,7 +498,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 		eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
 		const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 		const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-			scene->camera->GetPixelArea() * pixelCount);
+			scene->camera->GetPixelArea() * thread->pixelCount);
 		eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 		eyeVertex.dVC = 0.f;
 

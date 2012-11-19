@@ -131,6 +131,8 @@ set(SMALLLUXGPU_SRCS
 	bidirhybrid/bidirhybrid.cpp
 	bidirhybrid/bidirhybridthread.cpp
 	bidirhybrid/bidirstate.cpp
+	bidirvmcpu/bidirvmcpu.cpp
+	bidirvmcpu/bidirvmcputhread.cpp
 	cbidirhybrid/cbidirhybrid.cpp
 	pathocl/kernels/pathocl_kernel_core.cpp
 	pathocl/kernels/pathocl_kernel_datatypes.cpp

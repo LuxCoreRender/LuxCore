@@ -26,20 +26,14 @@
 #include "bidircpu/bidircpu.h"
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/sampler/sampler.h"
-#include "lightcpu/lightcpu.h"
 
 //------------------------------------------------------------------------------
 // BiDirCPU RenderThread
 //------------------------------------------------------------------------------
 
-static inline float MIS(const float a) {
-	//return a; // Balance heuristic
-	return a * a; // Power heuristic
-}
-
-const unsigned int sampleBootSize = 11;
-const unsigned int sampleLightStepSize = 6;
-const unsigned int sampleEyeStepSize = 11;
+//static const u_int BiDirCPURenderThread::sampleBootSize = 11;
+//static const u_int BiDirCPURenderThread::sampleLightStepSize = 6;
+//static const u_int BiDirCPURenderThread::sampleEyeStepSize = 11;
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device, const u_int seedVal) :
@@ -47,7 +41,7 @@ BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 }
 
 void BiDirCPURenderThread::ConnectVertices(
-		const PathVertex &eyeVertex, const PathVertex &lightVertex,
+		const PathVertexVM &eyeVertex, const PathVertexVM &lightVertex,
 		SampleResult *eyeSampleResult, const float u0) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -116,7 +110,7 @@ void BiDirCPURenderThread::ConnectVertices(
 	}
 }
 
-void BiDirCPURenderThread::ConnectToEye(const PathVertex &lightVertex, const float u0,
+void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const float u0,
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -157,7 +151,6 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertex &lightVertex, const flo
 				const float fluxToRadianceFactor = cameraPdfA;
 
 				// MIS weight (cameraPdfA must be expressed normalized device coordinate)
-				const unsigned int pixelCount = threadFilm->GetWidth() * threadFilm->GetHeight();
 				const float weightLight = MIS(cameraPdfA / pixelCount) *
 					(lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
 				const float misWeight = 1.f / (weightLight + 1.f);
@@ -174,7 +167,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertex &lightVertex, const flo
 void BiDirCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
-		const PathVertex &eyeVertex,
+		const PathVertexVM &eyeVertex,
 		Spectrum *radiance) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -230,7 +223,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 }
 
 void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
-		const PathVertex &eyeVertex, Spectrum *radiance) const {
+		const PathVertexVM &eyeVertex, Spectrum *radiance) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -260,7 +253,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 
 void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 		const Point &lensPoint,
-		vector<PathVertex> &lightPathVertices,
+		vector<PathVertexVM> &lightPathVertices,
 		vector<SampleResult> &sampleResults) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -270,7 +263,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 	const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
 
 	// Initialize the light path
-	PathVertex lightVertex;
+	PathVertexVM lightVertex;
 	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 	Ray lightRay;
 	lightVertex.throughput = light->Emit(scene,
@@ -288,6 +281,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 		lightVertex.dVCM = MIS(lightDirectPdfW / lightEmitPdfW);
 		const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
 		lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);
+		lightVertex.dVM = lightVertex.dVC * misVcWeightFactor;
 
 		lightVertex.depth = 1;
 		while (lightVertex.depth <= engine->maxLightPathDepth) {
@@ -313,6 +307,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 				const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.shadeN, lightRay.d));
 				lightVertex.dVCM *= factor;
 				lightVertex.dVC *= factor;
+				lightVertex.dVM *= factor;
 
 				// Store the vertex only if it isn't specular
 				if (!lightVertex.bsdf.IsDelta()) {
@@ -346,7 +341,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 }
 
 bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
-		PathVertex *pathVertex, Ray *nextEventRay) const {
+		PathVertexVM *pathVertex, Ray *nextEventRay) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 
 	Vector sampledDir;
@@ -382,10 +377,14 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 	// New MIS weights
 	if (event & SPECULAR) {
 		pathVertex->dVCM = 0.f;
-		pathVertex->dVC *= MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
+		const float factor = MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
+		pathVertex->dVC *= factor;
+		pathVertex->dVM *= factor;
 	} else {
 		pathVertex->dVC = MIS(cosSampledDir / bsdfPdfW) * (pathVertex->dVC *
-				MIS(bsdfRevPdfW) + pathVertex->dVCM);
+				MIS(bsdfRevPdfW) + pathVertex->dVCM + misVmWeightFactor);
+		pathVertex->dVM = MIS(cosSampledDir / bsdfPdfW) * (pathVertex->dVM *
+				MIS(bsdfRevPdfW) + pathVertex->dVCM * misVcWeightFactor + 1.f);
 		pathVertex->dVCM = MIS(1.f / bsdfPdfW);
 	}
 
@@ -408,7 +407,7 @@ void BiDirCPURenderThread::RenderFunc() {
 	Film *film = threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
-	const unsigned int pixelCount = filmWidth * filmHeight;
+	pixelCount = filmWidth * filmHeight;
 	samplesCount = 0.0;
 
 	// Setup the sampler
@@ -419,8 +418,12 @@ void BiDirCPURenderThread::RenderFunc() {
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
 	sampler->RequestSamples(sampleSize);
 
+	// Disable vertex merging
+	misVmWeightFactor = 0.f;
+	misVcWeightFactor = 0.f;
+
 	vector<SampleResult> sampleResults;
-	vector<PathVertex> lightPathVertices;
+	vector<PathVertexVM> lightPathVertices;
 	while (!boost::this_thread::interruption_requested()) {
 		samplesCount += 1.0;
 		sampleResults.clear();
@@ -444,7 +447,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		// Trace eye path
 		//----------------------------------------------------------------------
 
-		PathVertex eyeVertex;
+		PathVertexVM eyeVertex;
 		SampleResult eyeSampleResult;
 		eyeSampleResult.type = PER_PIXEL_NORMALIZED;
 		eyeSampleResult.alpha = 1.f;
@@ -462,6 +465,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			scene->camera->GetPixelArea() * pixelCount);
 		eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 		eyeVertex.dVC = 0.f;
+		eyeVertex.dVM = 0.f;
 
 		eyeVertex.depth = 1;
 		while (eyeVertex.depth <= engine->maxEyePathDepth) {
@@ -494,6 +498,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.shadeN, eyeVertex.bsdf.fixedDir));
 			eyeVertex.dVCM *= factor;
 			eyeVertex.dVC *= factor;
+			eyeVertex.dVM *= factor;
 
 			// Check if it is a light source
 			if (eyeVertex.bsdf.IsLightSource()) {
@@ -521,7 +526,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			//------------------------------------------------------------------
 
 			if (!eyeVertex.bsdf.IsDelta()) {
-				for (vector<PathVertex>::const_iterator lightPathVertex = lightPathVertices.begin();
+				for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
 						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
 					ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
 							sampler->GetSample(sampleOffset + 6));

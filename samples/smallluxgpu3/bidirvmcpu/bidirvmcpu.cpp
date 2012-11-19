@@ -21,31 +21,21 @@
 
 #include "smalllux.h"
 #include "renderconfig.h"
-#include "bidircpu/bidircpu.h"
+#include "bidirvmcpu/bidirvmcpu.h"
 
 //------------------------------------------------------------------------------
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex) {
+BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		BiDirCPURenderEngine(rcfg, flm, flmMutex) {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", 0.125f));
-	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
-	MachineEpsilon::SetMin(epsilon);
-	MachineEpsilon::SetMax(epsilon);
-
-	lightPathCount = 0;
-	baseRadius = 0.f;
-	radiusAlpha = 0.f;
-
-	film->EnableOverlappedScreenBufferUpdate(true);
+	lightPathCount = cfg.GetInt("bidirvm.lightpath.count", 1024);
+	baseRadius = cfg.GetFloat("bidirvm.radius", .003f) * renderConfig->scene->dataSet->GetBSphere().rad;
+	radiusAlpha = cfg.GetFloat("bidirvm.alpha", .75f);
 }

@@ -19,33 +19,45 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#ifndef _BIDIRVMCPU_H
+#define	_BIDIRVMCPU_H
+
 #include "smalllux.h"
-#include "renderconfig.h"
+
 #include "bidircpu/bidircpu.h"
 
 //------------------------------------------------------------------------------
-// BiDirCPURenderEngine
+// Bidirectional path tracing with Vertex Merging CPU render engine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex) {
-	const Properties &cfg = renderConfig->cfg;
+class BiDirVMCPURenderEngine;
 
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
+class BiDirVMCPURenderThread : public BiDirCPURenderThread {
+public:
+	BiDirVMCPURenderThread(BiDirVMCPURenderEngine *engine, const u_int index,
+			IntersectionDevice *device, const u_int seedVal);
 
-	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", 0.125f));
-	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
-	MachineEpsilon::SetMin(epsilon);
-	MachineEpsilon::SetMax(epsilon);
+	friend class BiDirVMCPURenderEngine;
 
-	lightPathCount = 0;
-	baseRadius = 0.f;
-	radiusAlpha = 0.f;
+private:
+	boost::thread *AllocRenderThread() { return new boost::thread(&BiDirVMCPURenderThread::RenderFuncVM, this); }
 
-	film->EnableOverlappedScreenBufferUpdate(true);
-}
+	void RenderFuncVM();
+};
+
+class BiDirVMCPURenderEngine : public BiDirCPURenderEngine {
+public:
+	BiDirVMCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+
+	RenderEngineType GetEngineType() const { return BIDIRVMCPU; }
+
+	friend class BiDirVMCPURenderThread;
+
+private:
+	CPURenderThread *NewRenderThread(const u_int index, IntersectionDevice *device,
+			const u_int seedVal) {
+		return new BiDirVMCPURenderThread(this, index, device, seedVal);
+	}
+};
+
+#endif	/* _BIDIRVMCPU_H */

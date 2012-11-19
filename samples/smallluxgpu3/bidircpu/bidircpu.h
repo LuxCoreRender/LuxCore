@@ -40,7 +40,8 @@ typedef struct {
 	// MIS weight computation works (http://www.iliyan.com/publications/ImplementingVCM)
 	float dVC; // MIS quantity used for vertex connection
 	float dVCM; // MIS quantity used for vertex connection (and merging in a future)
-} PathVertex;
+	float dVM; // MIS quantity used for vertex merging
+} PathVertexVM;
 
 class BiDirCPURenderEngine;
 
@@ -51,7 +52,17 @@ public:
 
 	friend class BiDirCPURenderEngine;
 
-private:
+protected:
+	// Used to offset Sampler data
+	static const u_int sampleBootSize = 11;
+	static const u_int sampleLightStepSize = 6;
+	static const u_int sampleEyeStepSize = 11;
+
+	static float MIS(const float a) {
+		//return a; // Balance heuristic
+		return a * a; // Power heuristic
+	}
+
 	boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
 
 	void RenderFunc();
@@ -59,20 +70,26 @@ private:
 	void DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
-		const PathVertex &eyeVertex, Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
 	void DirectHitLight(const bool finiteLightSource,
-		const PathVertex &eyeVertex, Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
 
-	void ConnectVertices(const PathVertex &eyeVertex, const PathVertex &BiDirVertex,
+	void ConnectVertices(const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
 		SampleResult *eyeSampleResult, const float u0) const;
-	void ConnectToEye(const PathVertex &BiDirVertex, const float u0,
+	void ConnectToEye(const PathVertexVM &BiDirVertex, const float u0,
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
 
 	void TraceLightPath(Sampler *sampler, const Point &lensPoint,
-		vector<PathVertex> &lightPathVertices,
+		vector<PathVertexVM> &lightPathVertices,
 		vector<SampleResult> &sampleResults) const;
 	bool Bounce(Sampler *sampler, const u_int sampleOffset,
-		PathVertex *pathVertex, Ray *nextEventRay) const;
+		PathVertexVM *pathVertex, Ray *nextEventRay) const;
+
+	u_int pixelCount;
+
+	float misVmWeightFactor; // Weight of vertex merging (used in VC)
+    float misVcWeightFactor; // Weight of vertex connection (used in VM)
+	float vmNormalization; // 1 / (Pi * radius^2 * light_path_count)
 
 	double samplesCount;
 };
@@ -85,6 +102,11 @@ public:
 
 	// Signed because of the delta parameter
 	int maxEyePathDepth, maxLightPathDepth;
+
+	// Used for vertex merging, it enables VM if it is > 0
+	u_int lightPathCount;
+	float baseRadius; // VM (i.e. SPPM) start radius parameter
+	float radiusAlpha; // VM (i.e. SPPM) alpha parameter
 
 	int rrDepth;
 	float rrImportanceCap;

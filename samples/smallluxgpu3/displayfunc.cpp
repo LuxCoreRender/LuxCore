@@ -45,8 +45,10 @@
 #include "lightcpu/lightcpu.h"
 #include "pathcpu/pathcpu.h"
 #include "rendersession.h"
+#include "bidircpu/bidircpu.h"
 #include "bidirhybrid/bidirhybrid.h"
 #include "cbidirhybrid/cbidirhybrid.h"
+#include "bidirvmcpu/bidirvmcpu.h"
 
 bool OSDPrintHelp = false;
 
@@ -76,11 +78,11 @@ static void PrintHelpAndSettings() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.5f);
-	glRecti(10, 40, session->film->GetWidth() - 10, session->film->GetHeight() - 40);
+	glRecti(10, 20, session->film->GetWidth() - 10, session->film->GetHeight() - 20);
 	glDisable(GL_BLEND);
 
 	glColor3f(1.f, 1.f, 1.f);
-	int fontOffset = session->film->GetHeight() - 40 - 20;
+	int fontOffset = session->film->GetHeight() - 20 - 20;
 	glRasterPos2i((session->film->GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
 	PrintString(GLUT_BITMAP_9_BY_15, "Help & Settings & Devices");
 
@@ -107,6 +109,8 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "5", "Hybrid bidir. path tracing");
 	PrintHelpString(320, fontOffset, "6", "Hybrid combinatorial bidir. path tracing");
+	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "7", "CPU bidir. VM path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -384,6 +388,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case '6':
 			session->SetRenderingEngineType(CBIDIRHYBRID);
+			break;
+		case '7':
+			session->SetRenderingEngineType(BIDIRVMCPU);
 			break;
 		case 'o': {
 #if defined(WIN32)

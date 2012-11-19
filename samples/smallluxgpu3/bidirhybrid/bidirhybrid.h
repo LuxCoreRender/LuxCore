@@ -24,11 +24,21 @@
 
 #include "smalllux.h"
 #include "renderengine.h"
-#include "bidircpu/bidircpu.h"
 
 //------------------------------------------------------------------------------
 // Bidirectional path tracing hybrid render engine
 //------------------------------------------------------------------------------
+
+typedef struct {
+	BSDF bsdf;
+	Spectrum throughput;
+	int depth;
+
+	// Check Iliyan Georgiev's latest technical report for the details of how
+	// MIS weight computation works (http://www.iliyan.com/publications/ImplementingVCM)
+	float dVC; // MIS quantity used for vertex connection
+	float dVCM; // MIS quantity used for vertex connection (and merging in a future)
+} PathVertex;
 
 class BiDirHybridRenderThread;
 class BiDirHybridRenderEngine;
