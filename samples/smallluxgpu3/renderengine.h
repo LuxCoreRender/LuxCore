@@ -148,9 +148,6 @@ protected:
 	Film *threadFilm;
 	IntersectionDevice *device;
 
-	// Thread counters
-	mutable double samplesCount;
-
 	bool started, editMode;
 	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
 };

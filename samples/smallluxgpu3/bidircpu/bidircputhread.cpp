@@ -37,7 +37,7 @@
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device, const u_int seedVal) :
-		CPURenderThread(engine, index, device, seedVal, true, true), samplesCount(0.0) {
+		CPURenderThread(engine, index, device, seedVal, true, true) {
 }
 
 void BiDirCPURenderThread::ConnectVertices(
@@ -408,7 +408,6 @@ void BiDirCPURenderThread::RenderFunc() {
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 	pixelCount = filmWidth * filmHeight;
-	samplesCount = 0.0;
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film);
@@ -425,7 +424,6 @@ void BiDirCPURenderThread::RenderFunc() {
 	vector<SampleResult> sampleResults;
 	vector<PathVertexVM> lightPathVertices;
 	while (!boost::this_thread::interruption_requested()) {
-		samplesCount += 1.0;
 		sampleResults.clear();
 		lightPathVertices.clear();
 

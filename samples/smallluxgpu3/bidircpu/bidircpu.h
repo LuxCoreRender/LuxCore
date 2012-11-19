@@ -90,8 +90,6 @@ protected:
 	float misVmWeightFactor; // Weight of vertex merging (used in VC)
     float misVcWeightFactor; // Weight of vertex connection (used in VM)
 	float vmNormalization; // 1 / (Pi * radius^2 * light_path_count)
-
-	double samplesCount;
 };
 
 class BiDirCPURenderEngine : public CPURenderEngine {
@@ -117,16 +115,6 @@ private:
 	CPURenderThread *NewRenderThread(const u_int index, IntersectionDevice *device,
 			const u_int seedVal) {
 		return new BiDirCPURenderThread(this, index, device, seedVal);
-	}
-
-	void UpdateSamplesCount() {
-		double count = 0.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i) {
-			BiDirCPURenderThread *thread = (BiDirCPURenderThread *)renderThreads[i];
-			if (thread)
-				count += thread->samplesCount;
-		}
-		samplesCount = count;
 	}
 };
 

@@ -175,9 +175,7 @@ void LightCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults;
-	samplesCount = 0.0;
 	while (!boost::this_thread::interruption_requested()) {
-		samplesCount += 1.0;
 		sampleResults.clear();
 
 		// Select one light source
