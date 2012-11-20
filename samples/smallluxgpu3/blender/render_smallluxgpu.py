@@ -25,7 +25,7 @@
 bl_info = {
     "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
-    "version": (2, 0, 4),
+    "version": (3, 0, 1),
     "blender": (2, 6, 0),
     "location": "Info Header > Engine dropdown menu",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
@@ -165,14 +165,6 @@ class SLGBP:
                 errout("Cannot create SLG scenes directory")
                 return False
 
-        # Get motion blur parameters
-        if scene.slg.cameramotionblur:
-            scene.frame_set(scene.frame_current - 1) # Blender now supports sub-frames!
-            SLGBP.camdirBlur = scene.camera.matrix_world * Vector((0, 0, -10))
-            SLGBP.camlocBlur = scene.camera.matrix_world.to_translation()
-            SLGBP.camupBlur = scene.camera.matrix_world.to_3x3() * Vector((0,1,0))
-            scene.frame_set(scene.frame_current + 1)
-
         return True
 
     # Get SLG .cfg properties
@@ -199,31 +191,21 @@ class SLGBP:
         cfg['batch.periodicsave'] = format(scene.slg.batchmode_periodicsave)
         cfg['scene.file'] = '{}/{}/{}.scn'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname)
         cfg['scene.epsilon'] = format(0.0001/scene.unit_settings.scale_length,'g')
-        cfg['opencl.latency.mode'] = format(scene.slg.low_latency, 'b')
-        cfg['opencl.nativethread.count'] = format(scene.slg.native_threads)
         cfg['opencl.cpu.use'] = format(scene.slg.opencl_cpu, 'b')
         cfg['opencl.gpu.use'] = format(scene.slg.opencl_gpu, 'b')
         cfg['opencl.task.count'] = format(scene.slg.opencl_task_count)
         cfg['opencl.platform.index'] = format(scene.slg.platform)
         if scene.slg.devices.strip():
             cfg['opencl.devices.select'] = scene.slg.devices
-        cfg['opencl.renderthread.count'] = format(scene.slg.devices_threads)
         cfg['opencl.gpu.workgroup.size'] = format(scene.slg.gpu_workgroup_size)
         cfg['film.gamma'] = format(scene.slg.film_gamma, 'g')
-        if scene.slg.rendering_type == '4' and scene.slg.filter_type != 'NONE':
+        if scene.slg.rendering_type == 'PATHOCL' and scene.slg.filter_type != 'NONE':
             cfg['film.filter.type'] = '0'
         else:
             cfg['film.filter.type'] = scene.slg.film_filter_type
         cfg['film.alphachannel.enable'] = format(scene.slg.alphachannel, 'b')
         cfg['screen.refresh.interval'] = format(scene.slg.refreshrate)
         cfg['renderengine.type'] = scene.slg.rendering_type
-        cfg['sppm.lookup.type'] = scene.slg.sppmlookuptype
-        cfg['sppm.directlight.enable'] = format(scene.slg.sppmdirectlight, 'b')
-        cfg['sppm.eyepath.maxdepth'] = format(scene.slg.sppm_eyepath_maxdepth)
-        cfg['sppm.photon.alpha'] = ff(scene.slg.sppm_photon_alpha)
-        cfg['sppm.photon.startradiusscale'] = ff(scene.slg.sppm_photon_radiusscale)
-        cfg['sppm.photon.maxdepth'] = format(scene.slg.sppm_photon_maxdepth)
-        cfg['sppm.stochastic.count'] = format(scene.slg.sppm_photon_per_pass)
         cfg['path.sampler.type'] = scene.slg.sampler_type
         cfg['path.pixelatomics.enable'] = format(scene.slg.pixelatomics_enable, 'b')
         cfg['path.sampler.xsamples'] = format(scene.slg.sampler_xsamples)
@@ -244,9 +226,6 @@ class SLGBP:
             cfg['path.russianroulette.prob'] = ff(scene.slg.rrprob)
         else:
             cfg['path.russianroulette.cap'] = ff(scene.slg.rrcap)
-        cfg['path.lightstrategy'] = scene.slg.lightstrategy
-        cfg['path.shadowrays'] = format(scene.slg.shadowrays)
-        cfg['path.sampler.spp'] = scene.slg.sampleperpixel
         cfg['accelerator.type'] = scene.slg.accelerator_type
 
         return cfg
@@ -267,17 +246,6 @@ class SLGBP:
         scn['scene.camera.up'] = '{} {} {}'.format(ff(camup.x),ff(camup.y),ff(camup.z))
 
         scn['scene.camera.fieldofview'] = format(cam.data.angle*180.0/3.1415926536,'g')
-
-        scn['scene.camera.motionblur.enable'] = format(scene.slg.cameramotionblur, 'b')
-        if scene.slg.cameramotionblur:
-            if SLGBP.live:
-                if 'scene.camera.lookat' in SLGBP.scn:
-                    scn['scene.camera.motionblur.lookat'] = SLGBP.scn['scene.camera.lookat']
-                    scn['scene.camera.motionblur.up'] = SLGBP.scn['scene.camera.up']
-            else:
-                scn['scene.camera.motionblur.lookat'] = '{} {} {} {} {} {}'.format(ff(SLGBP.camlocBlur.x),ff(SLGBP.camlocBlur.y),ff(SLGBP.camlocBlur.z),
-                        ff(SLGBP.camdirBlur[0]),ff(SLGBP.camdirBlur[1]),ff(SLGBP.camdirBlur[2]))
-                scn['scene.camera.motionblur.up'] = '{} {} {}'.format(ff(SLGBP.camupBlur.x),ff(SLGBP.camupBlur.y),ff(SLGBP.camupBlur.z))
 
         # DOF
         fdist = (camloc-cam.data.dof_object.matrix_world.to_translation()).magnitude if cam.data.dof_object else cam.data.dof_distance
@@ -323,15 +291,6 @@ class SLGBP:
                 scn['scene.sunlight.turbidity'] = ff(sky.atmosphere_turbidity)
                 scn['scene.sunlight.relsize'] = ff(sky.sun_size)
                 scn['scene.sunlight.gain'] = '{} {} {}'.format(ff(sky.sun_brightness),ff(sky.sun_brightness),ff(sky.sun_brightness))
-
-        # Participating Media properties
-        if scene.slg.enablepartmedia:
-            scn['scene.partecipatingmedia.singlescatering.enable'] = '1'
-            scn['scene.partecipatingmedia.singlescatering.bbox'] = '{} {} {} {} {} {}'.format(scene.slg.partmedia_bbox1.x, scene.slg.partmedia_bbox1.y, scene.slg.partmedia_bbox1.z, scene.slg.partmedia_bbox2.x, scene.slg.partmedia_bbox2.y, scene.slg.partmedia_bbox2.z)
-            scn['scene.partecipatingmedia.singlescatering.stepsize'] = ff(scene.slg.partmedia_stepsize)
-            scn['scene.partecipatingmedia.singlescatering.rrprob'] = ff(scene.slg.partmedia_rrprob)
-            scn['scene.partecipatingmedia.singlescatering.emission'] = '{} {} {}'.format(scene.slg.partmedia_emission[0], scene.slg.partmedia_emission[1], scene.slg.partmedia_emission[2])
-            scn['scene.partecipatingmedia.singlescatering.scattering'] = '{} {} {}'.format(scene.slg.partmedia_scattering[0], scene.slg.partmedia_scattering[1], scene.slg.partmedia_scattering[2])
 
         return scn
 
@@ -562,7 +521,6 @@ class SLGBP:
                                 dupliobj(o, ps)
 
         verts = [[] for i in range(len(plymats))]
-        vert_vcs = [[] for i in range(len(plymats))]
         mvc = [False]*len(plymats)
         vert_uvs = [[] for i in range(len(plymats))]
         faces = [[] for i in range(len(plymats))]
@@ -597,13 +555,6 @@ class SLGBP:
                         v = [vert.co[:] + vert.normal[:] for vert in mesh.vertices]
                     else:
                         v = [vert.co[:] for vert in mesh.vertices]
-                    vcd = []
-                    if bpy.app.version > (2, 62, 0 ): # bmesh adaption
-                        if scene.slg.vcolors and mesh.tessface_vertex_colors.active:
-                            vcd = mesh.tessface_vertex_colors.active.data
-                    else:
-                        if scene.slg.vcolors and mesh.vertex_colors.active:
-                            vcd = mesh.vertex_colors.active.data
                     uvd = []
                     if bpy.app.version > (2, 62, 0 ): # bmesh adaption
                         if scene.slg.vuvs and mesh.tessface_uv_textures.active:
@@ -621,12 +572,8 @@ class SLGBP:
                         onomat = nomat
                         objmats = [plymats.index(ms.material.name) if ms.material else onomat for ms in obj.material_slots]
                     tessfaces = mesh.tessfaces if bpy.app.version > (2, 62, 1 ) else mesh.faces # bmesh
-                    for face, vc, uv in zip_longest(tessfaces,vcd,uvd):
+                    for face, uv in zip_longest(tessfaces,uvd):
                         curmat = objmats[face.material_index] if objmats else onomat
-                        # Get vertex colors, if avail
-                        if vc:
-                            colors = vc.color1, vc.color2, vc.color3, vc.color4
-                            mvc[curmat] = True
                         # Get uvs if there is an image texture attached
                         if uv:
                             uvcos = uv.uv1, uv.uv2, uv.uv3, uv.uv4
@@ -635,13 +582,6 @@ class SLGBP:
                             if len(face.vertices) == 4:
                                 faces[curmat].append((vertnum[curmat], vertnum[curmat]+2, vertnum[curmat]+3))
                         for j, vert in enumerate(face.vertices):
-                            if scene.slg.vcolors:
-                                if vc:
-                                    color[0] = int(255.0*colors[j][0])
-                                    color[1] = int(255.0*colors[j][1])
-                                    color[2] = int(255.0*colors[j][2])
-                                else:
-                                    color[0] = color[1] = color[2] = 255
                             if scene.slg.vuvs:
                                 if uv:
                                     uvco[0] = uvcos[j][0]
@@ -663,8 +603,6 @@ class SLGBP:
                                     verts[curmat].append(v[vert])
                                 if scene.slg.vuvs:
                                     vert_uvs[curmat].append(tuple(uvco))
-                                if scene.slg.vcolors:
-                                    vert_vcs[curmat].append(tuple(color))
                                 vertnum[curmat] += 1
                         if face.use_smooth and not uv:
                             faces[curmat].append((sharedverts[curmat,face.vertices[0]], sharedverts[curmat,face.vertices[1]], sharedverts[curmat,face.vertices[2]]))
@@ -704,10 +642,6 @@ class SLGBP:
                     if scene.slg.vuvs:
                         fply.write(b'property float s\n')
                         fply.write(b'property float t\n')
-                    if scene.slg.vcolors and mvc[i]:
-                        fply.write(b'property uchar red\n')
-                        fply.write(b'property uchar green\n')
-                        fply.write(b'property uchar blue\n')
                     fply.write(str.encode('element face {}\n'.format(len(faces[i]))))
                     fply.write(b'property list uchar uint vertex_indices\n')
                     fply.write(b'end_header\n')
@@ -722,9 +656,6 @@ class SLGBP:
                         if scene.slg.vuvs:
                             #fply.write(str.encode(' {:.6g} {:.6g}'.format(*vert_uvs[i][j])))
                             fply.write(pack('<2f', *vert_uvs[i][j]))
-                        if scene.slg.vcolors and mvc[i]:
-                            #fply.write(str.encode(' {} {} {}'.format(*vert_vcs[i][j])))
-                            fply.write(pack('<3B', *vert_vcs[i][j]))
                         #fply.write(b'\n')
                     # Write out faces
                     for f in faces[i]:
@@ -1180,10 +1111,6 @@ def slg_add_properties():
         description="Export optional vertex uv information (only if assigned)",
         default=True)
 
-    SLGSettings.vcolors = BoolProperty(name="VCs",
-        description="Export optional vertex color information (only if assigned)",
-        default=False)
-
     SLGSettings.vnormals = BoolProperty(name="VNs",
         description="Export optional vertex normal information",
         default=True)
@@ -1196,34 +1123,20 @@ def slg_add_properties():
         description="Enable brute force rendering for InifinteLight light source",
         default=False)
 
-    SLGSettings.cameramotionblur = BoolProperty(name="Camera Motion Blur",
-        description="Enable camera motion blur",
-        default=False)
-
-    SLGSettings.low_latency = BoolProperty(name="Low Latency",
-        description="In low latency mode render is more interactive, otherwise render is faster",
-        default=True)
-
     SLGSettings.refreshrate = IntProperty(name="Screen Refresh Interval",
         description="How often, in milliseconds, the screen refreshes",
         default=250, min=1, soft_min=1)
 
-    SLGSettings.native_threads = IntProperty(name="Native Threads",
-        description="Number of native CPU threads",
-        default=2, min=0, max=1024, soft_min=0, soft_max=1024)
-
-    SLGSettings.devices_threads = IntProperty(name="OpenCL Threads",
-        description="Number of OpenCL devices threads",
-        default=2, min=0, max=1024, soft_min=0, soft_max=1024)
-
     SLGSettings.rendering_type = EnumProperty(name="Rendering Type",
         description="Select the desired rendering type",
-        items=(("0", "Path", "Path tracing"),
-               ("1", "SPPM", "Stochastic Progressive Photon Mapping"),
-               ("2", "Direct", "Direct lighting only"),
-               ("3", "PathGPU", "Path tracing using OpenCL only"),
-               ("4", "PathGPU2", "New Path tracing using OpenCL only")),
-        default="0")
+        items=(("PATHOCL", "PathOCL", "Path tracing using OpenCL only"),
+               ("LIGHTCPU", "LightCPU", "Light tracing using CPU only"),
+               ("PATHCPU", "PathCPU", "Path tracing using CPU only"),
+               ("BIDIRCPU", "BiDirCPU", "Bidirectional path tracing using CPU only"),
+               ("BIDIRHYBRID", "BiDirHybrid", "Bidirectional path tracing using CPU and OpenCL"),
+               ("CBIDIRHYBRID", "CBiDirHybrid", "Combinatorial bidirectional path tracing using CPU and OpenCL"),
+               ("CBIDIRVMCPU", "CBiDirVMCPU", "Bidirectional path tracing with Vertex Merging using CPU only")),
+        default="PATHOCL")
 
     SLGSettings.sampler_type = EnumProperty(name="Sampler Type",
         description="Sampler Type",
@@ -1285,38 +1198,6 @@ def slg_add_properties():
         description="OpenCL Task Count: Higher values can lead to better performance but consumes more memory",
         default=131072, min=1, soft_min=1)
 
-    SLGSettings.sppmlookuptype = EnumProperty(name="SPPM Lookup Type",
-        description="SPPM Lookup Type (Hybrid generally best)",
-        items=(("-1", "SPPM Lookup Type", "SPPM Lookup Type"),
-               ("0", "Hash Grid", "Hash Grid"),
-               ("1", "KD tree", "KD tree"),
-               ("2", "Hybrid Hash Grid", "Hybrid Hash Grid")),
-        default="2")
-
-    SLGSettings.sppm_eyepath_maxdepth = IntProperty(name="Eye depth",
-        description="SPPM eye path max depth",
-        default=16, min=1, soft_min=1)
-
-    SLGSettings.sppm_photon_alpha = FloatProperty(name="P.Alpha",
-        description="SPPM Photon Alpha: how fast the 'area of interest' around each eye hit point is reduced at each pass",
-        default=0.7, min=0, max=10, soft_min=0, soft_max=10, precision=3)
-
-    SLGSettings.sppm_photon_radiusscale = FloatProperty(name="P.Radius",
-        description="SPPM Photon Radius: how to scale the initial 'area of interest' around each eye hit point",
-        default=1.0, min=0, max=10, soft_min=0, soft_max=10, precision=3)
-
-    SLGSettings.sppm_photon_per_pass = IntProperty(name="Photons",
-        description="Number of (SPPM) photons to shot for each pass",
-        default=2500000, min=100, soft_min=100)
-
-    SLGSettings.sppm_photon_maxdepth = IntProperty(name="P.Depth",
-        description="Max depth for (SPPM) photons",
-        default=8, min=1, soft_min=1)
-
-    SLGSettings.sppmdirectlight = BoolProperty(name="Direct Light Sampling",
-        description="SPPM Direct Light Sampling",
-        default=False)
-
     SLGSettings.accelerator_type = EnumProperty(name="Accelerator Type",
         description="Select the desired ray tracing accelerator type",
         items=(("-1", "Default", "Default"),
@@ -1359,25 +1240,6 @@ def slg_add_properties():
         description="Gamma correction on screen and for saving non-HDR file format",
         default=2.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    SLGSettings.lightstrategy = EnumProperty(name="Light Strategy",
-        description="Select the desired light strategy",
-        items=(("0", "ONE_UNIFORM", "ONE_UNIFORM"),
-               ("1", "ALL_UNIFORM", "ALL_UNIFORM")),
-        default="0")
-
-    SLGSettings.sampleperpixel = EnumProperty(name="Sample per pixel",
-        description="Select the desired number of samples per pixel for each pass",
-        items=(("1", "1x1", "1x1"),
-               ("2", "2x2", "2x2"),
-               ("3", "3x3", "3x3"),
-               ("4", "4x4", "4x4"),
-               ("5", "5x5", "5x5"),
-               ("6", "6x6", "6x6"),
-               ("7", "7x7", "7x7"),
-               ("8", "8x8", "8x8"),
-               ("9", "9x9", "9x9")),
-        default="4")
-
     SLGSettings.alphachannel = BoolProperty(name="Alpha Background",
         description="Render background as transparent alpha channel in image file",
         default=False)
@@ -1389,10 +1251,6 @@ def slg_add_properties():
     SLGSettings.diffusebounce = IntProperty(name="Max Diffuse Bounces",
         description="Maximum path tracing diffuse bounce",
         default=5, min=0, max=1024, soft_min=0, soft_max=1024)
-
-    SLGSettings.shadowrays = IntProperty(name="Shadow Rays",
-        description="Shadow rays",
-        default=1, min=1, max=1024, soft_min=1, soft_max=1024)
 
     SLGSettings.rrstrategy = EnumProperty(name="Russian Roulette Strategy",
         description="Select the desired russian roulette strategy",
@@ -1411,29 +1269,6 @@ def slg_add_properties():
     SLGSettings.rrcap = FloatProperty(name="Russian Roulette Importance Cap",
         description="Russian roulette importance cap",
         default=0.25, min=0.01, max=0.99, soft_min=0.1, soft_max=0.9, precision=3)
-
-    # Participating Media properties
-    SLGSettings.enablepartmedia = BoolProperty(name="Participating Media",
-        description="Use single scattering participating media",
-        default=False)
-    SLGSettings.partmedia_stepsize = FloatProperty(name="Step Size",
-        description="Set ray marching step size",
-        default=2.0, min=0.01, max=100, soft_min=0.1, soft_max=10, precision=2)
-    SLGSettings.partmedia_rrprob = FloatProperty(name="RR prob.",
-        description="Russian Roulette probability",
-        default=0.33, min=0.01, max=1.0, soft_min=0.1, soft_max=0.9, precision=2)
-    SLGSettings.partmedia_emission = FloatVectorProperty(name="Emission",
-        description="Media emission",
-        default=(0.05, 0.05, 0.05), min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, subtype="COLOR")
-    SLGSettings.partmedia_scattering = FloatVectorProperty(name="Scattering",
-        description="Media scattering",
-        default=(0.05, 0.05, 0.05), min=0.0, max=100.0, soft_min=0.0, soft_max=100.0, subtype="COLOR")
-    SLGSettings.partmedia_bbox1 = FloatVectorProperty(name="Bounding Box Min",
-        description="Media bounding box min",
-        default=(-10.0, -10.0, -10.0), subtype="XYZ", size=3)
-    SLGSettings.partmedia_bbox2 = FloatVectorProperty(name="Bounding Box Max",
-        description="Media bounding box max",
-        default=(10.0, 10.0, 10.0), subtype="XYZ", size=3)
 
     SLGSettings.enablebatchmode = BoolProperty(name="Batch Mode",
         description="Render in background (required for animations)",
@@ -1614,11 +1449,9 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.scene_path",
         "scene.slg.export",
         "scene.slg.vuvs",
-        "scene.slg.vcolors",
         "scene.slg.vnormals",
         "scene.slg.forceobjplys",
         "scene.slg.infinitelightbf",
-        "scene.slg.cameramotionblur",
         "scene.slg.rendering_type",
         "scene.slg.accelerator_type",
         "scene.slg.film_filter_type",
@@ -1629,30 +1462,12 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.reinhard_postscale",
         "scene.slg.alphachannel",
         "scene.slg.film_gamma",
-        "scene.slg.sppmdirectlight",
-        "scene.slg.sppmlookuptype",
-        "scene.slg.sppm_photon_alpha",
-        "scene.slg.sppm_photon_radiusscale",
-        "scene.slg.sppm_eyepath_maxdepth",
-        "scene.slg.sppm_photon_maxdepth",
-        "scene.slg.sppm_photon_per_pass",
-        "scene.slg.lightstrategy",
         "scene.slg.tracedepth",
 		"scene.slg.diffusebounce",
-        "scene.slg.shadowrays",
-        "scene.slg.sampleperpixel",
         "scene.slg.rrstrategy",
         "scene.slg.rrdepth",
         "scene.slg.rrprob",
         "scene.slg.rrcap",
-        "scene.slg.enablepartmedia",
-        "scene.slg.partmedia_stepsize",
-        "scene.slg.partmedia_rrprob",
-        "scene.slg.partmedia_emission",
-        "scene.slg.partmedia_scattering",
-        "scene.slg.partmedia_bbox1",
-        "scene.slg.partmedia_bbox2",
-        "scene.slg.low_latency",
         "scene.slg.refreshrate",
         "scene.slg.enablebatchmode",
         "scene.slg.waitrender",
@@ -1661,8 +1476,6 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.batchmodetime",
         "scene.slg.batchmodespp",
         "scene.slg.batchmode_periodicsave",
-        "scene.slg.native_threads",
-        "scene.slg.devices_threads",
         "scene.slg.opencl_cpu",
         "scene.slg.opencl_gpu",
         "scene.slg.opencl_task_count",
@@ -1713,7 +1526,7 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col.label(text="Full path where the scene is exported:")
         col.prop(slg, "scene_path", text="")
         col.prop(slg, "scenename", text="Scene Name")
-        split = layout.split(percentage=0.25)
+        split = layout.split(percentage=0.33)
         col = split.column()
         col.prop(slg, "export")
         col = split.column()
@@ -1721,18 +1534,12 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col.prop(slg, "vuvs")
         col = split.column()
         col.active = slg.export
-        col.prop(slg, "vcolors")
-        col = split.column()
-        col.active = slg.export
         col.prop(slg, "vnormals")
         split = layout.split()
         col = split.column()
         col.prop(slg, "forceobjplys")
-        split = layout.split()
         col = split.column()
         col.prop(slg, "infinitelightbf")
-        col = split.column()
-        col.prop(slg, "cameramotionblur")
         split = layout.split()
         col = split.column()
         col.prop(slg, "rendering_type")
@@ -1760,7 +1567,7 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col.prop(slg, "alphachannel")
         col = split.column()
         col.prop(slg, "film_gamma")
-        if slg.rendering_type == '4':
+        if slg.rendering_type == 'PATHOCL':
             split = layout.split()
             col = split.column()
             col.prop(slg, "sampler_type")
@@ -1794,78 +1601,30 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
                 col.prop(slg, "filter_B")
                 col = split.column()
                 col.prop(slg, "filter_C")
-        if slg.rendering_type == '1':
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "sppmdirectlight")
-            col = split.column()
-            col.prop(slg, "sppmlookuptype")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "sppm_photon_alpha")
-            col = split.column()
-            col.prop(slg, "sppm_photon_radiusscale")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "sppm_eyepath_maxdepth")
-            col = split.column()
-            col.prop(slg, "sppm_photon_maxdepth")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "sppm_photon_per_pass", text="Photon count per pass")
-        else:
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "lightstrategy")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "tracedepth", text="Depth")
-            col = split.column()
-            col.prop(slg, "diffusebounce", text="Diffuse Bounces")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "shadowrays", text="Shadow")
-            #split = layout.split()
-            col = split.column()
-            col.prop(slg, "sampleperpixel")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "rrstrategy")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "rrdepth", text="RR Depth")
-            col = split.column()
-            if slg.rrstrategy == "0":
-                col.prop(slg, "rrprob", text="RR Prob")
-            else:
-                col.prop(slg, "rrcap", text="RR Cap")
-            split = layout.split()
-            if slg.rendering_type == '4':
-                col = split.column()
-                col.prop(slg, "pixelatomics_enable")
-            col = split.column()
-            col.prop(slg, "enablepartmedia")
-            if slg.enablepartmedia:
-                split = layout.split()
-                col = split.column()
-                col.prop(slg, "partmedia_stepsize", text="Step Size")
-                col = split.column()
-                col.prop(slg, "partmedia_rrprob", text="RR Prob.")
-                split = layout.split()
-                col = split.column(0)
-                col.prop(slg, "partmedia_emission", text="Emission")
-                col = split.column(1)
-                col.prop(slg, "partmedia_scattering", text="Scattering")
-                split = layout.split(percentage=0.5)
-                col = split.column()
-                col.prop(slg, "partmedia_bbox1")
-                col = split.column()
-                col.prop(slg, "partmedia_bbox2")
         split = layout.split()
         col = split.column()
-        col.prop(slg, "low_latency")
+        col.prop(slg, "tracedepth", text="Depth")
         col = split.column()
-        col.prop(slg, "refreshrate", text="Refresh")
+        col.prop(slg, "diffusebounce", text="Diffuse Bounces")
+        split = layout.split()
+        col = split.column()
+        col.prop(slg, "rrstrategy")
+        split = layout.split()
+        col = split.column()
+        col.prop(slg, "rrdepth", text="RR Depth")
+        col = split.column()
+        if slg.rrstrategy == "0":
+            col.prop(slg, "rrprob", text="RR Prob")
+        else:
+            col.prop(slg, "rrcap", text="RR Cap")
+        split = layout.split()
+        if slg.rendering_type == 'PATHOCL':
+            col = split.column()
+            col.prop(slg, "pixelatomics_enable")
+        col = split.column()
+        split = layout.split()
+        col = split.column()
+        col.prop(slg, "refreshrate", text="Screen refresh rate")
         split = layout.split()
         col = split.column()
         col.prop(slg, "enablebatchmode")
@@ -1884,30 +1643,26 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         split = layout.split()
         col = split.column()
         col.prop(slg, "batchmode_periodicsave")
-        split = layout.split()
-        col = split.column()
-        col.prop(slg, "native_threads")
-        col = split.column()
-        col.prop(slg, "devices_threads")
-        split = layout.split(percentage=0.33)
-        col = split.column()
-        col.label(text="OpenCL devs:")
-        col = split.column()
-        col.prop(slg, "opencl_cpu")
-        col = split.column()
-        col.prop(slg, "opencl_gpu")
-        split = layout.split()
-        if slg.rendering_type == '4':
+        if slg.rendering_type == 'PATHOCL' or slg.rendering_type == 'BIDIRHYBRID' or slg.rendering_type == 'CBIDIRHYBRID':
+            split = layout.split(percentage=0.33)
             col = split.column()
-            col.prop(slg, "opencl_task_count")
+            col.label(text="OpenCL devs:")
+            col = split.column()
+            col.prop(slg, "opencl_cpu")
+            col = split.column()
+            col.prop(slg, "opencl_gpu")
             split = layout.split()
-        col = split.column()
-        col.prop(slg, "gpu_workgroup_size")
-        split = layout.split()
-        col = split.column()
-        col.prop(slg, "platform", text="Platform")
-        col = split.column()
-        col.prop(slg, "devices", text='Devs')
+            if slg.rendering_type == 'PATHOCL':
+                col = split.column()
+                col.prop(slg, "opencl_task_count")
+                split = layout.split()
+            col = split.column()
+            col.prop(slg, "gpu_workgroup_size")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "platform", text="Platform")
+            col = split.column()
+            col.prop(slg, "devices", text='Devs')
         if SLGBP.live:
             SLGBP.livetrigger(context.scene, SLGBP.LIVECFG)
 
