@@ -102,7 +102,7 @@ public:
 	int maxEyePathDepth, maxLightPathDepth;
 
 	// Used for vertex merging, it enables VM if it is > 0
-	u_int lightPathCount;
+	u_int lightPathsCount;
 	float baseRadius; // VM (i.e. SPPM) start radius parameter
 	float radiusAlpha; // VM (i.e. SPPM) alpha parameter
 

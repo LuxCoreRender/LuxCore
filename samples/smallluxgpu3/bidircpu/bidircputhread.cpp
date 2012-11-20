@@ -31,10 +31,6 @@
 // BiDirCPU RenderThread
 //------------------------------------------------------------------------------
 
-//static const u_int BiDirCPURenderThread::sampleBootSize = 11;
-//static const u_int BiDirCPURenderThread::sampleLightStepSize = 6;
-//static const u_int BiDirCPURenderThread::sampleEyeStepSize = 11;
-
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device, const u_int seedVal) :
 		CPURenderThread(engine, index, device, seedVal, true, true) {
@@ -98,8 +94,10 @@ void BiDirCPURenderThread::ConnectVertices(
 				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  eyeDistance, cosThetaAtCamera);
 
 				// MIS weights
-				const float lightWeight = eyeBsdfPdfA * (lightVertex.dVCM + lightVertex.dVC * MIS(lightBsdfRevPdfW));
-				const float eyeWeight = lightBsdfPdfA * (eyeVertex.dVCM + eyeVertex.dVC * MIS(eyeBsdfRevPdfW));
+				const float lightWeight = eyeBsdfPdfA *
+					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(lightBsdfRevPdfW));
+				const float eyeWeight = lightBsdfPdfA *
+					(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(eyeBsdfRevPdfW));
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
@@ -152,10 +150,11 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				// MIS weight (cameraPdfA must be expressed normalized device coordinate)
 				const float weightLight = MIS(cameraPdfA / pixelCount) *
-					(lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
+					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
 				const float misWeight = 1.f / (weightLight + 1.f);
 
-				const Spectrum radiance = misWeight * connectionThroughput * lightVertex.throughput * fluxToRadianceFactor * bsdfEval;
+				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
+					connectionThroughput * lightVertex.throughput * bsdfEval;
 
 				AddSampleResult(sampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
 						radiance, 1.f);
@@ -210,7 +209,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 					// emissionPdfA / directPdfA = emissionPdfW / directPdfW
 					const float weightLight = MIS(bsdfPdfW / directLightSamplingPdfW);
 					const float weightCamera = MIS(emissionPdfW * cosThetaToLight / (directPdfW * cosThetaAtLight)) *
-						(eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
+						(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
 					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
 					const float factor = cosThetaToLight / directLightSamplingPdfW;

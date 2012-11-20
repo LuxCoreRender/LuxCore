@@ -43,7 +43,7 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
 
-	lightPathCount = 0;
+	lightPathsCount = 1;
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
 

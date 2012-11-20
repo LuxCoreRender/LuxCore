@@ -53,7 +53,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	pixelCount = filmWidth * filmHeight;
 
 	// Setup the samplers
-	vector<Sampler *> samplers(engine->lightPathCount, NULL);
+	vector<Sampler *> samplers(engine->lightPathsCount, NULL);
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
@@ -82,7 +82,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		radius = Max(radius, DEFAULT_EPSILON_STATIC);
 		const float radius2 = radius * radius;
 
-		const float vmFactor = M_PI * radius2 * engine->lightPathCount;
+		const float vmFactor = M_PI * radius2 * engine->lightPathsCount;
 		vmNormalization = 1.f / vmFactor;
 
 		const float etaVCM = vmFactor;
