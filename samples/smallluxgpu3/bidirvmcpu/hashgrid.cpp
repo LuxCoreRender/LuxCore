@@ -21,11 +21,12 @@
 
 #include "bidirvmcpu/bidirvmcpu.h"
 
-HashGrid::HashGrid(vector<vector<PathVertexVM> > &pathsVertices, const float radius) {
+void HashGrid::Build(vector<vector<PathVertexVM> > &pathsVertices, const float radius) {
 	radius2 = radius * radius;
 
 	// Build the vertices bounding box
-	u_int vertexCount = 0;
+	vertexCount = 0;
+	vertexBBox = BBox();
 	for (u_int i = 0; i < pathsVertices.size(); ++i) {
 		vertexCount += pathsVertices[i].size();
 
@@ -42,93 +43,113 @@ HashGrid::HashGrid(vector<vector<PathVertexVM> > &pathsVertices, const float rad
 	const float cellSize = radius * 2.f;
 	invCellSize = 1.f / cellSize;
 
-	gridSize = vertexCount;
-	grid.resize(gridSize, NULL);
+	gridSize = vertexCount;	
+	cellEnds.resize(gridSize);
+	fill(cellEnds.begin(), cellEnds.end(), 0);
+	lightVertices.resize(gridSize, NULL);
 
-	//unsigned int maxCellCount = 0;
-	//unsigned long long entryCount = 0;
-	for (u_int i = 0; i < pathsVertices.size(); ++i) {
-		for (u_int j = 0; j < pathsVertices[i].size(); ++j) {
-			PathVertexVM *vertex = &pathsVertices[i][j];
+	for (u_int i = 0, k = 0; i < pathsVertices.size(); ++i) {
+		for (u_int j = 0; j < pathsVertices[i].size(); ++j, ++k) {
+			const PathVertexVM *vertex = &pathsVertices[i][j];
 
-			const Vector rad(radius, radius, radius);
-			const Vector bMin = ((vertex->bsdf.hitPoint - rad) - vertexBBox.pMin) * invCellSize;
-			const Vector bMax = ((vertex->bsdf.hitPoint + rad) - vertexBBox.pMin) * invCellSize;
-
-			for (int iz = abs(int(bMin.z)); iz <= abs(int(bMax.z)); ++iz) {
-				for (int iy = abs(int(bMin.y)); iy <= abs(int(bMax.y)); ++iy) {
-					for (int ix = abs(int(bMin.x)); ix <= abs(int(bMax.x)); ++ix) {
-						int hv = Hash(ix, iy, iz);
-
-						if (grid[hv] == NULL)
-							grid[hv] = new list<PathVertexVM *>();
-
-						grid[hv]->push_front(vertex);
-						
-						// grid[hv]->size() is very slow to execute
-						//if (grid[hv]->size() > maxCellCount)
-							//maxCellCount = grid[hv]->size();
-						//++entryCount;
-					}
-				}
-			}
+			cellEnds[Hash(vertex->bsdf.hitPoint)]++;
 		}
 	}
 
-	//SLG_LOG("Max. hit points in a single hash grid entry: " << maxCellCount);
-	//SLG_LOG("Total hash grid entry: " << entryCount);
-	//SLG_LOG("Avg. hit points in a single hash grid entry: " << entryCount / gridSize);
-}
+	int sum = 0;
+	for (u_int i = 0; i < cellEnds.size(); ++i) {
+		int temp = cellEnds[i];
+		cellEnds[i] = sum;
+		sum += temp;
+	}
+	
+	for (u_int i = 0; i < pathsVertices.size(); ++i) {
+		for (u_int j = 0; j < pathsVertices[i].size(); ++j) {
+			const PathVertexVM *vertex = &pathsVertices[i][j];
 
-HashGrid::~HashGrid() {
-	for (unsigned int i = 0; i < gridSize; ++i)
-		delete grid[i];
+			const int targetIdx = cellEnds[Hash(vertex->bsdf.hitPoint)]++;
+            lightVertices[targetIdx] = vertex;
+		}
+	}
 }
 
 void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, Spectrum *radiance) const {
-	Vector hh = (eyeVertex.bsdf.hitPoint - vertexBBox.pMin) * invCellSize;
-	const int ix = abs(int(hh.x));
-	const int iy = abs(int(hh.y));
-	const int iz = abs(int(hh.z));
+	if ((vertexCount <= 0) ||
+			!vertexBBox.Inside(eyeVertex.bsdf.hitPoint))
+		return;
 
-	const list<PathVertexVM *> *lightVertices = grid[Hash(ix, iy, iz)];
+	const Vector distMin = eyeVertex.bsdf.hitPoint - vertexBBox.pMin;
+	const Vector cellPoint = invCellSize * distMin;
+	const Vector coordFloor(floorf(cellPoint.x), floorf(cellPoint.y), floorf(cellPoint.z));
 
-	if (lightVertices) {
+	const int px = int(coordFloor.x);
+	const int py = int(coordFloor.y);
+	const int pz = int(coordFloor.z);
+
+	const Vector fractCoord = cellPoint - coordFloor;
+
+	const int pxo = px + ((fractCoord.x < .5f) ? -1 : +1);
+	const int pyo = py + ((fractCoord.y < .5f) ? -1 : +1);
+	const int pzo = pz + ((fractCoord.z < .5f) ? -1 : +1);
+
+	int i0, i1;
+	HashRange(Hash(px, py, pz), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+	HashRange(Hash(px, py, pzo), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+	HashRange(Hash(px, pyo, pz), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+	HashRange(Hash(px, pyo, pzo), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+	HashRange(Hash(pxo, py, pz), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+	HashRange(Hash(pxo, py, pzo), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+	HashRange(Hash(pxo, pyo, pz), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+	HashRange(Hash(pxo, pyo, pzo), &i0, &i1);
+	Process(thread, eyeVertex, i0, i1, radiance);
+}
+
+void HashGrid::Process(const BiDirVMCPURenderThread *thread,
+		const PathVertexVM &eyeVertex, const int i0, const int i1,
+		Spectrum *radiance) const {
+	for (int i = i0; i < i1; ++i) {
+		const PathVertexVM *lightVertex = lightVertices[i];
+		Process(thread, eyeVertex, lightVertex, radiance);
+	}
+}
+
+void HashGrid::Process(const BiDirVMCPURenderThread *thread,
+		const PathVertexVM &eyeVertex, const PathVertexVM *lightVertex,
+		Spectrum *radiance) const {
+	const float distance2 = (lightVertex->bsdf.hitPoint - eyeVertex.bsdf.hitPoint).LengthSquared();
+
+	if (distance2 <= radius2) {
+		float eyeBsdfPdfW, eyeBsdfRevPdfW;
+		BSDFEvent eyeEvent;
+		const Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(lightVertex->bsdf.fixedDir,
+				&eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW);
+		if(eyeBsdfEval.Black())
+			return;
+
 		BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)thread->renderEngine;
-
-		list<PathVertexVM *>::const_iterator iter = lightVertices->begin();
-		while (iter != lightVertices->end()) {
-			const PathVertexVM *lightVertex = *iter++;
-
-			const float distance2 = (lightVertex->bsdf.hitPoint - eyeVertex.bsdf.hitPoint).LengthSquared();
-			if (distance2 <= radius2) {
-				// It is a valid light vertex
-
-				float eyeBsdfPdfW, eyeBsdfRevPdfW;
-				BSDFEvent eyeEvent;
-				const Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(lightVertex->bsdf.fixedDir,
-						&eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW);
-				if(eyeBsdfEval.Black())
-					continue;
-
-				if (eyeVertex.depth >= engine->rrDepth) {
-					// Russian Roulette
-					const float prob = Max(eyeBsdfEval.Filter(), engine->rrImportanceCap);
-					eyeBsdfPdfW *= prob;
-					eyeBsdfRevPdfW *= prob; // Note: SmallVCM uses light prob here
-				}
-
-				// MIS weights
-				const float weightLight = lightVertex->dVCM * thread->misVcWeightFactor +
-					lightVertex->dVM * BiDirVMCPURenderThread::MIS(eyeBsdfPdfW);
-				const float weightCamera = eyeVertex.dVCM * thread->misVcWeightFactor +
-					eyeVertex.dVM * BiDirVMCPURenderThread::MIS(eyeBsdfRevPdfW);
-				const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
-
-				*radiance += (thread->vmNormalization * misWeight) *
-						eyeVertex.throughput * eyeBsdfEval * lightVertex->throughput;
-			}
+		if (eyeVertex.depth >= engine->rrDepth) {
+			// Russian Roulette
+			const float prob = Max(eyeBsdfEval.Filter(), engine->rrImportanceCap);
+			eyeBsdfPdfW *= prob;
+			eyeBsdfRevPdfW *= prob; // Note: SmallVCM uses light prob here
 		}
+
+		// MIS weights
+		const float weightLight = lightVertex->dVCM * thread->misVcWeightFactor +
+			lightVertex->dVM * BiDirVMCPURenderThread::MIS(eyeBsdfPdfW);
+		const float weightCamera = eyeVertex.dVCM * thread->misVcWeightFactor +
+			eyeVertex.dVM * BiDirVMCPURenderThread::MIS(eyeBsdfRevPdfW);
+		const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
+
+		*radiance += (thread->vmNormalization * misWeight) *
+				eyeVertex.throughput * eyeBsdfEval * lightVertex->throughput;
 	}
 }

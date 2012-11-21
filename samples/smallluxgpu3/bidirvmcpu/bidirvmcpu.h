@@ -35,26 +35,53 @@ class BiDirVMCPURenderThread;
 
 class HashGrid {
 public:
-	HashGrid(vector<vector<PathVertexVM> > &pathsVertices, const float radius);
-	~HashGrid();
+	HashGrid() { }
+	~HashGrid() { }
+
+	void Build(vector<vector<PathVertexVM> > &pathsVertices, const float radius);
 
 	void Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
 
 private:
+	void Process(const BiDirVMCPURenderThread *thread,
+		const PathVertexVM &eyeVertex, const int i0, const int i1,
+		Spectrum *radiance) const;
+	void Process(const BiDirVMCPURenderThread *thread,
+		const PathVertexVM &eyeVertex, const PathVertexVM *lightVertex,
+		Spectrum *radiance) const;
+
+	void HashRange(const u_int i, int *i0, int *i1) const {
+		if (i == 0) {
+			*i0 = 0;
+			*i1 = cellEnds[0];
+		} else {
+			*i0 = cellEnds[i - 1];
+			*i1 = cellEnds[i];
+		}
+	}
+
 	u_int Hash(const int ix, const int iy, const int iz) const {
 		return (u_int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % gridSize;
 	}
-	/*u_int Hash(const int ix, const int iy, const int iz) const {
-		return (u_int)((ix * 997 + iy) * 443 + iz) % gridSize;
-	}*/
+
+	u_int Hash(const Point &p) const {
+		const Vector distMin = p - vertexBBox.pMin;
+
+		return Hash(
+				Float2Int(invCellSize * distMin.x),
+				Float2Int(invCellSize * distMin.y),
+				Float2Int(invCellSize * distMin.z));
+    }
 
 	float radius2;
 	u_int gridSize;
 	float invCellSize;
 	BBox vertexBBox;
+	u_int vertexCount;
 
-	vector<list<PathVertexVM *> *> grid;
+	vector<const PathVertexVM *> lightVertices;
+    vector<int> cellEnds;
 };
 
 class BiDirVMCPURenderThread : public BiDirCPURenderThread {
