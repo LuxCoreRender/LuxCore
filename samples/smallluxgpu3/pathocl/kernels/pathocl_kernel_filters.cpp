@@ -1,5 +1,7 @@
 #include "pathocl/kernels/kernels.h"
 std::string luxrays::KernelSource_PathOCL_kernel_filters = 
+"#line 2 \"patchocl_kernel_filters.cl\"\n"
+"\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
@@ -20,8 +22,6 @@ std::string luxrays::KernelSource_PathOCL_kernel_filters =
 " *                                                                         *\n"
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
-"\n"
-"// Line 451 + 268 = 719\n"
 "\n"
 "//------------------------------------------------------------------------------\n"
 "// Pixel related functions\n"

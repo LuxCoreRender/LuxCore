@@ -1,3 +1,5 @@
+#line 2 \"patchocl_kernel_samplers.cl\"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -18,8 +20,6 @@
  *                                                                         *
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
-
-// Line 451 + 268 + 242 + 854 = 1815
 
 void GenerateCameraPath(
 		__global GPUTask *task,

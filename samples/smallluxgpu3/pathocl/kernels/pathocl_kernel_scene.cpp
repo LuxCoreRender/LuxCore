@@ -1,5 +1,7 @@
 #include "pathocl/kernels/kernels.h"
 std::string luxrays::KernelSource_PathOCL_kernel_scene = 
+"#line 2 \"patchocl_kernel_scene.cl\"\n"
+"\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
@@ -20,8 +22,6 @@ std::string luxrays::KernelSource_PathOCL_kernel_scene =
 " *                                                                         *\n"
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
-"\n"
-"// Line 451 + 268 + 242 = 961\n"
 "\n"
 "void TexMap_GetTexel(__global Spectrum *pixels, const uint width, const uint height,\n"
 "		const int s, const int t, Spectrum *col) {\n"

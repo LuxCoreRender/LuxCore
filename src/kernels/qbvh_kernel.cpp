@@ -1,5 +1,7 @@
 #include "luxrays/kernels/kernels.h"
 std::string luxrays::KernelSource_QBVH = 
+"#line 2 \"qbvh_kernel.cl\"\n"
+"\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"

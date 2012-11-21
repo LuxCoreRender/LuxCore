@@ -1,3 +1,5 @@
+#line 2 \"patchocl_kernel_datatypes.cl\"
+
 /***************************************************************************
  *   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 *
  *                                                                         *
