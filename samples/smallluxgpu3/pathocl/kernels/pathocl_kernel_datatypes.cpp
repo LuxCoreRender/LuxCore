@@ -1,5 +1,7 @@
 #include "pathocl/kernels/kernels.h"
 std::string luxrays::KernelSource_PathOCL_kernel_datatypes = 
+"#line 2 \"patchocl_kernel_datatypes.cl\"\n"
+"\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
