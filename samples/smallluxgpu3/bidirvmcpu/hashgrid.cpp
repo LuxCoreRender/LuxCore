@@ -36,6 +36,8 @@ HashGrid::HashGrid(vector<vector<PathVertexVM> > &pathsVertices, const float rad
 	if (vertexCount <= 0)
 		return;
 
+	vertexBBox.Expand(radius + DEFAULT_EPSILON_STATIC);
+
 	// Calculate the size of the grid cell
 	const float cellSize = radius * 2.f;
 	invCellSize = 1.f / cellSize;
@@ -43,6 +45,8 @@ HashGrid::HashGrid(vector<vector<PathVertexVM> > &pathsVertices, const float rad
 	gridSize = vertexCount;
 	grid.resize(gridSize, NULL);
 
+	//unsigned int maxCellCount = 0;
+	//unsigned long long entryCount = 0;
 	for (u_int i = 0; i < pathsVertices.size(); ++i) {
 		for (u_int j = 0; j < pathsVertices[i].size(); ++j) {
 			PathVertexVM *vertex = &pathsVertices[i][j];
@@ -60,11 +64,20 @@ HashGrid::HashGrid(vector<vector<PathVertexVM> > &pathsVertices, const float rad
 							grid[hv] = new list<PathVertexVM *>();
 
 						grid[hv]->push_front(vertex);
+						
+						// grid[hv]->size() is very slow to execute
+						//if (grid[hv]->size() > maxCellCount)
+							//maxCellCount = grid[hv]->size();
+						//++entryCount;
 					}
 				}
 			}
 		}
 	}
+
+	//SLG_LOG("Max. hit points in a single hash grid entry: " << maxCellCount);
+	//SLG_LOG("Total hash grid entry: " << entryCount);
+	//SLG_LOG("Avg. hit points in a single hash grid entry: " << entryCount / gridSize);
 }
 
 HashGrid::~HashGrid() {
@@ -103,7 +116,7 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 					// Russian Roulette
 					const float prob = Max(eyeBsdfEval.Filter(), engine->rrImportanceCap);
 					eyeBsdfPdfW *= prob;
-					eyeBsdfRevPdfW *= prob; // TODO: fix
+					eyeBsdfRevPdfW *= prob; // Note: SmallVCM uses light prob here
 				}
 
 				// MIS weights

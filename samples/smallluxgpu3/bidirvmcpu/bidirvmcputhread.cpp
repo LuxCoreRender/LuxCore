@@ -166,9 +166,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				// Something was hit
 
 				// Update MIS constants
-				eyeVertex.dVCM *= MIS(eyeRayHit.t * eyeRayHit.t);
 				const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.shadeN, eyeVertex.bsdf.fixedDir));
-				eyeVertex.dVCM *= factor;
+				eyeVertex.dVCM *= MIS(eyeRayHit.t * eyeRayHit.t) * factor;
 				eyeVertex.dVC *= factor;
 				eyeVertex.dVM *= factor;
 
