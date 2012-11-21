@@ -69,6 +69,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	vector<vector<SampleResult> > samplesResults(samplers.size());
 	vector<vector<PathVertexVM> > lightPathsVertices(samplers.size());
 	vector<Point> lensPoints(samplers.size());
+	HashGrid hashGrid;
 	while (!boost::this_thread::interruption_requested()) {
 		// Clear the arrays
 		for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex) {
@@ -109,7 +110,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		// Store all light path vertices in the k-NN accelerator
 		//----------------------------------------------------------------------
 
-		HashGrid hashGrid(lightPathsVertices, radius);
+		hashGrid.Build(lightPathsVertices, radius);
 
 		//----------------------------------------------------------------------
 		// Trace all eye paths
