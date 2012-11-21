@@ -56,7 +56,7 @@ FOREACH(kernel ${KERNELS})
 			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
 			COMMAND echo "#include \"slg2/pathocl/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
 			COMMAND echo std::string luxrays::KernelSource_PathOCL_${kernel} = >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND for /F \"tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\slg2\\pathocl\\kernels\\pathocl_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
+			COMMAND for /F \"usebackq tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\slg2\\pathocl\\kernels\\pathocl_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
 			COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
 			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cl
 		)
