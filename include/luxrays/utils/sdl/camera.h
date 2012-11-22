@@ -38,6 +38,9 @@ public:
 
 	const Vector &GetDir() const { return dir; }
 	const float GetPixelArea() const { return pixelArea; }
+	const u_int GetFilmWeight() const { return filmWidth; }
+	const u_int GetFilmHeight() const { return filmHeight; }
+	const u_int *GetFilmSubRegion() const { return filmSubRegion; }
 
 	void TranslateLeft(const float k) {
 		Vector t = -k * Normalize(x);
@@ -86,7 +89,7 @@ public:
 		target = orig + t * p;
 	}
 
-	void Update(const unsigned int w, const unsigned int h);
+	void Update(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion = NULL);
 
 	void GenerateRay(
 		const float filmX, const float filmY,
@@ -119,7 +122,7 @@ public:
 	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
 private:
-	u_int filmWidth, filmHeight;
+	u_int filmWidth, filmHeight, filmSubRegion[4];
 
 	// Calculated values
 	float pixelArea;

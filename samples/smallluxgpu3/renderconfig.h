@@ -36,6 +36,8 @@ public:
 
 	void SetScreenRefreshInterval(const unsigned int t);
 	unsigned int GetScreenRefreshInterval() const;
+	void GetScreenSize(u_int *width, u_int *height) const;
+	void GetFilmSize(u_int *width, u_int *height, u_int *subRegion) const;
 
 	Sampler *AllocSampler(RandomGenerator *rndGen, Film *film) const;
 	

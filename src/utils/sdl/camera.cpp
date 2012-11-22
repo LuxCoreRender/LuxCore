@@ -25,9 +25,59 @@
 
 namespace luxrays { namespace sdl {
 
-void PerspectiveCamera::Update(const unsigned int w, const unsigned int h) {
-	filmWidth = w;
-	filmHeight = h;
+void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
+	const float frame =  float(width) / float(height);
+
+	float screen[4];
+	if (subRegion) {
+		// I have to render a sub region of the image
+		filmSubRegion[0] = subRegion[0];
+		filmSubRegion[1] = subRegion[1];
+		filmSubRegion[2] = subRegion[2];
+		filmSubRegion[3] = subRegion[3];
+		filmWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+		filmHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+
+		const float halfW = width * .5f;
+		const float halfH = height * .5f;
+		if (frame < 1.f) {
+			screen[0] = -frame * (-halfW + filmSubRegion[0]) / (-halfW);
+			screen[1] = frame * (filmSubRegion[0] + filmWidth - halfW) / halfW;
+			screen[2] = -(-halfH + filmSubRegion[2]) / (-halfH);
+			screen[3] = (filmSubRegion[2] + filmHeight - halfH) / halfH;
+		} else {
+			screen[0] = -(-halfW + filmSubRegion[0]) / (-halfW);
+			screen[1] = (filmSubRegion[0] + filmWidth - halfW) / halfW;
+			screen[2] = -(1.f / frame) * (-halfH + filmSubRegion[2]) / (-halfH);
+			screen[3] = (1.f / frame) * (filmSubRegion[2] + filmHeight - halfH) / halfH;			
+		}
+	} else {
+		// Just render the full image
+		filmWidth = width;
+		filmHeight = height;
+		filmSubRegion[0] = 0;
+		filmSubRegion[1] = width - 1;
+		filmSubRegion[2] = 0;
+		filmSubRegion[3] = height - 1;
+
+		if (frame < 1.f) {
+			screen[0] = -frame;
+			screen[1] = frame;
+			screen[2] = -1.f;
+			screen[3] = 1.f;
+		} else {
+			screen[0] = -1.f;
+			screen[1] = 1.f;
+			screen[2] = -1.f / frame;
+			screen[3] = 1.f / frame;
+		}
+	}
+
+//std::cout<<"==="<<filmWidth<<"x"<<filmHeight<<"\n";
+//std::cout<<"==="<<filmSubRegion[0]<<" "<<filmSubRegion[1]<<"\n";
+//std::cout<<"==="<<filmSubRegion[2]<<" "<<filmSubRegion[3]<<"\n";
+//std::cout<<"==="<<screen[0]<<" "<<screen[1]<<"\n";
+//std::cout<<"==="<<screen[2]<<" "<<screen[3]<<"\n";
 
 	// Used to move translate the camera
 	dir = target - orig;
@@ -46,19 +96,6 @@ void PerspectiveCamera::Update(const unsigned int w, const unsigned int h) {
 
 	Transform cameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
 
-	const float frame =  float(filmWidth) / float(filmHeight);
-	float screen[4];
-	if (frame < 1.f) {
-		screen[0] = -frame;
-		screen[1] = frame;
-		screen[2] = -1.f;
-		screen[3] = 1.f;
-	} else {
-		screen[0] = -1.f;
-		screen[1] = 1.f;
-		screen[2] = -1.f / frame;
-		screen[3] = 1.f / frame;
-	}
 	Transform screenToRaster =
 			Scale(float(filmWidth), float(filmHeight), 1.f) *
 			Scale(1.f / (screen[1] - screen[0]), 1.f / (screen[2] - screen[3]), 1.f) *
