@@ -115,7 +115,7 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
-static int BatchMode(const double stopTime, const unsigned int stopSPP, const float haltthreshold) {
+static int BatchMode(const double stopTime, const unsigned int stopSPP, const float haltThreshold) {
 	RenderConfig *config = session->renderConfig;
 	RenderEngine *engine = session->renderEngine;
 
@@ -156,7 +156,7 @@ static int BatchMode(const double stopTime, const unsigned int stopSPP, const fl
 
 		// Convergence test is update inside UpdateFilm()
 		const float convergence = engine->GetConvergence();
-		if ((haltthreshold >= 0.f) && (1.f - convergence <= haltthreshold))
+		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
 			break;
 
 		// Print some information about the rendering progress
@@ -183,9 +183,6 @@ int main(int argc, char *argv[]) {
 #if defined(__GNUC__) && !defined(__CYGWIN__)
 	set_terminate(SLGTerminate);
 #endif
-
-	// This is required to run AMD GPU profiler
-    //XInitThreads();
 
 	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
 
@@ -276,10 +273,9 @@ int main(int argc, char *argv[]) {
 			return BatchMode(halttime, haltspp, haltthreshold);
 		} else {
 			// It is important to initialize OpenGL before OpenCL
-			// (for OpenGL/OpenCL interoperability)
-			unsigned int width = config->cfg.GetInt("image.width", 640);
-			unsigned int height = config->cfg.GetInt("image.height", 480);
-
+			// (for OpenGL/OpenCL inter-operability)
+			u_int width, height;
+			config->GetScreenSize(&width, &height);
 			InitGlut(argc, argv, width, height);
 
 			session = new RenderSession(config);

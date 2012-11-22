@@ -19,9 +19,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "renderconfig.h"
+#include <boost/lexical_cast.hpp>
 
 #include "luxrays/utils/film/film.h"
+
+#include "renderconfig.h"
 
 RenderConfig::RenderConfig(const string &fileName, const Properties *additionalProperties) {
 	SLG_LOG("Reading configuration file: " << fileName);
@@ -52,6 +54,46 @@ void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {
 
 unsigned int RenderConfig::GetScreenRefreshInterval() const {
 	return screenRefreshInterval;
+}
+
+void RenderConfig::GetFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) const {
+	const u_int width = cfg.GetInt("image.width", 640);
+	const u_int height = cfg.GetInt("image.height", 480);
+
+	// Check if I'm rendering a film subregion
+	u_int subRegion[4];
+	if (cfg.IsDefined("image.subregion")) {
+		vector<int> params = cfg.GetIntVector("image.subregion", "0 " + boost::lexical_cast<string>(width - 1) + " 0 " + boost::lexical_cast<string>(height - 1));
+		if (params.size() != 4)
+			throw std::runtime_error("Syntax error in image.subregion (required 4 parameters)");
+
+		subRegion[0] = Max(0u, Min(width - 1, (u_int)params[0]));
+		subRegion[1] = Max(0u, Min(width - 1, Max(subRegion[0] + 1, (u_int)params[1])));
+		subRegion[2] = Max(0u, Min(height - 1, (u_int)params[2]));
+		subRegion[3] = Max(0u, Min(height - 1, Max(subRegion[2] + 1, (u_int)params[3])));
+	} else {
+		subRegion[0] = 0;
+		subRegion[1] = width - 1;
+		subRegion[2] = 0;
+		subRegion[3] = height - 1;
+	}
+
+	*filmWidth = width;
+	*filmHeight = height;
+	if (filmSubRegion) {
+		filmSubRegion[0] = subRegion[0];
+		filmSubRegion[1] = subRegion[1];
+		filmSubRegion[2] = subRegion[2];
+		filmSubRegion[3] = subRegion[3];
+	}
+}
+
+void RenderConfig::GetScreenSize(u_int *screenWidth, u_int *screenHeight) const {
+	u_int filmWidth, filmHeight, filmSubRegion[4];
+	GetFilmSize(&filmWidth, &filmHeight, filmSubRegion);
+
+	*screenWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+	*screenHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film) const {
