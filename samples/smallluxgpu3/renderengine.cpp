@@ -77,6 +77,7 @@ void RenderEngine::Start() {
 
 	startTime = WallClockTime();
 	film->ResetConvergenceTest();
+	convergence = 0.f;
 	lastConvergenceTestTime = startTime;
 	lastConvergenceTestSamplesCount = 0;	
 }
@@ -141,6 +142,7 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 	elapsedTime = 0.0f;
 	startTime = WallClockTime();
 	film->ResetConvergenceTest();
+	convergence = 0.f;
 	lastConvergenceTestTime = startTime;
 	lastConvergenceTestSamplesCount = 0;
 
