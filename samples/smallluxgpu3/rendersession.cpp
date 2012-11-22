@@ -30,9 +30,9 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	const Properties &cfg = renderConfig->cfg;
 
-	u_int filmWidth, filmHeight, filmSubRegion[4];
-	renderConfig->GetFilmSize(&filmWidth, &filmHeight, filmSubRegion);
-	renderConfig->scene->camera->Update(filmWidth, filmHeight, filmSubRegion);
+	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
+	renderConfig->GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
+	renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, filmSubRegion);
 
 	periodiceSaveTime = cfg.GetFloat("batch.periodicsave", 0.f);
 	lastPeriodicSave = WallClockTime();
@@ -74,7 +74,8 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	else
 		film->EnableAlphaChannel(false);
 
-	film->Init(filmWidth, filmHeight);
+	film->Init(renderConfig->scene->camera->GetFilmWeight(),
+			renderConfig->scene->camera->GetFilmHeight());
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine

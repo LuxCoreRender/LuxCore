@@ -56,7 +56,8 @@ unsigned int RenderConfig::GetScreenRefreshInterval() const {
 	return screenRefreshInterval;
 }
 
-void RenderConfig::GetFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) const {
+void RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
+		u_int *filmSubRegion) const {
 	const u_int width = cfg.GetInt("image.width", 640);
 	const u_int height = cfg.GetInt("image.height", 480);
 
@@ -78,8 +79,8 @@ void RenderConfig::GetFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmS
 		subRegion[3] = height - 1;
 	}
 
-	*filmWidth = width;
-	*filmHeight = height;
+	*filmFullWidth = width;
+	*filmFullHeight = height;
 	if (filmSubRegion) {
 		filmSubRegion[0] = subRegion[0];
 		filmSubRegion[1] = subRegion[1];
