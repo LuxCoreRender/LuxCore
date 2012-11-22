@@ -73,12 +73,6 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 		}
 	}
 
-//std::cout<<"==="<<filmWidth<<"x"<<filmHeight<<"\n";
-//std::cout<<"==="<<filmSubRegion[0]<<" "<<filmSubRegion[1]<<"\n";
-//std::cout<<"==="<<filmSubRegion[2]<<" "<<filmSubRegion[3]<<"\n";
-//std::cout<<"==="<<screen[0]<<" "<<screen[1]<<"\n";
-//std::cout<<"==="<<screen[2]<<" "<<screen[3]<<"\n";
-
 	// Used to move translate the camera
 	dir = target - orig;
 	dir = Normalize(dir);
