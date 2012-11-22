@@ -218,24 +218,24 @@ void displayFunc(void) {
 
 void reshapeFunc(int newWidth, int newHeight) {
 	// Check if width or height have really changed
-//	if ((newWidth != (int)session->film->GetWidth()) ||
-//			(newHeight != (int)session->film->GetHeight())) {
-//		glViewport(0, 0, newWidth, newHeight);
-//		glLoadIdentity();
-//		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
-//
-//		session->BeginEdit();
-//
-//		session->film->Init(newWidth, newHeight);
-//		session->editActions.AddAction(FILM_EDIT);
-//
-//		session->renderConfig->scene->camera->Update(newWidth, newHeight);
-//		session->editActions.AddAction(CAMERA_EDIT);
-//
-//		session->EndEdit();
-//
-//		glutPostRedisplay();
-//	}
+	if ((newWidth != (int)session->film->GetWidth()) ||
+			(newHeight != (int)session->film->GetHeight())) {
+		glViewport(0, 0, newWidth, newHeight);
+		glLoadIdentity();
+		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
+
+		session->BeginEdit();
+
+		session->film->Init(newWidth, newHeight);
+		session->editActions.AddAction(FILM_EDIT);
+
+		session->renderConfig->scene->camera->Update(newWidth, newHeight);
+		session->editActions.AddAction(CAMERA_EDIT);
+
+		session->EndEdit();
+
+		glutPostRedisplay();
+	}
 }
 
 void timerFunc(int value) {
