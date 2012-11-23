@@ -86,6 +86,9 @@ public:
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
+	bool HasPerPixelNormalizedBuffer() const { return enablePerPixelNormalizedBuffer; }
+	bool HasPerScreenNormalizedBuffer() const { return enablePerScreenNormalizedBuffer; }
+
 	void SetFilterType(const FilterType filter);
 	FilterType GetFilterType() const { return filterType; }
 
@@ -105,7 +108,13 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	void AddFilm(const Film &film);
+	void AddFilm(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY);
+	void AddFilm(const Film &film) {
+		AddFilm(film, 0, 0, width, height, 0, 0);
+	}
 
 	void SaveScreenBuffer(const std::string &filmFile);
 	void UpdateScreenBuffer();

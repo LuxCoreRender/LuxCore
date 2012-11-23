@@ -226,11 +226,12 @@ void reshapeFunc(int newWidth, int newHeight) {
 
 		session->BeginEdit();
 
-		session->film->Init(newWidth, newHeight);
-		session->editActions.AddAction(FILM_EDIT);
-
 		session->renderConfig->scene->camera->Update(newWidth, newHeight);
 		session->editActions.AddAction(CAMERA_EDIT);
+
+		session->film->Init(session->renderConfig->scene->camera->GetFilmWeight(),
+			session->renderConfig->scene->camera->GetFilmHeight());
+		session->editActions.AddAction(FILM_EDIT);
 
 		session->EndEdit();
 
