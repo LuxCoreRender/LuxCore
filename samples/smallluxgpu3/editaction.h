@@ -71,9 +71,9 @@ private:
 inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 	os << "EditActionList[";
 
-	bool sep = false;
+	bool addSeparetor = false;
 	for (set<EditAction>::const_iterator it = eal.actions.begin(); it!=eal.actions.end(); ++it) {
-		if (sep)
+		if (addSeparetor)
 			os << ", ";
 
 		switch (*it) {
@@ -114,6 +114,8 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 				os << "UNKNOWN[" << *it << "]";
 				break;
 		}
+
+		addSeparetor = true;
 	}
 
 	os << "]";

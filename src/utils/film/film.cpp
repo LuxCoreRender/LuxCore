@@ -146,35 +146,46 @@ void Film::Reset() {
 	statsStartSampleTime = WallClockTime();
 }
 
-void Film::AddFilm(const Film &film) {
+void Film::AddFilm(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY) {
 	statsTotalSampleCount += film.statsTotalSampleCount;
 
 	if (enablePerPixelNormalizedBuffer && film.enablePerPixelNormalizedBuffer) {
-		SamplePixel *spDst = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
-		SamplePixel *spSrc = film.sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
+		SampleFrameBuffer *fbDst = sampleFrameBuffer[PER_PIXEL_NORMALIZED];
+		const SampleFrameBuffer *fbSrc = film.sampleFrameBuffer[PER_PIXEL_NORMALIZED];
 
-		for (unsigned int i = 0; i < pixelCount; ++i) {
-			spDst[i].radiance += spSrc[i].radiance;
-			spDst[i].weight += spSrc[i].weight;
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const SamplePixel *srcPixel = fbSrc->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				fbDst->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel->radiance, srcPixel->weight);
+			}
 		}
 	}
 
 	if (enablePerScreenNormalizedBuffer && film.enablePerScreenNormalizedBuffer) {
-		SamplePixel *spDst = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
-		SamplePixel *spSrc = film.sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
+		SampleFrameBuffer *fbDst = sampleFrameBuffer[PER_SCREEN_NORMALIZED];
+		const SampleFrameBuffer *fbSrc = film.sampleFrameBuffer[PER_SCREEN_NORMALIZED];
 
-		for (unsigned int i = 0; i < pixelCount; ++i) {
-			spDst[i].radiance += spSrc[i].radiance;
-			spDst[i].weight += spSrc[i].weight;
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const SamplePixel *srcPixel = fbSrc->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				fbDst->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel->radiance, srcPixel->weight);
+			}
 		}
 	}
 
 	if (enableAlphaChannel && film.enableAlphaChannel) {
-		AlphaPixel *aDst = alphaFrameBuffer->GetPixels();
-		AlphaPixel *aSrc = film.alphaFrameBuffer->GetPixels();
+		AlphaFrameBuffer *fbDst = alphaFrameBuffer;
+		const AlphaFrameBuffer *fbSrc = film.alphaFrameBuffer;
 
-		for (unsigned int i = 0; i < pixelCount; ++i)
-			aDst[i].alpha += aSrc[i].alpha;
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const AlphaPixel *srcPixel = fbSrc->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				fbDst->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel->alpha);
+			}
+		}
 	}
 }
 

@@ -66,7 +66,7 @@ void RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 	if (cfg.IsDefined("image.subregion")) {
 		vector<int> params = cfg.GetIntVector("image.subregion", "0 " + boost::lexical_cast<string>(width - 1) + " 0 " + boost::lexical_cast<string>(height - 1));
 		if (params.size() != 4)
-			throw std::runtime_error("Syntax error in image.subregion (required 4 parameters)");
+			throw runtime_error("Syntax error in image.subregion (required 4 parameters)");
 
 		subRegion[0] = Max(0u, Min(width - 1, (u_int)params[0]));
 		subRegion[1] = Max(0u, Min(width - 1, Max(subRegion[0] + 1, (u_int)params[1])));

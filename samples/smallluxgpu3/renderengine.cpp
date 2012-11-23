@@ -139,7 +139,9 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 		ctx->UpdateDataSet();
 	}
 
+	samplesCount = 0;
 	elapsedTime = 0.0f;
+
 	startTime = WallClockTime();
 	film->ResetConvergenceTest();
 	convergence = 0.f;
