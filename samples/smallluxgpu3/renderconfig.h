@@ -40,7 +40,8 @@ public:
 	void GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
 
-	Sampler *AllocSampler(RandomGenerator *rndGen, Film *film) const;
+	Sampler *AllocSampler(RandomGenerator *rndGen, Film *film,
+		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
 	
 	Properties cfg;
 	Scene *scene;

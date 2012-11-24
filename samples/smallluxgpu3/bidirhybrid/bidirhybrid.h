@@ -54,7 +54,7 @@ typedef struct {
 
 class BiDirState : public HybridRenderState {
 public:
-	BiDirState(BiDirHybridRenderEngine *renderEngine, Film *film, RandomGenerator *rndGen);
+	BiDirState(BiDirHybridRenderThread *renderThread, Film *film, RandomGenerator *rndGen);
 	virtual ~BiDirState() { }
 
 	virtual void GenerateRays(HybridRenderThread *renderThread);
@@ -108,7 +108,7 @@ public:
 
 private:
 	HybridRenderState *AllocRenderState(RandomGenerator *rndGen) {
-		return new BiDirState((BiDirHybridRenderEngine *)renderEngine, threadFilm, rndGen);
+		return new BiDirState(this, threadFilm, rndGen);
 	}
 	boost::thread *AllocRenderThread() {
 		return new boost::thread(&BiDirHybridRenderThread::RenderFunc, this);

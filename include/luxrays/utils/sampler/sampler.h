@@ -109,7 +109,8 @@ public:
 class MetropolisSampler : public Sampler {
 public:
 	MetropolisSampler(RandomGenerator *rnd, Film *film, const unsigned int maxRej,
-			const float pLarge, const float imgRange);
+			const float pLarge, const float imgRange,
+			double *sharedTotalLuminance, double *sharedSampleCount);
 	~MetropolisSampler();
 
 	SamplerType GetType() const { return METROPOLIS; }
@@ -123,11 +124,14 @@ private:
 	unsigned int maxRejects;
 	float largeMutationProbability, imageRange;
 
+	// I'm storing totalLuminance and sampleCount on external (shared) variables
+	// in order to have far more accurate estimation in the image mean intensity
+	// computation
+	double *sharedTotalLuminance, *sharedSampleCount;
+
 	unsigned int sampleSize;
 	float *samples;
 	unsigned int *sampleStamps;
-
-	double totalLuminance, sampleCount;
 
 	float weight;
 	unsigned int consecRejects;

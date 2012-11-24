@@ -160,7 +160,9 @@ void LightCPURenderThread::RenderFunc() {
 	Film *film = threadFilm;
 
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film);
+	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
+			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const unsigned int sampleBootSize = 11;
 	const unsigned int sampleEyeStepSize = 4;
 	const unsigned int sampleLightStepSize = 6;

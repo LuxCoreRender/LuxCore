@@ -35,7 +35,7 @@ BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfig *rcfg, Film *flm, bo
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	lightPathsCount = Max(64, cfg.GetInt("bidirvm.lightpath.count", 16 * 1024));
+	lightPathsCount = Max(1024, cfg.GetInt("bidirvm.lightpath.count", 16 * 1024));
 	baseRadius = cfg.GetFloat("bidirvm.startradius.scale", .003f) * renderConfig->scene->dataSet->GetBSphere().rad;
-	radiusAlpha = cfg.GetFloat("bidirvm.alpha", .7f);
+	radiusAlpha = cfg.GetFloat("bidirvm.alpha", .95f);
 }

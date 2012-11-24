@@ -97,7 +97,8 @@ void RenderConfig::GetScreenSize(u_int *screenWidth, u_int *screenHeight) const 
 	*screenHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 }
 
-Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film) const {
+Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
+		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const {
 	//--------------------------------------------------------------------------
 	// Sampler
 	//--------------------------------------------------------------------------
@@ -115,7 +116,8 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film) const {
 			const float mutationrate = cfg.GetFloat("sampler.imagemutationrate",
 					cfg.GetFloat("path.sampler.imagemutationrate", .1f));
 
-			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate);
+			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate,
+					metropolisSharedTotalLuminance, metropolisSharedSampleCount);
 		}
 		default:
 			throw std::runtime_error("Unknown sampler.type: " + samplerType);

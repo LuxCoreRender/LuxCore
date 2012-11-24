@@ -54,8 +54,10 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 //------------------------------------------------------------------------------
 
 MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm, const unsigned int maxRej,
-		const float pLarge, const float imgRange) : Sampler(rnd, flm),
+		const float pLarge, const float imgRange,
+		double *sharedTotLum, double *sharedSplCount) : Sampler(rnd, flm),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageRange(imgRange),
+		sharedTotalLuminance(sharedTotLum), sharedSampleCount(sharedSplCount),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
 		cooldown(true) {
 }
@@ -107,8 +109,8 @@ void MetropolisSampler::RequestSamples(const unsigned int size) {
 	currentSamples = new float[sampleSize];
 	currentSampleStamps = new unsigned int[sampleSize];
 
-	totalLuminance = 0.;
-	sampleCount = 0.;
+	*sharedTotalLuminance = 0.;
+	*sharedSampleCount = 0.;
 
 	isLargeMutation = true;
 	weight = 0.f;
@@ -162,7 +164,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 			if (sr->type == PER_SCREEN_NORMALIZED) {
 				// This is required because the way camera pixel area is expressed (i.e. normalized
 				// coordinates Vs pixels). I should probably fix the source of the problem
-				// instead of this workaround.
+				// instead of using this workaround.
 				newLuminance += luminance / pixelCount;
 			} else
 				newLuminance += luminance;
@@ -170,12 +172,12 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	}
 
 	if (isLargeMutation) {
-		totalLuminance += newLuminance;
-		sampleCount += 1.;
+		*sharedTotalLuminance += newLuminance;
+		*sharedSampleCount += 1.;
 	}
 
-	const float meanIntensity = (totalLuminance > 0.) ?
-		static_cast<float>(totalLuminance / sampleCount) : 1.f;
+	const float meanIntensity = (*sharedTotalLuminance > 0.) ?
+		static_cast<float>(*sharedTotalLuminance / *sharedSampleCount) : 1.f;
 
 	// Define the probability of large mutations. It is 50% if we are still
 	// inside the cooldown phase.
@@ -229,10 +231,10 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	}
 
 	// Cooldown is used in order to not have problems in the estimation of meanIntensity
-	// when 
+	// when large mutation probability is very small
 	if (cooldown) {
 		// Check if it is time to end the cooldown
-		if (sampleCount > pixelCount) {
+		if (*sharedSampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else

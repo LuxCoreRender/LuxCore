@@ -194,7 +194,7 @@ class HybridRenderEngine;
 
 class HybridRenderState {
 public:
-	HybridRenderState(HybridRenderEngine *renderEngine, Film *film, RandomGenerator *rndGen);
+	HybridRenderState(HybridRenderThread *rendeThread, Film *film, RandomGenerator *rndGen);
 	virtual ~HybridRenderState();
 
 	virtual void GenerateRays(HybridRenderThread *renderThread) = 0;
@@ -251,7 +251,10 @@ protected:
 
 	RayBuffer *currentReiceivedRayBuffer;
 	size_t currentReiceivedRayBufferIndex;
-	
+
+	// Used to store values shared among all metropolis samplers
+	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+
 	bool started, editMode;
 };
 
