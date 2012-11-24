@@ -409,7 +409,9 @@ void BiDirCPURenderThread::RenderFunc() {
 	pixelCount = filmWidth * filmHeight;
 
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film);
+	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
+			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex

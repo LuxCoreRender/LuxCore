@@ -474,10 +474,12 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 // HybridRenderState
 //------------------------------------------------------------------------------
 
-HybridRenderState::HybridRenderState(HybridRenderEngine *renderEngine,
+HybridRenderState::HybridRenderState(HybridRenderThread *rendeThread,
 		Film *film, RandomGenerator *rndGen) {
 	// Setup the sampler
-	sampler = renderEngine->renderConfig->AllocSampler(rndGen, film);
+	sampler = rendeThread->renderEngine->renderConfig->AllocSampler(rndGen, film,
+			&rendeThread->metropolisSharedTotalLuminance,
+			&rendeThread->metropolisSharedSampleCount);
 }
 
 HybridRenderState::~HybridRenderState() {

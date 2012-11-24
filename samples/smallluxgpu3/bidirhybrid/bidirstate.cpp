@@ -45,9 +45,10 @@ const unsigned int sampleEyeStepSize = 11;
 const unsigned int sampleLightBootSize = 5;
 const unsigned int sampleLightStepSize = 6;
 
-BiDirState::BiDirState(BiDirHybridRenderEngine *renderEngine,
-		Film *film, RandomGenerator *rndGen) : HybridRenderState(renderEngine, film, rndGen),
-		eyeSampleResults(renderEngine->eyePathCount) {
+BiDirState::BiDirState(BiDirHybridRenderThread *renderThread,
+		Film *film, RandomGenerator *rndGen) : HybridRenderState(renderThread, film, rndGen),
+		eyeSampleResults(((BiDirHybridRenderEngine *)renderThread->renderEngine)->eyePathCount) {
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)renderThread->renderEngine;
 
 	// Setup the sampler
 	const unsigned int sampleSize = 
