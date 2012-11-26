@@ -60,11 +60,9 @@ endif()
 
 if (Boost_FOUND)
 	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-  link_directories(${Boost_LIBRARY_DIRS})
-  # Don't use old boost versions interfaces
-  ADD_DEFINITIONS(-DBOOST_FILESYSTEM_NO_DEPRECATED)
-  # Retain compatibility with Boost 1.44 and 1.45
-  ADD_DEFINITIONS(-DBOOST_FILESYSTEM_VERSION=3)
+	link_directories(${Boost_LIBRARY_DIRS})
+	# Don't use old boost versions interfaces
+	ADD_DEFINITIONS(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 endif ()
 
 

@@ -109,6 +109,8 @@ void RenderEngine::BeginEdit() {
 }
 
 void RenderEngine::EndEdit(const EditActionList &editActions) {
+	boost::unique_lock<boost::mutex> lock(engineMutex);
+
 	assert (started);
 	assert (editMode);
 
