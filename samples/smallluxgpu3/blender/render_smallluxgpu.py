@@ -227,6 +227,9 @@ class SLGBP:
         else:
             cfg['path.russianroulette.cap'] = ff(scene.slg.rrcap)
         cfg['accelerator.type'] = scene.slg.accelerator_type
+        cfg['bidirvm.lightpath.count'] = ff(scene.slg.bidirvm_lightpath_count)
+        cfg['bidirvm.startradius.scale'] = ff(scene.slg.bidirvm_startradius_scale)
+        cfg['bidirvm.alpha'] = ff(scene.slg.bidirvm_alpha)
 
         return cfg
 
@@ -1135,7 +1138,7 @@ def slg_add_properties():
                ("BIDIRCPU", "BiDirCPU", "Bidirectional path tracing using CPU only"),
                ("BIDIRHYBRID", "BiDirHybrid", "Bidirectional path tracing using CPU and OpenCL"),
                ("CBIDIRHYBRID", "CBiDirHybrid", "Combinatorial bidirectional path tracing using CPU and OpenCL"),
-               ("CBIDIRVMCPU", "CBiDirVMCPU", "Bidirectional path tracing with Vertex Merging using CPU only")),
+               ("BIDIRVMCPU", "BiDirVMCPU", "Bidirectional path tracing with Vertex Merging using CPU only")),
         default="PATHOCL")
 
     SLGSettings.sampler_type = EnumProperty(name="Sampler Type",
@@ -1318,6 +1321,17 @@ def slg_add_properties():
         description="blank = default (bitwise on/off value for each device, see SLG docs)",
         default="", maxlen=64)
 
+    # BiDirVM options
+    SLGSettings.bidirvm_lightpath_count = FloatProperty(name="Light Path Count",
+        description="Vertex Merging light path count",
+        default=16000, min=64, max=1000000)
+    SLGSettings.bidirvm_startradius_scale = FloatProperty(name="Vertex Merging start radius",
+        description="Vertex Merging start radius",
+        default=0.003, min=0.000001, max=0.5)
+    SLGSettings.bidirvm_alpha = FloatProperty(name="Vertex Merging alpha",
+        description="Vertex Merging radius decrease factor",
+        default=0.95, min=0.01, max=1.0)
+
     # Add SLG Camera Lens Radius
     bpy.types.Camera.slg_lensradius = FloatProperty(name="SLG DOF Lens Radius",
         description="SmallLuxGPU camera lens radius for depth of field",
@@ -1333,7 +1347,7 @@ def slg_add_properties():
         description="SmallLuxGPU gamma input value",
         default=2.2, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
-    # Add Objet Force Instance
+    # Add Object Force Instance
     bpy.types.Object.slg_forceinst = BoolProperty(name="SLG Force Instance",
         description="SmallLuxGPU - Force export of instance for this object",
         default=False)
@@ -1493,7 +1507,10 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.filter_width_y",
         "scene.slg.filter_alpha",
         "scene.slg.filter_B",
-        "scene.slg.filter_C"
+        "scene.slg.filter_C",
+        "scene.slg.bidirvm_lightpath_count",
+        "scene.slg.bidirvm_startradius_scale",
+        "scene.slg.bidirvm_alpha"
     ]
     preset_subdir = "slg"
 
@@ -1601,6 +1618,16 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
                 col.prop(slg, "filter_B")
                 col = split.column()
                 col.prop(slg, "filter_C")
+        if slg.rendering_type == 'BIDIRVMCPU':
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "bidirvm_lightpath_count")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "bidirvm_startradius_scale")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "bidirvm_alpha")
         split = layout.split()
         col = split.column()
         col.prop(slg, "tracedepth", text="Depth")
