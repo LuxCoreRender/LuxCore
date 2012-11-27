@@ -219,7 +219,7 @@ class SLGBP:
         cfg['path.filter.alpha'] = ff(scene.slg.filter_alpha)
         cfg['path.filter.B'] = ff(scene.slg.filter_B)
         cfg['path.filter.C'] = ff(scene.slg.filter_C)
-        cfg['path.maxdepth'] = format(scene.slg.tracedepth)
+        cfg['path.maxdepth'] = format(scene.slg.path_maxdepth)
         cfg['path.maxdiffusebounce'] = format(scene.slg.diffusebounce)
         cfg['path.russianroulette.depth'] = format(scene.slg.rrdepth)
         cfg['path.russianroulette.strategy'] = scene.slg.rrstrategy
@@ -232,6 +232,7 @@ class SLGBP:
         cfg['bidirvm.startradius.scale'] = ff(scene.slg.bidirvm_startradius_scale)
         cfg['bidirvm.alpha'] = ff(scene.slg.bidirvm_alpha)
         cfg['native.threads.count'] = format(scene.slg.native_threads_count)
+        cfg['light.maxdepth'] = format(scene.slg.light_maxdepth)
 
         return cfg
 
@@ -1248,10 +1249,6 @@ def slg_add_properties():
         description="Render background as transparent alpha channel in image file",
         default=False)
 
-    SLGSettings.tracedepth = IntProperty(name="Max Path Trace Depth",
-        description="Maximum path tracing depth",
-        default=6, min=1, max=1024, soft_min=1, soft_max=1024)
-
     SLGSettings.diffusebounce = IntProperty(name="Max Diffuse Bounces",
         description="Maximum path tracing diffuse bounce",
         default=5, min=0, max=1024, soft_min=0, soft_max=1024)
@@ -1322,10 +1319,20 @@ def slg_add_properties():
         description="blank = default (bitwise on/off value for each device, see SLG docs)",
         default="", maxlen=64)
 
-    # Shared among all *CPU render engine options
+    # Shared among all *CPU render engine
     SLGSettings.native_threads_count = IntProperty(name="Number of threads",
         description="Number of threads used for the rendering",
         default=multiprocessing.cpu_count(), min=1)
+
+    # PathCPU/OCL engine options
+    SLGSettings.path_maxdepth = IntProperty(name="Max Eye Path Depth",
+        description="Maximum eye path tracing depth",
+        default=5, min=1, max=1024, soft_min=1, soft_max=1024)
+
+    # LightCPU engine options
+    SLGSettings.light_maxdepth = IntProperty(name="Max Light Path Depth",
+        description="Maximum light path tracing depth",
+        default=5, min=1, max=1024, soft_min=1, soft_max=1024)
 
     # BiDirVM options
     SLGSettings.bidirvm_lightpath_count = FloatProperty(name="Light Path Count",
@@ -1482,7 +1489,8 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.reinhard_postscale",
         "scene.slg.alphachannel",
         "scene.slg.film_gamma",
-        "scene.slg.tracedepth",
+        "scene.slg.path_maxdepth",
+        "scene.slg.light_maxdepth",
 		"scene.slg.diffusebounce",
         "scene.slg.rrstrategy",
         "scene.slg.rrdepth",
@@ -1588,6 +1596,15 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col = split.column()
             col.prop(slg, "bidirvm_alpha")
 
+        if slg.rendering_type in ('PATHOCL', 'PATHCPU', 'BIDIRCPU', 'BIDIRVMCPU', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "path_maxdepth", text="Eye Path Depth")
+        if slg.rendering_type in ('LIGHTCPU', 'BIDIRCPU', 'BIDIRVMCPU', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "light_maxdepth", text="Light Path Depth")
+
 		# All *OCL or Hybrid
         if slg.rendering_type in ('PATHOCL', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
             split = layout.split(percentage=0.33)
@@ -1606,19 +1623,24 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col = split.column()
             col.prop(slg, "devices", text='Devs')
 
-		# All *OCL
+		# PATHOCL
         if slg.rendering_type in ('PATHOCL'):
             col = split.column()
             col.prop(slg, "opencl_task_count")
             split = layout.split()
             col = split.column()
             col.prop(slg, "pixelatomics_enable")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "diffusebounce", text="Diffuse Bounces")
 
 		# All *CPU
         if slg.rendering_type in ('PATHCPU', 'LIGHTCPU', 'BIDIRCPU', 'BIDIRVMCPU'):
             split = layout.split()
             col = split.column()
             col.prop(slg, "native_threads_count")
+
+        ########################################################################
 
         split = layout.split()
         col = split.column()
@@ -1678,11 +1700,6 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
                 col.prop(slg, "filter_B")
                 col = split.column()
                 col.prop(slg, "filter_C")
-        split = layout.split()
-        col = split.column()
-        col.prop(slg, "tracedepth", text="Depth")
-        col = split.column()
-        col.prop(slg, "diffusebounce", text="Diffuse Bounces")
         split = layout.split()
         col = split.column()
         col.prop(slg, "rrstrategy")
