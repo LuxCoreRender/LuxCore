@@ -210,8 +210,8 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 							const unsigned int ridx = y * width + x;
 
 							pixel[x].red = frameBuffer->GetPixel(ridx)->r;
-							pixel[x].green =  frameBuffer->GetPixel(ridx)->g;
-							pixel[x].blue =  frameBuffer->GetPixel(ridx)->b;
+							pixel[x].green = frameBuffer->GetPixel(ridx)->g;
+							pixel[x].blue = frameBuffer->GetPixel(ridx)->b;
 
 							const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixel(ridx);
 							const float weight = sp->weight;
@@ -247,8 +247,8 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						for (unsigned int x = 0; x < width; ++x) {
 							const unsigned int ridx = y * width + x;
 							pixel[x].red = frameBuffer->GetPixel(ridx)->r;
-							pixel[x].green =  frameBuffer->GetPixel(ridx)->g;
-							pixel[x].blue =  frameBuffer->GetPixel(ridx)->b;
+							pixel[x].green = frameBuffer->GetPixel(ridx)->g;
+							pixel[x].blue = frameBuffer->GetPixel(ridx)->b;
 						}
 
 						// Next line
@@ -370,7 +370,7 @@ void Film::MergeSampleBuffers(Pixel *p, std::vector<bool> &frameBufferMask) cons
 
 	if (enablePerScreenNormalizedBuffer) {
 		const SamplePixel *sp = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
-		const float factor = 1.f / statsTotalSampleCount;
+		const float factor = pixelCount / statsTotalSampleCount;
 
 		for (unsigned int i = 0; i < pixelCount; ++i) {
 			const float weight = sp[i].weight;
