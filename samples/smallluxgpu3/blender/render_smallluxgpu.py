@@ -209,10 +209,6 @@ class SLGBP:
         cfg['renderengine.type'] = scene.slg.rendering_type
         cfg['path.sampler.type'] = scene.slg.sampler_type
         cfg['path.pixelatomics.enable'] = format(scene.slg.pixelatomics_enable, 'b')
-        cfg['path.sampler.xsamples'] = format(scene.slg.sampler_xsamples)
-        cfg['path.sampler.ysamples'] = format(scene.slg.sampler_ysamples)
-        cfg['path.sampler.largesteprate'] = ff(scene.slg.sampler_largesteprate)
-        cfg['path.sampler.maxconsecutivereject'] = ff(scene.slg.sampler_maxconsecutivereject)
         cfg['path.filter.type'] = scene.slg.filter_type
         cfg['path.filter.width.x'] = ff(scene.slg.filter_width_x)
         cfg['path.filter.width.y'] = ff(scene.slg.filter_width_y)
@@ -233,6 +229,9 @@ class SLGBP:
         cfg['bidirvm.alpha'] = ff(scene.slg.bidirvm_alpha)
         cfg['native.threads.count'] = format(scene.slg.native_threads_count)
         cfg['light.maxdepth'] = format(scene.slg.light_maxdepth)
+        cfg['sampler.largesteprate'] = ff(scene.slg.sampler_largesteprate)
+        cfg['sampler.maxconsecutivereject'] = format(scene.slg.sampler_maxconsecutivereject)
+        cfg['sampler.imagemutationrate'] = ff(scene.slg.sampler_imagemutationrate)
 
         return cfg
 
@@ -1146,9 +1145,7 @@ def slg_add_properties():
 
     SLGSettings.sampler_type = EnumProperty(name="Sampler Type",
         description="Sampler Type",
-        items=(("INLINED_RANDOM", "Inlined Random", "Inlined Random"),
-               ("RANDOM", "Random", "Random"),
-               ("STRATIFIED", "Stratified", "Stratified"),
+        items=(("RANDOM", "Random", "Random"),
                ("METROPOLIS", "Metropolis", "Metropolis")),
         default="METROPOLIS")
 
@@ -1164,21 +1161,17 @@ def slg_add_properties():
         description="Use Pixel Atomics",
         default=False)
 
-    SLGSettings.sampler_xsamples = IntProperty(name="X Samples",
-        description="Stratified sampler X samples",
-        default=3, min=1, soft_min=1)
-
-    SLGSettings.sampler_ysamples = IntProperty(name="Y Samples",
-        description="Stratified sampler Y samples",
-        default=3, min=1, soft_min=1)
-
     SLGSettings.sampler_largesteprate = FloatProperty(name="Large Step Rate",
         description="Large Step Rate",
         default=0.4, min=0.0, max=1.0, soft_min=0.0, soft_max=1.0, precision=3)
 
-    SLGSettings.sampler_maxconsecutivereject = FloatProperty(name="Max Consecutive Reject",
+    SLGSettings.sampler_maxconsecutivereject = IntProperty(name="Max Consecutive Reject",
         description="Max Consecutive Reject",
-        default=512.0, min=0.0, soft_min=0.0)
+        default=512, min=1)
+
+    SLGSettings.sampler_imagemutationrate = FloatProperty(name="Image Mutation Rate",
+        description="Image Mutation Rate",
+        default=0.1, min=0.0001, max=1.0)
 
     SLGSettings.filter_width_x = FloatProperty(name="Filter Width X",
         description="Filter width x",
@@ -1512,10 +1505,9 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.devices",
         "scene.slg.sampler_type",
         "scene.slg.pixelatomics_enable",
-        "scene.slg.sampler_xsamples",
-        "scene.slg.sampler_ysamples",
         "scene.slg.sampler_largesteprate",
         "scene.slg.sampler_maxconsecutivereject",
+        "scene.slg.sampler_imagemutationrate",
         "scene.slg.filter_type",
         "scene.slg.filter_width_x",
         "scene.slg.filter_width_y",
@@ -1630,7 +1622,6 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             split = layout.split()
             col = split.column()
             col.prop(slg, "pixelatomics_enable")
-            split = layout.split()
             col = split.column()
             col.prop(slg, "diffusebounce", text="Diffuse Bounces")
 
@@ -1639,6 +1630,22 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             split = layout.split()
             col = split.column()
             col.prop(slg, "native_threads_count")
+
+        ########################################################################
+        # Sampler specific options
+        ########################################################################
+
+        split = layout.split()
+        col = split.column()
+        col.prop(slg, "sampler_type")
+        if slg.sampler_type == 'METROPOLIS':
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "sampler_largesteprate")
+            col = split.column()
+            col.prop(slg, "sampler_maxconsecutivereject")
+            col = split.column()
+            col.prop(slg, "sampler_imagemutationrate")
 
         ########################################################################
 
@@ -1667,21 +1674,6 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col = split.column()
         col.prop(slg, "film_gamma")
         if slg.rendering_type == 'PATHOCL':
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "sampler_type")
-            if slg.sampler_type == 'STRATIFIED':
-                split = layout.split()
-                col = split.column()
-                col.prop(slg, "sampler_xsamples")
-                col = split.column()
-                col.prop(slg, "sampler_ysamples")
-            elif slg.sampler_type == 'METROPOLIS':
-                split = layout.split()
-                col = split.column()
-                col.prop(slg, "sampler_largesteprate")
-                col = split.column()
-                col.prop(slg, "sampler_maxconsecutivereject")
             split = layout.split()
             col = split.column()
             col.prop(slg, "filter_type")
