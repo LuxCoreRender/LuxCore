@@ -332,12 +332,19 @@ void CPURenderThread::EndEdit(const EditActionList &editActions) {
 CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
 
+	const size_t renderThreadCount =  cfg->cfg.GetInt("native.threads.count",
+			boost::thread::hardware_concurrency());
+
 	//--------------------------------------------------------------------------
 	// Allocate devices
 	//--------------------------------------------------------------------------
 
-	selectedDeviceDescs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, selectedDeviceDescs);
+	vector<DeviceDescription *>  devDescs = ctx->GetAvailableDeviceDescriptions();
+	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, devDescs);
+
+	selectedDeviceDescs.resize(renderThreadCount, NULL);
+	for (size_t i = 0; i < selectedDeviceDescs.size(); ++i)
+		selectedDeviceDescs[i] = devDescs[i % devDescs.size()];
 
 	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
@@ -353,7 +360,6 @@ CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flm
 	// Create and start render threads
 	//--------------------------------------------------------------------------
 
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
 	renderThreads.resize(renderThreadCount, NULL);
 }

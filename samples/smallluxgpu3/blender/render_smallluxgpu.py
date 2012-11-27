@@ -34,6 +34,7 @@ bl_info = {
     "tracker_url": "http://www.luxrender.net/forum/viewforum.php?f=34",
     "category": "Render"}
 
+import multiprocessing
 import bpy, bl_operators, bl_ui
 import blf
 from mathutils import Matrix, Vector
@@ -227,9 +228,10 @@ class SLGBP:
         else:
             cfg['path.russianroulette.cap'] = ff(scene.slg.rrcap)
         cfg['accelerator.type'] = scene.slg.accelerator_type
-        cfg['bidirvm.lightpath.count'] = ff(scene.slg.bidirvm_lightpath_count)
+        cfg['bidirvm.lightpath.count'] = format(scene.slg.bidirvm_lightpath_count)
         cfg['bidirvm.startradius.scale'] = ff(scene.slg.bidirvm_startradius_scale)
         cfg['bidirvm.alpha'] = ff(scene.slg.bidirvm_alpha)
+        cfg['native.threads.count'] = format(scene.slg.native_threads_count)
 
         return cfg
 
@@ -1218,8 +1220,7 @@ def slg_add_properties():
 
     SLGSettings.film_tonemap_type = EnumProperty(name="Tonemap Type",
         description="Select the desired film tonemap type",
-        items=(("-1", "Tonemapping", "Tonemapping"),
-               ("0", "Linear tonemapping", "Linear tonemapping"),
+        items=(("0", "Linear tonemapping", "Linear tonemapping"),
                ("1", "Reinhard '02 tonemapping", "Reinhard '02 tonemapping")),
         default="0")
 
@@ -1320,6 +1321,11 @@ def slg_add_properties():
     SLGSettings.devices = StringProperty(name="OpenCL devices to use",
         description="blank = default (bitwise on/off value for each device, see SLG docs)",
         default="", maxlen=64)
+
+    # Shared among all *CPU render engine options
+    SLGSettings.native_threads_count = IntProperty(name="Number of threads",
+        description="Number of threads used for the rendering",
+        default=multiprocessing.cpu_count(), min=1)
 
     # BiDirVM options
     SLGSettings.bidirvm_lightpath_count = FloatProperty(name="Light Path Count",
@@ -1510,7 +1516,8 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.filter_C",
         "scene.slg.bidirvm_lightpath_count",
         "scene.slg.bidirvm_startradius_scale",
-        "scene.slg.bidirvm_alpha"
+        "scene.slg.bidirvm_alpha",
+        "scene.slg.native_threads_count"
     ]
     preset_subdir = "slg"
 
@@ -1557,9 +1564,62 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col.prop(slg, "forceobjplys")
         col = split.column()
         col.prop(slg, "infinitelightbf")
+
+        ########################################################################
+        # Rendering engine type
+        ########################################################################
         split = layout.split()
         col = split.column()
         col.prop(slg, "rendering_type")
+
+        ########################################################################
+        # Rendering engine specific options
+        ########################################################################
+
+		# BIDIRVMCPU
+        if slg.rendering_type == 'BIDIRVMCPU':
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "bidirvm_lightpath_count")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "bidirvm_startradius_scale")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "bidirvm_alpha")
+
+		# All *OCL or Hybrid
+        if slg.rendering_type in ('PATHOCL', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
+            split = layout.split(percentage=0.33)
+            col = split.column()
+            col.label(text="OpenCL devs:")
+            col = split.column()
+            col.prop(slg, "opencl_cpu")
+            col = split.column()
+            col.prop(slg, "opencl_gpu")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "gpu_workgroup_size")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "platform", text="Platform")
+            col = split.column()
+            col.prop(slg, "devices", text='Devs')
+
+		# All *OCL
+        if slg.rendering_type in ('PATHOCL'):
+            col = split.column()
+            col.prop(slg, "opencl_task_count")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "pixelatomics_enable")
+
+		# All *CPU
+        if slg.rendering_type in ('PATHCPU', 'LIGHTCPU', 'BIDIRCPU', 'BIDIRVMCPU'):
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "native_threads_count")
+
         split = layout.split()
         col = split.column()
         col.prop(slg, "accelerator_type")
@@ -1618,16 +1678,6 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
                 col.prop(slg, "filter_B")
                 col = split.column()
                 col.prop(slg, "filter_C")
-        if slg.rendering_type == 'BIDIRVMCPU':
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "bidirvm_lightpath_count")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "bidirvm_startradius_scale")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "bidirvm_alpha")
         split = layout.split()
         col = split.column()
         col.prop(slg, "tracedepth", text="Depth")
@@ -1645,9 +1695,6 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         else:
             col.prop(slg, "rrcap", text="RR Cap")
         split = layout.split()
-        if slg.rendering_type == 'PATHOCL':
-            col = split.column()
-            col.prop(slg, "pixelatomics_enable")
         col = split.column()
         split = layout.split()
         col = split.column()
@@ -1670,26 +1717,6 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         split = layout.split()
         col = split.column()
         col.prop(slg, "batchmode_periodicsave")
-        if slg.rendering_type == 'PATHOCL' or slg.rendering_type == 'BIDIRHYBRID' or slg.rendering_type == 'CBIDIRHYBRID':
-            split = layout.split(percentage=0.33)
-            col = split.column()
-            col.label(text="OpenCL devs:")
-            col = split.column()
-            col.prop(slg, "opencl_cpu")
-            col = split.column()
-            col.prop(slg, "opencl_gpu")
-            split = layout.split()
-            if slg.rendering_type == 'PATHOCL':
-                col = split.column()
-                col.prop(slg, "opencl_task_count")
-                split = layout.split()
-            col = split.column()
-            col.prop(slg, "gpu_workgroup_size")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "platform", text="Platform")
-            col = split.column()
-            col.prop(slg, "devices", text='Devs')
         if SLGBP.live:
             SLGBP.livetrigger(context.scene, SLGBP.LIVECFG)
 
