@@ -103,7 +103,8 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	const string samplerTypeName = cfg.GetString("path.sampler.type", "INLINED_RANDOM");
+	const string samplerTypeName = cfg.GetString("sampler.type",
+			cfg.GetString("path.sampler.type", "INLINED_RANDOM"));
 	if (samplerTypeName.compare("INLINED_RANDOM") == 0)
 		sampler = new PathOCL::InlinedRandomSampler();
 	else if (samplerTypeName.compare("RANDOM") == 0)
@@ -114,9 +115,12 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 
 		sampler = new PathOCL::StratifiedSampler(xSamples, ySamples);
 	} else if (samplerTypeName.compare("METROPOLIS") == 0) {
-		const float rate = cfg.GetFloat("path.sampler.largesteprate", .4f);
-		const float reject = cfg.GetFloat("path.sampler.maxconsecutivereject", 512);
-		const float mutationrate = cfg.GetFloat("path.sampler.imagemutationrate", .1f);
+		const float rate = cfg.GetFloat("sampler.largesteprate",
+				cfg.GetFloat("path.sampler.largesteprate", .4f));
+		const float reject = cfg.GetFloat("sampler.maxconsecutivereject",
+				cfg.GetFloat("path.sampler.maxconsecutivereject", 512));
+		const float mutationrate = cfg.GetFloat("sampler.imagemutationrate",
+				cfg.GetFloat("path.sampler.imagemutationrate", .1f));
 
 		sampler = new PathOCL::MetropolisSampler(rate, reject, mutationrate);
 	} else
