@@ -101,8 +101,8 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	rasterToWorld = screenToWorld * Inverse(screenToRaster);
 
 	const float tanAngle = tanf(Radians(fieldOfView) / 2.f) * 2.f;
-	const float xPixelWidth = tanAngle * ((screen[1] - screen[0]) / 2.f);
-	const float yPixelHeight = tanAngle * ((screen[3] - screen[2]) / 2.f);
+	const float xPixelWidth = tanAngle * ((screen[1] - screen[0]) / 2.f); // TODO: check if I'm missing a "* (xEnd - xStart) / xResolution"
+	const float yPixelHeight = tanAngle * ((screen[3] - screen[2]) / 2.f); // TODO: check if I'm missing a "* (yEnd - yStart) / yResolution"
 	pixelArea = xPixelWidth * yPixelHeight;
 }
 

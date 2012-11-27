@@ -136,7 +136,6 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				if (lightVertex.depth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = Max(bsdfEval.Filter(), engine->rrImportanceCap);
-					bsdfPdfW *= prob;
 					bsdfRevPdfW *= prob;
 				}
 
