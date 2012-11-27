@@ -160,15 +160,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		const float luminance = sr->radiance.Y();
 		assert (!isnan(luminance) && !isinf(luminance));
 
-		if ((luminance >= 0.f) &&!isnan(luminance) && !isinf(luminance)) {
-			if (sr->type == PER_SCREEN_NORMALIZED) {
-				// This is required because the way camera pixel area is expressed (i.e. normalized
-				// coordinates Vs pixels). I should probably fix the source of the problem
-				// instead of using this workaround.
-				newLuminance += luminance / pixelCount;
-			} else
-				newLuminance += luminance;
-		}
+		if ((luminance >= 0.f) &&!isnan(luminance) && !isinf(luminance))
+			newLuminance += luminance;
 	}
 
 	if (isLargeMutation) {
