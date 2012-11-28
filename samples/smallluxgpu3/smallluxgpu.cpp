@@ -157,16 +157,17 @@ static int BatchTileMode(const unsigned int stopSPP, const float haltThreshold) 
 	// Get the loop count
 	int loopCount = config->cfg.GetInt("batch.tile.loops", 1);
 
-	// Start the rendering
-	session->Start();
-
+	bool sessionStarted = false;
 	for (int loopIndex = 0; loopIndex < loopCount; ++loopIndex) {
 		u_int tileX = 0;
 		u_int tileY = 0;
 		const double startTime = WallClockTime();
 
 		// To setup new rendering parameters
-		session->BeginEdit();
+		if (loopIndex > 0) {
+			// I can begin an edit only after the start
+			session->BeginEdit();
+		}
 
 		for (;;) {
 			SLG_LOG("Rendering tile offset: (" << tileX << "/" << originalFilmWidth  + 2 * filterBorder << ", " <<
@@ -189,13 +190,18 @@ static int BatchTileMode(const unsigned int stopSPP, const float haltThreshold) 
 					originalFilmWidth + 2 * filterBorder,
 					originalFilmHeight + 2 * filterBorder,
 					filmSubRegion);
-			session->editActions.AddAction(CAMERA_EDIT);
-
+			
 			session->film->Init(session->renderConfig->scene->camera->GetFilmWeight(),
 					session->renderConfig->scene->camera->GetFilmHeight());
-			session->editActions.AddAction(FILM_EDIT);
 
-			session->EndEdit();
+			if (sessionStarted) {
+				session->editActions.AddAction(CAMERA_EDIT);
+				session->editActions.AddAction(FILM_EDIT);
+				session->EndEdit();
+			} else {
+				session->Start();
+				sessionStarted = true;
+			}
 
 			double lastFilmUpdate = WallClockTime();
 			char buf[512];
