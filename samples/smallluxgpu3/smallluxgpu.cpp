@@ -167,6 +167,9 @@ static int BatchTileMode(const unsigned int stopSPP, const float haltThreshold) 
 		if (loopIndex > 0) {
 			// I can begin an edit only after the start
 			session->BeginEdit();
+
+			// I have to use a new seed or I will render exactly the same images
+			session->renderEngine->GenerateNewSeed();
 		}
 
 		for (;;) {

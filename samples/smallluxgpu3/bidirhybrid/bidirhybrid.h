@@ -101,7 +101,7 @@ private:
 class BiDirHybridRenderThread : public HybridRenderThread {
 public:
 	BiDirHybridRenderThread(BiDirHybridRenderEngine *engine, const u_int index,
-			IntersectionDevice *device, const u_int seedVal);
+			IntersectionDevice *device);
 
 	friend class BiDirState;
 	friend class BiDirHybridRenderEngine;
@@ -134,9 +134,8 @@ public:
 	friend class BiDirHybridRenderThread;
 
 private:
-	HybridRenderThread *NewRenderThread(const u_int index, IntersectionDevice *device,
-			const u_int seedVal) {
-		return new BiDirHybridRenderThread(this, index, device, seedVal);
+	HybridRenderThread *NewRenderThread(const u_int index, IntersectionDevice *device) {
+		return new BiDirHybridRenderThread(this, index, device);
 	}
 };
 

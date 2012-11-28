@@ -36,6 +36,6 @@
 //------------------------------------------------------------------------------
 
 BiDirHybridRenderThread::BiDirHybridRenderThread(BiDirHybridRenderEngine *engine,
-		const u_int index, IntersectionDevice *device, const u_int seedVal) :
-		HybridRenderThread(engine, index, device, seedVal) {
+		const u_int index, IntersectionDevice *device) :
+		HybridRenderThread(engine, index, device) {
 }

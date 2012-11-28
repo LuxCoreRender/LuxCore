@@ -48,7 +48,7 @@ class BiDirCPURenderEngine;
 class BiDirCPURenderThread : public CPURenderThread {
 public:
 	BiDirCPURenderThread(BiDirCPURenderEngine *engine, const u_int index,
-			IntersectionDevice *device, const u_int seedVal);
+			IntersectionDevice *device);
 
 	friend class BiDirCPURenderEngine;
 
@@ -112,9 +112,8 @@ public:
 	friend class BiDirCPURenderThread;
 
 private:
-	CPURenderThread *NewRenderThread(const u_int index, IntersectionDevice *device,
-			const u_int seedVal) {
-		return new BiDirCPURenderThread(this, index, device, seedVal);
+	CPURenderThread *NewRenderThread(const u_int index, IntersectionDevice *device) {
+		return new BiDirCPURenderThread(this, index, device);
 	}
 };
 

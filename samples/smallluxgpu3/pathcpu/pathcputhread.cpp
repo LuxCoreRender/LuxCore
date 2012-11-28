@@ -33,8 +33,8 @@
 //------------------------------------------------------------------------------
 
 PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device, const u_int seedVal) :
-		CPURenderThread(engine, index, device, seedVal, true, false) {
+		const u_int index, IntersectionDevice *device) :
+		CPURenderThread(engine, index, device, true, false) {
 }
 
 void PathCPURenderThread::DirectLightSampling(
@@ -144,7 +144,7 @@ void PathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(seed);
+	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
 	Film * film = threadFilm;

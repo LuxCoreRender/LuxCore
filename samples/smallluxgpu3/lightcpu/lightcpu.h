@@ -34,7 +34,7 @@ class LightCPURenderEngine;
 class LightCPURenderThread : public CPURenderThread {
 public:
 	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index,
-			IntersectionDevice *device, const u_int seedVal);
+			IntersectionDevice *device);
 
 	friend class LightCPURenderEngine;
 
@@ -65,8 +65,8 @@ public:
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
-			IntersectionDevice *device, const unsigned int seedVal) {
-		return new LightCPURenderThread(this, index, device, seedVal);
+			IntersectionDevice *device) {
+		return new LightCPURenderThread(this, index, device);
 	}
 };
 

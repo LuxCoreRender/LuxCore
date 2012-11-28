@@ -87,7 +87,7 @@ private:
 class BiDirVMCPURenderThread : public BiDirCPURenderThread {
 public:
 	BiDirVMCPURenderThread(BiDirVMCPURenderEngine *engine, const u_int index,
-			IntersectionDevice *device, const u_int seedVal);
+			IntersectionDevice *device);
 
 	friend class HashGrid;
 	friend class BiDirVMCPURenderEngine;
@@ -107,9 +107,8 @@ public:
 	friend class BiDirVMCPURenderThread;
 
 private:
-	CPURenderThread *NewRenderThread(const u_int index, IntersectionDevice *device,
-			const u_int seedVal) {
-		return new BiDirVMCPURenderThread(this, index, device, seedVal);
+	CPURenderThread *NewRenderThread(const u_int index, IntersectionDevice *device) {
+		return new BiDirVMCPURenderThread(this, index, device);
 	}
 };
 
