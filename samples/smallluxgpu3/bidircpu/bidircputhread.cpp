@@ -32,8 +32,8 @@
 //------------------------------------------------------------------------------
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device, const u_int seedVal) :
-		CPURenderThread(engine, index, device, seedVal, true, true) {
+		const u_int index, IntersectionDevice *device) :
+		CPURenderThread(engine, index, device, true, true) {
 }
 
 void BiDirCPURenderThread::ConnectVertices(
@@ -399,7 +399,7 @@ void BiDirCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(seed);
+	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
 	Film *film = threadFilm;

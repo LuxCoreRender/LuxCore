@@ -41,12 +41,11 @@
 // PathOCLRenderThread
 //------------------------------------------------------------------------------
 
-PathOCLRenderThread::PathOCLRenderThread(const unsigned int index, const unsigned int seedBase,
+PathOCLRenderThread::PathOCLRenderThread(const unsigned int index,
 		const float samplStart, OpenCLIntersectionDevice *device,
 		PathOCLRenderEngine *re) {
 	intersectionDevice = device;
 	samplingStart = samplStart;
-	seed = seedBase;
 
 	renderThread = NULL;
 
@@ -389,7 +388,6 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
 			" -D PARAM_RAY_EPSILON=" << renderEngine->epsilon << "f" <<
-			" -D PARAM_SEED=" << seed <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT=" << renderEngine->maxDiffusePathVertexCount <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
@@ -962,6 +960,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
+	initKernel->setArg(argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
 	initKernel->setArg(argIndex++, *tasksBuff);
 	initKernel->setArg(argIndex++, *taskStatsBuff);
 	initKernel->setArg(argIndex++, *raysBuff);

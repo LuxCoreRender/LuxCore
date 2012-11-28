@@ -38,13 +38,14 @@
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) {
+RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+	seedBaseGenerator(131) {
 	renderConfig = cfg;
 	film = flm;
 	filmMutex = flmMutex;
-	seedBase = (unsigned int)(WallClockTime() / 1000.0);
 	started = false;
 	editMode = false;
+	GenerateNewSeed();
 
 	// Create LuxRays context
 	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
@@ -155,6 +156,10 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 	EndEditLockLess(editActions);
 }
 
+void RenderEngine::GenerateNewSeed() {
+	seedBase = seedBaseGenerator.uintValue();
+}
+
 void RenderEngine::UpdateFilm() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
@@ -253,10 +258,9 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 //------------------------------------------------------------------------------
 
 CPURenderThread::CPURenderThread(CPURenderEngine *engine,
-		const u_int index, IntersectionDevice *dev, const unsigned int seedVal,
+		const u_int index, IntersectionDevice *dev,
 		const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) {
 	threadIndex = index;
-	seed = seedVal;
 	renderEngine = engine;
 	device = dev;
 
@@ -377,7 +381,7 @@ CPURenderEngine::~CPURenderEngine() {
 void CPURenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (!renderThreads[i])
-			renderThreads[i] = NewRenderThread(i, intersectionDevices[i], seedBase + i);
+			renderThreads[i] = NewRenderThread(i, intersectionDevices[i]);
 		renderThreads[i]->Start();
 	}
 }
@@ -499,10 +503,8 @@ HybridRenderState::~HybridRenderState() {
 //------------------------------------------------------------------------------
 
 HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
-		const unsigned int index, IntersectionDevice *dev,
-		const unsigned int seedBase) {
+		const unsigned int index, IntersectionDevice *dev) {
 	device = dev;
-	seed = seedBase;
 
 	renderThread = NULL;
 	threadFilm = NULL;
@@ -635,7 +637,7 @@ void HybridRenderThread::RenderFunc() {
 	const unsigned int filmHeight = film->GetHeight();
 	pixelCount = filmWidth * filmHeight;
 
-	RandomGenerator *rndGen = new RandomGenerator(threadIndex + seed);
+	RandomGenerator *rndGen = new RandomGenerator(threadIndex + renderEngine->seedBase);
 
 	const u_int incrementStep = 4096;
 	vector<HybridRenderState *> states(incrementStep);
@@ -757,7 +759,7 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 void HybridRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (!renderThreads[i])
-			renderThreads[i] = NewRenderThread(i, devices[i], seedBase + i);
+			renderThreads[i] = NewRenderThread(i, devices[i]);
 		renderThreads[i]->Start();
 	}
 }

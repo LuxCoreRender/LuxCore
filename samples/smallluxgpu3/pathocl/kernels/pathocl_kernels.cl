@@ -26,6 +26,7 @@
 //------------------------------------------------------------------------------
 
 __kernel void Init(
+		uint seedBase,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
@@ -44,7 +45,7 @@ __kernel void Init(
 
 	// Initialize random number generator
 	Seed seed;
-	InitRandomGenerator(PARAM_SEED + gid, &seed);
+	InitRandomGenerator(seedBase + gid, &seed);
 
 	// Initialize the sample
 	Sampler_Init(gid,

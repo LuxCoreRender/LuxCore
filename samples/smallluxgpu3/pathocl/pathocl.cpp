@@ -154,8 +154,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 
 	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
 
-	const unsigned int seedBase = (unsigned int)(WallClockTime() / 1000.0);
-
 	film->EnableOverlappedScreenBufferUpdate(true);
 
 	//--------------------------------------------------------------------------
@@ -166,9 +164,9 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		PathOCLRenderThread *t = new PathOCLRenderThread(i,
-			seedBase + i * taskCount, i / (float)renderThreadCount,
-			(OpenCLIntersectionDevice *)(intersectionDevices[i]),
-			this);
+				i / (float)renderThreadCount,
+				(OpenCLIntersectionDevice *)(intersectionDevices[i]),
+				this);
 		renderThreads.push_back(t);
 	}
 }

@@ -57,6 +57,8 @@ public:
 
 	virtual RenderEngineType GetEngineType() const = 0;
 
+	void GenerateNewSeed();
+
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
 	}
@@ -98,7 +100,9 @@ protected:
 	RenderConfig *renderConfig;
 	Film *film;
 	boost::mutex *filmMutex;
+
 	u_int seedBase;
+	RandomGenerator seedBaseGenerator;
 
 	double startTime, elapsedTime;
 	double samplesCount, raysCount;
@@ -119,8 +123,9 @@ class CPURenderEngine;
 class CPURenderThread {
 public:
 	CPURenderThread(CPURenderEngine *engine,
-		const u_int index, IntersectionDevice *dev, const u_int seedVal,
-		const bool enablePerPixelNormBuffer, const bool enablePerScreenNormBuffer);
+			const u_int index, IntersectionDevice *dev,
+			const bool enablePerPixelNormBuffer,
+			const bool enablePerScreenNormBuffer);
 	virtual ~CPURenderThread();
 
 	virtual void Start();
@@ -141,7 +146,6 @@ protected:
 	virtual void RenderFunc() = 0;
 
 	u_int threadIndex;
-	u_int seed;
 	CPURenderEngine *renderEngine;
 
 	boost::thread *renderThread;
@@ -161,7 +165,7 @@ public:
 
 protected:
 	virtual CPURenderThread *NewRenderThread(const u_int index,
-			IntersectionDevice *device, const u_int seedVal) = 0;
+			IntersectionDevice *device) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
@@ -210,7 +214,7 @@ protected:
 class HybridRenderThread {
 public:
 	HybridRenderThread(HybridRenderEngine *re, const unsigned int index,
-			IntersectionDevice *device, const unsigned int seedBase);
+			IntersectionDevice *device);
 	~HybridRenderThread();
 
 	void Start();
@@ -239,7 +243,7 @@ protected:
 	Film *threadFilm;
 	IntersectionDevice *device;
 
-	unsigned int threadIndex, seed;
+	unsigned int threadIndex;
 	HybridRenderEngine *renderEngine;
 	u_int pixelCount;
 
@@ -268,7 +272,7 @@ public:
 
 protected:
 	virtual HybridRenderThread *NewRenderThread(const u_int index,
-			IntersectionDevice *device, const u_int seedVal) = 0;
+			IntersectionDevice *device) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

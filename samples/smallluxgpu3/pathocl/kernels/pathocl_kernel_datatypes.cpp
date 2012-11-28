@@ -28,7 +28,6 @@ std::string luxrays::KernelSource_PathOCL_kernel_datatypes =
 "//  PARAM_IMAGE_WIDTH\n"
 "//  PARAM_IMAGE_HEIGHT\n"
 "//  PARAM_RAY_EPSILON\n"
-"//  PARAM_SEED\n"
 "//  PARAM_MAX_PATH_DEPTH\n"
 "//  PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT\n"
 "//  PARAM_MAX_RR_DEPTH\n"
