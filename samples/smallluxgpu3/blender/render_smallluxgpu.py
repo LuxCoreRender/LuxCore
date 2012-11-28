@@ -1145,7 +1145,7 @@ def slg_add_properties():
 
     SLGSettings.sampler_type = EnumProperty(name="Sampler Type",
         description="Sampler Type",
-        items=(("RANDOM", "Random", "Random"),
+        items=(("INLINED_RANDOM", "Random", "Random"),
                ("METROPOLIS", "Metropolis", "Metropolis")),
         default="METROPOLIS")
 
