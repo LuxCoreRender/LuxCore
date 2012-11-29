@@ -19,10 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "renderconfig.h"
 #include "lightcpu/lightcpu.h"
-#include "luxrays/utils/core/randomgen.h"
-#include "luxrays/utils/sampler/sampler.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // LightCPU RenderThread
@@ -292,4 +296,6 @@ void LightCPURenderThread::RenderFunc() {
 	delete rndGen;
 
 	//SLG_LOG("[LightCPURenderThread::" << threadIndex << "] Rendering thread halted");
+}
+
 }

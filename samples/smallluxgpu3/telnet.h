@@ -22,8 +22,10 @@
 #ifndef _TELNET_H
 #define	_TELNET_H
 
-#include "smalllux.h"
+#include "slg.h"
 #include "rendersession.h"
+
+namespace slg {
 
 class TelnetServer {
 public:
@@ -42,5 +44,7 @@ private:
 
 	RenderSession *session;
 };
+
+}
 
 #endif	/* _TELNET_H */

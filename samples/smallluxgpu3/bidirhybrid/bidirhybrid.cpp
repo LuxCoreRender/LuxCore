@@ -19,10 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
-#include "renderconfig.h"
-
 #include "bidirhybrid/bidirhybrid.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // BiDirCPURenderEngine
@@ -49,4 +53,6 @@ BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, 
 	MachineEpsilon::SetMax(epsilon);
 
 	film->EnableOverlappedScreenBufferUpdate(true);
+}
+
 }

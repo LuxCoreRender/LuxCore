@@ -19,21 +19,26 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _BIDIRCPU_H
-#define	_BIDIRCPU_H
+#ifndef _SLG_BIDIRCPU_H
+#define	_SLG_BIDIRCPU_H
 
-#include "smalllux.h"
+#include "slg.h"
 #include "renderengine.h"
 
+#include "luxrays/utils/core/randomgen.h"
+#include "luxrays/utils/sampler/sampler.h"
+#include "luxrays/utils/film/film.h"
 #include "luxrays/utils/sdl/bsdf.h"
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // Bidirectional path tracing CPU render engine
 //------------------------------------------------------------------------------
 
 typedef struct {
-	BSDF bsdf;
-	Spectrum throughput;
+	luxrays::sdl::BSDF bsdf;
+	luxrays::Spectrum throughput;
 	int depth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
@@ -48,7 +53,7 @@ class BiDirCPURenderEngine;
 class BiDirCPURenderThread : public CPURenderThread {
 public:
 	BiDirCPURenderThread(BiDirCPURenderEngine *engine, const u_int index,
-			IntersectionDevice *device);
+			luxrays::IntersectionDevice *device);
 
 	friend class BiDirCPURenderEngine;
 
@@ -70,20 +75,20 @@ protected:
 	void DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
-		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 	void DirectHitLight(const bool finiteLightSource,
-		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
 	void ConnectVertices(const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
-		SampleResult *eyeSampleResult, const float u0) const;
+		luxrays::utils::SampleResult *eyeSampleResult, const float u0) const;
 	void ConnectToEye(const PathVertexVM &BiDirVertex, const float u0,
-		const Point &lensPoint, vector<SampleResult> &sampleResults) const;
+		const luxrays::Point &lensPoint, vector<luxrays::utils::SampleResult> &sampleResults) const;
 
-	void TraceLightPath(Sampler *sampler, const Point &lensPoint,
+	void TraceLightPath(luxrays::utils::Sampler *sampler, const luxrays::Point &lensPoint,
 		vector<PathVertexVM> &lightPathVertices,
-		vector<SampleResult> &sampleResults) const;
-	bool Bounce(Sampler *sampler, const u_int sampleOffset,
-		PathVertexVM *pathVertex, Ray *nextEventRay) const;
+		vector<luxrays::utils::SampleResult> &sampleResults) const;
+	bool Bounce(luxrays::utils::Sampler *sampler, const u_int sampleOffset,
+		PathVertexVM *pathVertex, luxrays::Ray *nextEventRay) const;
 
 	u_int pixelCount;
 
@@ -94,7 +99,7 @@ protected:
 
 class BiDirCPURenderEngine : public CPURenderEngine {
 public:
-	BiDirCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiDirCPURenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return BIDIRCPU; }
 
@@ -112,9 +117,11 @@ public:
 	friend class BiDirCPURenderThread;
 
 private:
-	CPURenderThread *NewRenderThread(const u_int index, IntersectionDevice *device) {
+	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
 		return new BiDirCPURenderThread(this, index, device);
 	}
 };
 
-#endif	/* _BIDIRCPU_H */
+}
+
+#endif	/* _SLG_BIDIRCPU_H */

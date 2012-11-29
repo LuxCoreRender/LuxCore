@@ -32,7 +32,12 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
 
-#include "luxrays/core/intersectiondevice.h"
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // RenderEngine
@@ -807,4 +812,6 @@ void HybridRenderEngine::UpdateCounters() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		totalCount += renderThreads[i]->device->GetTotalRaysCount();
 	raysCount = totalCount;
+}
+
 }

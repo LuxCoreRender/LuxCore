@@ -19,17 +19,19 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _COMPILEDSESSION_H
-#define	_COMPILEDSESSION_H
+#ifndef _SLG_COMPILEDSESSION_H
+#define	_SLGCOMPILEDSESSION_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "smalllux.h"
+#include "slg.h"
 #include "ocldatatypes.h"
 #include "editaction.h"
 
 #include "luxrays/utils/film/film.h"
 #include "luxrays/utils/sdl/scene.h"
+
+namespace slg {
 
 class CompiledScene {
 public:
@@ -99,6 +101,8 @@ private:
 	void CompileTextureMaps();
 };
 
+}
+
 #endif
 
-#endif	/* _COMPILEDSESSION_H */
+#endif	/* _SLG_COMPILEDSESSION_H */

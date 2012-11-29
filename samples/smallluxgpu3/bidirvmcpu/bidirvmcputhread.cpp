@@ -22,10 +22,14 @@
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
 // (http://www.davidovic.cz) and http://www.smallvcm.com)
 
-#include "renderconfig.h"
 #include "bidirvmcpu/bidirvmcpu.h"
-#include "luxrays/utils/core/randomgen.h"
-#include "luxrays/utils/sampler/sampler.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // BiDirVMCPU RenderThread
@@ -240,4 +244,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	delete rndGen;
 
 	//SLG_LOG("[BiDirVMCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
+}
+
 }

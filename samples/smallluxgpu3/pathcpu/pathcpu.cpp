@@ -19,11 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <boost/thread/mutex.hpp>
-
-#include "smalllux.h"
-#include "renderconfig.h"
 #include "pathcpu/pathcpu.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // PathCPURenderEngine
@@ -45,4 +48,6 @@ PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	MachineEpsilon::SetMax(epsilon);
 
 	film->EnableOverlappedScreenBufferUpdate(true);
+}
+
 }

@@ -19,17 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
-#include "renderconfig.h"
 #include "bidirhybrid/bidirhybrid.h"
 
-#include "luxrays/core/intersectiondevice.h"
-#include "luxrays/opencl/utils.h"
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
 
-#if defined(__APPLE__)
-//OSX version detection
-#include <sys/utsname.h>
-#endif
+namespace slg {
 
 //------------------------------------------------------------------------------
 // BiDirHybridRenderThread
@@ -38,4 +35,6 @@
 BiDirHybridRenderThread::BiDirHybridRenderThread(BiDirHybridRenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
 		HybridRenderThread(engine, index, device) {
+}
+
 }

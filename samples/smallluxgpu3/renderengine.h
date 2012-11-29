@@ -19,15 +19,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _RENDERENGINE_H
-#define	_RENDERENGINE_H
+#ifndef _SLG_RENDERENGINE_H
+#define	_SLG_RENDERENGINE_H
 
-#include "smalllux.h"
+#include "slg.h"
 #include "renderconfig.h"
 #include "editaction.h"
 
 #include "luxrays/utils/film/film.h"
 #include "luxrays/utils/sdl/bsdf.h"
+
+namespace slg {
 
 enum RenderEngineType {
 	PATHOCL  = 4,
@@ -45,7 +47,7 @@ enum RenderEngineType {
 
 class RenderEngine {
 public:
-	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 	virtual ~RenderEngine();
 
 	void Start();
@@ -59,11 +61,11 @@ public:
 
 	void GenerateNewSeed();
 
-	virtual bool IsMaterialCompiled(const MaterialType type) const {
+	virtual bool IsMaterialCompiled(const luxrays::sdl::MaterialType type) const {
 		return true;
 	}
 
-	const vector<IntersectionDevice *> &GetIntersectionDevices() const {
+	const vector<luxrays::IntersectionDevice *> &GetIntersectionDevices() const {
 		return intersectionDevices;
 	}
 
@@ -77,10 +79,10 @@ public:
 	double GetTotalRaysSec() const { return (elapsedTime == 0.0) ? 0.0 : (raysCount / elapsedTime); }
 	double GetRenderingTime() const { return elapsedTime; }
 
-	static RenderEngineType String2RenderEngineType(const string &type);
-	static const string RenderEngineType2String(const RenderEngineType type);
+	static RenderEngineType String2RenderEngineType(const std::string &type);
+	static const std::string RenderEngineType2String(const RenderEngineType type);
 	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
-		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+		RenderConfig *rcfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 
 protected:
 	virtual void StartLockLess() = 0;
@@ -93,16 +95,16 @@ protected:
 	virtual void UpdateCounters() = 0;
 
 	boost::mutex engineMutex;
-	Context *ctx;
-	vector<DeviceDescription *> selectedDeviceDescs;
-	vector<IntersectionDevice *> intersectionDevices;
+	luxrays::Context *ctx;
+	vector<luxrays::DeviceDescription *> selectedDeviceDescs;
+	vector<luxrays::IntersectionDevice *> intersectionDevices;
 
 	RenderConfig *renderConfig;
-	Film *film;
+	luxrays::utils::Film *film;
 	boost::mutex *filmMutex;
 
 	u_int seedBase;
-	RandomGenerator seedBaseGenerator;
+	luxrays::RandomGenerator seedBaseGenerator;
 
 	double startTime, elapsedTime;
 	double samplesCount, raysCount;
@@ -123,7 +125,7 @@ class CPURenderEngine;
 class CPURenderThread {
 public:
 	CPURenderThread(CPURenderEngine *engine,
-			const u_int index, IntersectionDevice *dev,
+			const u_int index, luxrays::IntersectionDevice *dev,
 			const bool enablePerPixelNormBuffer,
 			const bool enablePerScreenNormBuffer);
 	virtual ~CPURenderThread();
@@ -149,8 +151,8 @@ protected:
 	CPURenderEngine *renderEngine;
 
 	boost::thread *renderThread;
-	Film *threadFilm;
-	IntersectionDevice *device;
+	luxrays::utils::Film *threadFilm;
+	luxrays::IntersectionDevice *device;
 
 	bool started, editMode;
 	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
@@ -158,14 +160,14 @@ protected:
 
 class CPURenderEngine : public RenderEngine {
 public:
-	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPURenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 	~CPURenderEngine();
 
 	friend class CPURenderThread;
 
 protected:
 	virtual CPURenderThread *NewRenderThread(const u_int index,
-			IntersectionDevice *device) = 0;
+			luxrays::IntersectionDevice *device) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
@@ -185,7 +187,7 @@ protected:
 
 class OCLRenderEngine : public RenderEngine {
 public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+	OCLRenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
 };
 
@@ -198,7 +200,7 @@ class HybridRenderEngine;
 
 class HybridRenderState {
 public:
-	HybridRenderState(HybridRenderThread *rendeThread, Film *film, RandomGenerator *rndGen);
+	HybridRenderState(HybridRenderThread *rendeThread, luxrays::utils::Film *film, luxrays::RandomGenerator *rndGen);
 	virtual ~HybridRenderState();
 
 	virtual void GenerateRays(HybridRenderThread *renderThread) = 0;
@@ -208,13 +210,13 @@ public:
 	friend class HybridRenderEngine;
 
 protected:
-	Sampler *sampler;
+	luxrays::utils::Sampler *sampler;
 };
 
 class HybridRenderThread {
 public:
 	HybridRenderThread(HybridRenderEngine *re, const unsigned int index,
-			IntersectionDevice *device);
+			luxrays::IntersectionDevice *device);
 	~HybridRenderThread();
 
 	void Start();
@@ -228,7 +230,7 @@ public:
 	friend class HybridRenderEngine;
 
 protected:
-	virtual HybridRenderState *AllocRenderState(RandomGenerator *rndGen) = 0;
+	virtual HybridRenderState *AllocRenderState(luxrays::RandomGenerator *rndGen) = 0;
 	virtual boost::thread *AllocRenderThread() = 0;
 
 	void RenderFunc();
@@ -236,12 +238,12 @@ protected:
 	void StartRenderThread();
 	void StopRenderThread();
 
-	size_t PushRay(const Ray &ray);
-	void PopRay(const Ray **ray, const RayHit **rayHit);
+	size_t PushRay(const luxrays::Ray &ray);
+	void PopRay(const luxrays::Ray **ray, const luxrays::RayHit **rayHit);
 
 	boost::thread *renderThread;
-	Film *threadFilm;
-	IntersectionDevice *device;
+	luxrays::utils::Film *threadFilm;
+	luxrays::IntersectionDevice *device;
 
 	unsigned int threadIndex;
 	HybridRenderEngine *renderEngine;
@@ -250,10 +252,10 @@ protected:
 	double samplesCount;
 
 	unsigned int pendingRayBuffers;
-	RayBuffer *currentRayBufferToSend;
-	deque<RayBuffer *> freeRayBuffers;
+	luxrays::RayBuffer *currentRayBufferToSend;
+	std::deque<luxrays::RayBuffer *> freeRayBuffers;
 
-	RayBuffer *currentReiceivedRayBuffer;
+	luxrays::RayBuffer *currentReiceivedRayBuffer;
 	size_t currentReiceivedRayBufferIndex;
 
 	// Used to store values shared among all metropolis samplers
@@ -264,7 +266,7 @@ protected:
 
 class HybridRenderEngine : public OCLRenderEngine {
 public:
-	HybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	HybridRenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 	virtual ~HybridRenderEngine() { }
 
 	friend class HybridRenderState;
@@ -272,7 +274,7 @@ public:
 
 protected:
 	virtual HybridRenderThread *NewRenderThread(const u_int index,
-			IntersectionDevice *device) = 0;
+			luxrays::IntersectionDevice *device) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
@@ -283,8 +285,10 @@ protected:
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 
-	vector<IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
+	vector<luxrays::IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
 	vector<HybridRenderThread *> renderThreads;
 };
 
-#endif	/* _RENDERENGINE_H */
+}
+
+#endif	/* _SLG_RENDERENGINE_H */

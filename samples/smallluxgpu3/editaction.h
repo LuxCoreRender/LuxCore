@@ -24,7 +24,9 @@
 
 #include <set>
 
-#include "smalllux.h"
+#include "slg.h"
+
+namespace slg {
 
 enum EditAction {
 	FILM_EDIT, // Use this for image Film resize
@@ -65,14 +67,14 @@ public:
 
 	friend std::ostream &operator<<(std::ostream &os, const EditActionList &eal);
 private:
-	set<EditAction> actions;
+	std::set<EditAction> actions;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 	os << "EditActionList[";
 
 	bool addSeparetor = false;
-	for (set<EditAction>::const_iterator it = eal.actions.begin(); it!=eal.actions.end(); ++it) {
+	for (std::set<EditAction>::const_iterator it = eal.actions.begin(); it!=eal.actions.end(); ++it) {
 		if (addSeparetor)
 			os << ", ";
 
@@ -123,4 +125,6 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 	return os;
 }
 
-#endif	/* _EDITACTION_H */
+}
+
+#endif	/* _SLG_EDITACTION_H */

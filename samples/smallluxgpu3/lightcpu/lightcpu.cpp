@@ -19,9 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
-#include "renderconfig.h"
 #include "lightcpu/lightcpu.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // LightCPURenderEngine
@@ -43,4 +48,6 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	MachineEpsilon::SetMax(epsilon);
 
 	film->EnableOverlappedScreenBufferUpdate(true);
+}
+
 }

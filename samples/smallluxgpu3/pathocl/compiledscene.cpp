@@ -23,6 +23,13 @@
 
 #include"compiledscene.h"
 
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
+
 CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	scene = scn;
 	film = flm;
@@ -898,6 +905,8 @@ bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
 			return false;
 			break;
 	}
+}
+
 }
 
 #endif

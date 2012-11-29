@@ -20,8 +20,13 @@
  ***************************************************************************/
 
 #include "rendersession.h"
-#include "pathocl/pathocl.h"
-#include "lightcpu/lightcpu.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig = rcfg;
@@ -171,3 +176,6 @@ void RenderSession::SaveFilmImage() {
 	film->UpdateScreenBuffer();
 	film->SaveScreenBuffer(fileName);
 }
+
+}
+

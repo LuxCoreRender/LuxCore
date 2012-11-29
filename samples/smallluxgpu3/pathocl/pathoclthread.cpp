@@ -21,7 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "smalllux.h"
+#include "slg.h"
 #include "pathocl/pathocl.h"
 #include "pathocl/kernels/kernels.h"
 #include "renderconfig.h"
@@ -36,6 +36,13 @@
 //OSX version detection
 #include <sys/utsname.h>
 #endif
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // PathOCLRenderThread
@@ -1263,6 +1270,8 @@ void PathOCLRenderThread::RenderThreadImpl() {
 			alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
 			alphaFrameBuffer);
 	}
+}
+
 }
 
 #endif

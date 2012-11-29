@@ -21,6 +21,13 @@
 
 #include "bidirvmcpu/bidirvmcpu.h"
 
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
+
 void HashGrid::Build(vector<vector<PathVertexVM> > &pathsVertices, const float radius) {
 	radius2 = radius * radius;
 
@@ -152,4 +159,6 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 		*radiance += (thread->vmNormalization * misWeight) *
 				eyeVertex.throughput * eyeBsdfEval * lightVertex->throughput;
 	}
+}
+
 }

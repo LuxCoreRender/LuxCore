@@ -19,12 +19,16 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "renderconfig.h"
 #include "pathcpu/pathcpu.h"
-#include "luxrays/utils/core/randomgen.h"
+
 #include "luxrays/utils/core/mc.h"
-#include "luxrays/utils/sdl/bsdf.h"
-#include "luxrays/utils/sampler/sampler.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 // TODO: use only brute force to sample infinitelight
 
@@ -270,4 +274,6 @@ void PathCPURenderThread::RenderFunc() {
 	delete rndGen;
 
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+}
+
 }
