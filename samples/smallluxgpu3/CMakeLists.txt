@@ -111,20 +111,17 @@ ENDFOREACH(kernel)
 
 #############################################################################
 #
-# SLG binary
+# SLG library
 #
 #############################################################################
 
 include_directories(${LuxRays_INCLUDE_DIR})
 include_directories(".")
-link_directories (${LuxRays_LIB_DIR})
 
-set(SMALLLUXGPU_SRCS
-	smallluxgpu.cpp
+set(SLG3LIB_SRCS
 	rendersession.cpp
 	renderconfig.cpp
 	renderengine.cpp
-	displayfunc.cpp
 	telnet.cpp
 	bidircpu/bidircpu.cpp
 	bidircpu/bidircputhread.cpp
@@ -150,9 +147,24 @@ set(SMALLLUXGPU_SRCS
 	pathcpu/pathcputhread.cpp
 	)
 
+add_library(smallluxgpu3 STATIC ${SLG3LIB_SRCS})
+
+#############################################################################
+#
+# SLG binary
+#
+#############################################################################
+
+link_directories (${LuxRays_LIB_DIR})
+
+set(SMALLLUXGPU_SRCS
+	smallluxgpu.cpp
+	displayfunc.cpp
+	)
+
 add_executable(slg3 ${SMALLLUXGPU_SRCS})
 
-TARGET_LINK_LIBRARIES(slg3 luxrays ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+TARGET_LINK_LIBRARIES(slg3 smallluxgpu3 luxrays ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 
 # This instructs FREEGLUT to emit a pragma for the static version
 SET_TARGET_PROPERTIES(slg3 PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)

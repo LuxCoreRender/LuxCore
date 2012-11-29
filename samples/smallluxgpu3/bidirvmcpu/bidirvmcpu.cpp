@@ -19,9 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
-#include "renderconfig.h"
 #include "bidirvmcpu/bidirvmcpu.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // BiDirCPURenderEngine
@@ -38,4 +43,6 @@ BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfig *rcfg, Film *flm, bo
 	lightPathsCount = Max(1024, cfg.GetInt("bidirvm.lightpath.count", 16 * 1024));
 	baseRadius = cfg.GetFloat("bidirvm.startradius.scale", .003f) * renderConfig->scene->dataSet->GetBSphere().rad;
 	radiusAlpha = cfg.GetFloat("bidirvm.alpha", .95f);
+}
+
 }

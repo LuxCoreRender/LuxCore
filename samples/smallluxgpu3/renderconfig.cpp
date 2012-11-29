@@ -21,9 +21,14 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "luxrays/utils/film/film.h"
-
 #include "renderconfig.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 RenderConfig::RenderConfig(const string &fileName, const Properties *additionalProperties) {
 	SLG_LOG("Reading configuration file: " << fileName);
@@ -122,4 +127,6 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 		default:
 			throw std::runtime_error("Unknown sampler.type: " + samplerType);
 	}
+}
+
 }

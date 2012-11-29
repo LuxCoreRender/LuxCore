@@ -19,11 +19,18 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LIGHTCPU_H
-#define	_LIGHTCPU_H
+#ifndef _SLG_LIGHTCPU_H
+#define	_SLG_LIGHTCPU_H
 
-#include "smalllux.h"
+#include "slg.h"
 #include "renderengine.h"
+
+#include "luxrays/utils/core/randomgen.h"
+#include "luxrays/utils/sampler/sampler.h"
+#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/sdl/bsdf.h"
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // Light tracing CPU render engine
@@ -34,7 +41,7 @@ class LightCPURenderEngine;
 class LightCPURenderThread : public CPURenderThread {
 public:
 	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index,
-			IntersectionDevice *device);
+			luxrays::IntersectionDevice *device);
 
 	friend class LightCPURenderEngine;
 
@@ -44,14 +51,14 @@ private:
 	void RenderFunc();
 
 	void ConnectToEye(const float u0,
-			const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
-			vector<SampleResult> &sampleResults);
-	void TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults);
+			const luxrays::sdl::BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
+			vector<luxrays::utils::SampleResult> &sampleResults);
+	void TraceEyePath(luxrays::utils::Sampler *sampler, vector<luxrays::utils::SampleResult> *sampleResults);
 };
 
 class LightCPURenderEngine : public CPURenderEngine {
 public:
-	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	LightCPURenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return LIGHTCPU; }
 
@@ -65,9 +72,11 @@ public:
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
-			IntersectionDevice *device) {
+			luxrays::IntersectionDevice *device) {
 		return new LightCPURenderThread(this, index, device);
 	}
 };
 
-#endif	/* _LIGHTCPU_H */
+}
+
+#endif	/* _SLG_LIGHTCPU_H */

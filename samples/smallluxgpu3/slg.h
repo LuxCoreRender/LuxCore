@@ -19,42 +19,27 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#ifndef _SLG_H
+#define	_SLG_H
 
-#include <cmath>
 #include <sstream>
-#include <fstream>
-#include <iostream>
-#include <cstddef>
 
-#if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__)
-#include <stddef.h>
-#include <sys/time.h>
-#elif defined (WIN32)
-#include <windows.h>
-#else
-	Unsupported Platform !!!
-#endif
+#include "slgcfg.h"
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
+/*! \namespace slg
+ *
+ * \brief The SLG core classes are defined within this namespace.
+ */
 
-#include "slg.h"
+namespace slg {
+class RenderSession;
+class RenderConfig;
+class RenderEngine;
+class EditActionList;
+}
 
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
-using namespace slg;
+extern void SLGDebugHandler(const char *msg);
 
-extern string SLG_LABEL;
+#define SLG_LOG(a) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; SLGDebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); }
 
-extern RenderSession *session;
-
-extern void DebugHandler(const char *msg);
-
-#endif	/* _SMALLLUX_H */
+#endif	/* _LUXRAYS_H */

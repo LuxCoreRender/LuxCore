@@ -19,19 +19,22 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _RENDERCONFIG_H
-#define	_RENDERCONFIG_H
-
-#include "smalllux.h"
+#ifndef _SLG_RENDERCONFIG_H
+#define	_SLG_RENDERCONFIG_H
 
 #include <boost/thread/mutex.hpp>
 
+#include "slg.h"
+
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/sampler/sampler.h"
+#include "luxrays/utils/sdl/scene.h"
+
+namespace slg {
 
 class RenderConfig {
 public:
-	RenderConfig(const string &fileName, const Properties *additionalProperties);
+	RenderConfig(const std::string &fileName, const luxrays::Properties *additionalProperties);
 	~RenderConfig();
 
 	void SetScreenRefreshInterval(const unsigned int t);
@@ -40,14 +43,16 @@ public:
 	void GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
 
-	Sampler *AllocSampler(RandomGenerator *rndGen, Film *film,
+	luxrays::utils::Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, luxrays::utils::Film *film,
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
 	
-	Properties cfg;
-	Scene *scene;
+	luxrays::Properties cfg;
+	luxrays::sdl::Scene *scene;
 
 private:
 	unsigned int screenRefreshInterval;
 };
 
-#endif	/* _RENDERCONFIG_H */
+}
+
+#endif	/* _SLG_RENDERCONFIG_H */

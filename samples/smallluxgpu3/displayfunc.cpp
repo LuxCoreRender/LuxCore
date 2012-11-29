@@ -35,20 +35,13 @@
 #include <GL/glut.h>
 #endif
 
+#include "smalllux.h"
 #include "displayfunc.h"
 #include "renderconfig.h"
+#include "rendersession.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/film/film.h"
-
-#include "pathocl/pathocl.h"
-#include "lightcpu/lightcpu.h"
-#include "pathcpu/pathcpu.h"
-#include "rendersession.h"
-#include "bidircpu/bidircpu.h"
-#include "bidirhybrid/bidirhybrid.h"
-#include "cbidirhybrid/cbidirhybrid.h"
-#include "bidirvmcpu/bidirvmcpu.h"
 
 bool OSDPrintHelp = false;
 

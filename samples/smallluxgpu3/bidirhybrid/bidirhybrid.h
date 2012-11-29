@@ -19,19 +19,26 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _BIDIRHYBRID_H
-#define	_BIDIRHYBRID_H
+#ifndef _SLG_BIDIRHYBRID_H
+#define	_SLG_BIDIRHYBRID_H
 
-#include "smalllux.h"
+#include "slg.h"
 #include "renderengine.h"
+
+#include "luxrays/utils/core/randomgen.h"
+#include "luxrays/utils/sampler/sampler.h"
+#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/sdl/bsdf.h"
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // Bidirectional path tracing hybrid render engine
 //------------------------------------------------------------------------------
 
 typedef struct {
-	BSDF bsdf;
-	Spectrum throughput;
+	luxrays::sdl::BSDF bsdf;
+	luxrays::Spectrum throughput;
 	int depth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
@@ -47,14 +54,14 @@ typedef struct {
 	u_int lightPathVertexConnections;
 	float screenX, screenY;
 	float alpha;
-	Spectrum radiance;
+	luxrays::Spectrum radiance;
 	vector<float> sampleValue; // Used for pass-through sampling
-	vector<Spectrum> sampleRadiance;
+	vector<luxrays::Spectrum> sampleRadiance;
 } BiDirEyeSampleResult;
 
 class BiDirState : public HybridRenderState {
 public:
-	BiDirState(BiDirHybridRenderThread *renderThread, Film *film, RandomGenerator *rndGen);
+	BiDirState(BiDirHybridRenderThread *renderThread, luxrays::utils::Film *film, luxrays::RandomGenerator *rndGen);
 	virtual ~BiDirState() { }
 
 	virtual void GenerateRays(HybridRenderThread *renderThread);
@@ -68,25 +75,25 @@ protected:
 			const PathVertex &eyeVertex);
 	void DirectHitLight(HybridRenderThread *renderThread,
 			const bool finiteLightSource, const PathVertex &eyeVertex,
-			Spectrum *radiance) const;
+			luxrays::Spectrum *radiance) const;
 
 	bool ConnectToEye(HybridRenderThread *renderThread,
 			const PathVertex &lightVertex, const float u0,
-			const Point &lensPoint);
+			const luxrays::Point &lensPoint);
 	void ConnectVertices(HybridRenderThread *renderThread,
 			const u_int eyePathIndex,
 			const PathVertex &eyeVertex, const PathVertex &lightVertex,
 			const float u0);
 
-	void TraceLightPath(HybridRenderThread *renderThread, Sampler *sampler,
+	void TraceLightPath(HybridRenderThread *renderThread, luxrays::utils::Sampler *sampler,
 			const u_int lightPathIndex, vector<vector<PathVertex> > &lightPaths);
 	bool Bounce(HybridRenderThread *renderThread,
-			Sampler *sampler, const u_int sampleOffset,
-			PathVertex *pathVertex, Ray *nextEventRay) const;
+			luxrays::utils::Sampler *sampler, const u_int sampleOffset,
+			PathVertex *pathVertex, luxrays::Ray *nextEventRay) const;
 
 	// Light tracing results
 	vector<float> lightSampleValue; // Used for pass-through sampling
-	vector<SampleResult> lightSampleResults;
+	vector<luxrays::utils::SampleResult> lightSampleResults;
 
 	// Eye tracing results: I use a vector because of CBiDir. With standard BiDir,
 	// the size of the vector is just 1.
@@ -94,20 +101,20 @@ protected:
 
 private:
 	bool ValidResult(BiDirHybridRenderThread *renderThread,
-		const Ray *ray, const RayHit *rayHit,
-		const float u0, Spectrum *radiance);
+		const luxrays::Ray *ray, const luxrays::RayHit *rayHit,
+		const float u0, luxrays::Spectrum *radiance);
 };
 
 class BiDirHybridRenderThread : public HybridRenderThread {
 public:
 	BiDirHybridRenderThread(BiDirHybridRenderEngine *engine, const u_int index,
-			IntersectionDevice *device);
+			luxrays::IntersectionDevice *device);
 
 	friend class BiDirState;
 	friend class BiDirHybridRenderEngine;
 
 private:
-	HybridRenderState *AllocRenderState(RandomGenerator *rndGen) {
+	HybridRenderState *AllocRenderState(luxrays::RandomGenerator *rndGen) {
 		return new BiDirState(this, threadFilm, rndGen);
 	}
 	boost::thread *AllocRenderThread() {
@@ -117,7 +124,7 @@ private:
 
 class BiDirHybridRenderEngine : public HybridRenderEngine {
 public:
-	BiDirHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiDirHybridRenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return BIDIRHYBRID; }
 
@@ -134,9 +141,11 @@ public:
 	friend class BiDirHybridRenderThread;
 
 private:
-	HybridRenderThread *NewRenderThread(const u_int index, IntersectionDevice *device) {
+	HybridRenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
 		return new BiDirHybridRenderThread(this, index, device);
 	}
 };
 
-#endif	/* _BIDIRHYBRID_H */
+}
+
+#endif	/* _SLG_BIDIRHYBRID_H */

@@ -22,8 +22,15 @@
 #ifndef _PATHCPU_H
 #define	_PATHCPU_H
 
-#include "smalllux.h"
+#include "slg.h"
 #include "renderengine.h"
+
+#include "luxrays/utils/core/randomgen.h"
+#include "luxrays/utils/sampler/sampler.h"
+#include "luxrays/utils/film/film.h"
+#include "luxrays/utils/sdl/bsdf.h"
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // Path tracing CPU render engine
@@ -34,7 +41,7 @@ class PathCPURenderEngine;
 class PathCPURenderThread : public CPURenderThread {
 public:
 	PathCPURenderThread(PathCPURenderEngine *engine, const u_int index,
-			IntersectionDevice *device);
+			luxrays::IntersectionDevice *device);
 
 	friend class PathCPURenderEngine;
 
@@ -45,20 +52,20 @@ private:
 
 	void DirectLightSampling(const float u0, const float u1,
 			const float u2, const float u3, const float u4,
-			const Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
-			Spectrum *radiance);
+			const luxrays::Spectrum &pathThrouput, const luxrays::sdl::BSDF &bsdf, const int depth,
+			luxrays::Spectrum *radiance);
 
 	void DirectHitFiniteLight(const bool lastSpecular,
-			const Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
-			const float lastPdfW, Spectrum *radiance);
+			const luxrays::Spectrum &pathThrouput, const float distance, const luxrays::sdl::BSDF &bsdf,
+			const float lastPdfW, luxrays::Spectrum *radiance);
 
-	void DirectHitInfiniteLight(const bool lastSpecular, const Spectrum &pathThrouput,
-			const Vector &eyeDir, const float lastPdfW, Spectrum *radiance);
+	void DirectHitInfiniteLight(const bool lastSpecular, const luxrays::Spectrum &pathThrouput,
+			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
 };
 
 class PathCPURenderEngine : public CPURenderEngine {
 public:
-	PathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathCPURenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return PATHCPU; }
 
@@ -72,9 +79,11 @@ public:
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
-			IntersectionDevice *device) {
+			luxrays::IntersectionDevice *device) {
 		return new PathCPURenderThread(this, index, device);
 	}
 };
+
+}
 
 #endif	/* _PATHCPU_H */

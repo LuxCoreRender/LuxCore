@@ -19,15 +19,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _RENDERSESSION_H
-#define	_RENDERSESSION_H
+#ifndef _SLG_RENDERSESSION_H
+#define	_SLG_RENDERSESSION_H
 
-#include "smalllux.h"
+#include "slg.h"
 #include "renderconfig.h"
 #include "renderengine.h"
 
 #include "luxrays/utils/film/film.h"
 
+namespace slg {
+	
 class RenderSession {
 public:
 	RenderSession(RenderConfig *cfg);
@@ -48,7 +50,7 @@ public:
 	RenderEngine *renderEngine;
 
 	boost::mutex filmMutex;
-	Film *film;
+	luxrays::utils::Film *film;
 
 	EditActionList editActions;
 
@@ -58,4 +60,6 @@ protected:
 	bool started, editMode, periodicSaveEnabled;
 };
 
-#endif	/* _RENDERSESSION_H */
+}
+
+#endif	/* _SLG_RENDERSESSION_H */

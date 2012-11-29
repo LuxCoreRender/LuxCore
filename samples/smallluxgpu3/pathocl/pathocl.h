@@ -19,12 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _PATHOCL_H
-#define	_PATHOCL_H
+#ifndef _SLG_PATHOCL_H
+#define	_SLG_PATHOCL_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "smalllux.h"
+#include "slg.h"
 #include "renderengine.h"
 #include "ocldatatypes.h"
 #include "compiledscene.h"
@@ -33,6 +33,8 @@
 #include "luxrays/opencl/utils.h"
 
 #include <boost/thread/thread.hpp>
+
+namespace slg {
 
 class PathOCLRenderEngine;
 
@@ -190,6 +192,8 @@ private:
 	bool usePixelAtomics;
 };
 
+}
+
 #endif
 
-#endif	/* _PATHOCL_H */
+#endif	/* _SLG_PATHOCL_H */

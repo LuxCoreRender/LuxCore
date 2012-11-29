@@ -33,7 +33,7 @@
 
 #include <boost/thread/mutex.hpp>
 
-#include "smalllux.h"
+#include "slg.h"
 
 #include "pathocl/pathocl.h"
 #include "pathocl/kernels/kernels.h"
@@ -42,6 +42,13 @@
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/opencl/intersectiondevice.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // PathOCLRenderEngine
@@ -313,6 +320,8 @@ void PathOCLRenderEngine::UpdateCounters() {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		totalCount += intersectionDevices[i]->GetTotalRaysCount();
 	raysCount = totalCount;
+}
+
 }
 
 #endif

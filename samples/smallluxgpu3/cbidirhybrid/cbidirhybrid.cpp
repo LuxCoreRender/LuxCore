@@ -19,11 +19,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
-#include "renderconfig.h"
-
 #include "cbidirhybrid/cbidirhybrid.h"
-#include "cbidirhybrid.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // CBiDirHybridRenderEngine
@@ -39,4 +42,6 @@ CBiDirHybridRenderEngine::CBiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm
 
 	eyePathCount = cfg.GetInt("cbidir.eyepath.count", 5);
 	lightPathCount = cfg.GetInt("cbidir.lightpath.count", 5);
+}
+
 }

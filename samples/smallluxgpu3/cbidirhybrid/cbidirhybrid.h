@@ -19,12 +19,13 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _CBIDIRHYBRID_H
-#define	_CBIDIRHYBRID_H
+#ifndef _SLG_CBIDIRHYBRID_H
+#define	_SLG_CBIDIRHYBRID_H
 
-#include "smalllux.h"
-#include "renderengine.h"
+#include "slg.h"
 #include "bidirhybrid/bidirhybrid.h"
+
+namespace slg {
 
 //------------------------------------------------------------------------------
 // Combinatorial Bidirectional path tracing hybrid render engine
@@ -32,9 +33,11 @@
 
 class CBiDirHybridRenderEngine : public BiDirHybridRenderEngine {
 public:
-	CBiDirHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CBiDirHybridRenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return CBIDIRHYBRID; }
 };
 
-#endif	/* _CBIDIRHYBRID_H */
+}
+
+#endif	/* _SLG_CBIDIRHYBRID_H */

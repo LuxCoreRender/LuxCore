@@ -25,14 +25,19 @@
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
 
-#include "smalllux.h"
 #include "telnet.h"
 #include "renderconfig.h"
-#include "pathocl/pathocl.h"
 
 #include "luxrays/utils/properties.h"
 
+using namespace std;
+using namespace luxrays;
+using namespace luxrays::sdl;
+using namespace luxrays::utils;
+
 using boost::asio::ip::tcp;
+
+namespace slg {
 
 TelnetServer::TelnetServer(const unsigned int serverPort, RenderSession *renderSession) : port(serverPort) {
 	session = renderSession;
@@ -1015,4 +1020,6 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 	} catch (std::exception& e) {
 		SLG_LOG("Telnet server error: " << e.what());
 	}
+}
+
 }
