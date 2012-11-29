@@ -200,7 +200,7 @@ class SLGBP:
             cfg['opencl.devices.select'] = scene.slg.devices
         cfg['opencl.gpu.workgroup.size'] = format(scene.slg.gpu_workgroup_size)
         cfg['film.gamma'] = format(scene.slg.film_gamma, 'g')
-        if scene.slg.rendering_type == 'PATHOCL' and scene.slg.filter_type != 'NONE':
+        if scene.slg.rendering_type == 'PATHOCL' and scene.slg.ocl_filter_type != 'NONE':
             cfg['film.filter.type'] = '0'
         else:
             cfg['film.filter.type'] = scene.slg.film_filter_type
@@ -209,7 +209,7 @@ class SLGBP:
         cfg['renderengine.type'] = scene.slg.rendering_type
         cfg['path.sampler.type'] = scene.slg.sampler_type
         cfg['path.pixelatomics.enable'] = format(scene.slg.pixelatomics_enable, 'b')
-        cfg['path.filter.type'] = scene.slg.filter_type
+        cfg['path.filter.type'] = scene.slg.ocl_filter_type
         cfg['path.filter.width.x'] = ff(scene.slg.filter_width_x)
         cfg['path.filter.width.y'] = ff(scene.slg.filter_width_y)
         cfg['path.filter.alpha'] = ff(scene.slg.filter_alpha)
@@ -218,15 +218,13 @@ class SLGBP:
         cfg['path.maxdepth'] = format(scene.slg.path_maxdepth)
         cfg['path.maxdiffusebounce'] = format(scene.slg.diffusebounce)
         cfg['path.russianroulette.depth'] = format(scene.slg.rrdepth)
-        cfg['path.russianroulette.strategy'] = scene.slg.rrstrategy
-        if scene.slg.rrstrategy == '0':
-            cfg['path.russianroulette.prob'] = ff(scene.slg.rrprob)
-        else:
-            cfg['path.russianroulette.cap'] = ff(scene.slg.rrcap)
+        cfg['path.russianroulette.cap'] = ff(scene.slg.rrcap)
         cfg['accelerator.type'] = scene.slg.accelerator_type
         cfg['bidirvm.lightpath.count'] = format(scene.slg.bidirvm_lightpath_count)
         cfg['bidirvm.startradius.scale'] = ff(scene.slg.bidirvm_startradius_scale)
         cfg['bidirvm.alpha'] = ff(scene.slg.bidirvm_alpha)
+        cfg['cbidir.eyepath.count'] = format(scene.slg.cbidir_eyepath_count)
+        cfg['cbidir.lightpath.count'] = format(scene.slg.cbidir_lightpath_count)
         cfg['native.threads.count'] = format(scene.slg.native_threads_count)
         cfg['light.maxdepth'] = format(scene.slg.light_maxdepth)
         cfg['sampler.largesteprate'] = ff(scene.slg.sampler_largesteprate)
@@ -1149,8 +1147,8 @@ def slg_add_properties():
                ("METROPOLIS", "Metropolis", "Metropolis")),
         default="METROPOLIS")
 
-    SLGSettings.filter_type = EnumProperty(name="Filter Type",
-        description="Filter Type",
+    SLGSettings.ocl_filter_type = EnumProperty(name="OpenCL Filter Type",
+        description="OpenCL Filter Type",
         items=(("NONE", "None", "None"),
                ("BOX", "Box", "Box"),
                ("GAUSSIAN", "Gaussian", "Gaussian"),
@@ -1246,19 +1244,9 @@ def slg_add_properties():
         description="Maximum path tracing diffuse bounce",
         default=5, min=0, max=1024, soft_min=0, soft_max=1024)
 
-    SLGSettings.rrstrategy = EnumProperty(name="Russian Roulette Strategy",
-        description="Select the desired russian roulette strategy",
-        items=(("0", "Probability", "Probability"),
-               ("1", "Importance", "Importance")),
-        default="1")
-
     SLGSettings.rrdepth = IntProperty(name="Russian Roulette Depth",
         description="Russian roulette depth",
         default=5, min=1, max=1024, soft_min=1, soft_max=1024)
-
-    SLGSettings.rrprob = FloatProperty(name="Russian Roulette Probability",
-        description="Russian roulette probability",
-        default=0.75, min=0, max=1, soft_min=0, soft_max=1, precision=3)
 
     SLGSettings.rrcap = FloatProperty(name="Russian Roulette Importance Cap",
         description="Russian roulette importance cap",
@@ -1328,7 +1316,7 @@ def slg_add_properties():
         default=5, min=1, max=1024, soft_min=1, soft_max=1024)
 
     # BiDirVM options
-    SLGSettings.bidirvm_lightpath_count = FloatProperty(name="Light Path Count",
+    SLGSettings.bidirvm_lightpath_count = IntProperty(name="Light Path Count",
         description="Vertex Merging light path count",
         default=16000, min=64, max=1000000)
     SLGSettings.bidirvm_startradius_scale = FloatProperty(name="Vertex Merging start radius",
@@ -1337,6 +1325,14 @@ def slg_add_properties():
     SLGSettings.bidirvm_alpha = FloatProperty(name="Vertex Merging alpha",
         description="Vertex Merging radius decrease factor",
         default=0.95, min=0.01, max=1.0)
+
+    # CBiDir options
+    SLGSettings.cbidir_eyepath_count = IntProperty(name="Combinatorial Eye Path Count",
+        description="Combinatorial eye path count",
+        default=5, min=1, max=1000)
+    SLGSettings.cbidir_lightpath_count = IntProperty(name="Combinatorial Light Path Count",
+        description="Combinatorial light path count",
+        default=5, min=1, max=1000)
 
     # Add SLG Camera Lens Radius
     bpy.types.Camera.slg_lensradius = FloatProperty(name="SLG DOF Lens Radius",
@@ -1485,9 +1481,7 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.path_maxdepth",
         "scene.slg.light_maxdepth",
 		"scene.slg.diffusebounce",
-        "scene.slg.rrstrategy",
         "scene.slg.rrdepth",
-        "scene.slg.rrprob",
         "scene.slg.rrcap",
         "scene.slg.refreshrate",
         "scene.slg.enablebatchmode",
@@ -1508,7 +1502,7 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.sampler_largesteprate",
         "scene.slg.sampler_maxconsecutivereject",
         "scene.slg.sampler_imagemutationrate",
-        "scene.slg.filter_type",
+        "scene.slg.ocl_filter_type",
         "scene.slg.filter_width_x",
         "scene.slg.filter_width_y",
         "scene.slg.filter_alpha",
@@ -1517,6 +1511,8 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.bidirvm_lightpath_count",
         "scene.slg.bidirvm_startradius_scale",
         "scene.slg.bidirvm_alpha",
+        "scene.slg.cbidir_eyepath_count",
+        "scene.slg.cbidir_lightpath_count",
         "scene.slg.native_threads_count"
     ]
     preset_subdir = "slg"
@@ -1575,6 +1571,15 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         ########################################################################
         # Rendering engine specific options
         ########################################################################
+
+		# CBIDIRHYBRID
+        if slg.rendering_type == 'CBIDIRHYBRID':
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "cbidir_eyepath_count")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "cbidir_lightpath_count")
 
 		# BIDIRVMCPU
         if slg.rendering_type == 'BIDIRVMCPU':
@@ -1655,6 +1660,25 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         split = layout.split()
         col = split.column()
         col.prop(slg, "film_filter_type")
+        if slg.rendering_type == 'PATHOCL':
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "ocl_filter_type")
+            split = layout.split()
+            col = split.column()
+            col.prop(slg, "filter_width_x")
+            col = split.column()
+            col.prop(slg, "filter_width_y")
+            if slg.ocl_filter_type == 'GAUSSIAN':
+                split = layout.split()
+                col = split.column()
+                col.prop(slg, "filter_alpha")
+            elif slg.ocl_filter_type == 'MITCHELL':
+                split = layout.split()
+                col = split.column()
+                col.prop(slg, "filter_B")
+                col = split.column()
+                col.prop(slg, "filter_C")
         split = layout.split()
         col = split.column()
         col.prop(slg, "film_tonemap_type")
@@ -1673,36 +1697,11 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
         col.prop(slg, "alphachannel")
         col = split.column()
         col.prop(slg, "film_gamma")
-        if slg.rendering_type == 'PATHOCL':
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "filter_type")
-            split = layout.split()
-            col = split.column()
-            col.prop(slg, "filter_width_x")
-            col = split.column()
-            col.prop(slg, "filter_width_y")
-            if slg.filter_type == 'GAUSSIAN':
-                split = layout.split()
-                col = split.column()
-                col.prop(slg, "filter_alpha")
-            elif slg.filter_type == 'MITCHELL':
-                split = layout.split()
-                col = split.column()
-                col.prop(slg, "filter_B")
-                col = split.column()
-                col.prop(slg, "filter_C")
-        split = layout.split()
-        col = split.column()
-        col.prop(slg, "rrstrategy")
         split = layout.split()
         col = split.column()
         col.prop(slg, "rrdepth", text="RR Depth")
         col = split.column()
-        if slg.rrstrategy == "0":
-            col.prop(slg, "rrprob", text="RR Prob")
-        else:
-            col.prop(slg, "rrcap", text="RR Cap")
+        col.prop(slg, "rrcap", text="RR Cap")
         split = layout.split()
         col = split.column()
         split = layout.split()
