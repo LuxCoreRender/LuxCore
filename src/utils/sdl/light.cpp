@@ -51,7 +51,7 @@ Spectrum InfiniteLightBase::Emit(const Scene *scene,
 	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
-		*directPdfA = INV_PI * .25f;
+		*directPdfA = 1.f / (4.f * M_PI);
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
@@ -83,7 +83,7 @@ Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW =  INV_PI * .25f;
+	*directPdfW = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
@@ -107,7 +107,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene *scene,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	if (directPdfA)
-		*directPdfA = INV_PI * .25f;
+		*directPdfA = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW) {
 		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
@@ -334,16 +334,13 @@ Spectrum SunLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	// Choose point on disk oriented toward infinite light direction
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
 	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
 
+	// Set ray origin and direction for infinite light ray
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	Point Pdisk = worldCenter + worldRadius * (d1 * x + d2 * y);
-
-	// Set ray origin and direction for infinite light ray
-	*orig = Pdisk + worldRadius * sunDir;
+	*orig = worldCenter + worldRadius * (sunDir + d1 * x + d2 * y);
 	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, sunDir);
 	*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 
