@@ -698,17 +698,20 @@ void MQBVHAccel::CreateLeaf(int32_t parentIndex, int32_t childIndex,
 	node.InitializeLeaf(childIndex, 1, start);
 }
 
-bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
+bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
+	Ray ray(*initialRay);
+	rayHit->SetMiss();
+
 	//------------------------------
 	// Prepare the ray for intersection
-	QuadRay ray4(*ray);
+	QuadRay ray4(ray);
 	__m128 invDir[3];
-	invDir[0] = _mm_set1_ps(1.f / ray->d.x);
-	invDir[1] = _mm_set1_ps(1.f / ray->d.y);
-	invDir[2] = _mm_set1_ps(1.f / ray->d.z);
+	invDir[0] = _mm_set1_ps(1.f / ray.d.x);
+	invDir[1] = _mm_set1_ps(1.f / ray.d.y);
+	invDir[2] = _mm_set1_ps(1.f / ray.d.z);
 
 	int signs[3];
-	ray->GetDirectionSigns(signs);
+	ray.GetDirectionSigns(signs);
 
 	//------------------------------
 	// Main loop
@@ -804,26 +807,25 @@ bool MQBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			QBVHAccel *qbvh = leafs[leafIndex];
 
 			if (leafsTransform[leafIndex]) {
-				Ray r(Inverse(*leafsTransform[leafIndex]) *
-					(*ray));
+				Ray r(Inverse(*leafsTransform[leafIndex]) * ray);
 				RayHit rh;
-				rh.SetMiss();
 				if (qbvh->Intersect(&r, &rh)) {
 					rayHit->t = rh.t;
 					rayHit->b1 = rh.b1;
 					rayHit->b2 = rh.b2;
 					rayHit->index = rh.index + leafsOffset[leafIndex];
 
-					ray->maxt = rh.t;
+					ray.maxt = rh.t;
 				}
 			} else {
 				RayHit rh;
-				rh.SetMiss();
-				if (qbvh->Intersect(ray, &rh)) {
+				if (qbvh->Intersect(&ray, &rh)) {
 					rayHit->t = rh.t;
 					rayHit->b1 = rh.b1;
 					rayHit->b2 = rh.b2;
 					rayHit->index = rh.index + leafsOffset[leafIndex];
+
+					ray.maxt = rh.t;
 				}
 			}
 		}//end of the else
