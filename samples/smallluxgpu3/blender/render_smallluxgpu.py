@@ -547,6 +547,8 @@ class SLGBP:
                     else:
                         print("SLGBP        Using render mesh: {}".format(obj.name))
                         mesh = obj
+                        if bpy.app.version > (2, 62, 0 ) and not mesh.tessfaces: # bmesh adaption
+                            mesh.update(calc_tessface=True)
                 except:
                     pass
                 else:
@@ -621,9 +623,6 @@ class SLGBP:
         # Process each plymat
         for i, pm in enumerate(plymats):
             plyn = pm.replace('.','_')
-            # Remove portal materials
-            if type(plys[pm]) == bpy.types.Material and plys[pm].use_shadeless:
-                del plys[pm]
             # If have mesh using this plymat...
             if verts[i] or (not scene.slg.export and os.path.exists('{}/{}.ply'.format(SLGBP.sfullpath,plyn))):
                 if scene.slg.export or pm in mfp:
