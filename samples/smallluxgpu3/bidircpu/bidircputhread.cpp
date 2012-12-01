@@ -151,8 +151,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
 				const float fluxToRadianceFactor = cameraPdfA;
 
-				// MIS weight (cameraPdfA must be expressed normalized device coordinate)
-				const float weightLight = MIS(cameraPdfA / pixelCount) *
+				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
 				const float misWeight = 1.f / (weightLight + 1.f);
 
@@ -464,7 +463,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
 		const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 		const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-			scene->camera->GetPixelArea() * pixelCount);
+			scene->camera->GetPixelArea());
 		eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 		eyeVertex.dVC = 0.f;
 		eyeVertex.dVM = 0.f;

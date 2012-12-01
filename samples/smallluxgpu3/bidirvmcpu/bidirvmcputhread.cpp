@@ -141,7 +141,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
 			const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 			const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
-				scene->camera->GetPixelArea() * pixelCount);
+				scene->camera->GetPixelArea());
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 0.f;
 			eyeVertex.dVM = 0.f;
