@@ -721,9 +721,10 @@ void CompiledScene::CompileTextureMaps() {
 					}
 
 					if (!found) {
-					// Check if I can add a new page
-					if (alphaTexMemBlocks.size() > 5)
-						throw std::runtime_error("More than 5 blocks of memory are required for alpha channels of a texture maps");
+						// Check if I can add a new page
+						if (alphaTexMemBlocks.size() > 5)
+							throw std::runtime_error("More than 5 blocks of memory are required for alpha channels of a texture maps");
+
 						// Add a new page
 						alphaTexMemBlocks.push_back(vector<float>());
 						page = alphaTexMemBlocks.size() - 1;
