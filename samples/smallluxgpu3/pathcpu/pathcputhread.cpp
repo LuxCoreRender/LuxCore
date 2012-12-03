@@ -268,6 +268,11 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResults[0].radiance = radiance;
 		sampleResults[0].alpha = alpha;
 		sampler->NextSample(sampleResults);
+
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		renderThread->yield();
+#endif
 	}
 
 	delete sampler;

@@ -540,6 +540,11 @@ void BiDirCPURenderThread::RenderFunc() {
 				break;
 
 			++(eyeVertex.depth);
+
+#ifdef WIN32
+			// Work around Windows bad scheduling
+			renderThread->yield();
+#endif
 		}
 
 		sampleResults.push_back(eyeSampleResult);
