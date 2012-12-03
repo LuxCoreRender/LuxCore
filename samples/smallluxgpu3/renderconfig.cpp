@@ -30,9 +30,12 @@ using namespace luxrays::utils;
 
 namespace slg {
 
-RenderConfig::RenderConfig(const string &fileName, const Properties *additionalProperties) {
-	SLG_LOG("Reading configuration file: " << fileName);
-	cfg.LoadFile(fileName);
+RenderConfig::RenderConfig(const string *fileName, const Properties *additionalProperties) {
+	if (fileName) {
+		SLG_LOG("Reading configuration file: " << (*fileName));
+		cfg.LoadFile(*fileName);
+	}
+
 	if (additionalProperties)
 		cfg.Load(*additionalProperties);
 

@@ -34,7 +34,7 @@ namespace slg {
 
 class RenderConfig {
 public:
-	RenderConfig(const std::string &fileName, const luxrays::Properties *additionalProperties);
+	RenderConfig(const std::string *fileName, const luxrays::Properties *additionalProperties);
 	~RenderConfig();
 
 	void SetScreenRefreshInterval(const unsigned int t);

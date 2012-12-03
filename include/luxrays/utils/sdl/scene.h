@@ -39,6 +39,9 @@ namespace luxrays { namespace sdl {
 
 class Scene {
 public:
+	// Constructor used to create a scene by calling methods
+	Scene();
+	// Constructor used to load a scene from file
 	Scene(const std::string &fileName, const int accType = -1);
 	~Scene();
 
@@ -57,6 +60,21 @@ public:
 		BSDF *bsdf, Spectrum *connectionThroughput) const;
 
 	void UpdateDataSet(Context *ctx);
+
+	//--------------------------------------------------------------------------
+	// Methods to build a scene from scratch
+	//--------------------------------------------------------------------------
+
+	void CreateCamera(const std::string &propsString);
+	void CreateCamera(const Properties &props);
+
+	void AddMaterials(const std::string &propsString);
+	void AddMaterials(const Properties &props);
+
+	void AddObject(const std::string &objName, const std::string &matName, const Properties &props);
+	void AddObject(const std::string &objName, const std::string &matName, const std::string &propsString);
+
+	//--------------------------------------------------------------------------
 
 	static Material *CreateMaterial(const std::string &propName, const Properties &prop);
 
@@ -89,7 +107,6 @@ protected:
 		const std::string &defaultValue);
 
 	int accelType;
-	Properties *scnProp;
 };
 
 } }

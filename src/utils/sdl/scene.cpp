@@ -35,6 +35,20 @@
 using namespace luxrays;
 using namespace luxrays::sdl;
 
+Scene::Scene() {
+	camera = NULL;
+
+	infiniteLight = NULL;
+	sunLight = NULL;
+
+	dataSet = NULL;
+
+	extMeshCache = new ExtMeshCache();
+	texMapCache = new TextureMapCache();
+
+	accelType = -1;
+}
+
 Scene::Scene(const std::string &fileName, const int aType) {
 	accelType = aType;
 
@@ -43,56 +57,25 @@ Scene::Scene(const std::string &fileName, const int aType) {
 
 	SDL_LOG("Reading scene: " << fileName);
 
-	scnProp = new Properties(fileName);
+	Properties scnProp(fileName);
 
 	//--------------------------------------------------------------------------
 	// Read camera position and target
 	//--------------------------------------------------------------------------
 
-	std::vector<float> vf = GetParameters(*scnProp, "scene.camera.lookat", 6, "10.0 0.0 0.0  0.0 0.0 0.0");
-	Point o(vf.at(0), vf.at(1), vf.at(2));
-	Point t(vf.at(3), vf.at(4), vf.at(5));
-
-	SDL_LOG("Camera postion: " << o);
-	SDL_LOG("Camera target: " << t);
-
-	vf = GetParameters(*scnProp, "scene.camera.up", 3, "0.0 0.0 0.1");
-	const Vector up(vf.at(0), vf.at(1), vf.at(2));
-	camera = new PerspectiveCamera(o, t, up);
-
-	camera->lensRadius = scnProp->GetFloat("scene.camera.lensradius", 0.f);
-	camera->focalDistance = scnProp->GetFloat("scene.camera.focaldistance", 10.f);
-	camera->fieldOfView = scnProp->GetFloat("scene.camera.fieldofview", 45.f);
+	CreateCamera(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Read all materials
 	//--------------------------------------------------------------------------
 
-	std::vector<std::string> matKeys = scnProp->GetAllKeys("scene.materials.");
-	if (matKeys.size() == 0)
-		throw std::runtime_error("No material definition found");
-
-	for (std::vector<std::string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
-		const std::string &key = *matKey;
-		const std::string matType = Properties::ExtractField(key, 2);
-		if (matType == "")
-			throw std::runtime_error("Syntax error in " + key);
-		const std::string matName = Properties::ExtractField(key, 3);
-		if (matName == "")
-			throw std::runtime_error("Syntax error in " + key);
-		SDL_LOG("Material definition: " << matName << " [" << matType << "]");
-
-		Material *mat = CreateMaterial(key, *scnProp);
-
-		materialIndices[matName] = materials.size();
-		materials.push_back(mat);
-	}
+	AddMaterials(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Read all objects .ply file
 	//--------------------------------------------------------------------------
 
-	std::vector<std::string> objKeys = scnProp->GetAllKeys("scene.objects.");
+	std::vector<std::string> objKeys = scnProp.GetAllKeys("scene.objects.");
 	if (objKeys.size() == 0)
 		throw std::runtime_error("Unable to find object definitions");
 
@@ -109,146 +92,23 @@ Scene::Scene(const std::string &fileName, const int aType) {
 		if (dot2 != std::string::npos)
 			continue;
 
+		// Extract the material name
+		const std::string matName = Properties::ExtractField(key, 2);
+		if (matName == "")
+			throw std::runtime_error("Syntax error in material name: " + matName);
+
+		// Extract the object name
 		const std::string objName = Properties::ExtractField(key, 3);
 		if (objName == "")
 			throw std::runtime_error("Syntax error in " + key);
 
-		// Build the object
-		const std::vector<std::string> args = scnProp->GetStringVector(key, "");
-		const std::string plyFileName = args.at(0);
+		AddObject(objName, matName, scnProp);
+		++objCount;
+
 		const double now = WallClockTime();
 		if (now - lastPrint > 2.0) {
 			SDL_LOG("PLY object count: " << objCount);
 			lastPrint = now;
-		}
-		++objCount;
-		//SDL_LOG("PLY object [" << objName << "] file name: " << plyFileName);
-
-		// Check if I have to calculate normal or not
-		const bool usePlyNormals = (scnProp->GetInt(key + ".useplynormals", 0) != 0);
-
-		// Check if I have to use an instance mesh or not
-		ExtMesh *meshObject;
-		if (scnProp->IsDefined(key + ".transformation")) {
-			const std::vector<float> vf = GetParameters(*scnProp, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-			const Matrix4x4 mat(
-					vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-					vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-					vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-					vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-			const Transform trans(mat);
-
-			meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals, trans);
-		} else
-			meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals);
-
-		objectIndices[objName] = objects.size();
-		objects.push_back(meshObject);
-
-		// Get the material
-		const std::string matName = Properties::ExtractField(key, 2);
-		if (matName == "")
-			throw std::runtime_error("Syntax error in material name: " + matName);
-		if (materialIndices.count(matName) < 1)
-			throw std::runtime_error("Unknown material: " + matName);
-		Material *mat = materials[materialIndices[matName]];
-
-		// Check if it is a light sources
-		if (mat->IsLightSource()) {
-			SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
-
-			AreaLightMaterial *light = (AreaLightMaterial *)mat;
-			objectMaterials.push_back(mat);
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-				TriangleLight *tl = new TriangleLight(light, static_cast<unsigned int>(objects.size()) - 1, i, objects);
-				lights.push_back(tl);
-				triangleLightSource.push_back(tl);
-			}
-		} else {
-			SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
-			objectMaterials.push_back(surfMat);
-			for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-				triangleLightSource.push_back(NULL);
-		}
-
-		// [old deprecated syntax] Check if there is a texture map associated to the object
-		if (args.size() > 1) {
-			// Check if the object has UV coords
-			if (!meshObject->HasUVs())
-				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
-
-			TexMapInstance *tm = texMapCache->GetTexMapInstance(args.at(1), 2.2f);
-			objectTexMaps.push_back(tm);
-			objectBumpMaps.push_back(NULL);
-			objectNormalMaps.push_back(NULL);
-		} else {
-			// Check for if there is a texture map associated to the object with the new syntax
-			const std::string texMap = scnProp->GetString(key + ".texmap", "");
-			if (texMap != "") {
-				// Check if the object has UV coords
-				if (!meshObject->HasUVs())
-					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
-
-				const float gamma = scnProp->GetFloat(key + ".texmap.gamma", 2.2f);
-				TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma);
-				objectTexMaps.push_back(tm);
-			} else
-				objectTexMaps.push_back(NULL);
-
-			/**
-			 * Check if there is an alpha map associated to the object
-			 * If there is, the map is added to a previously added texturemap.
-			 * If no texture map (diffuse map) is detected, a black texture
-			 * is created and the alpha map is added to it. --PC
-			 */
-			const std::string alphaMap = scnProp->GetString(key + ".alphamap", "");
-			if (alphaMap != "") {
-				// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
-				const std::string texMap = scnProp->GetString(key + ".texmap", "");
-				const float gamma = scnProp->GetFloat(key + ".texmap.gamma", 2.2f);
-				TextureMap *tm;
-				if (!(tm = texMapCache->FindTextureMap(texMap, gamma))) {
-					SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
-					// We have an alpha map without a diffuse texture. In this case we need to create
-					// a texture map filled with black
-					tm = new TextureMap(alphaMap, gamma, 1.0, 1.0, 1.0);
-					tm->AddAlpha(alphaMap);
-					TexMapInstance *tmi = texMapCache->AddTextureMap(alphaMap, tm);
-					// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
-					objectTexMaps.pop_back();
-					// Add the new texture to the chain
-					objectTexMaps.push_back(tmi);
-				} else {
-					// Add an alpha map to the pre-existing diffuse texture
-					tm->AddAlpha(alphaMap);
-				}
-			}
-      
-			// Check for if there is a bump map associated to the object
-			const std::string bumpMap = scnProp->GetString(key + ".bumpmap", "");
-			if (bumpMap != "") {
-				// Check if the object has UV coords
-				if (!meshObject->HasUVs())
-					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for bump mapping");
-
-				const float scale = scnProp->GetFloat(key + ".bumpmap.scale", 1.f);
-
-				BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale);
-				objectBumpMaps.push_back(bm);
-			} else
-				objectBumpMaps.push_back(NULL);
-
-			// Check for if there is a normal map associated to the object
-			const std::string normalMap = scnProp->GetString(key + ".normalmap", "");
-			if (normalMap != "") {
-				// Check if the object has UV coords
-				if (!meshObject->HasUVs())
-					throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
-
-				NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap);
-				objectNormalMaps.push_back(nm);
-			} else
-				objectNormalMaps.push_back(NULL);
 		}
 	}
 	SDL_LOG("PLY object count: " << objCount);
@@ -257,17 +117,17 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	// Check if there is an infinitelight source defined
 	//--------------------------------------------------------------------------
 
-	const std::vector<std::string> ilParams = scnProp->GetStringVector("scene.infinitelight.file", "");
+	const std::vector<std::string> ilParams = scnProp.GetStringVector("scene.infinitelight.file", "");
 	if (ilParams.size() > 0) {
-		const float gamma = scnProp->GetFloat("scene.infinitelight.gamma", 2.2f);
+		const float gamma = scnProp.GetFloat("scene.infinitelight.gamma", 2.2f);
 		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
 
 		InfiniteLight *il = new InfiniteLight(tex);
 
-		std::vector<float> vf = GetParameters(*scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
+		std::vector<float> vf = GetParameters(scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
 		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
-		vf = GetParameters(*scnProp, "scene.infinitelight.shift", 2, "0.0 0.0");
+		vf = GetParameters(scnProp, "scene.infinitelight.shift", 2, "0.0 0.0");
 		il->SetShift(vf.at(0), vf.at(1));
 		il->Preprocess();
 
@@ -279,14 +139,14 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	// Check if there is a SkyLight defined
 	//--------------------------------------------------------------------------
 
-	const std::vector<std::string> silParams = scnProp->GetStringVector("scene.skylight.dir", "");
+	const std::vector<std::string> silParams = scnProp.GetStringVector("scene.skylight.dir", "");
 	if (silParams.size() > 0) {
 		if (infiniteLight)
 			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
 
-		std::vector<float> sdir = GetParameters(*scnProp, "scene.skylight.dir", 3, "0.0 0.0 1.0");
-		const float turb = scnProp->GetFloat("scene.skylight.turbidity", 2.2f);
-		std::vector<float> gain = GetParameters(*scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
+		std::vector<float> sdir = GetParameters(scnProp, "scene.skylight.dir", 3, "0.0 0.0 1.0");
+		const float turb = scnProp.GetFloat("scene.skylight.turbidity", 2.2f);
+		std::vector<float> gain = GetParameters(scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
 		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
@@ -299,12 +159,12 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	// Check if there is a SunLight defined
 	//--------------------------------------------------------------------------
 
-	const std::vector<std::string> sulParams = scnProp->GetStringVector("scene.sunlight.dir", "");
+	const std::vector<std::string> sulParams = scnProp.GetStringVector("scene.sunlight.dir", "");
 	if (sulParams.size() > 0) {
-		std::vector<float> sdir = GetParameters(*scnProp, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
-		const float turb = scnProp->GetFloat("scene.sunlight.turbidity", 2.2f);
-		const float relSize = scnProp->GetFloat("scene.sunlight.relsize", 1.0f);
-		std::vector<float> gain = GetParameters(*scnProp, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
+		std::vector<float> sdir = GetParameters(scnProp, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
+		const float turb = scnProp.GetFloat("scene.sunlight.turbidity", 2.2f);
+		const float relSize = scnProp.GetFloat("scene.sunlight.relsize", 1.0f);
+		std::vector<float> gain = GetParameters(scnProp, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
 
 		SunLight *sl = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
@@ -333,7 +193,6 @@ Scene::~Scene() {
 
 	delete extMeshCache;
 	delete texMapCache;
-	delete scnProp;
 }
 
 void Scene::UpdateDataSet(Context *ctx) {
@@ -377,6 +236,204 @@ std::vector<float> Scene::GetParameters(const Properties &prop, const std::strin
 	}
 
 	return vf;
+}
+
+//--------------------------------------------------------------------------
+// Methods to build a scene from scratch
+//--------------------------------------------------------------------------
+
+void Scene::CreateCamera(const std::string &propsString) {
+	Properties prop;
+	prop.LoadString(propsString);
+
+	CreateCamera(prop);
+}
+
+void Scene::CreateCamera(const Properties &props) {
+	std::vector<float> vf = GetParameters(props, "scene.camera.lookat", 6, "10.0 0.0 0.0  0.0 0.0 0.0");
+	Point orig(vf.at(0), vf.at(1), vf.at(2));
+	Point target(vf.at(3), vf.at(4), vf.at(5));
+
+	SDL_LOG("Camera postion: " << orig);
+	SDL_LOG("Camera target: " << target);
+
+	vf = GetParameters(props, "scene.camera.up", 3, "0.0 0.0 0.1");
+	const Vector up(vf.at(0), vf.at(1), vf.at(2));
+
+	camera = new PerspectiveCamera(orig, target, up);
+
+	camera->lensRadius = props.GetFloat("scene.camera.lensradius", 0.f);
+	camera->focalDistance = props.GetFloat("scene.camera.focaldistance", 10.f);
+	camera->fieldOfView = props.GetFloat("scene.camera.fieldofview", 45.f);
+}
+
+void Scene::AddMaterials(const std::string &propsString) {
+	Properties prop;
+	prop.LoadString(propsString);
+
+	AddMaterials(prop);
+}
+
+void Scene::AddMaterials(const Properties &props) {
+	std::vector<std::string> matKeys = props.GetAllKeys("scene.materials.");
+	if (matKeys.size() == 0)
+		throw std::runtime_error("No material definition found");
+
+	for (std::vector<std::string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
+		const std::string &key = *matKey;
+		const std::string matType = Properties::ExtractField(key, 2);
+		if (matType == "")
+			throw std::runtime_error("Syntax error in " + key);
+		const std::string matName = Properties::ExtractField(key, 3);
+		if (matName == "")
+			throw std::runtime_error("Syntax error in " + key);
+		SDL_LOG("Material definition: " << matName << " [" << matType << "]");
+
+		Material *mat = CreateMaterial(key, props);
+
+		materialIndices[matName] = materials.size();
+		materials.push_back(mat);
+	}
+}
+
+void Scene::AddObject(const std::string &objName, const std::string &matName, const std::string &propsString) {
+	Properties prop;
+	prop.LoadString("scene.objects." + matName + "." + objName + " = " + objName + "\n");
+	prop.LoadString(propsString);
+
+	AddObject(objName, matName, prop);
+}
+
+void Scene::AddObject(const std::string &objName, const std::string &matName, const Properties &props) {
+	const std::string key = "scene.objects." + matName + "." + objName;
+
+	// Build the object
+	const std::vector<std::string> args = props.GetStringVector(key, "");
+	const std::string plyFileName = args.at(0);
+
+	// Check if I have to calculate normal or not
+	const bool usePlyNormals = (props.GetInt(key + ".useplynormals", 0) != 0);
+
+	// Check if I have to use an instance mesh or not
+	ExtMesh *meshObject;
+	if (props.IsDefined(key + ".transformation")) {
+		const std::vector<float> vf = GetParameters(props, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const Matrix4x4 mat(
+				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		const Transform trans(mat);
+
+		meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals, trans);
+	} else
+		meshObject = extMeshCache->GetExtMesh(plyFileName, usePlyNormals);
+
+	objectIndices[objName] = objects.size();
+	objects.push_back(meshObject);
+
+	// Get the material
+	if (materialIndices.count(matName) < 1)
+		throw std::runtime_error("Unknown material: " + matName);
+	Material *mat = materials[materialIndices[matName]];
+
+	// Check if it is a light sources
+	if (mat->IsLightSource()) {
+		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
+
+		AreaLightMaterial *light = (AreaLightMaterial *)mat;
+		objectMaterials.push_back(mat);
+		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
+			TriangleLight *tl = new TriangleLight(light, static_cast<unsigned int>(objects.size()) - 1, i, objects);
+			lights.push_back(tl);
+			triangleLightSource.push_back(tl);
+		}
+	} else {
+		SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
+		objectMaterials.push_back(surfMat);
+		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+			triangleLightSource.push_back(NULL);
+	}
+
+	// [old deprecated syntax] Check if there is a texture map associated to the object
+	if (args.size() > 1) {
+		// Check if the object has UV coords
+		if (!meshObject->HasUVs())
+			throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
+
+		TexMapInstance *tm = texMapCache->GetTexMapInstance(args.at(1), 2.2f);
+		objectTexMaps.push_back(tm);
+		objectBumpMaps.push_back(NULL);
+		objectNormalMaps.push_back(NULL);
+	} else {
+		// Check for if there is a texture map associated to the object with the new syntax
+		const std::string texMap = props.GetString(key + ".texmap", "");
+		if (texMap != "") {
+			// Check if the object has UV coords
+			if (!meshObject->HasUVs())
+				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
+
+			const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
+			TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma);
+			objectTexMaps.push_back(tm);
+		} else
+			objectTexMaps.push_back(NULL);
+
+		/**
+		 * Check if there is an alpha map associated to the object
+		 * If there is, the map is added to a previously added texturemap.
+		 * If no texture map (diffuse map) is detected, a black texture
+		 * is created and the alpha map is added to it. --PC
+		 */
+		const std::string alphaMap = props.GetString(key + ".alphamap", "");
+		if (alphaMap != "") {
+			// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
+			const std::string texMap = props.GetString(key + ".texmap", "");
+			const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
+			TextureMap *tm;
+			if (!(tm = texMapCache->FindTextureMap(texMap, gamma))) {
+				SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
+				// We have an alpha map without a diffuse texture. In this case we need to create
+				// a texture map filled with black
+				tm = new TextureMap(alphaMap, gamma, 1.0, 1.0, 1.0);
+				tm->AddAlpha(alphaMap);
+				TexMapInstance *tmi = texMapCache->AddTextureMap(alphaMap, tm);
+				// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
+				objectTexMaps.pop_back();
+				// Add the new texture to the chain
+				objectTexMaps.push_back(tmi);
+			} else {
+				// Add an alpha map to the pre-existing diffuse texture
+				tm->AddAlpha(alphaMap);
+			}
+		}
+
+		// Check for if there is a bump map associated to the object
+		const std::string bumpMap = props.GetString(key + ".bumpmap", "");
+		if (bumpMap != "") {
+			// Check if the object has UV coords
+			if (!meshObject->HasUVs())
+				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for bump mapping");
+
+			const float scale = props.GetFloat(key + ".bumpmap.scale", 1.f);
+
+			BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale);
+			objectBumpMaps.push_back(bm);
+		} else
+			objectBumpMaps.push_back(NULL);
+
+		// Check for if there is a normal map associated to the object
+		const std::string normalMap = props.GetString(key + ".normalmap", "");
+		if (normalMap != "") {
+			// Check if the object has UV coords
+			if (!meshObject->HasUVs())
+				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
+
+			NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap);
+			objectNormalMaps.push_back(nm);
+		} else
+			objectNormalMaps.push_back(NULL);
+	}
 }
 
 Material *Scene::CreateMaterial(const std::string &propName, const Properties &prop) {
@@ -440,6 +497,8 @@ Material *Scene::CreateMaterial(const std::string &propName, const Properties &p
 	} else
 		throw std::runtime_error("Unknown material type " + matType);
 }
+
+//------------------------------------------------------------------------------
 
 LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
 	if (infiniteLight && (lightType == infiniteLight->GetType()))

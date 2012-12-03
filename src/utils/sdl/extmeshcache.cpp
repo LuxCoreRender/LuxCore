@@ -36,6 +36,19 @@ ExtMeshCache::~ExtMeshCache() {
 	}
 }
 
+void ExtMeshCache::DefineExtMesh(const std::string &fileName,
+		const long plyNbVerts, const long plyNbTris,
+		Point *p, Triangle *vi, Normal *n, UV *uv,
+		const bool usePlyNormals) {
+	ExtTriangleMesh *mesh = ExtTriangleMesh::CreateExtTriangleMesh(
+			plyNbVerts, plyNbTris, p, vi, n, uv,
+			usePlyNormals);
+
+	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
+	maps.insert(std::make_pair(key, mesh));
+	meshes.push_back(mesh);
+}
+
 ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals) {
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
 
