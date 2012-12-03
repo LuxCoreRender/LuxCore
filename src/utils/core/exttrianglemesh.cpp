@@ -186,6 +186,14 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	ply_close(plyfile);
 
+	return CreateExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
+}
+
+ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
+	const long plyNbVerts, const long plyNbTris,
+	Point *p, Triangle *vi, Normal *n, UV *uv,
+	const bool usePlyNormals) {
+
 	const unsigned int vertexCount = plyNbVerts;
 	const unsigned int triangleCount = plyNbTris;
 	Point *vertices = p;

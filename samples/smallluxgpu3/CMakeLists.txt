@@ -149,13 +149,27 @@ set(SLG3LIB_SRCS
 
 add_library(smallluxgpu3 STATIC ${SLG3LIB_SRCS})
 
+link_directories (${LuxRays_LIB_DIR})
+
+#############################################################################
+#
+# SLG library demo
+#
+#############################################################################
+
+set(SLGLIBDEMO_SRCS
+	slglibdemo.cpp
+	)
+
+add_executable(slg3libdemo ${SLGLIBDEMO_SRCS})
+
+TARGET_LINK_LIBRARIES(slg3libdemo smallluxgpu3 luxrays)
+
 #############################################################################
 #
 # SLG binary
 #
 #############################################################################
-
-link_directories (${LuxRays_LIB_DIR})
 
 set(SMALLLUXGPU_SRCS
 	smallluxgpu.cpp

@@ -20,8 +20,9 @@
  ***************************************************************************/
 
 #include <iostream>
-#include <stdexcept>
 #include <fstream>
+#include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
@@ -42,17 +43,12 @@ void Properties::Load(const Properties &p) {
 		SetString(*it, p.GetString(*it, ""));
 }
 
-void Properties::LoadFile(const std::string &fileName) {
-	std::ifstream file(fileName.c_str(), std::ios::in);
+void Properties::Load(std::istream &stream) {
 	char buf[512];
-	if (file.fail()) {
-		sprintf(buf, "Unable to open file %s", fileName.c_str());
-		throw std::runtime_error(buf);
-	}
-	
+
 	for (int lineNumber = 1;; ++lineNumber) {
-		file.getline(buf, 512);
-		if (file.eof())
+		stream.getline(buf, 512);
+		if (stream.eof())
 			break;
 		// Ignore comments
 		if (buf[0] == '#')
@@ -77,6 +73,23 @@ void Properties::LoadFile(const std::string &fileName) {
 
 		props[key] = value;
 	}
+}
+
+void Properties::LoadFile(const std::string &fileName) {
+	std::ifstream file(fileName.c_str(), std::ios::in);
+	char buf[512];
+	if (file.fail()) {
+		sprintf(buf, "Unable to open file %s", fileName.c_str());
+		throw std::runtime_error(buf);
+	}
+
+	Load(file);
+}
+
+void Properties::LoadString(const std::string &propDefinitions) {
+	std::istringstream stream(propDefinitions);
+
+	Load(stream);
 }
 
 std::vector<std::string> Properties::GetAllKeys() const {

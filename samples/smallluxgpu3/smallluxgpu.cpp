@@ -31,9 +31,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
-// Required when using XInitThread()
-//#include <X11/Xlib.h>
-
 #include "luxrays/core/device.h"
 #include "luxrays/opencl/utils.h"
 
@@ -116,7 +113,7 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
-static int BatchTileMode(const unsigned int stopSPP, const float haltThreshold) {
+static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) {
 	RenderConfig *config = session->renderConfig;
 	RenderEngine *engine = session->renderEngine;
 
@@ -219,7 +216,7 @@ static int BatchTileMode(const unsigned int stopSPP, const float haltThreshold) 
 				}
 
 				const unsigned int pass = engine->GetPass();
-				if ((stopSPP > 0) && (pass >= stopSPP))
+				if ((haltSpp > 0) && (pass >= haltSpp))
 					break;
 
 				// Convergence test is update inside UpdateFilm()
@@ -232,7 +229,7 @@ static int BatchTileMode(const unsigned int stopSPP, const float haltThreshold) 
 				const double elapsedTime = now - startTime;
 				sprintf(buf, "[Loop step: %d/%d][Elapsed time: %3d][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
 						loopIndex + 1, loopCount,
-						int(elapsedTime), pass, stopSPP, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
+						int(elapsedTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
 						config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 				SLG_LOG(buf);
@@ -281,7 +278,7 @@ static int BatchTileMode(const unsigned int stopSPP, const float haltThreshold) 
 	return EXIT_SUCCESS;
 }
 
-static int BatchSimpleMode(const double stopTime, const unsigned int stopSPP, const float haltThreshold) {
+static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, const float haltThreshold) {
 	RenderConfig *config = session->renderConfig;
 	RenderEngine *engine = session->renderEngine;
 
@@ -313,11 +310,11 @@ static int BatchSimpleMode(const double stopTime, const unsigned int stopSPP, co
 
 		const double now = WallClockTime();
 		const double elapsedTime = now - startTime;
-		if ((stopTime > 0) && (elapsedTime >= stopTime))
+		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
 		const unsigned int pass = engine->GetPass();
-		if ((stopSPP > 0) && (pass >= stopSPP))
+		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 
 		// Convergence test is update inside UpdateFilm()
@@ -327,7 +324,7 @@ static int BatchSimpleMode(const double stopTime, const unsigned int stopSPP, co
 
 		// Print some information about the rendering progress
 		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
-				int(elapsedTime), int(stopTime), pass, stopSPP, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
+				int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
 				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 		SLG_LOG(buf);
@@ -424,7 +421,7 @@ int main(int argc, char *argv[]) {
 		if (configFileName.compare("") == 0)
 			configFileName = "scenes/luxball/render-fast.cfg";
 
-		RenderConfig *config = new RenderConfig(configFileName, &cmdLineProp);
+		RenderConfig *config = new RenderConfig(&configFileName, &cmdLineProp);
 
 		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
 		const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);

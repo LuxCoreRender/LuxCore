@@ -115,6 +115,10 @@ public:
 	virtual void ApplyTransform(const Transform &trans);
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals = false);
+	static ExtTriangleMesh *CreateExtTriangleMesh(
+		const long plyNbVerts, const long plyNbTris,
+		Point *p, Triangle *vi, Normal *n, UV *uv,
+		const bool usePlyNormals);
 
 private:
 	unsigned int vertCount;
