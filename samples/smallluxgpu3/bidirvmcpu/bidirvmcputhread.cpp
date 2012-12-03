@@ -237,6 +237,11 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			samplers[samplerIndex]->NextSample(samplesResults[samplerIndex]);
 
 		++iteration;
+
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		renderThread->yield();
+#endif
 	}
 
 	for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex)

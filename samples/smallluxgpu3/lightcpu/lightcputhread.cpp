@@ -290,6 +290,11 @@ void LightCPURenderThread::RenderFunc() {
 		}
 
 		sampler->NextSample(sampleResults);
+
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		renderThread->yield();
+#endif
 	}
 
 	delete sampler;
