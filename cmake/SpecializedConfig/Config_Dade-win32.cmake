@@ -1,4 +1,3 @@
-
 ###########################################################################
 #
 # Configuration
@@ -43,7 +42,3 @@ ADD_DEFINITIONS(-DFREEGLUT_STATIC)
 
 set(GLEW_SEARCH_PATH          "E:/projects/luxrays-32bit/glew-1.7.0")
 ADD_DEFINITIONS(-DGLEW_BUILD)
-
-
-
-

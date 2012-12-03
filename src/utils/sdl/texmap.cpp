@@ -259,9 +259,8 @@ TextureMap::~TextureMap() {
 
 void TextureMap::AddAlpha(const std::string &alphaMapFileName) {
 	// Don't overwrite a pre-existing alpha
-	if (alpha != NULL) {
+	if (alpha != NULL)
 		return;
-	}
 
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(alphaMapFileName.c_str(), 0);
 	if (fif == FIF_UNKNOWN)
@@ -275,6 +274,9 @@ void TextureMap::AddAlpha(const std::string &alphaMapFileName) {
 
 		unsigned int alphaWidth = FreeImage_GetWidth(dib);
 		unsigned int alphaHeight = FreeImage_GetHeight(dib);
+
+		if ((alphaWidth != width) || (alphaHeight != height))
+			throw std::runtime_error("Alpha map " + alphaMapFileName + " must have the same width and height of the RGB map");
 
 		unsigned int pitch = FreeImage_GetPitch(dib);
 		unsigned int bpp = FreeImage_GetBPP(dib);
