@@ -71,8 +71,11 @@ public:
 	void AddMaterials(const std::string &propsString);
 	void AddMaterials(const Properties &props);
 
-	void AddObject(const std::string &objName, const std::string &matName, const Properties &props);
 	void AddObject(const std::string &objName, const std::string &matName, const std::string &propsString);
+	void AddObject(const std::string &objName, const std::string &matName, const Properties &props);
+
+	void AddInfiniteLight(const std::string &propsString);
+	void AddInfiniteLight(const Properties &props);
 
 	//--------------------------------------------------------------------------
 
