@@ -70,6 +70,12 @@ public:
 
 	void DefineTexMap(const std::string &tmName, Spectrum *map,
 		const unsigned int w, const unsigned int h) { texMapCache->DefineTexMap(tmName, new TextureMap(map, w, h)); }
+	void DefineTexMap(const std::string &tmName, Spectrum *map, float *alpha,
+		const unsigned int w, const unsigned int h) {
+		TextureMap *tm = new TextureMap(map, w, h);
+		tm->AddAlpha(alpha);
+		texMapCache->DefineTexMap(tmName, tm);
+	}
 
 	void AddMaterials(const std::string &propsString);
 	void AddMaterials(const Properties &props);
@@ -86,6 +92,10 @@ public:
 
 	void AddInfiniteLight(const std::string &propsString);
 	void AddInfiniteLight(const Properties &props);
+	void AddSkyLight(const std::string &propsString);
+	void AddSkyLight(const Properties &props);
+	void AddSunLight(const std::string &propsString);
+	void AddSunLight(const Properties &props);
 
 	//--------------------------------------------------------------------------
 

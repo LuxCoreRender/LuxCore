@@ -123,40 +123,13 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	// Check if there is a SkyLight defined
 	//--------------------------------------------------------------------------
 
-	const std::vector<std::string> silParams = scnProp.GetStringVector("scene.skylight.dir", "");
-	if (silParams.size() > 0) {
-		if (infiniteLight)
-			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
-
-		std::vector<float> sdir = GetParameters(scnProp, "scene.skylight.dir", 3, "0.0 0.0 1.0");
-		const float turb = scnProp.GetFloat("scene.skylight.turbidity", 2.2f);
-		std::vector<float> gain = GetParameters(scnProp, "scene.skylight.gain", 3, "1.0 1.0 1.0");
-
-		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->Preprocess();
-
-		infiniteLight = sl;
-	}
+	AddSkyLight(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Check if there is a SunLight defined
 	//--------------------------------------------------------------------------
 
-	const std::vector<std::string> sulParams = scnProp.GetStringVector("scene.sunlight.dir", "");
-	if (sulParams.size() > 0) {
-		std::vector<float> sdir = GetParameters(scnProp, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
-		const float turb = scnProp.GetFloat("scene.sunlight.turbidity", 2.2f);
-		const float relSize = scnProp.GetFloat("scene.sunlight.relsize", 1.0f);
-		std::vector<float> gain = GetParameters(scnProp, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
-
-		SunLight *sl = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->Preprocess();
-
-		sunLight = sl;
-	} else
-		sunLight = NULL;
+	AddSunLight(scnProp);
 
 	//--------------------------------------------------------------------------
 
@@ -445,6 +418,55 @@ void Scene::AddInfiniteLight(const Properties &props) {
 		infiniteLight = il;
 	} else
 		infiniteLight = NULL;
+}
+
+void Scene::AddSkyLight(const std::string &propsString) {
+	Properties prop;
+	prop.LoadFromString(propsString);
+
+	AddSkyLight(prop);
+}
+
+void Scene::AddSkyLight(const Properties &props) {
+	const std::vector<std::string> silParams = props.GetStringVector("scene.skylight.dir", "");
+	if (silParams.size() > 0) {
+		if (infiniteLight)
+			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
+
+		std::vector<float> sdir = GetParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
+		const float turb = props.GetFloat("scene.skylight.turbidity", 2.2f);
+		std::vector<float> gain = GetParameters(props, "scene.skylight.gain", 3, "1.0 1.0 1.0");
+
+		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sl->Preprocess();
+
+		infiniteLight = sl;
+	}
+}
+
+void Scene::AddSunLight(const std::string &propsString) {
+	Properties prop;
+	prop.LoadFromString(propsString);
+
+	AddSunLight(prop);
+}
+
+void Scene::AddSunLight(const Properties &props) {
+	const std::vector<std::string> sulParams = props.GetStringVector("scene.sunlight.dir", "");
+	if (sulParams.size() > 0) {
+		std::vector<float> sdir = GetParameters(props, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
+		const float turb = props.GetFloat("scene.sunlight.turbidity", 2.2f);
+		const float relSize = props.GetFloat("scene.sunlight.relsize", 1.0f);
+		std::vector<float> gain = GetParameters(props, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
+
+		SunLight *sl = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sl->Preprocess();
+
+		sunLight = sl;
+	} else
+		sunLight = NULL;
 }
 
 Material *Scene::CreateMaterial(const std::string &propName, const Properties &prop) {
