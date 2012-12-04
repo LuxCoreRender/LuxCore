@@ -54,36 +54,110 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
-static void CreateBox(Scene *scene, const string &objName, const string &matName, const BBox &bbox) {
-	Point *v = new Point[8];
+static void CreateBox(Scene *scene, const string &objName, const string &matName,
+		const string &texName, const BBox &bbox) {
+	Point *p = new Point[24];
 	// Bottom face
-	v[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
-	v[1] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
-	v[2] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
-	v[3] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
-
+	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
+	p[1] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
+	p[2] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
+	p[3] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
 	// Top face
-	v[4] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
-	v[5] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
-	v[6] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
-	v[7] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
+	p[4] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
+	p[5] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
+	p[6] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
+	p[7] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
+	// Side left
+	p[8] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
+	p[9] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
+	p[10] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
+	p[11] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
+	// Side right
+	p[12] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
+	p[13] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
+	p[14] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
+	p[15] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
+	// Side back
+	p[16] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
+	p[17] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
+	p[18] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
+	p[19] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
+	// Side front
+	p[20] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
+	p[21] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
+	p[22] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
+	p[23] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
 
-	Triangle *vi = new Triangle[4];
+	Triangle *vi = new Triangle[12];
 	// Bottom face
 	vi[0] = Triangle(0, 1, 2);
 	vi[1] = Triangle(2, 3, 0);
-
 	// Top face
 	vi[2] = Triangle(4, 5, 6);
 	vi[3] = Triangle(6, 7, 4);
+	// Side left
+	vi[4] = Triangle(8, 9, 10);
+	vi[5] = Triangle(10, 11, 8);
+	// Side right
+	vi[6] = Triangle(12, 13, 14);
+	vi[7] = Triangle(14, 15, 12);
+	// Side back
+	vi[8] = Triangle(16, 17, 18);
+	vi[9] = Triangle(18, 19, 16);
+	// Side back
+	vi[10] = Triangle(20, 21, 22);
+	vi[11] = Triangle(22, 23, 20);
 
-	// Define the object
-	scene->extMeshCache->DefineExtMesh(objName, 8, 4, v, vi, NULL, NULL, false);
+	if (texName == "") {
+		// Define the object
+		scene->DefineObject(objName, 24, 12, p, vi, NULL, NULL, false);
 
-	// Add the object to the scene
-	scene->AddObject(objName, matName,
-		"scene.objects." + matName + "." + objName + ".useplynormals = 0\n"
-		);
+		// Add the object to the scene
+		scene->AddObject(objName, matName,
+				"scene.objects." + matName + "." + objName + ".useplynormals = 0\n"
+			);
+	} else {
+		UV *uv = new UV[24];
+		// Bottom face
+		uv[0] = UV(0.f, 0.f);
+		uv[1] = UV(1.f, 0.f);
+		uv[2] = UV(1.f, 1.f);
+		uv[3] = UV(0.f, 1.f);
+		// Top face
+		uv[4] = UV(0.f, 0.f);
+		uv[5] = UV(1.f, 0.f);
+		uv[6] = UV(1.f, 1.f);
+		uv[7] = UV(0.f, 1.f);
+		// Side left
+		uv[8] = UV(0.f, 0.f);
+		uv[9] = UV(1.f, 0.f);
+		uv[10] = UV(1.f, 1.f);
+		uv[11] = UV(0.f, 1.f);
+		// Side right
+		uv[12] = UV(0.f, 0.f);
+		uv[13] = UV(1.f, 0.f);
+		uv[14] = UV(1.f, 1.f);
+		uv[15] = UV(0.f, 1.f);
+		// Side back
+		uv[16] = UV(0.f, 0.f);
+		uv[17] = UV(1.f, 0.f);
+		uv[18] = UV(1.f, 1.f);
+		uv[19] = UV(0.f, 1.f);
+		// Side front
+		uv[20] = UV(0.f, 0.f);
+		uv[21] = UV(1.f, 0.f);
+		uv[22] = UV(1.f, 1.f);
+		uv[23] = UV(0.f, 1.f);
+
+		// Define the object
+		scene->DefineObject(objName, 24, 12, p, vi, NULL, uv, false);
+
+		// Add the object to the scene
+		scene->AddObject(objName, matName,
+				"scene.objects." + matName + "." + objName + ".useplynormals = 0\n"
+				"scene.objects." + matName + "." + objName + ".texmap = " + texName + "\n"
+			);
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -106,14 +180,32 @@ int main(int argc, char *argv[]) {
 			"scene.camera.fieldofview = 60.0\n"
 			);
 
+		// Define texture maps
+		const u_int size = 500;
+		Spectrum *tm = new Spectrum[size * size];
+		for (u_int y = 0; y < size; ++y) {
+			for (u_int x = 0; x < size; ++x) {
+				if ((x % 50 < 25) ^ (y % 50 < 25))
+					tm[x + y * size] = Spectrum(1.f, 0.f, 0.f);
+				else
+					tm[x + y * size] = Spectrum(1.f, 1.f, 0.f);
+			}
+		}
+		scene->DefineTexMap("check_texmap", tm, size, size);
+
 		// Setup materials
 		scene->AddMaterials(
 			"scene.materials.matte.mat_white = 0.75 0.75 0.75\n"
 			"scene.materials.matte.mat_red = 0.75 0.0 0.0\n"
+			"scene.materials.glass.mat_glass = 0.9 0.9 0.9 0.9 0.9 0.9 1 1.4 1 1\n"
 			);
 
 		// Create the ground
-		CreateBox(scene, "ground", "mat_white", BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
+		CreateBox(scene, "ground", "mat_white", "check_texmap", BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
+		// Create the red box
+		CreateBox(scene, "box01", "mat_red", "", BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
+		// Create the glass box
+		CreateBox(scene, "box02", "mat_glass", "", BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 
 		// Create an InfiniteLight loaded from file
 		scene->AddInfiniteLight(
@@ -132,7 +224,7 @@ int main(int argc, char *argv[]) {
 				"opencl.platform.index = -1\n"
 				"opencl.cpu.use = 0\n"
 				"opencl.gpu.use = 1\n"
-				"batch.halttime = 10\n",
+				"batch.halttime = 5\n",
 				*scene);
 		RenderSession *session = new RenderSession(config);
 		RenderEngine *engine = session->renderEngine;

@@ -75,6 +75,7 @@ public:
 	 * areas.
 	*/
 	void AddAlpha(const std::string &alphaMap);
+	void AddAlpha(float *alphaMap);
   
 	const bool HasAlpha() const { return alpha != NULL; }
 	float GetAlpha(const UV &uv) const {
@@ -174,6 +175,8 @@ class TextureMapCache {
 public:
 	TextureMapCache();
 	~TextureMapCache();
+
+	void DefineTexMap(const std::string &name, TextureMap *tm);
 
 	TexMapInstance *GetTexMapInstance(const std::string &fileName, const float gamma);
 	BumpMapInstance *GetBumpMapInstance(const std::string &fileName, const float scale);

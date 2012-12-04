@@ -68,8 +68,18 @@ public:
 	void CreateCamera(const std::string &propsString);
 	void CreateCamera(const Properties &props);
 
+	void DefineTexMap(const std::string &tmName, Spectrum *map,
+		const unsigned int w, const unsigned int h) { texMapCache->DefineTexMap(tmName, new TextureMap(map, w, h)); }
+
 	void AddMaterials(const std::string &propsString);
 	void AddMaterials(const Properties &props);
+
+	void DefineObject(const std::string &objName,
+		const long plyNbVerts, const long plyNbTris,
+		Point *p, Triangle *vi, Normal *n, UV *uv,
+		const bool usePlyNormals) {
+		extMeshCache->DefineExtMesh(objName, plyNbVerts, plyNbTris, p, vi, n, uv, false);
+	}
 
 	void AddObject(const std::string &objName, const std::string &matName, const std::string &propsString);
 	void AddObject(const std::string &objName, const std::string &matName, const Properties &props);

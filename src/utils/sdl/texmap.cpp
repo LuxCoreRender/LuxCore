@@ -257,6 +257,11 @@ TextureMap::~TextureMap() {
 	delete[] alpha;
 }
 
+void TextureMap::AddAlpha(float *alphaMap) {
+	delete alpha;
+	alpha = alphaMap;
+}
+
 void TextureMap::AddAlpha(const std::string &alphaMapFileName) {
 	// Don't overwrite a pre-existing alpha
 	if (alpha != NULL)
@@ -339,6 +344,11 @@ TextureMap *TextureMapCache::GetTextureMap(const std::string &fileName, const fl
 			std::runtime_error("Texture map: " + fileName + " can not be used with 2 different gamma");
 		return tm;
 	}
+}
+
+void TextureMapCache::DefineTexMap(const std::string &name, TextureMap *tm) {
+	SDL_LOG("AddTexMap: " << name);
+	maps.insert(std::make_pair(name, tm));
 }
 
 TexMapInstance *TextureMapCache::AddTextureMap(const std::string &fileName, TextureMap *tm) {
