@@ -207,11 +207,23 @@ int main(int argc, char *argv[]) {
 		// Create the glass box
 		CreateBox(scene, "box02", "mat_glass", "", BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 
-		// Create an InfiniteLight loaded from file
+		/*// Create an InfiniteLight loaded from file
 		scene->AddInfiniteLight(
 				"scene.infinitelight.file = scenes/simple-mat/arch.exr\n"
 				"scene.infinitelight.gamma = 1.0\n"
 				"scene.infinitelight.gain = 3.0 3.0 3.0\n"
+				);*/
+
+		// Create a SkyLight & SunLight
+		scene->AddSkyLight(
+				"scene.skylight.dir = 0.166974 0.59908 0.783085\n"
+				"scene.skylight.turbidity = 2.2\n"
+				"scene.skylight.gain = 0.8 0.8 0.8\n"
+				);
+		scene->AddSunLight(
+				"scene.sunlight.dir = 0.166974 0.59908 0.783085\n"
+				"scene.sunlight.turbidity = 2.2\n"
+				"scene.sunlight.gain = 0.8 0.8 0.8\n"
 				);
 
 		//----------------------------------------------------------------------
