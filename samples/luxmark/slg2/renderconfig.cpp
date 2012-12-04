@@ -27,7 +27,7 @@ string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (Lu
 
 RenderConfig::RenderConfig(const string &fileName) {
 	LM_LOG_CFG("Reading configuration file: " << fileName);
-	cfg.LoadFile(fileName);
+	cfg.LoadFromFile(fileName);
 
 	LM_LOG_CFG("Configuration: ");
 	vector<string> keys = cfg.GetAllKeys();

@@ -32,7 +32,7 @@ namespace slg {
 
 RenderConfig::RenderConfig(const std::string &propString, luxrays::sdl::Scene &scn) {
 	Properties props;
-	props.LoadString(propString);
+	props.LoadFromString(propString);
 
 	Init(NULL, &props, &scn);
 }
@@ -49,7 +49,7 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 		Scene *scn) {
 	if (fileName) {
 		SLG_LOG("Reading configuration file: " << (*fileName));
-		cfg.LoadFile(*fileName);
+		cfg.LoadFromFile(*fileName);
 	}
 
 	if (additionalProperties)

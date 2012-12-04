@@ -228,7 +228,7 @@ std::vector<float> Scene::GetParameters(const Properties &prop, const std::strin
 
 void Scene::CreateCamera(const std::string &propsString) {
 	Properties prop;
-	prop.LoadString(propsString);
+	prop.LoadFromString(propsString);
 
 	CreateCamera(prop);
 }
@@ -253,7 +253,7 @@ void Scene::CreateCamera(const Properties &props) {
 
 void Scene::AddMaterials(const std::string &propsString) {
 	Properties prop;
-	prop.LoadString(propsString);
+	prop.LoadFromString(propsString);
 
 	AddMaterials(prop);
 }
@@ -282,8 +282,8 @@ void Scene::AddMaterials(const Properties &props) {
 
 void Scene::AddObject(const std::string &objName, const std::string &matName, const std::string &propsString) {
 	Properties prop;
-	prop.LoadString("scene.objects." + matName + "." + objName + " = " + objName + "\n");
-	prop.LoadString(propsString);
+	prop.LoadFromString("scene.objects." + matName + "." + objName + " = " + objName + "\n");
+	prop.LoadFromString(propsString);
 
 	AddObject(objName, matName, prop);
 }
@@ -422,7 +422,7 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 
 void Scene::AddInfiniteLight(const std::string &propsString) {
 	Properties prop;
-	prop.LoadString(propsString);
+	prop.LoadFromString(propsString);
 
 	AddInfiniteLight(prop);
 }
