@@ -198,7 +198,7 @@ ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 	const unsigned int triangleCount = plyNbTris;
 	Point *vertices = p;
 	Triangle *triangles = vi;
-	Normal *vertNormals = n;
+	Normal *vertNormals = (n) ? n : (new Normal[vertexCount]);
 	UV *vertUV = uv;
 
 	if (!usePlyNormals) {
@@ -228,6 +228,8 @@ ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 				vertNormals[i] = Normal(0.f, 0.f, 1.f);
 			}
 		}
+	} else {
+		assert (n != NULL);
 	}
 
 	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertUV);

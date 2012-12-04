@@ -117,23 +117,7 @@ Scene::Scene(const std::string &fileName, const int aType) {
 	// Check if there is an infinitelight source defined
 	//--------------------------------------------------------------------------
 
-	const std::vector<std::string> ilParams = scnProp.GetStringVector("scene.infinitelight.file", "");
-	if (ilParams.size() > 0) {
-		const float gamma = scnProp.GetFloat("scene.infinitelight.gamma", 2.2f);
-		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
-
-		InfiniteLight *il = new InfiniteLight(tex);
-
-		std::vector<float> vf = GetParameters(scnProp, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
-		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
-
-		vf = GetParameters(scnProp, "scene.infinitelight.shift", 2, "0.0 0.0");
-		il->SetShift(vf.at(0), vf.at(1));
-		il->Preprocess();
-
-		infiniteLight = il;
-	} else
-		infiniteLight = NULL;
+	AddInfiniteLight(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Check if there is a SkyLight defined
@@ -434,6 +418,33 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 		} else
 			objectNormalMaps.push_back(NULL);
 	}
+}
+
+void Scene::AddInfiniteLight(const std::string &propsString) {
+	Properties prop;
+	prop.LoadString(propsString);
+
+	AddInfiniteLight(prop);
+}
+
+void Scene::AddInfiniteLight(const Properties &props) {
+	const std::vector<std::string> ilParams = props.GetStringVector("scene.infinitelight.file", "");
+	if (ilParams.size() > 0) {
+		const float gamma = props.GetFloat("scene.infinitelight.gamma", 2.2f);
+		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
+
+		InfiniteLight *il = new InfiniteLight(tex);
+
+		std::vector<float> vf = GetParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
+		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
+
+		vf = GetParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
+		il->SetShift(vf.at(0), vf.at(1));
+		il->Preprocess();
+
+		infiniteLight = il;
+	} else
+		infiniteLight = NULL;
 }
 
 Material *Scene::CreateMaterial(const std::string &propName, const Properties &prop) {

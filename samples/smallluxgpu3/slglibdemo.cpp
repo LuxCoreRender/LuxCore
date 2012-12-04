@@ -78,11 +78,11 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	vi[3] = Triangle(6, 7, 4);
 
 	// Define the object
-	scene->extMeshCache->DefineExtMesh(objName, 8, 4, v, vi, NULL, NULL, true);
+	scene->extMeshCache->DefineExtMesh(objName, 8, 4, v, vi, NULL, NULL, false);
 
 	// Add the object to the scene
 	scene->AddObject(objName, matName,
-		"scene.objects." + matName + "." + objName + ".useplynormals = 1\n"
+		"scene.objects." + matName + "." + objName + ".useplynormals = 0\n"
 		);
 }
 
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 
 		// Setup the camera
 		scene->CreateCamera(
-			"scene.camera.lookat = 2.0 3.0 6.0  0.0 0.0 1.0\n"
+			"scene.camera.lookat = 1.0 6.0 3.0  0.0 0.0 0.5\n"
 			"scene.camera.fieldofview = 60.0\n"
 			);
 
@@ -113,20 +113,31 @@ int main(int argc, char *argv[]) {
 			);
 
 		// Create the ground
-		CreateBox(scene, "ground", "mat_white", BBox(Point(-10.f,-10.f,-.1f), Point(10.f, 10.f, 0.f)));
+		CreateBox(scene, "ground", "mat_white", BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
 
-		delete scene;
+		// Create an InfiniteLight loaded from file
+		scene->AddInfiniteLight(
+				"scene.infinitelight.file = scenes/simple-mat/arch.exr\n"
+				"scene.infinitelight.gamma = 1.0\n"
+				"scene.infinitelight.gain = 3.0 3.0 3.0\n"
+				);
 
 		//----------------------------------------------------------------------
 		// Do the render
 		//----------------------------------------------------------------------
 
-		const string cfgFilrName = "scenes/luxball/render-fast-hdr.cfg";
-		RenderConfig *config = new RenderConfig(&cfgFilrName, NULL);
+		RenderConfig *config = new RenderConfig(
+				"renderengine.type = PATHOCL\n"
+				"sampler.type = INLINED_RANDOM\n"
+				"opencl.platform.index = -1\n"
+				"opencl.cpu.use = 0\n"
+				"opencl.gpu.use = 1\n"
+				"batch.halttime = 10\n",
+				*scene);
 		RenderSession *session = new RenderSession(config);
 		RenderEngine *engine = session->renderEngine;
 
-		const unsigned int haltTime = 10;
+		const unsigned int haltTime = config->cfg.GetInt("batch.halttime", 0);
 		const unsigned int haltSpp = config->cfg.GetInt("batch.haltspp", 0);
 		const float haltThreshold = config->cfg.GetFloat("batch.haltthreshold", -1.f);
 
@@ -134,7 +145,7 @@ int main(int argc, char *argv[]) {
 		session->Start();
 		const double startTime = WallClockTime();
 
-		double lastFilmUpdate = WallClockTime();
+		double lastFilmUpdate = startTime;
 		char buf[512];
 		for (;;) {
 			boost::this_thread::sleep(boost::posix_time::millisec(1000));

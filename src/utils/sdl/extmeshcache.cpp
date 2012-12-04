@@ -44,6 +44,7 @@ void ExtMeshCache::DefineExtMesh(const std::string &fileName,
 			plyNbVerts, plyNbTris, p, vi, n, uv,
 			usePlyNormals);
 
+	assert (n || (!usePlyNormals));
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
 	maps.insert(std::make_pair(key, mesh));
 	meshes.push_back(mesh);

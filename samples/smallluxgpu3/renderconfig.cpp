@@ -30,7 +30,23 @@ using namespace luxrays::utils;
 
 namespace slg {
 
+RenderConfig::RenderConfig(const std::string &propString, luxrays::sdl::Scene &scn) {
+	Properties props;
+	props.LoadString(propString);
+
+	Init(NULL, &props, &scn);
+}
+
 RenderConfig::RenderConfig(const string *fileName, const Properties *additionalProperties) {
+	Init(fileName, additionalProperties, NULL);
+}
+
+RenderConfig::~RenderConfig() {
+	delete scene;
+}
+
+void RenderConfig::Init(const string *fileName, const Properties *additionalProperties,
+		Scene *scn) {
 	if (fileName) {
 		SLG_LOG("Reading configuration file: " << (*fileName));
 		cfg.LoadFile(*fileName);
@@ -46,16 +62,17 @@ RenderConfig::RenderConfig(const string *fileName, const Properties *additionalP
 
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
 
-	// Create the Scene
-	const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
-	const int accelType = cfg.GetInt("accelerator.type", -1);
+	if (scn) {
+		scene = scn;
+	} else {
+		// Create the Scene
+		const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
+		const int accelType = cfg.GetInt("accelerator.type", -1);
 
-	scene = new Scene(sceneFileName, accelType);
+		scene = new Scene(sceneFileName, accelType);
+	}
 }
 
-RenderConfig::~RenderConfig() {
-	delete scene;
-}
 void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {
 	screenRefreshInterval = t;
 }

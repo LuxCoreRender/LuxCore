@@ -34,6 +34,7 @@ namespace slg {
 
 class RenderConfig {
 public:
+	RenderConfig(const std::string &propString, luxrays::sdl::Scene &scene);
 	RenderConfig(const std::string *fileName, const luxrays::Properties *additionalProperties);
 	~RenderConfig();
 
@@ -50,6 +51,9 @@ public:
 	luxrays::sdl::Scene *scene;
 
 private:
+	void Init(const std::string *fileName, const luxrays::Properties *additionalProperties,
+		luxrays::sdl::Scene *scene);
+
 	unsigned int screenRefreshInterval;
 };
 
