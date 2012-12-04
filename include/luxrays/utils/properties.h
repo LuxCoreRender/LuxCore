@@ -37,8 +37,8 @@ public:
 
 	void Load(const Properties &prop);
 	void Load(std::istream &stream);
-	void LoadFile(const std::string &fileName);
-	void LoadString(const std::string &propDefinitions);
+	void LoadFromFile(const std::string &fileName);
+	void LoadFromString(const std::string &propDefinitions);
 
 	std::vector<std::string> GetAllKeys() const;
 	std::vector<std::string> GetAllKeys(const std::string prefix) const;

@@ -25,7 +25,7 @@
 
 RenderConfig::RenderConfig(const string &fileName) {
 	SLG_LOG("Reading configuration file: " << fileName);
-	cfg.LoadFile(fileName);
+	cfg.LoadFromFile(fileName);
 
 	SLG_LOG("Configuration: ");
 	vector<string> keys = cfg.GetAllKeys();

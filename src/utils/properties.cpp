@@ -34,7 +34,7 @@
 using namespace luxrays;
 
 Properties::Properties(const std::string &fileName) {
-	LoadFile(fileName);
+	LoadFromFile(fileName);
 }
 
 void Properties::Load(const Properties &p) {
@@ -75,7 +75,7 @@ void Properties::Load(std::istream &stream) {
 	}
 }
 
-void Properties::LoadFile(const std::string &fileName) {
+void Properties::LoadFromFile(const std::string &fileName) {
 	std::ifstream file(fileName.c_str(), std::ios::in);
 	char buf[512];
 	if (file.fail()) {
@@ -86,7 +86,7 @@ void Properties::LoadFile(const std::string &fileName) {
 	Load(file);
 }
 
-void Properties::LoadString(const std::string &propDefinitions) {
+void Properties::LoadFromString(const std::string &propDefinitions) {
 	std::istringstream stream(propDefinitions);
 
 	Load(stream);
