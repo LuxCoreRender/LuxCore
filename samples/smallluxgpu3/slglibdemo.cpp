@@ -59,9 +59,9 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	Point *p = new Point[24];
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
-	p[1] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
+	p[1] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
 	p[2] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
-	p[3] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
+	p[3] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
 	// Top face
 	p[4] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
 	p[5] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
@@ -69,24 +69,24 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	p[7] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
 	// Side left
 	p[8] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
-	p[9] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
+	p[9] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
 	p[10] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
-	p[11] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
+	p[11] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
 	// Side right
 	p[12] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
-	p[13] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
+	p[13] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
 	p[14] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
-	p[15] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
+	p[15] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
 	// Side back
 	p[16] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
-	p[17] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
+	p[17] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
 	p[18] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMax.z);
-	p[19] = Point(bbox.pMax.x, bbox.pMin.y, bbox.pMin.z);
+	p[19] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMax.z);
 	// Side front
 	p[20] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
-	p[21] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
+	p[21] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
 	p[22] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
-	p[23] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMax.z);
+	p[23] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
 
 	Triangle *vi = new Triangle[12];
 	// Bottom face
@@ -195,6 +195,7 @@ int main(int argc, char *argv[]) {
 
 		// Setup materials
 		scene->AddMaterials(
+			"scene.materials.light.whitelight = 300.0 300.0 300.0\n"
 			"scene.materials.matte.mat_white = 0.75 0.75 0.75\n"
 			"scene.materials.matte.mat_red = 0.75 0.0 0.0\n"
 			"scene.materials.glass.mat_glass = 0.9 0.9 0.9 0.9 0.9 0.9 1 1.4 1 1\n"
@@ -206,6 +207,8 @@ int main(int argc, char *argv[]) {
 		CreateBox(scene, "box01", "mat_red", "", BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
 		// Create the glass box
 		CreateBox(scene, "box02", "mat_glass", "", BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
+		// Create the light
+		CreateBox(scene, "box03", "whitelight", "", BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
 
 		/*// Create an InfiniteLight loaded from file
 		scene->AddInfiniteLight(
@@ -236,7 +239,7 @@ int main(int argc, char *argv[]) {
 				"opencl.platform.index = -1\n"
 				"opencl.cpu.use = 0\n"
 				"opencl.gpu.use = 1\n"
-				"batch.halttime = 5\n",
+				"batch.halttime = 10\n",
 				*scene);
 		RenderSession *session = new RenderSession(config);
 		RenderEngine *engine = session->renderEngine;
