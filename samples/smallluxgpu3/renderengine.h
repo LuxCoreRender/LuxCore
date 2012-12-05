@@ -69,15 +69,22 @@ public:
 		return intersectionDevices;
 	}
 
+	//--------------------------------------------------------------------------
+	// Statistics related methods
+	//--------------------------------------------------------------------------
+
 	unsigned int GetPass() const {
 		return samplesCount / (film->GetWidth() * film->GetHeight());
 	}
+	double GetTotalSampleCount() const { return samplesCount; }
 	float GetConvergence() const { return convergence; }
 	double GetTotalSamplesSec() const {
 		return (elapsedTime == 0.0) ? 0.0 : (samplesCount / elapsedTime);
 	}
 	double GetTotalRaysSec() const { return (elapsedTime == 0.0) ? 0.0 : (raysCount / elapsedTime); }
 	double GetRenderingTime() const { return elapsedTime; }
+
+	//--------------------------------------------------------------------------
 
 	static RenderEngineType String2RenderEngineType(const std::string &type);
 	static const std::string RenderEngineType2String(const RenderEngineType type);
