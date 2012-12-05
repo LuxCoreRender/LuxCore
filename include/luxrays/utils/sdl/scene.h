@@ -80,11 +80,15 @@ public:
 	void AddMaterials(const std::string &propsString);
 	void AddMaterials(const Properties &props);
 
+	void DefineObject(const std::string &objName, ExtTriangleMesh *mesh,
+		const bool usePlyNormals = true) {
+		extMeshCache->DefineExtMesh(objName, mesh, usePlyNormals);
+	}
 	void DefineObject(const std::string &objName,
 		const long plyNbVerts, const long plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
 		const bool usePlyNormals) {
-		extMeshCache->DefineExtMesh(objName, plyNbVerts, plyNbTris, p, vi, n, uv, false);
+		extMeshCache->DefineExtMesh(objName, plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
 	}
 
 	void AddObject(const std::string &objName, const std::string &matName, const std::string &propsString);
