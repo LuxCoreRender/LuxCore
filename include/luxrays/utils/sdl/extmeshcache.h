@@ -41,6 +41,8 @@ public:
 		const long plyNbVerts, const long plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
 		const bool usePlyNormals);
+	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
+		const bool usePlyNormals);
 
 	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals);
 	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals,
