@@ -138,10 +138,10 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *fl
 		SLG_LOG("[" << oclIntersectionDevices[i]->GetName() << "]");
 
 	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool frocedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
+	const bool forcedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
 	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
 	for (size_t i = 0; i < oclIntersectionDevices.size(); ++i) {
-		oclIntersectionDevices[i]->DisableImageStorage(frocedDisableImageStorage);
+		oclIntersectionDevices[i]->DisableImageStorage(forcedDisableImageStorage);
 		oclIntersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
 	}
 
