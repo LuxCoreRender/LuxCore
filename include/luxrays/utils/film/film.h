@@ -136,6 +136,15 @@ public:
 		return GetTotalSampleCount() / GetTotalTime();
 	}
 
+	const SamplePixel *GetSamplePixel(const FilmBufferType type,
+		const unsigned int x, const unsigned int y) const {
+		return sampleFrameBuffer[type]->GetPixel(x, y);
+	}
+
+	const AlphaPixel *GetAlphaPixel(const unsigned int x, const unsigned int y) const {
+		return alphaFrameBuffer->GetPixel(x, y);
+	}
+
 	//--------------------------------------------------------------------------
 
 	void ResetConvergenceTest();
