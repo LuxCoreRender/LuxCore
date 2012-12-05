@@ -198,41 +198,19 @@ ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 	const unsigned int triangleCount = plyNbTris;
 	Point *vertices = p;
 	Triangle *triangles = vi;
-	Normal *vertNormals = (n) ? n : (new Normal[vertexCount]);
+	Normal *vertNormals = n;
 	UV *vertUV = uv;
+
+	ExtTriangleMesh *mesh = new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertUV);
 
 	if (!usePlyNormals) {
 		// It looks like normals exported by Blender are bugged
-		for (unsigned int i = 0; i < vertexCount; ++i)
-			vertNormals[i] = Normal(0.f, 0.f, 0.f);
-		for (unsigned int i = 0; i < triangleCount; ++i) {
-			const Vector e1 = vertices[triangles[i].v[1]] - vertices[triangles[i].v[0]];
-			const Vector e2 = vertices[triangles[i].v[2]] - vertices[triangles[i].v[0]];
-			const Normal N = Normal(Normalize(Cross(e1, e2)));
-			vertNormals[triangles[i].v[0]] += N;
-			vertNormals[triangles[i].v[1]] += N;
-			vertNormals[triangles[i].v[2]] += N;
-		}
-		//int printedWarning = 0;
-		for (unsigned int i = 0; i < vertexCount; ++i) {
-			vertNormals[i] = Normalize(vertNormals[i]);
-			// Check for degenerate triangles/normals, they can freeze the GPU
-			if (isnan(vertNormals[i].x) || isnan(vertNormals[i].y) || isnan(vertNormals[i].z)) {
-				/*if (printedWarning < 15) {
-					SDL_LOG("The model contains a degenerate normal (index " << i << ")");
-					++printedWarning;
-				} else if (printedWarning == 15) {
-					SDL_LOG("The model contains more degenerate normals");
-					++printedWarning;
-				}*/
-				vertNormals[i] = Normal(0.f, 0.f, 1.f);
-			}
-		}
+		mesh->ComputeNormals();
 	} else {
 		assert (n != NULL);
 	}
 
-	return new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertUV);
+	return mesh;
 }
 
 //------------------------------------------------------------------------------
@@ -271,6 +249,37 @@ ExtTriangleMesh::ExtTriangleMesh(const unsigned int meshVertCount, const unsigne
 	triNormals = new Normal[triCount];
 	for (u_int i = 0; i < triCount; ++i)
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);;
+}
+
+void ExtTriangleMesh::ComputeNormals() {
+	if (!normals)
+		normals = new Normal[vertCount];
+
+	for (unsigned int i = 0; i < vertCount; ++i)
+		normals[i] = Normal(0.f, 0.f, 0.f);
+	for (unsigned int i = 0; i < triCount; ++i) {
+		const Vector e1 = vertices[tris[i].v[1]] - vertices[tris[i].v[0]];
+		const Vector e2 = vertices[tris[i].v[2]] - vertices[tris[i].v[0]];
+		const Normal N = Normal(Normalize(Cross(e1, e2)));
+		normals[tris[i].v[0]] += N;
+		normals[tris[i].v[1]] += N;
+		normals[tris[i].v[2]] += N;
+	}
+	//int printedWarning = 0;
+	for (unsigned int i = 0; i < vertCount; ++i) {
+		normals[i] = Normalize(normals[i]);
+		// Check for degenerate triangles/normals, they can freeze the GPU
+		if (isnan(normals[i].x) || isnan(normals[i].y) || isnan(normals[i].z)) {
+			/*if (printedWarning < 15) {
+				SDL_LOG("The model contains a degenerate normal (index " << i << ")");
+				++printedWarning;
+			} else if (printedWarning == 15) {
+				SDL_LOG("The model contains more degenerate normals");
+				++printedWarning;
+			}*/
+			normals[i] = Normal(0.f, 0.f, 1.f);
+		}
+	}
 }
 
 BBox ExtTriangleMesh::GetBBox() const {
