@@ -30,10 +30,14 @@ using namespace luxrays::utils;
 
 namespace slg {
 
-RenderConfig::RenderConfig(const std::string &propString, luxrays::sdl::Scene &scn) {
+RenderConfig::RenderConfig(const std::string &propsString, luxrays::sdl::Scene &scn) {
 	Properties props;
-	props.LoadFromString(propString);
+	props.LoadFromString(propsString);
 
+	Init(NULL, &props, &scn);
+}
+
+RenderConfig::RenderConfig(const luxrays::Properties &props, luxrays::sdl::Scene &scn) {
 	Init(NULL, &props, &scn);
 }
 
