@@ -34,7 +34,8 @@ namespace slg {
 
 class RenderConfig {
 public:
-	RenderConfig(const std::string &propString, luxrays::sdl::Scene &scene);
+	RenderConfig(const std::string &propsString, luxrays::sdl::Scene &scene);
+	RenderConfig(const luxrays::Properties &props, luxrays::sdl::Scene &scene);
 	RenderConfig(const std::string *fileName, const luxrays::Properties *additionalProperties);
 	~RenderConfig();
 
