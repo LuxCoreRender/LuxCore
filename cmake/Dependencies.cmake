@@ -95,5 +95,5 @@ set(OPENCL_ROOT                  "${OPENCL_SEARCH_PATH}")
 find_package(OpenCL)
 # OpenCL
 if (OPENCL_FOUND)
-	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR})
+	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
 endif ()
