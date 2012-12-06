@@ -27,11 +27,13 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 
 ExtMeshCache::ExtMeshCache() {
+	deleteMeshData = true;
 }
 
 ExtMeshCache::~ExtMeshCache() {
 	for (size_t i = 0; i < meshes.size(); ++i) {
-		meshes[i]->Delete();
+		if (deleteMeshData)
+			meshes[i]->Delete();
 		delete meshes[i];
 	}
 }

@@ -251,9 +251,13 @@ ExtTriangleMesh::ExtTriangleMesh(const unsigned int meshVertCount, const unsigne
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);;
 }
 
-void ExtTriangleMesh::ComputeNormals() {
-	if (!normals)
+Normal *ExtTriangleMesh::ComputeNormals() {
+	bool allocated;
+	if (!normals) {
+		allocated = true;
 		normals = new Normal[vertCount];
+	} else
+		allocated = false;
 
 	for (unsigned int i = 0; i < vertCount; ++i)
 		normals[i] = Normal(0.f, 0.f, 0.f);
@@ -280,6 +284,8 @@ void ExtTriangleMesh::ComputeNormals() {
 			normals[i] = Normal(0.f, 0.f, 1.f);
 		}
 	}
+
+	return allocated ? normals : NULL;
 }
 
 BBox ExtTriangleMesh::GetBBox() const {

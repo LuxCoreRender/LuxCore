@@ -70,7 +70,7 @@ public:
 		delete[] uvs;
 	}
 
-	void ComputeNormals();
+	Normal *ComputeNormals();
 
 	MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 	unsigned int GetTotalVertexCount() const { return vertCount; }
