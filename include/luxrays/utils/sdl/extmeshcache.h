@@ -37,6 +37,8 @@ public:
 	ExtMeshCache();
 	~ExtMeshCache();
 
+	void SetDeleteMeshData(const bool v) { deleteMeshData = v; }
+
 	void DefineExtMesh(const std::string &fileName,
 		const long plyNbVerts, const long plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
@@ -51,6 +53,8 @@ public:
 private:
 	std::map<std::string, ExtTriangleMesh *> maps;
 	std::vector<ExtMesh *> meshes;
+
+	bool deleteMeshData;
 };
 
 } }
