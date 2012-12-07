@@ -372,23 +372,23 @@ __kernel void AdvancePaths(
 #endif
 
 					Spectrum texColor;
-                                        __global Spectrum *address = GetRGBAddress(texMap->rgbPage, texMap->rgbPageOffset
+					__global Spectrum *address = GetRGBAddress(texMap->rgbPage, texMap->rgbPageOffset
 #if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
-                                            , texMapRGBBuff0
+						, texMapRGBBuff0
 #endif
 #if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
-                                            , texMapRGBBuff1
+						, texMapRGBBuff1
 #endif
 #if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
-                                            , texMapRGBBuff2
+						, texMapRGBBuff2
 #endif
 #if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
-                                            , texMapRGBBuff3
+						, texMapRGBBuff3
 #endif
 #if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
-                                            , texMapRGBBuff4
+						, texMapRGBBuff4
 #endif
-                                            );
+						);
 					TexMap_GetColor(address, texMap->width, texMap->height, uv.u, uv.v, &texColor);
 
 					shadeColor.r = texColor.r;
@@ -670,10 +670,11 @@ __kernel void AdvancePaths(
 
 					case MAT_NULL:
 						wi = rayDir;
+						// I have to continue to transport the same specularBounce and bouncePdf information
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
-						specularMaterial = 1;
+						specularMaterial = task->pathState.specularBounce;
 #endif
-						materialPdf = 1.f;
+						materialPdf = task->pathState.bouncePdf;
 
 						// I have also to restore the original throughput
 						throughput = prevThroughput;
