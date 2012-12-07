@@ -38,13 +38,26 @@ IF(MSVC)
 	message(STATUS "MSVC")
 
 	# Change warning level to something saner
-  # Force to always compile with W3
-  if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
-    string(REGEX REPLACE "/W[0-4]" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
-  endif()
+	# Force to always compile with W3
+	if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+		string(REGEX REPLACE "/W[0-4]" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
+	endif()
 
+	# Minimizes Windows header files
+	ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN)
+	# Do not define MIN and MAX macros
+	ADD_DEFINITIONS(-DNOMINMAX)
+	# Do not warn about standard but insecure functions
+	ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+	# Enable Unicode
+	ADD_DEFINITIONS(-D_UNICODE)
+	# Use static FreeImage
+	ADD_DEFINITIONS(-DFREEIMAGE_LIB)
+	# Enable SSE2/SSE/MMX
+	ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
+	
 	IF(MSVC90)
 		message(STATUS "Version 9")
 		# Whole Program Opt. gui display fixed in cmake 2.8.5
@@ -64,11 +77,6 @@ IF(MSVC)
 		# currently not in release version but should be soon - in meantime linker will inform you about switching this flag automatically because of /GL
 		set(MSVC_RELEASE_LINKER_FLAGS "/LTCG")
 		set(STATIC_LIBRARY_FLAGS_RELEASE "${STATIC_LIBRARY_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS}")
-
-		# Definitions.
-		ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
-		ADD_DEFINITIONS(-D_UNICODE -DUNICODE)
-		ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE)
 
 	ENDIF(MSVC90)
 
@@ -92,14 +100,8 @@ IF(MSVC)
 		set(MSVC_RELEASE_LINKER_FLAGS "/LTCG")
 		set(STATIC_LIBRARY_FLAGS_RELEASE "${STATIC_LIBRARY_FLAGS_RELEASE} ${MSVC_RELEASE_LINKER_FLAGS}")
 
-		# Definitions.
-		ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
-		ADD_DEFINITIONS(-D_UNICODE -DUNICODE)
-		ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE)
-
 	ENDIF(MSVC10)
-	
-	ADD_DEFINITIONS(-DNOMINMAX)
+
 ENDIF(MSVC)
 
 
