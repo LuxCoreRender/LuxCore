@@ -16,9 +16,10 @@ IF (WIN32)
 		$ENV{PROGRAMFILES}/GLUT/include
 		${LuxRays_SOURCE_DIR}/../freeglut/include
 		${LuxRays_SOURCE_DIR}/../glut/include
-		DOC "The directory where GL/glew.h resides")
+		DOC "The directory where GL/glut.h resides")
 	FIND_LIBRARY( GLUT_LIBRARY
 		NAMES glut GLUT glut32 glut32s freeglut freeglut_static
+		PATH_SUFFIXES "" x64 x86
 		PATHS
 		${GLUT_ROOT}
 		${GLUT_LIBRARYDIR}

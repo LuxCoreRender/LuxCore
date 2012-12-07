@@ -30,7 +30,7 @@
 # To not load defaults before loading custom values define
 # -DLUXRAYS_NO_DEFAULT_CONFIG=true
 #
-# WARNING: These variables will be cashed like any other
+# WARNING: These variables will be cached like any other
 #
 ###########################################################################
 
@@ -39,29 +39,51 @@ IF (NOT LUXRAYS_NO_DEFAULT_CONFIG)
   # Disable Boost automatic linking
   ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
 
-	IF (WIN32)
+  IF (WIN32)
 
-      MESSAGE(STATUS "Using default WIN32 Configuration settings")
-				
-	  set(BUILD_LUXMARK TRUE) # This will require QT
-			
-	  set(ENV{QTDIR} "c:/qt/")
-		
-	  set(FREEIMAGE_SEARCH_PATH     "${LuxRays_SOURCE_DIR}/../FreeImage")
-      set(FreeImage_INC_SEARCH_PATH "${FREEIMAGE_SEARCH_PATH}/source")
-	  set(FreeImage_LIB_SEARCH_PATH "${FREEIMAGE_SEARCH_PATH}/release"
-		                                "${FREEIMAGE_SEARCH_PATH}/debug"
-		                                "${FREEIMAGE_SEARCH_PATH}/dist")
-			                              
-	  set(BOOST_SEARCH_PATH         "${LuxRays_SOURCE_DIR}/../boost")
-	  set(OPENCL_SEARCH_PATH        "${LuxRays_SOURCE_DIR}/../opencl")
-	  set(GLUT_SEARCH_PATH          "${LuxRays_SOURCE_DIR}/../freeglut")
-			
-	ELSE(WIN32)
-			
-	
-	ENDIF(WIN32)
-	
+    MESSAGE(STATUS "Using default WIN32 Configuration settings")
+
+    SET(BUILD_LUXMARK TRUE) # This will require QT
+
+    IF(MSVC)
+
+      STRING(REGEX MATCH "(Win64)" _carch_x64 ${CMAKE_GENERATOR})
+      IF(_carch_x64)
+        SET(WINDOWS_ARCH "x64")
+      ELSE(_carch_x64)
+        SET(WINDOWS_ARCH "x86")
+      ENDIF(_carch_x64)
+      MESSAGE(STATUS "Building for target ${WINDOWS_ARCH}")
+
+      IF(DEFINED ENV{LUX_WINDOWS_BUILD_ROOT})
+        MESSAGE(STATUS "Lux build environment variables found")
+
+        SET(OPENCL_SEARCH_PATH    "$ENV{LUX_WINDOWS_BUILD_ROOT}/include")
+        SET(BOOST_SEARCH_PATH     "$ENV{LUX_${WINDOWS_ARCH}_BOOST_ROOT}")
+        SET(GLUT_SEARCH_PATH      "$ENV{LUX_${WINDOWS_ARCH}_GLUT_ROOT}")
+        SET(GLEW_SEARCH_PATH      "$ENV{LUX_${WINDOWS_ARCH}_GLEW_ROOT}")
+        SET(FREEIMAGE_SEARCH_PATH "$ENV{LUX_${WINDOWS_ARCH}_FREEIMAGE_ROOT}/FreeImage")
+	SET(QT_QMAKE_EXECUTABLE   "$ENV{LUX_${WINDOWS_ARCH}_QT_ROOT}/bin/qmake.exe")
+      ENDIF(DEFINED ENV{LUX_WINDOWS_BUILD_ROOT})
+
+    ELSE(MSVC)
+
+      SET(ENV{QTDIR} "c:/qt/")
+
+      SET(FREEIMAGE_SEARCH_PATH     "${LuxRays_SOURCE_DIR}/../FreeImage")
+      SET(BOOST_SEARCH_PATH         "${LuxRays_SOURCE_DIR}/../boost")
+      SET(OPENCL_SEARCH_PATH        "${LuxRays_SOURCE_DIR}/../opencl")
+      SET(GLUT_SEARCH_PATH          "${LuxRays_SOURCE_DIR}/../freeglut")
+
+    ENDIF(MSVC)
+
+    SET(FreeImage_INC_SEARCH_PATH "${FREEIMAGE_SEARCH_PATH}/source")
+    SET(FreeImage_LIB_SEARCH_PATH "${FREEIMAGE_SEARCH_PATH}/release"
+                                  "${FREEIMAGE_SEARCH_PATH}/debug"
+                                  "${FREEIMAGE_SEARCH_PATH}/dist")
+
+  ENDIF(WIN32)
+
 ELSE(NOT LUXRAYS_NO_DEFAULT_CONFIG)
 	
 	MESSAGE(STATUS "LUXRAYS_NO_DEFAULT_CONFIG defined - not using default configuration values.")
