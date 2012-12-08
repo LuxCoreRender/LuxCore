@@ -674,7 +674,9 @@ __kernel void AdvancePaths(
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING) || (PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT < PARAM_MAX_PATH_DEPTH)
 						specularMaterial = task->pathState.specularBounce;
 #endif
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 						materialPdf = task->pathState.bouncePdf;
+#endif
 
 						// I have also to restore the original throughput
 						throughput = prevThroughput;

@@ -187,7 +187,7 @@ void SkyLight_ChromaticityToSpectrum(const float Y, const float x, const float y
 void SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
 		const float theta, const float phi, Spectrum *spect) {
 	// add bottom half of hemisphere with horizon colour
-	const float theta_fin = min(theta, (const float)((M_PI * 0.5f) - 0.001f));
+	const float theta_fin = min(theta, (float)((M_PI * 0.5f) - 0.001f));
 	const float gamma = RiAngleBetween(theta, phi, skyLight->thetaS, skyLight->phiS);
 
 	// Compute xyY values
