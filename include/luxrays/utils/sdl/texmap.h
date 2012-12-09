@@ -35,7 +35,7 @@ namespace luxrays { namespace sdl {
 class TextureMap {
 public:
 	TextureMap(const std::string &fileName, const float gamma);
-	TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h);
+	TextureMap(Spectrum *cols, const float gamma, const unsigned int w, const unsigned int h);
 
 	/**
 	 * Creates a 24-bpp texture with size based on another bitmap, usually an alpha map, and initialized each pixel

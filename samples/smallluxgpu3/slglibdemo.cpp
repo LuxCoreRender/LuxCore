@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
 					tm[x + y * size] = Spectrum(1.f, 1.f, 0.f);
 			}
 		}
-		scene->DefineTexMap("check_texmap", tm, size, size);
+		scene->DefineTexMap("check_texmap", tm, 1.f, size, size);
 
 		// Setup materials
 		scene->AddMaterials(

@@ -68,11 +68,11 @@ public:
 	void CreateCamera(const std::string &propsString);
 	void CreateCamera(const Properties &props);
 
-	void DefineTexMap(const std::string &tmName, Spectrum *map,
-		const unsigned int w, const unsigned int h) { texMapCache->DefineTexMap(tmName, new TextureMap(map, w, h)); }
-	void DefineTexMap(const std::string &tmName, Spectrum *map, float *alpha,
+	void DefineTexMap(const std::string &tmName, Spectrum *map, const float gamma,
+		const unsigned int w, const unsigned int h) { texMapCache->DefineTexMap(tmName, new TextureMap(map, gamma, w, h)); }
+	void DefineTexMap(const std::string &tmName, Spectrum *map, float *alpha, const float gamma,
 		const unsigned int w, const unsigned int h) {
-		TextureMap *tm = new TextureMap(map, w, h);
+		TextureMap *tm = new TextureMap(map, gamma, w, h);
 		tm->AddAlpha(alpha);
 		texMapCache->DefineTexMap(tmName, tm);
 	}
