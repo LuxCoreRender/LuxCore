@@ -199,8 +199,8 @@ TextureMap::TextureMap(const std::string &fileName, const float g) {
 	DuDv.v = 1.f / height;
 }
 
-TextureMap::TextureMap(Spectrum *cols, const unsigned int w, const unsigned int h) {
-	gamma = 1.f;
+TextureMap::TextureMap(Spectrum *cols, const float g, const unsigned int w, const unsigned int h) {
+	gamma = g;
 
 	pixels = cols;
 	alpha = NULL;
