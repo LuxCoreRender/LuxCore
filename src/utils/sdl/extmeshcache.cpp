@@ -57,6 +57,16 @@ void ExtMeshCache::DefineExtMesh(const std::string &fileName,
 	DefineExtMesh(fileName, mesh, usePlyNormals);
 }
 
+ExtMesh *ExtMeshCache::FindExtMesh(const std::string &fileName, const bool usePlyNormals) {
+	// Check if the mesh has been already loaded
+	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
+	std::map<std::string, ExtTriangleMesh *>::const_iterator it = maps.find(key);
+	if (it == maps.end())
+		return NULL;
+	else
+		return it->second;
+}
+
 ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals) {
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
 
