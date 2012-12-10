@@ -40,7 +40,7 @@ namespace luxrays { namespace sdl {
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
-	Scene();
+	Scene(const int accType = -1);
 	// Constructor used to load a scene from file
 	Scene(const std::string &fileName, const int accType = -1);
 	~Scene();
