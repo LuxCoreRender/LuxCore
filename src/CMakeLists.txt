@@ -320,8 +320,12 @@ IF(OSX_UPDATE_LUXRAYS_REPO)
 	TARGET luxrays POST_BUILD
 	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/luxrays # clean first to assure update
 	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxrays.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libsmallluxgpu3.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
 	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxrays ${OSX_DEPENDENCY_ROOT}/include/LuxRays
+	)
+	ADD_CUSTOM_COMMAND(
+	TARGET smallluxgpu3 POST_BUILD
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libsmallluxgpu3.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
+	# todo: copy also needed headers
 	)
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
 
