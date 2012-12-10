@@ -35,7 +35,7 @@
 using namespace luxrays;
 using namespace luxrays::sdl;
 
-Scene::Scene() {
+Scene::Scene(const int accType) {
 	camera = NULL;
 
 	infiniteLight = NULL;
@@ -46,11 +46,11 @@ Scene::Scene() {
 	extMeshCache = new ExtMeshCache();
 	texMapCache = new TextureMapCache();
 
-	accelType = -1;
+	accelType = accType;
 }
 
-Scene::Scene(const std::string &fileName, const int aType) {
-	accelType = aType;
+Scene::Scene(const std::string &fileName, const int accType) {
+	accelType = accType;
 
 	extMeshCache = new ExtMeshCache();
 	texMapCache = new TextureMapCache();
