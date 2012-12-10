@@ -253,9 +253,10 @@ void Scene::AddMaterials(const Properties &props) {
 	}
 }
 
-void Scene::AddObject(const std::string &objName, const std::string &matName, const std::string &propsString) {
+void Scene::AddObject(const std::string &objName, const std::string &matName,
+		const std::string &meshName, const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString("scene.objects." + matName + "." + objName + " = " + objName + "\n");
+	prop.LoadFromString("scene.objects." + matName + "." + objName + " = " + meshName + "\n");
 	prop.LoadFromString(propsString);
 
 	AddObject(objName, matName, prop);
