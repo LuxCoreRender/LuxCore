@@ -110,10 +110,10 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 
 	if (texName == "") {
 		// Define the object
-		scene->DefineObject(objName, 24, 12, p, vi, NULL, NULL, false);
+		scene->DefineObject("Mesh-" + objName, 24, 12, p, vi, NULL, NULL, false);
 
 		// Add the object to the scene
-		scene->AddObject(objName, matName,
+		scene->AddObject(objName, matName, "Mesh-" + objName,
 				"scene.objects." + matName + "." + objName + ".useplynormals = 0\n"
 			);
 	} else {
@@ -150,10 +150,10 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene->DefineObject(objName, 24, 12, p, vi, NULL, uv, false);
+		scene->DefineObject("Mesh-" + objName, 24, 12, p, vi, NULL, uv, false);
 
 		// Add the object to the scene
-		scene->AddObject(objName, matName,
+		scene->AddObject(objName, matName, "Mesh-" + objName,
 				"scene.objects." + matName + "." + objName + ".useplynormals = 0\n"
 				"scene.objects." + matName + "." + objName + ".texmap = " + texName + "\n"
 			);

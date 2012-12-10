@@ -80,18 +80,18 @@ public:
 	void AddMaterials(const std::string &propsString);
 	void AddMaterials(const Properties &props);
 
-	void DefineObject(const std::string &objName, ExtTriangleMesh *mesh,
+	void DefineObject(const std::string &meshName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals = true) {
-		extMeshCache->DefineExtMesh(objName, mesh, usePlyNormals);
+		extMeshCache->DefineExtMesh(meshName, mesh, usePlyNormals);
 	}
-	void DefineObject(const std::string &objName,
+	void DefineObject(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
 		const bool usePlyNormals) {
-		extMeshCache->DefineExtMesh(objName, plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
+		extMeshCache->DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
 	}
 
-	void AddObject(const std::string &objName, const std::string &matName, const std::string &propsString);
+	void AddObject(const std::string &objName, const std::string &matName, const std::string &meshName, const std::string &propsString);
 	void AddObject(const std::string &objName, const std::string &matName, const Properties &props);
 
 	void AddInfiniteLight(const std::string &propsString);
