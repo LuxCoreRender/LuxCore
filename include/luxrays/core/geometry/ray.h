@@ -27,6 +27,8 @@
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 
+#include <boost/math/special_functions/sign.hpp>
+
 namespace luxrays {
 
 class  Ray {
@@ -49,9 +51,9 @@ public:
 
 	Point operator()(float t) const { return o + d * t; }
 	void GetDirectionSigns(int signs[3]) const {
-		signs[0] = d.x < 0.f;
-		signs[1] = d.y < 0.f;
-		signs[2] = d.z < 0.f;
+		signs[0] = boost::math::signbit(d.x);
+		signs[1] = boost::math::signbit(d.y);
+		signs[2] = boost::math::signbit(d.z);
 	}
 
 	// Ray Public Data
