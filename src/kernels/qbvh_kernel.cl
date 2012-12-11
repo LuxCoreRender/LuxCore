@@ -198,9 +198,9 @@ __kernel void Intersect(
 	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
 	const float4 invDir2 = (float4)(1.f / ray4.dz.s0);
 
-	const int signs0 = (ray4.dx.s0 < 0.f);
-	const int signs1 = (ray4.dy.s0 < 0.f);
-	const int signs2 = (ray4.dz.s0 < 0.f);
+        const int signs0 = signbit(ray4.dx.s0);
+        const int signs1 = signbit(ray4.dy.s0);
+        const int signs2 = signbit(ray4.dz.s0);
 
 	RayHit rayHit;
 	rayHit.index = 0xffffffffu;
