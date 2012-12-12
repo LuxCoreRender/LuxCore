@@ -242,73 +242,34 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	const bool isAlphaChannelEnabled = film->IsAlphaChannelEnabled();
 
-	switch (film->GetFilterType()) {
-		case FILTER_GAUSSIAN: {
-			for (unsigned int y = 0; y < imgHeight; ++y) {
-				unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
+	for (unsigned int y = 0; y < imgHeight; ++y) {
+		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
 
-				for (unsigned int x = 0; x < imgWidth; ++x) {
-					Spectrum c;
-					float alpha = 0.0f;
-					float count = 0.f;
-					for (size_t i = 0; i < renderThreads.size(); ++i) {
-						if (renderThreads[i]->frameBuffer) {
-							c += renderThreads[i]->frameBuffer[pGPU].c;
-							count += renderThreads[i]->frameBuffer[pGPU].count;
-						}
-
-						if (renderThreads[i]->alphaFrameBuffer)
-							alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
-					}
-
-					if ((count > 0) && !c.IsNaN()) {
-						c /= count;
-						film->AddSampleCount(1.f);
-						film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c);
-
-						if (isAlphaChannelEnabled && !isnan(alpha))
-							film->SplatFilteredAlpha(x, y, alpha / count);
-					}
-
-					++pGPU;
+		for (unsigned int x = 0; x < imgWidth; ++x) {
+			Spectrum c;
+			float alpha = 0.0f;
+			float count = 0.f;
+			for (size_t i = 0; i < renderThreads.size(); ++i) {
+				if (renderThreads[i]->frameBuffer) {
+					c += renderThreads[i]->frameBuffer[pGPU].c;
+					count += renderThreads[i]->frameBuffer[pGPU].count;
 				}
+
+				if (renderThreads[i]->alphaFrameBuffer)
+					alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
 			}
-			break;
-		}
-		case FILTER_NONE: {
-			for (unsigned int y = 0; y < imgHeight; ++y) {
-				unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
 
-				for (unsigned int x = 0; x < imgWidth; ++x) {
-					Spectrum c;
-					float alpha = 0.0f;
-					float count = 0.f;
-					for (size_t i = 0; i < renderThreads.size(); ++i) {
-						if (renderThreads[i]->frameBuffer) {
-							c += renderThreads[i]->frameBuffer[pGPU].c;
-							count += renderThreads[i]->frameBuffer[pGPU].count;
-						}
-						
-						if (renderThreads[i]->alphaFrameBuffer)
-							alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
-					}
+			if ((count > 0) && !c.IsNaN()) {
+				c /= count;
+				film->AddSampleCount(1.f);
+				film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c);
 
-					if ((count > 0) && !c.IsNaN()) {
-						film->AddSampleCount(1.f);
-						film->AddRadiance(PER_PIXEL_NORMALIZED, x, y, c / count, count);
-
-						if (isAlphaChannelEnabled && !isnan(alpha))
-							film->AddAlpha(x, y, alpha / count, 1.f);
-					}
-
-					++pGPU;
-				}
+				if (isAlphaChannelEnabled && !isnan(alpha))
+					film->SplatFilteredAlpha(x, y, alpha / count);
 			}
-			break;
+
+			++pGPU;
 		}
-		default:
-			assert (false);
-			break;
 	}
 
 	// Update the sample count statistic
