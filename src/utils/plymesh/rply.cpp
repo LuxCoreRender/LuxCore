@@ -17,6 +17,7 @@
 #include <stddef.h>
 
 #include "luxrays/utils/plymesh/rply.h"
+#include "luxrays/core/utils.h"
 
 // Patched for x64 Linux/OSX based on http://src.luxrender.net/lux/rev/612d14f647ae
 #if defined(WIN32) && !defined(__CYGWIN__) 
@@ -1403,6 +1404,8 @@ static int ibinary_int32(p_ply ply, double *value) {
     int32_t int32; //long int32;
     if (!ply->idriver->ichunk(ply, &int32, sizeof(int32))) return 0;
     *value = int32;
+    if (isnan(*value) || isinf(*value))
+       *value = 0.f;
     return 1;
 }
 
@@ -1417,6 +1420,8 @@ static int ibinary_float32(p_ply ply, double *value) {
     float float32;
     if (!ply->idriver->ichunk(ply, &float32, sizeof(float32))) return 0;
     *value = float32;
+    if (isnan(*value) || isinf(*value))
+       *value = 0.f;
     ply_reverse(&float32, sizeof(float32));
     return 1;
 }
