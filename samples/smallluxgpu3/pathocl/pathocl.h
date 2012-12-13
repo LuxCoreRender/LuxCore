@@ -119,10 +119,12 @@ private:
 	vector<cl::Buffer *> texMapRGBBuff;
 	vector<cl::Buffer *> texMapAlphaBuff;
 	cl::Buffer *texMapDescBuff;
-	cl::Buffer *meshTexsBuff;
-	cl::Buffer *meshBumpsBuff;
-	cl::Buffer *meshBumpsScaleBuff;
+	cl::Buffer *meshTexMapsBuff;
+	cl::Buffer *meshTexMapsInfoBuff;
+	cl::Buffer *meshBumpMapsBuff;
+	cl::Buffer *meshBumpMapsInfoBuff;
 	cl::Buffer *meshNormalMapsBuff;
+	cl::Buffer *meshNormalMapsInfoBuff;
 	cl::Buffer *uvsBuff;
 
 	luxrays::utils::oclKernelCache *kernelCache;

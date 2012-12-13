@@ -41,10 +41,13 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	skyLight = NULL;
 	rgbTexMemBlocks.resize(0);
 	alphaTexMemBlocks.resize(0);
-	meshTexs = NULL;
-	meshBumps = NULL;
-	bumpMapScales = NULL;
-	meshNormalMaps = NULL;
+
+	meshTexMaps.resize(0);
+	meshTexMapsInfo.resize(0);
+	meshBumpMaps.resize(0);
+	meshBumpMapsInfo.resize(0);
+	meshNormalMaps.resize(0);
+	meshNormalMapsInfo.resize(0);
 	
 	meshFirstTriangleOffset = NULL;
 
@@ -59,10 +62,6 @@ CompiledScene::~CompiledScene() {
 	// infiniteLightMap memory is handled from another class
 	delete sunLight;
 	delete skyLight;
-	delete[] meshTexs;
-	delete[] meshBumps;
-	delete[] bumpMapScales;
-	delete[] meshNormalMaps;
 }
 
 void CompiledScene::CompileCamera() {
@@ -628,10 +627,13 @@ void CompiledScene::CompileTextureMaps() {
 	gpuTexMaps.resize(0);
 	rgbTexMemBlocks.resize(0);
 	alphaTexMemBlocks.resize(0);
-	delete[] meshTexs;
-	delete[] meshBumps;
-	delete[] bumpMapScales;
-	delete[] meshNormalMaps;
+
+	meshTexMaps.resize(0);
+	meshTexMapsInfo.resize(0);
+	meshBumpMaps.resize(0);
+	meshBumpMapsInfo.resize(0);
+	meshNormalMaps.resize(0);
+	meshNormalMapsInfo.resize(0);
 
 	//--------------------------------------------------------------------------
 	// Translate mesh texture maps
@@ -753,7 +755,8 @@ void CompiledScene::CompileTextureMaps() {
 
 		// Translate mesh texture indices
 		const unsigned int meshCount = meshMats.size();
-		meshTexs = new unsigned int[meshCount];
+		meshTexMaps.resize(meshCount);
+		meshTexMapsInfo.resize(meshCount);
 		for (unsigned int i = 0; i < meshCount; ++i) {
 			TexMapInstance *t = scene->objectTexMaps[i];
 
@@ -767,16 +770,26 @@ void CompiledScene::CompileTextureMaps() {
 					}
 				}
 
-				meshTexs[i] = index;
-			} else
-				meshTexs[i] = 0xffffffffu;
+				meshTexMaps[i] = index;
+				meshTexMapsInfo[i].uScale = t->GetUScale();
+				meshTexMapsInfo[i].vScale = t->GetVScale();
+				meshTexMapsInfo[i].uDelta = t->GetUDelta();
+				meshTexMapsInfo[i].vDelta = t->GetVDelta();
+			} else {
+				meshTexMaps[i] = 0xffffffffu;
+				meshTexMapsInfo[i].uScale = 1.f;
+				meshTexMapsInfo[i].vScale = 1.f;
+				meshTexMapsInfo[i].uDelta = 0.f;
+				meshTexMapsInfo[i].vDelta = 0.f;
+			}
 		}
 
 		//----------------------------------------------------------------------
 
 		// Translate mesh bump map indices
 		bool hasBumpMapping = false;
-		meshBumps = new unsigned int[meshCount];
+		meshBumpMaps.resize(meshCount);
+		meshBumpMapsInfo.resize(meshCount);
 		for (unsigned int i = 0; i < meshCount; ++i) {
 			BumpMapInstance *bm = scene->objectBumpMaps[i];
 
@@ -790,33 +803,30 @@ void CompiledScene::CompileTextureMaps() {
 					}
 				}
 
-				meshBumps[i] = index;
+				meshBumpMaps[i] = index;
+				meshBumpMapsInfo[i].uScale = bm->GetUScale();
+				meshBumpMapsInfo[i].uScale = bm->GetUScale();
+				meshBumpMapsInfo[i].vScale = bm->GetVScale();
+				meshBumpMapsInfo[i].uDelta = bm->GetUDelta();
+				meshBumpMapsInfo[i].vDelta = bm->GetVDelta();
+				meshBumpMapsInfo[i].scale = bm->GetScale();
+
 				hasBumpMapping = true;
 			} else
-				meshBumps[i] = 0xffffffffu;
+				meshBumpMaps[i] = 0xffffffffu;
 		}
 
-		if (hasBumpMapping) {
-			bumpMapScales = new float[meshCount];
-			for (unsigned int i = 0; i < meshCount; ++i) {
-				BumpMapInstance *bm = scene->objectBumpMaps[i];
-
-				if (bm)
-					bumpMapScales[i] = bm->GetScale();
-				else
-					bumpMapScales[i] = 1.f;
-			}
-		} else {
-			delete[] meshBumps;
-			meshBumps = NULL;
-			bumpMapScales = NULL;
+		if (!hasBumpMapping) {
+			meshBumpMaps.resize(0);
+			meshBumpMapsInfo.resize(0);
 		}
 
 		//----------------------------------------------------------------------
 
 		// Translate mesh normal map indices
 		bool hasNormalMapping = false;
-		meshNormalMaps = new unsigned int[meshCount];
+		meshNormalMaps.resize(meshCount);
+		meshNormalMapsInfo.resize(meshCount);
 		for (unsigned int i = 0; i < meshCount; ++i) {
 			NormalMapInstance *nm = scene->objectNormalMaps[i];
 
@@ -831,23 +841,31 @@ void CompiledScene::CompileTextureMaps() {
 				}
 
 				meshNormalMaps[i] = index;
+				meshNormalMapsInfo[i].uScale = nm->GetUScale();
+				meshNormalMapsInfo[i].uScale = nm->GetUScale();
+				meshNormalMapsInfo[i].vScale = nm->GetVScale();
+				meshNormalMapsInfo[i].uDelta = nm->GetUDelta();
+				meshNormalMapsInfo[i].vDelta = nm->GetVDelta();
+
 				hasNormalMapping = true;
 			} else
 				meshNormalMaps[i] = 0xffffffffu;
 		}
 
 		if (!hasNormalMapping) {
-			delete[] meshNormalMaps;
-			meshNormalMaps = NULL;
+			meshNormalMaps.resize(0);
+			meshNormalMapsInfo.resize(0);
 		}
 	} else {
 		gpuTexMaps.resize(0);
 		rgbTexMemBlocks.resize(0);
 		alphaTexMemBlocks.resize(0);
-		meshTexs = NULL;
-		meshBumps = NULL;
-		bumpMapScales = NULL;
-		meshNormalMaps = NULL;
+		meshTexMaps.resize(0);
+		meshTexMapsInfo.resize(0);
+		meshBumpMaps.resize(0);
+		meshBumpMapsInfo.resize(0);
+		meshNormalMaps.resize(0);
+		meshNormalMapsInfo.resize(0);
 	}
 
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps RGB channel page count: " << rgbTexMemBlocks.size());

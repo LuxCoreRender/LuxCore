@@ -247,13 +247,15 @@ __kernel void AdvancePaths(
 #endif
 #endif
         , __global TexMap *texMapDescBuff
-        , __global unsigned int *meshTexsBuff
+        , __global unsigned int *meshTexMapsBuff
+		, __global TexMapInfo *meshTexMapsInfoBuff
 #if defined(PARAM_HAS_BUMPMAPS)
-        , __global unsigned int *meshBumpsBuff
-		, __global float *meshBumpsScaleBuff
+        , __global unsigned int *meshBumpMapsBuff
+		, __global BumpMapInfo *meshBumpMapsInfoBuff
 #endif
 #if defined(PARAM_HAS_NORMALMAPS)
         , __global unsigned int *meshNormalMapsBuff
+		, __global NormalMapInfo *meshNormalMapsInfoBuff
 #endif
 		, __global UV *vertUVs
 #endif
@@ -332,9 +334,10 @@ __kernel void AdvancePaths(
 				Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, hitPointB1, hitPointB2, &uv);
 #endif
 				// Check it the mesh has a texture map
-				unsigned int texIndex = meshTexsBuff[meshIndex];
+				unsigned int texIndex = meshTexMapsBuff[meshIndex];
 				if (texIndex != 0xffffffffu) {
 					__global TexMap *texMap = &texMapDescBuff[texIndex];
+					__global TexMapInfo *texMapInfo = &meshTexMapsInfoBuff[meshIndex];
 
 #if defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
 					// Check if it has an alpha channel
@@ -356,7 +359,9 @@ __kernel void AdvancePaths(
                                                     , texMapAlphaBuff4
 #endif
                                                     );
-						const float alpha = TexMap_GetAlpha(address, texMap->width, texMap->height, uv.u, uv.v);
+						const float alpha = TexMap_GetAlpha(address, texMap->width, texMap->height,
+							uv.u * texMapInfo->uScale + texMapInfo->uDelta,
+							uv.v * texMapInfo->vScale + texMapInfo->vDelta);
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);
@@ -389,7 +394,10 @@ __kernel void AdvancePaths(
 						, texMapRGBBuff4
 #endif
 						);
-					TexMap_GetColor(address, texMap->width, texMap->height, uv.u, uv.v, &texColor);
+					TexMap_GetColor(address, texMap->width, texMap->height,
+						uv.u * texMapInfo->uScale + texMapInfo->uDelta,
+						uv.v * texMapInfo->vScale + texMapInfo->vDelta,
+						&texColor);
 
 					shadeColor.r = texColor.r;
 					shadeColor.g = texColor.g;
@@ -422,6 +430,7 @@ __kernel void AdvancePaths(
 					__global TexMap *texMap = &texMapDescBuff[normalMapIndex];
 					const uint texWidth = texMap->width;
 					const uint texHeight = texMap->height;
+					__global NormalMapInfo *normalMapInfo = &meshNormalMapsInfoBuff[meshIndex];
 
 					Spectrum texColor;
                                         __global Spectrum *address = GetRGBAddress(texMap->rgbPage, texMap->rgbPageOffset
@@ -441,7 +450,10 @@ __kernel void AdvancePaths(
                                             , texMapRGBBuff4
 #endif
                                             );
-					TexMap_GetColor(address, texWidth, texHeight, uv.u, uv.v, &texColor);
+					TexMap_GetColor(address, texWidth, texHeight,
+						uv.u * normalMapInfo->uScale + normalMapInfo->uDelta,
+						uv.v * normalMapInfo->vScale + normalMapInfo->vDelta,
+						&texColor);
 					const float x = 2.f * (texColor.r - 0.5f);
 					const float y = 2.f * (texColor.g - 0.5f);
 					const float z = 2.f * (texColor.b - 0.5f);
@@ -457,16 +469,17 @@ __kernel void AdvancePaths(
 
 #if defined(PARAM_HAS_BUMPMAPS)
 				// Check it the mesh has a bump map
-				unsigned int bumpIndex = meshBumpsBuff[meshIndex];
+				unsigned int bumpIndex = meshBumpMapsBuff[meshIndex];
 				if (bumpIndex != 0xffffffffu) {
 					// Apply bump mapping
 					__global TexMap *texMap = &texMapDescBuff[bumpIndex];
 					const uint texWidth = texMap->width;
 					const uint texHeight = texMap->height;
+					__global BumpMapInfo *bumpMapInfo = &meshBumpMapsInfoBuff[meshIndex];
 
 					UV dudv;
-					dudv.u = 1.f / texWidth;
-					dudv.v = 1.f / texHeight;
+					dudv.u = 1.f / (bumpMapInfo->uScale * texWidth);
+					dudv.v = 1.f / (bumpMapInfo->vScale * texHeight);
 
 					Spectrum texColor;
                                         __global Spectrum *address = GetRGBAddress(texMap->rgbPage, texMap->rgbPageOffset
@@ -486,16 +499,25 @@ __kernel void AdvancePaths(
                                             , texMapRGBBuff4
 #endif
                                             );
-					TexMap_GetColor(address, texWidth, texHeight, uv.u, uv.v, &texColor);
+					TexMap_GetColor(address, texWidth, texHeight,
+						uv.u * bumpMapInfo->uScale + bumpMapInfo->uDelta,
+						uv.v * bumpMapInfo->vScale + bumpMapInfo->vDelta,
+						&texColor);
 					const float b0 = Spectrum_Y(&texColor);
 
-					TexMap_GetColor(address, texWidth, texHeight, uv.u + dudv.u, uv.v, &texColor);
+					TexMap_GetColor(address, texWidth, texHeight,
+						(uv.u + dudv.u) * bumpMapInfo->uScale + bumpMapInfo->uDelta,
+						uv.v * bumpMapInfo->vScale + bumpMapInfo->vDelta,
+						&texColor);
 					const float bu = Spectrum_Y(&texColor);
 
-					TexMap_GetColor(address, texWidth, texHeight, uv.u, uv.v + dudv.v, &texColor);
+					TexMap_GetColor(address, texWidth, texHeight,
+						uv.u * bumpMapInfo->uScale + bumpMapInfo->uDelta,
+						(uv.v + dudv.v) * bumpMapInfo->vScale + bumpMapInfo->vDelta,
+						&texColor);
 					const float bv = Spectrum_Y(&texColor);
 
-					const float scale = meshBumpsScaleBuff[meshIndex];
+					const float scale = bumpMapInfo->scale;
 					Vector bump;
 					bump.x = scale * (bu - b0);
 					bump.y = scale * (bv - b0);
@@ -1008,9 +1030,10 @@ Error: Huston, we have a problem !
 #endif
 
 				// Check it the mesh has a texture map
-				unsigned int texIndex = meshTexsBuff[meshIndex];
+				unsigned int texIndex = meshTexMapsBuff[meshIndex];
 				if (texIndex != 0xffffffffu) {
 					__global TexMap *texMap = &texMapDescBuff[texIndex];
+					__global TexMapInfo *texMapInfo = &meshTexMapsInfoBuff[meshIndex];
 
 					// Check if it has an alpha channel
 					if (texMap->alphaPage != 0xffffffffu) {
@@ -1031,7 +1054,9 @@ Error: Huston, we have a problem !
                                                     , texMapAlphaBuff4
 #endif
                                                     );
-						const float alpha = TexMap_GetAlpha(address, texMap->width, texMap->height, uv.u, uv.v);
+						const float alpha = TexMap_GetAlpha(address, texMap->width, texMap->height,
+							uv.u * texMapInfo->uScale + texMapInfo->uDelta,
+							uv.v * texMapInfo->vScale + texMapInfo->vDelta);
 
 #if (PARAM_SAMPLER_TYPE == 0)
 						const float texAlphaSample = RndFloatValue(&seed);

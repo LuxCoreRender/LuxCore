@@ -194,9 +194,6 @@ TextureMap::TextureMap(const std::string &fileName, const float g) {
 		FreeImage_Unload(dib);
 	} else
 		throw std::runtime_error("Unknown image file format: " + fileName);
-
-	DuDv.u = 1.f / width;
-	DuDv.v = 1.f / height;
 }
 
 TextureMap::TextureMap(Spectrum *cols, const float g, const unsigned int w, const unsigned int h) {
@@ -206,9 +203,6 @@ TextureMap::TextureMap(Spectrum *cols, const float g, const unsigned int w, cons
 	alpha = NULL;
 	width = w;
 	height = h;
-
-	DuDv.u = 1.f / width;
-	DuDv.v = 1.f / height;
 }
 
 TextureMap::TextureMap(const std::string& baseFileName, const float g,
@@ -248,8 +242,6 @@ TextureMap::TextureMap(const std::string& baseFileName, const float g,
 			}
 		}
 	}
-	DuDv.u = 1.f / width;
-	DuDv.v = 1.f / height;
 }
 
 TextureMap::~TextureMap() {
@@ -351,22 +343,6 @@ void TextureMapCache::DefineTexMap(const std::string &name, TextureMap *tm) {
 	maps.insert(std::make_pair(name, tm));
 }
 
-TexMapInstance *TextureMapCache::AddTextureMap(const std::string &fileName, TextureMap *tm) {
-	// Check if the texture map has been already loaded
-	std::map<std::string, TextureMap *>::const_iterator it = maps.find(fileName);
-
-	if (it == maps.end()) {
-		SDL_LOG("AddTexMap: " << fileName);
-		maps.insert(std::make_pair(fileName, tm));
-		TexMapInstance *texm = new TexMapInstance(tm);
-		texInstances.push_back(texm);
-		return (texm);
-	} else
-		std::runtime_error("Cannot add texture map: " + fileName + " to the cache. An instance exists already");
-
-	return NULL;
-}
-
 TextureMap *TextureMapCache::FindTextureMap(const std::string &fileName, const float gamma) {
 	// Check if the texture map has been already loaded
 	std::map<std::string, TextureMap *>::const_iterator it = maps.find(fileName);
@@ -380,25 +356,28 @@ TextureMap *TextureMapCache::FindTextureMap(const std::string &fileName, const f
 	}
 }
 
-TexMapInstance *TextureMapCache::GetTexMapInstance(const std::string &fileName, const float gamma) {
+TexMapInstance *TextureMapCache::GetTexMapInstance(const std::string &fileName, const float gamma,
+	const float uScale, const float vScale, const float uDelta, const float vDelta) {
 	TextureMap *tm = GetTextureMap(fileName, gamma);
-	TexMapInstance *texm = new TexMapInstance(tm);
+	TexMapInstance *texm = new TexMapInstance(tm, uScale, vScale, uDelta, vDelta);
 	texInstances.push_back(texm);
 
 	return texm;
 }
 
-BumpMapInstance *TextureMapCache::GetBumpMapInstance(const std::string &fileName, const float scale) {
+BumpMapInstance *TextureMapCache::GetBumpMapInstance(const std::string &fileName, const float scale,
+		const float uScale, const float vScale, const float uDelta, const float vDelta) {
 	TextureMap *tm = GetTextureMap(fileName, 1.f);
-	BumpMapInstance *bm = new BumpMapInstance(tm, scale);
+	BumpMapInstance *bm = new BumpMapInstance(tm, scale, uScale, vScale, uDelta, vDelta);
 	bumpInstances.push_back(bm);
 
 	return bm;
 }
 
-NormalMapInstance *TextureMapCache::GetNormalMapInstance(const std::string &fileName) {
+NormalMapInstance *TextureMapCache::GetNormalMapInstance(const std::string &fileName,
+		const float uScale, const float vScale, const float uDelta, const float vDelta) {
 	TextureMap *tm = GetTextureMap(fileName, 1.f);
-	NormalMapInstance *nm = new NormalMapInstance(tm);
+	NormalMapInstance *nm = new NormalMapInstance(tm, uScale, vScale, uDelta, vDelta);
 	normalInstances.push_back(nm);
 
 	return nm;
