@@ -38,7 +38,9 @@ class RenderEngine;
 class EditActionList;
 }
 
-extern void SLGDebugHandler(const char *msg);
+// The next two functions have to be defined by the application using SLG library
+extern void DebugHandler(const char *msg); // LuxRays handler
+extern void SLGDebugHandler(const char *msg); // SLG handler
 
 #define SLG_LOG(a) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; SLGDebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); }
 
