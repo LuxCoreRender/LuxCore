@@ -55,6 +55,4 @@ extern string SLG_LABEL;
 
 extern RenderSession *session;
 
-extern void DebugHandler(const char *msg);
-
 #endif	/* _SMALLLUX_H */
