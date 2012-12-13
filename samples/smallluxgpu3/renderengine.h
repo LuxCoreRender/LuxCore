@@ -298,7 +298,4 @@ protected:
 
 }
 
-// This function has to be defined by the application using SLG library
-extern void DebugHandler(const char *msg);
-
 #endif	/* _SLG_RENDERENGINE_H */
