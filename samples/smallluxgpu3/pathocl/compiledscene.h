@@ -83,12 +83,15 @@ public:
 	unsigned int totRGBTexMem, totAlphaTexMem;
 	vector<vector<Spectrum> > rgbTexMemBlocks;
 	vector<vector<float> > alphaTexMemBlocks;
-	unsigned int *meshTexs;
+
+	vector<unsigned int> meshTexMaps;
+	vector<PathOCL::TexMapInfo> meshTexMapsInfo;
 	// Compiled BumpMaps
-	unsigned int *meshBumps;
-	float *bumpMapScales;
+	vector<unsigned int> meshBumpMaps;
+	vector<PathOCL::BumpMapInfo> meshBumpMapsInfo;
 	// Compiled NormalMaps
-	unsigned int *meshNormalMaps;
+	vector<unsigned int> meshNormalMaps;
+	vector<PathOCL::NormalMapInfo> meshNormalMapsInfo;
 
 private:
 	void CompileCamera();

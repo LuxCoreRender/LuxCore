@@ -332,7 +332,13 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
 			const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
-			TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma);
+			const float uScale = props.GetFloat(key + ".texmap.uscale", 1.0f);
+			const float vScale = props.GetFloat(key + ".texmap.vscale", 1.0f);
+			const float uDelta = props.GetFloat(key + ".texmap.udelta", 0.0f);
+			const float vDelta = props.GetFloat(key + ".texmap.vdelta", 0.0f);
+
+			TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma,
+					uScale, vScale, uDelta, vDelta);
 			objectTexMaps.push_back(tm);
 		} else
 			objectTexMaps.push_back(NULL);
@@ -348,6 +354,7 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 			// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
 			const std::string texMap = props.GetString(key + ".texmap", "");
 			const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
+
 			TextureMap *tm;
 			if (!(tm = texMapCache->FindTextureMap(texMap, gamma))) {
 				SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
@@ -355,7 +362,14 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 				// a texture map filled with black
 				tm = new TextureMap(alphaMap, gamma, 1.0, 1.0, 1.0);
 				tm->AddAlpha(alphaMap);
-				TexMapInstance *tmi = texMapCache->AddTextureMap(alphaMap, tm);
+				texMapCache->DefineTexMap(alphaMap, tm);
+
+				const float uScale = props.GetFloat(key + ".texmap.uscale", 1.0f);
+				const float vScale = props.GetFloat(key + ".texmap.vscale", 1.0f);
+				const float uDelta = props.GetFloat(key + ".texmap.udelta", 0.0f);
+				const float vDelta = props.GetFloat(key + ".texmap.vdelta", 0.0f);
+				TexMapInstance *tmi = texMapCache->GetTexMapInstance(texMap, gamma,
+					uScale, vScale, uDelta, vDelta);
 				// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
 				objectTexMaps.pop_back();
 				// Add the new texture to the chain
@@ -374,8 +388,13 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for bump mapping");
 
 			const float scale = props.GetFloat(key + ".bumpmap.scale", 1.f);
+			const float uScale = props.GetFloat(key + ".bumpmap.uscale", 1.0f);
+			const float vScale = props.GetFloat(key + ".bumpmap.vscale", 1.0f);
+			const float uDelta = props.GetFloat(key + ".bumpmap.udelta", 0.0f);
+			const float vDelta = props.GetFloat(key + ".bumpmap.vdelta", 0.0f);
 
-			BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale);
+			BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale,
+					uScale, vScale, uDelta, vDelta);
 			objectBumpMaps.push_back(bm);
 		} else
 			objectBumpMaps.push_back(NULL);
@@ -387,7 +406,13 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 			if (!meshObject->HasUVs())
 				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
 
-			NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap);
+			const float uScale = props.GetFloat(key + ".normalmap.uscale", 1.0f);
+			const float vScale = props.GetFloat(key + ".normalmap.vscale", 1.0f);
+			const float uDelta = props.GetFloat(key + ".normalmap.udelta", 0.0f);
+			const float vDelta = props.GetFloat(key + ".normalmap.vdelta", 0.0f);
+
+			NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap,
+					uScale, vScale, uDelta, vDelta);
 			objectNormalMaps.push_back(nm);
 		} else
 			objectNormalMaps.push_back(NULL);

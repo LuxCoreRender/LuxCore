@@ -115,7 +115,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene *scene,
 	}
 
 	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI + shiftU, SphericalTheta(-dir) * INV_PI + shiftV);
-	return gain * tex->GetTexMap()->GetColor(uv);
+	return gain * tex->GetColor(uv);
 }
 
 //------------------------------------------------------------------------------

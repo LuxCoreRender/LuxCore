@@ -11,3 +11,5 @@ scene.objects.mat_white.mat_white = scenes/bump/mat_white.ply
 #scene.objects.mat_white.mat_white.bumpmap = scenes/bump/map.png
 #scene.objects.mat_white.mat_white.bumpmap.scale = 2.0
 scene.objects.mat_white.mat_white.normalmap = scenes/bump/normal.png
+scene.objects.mat_white.mat_white.normalmap.uscale = 2
+scene.objects.mat_white.mat_white.normalmap.vscale = 2

@@ -90,10 +90,12 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index,
 	cameraBuff = NULL;
 	areaLightsBuff = NULL;
 	texMapDescBuff = NULL;
-	meshTexsBuff = NULL;
-	meshBumpsBuff = NULL;
-	meshBumpsScaleBuff = NULL;
+	meshTexMapsBuff = NULL;
+	meshTexMapsInfoBuff = NULL;
+	meshBumpMapsBuff = NULL;
+	meshBumpMapsInfoBuff = NULL;
 	meshNormalMapsBuff = NULL;
+	meshNormalMapsInfoBuff = NULL;
 	uvsBuff = NULL;
 
 	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
@@ -348,33 +350,40 @@ void PathOCLRenderThread::InitTextureMaps() {
 				sizeof(PathOCL::TexMap) * cscene->gpuTexMaps.size(), "TexMaps description");
 
 		const unsigned int meshCount = renderEngine->compiledScene->meshMats.size();
-		AllocOCLBufferRO(&meshTexsBuff, cscene->meshTexs,
+		AllocOCLBufferRO(&meshTexMapsBuff, &cscene->meshTexMaps[0],
 				sizeof(unsigned int) * meshCount, "Mesh TexMaps index");
+		AllocOCLBufferRO(&meshTexMapsInfoBuff, &cscene->meshTexMapsInfo[0],
+			sizeof(PathOCL::TexMapInfo) * meshCount, "Mesh TexMaps info");
 
-		if (cscene->meshBumps) {
-			AllocOCLBufferRO(&meshBumpsBuff, cscene->meshBumps,
+		if (cscene->meshBumpMaps.size() > 0) {
+			AllocOCLBufferRO(&meshBumpMapsBuff, &cscene->meshBumpMaps[0],
 				sizeof(unsigned int) * meshCount, "Mesh BumpMaps index");
-
-			AllocOCLBufferRO(&meshBumpsScaleBuff, cscene->bumpMapScales,
-				sizeof(float) * meshCount, "Mesh BumpMaps scales");
+			AllocOCLBufferRO(&meshBumpMapsInfoBuff, &cscene->meshBumpMapsInfo[0],
+				sizeof(PathOCL::BumpMapInfo) * meshCount, "Mesh BumpMaps info");
 		} else {
-			meshBumpsBuff = NULL;
-			meshBumpsScaleBuff = NULL;
+			meshBumpMapsBuff = NULL;
+			meshBumpMapsInfoBuff = NULL;
 		}
 
-		if (cscene->meshNormalMaps)
-			AllocOCLBufferRO(&meshNormalMapsBuff, cscene->meshNormalMaps,
+		if (cscene->meshNormalMaps.size() > 0) {
+			AllocOCLBufferRO(&meshNormalMapsBuff, &cscene->meshNormalMaps[0],
 				sizeof(unsigned int) * meshCount, "Mesh NormalMaps index");
-		else
+			AllocOCLBufferRO(&meshNormalMapsInfoBuff, &cscene->meshNormalMapsInfo[0],
+				sizeof(PathOCL::NormalMapInfo) * meshCount, "Mesh NormalMaps info");
+		} else {
 			meshNormalMapsBuff = NULL;
+			meshNormalMapsInfoBuff = NULL;
+		}
 	} else {
 		texMapRGBBuff.resize(0);
 		texMapAlphaBuff.resize(0);
 		texMapDescBuff = NULL;
-		meshTexsBuff = NULL;
-		meshBumpsBuff = NULL;
-		meshBumpsScaleBuff = NULL;
+		meshTexMapsBuff = NULL;
+		meshTexMapsInfoBuff = NULL;
+		meshBumpMapsBuff = NULL;
+		meshBumpMapsInfoBuff = NULL;
 		meshNormalMapsBuff = NULL;
+		meshNormalMapsInfoBuff = NULL;
 	}
 }
 
@@ -476,7 +485,7 @@ void PathOCLRenderThread::InitKernels() {
 		if (cscene->alphaTexMemBlocks.size() > 5)
 			throw std::runtime_error("Too many memory pages required for alpha channel of a texture maps");
 	}
-	if (meshBumpsBuff)
+	if (meshBumpMapsBuff)
 		ss << " -D PARAM_HAS_BUMPMAPS";
 	if (meshNormalMapsBuff)
 		ss << " -D PARAM_HAS_NORMALMAPS";
@@ -942,13 +951,16 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *(texMapAlphaBuff[i]));
 	if ((cscene->rgbTexMemBlocks.size() > 0) || (cscene->alphaTexMemBlocks.size() > 0)) {
 		advancePathsKernel->setArg(argIndex++, *texMapDescBuff);
-		advancePathsKernel->setArg(argIndex++, *meshTexsBuff);
-		if (meshBumpsBuff) {
-			advancePathsKernel->setArg(argIndex++, *meshBumpsBuff);
-			advancePathsKernel->setArg(argIndex++, *meshBumpsScaleBuff);
+		advancePathsKernel->setArg(argIndex++, *meshTexMapsBuff);
+		advancePathsKernel->setArg(argIndex++, *meshTexMapsInfoBuff);
+		if (meshBumpMapsBuff) {
+			advancePathsKernel->setArg(argIndex++, *meshBumpMapsBuff);
+			advancePathsKernel->setArg(argIndex++, *meshBumpMapsInfoBuff);
 		}
-		if (meshNormalMapsBuff)
+		if (meshNormalMapsBuff) {
 			advancePathsKernel->setArg(argIndex++, *meshNormalMapsBuff);
+			advancePathsKernel->setArg(argIndex++, *meshNormalMapsInfoBuff);
+		}
 		advancePathsKernel->setArg(argIndex++, *uvsBuff);
 	}
 	if (alphaFrameBufferBuff)
@@ -1041,15 +1053,18 @@ void PathOCLRenderThread::Stop() {
 		FreeOCLBuffer(&texMapAlphaBuff[i]);
 	if ((texMapAlphaBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
 		FreeOCLBuffer(&texMapDescBuff);
-		FreeOCLBuffer(&meshTexsBuff);
+		FreeOCLBuffer(&meshTexMapsBuff);
+		FreeOCLBuffer(&meshTexMapsInfoBuff);
 
-		if (meshBumpsBuff) {
-			FreeOCLBuffer(&meshBumpsBuff);
-			FreeOCLBuffer(&meshBumpsScaleBuff);
+		if (meshBumpMapsBuff) {
+			FreeOCLBuffer(&meshBumpMapsBuff);
+			FreeOCLBuffer(&meshBumpMapsInfoBuff);
 		}
 
-		if (meshNormalMapsBuff)
+		if (meshNormalMapsBuff) {
 			FreeOCLBuffer(&meshNormalMapsBuff);
+			FreeOCLBuffer(&meshNormalMapsInfoBuff);
+		}
 
 		FreeOCLBuffer(&uvsBuff);
 	}

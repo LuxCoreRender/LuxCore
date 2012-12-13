@@ -290,6 +290,19 @@ typedef struct {
 } TexMap;
 
 typedef struct {
+	float uScale, vScale, uDelta, vDelta;
+} TexMapInfo;
+
+typedef struct {
+	float uScale, vScale, uDelta, vDelta;
+	float scale;
+} BumpMapInfo;
+
+typedef struct {
+	float uScale, vScale, uDelta, vDelta;
+} NormalMapInfo;
+
+typedef struct {
 	unsigned int vertsOffset;
 	unsigned int trisOffset;
 

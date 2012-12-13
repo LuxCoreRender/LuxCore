@@ -68,14 +68,12 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 
 		// Check if there is an assigned texture map
 		if (tm) {
-			const TextureMap *map = tm->GetTexMap();
-
 			// Apply texture mapping
-			surfaceColor *= map->GetColor(triUV);
+			surfaceColor *= tm->GetColor(triUV);
 
 			// Check if the texture map has an alpha channel
-			if (map->HasAlpha()) {
-				const float alpha = map->GetAlpha(triUV);
+			if (tm->HasAlpha()) {
+				const float alpha = tm->GetAlpha(triUV);
 
 				if ((alpha == 0.0f) || ((alpha < 1.f) && (u0 > alpha))) {
 					// It is a pass-through material
@@ -89,7 +87,7 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 		if (bm || nm) {
 			if (nm) {
 				// Apply normal mapping
-				const Spectrum color = nm->GetTexMap()->GetColor(triUV);
+				const Spectrum color = nm->GetColor(triUV);
 
 				const float x = 2.f * (color.r - 0.5f);
 				const float y = 2.f * (color.g - 0.5f);
@@ -105,16 +103,15 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 
 			if (bm) {
 				// Apply bump mapping
-				const TextureMap *map = bm->GetTexMap();
-				const UV &dudv = map->GetDuDv();
+				const UV &dudv = bm->GetDuDv();
 
-				const float b0 = map->GetColor(triUV).Filter();
+				const float b0 = bm->GetColor(triUV).Filter();
 
 				const UV uvdu(triUV.u + dudv.u, triUV.v);
-				const float bu = map->GetColor(uvdu).Filter();
+				const float bu = bm->GetColor(uvdu).Filter();
 
 				const UV uvdv(triUV.u, triUV.v + dudv.v);
-				const float bv = map->GetColor(uvdv).Filter();
+				const float bv = bm->GetColor(uvdv).Filter();
 
 				const float scale = bm->GetScale();
 				const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
