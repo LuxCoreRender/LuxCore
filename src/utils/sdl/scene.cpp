@@ -219,6 +219,8 @@ void Scene::CreateCamera(const Properties &props) {
 
 	camera = new PerspectiveCamera(orig, target, up);
 
+	camera->clipHither = props.GetFloat("scene.camera.cliphither", 1e-3f);
+	camera->clipYon = props.GetFloat("scene.camera.clipyon", 1e30f);
 	camera->lensRadius = props.GetFloat("scene.camera.lensradius", 0.f);
 	camera->focalDistance = props.GetFloat("scene.camera.focaldistance", 10.f);
 	camera->fieldOfView = props.GetFloat("scene.camera.fieldofview", 45.f);
