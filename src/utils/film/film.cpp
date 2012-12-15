@@ -137,8 +137,10 @@ void Film::SetFilterType(const FilterType type) {
 			throw std::runtime_error("Unknown filter type: " + type);
 	}
 
-	u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
-	filterLUTs = new FilterLUTs(*filter, size);
+	if (filter) {
+		u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
+		filterLUTs = new FilterLUTs(*filter, size);
+	}
 }
 
 void Film::Reset() {
