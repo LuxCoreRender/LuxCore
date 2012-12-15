@@ -72,14 +72,6 @@ public:
 	float preScale, postScale, burn;
 };
 
-//------------------------------------------------------------------------------
-// Filtering
-//------------------------------------------------------------------------------
-
-typedef enum {
-	FILTER_NONE, FILTER_GAUSSIAN
-} FilterType;
-
 }
 
 #endif	/* _LUXRAYS_UTILS_TONEMAPPING_H */

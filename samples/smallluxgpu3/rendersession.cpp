@@ -52,11 +52,8 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	film = new Film(renderConfig->scene->camera->GetFilmWeight(),
 			renderConfig->scene->camera->GetFilmHeight(), true, true, true);
 
-	const int filterType = cfg.GetInt("film.filter.type", 1);
-	if (filterType == 0)
-		film->SetFilterType(FILTER_NONE);
-	else
-		film->SetFilterType(FILTER_GAUSSIAN);
+	const FilterType filterType = Filter::String2FilterType(cfg.GetString("film.filter.type", "GAUSSIAN"));
+	film->SetFilterType(filterType);
 
 	const int toneMapType = cfg.GetInt("film.tonemap.type", 0);
 	if (toneMapType == 0) {
