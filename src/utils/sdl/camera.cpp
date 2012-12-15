@@ -27,8 +27,34 @@ namespace luxrays { namespace sdl {
 
 void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
 	const float frame =  float(width) / float(height);
-
 	float screen[4];
+
+	filmWidth = width;
+	filmHeight = height;
+	filmSubRegion[0] = 0;
+	filmSubRegion[1] = width - 1;
+	filmSubRegion[2] = 0;
+	filmSubRegion[3] = height - 1;
+
+	if (autoUpdateFilmRegion) {
+		if (frame < 1.f) {
+			screen[0] = -frame;
+			screen[1] = frame;
+			screen[2] = -1.f;
+			screen[3] = 1.f;
+		} else {
+			screen[0] = -1.f;
+			screen[1] = 1.f;
+			screen[2] = -1.f / frame;
+			screen[3] = 1.f / frame;
+		}
+	} else {
+		screen[0] = filmRegion[0];
+		screen[1] = filmRegion[1];
+		screen[2] = filmRegion[2];
+		screen[3] = filmRegion[3];
+	}
+
 	if (subRegion) {
 		// I have to render a sub region of the image
 		filmSubRegion[0] = subRegion[0];
@@ -51,26 +77,6 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 			screen[2] = -(1.f / frame) * (-halfH + filmSubRegion[2]) / (-halfH);
 			screen[3] = (1.f / frame) * (filmSubRegion[2] + filmHeight - halfH) / halfH;			
 		}
-	} else {
-		// Just render the full image
-		filmWidth = width;
-		filmHeight = height;
-		filmSubRegion[0] = 0;
-		filmSubRegion[1] = width - 1;
-		filmSubRegion[2] = 0;
-		filmSubRegion[3] = height - 1;
-
-		if (frame < 1.f) {
-			screen[0] = -frame;
-			screen[1] = frame;
-			screen[2] = -1.f;
-			screen[3] = 1.f;
-		} else {
-			screen[0] = -1.f;
-			screen[1] = 1.f;
-			screen[2] = -1.f / frame;
-			screen[3] = 1.f / frame;
-		}
 	}
 
 	// Used to move translate the camera
@@ -84,25 +90,22 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	y = Normalize(y);
 
 	// Used to generate rays
-
-	Transform WorldToCamera = LookAt(orig, target, up);
-	cameraToWorld = Inverse(WorldToCamera);
-
-	Transform cameraToScreen = Perspective(fieldOfView, clipHither, clipYon);
-
-	Transform screenToRaster =
-			Scale(float(filmWidth), float(filmHeight), 1.f) *
-			Scale(1.f / (screen[1] - screen[0]), 1.f / (screen[2] - screen[3]), 1.f) *
-			luxrays::Translate(Vector(-screen[0], -screen[3], 0.f));
-
-	rasterToCamera = Inverse(screenToRaster * cameraToScreen);
-
-	Transform screenToWorld = cameraToWorld * Inverse(cameraToScreen);
-	rasterToWorld = screenToWorld * Inverse(screenToRaster);
+	const Transform worldToCamera = LookAt(orig, target, up);
+	cameraToWorld = Inverse(worldToCamera);
+	
+	// Compute projective camera transformations
+	screenToCamera = Inverse(Perspective(fieldOfView, clipHither, clipYon));
+	screenToWorld = cameraToWorld * screenToCamera;
+	// Compute projective camera screen transformations
+	rasterToScreen = luxrays::Translate(Vector(screen[0], screen[3], 0.f)) *
+		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
+		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
+	rasterToCamera = screenToCamera * rasterToScreen;
+	rasterToWorld = screenToWorld * rasterToScreen;
 
 	const float tanAngle = tanf(Radians(fieldOfView) / 2.f) * 2.f;
-	const float xPixelWidth = tanAngle * ((screen[1] - screen[0]) / 2.f); // TODO: check if I'm missing a "* (xEnd - xStart) / xResolution"
-	const float yPixelHeight = tanAngle * ((screen[3] - screen[2]) / 2.f); // TODO: check if I'm missing a "* (yEnd - yStart) / yResolution"
+	const float xPixelWidth = tanAngle * ((screen[1] - screen[0]) / 2.f);
+	const float yPixelHeight = tanAngle * ((screen[3] - screen[2]) / 2.f);
 	pixelArea = xPixelWidth * yPixelHeight;
 }
 

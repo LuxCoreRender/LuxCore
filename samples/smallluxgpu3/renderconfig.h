@@ -42,7 +42,7 @@ public:
 	void SetScreenRefreshInterval(const unsigned int t);
 	unsigned int GetScreenRefreshInterval() const;
 	void GetScreenSize(u_int *width, u_int *height) const;
-	void GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
+	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
 
 	luxrays::utils::Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, luxrays::utils::Film *film,
