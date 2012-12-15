@@ -36,8 +36,10 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	const Properties &cfg = renderConfig->cfg;
 
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	renderConfig->GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
-	renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, filmSubRegion);
+	if (renderConfig->GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion))
+		renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, filmSubRegion);
+	else
+		renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, NULL);
 
 	periodiceSaveTime = cfg.GetFloat("batch.periodicsave", 0.f);
 	lastPeriodicSave = WallClockTime();

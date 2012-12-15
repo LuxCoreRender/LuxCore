@@ -85,13 +85,14 @@ unsigned int RenderConfig::GetScreenRefreshInterval() const {
 	return screenRefreshInterval;
 }
 
-void RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
+bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const {
 	const u_int width = cfg.GetInt("image.width", 640);
 	const u_int height = cfg.GetInt("image.height", 480);
 
 	// Check if I'm rendering a film subregion
 	u_int subRegion[4];
+	bool subRegionUsed;
 	if (cfg.IsDefined("image.subregion")) {
 		vector<int> params = cfg.GetIntVector("image.subregion", "0 " + boost::lexical_cast<string>(width - 1) + " 0 " + boost::lexical_cast<string>(height - 1));
 		if (params.size() != 4)
@@ -101,11 +102,13 @@ void RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		subRegion[1] = Max(0u, Min(width - 1, Max(subRegion[0] + 1, (u_int)params[1])));
 		subRegion[2] = Max(0u, Min(height - 1, (u_int)params[2]));
 		subRegion[3] = Max(0u, Min(height - 1, Max(subRegion[2] + 1, (u_int)params[3])));
+		subRegionUsed = true;
 	} else {
 		subRegion[0] = 0;
 		subRegion[1] = width - 1;
 		subRegion[2] = 0;
 		subRegion[3] = height - 1;
+		subRegionUsed = false;
 	}
 
 	*filmFullWidth = width;
@@ -116,6 +119,8 @@ void RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		filmSubRegion[2] = subRegion[2];
 		filmSubRegion[3] = subRegion[3];
 	}
+
+	return subRegionUsed;
 }
 
 void RenderConfig::GetScreenSize(u_int *screenWidth, u_int *screenHeight) const {

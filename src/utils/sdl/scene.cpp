@@ -217,7 +217,12 @@ void Scene::CreateCamera(const Properties &props) {
 	vf = GetParameters(props, "scene.camera.up", 3, "0.0 0.0 0.1");
 	const Vector up(vf.at(0), vf.at(1), vf.at(2));
 
-	camera = new PerspectiveCamera(orig, target, up);
+	if (props.IsDefined("scene.camera.screenwindow")) {
+		vf = GetParameters(props, "scene.camera.screenwindow", 4, "0.0 1.0 0.0 1.0");
+
+		camera = new PerspectiveCamera(orig, target, up, &vf[0]);
+	} else
+		camera = new PerspectiveCamera(orig, target, up);
 
 	camera->clipHither = props.GetFloat("scene.camera.cliphither", 1e-3f);
 	camera->clipYon = props.GetFloat("scene.camera.clipyon", 1e30f);

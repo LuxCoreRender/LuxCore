@@ -29,9 +29,19 @@ namespace luxrays { namespace sdl {
 
 class PerspectiveCamera {
 public:
-	PerspectiveCamera(const Point &o, const Point &t, const Vector &u) :
+	PerspectiveCamera(const Point &o, const Point &t, const Vector &u, const float *region = NULL) :
 		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
-		lensRadius(0.f), focalDistance(10.f) { }
+		lensRadius(0.f), focalDistance(10.f) {
+		if (region) {
+			autoUpdateFilmRegion = false;
+			filmRegion[0] = region[0];
+			filmRegion[1] = region[1];
+			filmRegion[2] = region[2];
+			filmRegion[3] = region[3];
+		} else
+			autoUpdateFilmRegion = true;
+			
+	}
 
 	~PerspectiveCamera() {
 	}
@@ -40,7 +50,6 @@ public:
 	const float GetPixelArea() const { return pixelArea; }
 	const u_int GetFilmWeight() const { return filmWidth; }
 	const u_int GetFilmHeight() const { return filmHeight; }
-	const u_int *GetFilmSubRegion() const { return filmSubRegion; }
 
 	void TranslateLeft(const float k) {
 		Vector t = -k * Normalize(x);
@@ -121,13 +130,21 @@ public:
 	Vector up;
 	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
+	float filmRegion[4];
+	bool autoUpdateFilmRegion;
+
 private:
 	u_int filmWidth, filmHeight, filmSubRegion[4];
 
 	// Calculated values
 	float pixelArea;
 	Vector dir, x, y;
-	Transform rasterToCamera, rasterToWorld, cameraToWorld;
+
+	// ProjectiveCamera Protected Data
+	Transform cameraToWorld;
+	Transform screenToCamera, screenToWorld;
+	Transform rasterToScreen, rasterToWorld;
+	Transform rasterToCamera;
 };
 
 } }
