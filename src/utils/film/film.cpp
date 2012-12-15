@@ -121,14 +121,24 @@ void Film::SetFilterType(const FilterType type) {
 			filter = NULL;
 			filterLUTs = NULL;
 			break;
+		case FILTER_BOX:
+			filter = new BoxFilter(1.5f, 1.5f);
+			break;
 		case FILTER_GAUSSIAN:
 			filter = new GaussianFilter(1.5f, 1.5f, 2.f);
-			filterLUTs = new FilterLUTs(*filter, 4);
+			break;
+		case FILTER_MITCHELL:
+			filter = new MitchellFilter(1.5f, 1.5f);
+			break;
+		case FILTER_MITCHELL_SS:
+			filter = new MitchellFilterSS(1.5f, 1.5f);
 			break;
 		default:
-			assert (false);
-			break;
+			throw std::runtime_error("Unknown filter type: " + type);
 	}
+
+	u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
+	filterLUTs = new FilterLUTs(*filter, size);
 }
 
 void Film::Reset() {
@@ -579,4 +589,18 @@ void Film::ResetConvergenceTest() {
 
 unsigned int Film::RunConvergenceTest() {
 	return convTest->Test((const float *)frameBuffer->GetPixels());
+}
+
+FilterType Filter::String2FilterType(const std::string &type) {
+	if ((type.compare("0") == 0) || (type.compare("NONE") == 0))
+		return FILTER_NONE;
+	else if ((type.compare("1") == 0) || (type.compare("BOX") == 0))
+		return FILTER_BOX;
+	else if ((type.compare("2") == 0) || (type.compare("GAUSSIAN") == 0))
+		return FILTER_GAUSSIAN;
+	else if ((type.compare("3") == 0) || (type.compare("MITCHELL") == 0))
+		return FILTER_MITCHELL;
+	else if ((type.compare("4") == 0) || (type.compare("MITCHELL_SS") == 0))
+		return FILTER_MITCHELL_SS;
+	throw std::runtime_error("Unknown filter type: " + type);
 }
