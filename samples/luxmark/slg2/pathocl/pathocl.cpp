@@ -260,7 +260,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					if ((count > 0) && !c.IsNaN()) {
 						c /= count;
 						film->AddSampleCount(1.f);
-						film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c);
+						film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c, 0.f);
 					}
 
 					++pGPU;

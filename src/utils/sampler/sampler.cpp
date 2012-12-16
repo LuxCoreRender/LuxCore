@@ -190,10 +190,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		// Add accumulated SampleResult of previous reference sample
 		const float norm = weight / (currentLuminance / meanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f) {
-			for (std::vector<SampleResult>::const_iterator sr = currentSampleResult.begin(); sr < currentSampleResult.end(); ++sr) {
-				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, norm);
-				film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha, norm);
-			}
+			for (std::vector<SampleResult>::const_iterator sr = currentSampleResult.begin(); sr < currentSampleResult.end(); ++sr)
+				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, norm);
 		}
 
 		// Save new contributions for reference
@@ -209,10 +207,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		// Add contribution of new sample before rejecting it
 		const float norm = newWeight / (newLuminance / meanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f) {
-			for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
-				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, norm * sr->radiance, norm);
-				film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha, norm);
-			}
+			for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, norm * sr->radiance, sr->alpha, norm);
 		}
 
 		// Restart from previous reference

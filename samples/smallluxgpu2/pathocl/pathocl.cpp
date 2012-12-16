@@ -240,8 +240,6 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
-	const bool isAlphaChannelEnabled = film->IsAlphaChannelEnabled();
-
 	for (unsigned int y = 0; y < imgHeight; ++y) {
 		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
 
@@ -262,10 +260,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 			if ((count > 0) && !c.IsNaN()) {
 				c /= count;
 				film->AddSampleCount(1.f);
-				film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c);
-
-				if (isAlphaChannelEnabled && !isnan(alpha))
-					film->SplatFilteredAlpha(x, y, alpha / count);
+				film->SplatFiltered(PER_PIXEL_NORMALIZED, x, y, c, isnan(alpha) ? 0.f : (alpha / count));
 			}
 
 			++pGPU;

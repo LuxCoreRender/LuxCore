@@ -95,10 +95,8 @@ public:
 	void NextSample(const std::vector<SampleResult> &sampleResults) {
 		film->AddSampleCount(1.0);
 
-		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
-			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance);
-			film->SplatFilteredAlpha(sr->screenX, sr->screenY, sr->alpha);
-		}
+		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
 	}
 };
 

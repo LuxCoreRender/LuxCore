@@ -498,7 +498,8 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 }
 
 void Film::SplatFiltered(const FilmBufferType type, const float screenX,
-		const float screenY, const Spectrum &radiance, const float weight) {
+		const float screenY, const Spectrum &radiance, const float alpha,
+		const float weight) {
 	assert (!radiance.IsNaN() && !radiance.IsInf());
 
 	if (radiance.IsNaN() || radiance.IsInf())
@@ -508,52 +509,12 @@ void Film::SplatFiltered(const FilmBufferType type, const float screenX,
 		const int x = Ceil2Int(screenX - 0.5f);
 		const int y = Ceil2Int(screenY - 0.5f);
 
-		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
+		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height)) {
 			AddRadiance(type, x, y, radiance, weight);
-	} else {
-		// Compute sample's raster extent
-		const float dImageX = screenX - 0.5f;
-		const float dImageY = screenY - 0.5f;
-		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
-		const float *lut = filterLUT->GetLUT();
 
-		const int x0 = Ceil2Int(dImageX - filter->xWidth);
-		const int x1 = x0 + filterLUT->GetWidth();
-		const int y0 = Ceil2Int(dImageY - filter->yWidth);
-		const int y1 = y0 + filterLUT->GetHeight();
-
-		for (int iy = y0; iy < y1; ++iy) {
-			if (iy < 0) {
-				lut += filterLUT->GetWidth();
-				continue;
-			} else if(iy >= (int)height)
-				break;
-
-			for (int ix = x0; ix < x1; ++ix) {
-				const float filterWt = *lut++;
-
-				if ((ix < 0) || (ix >= (int)width))
-					continue;
-
-				AddRadiance(type, ix, iy, radiance, weight * filterWt);
-			}
+			if (enableAlphaChannel)
+				AddAlpha(x, y, alpha, weight);
 		}
-	}
-}
-
-void Film::SplatFilteredAlpha(const float screenX, const float screenY,
-		const float alpha, const float weight) {
-	assert (!isnan(alpha) && !isinf(alpha));
-
-	if (!enableAlphaChannel || isnan(alpha) || isinf(alpha))
-		return;
-
-	if (filterType == FILTER_NONE) {
-		const int x = Ceil2Int(screenX - 0.5f);
-		const int y = Ceil2Int(screenY - 0.5f);
-
-		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-			AddAlpha((int)screenX, (int)screenY, alpha, weight);
 	} else {
 		// Compute sample's raster extent
 		const float dImageX = screenX - 0.5f;
@@ -579,7 +540,11 @@ void Film::SplatFilteredAlpha(const float screenX, const float screenY,
 				if ((ix < 0) || (ix >= (int)width))
 					continue;
 
-				AddAlpha(ix, iy, alpha, weight * filterWt);
+				const float filteredWeight = weight * filterWt;
+				AddRadiance(type, ix, iy, radiance, filteredWeight);
+
+				if (enableAlphaChannel)
+					AddAlpha(ix, iy, alpha, filteredWeight);
 			}
 		}
 	}

@@ -230,18 +230,16 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
-	const bool isAlphaChannelEnabled = film->IsAlphaChannelEnabled();
-
 	for (unsigned int y = 0; y < imgHeight; ++y) {
 		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
 
 		for (unsigned int x = 0; x < imgWidth; ++x) {
-			Spectrum c;
+			Spectrum radiance;
 			float alpha = 0.0f;
 			float count = 0.f;
 			for (size_t i = 0; i < renderThreads.size(); ++i) {
 				if (renderThreads[i]->frameBuffer) {
-					c += renderThreads[i]->frameBuffer[pGPU].c;
+					radiance += renderThreads[i]->frameBuffer[pGPU].c;
 					count += renderThreads[i]->frameBuffer[pGPU].count;
 				}
 
@@ -249,14 +247,11 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
 			}
 
-			if ((count > 0) && !c.IsNaN()) {
-				c /= count;
+			if ((count > 0) && !radiance.IsNaN()) {
 				film->AddSampleCount(1.f);
 				// -.5f is to align correctly the pixel after the splat
-				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f, c);
-
-				if (isAlphaChannelEnabled && !isnan(alpha))
-					film->SplatFilteredAlpha(x - .5f, y - .5f, alpha / count);
+				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
+						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
 			}
 
 			++pGPU;
