@@ -151,6 +151,14 @@ add_library(smallluxgpu3 STATIC ${SLG3LIB_SRCS})
 
 link_directories (${LuxRays_LIB_DIR})
 
+IF(OSX_UPDATE_LUXRAYS_REPO)
+	ADD_CUSTOM_COMMAND(
+	TARGET smallluxgpu3 POST_BUILD
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libsmallluxgpu3.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
+	# todo: copy also needed headers
+	)
+ENDIF(OSX_UPDATE_LUXRAYS_REPO)
+
 #############################################################################
 #
 # SLG library demo
