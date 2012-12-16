@@ -59,6 +59,7 @@ public:
 
 	virtual RenderEngineType GetEngineType() const = 0;
 
+	void SetSeed(const unsigned long seed);
 	void GenerateNewSeed();
 
 	virtual bool IsMaterialCompiled(const luxrays::sdl::MaterialType type) const {

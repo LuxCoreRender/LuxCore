@@ -161,6 +161,12 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 	EndEditLockLess(editActions);
 }
 
+void RenderEngine::SetSeed(const unsigned long seed) {
+	seedBaseGenerator.init(seed);
+
+	GenerateNewSeed();
+}
+
 void RenderEngine::GenerateNewSeed() {
 	seedBase = seedBaseGenerator.uintValue();
 }

@@ -63,11 +63,11 @@ public:
 		return (uintValue() & FLOATMASK) * invUI;
 	}
 
-private:
 	void init(const unsigned long tn) {
 		taus113_set(tn);
 	}
 
+private:
 	unsigned long LCG(const unsigned long n) {
 		return 69069UL * n; // The result is clamped to 32 bits (long)
 	}
