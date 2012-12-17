@@ -40,7 +40,6 @@ ExtMeshCache::~ExtMeshCache() {
 
 void ExtMeshCache::DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals) {
-	assert (n || (!usePlyNormals));
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
 	maps.insert(std::make_pair(key, mesh));
 	meshes.push_back(mesh);
