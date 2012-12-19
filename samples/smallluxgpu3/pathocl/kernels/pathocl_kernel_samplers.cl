@@ -374,7 +374,7 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer,
 
 		/*if (get_global_id(0) == 0)
 			printf(\"[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\\n\",
-					smallMutationCount,
+					consecutiveRejects,
 					currentL.r, currentL.g, currentL.b, weight,
 					proposedL.r, proposedL.g, proposedL.b, newWeight,
 					accProb, rndVal);*/
@@ -459,8 +459,8 @@ void Sampler_MLT_SplatSample(__global Pixel *frameBuffer,
 #if !defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
 		if (norm > 0.f) {
 			/*if (get_global_id(0) == 0)
-				printf(\"\\t\\tPixelIndex: %d Contrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
-						pixelIndex, contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
+				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
+						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
