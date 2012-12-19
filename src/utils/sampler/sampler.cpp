@@ -208,7 +208,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		const float norm = newWeight / (newLuminance / meanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f) {
 			for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, norm * sr->radiance, sr->alpha, norm);
+				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, norm);
 		}
 
 		// Restart from previous reference
