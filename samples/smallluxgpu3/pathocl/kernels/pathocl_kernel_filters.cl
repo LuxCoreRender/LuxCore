@@ -145,19 +145,19 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 			isnan(rad->g) || isinf(rad->g) ||
 			isnan(rad->b) || isinf(rad->b) ||
 			isnan(weight) || isinf(weight))
-		printf(\"(NaN/Inf. error: (%f, %f, %f) [%f]\\n\", rad->r, rad->g, rad->b, weight);*/
+		printf(\"NaN/Inf. error: (%f, %f, %f) [%f]\\n\", rad->r, rad->g, rad->b, weight);*/
 	
 #if defined(__APPLE_FIX__)
 
 #if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&pixel->c.r, rad->r);
-	AtomicAdd(&pixel->c.g, rad->g);
-	AtomicAdd(&pixel->c.b, rad->b);
+	AtomicAdd(&pixel->c.r, weight * rad->r);
+	AtomicAdd(&pixel->c.g, weight * rad->g);
+	AtomicAdd(&pixel->c.b, weight * rad->b);
 	AtomicAdd(&pixel->count, weight);
 #else
-	pixel->c.r += rad->r;
-	pixel->c.g += rad->g;
-	pixel->c.b += rad->b;
+	pixel->c.r += weight * rad->r;
+	pixel->c.g += weight * rad->g;
+	pixel->c.b += weight * rad->b;
 	pixel->count += weight;
 #endif
 
@@ -167,7 +167,8 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 	s.x = rad->r;
 	s.y = rad->g;
 	s.z = rad->b;
-	s.w = weight;
+	s.w = 1.f;
+	s *= weight;
 
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 	AtomicAdd(&pixel->c.r, s.x);
@@ -187,9 +188,9 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 
 void Pixel_AddAlpha(__global AlphaPixel *apixel, const float alpha, const float weight) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&apixel->alpha, alpha);
+	AtomicAdd(&apixel->alpha, weight * alpha);
 #else
-	apixel->alpha += alpha;
+	apixel->alpha += weight * alpha;
 #endif
 }
 #endif
