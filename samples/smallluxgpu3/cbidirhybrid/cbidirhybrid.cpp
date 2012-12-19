@@ -34,6 +34,9 @@ namespace slg {
 
 CBiDirHybridRenderEngine::CBiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		BiDirHybridRenderEngine(rcfg, flm, flmMutex) {
+}
+
+void CBiDirHybridRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
@@ -42,6 +45,8 @@ CBiDirHybridRenderEngine::CBiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm
 
 	eyePathCount = cfg.GetInt("cbidir.eyepath.count", 5);
 	lightPathCount = cfg.GetInt("cbidir.lightpath.count", 5);
+
+	BiDirHybridRenderEngine::StartLockLess();
 }
 
 }

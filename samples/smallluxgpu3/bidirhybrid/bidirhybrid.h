@@ -140,6 +140,9 @@ public:
 	friend class BiDirState;
 	friend class BiDirHybridRenderThread;
 
+protected:
+	virtual void StartLockLess();
+
 private:
 	HybridRenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
 		return new BiDirHybridRenderThread(this, index, device);

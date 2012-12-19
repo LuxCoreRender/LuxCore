@@ -34,15 +34,19 @@ namespace slg {
 
 BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		HybridRenderEngine(rcfg, flm, flmMutex) {
+	// For classic BiDir, the count is always 1
+	eyePathCount = 1;
+	lightPathCount = 1;
+
+	film->EnableOverlappedScreenBufferUpdate(true);
+}
+
+void BiDirHybridRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
-
-	// For classic BiDir, the count is always 1
-	eyePathCount = 1;
-	lightPathCount = 1;
 
 	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
 	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
@@ -52,7 +56,7 @@ BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, 
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
 
-	film->EnableOverlappedScreenBufferUpdate(true);
+	HybridRenderEngine::StartLockLess();
 }
 
 }

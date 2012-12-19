@@ -83,6 +83,25 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	// Set the LuxRays SataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
+	film->EnableOverlappedScreenBufferUpdate(true);
+}
+
+PathOCLRenderEngine::~PathOCLRenderEngine() {
+	if (editMode)
+		EndEdit(EditActionList());
+	if (started)
+		Stop();
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		delete renderThreads[i];
+
+	delete sampler;
+	delete filter;
+}
+
+void PathOCLRenderEngine::StartLockLess() {
+	const Properties &cfg = renderConfig->cfg;
+
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
@@ -161,7 +180,11 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 
 	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
 
-	film->EnableOverlappedScreenBufferUpdate(true);
+	//--------------------------------------------------------------------------
+	// Compile the scene
+	//--------------------------------------------------------------------------
+
+	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
 
 	//--------------------------------------------------------------------------
 	// Create and start render threads
@@ -176,23 +199,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 				this);
 		renderThreads.push_back(t);
 	}
-}
-
-PathOCLRenderEngine::~PathOCLRenderEngine() {
-	if (editMode)
-		EndEdit(EditActionList());
-	if (started)
-		Stop();
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		delete renderThreads[i];
-
-	delete sampler;
-	delete filter;
-}
-
-void PathOCLRenderEngine::StartLockLess() {
-	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Start();

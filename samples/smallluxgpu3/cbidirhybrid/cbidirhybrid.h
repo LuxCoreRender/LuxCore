@@ -36,6 +36,9 @@ public:
 	CBiDirHybridRenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return CBIDIRHYBRID; }
+
+protected:
+	virtual void StartLockLess();
 };
 
 }

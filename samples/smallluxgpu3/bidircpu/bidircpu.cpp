@@ -34,6 +34,14 @@ namespace slg {
 
 BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPURenderEngine(rcfg, flm, flmMutex) {
+	lightPathsCount = 1;
+	baseRadius = 0.f;
+	radiusAlpha = 0.f;
+
+	film->EnableOverlappedScreenBufferUpdate(true);
+}
+
+void BiDirCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
@@ -48,11 +56,7 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
 
-	lightPathsCount = 1;
-	baseRadius = 0.f;
-	radiusAlpha = 0.f;
-
-	film->EnableOverlappedScreenBufferUpdate(true);
+	CPURenderEngine::StartLockLess();
 }
 
 }

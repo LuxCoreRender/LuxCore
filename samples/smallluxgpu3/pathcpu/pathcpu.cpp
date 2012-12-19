@@ -50,4 +50,21 @@ PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	film->EnableOverlappedScreenBufferUpdate(true);
 }
 
+void PathCPURenderEngine::StartLockLess() {
+	const Properties &cfg = renderConfig->cfg;
+
+	//--------------------------------------------------------------------------
+	// Rendering parameters
+	//--------------------------------------------------------------------------
+
+	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
+	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+	const float epsilon = cfg.GetFloat("scene.epsilon", .0001f);
+	MachineEpsilon::SetMin(epsilon);
+	MachineEpsilon::SetMax(epsilon);
+
+	CPURenderEngine::StartLockLess();
+}
+
 }

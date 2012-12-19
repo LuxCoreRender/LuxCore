@@ -77,6 +77,9 @@ public:
 
 	friend class PathCPURenderThread;
 
+protected:
+	virtual void StartLockLess();
+
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {

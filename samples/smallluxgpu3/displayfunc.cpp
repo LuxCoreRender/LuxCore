@@ -328,6 +328,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			OSDPrintHelp = (!OSDPrintHelp);
 			break;
 		case 'i':
+			session->Stop();
 			if (session->renderConfig->cfg.GetString("sampler.type",
 					session->renderConfig->cfg.GetString("path.sampler.type", "INLINED_RANDOM")) == "INLINED_RANDOM") {
 				session->renderConfig->cfg.SetString("sampler.type", "METROPOLIS");
@@ -336,7 +337,6 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->renderConfig->cfg.SetString("sampler.type", "INLINED_RANDOM");
 				session->renderConfig->cfg.SetString("path.sampler.type", "INLINED_RANDOM");				
 			}
-			session->Stop();
 			session->Start();
 			break;
 		case 'n': {
