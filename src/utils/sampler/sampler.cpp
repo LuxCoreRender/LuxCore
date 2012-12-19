@@ -160,7 +160,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		const float luminance = sr->radiance.Y();
 		assert (!isnan(luminance) && !isinf(luminance));
 
-		if ((luminance >= 0.f) &&!isnan(luminance) && !isinf(luminance))
+		if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
 			newLuminance += luminance;
 	}
 
