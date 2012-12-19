@@ -39,7 +39,6 @@ class RandomGenerator {
 public:
 	RandomGenerator(const unsigned long seed) {
 		buf = new unsigned long[RAN_BUFFER_AMOUNT];
-		bufid = RAN_BUFFER_AMOUNT;
 
 		init(seed);
 	}
@@ -63,8 +62,10 @@ public:
 		return (uintValue() & FLOATMASK) * invUI;
 	}
 
-	void init(const unsigned long tn) {
-		taus113_set(tn);
+	void init(const unsigned long seed) {
+		bufid = RAN_BUFFER_AMOUNT;
+
+		taus113_set(seed);
 	}
 
 private:
