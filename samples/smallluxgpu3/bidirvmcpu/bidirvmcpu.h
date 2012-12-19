@@ -107,6 +107,9 @@ public:
 
 	friend class BiDirVMCPURenderThread;
 
+protected:
+	virtual void StartLockLess();
+
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
 		return new BiDirVMCPURenderThread(this, index, device);

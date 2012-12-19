@@ -34,8 +34,12 @@ namespace slg {
 
 LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPURenderEngine(rcfg, flm, flmMutex) {
+	film->EnableOverlappedScreenBufferUpdate(true);
+}
+
+void LightCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
-	
+
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
@@ -47,7 +51,7 @@ LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	MachineEpsilon::SetMin(epsilon);
 	MachineEpsilon::SetMax(epsilon);
 
-	film->EnableOverlappedScreenBufferUpdate(true);
+	CPURenderEngine::StartLockLess();
 }
 
 }

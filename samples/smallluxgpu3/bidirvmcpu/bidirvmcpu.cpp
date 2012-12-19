@@ -34,6 +34,9 @@ namespace slg {
 
 BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		BiDirCPURenderEngine(rcfg, flm, flmMutex) {
+}
+
+void BiDirVMCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
@@ -43,6 +46,8 @@ BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfig *rcfg, Film *flm, bo
 	lightPathsCount = Max(1024, cfg.GetInt("bidirvm.lightpath.count", 16 * 1024));
 	baseRadius = cfg.GetFloat("bidirvm.startradius.scale", .003f) * renderConfig->scene->dataSet->GetBSphere().rad;
 	radiusAlpha = cfg.GetFloat("bidirvm.alpha", .95f);
+
+	BiDirCPURenderEngine::StartLockLess();
 }
 
 }
