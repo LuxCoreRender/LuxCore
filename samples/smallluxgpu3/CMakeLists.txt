@@ -20,7 +20,7 @@
 ###########################################################################
 
 set(SLG_VERSION_MAJOR 3)
-set(SLG_VERSION_MINOR 0devel1)
+set(SLG_VERSION_MINOR 5devel1)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -132,15 +132,15 @@ set(SLG3LIB_SRCS
 	bidirvmcpu/bidirvmcputhread.cpp
 	bidirvmcpu/hashgrid.cpp
 	cbidirhybrid/cbidirhybrid.cpp
-	pathocl/kernels/pathocl_kernel_core.cpp
-	pathocl/kernels/pathocl_kernel_datatypes.cpp
-	pathocl/kernels/pathocl_kernel_filters.cpp
-	pathocl/kernels/pathocl_kernel_samplers.cpp
-	pathocl/kernels/pathocl_kernel_scene.cpp
-	pathocl/kernels/pathocl_kernels.cpp
-	pathocl/compiledscene.cpp
-	pathocl/pathocl.cpp
-	pathocl/pathoclthread.cpp
+	#pathocl/kernels/pathocl_kernel_core.cpp
+	#pathocl/kernels/pathocl_kernel_datatypes.cpp
+	#pathocl/kernels/pathocl_kernel_filters.cpp
+	#pathocl/kernels/pathocl_kernel_samplers.cpp
+	#pathocl/kernels/pathocl_kernel_scene.cpp
+	#pathocl/kernels/pathocl_kernels.cpp
+	#pathocl/compiledscene.cpp
+	#pathocl/pathocl.cpp
+	#pathocl/pathoclthread.cpp
 	lightcpu/lightcpu.cpp
 	lightcpu/lightcputhread.cpp
 	pathcpu/pathcpu.cpp

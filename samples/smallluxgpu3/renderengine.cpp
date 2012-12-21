@@ -200,8 +200,8 @@ void RenderEngine::UpdateFilm() {
 }
 
 RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
-	if ((type.compare("4") == 0) || (type.compare("PATHOCL") == 0))
-		return PATHOCL;
+//	if ((type.compare("4") == 0) || (type.compare("PATHOCL") == 0))
+//		return PATHOCL;
 	if ((type.compare("5") == 0) || (type.compare("LIGHTCPU") == 0))
 		return LIGHTCPU;
 	if ((type.compare("6") == 0) || (type.compare("PATHCPU") == 0))
@@ -219,8 +219,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 
 const string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
 	switch (type) {
-		case PATHOCL:
-			return "PATHOCL";
+//		case PATHOCL:
+//			return "PATHOCL";
 		case LIGHTCPU:
 			return "LIGHTCPU";
 		case PATHCPU:
@@ -243,12 +243,12 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 	switch (engineType) {
 		case LIGHTCPU:
 			return new LightCPURenderEngine(renderConfig, film, filmMutex);
-		case PATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-#endif
+//		case PATHOCL:
+//#ifndef LUXRAYS_DISABLE_OPENCL
+//			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
+//#else
+//			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
+//#endif
 		case PATHCPU:
 			return new PathCPURenderEngine(renderConfig, film, filmMutex);
 		case BIDIRCPU:

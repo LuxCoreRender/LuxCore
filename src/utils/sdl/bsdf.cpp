@@ -28,7 +28,6 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float u0) {
 	fromLight = fromL;
 	isPassThrough = false;
-	isLightSource = false;
 
 	hitPoint = ray(rayHit.t);
 	fixedDir = -ray.d;
@@ -48,14 +47,9 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
 
 	// Check if it is a light source
-	if (material->IsLightSource()) {
-		isLightSource = true;
+	if (material->IsLightSource())
 		lightSource = scene.triangleLightSource[currentTriangleIndex];
-		// SLG light sources are like black bodies
-		return;
-	}
 
-	surfMat = (const SurfaceMaterial *)material;
 	surfaceColor = Spectrum(1.f, 1.f, 1.f);
 
 	// Check if I have to apply texture mapping or normal mapping
@@ -144,14 +138,14 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 		return Spectrum();
 
 	const float sideTest = dotEyeDirNG * dotLightDirNG;
-	if (((sideTest > 0.f) && !(surfMat->GetEventTypes() & REFLECT)) ||
-			((sideTest < 0.f) && !(surfMat->GetEventTypes() & TRANSMIT)) ||
+	if (((sideTest > 0.f) && !(material->GetEventTypes() & REFLECT)) ||
+			((sideTest < 0.f) && !(material->GetEventTypes() & TRANSMIT)) ||
 			(sideTest == 0.f))
 		return Spectrum();
 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
-	Spectrum result = surfMat->Evaluate(fromLight, localLightDir, localEyeDir,
+	Spectrum result = material->Evaluate(fromLight, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
 
 	// Adjoint BSDF
@@ -169,7 +163,7 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
 
-	Spectrum result = surfMat->Sample(fromLight,
+	Spectrum result = material->Sample(fromLight,
 			localFixedDir, &localSampledDir, u0, u1, u2,
 			pdfW, cosSampledDir, event);
 	if (result.Black())
@@ -194,13 +188,13 @@ void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
 
-	surfMat->Pdf(fromLight, localLightDir, localEyeDir, directPdfW, reversePdfW);
+	material->Pdf(fromLight, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
 Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
 			float *directPdfA,
 			float *emissionPdfW) const {
-	return isLightSource ? 
+	return lightSource ? 
 		lightSource->GetRadiance(scene, fixedDir, hitPoint, directPdfA, emissionPdfW) :
 		Spectrum();
 }

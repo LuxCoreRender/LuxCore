@@ -50,12 +50,12 @@ public:
 
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsPassThrough() const { return isPassThrough; }
-	bool IsLightSource() const { return isLightSource; }
-	bool IsDelta() const { return surfMat->IsDelta(); }
-	bool IsShadowTransparent() const { return surfMat->IsShadowTransparent(); }
+	bool IsLightSource() const { return material->IsLightSource(); }
+	bool IsDelta() const { return material->IsDelta(); }
+	bool IsShadowTransparent() const { return material->IsShadowTransparent(); }
 
 	const Spectrum &GetSahdowTransparency() const {
-		return surfMat->GetSahdowTransparency();
+		return material->GetSahdowTransparency();
 	}
 
 	Spectrum Evaluate(const Vector &generatedDir,
@@ -81,11 +81,10 @@ private:
 	unsigned int triIndex;
 
 	const Material *material;
-	const SurfaceMaterial *surfMat; // != NULL only if it isn't an area light
 	const LightSource *lightSource; // != NULL only if it is an area light
 	Frame frame;
 
-	bool fromLight, isPassThrough, isLightSource;
+	bool fromLight, isPassThrough;
 };
 	
 } }
