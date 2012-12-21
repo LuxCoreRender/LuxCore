@@ -741,8 +741,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
 											if (scene->lights[i]->IsAreaLight()) {
 												TriangleLight *tl = (TriangleLight *)scene->lights[i];
-												if (tl->GetMaterial() == (LightMaterial *)oldMat)
-													tl->SetMaterial((AreaLightMaterial *)newMat);
+												if (tl->GetMaterial() == oldMat)
+													tl->SetMaterial(newMat);
 											}
 										}
 

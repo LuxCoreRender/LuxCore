@@ -133,6 +133,9 @@ Scene::Scene(const std::string &fileName, const int accType) {
 
 	//--------------------------------------------------------------------------
 
+	if (!infiniteLight && !sunLight && (lights.size() == 0))
+		throw std::runtime_error("The scene doesn't include any light source");
+
 	dataSet = NULL;
 }
 
@@ -183,7 +186,19 @@ void Scene::UpdateDataSet(Context *ctx) {
 	dataSet->Preprocess();
 }
 
-std::vector<float> Scene::GetParameters(const Properties &prop, const std::string &paramName,
+std::vector<std::string> Scene::GetStringParameters(const Properties &prop, const std::string &paramName,
+		const unsigned int paramCount, const std::string &defaultValue) {
+	const std::vector<std::string> vf = prop.GetStringVector(paramName, defaultValue);
+	if (vf.size() != paramCount) {
+		std::stringstream ss;
+		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
+		throw std::runtime_error(ss.str());
+	}
+
+	return vf;
+}
+
+std::vector<float> Scene::GetFloatParameters(const Properties &prop, const std::string &paramName,
 		const unsigned int paramCount, const std::string &defaultValue) {
 	const std::vector<float> vf = prop.GetFloatVector(paramName, defaultValue);
 	if (vf.size() != paramCount) {
@@ -207,18 +222,18 @@ void Scene::CreateCamera(const std::string &propsString) {
 }
 
 void Scene::CreateCamera(const Properties &props) {
-	std::vector<float> vf = GetParameters(props, "scene.camera.lookat", 6, "10.0 0.0 0.0  0.0 0.0 0.0");
+	std::vector<float> vf = GetFloatParameters(props, "scene.camera.lookat", 6, "10.0 0.0 0.0  0.0 0.0 0.0");
 	Point orig(vf.at(0), vf.at(1), vf.at(2));
 	Point target(vf.at(3), vf.at(4), vf.at(5));
 
 	SDL_LOG("Camera postion: " << orig);
 	SDL_LOG("Camera target: " << target);
 
-	vf = GetParameters(props, "scene.camera.up", 3, "0.0 0.0 0.1");
+	vf = GetFloatParameters(props, "scene.camera.up", 3, "0.0 0.0 0.1");
 	const Vector up(vf.at(0), vf.at(1), vf.at(2));
 
 	if (props.IsDefined("scene.camera.screenwindow")) {
-		vf = GetParameters(props, "scene.camera.screenwindow", 4, "0.0 1.0 0.0 1.0");
+		vf = GetFloatParameters(props, "scene.camera.screenwindow", 4, "0.0 1.0 0.0 1.0");
 
 		camera = new PerspectiveCamera(orig, target, up, &vf[0]);
 	} else
@@ -245,15 +260,20 @@ void Scene::AddMaterials(const Properties &props) {
 
 	for (std::vector<std::string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
 		const std::string &key = *matKey;
-		const std::string matType = Properties::ExtractField(key, 2);
-		if (matType == "")
-			throw std::runtime_error("Syntax error in " + key);
-		const std::string matName = Properties::ExtractField(key, 3);
-		if (matName == "")
-			throw std::runtime_error("Syntax error in " + key);
-		SDL_LOG("Material definition: " << matName << " [" << matType << "]");
 
-		Material *mat = CreateMaterial(key, props);
+		// Check if it is the root of the definition of an object otherwise skip
+		const size_t dot1 = key.find(".", std::string("scene.materials.").length());
+		if (dot1 == std::string::npos)
+			continue;
+
+		// Extract the material name
+		const std::string matName = Properties::ExtractField(key, 2);
+		if (matName == "")
+			throw std::runtime_error("Syntax error in material definition: " + matName);
+
+		SDL_LOG("Material definition: " << matName);
+
+		Material *mat = CreateMaterial(matName, props);
 
 		materialIndices[matName] = materials.size();
 		materials.push_back(mat);
@@ -282,7 +302,7 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 	// Check if I have to use an instance mesh or not
 	ExtMesh *meshObject;
 	if (props.IsDefined(key + ".transformation")) {
-		const std::vector<float> vf = GetParameters(props, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const std::vector<float> vf = GetFloatParameters(props, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
 				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
@@ -303,19 +323,16 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 	Material *mat = materials[materialIndices[matName]];
 
 	// Check if it is a light sources
+	objectMaterials.push_back(mat);
 	if (mat->IsLightSource()) {
 		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
 
-		AreaLightMaterial *light = (AreaLightMaterial *)mat;
-		objectMaterials.push_back(mat);
 		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-			TriangleLight *tl = new TriangleLight(light, static_cast<unsigned int>(objects.size()) - 1, i, objects);
+			TriangleLight *tl = new TriangleLight(mat, static_cast<unsigned int>(objects.size()) - 1, i, objects);
 			lights.push_back(tl);
 			triangleLightSource.push_back(tl);
 		}
-	} else {
-		SurfaceMaterial *surfMat = (SurfaceMaterial *)mat;
-		objectMaterials.push_back(surfMat);
+	} else {		
 		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
 			triangleLightSource.push_back(NULL);
 	}
@@ -441,10 +458,10 @@ void Scene::AddInfiniteLight(const Properties &props) {
 
 		InfiniteLight *il = new InfiniteLight(tex);
 
-		std::vector<float> vf = GetParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
+		std::vector<float> vf = GetFloatParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
 		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
-		vf = GetParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
+		vf = GetFloatParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
 		il->SetShift(vf.at(0), vf.at(1));
 		il->Preprocess();
 
@@ -466,9 +483,9 @@ void Scene::AddSkyLight(const Properties &props) {
 		if (infiniteLight)
 			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
 
-		std::vector<float> sdir = GetParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
+		std::vector<float> sdir = GetFloatParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
 		const float turb = props.GetFloat("scene.skylight.turbidity", 2.2f);
-		std::vector<float> gain = GetParameters(props, "scene.skylight.gain", 3, "1.0 1.0 1.0");
+		std::vector<float> gain = GetFloatParameters(props, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
 		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
@@ -488,10 +505,10 @@ void Scene::AddSunLight(const std::string &propsString) {
 void Scene::AddSunLight(const Properties &props) {
 	const std::vector<std::string> sulParams = props.GetStringVector("scene.sunlight.dir", "");
 	if (sulParams.size() > 0) {
-		std::vector<float> sdir = GetParameters(props, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
+		std::vector<float> sdir = GetFloatParameters(props, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
 		const float turb = props.GetFloat("scene.sunlight.turbidity", 2.2f);
 		const float relSize = props.GetFloat("scene.sunlight.relsize", 1.0f);
-		std::vector<float> gain = GetParameters(props, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
+		std::vector<float> gain = GetFloatParameters(props, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
 
 		SunLight *sl = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
@@ -502,64 +519,45 @@ void Scene::AddSunLight(const Properties &props) {
 		sunLight = NULL;
 }
 
-Material *Scene::CreateMaterial(const std::string &propName, const Properties &prop) {
-	const std::string matType = Properties::ExtractField(propName, 2);
-	if (matType == "")
-		throw std::runtime_error("Syntax error in " + propName);
-	const std::string matName = Properties::ExtractField(propName, 3);
-	if (matName == "")
-		throw std::runtime_error("Syntax error in " + propName);
+Material *Scene::CreateMaterial(const std::string &matName, const Properties &prop) {
+	const std::string propName = "scene.materials." + matName;
+	const std::string matType = GetStringParameters(prop, propName + ".type", 1, "matte").at(0);
+
+	const std::vector<float> ve = GetFloatParameters(prop, propName + ".emission", 3, "0.0 0.0 0.0");
+	const Spectrum emitted(ve.at(0), ve.at(1), ve.at(2));
 
 	if (matType == "matte") {
-		const std::vector<float> vf = GetParameters(prop, propName, 3, "1.0 1.0 1.0");
-		const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+		const std::vector<float> vkd = GetFloatParameters(prop, propName + ".kd", 3, "1.0 1.0 1.0");
+		const Spectrum Kd(vkd.at(0), vkd.at(1), vkd.at(2));
 
-		return new MatteMaterial(col);
-	} else if (matType == "light") {
-		const std::vector<float> vf = GetParameters(prop, propName, 3, "1.0 1.0 1.0");
-		const Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
-
-		return new AreaLightMaterial(gain);
+		return new MatteMaterial(emitted, Kd);
 	} else if (matType == "mirror") {
-		const std::vector<float> vf = GetParameters(prop, propName, 4, "1.0 1.0 1.0 1.0");
-		const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+		const std::vector<float> vkr = GetFloatParameters(prop, propName + ".kr", 3, "1.0 1.0 1.0");
+		const Spectrum Kd(vkr.at(0), vkr.at(1), vkr.at(2));
 
-		return new MirrorMaterial(col, vf.at(3) != 0.f);
-	} else if (matType == "mattemirror") {
-		const std::vector<float> vf = GetParameters(prop, propName, 7, "1.0 1.0 1.0 1.0 1.0 1.0 1.0");
-		const Spectrum Kd(vf.at(0), vf.at(1), vf.at(2));
-		const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
-
-		return new MatteMirrorMaterial(Kd, Kr, vf.at(6) != 0.f);
+		return new MirrorMaterial(emitted, Kd);
 	} else if (matType == "glass") {
-		const std::vector<float> vf = GetParameters(prop, propName, 10, "1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.5 1.0 1.0");
-		const Spectrum Krfl(vf.at(0), vf.at(1), vf.at(2));
-		const Spectrum Ktrn(vf.at(3), vf.at(4), vf.at(5));
+		const std::vector<float> vkr = GetFloatParameters(prop, propName + ".kr", 3, "1.0 1.0 1.0");
+		const Spectrum Krfl(vkr.at(0), vkr.at(1), vkr.at(2));
+		const std::vector<float> vkt = GetFloatParameters(prop, propName + ".kt", 3, "1.0 1.0 1.0");
+		const Spectrum Ktrn(vkt.at(0), vkt.at(1), vkt.at(2));
+		const std::vector<float> viorint = GetFloatParameters(prop, propName + ".iorint", 1, "1.0");
+		const std::vector<float> viorext = GetFloatParameters(prop, propName + ".iorext", 1, "1.5");
 
-		return new GlassMaterial(Krfl, Ktrn, vf.at(6), vf.at(7), vf.at(8) != 0.f, vf.at(9) != 0.f);
+		return new GlassMaterial(emitted, Krfl, Ktrn, viorint.at(0), viorext.at(0));
 	} else if (matType == "metal") {
-		const std::vector<float> vf = GetParameters(prop, propName, 5, "1.0 1.0 1.0 10.0 1.0");
-		const Spectrum col(vf.at(0), vf.at(1), vf.at(2));
+		const std::vector<float> vkr = GetFloatParameters(prop, propName + ".kr", 3, "1.0 1.0 1.0 10.0");
+		const Spectrum Krefl(vkr.at(0), vkr.at(1), vkr.at(2));
+		const std::vector<float> vexp = GetFloatParameters(prop, propName + ".exp", 1, "10.0");
 
-		return new MetalMaterial(col, vf.at(3), vf.at(4) != 0.f);
-	} else if (matType == "mattemetal") {
-		const std::vector<float> vf = GetParameters(prop, propName, 8, "1.0 1.0 1.0 1.0 1.0 1.0 10.0 1.0");
-		const Spectrum Kd(vf.at(0), vf.at(1), vf.at(2));
-		const Spectrum Kr(vf.at(3), vf.at(4), vf.at(5));
-
-		return new MatteMetalMaterial(Kd, Kr, vf.at(6), vf.at(7) != 0.f);
+		return new MetalMaterial(emitted, Krefl, vexp.at(0));
 	} else if (matType == "archglass") {
-		const std::vector<float> vf = GetParameters(prop, propName, 8, "1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0");
-		const Spectrum Krfl(vf.at(0), vf.at(1), vf.at(2));
-		const Spectrum Ktrn(vf.at(3), vf.at(4), vf.at(5));
+		const std::vector<float> vkr = GetFloatParameters(prop, propName + ".kr", 3, "1.0 1.0 1.0");
+		const Spectrum Krfl(vkr.at(0), vkr.at(1), vkr.at(2));
+		const std::vector<float> vkt = GetFloatParameters(prop, propName + ".kt", 3, "1.0 1.0 1.0");
+		const Spectrum Ktrn(vkt.at(0), vkt.at(1), vkt.at(2));
 
-		return new ArchGlassMaterial(Krfl, Ktrn, vf.at(6) != 0.f, vf.at(7) != 0.f);
-	} else if (matType == "alloy") {
-		const std::vector<float> vf = GetParameters(prop, propName, 9, "1.0 1.0 1.0 1.0 1.0 1.0 10.0 0.8 1.0");
-		const Spectrum Kdiff(vf.at(0), vf.at(1), vf.at(2));
-		const Spectrum Krfl(vf.at(3), vf.at(4), vf.at(5));
-
-		return new AlloyMaterial(Kdiff, Krfl, vf.at(6), vf.at(7), vf.at(8) != 0.f);
+		return new ArchGlassMaterial(emitted, Krfl, Ktrn);
 	} else
 		throw std::runtime_error("Unknown material type " + matType);
 }

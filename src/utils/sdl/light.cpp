@@ -406,7 +406,7 @@ Spectrum SunLight::GetRadiance(const Scene *scene,
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
+TriangleLight::TriangleLight(const Material *mat, const unsigned int mshIndex,
 		const unsigned int triangleIndex, const std::vector<ExtMesh *> &objs) {
 	lightMaterial = mat;
 	meshIndex = mshIndex;
@@ -452,7 +452,7 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = localDirOut.z;
 
-	return lightMaterial->GetGain() * localDirOut.z;
+	return lightMaterial->GetEmittedRadiance() * localDirOut.z;
 }
 
 Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
@@ -483,7 +483,7 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
-	return lightMaterial->GetGain();
+	return lightMaterial->GetEmittedRadiance();
 }
 
 Spectrum TriangleLight::GetRadiance(const Scene *scene,
@@ -510,5 +510,5 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	if (emissionPdfW)
 		*emissionPdfW = cosOutLight * INV_PI * invArea;
 
-	return lightMaterial->GetGain();
+	return lightMaterial->GetEmittedRadiance();
 }

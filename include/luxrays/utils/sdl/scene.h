@@ -103,7 +103,7 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	static Material *CreateMaterial(const std::string &propName, const Properties &prop);
+	static Material *CreateMaterial(const std::string &matName, const Properties &prop);
 
 	PerspectiveCamera *camera;
 
@@ -129,7 +129,10 @@ public:
 	DataSet *dataSet;
 
 protected:
-	static std::vector<float> GetParameters(const Properties &prop,
+	static std::vector<std::string> GetStringParameters(const Properties &prop,
+		const std::string &paramName, const unsigned int paramCount,
+		const std::string &defaultValue);
+	static std::vector<float> GetFloatParameters(const Properties &prop,
 		const std::string &paramName, const unsigned int paramCount,
 		const std::string &defaultValue);
 

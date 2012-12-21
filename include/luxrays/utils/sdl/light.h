@@ -262,14 +262,14 @@ private:
 class TriangleLight : public LightSource {
 public:
 	TriangleLight() { }
-	TriangleLight(const AreaLightMaterial *mat, const unsigned int mshIndex,
+	TriangleLight(const Material *mat, const unsigned int mshIndex,
 		const unsigned int triangleIndex, const std::vector<ExtMesh *> &objs);
 
 	bool IsAreaLight() const { return true; }
 
 	LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
-	void SetMaterial(const AreaLightMaterial *mat) { lightMaterial = mat; }
+	void SetMaterial(const Material *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
 
 	void Init(const std::vector<ExtMesh *> &objs);
@@ -294,7 +294,7 @@ public:
 			float *emissionPdfW = NULL) const;
 
 private:
-	const AreaLightMaterial *lightMaterial;
+	const Material *lightMaterial;
 	unsigned int meshIndex, triIndex;
 	float area, invArea;
 };
