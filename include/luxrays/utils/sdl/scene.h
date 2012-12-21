@@ -91,8 +91,11 @@ public:
 		extMeshCache->DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
 	}
 
-	void AddObject(const std::string &objName, const std::string &matName, const std::string &meshName, const std::string &propsString);
-	void AddObject(const std::string &objName, const std::string &matName, const Properties &props);
+	void AddObject(const std::string &objName, const std::string &meshName, const std::string &propsString);
+	void AddObject(const std::string &objName, const Properties &props);
+
+	void AddObjects(const std::string &propsString);
+	void AddObjects(const Properties &props);
 
 	void AddInfiniteLight(const std::string &propsString);
 	void AddInfiniteLight(const Properties &props);
