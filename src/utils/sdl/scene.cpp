@@ -75,43 +75,7 @@ Scene::Scene(const std::string &fileName, const int accType) {
 	// Read all objects .ply file
 	//--------------------------------------------------------------------------
 
-	std::vector<std::string> objKeys = scnProp.GetAllKeys("scene.objects.");
-	if (objKeys.size() == 0)
-		throw std::runtime_error("Unable to find object definitions");
-
-	double lastPrint = WallClockTime();
-	unsigned int objCount = 0;
-	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
-		const std::string &key = *objKey;
-
-		// Check if it is the root of the definition of an object otherwise skip
-		const size_t dot1 = key.find(".", std::string("scene.objects.").length());
-		if (dot1 == std::string::npos)
-			continue;
-		const size_t dot2 = key.find(".", dot1 + 1);
-		if (dot2 != std::string::npos)
-			continue;
-
-		// Extract the material name
-		const std::string matName = Properties::ExtractField(key, 2);
-		if (matName == "")
-			throw std::runtime_error("Syntax error in material name: " + matName);
-
-		// Extract the object name
-		const std::string objName = Properties::ExtractField(key, 3);
-		if (objName == "")
-			throw std::runtime_error("Syntax error in " + key);
-
-		AddObject(objName, matName, scnProp);
-		++objCount;
-
-		const double now = WallClockTime();
-		if (now - lastPrint > 2.0) {
-			SDL_LOG("PLY object count: " << objCount);
-			lastPrint = now;
-		}
-	}
-	SDL_LOG("PLY object count: " << objCount);
+	AddObjects(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinitelight source defined
@@ -260,8 +224,6 @@ void Scene::AddMaterials(const Properties &props) {
 
 	for (std::vector<std::string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
 		const std::string &key = *matKey;
-
-		// Check if it is the root of the definition of an object otherwise skip
 		const size_t dot1 = key.find(".", std::string("scene.materials.").length());
 		if (dot1 == std::string::npos)
 			continue;
@@ -270,6 +232,10 @@ void Scene::AddMaterials(const Properties &props) {
 		const std::string matName = Properties::ExtractField(key, 2);
 		if (matName == "")
 			throw std::runtime_error("Syntax error in material definition: " + matName);
+
+		// Check if it is a new material root otherwise skip
+		if (materialIndices.count(matName) > 0)
+			continue;
 
 		SDL_LOG("Material definition: " << matName);
 
@@ -280,21 +246,27 @@ void Scene::AddMaterials(const Properties &props) {
 	}
 }
 
-void Scene::AddObject(const std::string &objName, const std::string &matName,
-		const std::string &meshName, const std::string &propsString) {
+void Scene::AddObject(const std::string &objName, const std::string &meshName,
+		const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString("scene.objects." + matName + "." + objName + " = " + meshName + "\n");
+	prop.LoadFromString("scene.objects." + objName + ".ply = " + meshName + "\n");
 	prop.LoadFromString(propsString);
 
-	AddObject(objName, matName, prop);
+	AddObject(objName, prop);
 }
 
-void Scene::AddObject(const std::string &objName, const std::string &matName, const Properties &props) {
-	const std::string key = "scene.objects." + matName + "." + objName;
+void Scene::AddObject(const std::string &objName, const Properties &props) {
+	const std::string key = "scene.objects." + objName;
+
+	// Extract the material name
+	const std::string matName = GetStringParameters(props, key + ".material", 1, "").at(0);
+	if (matName == "")
+		throw std::runtime_error("Syntax error in object material reference: " + objName);
 
 	// Build the object
-	const std::vector<std::string> args = props.GetStringVector(key, "");
-	const std::string plyFileName = args.at(0);
+	const std::string plyFileName = GetStringParameters(props, key + ".ply", 1, "").at(0);
+	if (plyFileName == "")
+		throw std::runtime_error("Syntax error in object .ply file name: " + objName);
 
 	// Check if I have to calculate normal or not
 	const bool usePlyNormals = (props.GetInt(key + ".useplynormals", 0) != 0);
@@ -337,110 +309,139 @@ void Scene::AddObject(const std::string &objName, const std::string &matName, co
 			triangleLightSource.push_back(NULL);
 	}
 
-	// [old deprecated syntax] Check if there is a texture map associated to the object
-	if (args.size() > 1) {
+	// Check for if there is a texture map associated to the object with the new syntax
+	const std::string texMap = props.GetString(key + ".texmap", "");
+	if (texMap != "") {
 		// Check if the object has UV coords
 		if (!meshObject->HasUVs())
 			throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
 
-		TexMapInstance *tm = texMapCache->GetTexMapInstance(args.at(1), 2.2f);
-		objectTexMaps.push_back(tm);
-		objectBumpMaps.push_back(NULL);
-		objectNormalMaps.push_back(NULL);
-	} else {
-		// Check for if there is a texture map associated to the object with the new syntax
-		const std::string texMap = props.GetString(key + ".texmap", "");
-		if (texMap != "") {
-			// Check if the object has UV coords
-			if (!meshObject->HasUVs())
-				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for texture mapping");
+		const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
+		const float uScale = props.GetFloat(key + ".texmap.uscale", 1.0f);
+		const float vScale = props.GetFloat(key + ".texmap.vscale", 1.0f);
+		const float uDelta = props.GetFloat(key + ".texmap.udelta", 0.0f);
+		const float vDelta = props.GetFloat(key + ".texmap.vdelta", 0.0f);
 
-			const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
+		TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma,
+				uScale, vScale, uDelta, vDelta);
+		objectTexMaps.push_back(tm);
+	} else
+		objectTexMaps.push_back(NULL);
+
+	/**
+	 * Check if there is an alpha map associated to the object
+	 * If there is, the map is added to a previously added texturemap.
+	 * If no texture map (diffuse map) is detected, a black texture
+	 * is created and the alpha map is added to it. --PC
+	 */
+	const std::string alphaMap = props.GetString(key + ".alphamap", "");
+	if (alphaMap != "") {
+		// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
+		const std::string texMap = props.GetString(key + ".texmap", "");
+		const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
+
+		TextureMap *tm;
+		if (!(tm = texMapCache->FindTextureMap(texMap, gamma))) {
+			SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
+			// We have an alpha map without a diffuse texture. In this case we need to create
+			// a texture map filled with black
+			tm = new TextureMap(alphaMap, gamma, 1.0, 1.0, 1.0);
+			tm->AddAlpha(alphaMap);
+			texMapCache->DefineTexMap(alphaMap, tm);
+
 			const float uScale = props.GetFloat(key + ".texmap.uscale", 1.0f);
 			const float vScale = props.GetFloat(key + ".texmap.vscale", 1.0f);
 			const float uDelta = props.GetFloat(key + ".texmap.udelta", 0.0f);
 			const float vDelta = props.GetFloat(key + ".texmap.vdelta", 0.0f);
-
-			TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma,
-					uScale, vScale, uDelta, vDelta);
-			objectTexMaps.push_back(tm);
-		} else
-			objectTexMaps.push_back(NULL);
-
-		/**
-		 * Check if there is an alpha map associated to the object
-		 * If there is, the map is added to a previously added texturemap.
-		 * If no texture map (diffuse map) is detected, a black texture
-		 * is created and the alpha map is added to it. --PC
-		 */
-		const std::string alphaMap = props.GetString(key + ".alphamap", "");
-		if (alphaMap != "") {
-			// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
-			const std::string texMap = props.GetString(key + ".texmap", "");
-			const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
-
-			TextureMap *tm;
-			if (!(tm = texMapCache->FindTextureMap(texMap, gamma))) {
-				SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
-				// We have an alpha map without a diffuse texture. In this case we need to create
-				// a texture map filled with black
-				tm = new TextureMap(alphaMap, gamma, 1.0, 1.0, 1.0);
-				tm->AddAlpha(alphaMap);
-				texMapCache->DefineTexMap(alphaMap, tm);
-
-				const float uScale = props.GetFloat(key + ".texmap.uscale", 1.0f);
-				const float vScale = props.GetFloat(key + ".texmap.vscale", 1.0f);
-				const float uDelta = props.GetFloat(key + ".texmap.udelta", 0.0f);
-				const float vDelta = props.GetFloat(key + ".texmap.vdelta", 0.0f);
-				TexMapInstance *tmi = texMapCache->GetTexMapInstance(texMap, gamma,
-					uScale, vScale, uDelta, vDelta);
-				// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
-				objectTexMaps.pop_back();
-				// Add the new texture to the chain
-				objectTexMaps.push_back(tmi);
-			} else {
-				// Add an alpha map to the pre-existing diffuse texture
-				tm->AddAlpha(alphaMap);
-			}
+			TexMapInstance *tmi = texMapCache->GetTexMapInstance(texMap, gamma,
+				uScale, vScale, uDelta, vDelta);
+			// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
+			objectTexMaps.pop_back();
+			// Add the new texture to the chain
+			objectTexMaps.push_back(tmi);
+		} else {
+			// Add an alpha map to the pre-existing diffuse texture
+			tm->AddAlpha(alphaMap);
 		}
-
-		// Check for if there is a bump map associated to the object
-		const std::string bumpMap = props.GetString(key + ".bumpmap", "");
-		if (bumpMap != "") {
-			// Check if the object has UV coords
-			if (!meshObject->HasUVs())
-				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for bump mapping");
-
-			const float scale = props.GetFloat(key + ".bumpmap.scale", 1.f);
-			const float uScale = props.GetFloat(key + ".bumpmap.uscale", 1.0f);
-			const float vScale = props.GetFloat(key + ".bumpmap.vscale", 1.0f);
-			const float uDelta = props.GetFloat(key + ".bumpmap.udelta", 0.0f);
-			const float vDelta = props.GetFloat(key + ".bumpmap.vdelta", 0.0f);
-
-			BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale,
-					uScale, vScale, uDelta, vDelta);
-			objectBumpMaps.push_back(bm);
-		} else
-			objectBumpMaps.push_back(NULL);
-
-		// Check for if there is a normal map associated to the object
-		const std::string normalMap = props.GetString(key + ".normalmap", "");
-		if (normalMap != "") {
-			// Check if the object has UV coords
-			if (!meshObject->HasUVs())
-				throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
-
-			const float uScale = props.GetFloat(key + ".normalmap.uscale", 1.0f);
-			const float vScale = props.GetFloat(key + ".normalmap.vscale", 1.0f);
-			const float uDelta = props.GetFloat(key + ".normalmap.udelta", 0.0f);
-			const float vDelta = props.GetFloat(key + ".normalmap.vdelta", 0.0f);
-
-			NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap,
-					uScale, vScale, uDelta, vDelta);
-			objectNormalMaps.push_back(nm);
-		} else
-			objectNormalMaps.push_back(NULL);
 	}
+
+	// Check for if there is a bump map associated to the object
+	const std::string bumpMap = props.GetString(key + ".bumpmap", "");
+	if (bumpMap != "") {
+		// Check if the object has UV coords
+		if (!meshObject->HasUVs())
+			throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for bump mapping");
+
+		const float scale = props.GetFloat(key + ".bumpmap.scale", 1.f);
+		const float uScale = props.GetFloat(key + ".bumpmap.uscale", 1.0f);
+		const float vScale = props.GetFloat(key + ".bumpmap.vscale", 1.0f);
+		const float uDelta = props.GetFloat(key + ".bumpmap.udelta", 0.0f);
+		const float vDelta = props.GetFloat(key + ".bumpmap.vdelta", 0.0f);
+
+		BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale,
+				uScale, vScale, uDelta, vDelta);
+		objectBumpMaps.push_back(bm);
+	} else
+		objectBumpMaps.push_back(NULL);
+
+	// Check for if there is a normal map associated to the object
+	const std::string normalMap = props.GetString(key + ".normalmap", "");
+	if (normalMap != "") {
+		// Check if the object has UV coords
+		if (!meshObject->HasUVs())
+			throw std::runtime_error("PLY object " + plyFileName + " is missing UV coordinates for normal mapping");
+
+		const float uScale = props.GetFloat(key + ".normalmap.uscale", 1.0f);
+		const float vScale = props.GetFloat(key + ".normalmap.vscale", 1.0f);
+		const float uDelta = props.GetFloat(key + ".normalmap.udelta", 0.0f);
+		const float vDelta = props.GetFloat(key + ".normalmap.vdelta", 0.0f);
+
+		NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap,
+				uScale, vScale, uDelta, vDelta);
+		objectNormalMaps.push_back(nm);
+	} else
+		objectNormalMaps.push_back(NULL);
+}
+
+void Scene::AddObjects(const std::string &propsString) {
+	Properties prop;
+	prop.LoadFromString(propsString);
+
+	AddObjects(prop);
+}
+
+void Scene::AddObjects(const Properties &props) {
+	std::vector<std::string> objKeys = props.GetAllKeys("scene.objects.");
+	if (objKeys.size() == 0)
+		throw std::runtime_error("Unable to find object definitions");
+
+	double lastPrint = WallClockTime();
+	unsigned int objCount = 0;
+	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
+		const std::string &key = *objKey;
+		const size_t dot1 = key.find(".", std::string("scene.objects.").length());
+		if (dot1 == std::string::npos)
+			continue;
+
+		// Extract the object name
+		const std::string objName = Properties::ExtractField(key, 2);
+		if (objName == "")
+			throw std::runtime_error("Syntax error in " + key);
+
+		// Check if it is a new object root otherwise skip
+		if (objectIndices.count(objName) > 0)
+			continue;
+
+		AddObject(objName, props);
+		++objCount;
+
+		const double now = WallClockTime();
+		if (now - lastPrint > 2.0) {
+			SDL_LOG("PLY object count: " << objCount);
+			lastPrint = now;
+		}
+	}
+	SDL_LOG("PLY object count: " << objCount);
 }
 
 void Scene::AddInfiniteLight(const std::string &propsString) {
