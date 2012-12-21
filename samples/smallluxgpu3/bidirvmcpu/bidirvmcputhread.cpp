@@ -179,12 +179,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				eyeVertex.dVM *= factor;
 
 				// Check if it is a light source
-				if (eyeVertex.bsdf.IsLightSource()) {
+				if (eyeVertex.bsdf.IsLightSource())
 					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance);
-
-					// SLG light sources are like black bodies
-					break;
-				}
 
 				// Note: pass-through check is done inside SceneIntersect()
 

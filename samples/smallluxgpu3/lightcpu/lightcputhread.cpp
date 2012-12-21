@@ -113,10 +113,9 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 			break;
 		} else {
 			// Something was hit, check if it is a light source
-			if (bsdf.IsLightSource()) {
+			if (bsdf.IsLightSource())
 				radiance = eyePathThroughput * connectionThroughput * bsdf.GetEmittedRadiance(scene);
-				break;
-			} else {
+			else {
 				// Check if it is a specular bounce
 
 				float bsdfPdf;
@@ -138,9 +137,9 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 				assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
 
 				eyeRay = Ray(bsdf.hitPoint, sampledDir);
-				
-				++depth;
 			}
+
+			++depth;
 		}
 	}
 
@@ -234,12 +233,6 @@ void LightCPURenderThread::RenderFunc() {
 			if (scene->Intersect(device, true, true, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
-				
-				// Check if it is a light source
-				if (bsdf.IsLightSource()) {
-					// SLG light sources are like black bodies
-					break;
-				}
 
 				lightPathFlux *= connectionThroughput;
 
