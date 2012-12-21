@@ -316,12 +316,6 @@ void BiDirState::TraceLightPath(HybridRenderThread *renderThread,
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 				// Something was hit
 
-				// Check if it is a light source
-				if (lightVertex.bsdf.IsLightSource()) {
-					// SLG light sources are like black bodies
-					break;
-				}
-
 				// Update the new light vertex
 				lightVertex.throughput *= connectionThroughput;
 				// Infinite lights use MIS based on solid angle instead of area
@@ -534,12 +528,8 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 			eyeVertex.dVC *= factor;
 
 			// Check if it is a light source
-			if (eyeVertex.bsdf.IsLightSource()) {
+			if (eyeVertex.bsdf.IsLightSource())
 				DirectHitLight(renderThread, true, eyeVertex, &eyeSampleResults[eyePathIndex].radiance);
-
-				// SLG light sources are like black bodies
-				break;
-			}
 
 			// Note: pass-through check is done inside Scene::Intersect()
 

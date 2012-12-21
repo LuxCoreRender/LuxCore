@@ -294,12 +294,6 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 				// Something was hit
 
-				// Check if it is a light source
-				if (lightVertex.bsdf.IsLightSource()) {
-					// SLG light sources are like black bodies
-					break;
-				}
-
 				// Update the new light vertex
 				lightVertex.throughput *= connectionThroughput;
 				// Infinite lights use MIS based on solid angle instead of area

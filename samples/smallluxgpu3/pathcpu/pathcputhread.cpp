@@ -210,9 +210,6 @@ void PathCPURenderThread::RenderFunc() {
 			if (bsdf.IsLightSource()) {
 				DirectHitFiniteLight(lastSpecular, pathThrouput,
 						eyeRayHit.t, bsdf, lastPdfW, &radiance);
-
-				// SLG light sources are like black bodies
-				break;
 			}
 
 			// Note: pass-through check is done inside SceneIntersect()

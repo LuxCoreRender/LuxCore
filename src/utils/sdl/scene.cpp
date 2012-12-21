@@ -542,8 +542,8 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		const Spectrum Krfl(vkr.at(0), vkr.at(1), vkr.at(2));
 		const std::vector<float> vkt = GetFloatParameters(prop, propName + ".kt", 3, "1.0 1.0 1.0");
 		const Spectrum Ktrn(vkt.at(0), vkt.at(1), vkt.at(2));
-		const std::vector<float> viorint = GetFloatParameters(prop, propName + ".iorint", 1, "1.0");
-		const std::vector<float> viorext = GetFloatParameters(prop, propName + ".iorext", 1, "1.5");
+		const std::vector<float> viorint = GetFloatParameters(prop, propName + ".ioroutside", 1, "1.0");
+		const std::vector<float> viorext = GetFloatParameters(prop, propName + ".iorinside", 1, "1.5");
 
 		return new GlassMaterial(emitted, Krfl, Ktrn, viorint.at(0), viorext.at(0));
 	} else if (matType == "metal") {
