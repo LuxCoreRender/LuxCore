@@ -22,6 +22,11 @@
 #ifndef _LUXRAYS_SDL_TEXTURE_H
 #define	_LUXRAYS_SDL_TEXTURE_H
 
+#include <string>
+#include <vector>
+#include <map>
+
+#include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/core/spectrum.h"
 
