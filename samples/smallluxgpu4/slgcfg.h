@@ -19,16 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _DISPLAYFUNC_H
-#define	_DISPLAYFUNC_H
+#ifndef _SLG_CFG_H
+#define	_SLG_CFG_H
 
-#include <cmath>
+// The configured options and settings for SmallLuxGPU
 
-extern bool OSDPrintHelp;
-extern bool mouseGrabMode;
+#define SLG_VERSION_MAJOR "4"
+#define SLG_VERSION_MINOR "0devel1"
 
-extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
-extern void RunGlut();
-
-#endif	/* _DISPLAYFUNC_H */
-
+#endif	/* _SLG_CFG_H */
