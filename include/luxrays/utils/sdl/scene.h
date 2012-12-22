@@ -30,7 +30,7 @@
 #include "luxrays/utils/sdl/camera.h"
 #include "luxrays/utils/sdl/light.h"
 #include "luxrays/utils/sdl/material.h"
-#include "luxrays/utils/sdl/texmap.h"
+#include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/sdl/extmeshcache.h"
 #include "luxrays/utils/sdl/bsdf.h"
 #include "luxrays/utils/properties.h"
@@ -68,14 +68,14 @@ public:
 	void CreateCamera(const std::string &propsString);
 	void CreateCamera(const Properties &props);
 
-	void DefineTexMap(const std::string &tmName, Spectrum *map, const float gamma,
-		const unsigned int w, const unsigned int h) { texMapCache->DefineTexMap(tmName, new TextureMap(map, gamma, w, h)); }
-	void DefineTexMap(const std::string &tmName, Spectrum *map, float *alpha, const float gamma,
-		const unsigned int w, const unsigned int h) {
-		TextureMap *tm = new TextureMap(map, gamma, w, h);
-		tm->AddAlpha(alpha);
-		texMapCache->DefineTexMap(tmName, tm);
-	}
+//	void DefineTexMap(const std::string &tmName, Spectrum *map, const float gamma,
+//		const unsigned int w, const unsigned int h) { texMapCache->DefineTexMap(tmName, new TextureMap(map, gamma, w, h)); }
+//	void DefineTexMap(const std::string &tmName, Spectrum *map, float *alpha, const float gamma,
+//		const unsigned int w, const unsigned int h) {
+//		TextureMap *tm = new TextureMap(map, gamma, w, h);
+//		tm->AddAlpha(alpha);
+//		texMapCache->DefineTexMap(tmName, tm);
+//	}
 
 	void AddMaterials(const std::string &propsString);
 	void AddMaterials(const Properties &props);
@@ -111,11 +111,12 @@ public:
 	PerspectiveCamera *camera;
 
 	ExtMeshCache *extMeshCache; // Mesh objects
-	TextureMapCache *texMapCache; // Texture maps
+	ImageMapCache *imgMapCache; // Image maps
+	TextureDefinitions *texDefs; // Texture definitions
 
 	LightSource *infiniteLight; // A SLG scene can have only one infinite light
 	LightSource *sunLight;
-	std::vector<LightSource *> lights; // One for each light source (doesn't include light/infinite light)
+	std::vector<LightSource *> lights; // One for each light source (doesn't include sun/infinite light)
 
 	std::vector<Material *> materials; // All materials (one for each light source)
 	std::map<std::string, size_t> materialIndices; // All materials indices
@@ -123,9 +124,9 @@ public:
 	std::map<std::string, size_t> objectIndices; // All object indices
 
 	std::vector<Material *> objectMaterials; // One for each object
-	std::vector<TexMapInstance *> objectTexMaps; // One for each object
-	std::vector<BumpMapInstance *> objectBumpMaps; // One for each object
-	std::vector<NormalMapInstance *> objectNormalMaps; // One for each object
+	std::vector<ImageMapInstance *> objectTexMaps; // One for each object
+	std::vector<ImageMapInstance *> objectBumpMaps; // One for each object
+	std::vector<ImageMapInstance *> objectNormalMaps; // One for each object
 
 	std::vector<LightSource *> triangleLightSource; // One for each triangle
 
