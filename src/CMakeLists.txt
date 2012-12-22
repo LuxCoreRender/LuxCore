@@ -139,7 +139,7 @@ set(LuxRays_SRC_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/spd.cpp
-	${LuxRays_SOURCE_DIR}/src/utils/sdl/texmap.cpp
+	${LuxRays_SOURCE_DIR}/src/utils/sdl/texture.cpp
 )
 SOURCE_GROUP("Source Files\\Utils\\sdl" FILES ${LuxRays_SRC_UTILS_SDL})	
 
@@ -259,7 +259,7 @@ set(LuxRays_HEADERS_LUXRAYS_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/material.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/scene.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/spd.h
-	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/texmap.h
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/texture.h
 )
 SOURCE_GROUP("Header Files\\Utils\\SDL" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_SDL})
 

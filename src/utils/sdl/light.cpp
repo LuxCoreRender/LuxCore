@@ -95,7 +95,7 @@ Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
 // InfiniteLight
 //------------------------------------------------------------------------------
 
-InfiniteLight::InfiniteLight(TexMapInstance *tx) {
+InfiniteLight::InfiniteLight(ImageMapInstance *tx) {
 	tex = tx;
 	shiftU = 0.f;
 	shiftV = 0.f;

@@ -25,7 +25,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
-#include "luxrays/utils/sdl/texmap.h"
+#include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/sdl/material.h"
 
 namespace luxrays { namespace sdl {
@@ -119,7 +119,7 @@ protected:
 
 class InfiniteLight : public InfiniteLightBase {
 public:
-	InfiniteLight(TexMapInstance *tx);
+	InfiniteLight(ImageMapInstance *tx);
 	~InfiniteLight() { }
 
 	LightSourceType GetType() const { return TYPE_IL; }
@@ -132,14 +132,14 @@ public:
 	float GetShiftU() const { return shiftU; }
 	float GetShiftV() const { return shiftV; }
 
-	const TexMapInstance *GetTexture() const { return tex; }
+	const ImageMapInstance *GetTexture() const { return tex; }
 
 	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir, const Point &hitPoint,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
-	TexMapInstance *tex;
+	ImageMapInstance *tex;
 	float shiftU, shiftV;
 };
 

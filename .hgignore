@@ -1,5 +1,5 @@
 ^lib/libluxrays.a
-^lib/libsmallluxgpu3.a
+^lib/libsmallluxgpu4.a
 ^doxygen-luxrays.conf
 ^doxygen/luxrays.template
 ^doxygen-slg.conf

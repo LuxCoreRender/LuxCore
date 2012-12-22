@@ -44,7 +44,8 @@ Scene::Scene(const int accType) {
 	dataSet = NULL;
 
 	extMeshCache = new ExtMeshCache();
-	texMapCache = new TextureMapCache();
+	imgMapCache = new ImageMapCache();
+	texDefs = new TextureDefinitions();
 
 	accelType = accType;
 }
@@ -53,7 +54,8 @@ Scene::Scene(const std::string &fileName, const int accType) {
 	accelType = accType;
 
 	extMeshCache = new ExtMeshCache();
-	texMapCache = new TextureMapCache();
+	imgMapCache = new ImageMapCache();
+	texDefs = new TextureDefinitions();
 
 	SDL_LOG("Reading scene: " << fileName);
 
@@ -116,7 +118,8 @@ Scene::~Scene() {
 	delete dataSet;
 
 	delete extMeshCache;
-	delete texMapCache;
+	delete texDefs;
+	delete imgMapCache;
 }
 
 void Scene::UpdateDataSet(Context *ctx) {
@@ -322,48 +325,11 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 		const float uDelta = props.GetFloat(key + ".texmap.udelta", 0.0f);
 		const float vDelta = props.GetFloat(key + ".texmap.vdelta", 0.0f);
 
-		TexMapInstance *tm = texMapCache->GetTexMapInstance(texMap, gamma,
+		ImageMapInstance *im = imgMapCache->GetImageMapInstance(texMap, gamma, 1.f,
 				uScale, vScale, uDelta, vDelta);
-		objectTexMaps.push_back(tm);
+		objectTexMaps.push_back(im);
 	} else
 		objectTexMaps.push_back(NULL);
-
-	/**
-	 * Check if there is an alpha map associated to the object
-	 * If there is, the map is added to a previously added texturemap.
-	 * If no texture map (diffuse map) is detected, a black texture
-	 * is created and the alpha map is added to it. --PC
-	 */
-	const std::string alphaMap = props.GetString(key + ".alphamap", "");
-	if (alphaMap != "") {
-		// Got an alpha map, retrieve the textureMap and add the alpha channel to it.
-		const std::string texMap = props.GetString(key + ".texmap", "");
-		const float gamma = props.GetFloat(key + ".texmap.gamma", 2.2f);
-
-		TextureMap *tm;
-		if (!(tm = texMapCache->FindTextureMap(texMap, gamma))) {
-			SDL_LOG("Alpha map " << alphaMap << " is for a materials without texture. A black texture has been created for support!");
-			// We have an alpha map without a diffuse texture. In this case we need to create
-			// a texture map filled with black
-			tm = new TextureMap(alphaMap, gamma, 1.0, 1.0, 1.0);
-			tm->AddAlpha(alphaMap);
-			texMapCache->DefineTexMap(alphaMap, tm);
-
-			const float uScale = props.GetFloat(key + ".texmap.uscale", 1.0f);
-			const float vScale = props.GetFloat(key + ".texmap.vscale", 1.0f);
-			const float uDelta = props.GetFloat(key + ".texmap.udelta", 0.0f);
-			const float vDelta = props.GetFloat(key + ".texmap.vdelta", 0.0f);
-			TexMapInstance *tmi = texMapCache->GetTexMapInstance(texMap, gamma,
-				uScale, vScale, uDelta, vDelta);
-			// Remove the NULL inserted above, when no texmap was found. Without doing this the whole thing will not work
-			objectTexMaps.pop_back();
-			// Add the new texture to the chain
-			objectTexMaps.push_back(tmi);
-		} else {
-			// Add an alpha map to the pre-existing diffuse texture
-			tm->AddAlpha(alphaMap);
-		}
-	}
 
 	// Check for if there is a bump map associated to the object
 	const std::string bumpMap = props.GetString(key + ".bumpmap", "");
@@ -378,7 +344,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 		const float uDelta = props.GetFloat(key + ".bumpmap.udelta", 0.0f);
 		const float vDelta = props.GetFloat(key + ".bumpmap.vdelta", 0.0f);
 
-		BumpMapInstance *bm = texMapCache->GetBumpMapInstance(bumpMap, scale,
+		ImageMapInstance *bm = imgMapCache->GetImageMapInstance(bumpMap, 1.f, scale,
 				uScale, vScale, uDelta, vDelta);
 		objectBumpMaps.push_back(bm);
 	} else
@@ -396,7 +362,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 		const float uDelta = props.GetFloat(key + ".normalmap.udelta", 0.0f);
 		const float vDelta = props.GetFloat(key + ".normalmap.vdelta", 0.0f);
 
-		NormalMapInstance *nm = texMapCache->GetNormalMapInstance(normalMap,
+		ImageMapInstance *nm = imgMapCache->GetImageMapInstance(normalMap, 1.f, 1.f,
 				uScale, vScale, uDelta, vDelta);
 		objectNormalMaps.push_back(nm);
 	} else
@@ -455,9 +421,9 @@ void Scene::AddInfiniteLight(const Properties &props) {
 	const std::vector<std::string> ilParams = props.GetStringVector("scene.infinitelight.file", "");
 	if (ilParams.size() > 0) {
 		const float gamma = props.GetFloat("scene.infinitelight.gamma", 2.2f);
-		TexMapInstance *tex = texMapCache->GetTexMapInstance(ilParams.at(0), gamma);
+		ImageMapInstance *imgMap = imgMapCache->GetImageMapInstance(ilParams.at(0), gamma);
 
-		InfiniteLight *il = new InfiniteLight(tex);
+		InfiniteLight *il = new InfiniteLight(imgMap);
 
 		std::vector<float> vf = GetFloatParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
 		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
