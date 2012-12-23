@@ -45,9 +45,13 @@ public:
 	Texture() { }
 	virtual ~Texture() { }
 
+	virtual TextureType GetType() const = 0;
+
 	virtual float GetGreyValue(const UV &uv) const = 0;
 	virtual Spectrum GetColorValue(const UV &uv) const = 0;
 	virtual float GetAlphaValue(const UV &uv) const = 0;
+
+	virtual const UV GetDuDv() const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -58,18 +62,36 @@ class TextureDefinitions {
 public:
 	TextureDefinitions() { }
 	~TextureDefinitions() {
-		for (std::map<std::string, Texture *>::const_iterator it = texs.begin(); it != texs.end(); ++it)
-			delete it->second;
+		for (std::vector<Texture *>::const_iterator it = texs.begin(); it != texs.end(); ++it)
+			delete (*it);
 	}
 
+	bool IsTextureDefined(const std::string &name) const {
+		return (texsByName.count(name) > 0);
+	}
 	void DefineTexture(const std::string &name, Texture *t) {
-		texs.insert(std::make_pair(name, t));
+		texs.push_back(t);
+		texsByName.insert(std::make_pair(name, t));
+		indexByName.insert(std::make_pair(name, texs.size() - 1));
 	}
-	const Texture *GetTexture(const std::string &name) {
-		// Check if the texture map has been already loaded
-		std::map<std::string, Texture *>::const_iterator it = texs.find(name);
 
-		if (it == texs.end())
+	Texture *GetTexture(const std::string &name) {
+		// Check if the texture has been already defined
+		std::map<std::string, Texture *>::const_iterator it = texsByName.find(name);
+
+		if (it == texsByName.end())
+			throw std::runtime_error("Reference to an undefined texture: " + name);
+		else
+			return it->second;
+	}
+	Texture *GetTexture(const u_int index) {
+		return texs[index];
+	}
+	u_int GetTextureIndex(const std::string &name) {
+		// Check if the texture has been already defined
+		std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
+
+		if (it == indexByName.end())
 			throw std::runtime_error("Reference to an undefined texture: " + name);
 		else
 			return it->second;
@@ -79,7 +101,9 @@ public:
   
 private:
 
-	std::map<std::string, Texture *> texs;
+	std::vector<Texture *> texs;
+	std::map<std::string, Texture *> texsByName;
+	std::map<std::string, u_int> indexByName;
 };
 
 //------------------------------------------------------------------------------
@@ -91,9 +115,12 @@ public:
 	ConstFloatTexture(const float v) : value(v) { }
 	virtual ~ConstFloatTexture() { }
 
+	virtual TextureType GetType() const { return CONST_FLOAT; }
 	virtual float GetGreyValue(const UV &uv) const { return value; }
 	virtual Spectrum GetColorValue(const UV &uv) const { return Spectrum(value); }
 	virtual float GetAlphaValue(const UV &uv) const { return value; }
+
+	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
 
 private:
 	float value;
@@ -104,9 +131,12 @@ public:
 	ConstFloat3Texture(const Spectrum &c) : color(c) { }
 	virtual ~ConstFloat3Texture() { }
 
+	virtual TextureType GetType() const { return CONST_FLOAT3; }
 	virtual float GetGreyValue(const UV &uv) const { return color.Y(); }
 	virtual Spectrum GetColorValue(const UV &uv) const { return color; }
 	virtual float GetAlphaValue(const UV &uv) const { return 1.f; }
+
+	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
 
 private:
 	Spectrum color;
@@ -117,9 +147,12 @@ public:
 	ConstFloat4Texture(const Spectrum &c, const float a) : color(c), alpha(a) { }
 	virtual ~ConstFloat4Texture() { }
 
+	virtual TextureType GetType() const { return CONST_FLOAT4; }
 	virtual float GetGreyValue(const UV &uv) const { return color.Y(); }
 	virtual Spectrum GetColorValue(const UV &uv) const { return color; }
 	virtual float GetAlphaValue(const UV &uv) const { return alpha; }
+
+	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
 
 private:
 	Spectrum color;
@@ -324,9 +357,12 @@ public:
 	ImageMapTexture(const ImageMapInstance * imi) : imgMapInstance(imi) { }
 	virtual ~ImageMapTexture() { }
 
+	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetGreyValue(const UV &uv) const { return imgMapInstance->GetGrey(uv); }
 	virtual Spectrum GetColorValue(const UV &uv) const { return imgMapInstance->GetColor(uv); }
 	virtual float GetAlphaValue(const UV &uv) const { return imgMapInstance->GetAlpha(uv); }
+
+	virtual const UV GetDuDv() const { return imgMapInstance->GetDuDv(); }
 
 private:
 	const ImageMapInstance *imgMapInstance;

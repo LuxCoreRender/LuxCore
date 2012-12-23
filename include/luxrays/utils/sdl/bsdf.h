@@ -72,9 +72,9 @@ public:
 	// lightDir when fromLight = true
 	Vector fixedDir;
 	Point hitPoint;
+	UV hitPointUV;
 	Normal geometryN;
 	Normal shadeN;
-	Spectrum surfaceColor;
 
 private:
 	const ExtMesh *mesh;

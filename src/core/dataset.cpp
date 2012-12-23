@@ -56,7 +56,7 @@ DataSet::~DataSet() {
 	delete accel;
 }
 
-TriangleMeshID DataSet::Add(Mesh *mesh) {
+TriangleMeshID DataSet::Add(const Mesh *mesh) {
 	assert (!preprocessed);
 
 	const TriangleMeshID id = meshes.size();

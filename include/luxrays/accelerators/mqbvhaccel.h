@@ -34,7 +34,7 @@ using boost::int32_t;
 
 namespace luxrays {
 
-class MQBVHAccel  : public Accelerator {
+class MQBVHAccel : public Accelerator {
 public:
 	MQBVHAccel(const Context *context, u_int fst, u_int sf);
 	virtual ~MQBVHAccel();
@@ -42,7 +42,7 @@ public:
 	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
 	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		unsigned int stackSize, bool disableImageStorage) const;
-	virtual void Init(const std::deque<Mesh *> &meshes,
+	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 
@@ -67,7 +67,7 @@ public:
 	void Update();
 
 private:
-	static bool MeshPtrCompare(Mesh *, Mesh *);
+	static bool MeshPtrCompare(const Mesh *, const Mesh *);
 
 	void BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
@@ -80,7 +80,7 @@ private:
 	int32_t CreateNode(int32_t parentIndex, int32_t childIndex,
 		const BBox &nodeBbox);
 
-	std::deque<Mesh *> meshList;
+	std::deque<const Mesh *> meshList;
 
 	QBVHNode *nodes;
 	u_int nNodes, maxNodes;
@@ -90,7 +90,7 @@ private:
 	u_int skipFactor;
 
 	u_int nLeafs;
-	std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)> accels;
+	std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)> accels;
 	QBVHAccel **leafs;
 	const Transform **leafsTransform;
 	unsigned int *leafsOffset;

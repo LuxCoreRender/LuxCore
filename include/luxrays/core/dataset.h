@@ -35,7 +35,7 @@ public:
 	DataSet(const Context *luxRaysContext);
 	~DataSet();
 
-	TriangleMeshID Add(Mesh *mesh);
+	TriangleMeshID Add(const Mesh *mesh);
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
 
@@ -72,7 +72,7 @@ private:
 
 	unsigned int totalVertexCount;
 	unsigned int totalTriangleCount;
-	std::deque<Mesh *> meshes;
+	std::deque<const Mesh *> meshes;
 
 	bool preprocessed;
 

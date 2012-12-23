@@ -28,6 +28,8 @@
 #include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/core/mc.h"
+#include "luxrays/utils/sdl/texture.h"
+#include "texture.h"
 
 namespace luxrays { namespace sdl {
 
@@ -39,14 +41,22 @@ enum MaterialType {
 
 class Material {
 public:
-	Material(const Spectrum &emitted) : emittedRadiance(emitted) { }
+	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
+		emittedTex(emitted), bumpTex(bump), normalTex(normal) { }
 	virtual ~Material() { }
 
 	virtual MaterialType GetType() const = 0;
 
-	virtual bool IsLightSource() const {
-		return (emittedRadiance.r > 0.f) || (emittedRadiance.g > 0.f) || (emittedRadiance.g > 0.f);
+	bool IsLightSource() const {
+		return (emittedTex != NULL);
 	}
+	bool HasBumpTex() const { 
+		return (bumpTex != NULL);
+	}
+	bool HasNormalTex() const { 
+		return (normalTex != NULL);
+	}
+
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsShadowTransparent() const { return false; }
 	virtual BSDFEvent GetEventTypes() const = 0;
@@ -54,22 +64,81 @@ public:
 		throw std::runtime_error("Internal error, called Material::GetSahdowTransparency()");
 	}
 
-	const Spectrum &GetEmittedRadiance() const { return emittedRadiance; }
+	const Spectrum GetEmittedRadiance(const UV &uv) const { return emittedTex->GetColorValue(uv); }
 
-	virtual Spectrum Evaluate(const bool fromLight,
+	const Texture *GetEmitTexture() const { return emittedTex; }
+	const Texture *GetBumpTexture() const { return bumpTex; }
+	const Texture *GetNormalTexture() const { return normalTex; }
+
+	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const = 0;
 
-	virtual Spectrum Sample(const bool fromLight,
+	virtual Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const = 0;
 
-	virtual void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+	virtual void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const = 0;
 
 protected:
-	Spectrum emittedRadiance;
+	const Texture *emittedTex;
+	const Texture *bumpTex;
+	const Texture *normalTex;
+};
+
+//------------------------------------------------------------------------------
+// MaterialDefinitions
+//------------------------------------------------------------------------------
+
+class MaterialDefinitions {
+public:
+	MaterialDefinitions() { }
+	~MaterialDefinitions() {
+		for (std::vector<Material *>::const_iterator it = mats.begin(); it != mats.end(); ++it)
+			delete (*it);
+	}
+
+	bool IsMaterialDefined(const std::string &name) const {
+		return (matsByName.count(name) > 0);
+	}
+	void DefineMaterial(const std::string &name, Material *t) {
+		mats.push_back(t);
+		matsByName.insert(std::make_pair(name, t));
+		indexByName.insert(std::make_pair(name, mats.size() - 1));
+	}
+
+	Material *GetMaterial(const std::string &name) {
+		// Check if the material has been already defined
+		std::map<std::string, Material *>::const_iterator it = matsByName.find(name);
+
+		if (it == matsByName.end())
+			throw std::runtime_error("Reference to an undefined material: " + name);
+		else
+			return it->second;
+	}
+	Material *GetMaterial(const u_int index) {
+		return mats[index];
+	}
+	u_int GetMaterialIndex(const std::string &name) {
+		// Check if the material has been already defined
+		std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
+
+		if (it == indexByName.end())
+			throw std::runtime_error("Reference to an undefined material: " + name);
+		else
+			return it->second;
+	}
+
+	u_int GetSize()const { return static_cast<u_int>(mats.size()); }
+  
+private:
+
+	std::vector<Material *> mats;
+	std::map<std::string, Material *> matsByName;
+	std::map<std::string, u_int> indexByName;
 };
 
 //------------------------------------------------------------------------------
@@ -78,28 +147,27 @@ protected:
 
 class MatteMaterial : public Material {
 public:
-	MatteMaterial(const Spectrum &emitted, const Spectrum &col) : Material(emitted) {
-		Kd = col;
-		KdOverPI = Kd * INV_PI;
-	}
+	MatteMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *col) : Material(emitted, bump, normal), Kd(col) { }
 
 	MaterialType GetType() const { return MATTE; }
 	BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
-	const Spectrum &GetKd() const { return Kd; }
+	const Texture *GetKd() const { return Kd; }
 
-	Spectrum Evaluate(const bool fromLight,
+	Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	Spectrum Sample(const bool fromLight,
+	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+	void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
 private:
-	Spectrum Kd, KdOverPI;
+	const Texture *Kd;
 };
 
 //------------------------------------------------------------------------------
@@ -108,25 +176,25 @@ private:
 
 class MirrorMaterial : public Material {
 public:
-	MirrorMaterial(const Spectrum &emitted, const Spectrum &refl) : Material(emitted) {
-		Kr = refl;
-	}
+	MirrorMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+		const Texture *refl) : Material(emitted, bump, normal), Kr(refl) { }
 
 	MaterialType GetType() const { return MIRROR; }
 	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT; };
 
 	bool IsDelta() const { return true; }
 
-	const Spectrum &GetKr() const { return Kr; }
+	const Texture *GetKr() const { return Kr; }
 
-	Spectrum Evaluate(const bool fromLight,
+	Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	Spectrum Sample(const bool fromLight,
+	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+	void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
@@ -135,8 +203,7 @@ public:
 	}
 
 private:
-	Spectrum Kr;
-	bool reflectionSpecularBounce;
+	const Texture *Kr;
 };
 
 //------------------------------------------------------------------------------
@@ -145,40 +212,31 @@ private:
 
 class GlassMaterial : public Material {
 public:
-	GlassMaterial(const Spectrum &emitted,
-			const Spectrum &refl, const Spectrum &refrct,
-			const float outsideIorFact,	const float iorFact) : Material(emitted) {
-		Krefl = refl;
-		Krefrct = refrct;
-		ousideIor = outsideIorFact;
-		ior = iorFact;
-
-		const float nc = ousideIor;
-		const float nt = ior;
-		const float a = nt - nc;
-		const float b = nt + nc;
-		R0 = a * a / (b * b);
-	}
+	GlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *refl, const Texture *refrct,
+			const Texture *outsideIorFact, const Texture *iorFact) :
+			Material(emitted, bump, normal),
+			Krefl(refl), Krefrct(refrct), ousideIor(outsideIorFact), ior(iorFact) { }
 
 	MaterialType GetType() const { return GLASS; }
 	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
 
 	bool IsDelta() const { return true; }
 
-	const Spectrum &GetKrefl() const { return Krefl; }
-	const Spectrum &GetKrefrct() const { return Krefrct; }
-	const float GetOutsideIOR() const { return ousideIor; }
-	const float GetIOR() const { return ior; }
-	const float GetR0() const { return R0; }
+	const Texture *GetKrefl() const { return Krefl; }
+	const Texture *GetKrefrct() const { return Krefrct; }
+	const Texture *GetOutsideIOR() const { return ousideIor; }
+	const Texture *GetIOR() const { return ior; }
 
-	Spectrum Evaluate(const bool fromLight,
+	Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	Spectrum Sample(const bool fromLight,
+	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+	void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
@@ -187,10 +245,63 @@ public:
 	}
 
 private:
-	Spectrum Krefl, Krefrct;
-	float ousideIor, ior;
-	float R0;
+	const Texture *Krefl;
+	const Texture *Krefrct;
+	const Texture *ousideIor;
+	const Texture *ior;
 };
+
+//------------------------------------------------------------------------------
+// Architectural glass material
+//------------------------------------------------------------------------------
+
+// TODO: write the code as glass with IOR 1.0
+//class ArchGlassMaterial : public Material {
+//public:
+//	ArchGlassMaterial(const Texture *emitted,
+//			const Texture *refl, const Texture *refrct) : Material(emitted),
+//			Krefl(refl), Ktrans(refrct) {
+//		const float reflFilter = Krefl.Filter();
+//		transFilter = Ktrans.Filter();
+//		totFilter = reflFilter + transFilter;
+//
+//		reflPdf = reflFilter / totFilter;
+//		transPdf = transFilter / totFilter;
+//	}
+//
+//	MaterialType GetType() const { return ARCHGLASS; }
+//	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
+//
+//	bool IsDelta() const { return true; }
+//	bool IsShadowTransparent() const { return true; }
+//	const Spectrum &GetSahdowTransparency() const { return Ktrans; }
+//
+//	const Spectrum &GetKrefl() const { return Krefl; }
+//	const Spectrum &GetKrefrct() const { return Ktrans; }
+//	const float GetTransFilter() const { return transFilter; }
+//	const float GetTotFilter() const { return totFilter; }
+//	const float GetReflPdf() const { return reflPdf; }
+//	const float GetTransPdf() const { return transPdf; }
+//
+//	Spectrum Evaluate(const bool fromLight,
+//		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+//		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+//	Spectrum Sample(const bool fromLight,
+//		const Vector &fixedDir, Vector *sampledDir,
+//		const float u0, const float u1,  const float u2,
+//		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+//	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+//		float *directPdfW, float *reversePdfW) const {
+//		if (directPdfW)
+//			*directPdfW = 0.f;
+//		if (reversePdfW)
+//			*reversePdfW = 0.f;
+//	}
+//
+//private:
+//	Spectrum Krefl, Ktrans;
+//	float transFilter, totFilter, reflPdf, transPdf;
+//};
 
 //------------------------------------------------------------------------------
 // Metal material
@@ -198,26 +309,25 @@ private:
 
 class MetalMaterial : public Material {
 public:
-	MetalMaterial(const Spectrum &emitted, const Spectrum &refl,
-			const float exp) : Material(emitted) {
-		Kr = refl;
-		exponent = 1.f / (exp + 1.f);
-	}
+	MetalMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *refl, const Texture *exp) : Material(emitted, bump, normal),
+			Kr(refl), exponent(exp) { }
 
 	MaterialType GetType() const { return METAL; }
 	BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
-	const Spectrum &GetKr() const { return Kr; }
-	float GetExp() const { return exponent; }
+	const Texture *GetKr() const { return Kr; }
+	const Texture *GetExp() const { return exponent; }
 
-	Spectrum Evaluate(const bool fromLight,
+	Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	Spectrum Sample(const bool fromLight,
+	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
 		const float u0, const float u1,  const float u2,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+	void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
@@ -228,61 +338,8 @@ public:
 	static Vector GlossyReflection(const Vector &fixedDir, const float exponent,
 			const float u0, const float u1);
 private:
-	Spectrum Kr;
-	float exponent;
-};
-
-//------------------------------------------------------------------------------
-// Architectural glass material
-//------------------------------------------------------------------------------
-
-class ArchGlassMaterial : public Material {
-public:
-	ArchGlassMaterial(const Spectrum &emitted,
-			const Spectrum &refl, const Spectrum &refrct) : Material(emitted) {
-		Krefl = refl;
-		Ktrans = refrct;
-
-		const float reflFilter = Krefl.Filter();
-		transFilter = Ktrans.Filter();
-		totFilter = reflFilter + transFilter;
-
-		reflPdf = reflFilter / totFilter;
-		transPdf = transFilter / totFilter;
-	}
-
-	MaterialType GetType() const { return ARCHGLASS; }
-	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
-
-	bool IsDelta() const { return true; }
-	bool IsShadowTransparent() const { return true; }
-	const Spectrum &GetSahdowTransparency() const { return Ktrans; }
-
-	const Spectrum &GetKrefl() const { return Krefl; }
-	const Spectrum &GetKrefrct() const { return Ktrans; }
-	const float GetTransFilter() const { return transFilter; }
-	const float GetTotFilter() const { return totFilter; }
-	const float GetReflPdf() const { return reflPdf; }
-	const float GetTransPdf() const { return transPdf; }
-
-	Spectrum Evaluate(const bool fromLight,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	Spectrum Sample(const bool fromLight,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	void Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
-		float *directPdfW, float *reversePdfW) const {
-		if (directPdfW)
-			*directPdfW = 0.f;
-		if (reversePdfW)
-			*reversePdfW = 0.f;
-	}
-
-private:
-	Spectrum Krefl, Ktrans;
-	float transFilter, totFilter, reflPdf, transPdf;
+	const Texture *Kr;
+	const Texture *exponent;
 };
 
 } }

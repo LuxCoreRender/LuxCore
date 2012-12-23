@@ -29,7 +29,7 @@ using namespace luxrays::sdl;
 // Matte material
 //------------------------------------------------------------------------------
 
-Spectrum MatteMaterial::Evaluate(const bool fromLight,
+Spectrum MatteMaterial::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	if (directPdfW)
@@ -39,10 +39,10 @@ Spectrum MatteMaterial::Evaluate(const bool fromLight,
 		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
 
 	*event = DIFFUSE | REFLECT;
-	return KdOverPI;
+	return Kd->GetColorValue(uv) * INV_PI;
 }
 
-Spectrum MatteMaterial::Sample(const bool fromLight,
+Spectrum MatteMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
 	const float u0, const float u1,  const float u2,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
@@ -56,10 +56,11 @@ Spectrum MatteMaterial::Sample(const bool fromLight,
 		return Spectrum();
 
 	*event = DIFFUSE | REFLECT;
-	return KdOverPI;
+	return Kd->GetColorValue(uv) * INV_PI;
 }
 
-void MatteMaterial::Pdf(const bool fromLight, const Vector &lightDir, const Vector &eyeDir,
+void MatteMaterial::Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const {
 	if (directPdfW)
 		*directPdfW = fabsf((fromLight ? eyeDir.z : lightDir.z) * INV_PI);
@@ -72,13 +73,13 @@ void MatteMaterial::Pdf(const bool fromLight, const Vector &lightDir, const Vect
 // Mirror material
 //------------------------------------------------------------------------------
 
-Spectrum MirrorMaterial::Evaluate(const bool fromLight,
+Spectrum MirrorMaterial::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	return Spectrum();
 }
 
-Spectrum MirrorMaterial::Sample(const bool fromLight,
+Spectrum MirrorMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
 	const float u0, const float u1,  const float u2,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
@@ -89,20 +90,20 @@ Spectrum MirrorMaterial::Sample(const bool fromLight,
 
 	*cosSampledDir = fabsf(sampledDir->z);
 	// The cosSampledDir is used to compensate the other one used inside the integrator
-	return Kr / (*cosSampledDir);
+	return Kr->GetColorValue(uv) / (*cosSampledDir);
 }
 
 //------------------------------------------------------------------------------
 // Glass material
 //------------------------------------------------------------------------------
 
-Spectrum GlassMaterial::Evaluate(const bool fromLight,
+Spectrum GlassMaterial::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	return Spectrum();
 }
 
-Spectrum GlassMaterial::Sample(const bool fromLight,
+Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
 	const float u0, const float u1,  const float u2,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
@@ -116,8 +117,8 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 	const Vector rayDir = -fixedDir;
 	const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
 
-	const float nc = ousideIor;
-	const float nt = ior;
+	const float nc = ousideIor->GetGreyValue(uv);
+	const float nt = ior->GetGreyValue(uv);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
 	const float ddn = Dot(rayDir, shadeN);
@@ -131,7 +132,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*pdfW = 1.f;
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Krefl / (*cosSampledDir);
+		return Krefl->GetColorValue(uv) / (*cosSampledDir);
 	}
 
 	const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrtf(cos2t));
@@ -140,6 +141,9 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 
 	const float c = 1.f - (into ? -ddn : Dot(transDir, N));
 	const float c2 = c * c;
+	const float a = nt - nc;
+	const float b = nt + nc;
+	const float R0 = a * a / (b * b);
 	const float Re = R0 + (1.f - R0) * c2 * c2 * c;
 	const float Tr = 1.f - Re;
 	const float P = .25f + .5f * Re;
@@ -154,7 +158,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 			*pdfW = 1.f;
 
 			// The cosSampledDir is used to compensate the other one used inside the integrator
-			return Krefl / (*cosSampledDir);
+			return Krefl->GetColorValue(uv) / (*cosSampledDir);
 		}
 	} else if (Re == 0.f) {
 		*event = SPECULAR | TRANSMIT;
@@ -163,9 +167,9 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*pdfW = 1.f;
 
 		if (fromLight)
-			return Krefrct * (nnt2 / (*cosSampledDir));
+			return Krefrct->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
 		else
-			return Krefrct / (*cosSampledDir);
+			return Krefrct->GetColorValue(uv) / (*cosSampledDir);
 	} else if (u0 < P) {
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
@@ -173,7 +177,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 		*pdfW = P / Re;
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Krefl / (*cosSampledDir);
+		return Krefl->GetColorValue(uv) / (*cosSampledDir);
 	} else {
 		*event = SPECULAR | TRANSMIT;
 		*sampledDir = transDir;
@@ -182,9 +186,9 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		if (fromLight)
-			return Krefrct * (nnt2 / (*cosSampledDir));
+			return Krefrct->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
 		else
-			return Krefrct / (*cosSampledDir);
+			return Krefrct->GetColorValue(uv) / (*cosSampledDir);
 	}
 }
 
@@ -192,56 +196,56 @@ Spectrum GlassMaterial::Sample(const bool fromLight,
 // Architectural glass material
 //------------------------------------------------------------------------------
 
-Spectrum ArchGlassMaterial::Evaluate(const bool fromLight,
-	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-	float *directPdfW, float *reversePdfW) const {
-	return Spectrum();
-}
-
-Spectrum ArchGlassMaterial::Sample(const bool fromLight,
-	const Vector &fixedDir, Vector *sampledDir,
-	const float u0, const float u1,  const float u2,
-	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
-	// Ray from outside going in ?
-	const bool into = (fixedDir.z > 0.f);
-
-	if (!into) {
-		// Architectural glass has not internal reflections
-		*event = SPECULAR | TRANSMIT;
-		*sampledDir = -fixedDir;
-		*cosSampledDir = fabsf(sampledDir->z);
-		*pdfW = 1.f;
-
-		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Ktrans / (*cosSampledDir);
-	} else {
-		// RR to choose if reflect the ray or go trough the glass
-		const float comp = u0 * totFilter;
-		if (comp > transFilter) {
-			*event = SPECULAR | REFLECT;
-			*sampledDir = Vector(-fixedDir.x, -fixedDir.y, fixedDir.z);
-			*cosSampledDir = fabsf(sampledDir->z);
-			*pdfW = reflPdf;
-
-			// The cosSampledDir is used to compensate the other one used inside the integrator
-			return Krefl / (*cosSampledDir);
-		} else {
-			*event = SPECULAR | TRANSMIT;
-			*sampledDir = -fixedDir;
-			*cosSampledDir = fabsf(sampledDir->z);
-			*pdfW = transPdf;
-
-			// The cosSampledDir is used to compensate the other one used inside the integrator
-			return Ktrans / (*cosSampledDir);
-		}
-	}
-}
+//Spectrum ArchGlassMaterial::Evaluate(const bool fromLight, const UV &uv,
+//	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+//	float *directPdfW, float *reversePdfW) const {
+//	return Spectrum();
+//}
+//
+//Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
+//	const Vector &fixedDir, Vector *sampledDir,
+//	const float u0, const float u1,  const float u2,
+//	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
+//	// Ray from outside going in ?
+//	const bool into = (fixedDir.z > 0.f);
+//
+//	if (!into) {
+//		// Architectural glass has not internal reflections
+//		*event = SPECULAR | TRANSMIT;
+//		*sampledDir = -fixedDir;
+//		*cosSampledDir = fabsf(sampledDir->z);
+//		*pdfW = 1.f;
+//
+//		// The cosSampledDir is used to compensate the other one used inside the integrator
+//		return Ktrans / (*cosSampledDir);
+//	} else {
+//		// RR to choose if reflect the ray or go trough the glass
+//		const float comp = u0 * totFilter;
+//		if (comp > transFilter) {
+//			*event = SPECULAR | REFLECT;
+//			*sampledDir = Vector(-fixedDir.x, -fixedDir.y, fixedDir.z);
+//			*cosSampledDir = fabsf(sampledDir->z);
+//			*pdfW = reflPdf;
+//
+//			// The cosSampledDir is used to compensate the other one used inside the integrator
+//			return Krefl / (*cosSampledDir);
+//		} else {
+//			*event = SPECULAR | TRANSMIT;
+//			*sampledDir = -fixedDir;
+//			*cosSampledDir = fabsf(sampledDir->z);
+//			*pdfW = transPdf;
+//
+//			// The cosSampledDir is used to compensate the other one used inside the integrator
+//			return Ktrans / (*cosSampledDir);
+//		}
+//	}
+//}
 
 //------------------------------------------------------------------------------
 // Metal material
 //------------------------------------------------------------------------------
 
-Spectrum MetalMaterial::Evaluate(const bool fromLight,
+Spectrum MetalMaterial::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	return Spectrum();
@@ -278,18 +282,19 @@ Vector MetalMaterial::GlossyReflection(const Vector &fixedDir, const float expon
 	return x * u + y * v + z * w;
 }
 
-Spectrum MetalMaterial::Sample(const bool fromLight,
+Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
 	const float u0, const float u1,  const float u2,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
-	*sampledDir = GlossyReflection(fixedDir, exponent, u0, u1);
+	const float e = 1.f / (exponent->GetGreyValue(uv) + 1.f);
+	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
 
 	if (sampledDir->z * fixedDir.z > 0.f) {
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f;
 		*cosSampledDir = fabsf(sampledDir->z);
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Kr / (*cosSampledDir);
+		return Kr->GetColorValue(uv) / (*cosSampledDir);
 	} else
 		return Spectrum();
 }

@@ -134,7 +134,7 @@ int Properties::GetInt(const std::string propName, const int defaultValue) const
 	if (s.compare("") == 0)
 		return defaultValue;
 	else
-		return atoi(s.c_str());
+		return boost::lexical_cast<int>(s);
 }
 
 size_t Properties::GetSize(const std::string propName, const size_t defaultValue) const {
@@ -152,7 +152,7 @@ float Properties::GetFloat(const std::string propName, const float defaultValue)
 	if (s.compare("") == 0)
 		return defaultValue;
 	else
-		return static_cast<float>(atof(s.c_str()));
+		return static_cast<float>(boost::lexical_cast<double>(s));
 }
 
 std::vector<std::string> Properties::GetStringVector(const std::string propName, const std::string &defaultValue) const {
@@ -236,8 +236,10 @@ std::vector<int> Properties::ConvertToIntVector(const std::string &values) {
 
 	std::vector<int> ints;
 	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it) {
-		if (it->length() != 0)
-			ints.push_back(atoi(it->c_str()));
+		if (it->length() != 0) {
+			const int i = boost::lexical_cast<int>(*it);
+			ints.push_back(i);
+		}
 	}
 
 	return ints;
@@ -249,8 +251,10 @@ std::vector<float> Properties::ConvertToFloatVector(const std::string &values) {
 
 	std::vector<float> floats;
 	for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it) {
-		if (it->length() != 0)
-			floats.push_back(static_cast<float>(atof(it->c_str())));
+		if (it->length() != 0) {
+			const double f = boost::lexical_cast<double>(*it);
+			floats.push_back(static_cast<float>(f));
+		}
 	}
 
 	return floats;

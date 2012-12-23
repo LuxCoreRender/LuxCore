@@ -96,13 +96,13 @@ public:
 	virtual void ApplyTransform(const Transform &trans);
 
 	static TriangleMesh *Merge(
-		const std::deque<Mesh *> &meshes,
+		const std::deque<const Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 	static TriangleMesh *Merge(
 		const unsigned int totalVerticesCount,
 		const unsigned int totalIndicesCount,
-		const std::deque<Mesh *> &meshes,
+		const std::deque<const Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 
