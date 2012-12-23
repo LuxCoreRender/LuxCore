@@ -533,11 +533,12 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	const std::string propName = "scene.materials." + matName;
 	const std::string matType = GetStringParameters(props, propName + ".type", 1, "matte").at(0);
 
-	Texture *emissionTex = GetTexture(props.GetString(propName + ".emission", "1.0 1.0 1.0"));
-	Texture *bumpTex = props.IsDefined(propName + ".bump") ? 
-		GetTexture(props.GetString(propName + ".bump", "1.0")) : NULL;
-	Texture *normalTex = props.IsDefined(propName + ".bump") ? 
-		GetTexture(props.GetString(propName + ".normal", "1.0")) : NULL;
+	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
+		GetTexture(props.GetString(propName + ".emission", "0.0 0.0 0.0")) : NULL;
+	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
+		GetTexture(props.GetString(propName + ".bumptex", "1.0")) : NULL;
+	Texture *normalTex = props.IsDefined(propName + ".normaltex") ? 
+		GetTexture(props.GetString(propName + ".normaltex", "1.0")) : NULL;
 
 	if (matType == "matte") {
 		Texture *kd = GetTexture(props.GetString(propName + ".kd", "1.0 1.0 1.0"));

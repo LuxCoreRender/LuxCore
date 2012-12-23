@@ -64,7 +64,12 @@ public:
 		throw std::runtime_error("Internal error, called Material::GetSahdowTransparency()");
 	}
 
-	const Spectrum GetEmittedRadiance(const UV &uv) const { return emittedTex->GetColorValue(uv); }
+	const Spectrum GetEmittedRadiance(const UV &uv) const {
+		if (emittedTex)
+			return emittedTex->GetColorValue(uv);
+		else
+			return Spectrum();
+	}
 
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
