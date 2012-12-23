@@ -77,18 +77,21 @@ public:
 //		texMapCache->DefineTexMap(tmName, tm);
 //	}
 
-	void AddMaterials(const std::string &propsString);
-	void AddMaterials(const Properties &props);
+	void DefineTextures(const std::string &propsString);
+	void DefineTextures(const Properties &props);
+
+	void DefineMaterials(const std::string &propsString);
+	void DefineMaterials(const Properties &props);
 
 	void DefineObject(const std::string &meshName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals = true) {
-		extMeshCache->DefineExtMesh(meshName, mesh, usePlyNormals);
+		extMeshCache.DefineExtMesh(meshName, mesh, usePlyNormals);
 	}
 	void DefineObject(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
 		const bool usePlyNormals) {
-		extMeshCache->DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
+		extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
 	}
 
 	void AddObject(const std::string &objName, const std::string &meshName, const std::string &propsString);
@@ -106,28 +109,20 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	static Material *CreateMaterial(const std::string &matName, const Properties &prop);
+	Texture *CreateTexture(const std::string &texName, const Properties &props);
+	Material *CreateMaterial(const std::string &matName, const Properties &props);
 
 	PerspectiveCamera *camera;
 
-	ExtMeshCache *extMeshCache; // Mesh objects
-	ImageMapCache *imgMapCache; // Image maps
-	TextureDefinitions *texDefs; // Texture definitions
+	TextureDefinitions texDefs; // Texture definitions
+	MaterialDefinitions matDefs; // Material definitions
+	ExtMeshDefinitions meshDefs; // ExtMesh definitions
 
 	LightSource *infiniteLight; // A SLG scene can have only one infinite light
 	LightSource *sunLight;
 	std::vector<LightSource *> lights; // One for each light source (doesn't include sun/infinite light)
 
-	std::vector<Material *> materials; // All materials (one for each light source)
-	std::map<std::string, size_t> materialIndices; // All materials indices
-	std::vector<ExtMesh *> objects; // All objects
-	std::map<std::string, size_t> objectIndices; // All object indices
-
 	std::vector<Material *> objectMaterials; // One for each object
-	std::vector<ImageMapInstance *> objectTexMaps; // One for each object
-	std::vector<ImageMapInstance *> objectBumpMaps; // One for each object
-	std::vector<ImageMapInstance *> objectNormalMaps; // One for each object
-
 	std::vector<LightSource *> triangleLightSource; // One for each triangle
 
 	DataSet *dataSet;
@@ -139,6 +134,11 @@ protected:
 	static std::vector<float> GetFloatParameters(const Properties &prop,
 		const std::string &paramName, const unsigned int paramCount,
 		const std::string &defaultValue);
+
+	Texture *GetTexture(const std::string &name);
+
+	ExtMeshCache extMeshCache; // Mesh objects
+	ImageMapCache imgMapCache; // Image maps
 
 	int accelType;
 };

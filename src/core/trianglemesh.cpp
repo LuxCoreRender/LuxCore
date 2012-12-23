@@ -43,13 +43,13 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 }
 
 TriangleMesh *TriangleMesh::Merge(
-	const std::deque<Mesh *> &meshes,
+	const std::deque<const Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
 	unsigned int totalVertexCount = 0;
 	unsigned int totalTriangleCount = 0;
 
-	for (std::deque<Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+	for (std::deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
 		totalVertexCount += (*m)->GetTotalVertexCount();
 		totalTriangleCount += (*m)->GetTotalTriangleCount();
 	}
@@ -60,7 +60,7 @@ TriangleMesh *TriangleMesh::Merge(
 TriangleMesh *TriangleMesh::Merge(
 	const unsigned int totalVertexCount,
 	const unsigned int totalTriangleCount,
-	const std::deque<Mesh *> &meshes,
+	const std::deque<const Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
 	assert (totalVertexCount > 0);
@@ -78,7 +78,7 @@ TriangleMesh *TriangleMesh::Merge(
 	unsigned int vIndex = 0;
 	unsigned int iIndex = 0;
 	TriangleMeshID currentID = 0;
-	for (std::deque<Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+	for (std::deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
 		const Triangle *tris;
 		switch ((*m)->GetType()) {
 			case TYPE_TRIANGLE: {

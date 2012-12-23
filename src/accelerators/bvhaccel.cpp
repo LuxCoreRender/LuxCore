@@ -218,7 +218,7 @@ BVHAccel::BVHAccel(const Context *context,
 	initialized = false;
 }
 
-void BVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
+void BVHAccel::Init(const std::deque<const Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
 

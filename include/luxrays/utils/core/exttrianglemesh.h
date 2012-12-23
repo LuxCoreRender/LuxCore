@@ -101,9 +101,12 @@ public:
 	}
 
 	UV InterpolateTriUV(const unsigned int index, const float b1, const float b2) const {
-		const Triangle &tri = tris[index];
-		const float b0 = 1.f - b1 - b2;
-		return b0 * uvs[tri.v[0]] + b1 * uvs[tri.v[1]] + b2 * uvs[tri.v[2]];
+		if (uvs) {
+			const Triangle &tri = tris[index];
+			const float b0 = 1.f - b1 - b2;
+			return b0 * uvs[tri.v[0]] + b1 * uvs[tri.v[1]] + b2 * uvs[tri.v[2]];
+		} else
+			return UV(0.f, 0.f);
 	}
 
 	void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
@@ -206,6 +209,55 @@ public:
 private:
 	Transform trans;
 	ExtTriangleMesh *mesh;
+};
+
+class ExtMeshDefinitions {
+public:
+	ExtMeshDefinitions() { }
+	~ExtMeshDefinitions() {
+		// I don't delete the ExtMesh here because they are usually stored
+		// in a ExtMeshCache
+	}
+
+	bool IsExtMeshDefined(const std::string &name) const {
+		return (meshsByName.count(name) > 0);
+	}
+	void DefineExtMesh(const std::string &name, const ExtMesh *t) {
+		meshs.push_back(t);
+		meshsByName.insert(std::make_pair(name, t));
+		indexByName.insert(std::make_pair(name, meshs.size() - 1));
+	}
+
+	const ExtMesh *GetExtMesh(const std::string &name) const {
+		// Check if the mesh has been already defined
+		std::map<std::string, const ExtMesh *>::const_iterator it = meshsByName.find(name);
+
+		if (it == meshsByName.end())
+			throw std::runtime_error("Reference to an undefined mesh: " + name);
+		else
+			return it->second;
+	}
+	const ExtMesh *GetExtMesh(const u_int index) const {
+		return meshs[index];
+	}
+	u_int GetExtMeshIndex(const std::string &name) const {
+		// Check if the mesh has been already defined
+		std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
+
+		if (it == indexByName.end())
+			throw std::runtime_error("Reference to an undefined mesh: " + name);
+		else
+			return it->second;
+	}
+
+	const std::vector<const ExtMesh *> &GetAllMesh() const { return meshs; }
+	u_int GetSize() const { return static_cast<u_int>(meshs.size()); }
+  
+private:
+
+	std::vector<const ExtMesh *> meshs;
+	std::map<std::string, const ExtMesh *> meshsByName;
+	std::map<std::string, u_int> indexByName;
 };
 
 }

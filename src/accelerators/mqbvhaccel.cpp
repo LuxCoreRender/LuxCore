@@ -226,7 +226,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 	std::map<const QBVHAccel *, unsigned int> indexNodesMap;
 	std::map<const QBVHAccel *, unsigned int> indexQuadTrisMap;
 
-	for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+	for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		const QBVHAccel *qbvh = it->second;
 
 		indexNodesMap[qbvh] = totalNodesCount;
@@ -269,7 +269,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 	// Upload QBVH leafs
 	size_t nodesMemOffset = 0;
 	size_t quadTrisMemOffset = 0;
-	for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+	for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		const QBVHAccel *qbvh = it->second;
 
 		const size_t nodesMemSize = sizeof(QBVHNode) * qbvh->nNodes;
@@ -349,16 +349,16 @@ MQBVHAccel::~MQBVHAccel() {
 		delete[] leafsTransform;
 		delete[] leafs;
 
-		for (std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.begin(); it != accels.end(); it++)
+		for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::iterator it = accels.begin(); it != accels.end(); it++)
 			delete it->second;
 	}
 }
 
-bool MQBVHAccel::MeshPtrCompare(Mesh *p0, Mesh *p1) {
+bool MQBVHAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
 	return p0 < p1;
 }
 
-void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount,
+void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount) {
 	assert (!initialized);
 
@@ -396,7 +396,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int total
 				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshList[i];
 
 				// Check if a QBVH has already been created
-				std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.find(itm->GetTriangleMesh());
+				std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::iterator it = accels.find(itm->GetTriangleMesh());
 
 				if (it == accels.end()) {
 					// Create a new QBVH
@@ -415,7 +415,7 @@ void MQBVHAccel::Init(const std::deque<Mesh *> &meshes, const unsigned int total
 				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshList[i];
 
 				// Check if a QBVH has already been created
-				std::map<Mesh *, QBVHAccel *, bool (*)(Mesh *, Mesh *)>::iterator it = accels.find(eitm->GetExtTriangleMesh());
+				std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::iterator it = accels.find(eitm->GetExtTriangleMesh());
 				if (it == accels.end()) {
 					// Create a new QBVH
 					leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);

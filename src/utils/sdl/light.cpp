@@ -406,17 +406,16 @@ Spectrum SunLight::GetRadiance(const Scene *scene,
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight(const Material *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const std::vector<ExtMesh *> &objs) {
+TriangleLight::TriangleLight(const Material *mat,
+		const ExtMesh *m, const unsigned int triangleIndex) {
 	lightMaterial = mat;
-	meshIndex = mshIndex;
+	mesh = m;
 	triIndex = triangleIndex;
 
-	Init(objs);
+	Init();
 }
 
-void TriangleLight::Init(const std::vector<ExtMesh *> &objs) {
-	const ExtMesh *mesh = objs[meshIndex];
+void TriangleLight::Init() {
 	area = mesh->GetTriangleArea(triIndex);
 	invArea = 1.f / area;
 }
@@ -425,8 +424,6 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-
 	// Origin
 	float b0, b1, b2;
 	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
@@ -452,15 +449,14 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = localDirOut.z;
 
-	return lightMaterial->GetEmittedRadiance() * localDirOut.z;
+	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	return lightMaterial->GetEmittedRadiance(triUV) * localDirOut.z;
 }
 
 Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-
 	Point samplePoint;
 	float b0, b1, b2;
 	mesh->Sample(triIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
@@ -483,7 +479,8 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
-	return lightMaterial->GetEmittedRadiance();
+	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	return lightMaterial->GetEmittedRadiance(triUV);
 }
 
 Spectrum TriangleLight::GetRadiance(const Scene *scene,
@@ -491,8 +488,6 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 		const Point &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const ExtMesh *mesh = scene->objects[meshIndex];
-
 	// Get the u and v coordinates of the hit point
 	float b1, b2;
 	if (!mesh->GetTriUV(triIndex, hitPoint, &b1, &b2))
@@ -510,5 +505,6 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	if (emissionPdfW)
 		*emissionPdfW = cosOutLight * INV_PI * invArea;
 
-	return lightMaterial->GetEmittedRadiance();
+	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	return lightMaterial->GetEmittedRadiance(triUV);
 }

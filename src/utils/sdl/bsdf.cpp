@@ -36,7 +36,7 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	const unsigned int currentMeshIndex = scene.dataSet->GetMeshID(currentTriangleIndex);
 
 	// Get the triangle
-	mesh = scene.objects[currentMeshIndex];
+	mesh = scene.meshDefs.GetExtMesh(currentMeshIndex);
 	triIndex = scene.dataSet->GetMeshTriangleID(currentTriangleIndex);
 
 	// Get the material
@@ -50,71 +50,49 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	if (material->IsLightSource())
 		lightSource = scene.triangleLightSource[currentTriangleIndex];
 
-	surfaceColor = Spectrum(1.f, 1.f, 1.f);
+	// Interpolate UV coordinates if required
+	hitPointUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
 
-	// Check if I have to apply texture mapping or normal mapping
-	ImageMapInstance *tm = scene.objectTexMaps[currentMeshIndex];
-	ImageMapInstance *bm = scene.objectBumpMaps[currentMeshIndex];
-	ImageMapInstance *nm = scene.objectNormalMaps[currentMeshIndex];
-	if (tm || bm || nm) {
-		// Interpolate UV coordinates if required
-		const UV triUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
+	// Check if I have to apply bump mapping
+	if (material->HasNormalTex()) {
+		// Apply normal mapping
+		const Texture *nm = material->GetNormalTexture();
+		const Spectrum color = nm->GetColorValue(hitPointUV);
 
-		// Check if there is an assigned texture map
-		if (tm) {
-			// Apply texture mapping
-			surfaceColor *= tm->GetColor(triUV);
+		const float x = 2.f * (color.r - 0.5f);
+		const float y = 2.f * (color.g - 0.5f);
+		const float z = 2.f * (color.b - 0.5f);
 
-			const float alpha = tm->GetAlpha(triUV);
+		Vector v1, v2;
+		CoordinateSystem(Vector(shadeN), &v1, &v2);
+		shadeN = Normalize(Normal(
+				v1.x * x + v2.x * y + shadeN.x * z,
+				v1.y * x + v2.y * y + shadeN.y * z,
+				v1.z * x + v2.z * y + shadeN.z * z));
+	}
 
-			if ((alpha == 0.0f) || ((alpha < 1.f) && (u0 > alpha))) {
-				// It is a pass-through material
-				isPassThrough = true;
-				return;
-			}
-		}
+	// Check if I have to apply normal mapping
+	if (material->HasBumpTex()) {
+		// Apply normal mapping
+		const Texture *bm = material->GetBumpTexture();
+		const UV &dudv = bm->GetDuDv();
 
-		// Check if there is an assigned bump/normal map
-		if (bm || nm) {
-			if (nm) {
-				// Apply normal mapping
-				const Spectrum color = nm->GetColor(triUV);
+		const float b0 = bm->GetGreyValue(hitPointUV);
 
-				const float x = 2.f * (color.r - 0.5f);
-				const float y = 2.f * (color.g - 0.5f);
-				const float z = 2.f * (color.b - 0.5f);
+		const UV uvdu(hitPointUV.u + dudv.u, hitPointUV.v);
+		const float bu = bm->GetGreyValue(uvdu);
 
-				Vector v1, v2;
-				CoordinateSystem(Vector(shadeN), &v1, &v2);
-				shadeN = Normalize(Normal(
-						v1.x * x + v2.x * y + shadeN.x * z,
-						v1.y * x + v2.y * y + shadeN.y * z,
-						v1.z * x + v2.z * y + shadeN.z * z));
-			}
+		const UV uvdv(hitPointUV.u, hitPointUV.v + dudv.v);
+		const float bv = bm->GetGreyValue(uvdv);
 
-			if (bm) {
-				// Apply bump mapping
-				const UV &dudv = bm->GetDuDv();
+		const Vector bump(bu - b0, bv - b0, 1.f);
 
-				const float b0 = bm->GetColor(triUV).Filter();
-
-				const UV uvdu(triUV.u + dudv.u, triUV.v);
-				const float bu = bm->GetColor(uvdu).Filter();
-
-				const UV uvdv(triUV.u, triUV.v + dudv.v);
-				const float bv = bm->GetColor(uvdv).Filter();
-
-				const float scale = 1.f;//bm->GetScale();
-				const Vector bump(scale * (bu - b0), scale * (bv - b0), 1.f);
-
-				Vector v1, v2;
-				CoordinateSystem(Vector(shadeN), &v1, &v2);
-				shadeN = Normalize(Normal(
-						v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
-						v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
-						v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
-			}
-		}
+		Vector v1, v2;
+		CoordinateSystem(Vector(shadeN), &v1, &v2);
+		shadeN = Normalize(Normal(
+				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
+				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
+				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
 	}
 
 	frame.SetFromZ(shadeN);
@@ -142,16 +120,16 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
-	Spectrum result = material->Evaluate(fromLight, localLightDir, localEyeDir,
+	Spectrum result = material->Evaluate(fromLight, hitPointUV, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
 
 	// Adjoint BSDF
 	if (fromLight) {
 		const float absDotLightDirNS = AbsDot(lightDir, shadeN);
 		const float absDotEyeDirNS = AbsDot(eyeDir, shadeN);
-		return surfaceColor * result * ((absDotLightDirNS * absDotEyeDirNG) / (absDotEyeDirNS * absDotLightDirNG));
+		return result * ((absDotLightDirNS * absDotEyeDirNG) / (absDotEyeDirNS * absDotLightDirNG));
 	} else
-		return surfaceColor * result;
+		return result;
 }
 
 Spectrum BSDF::Sample(Vector *sampledDir,
@@ -160,7 +138,7 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
 
-	Spectrum result = material->Sample(fromLight,
+	Spectrum result = material->Sample(fromLight, hitPointUV,
 			localFixedDir, &localSampledDir, u0, u1, u2,
 			pdfW, cosSampledDir, event);
 	if (result.Black())
@@ -174,9 +152,9 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 		const float absDotSampledDirNS = fabsf(localSampledDir.z);
 		const float absDotFixedDirNG = AbsDot(fixedDir, geometryN);
 		const float absDotSampledDirNG = AbsDot(*sampledDir, geometryN);
-		return surfaceColor * result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
+		return result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
 	} else
-		return surfaceColor * result;
+		return result;
 }
 
 void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) const {
@@ -185,7 +163,7 @@ void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
 
-	material->Pdf(fromLight, localLightDir, localEyeDir, directPdfW, reversePdfW);
+	material->Pdf(fromLight, hitPointUV, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
 Spectrum BSDF::GetEmittedRadiance(const Scene *scene,

@@ -262,8 +262,8 @@ private:
 class TriangleLight : public LightSource {
 public:
 	TriangleLight() { }
-	TriangleLight(const Material *mat, const unsigned int mshIndex,
-		const unsigned int triangleIndex, const std::vector<ExtMesh *> &objs);
+	TriangleLight(const Material *mat, const ExtMesh *mesh,
+		const unsigned int triangleIndex);
 
 	bool IsAreaLight() const { return true; }
 
@@ -272,8 +272,8 @@ public:
 	void SetMaterial(const Material *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
 
-	void Init(const std::vector<ExtMesh *> &objs);
-	unsigned int GetMeshIndex() const { return meshIndex; }
+	void Init();
+	const ExtMesh *GetMesh() const { return mesh; }
 	unsigned int GetTriIndex() const { return triIndex; }
 	float GetArea() const { return area; }
 
@@ -295,7 +295,8 @@ public:
 
 private:
 	const Material *lightMaterial;
-	unsigned int meshIndex, triIndex;
+	const ExtMesh *mesh;
+	u_int triIndex;
 	float area, invArea;
 };
 
