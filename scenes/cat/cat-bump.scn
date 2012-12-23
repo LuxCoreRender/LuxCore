@@ -5,14 +5,14 @@ scene.textures.cat_png.type = imagemap
 scene.textures.cat_png.file = scenes/cat/EgyptCat.png
 scene.textures.cat_bump_png.type = imagemap
 scene.textures.cat_bump_png.file = scenes/cat/EgyptCat_DISP.png
-scene.textures.cat_bump_png.gain = 1.0
+scene.textures.cat_bump_png.gamma = 1.0
 scene.textures.ground_kd.type = constfloat3
 scene.textures.ground_kd.value = 1.0 0.850417 0.545883
 ################################################################################
 scene.materials.mat_egyptcat.type = metal
 scene.materials.mat_egyptcat.kr = cat_png
 scene.materials.mat_egyptcat.exp = 90
-scene.materials.mat_egyptcat.bump = cat_bump_png
+scene.materials.mat_egyptcat.bumptex = cat_bump_png
 scene.materials.mat_ground.type = matte
 scene.materials.mat_ground.kd = ground_kd
 scene.materials.mat_light.type = matte
