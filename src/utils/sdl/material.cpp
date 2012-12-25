@@ -325,3 +325,139 @@ Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 	} else
 		return Spectrum();
 }
+
+//------------------------------------------------------------------------------
+// Mix material
+//------------------------------------------------------------------------------
+
+Spectrum MixMaterial::GetSahdowTransparency(const UV &uv) const {
+	Spectrum result(1.f);
+
+	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float imix = 1.f - mix;
+
+	if (matA->IsShadowTransparent() && (imix > 0.f))
+		result *= imix * matA->GetSahdowTransparency(uv);
+	if (matB->IsShadowTransparent() && (mix > 0.f))
+		result *= mix * matB->GetSahdowTransparency(uv);
+
+	return result;
+}
+
+Spectrum MixMaterial::GetEmittedRadiance(const UV &uv) const {
+	Spectrum result;
+
+	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float imix = 1.f - mix;
+
+	if (matA->IsLightSource() && (imix > 0.f))
+		result += imix * matA->GetEmittedRadiance(uv);
+	if (matB->IsLightSource() && (mix > 0.f))
+		result *= mix * matB->GetEmittedRadiance(uv);
+	
+	return result;
+}
+
+Spectrum MixMaterial::Evaluate(const bool fromLight, const UV &uv,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	Spectrum result;
+
+	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float imix = 1.f - mix;
+
+	BSDFEvent eventMatA = NONE;
+	float directPdfWMatA = 1.f;
+	float reversePdfWMatA = 1.f;
+	if (imix > 0.f)
+		result += imix * matA->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
+
+	BSDFEvent eventMatB = NONE;
+	float directPdfWMatB = 1.f;
+	float reversePdfWMatB = 1.f;
+	if (mix > 0.f)
+		result += mix * matB->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
+
+	*event = eventMatA | eventMatB;
+
+	if (directPdfW)
+		*directPdfW = imix * directPdfWMatA + mix *directPdfWMatB;
+	if (reversePdfW)
+		*reversePdfW = imix * reversePdfWMatA + mix * reversePdfWMatB;
+
+	return result;
+}
+
+Spectrum MixMaterial::Sample(const bool fromLight, const UV &uv,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float u2,
+	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
+	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float imix = 1.f - mix;
+
+	if (u2 < mix) {
+		// Sample the second material
+		Spectrum result = matB->Sample(fromLight, uv, fixedDir, sampledDir,
+				u0, u1, u2 / mix, pdfW, cosSampledDir, event);
+		if (result.Black())
+			return Spectrum();
+		*pdfW *= mix;
+
+		// Evaluate the first material
+		BSDFEvent eventMatA;
+		if (fromLight) {
+			float pdfWMatA;
+			result += imix * matA->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatA);
+			*pdfW += imix * pdfWMatA;
+		} else {
+			float pdfWMatA;
+			result += imix * matA->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA);
+			*pdfW += imix * pdfWMatA;			
+		}
+
+		return result;
+	} else {
+		// Sample the first material
+		Spectrum result = matA->Sample(fromLight, uv, fixedDir, sampledDir,
+				u0, u1, u2 / imix, pdfW, cosSampledDir, event);
+		if (result.Black())
+			return Spectrum();
+		*pdfW *= imix;
+
+		// Evaluate the second material
+		BSDFEvent eventMatA;
+		if (fromLight) {
+			float pdfWMatB;
+			result += mix * matB->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatB);
+			*pdfW += mix * pdfWMatB;
+		} else {
+			float pdfWMatB;
+			result += mix * matB->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatB);
+			*pdfW += mix * pdfWMatB;			
+		}
+		
+		return result;
+	}
+}
+
+void MixMaterial::Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float imix = 1.f - mix;
+
+	float directPdfWMatA = 1.f;
+	float reversePdfWMatA = 1.f;
+	if (imix > 0.f)
+		matA->Pdf(fromLight, uv, lightDir, eyeDir, &directPdfWMatA, &reversePdfWMatA);
+
+	float directPdfWMatB = 1.f;
+	float reversePdfWMatB = 1.f;
+	if (imix > 0.f)
+		matA->Pdf(fromLight, uv, lightDir, eyeDir, &directPdfWMatB, &reversePdfWMatB);
+
+	if (directPdfW)
+		*directPdfW = imix * directPdfWMatA + mix *directPdfWMatB;
+	if (reversePdfW)
+		*reversePdfW = imix * reversePdfWMatA + mix * reversePdfWMatB;
+}

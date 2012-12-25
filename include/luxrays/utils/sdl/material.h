@@ -36,7 +36,7 @@ namespace luxrays { namespace sdl {
 class Scene;
 
 enum MaterialType {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX
 };
 
 class Material {
@@ -47,13 +47,13 @@ public:
 
 	virtual MaterialType GetType() const = 0;
 
-	bool IsLightSource() const {
+	virtual bool IsLightSource() const {
 		return (emittedTex != NULL);
 	}
-	bool HasBumpTex() const { 
+	virtual bool HasBumpTex() const { 
 		return (bumpTex != NULL);
 	}
-	bool HasNormalTex() const { 
+	virtual bool HasNormalTex() const { 
 		return (normalTex != NULL);
 	}
 
@@ -64,7 +64,7 @@ public:
 		throw std::runtime_error("Internal error, called Material::GetSahdowTransparency()");
 	}
 
-	const Spectrum GetEmittedRadiance(const UV &uv) const {
+	virtual Spectrum GetEmittedRadiance(const UV &uv) const {
 		if (emittedTex)
 			return emittedTex->GetColorValue(uv);
 		else
@@ -334,6 +334,54 @@ public:
 private:
 	const Texture *Kr;
 	const Texture *exponent;
+};
+
+//------------------------------------------------------------------------------
+// Mix material
+//------------------------------------------------------------------------------
+
+class MixMaterial : public Material {
+public:
+	MixMaterial(const Material *mA, const Material *mB, const Texture *mix) : Material(NULL, NULL, NULL),
+			matA(mA), matB(mB), mixFactor(mix) { }
+
+	MaterialType GetType() const { return MIX; }
+	BSDFEvent GetEventTypes() const { return (matA->GetEventTypes() | matB->GetEventTypes()); };
+
+	bool IsLightSource() const {
+		return (matA->IsLightSource() || matB->IsLightSource());
+	}
+	bool HasBumpTex() const { 
+		return (matA->HasBumpTex() || matB->HasBumpTex());
+	}
+	bool HasNormalTex() const {
+		return (matA->HasNormalTex() || matB->HasNormalTex());
+	}
+
+	bool IsDelta()  {
+		return (matA->IsDelta() && matB->IsDelta());
+	}
+	bool IsShadowTransparent() const {
+		return (matA->IsShadowTransparent() || matB->IsShadowTransparent());
+	}
+	Spectrum GetSahdowTransparency(const UV &uv) const;
+	Spectrum GetEmittedRadiance(const UV &uv) const;
+
+	Spectrum Evaluate(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight, const UV &uv,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float u2,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+private:
+	const Material *matA;
+	const Material *matB;
+	const Texture *mixFactor;
 };
 
 } }

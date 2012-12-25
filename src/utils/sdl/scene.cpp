@@ -565,6 +565,12 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
 
 		return new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt);
+	} else if (matType == "mix") {
+		Material *matA = matDefs.GetMaterial(props.GetString(propName + ".material1", "mat1"));
+		Material *matB = matDefs.GetMaterial(props.GetString(propName + ".material2", "mat2"));
+		Texture *mix = GetTexture(props.GetString(propName + ".amount", "0.5"));
+
+		return new MixMaterial(matA, matB, mix);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
