@@ -6,9 +6,14 @@ scene.textures.normalmap.uvscale = 2 2
 scene.textures.bumpmap.file = scenes/bump/map2.png
 scene.textures.bumpmap.gamma = 1.0
 scene.textures.bumpmap.uvscale = 1 1
+#scene.textures.light2.file = scenes/simple-mat/arch.exr
+#scene.textures.light2.gain = 7.0
+#scene.textures.light2.uvscale = 1 -1
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 16. 16. 16.
+#scene.materials.mat_light2.type = matte
+#scene.materials.mat_light2.emission = light2
 scene.materials.mat_red.type = matte
 scene.materials.mat_red.kd = 0.8 0.0 0.0
 scene.materials.mat_red.bumptex = bumpmap
@@ -18,6 +23,8 @@ scene.materials.mat_white.normaltex = normalmap
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
+#scene.objects.obj_light2.ply = scenes/bump/mat_light2.ply
+#scene.objects.obj_light2.material = mat_light2
 scene.objects.obj_red.ply = scenes/bump/mat_red.ply
 scene.objects.obj_red.material = mat_red
 scene.objects.obj_white.ply = scenes/bump/mat_white.ply

@@ -54,8 +54,8 @@ public:
 	bool IsDelta() const { return material->IsDelta(); }
 	bool IsShadowTransparent() const { return material->IsShadowTransparent(); }
 
-	const Spectrum &GetSahdowTransparency() const {
-		return material->GetSahdowTransparency();
+	Spectrum GetSahdowTransparency() const {
+		return material->GetSahdowTransparency(hitPointUV);
 	}
 
 	Spectrum Evaluate(const Vector &generatedDir,
