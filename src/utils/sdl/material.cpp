@@ -196,50 +196,77 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 // Architectural glass material
 //------------------------------------------------------------------------------
 
-//Spectrum ArchGlassMaterial::Evaluate(const bool fromLight, const UV &uv,
-//	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
-//	float *directPdfW, float *reversePdfW) const {
-//	return Spectrum();
-//}
-//
-//Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
-//	const Vector &fixedDir, Vector *sampledDir,
-//	const float u0, const float u1,  const float u2,
-//	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
-//	// Ray from outside going in ?
-//	const bool into = (fixedDir.z > 0.f);
-//
-//	if (!into) {
-//		// Architectural glass has not internal reflections
-//		*event = SPECULAR | TRANSMIT;
-//		*sampledDir = -fixedDir;
-//		*cosSampledDir = fabsf(sampledDir->z);
-//		*pdfW = 1.f;
-//
-//		// The cosSampledDir is used to compensate the other one used inside the integrator
-//		return Ktrans / (*cosSampledDir);
-//	} else {
-//		// RR to choose if reflect the ray or go trough the glass
-//		const float comp = u0 * totFilter;
-//		if (comp > transFilter) {
-//			*event = SPECULAR | REFLECT;
-//			*sampledDir = Vector(-fixedDir.x, -fixedDir.y, fixedDir.z);
-//			*cosSampledDir = fabsf(sampledDir->z);
-//			*pdfW = reflPdf;
-//
-//			// The cosSampledDir is used to compensate the other one used inside the integrator
-//			return Krefl / (*cosSampledDir);
-//		} else {
-//			*event = SPECULAR | TRANSMIT;
-//			*sampledDir = -fixedDir;
-//			*cosSampledDir = fabsf(sampledDir->z);
-//			*pdfW = transPdf;
-//
-//			// The cosSampledDir is used to compensate the other one used inside the integrator
-//			return Ktrans / (*cosSampledDir);
-//		}
-//	}
-//}
+Spectrum ArchGlassMaterial::Evaluate(const bool fromLight, const UV &uv,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	return Spectrum();
+}
+
+Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float u2,
+	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+
+	// TODO: remove
+	const Vector shadeN(0.f, 0.f, into ? 1.f : -1.f);
+	const Vector N(0.f, 0.f, 1.f);
+
+	const Vector rayDir = -fixedDir;
+	const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
+
+	const float ddn = Dot(rayDir, shadeN);
+	const float cos2t = ddn * ddn;
+
+	// Total internal reflection is not possible
+	const float kk = (into ? 1.f : -1.f) * (ddn + sqrtf(cos2t));
+	const Vector nkk = kk * Vector(N);
+	const Vector transDir = Normalize(rayDir - nkk);
+
+	const float c = 1.f - (into ? -ddn : Dot(transDir, N));
+	const float c2 = c * c;
+	const float Re = c2 * c2 * c;
+	const float Tr = 1.f - Re;
+	const float P = .25f + .5f * Re;
+
+	if (Tr == 0.f) {
+		if (Re == 0.f)
+			return Spectrum();
+		else {
+			*event = SPECULAR | REFLECT;
+			*sampledDir = reflDir;
+			*cosSampledDir = fabsf(sampledDir->z);
+			*pdfW = 1.f;
+
+			// The cosSampledDir is used to compensate the other one used inside the integrator
+			return Krefl->GetColorValue(uv) / (*cosSampledDir);
+		}
+	} else if (Re == 0.f) {
+		*event = SPECULAR | TRANSMIT;
+		*sampledDir = transDir;
+		*cosSampledDir = fabsf(sampledDir->z);
+		*pdfW = 1.f;
+
+		return Krefrct->GetColorValue(uv) / (*cosSampledDir);
+	} else if (u0 < P) {
+		*event = SPECULAR | REFLECT;
+		*sampledDir = reflDir;
+		*cosSampledDir = fabsf(sampledDir->z);
+		*pdfW = P / Re;
+
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return Krefl->GetColorValue(uv) / (*cosSampledDir);
+	} else {
+		*event = SPECULAR | TRANSMIT;
+		*sampledDir = transDir;
+		*cosSampledDir = fabsf(sampledDir->z);
+		*pdfW = (1.f - P) / Tr;
+
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return Krefrct->GetColorValue(uv) / (*cosSampledDir);
+	}
+}
 
 //------------------------------------------------------------------------------
 // Metal material

@@ -219,7 +219,7 @@ void Scene::DefineTextures(const std::string &propsString) {
 void Scene::DefineTextures(const Properties &props) {
 	std::vector<std::string> texKeys = props.GetAllKeys("scene.textures.");
 	if (texKeys.size() == 0)
-		throw std::runtime_error("No material definition found");
+		return;
 
 	for (std::vector<std::string>::const_iterator matKey = texKeys.begin(); matKey != texKeys.end(); ++matKey) {
 		const std::string &key = *matKey;
@@ -554,17 +554,17 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
 		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
 
-		return new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, iorinside, ioroutside);
+		return new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "metal") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *exp = GetTexture(props.GetString(propName + ".exp", "10.0"));
 
 		return new MetalMaterial(emissionTex, bumpTex, normalTex, kr, exp);
-//	} else if (matType == "archglass") {
-//		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
-//		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
-//
-//		return new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt);
+	} else if (matType == "archglass") {
+		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
+		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
+
+		return new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
