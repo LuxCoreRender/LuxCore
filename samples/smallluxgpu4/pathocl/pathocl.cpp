@@ -122,7 +122,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	maxDiffusePathVertexCount = cfg.GetInt("path.maxdiffusebounce", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
-	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", 0.125f);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
 	epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 
 	//--------------------------------------------------------------------------
