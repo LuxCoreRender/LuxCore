@@ -36,7 +36,7 @@ namespace luxrays { namespace sdl {
 class Scene;
 
 enum MaterialType {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
 };
 
 class Material {
@@ -218,18 +218,18 @@ private:
 class GlassMaterial : public Material {
 public:
 	GlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *refl, const Texture *refrct,
+			const Texture *refl, const Texture *trans,
 			const Texture *outsideIorFact, const Texture *iorFact) :
 			Material(emitted, bump, normal),
-			Krefl(refl), Krefrct(refrct), ousideIor(outsideIorFact), ior(iorFact) { }
+			Kr(refl), Kt(trans), ousideIor(outsideIorFact), ior(iorFact) { }
 
 	MaterialType GetType() const { return GLASS; }
 	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
 
 	bool IsDelta() const { return true; }
 
-	const Texture *GetKrefl() const { return Krefl; }
-	const Texture *GetKrefrct() const { return Krefrct; }
+	const Texture *GetKrefl() const { return Kr; }
+	const Texture *GetKrefrct() const { return Kt; }
 	const Texture *GetOutsideIOR() const { return ousideIor; }
 	const Texture *GetIOR() const { return ior; }
 
@@ -250,8 +250,8 @@ public:
 	}
 
 private:
-	const Texture *Krefl;
-	const Texture *Krefrct;
+	const Texture *Kr;
+	const Texture *Kt;
 	const Texture *ousideIor;
 	const Texture *ior;
 };
@@ -263,8 +263,8 @@ private:
 class ArchGlassMaterial : public Material {
 public:
 	ArchGlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *refl, const Texture *refrct) :
-			Material(emitted, bump, normal), Krefl(refl), Krefrct(refrct) { }
+			const Texture *refl, const Texture *trans) :
+			Material(emitted, bump, normal), Kr(refl), Kt(trans) { }
 
 	MaterialType GetType() const { return ARCHGLASS; }
 	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -272,11 +272,11 @@ public:
 	bool IsDelta() const { return true; }
 	bool IsShadowTransparent() const { return true; }
 	Spectrum GetShadowTransparency(const UV &uv, const float passThroughEvent) const {
-		return Krefrct->GetColorValue(uv);
+		return Kt->GetColorValue(uv);
 	}
 
-	const Texture *GetKrefl() const { return Krefl; }
-	const Texture *GetKrefrct() const { return Krefrct; }
+	const Texture *GetKrefl() const { return Kr; }
+	const Texture *GetKrefrct() const { return Kt; }
 
 	Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
@@ -295,8 +295,8 @@ public:
 	}
 
 private:
-	const Texture *Krefl;
-	const Texture *Krefrct;
+	const Texture *Kr;
+	const Texture *Kt;
 };
 
 //------------------------------------------------------------------------------
@@ -412,6 +412,35 @@ public:
 		if (reversePdfW)
 			*reversePdfW = 0.f;
 	}
+};
+
+//------------------------------------------------------------------------------
+// MatteTranslucent material
+//------------------------------------------------------------------------------
+
+class MatteTranslucentMaterial : public Material {
+public:
+	MatteTranslucentMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *refl, const Texture *trans) : Material(emitted, bump, normal),
+			Kr(refl), Kt(trans) { }
+
+	MaterialType GetType() const { return MATTETRANSLUCENT; }
+	BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT | TRANSMIT; };
+
+	Spectrum Evaluate(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight, const UV &uv,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float passThroughEvent,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+private:
+	const Texture *Kr;
+	const Texture *Kt;
 };
 
 } }

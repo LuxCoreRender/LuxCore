@@ -573,7 +573,12 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		return new MixMaterial(bumpTex, normalTex, matA, matB, mix);
 	} else if (matType == "null") {
 		return new NullMaterial();
-	} else
+	} else if (matType == "mattetranslucent") {
+		Texture *kr = GetTexture(props.GetString(propName + ".kr", "0.5 0.5 0.5"));
+		Texture *kt = GetTexture(props.GetString(propName + ".kt", "0.5 0.5 0.5"));
+
+		return new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
+	} else 
 		throw std::runtime_error("Unknown material type: " + matType);
 }
 
