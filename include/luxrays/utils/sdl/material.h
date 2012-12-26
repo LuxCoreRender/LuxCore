@@ -36,7 +36,7 @@ namespace luxrays { namespace sdl {
 class Scene;
 
 enum MaterialType {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT
 };
 
 class Material {
@@ -46,6 +46,7 @@ public:
 	virtual ~Material() { }
 
 	virtual MaterialType GetType() const = 0;
+	virtual BSDFEvent GetEventTypes() const = 0;
 
 	virtual bool IsLightSource() const {
 		return (emittedTex != NULL);
@@ -58,10 +59,9 @@ public:
 	}
 
 	virtual bool IsDelta() const { return false; }
-	virtual bool IsShadowTransparent() const { return false; }
-	virtual BSDFEvent GetEventTypes() const = 0;
-	virtual Spectrum GetSahdowTransparency(const UV &uv) const {
-		throw std::runtime_error("Internal error, called Material::GetSahdowTransparency()");
+	virtual bool IsPassThrough() const { return false; }
+	virtual Spectrum GetPassThroughTransparency(const UV &uv, const float passThroughEvent) const {
+		return Spectrum(0.f);
 	}
 
 	virtual Spectrum GetEmittedRadiance(const UV &uv) const {
@@ -81,7 +81,7 @@ public:
 
 	virtual Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,  const float passThroughEvent,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const = 0;
 
 	virtual void Pdf(const bool fromLight, const UV &uv,
@@ -165,7 +165,7 @@ public:
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,  const float passThroughEvent,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
@@ -196,7 +196,7 @@ public:
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,  const float passThroughEvent,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
@@ -238,7 +238,7 @@ public:
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,  const float passThroughEvent,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
@@ -271,7 +271,9 @@ public:
 
 	bool IsDelta() const { return true; }
 	bool IsShadowTransparent() const { return true; }
-	Spectrum GetSahdowTransparency(const UV &uv) const { return Krefrct->GetColorValue(uv); }
+	Spectrum GetShadowTransparency(const UV &uv, const float passThroughEvent) const {
+		return Krefrct->GetColorValue(uv);
+	}
 
 	const Texture *GetKrefl() const { return Krefl; }
 	const Texture *GetKrefrct() const { return Krefrct; }
@@ -281,7 +283,7 @@ public:
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,  const float passThroughEvent,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
@@ -318,7 +320,7 @@ public:
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,  const float passThroughEvent,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
@@ -352,14 +354,14 @@ public:
 	bool IsLightSource() const {
 		return (matA->IsLightSource() || matB->IsLightSource());
 	}
-
 	bool IsDelta()  {
 		return (matA->IsDelta() && matB->IsDelta());
 	}
-	bool IsShadowTransparent() const {
-		return (matA->IsShadowTransparent() || matB->IsShadowTransparent());
+	bool IsPassThrough() const {
+		return (matA->IsPassThrough() || matB->IsPassThrough());
 	}
-	Spectrum GetSahdowTransparency(const UV &uv) const;
+	Spectrum GetPassThroughTransparency(const UV &uv, const float passThroughEvent) const;
+
 	Spectrum GetEmittedRadiance(const UV &uv) const;
 
 	Spectrum Evaluate(const bool fromLight, const UV &uv,
@@ -367,7 +369,7 @@ public:
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(const bool fromLight, const UV &uv,
 		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,  const float passThroughEvent,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
@@ -377,6 +379,39 @@ private:
 	const Material *matA;
 	const Material *matB;
 	const Texture *mixFactor;
+};
+
+//------------------------------------------------------------------------------
+// Null material
+//------------------------------------------------------------------------------
+
+class NullMaterial : public Material {
+public:
+	NullMaterial() : Material(NULL, NULL, NULL) { }
+
+	MaterialType GetType() const { return NULLMAT; }
+	BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
+
+	bool IsDelta() const { return true; }
+	bool IsPassThrough() const { return true; }
+	Spectrum GetPassThroughTransparency(const UV &uv,
+		const float passThroughEvent) const { return Spectrum(1.f); }
+
+	Spectrum Evaluate(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	Spectrum Sample(const bool fromLight, const UV &uv,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float passThroughEvent,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
+	}
 };
 
 } }

@@ -41,27 +41,25 @@ public:
 
 	// A BSDF initialized from a ray hit
 	BSDF(const bool l2e, const Scene &scene, const Ray &ray,
-		const RayHit &rayHit, const float u0) {
-		Init(l2e, scene, ray, rayHit, u0);
+		const RayHit &rayHit, const float passThroughEvent) {
+		Init(l2e, scene, ray, rayHit, passThroughEvent);
 	}
 
 	void Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
-		const RayHit &rayHit, const float u0);
+		const RayHit &rayHit, const float passThroughEvent);
 
 	bool IsEmpty() const { return (material == NULL); }
-	bool IsPassThrough() const { return isPassThrough; }
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
-	bool IsShadowTransparent() const { return material->IsShadowTransparent(); }
 
-	Spectrum GetSahdowTransparency() const {
-		return material->GetSahdowTransparency(hitPointUV);
+	Spectrum GetPassThroughTransparency() const {
+		return material->GetPassThroughTransparency(hitPointUV, passThroughEvent);
 	}
 
 	Spectrum Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
 	void Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
 	Spectrum GetEmittedRadiance(const Scene *scene,
@@ -77,6 +75,7 @@ public:
 	Normal shadeN;
 
 private:
+	float passThroughEvent;
 	const ExtMesh *mesh;
 	unsigned int triIndex;
 
@@ -84,7 +83,7 @@ private:
 	const LightSource *lightSource; // != NULL only if it is an area light
 	Frame frame;
 
-	bool fromLight, isPassThrough;
+	bool fromLight;
 };
 	
 } }

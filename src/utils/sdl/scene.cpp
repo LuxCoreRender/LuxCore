@@ -571,6 +571,8 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *mix = GetTexture(props.GetString(propName + ".amount", "0.5"));
 
 		return new MixMaterial(bumpTex, normalTex, matA, matB, mix);
+	} else if (matType == "null") {
+		return new NullMaterial();
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
@@ -656,7 +658,7 @@ Spectrum Scene::GetEnvLightsRadiance(const Vector &dir,
 	return radiance;
 }
 
-bool Scene::Intersect(IntersectionDevice *device, const bool fromLight, const bool stopOnArchGlass,
+bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
 		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf, Spectrum *connectionThroughput) const {
 	*connectionThroughput = Spectrum(1.f, 1.f, 1.f);
 	for (;;) {
@@ -667,29 +669,15 @@ bool Scene::Intersect(IntersectionDevice *device, const bool fromLight, const bo
 			// Check if it is a pass through point
 			bsdf->Init(fromLight, *this, *ray, *rayHit, u0);
 
-			// Check if it is pass-through point
-			if (bsdf->IsPassThrough()) {
-				// It is a pass-through material, continue to trace the ray
-				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-
-				continue;
-			}
-
-			// Check if it is a light source
-			if (bsdf->IsLightSource())
+			// Mix material can have IsPassThrough() = true and return Spectrum(0.f)
+			Spectrum t = bsdf->GetPassThroughTransparency();
+			if (t.Black())
 				return true;
 
-			// Check if it is architectural glass
-			if (!stopOnArchGlass && bsdf->IsShadowTransparent()) {
-				*connectionThroughput *= bsdf->GetSahdowTransparency();
+			*connectionThroughput *= t;
 
-				// It is a shadow transparent material, continue to trace the ray
-				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-
-				continue;
-			}
-
-			return true;
+			// It is a shadow transparent material, continue to trace the ray
+			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
 		}
 	}
 }

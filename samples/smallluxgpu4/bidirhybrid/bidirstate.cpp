@@ -312,7 +312,7 @@ void BiDirState::TraceLightPath(HybridRenderThread *renderThread,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(thread->device, true, true, sampler->GetSample(lightVertexSampleOffset),
+			if (scene->Intersect(thread->device, true, sampler->GetSample(lightVertexSampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 				// Something was hit
 
@@ -361,7 +361,6 @@ bool BiDirState::Bounce(HybridRenderThread *renderThread,
 	const Spectrum bsdfSample = pathVertex->bsdf.Sample(&sampledDir,
 			sampler->GetSample(sampleOffset),
 			sampler->GetSample(sampleOffset + 1),
-			sampler->GetSample(sampleOffset + 2),
 			&bsdfPdfW, &cosSampledDir, &event);
 	if (bsdfSample.Black())
 		return false;
@@ -502,7 +501,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(thread->device, false, true, sampler->GetSample(eyeVertexSampleOffset),
+			if (!scene->Intersect(thread->device, false, sampler->GetSample(eyeVertexSampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 
@@ -587,16 +586,19 @@ bool BiDirState::ValidResult(BiDirHybridRenderThread *renderThread,
 				*scene, *ray, *rayHit, u0);
 
 		// Check if it is pass-through point
-		if (bsdf.IsPassThrough()) {
+		Spectrum t = bsdf.GetPassThroughTransparency();
+		if (!t.Black()) {
+			*radiance *= t;
+
 			// It is a pass-through material, continue to trace the ray. I do
 			// this on the CPU.
 
 			Ray newRay(*ray);
 			newRay.mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-			RayHit newRayHit;
+			RayHit newRayHit;			
 			Spectrum connectionThroughput;
 			if (scene->Intersect(renderThread->device, false, // true or false, here, doesn't really matter
-					true, u0, &newRay, &newRayHit, &bsdf, &connectionThroughput)) {
+					u0, &newRay, &newRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				return false;
 			} else {
