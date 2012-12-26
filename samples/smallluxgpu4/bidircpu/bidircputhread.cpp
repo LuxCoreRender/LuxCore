@@ -358,7 +358,7 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 	if (pathVertex->depth >= engine->rrDepth) {
 		// Russian Roulette
 		const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
-		if (sampler->GetSample(sampleOffset + 3) < prob) {
+		if (sampler->GetSample(sampleOffset + 2) < prob) {
 			bsdfPdfW *= prob;
 			bsdfRevPdfW *= prob;
 		} else
