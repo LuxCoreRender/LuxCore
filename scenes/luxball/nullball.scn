@@ -2,23 +2,17 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
 scene.textures.tex.type = imagemap
-scene.textures.tex.file = scenes/luxball/lux.png
+scene.textures.tex.file = scenes/luxball/lux2.png
 scene.textures.tex.gain = 1.0
 scene.textures.tex.uvscale = 8 -8
-scene.textures.bumpmap.file = scenes/bump/map2.png
-scene.textures.bumpmap.gain = 2.0
-scene.textures.bumpmap.gamma = 1.0
-scene.textures.bumpmap.uvscale = 5 5
 ################################################################################
-scene.materials.mat1.type = mirror
-scene.materials.mat1.kd = 0.8 0.8 0.8
-scene.materials.mat2.type = matte
-scene.materials.mat2.kd = 0.65 0.0 0.0
+scene.materials.mat1.type = matte
+scene.materials.mat1.kd = 0.65 0.0 0.0
+scene.materials.mat2.type = null
 scene.materials.shell.type = mix
 scene.materials.shell.material1 = mat1
 scene.materials.shell.material2 = mat2
 scene.materials.shell.amount = tex
-scene.materials.shell.bumptex = bumpmap
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

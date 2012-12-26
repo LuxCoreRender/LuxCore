@@ -27,7 +27,7 @@ namespace luxrays { namespace sdl {
 void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float u0) {
 	fromLight = fromL;
-	isPassThrough = false;
+	passThroughEvent = u0;
 
 	hitPoint = ray(rayHit.t);
 	fixedDir = -ray.d;
@@ -49,8 +49,10 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	// Check if it is a light source
 	if (material->IsLightSource())
 		lightSource = scene.triangleLightSource[currentTriangleIndex];
+	else
+		lightSource = NULL;
 
-	// Interpolate UV coordinates if required
+	// Interpolate UV coordinates
 	hitPointUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
 
 	// Check if I have to apply bump mapping
@@ -133,13 +135,13 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 }
 
 Spectrum BSDF::Sample(Vector *sampledDir,
-		const float u0, const float u1,  const float u2,
+		const float u0, const float u1,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
 
 	Spectrum result = material->Sample(fromLight, hitPointUV,
-			localFixedDir, &localSampledDir, u0, u1, u2,
+			localFixedDir, &localSampledDir, u0, u1, passThroughEvent,
 			pdfW, cosSampledDir, event);
 	if (result.Black())
 		return result;

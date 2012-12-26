@@ -59,7 +59,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				const float cosToCamera = Dot(bsdf.shadeN, -eyeDir);
@@ -105,7 +105,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 		RayHit eyeRayHit;
 		BSDF bsdf;
 		Spectrum connectionThroughput;
-		const bool somethingWasHit = scene->Intersect(device, false, true,
+		const bool somethingWasHit = scene->Intersect(device, false,
 				sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
@@ -125,7 +125,6 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 						sampler->GetSample(sampleOffset + 1),
 						sampler->GetSample(sampleOffset + 2),
-						sampler->GetSample(sampleOffset + 3),
 						&bsdfPdf, &cosSampleDir, &event);
 				if (bsdfSample.Black() || ((depth == 1) && !(event & SPECULAR)))
 					break;
@@ -230,7 +229,7 @@ void LightCPURenderThread::RenderFunc() {
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(device, true, true, sampler->GetSample(sampleOffset),
+			if (scene->Intersect(device, true, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 
@@ -257,7 +256,6 @@ void LightCPURenderThread::RenderFunc() {
 				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 						sampler->GetSample(sampleOffset + 2),
 						sampler->GetSample(sampleOffset + 3),
-						sampler->GetSample(sampleOffset + 4),
 						&bsdfPdf, &cosSampleDir, &event);
 				if (bsdfSample.Black())
 					break;

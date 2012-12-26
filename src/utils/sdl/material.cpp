@@ -44,7 +44,7 @@ Spectrum MatteMaterial::Evaluate(const bool fromLight, const UV &uv,
 
 Spectrum MatteMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
-	const float u0, const float u1,  const float u2,
+	const float u0, const float u1,  const float passThroughEvent,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
@@ -81,7 +81,7 @@ Spectrum MirrorMaterial::Evaluate(const bool fromLight, const UV &uv,
 
 Spectrum MirrorMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
-	const float u0, const float u1,  const float u2,
+	const float u0, const float u1,  const float passThroughEvent,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	*event = SPECULAR | REFLECT;
 
@@ -105,7 +105,7 @@ Spectrum GlassMaterial::Evaluate(const bool fromLight, const UV &uv,
 
 Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
-	const float u0, const float u1,  const float u2,
+	const float u0, const float u1,  const float passThroughEvent,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	// Ray from outside going in ?
 	const bool into = (fixedDir.z > 0.f);
@@ -204,7 +204,7 @@ Spectrum ArchGlassMaterial::Evaluate(const bool fromLight, const UV &uv,
 
 Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
-	const float u0, const float u1,  const float u2,
+	const float u0, const float u1,  const float passThroughEvent,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	// Ray from outside going in ?
 	const bool into = (fixedDir.z > 0.f);
@@ -311,7 +311,7 @@ Vector MetalMaterial::GlossyReflection(const Vector &fixedDir, const float expon
 
 Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
-	const float u0, const float u1,  const float u2,
+	const float u0, const float u1,  const float passThroughEvent,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
 	const float e = 1.f / (exponent->GetGreyValue(uv) + 1.f);
 	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
@@ -330,31 +330,27 @@ Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 // Mix material
 //------------------------------------------------------------------------------
 
-Spectrum MixMaterial::GetSahdowTransparency(const UV &uv) const {
-	Spectrum result(1.f);
+Spectrum MixMaterial::GetPassThroughTransparency(const UV &uv, const float passThroughEvent) const {
+	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
 
-	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
-	const float imix = 1.f - mix;
-
-	if (matA->IsShadowTransparent() && (imix > 0.f))
-		result *= imix * matA->GetSahdowTransparency(uv);
-	if (matB->IsShadowTransparent() && (mix > 0.f))
-		result *= mix * matB->GetSahdowTransparency(uv);
-
-	return result;
+	if (passThroughEvent < weight1)
+		return matA->GetPassThroughTransparency(uv, passThroughEvent / weight1);
+	else
+		return matB->GetPassThroughTransparency(uv, (passThroughEvent - weight2) / weight2);
 }
 
 Spectrum MixMaterial::GetEmittedRadiance(const UV &uv) const {
 	Spectrum result;
 
-	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
-	const float imix = 1.f - mix;
+	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
 
-	if (matA->IsLightSource() && (imix > 0.f))
-		result += imix * matA->GetEmittedRadiance(uv);
-	if (matB->IsLightSource() && (mix > 0.f))
-		result *= mix * matB->GetEmittedRadiance(uv);
-	
+	if (matA->IsLightSource() && (weight1 > 0.f))
+		result += weight1 * matA->GetEmittedRadiance(uv);
+	if (matB->IsLightSource() && (weight2 > 0.f))
+		result *= weight2 * matB->GetEmittedRadiance(uv);
+
 	return result;
 }
 
@@ -363,79 +359,91 @@ Spectrum MixMaterial::Evaluate(const bool fromLight, const UV &uv,
 	float *directPdfW, float *reversePdfW) const {
 	Spectrum result;
 
-	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
-	const float imix = 1.f - mix;
+	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
 
 	BSDFEvent eventMatA = NONE;
 	float directPdfWMatA = 1.f;
 	float reversePdfWMatA = 1.f;
-	if (imix > 0.f)
-		result += imix * matA->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
+	if (weight1 > 0.f)
+		result += weight1 * matA->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
 
 	BSDFEvent eventMatB = NONE;
 	float directPdfWMatB = 1.f;
 	float reversePdfWMatB = 1.f;
-	if (mix > 0.f)
-		result += mix * matB->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
+	if (weight2 > 0.f)
+		result += weight2 * matB->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
 
 	*event = eventMatA | eventMatB;
 
 	if (directPdfW)
-		*directPdfW = imix * directPdfWMatA + mix *directPdfWMatB;
+		*directPdfW = weight1 * directPdfWMatA + weight2 *directPdfWMatB;
 	if (reversePdfW)
-		*reversePdfW = imix * reversePdfWMatA + mix * reversePdfWMatB;
+		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
 
 	return result;
 }
 
 Spectrum MixMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
-	const float u0, const float u1,  const float u2,
+	const float u0, const float u1,  const float passThroughEvent,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
-	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
-	const float imix = 1.f - mix;
+	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
 
-	if (u2 < mix) {
-		// Sample the second material
-		Spectrum result = matB->Sample(fromLight, uv, fixedDir, sampledDir,
-				u0, u1, u2 / mix, pdfW, cosSampledDir, event);
-		if (result.Black())
-			return Spectrum();
-		*pdfW *= mix;
-
-		// Evaluate the first material
-		BSDFEvent eventMatA;
-		if (fromLight) {
-			float pdfWMatA;
-			result += imix * matA->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatA);
-			*pdfW += imix * pdfWMatA;
-		} else {
-			float pdfWMatA;
-			result += imix * matA->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA);
-			*pdfW += imix * pdfWMatA;			
-		}
-
-		return result;
-	} else {
+	if (passThroughEvent < weight1) {
 		// Sample the first material
 		Spectrum result = matA->Sample(fromLight, uv, fixedDir, sampledDir,
-				u0, u1, u2 / imix, pdfW, cosSampledDir, event);
+				u0, u1, passThroughEvent / weight1, pdfW, cosSampledDir, event);
 		if (result.Black())
 			return Spectrum();
-		*pdfW *= imix;
+		*pdfW *= weight1;
 
 		// Evaluate the second material
 		BSDFEvent eventMatA;
 		if (fromLight) {
 			float pdfWMatB;
-			result += mix * matB->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatB);
-			*pdfW += mix * pdfWMatB;
+			Spectrum f = matB->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatB);
+			if (!f.Black()) {
+				result += weight2 * f;
+				*pdfW += weight2 * pdfWMatB;
+			}
 		} else {
 			float pdfWMatB;
-			result += mix * matB->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatB);
-			*pdfW += mix * pdfWMatB;			
+			Spectrum f = matB->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatB);
+			if (!f.Black()) {
+				result += weight2 * f;
+				*pdfW += weight2 * pdfWMatB;
+			}
 		}
 		
+		return result;
+	} else {
+		// Sample the second material
+		Spectrum result = matB->Sample(fromLight, uv, fixedDir, sampledDir,
+				u0, u1, (passThroughEvent - weight1) / weight2, pdfW, cosSampledDir, event);
+		if (result.Black())
+			return Spectrum();
+		*pdfW *= weight2;
+
+		// Evaluate the first material
+		BSDFEvent eventMatA;
+		if (fromLight) {
+			float pdfWMatA;
+			Spectrum f = matA->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatA);
+			if (!f.Black()) {
+				result += weight1 * f;
+				*pdfW += weight1 * pdfWMatA;
+			}
+		} else {
+			float pdfWMatA;
+			Spectrum f = matA->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA);
+			if (!f.Black()) {
+				result += weight1 * f;
+				*pdfW += weight1 * pdfWMatA;
+			}
+		}
+
 		return result;
 	}
 }
@@ -443,21 +451,45 @@ Spectrum MixMaterial::Sample(const bool fromLight, const UV &uv,
 void MixMaterial::Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	const float mix = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
-	const float imix = 1.f - mix;
+	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
 
 	float directPdfWMatA = 1.f;
 	float reversePdfWMatA = 1.f;
-	if (imix > 0.f)
+	if (weight1 > 0.f)
 		matA->Pdf(fromLight, uv, lightDir, eyeDir, &directPdfWMatA, &reversePdfWMatA);
 
 	float directPdfWMatB = 1.f;
 	float reversePdfWMatB = 1.f;
-	if (imix > 0.f)
-		matA->Pdf(fromLight, uv, lightDir, eyeDir, &directPdfWMatB, &reversePdfWMatB);
+	if (weight2 > 0.f)
+		matB->Pdf(fromLight, uv, lightDir, eyeDir, &directPdfWMatB, &reversePdfWMatB);
 
 	if (directPdfW)
-		*directPdfW = imix * directPdfWMatA + mix *directPdfWMatB;
+		*directPdfW = weight1 * directPdfWMatA + weight2 *directPdfWMatB;
 	if (reversePdfW)
-		*reversePdfW = imix * reversePdfWMatA + mix * reversePdfWMatB;
+		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
+}
+
+//------------------------------------------------------------------------------
+// Null material
+//------------------------------------------------------------------------------
+
+Spectrum NullMaterial::Evaluate(const bool fromLight, const UV &uv,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	return Spectrum();
+}
+
+Spectrum NullMaterial::Sample(const bool fromLight, const UV &uv,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float passThroughEvent,
+	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
+	//throw std::runtime_error("Internal error, called NullMaterial::Sample()");
+
+	*sampledDir = -fixedDir;
+	*cosSampledDir = 1.f;
+
+	*pdfW = 1.f;
+	*event = SPECULAR | TRANSMIT;
+	return Spectrum(1.f);
 }
