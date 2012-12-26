@@ -60,8 +60,8 @@ public:
 protected:
 	// Used to offset Sampler data
 	static const u_int sampleBootSize = 11;
-	static const u_int sampleLightStepSize = 6;
-	static const u_int sampleEyeStepSize = 11;
+	static const u_int sampleLightStepSize = 5;
+	static const u_int sampleEyeStepSize = 10;
 
 	static float MIS(const float a) {
 		//return a; // Balance heuristic

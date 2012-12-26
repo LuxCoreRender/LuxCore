@@ -89,7 +89,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 
 	// Sample offsets
 	const unsigned int sampleBootSize = 11;
-	const unsigned int sampleEyeStepSize = 4;
+	const unsigned int sampleEyeStepSize = 3;
 
 	Ray eyeRay;
 	const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
@@ -167,7 +167,7 @@ void LightCPURenderThread::RenderFunc() {
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const unsigned int sampleBootSize = 11;
 	const unsigned int sampleEyeStepSize = 4;
-	const unsigned int sampleLightStepSize = 6;
+	const unsigned int sampleLightStepSize = 5;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
@@ -263,7 +263,7 @@ void LightCPURenderThread::RenderFunc() {
 				if (depth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
-					if (sampler->GetSample(sampleOffset + 5) < prob)
+					if (sampler->GetSample(sampleOffset + 4) < prob)
 						bsdfPdf *= prob;
 					else
 						break;

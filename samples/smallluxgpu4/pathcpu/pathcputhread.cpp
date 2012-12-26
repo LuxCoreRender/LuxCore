@@ -160,7 +160,7 @@ void PathCPURenderThread::RenderFunc() {
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const unsigned int sampleBootSize = 4;
-	const unsigned int sampleStepSize = 10;
+	const unsigned int sampleStepSize = 9;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		engine->maxPathDepth * sampleStepSize; // For each path vertex
@@ -244,7 +244,7 @@ void PathCPURenderThread::RenderFunc() {
 			if ((depth >= engine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
 				const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
-				if (sampler->GetSample(sampleOffset + 9) < prob)
+				if (sampler->GetSample(sampleOffset + 8) < prob)
 					lastPdfW *= prob;
 				else
 					break;
