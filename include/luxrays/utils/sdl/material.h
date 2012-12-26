@@ -342,20 +342,15 @@ private:
 
 class MixMaterial : public Material {
 public:
-	MixMaterial(const Material *mA, const Material *mB, const Texture *mix) : Material(NULL, NULL, NULL),
-			matA(mA), matB(mB), mixFactor(mix) { }
+	MixMaterial(const Texture *bump, const Texture *normal,
+			const Material *mA, const Material *mB, const Texture *mix) :
+			Material(NULL, bump, normal), matA(mA), matB(mB), mixFactor(mix) { }
 
 	MaterialType GetType() const { return MIX; }
 	BSDFEvent GetEventTypes() const { return (matA->GetEventTypes() | matB->GetEventTypes()); };
 
 	bool IsLightSource() const {
 		return (matA->IsLightSource() || matB->IsLightSource());
-	}
-	bool HasBumpTex() const { 
-		return (matA->HasBumpTex() || matB->HasBumpTex());
-	}
-	bool HasNormalTex() const {
-		return (matA->HasNormalTex() || matB->HasNormalTex());
 	}
 
 	bool IsDelta()  {

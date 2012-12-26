@@ -570,7 +570,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Material *matB = matDefs.GetMaterial(props.GetString(propName + ".material2", "mat2"));
 		Texture *mix = GetTexture(props.GetString(propName + ".amount", "0.5"));
 
-		return new MixMaterial(matA, matB, mix);
+		return new MixMaterial(bumpTex, normalTex, matA, matB, mix);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
