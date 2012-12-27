@@ -100,44 +100,23 @@ protected:
 
 class MaterialDefinitions {
 public:
-	MaterialDefinitions() { }
-	~MaterialDefinitions() {
-		for (std::vector<Material *>::const_iterator it = mats.begin(); it != mats.end(); ++it)
-			delete (*it);
-	}
+	MaterialDefinitions();
+	~MaterialDefinitions();
 
 	bool IsMaterialDefined(const std::string &name) const {
 		return (matsByName.count(name) > 0);
 	}
-	void DefineMaterial(const std::string &name, Material *t) {
-		mats.push_back(t);
-		matsByName.insert(std::make_pair(name, t));
-		indexByName.insert(std::make_pair(name, mats.size() - 1));
-	}
+	void DefineMaterial(const std::string &name, Material *m);
+	void UpdateMaterial(const std::string &name, Material *m);
 
-	Material *GetMaterial(const std::string &name) {
-		// Check if the material has been already defined
-		std::map<std::string, Material *>::const_iterator it = matsByName.find(name);
-
-		if (it == matsByName.end())
-			throw std::runtime_error("Reference to an undefined material: " + name);
-		else
-			return it->second;
-	}
+	Material *GetMaterial(const std::string &name);
 	Material *GetMaterial(const u_int index) {
 		return mats[index];
 	}
-	u_int GetMaterialIndex(const std::string &name) {
-		// Check if the material has been already defined
-		std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
+	u_int GetMaterialIndex(const std::string &name) const;
 
-		if (it == indexByName.end())
-			throw std::runtime_error("Reference to an undefined material: " + name);
-		else
-			return it->second;
-	}
-
-	u_int GetSize()const { return static_cast<u_int>(mats.size()); }
+	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
+	vector<std::string> GetMaterialNames() const;
   
 private:
 

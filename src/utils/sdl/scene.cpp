@@ -142,8 +142,8 @@ void Scene::UpdateDataSet(Context *ctx) {
 	}
 
 	// Add all objects
-	const std::vector<const ExtMesh *> &objects = meshDefs.GetAllMesh();
-	for (std::vector<const ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
+	const std::vector<ExtMesh *> &objects = meshDefs.GetAllMesh();
+	for (std::vector<ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
 		dataSet->Add(*obj);
 
 	dataSet->Preprocess();
@@ -277,6 +277,53 @@ void Scene::DefineMaterials(const Properties &props) {
 	}
 }
 
+void Scene::UpdateMaterial(const std::string &name, const std::string &propsString) {
+	Properties prop;
+	prop.LoadFromString(propsString);
+
+	UpdateMaterial(name, prop);
+}
+
+void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
+	// Look for old material
+	Material *oldMat = matDefs.GetMaterial(name);
+	const bool wasLightSource = oldMat->IsLightSource();
+
+	// Create new material
+	Material *newMat = CreateMaterial(name, props);
+
+	// UpdateMaterial() deletes oldMat
+	matDefs.UpdateMaterial(name, newMat);
+
+	// Check if both are light sources
+	if (wasLightSource) {
+		if (!newMat->IsLightSource())
+			throw std::runtime_error("Update material must be a light source too");
+
+		// Replace old light material with new one
+		for (u_int i = 0; i < objectMaterials.size(); ++i) {
+			if (objectMaterials[i] == oldMat)
+				objectMaterials[i] = newMat;
+		}
+		for (u_int i = 0; i < lights.size(); ++i) {
+			if (lights[i]->IsAreaLight()) {
+				TriangleLight *tl = (TriangleLight *)lights[i];
+				if (tl->GetMaterial() == oldMat)
+					tl->SetMaterial(newMat);
+			}
+		}
+	} else {
+		if (newMat->IsLightSource())
+			throw std::runtime_error("Update material must not be a light source too");
+
+		// Replace old material with new one
+		for (u_int i = 0; i < objectMaterials.size(); ++i) {
+			if (objectMaterials[i] == oldMat)
+				objectMaterials[i] = newMat;
+		}
+	}
+}
+
 void Scene::AddObject(const std::string &objName, const std::string &meshName,
 		const std::string &propsString) {
 	Properties prop;
@@ -337,6 +384,27 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 	} else {		
 		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
 			triangleLightSource.push_back(NULL);
+	}
+}
+
+void Scene::UpdateObjectTransformation(const std::string &objName, const Transform &trans) {
+	ExtMesh *mesh = meshDefs.GetExtMesh(objName);
+
+	ExtInstanceTriangleMesh *instanceMesh = dynamic_cast<ExtInstanceTriangleMesh *>(mesh);
+	if (instanceMesh)
+		instanceMesh->SetTransformation(trans);
+	else
+		mesh->ApplyTransform(trans);
+
+	// Check if it is a light source
+	const u_int meshIndex = meshDefs.GetExtMeshIndex(objName);
+	if (objectMaterials[meshIndex]->IsLightSource()) {
+		// Have to update all light source using this mesh
+		for (unsigned int i = 0; i < lights.size(); ++i) {
+			TriangleLight *tl = dynamic_cast<TriangleLight *>(lights[i]);
+			if (tl && tl->GetMesh() == mesh)
+				tl->Init();
+		}
 	}
 }
 

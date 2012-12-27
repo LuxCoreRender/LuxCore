@@ -122,7 +122,7 @@ set(SLG4LIB_SRCS
 	rendersession.cpp
 	renderconfig.cpp
 	renderengine.cpp
-	#telnet.cpp
+	telnet.cpp
 	bidircpu/bidircpu.cpp
 	bidircpu/bidircputhread.cpp
 	bidirhybrid/bidirhybrid.cpp

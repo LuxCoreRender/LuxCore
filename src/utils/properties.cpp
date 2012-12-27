@@ -27,6 +27,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/utils.h"
@@ -63,13 +64,13 @@ void Properties::Load(std::istream &stream) {
 
 		// Check if it is a valid key
 		std::string key(line.substr(0, idx));
-		StringTrim(key);
+		boost::trim(key);
 		std::string value(line.substr(idx + 1));
 		// Check if the last char is a LF or a CR and remove that (in case of
 		// a DOS file red under Linux/MacOS)
 		if ((value.size() > 0) && ((value[value.size() - 1] == '\n') || (value[value.size() - 1] == '\r')))
 			value.resize(value.size() - 1);
-		StringTrim(value);
+		boost::trim(value);
 
 		props[key] = value;
 	}
@@ -193,8 +194,8 @@ std::string Properties::SetString(const std::string &property) {
 	if (strs.size() != 2)
 		throw std::runtime_error("Syntax error in property definition");
 
-	StringTrim(strs[0]);
-	StringTrim(strs[1]);
+	boost::trim(strs[0]);
+	boost::trim(strs[1]);
 	SetString(strs[0], strs[1]);
 
 	return strs[0];

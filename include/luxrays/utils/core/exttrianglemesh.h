@@ -222,25 +222,31 @@ public:
 	bool IsExtMeshDefined(const std::string &name) const {
 		return (meshsByName.count(name) > 0);
 	}
-	void DefineExtMesh(const std::string &name, const ExtMesh *t) {
+	void DefineExtMesh(const std::string &name, ExtMesh *t) {
 		meshs.push_back(t);
 		meshsByName.insert(std::make_pair(name, t));
 		indexByName.insert(std::make_pair(name, meshs.size() - 1));
 	}
 
-	const ExtMesh *GetExtMesh(const std::string &name) const {
+	ExtMesh *GetExtMesh(const std::string &name) {
 		// Check if the mesh has been already defined
-		std::map<std::string, const ExtMesh *>::const_iterator it = meshsByName.find(name);
+		std::map<std::string, ExtMesh *>::const_iterator it = meshsByName.find(name);
 
 		if (it == meshsByName.end())
 			throw std::runtime_error("Reference to an undefined mesh: " + name);
 		else
 			return it->second;
 	}
+
+	ExtMesh *GetExtMesh(const u_int index) {
+		return meshs[index];
+	}
+
 	const ExtMesh *GetExtMesh(const u_int index) const {
 		return meshs[index];
 	}
-	u_int GetExtMeshIndex(const std::string &name) const {
+
+	u_int GetExtMeshIndex(const std::string &name) {
 		// Check if the mesh has been already defined
 		std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
 
@@ -250,13 +256,22 @@ public:
 			return it->second;
 	}
 
-	const std::vector<const ExtMesh *> &GetAllMesh() const { return meshs; }
+	vector<std::string> GetExtMeshNames() const {
+		vector<std::string> names;
+		names.reserve(meshs.size());
+		for (std::map<std::string, ExtMesh *>::const_iterator it = meshsByName.begin(); it != meshsByName.end(); ++it)
+			names.push_back(it->first);
+
+		return names;
+	}
+
+	std::vector<ExtMesh *> &GetAllMesh() { return meshs; }
 	u_int GetSize() const { return static_cast<u_int>(meshs.size()); }
   
 private:
 
-	std::vector<const ExtMesh *> meshs;
-	std::map<std::string, const ExtMesh *> meshsByName;
+	std::vector<ExtMesh *> meshs;
+	std::map<std::string, ExtMesh *> meshsByName;
 	std::map<std::string, u_int> indexByName;
 };
 

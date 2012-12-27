@@ -238,15 +238,6 @@ inline unsigned int UIntLog2(unsigned int value) {
 	return l;
 }
 
-inline void StringTrim(std::string &str) {
-	std::string::size_type pos = str.find_last_not_of(' ');
-	if (pos != std::string::npos) {
-		str.erase(pos + 1);
-		pos = str.find_first_not_of(' ');
-		if (pos != std::string::npos) str.erase(0, pos);
-	} else str.erase(str.begin(), str.end());
-}
-
 inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
 #if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 	{

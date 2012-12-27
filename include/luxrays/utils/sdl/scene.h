@@ -76,6 +76,8 @@ public:
 
 	void DefineMaterials(const std::string &propsString);
 	void DefineMaterials(const Properties &props);
+	void UpdateMaterial(const std::string &name, const std::string &propsString);
+	void UpdateMaterial(const std::string &name, const Properties &props);
 
 	void DefineObject(const std::string &meshName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals = true) {
@@ -90,6 +92,7 @@ public:
 
 	void AddObject(const std::string &objName, const std::string &meshName, const std::string &propsString);
 	void AddObject(const std::string &objName, const Properties &props);
+	void UpdateObjectTransformation(const std::string &objName, const Transform &trans);
 
 	void AddObjects(const std::string &propsString);
 	void AddObjects(const Properties &props);
