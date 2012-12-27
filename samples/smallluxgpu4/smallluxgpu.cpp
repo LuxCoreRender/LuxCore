@@ -452,7 +452,7 @@ int main(int argc, char *argv[]) {
 			session->Start();
 
 			if (telnetServerEnabled) {
-				//TelnetServer telnetServer(18081, session);
+				TelnetServer telnetServer(18081, session);
 				RunGlut();
 			} else
 				RunGlut();

@@ -24,6 +24,9 @@
 
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "telnet.h"
 #include "renderconfig.h"
@@ -108,6 +111,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "material.list - print the list of materials\n";
 						respStream << "object.list - print the list of objects\n";
 						respStream << "set <property name> = <values> - set the value of a (supported) property\n";
+						respStream << "set scene.materials.<name>.* = <values>, ... - update a material definition\n";
 						respStream << "transmit.framebuffer.rgb_float - transmit the current framebuffer (RGB float format)\n";
 						respStream << "transmit.framebuffer.rgb_byte - transmit the current framebuffer (RGB byte format)\n";
 						respStream << "OK\n";
@@ -374,11 +378,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "scene.camera.lensradius (requires edit.start)\n";
 						respStream << "scene.camera.lookat (requires edit.start)\n";
 						respStream << "scene.camera.up (requires edit.start)\n";
-						respStream << "scene.materials.*.* (requires edit.start)\n";
+						respStream << "scene.materials.* (requires edit.start, comma separated list of properties)\n";
 						respStream << "scene.infinitelight.gain (requires edit.start)\n";
 						respStream << "scene.infinitelight.shift (requires edit.start)\n";
-						respStream << "scene.objects.*.*.transform (requires edit.start)\n";
-						respStream << "scene.objects.*.*.transformation (requires edit.start)\n";
+						respStream << "scene.objects.*.transformation (requires edit.start)\n";
 						respStream << "scene.skylight.dir (requires edit.start)\n";
 						respStream << "scene.skylight.gain (requires edit.start)\n";
 						respStream << "scene.skylight.turbidity (requires edit.start)\n";
@@ -400,12 +403,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						boost::asio::streambuf response;
 						std::ostream respStream(&response);
 
-						std::map<std::string, size_t>::const_iterator iter =
-								scene->materialIndices.begin();
-						while (iter != scene->materialIndices.end()) {
-							respStream << (*iter).first << "\n";
-							iter++;
-						}
+						std::vector<std::string> names = scene->matDefs.GetMaterialNames();
+						for (std::vector<std::string>::const_iterator iter = names.begin(); iter < names.end(); ++iter)
+							respStream << (*iter) << "\n";
 
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
@@ -413,12 +413,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						boost::asio::streambuf response;
 						std::ostream respStream(&response);
 
-						std::map<std::string, size_t>::const_iterator iter =
-								scene->objectIndices.begin();
-						while (iter != scene->objectIndices.end()) {
-							respStream << (*iter).first << "\n";
-							iter++;
-						}
+						std::vector<std::string> names = scene->meshDefs.GetExtMeshNames();
+						for (std::vector<std::string>::const_iterator iter = names.begin(); iter < names.end(); ++iter)
+							respStream << (*iter) << "\n";
 
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
@@ -443,16 +440,26 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 						try {
 							// Get the name of the property to set
-							string property;
-							getline(commandStream, property, '\n');
-							Properties prop;
-							const string propertyName = prop.SetString(property);
+							string properties;
+							getline(commandStream, properties, '\n');
 							if (echoCommandOn)
-								SLG_LOG("[Telnet server] Set: " << property);
+								SLG_LOG("[Telnet server] Set: " << properties);
+
+							// Split the line by comma
+							std::vector<std::string> splitProperties;
+							boost::split(splitProperties, properties, boost::is_any_of(","));
+							for (std::vector<std::string>::iterator it = splitProperties.begin(); it < splitProperties.end(); ++it)
+								boost::trim(*it);
+
+							// Build the Properties
+							Properties props;
+							const string propertyName = props.SetString(splitProperties[0]);
+							for (std::vector<std::string>::const_iterator it = splitProperties.begin() + 1; it < splitProperties.end(); ++it)
+								props.SetString(*it);
 
 							// Check if is one of the supported properties
 							if (propertyName == "film.tonemap.linear.scale") {
-								const float k = prop.GetFloat(propertyName, 1.f);
+								const float k = props.GetFloat(propertyName, 1.f);
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
 									boost::asio::streambuf response;
@@ -468,7 +475,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.burn") {
-								const float k = prop.GetFloat(propertyName, 3.75f);
+								const float k = props.GetFloat(propertyName, 3.75f);
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
 									boost::asio::streambuf response;
@@ -484,7 +491,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.postscale") {
-								const float k = prop.GetFloat(propertyName, 1.2f);
+								const float k = props.GetFloat(propertyName, 1.2f);
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
 									boost::asio::streambuf response;
@@ -500,7 +507,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.prescale") {
-								const float k = prop.GetFloat(propertyName, 1.f);
+								const float k = props.GetFloat(propertyName, 1.f);
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
 									boost::asio::streambuf response;
@@ -516,7 +523,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.type") {
-								const int type = prop.GetInt(propertyName, 0);
+								const int type = props.GetInt(propertyName, 0);
 
 								if (type == 0) {
 									LinearToneMapParams params;
@@ -530,7 +537,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else if (propertyName == "image.filename") {
 								// Get the image file name
-								const string fileName = prop.GetString(propertyName, "image.png");
+								const string fileName = props.GetString(propertyName, "image.png");
 
 								session->renderConfig->cfg.SetString("image.filename", fileName);
 								respStream << "OK\n";
@@ -540,7 +547,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								if (state == EDIT) {
 									InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 									if (il) {
-										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 										il->SetGain(gain);
 										session->editActions.AddAction(INFINITELIGHT_EDIT);
@@ -548,36 +555,36 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No InifinteLight defined: " << property);
+										SLG_LOG("[Telnet server] No InifinteLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.infinitelight.shift") {
 								// Check if we are in the right state
 								if (state == EDIT) {
 									InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 									if (il) {
-										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0");
+										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0");
 										il->SetShift(vf.at(0), vf.at(1));
 										session->editActions.AddAction(INFINITELIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No InifinteLight defined: " << property);
+										SLG_LOG("[Telnet server] No InifinteLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.skylight.dir") {
 								// Check if we are in the right state
 								if (state == EDIT) {
 									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
-										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 1.0");
+										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0 1.0");
 										Vector dir(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetSunDir(dir);
 										sl->Preprocess();
@@ -586,18 +593,18 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No SkyLight defined: " << property);
+										SLG_LOG("[Telnet server] No SkyLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.skylight.gain") {
 								// Check if we are in the right state
 								if (state == EDIT) {
 									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
-										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetGain(gain);
 										session->editActions.AddAction(SKYLIGHT_EDIT);
@@ -605,72 +612,72 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No SkyLight defined: " << property);
+										SLG_LOG("[Telnet server] No SkyLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.skylight.turbidity") {
 								// Check if we are in the right state
 								if (state == EDIT) {
 									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
-										sl->SetTurbidity(prop.GetFloat(propertyName, 2.2f));
+										sl->SetTurbidity(props.GetFloat(propertyName, 2.2f));
 										sl->Preprocess();
 										session->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No SkyLight defined: " << property);
+										SLG_LOG("[Telnet server] No SkyLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.sunlight.turbidity") {
 								if (state == EDIT) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										sl->SetTurbidity(prop.GetFloat(propertyName, 2.2f));
+										sl->SetTurbidity(props.GetFloat(propertyName, 2.2f));
 										sl->Preprocess();
 										session->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No SunLight defined: " << property);
+										SLG_LOG("[Telnet server] No SunLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.sunlight.relsize") {
 								if (state == EDIT) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										sl->SetRelSize(prop.GetFloat(propertyName, 1.f));
+										sl->SetRelSize(props.GetFloat(propertyName, 1.f));
 										sl->Preprocess();
 										session->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No SunLight defined: " << property);
+										SLG_LOG("[Telnet server] No SunLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.sunlight.dir") {
 								if (state == EDIT) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 1.0");
+										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0 1.0");
 										Vector dir(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetDir(dir);
 										sl->Preprocess();
@@ -679,18 +686,18 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No SunLight defined: " << property);
+										SLG_LOG("[Telnet server] No SunLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.sunlight.gain") {
 								if (state == EDIT) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										const std::vector<float> vf = prop.GetFloatVector(propertyName, "1.0 1.0 1.0");
+										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetGain(gain);
 										sl->Preprocess();
@@ -699,93 +706,46 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										boost::asio::write(socket, response);
 									} else {
 										boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-										SLG_LOG("[Telnet server] No SunLight defined: " << property);
+										SLG_LOG("[Telnet server] No SunLight defined: " << properties);
 									}
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName.find("scene.materials.") == 0) {
 								if (state == EDIT) {
 									// Check if it is the name of a known material
-									const std::string matType = Properties::ExtractField(propertyName, 2);
-									if (matType == "")
-										throw std::runtime_error("Syntax error in " + propertyName);
-									const std::string matName = Properties::ExtractField(propertyName, 3);
+									const std::string matName = Properties::ExtractField(propertyName, 2);
 									if (matName == "")
 										throw std::runtime_error("Syntax error in " + propertyName);
 
-									// Look for old material
-									std::map<std::string, size_t>::const_iterator iter = scene->materialIndices.find(matName);
-									if (iter == scene->materialIndices.end())
-										throw std::runtime_error("Unknown material name: " + matName);
+									// Update material definition
+									scene->UpdateMaterial(matName, props);
+									const Material *newMat = scene->matDefs.GetMaterial(matName);
 
-									Material *oldMat = scene->materials[iter->second];
-
-									// Create new material
-									Material *newMat = Scene::CreateMaterial(propertyName, prop);
 									// Check if the material type is one of the already enabled
 									if (!session->renderEngine->IsMaterialCompiled(newMat->GetType()))
 										session->editActions.AddAction(MATERIAL_TYPES_EDIT);
 									// Check if both are light sources
-									if (oldMat->IsLightSource()) {
-										if (!newMat->IsLightSource())
-											throw std::runtime_error("New material must be a light source too");
-
-										// Replace old light material with new one
-										scene->materials[iter->second] = newMat;
-										for (unsigned int i = 0; i < scene->objectMaterials.size(); ++i) {
-											if (scene->objectMaterials[i] == oldMat)
-												scene->objectMaterials[i] = newMat;
-										}
-										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-											if (scene->lights[i]->IsAreaLight()) {
-												TriangleLight *tl = (TriangleLight *)scene->lights[i];
-												if (tl->GetMaterial() == oldMat)
-													tl->SetMaterial(newMat);
-											}
-										}
-
+									if (newMat->IsLightSource())
 										session->editActions.AddAction(AREALIGHTS_EDIT);
-									} else {
-										if (newMat->IsLightSource())
-											throw std::runtime_error("New material must not be a light source too");
-
-										// Replace old material with new one
-										scene->materials[iter->second] = newMat;
-										for (unsigned int i = 0; i < scene->objectMaterials.size(); ++i) {
-											if (scene->objectMaterials[i] == oldMat)
-												scene->objectMaterials[i] = newMat;
-										}
-									}
 
 									session->editActions.AddAction(MATERIALS_EDIT);
-									delete oldMat;
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
-							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transform") == propertyName.size() - 10)) {
+							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
 								if (state == EDIT) {
 									// Check if it is the name of a known objects
-									const std::string matType = Properties::ExtractField(propertyName, 2);
-									if (matType == "")
-										throw std::runtime_error("Syntax error in " + propertyName);
-									const std::string objName = Properties::ExtractField(propertyName, 3);
+									const std::string objName = Properties::ExtractField(propertyName, 2);
 									if (objName == "")
 										throw std::runtime_error("Syntax error in " + propertyName);
 
-									std::map<std::string, size_t>::const_iterator iter = scene->objectIndices.find(objName);
-									if (iter == scene->objectIndices.end())
-										throw std::runtime_error("Unknown object name: " + objName);
-
-									const unsigned int meshIndex = iter->second;
-									ExtMesh *obj = scene->objects[meshIndex];
-
 									// Read the new transformation
-									const std::vector<float> vf = prop.GetFloatVector(propertyName,
+									const std::vector<float> vf = props.GetFloatVector(propertyName,
 											"1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 									const Matrix4x4 mat(
 											vf.at(0), vf.at(4), vf.at(8), vf.at(12),
@@ -794,27 +754,20 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 											vf.at(3), vf.at(7), vf.at(11), vf.at(15));
 									const Transform trans(mat);
 
-									obj->ApplyTransform(trans);
+									// Update object transformation
+									scene->UpdateObjectTransformation(objName, trans);
 
 									// Check if it is a light source
+									const u_int meshIndex = scene->meshDefs.GetExtMeshIndex(objName);
 									if (scene->objectMaterials[meshIndex]->IsLightSource()) {
-										// Have to update all light source using this mesh
-										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-											if (scene->lights[i]->GetType() == luxrays::sdl::TYPE_TRIANGLE) {
-												TriangleLight *tl = (TriangleLight *)scene->lights[i];
-
-												if (tl->GetMeshIndex() == meshIndex)
-													tl->Init(scene->objects);
-											}
-										}
-
 										// Some render engine requires a complete update when
-										// modifing a light source
+										// modifying a light source
 										session->editActions.AddAction(AREALIGHTS_EDIT);
 									}
 
 									// Set the flag to Update the DataSet
-									if (obj->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+									ExtMesh *mesh = scene->meshDefs.GetExtMesh(objName);
+									if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 										if (session->renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
 											session->editActions.AddAction(INSTANCE_TRANS_EDIT);
 										else
@@ -825,74 +778,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
-								}
-							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
-								if (state == EDIT) {
-									// Check if it is the name of a known objects
-									const std::string matType = Properties::ExtractField(propertyName, 2);
-									if (matType == "")
-										throw std::runtime_error("Syntax error in " + propertyName);
-									const std::string objName = Properties::ExtractField(propertyName, 3);
-									if (objName == "")
-										throw std::runtime_error("Syntax error in " + propertyName);
-
-									std::map<std::string, size_t>::const_iterator iter = scene->objectIndices.find(objName);
-									if (iter == scene->objectIndices.end())
-										throw std::runtime_error("Unknown object name: " + objName);
-
-									const unsigned int meshIndex = iter->second;
-									ExtMesh *obj = scene->objects[meshIndex];
-
-									// Check if the object is an instance
-									if (obj->GetType() != TYPE_EXT_TRIANGLE_INSTANCE)
-										throw std::runtime_error("Object must be an instance: " + objName);
-
-									// Read the new transformation
-									const std::vector<float> vf = prop.GetFloatVector(propertyName,
-											"1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-									const Matrix4x4 mat(
-											vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-											vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-											vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-											vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-									const Transform trans(mat);
-
-									ExtInstanceTriangleMesh *iObj = (ExtInstanceTriangleMesh *)obj;
-									iObj->SetTransformation(trans);
-
-									// Check if it is a light source
-									if (scene->objectMaterials[meshIndex]->IsLightSource()) {
-										// Have to update all light source using this mesh
-										for (unsigned int i = 0; i < scene->lights.size(); ++i) {
-											if (scene->lights[i]->GetType() == luxrays::sdl::TYPE_TRIANGLE) {
-												TriangleLight *tl = (TriangleLight *)scene->lights[i];
-
-												if (tl->GetMeshIndex() == meshIndex)
-													tl->Init(scene->objects);
-											}
-										}
-
-										// Some render engine requires a complete update when
-										// modifing a light source
-										session->editActions.AddAction(AREALIGHTS_EDIT);
-									}
-
-									// Set the flag to Update the DataSet
-									if (session->renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
-										session->editActions.AddAction(INSTANCE_TRANS_EDIT);
-									else
-										session->editActions.AddAction(GEOMETRY_EDIT);
-
-									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
-								} else {
-									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.camera.lookat") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									const std::vector<float> vf = prop.GetFloatVector(propertyName, "10.0 0.0 0.0  0.0 0.0 0.0");
+									const std::vector<float> vf = props.GetFloatVector(propertyName, "10.0 0.0 0.0  0.0 0.0 0.0");
 									Point o(vf.at(0), vf.at(1), vf.at(2));
 									Point t(vf.at(3), vf.at(4), vf.at(5));
 
@@ -904,12 +795,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.camera.up") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									const std::vector<float> vf = prop.GetFloatVector(propertyName, "0.0 0.0 0.1");
+									const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0 0.1");
 									Vector up(vf.at(0), vf.at(1), vf.at(2));
 
 									scene->camera->up = Normalize(up);
@@ -919,47 +810,47 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.camera.lensradius") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									scene->camera->lensRadius = prop.GetFloat(propertyName, 0.f);
+									scene->camera->lensRadius = props.GetFloat(propertyName, 0.f);
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
 									session->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.camera.fieldofview") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									scene->camera->fieldOfView = prop.GetFloat(propertyName, 0.f);
+									scene->camera->fieldOfView = props.GetFloat(propertyName, 0.f);
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
 									session->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else if (propertyName == "scene.camera.focaldistance") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									scene->camera->focalDistance = prop.GetFloat(propertyName, 0.f);
+									scene->camera->focalDistance = props.GetFloat(propertyName, 0.f);
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
 									session->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << property);
+									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-								SLG_LOG("[Telnet server] Unknown property: " << property);
+								SLG_LOG("[Telnet server] Unknown property: " << properties);
 							}
 						} catch (std::exception& e) {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));

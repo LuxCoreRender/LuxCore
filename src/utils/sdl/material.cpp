@@ -26,6 +26,73 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 
 //------------------------------------------------------------------------------
+// MaterialDefinitions
+//------------------------------------------------------------------------------
+
+MaterialDefinitions::MaterialDefinitions() { }
+
+MaterialDefinitions::~MaterialDefinitions() {
+	for (std::vector<Material *>::const_iterator it = mats.begin(); it != mats.end(); ++it)
+		delete (*it);
+}
+
+void MaterialDefinitions::DefineMaterial(const std::string &name, Material *m) {
+	if (IsMaterialDefined(name))
+		throw std::runtime_error("Already defined material: " + name);
+
+	mats.push_back(m);
+	matsByName.insert(std::make_pair(name, m));
+	indexByName.insert(std::make_pair(name, mats.size() - 1));
+}
+
+void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
+	if (!IsMaterialDefined(name))
+		throw std::runtime_error("Can not update an undefined material: " + name);
+
+	Material *oldMat = GetMaterial(name);
+
+	// Update name/material definition
+	const u_int index = GetMaterialIndex(name);
+	mats[index] = m;
+	matsByName.erase(name);
+	matsByName.insert(std::make_pair(name, m));
+	indexByName.erase(name);
+	indexByName.insert(std::make_pair(name, index));
+
+	// Delete old material
+	delete oldMat;
+}
+
+Material *MaterialDefinitions::GetMaterial(const std::string &name) {
+	// Check if the material has been already defined
+	std::map<std::string, Material *>::const_iterator it = matsByName.find(name);
+
+	if (it == matsByName.end())
+		throw std::runtime_error("Reference to an undefined material: " + name);
+	else
+		return it->second;
+}
+
+u_int MaterialDefinitions::GetMaterialIndex(const std::string &name) const {
+	// Check if the material has been already defined
+	std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
+
+	if (it == indexByName.end())
+		throw std::runtime_error("Reference to an undefined material: " + name);
+	else
+		return it->second;
+}
+
+vector<std::string> MaterialDefinitions::GetMaterialNames() const {
+	vector<std::string> names;
+	names.reserve(mats.size());
+	for (std::map<std::string, Material *>::const_iterator it = matsByName.begin(); it != matsByName.end(); ++it)
+		names.push_back(it->first);
+
+	return names;
+}
+
+//------------------------------------------------------------------------------
 // Matte material
 //------------------------------------------------------------------------------
 
