@@ -553,6 +553,24 @@ void Scene::RemoveUnusedMaterials() {
 	}
 }
 
+void Scene::RemoveUnusedTextures() {
+	// Build a list of all referenced textures names
+	std::set<const Texture *> referencedTexs;
+	for (std::vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
+		(*it)->AddReferencedTextures(referencedTexs);
+
+	// Get the list of all defined material
+	std::vector<std::string> definedTexs = texDefs.GetTextureNames();
+	for (std::vector<std::string>::const_iterator it = definedTexs.begin(); it < definedTexs.end(); ++it) {
+		Texture *t = texDefs.GetTexture(*it);
+
+		if (referencedTexs.count(t) == 0) {
+			SDL_LOG("Deleting unreferenced texture: " << *it);
+			texDefs.DeleteTexture(*it);
+		}
+	}
+}
+
 //------------------------------------------------------------------------------
 
 Texture *Scene::CreateTexture(const std::string &texName, const Properties &props) {
@@ -604,17 +622,17 @@ Texture *Scene::GetTexture(const std::string &name) {
 
 			if (floats.size() == 1) {
 				ConstFloatTexture *tex = new ConstFloatTexture(floats.at(0));
-				texDefs.DefineTexture("Implicit-" + boost::lexical_cast<std::string>(tex), tex);
+				texDefs.DefineTexture("Implicit-ConstFloatTexture-" + boost::lexical_cast<std::string>(tex), tex);
 
 				return tex;
 			} else if (floats.size() == 3) {
 				ConstFloat3Texture *tex = new ConstFloat3Texture(Spectrum(floats.at(0), floats.at(1), floats.at(2)));
-				texDefs.DefineTexture("Implicit-" + boost::lexical_cast<std::string>(tex), tex);
+				texDefs.DefineTexture("Implicit-ConstFloatTexture3-" + boost::lexical_cast<std::string>(tex), tex);
 
 				return tex;
 			} else if (floats.size() == 4) {
 				ConstFloat4Texture *tex = new ConstFloat4Texture(Spectrum(floats.at(0), floats.at(1), floats.at(2)), floats.at(3));
-				texDefs.DefineTexture("Implicit-" + boost::lexical_cast<std::string>(tex), tex);
+				texDefs.DefineTexture("Implicit-ConstFloatTexture4-" + boost::lexical_cast<std::string>(tex), tex);
 
 				return tex;
 			} else

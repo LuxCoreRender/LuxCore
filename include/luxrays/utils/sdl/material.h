@@ -95,6 +95,14 @@ public:
 	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
 		referencedMats.insert(this);
 	}
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		if (emittedTex)
+			referencedTexs.insert(emittedTex);
+		if (bumpTex)
+			referencedTexs.insert(bumpTex);
+		if (normalTex)
+			referencedTexs.insert(normalTex);
+	}
 
 protected:
 	const Texture *emittedTex;
@@ -130,7 +138,6 @@ public:
 private:
 	u_int GetMaterialIndex(const std::string &name) const;
 
-	std::vector<std::string> matsNames;
 	std::vector<Material *> mats;
 	std::map<std::string, Material *> matsByName;
 	std::map<std::string, u_int> indexByName;
@@ -160,6 +167,8 @@ public:
 	virtual void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
 private:
 	const Texture *Kd;
@@ -196,6 +205,8 @@ public:
 		if (reversePdfW)
 			*reversePdfW = 0.f;
 	}
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
 private:
 	const Texture *Kr;
@@ -238,6 +249,8 @@ public:
 		if (reversePdfW)
 			*reversePdfW = 0.f;
 	}
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
 private:
 	const Texture *Kr;
@@ -284,6 +297,8 @@ public:
 			*reversePdfW = 0.f;
 	}
 
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
 private:
 	const Texture *Kr;
 	const Texture *Kt;
@@ -321,9 +336,12 @@ public:
 			*reversePdfW = 0.f;
 	}
 
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+private:
 	static Vector GlossyReflection(const Vector &fixedDir, const float exponent,
 			const float u0, const float u1);
-private:
+
 	const Texture *Kr;
 	const Texture *exponent;
 };
@@ -368,6 +386,7 @@ public:
 	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
 	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
 private:
 	const Material *matA;
@@ -431,6 +450,8 @@ public:
 	virtual void Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
 private:
 	const Texture *Kr;

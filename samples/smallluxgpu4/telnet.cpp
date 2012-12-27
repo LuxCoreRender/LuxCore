@@ -424,8 +424,10 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if ((command == "edit.stop") || (command == "render.start")) {
 						if (state == EDIT) {
-							if (session->editActions.Has(MATERIALS_EDIT))
+							if (session->editActions.Has(MATERIALS_EDIT)) {
 								session->renderConfig->scene->RemoveUnusedMaterials();
+								session->renderConfig->scene->RemoveUnusedTextures();
+							}
 							session->EndEdit();
 						}
 

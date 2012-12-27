@@ -105,6 +105,7 @@ public:
 	void AddSunLight(const Properties &props);
 
 	void RemoveUnusedMaterials();
+	void RemoveUnusedTextures();
 
 	//--------------------------------------------------------------------------
 

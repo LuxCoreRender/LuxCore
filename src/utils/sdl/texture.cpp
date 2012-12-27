@@ -32,6 +32,59 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 
 //------------------------------------------------------------------------------
+// TextureDefinitions
+//------------------------------------------------------------------------------
+
+TextureDefinitions::TextureDefinitions() { }
+
+TextureDefinitions::~TextureDefinitions() {
+	for (std::vector<Texture *>::const_iterator it = texs.begin(); it != texs.end(); ++it)
+		delete (*it);
+}
+
+void TextureDefinitions::DefineTexture(const std::string &name, Texture *t) {
+	texs.push_back(t);
+	texsByName.insert(std::make_pair(name, t));
+	indexByName.insert(std::make_pair(name, texs.size() - 1));
+}
+
+Texture *TextureDefinitions::GetTexture(const std::string &name) {
+	// Check if the texture has been already defined
+	std::map<std::string, Texture *>::const_iterator it = texsByName.find(name);
+
+	if (it == texsByName.end())
+		throw std::runtime_error("Reference to an undefined texture: " + name);
+	else
+		return it->second;
+}
+
+std::vector<std::string> TextureDefinitions::GetTextureNames() const {
+	std::vector<std::string> names;
+	names.reserve(texs.size());
+	for (std::map<std::string, Texture *>::const_iterator it = texsByName.begin(); it != texsByName.end(); ++it)
+		names.push_back(it->first);
+
+	return names;
+}
+
+void TextureDefinitions::DeleteTexture(const std::string &name) {
+	const u_int index = GetTextureIndex(name);
+	texs.erase(texs.begin() + index);
+	texsByName.erase(name);
+	indexByName.erase(name);
+}
+
+u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
+	// Check if the texture has been already defined
+	std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
+
+	if (it == indexByName.end())
+		throw std::runtime_error("Reference to an undefined texture: " + name);
+	else
+		return it->second;
+}
+
+//------------------------------------------------------------------------------
 // ImageMap texture
 //------------------------------------------------------------------------------
 
