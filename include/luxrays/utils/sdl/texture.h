@@ -60,46 +60,26 @@ public:
 
 class TextureDefinitions {
 public:
-	TextureDefinitions() { }
-	~TextureDefinitions() {
-		for (std::vector<Texture *>::const_iterator it = texs.begin(); it != texs.end(); ++it)
-			delete (*it);
-	}
+	TextureDefinitions();
+	~TextureDefinitions();
 
 	bool IsTextureDefined(const std::string &name) const {
 		return (texsByName.count(name) > 0);
 	}
-	void DefineTexture(const std::string &name, Texture *t) {
-		texs.push_back(t);
-		texsByName.insert(std::make_pair(name, t));
-		indexByName.insert(std::make_pair(name, texs.size() - 1));
-	}
+	void DefineTexture(const std::string &name, Texture *t);
 
-	Texture *GetTexture(const std::string &name) {
-		// Check if the texture has been already defined
-		std::map<std::string, Texture *>::const_iterator it = texsByName.find(name);
-
-		if (it == texsByName.end())
-			throw std::runtime_error("Reference to an undefined texture: " + name);
-		else
-			return it->second;
-	}
+	Texture *GetTexture(const std::string &name);
 	Texture *GetTexture(const u_int index) {
 		return texs[index];
 	}
-	u_int GetTextureIndex(const std::string &name) {
-		// Check if the texture has been already defined
-		std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
-
-		if (it == indexByName.end())
-			throw std::runtime_error("Reference to an undefined texture: " + name);
-		else
-			return it->second;
-	}
 
 	u_int GetSize()const { return static_cast<u_int>(texs.size()); }
-  
+	std::vector<std::string> GetTextureNames() const;
+
+	void DeleteTexture(const std::string &name);
+
 private:
+	u_int GetTextureIndex(const std::string &name);
 
 	std::vector<Texture *> texs;
 	std::map<std::string, Texture *> texsByName;

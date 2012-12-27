@@ -40,7 +40,6 @@ void MaterialDefinitions::DefineMaterial(const std::string &name, Material *m) {
 	if (IsMaterialDefined(name))
 		throw std::runtime_error("Already defined material: " + name);
 
-	matsNames.push_back(name);
 	mats.push_back(m);
 	matsByName.insert(std::make_pair(name, m));
 	indexByName.insert(std::make_pair(name, mats.size() - 1));
@@ -54,7 +53,6 @@ void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
 
 	// Update name/material definition
 	const u_int index = GetMaterialIndex(name);
-	matsNames[index] = name;
 	mats[index] = m;
 	matsByName.erase(name);
 	matsByName.insert(std::make_pair(name, m));
@@ -89,8 +87,8 @@ u_int MaterialDefinitions::GetMaterialIndex(const std::string &name) const {
 		return it->second;
 }
 
-vector<std::string> MaterialDefinitions::GetMaterialNames() const {
-	vector<std::string> names;
+std::vector<std::string> MaterialDefinitions::GetMaterialNames() const {
+	std::vector<std::string> names;
 	names.reserve(mats.size());
 	for (std::map<std::string, Material *>::const_iterator it = matsByName.begin(); it != matsByName.end(); ++it)
 		names.push_back(it->first);
@@ -100,7 +98,6 @@ vector<std::string> MaterialDefinitions::GetMaterialNames() const {
 
 void MaterialDefinitions::DeleteMaterial(const std::string &name) {
 	const u_int index = GetMaterialIndex(name);
-	matsNames.erase(matsNames.begin() + index);
 	mats.erase(mats.begin() + index);
 	matsByName.erase(name);
 	indexByName.erase(name);
@@ -150,6 +147,12 @@ void MatteMaterial::Pdf(const bool fromLight, const UV &uv,
 		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
 }
 
+void MatteMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	referencedTexs.insert(Kd);
+}
+
 //------------------------------------------------------------------------------
 // Mirror material
 //------------------------------------------------------------------------------
@@ -172,6 +175,12 @@ Spectrum MirrorMaterial::Sample(const bool fromLight, const UV &uv,
 	*cosSampledDir = fabsf(sampledDir->z);
 	// The cosSampledDir is used to compensate the other one used inside the integrator
 	return Kr->GetColorValue(uv) / (*cosSampledDir);
+}
+
+void MirrorMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	referencedTexs.insert(Kr);
 }
 
 //------------------------------------------------------------------------------
@@ -273,6 +282,15 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 	}
 }
 
+void GlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	referencedTexs.insert(Kr);
+	referencedTexs.insert(Kt);
+	referencedTexs.insert(ousideIor);
+	referencedTexs.insert(ior);
+}
+
 //------------------------------------------------------------------------------
 // Architectural glass material
 //------------------------------------------------------------------------------
@@ -349,6 +367,13 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 	}
 }
 
+void ArchGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	referencedTexs.insert(Kr);
+	referencedTexs.insert(Kt);
+}
+
 //------------------------------------------------------------------------------
 // Metal material
 //------------------------------------------------------------------------------
@@ -405,6 +430,12 @@ Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 		return Kr->GetColorValue(uv) / (*cosSampledDir);
 	} else
 		return Spectrum();
+}
+
+void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	referencedTexs.insert(Kr);
 }
 
 //------------------------------------------------------------------------------
@@ -585,6 +616,14 @@ void MixMaterial::AddReferencedMaterials(std::set<const Material *> &referencedM
 	matB->AddReferencedMaterials(referencedMats);
 }
 
+void MixMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	matA->AddReferencedTextures(referencedTexs);
+	matB->AddReferencedTextures(referencedTexs);
+	referencedTexs.insert(mixFactor);
+}
+
 //------------------------------------------------------------------------------
 // Null material
 //------------------------------------------------------------------------------
@@ -678,4 +717,11 @@ void MatteTranslucentMaterial::Pdf(const bool fromLight, const UV &uv,
 
 	if (reversePdfW)
 		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * (.5f * INV_PI));
+}
+
+void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	referencedTexs.insert(Kr);
+	referencedTexs.insert(Kt);
 }
