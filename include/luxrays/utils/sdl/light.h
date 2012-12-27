@@ -47,7 +47,6 @@ public:
 
 	virtual LightSourceType GetType() const = 0;
 
-	virtual bool IsAreaLight() const { return false; }
 	virtual bool IsEnvironmental() const { return false; }
 
 	// Emits particle from the light
@@ -264,8 +263,6 @@ public:
 	TriangleLight() { }
 	TriangleLight(const Material *mat, const ExtMesh *mesh,
 		const unsigned int triangleIndex);
-
-	bool IsAreaLight() const { return true; }
 
 	LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
