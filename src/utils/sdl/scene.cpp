@@ -322,6 +322,10 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 				objectMaterials[i] = newMat;
 		}
 	}
+
+	// Update all possible reference to old material with the new one
+	for (u_int i = 0; i < objectMaterials.size(); ++i)
+		objectMaterials[i]->UpdateMaterialReference(oldMat, newMat);
 }
 
 void Scene::AddObject(const std::string &objName, const std::string &meshName,
