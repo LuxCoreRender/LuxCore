@@ -359,7 +359,11 @@ public:
 
 	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat);
 
+	bool CheckForLoops() const { return CheckForLoops(this); }
+
 private:
+	bool CheckForLoops(const MixMaterial *base) const;
+
 	const Material *matA;
 	const Material *matB;
 	const Texture *mixFactor;

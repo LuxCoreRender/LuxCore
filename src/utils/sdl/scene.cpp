@@ -642,7 +642,15 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Material *matB = matDefs.GetMaterial(props.GetString(propName + ".material2", "mat2"));
 		Texture *mix = GetTexture(props.GetString(propName + ".amount", "0.5"));
 
-		return new MixMaterial(bumpTex, normalTex, matA, matB, mix);
+		MixMaterial *mixMat = new MixMaterial(bumpTex, normalTex, matA, matB, mix);
+
+		// Check if there is a loop in Mix material definition
+		// (Note: this can not really happen at the moment because forward
+		// declarations are not supported)
+		if (mixMat->CheckForLoops())
+			throw std::runtime_error("There is a loop in Mix material definition: " + matName);
+
+		return mixMat;
 	} else if (matType == "null") {
 		return new NullMaterial();
 	} else if (matType == "mattetranslucent") {
