@@ -165,13 +165,13 @@ ENDIF(OSX_UPDATE_LUXRAYS_REPO)
 #
 #############################################################################
 
-#set(SLGLIBDEMO_SRCS
-#	slglibdemo.cpp
-#	)
+set(SLGLIBDEMO_SRCS
+	slglibdemo.cpp
+	)
 
-#add_executable(slg4libdemo ${SLGLIBDEMO_SRCS})
+add_executable(slg4libdemo ${SLGLIBDEMO_SRCS})
 
-#TARGET_LINK_LIBRARIES(slg4libdemo smallluxgpu4 luxrays)
+TARGET_LINK_LIBRARIES(slg4libdemo smallluxgpu4 luxrays)
 
 #############################################################################
 #

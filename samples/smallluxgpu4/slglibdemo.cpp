@@ -55,7 +55,7 @@ void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 }
 
 static void CreateBox(Scene *scene, const string &objName, const string &matName,
-		const string &texName, const BBox &bbox) {
+		const bool enableUV, const BBox &bbox) {
 	Point *p = new Point[24];
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
@@ -108,7 +108,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	vi[10] = Triangle(20, 21, 22);
 	vi[11] = Triangle(22, 23, 20);
 
-	if (texName == "") {
+	if (!enableUV) {
 		// Define the object
 		scene->DefineObject("Mesh-" + objName, 24, 12, p, vi, NULL, NULL, false);
 
@@ -156,8 +156,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 		// Add the object to the scene
 		scene->AddObject(objName, "Mesh-" + objName,
 				"scene.objects." + objName + ".material = " + matName + "\n"
-				"scene.objects." + matName + "." + objName + ".useplynormals = 0\n"
-				"scene.objects." + matName + "." + objName + ".texmap = " + texName + "\n"
+				"scene.objects." + objName + ".useplynormals = 0\n"
 			);
 	}
 }
@@ -184,33 +183,52 @@ int main(int argc, char *argv[]) {
 
 		// Define texture maps
 		const u_int size = 500;
-		Spectrum *tm = new Spectrum[size * size];
+		float *img = new float[size * size * 3];
+		float *ptr = img;
 		for (u_int y = 0; y < size; ++y) {
 			for (u_int x = 0; x < size; ++x) {
-				if ((x % 50 < 25) ^ (y % 50 < 25))
-					tm[x + y * size] = Spectrum(1.f, 0.f, 0.f);
-				else
-					tm[x + y * size] = Spectrum(1.f, 1.f, 0.f);
+				if ((x % 50 < 25) ^ (y % 50 < 25)) {
+					*ptr++ = 1.f;
+					*ptr++ = 0.f;
+					*ptr++ = 0.f;
+				} else {
+					*ptr++ = 1.f;
+					*ptr++ = 1.f;
+					*ptr++ = 0.f;
+				}
 			}
 		}
-		scene->DefineTexMap("check_texmap", tm, 1.f, size, size);
+
+		scene->DefineImageMap("check_texmap", new ImageMap(img, 1.f, 3, size, size));
+		scene->DefineTextures(
+			"scene.textures.map.type = imagemap\n"
+			"scene.textures.map.file = check_texmap\n"
+			"scene.textures.map.gamma = 1.0\n"
+			);
 
 		// Setup materials
-		scene->AddMaterials(
-			"scene.materials.light.whitelight = 300.0 300.0 300.0\n"
-			"scene.materials.matte.mat_white = 0.75 0.75 0.75\n"
-			"scene.materials.matte.mat_red = 0.75 0.0 0.0\n"
-			"scene.materials.glass.mat_glass = 0.9 0.9 0.9 0.9 0.9 0.9 1 1.4 1 1\n"
+		scene->DefineMaterials(
+			"scene.materials.whitelight.type = matte\n"
+			"scene.materials.whitelight.emission = 200.0 200.0 200.0\n"
+			"scene.materials.mat_white.type = matte\n"
+			"scene.materials.mat_white.kd = map\n"
+			"scene.materials.mat_red.type = matte\n"
+			"scene.materials.mat_red.kd = 0.75 0.0 0.0\n"
+			"scene.materials.mat_glass.type = glass\n"
+			"scene.materials.mat_glass.kr = 0.9 0.9 0.9\n"
+			"scene.materials.mat_glass.kt = 0.9 0.9 0.9\n"
+			"scene.materials.mat_glass.ioroutside = 1.0\n"
+			"scene.materials.mat_glass.iorinside = 1.4\n"
 			);
 
 		// Create the ground
-		CreateBox(scene, "ground", "mat_white", "check_texmap", BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
+		CreateBox(scene, "ground", "mat_white", true, BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
 		// Create the red box
-		CreateBox(scene, "box01", "mat_red", "", BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
+		CreateBox(scene, "box01", "mat_red", false, BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
 		// Create the glass box
-		CreateBox(scene, "box02", "mat_glass", "", BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
+		CreateBox(scene, "box02", "mat_glass", false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 		// Create the light
-		CreateBox(scene, "box03", "whitelight", "", BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		CreateBox(scene, "box03", "whitelight", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
 
 		/*// Create an InfiniteLight loaded from file
 		scene->AddInfiniteLight(
@@ -236,7 +254,7 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		RenderConfig *config = new RenderConfig(
-				"renderengine.type = PATHOCL\n"
+				"renderengine.type = PATHCPU\n"
 				"sampler.type = INLINED_RANDOM\n"
 				"opencl.platform.index = -1\n"
 				"opencl.cpu.use = 0\n"
