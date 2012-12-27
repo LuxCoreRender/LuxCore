@@ -545,6 +545,22 @@ void MixMaterial::UpdateMaterialReference(const Material *oldMat,  const Materia
 		matB = newMat;
 }
 
+bool MixMaterial::CheckForLoops(const MixMaterial *base) const {
+	if (matA == base)
+		return true;
+	if (matB == base)
+		return true;
+
+	const MixMaterial *mixA = dynamic_cast<const MixMaterial *>(matA);
+	if (mixA && mixA->CheckForLoops(base))
+		return true;
+	const MixMaterial *mixB = dynamic_cast<const MixMaterial *>(matB);
+	if (mixB && mixB->CheckForLoops(base))
+		return true;
+
+	return false;
+}
+
 //------------------------------------------------------------------------------
 // Null material
 //------------------------------------------------------------------------------
