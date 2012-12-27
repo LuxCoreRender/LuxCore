@@ -92,6 +92,9 @@ public:
 	virtual void UpdateMaterialReference(const Material *oldMat, const Material *newMat) { }
 	// Return true if the material is referencing the specified material
 	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
+	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
+		referencedMats.insert(this);
+	}
 
 protected:
 	const Texture *emittedTex;
@@ -118,13 +121,16 @@ public:
 	Material *GetMaterial(const u_int index) {
 		return mats[index];
 	}
-	u_int GetMaterialIndex(const std::string &name) const;
 
 	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
-	vector<std::string> GetMaterialNames() const;
+	std::vector<std::string> GetMaterialNames() const;
+
+	void DeleteMaterial(const std::string &name);
   
 private:
+	u_int GetMaterialIndex(const std::string &name) const;
 
+	std::vector<std::string> matsNames;
 	std::vector<Material *> mats;
 	std::map<std::string, Material *> matsByName;
 	std::map<std::string, u_int> indexByName;
@@ -361,6 +367,7 @@ public:
 
 	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
+	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
 
 private:
 	const Material *matA;
