@@ -213,7 +213,7 @@ void Scene::DefineTextures(const std::string &propsString) {
 	Properties prop;
 	prop.LoadFromString(propsString);
 
-	DefineMaterials(prop);
+	DefineTextures(prop);
 }
 
 void Scene::DefineTextures(const Properties &props) {
