@@ -423,8 +423,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						session->SaveFilmImage();
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if ((command == "edit.stop") || (command == "render.start")) {
-						if (state == EDIT)
+						if (state == EDIT) {
+							if (session->editActions.Has(MATERIALS_EDIT))
+								session->renderConfig->scene->RemoveUnusedMaterials();
 							session->EndEdit();
+						}
 
 						state = RUN;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));

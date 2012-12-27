@@ -104,6 +104,8 @@ public:
 	void AddSunLight(const std::string &propsString);
 	void AddSunLight(const Properties &props);
 
+	void RemoveUnusedMaterials();
+
 	//--------------------------------------------------------------------------
 
 	Texture *CreateTexture(const std::string &texName, const Properties &props);

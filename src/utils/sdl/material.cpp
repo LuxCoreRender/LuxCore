@@ -40,6 +40,7 @@ void MaterialDefinitions::DefineMaterial(const std::string &name, Material *m) {
 	if (IsMaterialDefined(name))
 		throw std::runtime_error("Already defined material: " + name);
 
+	matsNames.push_back(name);
 	mats.push_back(m);
 	matsByName.insert(std::make_pair(name, m));
 	indexByName.insert(std::make_pair(name, mats.size() - 1));
@@ -53,6 +54,7 @@ void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
 
 	// Update name/material definition
 	const u_int index = GetMaterialIndex(name);
+	matsNames[index] = name;
 	mats[index] = m;
 	matsByName.erase(name);
 	matsByName.insert(std::make_pair(name, m));
@@ -94,6 +96,14 @@ vector<std::string> MaterialDefinitions::GetMaterialNames() const {
 		names.push_back(it->first);
 
 	return names;
+}
+
+void MaterialDefinitions::DeleteMaterial(const std::string &name) {
+	const u_int index = GetMaterialIndex(name);
+	matsNames.erase(matsNames.begin() + index);
+	mats.erase(mats.begin() + index);
+	matsByName.erase(name);
+	indexByName.erase(name);
 }
 
 //------------------------------------------------------------------------------
@@ -563,6 +573,16 @@ bool MixMaterial::IsReferencing(const Material *mat) const {
 		return true;
 
 	return false;
+}
+
+void MixMaterial::AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
+	Material::AddReferencedMaterials(referencedMats);
+
+	referencedMats.insert(matA);
+	matA->AddReferencedMaterials(referencedMats);
+
+	referencedMats.insert(matB);
+	matB->AddReferencedMaterials(referencedMats);
 }
 
 //------------------------------------------------------------------------------

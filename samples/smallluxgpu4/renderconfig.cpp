@@ -75,6 +75,9 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 
 		scene = new Scene(sceneFileName, accelType);
 	}
+
+	// Remove unused material
+	scene->RemoveUnusedMaterials();
 }
 
 void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {

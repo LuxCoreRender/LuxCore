@@ -23,11 +23,13 @@
 #include <istream>
 #include <stdexcept>
 #include <sstream>
+#include <set>
 
 #include <boost/detail/container_fwd.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <vector>
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
@@ -531,6 +533,24 @@ void Scene::AddSunLight(const Properties &props) {
 		sunLight = sl;
 	} else
 		sunLight = NULL;
+}
+
+void Scene::RemoveUnusedMaterials() {
+	// Build a list of all referenced material names
+	std::set<const Material *> referencedMats;
+	for (std::vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
+		(*it)->AddReferencedMaterials(referencedMats);
+
+	// Get the list of all defined material
+	std::vector<std::string> definedMats = matDefs.GetMaterialNames();
+	for (std::vector<std::string>::const_iterator it = definedMats.begin(); it < definedMats.end(); ++it) {
+		Material *m = matDefs.GetMaterial(*it);
+
+		if (referencedMats.count(m) == 0) {
+			SDL_LOG("Deleting unreferenced material: " << *it);
+			matDefs.DeleteMaterial(*it);
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
