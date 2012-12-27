@@ -61,6 +61,10 @@ void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
 
 	// Delete old material
 	delete oldMat;
+
+	// Update all possible reference to old material with the new one
+	for (u_int i = 0; i < mats.size(); ++i)
+		mats[i]->UpdateMaterialReference(oldMat, m);
 }
 
 Material *MaterialDefinitions::GetMaterial(const std::string &name) {
@@ -545,17 +549,17 @@ void MixMaterial::UpdateMaterialReference(const Material *oldMat,  const Materia
 		matB = newMat;
 }
 
-bool MixMaterial::CheckForLoops(const MixMaterial *base) const {
-	if (matA == base)
+bool MixMaterial::IsReferencing(const Material *mat) const {
+	if (matA == mat)
 		return true;
-	if (matB == base)
+	if (matB == mat)
 		return true;
 
 	const MixMaterial *mixA = dynamic_cast<const MixMaterial *>(matA);
-	if (mixA && mixA->CheckForLoops(base))
+	if (mixA && mixA->IsReferencing(mat))
 		return true;
 	const MixMaterial *mixB = dynamic_cast<const MixMaterial *>(matB);
-	if (mixB && mixB->CheckForLoops(base))
+	if (mixB && mixB->IsReferencing(mat))
 		return true;
 
 	return false;

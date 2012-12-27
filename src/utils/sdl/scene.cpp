@@ -295,37 +295,41 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 	// UpdateMaterial() deletes oldMat
 	matDefs.UpdateMaterial(name, newMat);
 
-	// Check if both are light sources
-	if (wasLightSource) {
-		if (!newMat->IsLightSource())
-			throw std::runtime_error("Update material must be a light source too");
-
-		// Replace old light material with new one
-		for (u_int i = 0; i < objectMaterials.size(); ++i) {
-			if (objectMaterials[i] == oldMat)
-				objectMaterials[i] = newMat;
-		}
-		for (u_int i = 0; i < lights.size(); ++i) {
-			if (lights[i]->IsAreaLight()) {
-				TriangleLight *tl = (TriangleLight *)lights[i];
-				if (tl->GetMaterial() == oldMat)
-					tl->SetMaterial(newMat);
-			}
-		}
-	} else {
-		if (newMat->IsLightSource())
-			throw std::runtime_error("Update material must not be a light source too");
-
-		// Replace old material with new one
-		for (u_int i = 0; i < objectMaterials.size(); ++i) {
-			if (objectMaterials[i] == oldMat)
-				objectMaterials[i] = newMat;
-		}
+	// Replace old material direct references with new one
+	for (u_int i = 0; i < objectMaterials.size(); ++i) {
+		if (objectMaterials[i] == oldMat)
+			objectMaterials[i] = newMat;
 	}
 
-	// Update all possible reference to old material with the new one
-	for (u_int i = 0; i < objectMaterials.size(); ++i)
-		objectMaterials[i]->UpdateMaterialReference(oldMat, newMat);
+	// Check if old and/or the new material were/is light sources
+	if (wasLightSource || newMat->IsLightSource()) {
+		// I have to build a new version of lights and triangleLightSource
+		std::vector<LightSource *> newLights;
+		std::vector<TriangleLight *> newTriangleLightSource;
+
+		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
+			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
+
+			if (objectMaterials[i]->IsLightSource()) {
+				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
+					TriangleLight *tl = new TriangleLight(objectMaterials[i], mesh, j);
+					newLights.push_back(tl);
+					newTriangleLightSource.push_back(tl);
+				}
+			} else {
+				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j)
+					newTriangleLightSource.push_back(NULL);
+			}
+		}
+
+		// Delete all old TriangleLight
+		for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
+			delete *l;
+
+		// Use the new versions
+		lights = newLights;
+		triangleLightSource = newTriangleLightSource;
+	}
 }
 
 void Scene::AddObject(const std::string &objName, const std::string &meshName,
@@ -607,6 +611,13 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 
 	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
 		GetTexture(props.GetString(propName + ".emission", "0.0 0.0 0.0")) : NULL;
+	// Required to remove light source while editing the scene
+	if (emissionTex && ((emissionTex->GetType() == CONST_FLOAT) ||
+			(emissionTex->GetType() == CONST_FLOAT3) ||
+			(emissionTex->GetType() == CONST_FLOAT4)) &&
+			emissionTex->GetColorValue(UV()).Black())
+		emissionTex = NULL;
+
 	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
 		GetTexture(props.GetString(propName + ".bumptex", "1.0")) : NULL;
 	Texture *normalTex = props.IsDefined(propName + ".normaltex") ? 
@@ -647,7 +658,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		// Check if there is a loop in Mix material definition
 		// (Note: this can not really happen at the moment because forward
 		// declarations are not supported)
-		if (mixMat->CheckForLoops())
+		if (mixMat->IsReferencing(mixMat))
 			throw std::runtime_error("There is a loop in Mix material definition: " + matName);
 
 		return mixMat;

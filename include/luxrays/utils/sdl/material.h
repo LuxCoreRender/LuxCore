@@ -89,7 +89,9 @@ public:
 		float *directPdfW, float *reversePdfW) const = 0;
 
 	// Update any reference to oldMat with newMat (mostly used for updating Mix material)
-	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat) { }
+	virtual void UpdateMaterialReference(const Material *oldMat, const Material *newMat) { }
+	// Return true if the material is referencing the specified material
+	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
 
 protected:
 	const Texture *emittedTex;
@@ -358,12 +360,9 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat);
-
-	bool CheckForLoops() const { return CheckForLoops(this); }
+	virtual bool IsReferencing(const Material *mat) const;
 
 private:
-	bool CheckForLoops(const MixMaterial *base) const;
-
 	const Material *matA;
 	const Material *matB;
 	const Texture *mixFactor;

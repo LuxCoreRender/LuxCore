@@ -120,7 +120,7 @@ public:
 	std::vector<LightSource *> lights; // One for each light source (doesn't include sun/infinite light)
 
 	std::vector<Material *> objectMaterials; // One for each object
-	std::vector<LightSource *> triangleLightSource; // One for each triangle
+	std::vector<TriangleLight *> triangleLightSource; // One for each triangle
 
 	DataSet *dataSet;
 
