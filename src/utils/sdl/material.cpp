@@ -537,6 +537,14 @@ void MixMaterial::Pdf(const bool fromLight, const UV &uv,
 		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
 }
 
+void MixMaterial::UpdateMaterialReference(const Material *oldMat,  const Material *newMat) {
+	if (matA == oldMat)
+		matA = newMat;
+
+	if (matB == oldMat)
+		matB = newMat;
+}
+
 //------------------------------------------------------------------------------
 // Null material
 //------------------------------------------------------------------------------
