@@ -55,7 +55,7 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const Film
 //------------------------------------------------------------------------------
 
 enum SamplerType {
-	RANDOM  = 0,
+	RANDOM = 0,
 	METROPOLIS = 1
 };
 

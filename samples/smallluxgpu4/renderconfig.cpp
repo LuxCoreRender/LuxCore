@@ -142,18 +142,14 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	const SamplerType samplerType = Sampler::String2SamplerType(cfg.GetString("sampler.type",
-			cfg.GetString("path.sampler.type", "INLINED_RANDOM")));
+	const SamplerType samplerType = Sampler::String2SamplerType(cfg.GetString("sampler.type", "RANDOM"));
 	switch (samplerType) {
 		case RANDOM:
 			return new InlinedRandomSampler(rndGen, film);
 		case METROPOLIS: {
-			const float rate = cfg.GetFloat("sampler.largesteprate",
-					cfg.GetFloat("path.sampler.largesteprate", .4f));
-			const float reject = cfg.GetFloat("sampler.maxconsecutivereject",
-					cfg.GetFloat("path.sampler.maxconsecutivereject", 512));
-			const float mutationrate = cfg.GetFloat("sampler.imagemutationrate",
-					cfg.GetFloat("path.sampler.imagemutationrate", .1f));
+			const float rate = cfg.GetFloat("sampler.largesteprate", .4f);
+			const float reject = cfg.GetFloat("sampler.maxconsecutivereject", 512);
+			const float mutationrate = cfg.GetFloat("sampler.imagemutationrate", .1f);
 
 			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate,
 					metropolisSharedTotalLuminance, metropolisSharedSampleCount);

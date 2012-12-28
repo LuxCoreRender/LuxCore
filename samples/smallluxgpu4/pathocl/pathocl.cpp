@@ -118,23 +118,18 @@ void PathOCLRenderEngine::StartLockLess() {
 			maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
 	}
 	SLG_LOG("[PathOCLRenderThread] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
-	
+
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxDiffusePathVertexCount = cfg.GetInt("path.maxdiffusebounce", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
-	epsilon = cfg.GetFloat("scene.epsilon", .0001f);
 
 	//--------------------------------------------------------------------------
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	const string samplerTypeName = cfg.GetString("sampler.type",
-			cfg.GetString("path.sampler.type", "INLINED_RANDOM"));
-	if (samplerTypeName.compare("INLINED_RANDOM") == 0)
+	const string samplerTypeName = cfg.GetString("sampler.type","RANDOM");
+	if (samplerTypeName.compare("RANDOM") == 0)
 		sampler = new PathOCL::InlinedRandomSampler();
-	else if (samplerTypeName.compare("RANDOM") == 0)
-		sampler = new PathOCL::RandomSampler();
 	else if (samplerTypeName.compare("STRATIFIED") == 0) {
 		const unsigned int xSamples = cfg.GetInt("path.sampler.xsamples", 3);
 		const unsigned int ySamples = cfg.GetInt("path.sampler.ysamples", 3);
