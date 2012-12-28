@@ -78,6 +78,8 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 
 	// Remove unused material
 	scene->RemoveUnusedMaterials();
+	// Remove unused textures
+	scene->RemoveUnusedTextures();
 }
 
 void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {
