@@ -1,5 +1,6 @@
-#include "luxrays/kernels/kernels.h"
-std::string luxrays::KernelSource_BVH = 
+#include <string>
+namespace luxrays {
+std::string KernelSource_BVH = 
 "#line 2 \"bvh_kernel.cl\"\n"
 "\n"
 "/***************************************************************************\n"
@@ -184,4 +185,4 @@ std::string luxrays::KernelSource_BVH =
 "	rayHits[gid].b2 = b2;\n"
 "	rayHits[gid].index = hitIndex;\n"
 "}\n"
-;
+; }

@@ -29,7 +29,21 @@
 #include "luxrays/utils/core/randomgen.h"
 #include "luxrays/utils/film/film.h"
 
-namespace luxrays { namespace utils {
+namespace luxrays {
+
+//------------------------------------------------------------------------------
+// OpenCL data types
+//------------------------------------------------------------------------------
+
+namespace ocl {
+#include "luxrays/utils/sampler/sampler_types.cl"
+} 
+
+//------------------------------------------------------------------------------
+// Sampler
+//------------------------------------------------------------------------------
+
+namespace utils {
 
 typedef struct {
 	FilmBufferType type;
@@ -50,10 +64,6 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const Film
 	sampleResults.push_back(sr);
 }
 
-//------------------------------------------------------------------------------
-// Sampler
-//------------------------------------------------------------------------------
-
 enum SamplerType {
 	RANDOM = 0,
 	METROPOLIS = 1
@@ -65,11 +75,13 @@ public:
 	virtual ~Sampler() { }
 
 	virtual SamplerType GetType() const = 0;
-	virtual void RequestSamples(const unsigned int size) = 0;
+	virtual void RequestSamples(const u_int size) = 0;
 
 	// index 0 and 1 are always image X and image Y
-	virtual float GetSample(const unsigned int index) = 0;
+	virtual float GetSample(const u_int index) = 0;
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
+
+	virtual void GetOCLData(luxrays::ocl::Sampler *oclSampler) const = 0;
 
 	static SamplerType String2SamplerType(const std::string &type);
 	static const std::string SamplerType2String(const SamplerType type);
@@ -83,20 +95,24 @@ protected:
 // Random sampler
 //------------------------------------------------------------------------------
 
-class InlinedRandomSampler : public Sampler {
+class RandomSampler : public Sampler {
 public:
-	InlinedRandomSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm) { }
-	~InlinedRandomSampler() { }
+	RandomSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm) { }
+	virtual ~RandomSampler() { }
 
-	SamplerType GetType() const { return RANDOM; }
-	void RequestSamples(const unsigned int size) { }
+	virtual SamplerType GetType() const { return RANDOM; }
+	virtual void RequestSamples(const u_int size) { }
 
-	float GetSample(const unsigned int index) { return rndGen->floatValue(); }
-	void NextSample(const std::vector<SampleResult> &sampleResults) {
+	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults) {
 		film->AddSampleCount(1.0);
 
 		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
 			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
+	}
+
+	virtual void GetOCLData(luxrays::ocl::Sampler *oclSampler) const {
+		oclSampler->type = luxrays::ocl::RANDOM;
 	}
 };
 
@@ -106,40 +122,46 @@ public:
 
 class MetropolisSampler : public Sampler {
 public:
-	MetropolisSampler(RandomGenerator *rnd, Film *film, const unsigned int maxRej,
+	MetropolisSampler(RandomGenerator *rnd, Film *film, const u_int maxRej,
 			const float pLarge, const float imgRange,
 			double *sharedTotalLuminance, double *sharedSampleCount);
-	~MetropolisSampler();
+	virtual ~MetropolisSampler();
 
-	SamplerType GetType() const { return METROPOLIS; }
-	void RequestSamples(const unsigned int size);
+	virtual SamplerType GetType() const { return METROPOLIS; }
+	virtual void RequestSamples(const u_int size);
 
-	float GetSample(const unsigned int index);
+	virtual float GetSample(const u_int index);
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	void NextSample(const std::vector<SampleResult> &sampleResults);
+	virtual void GetOCLData(luxrays::ocl::Sampler *oclSampler) const {
+		oclSampler->type = luxrays::ocl::METROPOLIS;
+		oclSampler->metropolis.largeMutationProbability = largeMutationProbability;
+		oclSampler->metropolis.imageMutationRange = imageMutationRange;
+		oclSampler->metropolis.maxRejects = maxRejects;
+	}
 
 private:
-	unsigned int maxRejects;
-	float largeMutationProbability, imageRange;
+	u_int maxRejects;
+	float largeMutationProbability, imageMutationRange;
 
 	// I'm storing totalLuminance and sampleCount on external (shared) variables
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
 	double *sharedTotalLuminance, *sharedSampleCount;
 
-	unsigned int sampleSize;
+	u_int sampleSize;
 	float *samples;
-	unsigned int *sampleStamps;
+	u_int *sampleStamps;
 
 	float weight;
-	unsigned int consecRejects;
-	unsigned int stamp;
+	u_int consecRejects;
+	u_int stamp;
 
 	// Data saved for the current sample
-	unsigned int currentStamp;
+	u_int currentStamp;
 	double currentLuminance;
 	float *currentSamples;
-	unsigned int *currentSampleStamps;
+	u_int *currentSampleStamps;
 	std::vector<SampleResult> currentSampleResult;
 
 	bool isLargeMutation, cooldown;

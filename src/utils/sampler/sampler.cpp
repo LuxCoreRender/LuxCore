@@ -56,7 +56,7 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm, const unsigned int maxRej,
 		const float pLarge, const float imgRange,
 		double *sharedTotLum, double *sharedSplCount) : Sampler(rnd, flm),
-		maxRejects(maxRej),	largeMutationProbability(pLarge), imageRange(imgRange),
+		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
 		sharedTotalLuminance(sharedTotLum), sharedSampleCount(sharedSplCount),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
 		cooldown(true) {
@@ -138,7 +138,7 @@ float MetropolisSampler::GetSample(const unsigned int index) {
 	if ((index == 0) || (index == 1)) {
 		// 0 and 1 are used for image X/Y
 		for (unsigned int i = sampleStamp; i < stamp; ++i)
-			s = MutateScaled(s, imageRange, rndGen->floatValue());
+			s = MutateScaled(s, imageMutationRange, rndGen->floatValue());
 	} else {
 		for (unsigned int i = sampleStamp; i < stamp; ++i)
 			s = Mutate(s, rndGen->floatValue());

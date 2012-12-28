@@ -24,7 +24,7 @@ MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
 
 ###########################################################################
 #
-# check and configure cmake
+# Check and configure cmake
 #
 ###########################################################################
 # Fresh start
@@ -55,6 +55,7 @@ set(CMAKE_MODULE_PATH
 
 INCLUDE(PlatformSpecific)
 INCLUDE(Configuration)
+INCLUDE(KernelPreprocess)
 
 # Install CMake modules
 #add_subdirectory(CMake)
