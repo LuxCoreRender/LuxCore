@@ -84,7 +84,7 @@ endif(DOXYGEN_FOUND)
 #
 # PathOCL kernel
 #
-SET(KERNELS kernel_core kernel_datatypes kernel_filters kernel_samplers kernel_scene kernels)
+SET(KERNELS kernels)
 FOREACH(kernel ${KERNELS})
 	STRING(TOLOWER ${kernel} kernel_lowercase)
 

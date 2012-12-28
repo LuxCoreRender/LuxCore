@@ -126,8 +126,7 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(20, fontOffset);
 	sprintf(buf, "[Render engine %s][Sampler %s][Tone mapping %s]",
 			RenderEngine::RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
-			session->renderConfig->cfg.GetString("sampler.type",
-				session->renderConfig->cfg.GetString("path.sampler.type", "INLINED_RANDOM")).c_str(),
+			session->renderConfig->cfg.GetString("sampler.type", "RANDOM").c_str(),
 			(session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
@@ -329,13 +328,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'i':
 			session->Stop();
-			if (session->renderConfig->cfg.GetString("sampler.type",
-					session->renderConfig->cfg.GetString("path.sampler.type", "INLINED_RANDOM")) == "INLINED_RANDOM") {
+			if (session->renderConfig->cfg.GetString("sampler.type", "RANDOM") == "RANDOM") {
 				session->renderConfig->cfg.SetString("sampler.type", "METROPOLIS");
 				session->renderConfig->cfg.SetString("path.sampler.type", "METROPOLIS");
 			} else {
-				session->renderConfig->cfg.SetString("sampler.type", "INLINED_RANDOM");
-				session->renderConfig->cfg.SetString("path.sampler.type", "INLINED_RANDOM");				
+				session->renderConfig->cfg.SetString("sampler.type", "RANDOM");
+				session->renderConfig->cfg.SetString("path.sampler.type", "RANDOM");				
 			}
 			session->Start();
 			break;

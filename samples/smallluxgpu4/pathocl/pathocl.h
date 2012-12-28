@@ -44,7 +44,7 @@ class PathOCLRenderEngine;
 
 class PathOCLRenderThread {
 public:
-	PathOCLRenderThread(const unsigned int index,
+	PathOCLRenderThread(const u_int index,
 			const float samplingStart, OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
 	~PathOCLRenderThread();
@@ -133,14 +133,11 @@ private:
 
 	boost::thread *renderThread;
 
-	unsigned int threadIndex;
+	u_int threadIndex;
 	PathOCLRenderEngine *renderEngine;
 	PathOCL::Pixel *frameBuffer;
 	PathOCL::AlphaPixel *alphaFrameBuffer;
-
-	// TODO: cleanup
-	unsigned int frameBufferPixelCount;
-	size_t stratifiedDataSize;
+	u_int frameBufferPixelCount;
 
 	bool started, editMode;
 
@@ -165,11 +162,14 @@ public:
 	friend class PathOCLRenderThread;
 
 	// Signed because of the delta parameter
-	int maxPathDepth, maxDiffusePathVertexCount;
+	int maxPathDepth;
 
 	int rrDepth;
 	float rrImportanceCap;
-	float epsilon;
+
+	u_int taskCount;
+	size_t maxMemPageSize;
+	bool usePixelAtomics;
 
 private:
 	void StartLockLess();
@@ -187,11 +187,6 @@ private:
 
 	PathOCL::Sampler *sampler;
 	PathOCL::Filter *filter;
-
-	unsigned int taskCount;
-
-	size_t maxMemPageSize;
-	bool usePixelAtomics;
 };
 
 }
