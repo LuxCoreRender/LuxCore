@@ -1,5 +1,6 @@
-#include "luxrays/kernels/kernels.h"
-std::string luxrays::KernelSource_QBVH = 
+#include <string>
+namespace luxrays {
+std::string KernelSource_QBVH = 
 "#line 2 \"qbvh_kernel.cl\"\n"
 "\n"
 "/***************************************************************************\n"
@@ -338,4 +339,4 @@ std::string luxrays::KernelSource_QBVH =
 "	rayHits[gid].b2 = rayHit.b2;\n"
 "	rayHits[gid].index = rayHit.index;\n"
 "}\n"
-;
+; }

@@ -26,29 +26,19 @@
 #
 ###########################################################################
 
-SET(KERNELS BVH QBVH MQBVH)
-FOREACH(kernel ${KERNELS})
-	STRING(TOLOWER ${kernel} kernel_lowercase)
-	IF(WIN32)
-		add_custom_command(
-			OUTPUT ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo "#include \"luxrays/kernels/kernels.h\"" >	${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo std::string luxrays::KernelSource_${kernel} = >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND for /F \"usebackq tokens=*\" %%a in (${LuxRays_SOURCE_DIR}\\src\\kernels\\${kernel_lowercase}_kernel.cl) do echo \"%%a\\n\" >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo ";" >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			MAIN_DEPENDENCY ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cl
-		)
-	ELSE(WIN32)
-		add_custom_command(
-			OUTPUT ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo \"\#include \\"luxrays/kernels/kernels.h\\"\" > ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo "std::string luxrays::KernelSource_${kernel} = " >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND cat ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			COMMAND echo "\;" >> ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cpp
-			MAIN_DEPENDENCY ${LuxRays_SOURCE_DIR}/src/kernels/${kernel_lowercase}_kernel.cl
-		)
-	ENDIF(WIN32)
-ENDFOREACH(kernel)
+PreprocessOCLKernel(BVH
+	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cpp)
+PreprocessOCLKernel(QBVH
+	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp)
+PreprocessOCLKernel(MQBVH
+	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp)
+
+PreprocessOCLKernel(Sampler
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/sampler_kernel.cpp)
 
 ###########################################################################
 #
@@ -99,6 +89,7 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/sampler_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 
@@ -312,7 +303,7 @@ IF(GCC AND NOT APPLE)
 ENDIF(GCC AND NOT APPLE)
 
 #
-# copy needed files for compiling LuxRender to dependencies directory, to find 
+# Copy needed files for compiling LuxRender to dependencies directory, to find 
 # them also if builddir name is not "luxrays"
 #
 IF(OSX_UPDATE_LUXRAYS_REPO)

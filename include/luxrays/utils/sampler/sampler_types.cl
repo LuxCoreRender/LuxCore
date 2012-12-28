@@ -19,20 +19,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+enum SamplerType {
+	RANDOM = 0,
+	METROPOLIS = 1
+};
 
-#include <string>
-
-namespace luxrays {
-
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
-
-extern std::string KernelSource_Sampler;
-
-}
-
-#endif	/* _LUXRAYS_KERNELS_H */
+typedef struct {
+	SamplerType type;
+	union {
+		struct {
+			float largeMutationProbability, imageMutationRange;
+			uint maxRejects;
+		} metropolis;
+	};
+} Sampler;

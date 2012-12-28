@@ -145,7 +145,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 	const SamplerType samplerType = Sampler::String2SamplerType(cfg.GetString("sampler.type", "RANDOM"));
 	switch (samplerType) {
 		case RANDOM:
-			return new InlinedRandomSampler(rndGen, film);
+			return new RandomSampler(rndGen, film);
 		case METROPOLIS: {
 			const float rate = cfg.GetFloat("sampler.largesteprate", .4f);
 			const float reject = cfg.GetFloat("sampler.maxconsecutivereject", 512);
