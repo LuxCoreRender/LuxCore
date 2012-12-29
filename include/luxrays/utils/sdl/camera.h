@@ -25,7 +25,21 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/mc.h"
 
-namespace luxrays { namespace sdl {
+namespace luxrays {
+	
+//------------------------------------------------------------------------------
+// OpenCL data types
+//------------------------------------------------------------------------------
+
+namespace ocl {
+#include "luxrays/utils/sdl/camera_types.cl"
+} 
+
+//------------------------------------------------------------------------------
+// PerspectiveCamera
+//------------------------------------------------------------------------------
+
+namespace sdl {
 
 class PerspectiveCamera {
 public:

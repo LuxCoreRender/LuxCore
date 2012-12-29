@@ -47,7 +47,7 @@ public:
 
 	luxrays::utils::Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, luxrays::utils::Film *film,
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
-	
+
 	luxrays::Properties cfg;
 	luxrays::sdl::Scene *scene;
 

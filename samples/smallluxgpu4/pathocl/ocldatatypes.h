@@ -69,103 +69,6 @@ typedef struct {
 } GPUTaskStats;
 
 //------------------------------------------------------------------------------
-// Filters
-//------------------------------------------------------------------------------
-
-typedef enum {
-	NONE, BOX, GAUSSIAN, MITCHELL
-} FilterType;
-
-class Filter {
-public:
-	Filter(const FilterType t, const float wx, const float wy) :
-		type(t), widthX(wx), widthY(wy) { }
-
-	FilterType type;
-	float widthX, widthY;
-};
-
-class NoneFilter : public Filter {
-public:
-	NoneFilter() : Filter(NONE, 0.f, 0.f) { }
-};
-
-class BoxFilter : public Filter {
-public:
-	BoxFilter(const float wx, const float wy) :
-		Filter(BOX, wx, wy) { }
-};
-
-class GaussianFilter : public Filter {
-public:
-	GaussianFilter(const float wx, const float wy, const float a) :
-		Filter(GAUSSIAN, wx, wy), alpha(a) { }
-
-	float alpha;
-};
-
-class MitchellFilter : public Filter {
-public:
-	MitchellFilter(const float wx, const float wy, const float b, const float c) :
-		Filter(MITCHELL, wx, wy), B(b), C(c) { }
-
-	float B, C;
-};
-
-//------------------------------------------------------------------------------
-// Samplers
-//------------------------------------------------------------------------------
-
-typedef enum {
-	INLINED_RANDOM, RANDOM, STRATIFIED, METROPOLIS
-} SamplerType;
-
-class Sampler {
-public:
-	Sampler(const SamplerType t) :
-		type(t) { }
-
-	SamplerType type;
-};
-
-class InlinedRandomSampler : public Sampler {
-public:
-	InlinedRandomSampler() :
-		Sampler(INLINED_RANDOM) { }
-
-	SamplerType type;
-};
-
-class RandomSampler : public Sampler {
-public:
-	RandomSampler() :
-		Sampler(RANDOM) { }
-
-	SamplerType type;
-};
-
-class StratifiedSampler : public Sampler {
-public:
-	StratifiedSampler(const unsigned int x, const unsigned int y) :
-		Sampler(STRATIFIED), xSamples(x), ySamples(y) { }
-
-	SamplerType type;
-	unsigned int xSamples, ySamples;
-};
-
-
-class MetropolisSampler : public Sampler {
-public:
-	MetropolisSampler(const float rate, const float reject, const float mutationRate) :
-		Sampler(METROPOLIS), largeStepRate(rate), imageMutationRate(mutationRate),
-		maxConsecutiveReject(reject) { }
-
-	SamplerType type;
-	float largeStepRate, imageMutationRate;
-	unsigned int maxConsecutiveReject;
-};
-
-//------------------------------------------------------------------------------
 
 #define MAT_MATTE 0
 #define MAT_AREALIGHT 1
@@ -301,23 +204,6 @@ typedef struct {
 typedef struct {
 	float uScale, vScale, uDelta, vDelta;
 } NormalMapInfo;
-
-typedef struct {
-	unsigned int vertsOffset;
-	unsigned int trisOffset;
-
-	float trans[4][4];
-	float invTrans[4][4];
-} Mesh;
-
-typedef struct {
-	float lensRadius;
-	float focalDistance;
-	float yon, hither;
-
-	float rasterToCameraMatrix[4][4];
-	float cameraToWorldMatrix[4][4];
-} Camera;
 
 }
 

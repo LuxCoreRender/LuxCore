@@ -19,23 +19,23 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+typedef enum {
+	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL
+} FilterType;
 
-#include <string>
-
-namespace luxrays {
-
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
-
-extern std::string KernelSource_Sampler;
-extern std::string KernelSource_Filter;
-extern std::string KernelSource_Camera;
-extern std::string KernelSource_TriangleMesh;
-
-}
-
-#endif	/* _LUXRAYS_KERNELS_H */
+typedef struct {
+	FilterType type;
+	union {
+		struct {
+			float widthX, widthY;
+		} box;
+		struct {
+			float widthX, widthY;
+			float alpha;
+		} gaussian;
+		struct {
+			float widthX, widthY;
+			float B, C;
+		} mitchell;
+	};
+} Filter;

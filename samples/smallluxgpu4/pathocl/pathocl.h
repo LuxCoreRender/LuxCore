@@ -185,8 +185,8 @@ private:
 
 	vector<PathOCLRenderThread *> renderThreads;
 
-	PathOCL::Sampler *sampler;
-	PathOCL::Filter *filter;
+	luxrays::ocl::Sampler *sampler;
+	luxrays::ocl::Filter *filter;
 };
 
 }

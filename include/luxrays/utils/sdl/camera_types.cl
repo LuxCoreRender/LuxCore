@@ -19,23 +19,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+typedef struct {
+	float lensRadius;
+	float focalDistance;
+	float yon, hither;
 
-#include <string>
-
-namespace luxrays {
-
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
-
-extern std::string KernelSource_Sampler;
-extern std::string KernelSource_Filter;
-extern std::string KernelSource_Camera;
-extern std::string KernelSource_TriangleMesh;
-
-}
-
-#endif	/* _LUXRAYS_KERNELS_H */
+	float rasterToCameraMatrix[4][4];
+	float cameraToWorldMatrix[4][4];
+} Camera;

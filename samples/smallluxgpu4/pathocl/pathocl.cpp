@@ -42,6 +42,7 @@
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/opencl/intersectiondevice.h"
+#include "luxrays/utils/film/filter.h"
 
 using namespace std;
 using namespace luxrays;
@@ -95,6 +96,7 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		delete renderThreads[i];
 
+	delete compiledScene;
 	delete sampler;
 	delete filter;
 }
@@ -127,20 +129,25 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	const string samplerTypeName = cfg.GetString("sampler.type","RANDOM");
-	if (samplerTypeName.compare("RANDOM") == 0)
-		sampler = new PathOCL::RandomSampler();
-	else if (samplerTypeName.compare("METROPOLIS") == 0) {
-		const float rate = cfg.GetFloat("sampler.largesteprate",
-				cfg.GetFloat("path.sampler.largesteprate", .4f));
-		const float reject = cfg.GetFloat("sampler.maxconsecutivereject",
-				cfg.GetFloat("path.sampler.maxconsecutivereject", 512));
-		const float mutationrate = cfg.GetFloat("sampler.imagemutationrate",
-				cfg.GetFloat("path.sampler.imagemutationrate", .1f));
+	const SamplerType samplerType = Sampler::String2SamplerType(cfg.GetString("sampler.type", "RANDOM"));
+	switch (samplerType) {
+		case RANDOM:
+			sampler->type = luxrays::ocl::RANDOM;
+			break;
+		case METROPOLIS: {
+			const float largeMutationProbability = cfg.GetFloat("sampler.largesteprate", .4f);
+			const float imageMutationRange = cfg.GetFloat("sampler.imagemutationrate", .1f);
+			const float maxRejects = cfg.GetFloat("sampler.maxconsecutivereject", 512);
 
-		sampler = new PathOCL::MetropolisSampler(rate, reject, mutationrate);
-	} else
-		throw std::runtime_error("Unknown path.sampler.type");
+			sampler->type = luxrays::ocl::METROPOLIS;
+			sampler->metropolis.largeMutationProbability = largeMutationProbability;
+			sampler->metropolis.imageMutationRange = imageMutationRange;
+			sampler->metropolis.maxRejects = maxRejects;
+		}
+		default:
+			throw std::runtime_error("Unknown sampler.type: " + samplerType);
+	}
+
 
 	//--------------------------------------------------------------------------
 	// Filter
@@ -154,19 +161,29 @@ void PathOCLRenderEngine::StartLockLess() {
 	if ((filterWidthY <= 0.f) || (filterWidthY > 1.5f))
 		throw std::runtime_error("path.filter.width.y must be between 0.0 and 1.5");
 
+	filter = new luxrays::ocl::Filter();
 	if (filterType.compare("NONE") == 0)
-		filter = new PathOCL::NoneFilter();
-	else if (filterType.compare("BOX") == 0)
-		filter = new PathOCL::BoxFilter(filterWidthX, filterWidthY);
-	else if (filterType.compare("GAUSSIAN") == 0) {
+		filter->type = luxrays::ocl::FILTER_NONE;
+	else if (filterType.compare("BOX") == 0) {
+		filter->type = luxrays::ocl::FILTER_BOX;
+		filter->box.widthX = filterWidthX;
+		filter->box.widthY = filterWidthY;
+	} else if (filterType.compare("GAUSSIAN") == 0) {
 		const float alpha = cfg.GetFloat("path.filter.alpha", 2.f);
-		filter = new PathOCL::GaussianFilter(filterWidthX, filterWidthY, alpha);
+		filter->type = luxrays::ocl::FILTER_GAUSSIAN;
+		filter->gaussian.widthX = filterWidthX;
+		filter->gaussian.widthY = filterWidthY;
+		filter->gaussian.alpha = alpha;
 	} else if (filterType.compare("MITCHELL") == 0) {
 		const float B = cfg.GetFloat("path.filter.B", 1.f / 3.f);
 		const float C = cfg.GetFloat("path.filter.C", 1.f / 3.f);
-		filter = new PathOCL::MitchellFilter(filterWidthX, filterWidthY, B, C);
+		filter->type = luxrays::ocl::FILTER_MITCHELL;
+		filter->mitchell.widthX = filterWidthX;
+		filter->mitchell.widthY = filterWidthY;
+		filter->mitchell.B = B;
+		filter->mitchell.C = C;
 	} else
-		throw std::runtime_error("Unknown path.filter.type");
+		throw std::runtime_error("Unknown path.filter.type: " + filterType);
 
 	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
 
@@ -180,98 +197,98 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Create and start render threads
 	//--------------------------------------------------------------------------
 
-	const size_t renderThreadCount = intersectionDevices.size();
-	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		PathOCLRenderThread *t = new PathOCLRenderThread(i,
-				i / (float)renderThreadCount,
-				(OpenCLIntersectionDevice *)(intersectionDevices[i]),
-				this);
-		renderThreads.push_back(t);
-	}
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
+//	const size_t renderThreadCount = intersectionDevices.size();
+//	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
+//	for (size_t i = 0; i < renderThreadCount; ++i) {
+//		PathOCLRenderThread *t = new PathOCLRenderThread(i,
+//				i / (float)renderThreadCount,
+//				(OpenCLIntersectionDevice *)(intersectionDevices[i]),
+//				this);
+//		renderThreads.push_back(t);
+//	}
+//
+//	for (size_t i = 0; i < renderThreads.size(); ++i)
+//		renderThreads[i]->Start();
 }
 
 void PathOCLRenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
+//	for (size_t i = 0; i < renderThreads.size(); ++i)
+//		renderThreads[i]->Interrupt();
+//	for (size_t i = 0; i < renderThreads.size(); ++i)
+//		renderThreads[i]->Stop();
 
 	delete compiledScene;
 	compiledScene = NULL;
 }
 
 void PathOCLRenderEngine::BeginEditLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
+//	for (size_t i = 0; i < renderThreads.size(); ++i)
+//		renderThreads[i]->Interrupt();
+//	for (size_t i = 0; i < renderThreads.size(); ++i)
+//		renderThreads[i]->BeginEdit();
 }
 
 void PathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	compiledScene->Recompile(editActions);
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+//	compiledScene->Recompile(editActions);
+//
+//	for (size_t i = 0; i < renderThreads.size(); ++i)
+//		renderThreads[i]->EndEdit(editActions);
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-	const unsigned int imgWidth = film->GetWidth();
-	const unsigned int imgHeight = film->GetHeight();
-
-	film->Reset();
-
-	for (unsigned int y = 0; y < imgHeight; ++y) {
-		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
-
-		for (unsigned int x = 0; x < imgWidth; ++x) {
-			Spectrum radiance;
-			float alpha = 0.0f;
-			float count = 0.f;
-			for (size_t i = 0; i < renderThreads.size(); ++i) {
-				if (renderThreads[i]->frameBuffer) {
-					radiance += renderThreads[i]->frameBuffer[pGPU].c;
-					count += renderThreads[i]->frameBuffer[pGPU].count;
-				}
-
-				if (renderThreads[i]->alphaFrameBuffer)
-					alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
-			}
-
-			if ((count > 0) && !radiance.IsNaN()) {
-				film->AddSampleCount(1.f);
-				// -.5f is to align correctly the pixel after the splat
-				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
-						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
-			}
-
-			++pGPU;
-		}
-	}
+//	boost::unique_lock<boost::mutex> lock(*filmMutex);
+//
+//	const unsigned int imgWidth = film->GetWidth();
+//	const unsigned int imgHeight = film->GetHeight();
+//
+//	film->Reset();
+//
+//	for (unsigned int y = 0; y < imgHeight; ++y) {
+//		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
+//
+//		for (unsigned int x = 0; x < imgWidth; ++x) {
+//			Spectrum radiance;
+//			float alpha = 0.0f;
+//			float count = 0.f;
+//			for (size_t i = 0; i < renderThreads.size(); ++i) {
+//				if (renderThreads[i]->frameBuffer) {
+//					radiance += renderThreads[i]->frameBuffer[pGPU].c;
+//					count += renderThreads[i]->frameBuffer[pGPU].count;
+//				}
+//
+//				if (renderThreads[i]->alphaFrameBuffer)
+//					alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
+//			}
+//
+//			if ((count > 0) && !radiance.IsNaN()) {
+//				film->AddSampleCount(1.f);
+//				// -.5f is to align correctly the pixel after the splat
+//				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
+//						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
+//			}
+//
+//			++pGPU;
+//		}
+//	}
 }
 
 void PathOCLRenderEngine::UpdateCounters() {
-	// Update the sample count statistic
-	unsigned long long totalCount = 0;
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		PathOCL::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
-
-		for (size_t i = 0; i < taskCount; ++i)
-			totalCount += stats[i].sampleCount;
-	}
-
-	samplesCount = totalCount;
-
-	// Update the ray count statistic
-	totalCount = 0.0;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		totalCount += intersectionDevices[i]->GetTotalRaysCount();
-	raysCount = totalCount;
+//	// Update the sample count statistic
+//	unsigned long long totalCount = 0;
+//	for (size_t i = 0; i < renderThreads.size(); ++i) {
+//		PathOCL::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
+//
+//		for (size_t i = 0; i < taskCount; ++i)
+//			totalCount += stats[i].sampleCount;
+//	}
+//
+//	samplesCount = totalCount;
+//
+//	// Update the ray count statistic
+//	totalCount = 0.0;
+//	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+//		totalCount += intersectionDevices[i]->GetTotalRaysCount();
+//	raysCount = totalCount;
 }
 
 }

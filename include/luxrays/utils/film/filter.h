@@ -24,11 +24,21 @@
 
 #include "luxrays/core/utils.h"
 
-namespace luxrays { namespace utils {
+namespace luxrays {
+	
+//------------------------------------------------------------------------------
+// OpenCL data types
+//------------------------------------------------------------------------------
+
+namespace ocl {
+#include "luxrays/utils/film/filter_types.cl"
+} 
 
 //------------------------------------------------------------------------------
 // Filters
 //------------------------------------------------------------------------------
+
+namespace utils {
 
 typedef enum {
 	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_MITCHELL_SS
