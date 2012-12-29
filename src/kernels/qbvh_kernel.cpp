@@ -1,7 +1,7 @@
 #include <string>
-namespace luxrays {
+namespace luxrays { namespace ocl {
 std::string KernelSource_QBVH = 
-"#line 2 \"qbvh_kernel.cl\"\n"
+"#line 1 \"qbvh_kernel.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -339,4 +339,4 @@ std::string KernelSource_QBVH =
 "	rayHits[gid].b2 = rayHit.b2;\n"
 "	rayHits[gid].index = rayHit.index;\n"
 "}\n"
-; }
+; } }

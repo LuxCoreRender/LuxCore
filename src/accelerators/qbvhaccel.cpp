@@ -56,7 +56,7 @@ public:
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE
 			_LUXRAYS_BBOX_OCLDEFINE);
-		code += KernelSource_QBVH;
+		code += luxrays::ocl::KernelSource_QBVH;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {
@@ -130,7 +130,7 @@ public:
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE
 			_LUXRAYS_BBOX_OCLDEFINE);
-		code += KernelSource_QBVH;
+		code += luxrays::ocl::KernelSource_QBVH;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {

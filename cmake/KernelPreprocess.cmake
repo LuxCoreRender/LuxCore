@@ -25,27 +25,28 @@
 #
 ###########################################################################
 
-FUNCTION(PreprocessOCLKernel KERNEL SRC DST)
+FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
 	MESSAGE(STATUS "Preprocessing OpenCL kernel: " ${SRC} " => " ${DST} )
 
 	IF(WIN32)
 		add_custom_command(
 			OUTPUT ${DST}
 			COMMAND echo "#include <string>" > ${DST}
-			COMMAND echo "namespace luxrays {" >> ${DST}
+			COMMAND echo namespace ${NAMESPACE} "{ namespace ocl {" >> ${DST}
 			COMMAND echo std::string KernelSource_PathOCL_${KERNEL} = >> ${DST}
+# TODO: this code need to be update in order to replace " char with \" (i.e. sed 's/"/\\"/g')
 			COMMAND for /F \"usebackq tokens=*\" %%a in (${SRC}) do echo \"%%a\\n\" >> ${DST}
-			COMMAND echo ";" >> ${DST}
+			COMMAND echo "; } }" >> ${DST}
 			MAIN_DEPENDENCY ${SRC}
 		)
 	ELSE(WIN32)
 		add_custom_command(
 			OUTPUT ${DST}
 			COMMAND echo \"\#include <string>\" > ${DST}
-			COMMAND echo \"namespace luxrays {\" >> ${DST}
+			COMMAND echo namespace ${NAMESPACE} \"{ namespace ocl {\" >> ${DST}
 			COMMAND echo "std::string KernelSource_${KERNEL} = " >> ${DST}
-			COMMAND cat ${SRC} | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${DST}
-			COMMAND echo "\; }" >> ${DST}
+			COMMAND cat ${SRC} | sed 's/\\\\/\\\\\\\\/g' | sed 's/\"/\\\\\"/g' | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${DST}
+			COMMAND echo "\; } }" >> ${DST}
 			MAIN_DEPENDENCY ${SRC}
 		)
 	ENDIF(WIN32)

@@ -1,3 +1,5 @@
+#line 1 "sampler_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -29,7 +31,7 @@ typedef struct {
 	union {
 		struct {
 			float largeMutationProbability, imageMutationRange;
-			uint maxRejects;
+			unsigned int maxRejects;
 		} metropolis;
 	};
 } Sampler;

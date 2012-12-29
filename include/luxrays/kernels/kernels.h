@@ -24,18 +24,18 @@
 
 #include <string>
 
-namespace luxrays {
+namespace luxrays { namespace ocl {
 
 // Intersection kernels
 extern std::string KernelSource_BVH;
 extern std::string KernelSource_QBVH;
 extern std::string KernelSource_MQBVH;
 
-extern std::string KernelSource_Sampler;
-extern std::string KernelSource_Filter;
-extern std::string KernelSource_Camera;
-extern std::string KernelSource_TriangleMesh;
+extern std::string KernelSource_SamplerTypes;
+extern std::string KernelSource_FilterTypes;
+extern std::string KernelSource_CameraTypes;
+extern std::string KernelSource_TriangleMeshTypes;
 
-}
+} }
 
 #endif	/* _LUXRAYS_KERNELS_H */

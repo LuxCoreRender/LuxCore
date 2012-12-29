@@ -1,3 +1,5 @@
+#line 1 "randomgen_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -19,17 +21,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _OCLDATATYPES_H
-#define	_OCLDATATYPES_H
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-#include "smalllux.h"
-
-namespace slg { namespace ocl {
-#include "kernels/pathocl_kernel_datatypes.cl"
-} }
-
-#endif
-
-#endif	/* _OCLDATATYPES_H */
+typedef struct {
+	unsigned int s1, s2, s3;
+} Seed;

@@ -1,6 +1,8 @@
 #include <string>
-namespace luxrays {
-std::string KernelSource_TriagnleMesh = 
+namespace luxrays { namespace ocl {
+std::string KernelSource_SamplerTypes = 
+"#line 1 \"sampler_types.cl\"\n"
+"\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
@@ -22,11 +24,18 @@ std::string KernelSource_TriagnleMesh =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef struct {\n"
-"	unsigned int vertsOffset;\n"
-"	unsigned int trisOffset;\n"
+"typedef enum {\n"
+"	RANDOM = 0,\n"
+"	METROPOLIS = 1\n"
+"} SamplerType;\n"
 "\n"
-"	float trans[4][4];\n"
-"	float invTrans[4][4];\n"
-"} Mesh;\n"
-; }
+"typedef struct {\n"
+"	SamplerType type;\n"
+"	union {\n"
+"		struct {\n"
+"			float largeMutationProbability, imageMutationRange;\n"
+"			unsigned int maxRejects;\n"
+"		} metropolis;\n"
+"	};\n"
+"} Sampler;\n"
+; } }

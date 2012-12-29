@@ -52,7 +52,7 @@ public:
 			_LUXRAYS_RAYHIT_OCLDEFINE
 			_LUXRAYS_BBOX_OCLDEFINE
 			_LUXRAYS_MATRIX4X4_OCLDEFINE);
-		code += KernelSource_MQBVH;
+		code += luxrays::ocl::KernelSource_MQBVH;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {
