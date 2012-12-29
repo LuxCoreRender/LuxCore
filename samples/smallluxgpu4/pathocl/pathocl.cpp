@@ -43,6 +43,7 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/opencl/intersectiondevice.h"
 #include "luxrays/utils/film/filter.h"
+#include "luxrays/utils/sdl/scene.h"
 
 using namespace std;
 using namespace luxrays;
@@ -129,6 +130,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Sampler
 	//--------------------------------------------------------------------------
 
+	sampler = new luxrays::ocl::Sampler();
 	const SamplerType samplerType = Sampler::String2SamplerType(cfg.GetString("sampler.type", "RANDOM"));
 	switch (samplerType) {
 		case RANDOM:

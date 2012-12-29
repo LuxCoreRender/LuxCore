@@ -1,6 +1,6 @@
 #include <string>
-namespace luxrays {
-std::string KernelSource_Filter = 
+namespace luxrays { namespace ocl {
+std::string KernelSource_CameraTypes = 
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
@@ -22,24 +22,12 @@ std::string KernelSource_Filter =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef enum {\n"
-"	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL\n"
-"} FilterType;\n"
-"\n"
 "typedef struct {\n"
-"	FilterType type;\n"
-"	union {\n"
-"		struct {\n"
-"			float widthX, widthY;\n"
-"		} box;\n"
-"		struct {\n"
-"			float widthX, widthY;\n"
-"			float alpha;\n"
-"		} gaussian;\n"
-"		struct {\n"
-"			float widthX, widthY;\n"
-"			float B, C;\n"
-"		} mitchell;\n"
-"	};\n"
-"} Filter;\n"
-; }
+"	float lensRadius;\n"
+"	float focalDistance;\n"
+"	float yon, hither;\n"
+"\n"
+"	float rasterToCameraMatrix[4][4];\n"
+"	float cameraToWorldMatrix[4][4];\n"
+"} Camera;\n"
+; } }

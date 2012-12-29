@@ -22,18 +22,13 @@
 #ifndef _SLG_KERNELS_H
 #define	_SLG_KERNELS_H
 
-//#include <string>
-//
-//namespace luxrays {
-//
-//// Intersection kernels
-//extern std::string KernelSource_PathOCL_kernel_core;
-//extern std::string KernelSource_PathOCL_kernel_datatypes;
-//extern std::string KernelSource_PathOCL_kernel_filters;
-//extern std::string KernelSource_PathOCL_kernel_samplers;
-//extern std::string KernelSource_PathOCL_kernel_scene;
-//extern std::string KernelSource_PathOCL_kernels;
-//
-//}
+#include <string>
+
+namespace slg { namespace ocl {
+
+extern std::string KernelSource_PathOCL_Kernels;
+extern std::string KernelSource_PathOCL_DataTypes;
+
+} }
 
 #endif	/* _SLG_KERNELS_H */

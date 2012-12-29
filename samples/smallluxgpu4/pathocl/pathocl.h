@@ -135,13 +135,13 @@ private:
 
 	u_int threadIndex;
 	PathOCLRenderEngine *renderEngine;
-	PathOCL::Pixel *frameBuffer;
-	PathOCL::AlphaPixel *alphaFrameBuffer;
+	slg::ocl::Pixel *frameBuffer;
+	slg::ocl::AlphaPixel *alphaFrameBuffer;
 	u_int frameBufferPixelCount;
 
 	bool started, editMode;
 
-	PathOCL::GPUTaskStats *gpuTaskStats;
+	slg::ocl::GPUTaskStats *gpuTaskStats;
 };
 
 //------------------------------------------------------------------------------

@@ -419,7 +419,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (configFileName.compare("") == 0)
-			configFileName = "scenes/luxball/render-fast.cfg";
+			configFileName = "scenes/luxball/luxball.cfg";
 
 		RenderConfig *config = new RenderConfig(&configFileName, &cmdLineProp);
 

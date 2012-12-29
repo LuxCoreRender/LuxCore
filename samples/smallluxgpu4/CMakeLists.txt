@@ -81,33 +81,12 @@ endif(DOXYGEN_FOUND)
 #
 ###########################################################################
 
-#
-# PathOCL kernel
-#
-SET(KERNELS kernels)
-FOREACH(kernel ${KERNELS})
-	STRING(TOLOWER ${kernel} kernel_lowercase)
-
-	IF(WIN32)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo "#include \"pathocl/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo std::string luxrays::KernelSource_PathOCL_${kernel} = >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND for /F \"usebackq tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\pathocl\\kernels\\pathocl_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cl
-		)
-	ELSE(WIN32)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo \"\#include \\"pathocl/kernels/kernels.h\\"\" > ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo "std::string luxrays::KernelSource_PathOCL_${kernel} = " >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND cat pathocl/kernels/pathocl_${kernel_lowercase}.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo "\;" >> ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_${kernel_lowercase}.cl
-		)
-	ENDIF(WIN32)
-ENDFOREACH(kernel)
+PreprocessOCLKernel(slg PathOCL_Kernels
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernels.cl
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernels.cpp)
+PreprocessOCLKernel(slg PathOCL_DataTypes
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_datatypes.cl
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_datatypes.cpp)
 
 #############################################################################
 #
@@ -132,15 +111,11 @@ set(SLG4LIB_SRCS
 	bidirvmcpu/bidirvmcputhread.cpp
 	bidirvmcpu/hashgrid.cpp
 	cbidirhybrid/cbidirhybrid.cpp
-	#pathocl/kernels/pathocl_kernel_core.cpp
-	#pathocl/kernels/pathocl_kernel_datatypes.cpp
-	#pathocl/kernels/pathocl_kernel_filters.cpp
-	#pathocl/kernels/pathocl_kernel_samplers.cpp
-	#pathocl/kernels/pathocl_kernel_scene.cpp
-	#pathocl/kernels/pathocl_kernels.cpp
+	pathocl/kernels/pathocl_kernel_datatypes.cpp
+	pathocl/kernels/pathocl_kernels.cpp
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
-	#pathocl/pathoclthread.cpp
+	pathocl/pathoclthread.cpp
 	lightcpu/lightcpu.cpp
 	lightcpu/lightcputhread.cpp
 	pathcpu/pathcpu.cpp

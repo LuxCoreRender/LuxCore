@@ -31,6 +31,7 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/opencl/utils.h"
 #include "luxrays/opencl/intersectiondevice.h"
+#include "luxrays/kernels/kernels.h"
 
 #if defined(__APPLE__)
 //OSX version detection
@@ -48,7 +49,7 @@ namespace slg {
 // PathOCLRenderThread
 //------------------------------------------------------------------------------
 
-PathOCLRenderThread::PathOCLRenderThread(const unsigned int index,
+PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 		const float samplStart, OpenCLIntersectionDevice *device,
 		PathOCLRenderEngine *re) {
 	intersectionDevice = device;
@@ -66,7 +67,6 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index,
 	kernelsParameters = "";
 	initKernel = NULL;
 	initFBKernel = NULL;
-	samplerKernel = NULL;
 	advancePathsKernel = NULL;
 
 	raysBuff = NULL;
@@ -98,7 +98,7 @@ PathOCLRenderThread::PathOCLRenderThread(const unsigned int index,
 	meshNormalMapsInfoBuff = NULL;
 	uvsBuff = NULL;
 
-	gpuTaskStats = new PathOCL::GPUTaskStats[renderEngine->taskCount];
+	gpuTaskStats = new slg::ocl::GPUTaskStats[renderEngine->taskCount];
 
 	// Check the kind of kernel cache to use
 	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "NONE");
@@ -121,7 +121,6 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 
 	delete initKernel;
 	delete initFBKernel;
-	delete samplerKernel;
 	delete advancePathsKernel;
 
 	delete[] frameBuffer;
@@ -200,43 +199,43 @@ void PathOCLRenderThread::InitFrameBuffer() {
 
 	// Delete previous allocated frameBuffer
 	delete[] frameBuffer;
-	frameBuffer = new PathOCL::Pixel[frameBufferPixelCount];
+	frameBuffer = new slg::ocl::Pixel[frameBufferPixelCount];
 
-	for (unsigned int i = 0; i < frameBufferPixelCount; ++i) {
+	for (u_int i = 0; i < frameBufferPixelCount; ++i) {
 		frameBuffer[i].c.r = 0.f;
 		frameBuffer[i].c.g = 0.f;
 		frameBuffer[i].c.b = 0.f;
 		frameBuffer[i].count = 0.f;
 	}
 
-	AllocOCLBufferRW(&frameBufferBuff, sizeof(PathOCL::Pixel) * frameBufferPixelCount, "FrameBuffer");
+	AllocOCLBufferRW(&frameBufferBuff, sizeof(slg::ocl::Pixel) * frameBufferPixelCount, "FrameBuffer");
 
 	delete[] alphaFrameBuffer;
 	alphaFrameBuffer = NULL;
 
 	// Check if the film has an alpha channel
 	if (renderEngine->film->IsAlphaChannelEnabled()) {
-		alphaFrameBuffer = new PathOCL::AlphaPixel[frameBufferPixelCount];
+		alphaFrameBuffer = new slg::ocl::AlphaPixel[frameBufferPixelCount];
 
-		for (unsigned int i = 0; i < frameBufferPixelCount; ++i)
+		for (u_int i = 0; i < frameBufferPixelCount; ++i)
 			alphaFrameBuffer[i].alpha = 0.f;
 
-		AllocOCLBufferRW(&alphaFrameBufferBuff, sizeof(PathOCL::AlphaPixel) * frameBufferPixelCount, "Alpha Channel FrameBuffer");
+		AllocOCLBufferRW(&alphaFrameBufferBuff, sizeof(slg::ocl::AlphaPixel) * frameBufferPixelCount, "Alpha Channel FrameBuffer");
 	}
 }
 
 void PathOCLRenderThread::InitCamera() {
 	AllocOCLBufferRO(&cameraBuff, &renderEngine->compiledScene->camera,
-			sizeof(PathOCL::Camera), "Camera");
+			sizeof(luxrays::ocl::Camera), "Camera");
 }
 
 void PathOCLRenderThread::InitGeometry() {
 	Scene *scene = renderEngine->renderConfig->scene;
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	const unsigned int trianglesCount = scene->dataSet->GetTotalTriangleCount();
+	const u_int trianglesCount = scene->dataSet->GetTotalTriangleCount();
 	AllocOCLBufferRO(&meshIDBuff, (void *)cscene->meshIDs,
-			sizeof(unsigned int) * trianglesCount, "MeshIDs");
+			sizeof(u_int) * trianglesCount, "MeshIDs");
 
 	AllocOCLBufferRO(&normalsBuff, &cscene->normals[0],
 		sizeof(Normal) * cscene->normals.size(), "Normals");
@@ -258,10 +257,10 @@ void PathOCLRenderThread::InitGeometry() {
 		// MQBVH geometry must be defined in a specific way.
 
 		AllocOCLBufferRO(&triangleIDBuff, (void *)cscene->meshFirstTriangleOffset,
-				sizeof(unsigned int) * cscene->meshDescs.size(), "First mesh triangle offset");
+				sizeof(u_int) * cscene->meshDescs.size(), "First mesh triangle offset");
 
 		AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
-				sizeof(PathOCL::Mesh) * cscene->meshDescs.size(), "Mesh description");
+				sizeof(luxrays::ocl::Mesh) * cscene->meshDescs.size(), "Mesh description");
 	} else {
 		triangleIDBuff = NULL;
 		meshDescsBuff = NULL;
@@ -269,122 +268,122 @@ void PathOCLRenderThread::InitGeometry() {
 }
 
 void PathOCLRenderThread::InitMaterials() {
-	const size_t materialsCount = renderEngine->compiledScene->mats.size();
-	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
-			sizeof(PathOCL::Material) * materialsCount, "Materials");
-
-	const unsigned int meshCount = renderEngine->compiledScene->meshMats.size();
-	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
-			sizeof(unsigned int) * meshCount, "Mesh material index");
+//	const size_t materialsCount = renderEngine->compiledScene->mats.size();
+//	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
+//			sizeof(slg::ocl::Material) * materialsCount, "Materials");
+//
+//	const u_int meshCount = renderEngine->compiledScene->meshMats.size();
+//	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
+//			sizeof(u_int) * meshCount, "Mesh material index");
 }
 
 void PathOCLRenderThread::InitAreaLights() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->areaLights.size() > 0) {
-		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
-			sizeof(PathOCL::TriangleLight) * cscene->areaLights.size(), "AreaLights");
-	} else
-		areaLightsBuff = NULL;
+//	CompiledScene *cscene = renderEngine->compiledScene;
+//
+//	if (cscene->areaLights.size() > 0) {
+//		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
+//			sizeof(slg::ocl::TriangleLight) * cscene->areaLights.size(), "AreaLights");
+//	} else
+//		areaLightsBuff = NULL;
 }
 
 void PathOCLRenderThread::InitInfiniteLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->infiniteLight) {
-		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
-			sizeof(PathOCL::InfiniteLight), "InfiniteLight");
-
-		const unsigned int pixelCount = cscene->infiniteLight->width * cscene->infiniteLight->height;
-		AllocOCLBufferRO(&infiniteLightMapBuff, (void *)cscene->infiniteLightMap,
-			sizeof(Spectrum) * pixelCount, "InfiniteLight map");
-	} else {
-		infiniteLightBuff = NULL;
-		infiniteLightMapBuff = NULL;
-	}
+//	CompiledScene *cscene = renderEngine->compiledScene;
+//
+//	if (cscene->infiniteLight) {
+//		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
+//			sizeof(slg::ocl::InfiniteLight), "InfiniteLight");
+//
+//		const u_int pixelCount = cscene->infiniteLight->width * cscene->infiniteLight->height;
+//		AllocOCLBufferRO(&infiniteLightMapBuff, (void *)cscene->infiniteLightMap,
+//			sizeof(Spectrum) * pixelCount, "InfiniteLight map");
+//	} else {
+//		infiniteLightBuff = NULL;
+//		infiniteLightMapBuff = NULL;
+//	}
 }
 
 void PathOCLRenderThread::InitSunLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->sunLight)
-		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
-			sizeof(PathOCL::SunLight), "SunLight");
-	else
-		sunLightBuff = NULL;
+//	CompiledScene *cscene = renderEngine->compiledScene;
+//
+//	if (cscene->sunLight)
+//		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
+//			sizeof(slg::ocl::SunLight), "SunLight");
+//	else
+//		sunLightBuff = NULL;
 }
 
 void PathOCLRenderThread::InitSkyLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->skyLight)
-		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
-			sizeof(PathOCL::SkyLight), "SkyLight");
-	else
-		skyLightBuff = NULL;
+//	CompiledScene *cscene = renderEngine->compiledScene;
+//
+//	if (cscene->skyLight)
+//		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
+//			sizeof(slg::ocl::SkyLight), "SkyLight");
+//	else
+//		skyLightBuff = NULL;
 }
 
 void PathOCLRenderThread::InitTextureMaps() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if ((cscene->totRGBTexMem > 0) || (cscene->totAlphaTexMem > 0)) {
-		if (cscene->totRGBTexMem > 0) {
-			texMapRGBBuff.resize(cscene->rgbTexMemBlocks.size());
-			for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i) {
-				AllocOCLBufferRO(&(texMapRGBBuff[i]), &(cscene->rgbTexMemBlocks[i][0]),
-						sizeof(Spectrum) * cscene->rgbTexMemBlocks[i].size(), "TexMaps");
-			}
-		} else
-			texMapRGBBuff.resize(0);
-
-		if (cscene->totAlphaTexMem > 0) {
-			texMapAlphaBuff.resize(cscene->alphaTexMemBlocks.size());
-			for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i) {
-				AllocOCLBufferRO(&(texMapAlphaBuff[i]), &(cscene->alphaTexMemBlocks[i][0]),
-						sizeof(float) * cscene->alphaTexMemBlocks[i].size(), "TexMaps Alpha Channel");
-			}
-		} else
-			texMapAlphaBuff.resize(0);
-
-		AllocOCLBufferRO(&texMapDescBuff, &cscene->gpuTexMaps[0],
-				sizeof(PathOCL::TexMap) * cscene->gpuTexMaps.size(), "TexMaps description");
-
-		const unsigned int meshCount = renderEngine->compiledScene->meshMats.size();
-		AllocOCLBufferRO(&meshTexMapsBuff, &cscene->meshTexMaps[0],
-				sizeof(unsigned int) * meshCount, "Mesh TexMaps index");
-		AllocOCLBufferRO(&meshTexMapsInfoBuff, &cscene->meshTexMapsInfo[0],
-			sizeof(PathOCL::TexMapInfo) * meshCount, "Mesh TexMaps info");
-
-		if (cscene->meshBumpMaps.size() > 0) {
-			AllocOCLBufferRO(&meshBumpMapsBuff, &cscene->meshBumpMaps[0],
-				sizeof(unsigned int) * meshCount, "Mesh BumpMaps index");
-			AllocOCLBufferRO(&meshBumpMapsInfoBuff, &cscene->meshBumpMapsInfo[0],
-				sizeof(PathOCL::BumpMapInfo) * meshCount, "Mesh BumpMaps info");
-		} else {
-			meshBumpMapsBuff = NULL;
-			meshBumpMapsInfoBuff = NULL;
-		}
-
-		if (cscene->meshNormalMaps.size() > 0) {
-			AllocOCLBufferRO(&meshNormalMapsBuff, &cscene->meshNormalMaps[0],
-				sizeof(unsigned int) * meshCount, "Mesh NormalMaps index");
-			AllocOCLBufferRO(&meshNormalMapsInfoBuff, &cscene->meshNormalMapsInfo[0],
-				sizeof(PathOCL::NormalMapInfo) * meshCount, "Mesh NormalMaps info");
-		} else {
-			meshNormalMapsBuff = NULL;
-			meshNormalMapsInfoBuff = NULL;
-		}
-	} else {
-		texMapRGBBuff.resize(0);
-		texMapAlphaBuff.resize(0);
-		texMapDescBuff = NULL;
-		meshTexMapsBuff = NULL;
-		meshTexMapsInfoBuff = NULL;
-		meshBumpMapsBuff = NULL;
-		meshBumpMapsInfoBuff = NULL;
-		meshNormalMapsBuff = NULL;
-		meshNormalMapsInfoBuff = NULL;
-	}
+//	CompiledScene *cscene = renderEngine->compiledScene;
+//
+//	if ((cscene->totRGBTexMem > 0) || (cscene->totAlphaTexMem > 0)) {
+//		if (cscene->totRGBTexMem > 0) {
+//			texMapRGBBuff.resize(cscene->rgbTexMemBlocks.size());
+//			for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i) {
+//				AllocOCLBufferRO(&(texMapRGBBuff[i]), &(cscene->rgbTexMemBlocks[i][0]),
+//						sizeof(Spectrum) * cscene->rgbTexMemBlocks[i].size(), "TexMaps");
+//			}
+//		} else
+//			texMapRGBBuff.resize(0);
+//
+//		if (cscene->totAlphaTexMem > 0) {
+//			texMapAlphaBuff.resize(cscene->alphaTexMemBlocks.size());
+//			for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i) {
+//				AllocOCLBufferRO(&(texMapAlphaBuff[i]), &(cscene->alphaTexMemBlocks[i][0]),
+//						sizeof(float) * cscene->alphaTexMemBlocks[i].size(), "TexMaps Alpha Channel");
+//			}
+//		} else
+//			texMapAlphaBuff.resize(0);
+//
+//		AllocOCLBufferRO(&texMapDescBuff, &cscene->gpuTexMaps[0],
+//				sizeof(slg::ocl::TexMap) * cscene->gpuTexMaps.size(), "TexMaps description");
+//
+//		const u_int meshCount = renderEngine->compiledScene->meshMats.size();
+//		AllocOCLBufferRO(&meshTexMapsBuff, &cscene->meshTexMaps[0],
+//				sizeof(u_int) * meshCount, "Mesh TexMaps index");
+//		AllocOCLBufferRO(&meshTexMapsInfoBuff, &cscene->meshTexMapsInfo[0],
+//			sizeof(slg::ocl::TexMapInfo) * meshCount, "Mesh TexMaps info");
+//
+//		if (cscene->meshBumpMaps.size() > 0) {
+//			AllocOCLBufferRO(&meshBumpMapsBuff, &cscene->meshBumpMaps[0],
+//				sizeof(u_int) * meshCount, "Mesh BumpMaps index");
+//			AllocOCLBufferRO(&meshBumpMapsInfoBuff, &cscene->meshBumpMapsInfo[0],
+//				sizeof(slg::ocl::BumpMapInfo) * meshCount, "Mesh BumpMaps info");
+//		} else {
+//			meshBumpMapsBuff = NULL;
+//			meshBumpMapsInfoBuff = NULL;
+//		}
+//
+//		if (cscene->meshNormalMaps.size() > 0) {
+//			AllocOCLBufferRO(&meshNormalMapsBuff, &cscene->meshNormalMaps[0],
+//				sizeof(u_int) * meshCount, "Mesh NormalMaps index");
+//			AllocOCLBufferRO(&meshNormalMapsInfoBuff, &cscene->meshNormalMapsInfo[0],
+//				sizeof(slg::ocl::NormalMapInfo) * meshCount, "Mesh NormalMaps info");
+//		} else {
+//			meshNormalMapsBuff = NULL;
+//			meshNormalMapsInfoBuff = NULL;
+//		}
+//	} else {
+//		texMapRGBBuff.resize(0);
+//		texMapAlphaBuff.resize(0);
+//		texMapDescBuff = NULL;
+//		meshTexMapsBuff = NULL;
+//		meshTexMapsInfoBuff = NULL;
+//		meshBumpMapsBuff = NULL;
+//		meshBumpMapsInfoBuff = NULL;
+//		meshNormalMapsBuff = NULL;
+//		meshNormalMapsInfoBuff = NULL;
+//	}
 }
 
 void PathOCLRenderThread::InitKernels() {
@@ -403,9 +402,8 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_TASK_COUNT=" << renderEngine->taskCount <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=" << renderEngine->epsilon << "f" <<
+//			" -D PARAM_RAY_EPSILON=" << renderEngine->epsilon << "f" <<
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
-			" -D PARAM_MAX_DIFFUSE_PATH_VERTEX_COUNT=" << renderEngine->maxDiffusePathVertexCount <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
 			;
@@ -424,24 +422,24 @@ void PathOCLRenderThread::InitKernels() {
 			assert (false);
 	}
 
-	if (cscene->enable_MAT_MATTE)
-		ss << " -D PARAM_ENABLE_MAT_MATTE";
-	if (cscene->enable_MAT_AREALIGHT)
-		ss << " -D PARAM_ENABLE_MAT_AREALIGHT";
-	if (cscene->enable_MAT_MIRROR)
-		ss << " -D PARAM_ENABLE_MAT_MIRROR";
-	if (cscene->enable_MAT_GLASS)
-		ss << " -D PARAM_ENABLE_MAT_GLASS";
-	if (cscene->enable_MAT_MATTEMIRROR)
-		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
-	if (cscene->enable_MAT_METAL)
-		ss << " -D PARAM_ENABLE_MAT_METAL";
-	if (cscene->enable_MAT_MATTEMETAL)
-		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
-	if (cscene->enable_MAT_ALLOY)
-		ss << " -D PARAM_ENABLE_MAT_ALLOY";
-	if (cscene->enable_MAT_ARCHGLASS)
-		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
+//	if (cscene->enable_MAT_MATTE)
+//		ss << " -D PARAM_ENABLE_MAT_MATTE";
+//	if (cscene->enable_MAT_AREALIGHT)
+//		ss << " -D PARAM_ENABLE_MAT_AREALIGHT";
+//	if (cscene->enable_MAT_MIRROR)
+//		ss << " -D PARAM_ENABLE_MAT_MIRROR";
+//	if (cscene->enable_MAT_GLASS)
+//		ss << " -D PARAM_ENABLE_MAT_GLASS";
+//	if (cscene->enable_MAT_MATTEMIRROR)
+//		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
+//	if (cscene->enable_MAT_METAL)
+//		ss << " -D PARAM_ENABLE_MAT_METAL";
+//	if (cscene->enable_MAT_MATTEMETAL)
+//		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
+//	if (cscene->enable_MAT_ALLOY)
+//		ss << " -D PARAM_ENABLE_MAT_ALLOY";
+//	if (cscene->enable_MAT_ARCHGLASS)
+//		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 
 	if (cscene->camera.lensRadius > 0.f)
 		ss << " -D PARAM_CAMERA_HAS_DOF";
@@ -464,54 +462,54 @@ void PathOCLRenderThread::InitKernels() {
 		}
 	}
 
-	if (areaLightsBuff) {
-		ss <<
-				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->areaLights.size()
-				;
-	}
+//	if (areaLightsBuff) {
+//		ss <<
+//				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
+//				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->areaLights.size()
+//				;
+//	}
+//
+//	if ((texMapRGBBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
+//		ss << " -D PARAM_HAS_TEXTUREMAPS";
+//		for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
+//			ss << " -D PARAM_TEXTUREMAPS_RGB_PAGE_" << i;
+//		if (cscene->rgbTexMemBlocks.size() > 5)
+//			throw std::runtime_error("Too many memory pages required for RGB channels of a texture maps");
+//	}
+//	if (texMapAlphaBuff.size() > 0) {
+//		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
+//		for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
+//			ss << " -D PARAM_TEXTUREMAPS_ALPHA_PAGE_" << i;
+//		if (cscene->alphaTexMemBlocks.size() > 5)
+//			throw std::runtime_error("Too many memory pages required for alpha channel of a texture maps");
+//	}
+//	if (meshBumpMapsBuff)
+//		ss << " -D PARAM_HAS_BUMPMAPS";
+//	if (meshNormalMapsBuff)
+//		ss << " -D PARAM_HAS_NORMALMAPS";
 
-	if ((texMapRGBBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
-		ss << " -D PARAM_HAS_TEXTUREMAPS";
-		for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
-			ss << " -D PARAM_TEXTUREMAPS_RGB_PAGE_" << i;
-		if (cscene->rgbTexMemBlocks.size() > 5)
-			throw std::runtime_error("Too many memory pages required for RGB channels of a texture maps");
-	}
-	if (texMapAlphaBuff.size() > 0) {
-		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
-		for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
-			ss << " -D PARAM_TEXTUREMAPS_ALPHA_PAGE_" << i;
-		if (cscene->alphaTexMemBlocks.size() > 5)
-			throw std::runtime_error("Too many memory pages required for alpha channel of a texture maps");
-	}
-	if (meshBumpMapsBuff)
-		ss << " -D PARAM_HAS_BUMPMAPS";
-	if (meshNormalMapsBuff)
-		ss << " -D PARAM_HAS_NORMALMAPS";
-
-	const PathOCL::Filter *filter = renderEngine->filter;
+	const luxrays::ocl::Filter *filter = renderEngine->filter;
 	switch (filter->type) {
-		case PathOCL::NONE:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
+		case luxrays::ocl::FILTER_NONE:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=NONE";
 			break;
-		case PathOCL::BOX:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f";
+		case luxrays::ocl::FILTER_BOX:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=BOX" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->box.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f";
 			break;
-		case PathOCL::GAUSSIAN:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << ((PathOCL::GaussianFilter *)filter)->alpha << "f";
+		case luxrays::ocl::FILTER_GAUSSIAN:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=GAUSSIAN" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->gaussian.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->gaussian.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << filter->gaussian.alpha << "f";
 			break;
-		case PathOCL::MITCHELL:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << ((PathOCL::MitchellFilter *)filter)->B << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << ((PathOCL::MitchellFilter *)filter)->C << "f";
+		case luxrays::ocl::FILTER_MITCHELL:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=MITCHELL" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchell.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchell.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
 			break;
 		default:
 			assert (false);
@@ -520,24 +518,16 @@ void PathOCLRenderThread::InitKernels() {
 	if (renderEngine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	const PathOCL::Sampler *sampler = renderEngine->sampler;
+	const luxrays::ocl::Sampler *sampler = renderEngine->sampler;
 	switch (sampler->type) {
-		case PathOCL::INLINED_RANDOM:
-			ss << " -D PARAM_SAMPLER_TYPE=0";
+		case luxrays::ocl::RANDOM:
+			ss << " -D PARAM_SAMPLER_TYPE=RANDOM";
 			break;
-		case PathOCL::RANDOM:
-			ss << " -D PARAM_SAMPLER_TYPE=1";
-			break;
-		case PathOCL::METROPOLIS:
-			ss << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << ((PathOCL::MetropolisSampler *)sampler)->largeStepRate << "f" <<
-					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << ((PathOCL::MetropolisSampler *)sampler)->maxConsecutiveReject <<
-					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << ((PathOCL::MetropolisSampler *)sampler)->imageMutationRate << "f";
-			break;
-		case PathOCL::STRATIFIED:
-			ss << " -D PARAM_SAMPLER_TYPE=3" <<
-					" -D PARAM_SAMPLER_STRATIFIED_X_SAMPLES=" << ((PathOCL::StratifiedSampler *)sampler)->xSamples <<
-					" -D PARAM_SAMPLER_STRATIFIED_Y_SAMPLES=" << ((PathOCL::StratifiedSampler *)sampler)->ySamples;
+		case luxrays::ocl::METROPOLIS:
+			ss << " -D PARAM_SAMPLER_TYPE=METROPOLIS" <<
+					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << sampler->metropolis.largeMutationProbability << "f" <<
+					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << sampler->metropolis.imageMutationRange << "f" <<
+					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
 			break;
 		default:
 			assert (false);
@@ -576,12 +566,12 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
-			KernelSource_PathOCL_kernel_datatypes <<
-			KernelSource_PathOCL_kernel_core <<
-			KernelSource_PathOCL_kernel_filters <<
-			KernelSource_PathOCL_kernel_scene <<
-			KernelSource_PathOCL_kernel_samplers <<
-			KernelSource_PathOCL_kernels;
+			luxrays::ocl::KernelSource_SamplerTypes <<
+			luxrays::ocl::KernelSource_FilterTypes <<
+			luxrays::ocl::KernelSource_CameraTypes <<
+			luxrays::ocl::KernelSource_TriangleMeshTypes <<
+			slg::ocl::KernelSource_PathOCL_DataTypes <<
+			slg::ocl::KernelSource_PathOCL_Kernels;
 		string kernelSource = ssKernel.str();
 
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
@@ -613,21 +603,8 @@ void PathOCLRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel");
 		initKernel = new cl::Kernel(*program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-
 		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
-			// Resize the workgroup to have enough local memory
-			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-
-			while ((initWorkGroupSize > 64) && (stratifiedDataSize * initWorkGroupSize > localMem))
-				initWorkGroupSize /= 2;
-
-			if (stratifiedDataSize * initWorkGroupSize > localMem)
-				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
-
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << initWorkGroupSize);
-		}
 
 		//--------------------------------------------------------------------------
 		// InitFB kernel
@@ -638,30 +615,6 @@ void PathOCLRenderThread::InitKernels() {
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
 		if (intersectionDevice->GetForceWorkGroupSize() > 0)
 			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-
-		//----------------------------------------------------------------------
-		// Sampler kernel
-		//----------------------------------------------------------------------
-
-		delete samplerKernel;
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Sampler Kernel");
-		samplerKernel = new cl::Kernel(*program, "Sampler");
-		samplerKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &samplerWorkGroupSize);
-
-		if (intersectionDevice->GetForceWorkGroupSize() > 0)
-			samplerWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
-		else if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
-			// Resize the workgroup to have enough local memory
-			size_t localMem = oclDevice.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-
-			while ((samplerWorkGroupSize > 64) && (stratifiedDataSize * samplerWorkGroupSize > localMem))
-				samplerWorkGroupSize /= 2;
-
-			if (stratifiedDataSize * samplerWorkGroupSize > localMem)
-				throw std::runtime_error("Not enough local memory to run, try to reduce path.sampler.xsamples and path.sampler.xsamples values");
-
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Cap work group size to: " << samplerWorkGroupSize);
-		}
 
 		//----------------------------------------------------------------------
 		// AdvancePaths kernel
@@ -685,7 +638,7 @@ void PathOCLRenderThread::InitKernels() {
 }
 
 void PathOCLRenderThread::InitRender() {
-	Scene *scene = renderEngine->renderConfig->scene;
+//	Scene *scene = renderEngine->renderConfig->scene;
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 
@@ -739,9 +692,9 @@ void PathOCLRenderThread::InitRender() {
 
 	InitSkyLight();
 
-	const unsigned int areaLightCount = renderEngine->compiledScene->areaLights.size();
-	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
-		throw runtime_error("There are no light sources supported by PathOCL in the scene");
+//	const u_int areaLightCount = renderEngine->compiledScene->areaLights.size();
+//	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
+//		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
 	//--------------------------------------------------------------------------
 	// Translate mesh texture maps
@@ -753,7 +706,7 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate Ray/RayHit buffers
 	//--------------------------------------------------------------------------
 
-	const unsigned int taskCount = renderEngine->taskCount;
+	const u_int taskCount = renderEngine->taskCount;
 
 	tStart = WallClockTime();
 
@@ -776,101 +729,101 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
-	// TODO: clenup all this mess
-
-	const size_t gpuTaksSizePart1 =
-		// Seed size
-		sizeof(PathOCL::Seed);
-
-	const size_t uDataEyePathVertexSize =
-		// IDX_SCREEN_X, IDX_SCREEN_Y
-		sizeof(float) * 2 +
-		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
-	const size_t uDataPerPathVertexSize =
-		// IDX_TEX_ALPHA,
-		((texMapAlphaBuff.size() > 0) ? sizeof(float) : 0) +
-		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
-		sizeof(float) * 3 +
-		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
-		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 3) : 0) +
-		// IDX_RR
-		sizeof(float);
-	const size_t uDataSize = (renderEngine->sampler->type == PathOCL::INLINED_RANDOM) ?
-		// Only IDX_SCREEN_X, IDX_SCREEN_Y
-		(sizeof(float) * 2) :
-		((renderEngine->sampler->type == PathOCL::METROPOLIS) ?
-			(sizeof(float) * 2 + sizeof(unsigned int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
-			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
-
-	size_t sampleSize =
-		// uint pixelIndex;
-		((renderEngine->sampler->type == PathOCL::METROPOLIS) ? 0 : sizeof(unsigned int)) +
-		uDataSize +
-		// Spectrum radiance;
-		sizeof(Spectrum) +
-		// float currentAlpha;
-		(((renderEngine->sampler->type == PathOCL::METROPOLIS) && alphaFrameBufferBuff) ? sizeof(float) : 0);
-
-	stratifiedDataSize = 0;
-	if (renderEngine->sampler->type == PathOCL::STRATIFIED) {
-		PathOCL::StratifiedSampler *s = (PathOCL::StratifiedSampler *)renderEngine->sampler;
-		stratifiedDataSize =
-				// stratifiedScreen2D
-				sizeof(float) * s->xSamples * s->ySamples * 2 +
-				// stratifiedDof2D
-				((scene->camera->lensRadius > 0.f) ? (sizeof(float) * s->xSamples * s->ySamples * 2) : 0) +
-				// stratifiedAlpha1D
-				((texMapAlphaBuff.size() > 0) ? (sizeof(float) * s->xSamples) : 0) +
-				// stratifiedBSDF2D
-				sizeof(float) * s->xSamples * s->ySamples * 2 +
-				// stratifiedBSDF1D
-				sizeof(float) * s->xSamples +
-				// stratifiedLight2D
-				// stratifiedLight1D
-				(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
-
-		sampleSize += stratifiedDataSize;
-	}
-
-	const size_t gpuTaksSizePart2 = sampleSize;
-
-	const size_t gpuTaksSizePart3 =
-		// PathState size
-		(((areaLightCount > 0) || sunLightBuff) ? sizeof(PathOCL::PathStateDL) : sizeof(PathOCL::PathState)) +
-		//unsigned int diffuseVertexCount;
-		((renderEngine->maxDiffusePathVertexCount < renderEngine->maxPathDepth) ? sizeof(unsigned int) : 0) +
-		//uint vertexCount;
-		//float alpha;
-		(alphaFrameBufferBuff ? (sizeof(unsigned int) + sizeof(float)) : 0);
-
-	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
-			"bytes (" << gpuTaksSizePart1 << " + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")");
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes");
-
-	// Check if the task buffer is too big
-	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < gpuTaksSize * taskCount) {
-		stringstream ss;
-		ss << "The GPUTask buffer is too big for this device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
-				"): try to reduce opencl.task.count and/or path.maxdepth and/or to change Sampler";
-		throw std::runtime_error(ss.str());
-	}
-
-	tasksBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			gpuTaksSize * taskCount);
-	intersectionDevice->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
+//	// TODO: clenup all this mess
+//
+//	const size_t gpuTaksSizePart1 =
+//		// Seed size
+//		sizeof(slg::ocl::Seed);
+//
+//	const size_t uDataEyePathVertexSize =
+//		// IDX_SCREEN_X, IDX_SCREEN_Y
+//		sizeof(float) * 2 +
+//		// IDX_DOF_X, IDX_DOF_Y
+//		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
+//	const size_t uDataPerPathVertexSize =
+//		// IDX_TEX_ALPHA,
+//		((texMapAlphaBuff.size() > 0) ? sizeof(float) : 0) +
+//		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
+//		sizeof(float) * 3 +
+//		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
+//		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 3) : 0) +
+//		// IDX_RR
+//		sizeof(float);
+//	const size_t uDataSize = (renderEngine->sampler->type == slg::ocl::INLINED_RANDOM) ?
+//		// Only IDX_SCREEN_X, IDX_SCREEN_Y
+//		(sizeof(float) * 2) :
+//		((renderEngine->sampler->type == slg::ocl::METROPOLIS) ?
+//			(sizeof(float) * 2 + sizeof(u_int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
+//			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
+//
+//	size_t sampleSize =
+//		// uint pixelIndex;
+//		((renderEngine->sampler->type == slg::ocl::METROPOLIS) ? 0 : sizeof(u_int)) +
+//		uDataSize +
+//		// Spectrum radiance;
+//		sizeof(Spectrum) +
+//		// float currentAlpha;
+//		(((renderEngine->sampler->type == slg::ocl::METROPOLIS) && alphaFrameBufferBuff) ? sizeof(float) : 0);
+//
+//	stratifiedDataSize = 0;
+//	if (renderEngine->sampler->type == slg::ocl::STRATIFIED) {
+//		slg::ocl::StratifiedSampler *s = (slg::ocl::StratifiedSampler *)renderEngine->sampler;
+//		stratifiedDataSize =
+//				// stratifiedScreen2D
+//				sizeof(float) * s->xSamples * s->ySamples * 2 +
+//				// stratifiedDof2D
+//				((scene->camera->lensRadius > 0.f) ? (sizeof(float) * s->xSamples * s->ySamples * 2) : 0) +
+//				// stratifiedAlpha1D
+//				((texMapAlphaBuff.size() > 0) ? (sizeof(float) * s->xSamples) : 0) +
+//				// stratifiedBSDF2D
+//				sizeof(float) * s->xSamples * s->ySamples * 2 +
+//				// stratifiedBSDF1D
+//				sizeof(float) * s->xSamples +
+//				// stratifiedLight2D
+//				// stratifiedLight1D
+//				(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
+//
+//		sampleSize += stratifiedDataSize;
+//	}
+//
+//	const size_t gpuTaksSizePart2 = sampleSize;
+//
+//	const size_t gpuTaksSizePart3 =
+//		// PathState size
+//		(((areaLightCount > 0) || sunLightBuff) ? sizeof(slg::ocl::PathStateDL) : sizeof(slg::ocl::PathState)) +
+//		//u_int diffuseVertexCount;
+//		((renderEngine->maxDiffusePathVertexCount < renderEngine->maxPathDepth) ? sizeof(u_int) : 0) +
+//		//uint vertexCount;
+//		//float alpha;
+//		(alphaFrameBufferBuff ? (sizeof(u_int) + sizeof(float)) : 0);
+//
+//	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
+//	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
+//			"bytes (" << gpuTaksSizePart1 << " + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")");
+//	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes");
+//
+//	// Check if the task buffer is too big
+//	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < gpuTaksSize * taskCount) {
+//		stringstream ss;
+//		ss << "The GPUTask buffer is too big for this device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
+//				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
+//				"): try to reduce opencl.task.count and/or path.maxdepth and/or to change Sampler";
+//		throw std::runtime_error(ss.str());
+//	}
+//
+//	tasksBuff = new cl::Buffer(oclContext,
+//			CL_MEM_READ_WRITE,
+//			gpuTaksSize * taskCount);
+//	intersectionDevice->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(PathOCL::GPUTaskStats) * taskCount / 1024) << "Kbytes");
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(slg::ocl::GPUTaskStats) * taskCount / 1024) << "Kbytes");
 	taskStatsBuff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
-			sizeof(PathOCL::GPUTaskStats) * taskCount);
+			sizeof(slg::ocl::GPUTaskStats) * taskCount);
 	intersectionDevice->AllocMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
 
 	//--------------------------------------------------------------------------
@@ -890,7 +843,7 @@ void PathOCLRenderThread::InitRender() {
 
 	// Clear the frame buffer
 	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
-			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),
+			cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, initFBWorkGroupSize)),
 			cl::NDRange(initFBWorkGroupSize));
 
 	// Initialize the tasks buffer
@@ -904,21 +857,12 @@ void PathOCLRenderThread::InitRender() {
 
 void PathOCLRenderThread::SetKernelArgs() {
 	// Set OpenCL kernel arguments
-	CompiledScene *cscene = renderEngine->compiledScene;
+//	CompiledScene *cscene = renderEngine->compiledScene;
 
 	//--------------------------------------------------------------------------
-	// samplerKernel & advancePathsKernel
+	// advancePathsKernel
 	//--------------------------------------------------------------------------
-	unsigned int argIndex = 0;
-	samplerKernel->setArg(argIndex++, *tasksBuff);
-	samplerKernel->setArg(argIndex++, *taskStatsBuff);
-	samplerKernel->setArg(argIndex++, *raysBuff);
-	if (cameraBuff)
-		samplerKernel->setArg(argIndex++, *cameraBuff);
-	if (renderEngine->sampler->type == PathOCL::STRATIFIED)
-		samplerKernel->setArg(argIndex++, samplerWorkGroupSize * stratifiedDataSize, NULL);
-
-	argIndex = 0;
+	u_int argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
@@ -935,36 +879,36 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	if (cameraBuff)
 		advancePathsKernel->setArg(argIndex++, *cameraBuff);
-	if (infiniteLightBuff) {
-		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
-		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
-	}
-	if (sunLightBuff)
-		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
-	if (skyLightBuff)
-		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
-	if (areaLightsBuff)
-		advancePathsKernel->setArg(argIndex++, *areaLightsBuff);
-	for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
-		advancePathsKernel->setArg(argIndex++, *(texMapRGBBuff[i]));
-	for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
-		advancePathsKernel->setArg(argIndex++, *(texMapAlphaBuff[i]));
-	if ((cscene->rgbTexMemBlocks.size() > 0) || (cscene->alphaTexMemBlocks.size() > 0)) {
-		advancePathsKernel->setArg(argIndex++, *texMapDescBuff);
-		advancePathsKernel->setArg(argIndex++, *meshTexMapsBuff);
-		advancePathsKernel->setArg(argIndex++, *meshTexMapsInfoBuff);
-		if (meshBumpMapsBuff) {
-			advancePathsKernel->setArg(argIndex++, *meshBumpMapsBuff);
-			advancePathsKernel->setArg(argIndex++, *meshBumpMapsInfoBuff);
-		}
-		if (meshNormalMapsBuff) {
-			advancePathsKernel->setArg(argIndex++, *meshNormalMapsBuff);
-			advancePathsKernel->setArg(argIndex++, *meshNormalMapsInfoBuff);
-		}
-		advancePathsKernel->setArg(argIndex++, *uvsBuff);
-	}
-	if (alphaFrameBufferBuff)
-		advancePathsKernel->setArg(argIndex++, *alphaFrameBufferBuff);
+//	if (infiniteLightBuff) {
+//		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
+//		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
+//	}
+//	if (sunLightBuff)
+//		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
+//	if (skyLightBuff)
+//		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
+//	if (areaLightsBuff)
+//		advancePathsKernel->setArg(argIndex++, *areaLightsBuff);
+//	for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
+//		advancePathsKernel->setArg(argIndex++, *(texMapRGBBuff[i]));
+//	for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
+//		advancePathsKernel->setArg(argIndex++, *(texMapAlphaBuff[i]));
+//	if ((cscene->rgbTexMemBlocks.size() > 0) || (cscene->alphaTexMemBlocks.size() > 0)) {
+//		advancePathsKernel->setArg(argIndex++, *texMapDescBuff);
+//		advancePathsKernel->setArg(argIndex++, *meshTexMapsBuff);
+//		advancePathsKernel->setArg(argIndex++, *meshTexMapsInfoBuff);
+//		if (meshBumpMapsBuff) {
+//			advancePathsKernel->setArg(argIndex++, *meshBumpMapsBuff);
+//			advancePathsKernel->setArg(argIndex++, *meshBumpMapsInfoBuff);
+//		}
+//		if (meshNormalMapsBuff) {
+//			advancePathsKernel->setArg(argIndex++, *meshNormalMapsBuff);
+//			advancePathsKernel->setArg(argIndex++, *meshNormalMapsInfoBuff);
+//		}
+//		advancePathsKernel->setArg(argIndex++, *uvsBuff);
+//	}
+//	if (alphaFrameBufferBuff)
+//		advancePathsKernel->setArg(argIndex++, *alphaFrameBufferBuff);
 
 	//--------------------------------------------------------------------------
 	// initFBKernel
@@ -985,8 +929,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 	initKernel->setArg(argIndex++, *raysBuff);
 	if (cameraBuff)
 		initKernel->setArg(argIndex++, *cameraBuff);
-	if (renderEngine->sampler->type == PathOCL::STRATIFIED)
-		initKernel->setArg(argIndex++, initWorkGroupSize * stratifiedDataSize, NULL);
 }
 
 void PathOCLRenderThread::Start() {
@@ -1157,7 +1099,7 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 
 		// Clear the frame buffer
 		oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
-			cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, initFBWorkGroupSize)),
+			cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, initFBWorkGroupSize)),
 			cl::NDRange(initFBWorkGroupSize));
 
 		// Initialize the tasks buffer
@@ -1175,7 +1117,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	const unsigned int taskCount = renderEngine->taskCount;
+	const u_int taskCount = renderEngine->taskCount;
 
 	try {
 		double startTime = WallClockTime();
@@ -1207,16 +1149,16 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				*(taskStatsBuff),
 				CL_FALSE,
 				0,
-				sizeof(PathOCL::GPUTaskStats) * taskCount,
+				sizeof(slg::ocl::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
 			for (;;) {
 				cl::Event event;
 
 				// Decide how many kernels to enqueue
-				const unsigned int screenRefreshInterval = renderEngine->renderConfig->GetScreenRefreshInterval();
+				const u_int screenRefreshInterval = renderEngine->renderConfig->GetScreenRefreshInterval();
 
-				unsigned int iterations;
+				u_int iterations;
 				if (screenRefreshInterval <= 100)
 					iterations = 1;
 				else if (screenRefreshInterval <= 500)
@@ -1226,23 +1168,14 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				else
 					iterations = 8;
 
-				for (unsigned int i = 0; i < iterations; ++i) {
-					// Generate the samples and paths
-					if (i == 0)
-						oclQueue.enqueueNDRangeKernel(*samplerKernel, cl::NullRange,
-								cl::NDRange(taskCount), cl::NDRange(samplerWorkGroupSize),
-								NULL, &event);
-					else
-						oclQueue.enqueueNDRangeKernel(*samplerKernel, cl::NullRange,
-								cl::NDRange(taskCount), cl::NDRange(samplerWorkGroupSize));
+				for (u_int i = 0; i < iterations; ++i) {
+					// Advance to next path state
+					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
+							cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 
 					// Trace rays
 					intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
 								*(hitsBuff), taskCount, NULL, NULL);
-
-					// Advance to next path state
-					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-							cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
 				}
 				oclQueue.flush();
 

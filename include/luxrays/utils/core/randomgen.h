@@ -28,6 +28,18 @@
 
 namespace luxrays {
 
+//------------------------------------------------------------------------------
+// OpenCL data types
+//------------------------------------------------------------------------------
+
+namespace ocl {
+#include "luxrays/utils/core/randomgen_types.cl"
+}
+
+//------------------------------------------------------------------------------
+// RandomGenerator
+//------------------------------------------------------------------------------
+
 #define MASK 0xffffffffUL
 #define FLOATMASK 0x00ffffffUL
 
@@ -128,6 +140,10 @@ private:
 
     The period of this generator is about 2^88.
  */
+
+//------------------------------------------------------------------------------
+// TauswortheRandomGenerator
+//------------------------------------------------------------------------------
 
 class TauswortheRandomGenerator {
 public:
