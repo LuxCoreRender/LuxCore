@@ -81,8 +81,6 @@ public:
 	virtual float GetSample(const u_int index) = 0;
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
 
-	virtual void GetOCLData(luxrays::ocl::Sampler *oclSampler) const = 0;
-
 	static SamplerType String2SamplerType(const std::string &type);
 	static const std::string SamplerType2String(const SamplerType type);
 
@@ -110,10 +108,6 @@ public:
 		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
 			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
 	}
-
-	virtual void GetOCLData(luxrays::ocl::Sampler *oclSampler) const {
-		oclSampler->type = luxrays::ocl::RANDOM;
-	}
 };
 
 //------------------------------------------------------------------------------
@@ -132,13 +126,6 @@ public:
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
-
-	virtual void GetOCLData(luxrays::ocl::Sampler *oclSampler) const {
-		oclSampler->type = luxrays::ocl::METROPOLIS;
-		oclSampler->metropolis.largeMutationProbability = largeMutationProbability;
-		oclSampler->metropolis.imageMutationRange = imageMutationRange;
-		oclSampler->metropolis.maxRejects = maxRejects;
-	}
 
 private:
 	u_int maxRejects;

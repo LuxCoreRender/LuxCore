@@ -39,6 +39,15 @@ PreprocessOCLKernel(MQBVH
 PreprocessOCLKernel(Sampler
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/sampler_kernel.cpp)
+PreprocessOCLKernel(Filter
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/filter_kernel.cpp)
+PreprocessOCLKernel(Camera
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/camera_kernel.cpp)
+PreprocessOCLKernel(TriagnleMesh
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_kernel.cpp)
 
 ###########################################################################
 #
@@ -90,6 +99,9 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/sampler_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/filter_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/camera_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 

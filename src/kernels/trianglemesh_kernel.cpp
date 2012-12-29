@@ -1,6 +1,6 @@
 #include <string>
 namespace luxrays {
-std::string KernelSource_Sampler = 
+std::string KernelSource_TriagnleMesh = 
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
@@ -22,18 +22,11 @@ std::string KernelSource_Sampler =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef enum {\n"
-"	RANDOM = 0,\n"
-"	METROPOLIS = 1\n"
-"} SamplerType;\n"
-"\n"
 "typedef struct {\n"
-"	SamplerType type;\n"
-"	union {\n"
-"		struct {\n"
-"			float largeMutationProbability, imageMutationRange;\n"
-"			uint maxRejects;\n"
-"		} metropolis;\n"
-"	};\n"
-"} Sampler;\n"
+"	unsigned int vertsOffset;\n"
+"	unsigned int trisOffset;\n"
+"\n"
+"	float trans[4][4];\n"
+"	float invTrans[4][4];\n"
+"} Mesh;\n"
 ; }

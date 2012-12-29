@@ -138,8 +138,8 @@ set(SLG4LIB_SRCS
 	#pathocl/kernels/pathocl_kernel_samplers.cpp
 	#pathocl/kernels/pathocl_kernel_scene.cpp
 	#pathocl/kernels/pathocl_kernels.cpp
-	#pathocl/compiledscene.cpp
-	#pathocl/pathocl.cpp
+	pathocl/compiledscene.cpp
+	pathocl/pathocl.cpp
 	#pathocl/pathoclthread.cpp
 	lightcpu/lightcpu.cpp
 	lightcpu/lightcputhread.cpp

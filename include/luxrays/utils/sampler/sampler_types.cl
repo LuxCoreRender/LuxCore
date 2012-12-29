@@ -19,10 +19,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-enum SamplerType {
+typedef enum {
 	RANDOM = 0,
 	METROPOLIS = 1
-};
+} SamplerType;
 
 typedef struct {
 	SamplerType type;
