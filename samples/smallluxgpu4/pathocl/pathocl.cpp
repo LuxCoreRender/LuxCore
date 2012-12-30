@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+//TODO: check OpenCL 1.1
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <cstdio>

@@ -104,7 +104,8 @@ __kernel void Init(
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
-	__global float *sampleData = GetSampleData(samplesData);
+	__global Sample *sample = &task->sample;
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 
 	// Initialize random number generator
 	Seed seed;
@@ -270,7 +271,7 @@ __kernel void AdvancePaths(
 
 	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &task->sample;
-	__global float *sampleData = GetSampleData(samplesData);
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 
 	// Read the seed
 	Seed seed;
@@ -300,7 +301,7 @@ __kernel void AdvancePaths(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 			alphaFrameBuffer,
 #endif
-			ray, camera);
+			camera, ray);
 	taskStats[gid].sampleCount += 1;
 
 	// Save the seed

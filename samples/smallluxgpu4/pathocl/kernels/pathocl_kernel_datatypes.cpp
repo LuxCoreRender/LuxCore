@@ -69,8 +69,6 @@ std::string KernelSource_PathOCL_DataTypes =
 "	Spectrum radiance;\n"
 "\n"
 "	unsigned int pixelIndex;\n"
-"	// Only IDX_SCREEN_X and IDX_SCREEN_Y need to be saved\n"
-"	float u[2];\n"
 "} RandomSample;\n"
 "\n"
 "typedef struct {\n"

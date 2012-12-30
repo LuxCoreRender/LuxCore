@@ -21,30 +21,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-__global float *GetSampleData(__global float *sampleData) {
-	const size_t gid = get_global_id(0);
-	return &sampleData[gid * TOTAL_U_SIZE];
-}
-
-float Dot(const Vector *v0, const Vector *v1) {
-	return v0->x * v1->x + v0->y * v1->y + v0->z * v1->z;
-}
-
-void Normalize(Vector *v) {
-	const float il = 1.f / sqrt(Dot(v, v));
-
-	v->x *= il;
-	v->y *= il;
-	v->z *= il;
-}
-
 void GenerateCameraRay(
 		__global Camera *camera,
 		__global Sample *sample,
 		__global float *sampleData,
-#if (PARAM_SAMPLER_TYPE == 0)
 		Seed *seed,
-#endif
 		__global Ray *ray) {
 #if (PARAM_SAMPLER_TYPE == 0)
 	const uint pixelIndex = sample->pixelIndex;
@@ -54,86 +35,63 @@ void GenerateCameraRay(
 
 	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - .5f;
 	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - .5f;
-#elif (PARAM_SAMPLER_TYPE == 2)
-	__global float *sampleData = &sample->u[sample->proposed][0];
+#elif (PARAM_SAMPLER_TYPE == 1)
 	const float screenX = min(sampleData[IDX_SCREEN_X] * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
 	const float screenY = min(sampleData[IDX_SCREEN_Y] * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
 #endif
 
-	Point Pras;
-	Pras.x = screenX;
-	Pras.y = PARAM_IMAGE_HEIGHT - screenY - 1.f;
-	Pras.z = 0;
-
-	Point orig;
-	// RasterToCamera(Pras, &orig);
-
-	const float iw = 1.f / (camera->rasterToCameraMatrix[3][0] * Pras.x + camera->rasterToCameraMatrix[3][1] * Pras.y + camera->rasterToCameraMatrix[3][2] * Pras.z + camera->rasterToCameraMatrix[3][3]);
-	orig.x = (camera->rasterToCameraMatrix[0][0] * Pras.x + camera->rasterToCameraMatrix[0][1] * Pras.y + camera->rasterToCameraMatrix[0][2] * Pras.z + camera->rasterToCameraMatrix[0][3]) * iw;
-	orig.y = (camera->rasterToCameraMatrix[1][0] * Pras.x + camera->rasterToCameraMatrix[1][1] * Pras.y + camera->rasterToCameraMatrix[1][2] * Pras.z + camera->rasterToCameraMatrix[1][3]) * iw;
-	orig.z = (camera->rasterToCameraMatrix[2][0] * Pras.x + camera->rasterToCameraMatrix[2][1] * Pras.y + camera->rasterToCameraMatrix[2][2] * Pras.z + camera->rasterToCameraMatrix[2][3]) * iw;
-
-	Vector dir;
-	dir.x = orig.x;
-	dir.y = orig.y;
-	dir.z = orig.z;
+	float3 Pras = (float3)(screenX, PARAM_IMAGE_HEIGHT - screenY - 1.f, 0.f);
+	float3 rayOrig = Transform_Apply(&camera->rasterToCamera, Pras);
+	float3 rayDir = rayOrig;
 
 	const float hither = camera->hither;
 
-#if defined(PARAM_CAMERA_HAS_DOF)
+//#if defined(PARAM_CAMERA_HAS_DOF)
+//
+//#if (PARAM_SAMPLER_TYPE == 0)
+//	const float dofSampleX = Rnd_FloatValue(seed);
+//	const float dofSampleY = Rnd_FloatValue(seed);
+//#elif (PARAM_SAMPLER_TYPE == 1)
+//	const float dofSampleX = sampleData[IDX_DOF_X];
+//	const float dofSampleY = sampleData[IDX_DOF_Y];
+//#endif
+//
+//	// Sample point on lens
+//	float lensU, lensV;
+//	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+//	const float lensRadius = camera->lensRadius;
+//	lensU *= lensRadius;
+//	lensV *= lensRadius;
+//
+//	// Compute point on plane of focus
+//	const float focalDistance = camera->focalDistance;
+//	const float dist = focalDistance - hither;
+//	const float ft = dist / dir.z;
+//	Point Pfocus;
+//	Pfocus.x = orig.x + dir.x * ft;
+//	Pfocus.y = orig.y + dir.y * ft;
+//	Pfocus.z = orig.z + dir.z * ft;
+//
+//	// Update ray for effect of lens
+//	const float k = dist / focalDistance;
+//	orig.x += lensU * k;
+//	orig.y += lensV * k;
+//
+//	dir.x = Pfocus.x - orig.x;
+//	dir.y = Pfocus.y - orig.y;
+//	dir.z = Pfocus.z - orig.z;
+//#endif
 
-#if (PARAM_SAMPLER_TYPE == 0)
-	const float dofSampleX = Rnd_FloatValue(seed);
-	const float dofSampleY = Rnd_FloatValue(seed);
-#elif (PARAM_SAMPLER_TYPE == 1)
-	const float dofSampleX = sampleData[IDX_DOF_X];
-	const float dofSampleY = sampleData[IDX_DOF_Y];
-#endif
+	rayDir = normalize(rayDir);
 
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	const float lensRadius = camera->lensRadius;
-	lensU *= lensRadius;
-	lensV *= lensRadius;
+	// Transform ray in world coordinates
+	rayOrig = Transform_Apply(&camera->cameraToWorld, rayOrig);
+	rayDir = Transform_Apply(&camera->cameraToWorld, rayDir);
 
-	// Compute point on plane of focus
-	const float focalDistance = camera->focalDistance;
-	const float dist = focalDistance - hither;
-	const float ft = dist / dir.z;
-	Point Pfocus;
-	Pfocus.x = orig.x + dir.x * ft;
-	Pfocus.y = orig.y + dir.y * ft;
-	Pfocus.z = orig.z + dir.z * ft;
-
-	// Update ray for effect of lens
-	const float k = dist / focalDistance;
-	orig.x += lensU * k;
-	orig.y += lensV * k;
-
-	dir.x = Pfocus.x - orig.x;
-	dir.y = Pfocus.y - orig.y;
-	dir.z = Pfocus.z - orig.z;
-#endif
-
-	Normalize(&dir);
-
-	// CameraToWorld(*ray, ray);
-	Point torig;
-	const float iw2 = 1.f / (camera->cameraToWorldMatrix[3][0] * orig.x + camera->cameraToWorldMatrix[3][1] * orig.y + camera->cameraToWorldMatrix[3][2] * orig.z + camera->cameraToWorldMatrix[3][3]);
-	torig.x = (camera->cameraToWorldMatrix[0][0] * orig.x + camera->cameraToWorldMatrix[0][1] * orig.y + camera->cameraToWorldMatrix[0][2] * orig.z + camera->cameraToWorldMatrix[0][3]) * iw2;
-	torig.y = (camera->cameraToWorldMatrix[1][0] * orig.x + camera->cameraToWorldMatrix[1][1] * orig.y + camera->cameraToWorldMatrix[1][2] * orig.z + camera->cameraToWorldMatrix[1][3]) * iw2;
-	torig.z = (camera->cameraToWorldMatrix[2][0] * orig.x + camera->cameraToWorldMatrix[2][1] * orig.y + camera->cameraToWorldMatrix[2][2] * orig.z + camera->cameraToWorldMatrix[2][3]) * iw2;
-
-	Vector tdir;
-	tdir.x = camera->cameraToWorldMatrix[0][0] * dir.x + camera->cameraToWorldMatrix[0][1] * dir.y + camera->cameraToWorldMatrix[0][2] * dir.z;
-	tdir.y = camera->cameraToWorldMatrix[1][0] * dir.x + camera->cameraToWorldMatrix[1][1] * dir.y + camera->cameraToWorldMatrix[1][2] * dir.z;
-	tdir.z = camera->cameraToWorldMatrix[2][0] * dir.x + camera->cameraToWorldMatrix[2][1] * dir.y + camera->cameraToWorldMatrix[2][2] * dir.z;
-
-	ray->o = torig;
-	ray->d = tdir;
+	vstore3(rayOrig, 0, &ray->o.x);
+	vstore3(rayDir, 0, &ray->d.x);
 	ray->mint = PARAM_RAY_EPSILON;
-	ray->maxt = (camera->yon - hither) / dir.z;
+	ray->maxt = (camera->yon - hither) / rayDir.z;
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
@@ -143,18 +101,12 @@ void GenerateCameraRay(
 void GenerateCameraPath(
 		__global GPUTask *task,
 		__global float *sampleData,
-#if (PARAM_SAMPLER_TYPE == 0)
 		Seed *seed,
-#endif
 		__global Camera *camera,
 		__global Ray *ray) {
 	__global Sample *sample = &task->sample;
 
-	GenerateCameraRay(camera, sample, sampleData,
-#if (PARAM_SAMPLER_TYPE == 0)
-			seed,
-#endif
-			ray);
+	GenerateCameraRay(camera, sample, sampleData, seed, ray);
 
 	sample->radiance.r = 0.f;
 	sample->radiance.g = 0.f;
@@ -182,6 +134,11 @@ void GenerateCameraPath(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
+__global float *Sampler_GetSampleData(__global Sample *sample, __global float *sampleData) {
+	const size_t gid = get_global_id(0);
+	return &sampleData[gid * TOTAL_U_SIZE];
+}
+
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	const size_t gid = get_global_id(0);
 
@@ -200,8 +157,11 @@ void Sampler_NextSample(
 		__global float *sampleData,
 		Seed *seed,
 		__global Pixel *frameBuffer,
-		__global Ray *ray,
-		__global Camera *camera
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		__global AlphaPixel *alphaFrameBuffer,
+#endif
+		__global Camera *camera,
+		__global Ray *ray
 		) {
 	const uint pixelIndex = sample->pixelIndex;
 	Spectrum radiance = sample->radiance;
@@ -218,14 +178,10 @@ void Sampler_NextSample(
 	// Move to the next assigned pixel
 	sample->pixelIndex = NextPixelIndex(pixelIndex);
 
-	sample->u[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	sample->u[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 
-	GenerateCameraPath(task, sampleData,
-#if (PARAM_SAMPLER_TYPE == 0)
-			seed,
-#endif
-			camera, ray);
+	GenerateCameraPath(task, sampleData, seed, camera, ray);
 }
 
 #endif
@@ -235,6 +191,11 @@ void Sampler_NextSample(
 //------------------------------------------------------------------------------
 
 #if (PARAM_SAMPLER_TYPE == 1)
+
+__global float *Sampler_GetSampleData(__global Sample *sample, __global float *sampleData) {
+	const size_t gid = get_global_id(0);
+	return &sampleData[2 * gid * TOTAL_U_SIZE];
+}
 
 void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)

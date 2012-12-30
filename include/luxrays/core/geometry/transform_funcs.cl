@@ -1,4 +1,4 @@
-#line 2 "camera_types.cl"
+#line 2 "randomgen_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,13 +21,18 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef struct {
-	Transform rasterToCamera;
-	Transform cameraToWorld;
+float3 Transform_Apply(__global Transform *trans, const float3 point) {
+	float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
-	// Placed here for Transform memory alignement
-	float lensRadius;
-	float focalDistance;
-	float yon, hither;
-} Camera;
+	const float4 row3 = vload4(0, &trans->m.m[3][0]);
+	const float iw = 1.f / dot(row3, point4);
 
+	const float4 row0 = vload4(0, &trans->m.m[0][0]);
+	const float4 row1 = vload4(0, &trans->m.m[1][0]);
+	const float4 row2 = vload4(0, &trans->m.m[2][0]);
+	return (float3)(
+			iw * dot(row0, point4),
+			iw * dot(row1, point4),
+			iw * dot(row2, point4),
+			);
+}

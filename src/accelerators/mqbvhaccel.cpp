@@ -50,8 +50,8 @@ public:
 			_LUXRAYS_VECTOR_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE
-			_LUXRAYS_BBOX_OCLDEFINE
-			_LUXRAYS_MATRIX4X4_OCLDEFINE);
+			_LUXRAYS_BBOX_OCLDEFINE +
+			luxrays::ocl::KernelSource_Matrix4x4Types);
 		code += luxrays::ocl::KernelSource_MQBVH;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);

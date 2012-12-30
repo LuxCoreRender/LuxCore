@@ -588,7 +588,10 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
-			"#define Normal Vector\n" <<
+			"typedef Vector Normal;\n" <<
+			luxrays::ocl::KernelSource_Matrix4x4Types <<
+			luxrays::ocl::KernelSource_TransformTypes <<
+			luxrays::ocl::KernelSource_TransformFuncs <<
 			luxrays::ocl::KernelSource_RandomGenTypes <<
 			luxrays::ocl::KernelSource_RandomGenFuncs <<
 			luxrays::ocl::KernelSource_SamplerTypes <<
@@ -780,12 +783,17 @@ void PathOCLRenderThread::InitRender() {
 		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 3) : 0) +
 		// IDX_RR
 		sizeof(float);
-	const size_t uDataSize = (renderEngine->sampler->type == luxrays::ocl::RANDOM) ?
+
+	size_t uDataSize = 0;
+	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
-		(sizeof(float) * 2) :
-		((renderEngine->sampler->type == luxrays::ocl::METROPOLIS) ?
-			(sizeof(float) * 2 + sizeof(u_int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
-			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
+		uDataSize += sizeof(float) * 2;
+	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
+		// Metropolis needs 2 sets of samples, the current and the proposed mutation
+		uDataSize += 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth);
+	} else
+		throw std::runtime_error("Unknown sampler.type: " + renderEngine->sampler->type);
+
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize);
 
 	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");

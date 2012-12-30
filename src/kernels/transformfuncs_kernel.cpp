@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_CameraTypes = 
-"#line 2 \"camera_types.cl\"\n"
+std::string KernelSource_TransformFuncs = 
+"#line 2 \"randomgen_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,14 +24,19 @@ std::string KernelSource_CameraTypes =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef struct {\n"
-"	Transform rasterToCamera;\n"
-"	Transform cameraToWorld;\n"
+"float3 Transform_Apply(__global Transform *trans, const float3 point) {\n"
+"	float4 point4 = (float4)(point.x, point.y, point.z, 1.f);\n"
 "\n"
-"	// Placed here for Transform memory alignement\n"
-"	float lensRadius;\n"
-"	float focalDistance;\n"
-"	float yon, hither;\n"
-"} Camera;\n"
+"	const float4 row3 = vload4(0, &trans->m.m[3][0]);\n"
+"	const float iw = 1.f / dot(row3, point4);\n"
 "\n"
+"	const float4 row0 = vload4(0, &trans->m.m[0][0]);\n"
+"	const float4 row1 = vload4(0, &trans->m.m[1][0]);\n"
+"	const float4 row2 = vload4(0, &trans->m.m[2][0]);\n"
+"	return (float3)(\n"
+"			iw * dot(row0, point4),\n"
+"			iw * dot(row1, point4),\n"
+"			iw * dot(row2, point4),\n"
+"			);\n"
+"}\n"
 ; } }
