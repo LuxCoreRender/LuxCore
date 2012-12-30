@@ -54,6 +54,15 @@ PreprocessOCLKernel(luxrays RandomGenTypes
 PreprocessOCLKernel(luxrays RandomGenFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_funcs.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgenfuncs_kernel.cpp)
+PreprocessOCLKernel(luxrays Matrix4x4Types
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4types_kernel.cpp)
+PreprocessOCLKernel(luxrays TransformTypes
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/transformtypes_kernel.cpp)
+PreprocessOCLKernel(luxrays TransformFuncs
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_funcs.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/transformfuncs_kernel.cpp)
 
 ###########################################################################
 #
@@ -110,6 +119,9 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshtypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgentypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgenfuncs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/transformtypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/transformfuncs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 

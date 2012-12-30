@@ -66,8 +66,6 @@ typedef struct {
 	Spectrum radiance;
 
 	unsigned int pixelIndex;
-	// Only IDX_SCREEN_X and IDX_SCREEN_Y need to be saved
-	float u[2];
 } RandomSample;
 
 typedef struct {

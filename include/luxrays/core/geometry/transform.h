@@ -31,6 +31,14 @@
 
 namespace luxrays {
 
+//------------------------------------------------------------------------------
+// OpenCL data types
+//------------------------------------------------------------------------------
+
+namespace ocl {
+#include "luxrays/core/geometry/transform_types.cl"
+}
+
 class Transform;
 
 class InvTransform {
@@ -67,7 +75,6 @@ public:
 	Transform operator/(const Transform &t2) const {
 		return Transform(m * t2.mInv, t2.m * mInv);
 	}
-
 
 	// Transform Data kept public so that transforms of new objects are
 	// easily added

@@ -26,6 +26,14 @@
 
 namespace luxrays {
 
+//------------------------------------------------------------------------------
+// OpenCL data types
+//------------------------------------------------------------------------------
+
+namespace ocl {
+#include "luxrays/core/geometry/matrix4x4_types.cl"
+}
+
 class Matrix4x4 {
 public:
 	// Matrix4x4 Public Methods
@@ -76,7 +84,6 @@ public:
 	friend std::ostream &operator<<(std::ostream &, const Matrix4x4 &);
 
 	float m[4][4];
-#define _LUXRAYS_MATRIX4X4_OCLDEFINE "typedef struct { float m[4][4]; } Matrix4x4;\n"
 };
 
 inline std::ostream & operator<<(std::ostream &os, const Matrix4x4 &m) {

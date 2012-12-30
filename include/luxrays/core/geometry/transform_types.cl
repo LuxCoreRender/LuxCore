@@ -1,4 +1,4 @@
-#line 2 "camera_types.cl"
+#line 2 "trianglemesh_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -22,12 +22,5 @@
  ***************************************************************************/
 
 typedef struct {
-	Transform rasterToCamera;
-	Transform cameraToWorld;
-
-	// Placed here for Transform memory alignement
-	float lensRadius;
-	float focalDistance;
-	float yon, hither;
-} Camera;
-
+	Matrix4x4 m;
+} Transform;
