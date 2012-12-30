@@ -178,7 +178,7 @@ std::string KernelSource_PathOCL_DataTypes =
 "#endif\n"
 "\n"
 "#if (PARAM_SAMPLER_TYPE == 0)\n"
-"#define TOTAL_U_SIZE (IDX_BSDF_OFFSET)\n"
+"#define TOTAL_U_SIZE 2\n"
 "#endif\n"
 "\n"
 "#if (PARAM_SAMPLER_TYPE == 1)\n"

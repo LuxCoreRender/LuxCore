@@ -175,7 +175,7 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 0)
-#define TOTAL_U_SIZE (IDX_BSDF_OFFSET)
+#define TOTAL_U_SIZE 2
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 1)

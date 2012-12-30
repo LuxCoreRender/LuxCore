@@ -21,7 +21,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-float3 Transform_Apply(__global Transform *trans, const float3 point) {
+float3 Transform_ApplyPoint(__global Transform *trans, const float3 point) {
 	float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
 	const float4 row3 = vload4(0, &trans->m.m[3][0]);
@@ -34,5 +34,16 @@ float3 Transform_Apply(__global Transform *trans, const float3 point) {
 			iw * dot(row0, point4),
 			iw * dot(row1, point4),
 			iw * dot(row2, point4),
+			);
+}
+
+float3 Transform_ApplyVector(__global Transform *trans, const float3 vector) {
+	const float3 row0 = vload3(0, &trans->m.m[0][0]);
+	const float3 row1 = vload3(0, &trans->m.m[1][0]);
+	const float3 row2 = vload3(0, &trans->m.m[2][0]);
+	return (float3)(
+			dot(row0, vector),
+			dot(row1, vector),
+			dot(row2, vector),
 			);
 }

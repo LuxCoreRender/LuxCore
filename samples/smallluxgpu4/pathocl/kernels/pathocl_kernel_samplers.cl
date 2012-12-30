@@ -41,7 +41,7 @@ void GenerateCameraRay(
 #endif
 
 	float3 Pras = (float3)(screenX, PARAM_IMAGE_HEIGHT - screenY - 1.f, 0.f);
-	float3 rayOrig = Transform_Apply(&camera->rasterToCamera, Pras);
+	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
 
 	const float hither = camera->hither;
@@ -83,15 +83,15 @@ void GenerateCameraRay(
 //#endif
 
 	rayDir = normalize(rayDir);
+	ray->mint = PARAM_RAY_EPSILON;
+	ray->maxt = (camera->yon - hither) / rayDir.z;
 
 	// Transform ray in world coordinates
-	rayOrig = Transform_Apply(&camera->cameraToWorld, rayOrig);
-	rayDir = Transform_Apply(&camera->cameraToWorld, rayDir);
+	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld, rayOrig);
+	rayDir = Transform_ApplyVector(&camera->cameraToWorld, rayDir);
 
 	vstore3(rayOrig, 0, &ray->o.x);
 	vstore3(rayDir, 0, &ray->d.x);
-	ray->mint = PARAM_RAY_EPSILON;
-	ray->maxt = (camera->yon - hither) / rayDir.z;
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
