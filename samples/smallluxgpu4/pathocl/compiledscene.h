@@ -59,17 +59,17 @@ public:
 	// to mesh TriangleID
 	u_int *meshFirstTriangleOffset;
 
-//	// Compiled AreaLights
-//	vector<PathOCL::TriangleLight> areaLights;
+	// Compiled AreaLights
+	vector<slg::ocl::TriangleLight> areaLights;
 
-//	// Compiled InfiniteLights
-//	PathOCL::InfiniteLight *infiniteLight;
-//	const Spectrum *infiniteLightMap;
+	// Compiled InfiniteLights
+	slg::ocl::InfiniteLight *infiniteLight;
+	const Spectrum *infiniteLightMap;
 
-//	// Compiled SunLight
-//	PathOCL::SunLight *sunLight;
-//	// Compiled SkyLight
-//	PathOCL::SkyLight *skyLight;
+	// Compiled SunLight
+	slg::ocl::SunLight *sunLight;
+	// Compiled SkyLight
+	slg::ocl::SkyLight *skyLight;
 
 //	// Compiled Materials
 //	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,

@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
 std::string KernelSource_TriangleMeshTypes = 
-"#line 1 \"trianglemesh_types.cl\"\n"
+"#line 2 \"trianglemesh_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"

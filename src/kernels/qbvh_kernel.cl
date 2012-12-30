@@ -1,4 +1,4 @@
-#line 1 "qbvh_kernel.cl"
+#line 2 "qbvh_kernel.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *

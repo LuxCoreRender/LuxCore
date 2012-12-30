@@ -87,6 +87,12 @@ PreprocessOCLKernel(slg PathOCL_Kernels
 PreprocessOCLKernel(slg PathOCL_DataTypes
 	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_datatypes.cl
 	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_datatypes.cpp)
+PreprocessOCLKernel(slg PathOCL_Filters
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_filters.cl
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_filters.cpp)
+PreprocessOCLKernel(slg PathOCL_Samplers
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_samplers.cl
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_samplers.cpp)
 
 #############################################################################
 #
@@ -112,6 +118,8 @@ set(SLG4LIB_SRCS
 	bidirvmcpu/hashgrid.cpp
 	cbidirhybrid/cbidirhybrid.cpp
 	pathocl/kernels/pathocl_kernel_datatypes.cpp
+	pathocl/kernels/pathocl_kernel_filters.cpp
+	pathocl/kernels/pathocl_kernel_samplers.cpp
 	pathocl/kernels/pathocl_kernels.cpp
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp

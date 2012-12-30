@@ -51,6 +51,9 @@ PreprocessOCLKernel(luxrays TriangleMeshTypes
 PreprocessOCLKernel(luxrays RandomGenTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_types.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgentypes_kernel.cpp)
+PreprocessOCLKernel(luxrays RandomGenFuncs
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_funcs.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/randomgenfuncs_kernel.cpp)
 
 ###########################################################################
 #
@@ -105,6 +108,8 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/filtertypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/cameratypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshtypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/randomgentypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/randomgenfuncs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 

@@ -1,4 +1,4 @@
-#line 1 "filter_types.cl"
+#line 2 "filter_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *

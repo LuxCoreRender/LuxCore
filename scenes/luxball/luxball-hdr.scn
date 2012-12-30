@@ -1,6 +1,6 @@
 scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
-scene.camera.lensradius = 0.015
-scene.camera.focaldistance = 2.0
+#scene.camera.lensradius = 0.015
+#scene.camera.focaldistance = 2.0
 ################################################################################
 scene.materials.shell.type = mirror
 scene.materials.shell.kr = 0.75 0.75 0.75

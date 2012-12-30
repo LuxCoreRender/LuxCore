@@ -199,98 +199,98 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Create and start render threads
 	//--------------------------------------------------------------------------
 
-//	const size_t renderThreadCount = intersectionDevices.size();
-//	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
-//	for (size_t i = 0; i < renderThreadCount; ++i) {
-//		PathOCLRenderThread *t = new PathOCLRenderThread(i,
-//				i / (float)renderThreadCount,
-//				(OpenCLIntersectionDevice *)(intersectionDevices[i]),
-//				this);
-//		renderThreads.push_back(t);
-//	}
-//
-//	for (size_t i = 0; i < renderThreads.size(); ++i)
-//		renderThreads[i]->Start();
+	const size_t renderThreadCount = intersectionDevices.size();
+	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
+	for (size_t i = 0; i < renderThreadCount; ++i) {
+		PathOCLRenderThread *t = new PathOCLRenderThread(i,
+				i / (float)renderThreadCount,
+				(OpenCLIntersectionDevice *)(intersectionDevices[i]),
+				this);
+		renderThreads.push_back(t);
+	}
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Start();
 }
 
 void PathOCLRenderEngine::StopLockLess() {
-//	for (size_t i = 0; i < renderThreads.size(); ++i)
-//		renderThreads[i]->Interrupt();
-//	for (size_t i = 0; i < renderThreads.size(); ++i)
-//		renderThreads[i]->Stop();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Stop();
 
 	delete compiledScene;
 	compiledScene = NULL;
 }
 
 void PathOCLRenderEngine::BeginEditLockLess() {
-//	for (size_t i = 0; i < renderThreads.size(); ++i)
-//		renderThreads[i]->Interrupt();
-//	for (size_t i = 0; i < renderThreads.size(); ++i)
-//		renderThreads[i]->BeginEdit();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->Interrupt();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->BeginEdit();
 }
 
 void PathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-//	compiledScene->Recompile(editActions);
-//
-//	for (size_t i = 0; i < renderThreads.size(); ++i)
-//		renderThreads[i]->EndEdit(editActions);
+	compiledScene->Recompile(editActions);
+
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->EndEdit(editActions);
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {
-//	boost::unique_lock<boost::mutex> lock(*filmMutex);
-//
-//	const unsigned int imgWidth = film->GetWidth();
-//	const unsigned int imgHeight = film->GetHeight();
-//
-//	film->Reset();
-//
-//	for (unsigned int y = 0; y < imgHeight; ++y) {
-//		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
-//
-//		for (unsigned int x = 0; x < imgWidth; ++x) {
-//			Spectrum radiance;
-//			float alpha = 0.0f;
-//			float count = 0.f;
-//			for (size_t i = 0; i < renderThreads.size(); ++i) {
-//				if (renderThreads[i]->frameBuffer) {
-//					radiance += renderThreads[i]->frameBuffer[pGPU].c;
-//					count += renderThreads[i]->frameBuffer[pGPU].count;
-//				}
-//
-//				if (renderThreads[i]->alphaFrameBuffer)
-//					alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
-//			}
-//
-//			if ((count > 0) && !radiance.IsNaN()) {
-//				film->AddSampleCount(1.f);
-//				// -.5f is to align correctly the pixel after the splat
-//				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
-//						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
-//			}
-//
-//			++pGPU;
-//		}
-//	}
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	const unsigned int imgWidth = film->GetWidth();
+	const unsigned int imgHeight = film->GetHeight();
+
+	film->Reset();
+
+	for (unsigned int y = 0; y < imgHeight; ++y) {
+		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
+
+		for (unsigned int x = 0; x < imgWidth; ++x) {
+			Spectrum radiance;
+			float alpha = 0.0f;
+			float count = 0.f;
+			for (size_t i = 0; i < renderThreads.size(); ++i) {
+				if (renderThreads[i]->frameBuffer) {
+					radiance += renderThreads[i]->frameBuffer[pGPU].c;
+					count += renderThreads[i]->frameBuffer[pGPU].count;
+				}
+
+				if (renderThreads[i]->alphaFrameBuffer)
+					alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
+			}
+
+			if ((count > 0) && !radiance.IsNaN()) {
+				film->AddSampleCount(1.f);
+				// -.5f is to align correctly the pixel after the splat
+				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
+						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
+			}
+
+			++pGPU;
+		}
+	}
 }
 
 void PathOCLRenderEngine::UpdateCounters() {
-//	// Update the sample count statistic
-//	unsigned long long totalCount = 0;
-//	for (size_t i = 0; i < renderThreads.size(); ++i) {
-//		PathOCL::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
-//
-//		for (size_t i = 0; i < taskCount; ++i)
-//			totalCount += stats[i].sampleCount;
-//	}
-//
-//	samplesCount = totalCount;
-//
-//	// Update the ray count statistic
-//	totalCount = 0.0;
-//	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-//		totalCount += intersectionDevices[i]->GetTotalRaysCount();
-//	raysCount = totalCount;
+	// Update the sample count statistic
+	unsigned long long totalCount = 0;
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		slg::ocl::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
+
+		for (size_t i = 0; i < taskCount; ++i)
+			totalCount += stats[i].sampleCount;
+	}
+
+	samplesCount = totalCount;
+
+	// Update the ray count statistic
+	totalCount = 0.0;
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		totalCount += intersectionDevices[i]->GetTotalRaysCount();
+	raysCount = totalCount;
 }
 
 }
