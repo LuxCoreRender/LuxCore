@@ -1,3 +1,5 @@
+#line 2 "camera_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -18,7 +20,6 @@
  *                                                                         *
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
-
 typedef struct {
 	float lensRadius;
 	float focalDistance;

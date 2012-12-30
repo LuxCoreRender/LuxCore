@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_SamplerTypes = 
-"#line 2 \"sampler_types.cl\"\n"
+std::string KernelSource_RandomGenTypes = 
+"#line 2 \"randomgen_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,18 +24,7 @@ std::string KernelSource_SamplerTypes =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef enum {\n"
-"	RANDOM = 0,\n"
-"	METROPOLIS = 1\n"
-"} SamplerType;\n"
-"\n"
 "typedef struct {\n"
-"	SamplerType type;\n"
-"	union {\n"
-"		struct {\n"
-"			float largeMutationProbability, imageMutationRange;\n"
-"			unsigned int maxRejects;\n"
-"		} metropolis;\n"
-"	};\n"
-"} Sampler;\n"
+"	unsigned int s1, s2, s3;\n"
+"} Seed;\n"
 ; } }

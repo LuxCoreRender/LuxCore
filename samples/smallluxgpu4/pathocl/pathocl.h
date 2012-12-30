@@ -99,6 +99,7 @@ private:
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *tasksBuff;
+	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *frameBufferBuff;
 	cl::Buffer *alphaFrameBufferBuff;

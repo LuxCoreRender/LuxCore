@@ -21,26 +21,33 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef struct {
-	unsigned int state;
-	unsigned int depth;
+//------------------------------------------------------------------------------
+// Some OpenCL specific definition
+//------------------------------------------------------------------------------
 
-	Spectrum throughput;
-} PathState;
+#if defined(SLG_OPENCL_KERNEL)
 
-typedef struct {
-	unsigned int state;
-	unsigned int depth;
+#if defined(PARAM_USE_PIXEL_ATOMICS)
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#endif
 
-	Spectrum throughput;
+#if defined(PARAM_HAS_SUNLIGHT) & !defined(PARAM_DIRECT_LIGHT_SAMPLING)
+Error: PARAM_HAS_SUNLIGHT requires PARAM_DIRECT_LIGHT_SAMPLING !
+#endif
 
-	float bouncePdf;
-	int specularBounce;
+#ifndef TRUE
+#define TRUE 1
+#endif
 
-	Ray nextPathRay;
-	Spectrum nextThroughput;
-	Spectrum lightRadiance;
-} PathStateDL;
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#endif
+
+//------------------------------------------------------------------------------
+// Frame buffer data types
+//------------------------------------------------------------------------------
 
 typedef struct {
 	Spectrum c;
@@ -50,6 +57,191 @@ typedef struct {
 typedef struct {
 	float alpha;
 } AlphaPixel;
+
+//------------------------------------------------------------------------------
+// Sample data types
+//------------------------------------------------------------------------------
+
+typedef struct {
+	Spectrum radiance;
+
+	unsigned int pixelIndex;
+	// Only IDX_SCREEN_X and IDX_SCREEN_Y need to be saved
+	float u[2];
+} RandomSample;
+
+typedef struct {
+	Spectrum radiance;
+
+	float totalI;
+
+	// Using ushort here totally freeze the ATI driver
+	unsigned int largeMutationCount, smallMutationCount;
+	unsigned int current, proposed, consecutiveRejects;
+
+	float weight;
+	Spectrum currentRadiance;
+	float currentAlpha;
+} MetropolisSampleWithAlphaChannel;
+
+typedef struct {
+	Spectrum radiance;
+
+	float totalI;
+
+	// Using ushort here totally freeze the ATI driver
+	unsigned int largeMutationCount, smallMutationCount;
+	unsigned int current, proposed, consecutiveRejects;
+
+	float weight;
+	Spectrum currentRadiance;
+} MetropolisSampleWithoutAlphaChannel;
+
+#if defined(SLG_OPENCL_KERNEL)
+
+#if (PARAM_SAMPLER_TYPE == 0)
+typedef RandomSample Sample;
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 1)
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+typedef MetropolisSampleWithAlphaChannel Sample;
+#else
+typedef MetropolisSampleWithoutAlphaChannel Sample;
+#endif
+#endif
+
+#endif
+
+//------------------------------------------------------------------------------
+// Indices of Sample related u[] array
+//------------------------------------------------------------------------------
+
+#if defined(SLG_OPENCL_KERNEL)
+
+#define IDX_SCREEN_X 0
+#define IDX_SCREEN_Y 1
+#if defined(PARAM_CAMERA_HAS_DOF)
+#define IDX_DOF_X 2
+#define IDX_DOF_Y 3
+#define IDX_BSDF_OFFSET 4
+#else
+#define IDX_BSDF_OFFSET 2
+#endif
+
+// Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
+#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS) && defined(PARAM_DIRECT_LIGHT_SAMPLING)
+
+#define IDX_TEX_ALPHA 0
+#define IDX_BSDF_X 1
+#define IDX_BSDF_Y 2
+#define IDX_BSDF_Z 3
+#define IDX_DIRECTLIGHT_X 4
+#define IDX_DIRECTLIGHT_Y 5
+#define IDX_DIRECTLIGHT_Z 6
+#define IDX_RR 7
+
+#define SAMPLE_SIZE 8
+
+#elif defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
+
+#define IDX_TEX_ALPHA 0
+#define IDX_BSDF_X 1
+#define IDX_BSDF_Y 2
+#define IDX_BSDF_Z 3
+#define IDX_RR 4
+
+#define SAMPLE_SIZE 5
+
+#elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
+
+#define IDX_BSDF_X 0
+#define IDX_BSDF_Y 1
+#define IDX_BSDF_Z 2
+#define IDX_DIRECTLIGHT_X 3
+#define IDX_DIRECTLIGHT_Y 4
+#define IDX_DIRECTLIGHT_Z 5
+#define IDX_RR 6
+
+#define SAMPLE_SIZE 7
+
+#else
+
+#define IDX_BSDF_X 0
+#define IDX_BSDF_Y 1
+#define IDX_BSDF_Z 2
+#define IDX_RR 3
+
+#define SAMPLE_SIZE 4
+
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 0)
+#define TOTAL_U_SIZE (IDX_BSDF_OFFSET)
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 1)
+#define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
+#endif
+
+#endif
+
+//------------------------------------------------------------------------------
+// GPUTask data types
+//------------------------------------------------------------------------------
+
+typedef enum {
+	GENERATE_SAMPLE,
+	RT_NEXT_VERTEX,
+	GENERATE_DL_RAY,
+	RT_DL_RAY,
+	GENERATE_NEXT_VERTXE_RAY,
+	SPLAT_SAMPLE
+} PathState;
+
+typedef struct {
+	unsigned int state;
+	unsigned int depth;
+
+	Spectrum throughput;
+} PathStateBase;
+
+typedef struct {
+	float bouncePdf;
+	int specularBounce;
+
+	Ray nextPathRay;
+	Spectrum nextThroughput;
+	// Radiance to add to the result if light source is visible
+	Spectrum lightRadiance;
+} PathStateDirectLight;
+
+typedef struct {
+	unsigned int vertexCount;
+	float alpha;
+} PathStateAlphaChannel;
+
+// This is defined only under OpenCL
+#if defined(SLG_OPENCL_KERNEL)
+
+typedef struct {
+	// The task seed
+	Seed seed;
+
+	// The set of Samples assigned to this task
+	Sample sample;
+
+	// The state used to keep track of the rendered path
+	PathStateBase pathStateBase;
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	PathStateDirectLight directLightState;
+#endif
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	PathStateAlphaChannel alphaChannelState;
+#endif
+} GPUTask;
+
+#endif
 
 typedef struct {
 	unsigned int sampleCount;

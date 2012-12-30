@@ -1,4 +1,4 @@
-#line 1 "patchocl_kernels.cl"
+#line 2 "patchocl_kernels.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,6 +21,70 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// List of symbols defined at compile time:
+//  PARAM_TASK_COUNT
+//  PARAM_IMAGE_WIDTH
+//  PARAM_IMAGE_HEIGHT
+//  PARAM_RAY_EPSILON
+//  PARAM_MAX_PATH_DEPTH
+//  PARAM_MAX_RR_DEPTH
+//  PARAM_MAX_RR_CAP
+//  PARAM_HAS_TEXTUREMAPS
+//  PARAM_HAS_ALPHA_TEXTUREMAPS
+//  PARAM_USE_PIXEL_ATOMICS
+//  PARAM_HAS_BUMPMAPS
+//  PARAM_ACCEL_BVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
+
+// To enable single material support (work around for ATI compiler problems)
+//  PARAM_ENABLE_MAT_MATTE
+//  PARAM_ENABLE_MAT_AREALIGHT
+//  PARAM_ENABLE_MAT_MIRROR
+//  PARAM_ENABLE_MAT_GLASS
+//  PARAM_ENABLE_MAT_MATTEMIRROR
+//  PARAM_ENABLE_MAT_METAL
+//  PARAM_ENABLE_MAT_MATTEMETAL
+//  PARAM_ENABLE_MAT_ALLOY
+//  PARAM_ENABLE_MAT_ARCHGLASS
+
+// (optional)
+//  PARAM_DIRECT_LIGHT_SAMPLING
+//  PARAM_DL_LIGHT_COUNT
+
+// (optional)
+//  PARAM_CAMERA_HAS_DOF
+
+// (optional)
+//  PARAM_HAS_INFINITELIGHT
+
+// (optional, requires PARAM_DIRECT_LIGHT_SAMPLING)
+//  PARAM_HAS_SUNLIGHT
+
+// (optional)
+//  PARAM_HAS_SKYLIGHT
+
+// (optional)
+//  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell)
+//  PARAM_IMAGE_FILTER_WIDTH_X
+//  PARAM_IMAGE_FILTER_WIDTH_Y
+// (Box filter)
+// (Gaussian filter)
+//  PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA
+// (Mitchell filter)
+//  PARAM_IMAGE_FILTER_MITCHELL_B
+//  PARAM_IMAGE_FILTER_MITCHELL_C
+
+// (optional)
+//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis)
+// (Metropolis)
+//  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
+//  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
+//  PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE
+
+// TODO: IDX_BSDF_Z used only if needed
+
+// (optional)
+//  PARAM_ENABLE_ALPHA_CHANNEL
+
 //------------------------------------------------------------------------------
 // Init Kernel
 //------------------------------------------------------------------------------
@@ -28,39 +92,41 @@
 __kernel void Init(
 		uint seedBase,
 		__global GPUTask *tasks,
+		__global float *samplesData,
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
 		__global Camera *camera
 		) {
-//	const size_t gid = get_global_id(0);
-//
-//	//if (gid == 0)
-//	//	printf("GPUTask: %d\n", sizeof(GPUTask));
-//
-//	// Initialize the task
-//	__global GPUTask *task = &tasks[gid];
-//
-//	// Initialize random number generator
-//	Seed seed;
-//	InitRandomGenerator(seedBase + gid, &seed);
-//
-//	// Initialize the sample
-//	Sampler_Init(gid,
-//#if (PARAM_SAMPLER_TYPE == 3)
-//			localMemTempBuff,
-//#endif
-//			&seed, &task->sample);
-//
-//	// Initialize the path
-//	GenerateCameraPath(task, &rays[gid], &seed, camera);
-//
-//	// Save the seed
-//	task->seed.s1 = seed.s1;
-//	task->seed.s2 = seed.s2;
-//	task->seed.s3 = seed.s3;
-//
-//	__global GPUTaskStats *taskStat = &taskStats[gid];
-//	taskStat->sampleCount = 0;
+	const size_t gid = get_global_id(0);
+
+	//if (gid == 0)
+	//	printf("GPUTask: %d\n", sizeof(GPUTask));
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+	__global float *sampleData = GetSampleData(samplesData);
+
+	// Initialize random number generator
+	Seed seed;
+	Rnd_Init(seedBase + gid, &seed);
+
+	// Initialize the sample
+	Sampler_Init(&seed, &task->sample, sampleData);
+
+	// Initialize the path
+	GenerateCameraPath(task, sampleData,
+#if (PARAM_SAMPLER_TYPE == 0)
+		&seed,
+#endif
+		camera, &rays[gid]);
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	taskStat->sampleCount = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -183,11 +249,13 @@ __kernel void InitFrameBuffer(
 
 __kernel void AdvancePaths(
 		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats,
+		__global float *samplesData,
 		__global Ray *rays,
 		__global RayHit *rayHits,
 		__global Pixel *frameBuffer,
-		__global Material *mats,
-		__global uint *meshMats,
+//		__global Material *mats,
+//		__global uint *meshMats,
 		__global uint *meshIDs,
 #if defined(PARAM_ACCEL_MQBVH)
 		__global uint *meshFirstTriangleOffset,
@@ -198,4 +266,45 @@ __kernel void AdvancePaths(
 		__global Triangle *triangles,
 		__global Camera *camera
 		) {
+	const size_t gid = get_global_id(0);
+
+	__global GPUTask *task = &tasks[gid];
+	__global Sample *sample = &task->sample;
+	__global float *sampleData = GetSampleData(samplesData);
+
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
+	__global Ray *ray = &rays[gid];
+	__global RayHit *rayHit = &rayHits[gid];
+	const uint currentTriangleIndex = rayHit->index;
+
+	Spectrum c;
+	if (currentTriangleIndex != 0xffffffffu) {
+		// Something was hit
+		c.r = 1.f;
+		c.g = 1.f;
+		c.b = 1.f;
+	} else {
+		c.r = 0.f;
+		c.g = 0.f;
+		c.b = 0.f;
+	}
+
+	sample->radiance = c;
+
+	Sampler_NextSample(task, sample, sampleData, &seed, frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			alphaFrameBuffer,
+#endif
+			ray, camera);
+	taskStats[gid].sampleCount += 1;
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
 }

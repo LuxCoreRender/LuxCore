@@ -35,10 +35,10 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	film = flm;
 	maxMemPageSize = (u_int)Min<size_t>(maxMemPageS, 0xffffffffu);
 
-//	infiniteLight = NULL;
-//	infiniteLightMap = NULL;
-//	sunLight = NULL;
-//	skyLight = NULL;
+	infiniteLight = NULL;
+	infiniteLightMap = NULL;
+	sunLight = NULL;
+	skyLight = NULL;
 //	rgbTexMemBlocks.resize(0);
 //	alphaTexMemBlocks.resize(0);
 //
@@ -58,10 +58,10 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 
 CompiledScene::~CompiledScene() {
 	delete[] meshFirstTriangleOffset;
-//	delete infiniteLight;
-//	// infiniteLightMap memory is handled from another class
-//	delete sunLight;
-//	delete skyLight;
+	delete infiniteLight;
+	// infiniteLightMap memory is handled from another class
+	delete sunLight;
+	delete skyLight;
 }
 
 void CompiledScene::CompileCamera() {

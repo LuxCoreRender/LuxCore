@@ -35,6 +35,8 @@ extern std::string KernelSource_SamplerTypes;
 extern std::string KernelSource_FilterTypes;
 extern std::string KernelSource_CameraTypes;
 extern std::string KernelSource_TriangleMeshTypes;
+extern std::string KernelSource_RandomGenTypes;
+extern std::string KernelSource_RandomGenFuncs;
 
 } }
 

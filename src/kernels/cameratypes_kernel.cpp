@@ -1,6 +1,8 @@
 #include <string>
 namespace luxrays { namespace ocl {
 std::string KernelSource_CameraTypes = 
+"#line 2 \"camera_types.cl\"\n"
+"\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
 " *                                                                         *\n"
@@ -21,7 +23,6 @@ std::string KernelSource_CameraTypes =
 " *                                                                         *\n"
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
-"\n"
 "typedef struct {\n"
 "	float lensRadius;\n"
 "	float focalDistance;\n"

@@ -72,6 +72,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	raysBuff = NULL;
 	hitsBuff = NULL;
 	tasksBuff = NULL;
+	sampleDataBuff = NULL;
 	taskStatsBuff = NULL;
 	frameBufferBuff = NULL;
 	alphaFrameBufferBuff = NULL;
@@ -131,6 +132,16 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 }
 
 void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
+	// Check if the buffer is too big
+	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
+		stringstream ss;
+		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() << 
+				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
+				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
+				"): try to reduce related parameters";
+		throw std::runtime_error(ss.str());
+	}
+
 	if (*buff) {
 		// Check the size of the already allocated buffer
 
@@ -158,6 +169,16 @@ void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const s
 }
 
 void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
+	// Check if the buffer is too big
+	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
+		stringstream ss;
+		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() << 
+				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
+				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
+				"): try to reduce related parameters";
+		throw std::runtime_error(ss.str());
+	}
+
 	if (*buff) {
 		// Check the size of the already allocated buffer
 
@@ -173,7 +194,7 @@ void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size,
 	}
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-
+ 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes");
 	*buff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
@@ -278,49 +299,49 @@ void PathOCLRenderThread::InitMaterials() {
 }
 
 void PathOCLRenderThread::InitAreaLights() {
-//	CompiledScene *cscene = renderEngine->compiledScene;
-//
-//	if (cscene->areaLights.size() > 0) {
-//		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
-//			sizeof(slg::ocl::TriangleLight) * cscene->areaLights.size(), "AreaLights");
-//	} else
-//		areaLightsBuff = NULL;
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->areaLights.size() > 0) {
+		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
+			sizeof(slg::ocl::TriangleLight) * cscene->areaLights.size(), "AreaLights");
+	} else
+		areaLightsBuff = NULL;
 }
 
 void PathOCLRenderThread::InitInfiniteLight() {
-//	CompiledScene *cscene = renderEngine->compiledScene;
-//
-//	if (cscene->infiniteLight) {
-//		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
-//			sizeof(slg::ocl::InfiniteLight), "InfiniteLight");
-//
-//		const u_int pixelCount = cscene->infiniteLight->width * cscene->infiniteLight->height;
-//		AllocOCLBufferRO(&infiniteLightMapBuff, (void *)cscene->infiniteLightMap,
-//			sizeof(Spectrum) * pixelCount, "InfiniteLight map");
-//	} else {
-//		infiniteLightBuff = NULL;
-//		infiniteLightMapBuff = NULL;
-//	}
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->infiniteLight) {
+		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
+			sizeof(slg::ocl::InfiniteLight), "InfiniteLight");
+
+		const u_int pixelCount = cscene->infiniteLight->width * cscene->infiniteLight->height;
+		AllocOCLBufferRO(&infiniteLightMapBuff, (void *)cscene->infiniteLightMap,
+			sizeof(Spectrum) * pixelCount, "InfiniteLight map");
+	} else {
+		infiniteLightBuff = NULL;
+		infiniteLightMapBuff = NULL;
+	}
 }
 
 void PathOCLRenderThread::InitSunLight() {
-//	CompiledScene *cscene = renderEngine->compiledScene;
-//
-//	if (cscene->sunLight)
-//		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
-//			sizeof(slg::ocl::SunLight), "SunLight");
-//	else
-//		sunLightBuff = NULL;
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->sunLight)
+		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
+			sizeof(slg::ocl::SunLight), "SunLight");
+	else
+		sunLightBuff = NULL;
 }
 
 void PathOCLRenderThread::InitSkyLight() {
-//	CompiledScene *cscene = renderEngine->compiledScene;
-//
-//	if (cscene->skyLight)
-//		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
-//			sizeof(slg::ocl::SkyLight), "SkyLight");
-//	else
-//		skyLightBuff = NULL;
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->skyLight)
+		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
+			sizeof(slg::ocl::SkyLight), "SkyLight");
+	else
+		skyLightBuff = NULL;
 }
 
 void PathOCLRenderThread::InitTextureMaps() {
@@ -374,15 +395,15 @@ void PathOCLRenderThread::InitTextureMaps() {
 //			meshNormalMapsInfoBuff = NULL;
 //		}
 //	} else {
-//		texMapRGBBuff.resize(0);
-//		texMapAlphaBuff.resize(0);
-//		texMapDescBuff = NULL;
-//		meshTexMapsBuff = NULL;
-//		meshTexMapsInfoBuff = NULL;
-//		meshBumpMapsBuff = NULL;
-//		meshBumpMapsInfoBuff = NULL;
-//		meshNormalMapsBuff = NULL;
-//		meshNormalMapsInfoBuff = NULL;
+		texMapRGBBuff.resize(0);
+		texMapAlphaBuff.resize(0);
+		texMapDescBuff = NULL;
+		meshTexMapsBuff = NULL;
+		meshTexMapsInfoBuff = NULL;
+		meshBumpMapsBuff = NULL;
+		meshBumpMapsInfoBuff = NULL;
+		meshNormalMapsBuff = NULL;
+		meshNormalMapsInfoBuff = NULL;
 //	}
 }
 
@@ -399,10 +420,11 @@ void PathOCLRenderThread::InitKernels() {
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
+			" -D SLG_OPENCL_KERNEL" <<
 			" -D PARAM_TASK_COUNT=" << renderEngine->taskCount <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-//			" -D PARAM_RAY_EPSILON=" << renderEngine->epsilon << "f" <<
+			" -D PARAM_RAY_EPSILON=0.0001f" << // TODO
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
@@ -462,13 +484,13 @@ void PathOCLRenderThread::InitKernels() {
 		}
 	}
 
-//	if (areaLightsBuff) {
-//		ss <<
-//				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-//				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->areaLights.size()
-//				;
-//	}
-//
+	if (areaLightsBuff) {
+		ss <<
+				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
+				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->areaLights.size()
+				;
+	}
+
 //	if ((texMapRGBBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
 //		ss << " -D PARAM_HAS_TEXTUREMAPS";
 //		for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
@@ -491,21 +513,21 @@ void PathOCLRenderThread::InitKernels() {
 	const luxrays::ocl::Filter *filter = renderEngine->filter;
 	switch (filter->type) {
 		case luxrays::ocl::FILTER_NONE:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=NONE";
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
 			break;
 		case luxrays::ocl::FILTER_BOX:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=BOX" <<
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->box.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f";
 			break;
 		case luxrays::ocl::FILTER_GAUSSIAN:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=GAUSSIAN" <<
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->gaussian.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->gaussian.widthY << "f" <<
 					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << filter->gaussian.alpha << "f";
 			break;
 		case luxrays::ocl::FILTER_MITCHELL:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=MITCHELL" <<
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchell.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchell.widthY << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
@@ -521,10 +543,10 @@ void PathOCLRenderThread::InitKernels() {
 	const luxrays::ocl::Sampler *sampler = renderEngine->sampler;
 	switch (sampler->type) {
 		case luxrays::ocl::RANDOM:
-			ss << " -D PARAM_SAMPLER_TYPE=RANDOM";
+			ss << " -D PARAM_SAMPLER_TYPE=0";
 			break;
 		case luxrays::ocl::METROPOLIS:
-			ss << " -D PARAM_SAMPLER_TYPE=METROPOLIS" <<
+			ss << " -D PARAM_SAMPLER_TYPE=1" <<
 					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << sampler->metropolis.largeMutationProbability << "f" <<
 					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << sampler->metropolis.imageMutationRange << "f" <<
 					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
@@ -566,11 +588,16 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
+			"#define Normal Vector\n" <<
+			luxrays::ocl::KernelSource_RandomGenTypes <<
+			luxrays::ocl::KernelSource_RandomGenFuncs <<
 			luxrays::ocl::KernelSource_SamplerTypes <<
 			luxrays::ocl::KernelSource_FilterTypes <<
 			luxrays::ocl::KernelSource_CameraTypes <<
 			luxrays::ocl::KernelSource_TriangleMeshTypes <<
 			slg::ocl::KernelSource_PathOCL_DataTypes <<
+			slg::ocl::KernelSource_PathOCL_Filters <<
+			slg::ocl::KernelSource_PathOCL_Samplers <<
 			slg::ocl::KernelSource_PathOCL_Kernels;
 		string kernelSource = ssKernel.str();
 
@@ -638,10 +665,8 @@ void PathOCLRenderThread::InitKernels() {
 }
 
 void PathOCLRenderThread::InitRender() {
-//	Scene *scene = renderEngine->renderConfig->scene;
-
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-
+	Scene *scene = renderEngine->renderConfig->scene;
+	const u_int taskCount = renderEngine->taskCount;
 	double tStart, tEnd;
 
 	//--------------------------------------------------------------------------
@@ -692,7 +717,7 @@ void PathOCLRenderThread::InitRender() {
 
 	InitSkyLight();
 
-//	const u_int areaLightCount = renderEngine->compiledScene->areaLights.size();
+	const u_int areaLightCount = renderEngine->compiledScene->areaLights.size();
 //	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
 //		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
@@ -706,125 +731,73 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate Ray/RayHit buffers
 	//--------------------------------------------------------------------------
 
-	const u_int taskCount = renderEngine->taskCount;
-
 	tStart = WallClockTime();
 
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Ray buffer size: " << (sizeof(Ray) * taskCount / 1024) << "Kbytes");
-	raysBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			sizeof(Ray) * taskCount);
-	intersectionDevice->AllocMemory(raysBuff->getInfo<CL_MEM_SIZE>());
-
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] RayHit buffer size: " << (sizeof(RayHit) * taskCount / 1024) << "Kbytes");
-	hitsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			sizeof(RayHit) * taskCount);
-	intersectionDevice->AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
-
-	tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	AllocOCLBufferRW(&raysBuff, sizeof(Ray) * taskCount, "Ray");
+	AllocOCLBufferRW(&hitsBuff, sizeof(RayHit) * taskCount, "RayHit");
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
-//	// TODO: clenup all this mess
-//
-//	const size_t gpuTaksSizePart1 =
-//		// Seed size
-//		sizeof(slg::ocl::Seed);
-//
-//	const size_t uDataEyePathVertexSize =
-//		// IDX_SCREEN_X, IDX_SCREEN_Y
-//		sizeof(float) * 2 +
-//		// IDX_DOF_X, IDX_DOF_Y
-//		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
-//	const size_t uDataPerPathVertexSize =
-//		// IDX_TEX_ALPHA,
-//		((texMapAlphaBuff.size() > 0) ? sizeof(float) : 0) +
-//		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
-//		sizeof(float) * 3 +
-//		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
-//		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 3) : 0) +
-//		// IDX_RR
-//		sizeof(float);
-//	const size_t uDataSize = (renderEngine->sampler->type == slg::ocl::INLINED_RANDOM) ?
-//		// Only IDX_SCREEN_X, IDX_SCREEN_Y
-//		(sizeof(float) * 2) :
-//		((renderEngine->sampler->type == slg::ocl::METROPOLIS) ?
-//			(sizeof(float) * 2 + sizeof(u_int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
-//			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
-//
-//	size_t sampleSize =
-//		// uint pixelIndex;
-//		((renderEngine->sampler->type == slg::ocl::METROPOLIS) ? 0 : sizeof(u_int)) +
-//		uDataSize +
-//		// Spectrum radiance;
-//		sizeof(Spectrum) +
-//		// float currentAlpha;
-//		(((renderEngine->sampler->type == slg::ocl::METROPOLIS) && alphaFrameBufferBuff) ? sizeof(float) : 0);
-//
-//	stratifiedDataSize = 0;
-//	if (renderEngine->sampler->type == slg::ocl::STRATIFIED) {
-//		slg::ocl::StratifiedSampler *s = (slg::ocl::StratifiedSampler *)renderEngine->sampler;
-//		stratifiedDataSize =
-//				// stratifiedScreen2D
-//				sizeof(float) * s->xSamples * s->ySamples * 2 +
-//				// stratifiedDof2D
-//				((scene->camera->lensRadius > 0.f) ? (sizeof(float) * s->xSamples * s->ySamples * 2) : 0) +
-//				// stratifiedAlpha1D
-//				((texMapAlphaBuff.size() > 0) ? (sizeof(float) * s->xSamples) : 0) +
-//				// stratifiedBSDF2D
-//				sizeof(float) * s->xSamples * s->ySamples * 2 +
-//				// stratifiedBSDF1D
-//				sizeof(float) * s->xSamples +
-//				// stratifiedLight2D
-//				// stratifiedLight1D
-//				(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * s->xSamples * s->ySamples * 2 + sizeof(float) * s->xSamples) : 0);
-//
-//		sampleSize += stratifiedDataSize;
-//	}
-//
-//	const size_t gpuTaksSizePart2 = sampleSize;
-//
-//	const size_t gpuTaksSizePart3 =
-//		// PathState size
-//		(((areaLightCount > 0) || sunLightBuff) ? sizeof(slg::ocl::PathStateDL) : sizeof(slg::ocl::PathState)) +
-//		//u_int diffuseVertexCount;
-//		((renderEngine->maxDiffusePathVertexCount < renderEngine->maxPathDepth) ? sizeof(u_int) : 0) +
-//		//uint vertexCount;
-//		//float alpha;
-//		(alphaFrameBufferBuff ? (sizeof(u_int) + sizeof(float)) : 0);
-//
-//	const size_t gpuTaksSize = gpuTaksSizePart1 + gpuTaksSizePart2 + gpuTaksSizePart3;
-//	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize <<
-//			"bytes (" << gpuTaksSizePart1 << " + " << gpuTaksSizePart2 << " + " << gpuTaksSizePart3 << ")");
-//	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Tasks buffer size: " << (gpuTaksSize * taskCount / 1024) << "Kbytes");
-//
-//	// Check if the task buffer is too big
-//	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < gpuTaksSize * taskCount) {
-//		stringstream ss;
-//		ss << "The GPUTask buffer is too big for this device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-//				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
-//				"): try to reduce opencl.task.count and/or path.maxdepth and/or to change Sampler";
-//		throw std::runtime_error(ss.str());
-//	}
-//
-//	tasksBuff = new cl::Buffer(oclContext,
-//			CL_MEM_READ_WRITE,
-//			gpuTaksSize * taskCount);
-//	intersectionDevice->AllocMemory(tasksBuff->getInfo<CL_MEM_SIZE>());
+	size_t gpuTaksSize = sizeof(luxrays::ocl::Seed);
+
+	if (renderEngine->sampler->type == luxrays::ocl::RANDOM)
+		gpuTaksSize += sizeof(slg::ocl::RandomSample);
+	else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithAlphaChannel);
+		else
+			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithoutAlphaChannel);
+	} else
+		throw std::runtime_error("Unknown sampler.type: " + renderEngine->sampler->type);
+
+	gpuTaksSize += sizeof(slg::ocl::PathStateBase);
+
+	if (areaLightCount > 0)
+		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
+
+	if (alphaFrameBufferBuff)
+		gpuTaksSize += sizeof(slg::ocl::PathStateAlphaChannel);
+
+	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
+
+	//--------------------------------------------------------------------------
+	// Allocate sample data buffers
+	//--------------------------------------------------------------------------
+
+	const size_t uDataEyePathVertexSize =
+		// IDX_SCREEN_X, IDX_SCREEN_Y
+		sizeof(float) * 2 +
+		// IDX_DOF_X, IDX_DOF_Y
+		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
+	const size_t uDataPerPathVertexSize =
+		// IDX_TEX_ALPHA,
+		((texMapAlphaBuff.size() > 0) ? sizeof(float) : 0) +
+		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
+		sizeof(float) * 3 +
+		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
+		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 3) : 0) +
+		// IDX_RR
+		sizeof(float);
+	const size_t uDataSize = (renderEngine->sampler->type == luxrays::ocl::RANDOM) ?
+		// Only IDX_SCREEN_X, IDX_SCREEN_Y
+		(sizeof(float) * 2) :
+		((renderEngine->sampler->type == luxrays::ocl::METROPOLIS) ?
+			(sizeof(float) * 2 + sizeof(u_int) * 5 + sizeof(Spectrum) + 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth)) :
+			(uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth));
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize);
+
+	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Task Stats buffer size: " << (sizeof(slg::ocl::GPUTaskStats) * taskCount / 1024) << "Kbytes");
-	taskStatsBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			sizeof(slg::ocl::GPUTaskStats) * taskCount);
-	intersectionDevice->AllocMemory(taskStatsBuff->getInfo<CL_MEM_SIZE>());
+	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::GPUTaskStats) * taskCount, "GPUTask Stats");
+
+	tEnd = WallClockTime();
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -864,11 +837,13 @@ void PathOCLRenderThread::SetKernelArgs() {
 	//--------------------------------------------------------------------------
 	u_int argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
+	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
+	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
 	advancePathsKernel->setArg(argIndex++, *frameBufferBuff);
-	advancePathsKernel->setArg(argIndex++, *materialsBuff);
-	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
+//	advancePathsKernel->setArg(argIndex++, *materialsBuff);
+//	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
 	if (triangleIDBuff)
 		advancePathsKernel->setArg(argIndex++, *triangleIDBuff);
@@ -877,8 +852,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *normalsBuff);
 	advancePathsKernel->setArg(argIndex++, *vertsBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
-	if (cameraBuff)
-		advancePathsKernel->setArg(argIndex++, *cameraBuff);
+	advancePathsKernel->setArg(argIndex++, *cameraBuff);
 //	if (infiniteLightBuff) {
 //		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
 //		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
@@ -925,10 +899,10 @@ void PathOCLRenderThread::SetKernelArgs() {
 	argIndex = 0;
 	initKernel->setArg(argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
 	initKernel->setArg(argIndex++, *tasksBuff);
+	initKernel->setArg(argIndex++, *sampleDataBuff);
 	initKernel->setArg(argIndex++, *taskStatsBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
-	if (cameraBuff)
-		initKernel->setArg(argIndex++, *cameraBuff);
+	initKernel->setArg(argIndex++, *cameraBuff);
 }
 
 void PathOCLRenderThread::Start() {
@@ -970,6 +944,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&raysBuff);
 	FreeOCLBuffer(&hitsBuff);
 	FreeOCLBuffer(&tasksBuff);
+	FreeOCLBuffer(&sampleDataBuff);
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&frameBufferBuff);
 	FreeOCLBuffer(&alphaFrameBufferBuff);
@@ -1169,13 +1144,17 @@ void PathOCLRenderThread::RenderThreadImpl() {
 					iterations = 8;
 
 				for (u_int i = 0; i < iterations; ++i) {
+					// Trace rays
+					if (i == 0)
+						intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
+								*(hitsBuff), taskCount, NULL, &event);
+					else
+						intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
+								*(hitsBuff), taskCount, NULL, NULL);
+
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
 							cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-
-					// Trace rays
-					intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-								*(hitsBuff), taskCount, NULL, NULL);
 				}
 				oclQueue.flush();
 
