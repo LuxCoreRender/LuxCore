@@ -21,6 +21,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if (PARAM_SAMPLER_TYPE == 0)
+#define Sampler_GetSample(index) (Rnd_FloatValue(seed))
+#elif (PARAM_SAMPLER_TYPE == 1)
+#define Sampler_GetSample(index) (sampleData[index])
+#endif
+
 void GenerateCameraRay(
 		__global Camera *camera,
 		__global Sample *sample,
@@ -46,41 +52,31 @@ void GenerateCameraRay(
 
 	const float hither = camera->hither;
 
-//#if defined(PARAM_CAMERA_HAS_DOF)
-//
-//#if (PARAM_SAMPLER_TYPE == 0)
-//	const float dofSampleX = Rnd_FloatValue(seed);
-//	const float dofSampleY = Rnd_FloatValue(seed);
-//#elif (PARAM_SAMPLER_TYPE == 1)
-//	const float dofSampleX = sampleData[IDX_DOF_X];
-//	const float dofSampleY = sampleData[IDX_DOF_Y];
-//#endif
-//
-//	// Sample point on lens
-//	float lensU, lensV;
-//	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-//	const float lensRadius = camera->lensRadius;
-//	lensU *= lensRadius;
-//	lensV *= lensRadius;
-//
-//	// Compute point on plane of focus
-//	const float focalDistance = camera->focalDistance;
-//	const float dist = focalDistance - hither;
-//	const float ft = dist / dir.z;
-//	Point Pfocus;
-//	Pfocus.x = orig.x + dir.x * ft;
-//	Pfocus.y = orig.y + dir.y * ft;
-//	Pfocus.z = orig.z + dir.z * ft;
-//
-//	// Update ray for effect of lens
-//	const float k = dist / focalDistance;
-//	orig.x += lensU * k;
-//	orig.y += lensV * k;
-//
-//	dir.x = Pfocus.x - orig.x;
-//	dir.y = Pfocus.y - orig.y;
-//	dir.z = Pfocus.z - orig.z;
-//#endif
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Sampler_GetSample(IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSample(IDX_DOF_Y);
+
+	// Sample point on lens
+	float lensU, lensV;
+	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+	const float lensRadius = camera->lensRadius;
+	lensU *= lensRadius;
+	lensV *= lensRadius;
+
+	// Compute point on plane of focus
+	const float focalDistance = camera->focalDistance;
+	const float dist = focalDistance - hither;
+	const float ft = dist / rayDir.z;
+	float3 Pfocus;
+	Pfocus = rayOrig + rayDir * ft;
+
+	// Update ray for effect of lens
+	const float k = dist / focalDistance;
+	rayOrig.x += lensU * k;
+	rayOrig.y += lensV * k;
+
+	rayDir = Pfocus - rayOrig;
+#endif
 
 	rayDir = normalize(rayDir);
 	ray->mint = PARAM_RAY_EPSILON;

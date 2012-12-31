@@ -38,7 +38,7 @@ namespace luxrays {
 
 namespace ocl {
 #include "luxrays/core/trianglemesh_types.cl"
-} 
+}
 
 typedef unsigned int TriangleMeshID;
 typedef unsigned int TriangleID;

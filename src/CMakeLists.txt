@@ -63,6 +63,9 @@ PreprocessOCLKernel(luxrays TransformTypes
 PreprocessOCLKernel(luxrays TransformFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_funcs.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/transformfuncs_kernel.cpp)
+PreprocessOCLKernel(luxrays McFuncs
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/mc_funcs.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/mcfuncs_kernel.cpp)
 
 ###########################################################################
 #
@@ -122,6 +125,7 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/transformtypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/transformfuncs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/mcfuncs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 
