@@ -589,6 +589,7 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
 			"typedef Vector Normal;\n" <<
+			luxrays::ocl::KernelSource_McFuncs <<
 			luxrays::ocl::KernelSource_Matrix4x4Types <<
 			luxrays::ocl::KernelSource_TransformTypes <<
 			luxrays::ocl::KernelSource_TransformFuncs <<
