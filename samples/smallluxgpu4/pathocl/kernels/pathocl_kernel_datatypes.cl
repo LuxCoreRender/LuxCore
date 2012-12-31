@@ -189,7 +189,6 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 //------------------------------------------------------------------------------
 
 typedef enum {
-	GENERATE_SAMPLE,
 	RT_NEXT_VERTEX,
 	GENERATE_DL_RAY,
 	RT_DL_RAY,
@@ -198,10 +197,11 @@ typedef enum {
 } PathState;
 
 typedef struct {
-	unsigned int state;
+	PathState state;
 	unsigned int depth;
 
 	Spectrum throughput;
+	BSDF bsdf;
 } PathStateBase;
 
 typedef struct {

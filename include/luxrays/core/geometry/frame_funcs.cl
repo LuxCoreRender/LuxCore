@@ -1,3 +1,5 @@
+#line 2 "randomgen_funcs.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -19,32 +21,30 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+void Frame_SetFromZ(__global Frame *frame, const float3 z) {
+	const float3 Z = normalize(z);
+	const float3 tmpZ = Z;
+	const float3 tmpX = (fabs(tmpZ.x) > 0.99f) ? (float3)(0.f, 1.f, 0.f) : (float3)(1.f, 0.f, 0.f);
+	const float3 Y = normalize(cross(tmpZ, tmpX));
+	const float3 X = cross(Y, tmpZ);
 
-#include <string>
+	vstore3(X, 0, &frame->X.x);
+	vstore3(Y, 0, &frame->Y.x);
+	vstore3(Z, 0, &frame->Z.x);
+}
 
-namespace luxrays { namespace ocl {
+float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 a) {
+	return X * a.x + Y * a.y + Z * a.z;
+}
 
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
+float3 Frame_ToWorld(__global Frame *frame, const float3 a) {
+	return ToWorld(vload3(0, &frame->X.x), vload3(0, &frame->Y.x), vload3(0, &frame->Z.x), a);
+}
 
-extern std::string KernelSource_SamplerTypes;
-extern std::string KernelSource_FilterTypes;
-extern std::string KernelSource_CameraTypes;
-extern std::string KernelSource_TriangleMeshTypes;
-extern std::string KernelSource_RandomGenTypes;
-extern std::string KernelSource_RandomGenFuncs;
-extern std::string KernelSource_Matrix4x4Types;
-extern std::string KernelSource_TransformTypes;
-extern std::string KernelSource_TransformFuncs;
-extern std::string KernelSource_McFuncs;
-extern std::string KernelSource_FrameTypes;
-extern std::string KernelSource_FrameFuncs;
-extern std::string KernelSource_BSDFTypes;
+float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
+	return (float3)(dot(a, X), dot(a, Y), dot(a, Z));
+}
 
-} }
-
-#endif	/* _LUXRAYS_KERNELS_H */
+float3 Frame_ToLocal(__global Frame *frame, const float3 a) {
+	return ToLocal(vload3(0, &frame->X.x), vload3(0, &frame->Y.x), vload3(0, &frame->Z.x), a);
+}

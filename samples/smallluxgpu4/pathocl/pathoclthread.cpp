@@ -585,16 +585,19 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_SPECTRUM_OCLDEFINE
 			_LUXRAYS_POINT_OCLDEFINE
 			_LUXRAYS_VECTOR_OCLDEFINE
+			_LUXRAYS_NORMAL_OCLDEFINE
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
-			"typedef Vector Normal;\n" <<
 			luxrays::ocl::KernelSource_McFuncs <<
+			luxrays::ocl::KernelSource_FrameTypes <<
+			luxrays::ocl::KernelSource_FrameFuncs <<
 			luxrays::ocl::KernelSource_Matrix4x4Types <<
 			luxrays::ocl::KernelSource_TransformTypes <<
 			luxrays::ocl::KernelSource_TransformFuncs <<
 			luxrays::ocl::KernelSource_RandomGenTypes <<
 			luxrays::ocl::KernelSource_RandomGenFuncs <<
+			luxrays::ocl::KernelSource_BSDFTypes <<
 			luxrays::ocl::KernelSource_SamplerTypes <<
 			luxrays::ocl::KernelSource_FilterTypes <<
 			luxrays::ocl::KernelSource_CameraTypes <<

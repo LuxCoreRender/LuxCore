@@ -25,6 +25,7 @@ typedef struct {
 	unsigned int vertsOffset;
 	unsigned int trisOffset;
 
+	// TODO: use Transform
 	float trans[4][4];
 	float invTrans[4][4];
 } Mesh;
