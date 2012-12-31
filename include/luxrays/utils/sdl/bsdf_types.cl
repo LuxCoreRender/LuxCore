@@ -1,3 +1,5 @@
+#line 2 "bsdf_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -19,32 +21,31 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
+enum BSDFEventType {
+	NONE     = 0,
+	DIFFUSE  = 1,
+	GLOSSY   = 2,
+	SPECULAR = 4,
+	REFLECT  = 8,
+	TRANSMIT = 16
+};
 
-#include <string>
+typedef int BSDFEvent;
 
-namespace luxrays { namespace ocl {
+typedef struct {
+	// The incoming direction. It is the eyeDir when fromLight = false and
+	// lightDir when fromLight = true
+	Vector fixedDir;
+	Point hitPoint;
+	UV hitPointUV;
+	Normal geometryN;
+	Normal shadeN;
 
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
+	float passThroughEvent;
+	unsigned int meshIndex, triIndex, materialIndex, lightSourceIndex;
 
-extern std::string KernelSource_SamplerTypes;
-extern std::string KernelSource_FilterTypes;
-extern std::string KernelSource_CameraTypes;
-extern std::string KernelSource_TriangleMeshTypes;
-extern std::string KernelSource_RandomGenTypes;
-extern std::string KernelSource_RandomGenFuncs;
-extern std::string KernelSource_Matrix4x4Types;
-extern std::string KernelSource_TransformTypes;
-extern std::string KernelSource_TransformFuncs;
-extern std::string KernelSource_McFuncs;
-extern std::string KernelSource_FrameTypes;
-extern std::string KernelSource_FrameFuncs;
-extern std::string KernelSource_BSDFTypes;
+	Frame frame;
 
-} }
-
-#endif	/* _LUXRAYS_KERNELS_H */
+	// This will be used for BiDir
+	//bool fromLight;
+} BSDF;

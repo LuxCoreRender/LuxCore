@@ -1,3 +1,5 @@
+#line 2 "trianglemesh_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -19,32 +21,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
-
-#include <string>
-
-namespace luxrays { namespace ocl {
-
-// Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
-
-extern std::string KernelSource_SamplerTypes;
-extern std::string KernelSource_FilterTypes;
-extern std::string KernelSource_CameraTypes;
-extern std::string KernelSource_TriangleMeshTypes;
-extern std::string KernelSource_RandomGenTypes;
-extern std::string KernelSource_RandomGenFuncs;
-extern std::string KernelSource_Matrix4x4Types;
-extern std::string KernelSource_TransformTypes;
-extern std::string KernelSource_TransformFuncs;
-extern std::string KernelSource_McFuncs;
-extern std::string KernelSource_FrameTypes;
-extern std::string KernelSource_FrameFuncs;
-extern std::string KernelSource_BSDFTypes;
-
-} }
-
-#endif	/* _LUXRAYS_KERNELS_H */
+typedef struct {
+	Vector X, Y, Z;
+} Frame;

@@ -279,33 +279,56 @@ __kernel void AdvancePaths(
 	seed.s2 = task->seed.s2;
 	seed.s3 = task->seed.s3;
 
+	// read the path state
+	PathState pathState = task->pathStateBase.state;
+
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 	const uint currentTriangleIndex = rayHit->index;
 
-	Spectrum c;
-	if (currentTriangleIndex != 0xffffffffu) {
-		// Something was hit
-		c.r = 1.f;
-		c.g = 1.f;
-		c.b = 1.f;
-	} else {
-		c.r = 0.f;
-		c.g = 0.f;
-		c.b = 0.f;
+	//--------------------------------------------------------------------------
+	// Evaluation of the Path finite state machine.
+	//
+	// From: RT_NEXT_VERTEX
+	// To: SPLAT_SAMPLE or GENERATE_DL_RAY
+	//--------------------------------------------------------------------------
+
+	if (pathState == RT_NEXT_VERTEX) {
+		if (currentTriangleIndex != 0xffffffffu) {
+			// Something was hit
+			sample->radiance.r += 1.f;
+			sample->radiance.g += 1.f;
+			sample->radiance.b += 1.f;
+		}
+
+		pathState = SPLAT_SAMPLE;
+	}
+	
+	//--------------------------------------------------------------------------
+	// Evaluation of the Path finite state machine.
+	//
+	// From: SPLAT_SAMPLE
+	// To: RT_NEXT_VERTEX
+	//--------------------------------------------------------------------------
+
+	if (pathState == SPLAT_SAMPLE) {
+		Sampler_NextSample(task, sample, sampleData, &seed, frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alphaFrameBuffer,
+#endif
+				camera, ray);
+		taskStats[gid].sampleCount += 1;
+
+		pathState = RT_NEXT_VERTEX;
 	}
 
-	sample->radiance = c;
-
-	Sampler_NextSample(task, sample, sampleData, &seed, frameBuffer,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			alphaFrameBuffer,
-#endif
-			camera, ray);
-	taskStats[gid].sampleCount += 1;
+	//--------------------------------------------------------------------------
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
+
+	// Save the state
+	task->pathStateBase.state = pathState;
 }

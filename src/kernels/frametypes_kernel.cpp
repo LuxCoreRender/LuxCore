@@ -1,6 +1,6 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_TriangleMeshTypes = 
+std::string KernelSource_FrameTypes = 
 "#line 2 \"trianglemesh_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
@@ -25,11 +25,6 @@ std::string KernelSource_TriangleMeshTypes =
 " ***************************************************************************/\n"
 "\n"
 "typedef struct {\n"
-"	unsigned int vertsOffset;\n"
-"	unsigned int trisOffset;\n"
-"\n"
-"	// TODO: use Transform\n"
-"	float trans[4][4];\n"
-"	float invTrans[4][4];\n"
-"} Mesh;\n"
+"	Vector X, Y, Z;\n"
+"} Frame;\n"
 ; } }

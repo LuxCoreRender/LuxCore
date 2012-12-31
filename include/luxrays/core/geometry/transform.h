@@ -31,10 +31,7 @@
 
 namespace luxrays {
 
-//------------------------------------------------------------------------------
 // OpenCL data types
-//------------------------------------------------------------------------------
-
 namespace ocl {
 #include "luxrays/core/geometry/transform_types.cl"
 }

@@ -66,6 +66,15 @@ PreprocessOCLKernel(luxrays TransformFuncs
 PreprocessOCLKernel(luxrays McFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/mc_funcs.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/mcfuncs_kernel.cpp)
+PreprocessOCLKernel(luxrays FrameTypes
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/frametypes_kernel.cpp)
+PreprocessOCLKernel(luxrays FrameFuncs
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_funcs.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/framefuncs_kernel.cpp)
+PreprocessOCLKernel(luxrays BSDFTypes
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/bsdf_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/bsdftypes_kernel.cpp)
 
 ###########################################################################
 #
@@ -126,6 +135,9 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/transformtypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/transformfuncs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/mcfuncs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/frametypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/framefuncs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/bsdftypes_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 
