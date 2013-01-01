@@ -1,4 +1,4 @@
-#line 2 "randomgen_funcs.cl"
+#line 2 "mc_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,11 +21,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
+void ConcentricSampleDisk(const float u0, const float u1, float *dx, float *dy) {
 	float r, theta;
 	// Map uniform random numbers to $[-1,1]^2$
-	float sx = 2.f * u1 - 1.f;
-	float sy = 2.f * u2 - 1.f;
+	float sx = 2.f * u0 - 1.f;
+	float sy = 2.f * u1 - 1.f;
 	// Map square to $(r,\theta)$
 	// Handle degeneracy at the origin
 	if (sx == 0.f && sy == 0.f) {
@@ -57,7 +57,27 @@ void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) 
 			theta = 6.f + sx / r;
 		}
 	}
-	theta *= M_PI / 4.f;
+	theta *= M_PI_F / 4.f;
 	*dx = r * cos(theta);
 	*dy = r * sin(theta);
+}
+
+float3 CosineSampleHemisphere(const float u0, const float u1) {
+	float x, y;
+	ConcentricSampleDisk(u0, u1, &x, &y);
+
+	const float z = sqrt(fmax(0.f, 1.f - x * x - y * y));
+
+	return (float3)(x, y, z);
+}
+
+float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW) {
+	float x, y;
+	ConcentricSampleDisk(u0, u1, &x, &y);
+
+	const float z = sqrt(fmax(0.f, 1.f - x * x - y * y));
+
+	*pdfW = z * M_1_PI_F;
+
+	return (float3)(x, y, z);
 }

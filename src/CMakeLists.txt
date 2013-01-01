@@ -81,6 +81,15 @@ PreprocessOCLKernel(luxrays BSDFTypes
 PreprocessOCLKernel(luxrays BSDFFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/bsdf_funcs.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/bsdffuncs_kernel.cpp)
+PreprocessOCLKernel(luxrays EpsilonTypes
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/epsilontypes_kernel.cpp)
+PreprocessOCLKernel(luxrays SpectrumTypes
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/spectrum_types.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/spectrumtypes_kernel.cpp)
+PreprocessOCLKernel(luxrays SpectrumFuncs
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/spectrum_funcs.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/spectrumfuncs_kernel.cpp)
 
 ###########################################################################
 #
@@ -146,6 +155,9 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/framefuncs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/bsdftypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/bsdffuncs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/epsilontypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/spectrumtypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/spectrumfuncs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 

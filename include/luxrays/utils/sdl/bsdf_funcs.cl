@@ -22,6 +22,7 @@
  ***************************************************************************/
 
 void BSDF_Init(__global BSDF *bsdf,
+		//const bool fromL,
 #if defined(PARAM_ACCEL_MQBVH)
 		__global uint *meshFirstTriangleOffset,
 		__global Mesh *meshDescs,
@@ -32,7 +33,6 @@ void BSDF_Init(__global BSDF *bsdf,
 		__global Vector *vertNormals,
 		__global Point *vertices,
 		__global Triangle *triangles,
-		//const bool fromL,
 		__global Ray *ray,
 		__global RayHit *rayHit,
 		const float u0) {
@@ -70,22 +70,18 @@ void BSDF_Init(__global BSDF *bsdf,
 	Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, hitPointB1, hitPointB2, &N);
 	TransformNormal(meshDesc->invTrans, &N);
 #else
-	//float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2);
+	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2);
 #endif
-
-
-//	geometryN = mesh->GetGeometryNormal(triIndex);
-//	shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
 
 //	// Check if it is a light source
 //	if (material->IsLightSource())
 //		lightSource = scene.triangleLightSource[currentTriangleIndex];
 //	else
 //		lightSource = NULL;
-//
+
 //	// Interpolate UV coordinates
 //	hitPointUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
-//
+
 //	// Check if I have to apply bump mapping
 //	if (material->HasNormalTex()) {
 //		// Apply normal mapping
@@ -103,7 +99,7 @@ void BSDF_Init(__global BSDF *bsdf,
 //				v1.y * x + v2.y * y + shadeN.y * z,
 //				v1.z * x + v2.z * y + shadeN.z * z));
 //	}
-//
+
 //	// Check if I have to apply normal mapping
 //	if (material->HasBumpTex()) {
 //		// Apply normal mapping
@@ -127,6 +123,49 @@ void BSDF_Init(__global BSDF *bsdf,
 //				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
 //				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
 //	}
-//
-//	frame.SetFromZ(shadeN);
+
+	
+	Frame_SetFromZ(&bsdf->frame, shadeN);
+
+	vstore3(shadeN, 0, &bsdf->shadeN.x);
+}
+
+float3 BSDF_Sample(__global BSDF *bsdf,
+		float3 *sampledDir,
+		const float u0, const float u1,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
+	const float3 fixedDir = vload3(0, &bsdf->fixedDir.x);
+	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
+	float3 localSampledDir;
+
+//	Spectrum result = material->Sample(fromLight, hitPointUV,
+//			localFixedDir, &localSampledDir, u0, u1, passThroughEvent,
+//			pdfW, cosSampledDir, event);
+//	if (result.Black())
+//		return result;
+
+	// Matte
+	if (fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	localSampledDir = (signbit(localFixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+
+	*cosSampledDir = fabs(localSampledDir.z);
+	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*event = DIFFUSE | REFLECT;
+	const float result = M_1_PI_F;
+	
+	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
+
+//	// Adjoint BSDF
+//	if (fromLight) {
+//		const float absDotFixedDirNS = fabsf(localFixedDir.z);
+//		const float absDotSampledDirNS = fabsf(localSampledDir.z);
+//		const float absDotFixedDirNG = AbsDot(fixedDir, geometryN);
+//		const float absDotSampledDirNG = AbsDot(*sampledDir, geometryN);
+//		return result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
+//	} else
+		return result;
 }
