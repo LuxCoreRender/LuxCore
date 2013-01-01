@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
 std::string KernelSource_TransformFuncs = 
-"#line 2 \"randomgen_funcs.cl\"\n"
+"#line 2 \"transform_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -36,7 +36,7 @@ std::string KernelSource_TransformFuncs =
 "	return (float3)(\n"
 "			iw * dot(row0, point4),\n"
 "			iw * dot(row1, point4),\n"
-"			iw * dot(row2, point4),\n"
+"			iw * dot(row2, point4)\n"
 "			);\n"
 "}\n"
 "\n"
@@ -47,7 +47,7 @@ std::string KernelSource_TransformFuncs =
 "	return (float3)(\n"
 "			dot(row0, vector),\n"
 "			dot(row1, vector),\n"
-"			dot(row2, vector),\n"
+"			dot(row2, vector)\n"
 "			);\n"
 "}\n"
 ; } }

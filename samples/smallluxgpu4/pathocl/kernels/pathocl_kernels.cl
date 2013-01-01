@@ -274,10 +274,12 @@ __kernel void AdvancePaths(
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 
 	// Read the seed
-	Seed seed;
-	seed.s1 = task->seed.s1;
-	seed.s2 = task->seed.s2;
-	seed.s3 = task->seed.s3;
+	Seed seedValue;
+	seedValue.s1 = task->seed.s1;
+	seedValue.s2 = task->seed.s2;
+	seedValue.s3 = task->seed.s3;
+	// This trick is required by Sampler_GetSample() macro
+	Seed *seed = &seedValue;
 
 	// read the path state
 	PathState pathState = task->pathStateBase.state;
@@ -285,6 +287,8 @@ __kernel void AdvancePaths(
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 	const uint currentTriangleIndex = rayHit->index;
+
+	const float3 skyCol = (float3)(.5f, .75f, 1.f);
 
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
@@ -305,18 +309,69 @@ __kernel void AdvancePaths(
 #endif
 					//mats,
 					//meshMats,
-					meshIDs, vertNormals, vertices, triangles, ray, rayHit, 0);
+					meshIDs, vertNormals, vertices, triangles, ray, rayHit,
+					Sampler_GetSample(IDX_DOF_X));
 
-			const float3 geometryN = vload3(0, &bsdf->geometryN.x);
-			const float c = geometryN.z;
-			sample->radiance.r += c;
-			sample->radiance.g += c;
-			sample->radiance.b += c;
+			// Sample next path vertex
+			pathState = GENERATE_NEXT_VERTEX_RAY;
+		} else {
+			sample->radiance.r += skyCol.s0;
+			sample->radiance.g += skyCol.s1;
+			sample->radiance.b += skyCol.s2;
+			pathState = SPLAT_SAMPLE;
 		}
-
-		pathState = SPLAT_SAMPLE;
 	}
-	
+
+	//--------------------------------------------------------------------------
+	// Evaluation of the Path finite state machine.
+	//
+	// From: GENERATE_NEXT_VERTEX_RAY
+	// To: SPLAT_SAMPLE or RT_NEXT_VERTEX
+	//--------------------------------------------------------------------------
+
+	if (pathState == GENERATE_NEXT_VERTEX_RAY) {
+		uint depth = task->pathStateBase.depth;
+
+		if (depth < PARAM_MAX_PATH_DEPTH) {
+			// Sample the BSDF
+			__global BSDF *bsdf = &task->pathStateBase.bsdf;
+			float3 sampledDir;
+			float lastPdfW;
+			float cosSampledDir;
+			BSDFEvent event;
+
+			const float3 bsdfSample = BSDF_Sample(bsdf, &sampledDir,
+					Sampler_GetSample(IDX_BSDF_X), Sampler_GetSample(IDX_BSDF_Y),
+					&lastPdfW, &cosSampledDir, &event);
+			const bool lastSpecular = ((event & SPECULAR) != 0);
+
+			// Russian Roulette
+			const float rrProb = fmax(Spectrum_Filter(bsdfSample), PARAM_RR_CAP);
+			const bool rrContinuePath = (depth < PARAM_RR_DEPTH) ||
+				lastSpecular || (Sampler_GetSample(IDX_RR) < rrProb);
+
+			const bool continuePath = !all(isequal(bsdfSample, BLACK)) && rrContinuePath;
+			if (continuePath) {
+				//lastPdfW *= rrProb; // Russian Roulette
+
+				float3 throughput = vload3(0, &task->pathStateBase.throughput.r);
+				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
+				vstore3(throughput, 0, &task->pathStateBase.throughput.r);
+
+				//TODO: Ray_Init(bsdf.hitPoint, sampledDir);
+				ray->o = bsdf->hitPoint;
+				vstore3(sampledDir, 0, &ray->d.x);
+				ray->mint = PARAM_RAY_EPSILON;
+				ray->maxt = INFINITY;
+
+				task->pathStateBase.depth = depth + 1;
+				pathState = RT_NEXT_VERTEX;
+			} else
+				pathState = SPLAT_SAMPLE;
+		} else
+			pathState = SPLAT_SAMPLE;
+	}
+
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
 	//
@@ -325,7 +380,7 @@ __kernel void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == SPLAT_SAMPLE) {
-		Sampler_NextSample(task, sample, sampleData, &seed, frameBuffer,
+		Sampler_NextSample(task, sample, sampleData, seed, frameBuffer,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				alphaFrameBuffer,
 #endif
@@ -338,9 +393,9 @@ __kernel void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	// Save the seed
-	task->seed.s1 = seed.s1;
-	task->seed.s2 = seed.s2;
-	task->seed.s3 = seed.s3;
+	task->seed.s1 = seed->s1;
+	task->seed.s2 = seed->s2;
+	task->seed.s3 = seed->s3;
 
 	// Save the state
 	task->pathStateBase.state = pathState;

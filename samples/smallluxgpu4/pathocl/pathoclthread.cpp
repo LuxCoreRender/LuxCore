@@ -583,13 +583,15 @@ void PathOCLRenderThread::InitKernels() {
 		stringstream ssKernel;
 		ssKernel <<
 			_LUXRAYS_UV_OCLDEFINE
-			_LUXRAYS_SPECTRUM_OCLDEFINE
 			_LUXRAYS_POINT_OCLDEFINE
 			_LUXRAYS_VECTOR_OCLDEFINE
 			_LUXRAYS_NORMAL_OCLDEFINE
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
+			luxrays::ocl::KernelSource_EpsilonTypes <<
+			luxrays::ocl::KernelSource_SpectrumTypes <<
+			luxrays::ocl::KernelSource_SpectrumFuncs <<
 			luxrays::ocl::KernelSource_McFuncs <<
 			luxrays::ocl::KernelSource_FrameTypes <<
 			luxrays::ocl::KernelSource_FrameFuncs <<
@@ -783,11 +785,11 @@ void PathOCLRenderThread::InitRender() {
 		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_TEX_ALPHA,
-		((texMapAlphaBuff.size() > 0) ? sizeof(float) : 0) +
-		// IDX_BSDF_X, IDX_BSDF_Y, IDX_BSDF_Z
-		sizeof(float) * 3 +
-		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z
-		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 3) : 0) +
+		((texMapAlphaBuff.size() > 0) /* TODO: has passthrough */  ? sizeof(float) : 0) +
+		// IDX_BSDF_X, IDX_BSDF_Y
+		sizeof(float) * 2 +
+		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
+		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 5) : 0) +
 		// IDX_RR
 		sizeof(float);
 
@@ -843,8 +845,15 @@ void PathOCLRenderThread::InitRender() {
 	intersectionDevice->ResetPerformaceStats();
 }
 
+static boost::mutex setKernelArgsMutex;
+
 void PathOCLRenderThread::SetKernelArgs() {
 	// Set OpenCL kernel arguments
+
+	// OpenCL kernel setArg() is the only no thread safe function in OpenCL 1.1 so
+	// I need to use a mutex here
+	boost::unique_lock<boost::mutex> lock(setKernelArgsMutex);
+
 //	CompiledScene *cscene = renderEngine->compiledScene;
 
 	//--------------------------------------------------------------------------

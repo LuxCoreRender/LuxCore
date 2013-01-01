@@ -128,49 +128,49 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
-#if defined(PARAM_HAS_ALPHA_TEXTUREMAPS) && defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING) && defined(PARAM_HAS_PASSTHROUGHT)
 
-#define IDX_TEX_ALPHA 0
+#define IDX_PASSTROUGHT 0
 #define IDX_BSDF_X 1
 #define IDX_BSDF_Y 2
-#define IDX_BSDF_Z 3
-#define IDX_DIRECTLIGHT_X 4
-#define IDX_DIRECTLIGHT_Y 5
-#define IDX_DIRECTLIGHT_Z 6
-#define IDX_RR 7
+#define IDX_DIRECTLIGHT_X 3
+#define IDX_DIRECTLIGHT_Y 4
+#define IDX_DIRECTLIGHT_Z 5
+#define IDX_DIRECTLIGHT_W 6
+#define IDX_DIRECTLIGHT_A 7
+#define IDX_RR 8
 
-#define SAMPLE_SIZE 8
-
-#elif defined(PARAM_HAS_ALPHA_TEXTUREMAPS)
-
-#define IDX_TEX_ALPHA 0
-#define IDX_BSDF_X 1
-#define IDX_BSDF_Y 2
-#define IDX_BSDF_Z 3
-#define IDX_RR 4
-
-#define SAMPLE_SIZE 5
+#define SAMPLE_SIZE 9
 
 #elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
 
 #define IDX_BSDF_X 0
 #define IDX_BSDF_Y 1
-#define IDX_BSDF_Z 2
-#define IDX_DIRECTLIGHT_X 3
-#define IDX_DIRECTLIGHT_Y 4
-#define IDX_DIRECTLIGHT_Z 5
-#define IDX_RR 6
+#define IDX_DIRECTLIGHT_X 2
+#define IDX_DIRECTLIGHT_Y 3
+#define IDX_DIRECTLIGHT_Z 4
+#define IDX_DIRECTLIGHT_W 5
+#define IDX_DIRECTLIGHT_A 6
+#define IDX_RR 7
 
-#define SAMPLE_SIZE 7
+#define SAMPLE_SIZE 8
+
+#elif defined(PARAM_HAS_PASSTHROUGHT)
+
+#define IDX_PASSTROUGHT 0
+#define IDX_BSDF_X 1
+#define IDX_BSDF_Y 2
+#define IDX_RR 3
+
+#define SAMPLE_SIZE 4
 
 #else
 
 #define IDX_BSDF_X 0
 #define IDX_BSDF_Y 1
-#define IDX_BSDF_Z 2
-#define IDX_RR 3
+#define IDX_RR 2
 
-#define SAMPLE_SIZE 4
+#define SAMPLE_SIZE 3
 
 #endif
 
@@ -192,7 +192,7 @@ typedef enum {
 	RT_NEXT_VERTEX,
 	GENERATE_DL_RAY,
 	RT_DL_RAY,
-	GENERATE_NEXT_VERTXE_RAY,
+	GENERATE_NEXT_VERTEX_RAY,
 	SPLAT_SAMPLE
 } PathState;
 

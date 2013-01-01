@@ -46,6 +46,9 @@ extern std::string KernelSource_FrameTypes;
 extern std::string KernelSource_FrameFuncs;
 extern std::string KernelSource_BSDFTypes;
 extern std::string KernelSource_BSDFFuncs;
+extern std::string KernelSource_EpsilonTypes;
+extern std::string KernelSource_SpectrumTypes;
+extern std::string KernelSource_SpectrumFuncs;
 
 } }
 

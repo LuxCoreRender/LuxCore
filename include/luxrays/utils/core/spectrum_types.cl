@@ -1,4 +1,4 @@
-#line 2 "trianglemesh_funcs.cl"
+#line 2 "spectrum_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,23 +21,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-float3 Mesh_GetGeometryNormal(__global Point *vertices,
-		__global Triangle *triangles, const uint triIndex) {
-	__global Triangle *tri = &triangles[triIndex];
-	const float3 p0 = vload3(0, &vertices[tri->v[0]].x);
-	const float3 p1 = vload3(0, &vertices[tri->v[1]].x);
-	const float3 p2 = vload3(0, &vertices[tri->v[2]].x);
+#define BLACK ((float3)(0.f, 0.f, 0.f))
 
-	return normalize(cross(p1 - p0, p2 - p0));
-}
-
-float3 Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,
-		const uint triIndex, const float b1, const float b2) {
-	__global Triangle *tri = &triangles[triIndex];
-	const float3 n0 = vload3(0, &normals[tri->v[0]].x);
-	const float3 n1 = vload3(0, &normals[tri->v[1]].x);
-	const float3 n2 = vload3(0, &normals[tri->v[2]].x);
-
-	const float b0 = 1.f - b1 - b2;
-	return normalize(b0 * n0 + b1 * n1 + b2 * n2);
-}
+typedef struct {
+	float r, g, b;
+} Spectrum;

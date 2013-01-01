@@ -1,4 +1,4 @@
-#line 2 "randomgen_funcs.cl"
+#line 2 "transform_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -33,7 +33,7 @@ float3 Transform_ApplyPoint(__global Transform *trans, const float3 point) {
 	return (float3)(
 			iw * dot(row0, point4),
 			iw * dot(row1, point4),
-			iw * dot(row2, point4),
+			iw * dot(row2, point4)
 			);
 }
 
@@ -44,6 +44,6 @@ float3 Transform_ApplyVector(__global Transform *trans, const float3 vector) {
 	return (float3)(
 			dot(row0, vector),
 			dot(row1, vector),
-			dot(row2, vector),
+			dot(row2, vector)
 			);
 }

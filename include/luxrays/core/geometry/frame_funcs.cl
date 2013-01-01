@@ -1,4 +1,4 @@
-#line 2 "randomgen_funcs.cl"
+#line 2 "frame_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
