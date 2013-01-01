@@ -27,7 +27,7 @@
 #include "smalllux.h"
 
 namespace slg { namespace ocl {
-#include "kernels/pathocl_kernel_datatypes.cl"
+#include "kernels/datatypes.cl"
 } }
 
 #endif

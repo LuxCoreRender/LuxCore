@@ -31,13 +31,20 @@
 #include "luxrays/utils/sdl/texture.h"
 #include "texture.h"
 
-namespace luxrays { namespace sdl {
+namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/utils/sdl/material_types.cl"
+}
+
+namespace sdl {
 
 class Scene;
 
-enum MaterialType {
+typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
-};
+} MaterialType;
 
 class Material {
 public:

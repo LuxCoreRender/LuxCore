@@ -26,70 +26,32 @@
 #
 ###########################################################################
 
-PreprocessOCLKernel(luxrays BVH
-	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cpp)
-PreprocessOCLKernel(luxrays QBVH
-	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp)
-PreprocessOCLKernel(luxrays MQBVH
-	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp)
-
-PreprocessOCLKernel(luxrays SamplerTypes
+set(LUXRAYS_KERNELS
+	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/samplertypes_kernel.cpp)
-PreprocessOCLKernel(luxrays FilterTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/filtertypes_kernel.cpp)
-PreprocessOCLKernel(luxrays CameraTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/cameratypes_kernel.cpp)
-PreprocessOCLKernel(luxrays TriangleMeshTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshtypes_kernel.cpp)
-PreprocessOCLKernel(luxrays TriangleMeshFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_funcs.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshfuncs_kernel.cpp)
-PreprocessOCLKernel(luxrays RandomGenTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/randomgentypes_kernel.cpp)
-PreprocessOCLKernel(luxrays RandomGenFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_funcs.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/randomgenfuncs_kernel.cpp)
-PreprocessOCLKernel(luxrays Matrix4x4Types
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4types_kernel.cpp)
-PreprocessOCLKernel(luxrays TransformTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/transformtypes_kernel.cpp)
-PreprocessOCLKernel(luxrays TransformFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_funcs.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/transformfuncs_kernel.cpp)
-PreprocessOCLKernel(luxrays McFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/mc_funcs.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/mcfuncs_kernel.cpp)
-PreprocessOCLKernel(luxrays FrameTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/frametypes_kernel.cpp)
-PreprocessOCLKernel(luxrays FrameFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_funcs.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/framefuncs_kernel.cpp)
-PreprocessOCLKernel(luxrays BSDFTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/bsdf_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/bsdftypes_kernel.cpp)
-PreprocessOCLKernel(luxrays BSDFFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/bsdf_funcs.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/bsdffuncs_kernel.cpp)
-PreprocessOCLKernel(luxrays EpsilonTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/epsilontypes_kernel.cpp)
-PreprocessOCLKernel(luxrays SpectrumTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/spectrum_types.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/spectrumtypes_kernel.cpp)
-PreprocessOCLKernel(luxrays SpectrumFuncs
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/spectrum_funcs.cl
-	${LuxRays_SOURCE_DIR}/src/kernels/spectrumfuncs_kernel.cpp)
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/material_types.cl
+)
+
+PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/kernels luxrays ${LUXRAYS_KERNELS})
 
 ###########################################################################
 #
@@ -97,99 +59,99 @@ PreprocessOCLKernel(luxrays SpectrumFuncs
 #
 ###########################################################################
 
-set(LuxRays_SRCS_ACCELERATORS
+	set(LUXRAYS_SRCS_ACCELERATORS
 	${LuxRays_SOURCE_DIR}/src/accelerators/bvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/accelerators/mqbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/accelerators/qbvhaccel.cpp
 )
-SOURCE_GROUP("Source Files\\Accelerators" FILES ${LuxRays_SRCS_ACCELERATORS})
+SOURCE_GROUP("Source Files\\Accelerators" FILES ${LUXRAYS_SRCS_ACCELERATORS})
 	
-set(LuxRays_SRCS_CORE
+set(LUXRAYS_SRCS_CORE
 	${LuxRays_SOURCE_DIR}/src/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/core/dataset.cpp
 	${LuxRays_SOURCE_DIR}/src/core/device.cpp
 	${LuxRays_SOURCE_DIR}/src/core/epsilon.cpp
 	${LuxRays_SOURCE_DIR}/src/core/trianglemesh.cpp
 )
-SOURCE_GROUP("Source Files\\Core" FILES ${LuxRays_SRCS_CORE})
+SOURCE_GROUP("Source Files\\Core" FILES ${LUXRAYS_SRCS_CORE})
 
 
-set(LuxRays_SRCS_CORE_GEOMETRY
+set(LUXRAYS_SRCS_CORE_GEOMETRY
 	${LuxRays_SOURCE_DIR}/src/core/geometry/bbox.cpp
 	${LuxRays_SOURCE_DIR}/src/core/geometry/matrix4x4.cpp
 	${LuxRays_SOURCE_DIR}/src/core/geometry/transform.cpp
 )
-SOURCE_GROUP("Source Files\\Core\\Geometry" FILES ${LuxRays_SRCS_CORE_GEOMETRY})
+SOURCE_GROUP("Source Files\\Core\\Geometry" FILES ${LUXRAYS_SRCS_CORE_GEOMETRY})
 
 IF(LUXRAYS_DISABLE_OPENCL)
-	set(LuxRays_SRCS_IDEVICES
+	set(LUXRAYS_SRCS_IDEVICES
 		${LuxRays_SOURCE_DIR}/src/idevices/nativeidevice.cpp
 		${LuxRays_SOURCE_DIR}/src/idevices/virtualidevice.cpp
 	)
 ELSE(LUXRAYS_DISABLE_OPENCL)
-	set(LuxRays_SRCS_IDEVICES
+	set(LUXRAYS_SRCS_IDEVICES
 		${LuxRays_SOURCE_DIR}/src/idevices/openclidevice.cpp
 		${LuxRays_SOURCE_DIR}/src/idevices/nativeidevice.cpp
 		${LuxRays_SOURCE_DIR}/src/idevices/virtualidevice.cpp
 	)
 ENDIF(LUXRAYS_DISABLE_OPENCL)
-SOURCE_GROUP("Source Files\\IDevices" FILES ${LuxRays_SRCS_IDEVICES})
+SOURCE_GROUP("Source Files\\IDevices" FILES ${LUXRAYS_SRCS_IDEVICES})
 
 
-set(LuxRays_SRCS_KERNELS
+set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/samplertypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/filtertypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/cameratypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshtypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshfuncs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/randomgentypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/randomgenfuncs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/transformtypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/transformfuncs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/mcfuncs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/frametypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/framefuncs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/bsdftypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/bsdffuncs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/epsilontypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/spectrumtypes_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/kernels/spectrumfuncs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/sampler_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/filter_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/camera_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/randomgen_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/randomgen_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/transform_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/transform_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/mc_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/frame_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/frame_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/bsdf_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/bsdf_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/epsilon_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/spectrum_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/spectrum_funcs_kernel.cpp
 )
-SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
+SOURCE_GROUP("Source Files\\Kernels" FILES ${LUXRAYS_SRCS_KERNELS})
 
 
-set(LuxRays_SRC_UTILS
+set(LUXRAYS_SRCS_UTILS
 	${LuxRays_SOURCE_DIR}/src/utils/properties.cpp
 )
-SOURCE_GROUP("Source Files\\Utils" FILES ${LuxRays_SRC_UTILS})	
+SOURCE_GROUP("Source Files\\Utils" FILES ${LUXRAYS_SRCS_UTILS})	
 
-set(LuxRays_SRC_UTILS_CORE
+set(LUXRAYS_SRCS_UTILS_CORE
 	${LuxRays_SOURCE_DIR}/src/utils/core/exttrianglemesh.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\core" FILES ${LuxRays_SRC_UTILS_CORE})	
+SOURCE_GROUP("Source Files\\Utils\\core" FILES ${LUXRAYS_SRCS_UTILS_CORE})	
 
-set(LuxRays_SRC_UTILS_FILM
+set(LUXRAYS_SRCS_UTILS_FILM
 	${LuxRays_SOURCE_DIR}/src/utils/film/film.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\film" FILES ${LuxRays_SRC_UTILS_FILM})
+SOURCE_GROUP("Source Files\\Utils\\film" FILES ${LUXRAYS_SRCS_UTILS_FILM})
 
-set(LuxRays_SRC_UTILS_CONVTEST
+set(LUXRAYS_SRCS_UTILS_CONVTEST
 	${LuxRays_SOURCE_DIR}/src/utils/convtest/pdiff/lpyramid.cpp
         ${LuxRays_SOURCE_DIR}/src/utils/convtest/pdiff/metric.cpp
         ${LuxRays_SOURCE_DIR}/src/utils/convtest/convtest.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\convtest" FILES ${LuxRays_SRC_UTILS_CONVTEST})
+SOURCE_GROUP("Source Files\\Utils\\convtest" FILES ${LUXRAYS_SRCS_UTILS_CONVTEST})
 
-set(LuxRays_SRC_UTILS_SAMPLER
+set(LUXRAYS_SRCS_UTILS_SAMPLER
 	${LuxRays_SOURCE_DIR}/src/utils/sampler/sampler.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\sampler" FILES ${LuxRays_SRC_UTILS_SAMPLER})
+SOURCE_GROUP("Source Files\\Utils\\sampler" FILES ${LUXRAYS_SRCS_UTILS_SAMPLER})
 
-set(LuxRays_SRC_UTILS_SDL
+set(LUXRAYS_SRCS_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/extmeshcache.cpp
@@ -200,54 +162,54 @@ set(LuxRays_SRC_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/spd.cpp
 	${LuxRays_SOURCE_DIR}/src/utils/sdl/texture.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\sdl" FILES ${LuxRays_SRC_UTILS_SDL})	
+SOURCE_GROUP("Source Files\\Utils\\sdl" FILES ${LUXRAYS_SRCS_UTILS_SDL})	
 
-set(LuxRays_SRC_UTILS_PLYMESH
+set(LUXRAYS_SRCS_UTILS_PLYMESH
 	${LuxRays_SOURCE_DIR}/src/utils/plymesh/rply.cpp
 )
-SOURCE_GROUP("Source Files\\Utils\\PlyMesh" FILES ${LuxRays_SRC_UTILS_PLYMESH})	
+SOURCE_GROUP("Source Files\\Utils\\PlyMesh" FILES ${LUXRAYS_SRCS_UTILS_PLYMESH})	
 
 IF(LUXRAYS_DISABLE_OPENCL)
-	set(LuxRays_SRC_UTILS_OCL )
+	set(LUXRAYS_SRCS_UTILS_OCL )
 ELSE(LUXRAYS_DISABLE_OPENCL)
-	set(LuxRays_SRC_UTILS_OCL
+	set(LUXRAYS_SRCS_UTILS_OCL
 		${LuxRays_SOURCE_DIR}/src/utils/ocl/utils.cpp
 	)
 ENDIF(LUXRAYS_DISABLE_OPENCL)
-SOURCE_GROUP("Source Files\\Utils\\Utils" FILES ${LuxRays_SRC_UTILS_OCL})
+SOURCE_GROUP("Source Files\\Utils\\Utils" FILES ${LUXRAYS_SRCS_UTILS_OCL})
 
-set(LuxRays_SRCS
-	${LuxRays_SRCS_ACCELERATORS}
-	${LuxRays_SRCS_CORE}
-	${LuxRays_SRCS_CORE_GEOMETRY}
-	${LuxRays_SRCS_IDEVICES}
-	${LuxRays_SRCS_KERNELS}
-	${LuxRays_SRC_UTILS_CORE}
-	${LuxRays_SRC_UTILS_FILM}
-	${LuxRays_SRC_UTILS_CONVTEST}
-	${LuxRays_SRC_UTILS_OCL}
-	${LuxRays_SRC_UTILS_SDL}
-	${LuxRays_SRC_UTILS_SAMPLER}
-	${LuxRays_SRC_UTILS_PLYMESH}
-	${LuxRays_SRC_UTILS}
+set(LUXRAYS_SRCS
+	${LUXRAYS_SRCS_ACCELERATORS}
+	${LUXRAYS_SRCS_CORE}
+	${LUXRAYS_SRCS_CORE_GEOMETRY}
+	${LUXRAYS_SRCS_IDEVICES}
+	${LUXRAYS_SRCS_KERNELS}
+	${LUXRAYS_SRCS_UTILS_CORE}
+	${LUXRAYS_SRCS_UTILS_FILM}
+	${LUXRAYS_SRCS_UTILS_CONVTEST}
+	${LUXRAYS_SRCS_UTILS_OCL}
+	${LUXRAYS_SRCS_UTILS_SDL}
+	${LUXRAYS_SRCS_UTILS_SAMPLER}
+	${LUXRAYS_SRCS_UTILS_PLYMESH}
+	${LUXRAYS_SRCS_UTILS}
 )
 
 
-set(LuxRays_HEADERS_LUXRAYS
+set(LUXRAYS_HEADERS_LUXRAYS
 	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h
 )
-SOURCE_GROUP("Header Files" FILES ${LuxRays_HEADERS_LUXRAYS})	
+SOURCE_GROUP("Header Files" FILES ${LUXRAYS_HEADERS_LUXRAYS})	
 
-set(LuxRays_HEADERS_LUXRAYS_ACCELERATORS
+set(LUXRAYS_HEADERS_LUXRAYS_ACCELERATORS
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvhaccel.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvhaccel.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvhaccel.h
 )
-SOURCE_GROUP("Header Files\\Accelerators" FILES ${LuxRays_HEADERS_LUXRAYS_ACCELERATORS})
+SOURCE_GROUP("Header Files\\Accelerators" FILES ${LUXRAYS_HEADERS_LUXRAYS_ACCELERATORS})
 
 
-set(LuxRays_HEADERS_LUXRAYS_CORE
+set(LUXRAYS_HEADERS_LUXRAYS_CORE
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/accelerator.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/context.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/dataset.h
@@ -258,9 +220,9 @@ set(LuxRays_HEADERS_LUXRAYS_CORE
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/virtualdevice.h
 )
-SOURCE_GROUP("Header Files\\Core" FILES ${LuxRays_HEADERS_LUXRAYS_CORE})
+SOURCE_GROUP("Header Files\\Core" FILES ${LUXRAYS_HEADERS_LUXRAYS_CORE})
 
-set(LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY
+set(LUXRAYS_HEADERS_LUXRAYS_CORE_GEOMETRY
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bbox.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bsphere.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4.h
@@ -274,44 +236,44 @@ set(LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_normal.h
 )
-SOURCE_GROUP("Header Files\\Core\\Geometry" FILES ${LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY})
+SOURCE_GROUP("Header Files\\Core\\Geometry" FILES ${LUXRAYS_HEADERS_LUXRAYS_CORE_GEOMETRY})
 
-set(LuxRays_HEADERS_LUXRAYS_KERNELS
+set(LUXRAYS_HEADERS_LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/kernels/kernels.h
 )
-SOURCE_GROUP("Header Files\\Kernels" FILES ${LuxRays_HEADERS_LUXRAYS_KERNELS})
+SOURCE_GROUP("Header Files\\Kernels" FILES ${LUXRAYS_HEADERS_LUXRAYS_KERNELS})
 
 
-set(LuxRays_HEADERS_LUXRAYS_UTILS
+set(LUXRAYS_HEADERS_LUXRAYS_UTILS
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/properties.h
 )
-SOURCE_GROUP("Header Files\\Utils" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS})
+SOURCE_GROUP("Header Files\\Utils" FILES ${LUXRAYS_HEADERS_LUXRAYS_UTILS})
 
-set(LuxRays_HEADERS_LUXRAYS_UTILS_CORE
+set(LUXRAYS_HEADERS_LUXRAYS_UTILS_CORE
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/atomic.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/exttrianglemesh.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/mc.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/spectrum.h
 )
-SOURCE_GROUP("Header Files\\Utils\\Core" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_CORE})
+SOURCE_GROUP("Header Files\\Utils\\Core" FILES ${LUXRAYS_HEADERS_LUXRAYS_UTILS_CORE})
 
 
-set(LuxRays_HEADERS_LUXRAYS_UTILS_FILM
+set(LUXRAYS_HEADERS_LUXRAYS_UTILS_FILM
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/film.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/framebuffer.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/tonemapping.h
 )
-SOURCE_GROUP("Header Files\\Utils\\Film" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_FILM})
+SOURCE_GROUP("Header Files\\Utils\\Film" FILES ${LUXRAYS_HEADERS_LUXRAYS_UTILS_FILM})
 
-set(LuxRays_HEADERS_LUXRAYS_UTILS_PLYMESH
+set(LUXRAYS_HEADERS_LUXRAYS_UTILS_PLYMESH
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/plymesh/rply.h
 )
-SOURCE_GROUP("Header Files\\Utils\\PlyMesh" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_PLYMESH})
+SOURCE_GROUP("Header Files\\Utils\\PlyMesh" FILES ${LUXRAYS_HEADERS_LUXRAYS_UTILS_PLYMESH})
 
 
-set(LuxRays_HEADERS_LUXRAYS_UTILS_SDL
+set(LUXRAYS_HEADERS_LUXRAYS_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/extmeshcache.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light.h
@@ -320,40 +282,40 @@ set(LuxRays_HEADERS_LUXRAYS_UTILS_SDL
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/spd.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/texture.h
 )
-SOURCE_GROUP("Header Files\\Utils\\SDL" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_SDL})
+SOURCE_GROUP("Header Files\\Utils\\SDL" FILES ${LUXRAYS_HEADERS_LUXRAYS_UTILS_SDL})
 
-set(LuxRays_HEADERS_LUXRAYS_UTILS_SDL_DATA
+set(LUXRAYS_HEADERS_LUXRAYS_UTILS_SDL_DATA
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/data/rgbD65_32.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/data/rgbE_32.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/data/sun_spect.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/data/xyzbasis.h
 )
-SOURCE_GROUP("Header Files\\Utils\\SDL\\Data" FILES ${LuxRays_HEADERS_LUXRAYS_UTILS_SDL_DATA})
+SOURCE_GROUP("Header Files\\Utils\\SDL\\Data" FILES ${LUXRAYS_HEADERS_LUXRAYS_UTILS_SDL_DATA})
 
-set(LuxRays_HEADERS_LUXRAYS_OPENCL
+set(LUXRAYS_HEADERS_LUXRAYS_OPENCL
 	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/device.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/intersectiondevice.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/opencl.h
 	${LuxRays_SOURCE_DIR}/include/luxrays/opencl/utils.h
 )
-SOURCE_GROUP("Header Files\\OpenCL" FILES ${LuxRays_HEADERS_LUXRAYS_OPENCL})
+SOURCE_GROUP("Header Files\\OpenCL" FILES ${LUXRAYS_HEADERS_LUXRAYS_OPENCL})
 
 set(LuxRays_HEADERS
-	${LuxRays_HEADERS_LUXRAYS}
-	${LuxRays_HEADERS_LUXRAYS_ACCELERATORS}
-	${LuxRays_HEADERS_LUXRAYS_CORE}
-	${LuxRays_HEADERS_LUXRAYS_CORE_GEOMETRY}
-	${LuxRays_HEADERS_LUXRAYS_KERNELS}
-	${LuxRays_HEADERS_LUXRAYS_OPENCL}
-	${LuxRays_HEADERS_LUXRAYS_UTILS}
-	${LuxRays_HEADERS_LUXRAYS_UTILS_CORE}
-	${LuxRays_HEADERS_LUXRAYS_UTILS_FILM}
-	${LuxRays_HEADERS_LUXRAYS_UTILS_PLYMESH}
-	${LuxRays_HEADERS_LUXRAYS_UTILS_SDL}
-	${LuxRays_HEADERS_LUXRAYS_UTILS_SDL_DATA}
+	${LUXRAYS_HEADERS_LUXRAYS}
+	${LUXRAYS_HEADERS_LUXRAYS_ACCELERATORS}
+	${LUXRAYS_HEADERS_LUXRAYS_CORE}
+	${LUXRAYS_HEADERS_LUXRAYS_CORE_GEOMETRY}
+	${LUXRAYS_HEADERS_LUXRAYS_KERNELS}
+	${LUXRAYS_HEADERS_LUXRAYS_OPENCL}
+	${LUXRAYS_HEADERS_LUXRAYS_UTILS}
+	${LUXRAYS_HEADERS_LUXRAYS_UTILS_CORE}
+	${LUXRAYS_HEADERS_LUXRAYS_UTILS_FILM}
+	${LUXRAYS_HEADERS_LUXRAYS_UTILS_PLYMESH}
+	${LUXRAYS_HEADERS_LUXRAYS_UTILS_SDL}
+	${LUXRAYS_HEADERS_LUXRAYS_UTILS_SDL_DATA}
 )
 
-add_library(luxrays STATIC ${LuxRays_SRCS} ${LuxRays_HEADERS})
+add_library(luxrays STATIC ${LUXRAYS_SRCS} ${LuxRays_HEADERS})
 
 ###########################################################################
 #

@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_SpectrumFuncs = 
-"#line 2 \"specturm_funcs.cl\"\n"
+std::string KernelSource_spectrum_types = 
+"#line 2 \"spectrum_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,7 +24,9 @@ std::string KernelSource_SpectrumFuncs =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"float Spectrum_Filter(const float3 c)  {\n"
-"	return fmax(c.s0, fmax(c.s1, c.s2));\n"
-"}\n"
+"#define BLACK ((float3)(0.f, 0.f, 0.f))\n"
+"\n"
+"typedef struct {\n"
+"	float r, g, b;\n"
+"} Spectrum;\n"
 ; } }

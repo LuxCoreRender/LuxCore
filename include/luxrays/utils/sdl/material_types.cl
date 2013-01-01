@@ -1,3 +1,5 @@
+#line 2 "material_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -19,22 +21,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_SDL_BSDFEVENTS_H
-#define	_LUXRAYS_SDL_BSDFEVENTS_H
-
-namespace luxrays { namespace sdl {
-
 typedef enum {
-	NONE     = 0,
-	DIFFUSE  = 1,
-	GLOSSY   = 2,
-	SPECULAR = 4,
-	REFLECT  = 8,
-	TRANSMIT = 16
-} BSDFEventType;
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
+} MaterialType;
 
-typedef int BSDFEvent;
+typedef struct {
+    unsigned int textureIndex;
+} MatteParam;
 
-} }
-
-#endif	/* _LUXRAYS_SDL_BSDFEVENTS_H */
+typedef struct {
+	MaterialType type;
+	union {
+		MatteParam matte;
+	} param;
+} Material;

@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
-std::string KernelSource_PathOCL_Filters = 
-"#line 2 \"patchocl_kernel_filters.cl\"\n"
+std::string KernelSource_filters = 
+"#line 2 \"filters.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"

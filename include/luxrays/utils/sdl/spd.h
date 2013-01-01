@@ -110,7 +110,7 @@ protected:
 };
 
 // only use spline for regular data
-enum SPDResamplingMethod { Linear, Spline };
+typedef enum { Linear, Spline } SPDResamplingMethod;
 
 // Irregularly sampled SPD
 // Resampled to a fixed resolution (at construction)

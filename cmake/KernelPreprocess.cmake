@@ -51,3 +51,20 @@ FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
 		)
 	ENDIF(WIN32)
 ENDFUNCTION(PreprocessOCLKernel)
+
+FUNCTION(PreprocessOCLKernels)
+	set(dest_dir ${ARGV0})
+	set(namespace ${ARGV1})
+	list(REMOVE_AT ARGV 0 1)
+
+	foreach(kernel ${ARGV})
+		get_filename_component(kernel_filename ${kernel} NAME)
+		string(LENGTH ${kernel_filename} kernel_filename_length)
+		math(EXPR kernel_filename_length "${kernel_filename_length} - 3")
+		string(SUBSTRING ${kernel_filename} 0 ${kernel_filename_length} kernel_name)
+
+		PreprocessOCLKernel(${namespace} ${kernel_name}
+			${kernel}
+			${dest_dir}/${kernel_name}_kernel.cpp)
+	endforeach(kernel)
+ENDFUNCTION(PreprocessOCLKernels)

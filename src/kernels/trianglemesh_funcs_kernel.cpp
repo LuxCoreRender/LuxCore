@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_Matrix4x4Types = 
-"#line 2 \"trianglemesh_types.cl\"\n"
+std::string KernelSource_trianglemesh_funcs = 
+"#line 2 \"trianglemesh_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,7 +24,24 @@ std::string KernelSource_Matrix4x4Types =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef struct {\n"
-"	float m[4][4];\n"
-"} Matrix4x4;\n"
+"float3 Mesh_GetGeometryNormal(__global Point *vertices,\n"
+"		__global Triangle *triangles, const uint triIndex) {\n"
+"	__global Triangle *tri = &triangles[triIndex];\n"
+"	const float3 p0 = vload3(0, &vertices[tri->v[0]].x);\n"
+"	const float3 p1 = vload3(0, &vertices[tri->v[1]].x);\n"
+"	const float3 p2 = vload3(0, &vertices[tri->v[2]].x);\n"
+"\n"
+"	return normalize(cross(p1 - p0, p2 - p0));\n"
+"}\n"
+"\n"
+"float3 Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,\n"
+"		const uint triIndex, const float b1, const float b2) {\n"
+"	__global Triangle *tri = &triangles[triIndex];\n"
+"	const float3 n0 = vload3(0, &normals[tri->v[0]].x);\n"
+"	const float3 n1 = vload3(0, &normals[tri->v[1]].x);\n"
+"	const float3 n2 = vload3(0, &normals[tri->v[2]].x);\n"
+"\n"
+"	const float b0 = 1.f - b1 - b2;\n"
+"	return normalize(b0 * n0 + b1 * n1 + b2 * n2);\n"
+"}\n"
 ; } }

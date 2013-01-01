@@ -64,10 +64,10 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const Film
 	sampleResults.push_back(sr);
 }
 
-enum SamplerType {
+typedef enum {
 	RANDOM = 0,
 	METROPOLIS = 1
-};
+} SamplerType;
 
 class Sampler {
 public:

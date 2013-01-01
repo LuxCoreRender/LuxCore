@@ -27,28 +27,29 @@
 namespace luxrays { namespace ocl {
 
 // Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
+extern std::string KernelSource_bvh;
+extern std::string KernelSource_qbvh;
+extern std::string KernelSource_mqbvh;
 
-extern std::string KernelSource_SamplerTypes;
-extern std::string KernelSource_FilterTypes;
-extern std::string KernelSource_CameraTypes;
-extern std::string KernelSource_TriangleMeshTypes;
-extern std::string KernelSource_TriangleMeshFuncs;
-extern std::string KernelSource_RandomGenTypes;
-extern std::string KernelSource_RandomGenFuncs;
-extern std::string KernelSource_Matrix4x4Types;
-extern std::string KernelSource_TransformTypes;
-extern std::string KernelSource_TransformFuncs;
-extern std::string KernelSource_McFuncs;
-extern std::string KernelSource_FrameTypes;
-extern std::string KernelSource_FrameFuncs;
-extern std::string KernelSource_BSDFTypes;
-extern std::string KernelSource_BSDFFuncs;
-extern std::string KernelSource_EpsilonTypes;
-extern std::string KernelSource_SpectrumTypes;
-extern std::string KernelSource_SpectrumFuncs;
+extern std::string KernelSource_sampler_types;
+extern std::string KernelSource_filter_types;
+extern std::string KernelSource_camera_types;
+extern std::string KernelSource_trianglemesh_types;
+extern std::string KernelSource_trianglemesh_funcs;
+extern std::string KernelSource_randomgen_types;
+extern std::string KernelSource_randomgen_funcs;
+extern std::string KernelSource_matrix4x4_types;
+extern std::string KernelSource_transform_types;
+extern std::string KernelSource_transform_funcs;
+extern std::string KernelSource_mc_funcs;
+extern std::string KernelSource_frame_types;
+extern std::string KernelSource_frame_funcs;
+extern std::string KernelSource_bsdf_types;
+extern std::string KernelSource_bsdf_funcs;
+extern std::string KernelSource_epsilon_types;
+extern std::string KernelSource_spectrum_types;
+extern std::string KernelSource_spectrum_funcs;
+extern std::string KernelSource_material_types;
 
 } }
 

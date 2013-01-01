@@ -26,10 +26,10 @@
 
 namespace slg { namespace ocl {
 
-extern std::string KernelSource_PathOCL_Kernels;
-extern std::string KernelSource_PathOCL_DataTypes;
-extern std::string KernelSource_PathOCL_Filters;
-extern std::string KernelSource_PathOCL_Samplers;
+extern std::string KernelSource_datatypes;
+extern std::string KernelSource_filters;
+extern std::string KernelSource_samplers;
+extern std::string KernelSource_pathocl_kernels;
 
 } }
 

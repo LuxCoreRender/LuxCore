@@ -33,9 +33,9 @@ public:
 	~TelnetServer();
 
 private:
-	enum ServerState {
+	typedef enum {
 		RUN, EDIT
-	};
+	} ServerState;
 
 	static void ServerThreadImpl(TelnetServer *telnetServer);
 

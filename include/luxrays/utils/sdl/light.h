@@ -32,9 +32,9 @@ namespace luxrays { namespace sdl {
 
 class Scene;
 
-enum LightSourceType {
+typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
-};
+} LightSourceType;
 
 //------------------------------------------------------------------------------
 // LightSource implementation

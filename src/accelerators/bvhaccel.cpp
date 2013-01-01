@@ -61,7 +61,7 @@ public:
 			_LUXRAYS_RAYHIT_OCLDEFINE
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_BBOX_OCLDEFINE);
-		code += luxrays::ocl::KernelSource_BVH;
+		code += luxrays::ocl::KernelSource_bvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {

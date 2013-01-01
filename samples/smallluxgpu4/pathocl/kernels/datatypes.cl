@@ -1,4 +1,4 @@
-#line 1 "pathocl_kernel_datatypes.cl"
+#line 2 "datatypes.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -244,88 +244,6 @@ typedef struct {
 typedef struct {
 	unsigned int sampleCount;
 } GPUTaskStats;
-
-//------------------------------------------------------------------------------
-
-#define MAT_MATTE 0
-#define MAT_AREALIGHT 1
-#define MAT_MIRROR 2
-#define MAT_GLASS 3
-#define MAT_MATTEMIRROR 4
-#define MAT_METAL 5
-#define MAT_MATTEMETAL 6
-#define MAT_ALLOY 7
-#define MAT_ARCHGLASS 8
-#define MAT_NULL 9
-
-typedef struct {
-    float r, g, b;
-} MatteParam;
-
-typedef struct {
-    float gain_r, gain_g, gain_b;
-} AreaLightParam;
-
-typedef struct {
-    float r, g, b;
-    int specularBounce;
-} MirrorParam;
-
-typedef struct {
-    float refl_r, refl_g, refl_b;
-    float refrct_r, refrct_g, refrct_b;
-    float ousideIor, ior;
-    float R0;
-    int reflectionSpecularBounce, transmitionSpecularBounce;
-} GlassParam;
-
-typedef struct {
-	MatteParam matte;
-	MirrorParam mirror;
-	float matteFilter, totFilter, mattePdf, mirrorPdf;
-} MatteMirrorParam;
-
-typedef struct {
-    float r, g, b;
-    float exponent;
-    int specularBounce;
-} MetalParam;
-
-typedef struct {
-	MatteParam matte;
-	MetalParam metal;
-	float matteFilter, totFilter, mattePdf, metalPdf;
-} MatteMetalParam;
-
-typedef struct {
-    float diff_r, diff_g, diff_b;
-	float refl_r, refl_g, refl_b;
-    float exponent;
-    float R0;
-    int specularBounce;
-} AlloyParam;
-
-typedef struct {
-    float refl_r, refl_g, refl_b;
-    float refrct_r, refrct_g, refrct_b;
-	float transFilter, totFilter, reflPdf, transPdf;
-	bool reflectionSpecularBounce, transmitionSpecularBounce;
-} ArchGlassParam;
-
-typedef struct {
-	unsigned int type;
-	union {
-		MatteParam matte;
-        AreaLightParam areaLight;
-		MirrorParam mirror;
-        GlassParam glass;
-		MatteMirrorParam matteMirror;
-        MetalParam metal;
-        MatteMetalParam matteMetal;
-        AlloyParam alloy;
-        ArchGlassParam archGlass;
-	} param;
-} Material;
 
 //------------------------------------------------------------------------------
 

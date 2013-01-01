@@ -36,9 +36,9 @@ namespace luxrays { namespace sdl {
 // Texture
 //------------------------------------------------------------------------------
 
-enum TextureType {
+typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP
-};
+} TextureType;
 	
 class Texture {
 public:

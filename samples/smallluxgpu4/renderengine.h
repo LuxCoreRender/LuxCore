@@ -31,7 +31,7 @@
 
 namespace slg {
 
-enum RenderEngineType {
+typedef enum {
 	PATHOCL  = 4,
 	LIGHTCPU = 5,
 	PATHCPU = 6,
@@ -39,7 +39,7 @@ enum RenderEngineType {
 	BIDIRHYBRID = 8,
 	CBIDIRHYBRID = 9,
 	BIDIRVMCPU = 10
-};
+} RenderEngineType;
 
 //------------------------------------------------------------------------------
 // Base class for render engines
