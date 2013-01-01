@@ -48,6 +48,9 @@ PreprocessOCLKernel(luxrays CameraTypes
 PreprocessOCLKernel(luxrays TriangleMeshTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshtypes_kernel.cpp)
+PreprocessOCLKernel(luxrays TriangleMeshFuncs
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_funcs.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshfuncs_kernel.cpp)
 PreprocessOCLKernel(luxrays RandomGenTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_types.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgentypes_kernel.cpp)
@@ -75,6 +78,9 @@ PreprocessOCLKernel(luxrays FrameFuncs
 PreprocessOCLKernel(luxrays BSDFTypes
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/bsdf_types.cl
 	${LuxRays_SOURCE_DIR}/src/kernels/bsdftypes_kernel.cpp)
+PreprocessOCLKernel(luxrays BSDFFuncs
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/bsdf_funcs.cl
+	${LuxRays_SOURCE_DIR}/src/kernels/bsdffuncs_kernel.cpp)
 
 ###########################################################################
 #
@@ -129,6 +135,7 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/filtertypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/cameratypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshtypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/trianglemeshfuncs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgentypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgenfuncs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4types_kernel.cpp
@@ -138,6 +145,7 @@ set(LuxRays_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/frametypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/framefuncs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/bsdftypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/bsdffuncs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LuxRays_SRCS_KERNELS})
 

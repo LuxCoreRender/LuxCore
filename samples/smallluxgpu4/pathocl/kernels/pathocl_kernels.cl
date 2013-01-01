@@ -296,9 +296,22 @@ __kernel void AdvancePaths(
 	if (pathState == RT_NEXT_VERTEX) {
 		if (currentTriangleIndex != 0xffffffffu) {
 			// Something was hit
-			sample->radiance.r += 1.f;
-			sample->radiance.g += 1.f;
-			sample->radiance.b += 1.f;
+
+			__global BSDF *bsdf = &task->pathStateBase.bsdf;
+			BSDF_Init(bsdf,
+#if defined(PARAM_ACCEL_MQBVH)
+					meshFirstTriangleOffset,
+					meshDescs,
+#endif
+					//mats,
+					//meshMats,
+					meshIDs, vertNormals, vertices, triangles, ray, rayHit, 0);
+
+			const float3 geometryN = vload3(0, &bsdf->geometryN.x);
+			const float c = geometryN.z;
+			sample->radiance.r += c;
+			sample->radiance.g += c;
+			sample->radiance.b += c;
 		}
 
 		pathState = SPLAT_SAMPLE;

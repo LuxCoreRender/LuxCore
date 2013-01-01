@@ -420,6 +420,7 @@ void PathOCLRenderThread::InitKernels() {
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
+			" -D LUXRAYS_OPENCL_KERNEL" <<
 			" -D SLG_OPENCL_KERNEL" <<
 			" -D PARAM_TASK_COUNT=" << renderEngine->taskCount <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
@@ -597,11 +598,13 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_TransformFuncs <<
 			luxrays::ocl::KernelSource_RandomGenTypes <<
 			luxrays::ocl::KernelSource_RandomGenFuncs <<
+			luxrays::ocl::KernelSource_TriangleMeshTypes <<
+			luxrays::ocl::KernelSource_TriangleMeshFuncs <<
 			luxrays::ocl::KernelSource_BSDFTypes <<
+			luxrays::ocl::KernelSource_BSDFFuncs <<
 			luxrays::ocl::KernelSource_SamplerTypes <<
 			luxrays::ocl::KernelSource_FilterTypes <<
 			luxrays::ocl::KernelSource_CameraTypes <<
-			luxrays::ocl::KernelSource_TriangleMeshTypes <<
 			slg::ocl::KernelSource_PathOCL_DataTypes <<
 			slg::ocl::KernelSource_PathOCL_Filters <<
 			slg::ocl::KernelSource_PathOCL_Samplers <<
