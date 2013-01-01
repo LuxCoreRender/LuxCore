@@ -49,7 +49,10 @@ typedef struct {
 	Triangle *triangles;
 	unsigned int triIndex;
 
-	//__global Material *material;
+#if defined(LUXRAYS_OPENCL_KERNEL)
+	__global
+#endif
+	Material *material;
 	//__global TriangleLightSource *lightSource;
 
 	Frame frame;

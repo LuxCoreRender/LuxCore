@@ -136,6 +136,7 @@ public:
 	Material *GetMaterial(const u_int index) {
 		return mats[index];
 	}
+	u_int GetMaterialIndex(Material *m) const;
 
 	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
 	std::vector<std::string> GetMaterialNames() const;
@@ -148,6 +149,7 @@ private:
 	std::vector<Material *> mats;
 	std::map<std::string, Material *> matsByName;
 	std::map<std::string, u_int> indexByName;
+	std::map<Material *, u_int> indexByPtr;
 };
 
 //------------------------------------------------------------------------------

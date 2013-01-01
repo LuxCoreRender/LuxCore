@@ -285,208 +285,66 @@ void CompiledScene::CompileGeometry() {
 }
 
 void CompiledScene::CompileMaterials() {
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
-//
-//	//--------------------------------------------------------------------------
-//	// Translate material definitions
-//	//--------------------------------------------------------------------------
-//
-//	const double tStart = WallClockTime();
-//
-//	enable_MAT_MATTE = false;
-//	enable_MAT_AREALIGHT = false;
-//	enable_MAT_MIRROR = false;
-//	enable_MAT_GLASS = false;
-//	enable_MAT_MATTEMIRROR = false;
-//	enable_MAT_METAL = false;
-//	enable_MAT_MATTEMETAL = false;
-//	enable_MAT_ALLOY = false;
-//	enable_MAT_ARCHGLASS = false;
-//
-//	const u_int materialsCount = scene->materials.size();
-//	mats.resize(materialsCount);
-//
-//	for (u_int i = 0; i < materialsCount; ++i) {
-//		Material *m = scene->materials[i];
-//		PathOCL::Material *gpum = &mats[i];
-//
-//		switch (m->GetType()) {
-//			case MATTE: {
-//				enable_MAT_MATTE = true;
-//				MatteMaterial *mm = (MatteMaterial *)m;
-//
-//				gpum->type = MAT_MATTE;
-//				gpum->param.matte.r = mm->GetKd().r;
-//				gpum->param.matte.g = mm->GetKd().g;
-//				gpum->param.matte.b = mm->GetKd().b;
-//				break;
-//			}
-//			case AREALIGHT: {
-//				enable_MAT_AREALIGHT = true;
-//				AreaLightMaterial *alm = (AreaLightMaterial *)m;
-//
-//				gpum->type = MAT_AREALIGHT;
-//				gpum->param.areaLight.gain_r = alm->GetGain().r;
-//				gpum->param.areaLight.gain_g = alm->GetGain().g;
-//				gpum->param.areaLight.gain_b = alm->GetGain().b;
-//				break;
-//			}
-//			case MIRROR: {
-//				enable_MAT_MIRROR = true;
-//				MirrorMaterial *mm = (MirrorMaterial *)m;
-//
-//				gpum->type = MAT_MIRROR;
-//				gpum->param.mirror.r = mm->GetKr().r;
-//				gpum->param.mirror.g = mm->GetKr().g;
-//				gpum->param.mirror.b = mm->GetKr().b;
-//				gpum->param.mirror.specularBounce = mm->HasSpecularBounceEnabled();
-//				break;
-//			}
-//			case GLASS: {
-//				enable_MAT_GLASS = true;
-//				GlassMaterial *gm = (GlassMaterial *)m;
-//
-//				gpum->type = MAT_GLASS;
-//				gpum->param.glass.refl_r = gm->GetKrefl().r;
-//				gpum->param.glass.refl_g = gm->GetKrefl().g;
-//				gpum->param.glass.refl_b = gm->GetKrefl().b;
-//
-//				gpum->param.glass.refrct_r = gm->GetKrefrct().r;
-//				gpum->param.glass.refrct_g = gm->GetKrefrct().g;
-//				gpum->param.glass.refrct_b = gm->GetKrefrct().b;
-//
-//				gpum->param.glass.ousideIor = gm->GetOutsideIOR();
-//				gpum->param.glass.ior = gm->GetIOR();
-//				gpum->param.glass.R0 = gm->GetR0();
-//				gpum->param.glass.reflectionSpecularBounce = gm->HasReflSpecularBounceEnabled();
-//				gpum->param.glass.transmitionSpecularBounce = gm->HasRefrctSpecularBounceEnabled();
-//				break;
-//			}
-//			case MATTEMIRROR: {
-//				enable_MAT_MATTEMIRROR = true;
-//				MatteMirrorMaterial *mmm = (MatteMirrorMaterial *)m;
-//
-//				gpum->type = MAT_MATTEMIRROR;
-//				gpum->param.matteMirror.matte.r = mmm->GetMatte().GetKd().r;
-//				gpum->param.matteMirror.matte.g = mmm->GetMatte().GetKd().g;
-//				gpum->param.matteMirror.matte.b = mmm->GetMatte().GetKd().b;
-//
-//				gpum->param.matteMirror.mirror.r = mmm->GetMirror().GetKr().r;
-//				gpum->param.matteMirror.mirror.g = mmm->GetMirror().GetKr().g;
-//				gpum->param.matteMirror.mirror.b = mmm->GetMirror().GetKr().b;
-//				gpum->param.matteMirror.mirror.specularBounce = mmm->GetMirror().HasSpecularBounceEnabled();
-//
-//				gpum->param.matteMirror.matteFilter = mmm->GetMatteFilter();
-//				gpum->param.matteMirror.totFilter = mmm->GetTotFilter();
-//				gpum->param.matteMirror.mattePdf = mmm->GetMattePdf();
-//				gpum->param.matteMirror.mirrorPdf = mmm->GetMirrorPdf();
-//				break;
-//			}
-//			case METAL: {
-//				enable_MAT_METAL = true;
-//				MetalMaterial *mm = (MetalMaterial *)m;
-//
-//				gpum->type = MAT_METAL;
-//				gpum->param.metal.r = mm->GetKr().r;
-//				gpum->param.metal.g = mm->GetKr().g;
-//				gpum->param.metal.b = mm->GetKr().b;
-//				gpum->param.metal.exponent = mm->GetExp();
-//				gpum->param.metal.specularBounce = mm->HasSpecularBounceEnabled();
-//				break;
-//			}
-//			case MATTEMETAL: {
-//				enable_MAT_MATTEMETAL = true;
-//				MatteMetalMaterial *mmm = (MatteMetalMaterial *)m;
-//
-//				gpum->type = MAT_MATTEMETAL;
-//				gpum->param.matteMetal.matte.r = mmm->GetMatte().GetKd().r;
-//				gpum->param.matteMetal.matte.g = mmm->GetMatte().GetKd().g;
-//				gpum->param.matteMetal.matte.b = mmm->GetMatte().GetKd().b;
-//
-//				gpum->param.matteMetal.metal.r = mmm->GetMetal().GetKr().r;
-//				gpum->param.matteMetal.metal.g = mmm->GetMetal().GetKr().g;
-//				gpum->param.matteMetal.metal.b = mmm->GetMetal().GetKr().b;
-//				gpum->param.matteMetal.metal.exponent = mmm->GetMetal().GetExp();
-//				gpum->param.matteMetal.metal.specularBounce = mmm->GetMetal().HasSpecularBounceEnabled();
-//
-//				gpum->param.matteMetal.matteFilter = mmm->GetMatteFilter();
-//				gpum->param.matteMetal.totFilter = mmm->GetTotFilter();
-//				gpum->param.matteMetal.mattePdf = mmm->GetMattePdf();
-//				gpum->param.matteMetal.metalPdf = mmm->GetMetalPdf();
-//				break;
-//			}
-//			case ALLOY: {
-//				enable_MAT_ALLOY = true;
-//				AlloyMaterial *am = (AlloyMaterial *)m;
-//
-//				gpum->type = MAT_ALLOY;
-//				gpum->param.alloy.refl_r= am->GetKrefl().r;
-//				gpum->param.alloy.refl_g = am->GetKrefl().g;
-//				gpum->param.alloy.refl_b = am->GetKrefl().b;
-//
-//				gpum->param.alloy.diff_r = am->GetKd().r;
-//				gpum->param.alloy.diff_g = am->GetKd().g;
-//				gpum->param.alloy.diff_b = am->GetKd().b;
-//
-//				gpum->param.alloy.exponent = am->GetExp();
-//				gpum->param.alloy.R0 = am->GetR0();
-//				gpum->param.alloy.specularBounce = am->HasSpecularBounceEnabled();
-//				break;
-//			}
-//			case ARCHGLASS: {
-//				enable_MAT_ARCHGLASS = true;
-//				ArchGlassMaterial *agm = (ArchGlassMaterial *)m;
-//
-//				gpum->type = MAT_ARCHGLASS;
-//				gpum->param.archGlass.refl_r = agm->GetKrefl().r;
-//				gpum->param.archGlass.refl_g = agm->GetKrefl().g;
-//				gpum->param.archGlass.refl_b = agm->GetKrefl().b;
-//
-//				gpum->param.archGlass.refrct_r = agm->GetKrefrct().r;
-//				gpum->param.archGlass.refrct_g = agm->GetKrefrct().g;
-//				gpum->param.archGlass.refrct_b = agm->GetKrefrct().b;
-//
-//				gpum->param.archGlass.transFilter = agm->GetTransFilter();
-//				gpum->param.archGlass.totFilter = agm->GetTotFilter();
-//				gpum->param.archGlass.reflPdf = agm->GetReflPdf();
-//				gpum->param.archGlass.transPdf = agm->GetTransPdf();
-//				break;
-//			}
-//			default: {
-//				enable_MAT_MATTE = true;
-//				gpum->type = MAT_MATTE;
-//				gpum->param.matte.r = 0.75f;
-//				gpum->param.matte.g = 0.75f;
-//				gpum->param.matte.b = 0.75f;
-//				break;
-//			}
-//		}
-//	}
-//
-//
-//	//--------------------------------------------------------------------------
-//	// Translate mesh material indices
-//	//--------------------------------------------------------------------------
-//
-//	const u_int meshCount = scene->objectMaterials.size();
-//	meshMats.resize(meshCount);
-//	for (u_int i = 0; i < meshCount; ++i) {
-//		Material *m = scene->objectMaterials[i];
-//
-//		// Look for the index
-//		u_int index = 0;
-//		for (u_int j = 0; j < materialsCount; ++j) {
-//			if (m == scene->materials[j]) {
-//				index = j;
-//				break;
-//			}
-//		}
-//
-//		meshMats[i] = index;
-//	}
-//
-//	const double tEnd = WallClockTime();
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
+
+	//--------------------------------------------------------------------------
+	// Translate material definitions
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	enable_MAT_MATTE = false;
+	enable_MAT_MIRROR = false;
+
+	const u_int materialsCount = scene->matDefs.GetSize();
+	mats.resize(materialsCount);
+
+	for (u_int i = 0; i < materialsCount; ++i) {
+		Material *m = scene->matDefs.GetMaterial(i);
+		luxrays::ocl::Material *mat = &mats[i];
+
+		switch (m->GetType()) {
+			case MATTE: {
+				enable_MAT_MATTE = true;
+				MatteMaterial *mm = (MatteMaterial *)m;
+
+				mat->type = luxrays::ocl::MATTE;
+				const Spectrum kd = mm->GetKd()->GetColorValue(UV(0.f, 0.f));
+				mat->param.matte.kd.r = kd.r;
+				mat->param.matte.kd.g = kd.g;
+				mat->param.matte.kd.b = kd.b;
+				break;
+			}
+			case MIRROR: {
+				enable_MAT_MIRROR = true;
+				MirrorMaterial *mm = (MirrorMaterial *)m;
+
+				mat->type = luxrays::ocl::MIRROR;
+				const Spectrum kr = mm->GetKr()->GetColorValue(UV(0.f, 0.f));
+				mat->param.mirror.kr.r = kr.r;
+				mat->param.mirror.kr.g = kr.g;
+				mat->param.mirror.kr.b = kr.b;
+				break;
+			}
+			default:
+				throw std::runtime_error("Unknown material: " + m->GetType());
+				break;
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// Translate mesh material indices
+	//--------------------------------------------------------------------------
+
+	const u_int meshCount = scene->meshDefs.GetSize();
+	meshMats.resize(meshCount);
+	for (u_int i = 0; i < meshCount; ++i) {
+		Material *m = scene->objectMaterials[i];
+		meshMats[i] = scene->matDefs.GetMaterialIndex(m);
+	}
+
+	const double tEnd = WallClockTime();
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileAreaLights() {

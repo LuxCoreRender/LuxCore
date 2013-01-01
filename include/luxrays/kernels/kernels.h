@@ -50,6 +50,7 @@ extern std::string KernelSource_epsilon_types;
 extern std::string KernelSource_spectrum_types;
 extern std::string KernelSource_spectrum_funcs;
 extern std::string KernelSource_material_types;
+extern std::string KernelSource_material_funcs;
 
 } }
 

@@ -71,12 +71,10 @@ public:
 	// Compiled SkyLight
 	slg::ocl::SkyLight *skyLight;
 
-//	// Compiled Materials
-//	bool enable_MAT_MATTE, enable_MAT_AREALIGHT, enable_MAT_MIRROR, enable_MAT_GLASS,
-//		enable_MAT_MATTEMIRROR, enable_MAT_METAL, enable_MAT_MATTEMETAL, enable_MAT_ALLOY,
-//		enable_MAT_ARCHGLASS;
-//	vector<PathOCL::Material> mats;
-//	vector<u_int> meshMats;
+	// Compiled Materials
+	bool enable_MAT_MATTE, enable_MAT_MIRROR;
+	vector<luxrays::ocl::Material> mats;
+	vector<u_int> meshMats;
 
 //	// Compiled TextureMaps
 //	vector<PathOCL::TexMap> gpuTexMaps;
