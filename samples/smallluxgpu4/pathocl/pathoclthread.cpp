@@ -589,28 +589,28 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
-			luxrays::ocl::KernelSource_EpsilonTypes <<
-			luxrays::ocl::KernelSource_SpectrumTypes <<
-			luxrays::ocl::KernelSource_SpectrumFuncs <<
-			luxrays::ocl::KernelSource_McFuncs <<
-			luxrays::ocl::KernelSource_FrameTypes <<
-			luxrays::ocl::KernelSource_FrameFuncs <<
-			luxrays::ocl::KernelSource_Matrix4x4Types <<
-			luxrays::ocl::KernelSource_TransformTypes <<
-			luxrays::ocl::KernelSource_TransformFuncs <<
-			luxrays::ocl::KernelSource_RandomGenTypes <<
-			luxrays::ocl::KernelSource_RandomGenFuncs <<
-			luxrays::ocl::KernelSource_TriangleMeshTypes <<
-			luxrays::ocl::KernelSource_TriangleMeshFuncs <<
-			luxrays::ocl::KernelSource_BSDFTypes <<
-			luxrays::ocl::KernelSource_BSDFFuncs <<
-			luxrays::ocl::KernelSource_SamplerTypes <<
-			luxrays::ocl::KernelSource_FilterTypes <<
-			luxrays::ocl::KernelSource_CameraTypes <<
-			slg::ocl::KernelSource_PathOCL_DataTypes <<
-			slg::ocl::KernelSource_PathOCL_Filters <<
-			slg::ocl::KernelSource_PathOCL_Samplers <<
-			slg::ocl::KernelSource_PathOCL_Kernels;
+			luxrays::ocl::KernelSource_epsilon_types <<
+			luxrays::ocl::KernelSource_spectrum_types <<
+			luxrays::ocl::KernelSource_spectrum_funcs <<
+			luxrays::ocl::KernelSource_mc_funcs <<
+			luxrays::ocl::KernelSource_frame_types <<
+			luxrays::ocl::KernelSource_frame_funcs <<
+			luxrays::ocl::KernelSource_matrix4x4_types <<
+			luxrays::ocl::KernelSource_transform_types <<
+			luxrays::ocl::KernelSource_transform_funcs <<
+			luxrays::ocl::KernelSource_randomgen_types <<
+			luxrays::ocl::KernelSource_randomgen_funcs <<
+			luxrays::ocl::KernelSource_trianglemesh_types <<
+			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			luxrays::ocl::KernelSource_bsdf_types <<
+			luxrays::ocl::KernelSource_bsdf_funcs <<
+			luxrays::ocl::KernelSource_sampler_types <<
+			luxrays::ocl::KernelSource_filter_types <<
+			luxrays::ocl::KernelSource_camera_types <<
+			slg::ocl::KernelSource_datatypes <<
+			slg::ocl::KernelSource_filters <<
+			slg::ocl::KernelSource_samplers <<
+			slg::ocl::KernelSource_pathocl_kernels;
 		string kernelSource = ssKernel.str();
 
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);

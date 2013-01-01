@@ -1,4 +1,4 @@
-#line 2 "patchocl_kernel_filters.cl"
+#line 2 "filters.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *

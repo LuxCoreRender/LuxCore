@@ -1,4 +1,4 @@
-#line 2 "patchocl_kernel_samplers.cl"
+#line 2 "samplers.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *

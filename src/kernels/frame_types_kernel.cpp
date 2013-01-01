@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_SpectrumTypes = 
-"#line 2 \"spectrum_types.cl\"\n"
+std::string KernelSource_frame_types = 
+"#line 2 \"trianglemesh_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,9 +24,7 @@ std::string KernelSource_SpectrumTypes =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"#define BLACK ((float3)(0.f, 0.f, 0.f))\n"
-"\n"
 "typedef struct {\n"
-"	float r, g, b;\n"
-"} Spectrum;\n"
+"	Vector X, Y, Z;\n"
+"} Frame;\n"
 ; } }

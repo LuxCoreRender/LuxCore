@@ -21,14 +21,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-enum BSDFEventType {
+typedef enum {
 	NONE     = 0,
 	DIFFUSE  = 1,
 	GLOSSY   = 2,
 	SPECULAR = 4,
 	REFLECT  = 8,
 	TRANSMIT = 16
-};
+} BSDFEventType;
 
 typedef int BSDFEvent;
 

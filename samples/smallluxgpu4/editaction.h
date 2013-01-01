@@ -28,7 +28,7 @@
 
 namespace slg {
 
-enum EditAction {
+typedef enum {
 	FILM_EDIT, // Use this for image Film resize
 	CAMERA_EDIT, // Use this for any Camera parameter editing
 	GEOMETRY_EDIT, // Use this for any DataSet related editing
@@ -40,7 +40,7 @@ enum EditAction {
 	SUNLIGHT_EDIT, // Use this for any SunLight related editing
 	SKYLIGHT_EDIT, // Use this for any SkyLight related editing
 	TEXTUREMAPS_EDIT // Use this for any TextureMaps related editing
-};
+} EditAction;
 
 class EditActionList {
 public:

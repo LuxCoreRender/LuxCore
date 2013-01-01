@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_FrameTypes = 
-"#line 2 \"trianglemesh_types.cl\"\n"
+std::string KernelSource_epsilon_types = 
+"#line 2 \"epsilon_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,7 +24,14 @@ std::string KernelSource_FrameTypes =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef struct {\n"
-"	Vector X, Y, Z;\n"
-"} Frame;\n"
+"#define DEFAULT_EPSILON_MIN 1e-9f\n"
+"#define DEFAULT_EPSILON_MAX 1e-1f\n"
+"#define DEFAULT_EPSILON_STATIC 1e-5f\n"
+"\n"
+"// An epsilon that can be used as threshold for cos(theta). For instance:\n"
+"// if (Dot(N, LightDir) < DEFAULT_COS_EPSILON_STATIC) return Spectrum();\n"
+"#define DEFAULT_COS_EPSILON_STATIC 1e-4f\n"
+"\n"
+"// This is about 1e-5f for values near 1.f\n"
+"#define DEFAULT_EPSILON_DISTANCE_FROM_VALUE 0x80u\n"
 ; } }

@@ -1,6 +1,6 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_TransformTypes = 
+std::string KernelSource_matrix4x4_types = 
 "#line 2 \"trianglemesh_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
@@ -25,6 +25,6 @@ std::string KernelSource_TransformTypes =
 " ***************************************************************************/\n"
 "\n"
 "typedef struct {\n"
-"	Matrix4x4 m;\n"
-"} Transform;\n"
+"	float m[4][4];\n"
+"} Matrix4x4;\n"
 ; } }

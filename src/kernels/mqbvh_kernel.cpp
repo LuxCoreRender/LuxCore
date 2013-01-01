@@ -1,6 +1,6 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_MQBVH = 
+std::string KernelSource_mqbvh = 
 "#line 2 \"mqbvh_kernel.cl\"\n"
 "\n"
 "/***************************************************************************\n"

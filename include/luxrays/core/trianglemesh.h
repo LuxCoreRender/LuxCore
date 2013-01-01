@@ -40,10 +40,10 @@ namespace ocl {
 typedef unsigned int TriangleMeshID;
 typedef unsigned int TriangleID;
 
-enum MeshType {
+typedef enum {
 	TYPE_TRIANGLE, TYPE_TRIANGLE_INSTANCE,
 	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE
-};
+} MeshType;
 
 class Mesh {
 public:

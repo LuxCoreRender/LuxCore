@@ -30,12 +30,14 @@
 #include "luxrays/utils/sdl/material.h"
 #include "luxrays/utils/sdl/light.h"
 
-namespace luxrays { namespace sdl {
+namespace luxrays {
 
 // OpenCL data types
 namespace ocl {
 #include "luxrays/utils/sdl/bsdf_types.cl"
 }
+
+namespace sdl {
 
 class Scene;
 

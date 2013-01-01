@@ -1,6 +1,6 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_BSDFFuncs = 
+std::string KernelSource_bsdf_funcs = 
 "#line 2 \"bsdf_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"

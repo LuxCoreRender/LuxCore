@@ -46,10 +46,10 @@
 
 namespace luxrays { namespace utils {
 
-enum FilmBufferType {
+typedef enum {
 	PER_PIXEL_NORMALIZED = 0,
 	PER_SCREEN_NORMALIZED = 1
-};
+} FilmBufferType;
 
 //------------------------------------------------------------------------------
 // Base class for all Film implementation

@@ -81,18 +81,14 @@ endif(DOXYGEN_FOUND)
 #
 ###########################################################################
 
-PreprocessOCLKernel(slg PathOCL_Kernels
+set(SLG_KERNELS
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/datatypes.cl
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/filters.cl
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/samplers.cl
 	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernels.cl
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernels.cpp)
-PreprocessOCLKernel(slg PathOCL_DataTypes
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_datatypes.cl
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_datatypes.cpp)
-PreprocessOCLKernel(slg PathOCL_Filters
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_filters.cl
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_filters.cpp)
-PreprocessOCLKernel(slg PathOCL_Samplers
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_samplers.cl
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernel_samplers.cpp)
+)
+
+PreprocessOCLKernels(${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels slg ${SLG_KERNELS})
 
 #############################################################################
 #
@@ -117,10 +113,10 @@ set(SLG4LIB_SRCS
 	bidirvmcpu/bidirvmcputhread.cpp
 	bidirvmcpu/hashgrid.cpp
 	cbidirhybrid/cbidirhybrid.cpp
-	pathocl/kernels/pathocl_kernel_datatypes.cpp
-	pathocl/kernels/pathocl_kernel_filters.cpp
-	pathocl/kernels/pathocl_kernel_samplers.cpp
-	pathocl/kernels/pathocl_kernels.cpp
+	pathocl/kernels/datatypes_kernel.cpp
+	pathocl/kernels/filters_kernel.cpp
+	pathocl/kernels/samplers_kernel.cpp
+	pathocl/kernels/pathocl_kernels_kernel.cpp
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
 	pathocl/pathoclthread.cpp
