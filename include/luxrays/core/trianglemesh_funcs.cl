@@ -1,4 +1,4 @@
-#line 2 "bsdf_types.cl"
+#line 2 "trianglemesh_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,39 +21,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-enum BSDFEventType {
-	NONE     = 0,
-	DIFFUSE  = 1,
-	GLOSSY   = 2,
-	SPECULAR = 4,
-	REFLECT  = 8,
-	TRANSMIT = 16
-};
+float3 Mesh_GetGeometryNormal(__global Point *vertices,
+		__global Triangle *triangles, const uint triIndex) {
+	__global Triangle *tri = &triangles[triIndex];
+	const float3 p0 = vload3(0, &vertices[tri->v[0]].x);
+	const float3 p1 = vload3(0, &vertices[tri->v[1]].x);
+	const float3 p2 = vload3(0, &vertices[tri->v[2]].x);
 
-typedef int BSDFEvent;
-
-typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	Vector fixedDir;
-	Point hitPoint;
-	UV hitPointUV;
-	Normal geometryN;
-	Normal shadeN;
-
-	float passThroughEvent;
-
-#if defined(LUXRAYS_OPENCL_KERNEL)
-	__global
-#endif
-	Triangle *triangles;
-	unsigned int triIndex;
-
-	//__global Material *material;
-	//__global TriangleLightSource *lightSource;
-
-	Frame frame;
-
-	// This will be used for BiDir
-	//bool fromLight;
-} BSDF;
+	return normalize(cross(p1 - p0, p2 - p0));
+}

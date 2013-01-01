@@ -26,14 +26,16 @@ namespace luxrays { namespace sdl {
 
 void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float u0) {
+	assert (!rayHit.Miss());
+
 	fromLight = fromL;
 	passThroughEvent = u0;
 
 	hitPoint = ray(rayHit.t);
 	fixedDir = -ray.d;
 
-	const unsigned int currentTriangleIndex = rayHit.index;
-	const unsigned int currentMeshIndex = scene.dataSet->GetMeshID(currentTriangleIndex);
+	const u_int currentTriangleIndex = rayHit.index;
+	const u_int currentMeshIndex = scene.dataSet->GetMeshID(currentTriangleIndex);
 
 	// Get the triangle
 	mesh = scene.meshDefs.GetExtMesh(currentMeshIndex);

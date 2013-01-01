@@ -32,6 +32,11 @@
 
 namespace luxrays { namespace sdl {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/utils/sdl/bsdf_types.cl"
+}
+
 class Scene;
 
 class BSDF {
@@ -77,7 +82,7 @@ public:
 private:
 	float passThroughEvent;
 	const ExtMesh *mesh;
-	unsigned int triIndex;
+	u_int triIndex;
 
 	const Material *material;
 	const LightSource *lightSource; // != NULL only if it is an area light

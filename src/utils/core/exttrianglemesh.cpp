@@ -112,7 +112,7 @@ static int FaceCB(p_ply_argument argument) {
 
 	if (valueIndex >= 0 && valueIndex < 3) {
 		verts[triIndex].v[valueIndex] =
-				static_cast<unsigned int> (ply_get_argument_value(argument));
+				static_cast<u_int> (ply_get_argument_value(argument));
 	}
 
 	return 1;
@@ -194,8 +194,8 @@ ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 	Point *p, Triangle *vi, Normal *n, UV *uv,
 	const bool usePlyNormals) {
 
-	const unsigned int vertexCount = plyNbVerts;
-	const unsigned int triangleCount = plyNbTris;
+	const u_int vertexCount = plyNbVerts;
+	const u_int triangleCount = plyNbTris;
 	Point *vertices = p;
 	Triangle *triangles = vi;
 	Normal *vertNormals = n;
@@ -230,7 +230,7 @@ ExtTriangleMesh::ExtTriangleMesh(ExtTriangleMesh *mesh) {
 	uvs = mesh->uvs;
 }
 
-ExtTriangleMesh::ExtTriangleMesh(const unsigned int meshVertCount, const unsigned int meshTriCount,
+ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV) {
 	assert (meshVertCount > 0);
 	assert (meshTriCount > 0);
@@ -259,9 +259,9 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	} else
 		allocated = false;
 
-	for (unsigned int i = 0; i < vertCount; ++i)
+	for (u_int i = 0; i < vertCount; ++i)
 		normals[i] = Normal(0.f, 0.f, 0.f);
-	for (unsigned int i = 0; i < triCount; ++i) {
+	for (u_int i = 0; i < triCount; ++i) {
 		const Vector e1 = vertices[tris[i].v[1]] - vertices[tris[i].v[0]];
 		const Vector e2 = vertices[tris[i].v[2]] - vertices[tris[i].v[0]];
 		const Normal N = Normal(Normalize(Cross(e1, e2)));
@@ -270,7 +270,7 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 		normals[tris[i].v[2]] += N;
 	}
 	//int printedWarning = 0;
-	for (unsigned int i = 0; i < vertCount; ++i) {
+	for (u_int i = 0; i < vertCount; ++i) {
 		normals[i] = Normalize(normals[i]);
 		// Check for degenerate triangles/normals, they can freeze the GPU
 		if (isnan(normals[i].x) || isnan(normals[i].y) || isnan(normals[i].z)) {
@@ -290,13 +290,13 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 
 BBox ExtTriangleMesh::GetBBox() const {
 	BBox bbox;
-	for (unsigned int i = 0; i < vertCount; ++i)
+	for (u_int i = 0; i < vertCount; ++i)
 		bbox = Union(bbox, vertices[i]);
 
 	return bbox;
 }
 
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
-	for (unsigned int i = 0; i < vertCount; ++i)
+	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
 }
