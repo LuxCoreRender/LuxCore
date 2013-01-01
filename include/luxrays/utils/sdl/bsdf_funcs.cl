@@ -27,8 +27,8 @@ void BSDF_Init(__global BSDF *bsdf,
 		__global uint *meshFirstTriangleOffset,
 		__global Mesh *meshDescs,
 #endif
-		//__global Material *mats,
-		//__global uint *meshMats,
+		__global Material *mats,
+		__global uint *meshMats,
 		__global uint *meshIDs,
 		__global Vector *vertNormals,
 		__global Point *vertices,
@@ -45,7 +45,7 @@ void BSDF_Init(__global BSDF *bsdf,
 	vstore3(-rayDir, 0, &bsdf->fixedDir.x);
 
 	const uint currentTriangleIndex = rayHit->index;
-	//const uint meshIndex = meshIDs[currentTriangleIndex];
+	const uint meshIndex = meshIDs[currentTriangleIndex];
 
 #if defined(PARAM_ACCEL_MQBVH)
 	__global Mesh *meshDesc = &meshDescs[meshIndex];
@@ -62,7 +62,7 @@ void BSDF_Init(__global BSDF *bsdf,
 #endif
 
 	// Get the material
-	//bsdf->material = &mats[meshMats[meshIndex]];
+	bsdf->material = &mats[meshMats[meshIndex]];
 
 	// Interpolate face normal
 	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
@@ -144,19 +144,12 @@ float3 BSDF_Sample(__global BSDF *bsdf,
 //	if (result.Black())
 //		return result;
 
-	// Matte
-	if (fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+	const float3 result = Material_Sample(bsdf->material,
+			(float2)(0.f, 0.f), localFixedDir, &localSampledDir,
+			u0, u1,  bsdf->passThroughEvent, pdfW, cosSampledDir, event);
+	if (all(isequal(result, BLACK)))
+		return 0.f;
 
-	localSampledDir = (signbit(localFixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-
-	*cosSampledDir = fabs(localSampledDir.z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
-
-	*event = DIFFUSE | REFLECT;
-	const float result = M_1_PI_F;
-	
 	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
 
 //	// Adjoint BSDF

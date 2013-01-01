@@ -255,8 +255,8 @@ __kernel void AdvancePaths(
 		__global Ray *rays,
 		__global RayHit *rayHits,
 		__global Pixel *frameBuffer,
-//		__global Material *mats,
-//		__global uint *meshMats,
+		__global Material *mats,
+		__global uint *meshMats,
 		__global uint *meshIDs,
 #if defined(PARAM_ACCEL_MQBVH)
 		__global uint *meshFirstTriangleOffset,
@@ -307,10 +307,8 @@ __kernel void AdvancePaths(
 					meshFirstTriangleOffset,
 					meshDescs,
 #endif
-					//mats,
-					//meshMats,
-					meshIDs, vertNormals, vertices, triangles, ray, rayHit,
-					Sampler_GetSample(IDX_DOF_X));
+					mats, meshMats,	meshIDs, vertNormals, vertices, triangles,
+					ray, rayHit, Sampler_GetSample(IDX_DOF_X));
 
 			// Sample next path vertex
 			pathState = GENERATE_NEXT_VERTEX_RAY;
@@ -352,7 +350,7 @@ __kernel void AdvancePaths(
 
 			const bool continuePath = !all(isequal(bsdfSample, BLACK)) && rrContinuePath;
 			if (continuePath) {
-				//lastPdfW *= rrProb; // Russian Roulette
+				lastPdfW *= rrProb; // Russian Roulette
 
 				float3 throughput = vload3(0, &task->pathStateBase.throughput.r);
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);

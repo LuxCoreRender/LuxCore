@@ -289,13 +289,13 @@ void PathOCLRenderThread::InitGeometry() {
 }
 
 void PathOCLRenderThread::InitMaterials() {
-//	const size_t materialsCount = renderEngine->compiledScene->mats.size();
-//	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
-//			sizeof(slg::ocl::Material) * materialsCount, "Materials");
-//
-//	const u_int meshCount = renderEngine->compiledScene->meshMats.size();
-//	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
-//			sizeof(u_int) * meshCount, "Mesh material index");
+	const size_t materialsCount = renderEngine->compiledScene->mats.size();
+	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
+			sizeof(luxrays::ocl::Material) * materialsCount, "Materials");
+
+	const u_int meshCount = renderEngine->compiledScene->meshMats.size();
+	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
+			sizeof(u_int) * meshCount, "Mesh material index");
 }
 
 void PathOCLRenderThread::InitAreaLights() {
@@ -589,24 +589,29 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			_LUXRAYS_RAY_OCLDEFINE
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
+			// OpenCL Types
 			luxrays::ocl::KernelSource_epsilon_types <<
 			luxrays::ocl::KernelSource_spectrum_types <<
-			luxrays::ocl::KernelSource_spectrum_funcs <<
-			luxrays::ocl::KernelSource_mc_funcs <<
 			luxrays::ocl::KernelSource_frame_types <<
-			luxrays::ocl::KernelSource_frame_funcs <<
 			luxrays::ocl::KernelSource_matrix4x4_types <<
 			luxrays::ocl::KernelSource_transform_types <<
-			luxrays::ocl::KernelSource_transform_funcs <<
 			luxrays::ocl::KernelSource_randomgen_types <<
-			luxrays::ocl::KernelSource_randomgen_funcs <<
 			luxrays::ocl::KernelSource_trianglemesh_types <<
-			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			luxrays::ocl::KernelSource_material_types <<
 			luxrays::ocl::KernelSource_bsdf_types <<
-			luxrays::ocl::KernelSource_bsdf_funcs <<
 			luxrays::ocl::KernelSource_sampler_types <<
 			luxrays::ocl::KernelSource_filter_types <<
 			luxrays::ocl::KernelSource_camera_types <<
+			// OpenCL Funcs
+			luxrays::ocl::KernelSource_spectrum_funcs <<
+			luxrays::ocl::KernelSource_mc_funcs <<
+			luxrays::ocl::KernelSource_frame_funcs <<
+			luxrays::ocl::KernelSource_transform_funcs <<
+			luxrays::ocl::KernelSource_randomgen_funcs <<
+			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			luxrays::ocl::KernelSource_material_funcs <<
+			luxrays::ocl::KernelSource_bsdf_funcs <<
+			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
 			slg::ocl::KernelSource_filters <<
 			slg::ocl::KernelSource_samplers <<
@@ -866,8 +871,8 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
 	advancePathsKernel->setArg(argIndex++, *frameBufferBuff);
-//	advancePathsKernel->setArg(argIndex++, *materialsBuff);
-//	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
+	advancePathsKernel->setArg(argIndex++, *materialsBuff);
+	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
 	if (triangleIDBuff)
 		advancePathsKernel->setArg(argIndex++, *triangleIDBuff);

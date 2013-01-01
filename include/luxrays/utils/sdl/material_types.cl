@@ -26,12 +26,19 @@ typedef enum {
 } MaterialType;
 
 typedef struct {
-    unsigned int textureIndex;
+	Spectrum kd;
+    //unsigned int kdTexIndex;
 } MatteParam;
+
+typedef struct {
+	Spectrum kr;
+    //unsigned int krTexIndex;
+} MirrorParam;
 
 typedef struct {
 	MaterialType type;
 	union {
 		MatteParam matte;
+		MirrorParam mirror;
 	} param;
 } Material;
