@@ -45,8 +45,10 @@ class MachineEpsilon {
 public:
 	// Not thread-safe method
 	static void SetMin(const float min) { minEpsilon = min; }
+	static float GetMin() { return minEpsilon; }
 	// Not thread-safe method
 	static void SetMax(const float max) { maxEpsilon = max; }
+	static float GetMax() { return maxEpsilon; }
 
 	// Thread-safe method
 	static float E(const float value) {

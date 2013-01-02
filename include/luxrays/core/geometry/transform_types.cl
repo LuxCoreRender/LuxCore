@@ -1,4 +1,4 @@
-#line 2 "trianglemesh_types.cl"
+#line 2 "ray_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *

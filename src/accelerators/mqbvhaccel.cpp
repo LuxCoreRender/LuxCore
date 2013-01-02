@@ -48,7 +48,7 @@ public:
 		std::string code(
 			_LUXRAYS_POINT_OCLDEFINE
 			_LUXRAYS_VECTOR_OCLDEFINE
-			_LUXRAYS_RAY_OCLDEFINE
+			+ luxrays::ocl::KernelSource_ray_types +
 			_LUXRAYS_RAYHIT_OCLDEFINE
 			_LUXRAYS_BBOX_OCLDEFINE +
 			luxrays::ocl::KernelSource_matrix4x4_types);

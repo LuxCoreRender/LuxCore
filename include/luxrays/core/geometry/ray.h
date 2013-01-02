@@ -31,6 +31,11 @@
 
 namespace luxrays {
 
+	// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/ray_types.cl"
+}
+
 class  Ray {
 public:
 	// Ray Public Methods
@@ -61,8 +66,7 @@ public:
 	Vector d;
 	mutable float mint, maxt;
 	float time;
-	float pad[3]; // Add padding to avoid size discrepancies with OpenCL
-#define _LUXRAYS_RAY_OCLDEFINE "typedef struct { Point o; Vector d; float mint, maxt, time, pad[3]; } Ray;\n"
+	float pad[3]; // Add padding to avoid size discrepancies with OpenCL (TODO: remove)
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ray &r) {

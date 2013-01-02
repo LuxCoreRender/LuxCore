@@ -434,7 +434,8 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_TASK_COUNT=" << renderEngine->taskCount <<
 			" -D PARAM_IMAGE_WIDTH=" << renderEngine->film->GetWidth() <<
 			" -D PARAM_IMAGE_HEIGHT=" << renderEngine->film->GetHeight() <<
-			" -D PARAM_RAY_EPSILON=0.0001f" << // TODO
+			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
+			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
@@ -596,7 +597,7 @@ void PathOCLRenderThread::InitKernels() {
 			_LUXRAYS_VECTOR_OCLDEFINE
 			_LUXRAYS_NORMAL_OCLDEFINE
 			_LUXRAYS_TRIANGLE_OCLDEFINE
-			_LUXRAYS_RAY_OCLDEFINE
+			+ luxrays::ocl::KernelSource_ray_types +
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
 			// OpenCL Types
 			luxrays::ocl::KernelSource_epsilon_types <<
@@ -613,6 +614,8 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_filter_types <<
 			luxrays::ocl::KernelSource_camera_types <<
 			// OpenCL Funcs
+			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_ray_funcs <<
 			luxrays::ocl::KernelSource_spectrum_funcs <<
 			luxrays::ocl::KernelSource_mc_funcs <<
 			luxrays::ocl::KernelSource_frame_funcs <<

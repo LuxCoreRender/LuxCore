@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_transform_types = 
-"#line 2 \"ray_types.cl\"\n"
+std::string KernelSource_epsilon_funcs = 
+"#line 2 \"epsilon_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,7 +24,17 @@ std::string KernelSource_transform_types =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef struct {\n"
-"	Matrix4x4 m;\n"
-"} Transform;\n"
+"float MachineEpsilon_FloatAdvance(const float value) {\n"
+"	return as_float(as_uint(value) + DEFAULT_EPSILON_DISTANCE_FROM_VALUE);\n"
+"}\n"
+"\n"
+"float MachineEpsilon_E(const float value) {\n"
+"	const float epsilon = fabs(MachineEpsilon_FloatAdvance(value) - value);\n"
+"\n"
+"	return clamp(epsilon, PARAM_RAY_EPSILON_MIN, PARAM_RAY_EPSILON_MAX);\n"
+"}\n"
+"\n"
+"float MachineEpsilon_E_Float3(const float3 v) {\n"
+"	return fmax(MachineEpsilon_E(v.x), fmax(MachineEpsilon_E(v.y), MachineEpsilon_E(v.z)));\n"
+"}\n"
 ; } }

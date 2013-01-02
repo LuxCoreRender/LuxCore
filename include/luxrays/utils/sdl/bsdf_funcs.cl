@@ -28,7 +28,7 @@ void BSDF_Init(__global BSDF *bsdf,
 		__global Mesh *meshDescs,
 #endif
 		__global Material *mats,
-		__global Material *texs,
+		__global Texture *texs,
 		__global uint *meshMats,
 		__global uint *meshIDs,
 		__global Vector *vertNormals,
@@ -131,7 +131,7 @@ void BSDF_Init(__global BSDF *bsdf,
 
 float3 BSDF_Sample(__global BSDF *bsdf,
 		__global Material *mats,
-		__global Material *texs,
+		__global Texture *texs,
 		float3 *sampledDir,
 		const float u0, const float u1,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {

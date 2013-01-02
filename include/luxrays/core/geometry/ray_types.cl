@@ -1,3 +1,5 @@
+#line 2 "ray_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -19,44 +21,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_KERNELS_H
-#define	_LUXRAYS_KERNELS_H
-
-#include <string>
-
-namespace luxrays { namespace ocl {
-
-// Intersection kernels
-extern std::string KernelSource_bvh;
-extern std::string KernelSource_qbvh;
-extern std::string KernelSource_mqbvh;
-
-extern std::string KernelSource_sampler_types;
-extern std::string KernelSource_filter_types;
-extern std::string KernelSource_camera_types;
-extern std::string KernelSource_trianglemesh_types;
-extern std::string KernelSource_trianglemesh_funcs;
-extern std::string KernelSource_randomgen_types;
-extern std::string KernelSource_randomgen_funcs;
-extern std::string KernelSource_matrix4x4_types;
-extern std::string KernelSource_transform_types;
-extern std::string KernelSource_transform_funcs;
-extern std::string KernelSource_mc_funcs;
-extern std::string KernelSource_frame_types;
-extern std::string KernelSource_frame_funcs;
-extern std::string KernelSource_bsdf_types;
-extern std::string KernelSource_bsdf_funcs;
-extern std::string KernelSource_epsilon_types;
-extern std::string KernelSource_epsilon_funcs;
-extern std::string KernelSource_spectrum_types;
-extern std::string KernelSource_spectrum_funcs;
-extern std::string KernelSource_material_types;
-extern std::string KernelSource_material_funcs;
-extern std::string KernelSource_texture_types;
-extern std::string KernelSource_texture_funcs;
-extern std::string KernelSource_ray_types;
-extern std::string KernelSource_ray_funcs;
-
-} }
-
-#endif	/* _LUXRAYS_KERNELS_H */
+typedef struct {
+	Point o;
+	Vector d;
+	float mint, maxt, time;
+	float pad[3]; // TODO: remove (here and in ray.h)
+} Ray;

@@ -80,15 +80,13 @@ void GenerateCameraRay(
 #endif
 
 	rayDir = normalize(rayDir);
-	ray->mint = PARAM_RAY_EPSILON;
-	ray->maxt = (camera->yon - hither) / rayDir.z;
+	const float maxt = (camera->yon - hither) / rayDir.z;
 
 	// Transform ray in world coordinates
 	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld, rayOrig);
 	rayDir = Transform_ApplyVector(&camera->cameraToWorld, rayDir);
 
-	vstore3(rayOrig, 0, &ray->o.x);
-	vstore3(rayDir, 0, &ray->d.x);
+	Ray_Init3(ray, rayOrig, rayDir, maxt);
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
