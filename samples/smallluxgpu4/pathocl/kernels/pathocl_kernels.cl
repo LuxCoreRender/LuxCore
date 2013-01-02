@@ -256,6 +256,7 @@ __kernel void AdvancePaths(
 		__global RayHit *rayHits,
 		__global Pixel *frameBuffer,
 		__global Material *mats,
+		__global Material *texs,
 		__global uint *meshMats,
 		__global uint *meshIDs,
 #if defined(PARAM_ACCEL_MQBVH)
@@ -307,8 +308,8 @@ __kernel void AdvancePaths(
 					meshFirstTriangleOffset,
 					meshDescs,
 #endif
-					mats, meshMats,	meshIDs, vertNormals, vertices, triangles,
-					ray, rayHit, Sampler_GetSample(IDX_DOF_X));
+					mats, texs, meshMats, meshIDs, vertNormals, vertices,
+					triangles, ray, rayHit, Sampler_GetSample(IDX_DOF_X));
 
 			// Sample next path vertex
 			pathState = GENERATE_NEXT_VERTEX_RAY;
@@ -338,7 +339,7 @@ __kernel void AdvancePaths(
 			float cosSampledDir;
 			BSDFEvent event;
 
-			const float3 bsdfSample = BSDF_Sample(bsdf, &sampledDir,
+			const float3 bsdfSample = BSDF_Sample(bsdf, mats, texs, &sampledDir,
 					Sampler_GetSample(IDX_BSDF_X), Sampler_GetSample(IDX_BSDF_Y),
 					&lastPdfW, &cosSampledDir, &event);
 			const bool lastSpecular = ((event & SPECULAR) != 0);

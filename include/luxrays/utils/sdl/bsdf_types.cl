@@ -43,17 +43,8 @@ typedef struct {
 
 	float passThroughEvent;
 
-#if defined(LUXRAYS_OPENCL_KERNEL)
-	__global
-#endif
-	Triangle *triangles;
-	unsigned int triIndex;
-
-#if defined(LUXRAYS_OPENCL_KERNEL)
-	__global
-#endif
-	Material *material;
-	//__global TriangleLightSource *lightSource;
+	unsigned int materialIndex;
+	//unsigned int lightSourceIndex;
 
 	Frame frame;
 

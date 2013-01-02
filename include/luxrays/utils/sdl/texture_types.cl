@@ -1,4 +1,4 @@
-#line 2 "material_types.cl"
+#line 2 "texture_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -22,21 +22,27 @@
  ***************************************************************************/
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
-} MaterialType;
+	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP
+} TextureType;
 
 typedef struct {
-    unsigned int kdTexIndex;
-} MatteParam;
+	float value;
+} ConstFloatParam;
 
 typedef struct {
-    unsigned int krTexIndex;
-} MirrorParam;
+	Spectrum color;
+} ConstFloat3Param;
 
 typedef struct {
-	MaterialType type;
+	Spectrum color;
+	float alpha;
+} ConstFloat4Param;
+
+typedef struct {
+	TextureType type;
 	union {
-		MatteParam matte;
-		MirrorParam mirror;
+		ConstFloatParam constFloat;
+		ConstFloat3Param constFloat3;
+		ConstFloat4Param constFloat4;
 	};
-} Material;
+} Texture;

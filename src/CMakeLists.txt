@@ -50,6 +50,8 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/spectrum_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/material_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/material_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/texture_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/texture_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/kernels luxrays ${LUXRAYS_KERNELS})
@@ -123,6 +125,8 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/spectrum_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/material_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/material_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/texture_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/texture_funcs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LUXRAYS_SRCS_KERNELS})
 

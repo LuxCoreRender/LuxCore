@@ -92,9 +92,9 @@ u_int MaterialDefinitions::GetMaterialIndex(const std::string &name) const {
 		return it->second;
 }
 
-u_int MaterialDefinitions::GetMaterialIndex(Material *m) const {
+u_int MaterialDefinitions::GetMaterialIndex(const Material *m) const {
 	// Check if the material has been already defined
-	std::map<Material *, u_int>::const_iterator it = indexByPtr.find(m);
+	std::map<const Material *, u_int>::const_iterator it = indexByPtr.find(m);
 
 	if (it == indexByPtr.end())
 		throw std::runtime_error("Reference to an undefined material: " + boost::lexical_cast<std::string>(m));
@@ -113,7 +113,7 @@ std::vector<std::string> MaterialDefinitions::GetMaterialNames() const {
 
 void MaterialDefinitions::DeleteMaterial(const std::string &name) {
 	const u_int index = GetMaterialIndex(name);
-	Material *m = GetMaterial(index);
+	Material *m = mats[index];
 	mats.erase(mats.begin() + index);
 	matsByName.erase(name);
 	indexByName.erase(name);
