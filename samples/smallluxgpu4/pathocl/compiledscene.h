@@ -63,8 +63,7 @@ public:
 	vector<slg::ocl::TriangleLight> areaLights;
 
 	// Compiled InfiniteLights
-	slg::ocl::InfiniteLight *infiniteLight;
-	const Spectrum *infiniteLightMap;
+	luxrays::ocl::InfiniteLight *infiniteLight;
 
 	// Compiled SunLight
 	slg::ocl::SunLight *sunLight;
@@ -78,27 +77,17 @@ public:
 
 	// Compiled Textures
 	vector<luxrays::ocl::Texture> texs;
-//	// Compiled TextureMaps
-//	vector<PathOCL::TexMap> gpuTexMaps;
-//	u_int totRGBTexMem, totAlphaTexMem;
-//	vector<vector<Spectrum> > rgbTexMemBlocks;
-//	vector<vector<float> > alphaTexMemBlocks;
 
-//	vector<u_int> meshTexMaps;
-//	vector<PathOCL::TexMapInfo> meshTexMapsInfo;
-//	// Compiled BumpMaps
-//	vector<u_int> meshBumpMaps;
-//	vector<PathOCL::BumpMapInfo> meshBumpMapsInfo;
-//	// Compiled NormalMaps
-//	vector<u_int> meshNormalMaps;
-//	vector<PathOCL::NormalMapInfo> meshNormalMapsInfo;
+	// Compiled ImageMaps
+	vector<luxrays::ocl::ImageMap> imageMapDescs;
+	vector<vector<float> > imageMapMemBlocks;
 
 private:
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();
 	void CompileTextures();
-	void CompileTextureMaps();
+	void CompileImageMaps();
 	void CompileAreaLights();
 	void CompileInfiniteLight();
 	void CompileSunLight();

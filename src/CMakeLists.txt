@@ -55,6 +55,10 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/kernels luxrays ${LUXRAYS_KERNELS})
@@ -65,7 +69,7 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/kernels luxrays ${LUXRAYS_KERNELS
 #
 ###########################################################################
 
-	set(LUXRAYS_SRCS_ACCELERATORS
+set(LUXRAYS_SRCS_ACCELERATORS
 	${LuxRays_SOURCE_DIR}/src/accelerators/bvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/accelerators/mqbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/accelerators/qbvhaccel.cpp
@@ -133,6 +137,10 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/texture_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/ray_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/ray_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/light_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/light_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/vector_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/vector_funcs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LUXRAYS_SRCS_KERNELS})
 

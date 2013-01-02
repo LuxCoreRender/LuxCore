@@ -1,4 +1,4 @@
-#line 2 "bsdf_types.cl"
+#line 2 "bsdf_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,7 +21,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-void BSDF_Init(__global BSDF *bsdf,
+void BSDF_Init(
+		__global BSDF *bsdf,
 		//const bool fromL,
 #if defined(PARAM_ACCEL_MQBVH)
 		__global uint *meshFirstTriangleOffset,
@@ -35,10 +36,15 @@ void BSDF_Init(__global BSDF *bsdf,
 		__global Point *vertices,
 		__global Triangle *triangles,
 		__global Ray *ray,
-		__global RayHit *rayHit,
-		const float u0) {
+		__global RayHit *rayHit
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		, const float u0
+#endif
+		) {
 	//bsdf->fromLight = fromL;
+#if defined(PARAM_HAS_PASSTHROUGHT)
 	bsdf->passThroughEvent = u0;
+#endif
 
 	const float3 rayOrig = vload3(0, &ray->o.x);
 	const float3 rayDir = vload3(0, &ray->d.x);
@@ -129,19 +135,42 @@ void BSDF_Init(__global BSDF *bsdf,
 	vstore3(shadeN, 0, &bsdf->shadeN.x);
 }
 
-float3 BSDF_Sample(__global BSDF *bsdf,
+float3 BSDF_Sample(
+		__global BSDF *bsdf,
 		__global Material *mats,
 		__global Texture *texs,
-		float3 *sampledDir,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
 		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
+		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	const float3 fixedDir = vload3(0, &bsdf->fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-	const float3 result = Material_Sample(&mats[bsdf->materialIndex], texs,
+	const float3 result = Material_Sample(
+			&mats[bsdf->materialIndex], texs,
 			(float2)(0.f, 0.f), localFixedDir, &localSampledDir,
-			u0, u1,  bsdf->passThroughEvent, pdfW, cosSampledDir, event);
+			u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+			bsdf->passThroughEvent,
+#endif
+			pdfW, cosSampledDir, event);
 	if (all(isequal(result, BLACK)))
 		return 0.f;
 

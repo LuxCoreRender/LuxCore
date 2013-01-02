@@ -39,10 +39,23 @@ typedef struct {
 } ConstFloat4Param;
 
 typedef struct {
+	unsigned int channelCount, width, height;
+	unsigned int pageIndex, pixelsIndex;
+} ImageMap;
+
+typedef struct {
+	float gain, uScale, vScale, uDelta, vDelta;
+	float Du, Dv;
+
+	unsigned int imageMapIndex;
+} ImageMapInstanceParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		ConstFloatParam constFloat;
 		ConstFloat3Param constFloat3;
 		ConstFloat4Param constFloat4;
+		ImageMapInstanceParam imageMapInstance;
 	};
 } Texture;

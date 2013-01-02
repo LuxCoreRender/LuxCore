@@ -308,7 +308,7 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 		//SDL_LOG("Cached image map: " << fileName);
 		ImageMap *im = (it->second);
 		if (im->GetGamma() != gamma)
-			throw std::runtime_error("Texture map: " + fileName + " can not be used with 2 different gamma");
+			throw std::runtime_error("Image map: " + fileName + " can not be used with 2 different gamma");
 		return im;
 	}
 }
@@ -327,7 +327,21 @@ ImageMapInstance *ImageMapCache::GetImageMapInstance(const std::string &fileName
 	return imi;
 }
 
-void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &tms) {
+u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
+	// TODO: use a std::map
+	u_int i = 0;
+	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it) {
+		if (it->second == im)
+			return i;
+		else
+			++i;
+	}
+
+	throw std::runtime_error("Unknown image map: " + boost::lexical_cast<std::string>(im));
+}
+
+void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
+	ims.reserve(maps.size());
 	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
-		tms.push_back(it->second);
+		ims.push_back(it->second);
 }

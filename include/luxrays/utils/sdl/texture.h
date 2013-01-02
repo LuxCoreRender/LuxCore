@@ -175,8 +175,8 @@ public:
 
 protected:
 	float GetGrey(const UV &uv) const {
-		const float s = uv.u * width - 0.5f;
-		const float t = uv.v * height - 0.5f;
+		const float s = uv.u * width - .5f;
+		const float t = uv.v * height - .5f;
 
 		const int s0 = Floor2Int(s);
 		const int t0 = Floor2Int(t);
@@ -194,8 +194,8 @@ protected:
 	}
 
 	Spectrum GetColor(const UV &uv) const {
-		const float s = uv.u * width - 0.5f;
-		const float t = uv.v * height - 0.5f;
+		const float s = uv.u * width - .5f;
+		const float t = uv.v * height - .5f;
 
 		const int s0 = Floor2Int(s);
 		const int t0 = Floor2Int(t);
@@ -213,8 +213,8 @@ protected:
 	};
 
 	float GetAlpha(const UV &uv) const {
-		const float s = uv.u * width - 0.5f;
-		const float t = uv.v * height - 0.5f;
+		const float s = uv.u * width - .5f;
+		const float t = uv.v * height - .5f;
 
 		const int s0 = Floor2Int(s);
 		const int t0 = Floor2Int(t);
@@ -297,6 +297,7 @@ public:
 	~ImageMapInstance() { }
 
 	const ImageMap *GetImgMap() const { return imgMap; }
+	float GetGain() const { return gain; }
 	float GetUScale() const { return uScale; }
 	float GetVScale() const { return vScale; }
 	float GetUDelta() const { return uDelta; }
@@ -337,8 +338,9 @@ public:
 
 	ImageMapInstance *GetImageMapInstance(const std::string &fileName, const float gamma, const float gain = 1.f,
 		const float uScale = 1.f, const float vScale = 1.f, const float uDelta = 0.f, const float vDelta = 0.f);
+	u_int GetImageMapIndex(const ImageMap *im) const;
 
-	void GetImageMaps(std::vector<ImageMap *> &tms);
+	void GetImageMaps(std::vector<ImageMap *> &ims);
 	u_int GetSize()const { return static_cast<u_int>(maps.size()); }
   
 private:

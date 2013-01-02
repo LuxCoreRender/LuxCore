@@ -52,8 +52,8 @@ public:
 
 		std::string code(
 			_LUXRAYS_POINT_OCLDEFINE
-			_LUXRAYS_VECTOR_OCLDEFINE
-			+ luxrays::ocl::KernelSource_ray_types +
+			+ luxrays::ocl::KernelSource_vector_types +
+			luxrays::ocl::KernelSource_ray_types +
 			_LUXRAYS_RAYHIT_OCLDEFINE
 			_LUXRAYS_BBOX_OCLDEFINE);
 		code += luxrays::ocl::KernelSource_qbvh;
@@ -126,8 +126,8 @@ public:
 
 		std::string code(
 			_LUXRAYS_POINT_OCLDEFINE
-			_LUXRAYS_VECTOR_OCLDEFINE
-			+ luxrays::ocl::KernelSource_ray_types +
+			+ luxrays::ocl::KernelSource_vector_types +
+			luxrays::ocl::KernelSource_ray_types +
 			_LUXRAYS_RAYHIT_OCLDEFINE
 			_LUXRAYS_BBOX_OCLDEFINE);
 		code += luxrays::ocl::KernelSource_qbvh;

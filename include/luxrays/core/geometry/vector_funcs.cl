@@ -1,4 +1,4 @@
-#line 2 "bsdf_types.cl"
+#line 2 "vector_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,33 +21,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef enum {
-	NONE     = 0,
-	DIFFUSE  = 1,
-	GLOSSY   = 2,
-	SPECULAR = 4,
-	REFLECT  = 8,
-	TRANSMIT = 16
-} BSDFEventType;
+float SphericalTheta(const float3 v) {
+	return acos(clamp(v.z, -1.f, 1.f));
+}
 
-typedef int BSDFEvent;
-
-typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	Vector fixedDir;
-	Point hitPoint;
-	UV hitPointUV;
-	Normal geometryN;
-	Normal shadeN;
-#if defined(PARAM_HAS_PASSTHROUGHT)
-	float passThroughEvent;
-#endif
-	unsigned int materialIndex;
-	//unsigned int lightSourceIndex;
-
-	Frame frame;
-
-	// This will be used for BiDir
-	//bool fromLight;
-} BSDF;
+float SphericalPhi(const float3 v) {
+	float p = atan2(v.y, v.x);
+	return (p < 0.f) ? p + 2.f * M_PI_F : p;
+}

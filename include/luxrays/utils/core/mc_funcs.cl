@@ -81,3 +81,14 @@ float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW
 
 	return (float3)(x, y, z);
 }
+
+int Mod(int a, int b) {
+	if (b == 0)
+		b = 1;
+
+	a %= b;
+	if (a < 0)
+		a += b;
+
+	return a;
+}

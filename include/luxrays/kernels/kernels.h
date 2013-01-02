@@ -56,6 +56,10 @@ extern std::string KernelSource_texture_types;
 extern std::string KernelSource_texture_funcs;
 extern std::string KernelSource_ray_types;
 extern std::string KernelSource_ray_funcs;
+extern std::string KernelSource_light_types;
+extern std::string KernelSource_light_funcs;
+extern std::string KernelSource_vector_types;
+extern std::string KernelSource_vector_funcs;
 
 } }
 
