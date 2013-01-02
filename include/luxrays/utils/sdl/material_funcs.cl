@@ -27,7 +27,10 @@
 
 float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
+		const float u0, const float u1, 
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		const float passThroughEvent,
+#endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 				return 0.f;
@@ -50,7 +53,10 @@ float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
 
 float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		const float passThroughEvent,
+#endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	*event = SPECULAR | REFLECT;
 
@@ -67,15 +73,26 @@ float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs
 
 float3 Material_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		const float passThroughEvent,
+#endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	switch (material->type) {
 		case MATTE:
 			return MatteMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1, passThroughEvent, pdfW, cosSampledDir, event);
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event);
 		case MIRROR:
 			return MirrorMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1, passThroughEvent, pdfW, cosSampledDir, event);
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event);
 		default:
 			return 0.f;
 	}

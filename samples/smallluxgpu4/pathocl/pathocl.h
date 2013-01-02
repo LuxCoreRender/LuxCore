@@ -73,13 +73,13 @@ private:
 	void InitFrameBuffer();
 	void InitCamera();
 	void InitGeometry();
-	void InitMaterials();
+	void InitImageMaps();
 	void InitTextures();
+	void InitMaterials();
 	void InitAreaLights();
 	void InitInfiniteLight();
 	void InitSunLight();
 	void InitSkyLight();
-	void InitTextureMaps();
 	void InitKernels();
 
 	void SetKernelArgs();
@@ -111,7 +111,6 @@ private:
 	cl::Buffer *meshDescsBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
-	cl::Buffer *infiniteLightMapBuff;
 	cl::Buffer *sunLightBuff;
 	cl::Buffer *skyLightBuff;
 	cl::Buffer *vertsBuff;
@@ -119,15 +118,8 @@ private:
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *areaLightsBuff;
-	vector<cl::Buffer *> texMapRGBBuff;
-	vector<cl::Buffer *> texMapAlphaBuff;
-	cl::Buffer *texMapDescBuff;
-	cl::Buffer *meshTexMapsBuff;
-	cl::Buffer *meshTexMapsInfoBuff;
-	cl::Buffer *meshBumpMapsBuff;
-	cl::Buffer *meshBumpMapsInfoBuff;
-	cl::Buffer *meshNormalMapsBuff;
-	cl::Buffer *meshNormalMapsInfoBuff;
+	cl::Buffer *imageMapDescsBuff;
+	vector<cl::Buffer *> imageMapsBuff;
 	cl::Buffer *uvsBuff;
 
 	luxrays::utils::oclKernelCache *kernelCache;

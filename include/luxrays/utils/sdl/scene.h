@@ -127,6 +127,9 @@ public:
 
 	DataSet *dataSet;
 
+	ExtMeshCache extMeshCache; // Mesh objects
+	ImageMapCache imgMapCache; // Image maps
+
 protected:
 	static std::vector<std::string> GetStringParameters(const Properties &prop,
 		const std::string &paramName, const unsigned int paramCount,
@@ -136,9 +139,6 @@ protected:
 		const std::string &defaultValue);
 
 	Texture *GetTexture(const std::string &name);
-
-	ExtMeshCache extMeshCache; // Mesh objects
-	ImageMapCache imgMapCache; // Image maps
 
 	int accelType;
 };

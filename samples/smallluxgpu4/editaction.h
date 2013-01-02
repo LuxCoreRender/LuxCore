@@ -39,7 +39,7 @@ typedef enum {
 	INFINITELIGHT_EDIT, // Use this for any InfiniteLight related editing
 	SUNLIGHT_EDIT, // Use this for any SunLight related editing
 	SKYLIGHT_EDIT, // Use this for any SkyLight related editing
-	TEXTUREMAPS_EDIT // Use this for any TextureMaps related editing
+	IMAGEMAPS_EDIT // Use this for any ImageMaps related editing
 } EditAction;
 
 class EditActionList {
@@ -60,7 +60,7 @@ public:
 		AddAction(INFINITELIGHT_EDIT);
 		AddAction(SUNLIGHT_EDIT);
 		AddAction(SKYLIGHT_EDIT);
-		AddAction(TEXTUREMAPS_EDIT);
+		AddAction(IMAGEMAPS_EDIT);
 	}
 	bool Has(const EditAction a) const { return (actions.find(a) != actions.end()); };
 	size_t Size() const { return actions.size(); };
@@ -109,8 +109,8 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 			case SKYLIGHT_EDIT:
 				os << "SKYLIGHT_EDIT";
 				break;
-			case TEXTUREMAPS_EDIT:
-				os << "TEXTUREMAPS_EDIT";
+			case IMAGEMAPS_EDIT:
+				os << "IMAGEMAPS_EDIT";
 				break;
 			default:
 				os << "UNKNOWN[" << *it << "]";

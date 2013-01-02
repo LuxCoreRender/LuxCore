@@ -36,18 +36,8 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	maxMemPageSize = (u_int)Min<size_t>(maxMemPageS, 0xffffffffu);
 
 	infiniteLight = NULL;
-	infiniteLightMap = NULL;
 	sunLight = NULL;
 	skyLight = NULL;
-//	rgbTexMemBlocks.resize(0);
-//	alphaTexMemBlocks.resize(0);
-//
-//	meshTexMaps.resize(0);
-//	meshTexMapsInfo.resize(0);
-//	meshBumpMaps.resize(0);
-//	meshBumpMapsInfo.resize(0);
-//	meshNormalMaps.resize(0);
-//	meshNormalMapsInfo.resize(0);
 	
 	meshFirstTriangleOffset = NULL;
 
@@ -59,7 +49,6 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 CompiledScene::~CompiledScene() {
 	delete[] meshFirstTriangleOffset;
 	delete infiniteLight;
-	// infiniteLightMap memory is handled from another class
 	delete sunLight;
 	delete skyLight;
 }
@@ -391,35 +380,40 @@ void CompiledScene::CompileAreaLights() {
 }
 
 void CompiledScene::CompileInfiniteLight() {
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
-//
-//	delete infiniteLight;
-//
-//	//--------------------------------------------------------------------------
-//	// Check if there is an infinite light source
-//	//--------------------------------------------------------------------------
-//
-//	const double tStart = WallClockTime();
-//
-//	InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
-//	if (il) {
-//		infiniteLight = new PathOCL::InfiniteLight();
-//
-//		infiniteLight->gain = il->GetGain();
-//		infiniteLight->shiftU = il->GetShiftU();
-//		infiniteLight->shiftV = il->GetShiftV();
-//		const TextureMap *texMap = il->GetTexture()->GetTexMap();
-//		infiniteLight->width = texMap->GetWidth();
-//		infiniteLight->height = texMap->GetHeight();
-//
-//		infiniteLightMap = texMap->GetPixels();
-//	} else {
-//		infiniteLight = NULL;
-//		infiniteLightMap = NULL;
-//	}
-//
-//	const double tEnd = WallClockTime();
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Infinitelight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
+
+	delete infiniteLight;
+
+	//--------------------------------------------------------------------------
+	// Check if there is an infinite light source
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
+	if (il) {
+		infiniteLight = new luxrays::ocl::InfiniteLight();
+
+		infiniteLight->gain.r = il->GetGain().r;
+		infiniteLight->gain.g = il->GetGain().g;
+		infiniteLight->gain.b = il->GetGain().b;
+		infiniteLight->shiftU = il->GetShiftU();
+		infiniteLight->shiftV = il->GetShiftV();
+
+		const ImageMapInstance *im = il->GetImageMapInstance();
+		infiniteLight->imageMapInstance.gain = im->GetGain();
+		infiniteLight->imageMapInstance.uScale = im->GetUScale();
+		infiniteLight->imageMapInstance.vScale = im->GetVScale();
+		infiniteLight->imageMapInstance.uDelta = im->GetUDelta();
+		infiniteLight->imageMapInstance.vDelta = im->GetVDelta();
+		infiniteLight->imageMapInstance.Du = im->GetDuDv().u;
+		infiniteLight->imageMapInstance.Dv = im->GetDuDv().v;
+		infiniteLight->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im->GetImgMap());
+	} else
+		infiniteLight = NULL;
+
+	const double tEnd = WallClockTime();
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Infinitelight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileSunLight() {
@@ -524,262 +518,68 @@ void CompiledScene::CompileTextures() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Textures compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
-void CompiledScene::CompileTextureMaps() {
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile TextureMaps");
-//
-//	gpuTexMaps.resize(0);
-//	rgbTexMemBlocks.resize(0);
-//	alphaTexMemBlocks.resize(0);
-//
-//	meshTexMaps.resize(0);
-//	meshTexMapsInfo.resize(0);
-//	meshBumpMaps.resize(0);
-//	meshBumpMapsInfo.resize(0);
-//	meshNormalMaps.resize(0);
-//	meshNormalMapsInfo.resize(0);
-//
-//	//--------------------------------------------------------------------------
-//	// Translate mesh texture maps
-//	//--------------------------------------------------------------------------
-//
-//	const double tStart = WallClockTime();
-//
-//	std::vector<TextureMap *> tms;
-//	scene->texMapCache->GetTexMaps(tms);
-//	// Calculate the amount of ram to allocate
-//	totRGBTexMem = 0;
-//	totAlphaTexMem = 0;
-//
-//	for (u_int i = 0; i < tms.size(); ++i) {
-//		TextureMap *tm = tms[i];
-//		const u_int pixelCount = tm->GetWidth() * tm->GetHeight();
-//
-//		totRGBTexMem += pixelCount;
-//		if (tm->HasAlpha())
-//			totAlphaTexMem += pixelCount;
-//	}
-//
-//	// Allocate texture map memory
-//	if ((totRGBTexMem > 0) || (totAlphaTexMem > 0)) {
-//		gpuTexMaps.resize(tms.size());
-//
-//		if (totRGBTexMem > 0) {
-//			rgbTexMemBlocks.resize(1);
-//
-//			for (u_int i = 0; i < tms.size(); ++i) {
-//				TextureMap *tm = tms[i];
-//				const u_int pixelCount = tm->GetWidth() * tm->GetHeight();
-//				const u_int texSize = pixelCount * sizeof(Spectrum);
-//
-//				if (texSize > maxMemPageSize)
-//					throw std::runtime_error("The RGB channels of a texture map are too big to fit in a single block of memory");
-//
-//				bool found = false;
-//				u_int page;
-//				for (u_int j = 0; j < rgbTexMemBlocks.size(); ++j) {
-//					// Check if it fits in the this page
-//					if (texSize + rgbTexMemBlocks[j].size() * sizeof(Spectrum) <= maxMemPageSize) {
-//						found = true;
-//						page = j;
-//						break;
-//					}
-//				}
-//
-//				if (!found) {
-//					// Check if I can add a new page
-//					if (rgbTexMemBlocks.size() > 5)
-//						throw std::runtime_error("More than 5 blocks of memory are required for RGB channels of a texture maps");
-//
-//					// Add a new page
-//					rgbTexMemBlocks.push_back(vector<Spectrum>());
-//					page = rgbTexMemBlocks.size() - 1;
-//				}
-//
-//				gpuTexMaps[i].rgbPage = page;
-//				gpuTexMaps[i].rgbPageOffset = (u_int)rgbTexMemBlocks[page].size();
-//				rgbTexMemBlocks[page].insert(rgbTexMemBlocks[page].end(), tm->GetPixels(), tm->GetPixels() + pixelCount);
-//			}
-//		}
-//
-//		if (totAlphaTexMem > 0) {
-//			alphaTexMemBlocks.resize(1);
-//
-//			for (u_int i = 0; i < tms.size(); ++i) {
-//				TextureMap *tm = tms[i];
-//				
-//				if (tm->HasAlpha()) {
-//					const u_int pixelCount = tm->GetWidth() * tm->GetHeight();
-//					const u_int texSize = pixelCount * sizeof(float);
-//
-//					if (texSize > maxMemPageSize)
-//						throw std::runtime_error("The alpha channel of a texture map is too big to fit in a single block of memory");
-//
-//					bool found = false;
-//					u_int page;
-//					for (u_int j = 0; j < alphaTexMemBlocks.size(); ++j) {
-//						// Check if it fits in the this page
-//						if (texSize + alphaTexMemBlocks[j].size() * sizeof(float) <= maxMemPageSize) {
-//							found = true;
-//							page = j;
-//							break;
-//						}
-//					}
-//
-//					if (!found) {
-//						// Check if I can add a new page
-//						if (alphaTexMemBlocks.size() > 5)
-//							throw std::runtime_error("More than 5 blocks of memory are required for alpha channels of a texture maps");
-//
-//						// Add a new page
-//						alphaTexMemBlocks.push_back(vector<float>());
-//						page = alphaTexMemBlocks.size() - 1;
-//					}
-//
-//					gpuTexMaps[i].alphaPage = page;
-//					gpuTexMaps[i].alphaPageOffset = (u_int)alphaTexMemBlocks[page].size();
-//					alphaTexMemBlocks[page].insert(alphaTexMemBlocks[page].end(), tm->GetAlphas(), tm->GetAlphas() + pixelCount);
-//				} else {
-//					gpuTexMaps[i].alphaPage = 0xffffffffu;
-//					gpuTexMaps[i].alphaPageOffset = 0xffffffffu;
-//				}
-//			}
-//		}
-//
-//		//----------------------------------------------------------------------
-//
-//		// Translate texture map description
-//		for (u_int i = 0; i < tms.size(); ++i) {
-//			TextureMap *tm = tms[i];
-//			gpuTexMaps[i].width = tm->GetWidth();
-//			gpuTexMaps[i].height = tm->GetHeight();
-//		}
-//
-//		//----------------------------------------------------------------------
-//
-//		// Translate mesh texture indices
-//		const u_int meshCount = meshMats.size();
-//		meshTexMaps.resize(meshCount);
-//		meshTexMapsInfo.resize(meshCount);
-//		for (u_int i = 0; i < meshCount; ++i) {
-//			TexMapInstance *t = scene->objectTexMaps[i];
-//
-//			if (t) {
-//				// Look for the index
-//				u_int index = 0;
-//				for (u_int j = 0; j < tms.size(); ++j) {
-//					if (t->GetTexMap() == tms[j]) {
-//						index = j;
-//						break;
-//					}
-//				}
-//
-//				meshTexMaps[i] = index;
-//				meshTexMapsInfo[i].uScale = t->GetUScale();
-//				meshTexMapsInfo[i].vScale = t->GetVScale();
-//				meshTexMapsInfo[i].uDelta = t->GetUDelta();
-//				meshTexMapsInfo[i].vDelta = t->GetVDelta();
-//			} else {
-//				meshTexMaps[i] = 0xffffffffu;
-//				meshTexMapsInfo[i].uScale = 1.f;
-//				meshTexMapsInfo[i].vScale = 1.f;
-//				meshTexMapsInfo[i].uDelta = 0.f;
-//				meshTexMapsInfo[i].vDelta = 0.f;
-//			}
-//		}
-//
-//		//----------------------------------------------------------------------
-//
-//		// Translate mesh bump map indices
-//		bool hasBumpMapping = false;
-//		meshBumpMaps.resize(meshCount);
-//		meshBumpMapsInfo.resize(meshCount);
-//		for (u_int i = 0; i < meshCount; ++i) {
-//			BumpMapInstance *bm = scene->objectBumpMaps[i];
-//
-//			if (bm) {
-//				// Look for the index
-//				u_int index = 0;
-//				for (u_int j = 0; j < tms.size(); ++j) {
-//					if (bm->GetTexMap() == tms[j]) {
-//						index = j;
-//						break;
-//					}
-//				}
-//
-//				meshBumpMaps[i] = index;
-//				meshBumpMapsInfo[i].uScale = bm->GetUScale();
-//				meshBumpMapsInfo[i].uScale = bm->GetUScale();
-//				meshBumpMapsInfo[i].vScale = bm->GetVScale();
-//				meshBumpMapsInfo[i].uDelta = bm->GetUDelta();
-//				meshBumpMapsInfo[i].vDelta = bm->GetVDelta();
-//				meshBumpMapsInfo[i].scale = bm->GetScale();
-//
-//				hasBumpMapping = true;
-//			} else
-//				meshBumpMaps[i] = 0xffffffffu;
-//		}
-//
-//		if (!hasBumpMapping) {
-//			meshBumpMaps.resize(0);
-//			meshBumpMapsInfo.resize(0);
-//		}
-//
-//		//----------------------------------------------------------------------
-//
-//		// Translate mesh normal map indices
-//		bool hasNormalMapping = false;
-//		meshNormalMaps.resize(meshCount);
-//		meshNormalMapsInfo.resize(meshCount);
-//		for (u_int i = 0; i < meshCount; ++i) {
-//			NormalMapInstance *nm = scene->objectNormalMaps[i];
-//
-//			if (nm) {
-//				// Look for the index
-//				u_int index = 0;
-//				for (u_int j = 0; j < tms.size(); ++j) {
-//					if (nm->GetTexMap() == tms[j]) {
-//						index = j;
-//						break;
-//					}
-//				}
-//
-//				meshNormalMaps[i] = index;
-//				meshNormalMapsInfo[i].uScale = nm->GetUScale();
-//				meshNormalMapsInfo[i].uScale = nm->GetUScale();
-//				meshNormalMapsInfo[i].vScale = nm->GetVScale();
-//				meshNormalMapsInfo[i].uDelta = nm->GetUDelta();
-//				meshNormalMapsInfo[i].vDelta = nm->GetVDelta();
-//
-//				hasNormalMapping = true;
-//			} else
-//				meshNormalMaps[i] = 0xffffffffu;
-//		}
-//
-//		if (!hasNormalMapping) {
-//			meshNormalMaps.resize(0);
-//			meshNormalMapsInfo.resize(0);
-//		}
-//	} else {
-//		gpuTexMaps.resize(0);
-//		rgbTexMemBlocks.resize(0);
-//		alphaTexMemBlocks.resize(0);
-//		meshTexMaps.resize(0);
-//		meshTexMapsInfo.resize(0);
-//		meshBumpMaps.resize(0);
-//		meshBumpMapsInfo.resize(0);
-//		meshNormalMaps.resize(0);
-//		meshNormalMapsInfo.resize(0);
-//	}
-//
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps RGB channel page count: " << rgbTexMemBlocks.size());
-//	for (u_int i = 0; i < rgbTexMemBlocks.size(); ++i)
-//		SLG_LOG("[PathOCLRenderThread::CompiledScene]  RGB channel page " << i << " size: " << rgbTexMemBlocks[i].size() * sizeof(Spectrum) / 1024 << "Kbytes");
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps Alpha channel page count: " << alphaTexMemBlocks.size());
-//	for (u_int i = 0; i < alphaTexMemBlocks.size(); ++i)
-//		SLG_LOG("[PathOCLRenderThread::CompiledScene]  Alpha channel page " << i << " size: " << alphaTexMemBlocks[i].size() * sizeof(float) / 1024 << "Kbytes");
-//
-//	const double tEnd = WallClockTime();
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+void CompiledScene::CompileImageMaps() {
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile ImageMaps");
+
+	imageMapDescs.resize(0);
+	imageMapMemBlocks.resize(0);
+
+	//--------------------------------------------------------------------------
+	// Translate image maps
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	std::vector<ImageMap *> ims;
+	scene->imgMapCache.GetImageMaps(ims);
+
+	imageMapDescs.resize(ims.size());
+	for (u_int i = 0; i < ims.size(); ++i) {
+		const ImageMap *im = ims[i];
+		luxrays::ocl::ImageMap *imd = &imageMapDescs[i];
+
+		const u_int pixelCount = im->GetWidth() * im->GetHeight();
+		const u_int memSize = pixelCount * im->GetChannelCount() * sizeof(float);
+
+		if (memSize > maxMemPageSize)
+			throw std::runtime_error("The RGB channels of a texture map are too big to fit in a single block of memory");
+
+		bool found = false;
+		u_int page;
+		for (u_int j = 0; j < imageMapMemBlocks.size(); ++j) {
+			// Check if it fits in the this page
+			if (memSize + imageMapMemBlocks[j].size() * sizeof(float) <= maxMemPageSize) {
+				found = true;
+				page = j;
+				break;
+			}
+		}
+
+		if (!found) {
+			// Check if I can add a new page
+			if (imageMapMemBlocks.size() > 5)
+				throw std::runtime_error("More than 5 blocks of memory are required for image maps");
+
+			// Add a new page
+			imageMapMemBlocks.push_back(vector<float>());
+			page = imageMapMemBlocks.size() - 1;
+		}
+
+		imd->width = im->GetWidth();
+		imd->height = im->GetHeight();
+		imd->channelCount = im->GetChannelCount();
+		imd->pageIndex = page;
+		imd->pixelsIndex = (u_int)imageMapMemBlocks[page].size();
+		imageMapMemBlocks[page].insert(imageMapMemBlocks[page].end(), im->GetPixels(),
+				im->GetPixels() + pixelCount * im->GetChannelCount());
+	}
+
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Image maps page count: " << imageMapMemBlocks.size());
+	for (u_int i = 0; i < imageMapMemBlocks.size(); ++i)
+		SLG_LOG("[PathOCLRenderThread::CompiledScene]  RGB channel page " << i << " size: " << imageMapMemBlocks[i].size() * sizeof(float) / 1024 << "Kbytes");
+
+	const double tEnd = WallClockTime();
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
@@ -799,8 +599,8 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileSunLight();
 	if (editActions.Has(SKYLIGHT_EDIT))
 		CompileSkyLight();
-	if (editActions.Has(TEXTUREMAPS_EDIT))
-		CompileTextureMaps();
+	if (editActions.Has(IMAGEMAPS_EDIT))
+		CompileImageMaps();
 }
 
 bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {

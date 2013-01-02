@@ -30,10 +30,11 @@
 //  PARAM_MAX_PATH_DEPTH
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
-//  PARAM_HAS_TEXTUREMAPS
-//  PARAM_HAS_ALPHA_TEXTUREMAPS
+//  PARAM_HAS_IMAGEMAPS
+//  PARAM_HAS_PASSTHROUGHT
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_HAS_BUMPMAPS
+//  PARAM_HAS_NORMALMAPS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
 
 // To enable single material support (work around for ATI compiler problems)
@@ -161,94 +162,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
 
-//#if defined(PARAM_HAS_TEXTUREMAPS)
-//
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
-//__global Spectrum *GetRGBAddress(const uint page, const uint offset
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_0)
-//                , __global Spectrum *texMapRGBBuff0
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
-//                , __global Spectrum *texMapRGBBuff1
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
-//                , __global Spectrum *texMapRGBBuff2
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
-//                , __global Spectrum *texMapRGBBuff3
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
-//                , __global Spectrum *texMapRGBBuff4
-//#endif
-//    ) {
-//    switch (page) {
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_1)
-//        case 1:
-//            return &texMapRGBBuff1[offset];
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_2)
-//        case 2:
-//            return &texMapRGBBuff2[offset];
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_3)
-//        case 3:
-//            return &texMapRGBBuff3[offset];
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_RGB_PAGE_4)
-//        case 4:
-//            return &texMapRGBBuff4[offset];
-//#endif
-//        default:
-//        case 0:
-//            return &texMapRGBBuff0[offset];
-//    }
-//}
-//#endif
-//
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_0)
-//__global float *GetAlphaAddress(const uint page, const uint offset
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_0)
-//                , __global float *texMapAlphaBuff0
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_1)
-//                , __global float *texMapAlphaBuff1
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_2)
-//                , __global float *texMapAlphaBuff2
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_3)
-//                , __global float *texMapAlphaBuff3
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_4)
-//                , __global float *texMapAlphaBuff4
-//#endif
-//    ) {
-//    switch (page) {
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_1)
-//        case 1:
-//            return &texMapAlphaBuff1[offset];
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_2)
-//        case 2:
-//            return &texMapAlphaBuff2[offset];
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_3)
-//        case 3:
-//            return &texMapAlphaBuff3[offset];
-//#endif
-//#if defined(PARAM_TEXTUREMAPS_ALPHA_PAGE_4)
-//        case 4:
-//            return &texMapAlphaBuff4[offset];
-//#endif
-//        default:
-//        case 0:
-//            return &texMapAlphaBuff0[offset];
-//    }
-//}
-//#endif
-//
-//#endif
-
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
@@ -268,6 +181,31 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global Point *vertices,
 		__global Triangle *triangles,
 		__global Camera *camera
+#if defined(PARAM_HAS_INFINITELIGHT)
+		, __global InfiniteLight *infiniteLight
+#endif
+#if defined(PARAM_HAS_IMAGEMAPS)
+		, __global ImageMap *imageMapDescs
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		, __global float *imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		, __global float *imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		, __global float *imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		, __global float *imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		, __global float *imageMapBuff4
+#endif
+		, __global UV *vertUVs
+#endif
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		, __global AlphaPixel *alphaFrameBuffer
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -290,8 +228,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	__global RayHit *rayHit = &rayHits[gid];
 	const uint currentTriangleIndex = rayHit->index;
 
-	const float3 skyCol = (float3)(.5f, .75f, 1.f);
-
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
 	//
@@ -310,14 +246,41 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					meshDescs,
 #endif
 					mats, texs, meshMats, meshIDs, vertNormals, vertices,
-					triangles, ray, rayHit, Sampler_GetSample(IDX_DOF_X));
+					triangles, ray, rayHit
+#if defined(PARAM_HAS_PASSTHROUGHT)
+					, Sampler_GetSample(IDX_PASSTROUGHT)
+#endif
+					);
 
 			// Sample next path vertex
 			pathState = GENERATE_NEXT_VERTEX_RAY;
 		} else {
-			sample->radiance.r += skyCol.s0;
-			sample->radiance.g += skyCol.s1;
-			sample->radiance.b += skyCol.s2;
+#if defined(PARAM_HAS_INFINITELIGHT)
+			const float3 lightRadiance = InfiniteLight_GetRadiance(
+				infiniteLight,
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
+				-vload3(0, &ray->d.x));
+			float3 radiance = vload3(0, &sample->radiance.r);
+			radiance += vload3(0, &task->pathStateBase.throughput.r) * lightRadiance;
+			vstore3(radiance, 0, &sample->radiance.r);
+#endif
 			pathState = SPLAT_SAMPLE;
 		}
 	}
@@ -340,9 +303,27 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			float cosSampledDir;
 			BSDFEvent event;
 
-			const float3 bsdfSample = BSDF_Sample(bsdf, mats, texs, &sampledDir,
+			const float3 bsdfSample = BSDF_Sample(bsdf, mats, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
 					Sampler_GetSample(IDX_BSDF_X), Sampler_GetSample(IDX_BSDF_Y),
-					&lastPdfW, &cosSampledDir, &event);
+					&sampledDir, &lastPdfW, &cosSampledDir, &event);
 			const bool lastSpecular = ((event & SPECULAR) != 0);
 
 			// Russian Roulette
@@ -352,7 +333,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			const bool continuePath = !all(isequal(bsdfSample, BLACK)) && rrContinuePath;
 			if (continuePath) {
-				lastPdfW *= rrProb; // Russian Roulette
+				if (depth >= PARAM_RR_DEPTH)
+					lastPdfW *= rrProb; // Russian Roulette
 
 				float3 throughput = vload3(0, &task->pathStateBase.throughput.r);
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);

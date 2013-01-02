@@ -83,7 +83,6 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	meshDescsBuff = NULL;
 	meshMatsBuff = NULL;
 	infiniteLightBuff = NULL;
-	infiniteLightMapBuff = NULL;
 	sunLightBuff = NULL;
 	skyLightBuff = NULL;
 	vertsBuff = NULL;
@@ -91,13 +90,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
 	areaLightsBuff = NULL;
-	texMapDescBuff = NULL;
-	meshTexMapsBuff = NULL;
-	meshTexMapsInfoBuff = NULL;
-	meshBumpMapsBuff = NULL;
-	meshBumpMapsInfoBuff = NULL;
-	meshNormalMapsBuff = NULL;
-	meshNormalMapsInfoBuff = NULL;
+	imageMapDescsBuff = NULL;
 	uvsBuff = NULL;
 
 	gpuTaskStats = new slg::ocl::GPUTaskStats[renderEngine->taskCount];
@@ -286,8 +279,8 @@ void PathOCLRenderThread::InitGeometry() {
 		AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
 				sizeof(luxrays::ocl::Mesh) * cscene->meshDescs.size(), "Mesh description");
 	} else {
-		triangleIDBuff = NULL;
-		meshDescsBuff = NULL;
+		FreeOCLBuffer(&triangleIDBuff);
+		FreeOCLBuffer(&meshDescsBuff);
 	}
 }
 
@@ -314,23 +307,17 @@ void PathOCLRenderThread::InitAreaLights() {
 		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
 			sizeof(slg::ocl::TriangleLight) * cscene->areaLights.size(), "AreaLights");
 	} else
-		areaLightsBuff = NULL;
+		FreeOCLBuffer(&areaLightsBuff);
 }
 
 void PathOCLRenderThread::InitInfiniteLight() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	if (cscene->infiniteLight) {
+	if (cscene->infiniteLight)
 		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
-			sizeof(slg::ocl::InfiniteLight), "InfiniteLight");
-
-		const u_int pixelCount = cscene->infiniteLight->width * cscene->infiniteLight->height;
-		AllocOCLBufferRO(&infiniteLightMapBuff, (void *)cscene->infiniteLightMap,
-			sizeof(Spectrum) * pixelCount, "InfiniteLight map");
-	} else {
-		infiniteLightBuff = NULL;
-		infiniteLightMapBuff = NULL;
-	}
+			sizeof(luxrays::ocl::InfiniteLight), "InfiniteLight");
+	else
+		FreeOCLBuffer(&infiniteLightBuff);
 }
 
 void PathOCLRenderThread::InitSunLight() {
@@ -340,7 +327,7 @@ void PathOCLRenderThread::InitSunLight() {
 		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
 			sizeof(slg::ocl::SunLight), "SunLight");
 	else
-		sunLightBuff = NULL;
+		FreeOCLBuffer(&sunLightBuff);
 }
 
 void PathOCLRenderThread::InitSkyLight() {
@@ -350,70 +337,25 @@ void PathOCLRenderThread::InitSkyLight() {
 		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
 			sizeof(slg::ocl::SkyLight), "SkyLight");
 	else
-		skyLightBuff = NULL;
+		FreeOCLBuffer(&skyLightBuff);
 }
 
-void PathOCLRenderThread::InitTextureMaps() {
-//	CompiledScene *cscene = renderEngine->compiledScene;
-//
-//	if ((cscene->totRGBTexMem > 0) || (cscene->totAlphaTexMem > 0)) {
-//		if (cscene->totRGBTexMem > 0) {
-//			texMapRGBBuff.resize(cscene->rgbTexMemBlocks.size());
-//			for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i) {
-//				AllocOCLBufferRO(&(texMapRGBBuff[i]), &(cscene->rgbTexMemBlocks[i][0]),
-//						sizeof(Spectrum) * cscene->rgbTexMemBlocks[i].size(), "TexMaps");
-//			}
-//		} else
-//			texMapRGBBuff.resize(0);
-//
-//		if (cscene->totAlphaTexMem > 0) {
-//			texMapAlphaBuff.resize(cscene->alphaTexMemBlocks.size());
-//			for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i) {
-//				AllocOCLBufferRO(&(texMapAlphaBuff[i]), &(cscene->alphaTexMemBlocks[i][0]),
-//						sizeof(float) * cscene->alphaTexMemBlocks[i].size(), "TexMaps Alpha Channel");
-//			}
-//		} else
-//			texMapAlphaBuff.resize(0);
-//
-//		AllocOCLBufferRO(&texMapDescBuff, &cscene->gpuTexMaps[0],
-//				sizeof(slg::ocl::TexMap) * cscene->gpuTexMaps.size(), "TexMaps description");
-//
-//		const u_int meshCount = renderEngine->compiledScene->meshMats.size();
-//		AllocOCLBufferRO(&meshTexMapsBuff, &cscene->meshTexMaps[0],
-//				sizeof(u_int) * meshCount, "Mesh TexMaps index");
-//		AllocOCLBufferRO(&meshTexMapsInfoBuff, &cscene->meshTexMapsInfo[0],
-//			sizeof(slg::ocl::TexMapInfo) * meshCount, "Mesh TexMaps info");
-//
-//		if (cscene->meshBumpMaps.size() > 0) {
-//			AllocOCLBufferRO(&meshBumpMapsBuff, &cscene->meshBumpMaps[0],
-//				sizeof(u_int) * meshCount, "Mesh BumpMaps index");
-//			AllocOCLBufferRO(&meshBumpMapsInfoBuff, &cscene->meshBumpMapsInfo[0],
-//				sizeof(slg::ocl::BumpMapInfo) * meshCount, "Mesh BumpMaps info");
-//		} else {
-//			meshBumpMapsBuff = NULL;
-//			meshBumpMapsInfoBuff = NULL;
-//		}
-//
-//		if (cscene->meshNormalMaps.size() > 0) {
-//			AllocOCLBufferRO(&meshNormalMapsBuff, &cscene->meshNormalMaps[0],
-//				sizeof(u_int) * meshCount, "Mesh NormalMaps index");
-//			AllocOCLBufferRO(&meshNormalMapsInfoBuff, &cscene->meshNormalMapsInfo[0],
-//				sizeof(slg::ocl::NormalMapInfo) * meshCount, "Mesh NormalMaps info");
-//		} else {
-//			meshNormalMapsBuff = NULL;
-//			meshNormalMapsInfoBuff = NULL;
-//		}
-//	} else {
-		texMapRGBBuff.resize(0);
-		texMapAlphaBuff.resize(0);
-		texMapDescBuff = NULL;
-		meshTexMapsBuff = NULL;
-		meshTexMapsInfoBuff = NULL;
-		meshBumpMapsBuff = NULL;
-		meshBumpMapsInfoBuff = NULL;
-		meshNormalMapsBuff = NULL;
-		meshNormalMapsInfoBuff = NULL;
-//	}
+void PathOCLRenderThread::InitImageMaps() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	if (cscene->imageMapMemBlocks.size() > 0) {
+		AllocOCLBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
+				sizeof(luxrays::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMaps description");
+
+		imageMapsBuff.resize(cscene->imageMapMemBlocks.size());
+		for (u_int i = 0; i < cscene->imageMapMemBlocks.size(); ++i) {
+			AllocOCLBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
+					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
+		}
+	} else {
+		FreeOCLBuffer(&imageMapDescsBuff);
+		imageMapsBuff.resize(0);
+	}
 }
 
 void PathOCLRenderThread::InitKernels() {
@@ -502,20 +444,14 @@ void PathOCLRenderThread::InitKernels() {
 				;
 	}
 
-//	if ((texMapRGBBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
-//		ss << " -D PARAM_HAS_TEXTUREMAPS";
-//		for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
-//			ss << " -D PARAM_TEXTUREMAPS_RGB_PAGE_" << i;
-//		if (cscene->rgbTexMemBlocks.size() > 5)
-//			throw std::runtime_error("Too many memory pages required for RGB channels of a texture maps");
-//	}
-//	if (texMapAlphaBuff.size() > 0) {
-//		ss << " -D PARAM_HAS_ALPHA_TEXTUREMAPS";
-//		for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
-//			ss << " -D PARAM_TEXTUREMAPS_ALPHA_PAGE_" << i;
-//		if (cscene->alphaTexMemBlocks.size() > 5)
-//			throw std::runtime_error("Too many memory pages required for alpha channel of a texture maps");
-//	}
+	if (imageMapDescsBuff) {
+		ss << " -D PARAM_HAS_IMAGEMAPS";
+		if (imageMapsBuff.size() > 5)
+			throw std::runtime_error("Too many memory pages required for image maps");
+		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
+			ss << " -D PARAM_IMAGEMAPS_PAGE_" << i;
+	}
+
 //	if (meshBumpMapsBuff)
 //		ss << " -D PARAM_HAS_BUMPMAPS";
 //	if (meshNormalMapsBuff)
@@ -594,7 +530,7 @@ void PathOCLRenderThread::InitKernels() {
 		ssKernel <<
 			_LUXRAYS_UV_OCLDEFINE
 			_LUXRAYS_POINT_OCLDEFINE
-			_LUXRAYS_VECTOR_OCLDEFINE
+			+ luxrays::ocl::KernelSource_vector_types +
 			_LUXRAYS_NORMAL_OCLDEFINE
 			_LUXRAYS_TRIANGLE_OCLDEFINE
 			+ luxrays::ocl::KernelSource_ray_types +
@@ -613,8 +549,10 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_sampler_types <<
 			luxrays::ocl::KernelSource_filter_types <<
 			luxrays::ocl::KernelSource_camera_types <<
+			luxrays::ocl::KernelSource_light_types <<
 			// OpenCL Funcs
 			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_vector_funcs <<
 			luxrays::ocl::KernelSource_ray_funcs <<
 			luxrays::ocl::KernelSource_spectrum_funcs <<
 			luxrays::ocl::KernelSource_mc_funcs <<
@@ -624,6 +562,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_trianglemesh_funcs <<
 			luxrays::ocl::KernelSource_texture_funcs <<
 			luxrays::ocl::KernelSource_material_funcs <<
+			luxrays::ocl::KernelSource_light_funcs <<
 			luxrays::ocl::KernelSource_bsdf_funcs <<
 			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
@@ -719,16 +658,22 @@ void PathOCLRenderThread::InitRender() {
 	InitGeometry();
 
 	//--------------------------------------------------------------------------
-	// Translate material definitions
+	// Image maps
 	//--------------------------------------------------------------------------
 
-	InitMaterials();
+	InitImageMaps();
 
 	//--------------------------------------------------------------------------
-	// Translate texture definitions
+	// Texture definitions
 	//--------------------------------------------------------------------------
 
 	InitTextures();
+
+	//--------------------------------------------------------------------------
+	// Material definitions
+	//--------------------------------------------------------------------------
+
+	InitMaterials();
 
 	//--------------------------------------------------------------------------
 	// Translate area lights
@@ -755,14 +700,8 @@ void PathOCLRenderThread::InitRender() {
 	InitSkyLight();
 
 	const u_int areaLightCount = renderEngine->compiledScene->areaLights.size();
-//	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
-//		throw runtime_error("There are no light sources supported by PathOCL in the scene");
-
-	//--------------------------------------------------------------------------
-	// Translate mesh texture maps
-	//--------------------------------------------------------------------------
-
-	InitTextureMaps();
+	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
+		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
 	//--------------------------------------------------------------------------
 	// Allocate Ray/RayHit buffers
@@ -809,8 +748,8 @@ void PathOCLRenderThread::InitRender() {
 		// IDX_DOF_X, IDX_DOF_Y
 		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =
-		// IDX_TEX_ALPHA,
-		((texMapAlphaBuff.size() > 0) /* TODO: has passthrough */  ? sizeof(float) : 0) +
+		// IDX_PASSTHROUGH,
+		//((texMapAlphaBuff.size() > 0) /* TODO: has passthrough */  ? sizeof(float) : 0) +
 		// IDX_BSDF_X, IDX_BSDF_Y
 		sizeof(float) * 2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
@@ -903,36 +842,25 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *vertsBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
-//	if (infiniteLightBuff) {
-//		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
-//		advancePathsKernel->setArg(argIndex++, *infiniteLightMapBuff);
-//	}
+	if (infiniteLightBuff)
+		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
 //	if (sunLightBuff)
 //		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
 //	if (skyLightBuff)
 //		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
 //	if (areaLightsBuff)
 //		advancePathsKernel->setArg(argIndex++, *areaLightsBuff);
-//	for (u_int i = 0; i < cscene->rgbTexMemBlocks.size(); ++i)
-//		advancePathsKernel->setArg(argIndex++, *(texMapRGBBuff[i]));
-//	for (u_int i = 0; i < cscene->alphaTexMemBlocks.size(); ++i)
-//		advancePathsKernel->setArg(argIndex++, *(texMapAlphaBuff[i]));
-//	if ((cscene->rgbTexMemBlocks.size() > 0) || (cscene->alphaTexMemBlocks.size() > 0)) {
-//		advancePathsKernel->setArg(argIndex++, *texMapDescBuff);
-//		advancePathsKernel->setArg(argIndex++, *meshTexMapsBuff);
-//		advancePathsKernel->setArg(argIndex++, *meshTexMapsInfoBuff);
-//		if (meshBumpMapsBuff) {
-//			advancePathsKernel->setArg(argIndex++, *meshBumpMapsBuff);
-//			advancePathsKernel->setArg(argIndex++, *meshBumpMapsInfoBuff);
-//		}
-//		if (meshNormalMapsBuff) {
-//			advancePathsKernel->setArg(argIndex++, *meshNormalMapsBuff);
-//			advancePathsKernel->setArg(argIndex++, *meshNormalMapsInfoBuff);
-//		}
-//		advancePathsKernel->setArg(argIndex++, *uvsBuff);
-//	}
-//	if (alphaFrameBufferBuff)
-//		advancePathsKernel->setArg(argIndex++, *alphaFrameBufferBuff);
+
+	if (imageMapDescsBuff) {
+		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);
+
+		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
+			advancePathsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
+
+		advancePathsKernel->setArg(argIndex++, *uvsBuff);
+	}
+	if (alphaFrameBufferBuff)
+		advancePathsKernel->setArg(argIndex++, *alphaFrameBufferBuff);
 
 	//--------------------------------------------------------------------------
 	// initFBKernel
@@ -1007,32 +935,15 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&normalsBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);
-	if (infiniteLightBuff) {
-		FreeOCLBuffer(&infiniteLightBuff);
-		FreeOCLBuffer(&infiniteLightMapBuff);
-	}
+	FreeOCLBuffer(&infiniteLightBuff);
 	FreeOCLBuffer(&sunLightBuff);
 	FreeOCLBuffer(&skyLightBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&areaLightsBuff);
-	for (u_int i = 0; i < texMapRGBBuff.size(); ++i)
-		FreeOCLBuffer(&texMapRGBBuff[i]);
-	for (u_int i = 0; i < texMapAlphaBuff.size(); ++i)
-		FreeOCLBuffer(&texMapAlphaBuff[i]);
-	if ((texMapAlphaBuff.size() > 0) || (texMapAlphaBuff.size() > 0)) {
-		FreeOCLBuffer(&texMapDescBuff);
-		FreeOCLBuffer(&meshTexMapsBuff);
-		FreeOCLBuffer(&meshTexMapsInfoBuff);
-
-		if (meshBumpMapsBuff) {
-			FreeOCLBuffer(&meshBumpMapsBuff);
-			FreeOCLBuffer(&meshBumpMapsInfoBuff);
-		}
-
-		if (meshNormalMapsBuff) {
-			FreeOCLBuffer(&meshNormalMapsBuff);
-			FreeOCLBuffer(&meshNormalMapsInfoBuff);
-		}
+	if (imageMapDescsBuff) {
+		FreeOCLBuffer(&imageMapDescsBuff);
+		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
+			FreeOCLBuffer(&imageMapsBuff[i]);
 
 		FreeOCLBuffer(&uvsBuff);
 	}

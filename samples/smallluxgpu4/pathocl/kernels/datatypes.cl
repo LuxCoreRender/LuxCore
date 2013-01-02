@@ -255,12 +255,6 @@ typedef struct {
 } TriangleLight;
 
 typedef struct {
-	float shiftU, shiftV;
-	Spectrum gain;
-	unsigned int width, height;
-} InfiniteLight;
-
-typedef struct {
 	Vector sundir;
 	Spectrum gain;
 	float turbidity;

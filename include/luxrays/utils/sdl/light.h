@@ -28,7 +28,14 @@
 #include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/sdl/material.h"
 
-namespace luxrays { namespace sdl {
+namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/utils/sdl/light_types.cl"
+}
+
+namespace sdl {
 
 class Scene;
 
@@ -131,14 +138,14 @@ public:
 	float GetShiftU() const { return shiftU; }
 	float GetShiftV() const { return shiftV; }
 
-	const ImageMapInstance *GetTexture() const { return tex; }
+	const ImageMapInstance *GetImageMapInstance() const { return imageMapInstance; }
 
 	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir, const Point &hitPoint,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
-	ImageMapInstance *tex;
+	ImageMapInstance *imageMapInstance;
 	float shiftU, shiftV;
 };
 

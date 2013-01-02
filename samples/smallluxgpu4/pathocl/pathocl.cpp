@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 //TODO: check OpenCL 1.1
+//TODO: disable RR when RR_DEPTH > MAX_PATH_DEPTH
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 

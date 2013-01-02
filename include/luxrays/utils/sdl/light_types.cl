@@ -1,4 +1,4 @@
-#line 2 "bsdf_types.cl"
+#line 2 "light_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -22,32 +22,11 @@
  ***************************************************************************/
 
 typedef enum {
-	NONE     = 0,
-	DIFFUSE  = 1,
-	GLOSSY   = 2,
-	SPECULAR = 4,
-	REFLECT  = 8,
-	TRANSMIT = 16
-} BSDFEventType;
-
-typedef int BSDFEvent;
+	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
+} LightSourceType;
 
 typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	Vector fixedDir;
-	Point hitPoint;
-	UV hitPointUV;
-	Normal geometryN;
-	Normal shadeN;
-#if defined(PARAM_HAS_PASSTHROUGHT)
-	float passThroughEvent;
-#endif
-	unsigned int materialIndex;
-	//unsigned int lightSourceIndex;
-
-	Frame frame;
-
-	// This will be used for BiDir
-	//bool fromLight;
-} BSDF;
+	Spectrum gain;
+	float shiftU, shiftV;
+	ImageMapInstanceParam imageMapInstance;
+} InfiniteLight;
