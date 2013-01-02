@@ -1,6 +1,6 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_transform_types = 
+std::string KernelSource_ray_types = 
 "#line 2 \"ray_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
@@ -25,6 +25,9 @@ std::string KernelSource_transform_types =
 " ***************************************************************************/\n"
 "\n"
 "typedef struct {\n"
-"	Matrix4x4 m;\n"
-"} Transform;\n"
+"	Point o;\n"
+"	Vector d;\n"
+"	float mint, maxt, time;\n"
+"	float pad[3]; // TODO: remove (here and in ray.h)\n"
+"} Ray;\n"
 ; } }

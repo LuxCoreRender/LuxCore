@@ -25,7 +25,8 @@
 //  PARAM_TASK_COUNT
 //  PARAM_IMAGE_WIDTH
 //  PARAM_IMAGE_HEIGHT
-//  PARAM_RAY_EPSILON
+//  PARAM_RAY_EPSILON_MIN
+//  PARAM_RAY_EPSILON_MAX
 //  PARAM_MAX_PATH_DEPTH
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
@@ -89,7 +90,7 @@
 // Init Kernel
 //------------------------------------------------------------------------------
 
-__kernel void Init(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		uint seedBase,
 		__global GPUTask *tasks,
 		__global float *samplesData,
@@ -134,7 +135,7 @@ __kernel void Init(
 // InitFrameBuffer Kernel
 //------------------------------------------------------------------------------
 
-__kernel void InitFrameBuffer(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 		__global Pixel *frameBuffer
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
@@ -248,7 +249,7 @@ __kernel void InitFrameBuffer(
 //
 //#endif
 
-__kernel void AdvancePaths(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
 		__global float *samplesData,
@@ -256,7 +257,7 @@ __kernel void AdvancePaths(
 		__global RayHit *rayHits,
 		__global Pixel *frameBuffer,
 		__global Material *mats,
-		__global Material *texs,
+		__global Texture *texs,
 		__global uint *meshMats,
 		__global uint *meshIDs,
 #if defined(PARAM_ACCEL_MQBVH)
@@ -357,11 +358,7 @@ __kernel void AdvancePaths(
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
 				vstore3(throughput, 0, &task->pathStateBase.throughput.r);
 
-				//TODO: Ray_Init(bsdf.hitPoint, sampledDir);
-				ray->o = bsdf->hitPoint;
-				vstore3(sampledDir, 0, &ray->d.x);
-				ray->mint = PARAM_RAY_EPSILON;
-				ray->maxt = INFINITY;
+				Ray_Init2(ray, vload3(0, &bsdf->hitPoint.x), sampledDir);
 
 				task->pathStateBase.depth = depth + 1;
 				pathState = RT_NEXT_VERTEX;

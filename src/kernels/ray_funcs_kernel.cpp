@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_transform_types = 
-"#line 2 \"ray_types.cl\"\n"
+std::string KernelSource_ray_funcs = 
+"#line 2 \"ray_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -24,7 +24,19 @@ std::string KernelSource_transform_types =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"typedef struct {\n"
-"	Matrix4x4 m;\n"
-"} Transform;\n"
+"void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,\n"
+"		const float mint, const float maxt) {\n"
+"	vstore3(orig, 0, &ray->o.x);\n"
+"	vstore3(dir, 0, &ray->d.x);\n"
+"	ray->mint = mint;\n"
+"	ray->maxt = maxt;\n"
+"}\n"
+"\n"
+"void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir, const float maxt) {\n"
+"	Ray_Init4(ray, orig, dir, 0.0001f, maxt);\n"
+"}\n"
+"\n"
+"void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir) {\n"
+"	Ray_Init4(ray, orig, dir, 0.0001f, INFINITY);\n"
+"}\n"
 ; } }
