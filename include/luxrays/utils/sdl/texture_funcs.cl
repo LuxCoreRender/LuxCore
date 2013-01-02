@@ -22,60 +22,39 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Matte material
+// ConstFloat texture
 //------------------------------------------------------------------------------
 
-float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
-		const float2 uv, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-				return 0.f;
-
-	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-
-	*cosSampledDir = fabs((*sampledDir).z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-		return 0.f;
-
-	*event = DIFFUSE | REFLECT;
-
-	const float3 kd = Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv);
-	return M_1_PI_F * kd;
+float3 ConstFloatTexture_GetColorValue(__global Texture *texture, const float2 uv) {
+	return texture->constFloat.value;
 }
 
 //------------------------------------------------------------------------------
-// Mirror material
+// ConstFloat3 texture
 //------------------------------------------------------------------------------
 
-float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs,
-		const float2 uv, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
-	*event = SPECULAR | REFLECT;
+float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, const float2 uv) {
+	return vload3(0, &texture->constFloat3.color.r);
+}
 
-	*sampledDir = (float3)(-fixedDir.x, -fixedDir.y, fixedDir.z);
-	*pdfW = 1.f;
+//------------------------------------------------------------------------------
+// ConstFloat4 texture
+//------------------------------------------------------------------------------
 
-	*cosSampledDir = fabs((*sampledDir).z);
-	const float3 kr = Texture_GetColorValue(&texs[material->mirror.krTexIndex], uv);
-	// The cosSampledDir is used to compensate the other one used inside the integrator
-	return kr / (*cosSampledDir);
+float3 ConstFloat4Texture_GetColorValue(__global Texture *texture, const float2 uv) {
+	return vload3(0, &texture->constFloat4.color.r);
 }
 
 //------------------------------------------------------------------------------
 
-float3 Material_Sample(__global Material *material, __global Texture *texs,
-		const float2 uv, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
-	switch (material->type) {
-		case MATTE:
-			return MatteMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1, passThroughEvent, pdfW, cosSampledDir, event);
-		case MIRROR:
-			return MirrorMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1, passThroughEvent, pdfW, cosSampledDir, event);
+float3 Texture_GetColorValue(__global Texture *texture, const float2 uv) {
+	switch (texture->type) {
+		case CONST_FLOAT:
+			return ConstFloatTexture_GetColorValue(texture, uv);
+		case CONST_FLOAT3:
+			return ConstFloat3Texture_GetColorValue(texture, uv);
+		case CONST_FLOAT4:
+			return ConstFloat4Texture_GetColorValue(texture, uv);
 		default:
 			return 0.f;
 	}

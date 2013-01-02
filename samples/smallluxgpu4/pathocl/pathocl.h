@@ -74,6 +74,7 @@ private:
 	void InitCamera();
 	void InitGeometry();
 	void InitMaterials();
+	void InitTextures();
 	void InitAreaLights();
 	void InitInfiniteLight();
 	void InitSunLight();
@@ -104,6 +105,7 @@ private:
 	cl::Buffer *frameBufferBuff;
 	cl::Buffer *alphaFrameBufferBuff;
 	cl::Buffer *materialsBuff;
+	cl::Buffer *texturesBuff;
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *triangleIDBuff;
 	cl::Buffer *meshDescsBuff;

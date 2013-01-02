@@ -76,6 +76,8 @@ public:
 	vector<luxrays::ocl::Material> mats;
 	vector<u_int> meshMats;
 
+	// Compiled Textures
+	vector<luxrays::ocl::Texture> texs;
 //	// Compiled TextureMaps
 //	vector<PathOCL::TexMap> gpuTexMaps;
 //	u_int totRGBTexMem, totAlphaTexMem;
@@ -95,11 +97,12 @@ private:
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();
+	void CompileTextures();
+	void CompileTextureMaps();
 	void CompileAreaLights();
 	void CompileInfiniteLight();
 	void CompileSunLight();
 	void CompileSkyLight();
-	void CompileTextureMaps();
 };
 
 }

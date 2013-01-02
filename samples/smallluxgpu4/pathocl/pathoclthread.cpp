@@ -77,6 +77,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	frameBufferBuff = NULL;
 	alphaFrameBufferBuff = NULL;
 	materialsBuff = NULL;
+	texturesBuff = NULL;
 	meshIDBuff = NULL;
 	triangleIDBuff = NULL;
 	meshDescsBuff = NULL;
@@ -161,7 +162,8 @@ void PathOCLRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const s
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes");
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
+			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 	*buff = new cl::Buffer(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			size, src);
@@ -195,7 +197,8 @@ void PathOCLRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size,
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
  
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " << (size / 1024) << "Kbytes");
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
+			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 	*buff = new cl::Buffer(oclContext,
 			CL_MEM_READ_WRITE,
 			size);
@@ -296,6 +299,12 @@ void PathOCLRenderThread::InitMaterials() {
 	const u_int meshCount = renderEngine->compiledScene->meshMats.size();
 	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
 			sizeof(u_int) * meshCount, "Mesh material index");
+}
+
+void PathOCLRenderThread::InitTextures() {
+	const size_t texturesCount = renderEngine->compiledScene->texs.size();
+	AllocOCLBufferRO(&texturesBuff, &renderEngine->compiledScene->texs[0],
+			sizeof(luxrays::ocl::Texture) * texturesCount, "Textures");
 }
 
 void PathOCLRenderThread::InitAreaLights() {
@@ -597,6 +606,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_transform_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<
 			luxrays::ocl::KernelSource_trianglemesh_types <<
+			luxrays::ocl::KernelSource_texture_types <<
 			luxrays::ocl::KernelSource_material_types <<
 			luxrays::ocl::KernelSource_bsdf_types <<
 			luxrays::ocl::KernelSource_sampler_types <<
@@ -609,6 +619,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_transform_funcs <<
 			luxrays::ocl::KernelSource_randomgen_funcs <<
 			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			luxrays::ocl::KernelSource_texture_funcs <<
 			luxrays::ocl::KernelSource_material_funcs <<
 			luxrays::ocl::KernelSource_bsdf_funcs <<
 			// SLG Kernels
@@ -709,6 +720,12 @@ void PathOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	InitMaterials();
+
+	//--------------------------------------------------------------------------
+	// Translate texture definitions
+	//--------------------------------------------------------------------------
+
+	InitTextures();
 
 	//--------------------------------------------------------------------------
 	// Translate area lights
@@ -872,6 +889,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
 	advancePathsKernel->setArg(argIndex++, *frameBufferBuff);
 	advancePathsKernel->setArg(argIndex++, *materialsBuff);
+	advancePathsKernel->setArg(argIndex++, *texturesBuff);
 	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
 	if (triangleIDBuff)
@@ -978,6 +996,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&frameBufferBuff);
 	FreeOCLBuffer(&alphaFrameBufferBuff);
 	FreeOCLBuffer(&materialsBuff);
+	FreeOCLBuffer(&texturesBuff);
 	FreeOCLBuffer(&meshIDBuff);
 	FreeOCLBuffer(&triangleIDBuff);
 	FreeOCLBuffer(&meshDescsBuff);

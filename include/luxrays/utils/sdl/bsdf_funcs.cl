@@ -28,6 +28,7 @@ void BSDF_Init(__global BSDF *bsdf,
 		__global Mesh *meshDescs,
 #endif
 		__global Material *mats,
+		__global Material *texs,
 		__global uint *meshMats,
 		__global uint *meshIDs,
 		__global Vector *vertNormals,
@@ -48,6 +49,7 @@ void BSDF_Init(__global BSDF *bsdf,
 	const uint meshIndex = meshIDs[currentTriangleIndex];
 
 #if defined(PARAM_ACCEL_MQBVH)
+	TODO
 	__global Mesh *meshDesc = &meshDescs[meshIndex];
 	__global Point *iVertices = &vertices[meshDesc->vertsOffset];
 	__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
@@ -56,13 +58,10 @@ void BSDF_Init(__global BSDF *bsdf,
 #endif
 	bsdf->triangles = &triangles[meshDesc->trisOffset];
 	bsdf->triIndex = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
-#else
-	bsdf->triangles = triangles;
-	bsdf->triIndex = currentTriangleIndex;
 #endif
 
 	// Get the material
-	bsdf->material = &mats[meshMats[meshIndex]];
+	bsdf->materialIndex = meshMats[meshIndex];
 
 	// Interpolate face normal
 	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
@@ -131,6 +130,8 @@ void BSDF_Init(__global BSDF *bsdf,
 }
 
 float3 BSDF_Sample(__global BSDF *bsdf,
+		__global Material *mats,
+		__global Material *texs,
 		float3 *sampledDir,
 		const float u0, const float u1,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
@@ -138,13 +139,7 @@ float3 BSDF_Sample(__global BSDF *bsdf,
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-//	Spectrum result = material->Sample(fromLight, hitPointUV,
-//			localFixedDir, &localSampledDir, u0, u1, passThroughEvent,
-//			pdfW, cosSampledDir, event);
-//	if (result.Black())
-//		return result;
-
-	const float3 result = Material_Sample(bsdf->material,
+	const float3 result = Material_Sample(&mats[bsdf->materialIndex], texs,
 			(float2)(0.f, 0.f), localFixedDir, &localSampledDir,
 			u0, u1,  bsdf->passThroughEvent, pdfW, cosSampledDir, event);
 	if (all(isequal(result, BLACK)))

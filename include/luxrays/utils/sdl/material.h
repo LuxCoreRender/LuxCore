@@ -136,7 +136,7 @@ public:
 	Material *GetMaterial(const u_int index) {
 		return mats[index];
 	}
-	u_int GetMaterialIndex(Material *m) const;
+	u_int GetMaterialIndex(const Material *m) const;
 
 	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
 	std::vector<std::string> GetMaterialNames() const;
@@ -149,7 +149,7 @@ private:
 	std::vector<Material *> mats;
 	std::map<std::string, Material *> matsByName;
 	std::map<std::string, u_int> indexByName;
-	std::map<Material *, u_int> indexByPtr;
+	std::map<const Material *, u_int> indexByPtr;
 };
 
 //------------------------------------------------------------------------------
@@ -164,8 +164,6 @@ public:
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
-	const Texture *GetKd() const { return Kd; }
-
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
@@ -178,6 +176,8 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	const Texture *GetKd() const { return Kd; }
 
 private:
 	const Texture *Kd;
@@ -197,8 +197,6 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	const Texture *GetKr() const { return Kr; }
-
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
@@ -216,6 +214,8 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	const Texture *GetKr() const { return Kr; }
 
 private:
 	const Texture *Kr;
@@ -238,11 +238,6 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	const Texture *GetKrefl() const { return Kr; }
-	const Texture *GetKrefrct() const { return Kt; }
-	const Texture *GetOutsideIOR() const { return ousideIor; }
-	const Texture *GetIOR() const { return ior; }
-
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
@@ -260,6 +255,11 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	const Texture *GetKrefl() const { return Kr; }
+	const Texture *GetKrefrct() const { return Kt; }
+	const Texture *GetOutsideIOR() const { return ousideIor; }
+	const Texture *GetIOR() const { return ior; }
 
 private:
 	const Texture *Kr;
@@ -287,9 +287,6 @@ public:
 		return Kt->GetColorValue(uv);
 	}
 
-	const Texture *GetKrefl() const { return Kr; }
-	const Texture *GetKrefrct() const { return Kt; }
-
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
@@ -307,6 +304,9 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	const Texture *GetKrefl() const { return Kr; }
+	const Texture *GetKrefrct() const { return Kt; }
 
 private:
 	const Texture *Kr;
@@ -326,9 +326,6 @@ public:
 	virtual MaterialType GetType() const { return METAL; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
-	const Texture *GetKr() const { return Kr; }
-	const Texture *GetExp() const { return exponent; }
-
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
@@ -346,6 +343,9 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	const Texture *GetKr() const { return Kr; }
+	const Texture *GetExp() const { return exponent; }
 
 private:
 	static Vector GlossyReflection(const Vector &fixedDir, const float exponent,

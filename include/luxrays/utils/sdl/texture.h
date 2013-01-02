@@ -30,7 +30,14 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/core/spectrum.h"
 
-namespace luxrays { namespace sdl {
+namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/utils/sdl/texture_types.cl"
+}
+
+namespace sdl {
 
 //------------------------------------------------------------------------------
 // Texture
@@ -72,6 +79,7 @@ public:
 	Texture *GetTexture(const u_int index) {
 		return texs[index];
 	}
+	u_int GetTextureIndex(const Texture *t) const;
 
 	u_int GetSize()const { return static_cast<u_int>(texs.size()); }
 	std::vector<std::string> GetTextureNames() const;
@@ -84,6 +92,7 @@ private:
 	std::vector<Texture *> texs;
 	std::map<std::string, Texture *> texsByName;
 	std::map<std::string, u_int> indexByName;
+	std::map<const Texture *, u_int> indexByPtr;
 };
 
 //------------------------------------------------------------------------------
@@ -102,6 +111,8 @@ public:
 
 	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
 
+	float GetValue() const { return value; };
+
 private:
 	float value;
 };
@@ -118,6 +129,8 @@ public:
 
 	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
 
+	const Spectrum &GetColor() const { return color; };
+
 private:
 	Spectrum color;
 };
@@ -133,6 +146,9 @@ public:
 	virtual float GetAlphaValue(const UV &uv) const { return alpha; }
 
 	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
+
+	const Spectrum &GetColor() const { return color; };
+	float GetAlpha() const { return alpha; };
 
 private:
 	Spectrum color;

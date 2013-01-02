@@ -306,24 +306,18 @@ void CompiledScene::CompileMaterials() {
 		switch (m->GetType()) {
 			case MATTE: {
 				enable_MAT_MATTE = true;
-				MatteMaterial *mm = (MatteMaterial *)m;
+				MatteMaterial *mm = static_cast<MatteMaterial *>(m);
 
 				mat->type = luxrays::ocl::MATTE;
-				const Spectrum kd = mm->GetKd()->GetColorValue(UV(0.f, 0.f));
-				mat->param.matte.kd.r = kd.r;
-				mat->param.matte.kd.g = kd.g;
-				mat->param.matte.kd.b = kd.b;
+				mat->matte.kdTexIndex = scene->texDefs.GetTextureIndex(mm->GetKd());
 				break;
 			}
 			case MIRROR: {
 				enable_MAT_MIRROR = true;
-				MirrorMaterial *mm = (MirrorMaterial *)m;
+				MirrorMaterial *mm = static_cast<MirrorMaterial *>(m);
 
 				mat->type = luxrays::ocl::MIRROR;
-				const Spectrum kr = mm->GetKr()->GetColorValue(UV(0.f, 0.f));
-				mat->param.mirror.kr.r = kr.r;
-				mat->param.mirror.kr.g = kr.g;
-				mat->param.mirror.kr.b = kr.b;
+				mat->mirror.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
 				break;
 			}
 			default:
@@ -471,6 +465,63 @@ void CompiledScene::CompileSkyLight() {
 //				skyLight->perez_Y, skyLight->perez_x, skyLight->perez_y);
 //	} else
 //		skyLight = NULL;
+}
+
+void CompiledScene::CompileTextures() {
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
+
+	texs.resize(0);
+
+	//--------------------------------------------------------------------------
+	// Translate textures
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	const u_int texturesCount = scene->texDefs.GetSize();
+	texs.resize(texturesCount);
+
+	for (u_int i = 0; i < texturesCount; ++i) {
+		Texture *t = scene->texDefs.GetTexture(i);
+		luxrays::ocl::Texture *tex = &texs[i];
+
+		switch (t->GetType()) {
+			case CONST_FLOAT: {
+				ConstFloatTexture *cft = static_cast<ConstFloatTexture *>(t);
+
+				tex->type = luxrays::ocl::CONST_FLOAT;
+				tex->constFloat.value = cft->GetValue();
+				break;
+			}
+			case CONST_FLOAT3: {
+				ConstFloat3Texture *cft = static_cast<ConstFloat3Texture *>(t);
+
+				tex->type = luxrays::ocl::CONST_FLOAT3;
+				const Spectrum &c = cft->GetColor();
+				tex->constFloat3.color.r = c.r;
+				tex->constFloat3.color.g = c.g;
+				tex->constFloat3.color.b = c.b;
+				break;
+			}
+			case CONST_FLOAT4: {
+				ConstFloat4Texture *cft = static_cast<ConstFloat4Texture *>(t);
+
+				tex->type = luxrays::ocl::CONST_FLOAT4;
+				const Spectrum &c = cft->GetColor();
+				tex->constFloat4.color.r = c.r;
+				tex->constFloat4.color.g = c.g;
+				tex->constFloat4.color.b = c.b;
+				tex->constFloat4.alpha = cft->GetAlpha();
+				break;
+			}
+			default:
+				throw std::runtime_error("Unknown texture: " + t->GetType());
+				break;
+		}
+	}
+		
+	const double tEnd = WallClockTime();
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Textures compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileTextureMaps() {
@@ -736,8 +787,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileCamera();
 	if (editActions.Has(GEOMETRY_EDIT))
 		CompileGeometry();
-	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
+	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
 		CompileMaterials();
+		CompileTextures();
+	}
 	if (editActions.Has(AREALIGHTS_EDIT))
 		CompileAreaLights();
 	if (editActions.Has(INFINITELIGHT_EDIT))
