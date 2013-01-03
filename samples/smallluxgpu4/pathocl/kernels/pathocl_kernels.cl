@@ -328,12 +328,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			// Russian Roulette
 			const float rrProb = fmax(Spectrum_Filter(bsdfSample), PARAM_RR_CAP);
-			const bool rrContinuePath = (depth < PARAM_RR_DEPTH) ||
-				lastSpecular || (Sampler_GetSample(IDX_RR) < rrProb);
+			const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !lastSpecular;
+			const bool rrContinuePath = !rrEnabled || (Sampler_GetSample(IDX_RR) < rrProb);
 
 			const bool continuePath = !all(isequal(bsdfSample, BLACK)) && rrContinuePath;
 			if (continuePath) {
-				if (depth >= PARAM_RR_DEPTH)
+				if (rrEnabled)
 					lastPdfW *= rrProb; // Russian Roulette
 
 				float3 throughput = vload3(0, &task->pathStateBase.throughput.r);
