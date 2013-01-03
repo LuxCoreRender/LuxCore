@@ -32,6 +32,8 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	passThroughEvent = u0;
 
 	hitPoint = ray(rayHit.t);
+	hitPointB1 = rayHit.b1;
+	hitPointB2 = rayHit.b2;
 	fixedDir = -ray.d;
 
 	const u_int currentTriangleIndex = rayHit.index;
@@ -50,9 +52,9 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		lightSource = scene.triangleLightSource[currentTriangleIndex];
+		triangleLightSource = scene.triangleLightSource[currentTriangleIndex];
 	else
-		lightSource = NULL;
+		triangleLightSource = NULL;
 
 	// Interpolate UV coordinates
 	hitPointUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
@@ -173,8 +175,8 @@ void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) 
 Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
 			float *directPdfA,
 			float *emissionPdfW) const {
-	return lightSource ? 
-		lightSource->GetRadiance(scene, fixedDir, hitPoint, directPdfA, emissionPdfW) :
+	return triangleLightSource ? 
+		triangleLightSource->GetRadiance(scene, fixedDir, hitPointB1, hitPointB2, directPdfA, emissionPdfW) :
 		Spectrum();
 }
 

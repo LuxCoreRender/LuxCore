@@ -162,7 +162,7 @@ public:
 		*b1 = r;
 		*b2 = t;
 
-		return ((r <= 1) && (t <= 1) && (r + t <= 1.f));
+		return ((r <= 1.f) && (t <= 1.f) && (r + t <= 1.f));
 	}
 
 	unsigned int v[3];

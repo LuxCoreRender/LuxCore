@@ -780,9 +780,9 @@ Spectrum Scene::GetEnvLightsRadiance(const Vector &dir,
 			float *emissionPdfW) const {
 	Spectrum radiance;
 	if (infiniteLight)
-		radiance += infiniteLight->GetRadiance(this, dir, hitPoint, directPdfA, emissionPdfW);
+		radiance += infiniteLight->GetRadiance(this, dir, directPdfA, emissionPdfW);
 	if (sunLight)
-		radiance += sunLight->GetRadiance(this, dir, hitPoint, directPdfA, emissionPdfW);
+		radiance += sunLight->GetRadiance(this, dir, directPdfA, emissionPdfW);
 
 	if (directPdfA)
 		*directPdfA *= PickLightPdf();
