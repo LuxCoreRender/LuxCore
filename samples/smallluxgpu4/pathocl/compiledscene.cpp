@@ -361,9 +361,6 @@ void CompiledScene::CompileAreaLights() {
 			ASSIGN_VECTOR(triLight->v0, mesh->GetVertex(tri->v[0]));
 			ASSIGN_VECTOR(triLight->v1, mesh->GetVertex(tri->v[1]));
 			ASSIGN_VECTOR(triLight->v2, mesh->GetVertex(tri->v[2]));
-
-			const Normal geometryN = mesh->GetGeometryNormal(tl->GetTriIndex());
-			ASSIGN_VECTOR(triLight->geometryN, geometryN);
 			triLight->invArea = 1.f / tl->GetArea();
 
 			triLight->materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
@@ -372,8 +369,8 @@ void CompiledScene::CompileAreaLights() {
 		meshLights.resize(scene->triangleLights.size());
 		for (u_int i = 0; i < scene->triangleLights.size(); ++i) {
 			// Look for the index
-			u_int index = 0;
-			for (u_int j = 1; j < scene->triLightDefs.size(); ++j) {
+			u_int index = NULL_INDEX;
+			for (u_int j = 0; j < scene->triLightDefs.size(); ++j) {
 				if (scene->triangleLights[i] == scene->triLightDefs[j]) {
 					index = j;
 					break;

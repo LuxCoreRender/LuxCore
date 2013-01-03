@@ -76,3 +76,20 @@ float3 InfiniteLight_GetRadiance(
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// TriangleLight
+//------------------------------------------------------------------------------
+
+float3 TriangleLight_GetRadiance(__global TriangleLight *triLight, __global Material *mats,
+		 __global Texture *texs, const float3 dir, const float3 hitPointNormal,
+		const float2 triUV, float *directPdfA) {
+	const float cosOutLight = dot(hitPointNormal, dir);
+	if (cosOutLight <= 0.f)
+		return BLACK;
+
+	if (directPdfA)
+		*directPdfA = triLight->invArea;
+
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs, triUV);
+}

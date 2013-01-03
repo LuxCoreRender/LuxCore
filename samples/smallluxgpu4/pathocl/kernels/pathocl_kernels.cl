@@ -177,8 +177,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global uint *meshFirstTriangleOffset,
 		__global Mesh *meshDescs,
 #endif
-		__global Vector *vertNormals,
 		__global Point *vertices,
+		__global Vector *vertNormals,
+		__global UV *vertUVs,
 		__global Triangle *triangles,
 		__global Camera *camera
 #if defined(PARAM_HAS_INFINITELIGHT)
@@ -201,7 +202,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_IMAGEMAPS_PAGE_4)
 		, __global float *imageMapBuff4
 #endif
-		, __global UV *vertUVs
 #endif
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
@@ -249,11 +249,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					meshFirstTriangleOffset,
 					meshDescs,
 #endif
-					mats, texs, meshMats, meshIDs, vertNormals, vertices,
-					triangles, ray, rayHit
-#if defined(PARAM_HAS_IMAGEMAPS)
-					, vertUVs
+					mats, texs, meshMats, meshIDs,
+#if (PARAM_DL_LIGHT_COUNT > 0)
+					meshLights,
 #endif
+					vertices, vertNormals, vertUVs,
+					triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGHT)
 					, Sampler_GetSample(IDX_PASSTROUGHT)
 #endif
@@ -264,7 +265,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
 				// Add emitted radiance
 				float3 radiance = vload3(0, &sample->radiance.r);
-				radiance += vload3(0, &task->pathStateBase.throughput.r) * BSDF_GetEmittedRadiance(bsdf);
+				const float3 throughput = vload3(0, &task->pathStateBase.throughput.r);
+				float directPdfA;
+				radiance += throughput * BSDF_GetEmittedRadiance(bsdf, mats, texs, triLightDefs, &directPdfA);
 				vstore3(radiance, 0, &sample->radiance.r);
 			}
 #endif

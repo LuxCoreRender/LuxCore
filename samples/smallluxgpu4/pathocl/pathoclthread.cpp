@@ -87,12 +87,12 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	skyLightBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
+	uvsBuff = NULL;
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
 	triLightDefsBuff = NULL;
 	meshLightsBuff = NULL;
 	imageMapDescsBuff = NULL;
-	uvsBuff = NULL;
 
 	gpuTaskStats = new slg::ocl::GPUTaskStats[renderEngine->taskCount];
 
@@ -533,6 +533,7 @@ void PathOCLRenderThread::InitKernels() {
 		// Compile sources
 		stringstream ssKernel;
 		ssKernel <<
+			luxrays::ocl::KernelSource_luxrays_types +
 			_LUXRAYS_UV_OCLDEFINE
 			_LUXRAYS_POINT_OCLDEFINE
 			+ luxrays::ocl::KernelSource_vector_types +
@@ -843,8 +844,9 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *triangleIDBuff);
 	if (meshDescsBuff)
 		advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
-	advancePathsKernel->setArg(argIndex++, *normalsBuff);
 	advancePathsKernel->setArg(argIndex++, *vertsBuff);
+	advancePathsKernel->setArg(argIndex++, *normalsBuff);
+	advancePathsKernel->setArg(argIndex++, *uvsBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
 	if (infiniteLightBuff)
@@ -863,8 +865,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			advancePathsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
-
-		advancePathsKernel->setArg(argIndex++, *uvsBuff);
 	}
 	if (alphaFrameBufferBuff)
 		advancePathsKernel->setArg(argIndex++, *alphaFrameBufferBuff);
@@ -940,6 +940,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&meshDescsBuff);
 	FreeOCLBuffer(&meshMatsBuff);
 	FreeOCLBuffer(&normalsBuff);
+	FreeOCLBuffer(&uvsBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);
 	FreeOCLBuffer(&infiniteLightBuff);
@@ -951,8 +952,6 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&imageMapDescsBuff);
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 		FreeOCLBuffer(&imageMapsBuff[i]);
-
-	FreeOCLBuffer(&uvsBuff);
 
 	started = false;
 

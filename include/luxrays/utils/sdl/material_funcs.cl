@@ -33,13 +33,13 @@ float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-				return 0.f;
+		return BLACK;
 
 	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 
 	*cosSampledDir = fabs((*sampledDir).z);
 	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-		return 0.f;
+		return BLACK;
 
 	*event = DIFFUSE | REFLECT;
 
@@ -94,6 +94,14 @@ float3 Material_Sample(__global Material *material, __global Texture *texs,
 #endif
 					pdfW, cosSampledDir, event);
 		default:
-			return 0.f;
+			return BLACK;
 	}
+}
+
+float3 Material_GetEmittedRadiance(__global Material *mat, __global Texture *texs, const float2 triUV) {
+	const uint emitTexIndex = mat->emitTexIndex;
+	if (emitTexIndex == NULL_INDEX)
+		return BLACK;
+
+	return Texture_GetColorValue(&texs[emitTexIndex], triUV);	
 }

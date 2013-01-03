@@ -115,13 +115,13 @@ private:
 	cl::Buffer *skyLightBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
+	cl::Buffer *uvsBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *triLightDefsBuff;
 	cl::Buffer *meshLightsBuff;
 	cl::Buffer *imageMapDescsBuff;
 	vector<cl::Buffer *> imageMapsBuff;
-	cl::Buffer *uvsBuff;
 
 	luxrays::utils::oclKernelCache *kernelCache;
 

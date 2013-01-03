@@ -279,9 +279,9 @@ public:
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum GetRadiance(const Scene *scene,
+	Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir,
-			const float hitPointB1, const float hitPointB2,
+			const UV &triUV,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
