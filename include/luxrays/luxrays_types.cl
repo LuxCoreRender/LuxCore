@@ -1,3 +1,5 @@
+#line 2 "luxrays_types.cl"
+
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -19,48 +21,4 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_H
-#define	_LUXRAYS_H
-
-#include "luxrays/cfg.h"
-
-typedef unsigned char u_char;
-typedef unsigned short u_short;
-typedef unsigned int u_int;
-typedef unsigned long u_long;
-
-/*! \namespace luxrays
- *
- * \brief The LuxRays core classes are defined within this namespace.
- */
-namespace luxrays {
-// OpenCL data types
-namespace ocl {
-#include "luxrays/luxrays_types.cl"
-}
-
-class Accelerator;
-class BBox;
-class Context;
-class DataSet;
-class IntersectionDevice;
-class Mesh;
-class Normal;
-class PixelDevice;
-class Point;
-class Ray;
-class RayBuffer;
-class RayBufferQueue;
-class RayBufferQueueO2O;
-class RayHit;
-class SampleBuffer;
-class Spectrum;
-class Triangle;
-class TriangleMesh;
-class UV;
-class Vector;
-class VirtualM2MHardwareIntersectionDevice;
-class VirtualM2OHardwareIntersectionDevice;
-}
-
-#endif	/* _LUXRAYS_H */
+#define NULL_INDEX (0xffffffffu)

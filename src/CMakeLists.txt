@@ -27,6 +27,7 @@
 ###########################################################################
 
 set(LUXRAYS_KERNELS
+	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvh.cl
@@ -109,6 +110,7 @@ SOURCE_GROUP("Source Files\\IDevices" FILES ${LUXRAYS_SRCS_IDEVICES})
 
 
 set(LUXRAYS_SRCS_KERNELS
+	${LuxRays_SOURCE_DIR}/src/kernels/luxrays_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/bvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp

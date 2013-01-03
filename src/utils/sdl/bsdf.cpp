@@ -176,7 +176,7 @@ Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
 			float *directPdfA,
 			float *emissionPdfW) const {
 	return triangleLightSource ? 
-		triangleLightSource->GetRadiance(scene, fixedDir, hitPointB1, hitPointB2, directPdfA, emissionPdfW) :
+		triangleLightSource->GetRadiance(scene, fixedDir, hitPointUV, directPdfA, emissionPdfW) :
 		Spectrum();
 }
 

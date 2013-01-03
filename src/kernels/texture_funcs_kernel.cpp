@@ -196,7 +196,7 @@ std::string KernelSource_texture_funcs =
 "		case CONST_FLOAT4:\n"
 "			return ConstFloat4Texture_GetColorValue(texture, uv);\n"
 "		default:\n"
-"			return 0.f;\n"
+"			return BLACK;\n"
 "	}\n"
 "}\n"
 ; } }

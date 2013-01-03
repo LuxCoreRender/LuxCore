@@ -482,7 +482,7 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 
 Spectrum TriangleLight::GetRadiance(const Scene *scene,
 		const Vector &dir,
-		const float hitPointB1, const float hitPointB2,
+		const UV &triUV,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const Normal geometryN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
@@ -497,6 +497,5 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	if (emissionPdfW)
 		*emissionPdfW = cosOutLight * INV_PI * invArea;
 
-	const UV triUV = mesh->InterpolateTriUV(triIndex, hitPointB1, hitPointB2);
 	return lightMaterial->GetEmittedRadiance(triUV);
 }

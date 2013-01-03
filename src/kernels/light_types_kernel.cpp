@@ -36,7 +36,6 @@ std::string KernelSource_light_types =
 "\n"
 "typedef struct {\n"
 "	Vector v0, v1, v2;\n"
-"	Normal geometryN;\n"
 "	float invArea;\n"
 "\n"
 "	unsigned int materialIndex;\n"

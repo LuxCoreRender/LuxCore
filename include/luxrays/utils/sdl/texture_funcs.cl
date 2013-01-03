@@ -193,6 +193,6 @@ float3 Texture_GetColorValue(__global Texture *texture, const float2 uv) {
 		case CONST_FLOAT4:
 			return ConstFloat4Texture_GetColorValue(texture, uv);
 		default:
-			return 0.f;
+			return BLACK;
 	}
 }
