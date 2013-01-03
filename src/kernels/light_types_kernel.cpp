@@ -33,4 +33,8 @@ std::string KernelSource_light_types =
 "	float shiftU, shiftV;\n"
 "	ImageMapInstanceParam imageMapInstance;\n"
 "} InfiniteLight;\n"
+"\n"
+"typedef struct {\n"
+"	unsigned int materialIndex;\n"
+"} TriangleLight;\n"
 ; } }

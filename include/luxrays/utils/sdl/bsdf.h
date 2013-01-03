@@ -78,6 +78,7 @@ public:
 	Vector fixedDir;
 	Point hitPoint;
 	UV hitPointUV;
+	float hitPointB1, hitPointB2;
 	Normal geometryN;
 	Normal shadeN;
 
@@ -87,7 +88,7 @@ private:
 	u_int triIndex;
 
 	const Material *material;
-	const LightSource *lightSource; // != NULL only if it is an area light
+	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
 	Frame frame;
 
 	bool fromLight;

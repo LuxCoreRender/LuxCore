@@ -71,13 +71,6 @@ public:
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const {
 		throw std::runtime_error("Internal error, called LightSource::Illuminate()");
 	}
-
-	// Returns radiance for ray hitting the light source
-	virtual Spectrum GetRadiance(const Scene *scene,
-			const Vector &dir, const Point &hitPoint,
-			float *directPdfA = NULL, float *emissionPdfW = NULL) const {
-		throw std::runtime_error("Internal error, called LightSource::GetRadiance()");
-	}
 };
 
 //------------------------------------------------------------------------------
@@ -87,11 +80,11 @@ public:
 class InfiniteLightBase : public LightSource {
 public:
 	InfiniteLightBase() : gain(1.f, 1.f, 1.f) { }
-	~InfiniteLightBase() { }
+	virtual ~InfiniteLightBase() { }
 
 	virtual void Preprocess() { }
 
-	bool IsEnvironmental() const { return true; }
+	virtual bool IsEnvironmental() const { return true; }
 
 	void SetGain(const Spectrum &g) {
 		gain = g;
@@ -101,18 +94,17 @@ public:
 		return gain;
 	}
 
-	Spectrum Emit(const Scene *scene,
+	virtual Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-    Spectrum Illuminate(const Scene *scene, const Point &p,
+    virtual Spectrum Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum GetRadiance(const Scene *scene,
-			const Vector &dir, const Point &hitPoint,
+	virtual Spectrum GetRadiance(const Scene *scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
 protected:
@@ -126,9 +118,9 @@ protected:
 class InfiniteLight : public InfiniteLightBase {
 public:
 	InfiniteLight(ImageMapInstance *tx);
-	~InfiniteLight() { }
+	virtual ~InfiniteLight() { }
 
-	LightSourceType GetType() const { return TYPE_IL; }
+	virtual LightSourceType GetType() const { return TYPE_IL; }
 
 	void SetShift(const float su, const float sv) {
 		shiftU = su;
@@ -140,8 +132,7 @@ public:
 
 	const ImageMapInstance *GetImageMapInstance() const { return imageMapInstance; }
 
-	Spectrum GetRadiance(const Scene *scene,
-			const Vector &dir, const Point &hitPoint,
+	virtual Spectrum GetRadiance(const Scene *scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
@@ -158,9 +149,9 @@ public:
 	SkyLight(float turbidity, const Vector &sundir);
 	virtual ~SkyLight() { }
 
-	void Preprocess();
+	virtual void Preprocess();
 
-	LightSourceType GetType() const { return TYPE_IL_SKY; }
+	virtual LightSourceType GetType() const { return TYPE_IL_SKY; }
 
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
@@ -183,8 +174,7 @@ public:
 		}
 	}
 
-	Spectrum GetRadiance(const Scene *scene,
-			const Vector &dir, const Point &hitPoint,
+	virtual Spectrum GetRadiance(const Scene *scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
@@ -203,9 +193,9 @@ public:
 	SunLight(float turbidity, float relSize, const Vector &sunDir);
 	virtual ~SunLight() { }
 
-	void Preprocess();
+	virtual void Preprocess();
 
-	LightSourceType GetType() const { return TYPE_SUN; }
+	virtual LightSourceType GetType() const { return TYPE_SUN; }
 
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
@@ -233,21 +223,18 @@ public:
 		*suncolorData = sunColor;
 	}
 
-	Spectrum Emit(const Scene *scene,
+	virtual Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum Illuminate(const Scene *scene, const Point &p,
+	virtual Spectrum Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum GetRadiance(const Scene *scene,
-			const Vector &dir,
-			const Point &hitPoint,
-			float *directPdfA = NULL,
-			float *emissionPdfW = NULL) const;
+	Spectrum GetRadiance(const Scene *scene, const Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
 	Vector sunDir;
@@ -270,8 +257,9 @@ public:
 	TriangleLight() { }
 	TriangleLight(const Material *mat, const ExtMesh *mesh,
 		const unsigned int triangleIndex);
+	virtual ~TriangleLight() { }
 
-	LightSourceType GetType() const { return TYPE_TRIANGLE; }
+	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
 	void SetMaterial(const Material *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
@@ -281,19 +269,19 @@ public:
 	unsigned int GetTriIndex() const { return triIndex; }
 	float GetArea() const { return area; }
 
-	Spectrum Emit(const Scene *scene,
+	virtual Spectrum Emit(const Scene *scene,
 		const float u0, const float u1, const float u2, const float u3,
 		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum Illuminate(const Scene *scene, const Point &p,
+	virtual Spectrum Illuminate(const Scene *scene, const Point &p,
 		const float u0, const float u1, const float u2,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum GetRadiance(const Scene *scene,
+	virtual Spectrum GetRadiance(const Scene *scene,
 			const Vector &dir,
-			const Point &hitPoint,
+			const float hitPointB1, const float hitPointB2,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 

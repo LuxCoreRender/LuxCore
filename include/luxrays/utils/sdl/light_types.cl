@@ -30,3 +30,7 @@ typedef struct {
 	float shiftU, shiftV;
 	ImageMapInstanceParam imageMapInstance;
 } InfiniteLight;
+
+typedef struct {
+	unsigned int materialIndex;
+} TriangleLight;

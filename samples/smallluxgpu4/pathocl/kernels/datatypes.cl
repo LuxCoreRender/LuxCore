@@ -248,13 +248,6 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef struct {
-	Point v0, v1, v2;
-	Normal normal;
-	float area;
-	float gain_r, gain_g, gain_b;
-} TriangleLight;
-
-typedef struct {
 	Vector sundir;
 	Spectrum gain;
 	float turbidity;
@@ -272,24 +265,3 @@ typedef struct {
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
 } SkyLight;
-
-//------------------------------------------------------------------------------
-
-typedef struct {
-	unsigned int rgbPage, rgbPageOffset;
-	unsigned int alphaPage, alphaPageOffset;
-	unsigned int width, height;
-} TexMap;
-
-typedef struct {
-	float uScale, vScale, uDelta, vDelta;
-} TexMapInfo;
-
-typedef struct {
-	float uScale, vScale, uDelta, vDelta;
-	float scale;
-} BumpMapInfo;
-
-typedef struct {
-	float uScale, vScale, uDelta, vDelta;
-} NormalMapInfo;

@@ -305,7 +305,7 @@ void PathOCLRenderThread::InitAreaLights() {
 
 	if (cscene->areaLights.size() > 0) {
 		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
-			sizeof(slg::ocl::TriangleLight) * cscene->areaLights.size(), "AreaLights");
+			sizeof(luxrays::ocl::TriangleLight) * cscene->areaLights.size(), "AreaLights");
 	} else
 		FreeOCLBuffer(&areaLightsBuff);
 }

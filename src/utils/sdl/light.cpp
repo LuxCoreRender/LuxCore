@@ -56,7 +56,7 @@ Spectrum InfiniteLightBase::Emit(const Scene *scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
 
-	return GetRadiance(scene, *dir, p2);
+	return GetRadiance(scene, *dir);
 }
 
 Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
@@ -88,7 +88,7 @@ Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
-	return GetRadiance(scene, -(*dir), emisPoint);
+	return GetRadiance(scene, -(*dir));
 }
 
 //------------------------------------------------------------------------------
@@ -103,7 +103,6 @@ InfiniteLight::InfiniteLight(ImageMapInstance *tx) {
 
 Spectrum InfiniteLight::GetRadiance(const Scene *scene,
 		const Vector &dir,
-		const Point &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	if (directPdfA)
@@ -227,7 +226,6 @@ void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectr
 
 Spectrum SkyLight::GetRadiance(const Scene *scene,
 		const Vector &dir,
-		const Point &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	const float theta = SphericalTheta(-dir);
@@ -380,7 +378,6 @@ Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
 
 Spectrum SunLight::GetRadiance(const Scene *scene,
 		const Vector &dir,
-		const Point &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
 	// Make the sun visible only if relsize has been changed (in order
@@ -485,14 +482,9 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 
 Spectrum TriangleLight::GetRadiance(const Scene *scene,
 		const Vector &dir,
-		const Point &hitPoint,
+		const float hitPointB1, const float hitPointB2,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	// Get the u and v coordinates of the hit point
-	float b1, b2;
-	if (!mesh->GetTriUV(triIndex, hitPoint, &b1, &b2))
-		return Spectrum();
-
 	const Normal geometryN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
 
 	const float cosOutLight = Dot(geometryN, dir);
@@ -505,6 +497,6 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	if (emissionPdfW)
 		*emissionPdfW = cosOutLight * INV_PI * invArea;
 
-	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	const UV triUV = mesh->InterpolateTriUV(triIndex, hitPointB1, hitPointB2);
 	return lightMaterial->GetEmittedRadiance(triUV);
 }
