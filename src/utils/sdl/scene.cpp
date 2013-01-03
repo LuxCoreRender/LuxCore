@@ -102,7 +102,7 @@ Scene::Scene(const std::string &fileName, const int accType) {
 
 	//--------------------------------------------------------------------------
 
-	if (!infiniteLight && !sunLight && (lights.size() == 0))
+	if (!infiniteLight && !sunLight && (triLightDefs.size() == 0))
 		throw std::runtime_error("The scene doesn't include any light source");
 
 	dataSet = NULL;
@@ -113,7 +113,7 @@ Scene::~Scene() {
 	delete infiniteLight;
 	delete sunLight;
 
-	for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
+	for (std::vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
 		delete *l;
 
 	delete dataSet;
@@ -306,8 +306,8 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 	// Check if old and/or the new material were/is light sources
 	if (wasLightSource || newMat->IsLightSource()) {
 		// I have to build a new version of lights and triangleLightSource
-		std::vector<LightSource *> newLights;
-		std::vector<TriangleLight *> newTriangleLightSource;
+		std::vector<TriangleLight *> newTriLights;
+		std::vector<TriangleLight *> newTriangleLightSources;
 
 		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
 			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
@@ -315,22 +315,22 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 			if (objectMaterials[i]->IsLightSource()) {
 				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
 					TriangleLight *tl = new TriangleLight(objectMaterials[i], mesh, j);
-					newLights.push_back(tl);
-					newTriangleLightSource.push_back(tl);
+					newTriLights.push_back(tl);
+					newTriangleLightSources.push_back(tl);
 				}
 			} else {
 				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j)
-					newTriangleLightSource.push_back(NULL);
+					newTriangleLightSources.push_back(NULL);
 			}
 		}
 
 		// Delete all old TriangleLight
-		for (std::vector<LightSource *>::const_iterator l = lights.begin(); l != lights.end(); ++l)
+		for (std::vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
 			delete *l;
 
 		// Use the new versions
-		lights = newLights;
-		triangleLightSource = newTriangleLightSource;
+		triLightDefs = newTriLights;
+		triangleLights = newTriangleLightSources;
 	}
 }
 
@@ -388,12 +388,12 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 
 		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 			TriangleLight *tl = new TriangleLight(mat, meshObject, i);
-			lights.push_back(tl);
-			triangleLightSource.push_back(tl);
+			triLightDefs.push_back(tl);
+			triangleLights.push_back(tl);
 		}
 	} else {		
 		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-			triangleLightSource.push_back(NULL);
+			triangleLights.push_back(NULL);
 	}
 }
 
@@ -410,8 +410,8 @@ void Scene::UpdateObjectTransformation(const std::string &objName, const Transfo
 	const u_int meshIndex = meshDefs.GetExtMeshIndex(objName);
 	if (objectMaterials[meshIndex]->IsLightSource()) {
 		// Have to update all light source using this mesh
-		for (unsigned int i = 0; i < lights.size(); ++i) {
-			TriangleLight *tl = dynamic_cast<TriangleLight *>(lights[i]);
+		for (unsigned int i = 0; i < triLightDefs.size(); ++i) {
+			TriangleLight *tl = dynamic_cast<TriangleLight *>(triLightDefs[i]);
 			if (tl && tl->GetMesh() == mesh)
 				tl->Init();
 		}
@@ -719,8 +719,8 @@ LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
 	if (sunLight && (lightType == TYPE_SUN))
 			return sunLight;
 
-	for (unsigned int i = 0; i < static_cast<unsigned int>(lights.size()); ++i) {
-		LightSource *ls = lights[i];
+	for (unsigned int i = 0; i < static_cast<unsigned int>(triLightDefs.size()); ++i) {
+		LightSource *ls = triLightDefs[i];
 		if (ls->GetType() == lightType)
 			return ls;
 	}
@@ -729,7 +729,7 @@ LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
 }
 
 LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
-	unsigned int lightsSize = static_cast<unsigned int>(lights.size());
+	unsigned int lightsSize = static_cast<unsigned int>(triLightDefs.size());
 	if (infiniteLight)
 		++lightsSize;
 	if (sunLight)
@@ -746,26 +746,26 @@ LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
 			else if (lightIndex == lightsSize - 2)
 				return infiniteLight;
 			else
-				return lights[lightIndex];
+				return triLightDefs[lightIndex];
 		} else {
 			if (lightIndex == lightsSize - 1)
 				return infiniteLight;
 			else
-				return lights[lightIndex];
+				return triLightDefs[lightIndex];
 		}
 	} else {
 		if (sunLight) {
 			if (lightIndex == lightsSize - 1)
 				return sunLight;
 			else
-				return lights[lightIndex];
+				return triLightDefs[lightIndex];
 		} else
-			return lights[lightIndex];
+			return triLightDefs[lightIndex];
 	}
 }
 
 float Scene::PickLightPdf() const {
-	unsigned int lightsSize = static_cast<unsigned int>(lights.size());
+	unsigned int lightsSize = static_cast<unsigned int>(triLightDefs.size());
 	if (infiniteLight)
 		++lightsSize;
 	if (sunLight)

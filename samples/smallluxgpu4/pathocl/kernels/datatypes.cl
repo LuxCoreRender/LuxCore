@@ -45,6 +45,8 @@ Error: PARAM_HAS_SUNLIGHT requires PARAM_DIRECT_LIGHT_SAMPLING !
 
 #endif
 
+#define NULL_INDEX (0xffffffffu)
+
 //------------------------------------------------------------------------------
 // Frame buffer data types
 //------------------------------------------------------------------------------

@@ -89,7 +89,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	normalsBuff = NULL;
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
-	areaLightsBuff = NULL;
+	triLightDefsBuff = NULL;
+	meshLightsBuff = NULL;
 	imageMapDescsBuff = NULL;
 	uvsBuff = NULL;
 
@@ -300,14 +301,18 @@ void PathOCLRenderThread::InitTextures() {
 			sizeof(luxrays::ocl::Texture) * texturesCount, "Textures");
 }
 
-void PathOCLRenderThread::InitAreaLights() {
+void PathOCLRenderThread::InitTriangleAreaLights() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	if (cscene->areaLights.size() > 0) {
-		AllocOCLBufferRO(&areaLightsBuff, &cscene->areaLights[0],
-			sizeof(luxrays::ocl::TriangleLight) * cscene->areaLights.size(), "AreaLights");
-	} else
-		FreeOCLBuffer(&areaLightsBuff);
+	if (cscene->triLightDefs.size() > 0) {
+		AllocOCLBufferRO(&triLightDefsBuff, &cscene->triLightDefs[0],
+			sizeof(luxrays::ocl::TriangleLight) * cscene->triLightDefs.size(), "Triangle AreaLights");
+		AllocOCLBufferRO(&meshLightsBuff, &cscene->meshLights[0],
+			sizeof(u_int) * cscene->meshLights.size(), "Triangle AreaLights index");
+	} else {
+		FreeOCLBuffer(&triLightDefsBuff);
+		FreeOCLBuffer(&meshLightsBuff);
+	}
 }
 
 void PathOCLRenderThread::InitInfiniteLight() {
@@ -429,7 +434,7 @@ void PathOCLRenderThread::InitKernels() {
 	if (sunLightBuff) {
 		ss << " -D PARAM_HAS_SUNLIGHT";
 
-		if (!areaLightsBuff) {
+		if (!triLightDefsBuff) {
 			ss <<
 				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
 				" -D PARAM_DL_LIGHT_COUNT=0"
@@ -437,10 +442,10 @@ void PathOCLRenderThread::InitKernels() {
 		}
 	}
 
-	if (areaLightsBuff) {
+	if (triLightDefsBuff) {
 		ss <<
 				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->areaLights.size()
+				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->triLightDefs.size()
 				;
 	}
 
@@ -676,10 +681,10 @@ void PathOCLRenderThread::InitRender() {
 	InitMaterials();
 
 	//--------------------------------------------------------------------------
-	// Translate area lights
+	// Translate triangle area lights
 	//--------------------------------------------------------------------------
 
-	InitAreaLights();
+	InitTriangleAreaLights();
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinite light source
@@ -699,8 +704,8 @@ void PathOCLRenderThread::InitRender() {
 
 	InitSkyLight();
 
-	const u_int areaLightCount = renderEngine->compiledScene->areaLights.size();
-	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (areaLightCount == 0))
+	const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
+	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (triAreaLightCount == 0))
 		throw runtime_error("There are no light sources supported by PathOCL in the scene");
 
 	//--------------------------------------------------------------------------
@@ -730,7 +735,7 @@ void PathOCLRenderThread::InitRender() {
 
 	gpuTaksSize += sizeof(slg::ocl::PathStateBase);
 
-	if (areaLightCount > 0)
+	if (triAreaLightCount > 0)
 		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
 
 	if (alphaFrameBufferBuff)
@@ -753,7 +758,7 @@ void PathOCLRenderThread::InitRender() {
 		// IDX_BSDF_X, IDX_BSDF_Y
 		sizeof(float) * 2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		(((areaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 5) : 0) +
+		(((triAreaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 5) : 0) +
 		// IDX_RR
 		sizeof(float);
 
@@ -848,8 +853,10 @@ void PathOCLRenderThread::SetKernelArgs() {
 //		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
 //	if (skyLightBuff)
 //		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
-//	if (areaLightsBuff)
-//		advancePathsKernel->setArg(argIndex++, *areaLightsBuff);
+	if (triLightDefsBuff) {
+		advancePathsKernel->setArg(argIndex++, *triLightDefsBuff);
+		advancePathsKernel->setArg(argIndex++, *meshLightsBuff);
+	}
 
 	if (imageMapDescsBuff) {
 		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);
@@ -939,14 +946,13 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&sunLightBuff);
 	FreeOCLBuffer(&skyLightBuff);
 	FreeOCLBuffer(&cameraBuff);
-	FreeOCLBuffer(&areaLightsBuff);
-	if (imageMapDescsBuff) {
-		FreeOCLBuffer(&imageMapDescsBuff);
-		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			FreeOCLBuffer(&imageMapsBuff[i]);
+	FreeOCLBuffer(&triLightDefsBuff);
+	FreeOCLBuffer(&meshLightsBuff);
+	FreeOCLBuffer(&imageMapDescsBuff);
+	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
+		FreeOCLBuffer(&imageMapsBuff[i]);
 
-		FreeOCLBuffer(&uvsBuff);
-	}
+	FreeOCLBuffer(&uvsBuff);
 
 	started = false;
 
@@ -999,7 +1005,7 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 
 	if  (editActions.Has(AREALIGHTS_EDIT)) {
 		// Update Scene Area Lights
-		InitAreaLights();
+		InitTriangleAreaLights();
 	}
 
 	if  (editActions.Has(INFINITELIGHT_EDIT)) {

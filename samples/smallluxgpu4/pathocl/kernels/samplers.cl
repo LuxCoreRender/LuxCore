@@ -103,23 +103,19 @@ void GenerateCameraPath(
 
 	GenerateCameraRay(camera, sample, sampleData, seed, ray);
 
-	sample->radiance.r = 0.f;
-	sample->radiance.g = 0.f;
-	sample->radiance.b = 0.f;
+	vstore3(BLACK, 0, &sample->radiance.r);
 
 	// Initialize the path state
 	task->pathStateBase.state = RT_NEXT_VERTEX;
 	task->pathStateBase.depth = 0;
-	task->pathStateBase.throughput.r = 1.f;
-	task->pathStateBase.throughput.g = 1.f;
-	task->pathStateBase.throughput.b = 1.f;
+	vstore3(WHITE, 0, &task->pathStateBase.throughput.r);
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	task->pathStateDirectLight.bouncePdf = 1.f;
-	task->pathStateDirectLight.specularBounce = TRUE;
+	task->directLightState.bouncePdf = 1.f;
+	task->directLightState.specularBounce = TRUE;
 #endif
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	task->pathStateAlphaChannel.vertexCount = 0;
-	task->pathStateAlphaChannel.alpha = 1.f;
+	task->alphaChannelState.vertexCount = 0;
+	task->alphaChannelState.alpha = 1.f;
 #endif
 }
 

@@ -32,5 +32,9 @@ typedef struct {
 } InfiniteLight;
 
 typedef struct {
+	Vector v0, v1, v2;
+	Normal geometryN;
+	float invArea;
+
 	unsigned int materialIndex;
 } TriangleLight;

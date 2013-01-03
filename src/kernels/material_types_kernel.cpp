@@ -38,6 +38,7 @@ std::string KernelSource_material_types =
 "\n"
 "typedef struct {\n"
 "	MaterialType type;\n"
+"	unsigned int emitTexIndex;\n"
 "	union {\n"
 "		MatteParam matte;\n"
 "		MirrorParam mirror;\n"

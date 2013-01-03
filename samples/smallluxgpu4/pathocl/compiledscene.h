@@ -60,7 +60,7 @@ public:
 	u_int *meshFirstTriangleOffset;
 
 	// Compiled AreaLights
-	vector<luxrays::ocl::TriangleLight> areaLights;
+	vector<luxrays::ocl::TriangleLight> triLightDefs;
 	vector<u_int> meshLights;
 
 	// Compiled InfiniteLights

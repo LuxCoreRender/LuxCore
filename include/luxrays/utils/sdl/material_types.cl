@@ -35,6 +35,7 @@ typedef struct {
 
 typedef struct {
 	MaterialType type;
+	unsigned int emitTexIndex;
 	union {
 		MatteParam matte;
 		MirrorParam mirror;

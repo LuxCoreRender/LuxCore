@@ -44,7 +44,9 @@ typedef struct {
 	float passThroughEvent;
 #endif
 	unsigned int materialIndex;
-	//unsigned int lightSourceIndex;
+#if (PARAM_DL_LIGHT_COUNT > 0)
+	unsigned int triangleLightSourceIndex;
+#endif
 
 	Frame frame;
 

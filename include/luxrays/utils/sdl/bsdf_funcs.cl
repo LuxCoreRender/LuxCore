@@ -37,6 +37,9 @@ void BSDF_Init(
 		__global Triangle *triangles,
 		__global Ray *ray,
 		__global RayHit *rayHit
+#if defined(PARAM_HAS_IMAGEMAPS)
+		, __global UV *vertUVs
+#endif
 #if defined(PARAM_HAS_PASSTHROUGHT)
 		, const float u0
 #endif
@@ -67,7 +70,8 @@ void BSDF_Init(
 #endif
 
 	// Get the material
-	bsdf->materialIndex = meshMats[meshIndex];
+	const uint matIndex = meshMats[meshIndex];
+	bsdf->materialIndex = matIndex;
 
 	// Interpolate face normal
 	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
@@ -78,14 +82,13 @@ void BSDF_Init(
 	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2);
 #endif
 
-//	// Check if it is a light source
-//	if (material->IsLightSource())
-//		lightSource = scene.triangleLightSource[currentTriangleIndex];
-//	else
-//		lightSource = NULL;
+#if (PARAM_DL_LIGHT_COUNT > 0)
+	// Check if it is a light source
+	bsdf->triangleLightSourceIndex = mats[matIndex].emitTexIndex;
+#endif
 
 //	// Interpolate UV coordinates
-//	hitPointUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
+//	vstore2(Mesh_InterpolateTriUV(triIndex, rayHit->b1, rayHit->b2), 0, bsdf->hitPointUV.u);
 
 //	// Check if I have to apply bump mapping
 //	if (material->HasNormalTex()) {
@@ -186,3 +189,10 @@ float3 BSDF_Sample(
 //	} else
 		return result;
 }
+
+#if (PARAM_DL_LIGHT_COUNT > 0)
+float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf) {
+	//TriangleLight_GetRadiance(scene, fixedDir, hitPointB1, hitPointB2);
+	return WHITE;
+}
+#endif

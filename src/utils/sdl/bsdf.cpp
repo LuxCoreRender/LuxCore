@@ -52,7 +52,7 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.triangleLightSource[currentTriangleIndex];
+		triangleLightSource = scene.triangleLights[currentTriangleIndex];
 	else
 		triangleLightSource = NULL;
 
