@@ -120,10 +120,10 @@ public:
 
 	InfiniteLightBase *infiniteLight; // A SLG scene can have only one infinite light
 	SunLight *sunLight;
-	std::vector<LightSource *> lights; // One for each light source (doesn't include sun/infinite light)
+	std::vector<TriangleLight *> triLightDefs; // One for each light source (doesn't include sun/infinite light)
+	std::vector<TriangleLight *> triangleLights; // One for each triangle
 
 	std::vector<Material *> objectMaterials; // One for each object
-	std::vector<TriangleLight *> triangleLightSource; // One for each triangle
 
 	DataSet *dataSet;
 

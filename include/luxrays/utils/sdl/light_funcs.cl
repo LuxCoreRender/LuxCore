@@ -25,6 +25,8 @@
 // InfiniteLight
 //------------------------------------------------------------------------------
 
+#if defined(PARAM_HAS_INFINITELIGHT)
+
 float3 InfiniteLight_GetRadiance(
 	__global InfiniteLight *infiniteLight,
 #if defined(PARAM_HAS_IMAGEMAPS)
@@ -72,3 +74,5 @@ float3 InfiniteLight_GetRadiance(
 #endif
 			uv);
 }
+
+#endif

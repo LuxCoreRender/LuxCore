@@ -21,6 +21,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#define ASSIGN_VECTOR(a, b) { (a).x = (b).x; (a).y = (b).y; (a).z = (b).z; }
+
 typedef struct {
 	float x, y, z;
 } Vector;

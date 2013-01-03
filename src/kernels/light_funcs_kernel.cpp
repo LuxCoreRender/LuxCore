@@ -28,6 +28,8 @@ std::string KernelSource_light_funcs =
 "// InfiniteLight\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
+"#if defined(PARAM_HAS_INFINITELIGHT)\n"
+"\n"
 "float3 InfiniteLight_GetRadiance(\n"
 "	__global InfiniteLight *infiniteLight,\n"
 "#if defined(PARAM_HAS_IMAGEMAPS)\n"
@@ -75,4 +77,6 @@ std::string KernelSource_light_funcs =
 "#endif\n"
 "			uv);\n"
 "}\n"
+"\n"
+"#endif\n"
 ; } }

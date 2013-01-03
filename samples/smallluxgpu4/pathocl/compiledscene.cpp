@@ -21,6 +21,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <boost/lexical_cast.hpp>
+
 #include"compiledscene.h"
 
 using namespace std;
@@ -292,6 +294,14 @@ void CompiledScene::CompileMaterials() {
 		Material *m = scene->matDefs.GetMaterial(i);
 		luxrays::ocl::Material *mat = &mats[i];
 
+		// Material emission
+		const Texture *emitTex = m->GetEmitTexture();
+		if (emitTex)
+			mat->emitTexIndex = scene->texDefs.GetTextureIndex(emitTex);
+		else
+			mat->emitTexIndex = NULL_INDEX;
+
+		// Material specific parameters
 		switch (m->GetType()) {
 			case MATTE: {
 				enable_MAT_MATTE = true;
@@ -310,7 +320,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			default:
-				throw std::runtime_error("Unknown material: " + m->GetType());
+				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
 				break;
 		}
 	}
@@ -331,52 +341,51 @@ void CompiledScene::CompileMaterials() {
 }
 
 void CompiledScene::CompileAreaLights() {
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile AreaLights");
-//
-//	//--------------------------------------------------------------------------
-//	// Translate area lights
-//	//--------------------------------------------------------------------------
-//
-//	const double tStart = WallClockTime();
-//
-//	// Count the area lights
-//	u_int areaLightCount = 0;
-//	for (u_int i = 0; i < scene->lights.size(); ++i) {
-//		if (scene->lights[i]->IsAreaLight())
-//			++areaLightCount;
-//	}
-//
-//	areaLights.resize(areaLightCount);
-//	if (areaLightCount > 0) {
-//		u_int index = 0;
-//		for (u_int i = 0; i < scene->lights.size(); ++i) {
-//			if (scene->lights[i]->IsAreaLight()) {
-//				const TriangleLight *tl = (TriangleLight *)scene->lights[i];
-//				const ExtMesh *mesh = scene->objects[tl->GetMeshIndex()];
-//				const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriIndex()]);
-//
-//				PathOCL::TriangleLight *cpl = &areaLights[index];
-//				cpl->v0 = mesh->GetVertex(tri->v[0]);
-//				cpl->v1 = mesh->GetVertex(tri->v[1]);
-//				cpl->v2 = mesh->GetVertex(tri->v[2]);
-//
-//				cpl->normal = mesh->GetGeometryNormal(tl->GetTriIndex());
-//
-//				cpl->area = tl->GetArea();
-//
-//				AreaLightMaterial *alm = (AreaLightMaterial *)tl->GetMaterial();
-//				cpl->gain_r = alm->GetGain().r;
-//				cpl->gain_g = alm->GetGain().g;
-//				cpl->gain_b = alm->GetGain().b;
-//
-//				++index;
-//			}
-//		}
-//	}
-//
-//	const double tEnd = WallClockTime();
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile AreaLights");
 
+	//--------------------------------------------------------------------------
+	// Translate area lights
+	//--------------------------------------------------------------------------
+
+	const double tStart = WallClockTime();
+
+	const u_int areaLightCount = scene->triLightDefs.size();
+	triLightDefs.resize(areaLightCount);
+	if (areaLightCount > 0) {
+		for (u_int i = 0; i < scene->triLightDefs.size(); ++i) {
+			const TriangleLight *tl = scene->triLightDefs[i];
+			const ExtMesh *mesh = tl->GetMesh();
+			const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriIndex()]);
+
+			luxrays::ocl::TriangleLight *triLight = &triLightDefs[i];
+			ASSIGN_VECTOR(triLight->v0, mesh->GetVertex(tri->v[0]));
+			ASSIGN_VECTOR(triLight->v1, mesh->GetVertex(tri->v[1]));
+			ASSIGN_VECTOR(triLight->v2, mesh->GetVertex(tri->v[2]));
+
+			const Normal geometryN = mesh->GetGeometryNormal(tl->GetTriIndex());
+			ASSIGN_VECTOR(triLight->geometryN, geometryN);
+			triLight->invArea = 1.f / tl->GetArea();
+
+			triLight->materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
+		}
+
+		meshLights.resize(scene->triangleLights.size());
+		for (u_int i = 0; i < scene->triangleLights.size(); ++i) {
+			// Look for the index
+			u_int index = 0;
+			for (u_int j = 1; j < scene->triLightDefs.size(); ++j) {
+				if (scene->triangleLights[i] == scene->triLightDefs[j]) {
+					index = j;
+					break;
+				}
+			}
+			meshLights[i] = index;
+		}
+	} else
+		meshLights.resize(0);
+
+	const double tEnd = WallClockTime();
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileInfiniteLight() {
@@ -394,9 +403,7 @@ void CompiledScene::CompileInfiniteLight() {
 	if (il) {
 		infiniteLight = new luxrays::ocl::InfiniteLight();
 
-		infiniteLight->gain.r = il->GetGain().r;
-		infiniteLight->gain.g = il->GetGain().g;
-		infiniteLight->gain.b = il->GetGain().b;
+		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
 		infiniteLight->shiftU = il->GetShiftU();
 		infiniteLight->shiftV = il->GetShiftV();
 
@@ -491,25 +498,19 @@ void CompiledScene::CompileTextures() {
 				ConstFloat3Texture *cft = static_cast<ConstFloat3Texture *>(t);
 
 				tex->type = luxrays::ocl::CONST_FLOAT3;
-				const Spectrum &c = cft->GetColor();
-				tex->constFloat3.color.r = c.r;
-				tex->constFloat3.color.g = c.g;
-				tex->constFloat3.color.b = c.b;
+				ASSIGN_SPECTRUM(tex->constFloat3.color, cft->GetColor());
 				break;
 			}
 			case CONST_FLOAT4: {
 				ConstFloat4Texture *cft = static_cast<ConstFloat4Texture *>(t);
 
 				tex->type = luxrays::ocl::CONST_FLOAT4;
-				const Spectrum &c = cft->GetColor();
-				tex->constFloat4.color.r = c.r;
-				tex->constFloat4.color.g = c.g;
-				tex->constFloat4.color.b = c.b;
+				ASSIGN_SPECTRUM(tex->constFloat4.color, cft->GetColor());
 				tex->constFloat4.alpha = cft->GetAlpha();
 				break;
 			}
 			default:
-				throw std::runtime_error("Unknown texture: " + t->GetType());
+				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;
 		}
 	}

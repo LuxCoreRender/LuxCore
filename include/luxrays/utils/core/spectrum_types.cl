@@ -21,7 +21,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if defined(SLG_OPENCL_KERNEL)
 #define BLACK ((float3)(0.f, 0.f, 0.f))
+#define WHITE ((float3)(1.f, 1.f, 1.f))
+#endif
+
+#define ASSIGN_SPECTRUM(c0, c1) { (c0).r = (c1).r; (c0).g = (c1).g; (c0).b = (c1).b; }
 
 typedef struct {
 	float r, g, b;

@@ -24,6 +24,8 @@ std::string KernelSource_vector_types =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
+"#define ASSIGN_VECTOR(a, b) { (a).x = (b).x; (a).y = (b).y; (a).z = (b).z; }\n"
+"\n"
 "typedef struct {\n"
 "	float x, y, z;\n"
 "} Vector;\n"

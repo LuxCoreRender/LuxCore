@@ -76,7 +76,7 @@ private:
 	void InitImageMaps();
 	void InitTextures();
 	void InitMaterials();
-	void InitAreaLights();
+	void InitTriangleAreaLights();
 	void InitInfiniteLight();
 	void InitSunLight();
 	void InitSkyLight();
@@ -117,7 +117,8 @@ private:
 	cl::Buffer *normalsBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
-	cl::Buffer *areaLightsBuff;
+	cl::Buffer *triLightDefsBuff;
+	cl::Buffer *meshLightsBuff;
 	cl::Buffer *imageMapDescsBuff;
 	vector<cl::Buffer *> imageMapsBuff;
 	cl::Buffer *uvsBuff;
