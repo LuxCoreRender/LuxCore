@@ -338,6 +338,26 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
 	//
+	// From: RT_DL
+	// To: GENERATE_NEXT_VERTEX_RAY
+	//--------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+	if (pathState == RT_DL) {
+		if (currentTriangleIndex == NULL_INDEX) {
+			// Nothing was hit, the light source is visible
+			float3 radiance = vload3(0, &sample->radiance.r);
+			const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r);
+			radiance += lightRadiance;
+			vstore3(radiance, 0, &sample->radiance.r);
+		}
+		pathState = GENERATE_NEXT_VERTEX_RAY;
+	}
+#endif
+
+	//--------------------------------------------------------------------------
+	// Evaluation of the Path finite state machine.
+	//
 	// From: GENERATE_DL_RAY
 	// To: GENERATE_NEXT_VERTEX_RAY or RT_DL
 	//--------------------------------------------------------------------------
@@ -389,9 +409,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 						lightRayDir, &event, &bsdfPdfW);
 				if (any(isnotequal(bsdfEval, BLACK))) {
-
-					float3 radiance = vload3(0, &sample->radiance.r);
-
 					const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
 					const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
@@ -403,8 +420,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					// MIS between direct light sampling and BSDF sampling
 					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
-					radiance += (weight * factor) * pathThrouput * bsdfEval * lightRadiance;
-					vstore3(radiance, 0, &sample->radiance.r);
+					vstore3((weight * factor) * pathThrouput * bsdfEval * lightRadiance, 0, &task->directLightState.lightRadiance.r);
+
+					// Setup the shadow ray
+					const float3 hitPoint = vload3(0, &bsdf->hitPoint.x);
+					Ray_Init4(ray, hitPoint, lightRayDir,
+						MachineEpsilon_E_Float3(hitPoint),
+						distance - MachineEpsilon_E(distance));
+					pathState = RT_DL;
 				}
 			}
 		}

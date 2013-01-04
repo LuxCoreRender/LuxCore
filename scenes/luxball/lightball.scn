@@ -1,13 +1,13 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
-scene.materials.shell.type = glass
-scene.materials.shell.kr = 0.69 0.78 1.0 
-scene.materials.shell.kt = 0.69 0.78 1.0
-scene.materials.shell.ioroutside = 1.0
-scene.materials.shell.iorinside = 1.45
-#scene.materials.shell.type = matte
-#scene.materials.shell.kd = 0.69 0.78 1.0 
+#scene.materials.shell.type = glass
+#scene.materials.shell.kr = 0.69 0.78 1.0 
+#scene.materials.shell.kt = 0.69 0.78 1.0
+#scene.materials.shell.ioroutside = 1.0
+#scene.materials.shell.iorinside = 1.45
+scene.materials.shell.type = matte
+scene.materials.shell.kd = 0.69 0.78 1.0 
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte
