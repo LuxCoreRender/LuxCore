@@ -533,13 +533,13 @@ void PathOCLRenderThread::InitKernels() {
 		// Compile sources
 		stringstream ssKernel;
 		ssKernel <<
-			luxrays::ocl::KernelSource_luxrays_types +
-			_LUXRAYS_UV_OCLDEFINE
-			_LUXRAYS_POINT_OCLDEFINE
-			+ luxrays::ocl::KernelSource_vector_types +
-			_LUXRAYS_NORMAL_OCLDEFINE
-			_LUXRAYS_TRIANGLE_OCLDEFINE
-			+ luxrays::ocl::KernelSource_ray_types +
+			luxrays::ocl::KernelSource_luxrays_types <<
+			luxrays::ocl::KernelSource_uv_types <<
+			_LUXRAYS_POINT_OCLDEFINE <<
+			luxrays::ocl::KernelSource_vector_types <<
+			_LUXRAYS_NORMAL_OCLDEFINE <<
+			luxrays::ocl::KernelSource_triangle_types <<
+			luxrays::ocl::KernelSource_ray_types <<
 			_LUXRAYS_RAYHIT_OCLDEFINE <<
 			// OpenCL Types
 			luxrays::ocl::KernelSource_epsilon_types <<
@@ -565,6 +565,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_frame_funcs <<
 			luxrays::ocl::KernelSource_transform_funcs <<
 			luxrays::ocl::KernelSource_randomgen_funcs <<
+			luxrays::ocl::KernelSource_triangle_funcs <<
 			luxrays::ocl::KernelSource_trianglemesh_funcs <<
 			luxrays::ocl::KernelSource_texture_funcs <<
 			luxrays::ocl::KernelSource_material_funcs <<

@@ -191,7 +191,7 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 typedef enum {
 	RT_NEXT_VERTEX,
 	GENERATE_DL_RAY,
-	RT_DL_RAY,
+	RT_DL,
 	GENERATE_NEXT_VERTEX_RAY,
 	SPLAT_SAMPLE
 } PathState;

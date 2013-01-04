@@ -114,7 +114,7 @@ public:
 	}
 
 	float LengthSquared() const {
-		return x * x + y * y + z*z;
+		return x * x + y * y + z * z;
 	}
 
 	float Length() const {

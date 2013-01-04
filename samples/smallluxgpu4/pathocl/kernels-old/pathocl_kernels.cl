@@ -835,7 +835,7 @@ __kernel void AdvancePaths(
 					const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * ul0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 					__global TriangleLight *l = &triLights[lightIndex];
 
-					TriangleLight_Sample_L(l, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
+					TriangleLight_Sample_L(l, mats, texs, &hitPoint, &lightPdf, &Le, &shadowRay, ul1, ul2);
 					lPdf = PARAM_DL_LIGHT_COUNT / l->area;
 					lightSourceCount = PARAM_DL_LIGHT_COUNT;
 

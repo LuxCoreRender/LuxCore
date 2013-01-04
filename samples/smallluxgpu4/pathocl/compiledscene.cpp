@@ -341,7 +341,7 @@ void CompiledScene::CompileMaterials() {
 }
 
 void CompiledScene::CompileAreaLights() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile AreaLights");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Triangle AreaLights");
 
 	//--------------------------------------------------------------------------
 	// Translate area lights
@@ -361,6 +361,17 @@ void CompiledScene::CompileAreaLights() {
 			ASSIGN_VECTOR(triLight->v0, mesh->GetVertex(tri->v[0]));
 			ASSIGN_VECTOR(triLight->v1, mesh->GetVertex(tri->v[1]));
 			ASSIGN_VECTOR(triLight->v2, mesh->GetVertex(tri->v[2]));
+			if (mesh->HasUVs()) {
+				ASSIGN_UV(triLight->uv0, mesh->GetUV(tri->v[0]));
+				ASSIGN_UV(triLight->uv1, mesh->GetUV(tri->v[1]));
+				ASSIGN_UV(triLight->uv2, mesh->GetUV(tri->v[2]));
+			} else {
+				const UV zero;
+				ASSIGN_UV(triLight->uv0, zero);
+				ASSIGN_UV(triLight->uv1, zero);
+				ASSIGN_UV(triLight->uv2, zero);
+				
+			}
 			triLight->invArea = 1.f / tl->GetArea();
 
 			triLight->materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
@@ -382,7 +393,7 @@ void CompiledScene::CompileAreaLights() {
 		meshLights.resize(0);
 
 	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Triangle area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileInfiniteLight() {

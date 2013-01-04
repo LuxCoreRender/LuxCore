@@ -22,29 +22,31 @@
  ***************************************************************************/
 
 #if (PARAM_SAMPLER_TYPE == 0)
-#define Sampler_GetSample(index) (Rnd_FloatValue(seed))
+#define Sampler_GetSamplePath(index) (Rnd_FloatValue(seed))
+#define Sampler_GetSamplePathVertex(index) (Rnd_FloatValue(seed))
 #elif (PARAM_SAMPLER_TYPE == 1)
-#define Sampler_GetSample(index) (sampleData[index])
+#define Sampler_GetSamplePath(index) (sampleDataPathBase[index])
+#define Sampler_GetSamplePathVertex(index) (sampleDataPathVertexBase[index])
 #endif
 
 void GenerateCameraRay(
 		__global Camera *camera,
 		__global Sample *sample,
-		__global float *sampleData,
+		__global float *sampleDataPathBase,
 		Seed *seed,
 		__global Ray *ray) {
 #if (PARAM_SAMPLER_TYPE == 0)
 	const uint pixelIndex = sample->pixelIndex;
 
 	// Don't use Sampler_GetSample() here
-	const float scrSampleX = sampleData[IDX_SCREEN_X];
-	const float scrSampleY = sampleData[IDX_SCREEN_Y];
+	const float scrSampleX = sampleDataPathBase[IDX_SCREEN_X];
+	const float scrSampleY = sampleDataPathBase[IDX_SCREEN_Y];
 
 	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - .5f;
 	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - .5f;
 #elif (PARAM_SAMPLER_TYPE == 1)
-	const float screenX = min(Sampler_GetSample(IDX_SCREEN_X) * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min(Sampler_GetSample(IDX_SCREEN_Y) * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
+	const float screenX = min(Sampler_GetSamplePath(IDX_SCREEN_X) * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
+	const float screenY = min(Sampler_GetSamplePath(IDX_SCREEN_Y) * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
 #endif
 
 	float3 Pras = (float3)(screenX, PARAM_IMAGE_HEIGHT - screenY - 1.f, 0.f);
@@ -54,8 +56,8 @@ void GenerateCameraRay(
 	const float hither = camera->hither;
 
 #if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSample(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSample(IDX_DOF_Y);
+	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
 
 	// Sample point on lens
 	float lensU, lensV;
@@ -130,7 +132,17 @@ __global float *Sampler_GetSampleData(__global Sample *sample, __global float *s
 	return &sampleData[gid * TOTAL_U_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+	const size_t gid = get_global_id(0);
+	return &sampleData[gid * TOTAL_U_SIZE];
+}
+
+__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
+		__global float *sampleDataPathBase, const uint depth) {
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
+}
+
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDataPathBase) {
 	const size_t gid = get_global_id(0);
 
 	sample->radiance.r = 0.f;
@@ -138,8 +150,8 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	sample->radiance.b = 0.f;
 	sample->pixelIndex = InitialPixelIndex(gid);
 
-	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+	sampleDataPathBase[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+	sampleDataPathBase[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 }
 
 void Sampler_NextSample(
@@ -184,8 +196,15 @@ void Sampler_NextSample(
 #if (PARAM_SAMPLER_TYPE == 1)
 
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *sampleData) {
+	TODO
 	const size_t gid = get_global_id(0);
 	return &sampleData[2 * gid * TOTAL_U_SIZE];
+}
+
+__global float *Sampler_GetSamplePathVertexData(__global Sample *sample,
+		__global float *sampleDataPathBase, const uint depth) {
+	TODO
+	return &sampleData[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
 }
 
 void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU) {

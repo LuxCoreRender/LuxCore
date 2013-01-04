@@ -214,8 +214,20 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	const size_t gid = get_global_id(0);
 
 	__global GPUTask *task = &tasks[gid];
+
+	// Read the path state
+	PathState pathState = task->pathStateBase.state;
+	const uint depth = task->pathStateBase.depth;
+	__global BSDF *bsdf = &task->pathStateBase.bsdf;
+
 	__global Sample *sample = &task->sample;
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+#if (PARAM_SAMPLER_TYPE != 0)
+	// Used by Sampler_GetSample() macro
+	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+			sample, sampleDataPathBase, depth);
+#endif
 
 	// Read the seed
 	Seed seedValue;
@@ -224,9 +236,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	seedValue.s3 = task->seed.s3;
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
-
-	// read the path state
-	PathState pathState = task->pathStateBase.state;
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
@@ -243,7 +252,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		if (currentTriangleIndex != NULL_INDEX) {
 			// Something was hit
 
-			__global BSDF *bsdf = &task->pathStateBase.bsdf;
 			BSDF_Init(bsdf,
 #if defined(PARAM_ACCEL_MQBVH)
 					meshFirstTriangleOffset,
@@ -256,24 +264,29 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					vertices, vertNormals, vertUVs,
 					triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGHT)
-					, Sampler_GetSample(IDX_PASSTROUGHT)
+					, Sampler_GetSamplePathVertex(IDX_PASSTROUGHT)
 #endif
 					);
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 			// Check if it is a light source
-			if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
-				// Add emitted radiance
-				float3 radiance = vload3(0, &sample->radiance.r);
-				const float3 throughput = vload3(0, &task->pathStateBase.throughput.r);
-				float directPdfA;
-				radiance += throughput * BSDF_GetEmittedRadiance(bsdf, mats, texs, triLightDefs, &directPdfA);
-				vstore3(radiance, 0, &sample->radiance.r);
-			}
+//			if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
+//				// Add emitted radiance
+//				float3 radiance = vload3(0, &sample->radiance.r);
+//				const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
+//				float directPdfA;
+//				radiance += pathThrouput * BSDF_GetEmittedRadiance(bsdf, mats, texs, triLightDefs, &directPdfA);
+//				vstore3(radiance, 0, &sample->radiance.r);
+//			}
 #endif
-			
+
+#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+			// Direct light sampling
+			pathState = GENERATE_DL_RAY;
+#else
 			// Sample next path vertex
 			pathState = GENERATE_NEXT_VERTEX_RAY;
+#endif
 		} else {
 #if defined(PARAM_HAS_INFINITELIGHT)
 			const float3 lightRadiance = InfiniteLight_GetRadiance(infiniteLight,
@@ -297,7 +310,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 					-vload3(0, &ray->d.x));
 			float3 radiance = vload3(0, &sample->radiance.r);
-			radiance += vload3(0, &task->pathStateBase.throughput.r) * lightRadiance;
+			const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
+			radiance += pathThrouput * lightRadiance;
 			vstore3(radiance, 0, &sample->radiance.r);
 #endif
 			pathState = SPLAT_SAMPLE;
@@ -307,13 +321,55 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
 	//
+	// From: GENERATE_DL_RAY
+	// To: GENERATE_NEXT_VERTEX_RAY or RT_DL
+	//--------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+	if (pathState == GENERATE_DL_RAY) {
+		pathState = GENERATE_NEXT_VERTEX_RAY;
+
+		if (!BSDF_IsDelta(bsdf, mats)) {
+			// TODO: sunlight
+
+			// Pick a triangle light source to sample
+			const float lu0 = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_X);
+			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+			const float lightPickPdf = 1.f / PARAM_DL_LIGHT_COUNT;
+			__global TriangleLight *l = &triLightDefs[lightIndex];
+
+			float3 lightRayDir;
+			float distance, directPdfW;
+			float3 lightRadiance = TriangleLight_Illuminate(
+					l, mats, texs,
+					vload3(0, &bsdf->hitPoint.x),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
+					&lightRayDir, &distance, &directPdfW);
+			if (any(isnotequal(lightRadiance, BLACK))) {
+				float3 radiance = vload3(0, &sample->radiance.r);
+
+				const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
+				const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
+				const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+				const float factor = cosThetaToLight / directLightSamplingPdfW;
+
+				radiance += factor * pathThrouput * lightRadiance;
+				vstore3(radiance, 0, &sample->radiance.r);
+			}
+		}
+	}
+#endif
+
+	//--------------------------------------------------------------------------
+	// Evaluation of the Path finite state machine.
+	//
 	// From: GENERATE_NEXT_VERTEX_RAY
 	// To: SPLAT_SAMPLE or RT_NEXT_VERTEX
 	//--------------------------------------------------------------------------
 
 	if (pathState == GENERATE_NEXT_VERTEX_RAY) {
-		uint depth = task->pathStateBase.depth;
-
 		if (depth < PARAM_MAX_PATH_DEPTH) {
 			// Sample the BSDF
 			__global BSDF *bsdf = &task->pathStateBase.bsdf;
@@ -341,14 +397,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					imageMapBuff4,
 #endif
 #endif
-					Sampler_GetSample(IDX_BSDF_X), Sampler_GetSample(IDX_BSDF_Y),
+					Sampler_GetSamplePathVertex(IDX_BSDF_X), Sampler_GetSamplePathVertex(IDX_BSDF_Y),
 					&sampledDir, &lastPdfW, &cosSampledDir, &event);
 			const bool lastSpecular = ((event & SPECULAR) != 0);
 
 			// Russian Roulette
 			const float rrProb = fmax(Spectrum_Filter(bsdfSample), PARAM_RR_CAP);
 			const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !lastSpecular;
-			const bool rrContinuePath = !rrEnabled || (Sampler_GetSample(IDX_RR) < rrProb);
+			const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(IDX_RR) < rrProb);
 
 			const bool continuePath = !all(isequal(bsdfSample, BLACK)) && rrContinuePath;
 			if (continuePath) {

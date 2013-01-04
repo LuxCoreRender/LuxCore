@@ -194,7 +194,7 @@ std::string KernelSource_datatypes =
 "typedef enum {\n"
 "	RT_NEXT_VERTEX,\n"
 "	GENERATE_DL_RAY,\n"
-"	RT_DL_RAY,\n"
+"	RT_DL,\n"
 "	GENERATE_NEXT_VERTEX_RAY,\n"
 "	SPLAT_SAMPLE\n"
 "} PathState;\n"
