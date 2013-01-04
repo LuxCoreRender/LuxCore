@@ -270,14 +270,29 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 			// Check if it is a light source
-//			if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
-//				// Add emitted radiance
-//				float3 radiance = vload3(0, &sample->radiance.r);
-//				const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
-//				float directPdfA;
-//				radiance += pathThrouput * BSDF_GetEmittedRadiance(bsdf, mats, texs, triLightDefs, &directPdfA);
-//				vstore3(radiance, 0, &sample->radiance.r);
-//			}
+			if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
+				float directPdfA;
+				const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs, triLightDefs, &directPdfA);
+
+				if (any(isnotequal(emittedRadiance, BLACK))) {
+					// Add emitted radiance
+					float weight = 1.f;
+					if (!task->directLightState.lastSpecular) {
+						const float lightPickProb = Scene_PickLightPdf();
+						const float directPdfW = PdfAtoW(directPdfA, rayHit->t,
+							fabs(dot(vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->shadeN.x))));
+
+						// MIS between BSDF sampling and direct light sampling
+						weight = PowerHeuristic(task->directLightState.lastPdfW, directPdfW * lightPickProb);
+					}
+
+					float3 radiance = vload3(0, &sample->radiance.r);
+					const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
+					float directPdfA;
+					radiance += pathThrouput * weight * emittedRadiance;
+					vstore3(radiance, 0, &sample->radiance.r);
+				}
+			}
 #endif
 
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
@@ -288,6 +303,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			pathState = GENERATE_NEXT_VERTEX_RAY;
 #endif
 		} else {
+			// TODO: sunlight + Scene::GetEnvLightsRadiance()
+
 #if defined(PARAM_HAS_INFINITELIGHT)
 			const float3 lightRadiance = InfiniteLight_GetRadiance(infiniteLight,
 #if defined(PARAM_HAS_IMAGEMAPS)
@@ -347,16 +364,48 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW);
+
 			if (any(isnotequal(lightRadiance, BLACK))) {
-				float3 radiance = vload3(0, &sample->radiance.r);
+				BSDFEvent event;
+				float bsdfPdfW;
+				const float3 bsdfEval = BSDF_Evaluate(bsdf, mats, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+						imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+						imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+						imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+						imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+						imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+						imageMapBuff4,
+#endif
+#endif
+						lightRayDir, &event, &bsdfPdfW);
+				if (any(isnotequal(bsdfEval, BLACK))) {
 
-				const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
-				const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
-				const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-				const float factor = cosThetaToLight / directLightSamplingPdfW;
+					float3 radiance = vload3(0, &sample->radiance.r);
 
-				radiance += factor * pathThrouput * lightRadiance;
-				vstore3(radiance, 0, &sample->radiance.r);
+					const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
+					const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
+					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+					const float factor = cosThetaToLight / directLightSamplingPdfW;
+
+					// Russian Roulette
+					bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? fmax(Spectrum_Filter(bsdfEval), PARAM_RR_CAP) : 1.f;
+
+					// MIS between direct light sampling and BSDF sampling
+					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+
+					radiance += (weight * factor) * pathThrouput * bsdfEval * lightRadiance;
+					vstore3(radiance, 0, &sample->radiance.r);
+				}
 			}
 		}
 	}
@@ -418,6 +467,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				Ray_Init2(ray, vload3(0, &bsdf->hitPoint.x), sampledDir);
 
 				task->pathStateBase.depth = depth + 1;
+#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+				task->directLightState.lastPdfW = lastPdfW;
+				task->directLightState.lastSpecular = lastSpecular;
+#endif
 				pathState = RT_NEXT_VERTEX;
 			} else
 				pathState = SPLAT_SAMPLE;

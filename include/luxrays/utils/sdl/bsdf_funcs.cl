@@ -139,6 +139,86 @@ void BSDF_Init(
 	vstore3(shadeN, 0, &bsdf->shadeN.x);
 }
 
+float3 BSDF_Evaluate(
+		__global BSDF *bsdf,
+		__global Material *mats,
+		__global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
+		const float3 generatedDir, BSDFEvent *event, float *directPdfW) {
+	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
+	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
+	const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
+	const float3 lightDir = generatedDir;
+	const float3 geometryN = vload3(0, &bsdf->geometryN.x);
+
+	const float dotLightDirNG = dot(lightDir, geometryN);
+	const float absDotLightDirNG = fabs(dotLightDirNG);
+	const float dotEyeDirNG = dot(eyeDir, geometryN);
+	const float absDotEyeDirNG = fabs(dotEyeDirNG);
+
+	if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
+			(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
+		return BLACK;
+
+	__global Material *mat = &mats[bsdf->materialIndex];
+	const float sideTest = dotEyeDirNG * dotLightDirNG;
+	const BSDFEvent matEvent = Material_GetEventTypes(mat);
+	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
+			((sideTest < 0.f) && !(matEvent & TRANSMIT)) ||
+			(sideTest == 0.f))
+		return BLACK;
+
+	__global Frame *frame = &bsdf->frame;
+	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
+	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
+	const float3 result = Material_Evaluate(mat, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+			vload2(0, &bsdf->hitPointUV.u), localLightDir, localEyeDir,
+			event, directPdfW);
+
+	// Adjoint BSDF
+//	if (fromLight) {
+//		const float absDotLightDirNS = AbsDot(lightDir, shadeN);
+//		const float absDotEyeDirNS = AbsDot(eyeDir, shadeN);
+//		return result * ((absDotLightDirNS * absDotEyeDirNG) / (absDotEyeDirNS * absDotLightDirNG));
+//	} else
+		return result;
+}
+
 float3 BSDF_Sample(
 		__global BSDF *bsdf,
 		__global Material *mats,
@@ -169,6 +249,24 @@ float3 BSDF_Sample(
 
 	const float3 result = Material_Sample(
 			&mats[bsdf->materialIndex], texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
 			(float2)(0.f, 0.f), localFixedDir, &localSampledDir,
 			u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
@@ -180,7 +278,7 @@ float3 BSDF_Sample(
 
 	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
 
-//	// Adjoint BSDF
+	// Adjoint BSDF
 //	if (fromLight) {
 //		const float absDotFixedDirNS = fabsf(localFixedDir.z);
 //		const float absDotSampledDirNS = fabsf(localSampledDir.z);

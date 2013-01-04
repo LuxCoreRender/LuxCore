@@ -305,11 +305,11 @@ private:
 };
 
 inline float PdfWtoA(const float pdfW, const float dist, const float cosThere) {
-    return pdfW * fabs(cosThere) / (dist * dist);
+    return pdfW * fabsf(cosThere) / (dist * dist);
 }
 
 inline float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
-    return pdfA * dist * dist / fabs(cosThere);
+    return pdfA * dist * dist / fabsf(cosThere);
 }
 
 inline float BalanceHeuristic(const u_int nf, const float fPdf, const u_int ng, const float gPdf) {

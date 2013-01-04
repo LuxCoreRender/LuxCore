@@ -22,7 +22,8 @@
  ***************************************************************************/
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
+	MATTE, MIRROR
+	//, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
 } MaterialType;
 
 typedef struct {

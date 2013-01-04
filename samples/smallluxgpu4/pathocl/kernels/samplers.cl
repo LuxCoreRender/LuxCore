@@ -109,11 +109,11 @@ void GenerateCameraPath(
 
 	// Initialize the path state
 	task->pathStateBase.state = RT_NEXT_VERTEX;
-	task->pathStateBase.depth = 0;
+	task->pathStateBase.depth = 1;
 	vstore3(WHITE, 0, &task->pathStateBase.throughput.r);
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	task->directLightState.bouncePdf = 1.f;
-	task->directLightState.specularBounce = TRUE;
+	task->directLightState.lastPdfW = 1.f;
+	task->directLightState.lastSpecular = TRUE;
 #endif
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	task->alphaChannelState.vertexCount = 0;

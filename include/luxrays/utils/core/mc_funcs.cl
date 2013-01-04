@@ -92,3 +92,18 @@ int Mod(int a, int b) {
 
 	return a;
 }
+
+float PowerHeuristic(const float fPdf, const float gPdf) {
+	const float f = fPdf;
+	const float g = gPdf;
+
+	return (f * f) / (f * f + g * g);
+}
+
+float PdfWtoA(const float pdfW, const float dist, const float cosThere) {
+    return pdfW * fabs(cosThere) / (dist * dist);
+}
+
+float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
+    return pdfA * dist * dist / fabs(cosThere);
+}
