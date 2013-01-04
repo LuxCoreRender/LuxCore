@@ -21,6 +21,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-float Spectrum_Filter(const float3 c)  {
-	return fmax(c.s0, fmax(c.s1, c.s2));
+float Spectrum_Filter(const float3 s)  {
+	return fmax(s.s0, fmax(s.s1, s.s2));
+}
+
+float Spectrum_Y(const float3 s) {
+	return 0.212671f * s.s0 + 0.715160f * s.s1 + 0.072169f * s.s2;
 }

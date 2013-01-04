@@ -97,13 +97,13 @@ void GenerateCameraRay(
 
 void GenerateCameraPath(
 		__global GPUTask *task,
-		__global float *sampleData,
+		__global float *sampleDataPathBase,
 		Seed *seed,
 		__global Camera *camera,
 		__global Ray *ray) {
 	__global Sample *sample = &task->sample;
 
-	GenerateCameraRay(camera, sample, sampleData, seed, ray);
+	GenerateCameraRay(camera, sample, sampleDataPathBase, seed, ray);
 
 	vstore3(BLACK, 0, &sample->radiance.r);
 
@@ -127,14 +127,13 @@ void GenerateCameraPath(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *sampleData) {
+__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
-	return &sampleData[gid * TOTAL_U_SIZE];
+	return &samplesData[gid * TOTAL_U_SIZE];
 }
 
 __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
-	const size_t gid = get_global_id(0);
-	return &sampleData[gid * TOTAL_U_SIZE];
+	return sampleData;
 }
 
 __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
@@ -142,16 +141,14 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDataPathBase) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	const size_t gid = get_global_id(0);
 
-	sample->radiance.r = 0.f;
-	sample->radiance.g = 0.f;
-	sample->radiance.b = 0.f;
+	vstore3(BLACK, 0, &sample->radiance.r);
 	sample->pixelIndex = InitialPixelIndex(gid);
 
-	sampleDataPathBase[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	sampleDataPathBase[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 }
 
 void Sampler_NextSample(
@@ -167,12 +164,11 @@ void Sampler_NextSample(
 		__global Ray *ray
 		) {
 	const uint pixelIndex = sample->pixelIndex;
-	Spectrum radiance = sample->radiance;
 	SplatSample(frameBuffer,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				alphaFrameBuffer,
 #endif
-				pixelIndex, &radiance,
+				pixelIndex, vload3(0, &sample->radiance.r),
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				contribAlpha,
 #endif
@@ -184,7 +180,8 @@ void Sampler_NextSample(
 	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
 	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 
-	GenerateCameraPath(task, sampleData, seed, camera, ray);
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	GenerateCameraPath(task, sampleDataPathBase, seed, camera, ray);
 }
 
 #endif
@@ -195,16 +192,19 @@ void Sampler_NextSample(
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *sampleData) {
-	TODO
+__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
-	return &sampleData[2 * gid * TOTAL_U_SIZE];
+	return &samplesData[gid * (2 *TOTAL_U_SIZE)];
 }
 
-__global float *Sampler_GetSamplePathVertexData(__global Sample *sample,
+__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+	const size_t gid = get_global_id(0);
+	return &sampleData[sample->proposed * TOTAL_U_SIZE];
+}
+
+__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
-	TODO
-	return &sampleData[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
 }
 
 void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU) {
@@ -263,268 +263,215 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(seed, currentU[i]);
 }
 
-void Sampler_Init(const size_t gid, Seed *seed, __global Sample *sample) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	sample->totalI = 0.f;
-	sample->largeMutationCount = 0.f;
+	sample->largeMutationCount = 1.f;
 
-	sample->current = 0xffffffffu;
+	sample->current = NULL_INDEX;
 	sample->proposed = 1;
 
 	sample->smallMutationCount = 0;
 	sample->consecutiveRejects = 0;
 
 	sample->weight = 0.f;
-	sample->currentRadiance.r = 0.f;
-	sample->currentRadiance.g = 0.f;
-	sample->currentRadiance.b = 0.f;
+	vstore3(WHITE, 0, &sample->currentRadiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->currentAlpha = 0.f;
 #endif
 
-	LargeStep(seed, 0, &sample->u[1][0]);
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	LargeStep(seed, 0, sampleDataPathBase);
 }
 
-//__kernel void Sampler(
-//		__global GPUTask *tasks,
-//		__global GPUTaskStats *taskStats,
-//		__global Ray *rays,
-//		__global Camera *camera) {
-//	const size_t gid = get_global_id(0);
-//
-//	// Initialize the task
-//	__global GPUTask *task = &tasks[gid];
-//
-//	__global Sample *sample = &task->sample;
-//	const uint current = sample->current;
-//
-//	// Check if it is a complete path and not the very first sample
-//	if ((current != 0xffffffffu) && (task->pathState.state == PATH_STATE_DONE)) {
-//		// Read the seed
-//		Seed seed;
-//		seed.s1 = task->seed.s1;
-//		seed.s2 = task->seed.s2;
-//		seed.s3 = task->seed.s3;
-//
-//		const uint proposed = sample->proposed;
-//		__global float *proposedU = &sample->u[proposed][0];
-//
-//		if (Rnd_FloatValue(&seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
-//			LargeStep(&seed, sample->largeMutationCount, proposedU);
-//			sample->smallMutationCount = 0;
-//		} else {
-//			__global float *currentU = &sample->u[current][0];
-//
-//			SmallStep(&seed, currentU, proposedU);
-//			sample->smallMutationCount += 1;
-//		}
-//
-//		taskStats[gid].sampleCount += 1;
-//
-//		GenerateCameraPath(task, &rays[gid], &seed, camera);
-//
-//		// Save the seed
-//		task->seed.s1 = seed.s1;
-//		task->seed.s2 = seed.s2;
-//		task->seed.s3 = seed.s3;
-//	}
-//}
+void Sampler_NextSample(
+		__global GPUTask *task,
+		__global Sample *sample,
+		__global float *sampleData,
+		Seed *seed,
+		__global Pixel *frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		__global AlphaPixel *alphaFrameBuffer,
+#endif
+		__global Camera *camera,
+		__global Ray *ray
+		) {
+	//--------------------------------------------------------------------------
+	// Accept/Reject the sample
+	//--------------------------------------------------------------------------
 
-//void Sampler_MLT_SplatSample(__global Pixel *frameBuffer,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//		__global AlphaPixel *alphaFrameBuffer,
-//#endif
-//		Seed *seed, __global Sample *sample
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//		, const float alpha
-//#endif
-//		) {
-//	uint current = sample->current;
-//	uint proposed = sample->proposed;
-//
-//	Spectrum radiance = sample->radiance;
-//
-//	if (current == 0xffffffffu) {
-//		// It is the very first sample, I have still to initialize the current
-//		// sample
-//
-//		sample->currentRadiance = radiance;
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//		sample->currentAlpha = alpha;
-//#endif
-//		sample->totalI = Spectrum_Y(&radiance);
-//
-//		// The following 2 lines could be moved in the initialization code
-//		sample->largeMutationCount = 1;
-//		sample->weight = 0.f;
-//
-//		current = proposed;
-//		proposed ^= 1;
-//	} else {
-//		const Spectrum currentL = sample->currentRadiance;
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//		const float currentAlpha = sample->currentAlpha;
-//#endif
-//		const float currentI = Spectrum_Y(&currentL);
-//
-//		const Spectrum proposedL = radiance;
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//		const float proposedAlpha = alpha;
-//#endif
-//		float proposedI = Spectrum_Y(&proposedL);
-//		proposedI = isinf(proposedI) ? 0.f : proposedI;
-//
-//		float totalI = sample->totalI;
-//		uint largeMutationCount = sample->largeMutationCount;
-//		uint smallMutationCount = sample->smallMutationCount;
-//		if (smallMutationCount == 0) {
-//			// It is a large mutation
-//			totalI += Spectrum_Y(&proposedL);
-//			largeMutationCount += 1;
-//
-//			sample->totalI = totalI;
-//			sample->largeMutationCount = largeMutationCount;
-//		}
-//
-//		const float meanI = (totalI > 0.f) ? (totalI / largeMutationCount) : 1.f;
-//
-//		// Calculate accept probability from old and new image sample
-//		uint consecutiveRejects = sample->consecutiveRejects;
-//
-//		float accProb;
-//		if ((currentI > 0.f) && (consecutiveRejects < PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT))
-//			accProb = min(1.f, proposedI / currentI);
-//		else
-//			accProb = 1.f;
-//
-//		const float newWeight = accProb + ((smallMutationCount == 0) ? 1.f : 0.f);
-//		float weight = sample->weight;
-//		weight += 1.f - accProb;
-//
-//		const float rndVal = Rnd_FloatValue(seed);
-//
-//		/*if (get_global_id(0) == 0)
-//			printf(\"[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\\n\",
-//					consecutiveRejects,
-//					currentL.r, currentL.g, currentL.b, weight,
-//					proposedL.r, proposedL.g, proposedL.b, newWeight,
-//					accProb, rndVal);*/
-//
-//		Spectrum contrib;
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//		float contribAlpha;
-//#endif
-//		float norm;
-//		float scrX, scrY;
-//
-//		if ((accProb == 1.f) || (rndVal < accProb)) {
-//			/*if (get_global_id(0) == 0)
-//				printf(\"\\t\\tACCEPTED !\\n\");*/
-//
-//			// Add accumulated contribution of previous reference sample
-//			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-//			contrib = currentL;
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//			contribAlpha = currentAlpha;
-//#endif
-//			scrX = sample->u[current][IDX_SCREEN_X];
-//			scrY = sample->u[current][IDX_SCREEN_Y];
-//
-//#if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
-//			// Debug code: to check sample distribution
-//			contrib.r = contrib.g = contrib.b = (consecutiveRejects + 1.f)  * .01f;
-//			const uint pixelIndex = PPixelIndexFloat2D(scrX, scrY);
-//			SplatSample(frameBuffer,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				alphaFrameBuffer,
-//#endif
-//				pixelIndex, &contrib,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				contribAlpha,
-//#endif
-//				1.f);
-//#endif
-//
-//			current ^= 1;
-//			proposed ^= 1;
-//			consecutiveRejects = 0;
-//
-//			weight = newWeight;
-//
-//			sample->currentRadiance = proposedL;
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//			sample->currentAlpha = proposedAlpha;
-//#endif
-//		} else {
-//			/*if (get_global_id(0) == 0)
-//				printf(\"\\t\\tREJECTED !\\n\");*/
-//
-//			// Add contribution of new sample before rejecting it
-//			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-//			contrib = proposedL;
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//			contribAlpha = proposedAlpha;
-//#endif
-//
-//			scrX = sample->u[proposed][IDX_SCREEN_X];
-//			scrY = sample->u[proposed][IDX_SCREEN_Y];
-//
-//			++consecutiveRejects;
-//
-//#if defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
-//			// Debug code: to check sample distribution
-//			contrib.r = contrib.g = contrib.b = 1.f * .01f;
-//			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
-//			SplatSample(frameBuffer,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				alphaFrameBuffer,
-//#endif
-//				pixelIndex, &contrib,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				contribAlpha,
-//#endif
-//				1.f);
-//#endif
-//		}
-//
-//#if !defined(PARAM_SAMPLER_METROPOLIS_DEBUG_SHOW_SAMPLE_DENSITY)
-//		if (norm > 0.f) {
-//			/*if (get_global_id(0) == 0)
-//				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
-//						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
-//
-//#if (PARAM_IMAGE_FILTER_TYPE == 0)
-//			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
-//			SplatSample(frameBuffer,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				alphaFrameBuffer,
-//#endif
-//				pixelIndex, &contrib,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				contribAlpha,
-//#endif
-//				norm);
-//#else
-//			float sx, sy;
-//			const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
-//			SplatSample(frameBuffer,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				alphaFrameBuffer,
-//#endif
-//				pixelIndex, sx, sy, &contrib,
-//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-//				contribAlpha,
-//#endif
-//				norm);
-//#endif
-//		}
-//#endif
-//
-//		sample->weight = weight;
-//		sample->consecutiveRejects = consecutiveRejects;
-//	}
-//
-//	sample->current = current;
-//	sample->proposed = proposed;
-//}
+	uint current = sample->current;
+	uint proposed = sample->proposed;
+
+	const float3 radiance = vload3(0, &sample->radiance.r);
+
+	if (current == NULL_INDEX) {
+		// It is the very first sample, I have still to initialize the current
+		// sample
+
+		vstore3(radiance, 0, &sample->currentRadiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		sample->currentAlpha = alpha;
+#endif
+		sample->totalI = Spectrum_Y(radiance);
+
+		current = proposed;
+		proposed ^= 1;
+	} else {
+		const float3 currentL = vload3(0, &sample->currentRadiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		const float currentAlpha = sample->currentAlpha;
+#endif
+		const float currentI = Spectrum_Y(currentL);
+
+		const float3 proposedL = radiance;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		const float proposedAlpha = alpha;
+#endif
+		float proposedI = Spectrum_Y(proposedL);
+		proposedI = isinf(proposedI) ? 0.f : proposedI;
+
+		float totalI = sample->totalI;
+		uint largeMutationCount = sample->largeMutationCount;
+		uint smallMutationCount = sample->smallMutationCount;
+		if (smallMutationCount == 0) {
+			// It is a large mutation
+			totalI += Spectrum_Y(proposedL);
+			largeMutationCount += 1;
+
+			sample->totalI = totalI;
+			sample->largeMutationCount = largeMutationCount;
+		}
+
+		const float meanI = (totalI > 0.f) ? (totalI / largeMutationCount) : 1.f;
+
+		// Calculate accept probability from old and new image sample
+		uint consecutiveRejects = sample->consecutiveRejects;
+
+		float accProb;
+		if ((currentI > 0.f) && (consecutiveRejects < PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT))
+			accProb = min(1.f, proposedI / currentI);
+		else
+			accProb = 1.f;
+
+		const float newWeight = accProb + ((smallMutationCount == 0) ? 1.f : 0.f);
+		float weight = sample->weight;
+		weight += 1.f - accProb;
+
+		const float rndVal = Rnd_FloatValue(seed);
+
+		/*if (get_global_id(0) == 0)
+			printf(\"[%d] Current: (%f, %f, %f) [%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\\n\",
+					consecutiveRejects,
+					currentL.r, currentL.g, currentL.b, weight,
+					proposedL.r, proposedL.g, proposedL.b, newWeight,
+					accProb, rndVal);*/
+
+		float3 contrib;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		float contribAlpha;
+#endif
+		float norm;
+		float scrX, scrY;
+
+		if ((accProb == 1.f) || (rndVal < accProb)) {
+			/*if (get_global_id(0) == 0)
+				printf(\"\\t\\tACCEPTED !\\n\");*/
+
+			// Add accumulated contribution of previous reference sample
+			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
+			contrib = currentL;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			contribAlpha = currentAlpha;
+#endif
+			scrX = sampleData[current * TOTAL_U_SIZE + IDX_SCREEN_X];
+			scrY = sampleData[current * TOTAL_U_SIZE + IDX_SCREEN_Y];
+
+			current ^= 1;
+			proposed ^= 1;
+			consecutiveRejects = 0;
+
+			weight = newWeight;
+
+			vstore3(proposedL, 0, &sample->currentRadiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			sample->currentAlpha = proposedAlpha;
+#endif
+		} else {
+			/*if (get_global_id(0) == 0)
+				printf(\"\\t\\tREJECTED !\\n\");*/
+
+			// Add contribution of new sample before rejecting it
+			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
+			contrib = proposedL;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			contribAlpha = proposedAlpha;
+#endif
+
+			scrX = sampleData[proposed * TOTAL_U_SIZE + IDX_SCREEN_X];
+			scrY = sampleData[proposed * TOTAL_U_SIZE + IDX_SCREEN_Y];
+
+			++consecutiveRejects;
+		}
+
+		if (norm > 0.f) {
+			/*if (get_global_id(0) == 0)
+				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
+						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
+
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
+			SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alphaFrameBuffer,
+#endif
+				pixelIndex, contrib,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				contribAlpha,
+#endif
+				norm);
+#else
+			float sx, sy;
+			const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
+			SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				alphaFrameBuffer,
+#endif
+				pixelIndex, sx, sy, contrib,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+				contribAlpha,
+#endif
+				norm);
+#endif
+		}
+
+		sample->weight = weight;
+		sample->consecutiveRejects = consecutiveRejects;
+	}
+
+	sample->current = current;
+	sample->proposed = proposed;
+
+	//--------------------------------------------------------------------------
+	// Mutate the sample
+	//--------------------------------------------------------------------------
+
+	__global float *proposedU = &sampleData[proposed * TOTAL_U_SIZE];
+	if (Rnd_FloatValue(seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
+		LargeStep(seed, sample->largeMutationCount, proposedU);
+		sample->smallMutationCount = 0;
+	} else {
+		__global float *currentU = &sampleData[current * TOTAL_U_SIZE];
+
+		SmallStep(seed, currentU, proposedU);
+		sample->smallMutationCount += 1;
+	}
+
+	//--------------------------------------------------------------------------
+	// Generate a new camera path
+	//--------------------------------------------------------------------------
+
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	GenerateCameraPath(task, sampleDataPathBase, seed, camera, ray);
+}
 
 #endif

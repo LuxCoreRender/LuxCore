@@ -21,6 +21,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <boost/lexical_cast.hpp>
+
 #include "slg.h"
 #include "pathocl/pathocl.h"
 #include "pathocl/kernels/kernels.h"
@@ -734,7 +736,7 @@ void PathOCLRenderThread::InitRender() {
 		else
 			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithoutAlphaChannel);
 	} else
-		throw std::runtime_error("Unknown sampler.type: " + renderEngine->sampler->type);
+		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
 
 	gpuTaksSize += sizeof(slg::ocl::PathStateBase);
 
@@ -773,7 +775,7 @@ void PathOCLRenderThread::InitRender() {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize += 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth);
 	} else
-		throw std::runtime_error("Unknown sampler.type: " + renderEngine->sampler->type);
+		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize);
 

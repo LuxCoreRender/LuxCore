@@ -107,21 +107,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &task->sample;
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 
 	// Initialize random number generator
 	Seed seed;
 	Rnd_Init(seedBase + gid, &seed);
 
 	// Initialize the sample
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	Sampler_Init(&seed, &task->sample, sampleData);
 
 	// Initialize the path
-	GenerateCameraPath(task, sampleData,
-#if (PARAM_SAMPLER_TYPE == 0)
-		&seed,
-#endif
-		camera, &rays[gid]);
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	GenerateCameraPath(task, sampleDataPathBase, &seed, camera, &rays[gid]);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
