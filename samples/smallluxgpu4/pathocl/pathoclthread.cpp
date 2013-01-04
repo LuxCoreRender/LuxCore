@@ -571,6 +571,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_material_funcs <<
 			luxrays::ocl::KernelSource_light_funcs <<
 			luxrays::ocl::KernelSource_bsdf_funcs <<
+			luxrays::ocl::KernelSource_scene_funcs <<
 			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
 			slg::ocl::KernelSource_filters <<

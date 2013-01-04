@@ -1,4 +1,4 @@
-#line 2 "frame_funcs.cl"
+#line 2 "scene_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,30 +21,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-void Frame_SetFromZ(__global Frame *frame, const float3 z) {
-	const float3 Z = normalize(z);
-	const float3 tmpZ = Z;
-	const float3 tmpX = (fabs(tmpZ.x) > 0.99f) ? (float3)(0.f, 1.f, 0.f) : (float3)(1.f, 0.f, 0.f);
-	const float3 Y = normalize(cross(tmpZ, tmpX));
-	const float3 X = cross(Y, tmpZ);
-
-	vstore3(X, 0, &frame->X.x);
-	vstore3(Y, 0, &frame->Y.x);
-	vstore3(Z, 0, &frame->Z.x);
-}
-
-float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
-	return X * v.x + Y * v.y + Z * v.z;
-}
-
-float3 Frame_ToWorld(__global Frame *frame, const float3 v) {
-	return ToWorld(vload3(0, &frame->X.x), vload3(0, &frame->Y.x), vload3(0, &frame->Z.x), v);
-}
-
-float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
-	return (float3)(dot(a, X), dot(a, Y), dot(a, Z));
-}
-
-float3 Frame_ToLocal(__global Frame *frame, const float3 v) {
-	return ToLocal(vload3(0, &frame->X.x), vload3(0, &frame->Y.x), vload3(0, &frame->Z.x), v);
+float Scene_PickLightPdf() {
+#if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+	return 1.f / (1.f + PARAM_DL_LIGHT_COUNT);
+#elif defined(PARAM_HAS_SUNLIGHT)
+	return 1.f;
+#elif (PARAM_DL_LIGHT_COUNT > 0)
+	return 1.f / PARAM_DL_LIGHT_COUNT;
+#endif
 }

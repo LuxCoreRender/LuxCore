@@ -1,6 +1,6 @@
 Authors:
 
-David "Dade" Bucciarelli <davibu.at.interfree.it>
+David "Dade" Bucciarelli <dade916.at.gmail.com>
 Alain "Chiaroscuro" Ducharme <>
 Jens Verwiebe <info.at.jensverwiebe.de>
 Tom "Tomb" Bech <tom.bech.at.gmail.com>

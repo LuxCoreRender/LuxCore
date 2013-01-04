@@ -25,6 +25,36 @@
 // Matte material
 //------------------------------------------------------------------------------
 
+float3 MatteMaterial_Evaluate(__global Material *material, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
+		const float2 uv, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW) {
+	if (directPdfW)
+		*directPdfW = fabs(lightDir.z * M_1_PI_F);
+
+	*event = DIFFUSE | REFLECT;
+
+	const float3 kd = Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv);
+	return M_1_PI_F * kd;
+}
+
 float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
@@ -73,8 +103,19 @@ float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs
 // Generic material functions
 //------------------------------------------------------------------------------
 
-bool Material_IsDelta(__global Material *material) {
-	switch (material->type) {
+BSDFEvent Material_GetEventTypes(__global Material *mat) {
+	switch (mat->type) {
+		case MATTE:
+			return DIFFUSE | REFLECT;
+		case MIRROR:
+			return SPECULAR | REFLECT;
+		default:
+			return NONE;
+	}
+}
+
+bool Material_IsDelta(__global Material *mat) {
+	switch (mat->type) {
 		case MATTE:
 			return false;
 		case MIRROR:
@@ -83,23 +124,91 @@ bool Material_IsDelta(__global Material *material) {
 	}
 }
 
-float3 Material_Sample(__global Material *material, __global Texture *texs,
+float3 Material_Evaluate(__global Material *mat, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
+		const float2 uv, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW) {
+	switch (mat->type) {
+		case MATTE:
+			return MatteMaterial_Evaluate(mat, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
+					uv, lightDir, eyeDir,
+					event, directPdfW);
+		case MIRROR:
+		default:
+			return BLACK;
+	}
+}
+
+float3 Material_Sample(__global Material *mat, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
-	switch (material->type) {
+	switch (mat->type) {
 		case MATTE:
-			return MatteMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+			return MatteMaterial_Sample(mat, texs, uv, fixedDir, sampledDir,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 					passThroughEvent,
 #endif
 					pdfW, cosSampledDir, event);
 		case MIRROR:
-			return MirrorMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+			return MirrorMaterial_Sample(mat, texs, uv, fixedDir, sampledDir,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 					passThroughEvent,

@@ -205,13 +205,11 @@ typedef struct {
 } PathStateBase;
 
 typedef struct {
-	float bouncePdf;
-	int specularBounce;
-
-	Ray nextPathRay;
-	Spectrum nextThroughput;
 	// Radiance to add to the result if light source is visible
 	Spectrum lightRadiance;
+
+	float lastPdfW;
+	int lastSpecular;
 } PathStateDirectLight;
 
 typedef struct {
