@@ -70,6 +70,18 @@ float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs
 }
 
 //------------------------------------------------------------------------------
+// Generic material functions
+//------------------------------------------------------------------------------
+
+bool Material_IsDelta(__global Material *material) {
+	switch (material->type) {
+		case MATTE:
+			return false;
+		case MIRROR:
+		default:
+			return true;
+	}
+}
 
 float3 Material_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,

@@ -59,7 +59,7 @@ public:
 			+ luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
 			_LUXRAYS_RAYHIT_OCLDEFINE
-			_LUXRAYS_TRIANGLE_OCLDEFINE
+			+ luxrays::ocl::KernelSource_triangle_types +
 			_LUXRAYS_BBOX_OCLDEFINE);
 		code += luxrays::ocl::KernelSource_bvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));

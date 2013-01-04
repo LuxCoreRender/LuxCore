@@ -81,6 +81,40 @@ float3 InfiniteLight_GetRadiance(
 // TriangleLight
 //------------------------------------------------------------------------------
 
+float3 TriangleLight_Illuminate(
+		__global TriangleLight *triLight, __global Material *mats, __global Texture *texs,
+		const float3 p, const float u0, const float u1, const float u2,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 p0 = vload3(0, &triLight->v0.x);
+	const float3 p1 = vload3(0, &triLight->v1.x);
+	const float3 p2 = vload3(0, &triLight->v2.x);
+	float b0, b1, b2;
+	float3 samplePoint = Triangle_Sample(
+			p0, p1, p2,
+			u0, u1,
+			&b0, &b1, &b2);
+		
+	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
+
+	*dir = samplePoint - p;
+	const float distanceSquared = dot(*dir, *dir);;
+	*distance = sqrt(distanceSquared);
+	*dir /= (*distance);
+
+	const float cosAtLight = dot(sampleN, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*directPdfW = triLight->invArea * distanceSquared / cosAtLight;
+
+	const float2 uv0 = vload2(0, &triLight->uv0.u);
+	const float2 uv1 = vload2(0, &triLight->uv1.u);
+	const float2 uv2 = vload2(0, &triLight->uv2.u);
+	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
+
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs, triUV);
+}
+
 float3 TriangleLight_GetRadiance(__global TriangleLight *triLight, __global Material *mats,
 		 __global Texture *texs, const float3 dir, const float3 hitPointNormal,
 		const float2 triUV, float *directPdfA) {

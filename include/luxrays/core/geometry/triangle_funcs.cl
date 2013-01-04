@@ -1,4 +1,4 @@
-#line 2 "light_types.cl"
+#line 2 "triangle_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,20 +21,31 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
-} LightSourceType;
+void Triangle_UniformSample(const float u0, const float u1, float *b1, float *b2) {
+	const float su1 = sqrt(u0);
+	*b1 = 1.f - su1;
+	*b2 = u1 * su1;
+}
 
-typedef struct {
-	Spectrum gain;
-	float shiftU, shiftV;
-	ImageMapInstanceParam imageMapInstance;
-} InfiniteLight;
+float3 Triangle_Sample(const float3 p0, const float3 p1, const float3 p2,
+		const float u0, const float u1,
+		float *b0, float *b1, float *b2) {
+		Triangle_UniformSample(u0, u1, b1, b2);
+		*b0 = 1.f - (*b1) - (*b2);
 
-typedef struct {
-	Vector v0, v1, v2;
-	UV uv0, uv1, uv2;
-	float invArea;
+		return (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
+}
 
-	unsigned int materialIndex;
-} TriangleLight;
+float3 Triangle_GetGeometryNormal(const float3 p0, const float3 p1, const float3 p2) {
+	return normalize(cross(p1 - p0, p2 - p0));
+}
+
+float3 Triangle_InterpolateNormal(const float3 n0, const float3 n1, const float3 n2,
+		const float b0, const float b1, const float b2) {
+	return normalize(b0 * n0 + b1 * n1 + b2 * n2);
+}
+
+float2 Triangle_InterpolateUV(const float2 uv0, const float2 uv1, const float2 uv2,
+		const float b0, const float b1, const float b2) {
+	return normalize(b0 * uv0 + b1 * uv1 + b2 * uv2);
+}

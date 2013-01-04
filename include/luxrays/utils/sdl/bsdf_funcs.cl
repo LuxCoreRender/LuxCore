@@ -191,10 +191,18 @@ float3 BSDF_Sample(
 		return result;
 }
 
+bool BSDF_IsDelta(__global BSDF *bsdf, __global Material *mats) {
+	return Material_IsDelta(&mats[bsdf->materialIndex]);
+}
+
 #if (PARAM_DL_LIGHT_COUNT > 0)
 float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, __global Material *mats,
 		__global Texture *texs, __global TriangleLight *triLightDefs, float *directPdfA) {
-	return TriangleLight_GetRadiance(&triLightDefs[bsdf->triangleLightSourceIndex], mats, texs,
-			vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->geometryN.x), vload2(0, &bsdf->hitPointUV.u), directPdfA);
+	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
+	if (triangleLightSourceIndex == NULL_INDEX)
+		return BLACK;
+	else
+		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex], mats, texs,
+				vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->geometryN.x), vload2(0, &bsdf->hitPointUV.u), directPdfA);
 }
 #endif

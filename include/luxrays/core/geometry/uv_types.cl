@@ -1,4 +1,4 @@
-#line 2 "light_types.cl"
+#line 2 "uv_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,20 +21,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
-} LightSourceType;
+#define ASSIGN_UV(a, b) { (a).u = (b).u; (a).v = (b).v; }
 
 typedef struct {
-	Spectrum gain;
-	float shiftU, shiftV;
-	ImageMapInstanceParam imageMapInstance;
-} InfiniteLight;
-
-typedef struct {
-	Vector v0, v1, v2;
-	UV uv0, uv1, uv2;
-	float invArea;
-
-	unsigned int materialIndex;
-} TriangleLight;
+	float u,v;
+} UV;
