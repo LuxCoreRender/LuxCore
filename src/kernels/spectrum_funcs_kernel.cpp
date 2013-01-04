@@ -24,7 +24,11 @@ std::string KernelSource_spectrum_funcs =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"float Spectrum_Filter(const float3 c)  {\n"
-"	return fmax(c.s0, fmax(c.s1, c.s2));\n"
+"float Spectrum_Filter(const float3 s)  {\n"
+"	return fmax(s.s0, fmax(s.s1, s.s2));\n"
+"}\n"
+"\n"
+"float Spectrum_Y(const float3 s) {\n"
+"	return 0.212671f * s.s0 + 0.715160f * s.s1 + 0.072169f * s.s2;\n"
 "}\n"
 ; } }

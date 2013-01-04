@@ -140,7 +140,7 @@ Error: unknown image filter !!!
 
 #endif
 
-void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight) {
+void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weight) {
 	/*if (isnan(rad->r) || isinf(rad->r) ||
 			isnan(rad->g) || isinf(rad->g) ||
 			isnan(rad->b) || isinf(rad->b) ||
@@ -150,23 +150,21 @@ void Pixel_AddRadiance(__global Pixel *pixel, Spectrum *rad, const float weight)
 #if defined(__APPLE_FIX__)
 
 #if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&pixel->c.r, weight * rad->r);
-	AtomicAdd(&pixel->c.g, weight * rad->g);
-	AtomicAdd(&pixel->c.b, weight * rad->b);
+	AtomicAdd(&pixel->c.r, weight * rad.r);
+	AtomicAdd(&pixel->c.g, weight * rad.g);
+	AtomicAdd(&pixel->c.b, weight * rad.b);
 	AtomicAdd(&pixel->count, weight);
 #else
-	pixel->c.r += weight * rad->r;
-	pixel->c.g += weight * rad->g;
-	pixel->c.b += weight * rad->b;
+	pixel->c.r += weight * rad.r;
+	pixel->c.g += weight * rad.g;
+	pixel->c.b += weight * rad.b;
 	pixel->count += weight;
 #endif
 
 #else
 
 	float4 s;
-	s.x = rad->r;
-	s.y = rad->g;
-	s.z = rad->b;
+	s.xyz = rad;
 	s.w = 1.f;
 	s *= weight;
 
@@ -195,7 +193,7 @@ void Pixel_AddAlpha(__global AlphaPixel *apixel, const float alpha, const float 
 #endif
 
 #if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
-void Pixel_AddFilteredRadiance(__global Pixel *pixel, Spectrum *rad,
+void Pixel_AddFilteredRadiance(__global Pixel *pixel, const float rad,
 	const float distX, const float distY, const float weight) {
 	const float filterWeight = ImageFilter_Evaluate(distX, distY);
 
@@ -219,7 +217,7 @@ void SplatSample(__global Pixel *frameBuffer,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		__global AlphaPixel *alphaFrameBuffer,
 #endif
-		const uint pixelIndex, Spectrum *radiance,
+		const uint pixelIndex, const float3 radiance,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		const float alpha,
 #endif
@@ -245,7 +243,7 @@ void SplatSample(__global Pixel *frameBuffer,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		__global AlphaPixel *alphaFrameBuffer,
 #endif
-		const uint pixelIndex, const float sx, const float sy, Spectrum *radiance,
+		const uint pixelIndex, const float sx, const float sy, const float3 radiance,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		const float alpha,
 #endif

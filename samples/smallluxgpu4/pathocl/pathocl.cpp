@@ -19,8 +19,10 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//TODO: check OpenCL 1.1
-//TODO: disable RR when RR_DEPTH > MAX_PATH_DEPTH
+// TODO: check OpenCL 1.1
+// TODO: disable RR when RR_DEPTH > MAX_PATH_DEPTH
+// TODO: metropolis with lazy evaluation
+// TODO: state sorting optimization
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -35,6 +37,7 @@
 #include <stdexcept>
 
 #include <boost/thread/mutex.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "slg.h"
 
@@ -148,9 +151,10 @@ void PathOCLRenderEngine::StartLockLess() {
 			sampler->metropolis.largeMutationProbability = largeMutationProbability;
 			sampler->metropolis.imageMutationRange = imageMutationRange;
 			sampler->metropolis.maxRejects = maxRejects;
+			break;
 		}
 		default:
-			throw std::runtime_error("Unknown sampler.type: " + samplerType);
+			throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(samplerType));
 	}
 
 
@@ -188,7 +192,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		filter->mitchell.B = B;
 		filter->mitchell.C = C;
 	} else
-		throw std::runtime_error("Unknown path.filter.type: " + filterType);
+		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 
 	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
 
