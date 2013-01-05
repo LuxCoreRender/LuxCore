@@ -224,7 +224,7 @@ std::string KernelSource_pathocl_kernels =
 "	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);\n"
 "	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);\n"
 "#if (PARAM_SAMPLER_TYPE != 0)\n"
-"	// Used by Sampler_GetSample() macro\n"
+"	// Used by Sampler_GetSamplePathVertex() macro\n"
 "	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(\n"
 "			sample, sampleDataPathBase, depth);\n"
 "#endif\n"

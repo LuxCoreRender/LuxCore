@@ -122,8 +122,8 @@ void CompiledScene::CompileGeometry() {
 		luxrays::ocl::Mesh newMeshDesc;
 		newMeshDesc.vertsOffset = 0;
 		newMeshDesc.trisOffset = 0;
-		memcpy(newMeshDesc.trans, Matrix4x4().m, sizeof(float[4][4]));
-		memcpy(newMeshDesc.invTrans, Matrix4x4().m, sizeof(float[4][4]));
+		memcpy(&newMeshDesc.trans.m, Matrix4x4().m, sizeof(float[4][4]));
+		memcpy(&newMeshDesc.trans.mInv, Matrix4x4().m, sizeof(float[4][4]));
 
 		luxrays::ocl::Mesh currentMeshDesc;
 
@@ -153,7 +153,8 @@ void CompiledScene::CompileGeometry() {
 					isExistingInstance = true;
 				}
 
-				memcpy(currentMeshDesc.trans, imesh->GetTransformation().GetMatrix().m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
 				mesh = imesh->GetExtTriangleMesh();
 			} else {
 				currentMeshDesc = newMeshDesc;

@@ -38,7 +38,7 @@ void BSDF_Init(
 		__global Point *vertices,
 		__global Vector *vertNormals,
 		__global UV *vertUVs,
-		__global Triangle *triangles,
+		__global Triangle *tris,
 		__global Ray *ray,
 		__global RayHit *rayHit
 #if defined(PARAM_HAS_PASSTHROUGHT)
@@ -59,37 +59,34 @@ void BSDF_Init(
 	const uint meshIndex = meshIDs[currentTriangleIndex];
 
 #if defined(PARAM_ACCEL_MQBVH)
-	TODO
 	__global Mesh *meshDesc = &meshDescs[meshIndex];
 	__global Point *iVertices = &vertices[meshDesc->vertsOffset];
 	__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
-#if defined(PARAM_HAS_TEXTUREMAPS)
 	__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
-#endif
-	bsdf->triangles = &triangles[meshDesc->trisOffset];
-	bsdf->triIndex = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
+	__global Triangle *iTriangles = &tris[meshDesc->trisOffset];
+	const uint triangleID = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
 #endif
 
 	// Get the material
 	const uint matIndex = meshMats[meshIndex];
 	bsdf->materialIndex = matIndex;
 
-	// Interpolate face normal
-	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
+	// Interpolate face normal and UV coordinates
 #if defined(PARAM_ACCEL_MQBVH)
-	Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, hitPointB1, hitPointB2, &N);
-	TransformNormal(meshDesc->invTrans, &N);
+	vstore3(Mesh_GetGeometryNormal(iVertices, iTriangles, triangleID), 0, &bsdf->geometryN.x);
+	float3 shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, rayHit->b1, rayHit->b2);
+	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
+	vstore2(Mesh_InterpolateTriUV(iVertUVs, iTriangles, triangleID, rayHit->b1, rayHit->b2), 0, &bsdf->hitPointUV.u);
 #else
+	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
 	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2);
+	vstore2(Mesh_InterpolateTriUV(vertUVs, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2), 0, &bsdf->hitPointUV.u);
 #endif
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 	// Check if it is a light source
 	bsdf->triangleLightSourceIndex = meshLights[currentTriangleIndex];
 #endif
-
-	// Interpolate UV coordinates
-	vstore2(Mesh_InterpolateTriUV(vertUVs, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2), 0, &bsdf->hitPointUV.u);
 
 //	// Check if I have to apply bump mapping
 //	if (material->HasNormalTex()) {

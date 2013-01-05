@@ -39,6 +39,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/mc_funcs.cl
@@ -126,6 +127,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgen_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgen_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/matrix4x4_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/transform_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/transform_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/mc_funcs_kernel.cpp

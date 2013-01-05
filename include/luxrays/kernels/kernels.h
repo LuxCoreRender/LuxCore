@@ -41,6 +41,7 @@ extern std::string KernelSource_trianglemesh_funcs;
 extern std::string KernelSource_randomgen_types;
 extern std::string KernelSource_randomgen_funcs;
 extern std::string KernelSource_matrix4x4_types;
+extern std::string KernelSource_matrix4x4_funcs;
 extern std::string KernelSource_transform_types;
 extern std::string KernelSource_transform_funcs;
 extern std::string KernelSource_mc_funcs;
