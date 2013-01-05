@@ -404,28 +404,13 @@ void PathOCLRenderThread::InitKernels() {
 			assert (false);
 	}
 
-//	if (cscene->enable_MAT_MATTE)
-//		ss << " -D PARAM_ENABLE_MAT_MATTE";
-//	if (cscene->enable_MAT_AREALIGHT)
-//		ss << " -D PARAM_ENABLE_MAT_AREALIGHT";
-//	if (cscene->enable_MAT_MIRROR)
-//		ss << " -D PARAM_ENABLE_MAT_MIRROR";
-//	if (cscene->enable_MAT_GLASS)
-//		ss << " -D PARAM_ENABLE_MAT_GLASS";
-//	if (cscene->enable_MAT_MATTEMIRROR)
-//		ss << " -D PARAM_ENABLE_MAT_MATTEMIRROR";
-//	if (cscene->enable_MAT_METAL)
-//		ss << " -D PARAM_ENABLE_MAT_METAL";
-//	if (cscene->enable_MAT_MATTEMETAL)
-//		ss << " -D PARAM_ENABLE_MAT_MATTEMETAL";
-//	if (cscene->enable_MAT_ALLOY)
-//		ss << " -D PARAM_ENABLE_MAT_ALLOY";
-//	if (cscene->enable_MAT_ARCHGLASS)
-//		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
+	if (cscene->IsMaterialCompiled(MATTE))
+		ss << " -D PARAM_ENABLE_MAT_MATTE";
+	if (cscene->IsMaterialCompiled(MIRROR))
+		ss << " -D PARAM_ENABLE_MAT_MIRROR";
 
 	if (cscene->camera.lensRadius > 0.f)
 		ss << " -D PARAM_CAMERA_HAS_DOF";
-
 
 	if (infiniteLightBuff)
 		ss << " -D PARAM_HAS_INFINITELIGHT";

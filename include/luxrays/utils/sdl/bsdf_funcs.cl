@@ -38,7 +38,7 @@ void BSDF_Init(
 		__global Point *vertices,
 		__global Vector *vertNormals,
 		__global UV *vertUVs,
-		__global Triangle *tris,
+		__global Triangle *triangles,
 		__global Ray *ray,
 		__global RayHit *rayHit
 #if defined(PARAM_HAS_PASSTHROUGHT)
@@ -63,7 +63,7 @@ void BSDF_Init(
 	__global Point *iVertices = &vertices[meshDesc->vertsOffset];
 	__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
 	__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
-	__global Triangle *iTriangles = &tris[meshDesc->trisOffset];
+	__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
 	const uint triangleID = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
 #endif
 

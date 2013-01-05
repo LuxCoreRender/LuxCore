@@ -24,6 +24,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <set>
+
 #include "slg.h"
 #include "ocldatatypes.h"
 #include "editaction.h"
@@ -72,7 +74,7 @@ public:
 	slg::ocl::SkyLight *skyLight;
 
 	// Compiled Materials
-	bool enable_MAT_MATTE, enable_MAT_MIRROR;
+	std::set<MaterialType> usedMaterialTypes; // I can not use MaterialType here
 	vector<luxrays::ocl::Material> mats;
 	vector<u_int> meshMats;
 

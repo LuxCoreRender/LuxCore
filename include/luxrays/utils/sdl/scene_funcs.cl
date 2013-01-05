@@ -28,5 +28,7 @@ float Scene_PickLightPdf() {
 	return 1.f;
 #elif (PARAM_DL_LIGHT_COUNT > 0)
 	return 1.f / PARAM_DL_LIGHT_COUNT;
+#else
+	return 0;
 #endif
 }
