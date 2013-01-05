@@ -1,4 +1,4 @@
-#line 2 "trianglemesh_types.cl"
+#line 2 "matrix4x4_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,9 +21,29 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef struct {
-	unsigned int vertsOffset;
-	unsigned int trisOffset;
+float3 Matrix4x4_ApplyPoint(__global Matrix4x4 *m, const float3 point) {
+	float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
-	Transform trans;
-} Mesh;
+	const float4 row3 = vload4(0, &m->m[3][0]);
+	const float iw = 1.f / dot(row3, point4);
+
+	const float4 row0 = vload4(0, &m->m[0][0]);
+	const float4 row1 = vload4(0, &m->m[1][0]);
+	const float4 row2 = vload4(0, &m->m[2][0]);
+	return (float3)(
+			iw * dot(row0, point4),
+			iw * dot(row1, point4),
+			iw * dot(row2, point4)
+			);
+}
+
+float3 Matrix4x4_ApplyVector(__global Matrix4x4 *m, const float3 vector) {
+	const float3 row0 = vload3(0, &m->m[0][0]);
+	const float3 row1 = vload3(0, &m->m[1][0]);
+	const float3 row2 = vload3(0, &m->m[2][0]);
+	return (float3)(
+			dot(row0, vector),
+			dot(row1, vector),
+			dot(row2, vector)
+			);
+}

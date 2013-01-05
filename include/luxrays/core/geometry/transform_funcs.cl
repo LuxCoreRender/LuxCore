@@ -22,28 +22,17 @@
  ***************************************************************************/
 
 float3 Transform_ApplyPoint(__global Transform *trans, const float3 point) {
-	float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
-
-	const float4 row3 = vload4(0, &trans->m.m[3][0]);
-	const float iw = 1.f / dot(row3, point4);
-
-	const float4 row0 = vload4(0, &trans->m.m[0][0]);
-	const float4 row1 = vload4(0, &trans->m.m[1][0]);
-	const float4 row2 = vload4(0, &trans->m.m[2][0]);
-	return (float3)(
-			iw * dot(row0, point4),
-			iw * dot(row1, point4),
-			iw * dot(row2, point4)
-			);
+	return Matrix4x4_ApplyPoint(&trans->m, point);
 }
 
 float3 Transform_ApplyVector(__global Transform *trans, const float3 vector) {
-	const float3 row0 = vload3(0, &trans->m.m[0][0]);
-	const float3 row1 = vload3(0, &trans->m.m[1][0]);
-	const float3 row2 = vload3(0, &trans->m.m[2][0]);
-	return (float3)(
-			dot(row0, vector),
-			dot(row1, vector),
-			dot(row2, vector)
-			);
+	return Matrix4x4_ApplyVector(&trans->m, vector);
+}
+
+float3 Transform_InvApplyPoint(__global Transform *trans, const float3 point) {
+	return Matrix4x4_ApplyPoint(&trans->mInv, point);
+}
+
+float3 Transform_InvApplyVector(__global Transform *trans, const float3 vector) {
+	return Matrix4x4_ApplyVector(&trans->mInv, vector);
 }

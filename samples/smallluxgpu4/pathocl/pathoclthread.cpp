@@ -563,6 +563,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_vector_funcs <<
 			luxrays::ocl::KernelSource_ray_funcs <<
 			luxrays::ocl::KernelSource_spectrum_funcs <<
+			luxrays::ocl::KernelSource_matrix4x4_funcs <<
 			luxrays::ocl::KernelSource_mc_funcs <<
 			luxrays::ocl::KernelSource_frame_funcs <<
 			luxrays::ocl::KernelSource_transform_funcs <<

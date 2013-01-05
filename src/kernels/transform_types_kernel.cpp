@@ -25,6 +25,6 @@ std::string KernelSource_transform_types =
 " ***************************************************************************/\n"
 "\n"
 "typedef struct {\n"
-"	Matrix4x4 m;\n"
+"	Matrix4x4 m, mInv;\n"
 "} Transform;\n"
 ; } }

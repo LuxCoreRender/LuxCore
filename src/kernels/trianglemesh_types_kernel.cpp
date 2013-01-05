@@ -28,8 +28,6 @@ std::string KernelSource_trianglemesh_types =
 "	unsigned int vertsOffset;\n"
 "	unsigned int trisOffset;\n"
 "\n"
-"	// TODO: use Transform\n"
-"	float trans[4][4];\n"
-"	float invTrans[4][4];\n"
+"	Transform trans;\n"
 "} Mesh;\n"
 ; } }
