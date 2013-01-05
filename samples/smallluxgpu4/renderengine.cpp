@@ -377,10 +377,10 @@ CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flm
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	//--------------------------------------------------------------------------
-	// Create and start render threads
+	// Setup render threads array
 	//--------------------------------------------------------------------------
 
-	SLG_LOG("Starting "<< renderThreadCount << " CPU render threads");
+	SLG_LOG("Configuring "<< renderThreadCount << " CPU render threads");
 	renderThreads.resize(renderThreadCount, NULL);
 }
 
