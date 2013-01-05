@@ -1,12 +1,12 @@
 scene.camera.lookat = 0.618576 -11.311428 5.343666 -2.558834 -1.985422 3.632028
 scene.camera.fieldofview = 77.3196
-scene.materials.light.mat_light = 800.000012 800.000012 400.
-scene.objects.mat_light.mat_light = scenes/media/mat_light.ply
-scene.materials.matte.mat_white = 0.603827 0.603827 0.603827
-scene.objects.mat_white.mat_white = scenes/media/mat_white.ply
-scene.partecipatingmedia.singlescatering.enable = 1
-scene.partecipatingmedia.singlescatering.bbox = -11.0 -11.0 -11.0  11.0 11.0 11.0
-scene.partecipatingmedia.singlescatering.stepsize = 20.0
-scene.partecipatingmedia.singlescatering.scattering = 0.15 0.15 0.15
-scene.partecipatingmedia.singlescatering.rrprob = 0.33
-#scene.partecipatingmedia.singlescatering.emission = 0.01 0.01 0.01
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 800.000012 800.000012 400.
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = 0.603827 0.603827 0.603827
+################################################################################
+scene.objects.mat_light.material = mat_light
+scene.objects.mat_light.ply = scenes/media/mat_light.ply
+scene.objects.mat_white.material = mat_white
+scene.objects.mat_white.ply = scenes/media/mat_white.ply

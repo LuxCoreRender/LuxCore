@@ -777,7 +777,7 @@ void PathOCLRenderThread::InitRender() {
 	} else
 		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
 
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize);
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
 	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
 

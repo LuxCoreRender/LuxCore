@@ -92,6 +92,14 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	film->EnableOverlappedScreenBufferUpdate(true);
+
+	//--------------------------------------------------------------------------
+	// Setup render threads array
+	//--------------------------------------------------------------------------
+
+	const size_t renderThreadCount = intersectionDevices.size();
+	SLG_LOG("Configuring "<< renderThreadCount << " CPU render threads");
+	renderThreads.resize(renderThreadCount, NULL);
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
@@ -203,17 +211,18 @@ void PathOCLRenderEngine::StartLockLess() {
 	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
 
 	//--------------------------------------------------------------------------
-	// Create and start render threads
+	// Start render threads
 	//--------------------------------------------------------------------------
 
 	const size_t renderThreadCount = intersectionDevices.size();
 	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
-		PathOCLRenderThread *t = new PathOCLRenderThread(i,
-				i / (float)renderThreadCount,
-				(OpenCLIntersectionDevice *)(intersectionDevices[i]),
-				this);
-		renderThreads.push_back(t);
+		if (!renderThreads[i]) {
+			renderThreads[i] = new PathOCLRenderThread(i,
+					i / (float)renderThreadCount,
+					(OpenCLIntersectionDevice *)(intersectionDevices[i]),
+					this);
+		}
 	}
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
