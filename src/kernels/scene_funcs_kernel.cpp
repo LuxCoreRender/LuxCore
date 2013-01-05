@@ -31,6 +31,8 @@ std::string KernelSource_scene_funcs =
 "	return 1.f;\n"
 "#elif (PARAM_DL_LIGHT_COUNT > 0)\n"
 "	return 1.f / PARAM_DL_LIGHT_COUNT;\n"
+"#else\n"
+"	return 0;\n"
 "#endif\n"
 "}\n"
 ; } }

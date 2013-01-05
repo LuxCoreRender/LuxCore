@@ -25,6 +25,8 @@
 // Matte material
 //------------------------------------------------------------------------------
 
+#if defined (PARAM_ENABLE_MAT_MATTE)
+
 float3 MatteMaterial_Evaluate(__global Material *material, __global Texture *texs,
 #if defined(PARAM_HAS_IMAGEMAPS)
 		__global ImageMap *imageMapDescs,
@@ -77,9 +79,13 @@ float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
 	return M_1_PI_F * kd;
 }
 
+#endif
+
 //------------------------------------------------------------------------------
 // Mirror material
 //------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_MIRROR)
 
 float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
@@ -99,16 +105,22 @@ float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs
 	return kr / (*cosSampledDir);
 }
 
+#endif
+
 //------------------------------------------------------------------------------
 // Generic material functions
 //------------------------------------------------------------------------------
 
 BSDFEvent Material_GetEventTypes(__global Material *mat) {
 	switch (mat->type) {
+#if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return DIFFUSE | REFLECT;
+#endif
+#if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
 			return SPECULAR | REFLECT;
+#endif
 		default:
 			return NONE;
 	}
@@ -116,9 +128,13 @@ BSDFEvent Material_GetEventTypes(__global Material *mat) {
 
 bool Material_IsDelta(__global Material *mat) {
 	switch (mat->type) {
+#if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return false;
+#endif
+#if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
+#endif
 		default:
 			return true;
 	}
@@ -146,6 +162,7 @@ float3 Material_Evaluate(__global Material *mat, __global Texture *texs,
 		const float2 uv, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW) {
 	switch (mat->type) {
+#if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Evaluate(mat, texs,
 #if defined(PARAM_HAS_IMAGEMAPS)
@@ -168,7 +185,10 @@ float3 Material_Evaluate(__global Material *mat, __global Texture *texs,
 #endif
 					uv, lightDir, eyeDir,
 					event, directPdfW);
+#endif
+#if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
+#endif
 		default:
 			return BLACK;
 	}
@@ -200,6 +220,7 @@ float3 Material_Sample(__global Material *mat, __global Texture *texs,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
 	switch (mat->type) {
+#if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Sample(mat, texs, uv, fixedDir, sampledDir,
 					u0, u1,
@@ -207,6 +228,8 @@ float3 Material_Sample(__global Material *mat, __global Texture *texs,
 					passThroughEvent,
 #endif
 					pdfW, cosSampledDir, event);
+#endif
+#if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
 			return MirrorMaterial_Sample(mat, texs, uv, fixedDir, sampledDir,
 					u0, u1,
@@ -214,6 +237,7 @@ float3 Material_Sample(__global Material *mat, __global Texture *texs,
 					passThroughEvent,
 #endif
 					pdfW, cosSampledDir, event);
+#endif
 		default:
 			return BLACK;
 	}

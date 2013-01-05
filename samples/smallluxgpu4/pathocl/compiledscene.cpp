@@ -285,8 +285,7 @@ void CompiledScene::CompileMaterials() {
 
 	const double tStart = WallClockTime();
 
-	enable_MAT_MATTE = false;
-	enable_MAT_MIRROR = false;
+	usedMaterialTypes.clear();
 
 	const u_int materialsCount = scene->matDefs.GetSize();
 	mats.resize(materialsCount);
@@ -305,7 +304,7 @@ void CompiledScene::CompileMaterials() {
 		// Material specific parameters
 		switch (m->GetType()) {
 			case MATTE: {
-				enable_MAT_MATTE = true;
+				usedMaterialTypes.insert(MATTE);
 				MatteMaterial *mm = static_cast<MatteMaterial *>(m);
 
 				mat->type = luxrays::ocl::MATTE;
@@ -313,7 +312,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MIRROR: {
-				enable_MAT_MIRROR = true;
+				usedMaterialTypes.insert(MIRROR);
 				MirrorMaterial *mm = static_cast<MirrorMaterial *>(m);
 
 				mat->type = luxrays::ocl::MIRROR;
@@ -614,32 +613,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 }
 
 bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
-//	switch (type) {
-//		case MATTE:
-//			return enable_MAT_MATTE;
-//		case AREALIGHT:
-//			return enable_MAT_AREALIGHT;
-//		case MIRROR:
-//			return enable_MAT_MIRROR;
-//		case MATTEMIRROR:
-//			return enable_MAT_MATTEMIRROR;
-//		case GLASS:
-//			return enable_MAT_GLASS;
-//		case METAL:
-//			return enable_MAT_METAL;
-//		case MATTEMETAL:
-//			return enable_MAT_MATTEMETAL;
-//		case ARCHGLASS:
-//			return enable_MAT_ARCHGLASS;
-//		case ALLOY:
-//			return enable_MAT_ALLOY;
-//		default:
-//			assert (false);
-//			return false;
-//			break;
-//	}
-
-	return true;
+	return (usedMaterialTypes.find(type) != usedMaterialTypes.end());
 }
 
 }
