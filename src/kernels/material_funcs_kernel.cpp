@@ -535,7 +535,7 @@ std::string KernelSource_material_funcs =
 "			return SPECULAR | REFLECT | TRANSMIT;\n"
 "#endif\n"
 "#if defined (PARAM_ENABLE_MAT_NULL)\n"
-"		case ARCHGLASS:\n"
+"		case NULL:\n"
 "			return SPECULAR | TRANSMIT;\n"
 "#endif\n"
 "		default:\n"

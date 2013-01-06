@@ -180,4 +180,10 @@ Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
 		Spectrum();
 }
 
+Spectrum BSDF::GetPassThroughTransparency() const {
+	const Vector localFixedDir = frame.ToLocal(fixedDir);
+
+	return material->GetPassThroughTransparency(hitPointUV, localFixedDir, passThroughEvent);
+}
+
 } }

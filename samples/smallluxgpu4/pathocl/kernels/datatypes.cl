@@ -206,11 +206,15 @@ typedef struct {
 typedef struct {
 	// Radiance to add to the result if light source is visible
 	Spectrum lightRadiance;
-	float passThroughEvent; // The passthrough sample used for the shadow ray
 
 	float lastPdfW;
 	int lastSpecular;
 } PathStateDirectLight;
+
+typedef struct {
+	float passThroughEvent; // The passthrough sample used for the shadow ray
+	BSDF passThroughBsdf;
+} PathStateDirectLightPassThrough;
 
 typedef struct {
 	unsigned int vertexCount;
@@ -231,6 +235,9 @@ typedef struct {
 	PathStateBase pathStateBase;
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	PathStateDirectLight directLightState;
+#if defined(PARAM_HAS_PASSTHROUGHT)
+	PathStateDirectLightPassThrough passThroughState;
+#endif
 #endif
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	PathStateAlphaChannel alphaChannelState;

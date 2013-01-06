@@ -532,7 +532,7 @@ BSDFEvent Material_GetEventTypes(__global Material *mat) {
 			return SPECULAR | REFLECT | TRANSMIT;
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
-		case ARCHGLASS:
+		case NULL:
 			return SPECULAR | TRANSMIT;
 #endif
 		default:

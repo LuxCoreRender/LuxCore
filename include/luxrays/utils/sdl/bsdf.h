@@ -59,9 +59,7 @@ public:
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
 
-	Spectrum GetPassThroughTransparency() const {
-		return material->GetPassThroughTransparency(hitPointUV, fixedDir, passThroughEvent);
-	}
+	Spectrum GetPassThroughTransparency() const;
 
 	Spectrum Evaluate(const Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
