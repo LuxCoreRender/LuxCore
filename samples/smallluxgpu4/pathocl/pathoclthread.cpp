@@ -737,8 +737,14 @@ void PathOCLRenderThread::InitRender() {
 
 	gpuTaksSize += sizeof(slg::ocl::PathStateBase);
 
-	if (triAreaLightCount > 0)
+	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
+		renderEngine->compiledScene->IsMaterialCompiled(NULLMAT));
+	if (triAreaLightCount > 0) {
 		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
+
+		if (hasPassThrough)
+			gpuTaksSize += sizeof(slg::ocl::PathStateDirectLightPassThrough);
+	}
 
 	if (alphaFrameBufferBuff)
 		gpuTaksSize += sizeof(slg::ocl::PathStateAlphaChannel);
@@ -749,8 +755,6 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate sample data buffers
 	//--------------------------------------------------------------------------
 
-	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
-		renderEngine->compiledScene->IsMaterialCompiled(NULLMAT));
 	const size_t uDataEyePathVertexSize =
 		// IDX_SCREEN_X, IDX_SCREEN_Y
 		sizeof(float) * 2 +
