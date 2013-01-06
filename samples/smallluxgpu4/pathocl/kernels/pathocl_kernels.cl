@@ -182,6 +182,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_INFINITELIGHT)
 		, __global InfiniteLight *infiniteLight
 #endif
+#if (PARAM_DL_LIGHT_COUNT > 0)
+		, __global TriangleLight *triLightDefs
+		, __global uint *meshLights
+#endif
 #if defined(PARAM_HAS_IMAGEMAPS)
 		, __global ImageMap *imageMapDescs
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
@@ -202,10 +206,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
-#endif
-#if (PARAM_DL_LIGHT_COUNT > 0)
-		, __global TriangleLight *triLightDefs
-		, __global uint *meshLights
 #endif
 		) {
 	const size_t gid = get_global_id(0);
@@ -254,7 +254,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					meshFirstTriangleOffset,
 					meshDescs,
 #endif
-					mats, texs, meshMats, meshIDs,
+					meshMats, meshIDs,
 #if (PARAM_DL_LIGHT_COUNT > 0)
 					meshLights,
 #endif
@@ -269,8 +269,26 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			// Check if it is a light source
 			if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
 				float directPdfA;
-				const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs, triLightDefs, &directPdfA);
-
+				const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+						imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+						imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+						imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+						imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+						imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+						imageMapBuff4,
+#endif
+#endif
+						triLightDefs, &directPdfA);
 				if (any(isnotequal(emittedRadiance, BLACK))) {
 					// Add emitted radiance
 					float weight = 1.f;
@@ -285,7 +303,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 					float3 radiance = vload3(0, &sample->radiance.r);
 					const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
-					float directPdfA;
 					radiance += pathThrouput * weight * emittedRadiance;
 					vstore3(radiance, 0, &sample->radiance.r);
 				}
@@ -376,6 +393,24 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			float distance, directPdfW;
 			float3 lightRadiance = TriangleLight_Illuminate(
 					l, mats, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
 					vload3(0, &bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
@@ -405,6 +440,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #endif
 						lightRayDir, &event, &bsdfPdfW);
+
 				if (any(isnotequal(bsdfEval, BLACK))) {
 					const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
 					const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));

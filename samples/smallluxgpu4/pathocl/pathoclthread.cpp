@@ -260,11 +260,8 @@ void PathOCLRenderThread::InitGeometry() {
 	AllocOCLBufferRO(&normalsBuff, &cscene->normals[0],
 		sizeof(Normal) * cscene->normals.size(), "Normals");
 
-	if (cscene->uvs.size() > 0)
-		AllocOCLBufferRO(&uvsBuff, &cscene->uvs[0],
-			sizeof(UV) * cscene->uvs.size(), "UVs");
-	else
-		uvsBuff = NULL;
+	AllocOCLBufferRO(&uvsBuff, &cscene->uvs[0],
+		sizeof(UV) * cscene->uvs.size(), "UVs");
 
 	AllocOCLBufferRO(&vertsBuff, &cscene->verts[0],
 		sizeof(Point) * cscene->verts.size(), "Vertices");
@@ -350,17 +347,24 @@ void PathOCLRenderThread::InitSkyLight() {
 void PathOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	if (cscene->imageMapMemBlocks.size() > 0) {
+	if (cscene->imageMapDescs.size() > 0) {
 		AllocOCLBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
 				sizeof(luxrays::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMaps description");
 
-		imageMapsBuff.resize(cscene->imageMapMemBlocks.size());
-		for (u_int i = 0; i < cscene->imageMapMemBlocks.size(); ++i) {
+		// Free unused pages
+		for (u_int i = cscene->imageMapMemBlocks.size(); i < imageMapsBuff.size(); ++i)
+			FreeOCLBuffer(&imageMapsBuff[i]);
+		imageMapsBuff.resize(cscene->imageMapMemBlocks.size(), NULL);
+
+		for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
 			AllocOCLBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
 					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
 		}
+
 	} else {
 		FreeOCLBuffer(&imageMapDescsBuff);
+		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
+			FreeOCLBuffer(&imageMapsBuff[i]);
 		imageMapsBuff.resize(0);
 	}
 }
@@ -849,7 +853,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *triLightDefsBuff);
 		advancePathsKernel->setArg(argIndex++, *meshLightsBuff);
 	}
-
 	if (imageMapDescsBuff) {
 		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);
 
@@ -942,6 +945,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&imageMapDescsBuff);
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 		FreeOCLBuffer(&imageMapsBuff[i]);
+	imageMapsBuff.resize(0);
 
 	started = false;
 

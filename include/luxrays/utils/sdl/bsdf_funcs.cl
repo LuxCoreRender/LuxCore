@@ -28,8 +28,6 @@ void BSDF_Init(
 		__global uint *meshFirstTriangleOffset,
 		__global Mesh *meshDescs,
 #endif
-		__global Material *mats,
-		__global Texture *texs,
 		__global uint *meshMats,
 		__global uint *meshIDs,
 #if (PARAM_DL_LIGHT_COUNT > 0)
@@ -72,15 +70,17 @@ void BSDF_Init(
 	bsdf->materialIndex = matIndex;
 
 	// Interpolate face normal and UV coordinates
+	const float b1 = rayHit->b1;
+	const float b2 = rayHit->b2;
 #if defined(PARAM_ACCEL_MQBVH)
 	vstore3(Mesh_GetGeometryNormal(iVertices, iTriangles, triangleID), 0, &bsdf->geometryN.x);
-	float3 shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, rayHit->b1, rayHit->b2);
+	float3 shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, b1, b2);
 	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
-	vstore2(Mesh_InterpolateTriUV(iVertUVs, iTriangles, triangleID, rayHit->b1, rayHit->b2), 0, &bsdf->hitPointUV.u);
+	vstore2(Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2), 0, &bsdf->hitPointUV.u);
 #else
 	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
-	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2);
-	vstore2(Mesh_InterpolateTriUV(vertUVs, triangles, currentTriangleIndex, rayHit->b1, rayHit->b2), 0, &bsdf->hitPointUV.u);
+	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
+	vstore2(Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2), 0, &bsdf->hitPointUV.u);
 #endif
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
@@ -264,7 +264,7 @@ float3 BSDF_Sample(
 			imageMapBuff4,
 #endif
 #endif
-			(float2)(0.f, 0.f), localFixedDir, &localSampledDir,
+			vload2(0, &bsdf->hitPointUV.u), localFixedDir, &localSampledDir,
 			u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 			bsdf->passThroughEvent,
@@ -291,13 +291,50 @@ bool BSDF_IsDelta(__global BSDF *bsdf, __global Material *mats) {
 }
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
-float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, __global Material *mats,
-		__global Texture *texs, __global TriangleLight *triLightDefs, float *directPdfA) {
+float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
+		__global Material *mats, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
+		__global TriangleLight *triLightDefs, float *directPdfA) {
 	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
 	if (triangleLightSourceIndex == NULL_INDEX)
 		return BLACK;
 	else
 		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex], mats, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
 				vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->geometryN.x), vload2(0, &bsdf->hitPointUV.u), directPdfA);
 }
 #endif

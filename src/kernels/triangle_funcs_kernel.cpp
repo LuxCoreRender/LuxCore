@@ -50,6 +50,6 @@ std::string KernelSource_triangle_funcs =
 "\n"
 "float2 Triangle_InterpolateUV(const float2 uv0, const float2 uv1, const float2 uv2,\n"
 "		const float b0, const float b1, const float b2) {\n"
-"	return normalize(b0 * uv0 + b1 * uv1 + b2 * uv2);\n"
+"	return b0 * uv0 + b1 * uv1 + b2 * uv2;\n"
 "}\n"
 ; } }

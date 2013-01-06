@@ -79,6 +79,7 @@ public:
 	Texture *GetTexture(const u_int index) {
 		return texs[index];
 	}
+	u_int GetTextureIndex(const std::string &name);
 	u_int GetTextureIndex(const Texture *t) const;
 
 	u_int GetSize()const { return static_cast<u_int>(texs.size()); }
@@ -87,12 +88,9 @@ public:
 	void DeleteTexture(const std::string &name);
 
 private:
-	u_int GetTextureIndex(const std::string &name);
 
 	std::vector<Texture *> texs;
 	std::map<std::string, Texture *> texsByName;
-	std::map<std::string, u_int> indexByName;
-	std::map<const Texture *, u_int> indexByPtr;
 };
 
 //------------------------------------------------------------------------------
@@ -361,6 +359,8 @@ public:
 	virtual float GetAlphaValue(const UV &uv) const { return imgMapInstance->GetAlpha(uv); }
 
 	virtual const UV GetDuDv() const { return imgMapInstance->GetDuDv(); }
+
+	const ImageMapInstance *GetImageMapInstance() const { return imgMapInstance; }
 
 private:
 	const ImageMapInstance *imgMapInstance;

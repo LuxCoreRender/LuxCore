@@ -42,7 +42,7 @@ float3 Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *trian
 	return Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);
 }
 
-float2 Mesh_InterpolateTriUV(__global UV *vertUVs, __global Triangle *triangles,
+float2 Mesh_InterpolateUV(__global UV *vertUVs, __global Triangle *triangles,
 		const uint triIndex, const float b1, const float b2) {
 	__global Triangle *tri = &triangles[triIndex];
 	const float2 uv0 = vload2(0, &vertUVs[tri->v[0]].u);

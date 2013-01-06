@@ -47,5 +47,5 @@ float3 Triangle_InterpolateNormal(const float3 n0, const float3 n1, const float3
 
 float2 Triangle_InterpolateUV(const float2 uv0, const float2 uv1, const float2 uv2,
 		const float b0, const float b1, const float b2) {
-	return normalize(b0 * uv0 + b1 * uv1 + b2 * uv2);
+	return b0 * uv0 + b1 * uv1 + b2 * uv2;
 }

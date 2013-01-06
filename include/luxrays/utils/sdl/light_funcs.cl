@@ -81,8 +81,26 @@ float3 InfiniteLight_GetRadiance(
 // TriangleLight
 //------------------------------------------------------------------------------
 
-float3 TriangleLight_Illuminate(
-		__global TriangleLight *triLight, __global Material *mats, __global Texture *texs,
+float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
+		__global Material *mats, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
 		const float3 p, const float u0, const float u1, const float u2,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float3 p0 = vload3(0, &triLight->v0.x);
@@ -112,11 +130,49 @@ float3 TriangleLight_Illuminate(
 	const float2 uv2 = vload2(0, &triLight->uv2.u);
 	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs, triUV);
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+			triUV);
 }
 
-float3 TriangleLight_GetRadiance(__global TriangleLight *triLight, __global Material *mats,
-		 __global Texture *texs, const float3 dir, const float3 hitPointNormal,
+float3 TriangleLight_GetRadiance(__global TriangleLight *triLight,
+		__global Material *mats, __global Texture *texs, 
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
+		const float3 dir, const float3 hitPointNormal,
 		const float2 triUV, float *directPdfA) {
 	const float cosOutLight = dot(hitPointNormal, dir);
 	if (cosOutLight <= 0.f)
@@ -125,5 +181,24 @@ float3 TriangleLight_GetRadiance(__global TriangleLight *triLight, __global Mate
 	if (directPdfA)
 		*directPdfA = triLight->invArea;
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs, triUV);
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+			triUV);
 }
