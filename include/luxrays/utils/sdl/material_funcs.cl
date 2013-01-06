@@ -203,6 +203,261 @@ float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs
 #endif
 
 //------------------------------------------------------------------------------
+// Glass material
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_GLASS)
+
+float3 GlassMaterial_Sample(__global Material *material, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
+		const float2 uv, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) {
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+
+	// TODO: remove
+	const float3 shadeN = (float3)(0.f, 0.f, into ? 1.f : -1.f);
+	const float3 N = (float3)(0.f, 0.f, 1.f);
+
+	const float3 rayDir = -fixedDir;
+	const float3 reflDir = rayDir - (2.f * dot(N, rayDir)) * N;
+
+	const float nc = Texture_GetGreyValue(&texs[material->glass.ousideIorTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
+				uv);
+	const float nt = Texture_GetGreyValue(&texs[material->glass.iorTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
+				uv);
+	const float nnt = into ? (nc / nt) : (nt / nc);
+	const float nnt2 = nnt * nnt;
+	const float ddn = dot(rayDir, shadeN);
+	const float cos2t = 1.f - nnt2 * (1.f - ddn * ddn);
+
+	// Total internal reflection
+	if (cos2t < 0.f) {
+		*event = SPECULAR | REFLECT;
+		*sampledDir = reflDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		*pdfW = 1.f;
+
+		const float3 kr = Texture_GetColorValue(&texs[material->glass.krTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
+				uv);
+		return kr / (*cosSampledDir);
+	}
+
+	const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
+	const float3 nkk = kk * N;
+	const float3 transDir = normalize(nnt * rayDir - nkk);
+
+	const float c = 1.f - (into ? -ddn : dot(transDir, N));
+	const float c2 = c * c;
+	const float a = nt - nc;
+	const float b = nt + nc;
+	const float R0 = a * a / (b * b);
+	const float Re = R0 + (1.f - R0) * c2 * c2 * c;
+	const float Tr = 1.f - Re;
+	const float P = .25f + .5f * Re;
+
+	if (Tr == 0.f) {
+		if (Re == 0.f)
+			return BLACK;
+		else {
+			*event = SPECULAR | REFLECT;
+			*sampledDir = reflDir;
+			*cosSampledDir = fabs((*sampledDir).z);
+			*pdfW = 1.f;
+
+			const float3 kr = Texture_GetColorValue(&texs[material->glass.krTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
+					uv);
+			return kr / (*cosSampledDir);
+		}
+	} else if (Re == 0.f) {
+		*event = SPECULAR | TRANSMIT;
+		*sampledDir = transDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		*pdfW = 1.f;
+
+//		if (fromLight)
+//			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
+//		else
+//			return Kt->GetColorValue(uv) / (*cosSampledDir);
+		const float3 kt = Texture_GetColorValue(&texs[material->glass.ktTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
+				uv);
+		return kt / (*cosSampledDir);
+	} else if (u0 < P) {
+		*event = SPECULAR | REFLECT;
+		*sampledDir = reflDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		*pdfW = P / Re;
+
+		const float3 kr = Texture_GetColorValue(&texs[material->glass.krTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
+				uv);
+		return kr / (*cosSampledDir);
+	} else {
+		*event = SPECULAR | TRANSMIT;
+		*sampledDir = transDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		*pdfW = (1.f - P) / Tr;
+
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+//		if (fromLight)
+//			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
+//		else
+//			return Kt->GetColorValue(uv) / (*cosSampledDir);
+		const float3 kt = Texture_GetColorValue(&texs[material->glass.ktTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+				imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+				imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+				imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+				imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+				imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+				imageMapBuff4,
+#endif
+#endif
+				uv);
+		return kt / (*cosSampledDir);
+	}
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // ArchGlass material
 //------------------------------------------------------------------------------
 
@@ -527,6 +782,10 @@ BSDFEvent Material_GetEventTypes(__global Material *mat) {
 		case MIRROR:
 			return SPECULAR | REFLECT;
 #endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
+			return SPECULAR | REFLECT | TRANSMIT;
+#endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 			return SPECULAR | REFLECT | TRANSMIT;
@@ -548,6 +807,9 @@ bool Material_IsDelta(__global Material *mat) {
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
+#endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -608,6 +870,9 @@ float3 Material_Evaluate(__global Material *material, __global Texture *texs,
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
+#endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -702,9 +967,37 @@ float3 Material_Sample(__global Material *material, __global Texture *texs,
 #endif
 					pdfW, cosSampledDir, event);
 #endif
-#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
+			#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 			return ArchGlassMaterial_Sample(material, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
+					uv, fixedDir, sampledDir,
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event);
+#endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
+			return GlassMaterial_Sample(material, texs,
 #if defined(PARAM_HAS_IMAGEMAPS)
 					imageMapDescs,
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
@@ -863,6 +1156,9 @@ float3 Material_GetPassThroughTransparency(__global Material *material, __global
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
+#endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
 #endif
 		default:
 			return BLACK;
