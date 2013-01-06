@@ -12,6 +12,7 @@ scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = 8.0 8.0 8.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply

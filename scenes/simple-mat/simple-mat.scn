@@ -15,8 +15,10 @@ scene.materials.texmap.type = matte
 scene.materials.texmap.kd = imagemap
 scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = 60.0 60.0 60.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
 scene.materials.whitelight2.type = matte
 scene.materials.whitelight2.emission = 40.0 40.0 40.0
+scene.materials.whitelight2.kd = 0.0 0.0 0.0
 #scene.materials.archglass.aglass = 0.25 0.25 0.25  0.0 0.0 0.8 0 0
 ################################################################################
 scene.objects.back.material = whitematte
