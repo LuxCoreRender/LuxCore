@@ -338,3 +338,129 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 				vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->geometryN.x), vload2(0, &bsdf->hitPointUV.u), directPdfA);
 }
 #endif
+
+#if defined(PARAM_HAS_PASSTHROUGHT)
+float3 GetPassThroughTransparency(
+#if defined(PARAM_ACCEL_MQBVH)
+		__global uint *meshFirstTriangleOffset,
+		__global Mesh *meshDescs,
+#endif
+		__global uint *meshMats,
+		__global uint *meshIDs,
+		__global UV *vertUVs,
+		__global Triangle *triangles,
+		__global Ray *ray,
+		__global RayHit *rayHit,
+		const float passThroughEvent,
+		__global Material *mats,
+		__global Texture *texs
+#if defined(PARAM_HAS_IMAGEMAPS)
+		, __global ImageMap *imageMapDescs
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		, __global float *imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		, __global float *imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		, __global float *imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		, __global float *imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		, __global float *imageMapBuff4
+#endif
+#endif
+		) {
+	const float3 fixedDir = -vload3(0, &ray->d.x);
+
+	const uint currentTriangleIndex = rayHit->index;
+	const uint meshIndex = meshIDs[currentTriangleIndex];
+
+#if defined(PARAM_ACCEL_MQBVH)
+	__global Mesh *meshDesc = &meshDescs[meshIndex];
+	__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
+	__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+	const uint triangleID = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
+#endif
+
+	// Get the material
+	const uint matIndex = meshMats[meshIndex];
+
+	// Interpolate face normal and UV coordinates
+	const float b1 = rayHit->b1;
+	const float b2 = rayHit->b2;
+#if defined(PARAM_ACCEL_MQBVH)
+	const float2 hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2);
+#else
+	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
+#endif
+
+	return Material_GetPassThroughTransparency(
+			&mats[matIndex], texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+			hitPointUV, fixedDir, passThroughEvent);
+}
+
+float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf,
+		__global Material *mats, __global Texture *texs
+#if defined(PARAM_HAS_IMAGEMAPS)
+		, __global ImageMap *imageMapDescs
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		, __global float *imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		, __global float *imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		, __global float *imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		, __global float *imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		, __global float *imageMapBuff4
+#endif
+#endif
+		) {
+	return Material_GetPassThroughTransparency(
+			&mats[bsdf->materialIndex], texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+			vload2(0, &bsdf->hitPointUV.u), vload3(0, &bsdf->fixedDir.x), bsdf->passThroughEvent);
+}
+#endif

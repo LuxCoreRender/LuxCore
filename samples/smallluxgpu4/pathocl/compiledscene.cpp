@@ -319,9 +319,25 @@ void CompiledScene::CompileMaterials() {
 				mat->mirror.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
 				break;
 			}
-			default:
-				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
+			case ARCHGLASS: {
+				usedMaterialTypes.insert(ARCHGLASS);
+				ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);
+
+				mat->type = luxrays::ocl::ARCHGLASS;
+				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
+				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
 				break;
+			}
+			default:
+			case NULLMAT: {
+				usedMaterialTypes.insert(NULLMAT);
+
+				mat->type = luxrays::ocl::NULLMAT;
+				break;
+			}
+//			default:
+//				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
+//				break;
 		}
 	}
 

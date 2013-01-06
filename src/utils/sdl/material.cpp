@@ -261,7 +261,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
 		else
 			return Kt->GetColorValue(uv) / (*cosSampledDir);
-	} else if (u0 < P) {
+	} else if (passThroughEvent < P) {
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
 		*cosSampledDir = fabsf(sampledDir->z);
@@ -349,7 +349,7 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW = 1.f;
 
 		return Kt->GetColorValue(uv) / (*cosSampledDir);
-	} else if (u0 < P) {
+	} else if (passThroughEvent < P) {
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
 		*cosSampledDir = fabsf(sampledDir->z);
@@ -366,6 +366,41 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return Kt->GetColorValue(uv) / (*cosSampledDir);
 	}
+}
+
+Spectrum ArchGlassMaterial::GetPassThroughTransparency(const UV &uv,
+		const Vector &fixedDir, const float passThroughEvent) const {
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+
+	// TODO: remove
+	const Vector shadeN(0.f, 0.f, into ? 1.f : -1.f);
+	const Vector N(0.f, 0.f, 1.f);
+
+	const Vector rayDir = -fixedDir;
+
+	const float ddn = Dot(rayDir, shadeN);
+	const float cos2t = ddn * ddn;
+
+	// Total internal reflection is not possible
+	const float kk = (into ? 1.f : -1.f) * (ddn + sqrtf(cos2t));
+	const Vector nkk = kk * Vector(N);
+	const Vector transDir = Normalize(rayDir - nkk);
+
+	const float c = 1.f - (into ? -ddn : Dot(transDir, N));
+	const float c2 = c * c;
+	const float Re = c2 * c2 * c;
+	const float Tr = 1.f - Re;
+	const float P = .25f + .5f * Re;
+
+	if (Tr == 0.f)
+		return Spectrum();
+	else if (Re == 0.f)
+		return Kt->GetColorValue(uv);
+	else if (passThroughEvent < P)
+		return Spectrum();
+	else
+		return Kt->GetColorValue(uv);
 }
 
 void ArchGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
@@ -443,14 +478,15 @@ void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 // Mix material
 //------------------------------------------------------------------------------
 
-Spectrum MixMaterial::GetPassThroughTransparency(const UV &uv, const float passThroughEvent) const {
+Spectrum MixMaterial::GetPassThroughTransparency(const UV &uv, const Vector &fixedDir,
+		const float passThroughEvent) const {
 	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	if (passThroughEvent < weight1)
-		return matA->GetPassThroughTransparency(uv, passThroughEvent / weight1);
+		return matA->GetPassThroughTransparency(uv, fixedDir, passThroughEvent / weight1);
 	else
-		return matB->GetPassThroughTransparency(uv, (passThroughEvent - weight2) / weight2);
+		return matB->GetPassThroughTransparency(uv, fixedDir, (passThroughEvent - weight2) / weight2);
 }
 
 Spectrum MixMaterial::GetEmittedRadiance(const UV &uv) const {

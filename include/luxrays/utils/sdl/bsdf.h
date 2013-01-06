@@ -60,7 +60,7 @@ public:
 	bool IsDelta() const { return material->IsDelta(); }
 
 	Spectrum GetPassThroughTransparency() const {
-		return material->GetPassThroughTransparency(hitPointUV, passThroughEvent);
+		return material->GetPassThroughTransparency(hitPointUV, fixedDir, passThroughEvent);
 	}
 
 	Spectrum Evaluate(const Vector &generatedDir,
