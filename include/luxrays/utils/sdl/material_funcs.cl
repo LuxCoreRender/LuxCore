@@ -53,11 +53,48 @@ float3 MatteMaterial_Evaluate(__global Material *material, __global Texture *tex
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv);
+	const float3 kd = Texture_GetColorValue(&texs[material->matte.kdTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+			uv);
 	return M_1_PI_F * kd;
 }
 
 float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGHT)
@@ -75,7 +112,27 @@ float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv);
+	const float3 kd = Texture_GetColorValue(&texs[material->matte.kdTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+
+			uv);
 	return M_1_PI_F * kd;
 }
 
@@ -88,6 +145,24 @@ float3 MatteMaterial_Sample(__global Material *material, __global Texture *texs,
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 
 float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
@@ -100,7 +175,27 @@ float3 MirrorMaterial_Sample(__global Material *material, __global Texture *texs
 	*pdfW = 1.f;
 
 	*cosSampledDir = fabs((*sampledDir).z);
-	const float3 kr = Texture_GetColorValue(&texs[material->mirror.krTexIndex], uv);
+	const float3 kr = Texture_GetColorValue(&texs[material->mirror.krTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+			imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			imageMapBuff4,
+#endif
+#endif
+
+			uv);
 	// The cosSampledDir is used to compensate the other one used inside the integrator
 	return kr / (*cosSampledDir);
 }
@@ -222,7 +317,26 @@ float3 Material_Sample(__global Material *mat, __global Texture *texs,
 	switch (mat->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
-			return MatteMaterial_Sample(mat, texs, uv, fixedDir, sampledDir,
+			return MatteMaterial_Sample(mat, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
+					uv, fixedDir, sampledDir,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 					passThroughEvent,
@@ -231,7 +345,26 @@ float3 Material_Sample(__global Material *mat, __global Texture *texs,
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
-			return MirrorMaterial_Sample(mat, texs, uv, fixedDir, sampledDir,
+			return MirrorMaterial_Sample(mat, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
+					uv, fixedDir, sampledDir,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 					passThroughEvent,
@@ -243,10 +376,48 @@ float3 Material_Sample(__global Material *mat, __global Texture *texs,
 	}
 }
 
-float3 Material_GetEmittedRadiance(__global Material *mat, __global Texture *texs, const float2 triUV) {
+float3 Material_GetEmittedRadiance(__global Material *mat, __global Texture *texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+		__global ImageMap *imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		__global float *imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		__global float *imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		__global float *imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		__global float *imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		__global float *imageMapBuff4,
+#endif
+#endif
+	const float2 triUV) {
 	const uint emitTexIndex = mat->emitTexIndex;
 	if (emitTexIndex == NULL_INDEX)
 		return BLACK;
 
-	return Texture_GetColorValue(&texs[emitTexIndex], triUV);	
+	return Texture_GetColorValue(&texs[emitTexIndex],
+#if defined(PARAM_HAS_IMAGEMAPS)
+					imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					imageMapBuff4,
+#endif
+#endif
+			triUV);	
 }

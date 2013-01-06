@@ -46,9 +46,6 @@ TextureDefinitions::~TextureDefinitions() {
 void TextureDefinitions::DefineTexture(const std::string &name, Texture *t) {
 	texs.push_back(t);
 	texsByName.insert(std::make_pair(name, t));
-	const u_int index = texs.size() - 1;
-	indexByName.insert(std::make_pair(name, index));
-	indexByPtr.insert(std::make_pair(t, index));
 }
 
 Texture *TextureDefinitions::GetTexture(const std::string &name) {
@@ -72,31 +69,21 @@ std::vector<std::string> TextureDefinitions::GetTextureNames() const {
 
 void TextureDefinitions::DeleteTexture(const std::string &name) {
 	const u_int index = GetTextureIndex(name);
-	Texture *tex = texs[index];
 	texs.erase(texs.begin() + index);
 	texsByName.erase(name);
-	indexByName.erase(name);
-	indexByPtr.erase(tex);
 }
 
 u_int TextureDefinitions::GetTextureIndex(const Texture *t) const {
-	// Check if the texture has been already defined
-	std::map<const Texture *, u_int>::const_iterator it = indexByPtr.find(t);
+	for (u_int i = 0; i < texs.size(); ++i) {
+		if (t == texs[i])
+			return i;
+	}
 
-	if (it == indexByPtr.end())
-		throw std::runtime_error("Reference to an undefined texture: " + boost::lexical_cast<std::string>(t));
-	else
-		return it->second;
+	throw std::runtime_error("Reference to an undefined texture: " + boost::lexical_cast<std::string>(t));
 }
 
 u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
-	// Check if the texture has been already defined
-	std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
-
-	if (it == indexByName.end())
-		throw std::runtime_error("Reference to an undefined texture: " + name);
-	else
-		return it->second;
+	return GetTextureIndex(GetTexture(name));
 }
 
 //------------------------------------------------------------------------------

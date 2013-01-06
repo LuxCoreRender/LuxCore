@@ -517,6 +517,20 @@ void CompiledScene::CompileTextures() {
 				tex->constFloat4.alpha = cft->GetAlpha();
 				break;
 			}
+			case IMAGEMAP: {
+				ImageMapTexture *imt = static_cast<ImageMapTexture *>(t);
+
+				tex->type = luxrays::ocl::IMAGEMAP;
+				tex->imageMapInstance.gain = imt->GetImageMapInstance()->GetGain();
+				tex->imageMapInstance.uScale = imt->GetImageMapInstance()->GetUScale();
+				tex->imageMapInstance.vScale = imt->GetImageMapInstance()->GetVScale();
+				tex->imageMapInstance.uDelta = imt->GetImageMapInstance()->GetUDelta();
+				tex->imageMapInstance.vDelta = imt->GetImageMapInstance()->GetVDelta();
+				tex->imageMapInstance.Du = imt->GetImageMapInstance()->GetDuDv().u;
+				tex->imageMapInstance.Dv = imt->GetImageMapInstance()->GetDuDv().v;
+				tex->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(imt->GetImageMapInstance()->GetImgMap());
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;
@@ -551,7 +565,7 @@ void CompiledScene::CompileImageMaps() {
 		const u_int memSize = pixelCount * im->GetChannelCount() * sizeof(float);
 
 		if (memSize > maxMemPageSize)
-			throw std::runtime_error("The RGB channels of a texture map are too big to fit in a single block of memory");
+			throw std::runtime_error("An image map is too big to fit in a single block of memory");
 
 		bool found = false;
 		u_int page;

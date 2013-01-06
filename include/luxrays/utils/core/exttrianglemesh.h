@@ -25,6 +25,8 @@
 #include <cassert>
 #include <cstdlib>
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/triangle.h"
@@ -225,7 +227,6 @@ public:
 	void DefineExtMesh(const std::string &name, ExtMesh *t) {
 		meshs.push_back(t);
 		meshsByName.insert(std::make_pair(name, t));
-		indexByName.insert(std::make_pair(name, meshs.size() - 1));
 	}
 
 	ExtMesh *GetExtMesh(const std::string &name) {
@@ -247,13 +248,15 @@ public:
 	}
 
 	u_int GetExtMeshIndex(const std::string &name) {
-		// Check if the mesh has been already defined
-		std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
+		return GetExtMeshIndex(GetExtMesh(name));
+	}
+	u_int GetExtMeshIndex(const ExtMesh *m) const {
+		for (u_int i = 0; i < meshs.size(); ++i) {
+			if (m == meshs[i])
+				return i;
+		}
 
-		if (it == indexByName.end())
-			throw std::runtime_error("Reference to an undefined mesh: " + name);
-		else
-			return it->second;
+		throw std::runtime_error("Reference to an undefined mesh: " + boost::lexical_cast<std::string>(m));
 	}
 
 	vector<std::string> GetExtMeshNames() const {
@@ -272,7 +275,6 @@ private:
 
 	std::vector<ExtMesh *> meshs;
 	std::map<std::string, ExtMesh *> meshsByName;
-	std::map<std::string, u_int> indexByName;
 };
 
 }

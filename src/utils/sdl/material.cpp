@@ -44,8 +44,6 @@ void MaterialDefinitions::DefineMaterial(const std::string &name, Material *m) {
 
 	mats.push_back(m);
 	matsByName.insert(std::make_pair(name, m));
-	indexByName.insert(std::make_pair(name, mats.size() - 1));
-	indexByPtr.insert(std::make_pair(m, mats.size() - 1));
 }
 
 void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
@@ -59,10 +57,6 @@ void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
 	mats[index] = m;
 	matsByName.erase(name);
 	matsByName.insert(std::make_pair(name, m));
-	indexByName.erase(name);
-	indexByName.insert(std::make_pair(name, index));
-	indexByPtr.erase(oldMat);
-	indexByPtr.insert(std::make_pair(m, index));
 
 	// Delete old material
 	delete oldMat;
@@ -82,24 +76,17 @@ Material *MaterialDefinitions::GetMaterial(const std::string &name) {
 		return it->second;
 }
 
-u_int MaterialDefinitions::GetMaterialIndex(const std::string &name) const {
-	// Check if the material has been already defined
-	std::map<std::string, u_int>::const_iterator it = indexByName.find(name);
-
-	if (it == indexByName.end())
-		throw std::runtime_error("Reference to an undefined material: " + name);
-	else
-		return it->second;
+u_int MaterialDefinitions::GetMaterialIndex(const std::string &name) {
+	return GetMaterialIndex(GetMaterial(name));
 }
 
 u_int MaterialDefinitions::GetMaterialIndex(const Material *m) const {
-	// Check if the material has been already defined
-	std::map<const Material *, u_int>::const_iterator it = indexByPtr.find(m);
+	for (u_int i = 0; i < mats.size(); ++i) {
+		if (m == mats[i])
+			return i;
+	}
 
-	if (it == indexByPtr.end())
-		throw std::runtime_error("Reference to an undefined material: " + boost::lexical_cast<std::string>(m));
-	else
-		return it->second;
+	throw std::runtime_error("Reference to an undefined material: " + boost::lexical_cast<std::string>(m));
 }
 
 std::vector<std::string> MaterialDefinitions::GetMaterialNames() const {
@@ -113,11 +100,8 @@ std::vector<std::string> MaterialDefinitions::GetMaterialNames() const {
 
 void MaterialDefinitions::DeleteMaterial(const std::string &name) {
 	const u_int index = GetMaterialIndex(name);
-	Material *m = mats[index];
 	mats.erase(mats.begin() + index);
 	matsByName.erase(name);
-	indexByName.erase(name);
-	indexByPtr.erase(m);
 }
 
 //------------------------------------------------------------------------------

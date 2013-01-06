@@ -136,6 +136,7 @@ public:
 	Material *GetMaterial(const u_int index) {
 		return mats[index];
 	}
+	u_int GetMaterialIndex(const std::string &name);
 	u_int GetMaterialIndex(const Material *m) const;
 
 	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
@@ -144,12 +145,8 @@ public:
 	void DeleteMaterial(const std::string &name);
   
 private:
-	u_int GetMaterialIndex(const std::string &name) const;
-
 	std::vector<Material *> mats;
 	std::map<std::string, Material *> matsByName;
-	std::map<std::string, u_int> indexByName;
-	std::map<const Material *, u_int> indexByPtr;
 };
 
 //------------------------------------------------------------------------------

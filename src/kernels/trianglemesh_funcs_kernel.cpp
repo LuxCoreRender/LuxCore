@@ -45,7 +45,7 @@ std::string KernelSource_trianglemesh_funcs =
 "	return Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);\n"
 "}\n"
 "\n"
-"float2 Mesh_InterpolateTriUV(__global UV *vertUVs, __global Triangle *triangles,\n"
+"float2 Mesh_InterpolateUV(__global UV *vertUVs, __global Triangle *triangles,\n"
 "		const uint triIndex, const float b1, const float b2) {\n"
 "	__global Triangle *tri = &triangles[triIndex];\n"
 "	const float2 uv0 = vload2(0, &vertUVs[tri->v[0]].u);\n"
