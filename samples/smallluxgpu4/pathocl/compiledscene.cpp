@@ -319,6 +319,17 @@ void CompiledScene::CompileMaterials() {
 				mat->mirror.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
 				break;
 			}
+			case GLASS: {
+				usedMaterialTypes.insert(GLASS);
+				GlassMaterial *gm = static_cast<GlassMaterial *>(m);
+
+				mat->type = luxrays::ocl::GLASS;
+				mat->glass.krTexIndex = scene->texDefs.GetTextureIndex(gm->GetKr());
+				mat->glass.ktTexIndex = scene->texDefs.GetTextureIndex(gm->GetKt());
+				mat->glass.ousideIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetOutsideIOR());
+				mat->glass.iorTexIndex = scene->texDefs.GetTextureIndex(gm->GetIOR());
+				break;
+			}
 			case ARCHGLASS: {
 				usedMaterialTypes.insert(ARCHGLASS);
 				ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);

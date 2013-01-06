@@ -261,7 +261,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
 		else
 			return Kt->GetColorValue(uv) / (*cosSampledDir);
-	} else if (passThroughEvent < P) {
+	} else if (u0 < P) {
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
 		*cosSampledDir = fabsf(sampledDir->z);
