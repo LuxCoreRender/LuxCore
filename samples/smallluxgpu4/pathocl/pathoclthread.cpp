@@ -412,7 +412,14 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
 	if (cscene->IsMaterialCompiled(MIRROR))
 		ss << " -D PARAM_ENABLE_MAT_MIRROR";
+	if (cscene->IsMaterialCompiled(ARCHGLASS))
+		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
+	if (cscene->IsMaterialCompiled(NULLMAT))
+		ss << " -D PARAM_ENABLE_MAT_NULL";
 
+	if (cscene->IsMaterialCompiled(ARCHGLASS) || cscene->IsMaterialCompiled(NULLMAT))
+		ss << " -D PARAM_HAS_PASSTHROUGHT";
+	
 	if (cscene->camera.lensRadius > 0.f)
 		ss << " -D PARAM_CAMERA_HAS_DOF";
 
@@ -742,6 +749,8 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate sample data buffers
 	//--------------------------------------------------------------------------
 
+	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
+		renderEngine->compiledScene->IsMaterialCompiled(NULLMAT));
 	const size_t uDataEyePathVertexSize =
 		// IDX_SCREEN_X, IDX_SCREEN_Y
 		sizeof(float) * 2 +
@@ -749,11 +758,11 @@ void PathOCLRenderThread::InitRender() {
 		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =
 		// IDX_PASSTHROUGH,
-		//((texMapAlphaBuff.size() > 0) /* TODO: has passthrough */  ? sizeof(float) : 0) +
+		(hasPassThrough ? sizeof(float) : 0) +
 		// IDX_BSDF_X, IDX_BSDF_Y
 		sizeof(float) * 2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		(((triAreaLightCount > 0) || sunLightBuff) ? (sizeof(float) * 5) : 0) +
+		(((triAreaLightCount > 0) || sunLightBuff) ? (sizeof(float) * (4 + (hasPassThrough ? 1 : 0))) : 0) +
 		// IDX_RR
 		sizeof(float);
 

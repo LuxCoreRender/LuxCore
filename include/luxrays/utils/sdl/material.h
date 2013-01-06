@@ -67,7 +67,8 @@ public:
 
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
-	virtual Spectrum GetPassThroughTransparency(const UV &uv, const float passThroughEvent) const {
+	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir,
+		const float passThroughEvent) const {
 		return Spectrum(0.f);
 	}
 
@@ -253,8 +254,8 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
-	const Texture *GetKrefl() const { return Kr; }
-	const Texture *GetKrefrct() const { return Kt; }
+	const Texture *GetKr() const { return Kr; }
+	const Texture *GetKt() const { return Kt; }
 	const Texture *GetOutsideIOR() const { return ousideIor; }
 	const Texture *GetIOR() const { return ior; }
 
@@ -280,9 +281,8 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsShadowTransparent() const { return true; }
-	virtual Spectrum GetShadowTransparency(const UV &uv, const float passThroughEvent) const {
-		return Kt->GetColorValue(uv);
-	}
+	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir,
+		const float passThroughEvent) const;
 
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
@@ -302,8 +302,8 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
-	const Texture *GetKrefl() const { return Kr; }
-	const Texture *GetKrefrct() const { return Kt; }
+	const Texture *GetKr() const { return Kr; }
+	const Texture *GetKt() const { return Kt; }
 
 private:
 	const Texture *Kr;
@@ -374,7 +374,8 @@ public:
 	virtual bool IsPassThrough() const {
 		return (matA->IsPassThrough() || matB->IsPassThrough());
 	}
-	virtual Spectrum GetPassThroughTransparency(const UV &uv, const float passThroughEvent) const;
+	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir,
+		const float passThroughEvent) const;
 
 	virtual Spectrum GetEmittedRadiance(const UV &uv) const;
 
@@ -413,7 +414,7 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const UV &uv,
+	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir, 
 		const float passThroughEvent) const { return Spectrum(1.f); }
 
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,

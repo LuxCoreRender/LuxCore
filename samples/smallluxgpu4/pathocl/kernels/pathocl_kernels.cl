@@ -265,57 +265,93 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 					);
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
-			// Check if it is a light source
-			if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
-				float directPdfA;
-				const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(bsdf, mats, texs
 #if defined(PARAM_HAS_IMAGEMAPS)
-						imageMapDescs,
+					, imageMapDescs
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
-						imageMapBuff0,
+					, imageMapBuff0
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_1)
-						imageMapBuff1,
+					, imageMapBuff1
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_2)
-						imageMapBuff2,
+					, imageMapBuff2
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_3)
-						imageMapBuff3,
+					, imageMapBuff3
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_4)
-						imageMapBuff4,
+					, imageMapBuff4
 #endif
 #endif
-						triLightDefs, &directPdfA);
-				if (any(isnotequal(emittedRadiance, BLACK))) {
-					// Add emitted radiance
-					float weight = 1.f;
-					if (!task->directLightState.lastSpecular) {
-						const float lightPickProb = Scene_PickLightPdf();
-						const float directPdfW = PdfAtoW(directPdfA, rayHit->t,
-							fabs(dot(vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->shadeN.x))));
+						);
+			if (any(isnotequal(passthroughTrans, BLACK))) {
+				const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r) * passthroughTrans;
+				vstore3(pathThrouput, 0, &task->pathStateBase.throughput.r);
 
-						// MIS between BSDF sampling and direct light sampling
-						weight = PowerHeuristic(task->directLightState.lastPdfW, directPdfW * lightPickProb);
-					}
+				// It is a pass through point, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
 
-					float3 radiance = vload3(0, &sample->radiance.r);
-					const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
-					radiance += pathThrouput * weight * emittedRadiance;
-					vstore3(radiance, 0, &sample->radiance.r);
-				}
+				// Keep the same path state
 			}
+#endif
+#if defined(PARAM_HAS_PASSTHROUGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+			else
+#endif
+			{
+#if (PARAM_DL_LIGHT_COUNT > 0)
+				// Check if it is a light source
+				if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
+					float directPdfA;
+					const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs,
+#if defined(PARAM_HAS_IMAGEMAPS)
+							imageMapDescs,
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+							imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+							imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+							imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+							imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+							imageMapBuff4,
+#endif
+#endif
+							triLightDefs, &directPdfA);
+					if (any(isnotequal(emittedRadiance, BLACK))) {
+						// Add emitted radiance
+						float weight = 1.f;
+						if (!task->directLightState.lastSpecular) {
+							const float lightPickProb = Scene_PickLightPdf();
+							const float directPdfW = PdfAtoW(directPdfA, rayHit->t,
+								fabs(dot(vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->shadeN.x))));
+
+							// MIS between BSDF sampling and direct light sampling
+							weight = PowerHeuristic(task->directLightState.lastPdfW, directPdfW * lightPickProb);
+						}
+
+						float3 radiance = vload3(0, &sample->radiance.r);
+						const float3 pathThrouput = vload3(0, &task->pathStateBase.throughput.r);
+						radiance += pathThrouput * weight * emittedRadiance;
+						vstore3(radiance, 0, &sample->radiance.r);
+					}
+				}
 #endif
 
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
-			// Direct light sampling
-			pathState = GENERATE_DL_RAY;
+				// Direct light sampling
+				pathState = GENERATE_DL_RAY;
 #else
-			// Sample next path vertex
-			pathState = GENERATE_NEXT_VERTEX_RAY;
+				// Sample next path vertex
+				pathState = GENERATE_NEXT_VERTEX_RAY;
 #endif
+			}
 		} else {
 			// TODO: sunlight + Scene::GetEnvLightsRadiance()
 
@@ -358,6 +394,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
 	if (pathState == RT_DL) {
+		pathState = GENERATE_NEXT_VERTEX_RAY;
+
 		if (currentTriangleIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
 			float3 radiance = vload3(0, &sample->radiance.r);
@@ -365,7 +403,46 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			radiance += lightRadiance;
 			vstore3(radiance, 0, &sample->radiance.r);
 		}
-		pathState = GENERATE_NEXT_VERTEX_RAY;
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		else {
+			const float3 passthroughTrans = GetPassThroughTransparency(
+#if defined(PARAM_ACCEL_MQBVH)
+					meshFirstTriangleOffset,
+					meshDescs,
+#endif
+					meshMats, meshIDs,
+					vertUVs, triangles, ray, rayHit,
+					task->directLightState.passThroughEvent,
+					mats, texs
+#if defined(PARAM_HAS_IMAGEMAPS)
+					, imageMapDescs
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+					, imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+					, imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+					, imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+					, imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+					, imageMapBuff4
+#endif
+#endif
+						);
+			if (any(isnotequal(passthroughTrans, BLACK))) {
+				const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r) * passthroughTrans;
+				vstore3(lightRadiance, 0, &task->directLightState.lightRadiance.r);
+
+				// It is a pass through point, continue to trace the ray				
+				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+				pathState = RT_DL;
+			}
+		}
+#endif
 	}
 #endif
 
@@ -454,6 +531,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
 					vstore3((weight * factor) * pathThrouput * bsdfEval * lightRadiance, 0, &task->directLightState.lightRadiance.r);
+					task->directLightState.passThroughEvent = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_A);
 
 					// Setup the shadow ray
 					const float3 hitPoint = vload3(0, &bsdf->hitPoint.x);

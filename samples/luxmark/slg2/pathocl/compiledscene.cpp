@@ -348,13 +348,13 @@ void CompiledScene::CompileMaterials() {
 				GlassMaterial *gm = (GlassMaterial *)m;
 
 				gpum->type = MAT_GLASS;
-				gpum->param.glass.refl_r = gm->GetKrefl().r;
-				gpum->param.glass.refl_g = gm->GetKrefl().g;
-				gpum->param.glass.refl_b = gm->GetKrefl().b;
+				gpum->param.glass.refl_r = gm->GetKr().r;
+				gpum->param.glass.refl_g = gm->GetKr().g;
+				gpum->param.glass.refl_b = gm->GetKr().b;
 
-				gpum->param.glass.refrct_r = gm->GetKrefrct().r;
-				gpum->param.glass.refrct_g = gm->GetKrefrct().g;
-				gpum->param.glass.refrct_b = gm->GetKrefrct().b;
+				gpum->param.glass.refrct_r = gm->GetKt().r;
+				gpum->param.glass.refrct_g = gm->GetKt().g;
+				gpum->param.glass.refrct_b = gm->GetKt().b;
 
 				gpum->param.glass.ousideIor = gm->GetOutsideIOR();
 				gpum->param.glass.ior = gm->GetIOR();
@@ -439,13 +439,13 @@ void CompiledScene::CompileMaterials() {
 				ArchGlassMaterial *agm = (ArchGlassMaterial *)m;
 
 				gpum->type = MAT_ARCHGLASS;
-				gpum->param.archGlass.refl_r = agm->GetKrefl().r;
-				gpum->param.archGlass.refl_g = agm->GetKrefl().g;
-				gpum->param.archGlass.refl_b = agm->GetKrefl().b;
+				gpum->param.archGlass.refl_r = agm->GetKr().r;
+				gpum->param.archGlass.refl_g = agm->GetKr().g;
+				gpum->param.archGlass.refl_b = agm->GetKr().b;
 
-				gpum->param.archGlass.refrct_r = agm->GetKrefrct().r;
-				gpum->param.archGlass.refrct_g = agm->GetKrefrct().g;
-				gpum->param.archGlass.refrct_b = agm->GetKrefrct().b;
+				gpum->param.archGlass.refrct_r = agm->GetKt().r;
+				gpum->param.archGlass.refrct_g = agm->GetKt().g;
+				gpum->param.archGlass.refrct_b = agm->GetKt().b;
 
 				gpum->param.archGlass.transFilter = agm->GetTransFilter();
 				gpum->param.archGlass.totFilter = agm->GetTotFilter();

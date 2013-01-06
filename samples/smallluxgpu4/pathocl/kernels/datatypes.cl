@@ -150,10 +150,9 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #define IDX_DIRECTLIGHT_Y 3
 #define IDX_DIRECTLIGHT_Z 4
 #define IDX_DIRECTLIGHT_W 5
-#define IDX_DIRECTLIGHT_A 6
-#define IDX_RR 7
+#define IDX_RR 6
 
-#define SAMPLE_SIZE 8
+#define SAMPLE_SIZE 7
 
 #elif defined(PARAM_HAS_PASSTHROUGHT)
 
@@ -207,6 +206,7 @@ typedef struct {
 typedef struct {
 	// Radiance to add to the result if light source is visible
 	Spectrum lightRadiance;
+	float passThroughEvent; // The passthrough sample used for the shadow ray
 
 	float lastPdfW;
 	int lastSpecular;
