@@ -3,6 +3,7 @@ scene.camera.fieldofview = 77.3196
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 800.000012 800.000012 400.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.603827 0.603827 0.603827
 ################################################################################

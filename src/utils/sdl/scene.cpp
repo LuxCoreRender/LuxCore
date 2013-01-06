@@ -662,7 +662,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		GetTexture(props.GetString(propName + ".normaltex", "1.0")) : NULL;
 
 	if (matType == "matte") {
-		Texture *kd = GetTexture(props.GetString(propName + ".kd", "1.0 1.0 1.0"));
+		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.75 0.75 0.75"));
 
 		return new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
 	} else if (matType == "mirror") {

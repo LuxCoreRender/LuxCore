@@ -19,6 +19,7 @@ scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxinner.type = matte
 scene.materials.luxinner.kd = 0.75 0.75 0.75
 scene.materials.luxinner.emission = 0.5 0.5 0.5
+scene.materials.luxinner.kd = 0.0 0.0 0.0
 ################################################################################
 scene.objects.room.ply = scenes/luxball/room.ply
 scene.objects.room.material = whitematte

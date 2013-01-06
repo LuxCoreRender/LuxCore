@@ -11,6 +11,7 @@ scene.materials.DarkGreen.type = matte
 scene.materials.DarkGreen.kd = 0. 0.4 0.
 scene.materials.Light.type = matte
 scene.materials.Light.emission = 10. 10. 10.
+scene.materials.Light.kd = 0.0 0.0 0.0
 ################################################################################
 scene.objects.Khaki.material = Khaki
 scene.objects.Khaki.ply = scenes/cornell/Khaki.ply
