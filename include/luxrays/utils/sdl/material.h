@@ -460,6 +460,9 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
+	const Texture *GetKr() const { return Kr; }
+	const Texture *GetKt() const { return Kt; }
+
 private:
 	const Texture *Kr;
 	const Texture *Kt;

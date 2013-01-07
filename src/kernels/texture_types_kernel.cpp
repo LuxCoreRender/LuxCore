@@ -96,6 +96,7 @@ std::string KernelSource_texture_types =
 "#else\n"
 "\n"
 "#define IMAGEMAPS_PARAM_DECL\n"
+"#define IMAGEMAPS_PARAM\n"
 "\n"
 "#endif\n"
 ; } }

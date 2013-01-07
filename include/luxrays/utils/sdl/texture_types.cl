@@ -93,5 +93,6 @@ typedef struct {
 #else
 
 #define IMAGEMAPS_PARAM_DECL
+#define IMAGEMAPS_PARAM
 
 #endif
