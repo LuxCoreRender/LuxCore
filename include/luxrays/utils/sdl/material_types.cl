@@ -22,7 +22,7 @@
  ***************************************************************************/
 
 typedef enum {
-	MATTE, MIRROR, GLASS, ARCHGLASS, NULLMAT
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, NULLMAT
 	//MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
 } MaterialType;
 
@@ -37,14 +37,19 @@ typedef struct {
 typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
-} ArchGlassParam;
+	unsigned int ousideIorTexIndex;
+	unsigned int iorTexIndex;
+} GlassParam;
+
+typedef struct {
+    unsigned int krTexIndex;
+	unsigned int expTexIndex;
+} MetalParam;
 
 typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
-	unsigned int ousideIorTexIndex;
-	unsigned int iorTexIndex;
-} GlassParam;
+} ArchGlassParam;
 
 typedef struct {
 	MaterialType type;
@@ -53,6 +58,7 @@ typedef struct {
 		MatteParam matte;
 		MirrorParam mirror;
 		GlassParam glass;
+		MetalParam metal;
 		ArchGlassParam archglass;
 		// NULLMAT has no parameters
 	};

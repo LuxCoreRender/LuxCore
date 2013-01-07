@@ -137,6 +137,7 @@ float3 GlassMaterial_Sample(__global Material *material, __global Texture *texs,
 
 		const float3 kr = Texture_GetColorValue(&texs[material->glass.krTexIndex], uv
 				IMAGEMAPS_PARAM);
+		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kr / (*cosSampledDir);
 	}
 
@@ -164,6 +165,7 @@ float3 GlassMaterial_Sample(__global Material *material, __global Texture *texs,
 
 			const float3 kr = Texture_GetColorValue(&texs[material->glass.krTexIndex], uv
 					IMAGEMAPS_PARAM);
+			// The cosSampledDir is used to compensate the other one used inside the integrator
 			return kr / (*cosSampledDir);
 		}
 	} else if (Re == 0.f) {
@@ -172,6 +174,7 @@ float3 GlassMaterial_Sample(__global Material *material, __global Texture *texs,
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = 1.f;
 
+		// The cosSampledDir is used to compensate the other one used inside the integrator
 //		if (fromLight)
 //			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
 //		else
@@ -187,6 +190,7 @@ float3 GlassMaterial_Sample(__global Material *material, __global Texture *texs,
 
 		const float3 kr = Texture_GetColorValue(&texs[material->glass.krTexIndex], uv
 				IMAGEMAPS_PARAM);
+		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kr / (*cosSampledDir);
 	} else {
 		*event = SPECULAR | TRANSMIT;
@@ -203,6 +207,64 @@ float3 GlassMaterial_Sample(__global Material *material, __global Texture *texs,
 				IMAGEMAPS_PARAM);
 		return kt / (*cosSampledDir);
 	}
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Metal material
+//------------------------------------------------------------------------------
+
+float3 GlossyReflection(const float3 fixedDir, const float exponent,
+		const float u0, const float u1) {
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+	const float3 shadeN = (float3)(0.f, 0.f, into ? 1.f : -1.f);
+
+	const float phi = 2.f * M_PI * u0;
+	const float cosTheta = pow(1.f - u1, exponent);
+	const float sinTheta = sqrt(fmax(0.f, 1.f - cosTheta * cosTheta));
+	const float x = cos(phi) * sinTheta;
+	const float y = sin(phi) * sinTheta;
+	const float z = cosTheta;
+
+	const float3 dir = -fixedDir;
+	const float dp = dot(shadeN, dir);
+	const float3 w = dir - (2.f * dp) * shadeN;
+
+	const float3 u = normalize(cross(
+			(fabs(shadeN.x) > .1f) ? ((float3)(0.f, 1.f, 0.f)) : ((float3)(1.f, 0.f, 0.f)),
+			w));
+	const float3 v = cross(w, u);
+
+	return x * u + y * v + z * w;
+}
+
+#if defined (PARAM_ENABLE_MAT_METAL)
+
+float3 MetalMaterial_Sample(__global Material *material, __global Texture *texs,
+		const float2 uv, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		IMAGEMAPS_PARAM_DECL) {
+	const float e = 1.f / (Texture_GetGreyValue(&texs[material->metal.expTexIndex], uv
+				IMAGEMAPS_PARAM) + 1.f);
+	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
+
+	if ((*sampledDir).z * fixedDir.z > 0.f) {
+		*event = SPECULAR | REFLECT;
+		*pdfW = 1.f;
+		*cosSampledDir = fabs((*sampledDir).z);
+
+		const float3 kt = Texture_GetColorValue(&texs[material->metal.krTexIndex], uv
+				IMAGEMAPS_PARAM);
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return kt / (*cosSampledDir);
+	} else
+		return BLACK;
 }
 
 #endif
@@ -265,9 +327,9 @@ float3 ArchGlassMaterial_Sample(__global Material *material, __global Texture *t
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = 1.f;
 
-		
 		const float3 kt = Texture_GetColorValue(&texs[material->archglass.ktTexIndex], uv
 				IMAGEMAPS_PARAM);
+		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kt / (*cosSampledDir);
 	} else if (u0 < P) {
 		*event = SPECULAR | REFLECT;
@@ -348,7 +410,7 @@ float3 NullMaterial_Sample(__global Material *material, __global Texture *texs,
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
-		IMAGEMAPS_PARAM) {
+		IMAGEMAPS_PARAM_DECL) {
 	*sampledDir = -fixedDir;
 	*cosSampledDir = 1.f;
 
@@ -377,12 +439,16 @@ BSDFEvent Material_GetEventTypes(__global Material *mat) {
 		case GLASS:
 			return SPECULAR | REFLECT | TRANSMIT;
 #endif
+#if defined (PARAM_ENABLE_MAT_METAL)
+		case METAL:
+			return SPECULAR | REFLECT;
+#endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 			return SPECULAR | REFLECT | TRANSMIT;
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
-		case NULL:
+		case NULLMAT:
 			return SPECULAR | TRANSMIT;
 #endif
 		default:
@@ -401,6 +467,9 @@ bool Material_IsDelta(__global Material *mat) {
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL)
+		case METAL:
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -428,6 +497,9 @@ float3 Material_Evaluate(__global Material *material, __global Texture *texs,
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL)
+		case METAL:
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -485,6 +557,15 @@ float3 Material_Sample(__global Material *material, __global Texture *texs,
 					pdfW, cosSampledDir, event
 					IMAGEMAPS_PARAM);
 #endif
+#if defined (PARAM_ENABLE_MAT_METAL)
+		case METAL:
+			return MetalMaterial_Sample(material, texs, uv, fixedDir, sampledDir, u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
+#endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
 			return NullMaterial_Sample(material, texs, uv, fixedDir, sampledDir, u0, u1,
@@ -532,6 +613,9 @@ float3 Material_GetPassThroughTransparency(__global Material *material, __global
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL)
+		case METAL:
 #endif
 		default:
 			return BLACK;
