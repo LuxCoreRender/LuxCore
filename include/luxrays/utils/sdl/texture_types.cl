@@ -59,3 +59,39 @@ typedef struct {
 		ImageMapInstanceParam imageMapInstance;
 	};
 } Texture;
+
+//------------------------------------------------------------------------------
+// Some macro trick in order to have more readable code
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_IMAGEMAPS)
+
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+#define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float *imageMapBuff0, __global float *imageMapBuff1, __global float *imageMapBuff2, __global float *imageMapBuff3, __global float *imageMapBuff4
+#elif  defined(PARAM_IMAGEMAPS_PAGE_3)
+#define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float *imageMapBuff0, __global float *imageMapBuff1, __global float *imageMapBuff2, __global float *imageMapBuff3
+#elif  defined(PARAM_IMAGEMAPS_PAGE_2)
+#define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float *imageMapBuff0, __global float *imageMapBuff1, __global float *imageMapBuff2
+#elif  defined(PARAM_IMAGEMAPS_PAGE_1)
+#define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float *imageMapBuff0, __global float *imageMapBuff1
+#elif  defined(PARAM_IMAGEMAPS_PAGE_0)
+#define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float *imageMapBuff0
+#endif
+
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+#define IMAGEMAPS_PARAM , imageMapDescs, imageMapBuff0, imageMapBuff1, imageMapBuff2, imageMapBuff3, imageMapBuff4
+#elif  defined(PARAM_IMAGEMAPS_PAGE_3)
+#define IMAGEMAPS_PARAM , imageMapDescs, imageMapBuff0, imageMapBuff1, imageMapBuff2, imageMapBuff3
+#elif  defined(PARAM_IMAGEMAPS_PAGE_2)
+#define IMAGEMAPS_PARAM , imageMapDescs, imageMapBuff0, imageMapBuff1, imageMapBuff2
+#elif  defined(PARAM_IMAGEMAPS_PAGE_1)
+#define IMAGEMAPS_PARAM , imageMapDescs, imageMapBuff0, imageMapBuff1
+#elif  defined(PARAM_IMAGEMAPS_PAGE_0)
+#define IMAGEMAPS_PARAM , imageMapDescs, imageMapBuff0
+#endif
+
+#else
+
+#define IMAGEMAPS_PARAM_DECL
+
+#endif

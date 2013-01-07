@@ -136,29 +136,9 @@ void BSDF_Init(
 	vstore3(shadeN, 0, &bsdf->shadeN.x);
 }
 
-float3 BSDF_Evaluate(
-		__global BSDF *bsdf,
-		__global Material *mats,
-		__global Texture *texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-		__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		__global float *imageMapBuff4,
-#endif
-#endif
-		const float3 generatedDir, BSDFEvent *event, float *directPdfW) {
+float3 BSDF_Evaluate(__global BSDF *bsdf, __global Material *mats, __global Texture *texs,
+		const float3 generatedDir, BSDFEvent *event, float *directPdfW
+		IMAGEMAPS_PARAM_DECL) {
 	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
 	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
 	const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
@@ -185,27 +165,9 @@ float3 BSDF_Evaluate(
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
-	const float3 result = Material_Evaluate(mat, texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-			imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-			imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-			imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-			imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-			imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-			imageMapBuff4,
-#endif
-#endif
-			vload2(0, &bsdf->hitPointUV.u), localLightDir, localEyeDir,
-			event, directPdfW);
+	const float3 result = Material_Evaluate(mat, texs, vload2(0, &bsdf->hitPointUV.u),
+			localLightDir, localEyeDir,	event, directPdfW
+			IMAGEMAPS_PARAM);
 
 	// Adjoint BSDF
 //	if (fromLight) {
@@ -216,60 +178,20 @@ float3 BSDF_Evaluate(
 		return result;
 }
 
-float3 BSDF_Sample(
-		__global BSDF *bsdf,
-		__global Material *mats,
-		__global Texture *texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-		__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		__global float *imageMapBuff4,
-#endif
-#endif
-		const float u0, const float u1,
-		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event) {
+float3 BSDF_Sample(__global BSDF *bsdf, __global Material *mats, __global Texture *texs,
+		const float u0, const float u1, float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+		IMAGEMAPS_PARAM_DECL) {
 	const float3 fixedDir = vload3(0, &bsdf->fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-	const float3 result = Material_Sample(
-			&mats[bsdf->materialIndex], texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-			imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-			imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-			imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-			imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-			imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-			imageMapBuff4,
-#endif
-#endif
-			vload2(0, &bsdf->hitPointUV.u), localFixedDir, &localSampledDir,
-			u0, u1,
+	const float3 result = Material_Sample(&mats[bsdf->materialIndex], texs,
+			vload2(0, &bsdf->hitPointUV.u), localFixedDir, &localSampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 			bsdf->passThroughEvent,
 #endif
-			pdfW, cosSampledDir, event);
+			pdfW, cosSampledDir, event
+			IMAGEMAPS_PARAM);
 	if (all(isequal(result, BLACK)))
 		return 0.f;
 
@@ -293,96 +215,25 @@ bool BSDF_IsDelta(__global BSDF *bsdf, __global Material *mats) {
 #if (PARAM_DL_LIGHT_COUNT > 0)
 float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 		__global Material *mats, __global Texture *texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-		__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		__global float *imageMapBuff4,
-#endif
-#endif
-		__global TriangleLight *triLightDefs, float *directPdfA) {
+		__global TriangleLight *triLightDefs, float *directPdfA
+		IMAGEMAPS_PARAM_DECL) {
 	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
 	if (triangleLightSourceIndex == NULL_INDEX)
 		return BLACK;
 	else
 		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex], mats, texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-				imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-				imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-				imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-				imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-				imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-				imageMapBuff4,
-#endif
-#endif
-				vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->geometryN.x), vload2(0, &bsdf->hitPointUV.u), directPdfA);
+				vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->geometryN.x), vload2(0, &bsdf->hitPointUV.u), directPdfA
+				IMAGEMAPS_PARAM);
 }
 #endif
 
 #if defined(PARAM_HAS_PASSTHROUGHT)
-float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf,
-		__global Material *mats, __global Texture *texs
-#if defined(PARAM_HAS_IMAGEMAPS)
-		, __global ImageMap *imageMapDescs
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		, __global float *imageMapBuff0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		, __global float *imageMapBuff1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		, __global float *imageMapBuff2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		, __global float *imageMapBuff3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		, __global float *imageMapBuff4
-#endif
-#endif
-		) {
+float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf, __global Material *mats, __global Texture *texs
+		IMAGEMAPS_PARAM_DECL) {
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, vload3(0, &bsdf->fixedDir.x));
 
-	return Material_GetPassThroughTransparency(
-			&mats[bsdf->materialIndex], texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-			imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-			imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-			imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-			imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-			imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-			imageMapBuff4,
-#endif
-#endif
-			vload2(0, &bsdf->hitPointUV.u), localFixedDir, bsdf->passThroughEvent);
+	return Material_GetPassThroughTransparency( &mats[bsdf->materialIndex], texs,
+			vload2(0, &bsdf->hitPointUV.u), localFixedDir, bsdf->passThroughEvent
+			IMAGEMAPS_PARAM);
 }
 #endif

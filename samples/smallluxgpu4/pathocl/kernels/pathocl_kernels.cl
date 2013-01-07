@@ -186,24 +186,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		, __global TriangleLight *triLightDefs
 		, __global uint *meshLights
 #endif
-#if defined(PARAM_HAS_IMAGEMAPS)
-		, __global ImageMap *imageMapDescs
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		, __global float *imageMapBuff0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		, __global float *imageMapBuff1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		, __global float *imageMapBuff2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		, __global float *imageMapBuff3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		, __global float *imageMapBuff4
-#endif
-#endif
+		IMAGEMAPS_PARAM_DECL
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
@@ -267,25 +250,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 #if defined(PARAM_HAS_PASSTHROUGHT)
 			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(bsdf, mats, texs
-#if defined(PARAM_HAS_IMAGEMAPS)
-					, imageMapDescs
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-					, imageMapBuff0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-					, imageMapBuff1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-					, imageMapBuff2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-					, imageMapBuff3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-					, imageMapBuff4
-#endif
-#endif
-						);
+					IMAGEMAPS_PARAM);
 			if (any(isnotequal(passthroughTrans, BLACK))) {
 				const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r) * passthroughTrans;
 				vstore3(pathThroughput, 0, &task->pathStateBase.throughput.r);
@@ -305,25 +270,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
 					float directPdfA;
 					const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-							imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-							imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-							imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-							imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-							imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-							imageMapBuff4,
-#endif
-#endif
-							triLightDefs, &directPdfA);
+							triLightDefs, &directPdfA
+							IMAGEMAPS_PARAM);
 					if (any(isnotequal(emittedRadiance, BLACK))) {
 						// Add emitted radiance
 						float weight = 1.f;
@@ -358,25 +306,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 #if defined(PARAM_HAS_INFINITELIGHT)
 			const float3 lightRadiance = InfiniteLight_GetRadiance(infiniteLight,
-#if defined(PARAM_HAS_IMAGEMAPS)
-					imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-					imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-					imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-					imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-					imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-					imageMapBuff4,
-#endif
-#endif
-					-vload3(0, &ray->d.x));
+					-vload3(0, &ray->d.x)
+					IMAGEMAPS_PARAM);
 			float3 radiance = vload3(0, &sample->radiance.r);
 			const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
 			radiance += pathThroughput * lightRadiance;
@@ -418,25 +349,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					);
 
 			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf, mats, texs
-#if defined(PARAM_HAS_IMAGEMAPS)
-					, imageMapDescs
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-					, imageMapBuff0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-					, imageMapBuff1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-					, imageMapBuff2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-					, imageMapBuff3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-					, imageMapBuff4
-#endif
-#endif
-					);
+					IMAGEMAPS_PARAM);
 			if (any(isnotequal(passthroughTrans, BLACK))) {
 				const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r) * passthroughTrans;
 				vstore3(lightRadiance, 0, &task->directLightState.lightRadiance.r);
@@ -474,53 +387,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			float distance, directPdfW;
 			float3 lightRadiance = TriangleLight_Illuminate(
 					l, mats, texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-					imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-					imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-					imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-					imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-					imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-					imageMapBuff4,
-#endif
-#endif
 					vload3(0, &bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
-					&lightRayDir, &distance, &directPdfW);
+					&lightRayDir, &distance, &directPdfW
+					IMAGEMAPS_PARAM);
 
 			if (any(isnotequal(lightRadiance, BLACK))) {
 				BSDFEvent event;
 				float bsdfPdfW;
 				const float3 bsdfEval = BSDF_Evaluate(bsdf, mats, texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-						imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-						imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-						imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-						imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-						imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-						imageMapBuff4,
-#endif
-#endif
-						lightRayDir, &event, &bsdfPdfW);
+						lightRayDir, &event, &bsdfPdfW
+						IMAGEMAPS_PARAM);
 
 				if (any(isnotequal(bsdfEval, BLACK))) {
 					const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
@@ -568,26 +447,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			BSDFEvent event;
 
 			const float3 bsdfSample = BSDF_Sample(bsdf, mats, texs,
-#if defined(PARAM_HAS_IMAGEMAPS)
-					imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-					imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-					imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-					imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-					imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-					imageMapBuff4,
-#endif
-#endif
 					Sampler_GetSamplePathVertex(IDX_BSDF_X), Sampler_GetSamplePathVertex(IDX_BSDF_Y),
-					&sampledDir, &lastPdfW, &cosSampledDir, &event);
+					&sampledDir, &lastPdfW, &cosSampledDir, &event
+					IMAGEMAPS_PARAM);
 			const bool lastSpecular = ((event & SPECULAR) != 0);
 
 			// Russian Roulette

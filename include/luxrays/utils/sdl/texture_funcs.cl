@@ -183,24 +183,8 @@ float3 ImageMap_GetColor(__global float *pixels,
 }
 
 float ImageMapInstance_GetGrey(
-	__global ImageMapInstanceParam *imageMapInstance,
-	__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	__global float *imageMapBuff4,
-#endif
-	const float2 uv) {
+	__global ImageMapInstanceParam *imageMapInstance, const float2 uv
+	IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[imageMapInstance->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
@@ -218,7 +202,7 @@ float ImageMapInstance_GetGrey(
 #if defined(PARAM_IMAGEMAPS_PAGE_4)
 		imageMapBuff4,
 #endif
-		imageMap->pageIndex, imageMap->pixelsIndex
+			imageMap->pageIndex, imageMap->pixelsIndex
 		);
 
 	const float2 scale = vload2(0, &imageMapInstance->uScale);
@@ -232,24 +216,8 @@ float ImageMapInstance_GetGrey(
 }
 
 float3 ImageMapInstance_GetColor(
-	__global ImageMapInstanceParam *imageMapInstance,
-	__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	__global float *imageMapBuff4,
-#endif
-	const float2 uv) {
+	__global ImageMapInstanceParam *imageMapInstance, const float2 uv
+	IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[imageMapInstance->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
@@ -267,7 +235,7 @@ float3 ImageMapInstance_GetColor(
 #if defined(PARAM_IMAGEMAPS_PAGE_4)
 		imageMapBuff4,
 #endif
-		imageMap->pageIndex, imageMap->pixelsIndex
+			imageMap->pageIndex, imageMap->pixelsIndex
 		);
 
 	const float2 scale = vload2(0, &imageMapInstance->uScale);
@@ -280,108 +248,24 @@ float3 ImageMapInstance_GetColor(
 			mapUV.s0, mapUV.s1);
 }
 
-float ImageMapTexture_GetGreyValue(__global Texture *texture,
-		__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		__global float *imageMapBuff4,
-#endif
-		const float2 uv) {
-	return ImageMapInstance_GetGrey(
-			&texture->imageMapInstance,
-			imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-			imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-			imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-			imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-			imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-			imageMapBuff4,
-#endif
-			uv);
+float ImageMapTexture_GetGreyValue(__global Texture *texture, const float2 uv
+	IMAGEMAPS_PARAM_DECL) {
+	return ImageMapInstance_GetGrey(&texture->imageMapInstance, uv
+			IMAGEMAPS_PARAM);
 }
 
-float3 ImageMapTexture_GetColorValue(__global Texture *texture,
-		__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		__global float *imageMapBuff4,
-#endif
-		const float2 uv) {
-	return ImageMapInstance_GetColor(
-			&texture->imageMapInstance,
-			imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-			imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-			imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-			imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-			imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-			imageMapBuff4,
-#endif
-			uv);
+float3 ImageMapTexture_GetColorValue(__global Texture *texture, const float2 uv
+	IMAGEMAPS_PARAM_DECL) {
+	return ImageMapInstance_GetColor(&texture->imageMapInstance, uv
+			IMAGEMAPS_PARAM);
 }
 
 #endif
 
 //------------------------------------------------------------------------------
 
-float Texture_GetGreyValue(__global Texture *texture,
-#if defined(PARAM_HAS_IMAGEMAPS)
-		__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		__global float *imageMapBuff4,
-#endif
-#endif
-		const float2 uv) {
+float Texture_GetGreyValue(__global Texture *texture, const float2 uv
+		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
 		case CONST_FLOAT:
 			return ConstFloatTexture_GetGreyValue(texture, uv);
@@ -391,50 +275,16 @@ float Texture_GetGreyValue(__global Texture *texture,
 			return ConstFloat4Texture_GetGreyValue(texture, uv);
 #if defined(PARAM_HAS_IMAGEMAPS)
 		case IMAGEMAP:
-			return ImageMapTexture_GetGreyValue(texture,
-					imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-					imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-					imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-					imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-					imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-					imageMapBuff4,
-#endif
-					uv);
+			return ImageMapTexture_GetGreyValue(texture, uv
+					IMAGEMAPS_PARAM);
 #endif
 		default:
 			return 0.f;
 	}
 }
 
-float3 Texture_GetColorValue(__global Texture *texture,
-#if defined(PARAM_HAS_IMAGEMAPS)
-		__global ImageMap *imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		__global float *imageMapBuff4,
-#endif
-#endif
-		const float2 uv) {
+float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
+		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
 		case CONST_FLOAT:
 			return ConstFloatTexture_GetColorValue(texture, uv);
@@ -444,24 +294,8 @@ float3 Texture_GetColorValue(__global Texture *texture,
 			return ConstFloat4Texture_GetColorValue(texture, uv);
 #if defined(PARAM_HAS_IMAGEMAPS)
 		case IMAGEMAP:
-			return ImageMapTexture_GetColorValue(texture,
-					imageMapDescs,
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-					imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-					imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-					imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-					imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-					imageMapBuff4,
-#endif
-					uv);
+			return ImageMapTexture_GetColorValue(texture, uv
+					IMAGEMAPS_PARAM);
 #endif
 		default:
 			return BLACK;
