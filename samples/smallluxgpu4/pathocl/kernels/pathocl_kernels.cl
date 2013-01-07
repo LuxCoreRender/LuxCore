@@ -182,6 +182,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_INFINITELIGHT)
 		, __global InfiniteLight *infiniteLight
 #endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		, __global SunLight *sunLight
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		, __global SkyLight *skyLight
+#endif
 #if (PARAM_DL_LIGHT_COUNT > 0)
 		, __global TriangleLight *triLightDefs
 		, __global uint *meshLights
@@ -266,7 +272,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 			{
 #if (PARAM_DL_LIGHT_COUNT > 0)
-				// Check if it is a light source
+				// Check if it is a light source (note: I can hit only triangle area light sources)
 				if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
 					float directPdfA;
 					const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs,
@@ -302,17 +308,36 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 			}
 		} else {
-			// TODO: sunlight + Scene::GetEnvLightsRadiance()
-
-#if defined(PARAM_HAS_INFINITELIGHT)
-			const float3 lightRadiance = InfiniteLight_GetRadiance(infiniteLight,
-					-vload3(0, &ray->d.x)
-					IMAGEMAPS_PARAM);
+			//------------------------------------------------------------------
+			// Nothing was hit, get environmental lights radiance
+			//------------------------------------------------------------------
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT)
 			float3 radiance = vload3(0, &sample->radiance.r);
 			const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
+			const float3 dir = -vload3(0, &ray->d.x);
+			float3 lightRadiance = BLACK;
+
+#if defined(PARAM_HAS_INFINITELIGHT)
+			lightRadiance += InfiniteLight_GetRadiance(infiniteLight, dir
+					IMAGEMAPS_PARAM);
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+			lightRadiance += SkyLight_GetRadiance(skyLight, dir);
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+			float directPdfW;
+			const float3 sunRadiance = SunLight_GetRadiance(sunLight, dir, &directPdfW);
+			if (any(isnotequal(sunRadiance, BLACK))) {
+				// MIS between BSDF sampling and direct light sampling
+				const float weight = (task->directLightState.lastSpecular ? 1.f : PowerHeuristic(task->directLightState.lastPdfW, directPdfW));
+				lightRadiance += weight * sunRadiance;
+			}
+#endif
+
 			radiance += pathThroughput * lightRadiance;
 			vstore3(radiance, 0, &sample->radiance.r);
 #endif
+
 			pathState = SPLAT_SAMPLE;
 		}
 	}
@@ -342,7 +367,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					meshFirstTriangleOffset,
 					meshDescs,
 #endif
-					meshMats, meshIDs, meshLights,
+					meshMats, meshIDs,
+#if (PARAM_DL_LIGHT_COUNT > 0)
+					meshLights,
+#endif
 					vertices, vertNormals, vertUVs,
 					triangles, ray, rayHit,
 					task->passThroughState.passThroughEvent
@@ -379,20 +407,49 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			// Pick a triangle light source to sample
 			const float lu0 = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_X);
-			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
-			const float lightPickPdf = 1.f / PARAM_DL_LIGHT_COUNT;
-			__global TriangleLight *l = &triLightDefs[lightIndex];
+			const float lightPickPdf = Scene_PickLightPdf();
 
 			float3 lightRayDir;
 			float distance, directPdfW;
-			float3 lightRadiance = TriangleLight_Illuminate(
-					l, mats, texs,
+			float3 lightRadiance;
+#if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+			const uint lightIndex = min((uint)floor((PARAM_DL_LIGHT_COUNT + 1) * lu0), (uint)(PARAM_DL_LIGHT_COUNT));
+
+			if (lightIndex == PARAM_DL_LIGHT_COUNT) {
+				lightRadiance = SunLight_Illuminate(
+					sunLight,
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					&lightRayDir, &distance, &directPdfW);
+			} else {
+				lightRadiance = TriangleLight_Illuminate(
+					&triLightDefs[lightIndex], mats, texs,
 					vload3(0, &bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW
 					IMAGEMAPS_PARAM);
+			}
+			
+#elif (PARAM_DL_LIGHT_COUNT > 0)
+			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+
+			lightRadiance = TriangleLight_Illuminate(
+					&triLightDefs[lightIndex], mats, texs,
+					vload3(0, &bsdf->hitPoint.x),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
+					&lightRayDir, &distance, &directPdfW
+					IMAGEMAPS_PARAM);
+#elif defined(PARAM_HAS_SUNLIGHT)
+			lightRadiance = SunLight_Illuminate(
+					sunLight,
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					&lightRayDir, &distance, &directPdfW);
+#endif
 
 			if (any(isnotequal(lightRadiance, BLACK))) {
 				BSDFEvent event;

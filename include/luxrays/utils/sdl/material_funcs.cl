@@ -439,9 +439,7 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material, __global T
 float3 MatteTranslucentMaterial_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGHT)
 		const float passThroughEvent,
-#endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		IMAGEMAPS_PARAM_DECL) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
@@ -600,7 +598,7 @@ float3 Material_Sample(__global Material *material, __global Texture *texs,
 					u0, u1, pdfW, cosSampledDir, event
 					IMAGEMAPS_PARAM);
 #endif
-			#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
+#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 			return ArchGlassMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
 					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event

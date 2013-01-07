@@ -82,6 +82,25 @@ float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW
 	return (float3)(x, y, z);
 }
 
+float3 UniformSampleCone(const float u0, const float u1, const float costhetamax,
+	const float3 x, const float3 y, const float3 z) {
+	const float costheta = mix(costhetamax, 1.f, u0);
+	const float sintheta = sqrt(1.f - costheta * costheta);
+	const float phi = u1 * 2.f * M_PI_F;
+
+	const float kx = cos(phi) * sintheta;
+	const float ky = sin(phi) * sintheta;
+	const float kz = costheta;
+
+	return (float3)(kx * x.x + ky * y.x + kz * z.x,
+			kx * x.y + ky * y.y + kz * z.y,
+			kx * x.z + ky * y.z + kz * z.z);
+}
+
+float UniformConePdf(const float costhetamax) {
+	return 1.f / (2.f * M_PI_F * (1.f - costhetamax));
+}
+
 int Mod(int a, int b) {
 	if (b == 0)
 		b = 1;

@@ -249,24 +249,3 @@ typedef struct {
 typedef struct {
 	unsigned int sampleCount;
 } GPUTaskStats;
-
-//------------------------------------------------------------------------------
-
-typedef struct {
-	Vector sundir;
-	Spectrum gain;
-	float turbidity;
-	float relSize;
-	// XY Vectors for cone sampling
-	Vector x, y;
-	float cosThetaMax;
-	Spectrum suncolor;
-} SunLight;
-
-typedef struct {
-	Spectrum gain;
-	float thetaS;
-	float phiS;
-	float zenith_Y, zenith_x, zenith_y;
-	float perez_Y[6], perez_x[6], perez_y[6];
-} SkyLight;

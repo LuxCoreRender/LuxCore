@@ -1,9 +1,17 @@
-scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
-scene.camera.lensradius = 0.015
-scene.camera.focaldistance = 2.0
+scene.camera.lookat = 1.1 -2.1 1.0 0.0 0.0 0.4
+#scene.camera.lensradius = 0.005
+#scene.camera.focaldistance = 2.0
 ################################################################################
-scene.materials.shell.type = mirror
-scene.materials.shell.kr = 0.75 0.75 0.75
+scene.materials.shell.type = mattetranslucent
+scene.materials.shell.kr = 0.15 0.0 0.0
+scene.materials.shell.kt = 0.75 0.0 0.0
+#scene.materials.shell.type = matte
+#scene.materials.shell.kd = 0.75 0.0 0.0
+#scene.materials.shell.type = glass
+#scene.materials.shell.kr = 0.69 0.78 1.0 
+#scene.materials.shell.kt = 0.69 0.78 1.0 
+#scene.materials.shell.ioroutside = 1.0
+#scene.materials.shell.iorinside = 1.45
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte
@@ -23,6 +31,11 @@ scene.objects.blacktext.material = blacktext
 scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 ################################################################################
 scene.infinitelight.file = scenes/simple-mat/sky.exr
-scene.sunlight.dir = 0.166974 -0.59908 0.783085
-scene.sunlight.turbidity = 2.2
-scene.sunlight.gain = 0.8 0.8 0.8
+scene.infinitelight.gain = 0.75 0.75 0.75
+#scene.skylight.dir = 0 -1 0
+#scene.skylight.turbidity = 2.2
+#scene.skylight.gain = .5 .5 .5
+scene.sunlight.dir = 0 -1 0
+scene.sunlight.gain = 3.5 3.5 3.5
+scene.sunlight.relsize = 30.0
+#scene.sunlight.relsize = 10.0

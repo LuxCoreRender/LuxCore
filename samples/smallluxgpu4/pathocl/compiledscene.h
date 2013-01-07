@@ -69,9 +69,9 @@ public:
 	luxrays::ocl::InfiniteLight *infiniteLight;
 
 	// Compiled SunLight
-	slg::ocl::SunLight *sunLight;
+	luxrays::ocl::SunLight *sunLight;
 	// Compiled SkyLight
-	slg::ocl::SkyLight *skyLight;
+	luxrays::ocl::SkyLight *skyLight;
 
 	// Compiled Materials
 	std::set<MaterialType> usedMaterialTypes; // I can not use MaterialType here
