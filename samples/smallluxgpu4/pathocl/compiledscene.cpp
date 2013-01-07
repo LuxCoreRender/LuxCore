@@ -354,6 +354,15 @@ void CompiledScene::CompileMaterials() {
 				mat->type = luxrays::ocl::NULLMAT;
 				break;
 			}
+			case MATTETRANSLUCENT: {
+				usedMaterialTypes.insert(MATTETRANSLUCENT);
+				MatteTranslucentMaterial *mm = static_cast<MatteTranslucentMaterial *>(m);
+
+				mat->type = luxrays::ocl::MATTETRANSLUCENT;
+				mat->matteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
+				mat->matteTranslucent.ktTexIndex = scene->texDefs.GetTextureIndex(mm->GetKt());
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
 				break;

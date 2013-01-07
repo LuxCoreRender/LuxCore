@@ -420,8 +420,11 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 	if (cscene->IsMaterialCompiled(NULLMAT))
 		ss << " -D PARAM_ENABLE_MAT_NULL";
+	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
+		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
 
-	if (cscene->IsMaterialCompiled(ARCHGLASS) || cscene->IsMaterialCompiled(NULLMAT))
+	if (cscene->IsMaterialCompiled(GLASS) || cscene->IsMaterialCompiled(ARCHGLASS) ||
+			cscene->IsMaterialCompiled(NULLMAT) || cscene->IsMaterialCompiled(MATTETRANSLUCENT))
 		ss << " -D PARAM_HAS_PASSTHROUGHT";
 	
 	if (cscene->camera.lensRadius > 0.f)
@@ -741,8 +744,10 @@ void PathOCLRenderThread::InitRender() {
 
 	gpuTaksSize += sizeof(slg::ocl::PathStateBase);
 
-	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
-		renderEngine->compiledScene->IsMaterialCompiled(NULLMAT));
+	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(GLASS) ||
+			renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
+			renderEngine->compiledScene->IsMaterialCompiled(NULLMAT) ||
+			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT));
 	if (triAreaLightCount > 0) {
 		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
 
