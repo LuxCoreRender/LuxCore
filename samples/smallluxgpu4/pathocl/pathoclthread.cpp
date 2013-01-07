@@ -414,6 +414,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_MIRROR";
 	if (cscene->IsMaterialCompiled(GLASS))
 		ss << " -D PARAM_ENABLE_MAT_GLASS";
+	if (cscene->IsMaterialCompiled(METAL))
+		ss << " -D PARAM_ENABLE_MAT_METAL";
 	if (cscene->IsMaterialCompiled(ARCHGLASS))
 		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 	if (cscene->IsMaterialCompiled(NULLMAT))

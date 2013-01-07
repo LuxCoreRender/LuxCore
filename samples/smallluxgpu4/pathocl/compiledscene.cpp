@@ -330,6 +330,15 @@ void CompiledScene::CompileMaterials() {
 				mat->glass.iorTexIndex = scene->texDefs.GetTextureIndex(gm->GetIOR());
 				break;
 			}
+			case METAL: {
+				usedMaterialTypes.insert(METAL);
+				MetalMaterial *mm = static_cast<MetalMaterial *>(m);
+
+				mat->type = luxrays::ocl::METAL;
+				mat->metal.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
+				mat->metal.expTexIndex = scene->texDefs.GetTextureIndex(mm->GetExp());
+				break;
+			}
 			case ARCHGLASS: {
 				usedMaterialTypes.insert(ARCHGLASS);
 				ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);
@@ -339,16 +348,15 @@ void CompiledScene::CompileMaterials() {
 				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
 				break;
 			}
-			default:
 			case NULLMAT: {
 				usedMaterialTypes.insert(NULLMAT);
 
 				mat->type = luxrays::ocl::NULLMAT;
 				break;
 			}
-//			default:
-//				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
-//				break;
+			default:
+				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
+				break;
 		}
 	}
 

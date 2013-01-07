@@ -437,16 +437,10 @@ Vector MetalMaterial::GlossyReflection(const Vector &fixedDir, const float expon
 	const float dp = Dot(shadeN, dir);
 	const Vector w = dir - (2.f * dp) * Vector(shadeN);
 
-	Vector u;
-	if (fabsf(shadeN.x) > .1f) {
-		const Vector a(0.f, 1.f, 0.f);
-		u = Cross(a, w);
-	} else {
-		const Vector a(1.f, 0.f, 0.f);
-		u = Cross(a, w);
-	}
-	u = Normalize(u);
-	Vector v = Cross(w, u);
+	const Vector u = Normalize(Cross(
+			(fabsf(shadeN.x) > .1f) ? Vector(0.f, 1.f, 0.f) :  Vector(1.f, 0.f, 0.f),
+			w));
+	const Vector v = Cross(w, u);
 
 	return x * u + y * v + z * w;
 }
@@ -472,6 +466,7 @@ void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 	Material::AddReferencedTextures(referencedTexs);
 
 	referencedTexs.insert(Kr);
+	referencedTexs.insert(exponent);
 }
 
 //------------------------------------------------------------------------------
