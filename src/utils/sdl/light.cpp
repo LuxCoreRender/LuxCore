@@ -121,12 +121,13 @@ Spectrum InfiniteLight::GetRadiance(const Scene *scene,
 // SkyLight
 //------------------------------------------------------------------------------
 
-static float PerezBase(const float lam[6], float theta, float gamma) {
+static float PerezBase(const float lam[6], const float theta, const float gamma) {
 	return (1.f + lam[1] * expf(lam[2] / cosf(theta))) *
 		(1.f + lam[3] * expf(lam[4] * gamma)  + lam[5] * cosf(gamma) * cosf(gamma));
 }
 
-static inline float RiAngleBetween(float thetav, float phiv, float theta, float phi) {
+static float RiAngleBetween(const float thetav, const float phiv,
+		const float theta, const float phi) {
 	const float cospsi = sinf(thetav) * sinf(theta) * cosf(phi - phiv) + cosf(thetav) * cosf(theta);
 	if (cospsi >= 1.f)
 		return 0.f;

@@ -108,7 +108,6 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 		kernelCache = new luxrays::utils::oclKernelDummyCache();
 	else
 		throw std::runtime_error("Unknown opencl.kernelcache type: " + type);
-
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -329,7 +328,7 @@ void PathOCLRenderThread::InitSunLight() {
 
 	if (cscene->sunLight)
 		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
-			sizeof(slg::ocl::SunLight), "SunLight");
+			sizeof(luxrays::ocl::SunLight), "SunLight");
 	else
 		FreeOCLBuffer(&sunLightBuff);
 }
@@ -339,7 +338,7 @@ void PathOCLRenderThread::InitSkyLight() {
 
 	if (cscene->skyLight)
 		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
-			sizeof(slg::ocl::SkyLight), "SkyLight");
+			sizeof(luxrays::ocl::SkyLight), "SkyLight");
 	else
 		FreeOCLBuffer(&skyLightBuff);
 }
@@ -748,7 +747,7 @@ void PathOCLRenderThread::InitRender() {
 			renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
 			renderEngine->compiledScene->IsMaterialCompiled(NULLMAT) ||
 			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT));
-	if (triAreaLightCount > 0) {
+	if ((triAreaLightCount > 0) || sunLightBuff) {
 		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
 
 		if (hasPassThrough)
@@ -867,10 +866,10 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
 	if (infiniteLightBuff)
 		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
-//	if (sunLightBuff)
-//		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
-//	if (skyLightBuff)
-//		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
+	if (sunLightBuff)
+		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
+	if (skyLightBuff)
+		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
 	if (triLightDefsBuff) {
 		advancePathsKernel->setArg(argIndex++, *triLightDefsBuff);
 		advancePathsKernel->setArg(argIndex++, *meshLightsBuff);

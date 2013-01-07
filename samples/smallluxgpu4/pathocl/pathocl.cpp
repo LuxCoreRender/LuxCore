@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 // TODO: check OpenCL 1.1
+// TODO: alpha frame buffer
 // TODO: disable RR when RR_DEPTH > MAX_PATH_DEPTH
 // TODO: introduce conditional compilation for textures too (like for materials)
 // TODO: metropolis with lazy evaluation

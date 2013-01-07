@@ -42,6 +42,113 @@ float3 InfiniteLight_GetRadiance(
 #endif
 
 //------------------------------------------------------------------------------
+// SktLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SKYLIGHT)
+
+float SkyLight_PerezBase(__global float *lam, const float theta, const float gamma) {
+	return (1.f + lam[1] * exp(lam[2] / cos(theta))) *
+		(1.f + lam[3] * exp(lam[4] * gamma)  + lam[5] * cos(gamma) * cos(gamma));
+}
+
+float SkyLight_RiAngleBetween(const float thetav, const float phiv, const float theta, const float phi) {
+	const float cospsi = sin(thetav) * sin(theta) * cos(phi - phiv) + cos(thetav) * cos(theta);
+	if (cospsi >= 1.f)
+		return 0.f;
+	if (cospsi <= -1.f)
+		return M_PI_F;
+	return acos(cospsi);
+}
+
+float3 SkyLight_ChromaticityToSpectrum(float Y, float x, float y) {
+	float X, Z;
+	
+	if (y != 0.f)
+		X = (x / y) * Y;
+	else
+		X = 0.f;
+	
+	if (y != 0.f && Y != 0.f)
+		Z = (1.f - x - y) / y * Y;
+	else
+		Z = 0.f;
+
+	// Assuming sRGB (D65 illuminant)
+	return (float3)(3.2410f * X - 1.5374f * Y - 0.4986f * Z,
+			-0.9692f * X + 1.8760f * Y + 0.0416f * Z,
+			0.0556f * X - 0.2040f * Y + 1.0570f * Z);
+}
+
+float3 SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
+		const float theta, const float phi) {
+	// Add bottom half of hemisphere with horizon colour
+	const float theta_fin = fmin(theta, (M_PI_F * .5f) - .001f);
+	const float gamma = SkyLight_RiAngleBetween(theta, phi, skyLight->thetaS, skyLight->phiS);
+
+	// Compute xyY values
+	const float x = skyLight->zenith_x * SkyLight_PerezBase(skyLight->perez_x, theta_fin, gamma);
+	const float y = skyLight->zenith_y * SkyLight_PerezBase(skyLight->perez_y, theta_fin, gamma);
+	const float Y = skyLight->zenith_Y * SkyLight_PerezBase(skyLight->perez_Y, theta_fin, gamma);
+
+	return SkyLight_ChromaticityToSpectrum(Y, x, y);
+}
+
+float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir) {
+	const float theta = SphericalTheta(-dir);
+	const float phi = SphericalPhi(-dir);
+	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
+
+	return vload3(0, &skyLight->gain.r) * s;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// SunLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SUNLIGHT)
+
+float3 SunLight_Illuminate(__global SunLight *sunLight,
+		const float u0, const float u1,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float cosThetaMax = sunLight->cosThetaMax;
+	const float3 sunDir = vload3(0, &sunLight->sunDir.x);
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, vload3(0, &sunLight->x.x), vload3(0, &sunLight->y.x), sunDir);
+
+	// Check if the point can be inside the sun cone of light
+	const float cosAtLight = dot(sunDir, *dir);
+	if (cosAtLight <= cosThetaMax)
+		return BLACK;
+
+	*distance = INFINITY;
+	*directPdfW = UniformConePdf(cosThetaMax);
+
+	return vload3(0, &sunLight->sunColor.r);
+}
+
+float3 SunLight_GetRadiance(__global SunLight *sunLight, const float3 dir, float *directPdfA) {
+	// Make the sun visible only if relsize has been changed (in order
+	// to avoid fireflies).
+	if (sunLight->relSize > 5.f) {
+		const float cosThetaMax = sunLight->cosThetaMax;
+		const float3 sunDir = vload3(0, &sunLight->sunDir.x);
+
+		if ((cosThetaMax < 1.f) && (dot(-dir, sunDir) > cosThetaMax)) {
+			if (directPdfA)
+				*directPdfA = UniformConePdf(cosThetaMax);
+
+			return vload3(0, &sunLight->sunColor.r);
+		}
+	}
+
+	return BLACK;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // TriangleLight
 //------------------------------------------------------------------------------
 

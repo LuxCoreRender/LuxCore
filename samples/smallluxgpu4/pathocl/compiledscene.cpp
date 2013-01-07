@@ -476,48 +476,49 @@ void CompiledScene::CompileInfiniteLight() {
 }
 
 void CompiledScene::CompileSunLight() {
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SunLight");
-//
-//	delete sunLight;
-//
-//	//--------------------------------------------------------------------------
-//	// Check if there is an sun light source
-//	//--------------------------------------------------------------------------
-//
-//	SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
-//	if (sl) {
-//		sunLight = new PathOCL::SunLight();
-//
-//		sunLight->sundir = sl->GetDir();
-//		sunLight->gain = sl->GetGain();
-//		sunLight->turbidity = sl->GetTubidity();
-//		sunLight->relSize= sl->GetRelSize();
-//		float tmp;
-//		sl->GetInitData(&sunLight->x, &sunLight->y, &tmp, &tmp, &tmp,
-//				&sunLight->cosThetaMax, &tmp, &sunLight->suncolor);
-//	} else
-//		sunLight = NULL;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SunLight");
+
+	delete sunLight;
+
+	//--------------------------------------------------------------------------
+	// Check if there is an sun light source
+	//--------------------------------------------------------------------------
+
+	SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
+	if (sl) {
+		sunLight = new luxrays::ocl::SunLight();
+
+		ASSIGN_VECTOR(sunLight->sunDir, sl->GetDir());
+		ASSIGN_SPECTRUM(sunLight->gain, sl->GetGain());
+		sunLight->turbidity = sl->GetTubidity();
+		sunLight->relSize= sl->GetRelSize();
+		float tmp;
+		sl->GetInitData(reinterpret_cast<Vector *>(&sunLight->x),
+				reinterpret_cast<Vector *>(&sunLight->y), &tmp, &tmp, &tmp,
+				&sunLight->cosThetaMax, &tmp, reinterpret_cast<Spectrum *>(&sunLight->sunColor));
+	} else
+		sunLight = NULL;
 }
 
 void CompiledScene::CompileSkyLight() {
-//	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SkyLight");
-//
-//	delete skyLight;
-//
-//	//--------------------------------------------------------------------------
-//	// Check if there is an sky light source
-//	//--------------------------------------------------------------------------
-//
-//	SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
-//	if (sl) {
-//		skyLight = new PathOCL::SkyLight();
-//
-//		skyLight->gain = sl->GetGain();
-//		sl->GetInitData(&skyLight->thetaS, &skyLight->phiS,
-//				&skyLight->zenith_Y, &skyLight->zenith_x, &skyLight->zenith_y,
-//				skyLight->perez_Y, skyLight->perez_x, skyLight->perez_y);
-//	} else
-//		skyLight = NULL;
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SkyLight");
+
+	delete skyLight;
+
+	//--------------------------------------------------------------------------
+	// Check if there is an sky light source
+	//--------------------------------------------------------------------------
+
+	SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
+	if (sl) {
+		skyLight = new luxrays::ocl::SkyLight();
+
+		ASSIGN_SPECTRUM(skyLight->gain, sl->GetGain());
+		sl->GetInitData(&skyLight->thetaS, &skyLight->phiS,
+				&skyLight->zenith_Y, &skyLight->zenith_x, &skyLight->zenith_y,
+				skyLight->perez_Y, skyLight->perez_x, skyLight->perez_y);
+	} else
+		skyLight = NULL;
 }
 
 void CompiledScene::CompileTextures() {
