@@ -36,18 +36,16 @@ void GenerateCameraRay(
 		Seed *seed,
 		__global Ray *ray) {
 #if (PARAM_SAMPLER_TYPE == 0)
-	const uint pixelIndex = sample->pixelIndex;
-
 	// Don't use Sampler_GetSample() here
 	const float scrSampleX = sampleDataPathBase[IDX_SCREEN_X];
 	const float scrSampleY = sampleDataPathBase[IDX_SCREEN_Y];
-
-	const float screenX = pixelIndex % PARAM_IMAGE_WIDTH + scrSampleX - .5f;
-	const float screenY = pixelIndex / PARAM_IMAGE_WIDTH + scrSampleY - .5f;
-#elif (PARAM_SAMPLER_TYPE == 1)
-	const float screenX = min(Sampler_GetSamplePath(IDX_SCREEN_X) * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min(Sampler_GetSamplePath(IDX_SCREEN_Y) * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
+#else
+	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
+	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
 #endif
+
+	const float screenX = min(scrSampleX * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
+	const float screenY = min(scrSampleY * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
 
 	float3 Pras = (float3)(screenX, PARAM_IMAGE_HEIGHT - screenY - 1.f, 0.f);
 	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera, Pras);
@@ -144,7 +142,6 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	const size_t gid = get_global_id(0);
 
 	vstore3(BLACK, 0, &sample->radiance.r);
-	sample->pixelIndex = InitialPixelIndex(gid);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
@@ -165,19 +162,34 @@ void Sampler_NextSample(
 		__global Camera *camera,
 		__global Ray *ray
 		) {
-	const uint pixelIndex = sample->pixelIndex;
+#if (PARAM_IMAGE_FILTER_TYPE == 0)
+	const uint pixelIndex = PixelIndexFloat2D(sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y]);
 	SplatSample(frameBuffer,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-				alphaFrameBuffer,
+			alphaFrameBuffer,
 #endif
-				pixelIndex, vload3(0, &sample->radiance.r),
+			pixelIndex, vload3(0, &sample->radiance.r),
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-				sample->alpha,
+			sample->alpha,
 #endif
-				1.f);
+			1.f);
+#else
+	const float scrX = sampleData[IDX_SCREEN_X];
+	const float scrY = sampleData[IDX_SCREEN_Y];
+	float sx, sy;
+	const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
+	SplatSample(frameBuffer,
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			alphaFrameBuffer,
+#endif
+			pixelIndex, sx, sy, vload3(0, &sample->radiance.r),
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			sample->alpha,
+#endif
+			1.f);
+#endif
 
 	// Move to the next assigned pixel
-	sample->pixelIndex = NextPixelIndex(pixelIndex);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
