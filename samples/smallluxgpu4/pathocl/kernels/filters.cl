@@ -193,7 +193,7 @@ void Pixel_AddAlpha(__global AlphaPixel *apixel, const float alpha, const float 
 #endif
 
 #if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
-void Pixel_AddFilteredRadiance(__global Pixel *pixel, const float rad,
+void Pixel_AddFilteredRadiance(__global Pixel *pixel, const float3 rad,
 	const float distX, const float distY, const float weight) {
 	const float filterWeight = ImageFilter_Evaluate(distX, distY);
 

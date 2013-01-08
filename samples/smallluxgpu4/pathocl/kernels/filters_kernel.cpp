@@ -196,7 +196,7 @@ std::string KernelSource_filters =
 "#endif\n"
 "\n"
 "#if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)\n"
-"void Pixel_AddFilteredRadiance(__global Pixel *pixel, const float rad,\n"
+"void Pixel_AddFilteredRadiance(__global Pixel *pixel, const float3 rad,\n"
 "	const float distX, const float distY, const float weight) {\n"
 "	const float filterWeight = ImageFilter_Evaluate(distX, distY);\n"
 "\n"

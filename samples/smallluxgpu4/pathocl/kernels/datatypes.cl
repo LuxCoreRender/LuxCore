@@ -65,14 +65,10 @@ typedef struct {
 typedef struct {
 	Spectrum radiance;
 	float alpha;
-
-	unsigned int pixelIndex;
 } RandomSampleWithAlphaChannel;
 
 typedef struct {
 	Spectrum radiance;
-
-	unsigned int pixelIndex;
 } RandomSampleWithoutAlphaChannel;
 
 typedef struct {
