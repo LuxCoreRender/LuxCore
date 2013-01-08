@@ -544,17 +544,17 @@ Spectrum MixMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW *= weight1;
 
 		// Evaluate the second material
-		BSDFEvent eventMatA;
+		BSDFEvent eventMatB;
 		if (fromLight) {
 			float pdfWMatB;
-			Spectrum f = matB->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatB);
+			Spectrum f = matB->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatB, &pdfWMatB);
 			if (!f.Black()) {
 				result += weight2 * f;
 				*pdfW += weight2 * pdfWMatB;
 			}
 		} else {
 			float pdfWMatB;
-			Spectrum f = matB->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatB);
+			Spectrum f = matB->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatB, &pdfWMatB);
 			if (!f.Black()) {
 				result += weight2 * f;
 				*pdfW += weight2 * pdfWMatB;
