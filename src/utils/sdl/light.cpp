@@ -28,6 +28,10 @@
 using namespace luxrays;
 using namespace luxrays::sdl;
 
+// This is used to scale the world radius in sun/sky/infinite lights in order to
+// avoid problems with objects that are near the borderline of the world bounding sphere
+static const float worldRadiusScale = 10.f;
+
 //------------------------------------------------------------------------------
 // InfiniteLightBase
 //------------------------------------------------------------------------------
@@ -38,7 +42,7 @@ Spectrum InfiniteLightBase::Emit(const Scene *scene,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+	const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
 
 	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
 	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
@@ -64,7 +68,7 @@ Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+	const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
 
 	*dir = UniformSampleSphere(u0, u1);
 
@@ -109,7 +113,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene *scene,
 		*directPdfA = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW) {
-		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+		const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
@@ -238,7 +242,7 @@ Spectrum SkyLight::GetRadiance(const Scene *scene,
 		*directPdfA = INV_PI * .25f;
 
 	if (emissionPdfW) {
-		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+		const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
@@ -334,7 +338,7 @@ Spectrum SunLight::Emit(const Scene *scene,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+	const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad;
 
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
@@ -370,8 +374,8 @@ Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
 		*cosThetaAtLight = cosAtLight;
 
 	if (emissionPdfW) {
-		const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
-		*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+		const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad;
+		*emissionPdfW =  UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 	}
 	
 	return sunColor;
@@ -389,7 +393,7 @@ Spectrum SunLight::GetRadiance(const Scene *scene,
 				*directPdfA = UniformConePdf(cosThetaMax);
 
 			if (emissionPdfW) {
-				const float worldRadius = scene->dataSet->GetBSphere().rad * 1.01f;
+				const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad;
 				*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 			}
 
