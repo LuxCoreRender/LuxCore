@@ -39,7 +39,7 @@ Properties::Properties(const std::string &fileName) {
 }
 
 void Properties::Load(const Properties &p) {
-	std::vector<std::string> keys = p.GetAllKeys();
+	const std::vector<std::string> &keys = p.GetAllKeys();
 	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it)
 		SetString(*it, p.GetString(*it, ""));
 }
@@ -73,6 +73,7 @@ void Properties::Load(std::istream &stream) {
 		boost::trim(value);
 
 		props[key] = value;
+		keys.push_back(key);
 	}
 }
 
@@ -93,22 +94,18 @@ void Properties::LoadFromString(const std::string &propDefinitions) {
 	Load(stream);
 }
 
-std::vector<std::string> Properties::GetAllKeys() const {
-	std::vector<std::string> keys;
-	for (std::map<std::string, std::string>::const_iterator it = props.begin(); it != props.end(); ++it)
-		keys.push_back(it->first);
-
+const std::vector<std::string> &Properties::GetAllKeys() const {
 	return keys;
 }
 
 std::vector<std::string> Properties::GetAllKeys(const std::string prefix) const {
-	std::vector<std::string> keys;
-	for (std::map<std::string, std::string>::const_iterator it = props.begin(); it != props.end(); ++it) {
-		if (it->first.find(prefix) == 0)
-			keys.push_back(it->first);
+	std::vector<std::string> keysSubset;
+	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
+		if (it->find(prefix) == 0)
+			keysSubset.push_back(*it);
 	}
 
-	return keys;
+	return keysSubset;
 }
 
 bool Properties::IsDefined(const std::string propName) const {
@@ -185,6 +182,12 @@ std::vector<float> Properties::GetFloatVector(const std::string propName, const 
 
 void Properties::SetString(const std::string &propName, const std::string &value) {
 	props[propName] = value;
+
+	std::vector<std::string>::iterator it = std::find(keys.begin(), keys.end(), propName);
+	if (it == keys.end())
+		keys.push_back(propName);
+	else
+		*it = propName;
 }
 
 std::string Properties::SetString(const std::string &property) {

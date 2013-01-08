@@ -40,7 +40,7 @@ public:
 	void LoadFromFile(const std::string &fileName);
 	void LoadFromString(const std::string &propDefinitions);
 
-	std::vector<std::string> GetAllKeys() const;
+	const std::vector<std::string> &GetAllKeys() const;
 	std::vector<std::string> GetAllKeys(const std::string prefix) const;
 
 	bool IsDefined(const std::string propName) const;
@@ -62,6 +62,7 @@ public:
 	static std::vector<float> ConvertToFloatVector(const std::string &values);
 
 private:
+	std::vector<std::string> keys;
 	std::map<std::string, std::string> props;
 };
 

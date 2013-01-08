@@ -60,8 +60,8 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 		cfg.Load(*additionalProperties);
 
 	SLG_LOG("Configuration: ");
-	vector<string> keys = cfg.GetAllKeys();
-	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
+	const vector<string> &keys = cfg.GetAllKeys();
+	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
 		SLG_LOG("  " << *i << " = " << cfg.GetString(*i, ""));
 
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
