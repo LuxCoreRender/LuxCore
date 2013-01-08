@@ -22,8 +22,7 @@
  ***************************************************************************/
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, NULLMAT, MATTETRANSLUCENT
-	//MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
 } MaterialType;
 
 typedef struct {
@@ -37,8 +36,7 @@ typedef struct {
 typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
-	unsigned int ousideIorTexIndex;
-	unsigned int iorTexIndex;
+	unsigned int ousideIorTexIndex, iorTexIndex;
 } GlassParam;
 
 typedef struct {
@@ -50,6 +48,11 @@ typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
 } ArchGlassParam;
+
+typedef struct {
+	unsigned int matAIndex, matBIndex;
+	unsigned int mixFactorTexIndex;
+} MixParam;
 
 typedef struct {
     unsigned int krTexIndex;
@@ -65,7 +68,15 @@ typedef struct {
 		GlassParam glass;
 		MetalParam metal;
 		ArchGlassParam archglass;
+		MixParam mix;
 		// NULLMAT has no parameters
 		MatteTranslucentParam matteTranslucent;
 	};
 } Material;
+
+//------------------------------------------------------------------------------
+// Some macro trick in order to have more readable code
+//------------------------------------------------------------------------------
+
+#define MATERIALS_PARAM_DECL ,__global Material *mats, __global Texture *texs
+#define MATERIALS_PARAM ,mats, texs

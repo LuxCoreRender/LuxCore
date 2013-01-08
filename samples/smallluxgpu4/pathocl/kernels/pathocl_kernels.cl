@@ -407,7 +407,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	if (pathState == GENERATE_DL_RAY) {
 		pathState = GENERATE_NEXT_VERTEX_RAY;
 
-		if (!BSDF_IsDelta(bsdf, mats)) {
+		if (!BSDF_IsDelta(bsdf
+				MATERIALS_PARAM)) {
 			// TODO: sunlight
 
 			// Pick a triangle light source to sample
@@ -459,8 +460,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			if (any(isnotequal(lightRadiance, BLACK))) {
 				BSDFEvent event;
 				float bsdfPdfW;
-				const float3 bsdfEval = BSDF_Evaluate(bsdf, mats, texs,
+				const float3 bsdfEval = BSDF_Evaluate(bsdf,
 						lightRayDir, &event, &bsdfPdfW
+						MATERIALS_PARAM
 						IMAGEMAPS_PARAM);
 
 				if (any(isnotequal(bsdfEval, BLACK))) {
@@ -508,9 +510,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			float cosSampledDir;
 			BSDFEvent event;
 
-			const float3 bsdfSample = BSDF_Sample(bsdf, mats, texs,
+			const float3 bsdfSample = BSDF_Sample(bsdf,
 					Sampler_GetSamplePathVertex(IDX_BSDF_X), Sampler_GetSamplePathVertex(IDX_BSDF_Y),
 					&sampledDir, &lastPdfW, &cosSampledDir, &event
+					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
 			const bool lastSpecular = ((event & SPECULAR) != 0);
 

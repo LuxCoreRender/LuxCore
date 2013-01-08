@@ -474,9 +474,43 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material, __global Tex
 
 //------------------------------------------------------------------------------
 // Generic material functions
+//
+// They include the support for all material but Mix
+// (because OpenCL doesn't support recursion)
 //------------------------------------------------------------------------------
 
-BSDFEvent Material_GetEventTypes(__global Material *mat) {
+bool Material_IsDeltaNoMix(__global Material *material) {
+	switch (material->type) {
+		// Non Specular materials
+#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
+		case MATTETRANSLUCENT:
+#endif
+#if defined (PARAM_ENABLE_MAT_MATTE)
+		case MATTE:
+			return false;
+#endif
+		// Specular materials
+#if defined (PARAM_ENABLE_MAT_MIRROR)
+		case MIRROR:
+#endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL)
+		case METAL:
+#endif
+#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
+		case ARCHGLASS:
+#endif
+#if defined (PARAM_ENABLE_MAT_NULL)
+		case NULLMAT:
+#endif
+		default:
+			return true;
+	}
+}
+
+BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 	switch (mat->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
@@ -511,34 +545,59 @@ BSDFEvent Material_GetEventTypes(__global Material *mat) {
 	}
 }
 
-bool Material_IsDelta(__global Material *mat) {
-	switch (mat->type) {
-		// Non Specular materials
-#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
-		case MATTETRANSLUCENT:
+float3 Material_SampleNoMix(__global Material *material, __global Texture *texs,
+		const float2 uv, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+		const float passThroughEvent,
 #endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		IMAGEMAPS_PARAM_DECL) {
+	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
-			return false;
+			return MatteMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
 #endif
-		// Specular materials
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
+			return MirrorMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+					u0, u1, pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
+			return GlassMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL)
 		case METAL:
+			return MetalMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
+			return ArchGlassMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
+			return NullMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+					u0, u1, pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
+		case MATTETRANSLUCENT:
+			return MatteTranslucentMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					IMAGEMAPS_PARAM);
 #endif
 		default:
-			return true;
+			return BLACK;
 	}
 }
 
@@ -577,60 +636,215 @@ float3 Material_Evaluate(__global Material *material, __global Texture *texs,
 	}
 }
 
-float3 Material_Sample(__global Material *material, __global Texture *texs,
+//------------------------------------------------------------------------------
+// Mix material
+//
+// This requires a quite complex implementation because OpenCL doesn't support
+// recursion.
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_MIX)
+
+#define MIX_STACK_SIZE 16
+
+BSDFEvent MixMaterial_IsDelta(__global Material *material
+		MATERIALS_PARAM_DECL) {
+	int matIndexStack[MIX_STACK_SIZE];
+	matIndexStack[0] = material->mix.matAIndex;
+	matIndexStack[1] = material->mix.matBIndex;
+	int stackIndex = 1;
+
+	while (stackIndex >= 0) {
+		// Extract a material from the stack
+		__global Material *m = &mats[matIndexStack[stackIndex--]];
+
+		// Check if it is a Mix material too
+		if (m->type == MIX) {
+			// Add both material to the stack
+			matIndexStack[stackIndex] = m->mix.matAIndex;
+			matIndexStack[stackIndex] = m->mix.matBIndex;
+			stackIndex += 2;
+		} else {
+			// Normal GetEventTypes() evaluation
+			if (Material_IsDeltaNoMix(m))
+				return true;
+		}
+	}
+
+	return false;
+}
+
+BSDFEvent MixMaterial_GetEventTypes(__global Material *material
+		MATERIALS_PARAM_DECL) {
+	BSDFEvent event = NONE;
+	int matIndexStack[MIX_STACK_SIZE];
+	matIndexStack[0] = material->mix.matAIndex;
+	matIndexStack[1] = material->mix.matBIndex;
+	int stackIndex = 1;
+
+	while (stackIndex >= 0) {
+		// Extract a material from the stack
+		__global Material *m = &mats[matIndexStack[stackIndex--]];
+
+		// Check if it is a Mix material too
+		if (m->type == MIX) {
+			// Add both material to the stack
+			matIndexStack[stackIndex] = m->mix.matAIndex;
+			matIndexStack[stackIndex] = m->mix.matBIndex;
+			stackIndex += 2;
+		} else {
+			// Normal GetEventTypes() evaluation
+			event |= Material_GetEventTypesNoMix(m);
+		}
+	}
+
+	return event;
+}
+
+float3 MixMaterial_Sample(__global Material *material,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1, const float passEvent,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		MATERIALS_PARAM_DECL
+		IMAGEMAPS_PARAM_DECL) {
+	__global Material *mix = material;
+	float passThrough = passEvent;
+
+	for (;;) {
+		__global Material *matA = &mats[material->mix.matAIndex];
+		__global Material *matB = &mats[material->mix.matBIndex];
+
+		const float factor = Texture_GetGreyValue(&texs[mix->mix.mixFactorTexIndex], uv
+			IMAGEMAPS_PARAM);
+		const float weight2 = clamp(factor, 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
+
+		if (passThrough < weight1) {
+			// Check if it is a Mix material too
+			if (matA->type == MIX) {
+				mix = matA;
+				passThrough = passThrough / weight1;
+				continue;
+			} else {
+				// Sample the first material
+				float3 result = Material_SampleNoMix(matA, texs, uv,
+						fixedDir, sampledDir, u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+						passThrough / weight1,
+#endif
+						pdfW, cosSampledDir, event
+						IMAGEMAPS_PARAM);
+				if (all(isequal(result, BLACK)))
+					return BLACK;
+				*pdfW *= weight1;
+
+				// Evaluate the second material
+				// TODO: mix support
+				BSDFEvent eventMatB;
+				float pdfWMatB;
+				const float3 f = Material_Evaluate(matB, texs, uv, *sampledDir, fixedDir, &eventMatB, &pdfWMatB
+						IMAGEMAPS_PARAM);
+				if (any(isnotequal(f, BLACK))) {
+					result += weight2 * f;
+					*pdfW += weight2 * pdfWMatB;
+				}
+
+				return result;
+			}
+		} else {
+			// Check if it is a Mix material too
+			if (matB->type == MIX) {
+				mix = matB;
+				passThrough = (passThrough - weight1) / weight2;
+				continue;
+			} else {
+				// Sample the second material
+				float3 result = Material_SampleNoMix(matB, texs, uv,
+						fixedDir, sampledDir, u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+						(passThrough - weight1) / weight2,
+#endif
+						pdfW, cosSampledDir, event
+						IMAGEMAPS_PARAM);
+				if (all(isequal(result, BLACK)))
+					return BLACK;
+				*pdfW *= weight2;
+
+				// Evaluate the second material
+				// TODO: mix support
+				BSDFEvent eventMatA;
+				float pdfWMatA;
+				const float3 f = Material_Evaluate(matA, texs, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA
+						IMAGEMAPS_PARAM);
+				if (any(isnotequal(f, BLACK))) {
+					result += weight1 * f;
+					*pdfW += weight1 * pdfWMatA;
+				}
+
+				return result;
+			}
+		}
+	}
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Generic material functions with Mix support
+//------------------------------------------------------------------------------
+
+BSDFEvent Material_GetEventTypes(__global Material *material
+		MATERIALS_PARAM_DECL) {
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_GetEventTypes(material
+				MATERIALS_PARAM);
+	else
+#endif
+		return Material_GetEventTypesNoMix(material);
+}
+
+bool Material_IsDelta(__global Material *material
+		MATERIALS_PARAM_DECL) {
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_IsDelta(material
+				MATERIALS_PARAM);
+	else
+#endif
+		return Material_IsDeltaNoMix(material);
+}
+
+float3 Material_Sample(__global Material *material,	const float2 uv,
+		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
-	switch (material->type) {
-#if defined (PARAM_ENABLE_MAT_MATTE)
-		case MATTE:
-			return MatteMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event
-					IMAGEMAPS_PARAM);
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_Sample(material, uv,
+				fixedDir, sampledDir,
+				u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+				passThroughEvent,
 #endif
-#if defined (PARAM_ENABLE_MAT_MIRROR)
-		case MIRROR:
-			return MirrorMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1, pdfW, cosSampledDir, event
-					IMAGEMAPS_PARAM);
+				pdfW, cosSampledDir, event
+				MATERIALS_PARAM
+				IMAGEMAPS_PARAM);
+	else
 #endif
-#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
-		case ARCHGLASS:
-			return ArchGlassMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
-					IMAGEMAPS_PARAM);
+		return Material_SampleNoMix(material, texs, uv,
+				fixedDir, sampledDir,
+				u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGHT)
+				passThroughEvent,
 #endif
-#if defined (PARAM_ENABLE_MAT_GLASS)
-		case GLASS:
-			return GlassMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
-					IMAGEMAPS_PARAM);
-#endif
-#if defined (PARAM_ENABLE_MAT_METAL)
-		case METAL:
-			return MetalMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event
-					IMAGEMAPS_PARAM);
-#endif
-#if defined (PARAM_ENABLE_MAT_NULL)
-		case NULLMAT:
-			return NullMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1, pdfW, cosSampledDir, event
-					IMAGEMAPS_PARAM);
-#endif
-#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
-		case MATTETRANSLUCENT:
-			return MatteTranslucentMaterial_Sample(material, texs, uv, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
-					IMAGEMAPS_PARAM);
-#endif
-		default:
-			return BLACK;
-	}
+				pdfW, cosSampledDir, event
+				IMAGEMAPS_PARAM);
 }
 
 float3 Material_GetEmittedRadiance(__global Material *material, __global Texture *texs, const float2 triUV

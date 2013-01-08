@@ -395,6 +395,10 @@ public:
 	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
+	const Material *GetMaterialA() const { return matA; }
+	const Material *GetMaterialB() const { return matB; }
+	const Texture *GetMixFactor() const { return mixFactor; }
+
 private:
 	const Material *matA;
 	const Material *matB;

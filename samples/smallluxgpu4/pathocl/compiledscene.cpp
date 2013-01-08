@@ -348,6 +348,16 @@ void CompiledScene::CompileMaterials() {
 				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
 				break;
 			}
+			case MIX: {
+				usedMaterialTypes.insert(MIX);
+				MixMaterial *mm = static_cast<MixMaterial *>(m);
+
+				mat->type = luxrays::ocl::MIX;
+				mat->mix.matAIndex = scene->matDefs.GetMaterialIndex(mm->GetMaterialA());
+				mat->mix.matBIndex = scene->matDefs.GetMaterialIndex(mm->GetMaterialB());
+				mat->mix.mixFactorTexIndex = scene->texDefs.GetTextureIndex(mm->GetMixFactor());
+				break;
+			}
 			case NULLMAT: {
 				usedMaterialTypes.insert(NULLMAT);
 

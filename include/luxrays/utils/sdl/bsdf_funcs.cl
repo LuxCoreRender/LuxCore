@@ -136,8 +136,9 @@ void BSDF_Init(
 	vstore3(shadeN, 0, &bsdf->shadeN.x);
 }
 
-float3 BSDF_Evaluate(__global BSDF *bsdf, __global Material *mats, __global Texture *texs,
+float3 BSDF_Evaluate(__global BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
+		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
 	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
 	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
@@ -156,7 +157,8 @@ float3 BSDF_Evaluate(__global BSDF *bsdf, __global Material *mats, __global Text
 
 	__global Material *mat = &mats[bsdf->materialIndex];
 	const float sideTest = dotEyeDirNG * dotLightDirNG;
-	const BSDFEvent matEvent = Material_GetEventTypes(mat);
+	const BSDFEvent matEvent = Material_GetEventTypes(mat
+			MATERIALS_PARAM);
 	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
 			((sideTest < 0.f) && !(matEvent & TRANSMIT)) ||
 			(sideTest == 0.f))
@@ -178,19 +180,21 @@ float3 BSDF_Evaluate(__global BSDF *bsdf, __global Material *mats, __global Text
 		return result;
 }
 
-float3 BSDF_Sample(__global BSDF *bsdf, __global Material *mats, __global Texture *texs,
-		const float u0, const float u1, float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
+		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 fixedDir = vload3(0, &bsdf->fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-	const float3 result = Material_Sample(&mats[bsdf->materialIndex], texs,
-			vload2(0, &bsdf->hitPointUV.u), localFixedDir, &localSampledDir, u0, u1,
+	const float3 result = Material_Sample(&mats[bsdf->materialIndex], vload2(0, &bsdf->hitPointUV.u),
+			localFixedDir, &localSampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGHT)
 			bsdf->passThroughEvent,
 #endif
 			pdfW, cosSampledDir, event
+			MATERIALS_PARAM
 			IMAGEMAPS_PARAM);
 	if (all(isequal(result, BLACK)))
 		return 0.f;
@@ -208,8 +212,10 @@ float3 BSDF_Sample(__global BSDF *bsdf, __global Material *mats, __global Textur
 		return result;
 }
 
-bool BSDF_IsDelta(__global BSDF *bsdf, __global Material *mats) {
-	return Material_IsDelta(&mats[bsdf->materialIndex]);
+bool BSDF_IsDelta(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_IsDelta(&mats[bsdf->materialIndex]
+			MATERIALS_PARAM);
 }
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
