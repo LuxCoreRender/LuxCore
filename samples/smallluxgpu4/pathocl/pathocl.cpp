@@ -19,9 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-// TODO: check OpenCL 1.1
-// TODO: alpha frame buffer
-// TODO: disable RR when RR_DEPTH > MAX_PATH_DEPTH
 // TODO: introduce conditional compilation for textures too (like for materials)
 // TODO: metropolis with lazy evaluation
 // TODO: state sorting optimization
@@ -88,6 +85,10 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		oclIntersectionDevice->DisableImageStorage(forcedDisableImageStorage);
 		// Disable the support for hybrid rendering
 		oclIntersectionDevice->SetDataParallelSupport(false);
+
+		// Check if OpenCL 1.1 is available
+		if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1())
+			throw std::runtime_error("OpenCL version 1.1 or better is required for device: " + devs[i]->GetName());
 	}
 
 	// Set the LuxRays SataSet

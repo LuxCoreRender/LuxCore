@@ -73,6 +73,25 @@ public:
 	cl::Context &GetOCLContext() const;
 	cl::Device &GetOCLDevice() const { return oclDevice; }
 
+	bool IsOpenCL_1_0() const {
+		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
+		int major, minor;
+		sscanf(platform.getInfo<CL_PLATFORM_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
+		return (major >= 1) && (minor >= 0);
+	}
+	bool IsOpenCL_1_1() const {
+		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
+		int major, minor;
+		sscanf(platform.getInfo<CL_PLATFORM_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
+		return (major >= 1) && (minor >= 1);
+	}
+	bool IsOpenCL_1_2() const {
+		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
+		int major, minor;
+		sscanf(platform.getInfo<CL_PLATFORM_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
+		return (major >= 1) && (minor >= 2);
+	}
+
 	bool IsAMDPlatform() const {
 		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
 		return !strcmp(platform.getInfo<CL_PLATFORM_VENDOR>().c_str(), "Advanced Micro Devices, Inc.");
