@@ -84,12 +84,12 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 	Scene *scene = engine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
 	Film *film = threadFilm;
-	const unsigned int filmWidth = film->GetWidth();
-	const unsigned int filmHeight = film->GetHeight();
+	const u_int filmWidth = film->GetWidth();
+	const u_int filmHeight = film->GetHeight();
 
 	// Sample offsets
-	const unsigned int sampleBootSize = 11;
-	const unsigned int sampleEyeStepSize = 3;
+	const u_int sampleBootSize = 11;
+	const u_int sampleEyeStepSize = 3;
 
 	Ray eyeRay;
 	const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
@@ -100,7 +100,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 	Spectrum radiance, eyePathThroughput(1.f, 1.f, 1.f);
 	int depth = 1;
 	while (depth <= engine->maxPathDepth) {
-		const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleEyeStepSize;
+		const u_int sampleOffset = sampleBootSize + (depth - 1) * sampleEyeStepSize;
 
 		RayHit eyeRayHit;
 		BSDF bsdf;
@@ -109,7 +109,11 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 				sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
-			radiance = eyePathThroughput * connectionThroughput * scene->GetEnvLightsRadiance(-eyeRay.d, Point());
+			const Spectrum throughput = eyePathThroughput * connectionThroughput;
+			if (scene->envLight)
+				radiance +=  throughput * scene->envLight->GetRadiance(scene, -eyeRay.d);
+			if (scene->sunLight)
+				radiance +=  throughput * scene->sunLight->GetRadiance(scene, -eyeRay.d);
 			break;
 		} else {
 			// Something was hit, check if it is a light source
@@ -165,10 +169,10 @@ void LightCPURenderThread::RenderFunc() {
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
-	const unsigned int sampleBootSize = 11;
-	const unsigned int sampleEyeStepSize = 4;
-	const unsigned int sampleLightStepSize = 5;
-	const unsigned int sampleSize = 
+	const u_int sampleBootSize = 11;
+	const u_int sampleEyeStepSize = 4;
+	const u_int sampleLightStepSize = 5;
+	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
 		engine->maxPathDepth * sampleLightStepSize; // For each light vertex
@@ -223,7 +227,7 @@ void LightCPURenderThread::RenderFunc() {
 
 		int depth = 1;
 		while (depth <= engine->maxPathDepth) {
-			const unsigned int sampleOffset = sampleBootSize + sampleEyeStepSize * engine->maxPathDepth +
+			const u_int sampleOffset = sampleBootSize + sampleEyeStepSize * engine->maxPathDepth +
 				(depth - 1) * sampleLightStepSize;
 
 			RayHit nextEventRayHit;

@@ -241,16 +241,8 @@ void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 }
 
 void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
-		const bool finiteLightSource, const PathVertex &eyeVertex,
-		Spectrum *radiance) const {
-	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
-	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
-	Scene *scene = renderEngine->renderConfig->scene;
-
-	float directPdfA, emissionPdfW;
-	const Spectrum lightRadiance = (finiteLightSource) ?
-		eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW) :
-		scene->GetEnvLightsRadiance(eyeVertex.bsdf.fixedDir, Point(), &directPdfA, &emissionPdfW);
+		const Spectrum &lightRadiance, const float directPdfA, const float emissionPdfW,
+		const PathVertex &eyeVertex, Spectrum *radiance) const {
 	if (lightRadiance.Black())
 		return;
 
@@ -259,16 +251,39 @@ void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
 		return;
 	}
 
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
+	Scene *scene = renderEngine->renderConfig->scene;
 	const float lightPickPdf = scene->PickLightPdf();
-	directPdfA *= lightPickPdf;
-	emissionPdfW *= lightPickPdf;
 
 	// MIS weight
-	const float weightCamera = MIS(directPdfA) * eyeVertex.dVCM +
-		MIS(emissionPdfW) * eyeVertex.dVC;
+	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
+		MIS(emissionPdfW * lightPickPdf) * eyeVertex.dVC;
 	const float misWeight = 1.f / (weightCamera + 1.f);
 
 	*radiance += misWeight * eyeVertex.throughput * lightRadiance;
+}
+
+void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
+		const bool finiteLightSource, const PathVertex &eyeVertex, Spectrum *radiance) const {
+	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
+	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
+	Scene *scene = renderEngine->renderConfig->scene;
+
+	float directPdfA, emissionPdfW;
+	if (finiteLightSource) {
+		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW);
+		DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+	} else {
+		if (scene->envLight) {
+			const Spectrum lightRadiance = scene->envLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		}
+		if (scene->sunLight) {
+			const Spectrum lightRadiance = scene->sunLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		}
+	}
 }
 
 void BiDirState::TraceLightPath(HybridRenderThread *renderThread,

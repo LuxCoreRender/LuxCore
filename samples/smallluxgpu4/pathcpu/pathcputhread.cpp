@@ -125,19 +125,30 @@ void PathCPURenderThread::DirectHitInfiniteLight(
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
+	// Infinite light
 	float directPdfW;
-	Spectrum lightRadiance = scene->GetEnvLightsRadiance(-eyeDir, Point(), &directPdfW);
-	if (lightRadiance.Black())
-		return;
+	if (scene->envLight) {
+		const Spectrum envRadiance = scene->envLight->GetRadiance(scene, -eyeDir, &directPdfW);
+		if (!envRadiance.Black()) {
+			if(!lastSpecular) {
+				// MIS between BSDF sampling and direct light sampling
+				*radiance += pathThrouput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
+			} else
+				*radiance += pathThrouput * envRadiance;
+		}
+	}
 
-	float weight;
-	if(!lastSpecular) {
-		// MIS between BSDF sampling and direct light sampling
-		weight = PowerHeuristic(lastPdfW, directPdfW);
-	} else
-		weight = 1.f;
-
-	*radiance += pathThrouput * weight * lightRadiance;
+	// Sun light
+	if (scene->sunLight) {
+		const Spectrum sunRadiance = scene->sunLight->GetRadiance(scene, -eyeDir, &directPdfW);
+		if (!sunRadiance.Black()) {
+			if(!lastSpecular) {
+				// MIS between BSDF sampling and direct light sampling
+				*radiance += pathThrouput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
+			} else
+				*radiance += pathThrouput * sunRadiance;
+		}
+	}
 }
 
 void PathCPURenderThread::RenderFunc() {

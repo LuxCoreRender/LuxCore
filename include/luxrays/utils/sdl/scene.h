@@ -50,10 +50,6 @@ public:
 	LightSource *GetLightByType(const LightSourceType lightType) const;
 	LightSource *SampleAllLights(const float u, float *pdf) const;
 	float PickLightPdf() const;
-	Spectrum GetEnvLightsRadiance(const Vector &dir,
-			const Point &hitPoint,
-			float *directPdfA = NULL,
-			float *emissionPdfW = NULL) const;
 	bool Intersect(IntersectionDevice *device, const bool fromLight,
 		const float u0, Ray *ray, RayHit *rayHit,
 		BSDF *bsdf, Spectrum *connectionThroughput) const;
@@ -118,7 +114,7 @@ public:
 	MaterialDefinitions matDefs; // Material definitions
 	ExtMeshDefinitions meshDefs; // ExtMesh definitions
 
-	InfiniteLightBase *infiniteLight; // A SLG scene can have only one infinite light
+	InfiniteLightBase *envLight; // A SLG scene can have only one infinite light
 	SunLight *sunLight;
 	std::vector<TriangleLight *> triLightDefs; // One for each light source (doesn't include sun/infinite light)
 	std::vector<TriangleLight *> triangleLights; // One for each triangle
