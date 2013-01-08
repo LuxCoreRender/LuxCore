@@ -338,6 +338,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			vstore3(radiance, 0, &sample->radiance.r);
 #endif
 
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			if (depth == 1)
+				sample->alpha = 0.f;
+#endif
+
 			pathState = SPLAT_SAMPLE;
 		}
 	}

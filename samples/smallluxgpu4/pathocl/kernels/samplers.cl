@@ -106,6 +106,9 @@ void GenerateCameraPath(
 	GenerateCameraRay(camera, sample, sampleDataPathBase, seed, ray);
 
 	vstore3(BLACK, 0, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
 
 	// Initialize the path state
 	task->pathStateBase.state = RT_NEXT_VERTEX;
@@ -114,10 +117,6 @@ void GenerateCameraPath(
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	task->directLightState.lastPdfW = 1.f;
 	task->directLightState.lastSpecular = TRUE;
-#endif
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	task->alphaChannelState.vertexCount = 0;
-	task->alphaChannelState.alpha = 1.f;
 #endif
 }
 
@@ -146,6 +145,9 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 
 	vstore3(BLACK, 0, &sample->radiance.r);
 	sample->pixelIndex = InitialPixelIndex(gid);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
 
 	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
 	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
@@ -170,12 +172,15 @@ void Sampler_NextSample(
 #endif
 				pixelIndex, vload3(0, &sample->radiance.r),
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-				contribAlpha,
+				sample->alpha,
 #endif
 				1.f);
 
 	// Move to the next assigned pixel
 	sample->pixelIndex = NextPixelIndex(pixelIndex);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
 
 	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
 	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
@@ -274,9 +279,11 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	sample->consecutiveRejects = 0;
 
 	sample->weight = 0.f;
-	vstore3(WHITE, 0, &sample->currentRadiance.r);
+	vstore3(BLACK, 0, &sample->currentRadiance.r);
+	vstore3(BLACK, 0, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->currentAlpha = 0.f;
+	sample->currentAlpha = 1.f;
+	sample->alpha = 1.f;
 #endif
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
@@ -310,7 +317,7 @@ void Sampler_NextSample(
 
 		vstore3(radiance, 0, &sample->currentRadiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		sample->currentAlpha = alpha;
+		sample->currentAlpha = sample->alpha;
 #endif
 		sample->totalI = Spectrum_Y(radiance);
 
@@ -325,7 +332,7 @@ void Sampler_NextSample(
 
 		const float3 proposedL = radiance;
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		const float proposedAlpha = alpha;
+		const float proposedAlpha = sample->alpha;
 #endif
 		float proposedI = Spectrum_Y(proposedL);
 		proposedI = isinf(proposedI) ? 0.f : proposedI;

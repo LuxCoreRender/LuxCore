@@ -64,12 +64,20 @@ typedef struct {
 
 typedef struct {
 	Spectrum radiance;
+	float alpha;
 
 	unsigned int pixelIndex;
-} RandomSample;
+} RandomSampleWithAlphaChannel;
 
 typedef struct {
 	Spectrum radiance;
+
+	unsigned int pixelIndex;
+} RandomSampleWithoutAlphaChannel;
+
+typedef struct {
+	Spectrum radiance;
+	float alpha;
 
 	float totalI;
 
@@ -98,7 +106,11 @@ typedef struct {
 #if defined(SLG_OPENCL_KERNEL)
 
 #if (PARAM_SAMPLER_TYPE == 0)
-typedef RandomSample Sample;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+typedef RandomSampleWithAlphaChannel Sample;
+#else
+typedef RandomSampleWithoutAlphaChannel Sample;
+#endif
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 1)
@@ -216,11 +228,6 @@ typedef struct {
 	BSDF passThroughBsdf;
 } PathStateDirectLightPassThrough;
 
-typedef struct {
-	unsigned int vertexCount;
-	float alpha;
-} PathStateAlphaChannel;
-
 // This is defined only under OpenCL
 #if defined(SLG_OPENCL_KERNEL)
 
@@ -238,9 +245,6 @@ typedef struct {
 #if defined(PARAM_HAS_PASSTHROUGHT)
 	PathStateDirectLightPassThrough passThroughState;
 #endif
-#endif
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	PathStateAlphaChannel alphaChannelState;
 #endif
 } GPUTask;
 
