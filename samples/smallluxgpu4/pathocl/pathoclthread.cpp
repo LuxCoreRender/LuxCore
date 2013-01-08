@@ -359,7 +359,6 @@ void PathOCLRenderThread::InitImageMaps() {
 			AllocOCLBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
 					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
 		}
-
 	} else {
 		FreeOCLBuffer(&imageMapDescsBuff);
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)

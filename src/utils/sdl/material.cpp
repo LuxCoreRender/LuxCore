@@ -493,7 +493,7 @@ Spectrum MixMaterial::GetEmittedRadiance(const UV &uv) const {
 	if (matA->IsLightSource() && (weight1 > 0.f))
 		result += weight1 * matA->GetEmittedRadiance(uv);
 	if (matB->IsLightSource() && (weight2 > 0.f))
-		result *= weight2 * matB->GetEmittedRadiance(uv);
+		result += weight2 * matB->GetEmittedRadiance(uv);
 
 	return result;
 }

@@ -30,7 +30,7 @@ RenderConfig::RenderConfig(const string &fileName) {
 	cfg.LoadFromFile(fileName);
 
 	LM_LOG_CFG("Configuration: ");
-	vector<string> keys = cfg.GetAllKeys();
+	const vector<string> &keys = cfg.GetAllKeys();
 	for (vector<string>::iterator i = keys.begin(); i != keys.end(); ++i)
 		LM_LOG_CFG("  " << *i << " = " << cfg.GetString(*i, ""));
 
