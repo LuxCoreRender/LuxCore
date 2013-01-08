@@ -78,6 +78,9 @@ protected:
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 	void DirectHitLight(const bool finiteLightSource,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
+	void DirectHitLight(const luxrays::Spectrum &lightRadiance,
+		const float directPdfA, const float emissionPdfW,
+		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
 	void ConnectVertices(const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
 		luxrays::utils::SampleResult *eyeSampleResult, const float u0) const;

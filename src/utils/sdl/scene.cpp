@@ -43,7 +43,7 @@ using namespace luxrays::sdl;
 Scene::Scene(const int accType) {
 	camera = NULL;
 
-	infiniteLight = NULL;
+	envLight = NULL;
 	sunLight = NULL;
 
 	dataSet = NULL;
@@ -102,7 +102,7 @@ Scene::Scene(const std::string &fileName, const int accType) {
 
 	//--------------------------------------------------------------------------
 
-	if (!infiniteLight && !sunLight && (triLightDefs.size() == 0))
+	if (!envLight && !sunLight && (triLightDefs.size() == 0))
 		throw std::runtime_error("The scene doesn't include any light source");
 
 	dataSet = NULL;
@@ -110,7 +110,7 @@ Scene::Scene(const std::string &fileName, const int accType) {
 
 Scene::~Scene() {
 	delete camera;
-	delete infiniteLight;
+	delete envLight;
 	delete sunLight;
 
 	for (std::vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
@@ -152,7 +152,7 @@ void Scene::UpdateDataSet(Context *ctx) {
 }
 
 std::vector<std::string> Scene::GetStringParameters(const Properties &prop, const std::string &paramName,
-		const unsigned int paramCount, const std::string &defaultValue) {
+		const u_int paramCount, const std::string &defaultValue) {
 	const std::vector<std::string> vf = prop.GetStringVector(paramName, defaultValue);
 	if (vf.size() != paramCount) {
 		std::stringstream ss;
@@ -164,7 +164,7 @@ std::vector<std::string> Scene::GetStringParameters(const Properties &prop, cons
 }
 
 std::vector<float> Scene::GetFloatParameters(const Properties &prop, const std::string &paramName,
-		const unsigned int paramCount, const std::string &defaultValue) {
+		const u_int paramCount, const std::string &defaultValue) {
 	const std::vector<float> vf = prop.GetFloatVector(paramName, defaultValue);
 	if (vf.size() != paramCount) {
 		std::stringstream ss;
@@ -386,13 +386,13 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 	if (mat->IsLightSource()) {
 		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
 
-		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
+		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
 			TriangleLight *tl = new TriangleLight(mat, meshObject, i);
 			triLightDefs.push_back(tl);
 			triangleLights.push_back(tl);
 		}
 	} else {		
-		for (unsigned int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
+		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
 			triangleLights.push_back(NULL);
 	}
 }
@@ -410,7 +410,7 @@ void Scene::UpdateObjectTransformation(const std::string &objName, const Transfo
 	const u_int meshIndex = meshDefs.GetExtMeshIndex(objName);
 	if (objectMaterials[meshIndex]->IsLightSource()) {
 		// Have to update all light source using this mesh
-		for (unsigned int i = 0; i < triLightDefs.size(); ++i) {
+		for (u_int i = 0; i < triLightDefs.size(); ++i) {
 			TriangleLight *tl = dynamic_cast<TriangleLight *>(triLightDefs[i]);
 			if (tl && tl->GetMesh() == mesh)
 				tl->Init();
@@ -431,7 +431,7 @@ void Scene::AddObjects(const Properties &props) {
 		throw std::runtime_error("Unable to find object definitions");
 
 	double lastPrint = WallClockTime();
-	unsigned int objCount = 0;
+	u_int objCount = 0;
 	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
 		const std::string &key = *objKey;
 		const size_t dot1 = key.find(".", std::string("scene.objects.").length());
@@ -481,9 +481,9 @@ void Scene::AddInfiniteLight(const Properties &props) {
 		il->SetShift(vf.at(0), vf.at(1));
 		il->Preprocess();
 
-		infiniteLight = il;
+		envLight = il;
 	} else
-		infiniteLight = NULL;
+		envLight = NULL;
 }
 
 void Scene::AddSkyLight(const std::string &propsString) {
@@ -496,7 +496,7 @@ void Scene::AddSkyLight(const std::string &propsString) {
 void Scene::AddSkyLight(const Properties &props) {
 	const std::vector<std::string> silParams = props.GetStringVector("scene.skylight.dir", "");
 	if (silParams.size() > 0) {
-		if (infiniteLight)
+		if (envLight)
 			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
 
 		std::vector<float> sdir = GetFloatParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
@@ -507,7 +507,7 @@ void Scene::AddSkyLight(const Properties &props) {
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->Preprocess();
 
-		infiniteLight = sl;
+		envLight = sl;
 	}
 }
 
@@ -714,12 +714,12 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 //------------------------------------------------------------------------------
 
 LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
-	if (infiniteLight && (lightType == infiniteLight->GetType()))
-			return infiniteLight;
+	if (envLight && (lightType == envLight->GetType()))
+			return envLight;
 	if (sunLight && (lightType == TYPE_SUN))
 			return sunLight;
 
-	for (unsigned int i = 0; i < static_cast<unsigned int>(triLightDefs.size()); ++i) {
+	for (u_int i = 0; i < static_cast<u_int>(triLightDefs.size()); ++i) {
 		LightSource *ls = triLightDefs[i];
 		if (ls->GetType() == lightType)
 			return ls;
@@ -729,27 +729,27 @@ LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
 }
 
 LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
-	unsigned int lightsSize = static_cast<unsigned int>(triLightDefs.size());
-	if (infiniteLight)
+	u_int lightsSize = static_cast<u_int>(triLightDefs.size());
+	if (envLight)
 		++lightsSize;
 	if (sunLight)
 		++lightsSize;
 
 	// One Uniform light strategy
-	const unsigned int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
+	const u_int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
 	*pdf = 1.f / lightsSize;
 
-	if (infiniteLight) {
+	if (envLight) {
 		if (sunLight) {
 			if (lightIndex == lightsSize - 1)
 				return sunLight;
 			else if (lightIndex == lightsSize - 2)
-				return infiniteLight;
+				return envLight;
 			else
 				return triLightDefs[lightIndex];
 		} else {
 			if (lightIndex == lightsSize - 1)
-				return infiniteLight;
+				return envLight;
 			else
 				return triLightDefs[lightIndex];
 		}
@@ -765,31 +765,13 @@ LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
 }
 
 float Scene::PickLightPdf() const {
-	unsigned int lightsSize = static_cast<unsigned int>(triLightDefs.size());
-	if (infiniteLight)
+	u_int lightsSize = static_cast<u_int>(triLightDefs.size());
+	if (envLight)
 		++lightsSize;
 	if (sunLight)
 		++lightsSize;
 
 	return 1.f / lightsSize;
-}
-
-Spectrum Scene::GetEnvLightsRadiance(const Vector &dir,
-			const Point &hitPoint,
-			float *directPdfA,
-			float *emissionPdfW) const {
-	Spectrum radiance;
-	if (infiniteLight)
-		radiance += infiniteLight->GetRadiance(this, dir, directPdfA, emissionPdfW);
-	if (sunLight)
-		radiance += sunLight->GetRadiance(this, dir, directPdfA, emissionPdfW);
-
-	if (directPdfA)
-		*directPdfA *= PickLightPdf();
-	if (emissionPdfW)
-		*emissionPdfW *= PickLightPdf();
-
-	return radiance;
 }
 
 bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
