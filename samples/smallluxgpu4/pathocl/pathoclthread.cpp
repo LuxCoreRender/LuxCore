@@ -731,9 +731,12 @@ void PathOCLRenderThread::InitRender() {
 
 	size_t gpuTaksSize = sizeof(luxrays::ocl::Seed);
 
-	if (renderEngine->sampler->type == luxrays::ocl::RANDOM)
-		gpuTaksSize += sizeof(slg::ocl::RandomSample);
-	else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
+	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(slg::ocl::RandomSampleWithAlphaChannel);
+		else
+			gpuTaksSize += sizeof(slg::ocl::RandomSampleWithoutAlphaChannel);
+	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
 		if (alphaFrameBufferBuff)
 			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithAlphaChannel);
 		else
@@ -753,9 +756,6 @@ void PathOCLRenderThread::InitRender() {
 		if (hasPassThrough)
 			gpuTaksSize += sizeof(slg::ocl::PathStateDirectLightPassThrough);
 	}
-
-	if (alphaFrameBufferBuff)
-		gpuTaksSize += sizeof(slg::ocl::PathStateAlphaChannel);
 
 	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
 
