@@ -506,24 +506,40 @@ Spectrum MixMaterial::Evaluate(const bool fromLight, const UV &uv,
 	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
+	if (directPdfW)
+		*directPdfW = 0.f;
+	if (reversePdfW)
+		*reversePdfW = 0.f;
+
 	BSDFEvent eventMatA = NONE;
-	float directPdfWMatA = 1.f;
-	float reversePdfWMatA = 1.f;
-	if (weight1 > 0.f)
-		result += weight1 * matA->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
+	if (weight1 > 0.f) {
+		float directPdfWMatA, reversePdfWMatA;
+		const Spectrum matAResult = matA->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
+		if (!matAResult.Black()) {
+			result += weight1 * matAResult;
+
+			if (directPdfW)
+				*directPdfW += weight1 * directPdfWMatA;
+			if (reversePdfW)
+				*reversePdfW += weight1 * reversePdfWMatA;
+		}
+	}
 
 	BSDFEvent eventMatB = NONE;
-	float directPdfWMatB = 1.f;
-	float reversePdfWMatB = 1.f;
-	if (weight2 > 0.f)
-		result += weight2 * matB->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
+	if (weight2 > 0.f) {
+		float directPdfWMatB, reversePdfWMatB;
+		const Spectrum matBResult = matB->Evaluate(fromLight, uv, lightDir, eyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
+		if (!matBResult.Black()) {
+			result += weight2 * matBResult;
+
+			if (directPdfW)
+				*directPdfW += weight2 * directPdfWMatB;
+			if (reversePdfW)
+				*reversePdfW += weight2 * reversePdfWMatB;
+		}
+	}
 
 	*event = eventMatA | eventMatB;
-
-	if (directPdfW)
-		*directPdfW = weight1 * directPdfWMatA + weight2 *directPdfWMatB;
-	if (reversePdfW)
-		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
 
 	return result;
 }
