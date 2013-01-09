@@ -44,6 +44,8 @@ std::string KernelSource_bsdf_types =
 "	Normal geometryN;\n"
 "	Normal shadeN;\n"
 "#if defined(PARAM_HAS_PASSTHROUGHT)\n"
+"	// passThroughEvent can be stored here in a path state even before to of\n"
+"	// BSDF initialization (while tracing the next path vertex ray)\n"
 "	float passThroughEvent;\n"
 "#endif\n"
 "	unsigned int materialIndex;\n"

@@ -429,7 +429,6 @@ void CompiledScene::CompileAreaLights() {
 				ASSIGN_UV(triLight->uv0, zero);
 				ASSIGN_UV(triLight->uv1, zero);
 				ASSIGN_UV(triLight->uv2, zero);
-				
 			}
 			triLight->invArea = 1.f / tl->GetArea();
 

@@ -235,12 +235,14 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 #endif
 
 #if defined(PARAM_HAS_PASSTHROUGHT)
-float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf, __global Material *mats, __global Texture *texs
+float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, vload3(0, &bsdf->fixedDir.x));
 
-	return Material_GetPassThroughTransparency( &mats[bsdf->materialIndex], texs,
+	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
 			vload2(0, &bsdf->hitPointUV.u), localFixedDir, bsdf->passThroughEvent
+			MATERIALS_PARAM
 			IMAGEMAPS_PARAM);
 }
 #endif
