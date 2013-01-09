@@ -153,9 +153,9 @@ float3 SunLight_GetRadiance(__global SunLight *sunLight, const float3 dir, float
 //------------------------------------------------------------------------------
 
 float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
-		__global Material *mats, __global Texture *texs,
 		const float3 p, const float u0, const float u1, const float u2,
 		float3 *dir, float *distance, float *directPdfW
+		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 p0 = vload3(0, &triLight->v0.x);
 	const float3 p1 = vload3(0, &triLight->v1.x);
@@ -184,7 +184,8 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
 	const float2 uv2 = vload2(0, &triLight->uv2.u);
 	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs, triUV
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], triUV
+			MATERIALS_PARAM
 			IMAGEMAPS_PARAM);
 }
 
@@ -200,6 +201,7 @@ float3 TriangleLight_GetRadiance(__global TriangleLight *triLight,
 	if (directPdfA)
 		*directPdfA = triLight->invArea;
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], texs, triUV
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], triUV
+			MATERIALS_PARAM
 			IMAGEMAPS_PARAM);
 }

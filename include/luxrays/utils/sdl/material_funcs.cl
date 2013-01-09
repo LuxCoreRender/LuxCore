@@ -636,6 +636,16 @@ float3 Material_EvaluateNoMix(__global Material *material, __global Texture *tex
 	}
 }
 
+float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Texture *texs, const float2 uv
+		IMAGEMAPS_PARAM_DECL) {
+	const uint emitTexIndex = material->emitTexIndex;
+	if (emitTexIndex == NULL_INDEX)
+		return BLACK;
+
+	return Texture_GetColorValue(&texs[emitTexIndex], uv
+			IMAGEMAPS_PARAM);
+}
+
 //------------------------------------------------------------------------------
 // Mix material
 //
@@ -649,20 +659,19 @@ float3 Material_EvaluateNoMix(__global Material *material, __global Texture *tex
 
 BSDFEvent MixMaterial_IsDelta(__global Material *material
 		MATERIALS_PARAM_DECL) {
-	int matIndexStack[MIX_STACK_SIZE];
-	matIndexStack[0] = material->mix.matAIndex;
-	matIndexStack[1] = material->mix.matBIndex;
-	int stackIndex = 1;
+	__global Material *materialStack[MIX_STACK_SIZE];
+	materialStack[0] = material;
+	int stackIndex = 0;
 
 	while (stackIndex >= 0) {
 		// Extract a material from the stack
-		__global Material *m = &mats[matIndexStack[stackIndex--]];
+		__global Material *m = materialStack[stackIndex--];
 
 		// Check if it is a Mix material too
 		if (m->type == MIX) {
 			// Add both material to the stack
-			matIndexStack[++stackIndex] = m->mix.matAIndex;
-			matIndexStack[++stackIndex] = m->mix.matBIndex;
+			materialStack[++stackIndex] = &mats[m->mix.matAIndex];
+			materialStack[++stackIndex] = &mats[m->mix.matBIndex];
 		} else {
 			// Normal GetEventTypes() evaluation
 			if (!Material_IsDeltaNoMix(m))
@@ -676,20 +685,19 @@ BSDFEvent MixMaterial_IsDelta(__global Material *material
 BSDFEvent MixMaterial_GetEventTypes(__global Material *material
 		MATERIALS_PARAM_DECL) {
 	BSDFEvent event = NONE;
-	int matIndexStack[MIX_STACK_SIZE];
-	matIndexStack[0] = material->mix.matAIndex;
-	matIndexStack[1] = material->mix.matBIndex;
-	int stackIndex = 1;
+	__global Material *materialStack[MIX_STACK_SIZE];
+	materialStack[0] = material;
+	int stackIndex = 0;
 
 	while (stackIndex >= 0) {
 		// Extract a material from the stack
-		__global Material *m = &mats[matIndexStack[stackIndex--]];
+		__global Material *m = materialStack[stackIndex--];
 
 		// Check if it is a Mix material too
 		if (m->type == MIX) {
 			// Add both material to the stack
-			matIndexStack[++stackIndex] = m->mix.matAIndex;
-			matIndexStack[++stackIndex] = m->mix.matBIndex;
+			materialStack[++stackIndex] = &mats[m->mix.matAIndex];
+			materialStack[++stackIndex] = &mats[m->mix.matBIndex];
 		} else {
 			// Normal GetEventTypes() evaluation
 			event |= Material_GetEventTypesNoMix(m);
@@ -704,24 +712,13 @@ float3 MixMaterial_Evaluate(__global Material *material,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
-	int matIndexStack[MIX_STACK_SIZE];
+	__global Material *materialStack[MIX_STACK_SIZE];
 	float totalWeightStack[MIX_STACK_SIZE];
 
-	// Evaluate the root Mix material
-	matIndexStack[0] = material->mix.matAIndex;
-	matIndexStack[1] = material->mix.matBIndex;
-
-	const float factor = Texture_GetGreyValue(&texs[material->mix.mixFactorTexIndex], uv
-			IMAGEMAPS_PARAM);
-	const float weight2 = clamp(factor, 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
-
-	totalWeightStack[0] = weight1;
-	totalWeightStack[1] = weight2;
-
-	matIndexStack[0] = material->mix.matAIndex;
-	matIndexStack[1] = material->mix.matBIndex;
-	int stackIndex = 1;
+	// Push the root Mix material
+	materialStack[0] = material;
+	totalWeightStack[0] = 1.f;
+	int stackIndex = 0;
 
 	// Setup the results
 	float3 result = BLACK;
@@ -731,32 +728,27 @@ float3 MixMaterial_Evaluate(__global Material *material,
 
 	while (stackIndex >= 0) {
 		// Extract a material from the stack
-		__global Material *m = &mats[matIndexStack[stackIndex]];
+		__global Material *m = materialStack[stackIndex];
 		float totalWeight = totalWeightStack[stackIndex--];
 
 		// Check if it is a Mix material too
 		if (m->type == MIX) {
 			// Add both material to the stack
-			matIndexStack[stackIndex] = m->mix.matAIndex;
-			matIndexStack[stackIndex + 1] = m->mix.matBIndex;
-
 			const float factor = Texture_GetGreyValue(&texs[m->mix.mixFactorTexIndex], uv
 					IMAGEMAPS_PARAM);
 			const float weight2 = clamp(factor, 0.f, 1.f);
 			const float weight1 = 1.f - weight2;
 
+			materialStack[++stackIndex] = &mats[m->mix.matAIndex];
 			totalWeightStack[stackIndex] = totalWeight * weight1;
-			totalWeightStack[stackIndex + 1] = totalWeight * weight2;
 
-			matIndexStack[stackIndex] = m->mix.matAIndex;
-			matIndexStack[stackIndex + 1] = m->mix.matBIndex;
-
-			stackIndex += 2;
+			materialStack[++stackIndex] = &mats[m->mix.matBIndex];			
+			totalWeightStack[stackIndex] = totalWeight * weight2;
 		} else {
 			// Normal GetEventTypes() evaluation
 			if (totalWeight > 0.f) {
 				BSDFEvent eventMat;
-				float directPdfWMat, reversePdfWMat;
+				float directPdfWMat;
 				const float3 resultMat = Material_EvaluateNoMix(m, texs, uv, lightDir, eyeDir, &eventMat, &directPdfWMat
 						IMAGEMAPS_PARAM);
 				if (any(isnotequal(resultMat, BLACK))) {
@@ -816,8 +808,10 @@ float3 MixMaterial_Sample(__global Material *material,
 		// Add the second material to the evaluation list
 		//----------------------------------------------------------------------
 
-		evaluationMatList[evaluationListSize] = matSecond;
-		parentWeightList[evaluationListSize++] = parentWeight * weightSecond;
+		if (weightSecond > 0.f) {
+			evaluationMatList[evaluationListSize] = matSecond;
+			parentWeightList[evaluationListSize++] = parentWeight * weightSecond;
+		}
 
 		//----------------------------------------------------------------------
 		// Sample the first material
@@ -877,6 +871,51 @@ float3 MixMaterial_Sample(__global Material *material,
 		}
 	}
 
+	return result;
+}
+
+float3 MixMaterial_GetEmittedRadiance(__global Material *material, const float2 uv
+		MATERIALS_PARAM_DECL
+		IMAGEMAPS_PARAM_DECL) {
+	__global Material *materialStack[MIX_STACK_SIZE];
+	float totalWeightStack[MIX_STACK_SIZE];
+
+	// Push the root Mix material
+	materialStack[0] = material;
+	totalWeightStack[0] = 1.f;
+	int stackIndex = 0;
+
+	// Setup the results
+	float3 result = BLACK;
+
+	while (stackIndex >= 0) {
+		// Extract a material from the stack
+		__global Material *m = materialStack[stackIndex];
+		float totalWeight = totalWeightStack[stackIndex--];
+
+		if (m->type == MIX) {
+			const float factor = Texture_GetGreyValue(&texs[m->mix.mixFactorTexIndex], uv
+					IMAGEMAPS_PARAM);
+			const float weight2 = clamp(factor, 0.f, 1.f);
+			const float weight1 = 1.f - weight2;
+
+			if (weight1 > 0.f) {
+				materialStack[++stackIndex] = &mats[m->mix.matAIndex];
+				totalWeightStack[stackIndex] = totalWeight * weight1;
+			}
+
+			if (weight2 > 0.f) {
+				materialStack[++stackIndex] = &mats[m->mix.matBIndex];
+				totalWeightStack[stackIndex] = totalWeight * weight2;
+			}
+		} else {
+			const float3 emitRad = Material_GetEmittedRadianceNoMix(m, texs, uv
+				IMAGEMAPS_PARAM);
+			if (any(isnotequal(emitRad, BLACK)))
+				result += totalWeight * emitRad;
+		}
+	}
+	
 	return result;
 }
 
@@ -956,14 +995,18 @@ float3 Material_Sample(__global Material *material,	const float2 uv,
 				IMAGEMAPS_PARAM);
 }
 
-float3 Material_GetEmittedRadiance(__global Material *material, __global Texture *texs, const float2 triUV
+float3 Material_GetEmittedRadiance(__global Material *material, const float2 uv
+		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
-	const uint emitTexIndex = material->emitTexIndex;
-	if (emitTexIndex == NULL_INDEX)
-		return BLACK;
-
-	return Texture_GetColorValue(&texs[emitTexIndex], triUV
-			IMAGEMAPS_PARAM);
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_GetEmittedRadiance(material, uv
+				MATERIALS_PARAM
+				IMAGEMAPS_PARAM);
+	else
+#endif
+		return Material_GetEmittedRadianceNoMix(material, texs, uv
+				IMAGEMAPS_PARAM);
 }
 
 #if defined(PARAM_HAS_PASSTHROUGHT)
