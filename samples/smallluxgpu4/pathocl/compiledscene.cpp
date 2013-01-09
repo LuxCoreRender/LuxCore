@@ -403,6 +403,11 @@ void CompiledScene::CompileAreaLights() {
 
 	const double tStart = WallClockTime();
 
+	// Used to speedup the TriangleLight lookup
+	std::map<const TriangleLight *, u_int> triLightByPtr;
+	for (u_int i = 0; i < scene->triLightDefs.size(); ++i)
+		triLightByPtr.insert(std::make_pair(scene->triLightDefs[i], i));
+
 	const u_int areaLightCount = scene->triLightDefs.size();
 	triLightDefs.resize(areaLightCount);
 	if (areaLightCount > 0) {
@@ -433,15 +438,11 @@ void CompiledScene::CompileAreaLights() {
 
 		meshLights.resize(scene->triangleLights.size());
 		for (u_int i = 0; i < scene->triangleLights.size(); ++i) {
-			// Look for the index
-			u_int index = NULL_INDEX;
-			for (u_int j = 0; j < scene->triLightDefs.size(); ++j) {
-				if (scene->triangleLights[i] == scene->triLightDefs[j]) {
-					index = j;
-					break;
-				}
-			}
-			meshLights[i] = index;
+			if (scene->triangleLights[i]) {
+				// Look for the index
+				meshLights[i] = triLightByPtr.find(scene->triangleLights[i])->second;
+			} else
+				meshLights[i] = NULL_INDEX;
 		}
 	} else
 		meshLights.resize(0);
