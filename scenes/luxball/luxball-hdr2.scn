@@ -2,8 +2,15 @@ scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
 scene.camera.lensradius = 0.015
 scene.camera.focaldistance = 2.0
 ################################################################################
-scene.materials.shell.type = mirror
-scene.materials.shell.kr = 0.75 0.75 0.75
+scene.materials.mat1.type = matte
+scene.materials.mat1.kd = 0.75 0.0 0.0
+scene.materials.mat2.type = metal
+scene.materials.mat2.kr = 0.75 0.75 0.75
+scene.materials.mat2.exp = 50
+scene.materials.shell.type = mix
+scene.materials.shell.amount = 0.2
+scene.materials.shell.material1 = mat1
+scene.materials.shell.material2 = mat2
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte
