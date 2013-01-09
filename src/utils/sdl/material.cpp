@@ -551,61 +551,37 @@ Spectrum MixMaterial::Sample(const bool fromLight, const UV &uv,
 	const float weight2 = Clamp(mixFactor->GetGreyValue(uv), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
-	if (passThroughEvent < weight1) {
-		// Sample the first material
-		Spectrum result = matA->Sample(fromLight, uv, fixedDir, sampledDir,
-				u0, u1, passThroughEvent / weight1, pdfW, cosSampledDir, event);
-		if (result.Black())
-			return Spectrum();
-		*pdfW *= weight1;
+	const bool sampleMatA = (passThroughEvent < weight1);
 
-		// Evaluate the second material
-		BSDFEvent eventMatB;
-		if (fromLight) {
-			float pdfWMatB;
-			Spectrum f = matB->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatB, &pdfWMatB);
-			if (!f.Black()) {
-				result += weight2 * f;
-				*pdfW += weight2 * pdfWMatB;
-			}
-		} else {
-			float pdfWMatB;
-			Spectrum f = matB->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatB, &pdfWMatB);
-			if (!f.Black()) {
-				result += weight2 * f;
-				*pdfW += weight2 * pdfWMatB;
-			}
-		}
-		
-		return result;
-	} else {
-		// Sample the second material
-		Spectrum result = matB->Sample(fromLight, uv, fixedDir, sampledDir,
-				u0, u1, (passThroughEvent - weight1) / weight2, pdfW, cosSampledDir, event);
-		if (result.Black())
-			return Spectrum();
-		*pdfW *= weight2;
+	const float weightFirst = sampleMatA ? weight1 : weight2;
+	const float weightSecond = sampleMatA ? weight2 : weight1;
 
-		// Evaluate the first material
-		BSDFEvent eventMatA;
-		if (fromLight) {
-			float pdfWMatA;
-			Spectrum f = matA->Evaluate(fromLight, uv, fixedDir, *sampledDir, &eventMatA, &pdfWMatA);
-			if (!f.Black()) {
-				result += weight1 * f;
-				*pdfW += weight1 * pdfWMatA;
-			}
-		} else {
-			float pdfWMatA;
-			Spectrum f = matA->Evaluate(fromLight, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA);
-			if (!f.Black()) {
-				result += weight1 * f;
-				*pdfW += weight1 * pdfWMatA;
-			}
-		}
+	const float passThroughEventFirst = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
 
-		return result;
+	// Sample the first material, evaluate the second
+	const Material *matFirst = sampleMatA ? matA : matB;
+	const Material *matSecond = sampleMatA ? matB : matA;
+
+	// Sample the first material
+	Spectrum result = matFirst->Sample(fromLight, uv, fixedDir, sampledDir,
+			u0, u1, passThroughEventFirst, pdfW, cosSampledDir, event);
+	if (result.Black())
+		return Spectrum();
+	*pdfW *= weightFirst;
+	result *= weightFirst;
+
+	// Evaluate the second material
+	const Vector &lightDir = (fromLight) ? fixedDir : *sampledDir;
+	const Vector &eyeDir = (fromLight) ? *sampledDir : fixedDir;
+	BSDFEvent eventSecond;
+	float pdfWSecond;
+	Spectrum evalSecond = matSecond->Evaluate(fromLight, uv, lightDir, eyeDir, &eventSecond, &pdfWSecond);
+	if (!evalSecond.Black()) {
+		result += weightSecond * evalSecond;
+		*pdfW += weightSecond * pdfWSecond;
 	}
+
+	return result;
 }
 
 void MixMaterial::Pdf(const bool fromLight, const UV &uv,

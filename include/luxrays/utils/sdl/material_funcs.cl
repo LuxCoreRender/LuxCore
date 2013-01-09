@@ -665,12 +665,12 @@ BSDFEvent MixMaterial_IsDelta(__global Material *material
 			matIndexStack[++stackIndex] = m->mix.matBIndex;
 		} else {
 			// Normal GetEventTypes() evaluation
-			if (Material_IsDeltaNoMix(m))
-				return true;
+			if (!Material_IsDeltaNoMix(m))
+				return false;
 		}
 	}
 
-	return false;
+	return true;
 }
 
 BSDFEvent MixMaterial_GetEventTypes(__global Material *material
@@ -780,86 +780,104 @@ float3 MixMaterial_Sample(__global Material *material,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
-	__global Material *mix = material;
-	float passThrough = passEvent;
+	__global Material *evaluationMatList[MIX_STACK_SIZE];
+	float parentWeightList[MIX_STACK_SIZE];
+	int evaluationListSize = 0;
 
+	// Setup the results
+	float3 result = BLACK;
+	*pdfW = 0.f;
+
+	// Look for a no Mix material to sample
+	__global Material *currentMixMat = material;
+	float passThroughEvent = passEvent;
+	float parentWeight = 1.f;
 	for (;;) {
-		__global Material *matA = &mats[material->mix.matAIndex];
-		__global Material *matB = &mats[material->mix.matBIndex];
-
-		const float factor = Texture_GetGreyValue(&texs[mix->mix.mixFactorTexIndex], uv
+		const float factor = Texture_GetGreyValue(&texs[currentMixMat->mix.mixFactorTexIndex], uv
 			IMAGEMAPS_PARAM);
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
 
-		if (passThrough < weight1) {
-			// Check if it is a Mix material too
-			if (matA->type == MIX) {
-				mix = matA;
-				passThrough = passThrough / weight1;
-				// TODO: evaluate matB
-				continue;
-			} else {
-				// Sample the first material
-				float3 result = Material_SampleNoMix(matA, texs, uv,
-						fixedDir, sampledDir, u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
-						passThrough / weight1,
-#endif
-						pdfW, cosSampledDir, event
-						IMAGEMAPS_PARAM);
-				if (all(isequal(result, BLACK)))
-					return BLACK;
-				*pdfW *= weight1;
+		const bool sampleMatA = (passThroughEvent < weight1);
 
-				// Evaluate the second material
-				// TODO: mix support
-				BSDFEvent eventMatB;
-				float pdfWMatB;
-				const float3 f = Material_EvaluateNoMix(matB, texs, uv, *sampledDir, fixedDir, &eventMatB, &pdfWMatB
-						IMAGEMAPS_PARAM);
-				if (any(isnotequal(f, BLACK))) {
-					result += weight2 * f;
-					*pdfW += weight2 * pdfWMatB;
-				}
+		const float weightFirst = sampleMatA ? weight1 : weight2;
+		const float weightSecond = sampleMatA ? weight2 : weight1;
 
-				return result;
-			}
+		const float passThroughEventFirst = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
+
+		const uint matIndexFirst = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
+		const uint matIndexSecond = sampleMatA ? currentMixMat->mix.matBIndex : currentMixMat->mix.matAIndex;
+
+		// Sample the first material, evaluate the second
+		__global Material *matFirst = &mats[matIndexFirst];
+		__global Material *matSecond = &mats[matIndexSecond];
+
+		//----------------------------------------------------------------------
+		// Add the second material to the evaluation list
+		//----------------------------------------------------------------------
+
+		evaluationMatList[evaluationListSize] = matSecond;
+		parentWeightList[evaluationListSize++] = parentWeight * weightSecond;
+
+		//----------------------------------------------------------------------
+		// Sample the first material
+		//----------------------------------------------------------------------
+
+		// Check if it is a Mix material too
+		if (matFirst->type == MIX) {
+			// Make the first material the current
+			currentMixMat = matFirst;
+			passThroughEvent = passThroughEventFirst;
+			parentWeight *= weightFirst;
 		} else {
-			// Check if it is a Mix material too
-			if (matB->type == MIX) {
-				mix = matB;
-				passThrough = (passThrough - weight1) / weight2;
-				// TODO: evaluate matB
-				continue;
-			} else {
-				// Sample the second material
-				float3 result = Material_SampleNoMix(matB, texs, uv,
-						fixedDir, sampledDir, u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
-						(passThrough - weight1) / weight2,
-#endif
-						pdfW, cosSampledDir, event
-						IMAGEMAPS_PARAM);
-				if (all(isequal(result, BLACK)))
-					return BLACK;
-				*pdfW *= weight2;
+			// Sample the first material
+			float pdfWMatFirst;
+			const float3 sampleResult = Material_SampleNoMix(matFirst, texs, uv,
+					fixedDir, sampledDir,
+					u0, u1, passThroughEventFirst,
+					&pdfWMatFirst, cosSampledDir, event
+					IMAGEMAPS_PARAM);
 
-				// Evaluate the second material
-				// TODO: mix support
-				BSDFEvent eventMatA;
-				float pdfWMatA;
-				const float3 f = Material_EvaluateNoMix(matA, texs, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA
-						IMAGEMAPS_PARAM);
-				if (any(isnotequal(f, BLACK))) {
-					result += weight1 * f;
-					*pdfW += weight1 * pdfWMatA;
-				}
+			if (all(isequal(sampleResult, BLACK)))
+				return BLACK;
 
-				return result;
-			}
+			const float weight = parentWeight * weightFirst;
+			*pdfW += weight * pdfWMatFirst;
+			result += weight * sampleResult;
+
+			// I can stop now
+			break;
 		}
 	}
+
+	while (evaluationListSize > 0) {
+		// Extract the material to evaluate
+		__global Material *evalMat = evaluationMatList[--evaluationListSize];
+		const float evalWeight = parentWeightList[evaluationListSize];
+
+		// Evaluate the material
+
+		// Check if it is a Mix material too
+		BSDFEvent eventMat;
+		float pdfWMat;
+		float3 eval;
+		if (evalMat->type == MIX) {
+			eval = MixMaterial_Evaluate(evalMat, uv, *sampledDir, fixedDir,
+					&eventMat, &pdfWMat
+					MATERIALS_PARAM
+					IMAGEMAPS_PARAM);
+		} else {
+			eval = Material_EvaluateNoMix(evalMat, texs, uv, *sampledDir, fixedDir,
+					&eventMat, &pdfWMat
+					IMAGEMAPS_PARAM);
+		}
+		if (any(isnotequal(eval, BLACK))) {
+			result += evalWeight * eval;
+			*pdfW += evalWeight * pdfWMat;
+		}
+	}
+
+	return result;
 }
 
 #endif
@@ -922,9 +940,7 @@ float3 Material_Sample(__global Material *material,	const float2 uv,
 		return MixMaterial_Sample(material, uv,
 				fixedDir, sampledDir,
 				u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
 				passThroughEvent,
-#endif
 				pdfW, cosSampledDir, event
 				MATERIALS_PARAM
 				IMAGEMAPS_PARAM);
