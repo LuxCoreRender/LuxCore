@@ -429,12 +429,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					&lightRayDir, &distance, &directPdfW);
 			} else {
 				lightRadiance = TriangleLight_Illuminate(
-					&triLightDefs[lightIndex], mats, texs,
-					vload3(0, &bsdf->hitPoint.x),
+					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW
+					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
 			}
 			
@@ -442,12 +442,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 
 			lightRadiance = TriangleLight_Illuminate(
-					&triLightDefs[lightIndex], mats, texs,
-					vload3(0, &bsdf->hitPoint.x),
+					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW
+					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
 #elif defined(PARAM_HAS_SUNLIGHT)
 			lightRadiance = SunLight_Illuminate(
