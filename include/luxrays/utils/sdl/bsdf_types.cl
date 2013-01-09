@@ -41,6 +41,8 @@ typedef struct {
 	Normal geometryN;
 	Normal shadeN;
 #if defined(PARAM_HAS_PASSTHROUGHT)
+	// passThroughEvent can be stored here in a path state even before to of
+	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
 #endif
 	unsigned int materialIndex;

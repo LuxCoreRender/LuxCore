@@ -646,6 +646,25 @@ float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Te
 			IMAGEMAPS_PARAM);
 }
 
+float3 Material_GetPassThroughTransparencyNoMix(__global Material *material, __global Texture *texs,
+		const float2 uv, const float3 fixedDir, const float passThroughEvent
+		IMAGEMAPS_PARAM_DECL) {
+	switch (material->type) {
+#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
+		case ARCHGLASS:
+			return ArchGlassMaterial_GetPassThroughTransparency(material, texs,
+					uv, fixedDir, passThroughEvent
+					IMAGEMAPS_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_NULL)
+		case NULLMAT:
+			return WHITE;
+#endif
+		default:
+			return BLACK;
+	}
+}
+
 //------------------------------------------------------------------------------
 // Mix material
 //
@@ -919,6 +938,45 @@ float3 MixMaterial_GetEmittedRadiance(__global Material *material, const float2 
 	return result;
 }
 
+float3 MixMaterial_GetPassThroughTransparency(__global Material *material,
+		const float2 uv, const float3 fixedDir, const float passEvent
+		MATERIALS_PARAM_DECL
+		IMAGEMAPS_PARAM_DECL) {
+	__global Material *currentMixMat = material;
+	float passThroughEvent = passEvent;
+//
+//	for (;;) {
+//		const float factor = Texture_GetGreyValue(&texs[currentMixMat->mix.mixFactorTexIndex], uv
+//				IMAGEMAPS_PARAM);
+//		const float weight2 = clamp(factor, 0.f, 1.f);
+//		const float weight1 = 1.f - weight2;
+//
+//		const bool sampleMatA = (passThroughEvent < weight1);
+//		passThroughEvent = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
+//		const uint matIndex = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
+//		__global Material *mat = &mats[matIndex];
+//
+//		if (mat->type == MIX) {
+//			currentMixMat = mat;
+//			continue;
+//		} else
+//			return Material_GetPassThroughTransparencyNoMix(mat, texs, uv, fixedDir, passThroughEvent
+//					IMAGEMAPS_PARAM);
+//	}
+
+	const float factor = Texture_GetGreyValue(&texs[material->mix.mixFactorTexIndex], uv
+			IMAGEMAPS_PARAM);
+	const float weight2 = clamp(factor, 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+
+	if (passThroughEvent < weight1)
+		return Material_GetPassThroughTransparencyNoMix(&mats[material->mix.matAIndex], texs, uv, fixedDir, passThroughEvent / weight1
+					IMAGEMAPS_PARAM);
+	else
+		return Material_GetPassThroughTransparencyNoMix(&mats[material->mix.matBIndex], texs, uv, fixedDir, (passThroughEvent - weight2) / weight2
+					IMAGEMAPS_PARAM);
+}
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -1010,22 +1068,20 @@ float3 Material_GetEmittedRadiance(__global Material *material, const float2 uv
 }
 
 #if defined(PARAM_HAS_PASSTHROUGHT)
-float3 Material_GetPassThroughTransparency(__global Material *material, __global Texture *texs,
+float3 Material_GetPassThroughTransparency(__global Material *material,
 		const float2 uv, const float3 fixedDir, const float passThroughEvent
+		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
-	switch (material->type) {
-#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
-		case ARCHGLASS:
-			return ArchGlassMaterial_GetPassThroughTransparency(material, texs,
-					uv, fixedDir, passThroughEvent
-					IMAGEMAPS_PARAM);
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_GetPassThroughTransparency(material,
+				uv, fixedDir, passThroughEvent
+				MATERIALS_PARAM
+				IMAGEMAPS_PARAM);
+	else
 #endif
-#if defined (PARAM_ENABLE_MAT_NULL)
-		case NULLMAT:
-			return WHITE;
-#endif
-		default:
-			return BLACK;
-	}
+		return Material_GetPassThroughTransparencyNoMix(material, texs,
+				uv, fixedDir, passThroughEvent
+				IMAGEMAPS_PARAM);
 }
 #endif

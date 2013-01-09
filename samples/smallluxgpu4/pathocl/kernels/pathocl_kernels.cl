@@ -250,15 +250,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					vertices, vertNormals, vertUVs,
 					triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGHT)
-					, Sampler_GetSamplePathVertex(IDX_PASSTROUGHT)
+					, task->pathStateBase.bsdf.passThroughEvent
 #endif
 					);
 
 #if defined(PARAM_HAS_PASSTHROUGHT)
-			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(bsdf, mats, texs
+			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
-			if (any(isnotequal(passthroughTrans, BLACK))) {
-				const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r) * passthroughTrans;
+			if (any(isnotequal(passThroughTrans, BLACK))) {
+				const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r) * passThroughTrans;
 				vstore3(pathThroughput, 0, &task->pathStateBase.throughput.r);
 
 				// It is a pass through point, continue to trace the ray
@@ -381,7 +382,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					task->passThroughState.passThroughEvent
 					);
 
-			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf, mats, texs
+			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
+					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
 			if (any(isnotequal(passthroughTrans, BLACK))) {
 				const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r) * passthroughTrans;
@@ -537,6 +539,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
 				task->directLightState.lastPdfW = lastPdfW;
 				task->directLightState.lastSpecular = lastSpecular;
+#endif
+#if defined(PARAM_HAS_PASSTHROUGHT)
+				// This is a bit tricky. I store the passThroughEvent in the BSDF
+				// before of the initialization because it can be use during the
+				// tracing of next path vertex ray.
+
+				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
+				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+					sample, sampleDataPathBase, depth + 1);
+				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(IDX_PASSTROUGHT);
 #endif
 				pathState = RT_NEXT_VERTEX;
 			} else
