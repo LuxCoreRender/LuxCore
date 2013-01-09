@@ -167,8 +167,9 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
-	const float3 result = Material_Evaluate(mat, texs, vload2(0, &bsdf->hitPointUV.u),
+	const float3 result = Material_Evaluate(mat, vload2(0, &bsdf->hitPointUV.u),
 			localLightDir, localEyeDir,	event, directPdfW
+			MATERIALS_PARAM
 			IMAGEMAPS_PARAM);
 
 	// Adjoint BSDF

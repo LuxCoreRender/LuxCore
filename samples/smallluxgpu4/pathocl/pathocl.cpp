@@ -19,6 +19,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// TODO: optimize triangle area lights compilation time
+// TODO: check pixel position difference between CPU and OpenCL
+// TODO: Spectrum_IsEqual() and Spectrum_IsNotEqual()
 // TODO: introduce conditional compilation for textures too (like for materials)
 // TODO: metropolis with lazy evaluation
 // TODO: state sorting optimization

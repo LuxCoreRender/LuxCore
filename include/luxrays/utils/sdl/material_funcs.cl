@@ -601,7 +601,7 @@ float3 Material_SampleNoMix(__global Material *material, __global Texture *texs,
 	}
 }
 
-float3 Material_Evaluate(__global Material *material, __global Texture *texs,
+float3 Material_EvaluateNoMix(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
@@ -661,9 +661,8 @@ BSDFEvent MixMaterial_IsDelta(__global Material *material
 		// Check if it is a Mix material too
 		if (m->type == MIX) {
 			// Add both material to the stack
-			matIndexStack[stackIndex] = m->mix.matAIndex;
-			matIndexStack[stackIndex] = m->mix.matBIndex;
-			stackIndex += 2;
+			matIndexStack[++stackIndex] = m->mix.matAIndex;
+			matIndexStack[++stackIndex] = m->mix.matBIndex;
 		} else {
 			// Normal GetEventTypes() evaluation
 			if (Material_IsDeltaNoMix(m))
@@ -689,9 +688,8 @@ BSDFEvent MixMaterial_GetEventTypes(__global Material *material
 		// Check if it is a Mix material too
 		if (m->type == MIX) {
 			// Add both material to the stack
-			matIndexStack[stackIndex] = m->mix.matAIndex;
-			matIndexStack[stackIndex] = m->mix.matBIndex;
-			stackIndex += 2;
+			matIndexStack[++stackIndex] = m->mix.matAIndex;
+			matIndexStack[++stackIndex] = m->mix.matBIndex;
 		} else {
 			// Normal GetEventTypes() evaluation
 			event |= Material_GetEventTypesNoMix(m);
@@ -699,6 +697,81 @@ BSDFEvent MixMaterial_GetEventTypes(__global Material *material
 	}
 
 	return event;
+}
+
+float3 MixMaterial_Evaluate(__global Material *material,
+		const float2 uv, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		MATERIALS_PARAM_DECL
+		IMAGEMAPS_PARAM_DECL) {
+	int matIndexStack[MIX_STACK_SIZE];
+	float totalWeightStack[MIX_STACK_SIZE];
+
+	// Evaluate the root Mix material
+	matIndexStack[0] = material->mix.matAIndex;
+	matIndexStack[1] = material->mix.matBIndex;
+
+	const float factor = Texture_GetGreyValue(&texs[material->mix.mixFactorTexIndex], uv
+			IMAGEMAPS_PARAM);
+	const float weight2 = clamp(factor, 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+
+	totalWeightStack[0] = weight1;
+	totalWeightStack[1] = weight2;
+
+	matIndexStack[0] = material->mix.matAIndex;
+	matIndexStack[1] = material->mix.matBIndex;
+	int stackIndex = 1;
+
+	// Setup the results
+	float3 result = BLACK;
+	*event = NONE;
+	if (directPdfW)
+		*directPdfW = 0.f;
+
+	while (stackIndex >= 0) {
+		// Extract a material from the stack
+		__global Material *m = &mats[matIndexStack[stackIndex]];
+		float totalWeight = totalWeightStack[stackIndex--];
+
+		// Check if it is a Mix material too
+		if (m->type == MIX) {
+			// Add both material to the stack
+			matIndexStack[stackIndex] = m->mix.matAIndex;
+			matIndexStack[stackIndex + 1] = m->mix.matBIndex;
+
+			const float factor = Texture_GetGreyValue(&texs[m->mix.mixFactorTexIndex], uv
+					IMAGEMAPS_PARAM);
+			const float weight2 = clamp(factor, 0.f, 1.f);
+			const float weight1 = 1.f - weight2;
+
+			totalWeightStack[stackIndex] = totalWeight * weight1;
+			totalWeightStack[stackIndex + 1] = totalWeight * weight2;
+
+			matIndexStack[stackIndex] = m->mix.matAIndex;
+			matIndexStack[stackIndex + 1] = m->mix.matBIndex;
+
+			stackIndex += 2;
+		} else {
+			// Normal GetEventTypes() evaluation
+			if (totalWeight > 0.f) {
+				BSDFEvent eventMat;
+				float directPdfWMat, reversePdfWMat;
+				const float3 resultMat = Material_EvaluateNoMix(m, texs, uv, lightDir, eyeDir, &eventMat, &directPdfWMat
+						IMAGEMAPS_PARAM);
+				if (any(isnotequal(resultMat, BLACK))) {
+					result += totalWeight * resultMat;
+
+					if (directPdfW)
+						*directPdfW += totalWeight * directPdfWMat;
+				}
+				
+				*event |= eventMat;
+			}
+		}
+	}
+
+	return result;
 }
 
 float3 MixMaterial_Sample(__global Material *material,
@@ -724,6 +797,7 @@ float3 MixMaterial_Sample(__global Material *material,
 			if (matA->type == MIX) {
 				mix = matA;
 				passThrough = passThrough / weight1;
+				// TODO: evaluate matB
 				continue;
 			} else {
 				// Sample the first material
@@ -742,7 +816,7 @@ float3 MixMaterial_Sample(__global Material *material,
 				// TODO: mix support
 				BSDFEvent eventMatB;
 				float pdfWMatB;
-				const float3 f = Material_Evaluate(matB, texs, uv, *sampledDir, fixedDir, &eventMatB, &pdfWMatB
+				const float3 f = Material_EvaluateNoMix(matB, texs, uv, *sampledDir, fixedDir, &eventMatB, &pdfWMatB
 						IMAGEMAPS_PARAM);
 				if (any(isnotequal(f, BLACK))) {
 					result += weight2 * f;
@@ -756,6 +830,7 @@ float3 MixMaterial_Sample(__global Material *material,
 			if (matB->type == MIX) {
 				mix = matB;
 				passThrough = (passThrough - weight1) / weight2;
+				// TODO: evaluate matB
 				continue;
 			} else {
 				// Sample the second material
@@ -774,7 +849,7 @@ float3 MixMaterial_Sample(__global Material *material,
 				// TODO: mix support
 				BSDFEvent eventMatA;
 				float pdfWMatA;
-				const float3 f = Material_Evaluate(matA, texs, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA
+				const float3 f = Material_EvaluateNoMix(matA, texs, uv, *sampledDir, fixedDir, &eventMatA, &pdfWMatA
 						IMAGEMAPS_PARAM);
 				if (any(isnotequal(f, BLACK))) {
 					result += weight1 * f;
@@ -813,6 +888,24 @@ bool Material_IsDelta(__global Material *material
 	else
 #endif
 		return Material_IsDeltaNoMix(material);
+}
+
+float3 Material_Evaluate(__global Material *material,
+		const float2 uv, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		MATERIALS_PARAM_DECL
+		IMAGEMAPS_PARAM_DECL) {
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_Evaluate(material, uv, lightDir, eyeDir,
+				event, directPdfW
+				MATERIALS_PARAM
+				IMAGEMAPS_PARAM);
+	else
+#endif
+		return Material_EvaluateNoMix(material, texs, uv, lightDir, eyeDir,
+				event, directPdfW
+				IMAGEMAPS_PARAM);
 }
 
 float3 Material_Sample(__global Material *material,	const float2 uv,
