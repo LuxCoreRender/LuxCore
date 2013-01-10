@@ -162,8 +162,11 @@ void Sampler_NextSample(
 		__global Camera *camera,
 		__global Ray *ray
 		) {
+	const float scrX = sampleData[IDX_SCREEN_X];
+	const float scrY = sampleData[IDX_SCREEN_Y];
+
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
-	const uint pixelIndex = PixelIndexFloat2D(sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y]);
+	const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
 	SplatSample(frameBuffer,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 			alphaFrameBuffer,
@@ -174,8 +177,6 @@ void Sampler_NextSample(
 #endif
 			1.f);
 #else
-	const float scrX = sampleData[IDX_SCREEN_X];
-	const float scrY = sampleData[IDX_SCREEN_Y];
 	float sx, sy;
 	const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
 	SplatSample(frameBuffer,
