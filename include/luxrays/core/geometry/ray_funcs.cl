@@ -32,13 +32,13 @@ void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
 void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir, const float maxt) {
 	vstore3(orig, 0, &ray->o.x);
 	vstore3(dir, 0, &ray->d.x);
-	ray->mint = MachineEpsilon_E(1.f);
+	ray->mint = MachineEpsilon_E(orig);
 	ray->maxt = maxt;
 }
 
 void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir) {
 	vstore3(orig, 0, &ray->o.x);
 	vstore3(dir, 0, &ray->d.x);
-	ray->mint = MachineEpsilon_E(1.f);
+	ray->mint = MachineEpsilon_E(orig);
 	ray->maxt = INFINITY;
 }
