@@ -1,4 +1,6 @@
-scene.camera.lookat = -6.078912 0.763888 -0.244332 3.862433 -0.287569 -0.49751
+scene.camera.lookat = -6.078912 -1.287569 -0.244332 3.862433 8.763888 -0.49751
+scene.camera.lensradius = 0.005
+scene.camera.focaldistance = 4.0
 ################################################################################
 scene.materials.chrome.type = mirror
 scene.materials.mirror.chrome =  1.0 1.0 1.0
@@ -24,7 +26,7 @@ scene.materials.rubber.kd = 0.069287 0.069287 0.069287
 scene.materials.walls.kd = 0.85 0.85 0.85
 scene.materials.white_paint.kd = 0.85 0.85 0.85
 scene.materials.white_plastic.kd = 0.85 0.85 0.85
-scene.materials.portal.emission = 3.8 3.8 3.8
+#scene.materials.portal.emission = 3.8 3.8 3.8
 ################################################################################
 scene.objects.chair.material = chair
 scene.objects.chair.ply = scenes/classroom/chair.ply
@@ -40,8 +42,8 @@ scene.objects.lampshades.material = lampshades
 scene.objects.lampshades.ply = scenes/classroom/lampshades.ply
 scene.objects.lights.material = lights
 scene.objects.lights.ply = scenes/classroom/lights.ply
-scene.objects.portal.material = portal
-scene.objects.portal.ply = scenes/classroom/portal.ply
+#scene.objects.portal.material = portal
+#scene.objects.portal.ply = scenes/classroom/portal.ply
 scene.objects.rubber.material = rubber
 scene.objects.rubber.ply = scenes/classroom/rubber.ply
 scene.objects.walls.material = walls
@@ -50,3 +52,10 @@ scene.objects.white_paint.material = white_paint
 scene.objects.white_paint.ply = scenes/classroom/white_paint.ply
 scene.objects.white_plastic.material = white_plastic
 scene.objects.white_plastic.ply = scenes/classroom/white_plastic.ply
+################################################################################
+scene.infinitelight.file = scenes/simple-mat/sky.exr
+scene.infinitelight.gain = 1.0 1.0 1.0
+scene.infinitelight.shift = -0.375 0.0
+scene.materials.sun.emission = 300.0 300.0 220.0
+scene.objects.sun.material = sun
+scene.objects.sun.ply = scenes/classroom/sun.ply
