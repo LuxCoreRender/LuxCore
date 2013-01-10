@@ -214,7 +214,7 @@ std::string KernelSource_bsdf_funcs =
 "			pdfW, cosSampledDir, event\n"
 "			MATERIALS_PARAM\n"
 "			IMAGEMAPS_PARAM);\n"
-"	if (all(isequal(result, BLACK)))\n"
+"	if (Spectrum_IsBlack(result))\n"
 "		return 0.f;\n"
 "\n"
 "	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);\n"

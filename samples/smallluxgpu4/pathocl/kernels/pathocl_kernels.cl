@@ -262,7 +262,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
 					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
-			if (any(isnotequal(passThroughTrans, BLACK))) {
+			if (!Spectrum_IsBlack(passThroughTrans)) {
 				const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r) * passThroughTrans;
 				vstore3(pathThroughput, 0, &task->pathStateBase.throughput.r);
 
@@ -283,7 +283,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs,
 							triLightDefs, &directPdfA
 							IMAGEMAPS_PARAM);
-					if (any(isnotequal(emittedRadiance, BLACK))) {
+					if (!Spectrum_IsBlack(emittedRadiance)) {
 						// Add emitted radiance
 						float weight = 1.f;
 						if (!task->directLightState.lastSpecular) {
@@ -332,7 +332,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_SUNLIGHT)
 			float directPdfW;
 			const float3 sunRadiance = SunLight_GetRadiance(sunLight, dir, &directPdfW);
-			if (any(isnotequal(sunRadiance, BLACK))) {
+			if (!Spectrum_IsBlack(sunRadiance)) {
 				// MIS between BSDF sampling and direct light sampling
 				const float weight = (task->directLightState.lastSpecular ? 1.f : PowerHeuristic(task->directLightState.lastPdfW, directPdfW));
 				lightRadiance += weight * sunRadiance;
@@ -393,7 +393,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
 					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
-			if (any(isnotequal(passthroughTrans, BLACK))) {
+			if (!Spectrum_IsBlack(passthroughTrans)) {
 				const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r) * passthroughTrans;
 				vstore3(lightRadiance, 0, &task->directLightState.lightRadiance.r);
 
@@ -467,7 +467,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					&lightRayDir, &distance, &directPdfW);
 #endif
 
-			if (any(isnotequal(lightRadiance, BLACK))) {
+			if (!Spectrum_IsBlack(lightRadiance)) {
 				BSDFEvent event;
 				float bsdfPdfW;
 				const float3 bsdfEval = BSDF_Evaluate(bsdf,
@@ -475,7 +475,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 						MATERIALS_PARAM
 						IMAGEMAPS_PARAM);
 
-				if (any(isnotequal(bsdfEval, BLACK))) {
+				if (!Spectrum_IsBlack(bsdfEval)) {
 					const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
 					const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
@@ -532,7 +532,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !lastSpecular;
 			const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(IDX_RR) < rrProb);
 
-			const bool continuePath = any(isnotequal(bsdfSample, BLACK)) && rrContinuePath;
+			const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath;
 			if (continuePath) {
 				if (rrEnabled)
 					lastPdfW *= rrProb; // Russian Roulette

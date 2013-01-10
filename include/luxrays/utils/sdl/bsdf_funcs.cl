@@ -211,7 +211,7 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 			pdfW, cosSampledDir, event
 			MATERIALS_PARAM
 			IMAGEMAPS_PARAM);
-	if (all(isequal(result, BLACK)))
+	if (Spectrum_IsBlack(result))
 		return 0.f;
 
 	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);

@@ -770,7 +770,7 @@ float3 MixMaterial_Evaluate(__global Material *material,
 				float directPdfWMat;
 				const float3 resultMat = Material_EvaluateNoMix(m, texs, uv, lightDir, eyeDir, &eventMat, &directPdfWMat
 						IMAGEMAPS_PARAM);
-				if (any(isnotequal(resultMat, BLACK))) {
+				if (!Spectrum_IsBlack(BLACK)) {
 					result += totalWeight * resultMat;
 
 					if (directPdfW)
@@ -884,7 +884,7 @@ float3 MixMaterial_Sample(__global Material *material,
 					&eventMat, &pdfWMat
 					IMAGEMAPS_PARAM);
 		}
-		if (any(isnotequal(eval, BLACK))) {
+		if (!Spectrum_IsBlack(eval)) {
 			result += evalWeight * eval;
 			*pdfW += evalWeight * pdfWMat;
 		}
@@ -930,7 +930,7 @@ float3 MixMaterial_GetEmittedRadiance(__global Material *material, const float2 
 		} else {
 			const float3 emitRad = Material_GetEmittedRadianceNoMix(m, texs, uv
 				IMAGEMAPS_PARAM);
-			if (any(isnotequal(emitRad, BLACK)))
+			if (!Spectrum_IsBlack(emitRad))
 				result += totalWeight * emitRad;
 		}
 	}

@@ -21,6 +21,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+bool Spectrum_IsEqual(const float3 a, const float3 b) {
+	return all(isequal(a, b));
+}
+
+bool Spectrum_IsBlack(const float3 a) {
+	return Spectrum_IsEqual(a, BLACK);
+}
+
 float Spectrum_Filter(const float3 s)  {
 	return fmax(s.s0, fmax(s.s1, s.s2));
 }
