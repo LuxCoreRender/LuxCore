@@ -1,17 +1,14 @@
 scene.camera.lookat = -4.647589 -0.639827 3.469284 4.150244 0.305232 -1.189577
 scene.camera.fieldofview = 60
+################################################################################
+scene.materials.chrome.type = mirror
+scene.materials.chrome.kr = 0.9 0.9 0.9 1
+scene.materials.white.kd = 0.8 0.8 0.8
+################################################################################
+scene.objects.chrome.material = chrome
+scene.objects.chrome.ply = scenes/studiotest/chrome.ply
+scene.objects.white.material = white
+scene.objects.white.ply = scenes/studiotest/white.ply
+################################################################################
 scene.infinitelight.file = scenes/studiotest/test-light2.png
 scene.infinitelight.gain = 15 15 15
-#scene.infinitelight.file = scenes/studiotest/test-light.png
-#scene.infinitelight.gain = 15000.0 15000.0 15000.0
-#scene.infinitelight.file = scenes/studiotest/studiolights.exr
-#scene.infinitelight.gain = 1.5 1.5 1.5
-scene.infinitelight.shift = 1.0 0.0
-#scene.infinitelight.usebruteforce = 1
-#scene.materials.mirror.chrome = 0.9 0.9 0.9 1
-#scene.materials.matte.chrome = 0.8 0.0 0.0
-scene.materials.glass.chrome = 0.9 0.9 0.9 0.9 0.9 0.9 1 1.45 1 1
-scene.objects.chrome.chrome = scenes/studiotest/chrome.ply
-scene.materials.matte.white = 0.8 0.8 0.8
-#scene.materials.glass.white = 0.9 0.9 0.9 0.25 0.25 0.25 1 1.45 1 1
-scene.objects.white.white = scenes/studiotest/white.ply
