@@ -29,3 +29,19 @@ float SphericalPhi(const float3 v) {
 	float p = atan2(v.y, v.x);
 	return (p < 0.f) ? p + 2.f * M_PI_F : p;
 }
+
+void CoordinateSystem(const float3 v1, float3 *v2, float3 *v3) {
+	if (fabs(v1.x) > fabs(v1.y)) {
+		float invLen = 1.f / sqrt(v1.x * v1.x + v1.z * v1.z);
+		(*v2).x = -v1.z * invLen;
+		(*v2).y = 0.f;
+		(*v2).z = v1.x * invLen;
+	} else {
+		float invLen = 1.f / sqrt(v1.y * v1.y + v1.z * v1.z);
+		(*v2).x = 0.f;
+		(*v2).y = v1.z * invLen;
+		(*v2).z = -v1.y * invLen;
+	}
+
+	*v3 = cross(v1, *v2);
+}

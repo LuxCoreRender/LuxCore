@@ -301,3 +301,17 @@ float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
 			return BLACK;
 	}
 }
+
+float2 Texture_GetDuDv(__global Texture *texture) {
+	switch (texture->type) {
+#if defined(PARAM_HAS_IMAGEMAPS)
+		case IMAGEMAP:
+			return vload2(0, &texture->imageMapInstance.Du);
+#endif
+		case CONST_FLOAT:
+		case CONST_FLOAT3:
+		case CONST_FLOAT4:
+		default:
+			return 0.f;
+	}
+}

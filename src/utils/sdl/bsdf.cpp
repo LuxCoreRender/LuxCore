@@ -59,15 +59,15 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	// Interpolate UV coordinates
 	hitPointUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
 
-	// Check if I have to apply bump mapping
+	// Check if I have to apply normal mapping
 	if (material->HasNormalTex()) {
 		// Apply normal mapping
 		const Texture *nm = material->GetNormalTexture();
 		const Spectrum color = nm->GetColorValue(hitPointUV);
 
-		const float x = 2.f * (color.r - 0.5f);
-		const float y = 2.f * (color.g - 0.5f);
-		const float z = 2.f * (color.b - 0.5f);
+		const float x = 2.f * color.r - 1.f;
+		const float y = 2.f * color.g - 1.f;
+		const float z = 2.f * color.b - 1.f;
 
 		Vector v1, v2;
 		CoordinateSystem(Vector(shadeN), &v1, &v2);
@@ -77,9 +77,9 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 				v1.z * x + v2.z * y + shadeN.z * z));
 	}
 
-	// Check if I have to apply normal mapping
+	// Check if I have to apply bump mapping
 	if (material->HasBumpTex()) {
-		// Apply normal mapping
+		// Apply bump mapping
 		const Texture *bm = material->GetBumpTexture();
 		const UV &dudv = bm->GetDuDv();
 

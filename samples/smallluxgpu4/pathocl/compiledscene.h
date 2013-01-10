@@ -77,6 +77,7 @@ public:
 	std::set<MaterialType> usedMaterialTypes; // I can not use MaterialType here
 	vector<luxrays::ocl::Material> mats;
 	vector<u_int> meshMats;
+	bool useBumpMapping, useNormalMapping;
 
 	// Compiled Textures
 	vector<luxrays::ocl::Texture> texs;
