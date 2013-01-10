@@ -42,6 +42,7 @@ public:
 
 	void Recompile(const EditActionList &editActions);
 	bool IsMaterialCompiled(const MaterialType type) const;
+	bool IsTextureCompiled(const TextureType type) const;
 
 	Scene *scene;
 	Film *film;
@@ -74,12 +75,13 @@ public:
 	luxrays::ocl::SkyLight *skyLight;
 
 	// Compiled Materials
-	std::set<MaterialType> usedMaterialTypes; // I can not use MaterialType here
+	std::set<MaterialType> usedMaterialTypes;
 	vector<luxrays::ocl::Material> mats;
 	vector<u_int> meshMats;
 	bool useBumpMapping, useNormalMapping;
 
 	// Compiled Textures
+	std::set<TextureType> usedTextureTypes;
 	vector<luxrays::ocl::Texture> texs;
 
 	// Compiled ImageMaps

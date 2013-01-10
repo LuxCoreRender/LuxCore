@@ -279,6 +279,8 @@ void CompiledScene::CompileGeometry() {
 void CompiledScene::CompileMaterials() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
 
+	CompileTextures();
+
 	//--------------------------------------------------------------------------
 	// Translate material definitions
 	//--------------------------------------------------------------------------
@@ -320,9 +322,9 @@ void CompiledScene::CompileMaterials() {
 			mat->normalTexIndex = NULL_INDEX;
 
 		// Material specific parameters
+		usedMaterialTypes.insert(m->GetType());
 		switch (m->GetType()) {
 			case MATTE: {
-				usedMaterialTypes.insert(MATTE);
 				MatteMaterial *mm = static_cast<MatteMaterial *>(m);
 
 				mat->type = luxrays::ocl::MATTE;
@@ -330,7 +332,6 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MIRROR: {
-				usedMaterialTypes.insert(MIRROR);
 				MirrorMaterial *mm = static_cast<MirrorMaterial *>(m);
 
 				mat->type = luxrays::ocl::MIRROR;
@@ -338,7 +339,6 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case GLASS: {
-				usedMaterialTypes.insert(GLASS);
 				GlassMaterial *gm = static_cast<GlassMaterial *>(m);
 
 				mat->type = luxrays::ocl::GLASS;
@@ -349,7 +349,6 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case METAL: {
-				usedMaterialTypes.insert(METAL);
 				MetalMaterial *mm = static_cast<MetalMaterial *>(m);
 
 				mat->type = luxrays::ocl::METAL;
@@ -358,7 +357,6 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case ARCHGLASS: {
-				usedMaterialTypes.insert(ARCHGLASS);
 				ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);
 
 				mat->type = luxrays::ocl::ARCHGLASS;
@@ -377,13 +375,10 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case NULLMAT: {
-				usedMaterialTypes.insert(NULLMAT);
-
 				mat->type = luxrays::ocl::NULLMAT;
 				break;
 			}
 			case MATTETRANSLUCENT: {
-				usedMaterialTypes.insert(MATTETRANSLUCENT);
 				MatteTranslucentMaterial *mm = static_cast<MatteTranslucentMaterial *>(m);
 
 				mat->type = luxrays::ocl::MATTETRANSLUCENT;
@@ -552,13 +547,13 @@ void CompiledScene::CompileSkyLight() {
 void CompiledScene::CompileTextures() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
 
-	texs.resize(0);
-
 	//--------------------------------------------------------------------------
 	// Translate textures
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
+
+	usedTextureTypes.clear();
 
 	const u_int texturesCount = scene->texDefs.GetSize();
 	texs.resize(texturesCount);
@@ -567,6 +562,7 @@ void CompiledScene::CompileTextures() {
 		Texture *t = scene->texDefs.GetTexture(i);
 		luxrays::ocl::Texture *tex = &texs[i];
 
+		usedTextureTypes.insert(t->GetType());
 		switch (t->GetType()) {
 			case CONST_FLOAT: {
 				ConstFloatTexture *cft = static_cast<ConstFloatTexture *>(t);
@@ -683,10 +679,8 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileCamera();
 	if (editActions.Has(GEOMETRY_EDIT))
 		CompileGeometry();
-	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();
-		CompileTextures();
-	}
 	if (editActions.Has(AREALIGHTS_EDIT))
 		CompileAreaLights();
 	if (editActions.Has(INFINITELIGHT_EDIT))
@@ -701,6 +695,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 
 bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
 	return (usedMaterialTypes.find(type) != usedMaterialTypes.end());
+}
+
+bool CompiledScene::IsTextureCompiled(const TextureType type) const {
+	return (usedTextureTypes.find(type) != usedTextureTypes.end());
 }
 
 }

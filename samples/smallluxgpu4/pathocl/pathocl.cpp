@@ -19,8 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-// TODO: check pixel position difference between CPU and OpenCL
-// TODO: introduce conditional compilation for textures too (like for materials)
 // TODO: metropolis with lazy evaluation
 // TODO: state sorting optimization
 

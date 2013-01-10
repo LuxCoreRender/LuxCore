@@ -406,6 +406,15 @@ void PathOCLRenderThread::InitKernels() {
 			assert (false);
 	}
 
+	if (cscene->IsTextureCompiled(CONST_FLOAT))
+		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
+	if (cscene->IsTextureCompiled(CONST_FLOAT3))
+		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
+	if (cscene->IsTextureCompiled(CONST_FLOAT4))
+		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT4";
+	if (cscene->IsTextureCompiled(IMAGEMAP))
+		ss << " -D PARAM_ENABLE_TEX_IMAGEMAP";
+
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
 	if (cscene->IsMaterialCompiled(MIRROR))

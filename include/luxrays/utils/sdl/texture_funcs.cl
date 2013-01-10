@@ -25,6 +25,8 @@
 // ConstFloat texture
 //------------------------------------------------------------------------------
 
+#if defined (PARAM_ENABLE_TEX_CONST_FLOAT)
+
 float ConstFloatTexture_GetGreyValue(__global Texture *texture, const float2 uv) {
 	return texture->constFloat.value;
 }
@@ -33,9 +35,13 @@ float3 ConstFloatTexture_GetColorValue(__global Texture *texture, const float2 u
 	return texture->constFloat.value;
 }
 
+#endif
+
 //------------------------------------------------------------------------------
 // ConstFloat3 texture
 //------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_CONST_FLOAT3)
 
 float ConstFloat3Texture_GetGreyValue(__global Texture *texture, const float2 uv) {
 	return Spectrum_Y(vload3(0, &texture->constFloat3.color.r));
@@ -45,9 +51,13 @@ float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, const float2 
 	return vload3(0, &texture->constFloat3.color.r);
 }
 
+#endif
+
 //------------------------------------------------------------------------------
 // ConstFloat4 texture
 //------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_CONST_FLOAT4)
 
 float ConstFloat4Texture_GetGreyValue(__global Texture *texture, const float2 uv) {
 	return Spectrum_Y(vload3(0, &texture->constFloat4.color.r));
@@ -57,8 +67,10 @@ float3 ConstFloat4Texture_GetColorValue(__global Texture *texture, const float2 
 	return vload3(0, &texture->constFloat4.color.r);
 }
 
+#endif
+
 //------------------------------------------------------------------------------
-// ImageMap texture
+// ImageMaps support
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_IMAGEMAPS)
@@ -248,6 +260,14 @@ float3 ImageMapInstance_GetColor(
 			mapUV.s0, mapUV.s1);
 }
 
+#endif
+
+//------------------------------------------------------------------------------
+// ImageMap texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_IMAGEMAP)
+
 float ImageMapTexture_GetGreyValue(__global Texture *texture, const float2 uv
 	IMAGEMAPS_PARAM_DECL) {
 	return ImageMapInstance_GetGrey(&texture->imageMapInstance, uv
@@ -267,13 +287,19 @@ float3 ImageMapTexture_GetColorValue(__global Texture *texture, const float2 uv
 float Texture_GetGreyValue(__global Texture *texture, const float2 uv
 		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
 			return ConstFloatTexture_GetGreyValue(texture, uv);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
 			return ConstFloat3Texture_GetGreyValue(texture, uv);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
 			return ConstFloat4Texture_GetGreyValue(texture, uv);
-#if defined(PARAM_HAS_IMAGEMAPS)
+#endif
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
 			return ImageMapTexture_GetGreyValue(texture, uv
 					IMAGEMAPS_PARAM);
@@ -286,13 +312,19 @@ float Texture_GetGreyValue(__global Texture *texture, const float2 uv
 float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
 		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
 			return ConstFloatTexture_GetColorValue(texture, uv);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
 			return ConstFloat3Texture_GetColorValue(texture, uv);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
 			return ConstFloat4Texture_GetColorValue(texture, uv);
-#if defined(PARAM_HAS_IMAGEMAPS)
+#endif
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
 			return ImageMapTexture_GetColorValue(texture, uv
 					IMAGEMAPS_PARAM);
@@ -304,13 +336,19 @@ float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
 
 float2 Texture_GetDuDv(__global Texture *texture) {
 	switch (texture->type) {
-#if defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
 			return vload2(0, &texture->imageMapInstance.Du);
 #endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
+#endif
 		default:
 			return 0.f;
 	}

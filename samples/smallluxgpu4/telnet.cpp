@@ -728,8 +728,11 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->UpdateMaterial(matName, props);
 									const Material *newMat = scene->matDefs.GetMaterial(matName);
 
-									// Check if the material type is one of the already enabled
-									if (!session->renderEngine->IsMaterialCompiled(newMat->GetType()))
+									// To enable this optimization, I should check not only all
+									// referenced materials (i.e. Mix) but also all referenced textures.
+									// Doesn't seem worth the work.
+									//// Check if the material type is one of the already enabled
+									//if (!session->renderEngine->IsMaterialCompiled(newMat->GetType()))
 										session->editActions.AddAction(MATERIAL_TYPES_EDIT);
 									// Check if both are light sources
 									if (newMat->IsLightSource())
