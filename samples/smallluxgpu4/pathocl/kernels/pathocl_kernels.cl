@@ -252,6 +252,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_PASSTHROUGHT)
 					, task->pathStateBase.bsdf.passThroughEvent
 #endif
+#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+					MATERIALS_PARAM
+					IMAGEMAPS_PARAM
+#endif
 					);
 
 #if defined(PARAM_HAS_PASSTHROUGHT)
@@ -380,6 +384,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					vertices, vertNormals, vertUVs,
 					triangles, ray, rayHit,
 					task->passThroughState.passThroughEvent
+#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+					MATERIALS_PARAM
+					IMAGEMAPS_PARAM
+#endif
 					);
 
 			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf

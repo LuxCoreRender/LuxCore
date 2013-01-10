@@ -465,10 +465,10 @@ void PathOCLRenderThread::InitKernels() {
 			ss << " -D PARAM_IMAGEMAPS_PAGE_" << i;
 	}
 
-//	if (meshBumpMapsBuff)
-//		ss << " -D PARAM_HAS_BUMPMAPS";
-//	if (meshNormalMapsBuff)
-//		ss << " -D PARAM_HAS_NORMALMAPS";
+	if (renderEngine->compiledScene->useBumpMapping)
+		ss << " -D PARAM_HAS_BUMPMAPS";
+	if (renderEngine->compiledScene->useNormalMapping)
+		ss << " -D PARAM_HAS_NORMALMAPS";
 
 	const luxrays::ocl::Filter *filter = renderEngine->filter;
 	switch (filter->type) {
@@ -843,8 +843,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 	// OpenCL kernel setArg() is the only no thread safe function in OpenCL 1.1 so
 	// I need to use a mutex here
 	boost::unique_lock<boost::mutex> lock(setKernelArgsMutex);
-
-//	CompiledScene *cscene = renderEngine->compiledScene;
 
 	//--------------------------------------------------------------------------
 	// advancePathsKernel

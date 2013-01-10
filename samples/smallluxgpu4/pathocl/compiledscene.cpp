@@ -289,6 +289,8 @@ void CompiledScene::CompileMaterials() {
 
 	const u_int materialsCount = scene->matDefs.GetSize();
 	mats.resize(materialsCount);
+	useBumpMapping = false;
+	useNormalMapping = false;
 
 	for (u_int i = 0; i < materialsCount; ++i) {
 		Material *m = scene->matDefs.GetMaterial(i);
@@ -300,6 +302,22 @@ void CompiledScene::CompileMaterials() {
 			mat->emitTexIndex = scene->texDefs.GetTextureIndex(emitTex);
 		else
 			mat->emitTexIndex = NULL_INDEX;
+
+		// Material bump mapping
+		const Texture *bumpTex = m->GetBumpTexture();
+		if (bumpTex) {
+			mat->bumpTexIndex = scene->texDefs.GetTextureIndex(bumpTex);
+			useBumpMapping = true;
+		} else
+			mat->bumpTexIndex = NULL_INDEX;
+
+		// Material normal mapping
+		const Texture *normalTex = m->GetNormalTexture();
+		if (normalTex) {
+			mat->normalTexIndex = scene->texDefs.GetTextureIndex(normalTex);
+			useNormalMapping = true;
+		} else
+			mat->normalTexIndex = NULL_INDEX;
 
 		// Material specific parameters
 		switch (m->GetType()) {

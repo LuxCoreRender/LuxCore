@@ -42,6 +42,10 @@ void BSDF_Init(
 #if defined(PARAM_HAS_PASSTHROUGHT)
 		, const float u0
 #endif
+#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+		MATERIALS_PARAM_DECL
+		IMAGEMAPS_PARAM_DECL
+#endif
 		) {
 	//bsdf->fromLight = fromL;
 #if defined(PARAM_HAS_PASSTHROUGHT)
@@ -76,61 +80,71 @@ void BSDF_Init(
 	vstore3(Mesh_GetGeometryNormal(iVertices, iTriangles, triangleID), 0, &bsdf->geometryN.x);
 	float3 shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, b1, b2);
 	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
-	vstore2(Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2), 0, &bsdf->hitPointUV.u);
+	const float2 hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2);
 #else
 	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
 	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
-	vstore2(Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2), 0, &bsdf->hitPointUV.u);
+	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
 #endif
+	vstore2(hitPointUV, 0, &bsdf->hitPointUV.u);
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 	// Check if it is a light source
 	bsdf->triangleLightSourceIndex = meshLights[currentTriangleIndex];
 #endif
 
-//	// Check if I have to apply bump mapping
-//	if (material->HasNormalTex()) {
-//		// Apply normal mapping
-//		const Texture *nm = material->GetNormalTexture();
-//		const Spectrum color = nm->GetColorValue(hitPointUV);
-//
-//		const float x = 2.f * (color.r - 0.5f);
-//		const float y = 2.f * (color.g - 0.5f);
-//		const float z = 2.f * (color.b - 0.5f);
-//
-//		Vector v1, v2;
-//		CoordinateSystem(Vector(shadeN), &v1, &v2);
-//		shadeN = Normalize(Normal(
-//				v1.x * x + v2.x * y + shadeN.x * z,
-//				v1.y * x + v2.y * y + shadeN.y * z,
-//				v1.z * x + v2.z * y + shadeN.z * z));
-//	}
+#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+	__global Material *mat = &mats[matIndex];
 
-//	// Check if I have to apply normal mapping
-//	if (material->HasBumpTex()) {
-//		// Apply normal mapping
-//		const Texture *bm = material->GetBumpTexture();
-//		const UV &dudv = bm->GetDuDv();
-//
-//		const float b0 = bm->GetGreyValue(hitPointUV);
-//
-//		const UV uvdu(hitPointUV.u + dudv.u, hitPointUV.v);
-//		const float bu = bm->GetGreyValue(uvdu);
-//
-//		const UV uvdv(hitPointUV.u, hitPointUV.v + dudv.v);
-//		const float bv = bm->GetGreyValue(uvdv);
-//
-//		const Vector bump(bu - b0, bv - b0, 1.f);
-//
-//		Vector v1, v2;
-//		CoordinateSystem(Vector(shadeN), &v1, &v2);
-//		shadeN = Normalize(Normal(
-//				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
-//				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
-//				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
-//	}
+#if defined(PARAM_HAS_NORMALMAPS)
+	// Check if I have to apply normal mapping
+	const uint normalTexIndex = mat->normalTexIndex;
+	if (normalTexIndex != NULL_INDEX) {
+		// Apply normal mapping
+		const float3 color = Texture_GetColorValue(&texs[normalTexIndex], hitPointUV
+			IMAGEMAPS_PARAM);
+		const float3 xyz = 2.f * color - 1.f;
 
-	
+		float3 v1, v2;
+		CoordinateSystem(shadeN, &v1, &v2);
+		shadeN = normalize((float3)(
+				v1.x * xyz.x + v2.x * xyz.y + shadeN.x * xyz.z,
+				v1.y * xyz.x + v2.y * xyz.y + shadeN.y * xyz.z,
+				v1.z * xyz.x + v2.z * xyz.y + shadeN.z * xyz.z));
+	}
+#endif
+
+#if defined(PARAM_HAS_BUMPMAPS)
+	// Check if I have to apply bump mapping
+	const uint bumpTexIndex = mat->bumpTexIndex;
+	if (bumpTexIndex != NULL_INDEX) {
+		// Apply bump mapping
+		__global Texture *tex = &texs[bumpTexIndex];
+		const float2 dudv = Texture_GetDuDv(tex);
+
+		const float b0 = Texture_GetGreyValue(tex, hitPointUV
+			IMAGEMAPS_PARAM);
+
+		const float2 uvdu = (float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1);
+		const float bu = Texture_GetGreyValue(tex, uvdu
+			IMAGEMAPS_PARAM);
+
+		const float2 uvdv = (float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1);
+		const float bv = Texture_GetGreyValue(tex, uvdv
+			IMAGEMAPS_PARAM);
+
+		const float3 bump = (float3)(bu - b0, bv - b0, 1.f);
+
+		float3 v1, v2;
+		CoordinateSystem(shadeN, &v1, &v2);
+		shadeN = normalize((float3)(
+				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
+				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
+				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
+	}
+#endif
+#endif
+
 	Frame_SetFromZ(&bsdf->frame, shadeN);
 
 	vstore3(shadeN, 0, &bsdf->shadeN.x);
