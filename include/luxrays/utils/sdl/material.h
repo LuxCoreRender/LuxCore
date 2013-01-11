@@ -370,7 +370,7 @@ public:
 	virtual bool IsLightSource() const {
 		return (matA->IsLightSource() || matB->IsLightSource());
 	}
-	virtual bool IsDelta()  {
+	virtual bool IsDelta() const {
 		return (matA->IsDelta() && matB->IsDelta());
 	}
 	virtual bool IsPassThrough() const {
