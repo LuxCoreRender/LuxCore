@@ -34,14 +34,21 @@ namespace luxrays {
 class OpenCLKernel {
 public:
 	OpenCLKernel(OpenCLIntersectionDevice *dev) : device(dev), kernel(NULL),
-		stackSize(24) { }
+			stackSize(24) { }
 	virtual ~OpenCLKernel() { delete kernel; }
 
 	virtual void FreeBuffers() = 0;
 	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
 		const unsigned int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+		throw std::runtime_error("Internal error: called OpenCLKernel::EnqueueRayBuffer(no ray index mapping)"); 
+	}
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff, cl::Buffer &mapBuff,
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+		throw std::runtime_error("Internal error: called OpenCLKernel::EnqueueRayBuffer(with ray index mapping)"); 
+	}
 
 	void SetMaxStackSize(const size_t s) { stackSize = s; }
 
@@ -76,8 +83,12 @@ public:
 		return deviceDesc->GetMaxMemory();
 	}
 
-	void DisableImageStorage(const bool v) {
+	void SetDisableImageStorage(const bool v) {
 		disableImageStorage = v;
+	}
+	
+	void SetRayIndexMapping(const bool v) {
+		enableRayIndexMapping = v;
 	}
 
 	//--------------------------------------------------------------------------
@@ -92,7 +103,10 @@ public:
 	// Data parallel interface: to trace large set of rays directly from the GPU
 	//--------------------------------------------------------------------------
 
-	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
+	void EnqueueTraceRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
+	void EnqueueTraceRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff, cl::Buffer &mapBuff,
 		const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
@@ -126,7 +140,7 @@ private:
 	RayBufferQueueO2O rayBufferQueue;
 	RayBufferQueue *externalRayBufferQueue;
 
-	bool reportedPermissionError, disableImageStorage;
+	bool reportedPermissionError, disableImageStorage, enableRayIndexMapping;
 };
 
 }

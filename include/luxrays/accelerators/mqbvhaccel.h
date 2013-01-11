@@ -41,24 +41,25 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
 	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-		unsigned int stackSize, bool disableImageStorage) const;
+		const u_int stackSize, const bool disableImageStorage,
+		const bool enableRayIndexMapping) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
-		const unsigned int totalVertexCount,
-		const unsigned int totalTriangleCount);
+		const u_int totalVertexCount,
+		const u_int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
+	virtual const TriangleMeshID GetMeshID(const u_int index) const {
 		return meshIDs[index];
 	}
 	virtual const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
+	virtual const TriangleID GetMeshTriangleID(const u_int index) const {
 		return meshTriangleIDs[index];
 	}
 	virtual const TriangleID *GetMeshTriangleIDTable() const {
 		return meshTriangleIDs;
 	}
-	unsigned int GetNNodes() const { return nNodes; }
+	u_int GetNNodes() const { return nNodes; }
 	QBVHNode *GetTree() const { return nodes; }
-	unsigned int GetNLeafs() const { return nLeafs; }
+	u_int GetNLeafs() const { return nLeafs; }
 	const Transform **GetTransforms() const { return leafsTransform; }
 
 
@@ -93,7 +94,7 @@ private:
 	std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)> accels;
 	QBVHAccel **leafs;
 	const Transform **leafsTransform;
-	unsigned int *leafsOffset;
+	u_int *leafsOffset;
 	TriangleMeshID *meshIDs;
 	TriangleID *meshTriangleIDs;
 

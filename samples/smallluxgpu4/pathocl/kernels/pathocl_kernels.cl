@@ -36,6 +36,7 @@
 //  PARAM_HAS_BUMPMAPS
 //  PARAM_HAS_NORMALMAPS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
+//  PARAM_ENABLE_STATE_SORTING
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -99,36 +100,44 @@
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		uint seedBase,
 		__global GPUTask *tasks,
-		__global float *samplesData,
+#if defined(PARAM_ENABLE_STATE_SORTING)
+		__global uint *taskMapping,
+#endif
 		__global GPUTaskStats *taskStats,
+		__global float *samplesData,
 		__global Ray *rays,
 		__global Camera *camera
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = get_global_id(0);
 
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
+	__global GPUTask *task = &tasks[taskIndex];
 	__global Sample *sample = &task->sample;
 
 	// Initialize random number generator
 	Seed seed;
-	Rnd_Init(seedBase + gid, &seed);
+	Rnd_Init(seedBase + taskIndex, &seed);
 
 	// Initialize the sample
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, &task->sample, sampleData);
+	__global float *sampleData = Sampler_GetSampleData(taskIndex, sample, samplesData);
+	Sampler_Init(taskIndex, &seed, &task->sample, sampleData);
 
 	// Initialize the path
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	GenerateCameraPath(task, sampleDataPathBase, &seed, camera, &rays[gid]);
+	GenerateCameraPath(task, sampleDataPathBase, &seed, camera, &rays[taskIndex]);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
 
-	__global GPUTaskStats *taskStat = &taskStats[gid];
+	__global GPUTaskStats *taskStat = &taskStats[taskIndex];
 	taskStat->sampleCount = 0;
+
+	// Initialize task mapping
+#if defined(PARAM_ENABLE_STATE_SORTING)
+	taskMapping[taskIndex] = taskIndex;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -158,11 +167,241 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 }
 
 //------------------------------------------------------------------------------
+// StateSorting Kernel
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_STATE_SORTING)
+
+#define SEARCH_SIZE 8
+#define STATESORTING_WORKGROUP_SIZE 64
+
+__kernel __attribute__((reqd_work_group_size(STATESORTING_WORKGROUP_SIZE, 1, 1))) void StateSorting(
+		__global GPUTask *tasks,
+		__global uint *taskMapping) {
+
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	__local uint taskStates[SEARCH_SIZE * STATESORTING_WORKGROUP_SIZE];
+	__local uint taskIndices[SEARCH_SIZE * STATESORTING_WORKGROUP_SIZE];
+
+	const uint grpid = get_group_id(0);
+	const uint lid = get_local_id(0);
+
+	// Read all data
+	for (uint i = 0; i < SEARCH_SIZE; ++i)
+		taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] =
+				tasks[grpid * STATESORTING_WORKGROUP_SIZE * SEARCH_SIZE + i * STATESORTING_WORKGROUP_SIZE + lid].pathStateBase.state;
+
+	for (uint i = 0; i < SEARCH_SIZE; ++i)
+		taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid] =
+				grpid * STATESORTING_WORKGROUP_SIZE * SEARCH_SIZE + i * STATESORTING_WORKGROUP_SIZE + lid;
+
+//	if (get_global_id(0) == 1) {
+//		printf("=================================\n");
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskStates[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n");
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n\n");
+//	}
+
+	// Move all RT_EYE_RAY tasks at the beginning of the array
+	for (uint i = 0; i < 2; ++i) {
+		if (taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] == RT_EYE_RAY)
+			continue;
+		else {
+			// Look for a state to swap
+			bool found = false;
+			for (uint j = i + 1; j < SEARCH_SIZE; ++j) {
+				if (taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] == RT_EYE_RAY) {
+//					if (get_global_id(0) == 1)
+//						printf(" Swap %d %d\n", i, j);
+
+					// Swap the states
+					taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] = taskStates[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] = RT_EYE_RAY;
+
+					// Swap indices
+					const uint tmp = taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid] = taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid] = tmp;
+
+					found = true;
+					break;
+				}
+			}
+
+			if (!found) {
+				// None found, I can stop
+				break;
+			}
+		}
+	}
+
+	// Move all RT_NEXT_VERTEX tasks at the beginning of the array
+	for (uint i = 2; i < 5; ++i) {
+		if (taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] == RT_NEXT_VERTEX)
+			continue;
+		else {
+			// Look for a state to swap
+			bool found = false;
+			for (uint j = 0; j < SEARCH_SIZE; ++j) {
+				if (taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] == RT_NEXT_VERTEX && (j < 2 || j > i)) {
+//					if (get_global_id(0) == 1)
+//						printf(" Swap %d %d\n", i, j);
+
+					// Swap the states
+					taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] = taskStates[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] = RT_NEXT_VERTEX;
+
+					// Swap indices
+					const uint tmp = taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid] = taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid] = tmp;
+
+					found = true;
+					break;
+				}
+			}
+
+			if (!found) {
+				// None found, I can stop
+				break;
+			}
+		}
+	}
+
+	// Move all RT_DL tasks at the beginning of the array
+	for (uint i = 5; i < 8; ++i) {
+		if (taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] == RT_NEXT_VERTEX)
+			continue;
+		else {
+			// Look for a state to swap
+			bool found = false;
+			for (uint j = 0; j < SEARCH_SIZE; ++j) {
+				if (taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] == RT_DL && (j < 5 || j > i)) {
+//					if (get_global_id(0) == 1)
+//						printf(" Swap %d %d\n", i, j);
+
+					// Swap the states
+					taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] = taskStates[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] = RT_DL;
+
+					// Swap indices
+					const uint tmp = taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid] = taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid] = tmp;
+
+					found = true;
+					break;
+				}
+			}
+
+			if (!found) {
+				// None found, I can stop
+				break;
+			}
+		}
+	}
+
+//	if (get_global_id(0) == 1) {
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskStates[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n");
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n\n");
+//	}
+
+	// Write all data
+	for (uint i = 0; i < SEARCH_SIZE; ++i)
+		taskMapping[grpid * STATESORTING_WORKGROUP_SIZE * SEARCH_SIZE + i * STATESORTING_WORKGROUP_SIZE + lid] =
+				taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid];
+#else
+	__local uint taskStates[SEARCH_SIZE * STATESORTING_WORKGROUP_SIZE];
+	__local uint taskIndices[SEARCH_SIZE * STATESORTING_WORKGROUP_SIZE];
+
+	const uint grpid = get_group_id(0);
+	const uint lid = get_local_id(0);
+
+	// Read all data
+	for (uint i = 0; i < SEARCH_SIZE; ++i)
+		taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] =
+				tasks[grpid * STATESORTING_WORKGROUP_SIZE * SEARCH_SIZE + i * STATESORTING_WORKGROUP_SIZE + lid].pathStateBase.state;
+
+	for (uint i = 0; i < SEARCH_SIZE; ++i)
+		taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid] =
+				grpid * STATESORTING_WORKGROUP_SIZE * SEARCH_SIZE + i * STATESORTING_WORKGROUP_SIZE + lid;
+
+//	if (get_global_id(0) == 1) {
+//		printf("=================================\n");
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskStates[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n");
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n\n");
+//	}
+
+	// Move all RT_EYE_RAY tasks at the beginning of the array
+	for (uint i = 0; i < SEARCH_SIZE; ++i) {
+		if (taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] == RT_EYE_RAY)
+			continue;
+		else {
+			// Look for a state to swap
+			bool found = false;
+			for (uint j = i + 1; j < SEARCH_SIZE; ++j) {
+				if (taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] == RT_EYE_RAY) {
+//					if (get_global_id(0) == 1)
+//						printf(" Swap %d %d\n", i, j);
+
+					// Swap the states
+					taskStates[STATESORTING_WORKGROUP_SIZE * j + lid] = taskStates[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskStates[STATESORTING_WORKGROUP_SIZE * i + lid] = RT_EYE_RAY;
+
+					// Swap indices
+					const uint tmp = taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid] = taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid];
+					taskIndices[STATESORTING_WORKGROUP_SIZE * j + lid] = tmp;
+
+					found = true;
+					break;
+				}
+			}
+
+			if (!found) {
+				// None found, I can stop
+				break;
+			}
+		}
+	}
+
+//	if (get_global_id(0) == 1) {
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskStates[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n");
+//		for (uint i = 0; i < SEARCH_SIZE; ++i)
+//			printf("%d ", taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid]);
+//		printf("\n\n");
+//	}
+
+	// Write all data
+	for (uint i = 0; i < SEARCH_SIZE; ++i)
+		taskMapping[grpid * STATESORTING_WORKGROUP_SIZE * SEARCH_SIZE + i * STATESORTING_WORKGROUP_SIZE + lid] =
+				taskIndices[STATESORTING_WORKGROUP_SIZE * i + lid];
+#endif
+}
+#endif
+
+//------------------------------------------------------------------------------
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global GPUTask *tasks,
+#if defined(PARAM_ENABLE_STATE_SORTING)
+		__global uint *taskMapping,
+#endif
 		__global GPUTaskStats *taskStats,
 		__global float *samplesData,
 		__global Ray *rays,
@@ -199,11 +438,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
 		) {
-	const size_t gid = get_global_id(0);
+#if defined(PARAM_ENABLE_STATE_SORTING)
+	const uint taskIndex = taskMapping[get_global_id(0)];
+#else
+	const uint taskIndex = get_global_id(0);
+#endif
 
-	__global GPUTask *task = &tasks[gid];
+	__global GPUTask *task = &tasks[taskIndex];
 
-//	if (gid == 0) {
+//	if (get_global_id(0) == 0) {
 //		// Statistic study for state reordering
 //		// State averages for LuxBall HDR: 3.95 4.04 0
 //		// State averages for LuxBall:     0.83 4.45 2.71
@@ -230,20 +473,25 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //		printf("%d %d %d\n", RT_EYE_RAY_count, RT_NEXT_VERTEX_count, RT_DL_count);
 //	}
 
-//	if (gid == 0) {
+//	if (get_global_id(0) == 0) {
 //		// Statistic study of work group state divergence
 //		// State averages for LuxBall HDR: 49% 51% 0
 //		// State averages for LuxBall:     11% 55% 34%
 //		// State averages for Cornell:     21% 42% 37%
 //		//
-//		// Full state divergence in all scenes
+//		// Full state divergence in all scenes without state sorting
+//		// Only 30% divergence with state sorting
+//
+////		printf("=================================\n");
 //
 //		bool noDivergence = true;
 //		bool RT_EYE_RAY_state = false;
 //		bool RT_NEXT_VERTEX_state = false;
 //		bool RT_DL_state = false;
 //		for (uint i = 0; i < 64; ++i) {
-//			PathState s = tasks[i].pathStateBase.state;
+//			PathState s = tasks[taskMapping[i]].pathStateBase.state;
+////			printf("%d %d\n", s, taskMapping[i]);
+//
 //			switch (s) {
 //				case RT_EYE_RAY:
 //					RT_EYE_RAY_state = true;
@@ -269,7 +517,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	__global BSDF *bsdf = &task->pathStateBase.bsdf;
 
 	__global Sample *sample = &task->sample;
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+	__global float *sampleData = Sampler_GetSampleData(taskIndex, sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 #if (PARAM_SAMPLER_TYPE != 0)
 	// Used by Sampler_GetSamplePathVertex() macro
@@ -285,8 +533,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
 
-	__global Ray *ray = &rays[gid];
-	__global RayHit *rayHit = &rayHits[gid];
+	__global Ray *ray = &rays[taskIndex];
+	__global RayHit *rayHit = &rayHits[taskIndex];
 	const uint currentTriangleIndex = rayHit->index;
 
 	//--------------------------------------------------------------------------
@@ -640,7 +888,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				alphaFrameBuffer,
 #endif
 				camera, ray);
-		taskStats[gid].sampleCount += 1;
+		taskStats[taskIndex].sampleCount += 1;
 
 		// task->pathStateBase.state is set to RT_EYE_RAY inside Sampler_NextSample() => GenerateCameraPath()
 	} else {

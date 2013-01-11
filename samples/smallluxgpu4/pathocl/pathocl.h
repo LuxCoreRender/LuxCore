@@ -96,11 +96,13 @@ private:
 	size_t samplerWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	size_t advancePathsWorkGroupSize;
+	cl::Kernel *stateSortingKernel;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *tasksBuff;
 	cl::Buffer *sampleDataBuff;
+	cl::Buffer *taskMappingBuff;
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *frameBufferBuff;
 	cl::Buffer *alphaFrameBufferBuff;
@@ -135,7 +137,7 @@ private:
 	slg::ocl::AlphaPixel *alphaFrameBuffer;
 	u_int frameBufferPixelCount;
 
-	bool started, editMode;
+	bool started, editMode, useStateSorting;
 
 	slg::ocl::GPUTaskStats *gpuTaskStats;
 };
@@ -165,7 +167,7 @@ public:
 
 	u_int taskCount;
 	size_t maxMemPageSize;
-	bool usePixelAtomics;
+	bool usePixelAtomics, useStateSorting;
 
 private:
 	void StartLockLess();

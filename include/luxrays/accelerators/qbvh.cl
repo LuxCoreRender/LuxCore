@@ -169,16 +169,24 @@ __kernel void Intersect(
 		__global QuadTiangle *quadTris,
 #endif
 		const uint rayCount,
-		__local int *nodeStacks) {
+		__local int *nodeStacks
+#if defined(ENABLE_RAY_INDEX_MAPPING)
+		, __global uint *rayIndexMapping
+#endif
+		) {
 	// Select the ray to check
-	const int gid = get_global_id(0);
-	if (gid >= rayCount)
+#if defined(ENABLE_RAY_INDEX_MAPPING)
+	const uint rayIndex = rayIndexMapping[get_global_id(0)];
+#else
+	const uint rayIndex = get_global_id(0);
+#endif
+	if (rayIndex >= rayCount)
 		return;
 
 	// Prepare the ray for intersection
 	QuadRay ray4;
 	{
-        __global float4 *basePtr =(__global float4 *)&rays[gid];
+        __global float4 *basePtr =(__global float4 *)&rays[rayIndex];
         float4 data0 = (*basePtr++);
         float4 data1 = (*basePtr);
 
@@ -331,8 +339,8 @@ __kernel void Intersect(
 	//printf("MaxDepth=%02d\n", maxDepth);
 
 	// Write result
-	rayHits[gid].t = rayHit.t;
-	rayHits[gid].b1 = rayHit.b1;
-	rayHits[gid].b2 = rayHit.b2;
-	rayHits[gid].index = rayHit.index;
+	rayHits[rayIndex].t = rayHit.t;
+	rayHits[rayIndex].b1 = rayHit.b1;
+	rayHits[rayIndex].b2 = rayHit.b2;
+	rayHits[rayIndex].index = rayHit.index;
 }
