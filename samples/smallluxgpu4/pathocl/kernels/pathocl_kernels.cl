@@ -106,9 +106,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		) {
 	const size_t gid = get_global_id(0);
 
-	//if (gid == 0)
-	//	printf("GPUTask: %d\n", sizeof(GPUTask));
-
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &task->sample;
@@ -206,6 +203,66 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 	__global GPUTask *task = &tasks[gid];
 
+//	if (gid == 0) {
+//		// Statistic study for state reordering
+//		// State averages for LuxBall HDR: 3.95 4.04 0
+//		// State averages for LuxBall:     0.83 4.45 2.71
+//		// State averages for Cornell:     1.69 3.35 2.95
+//
+//		uint RT_EYE_RAY_count = 0;
+//		uint RT_NEXT_VERTEX_count = 0;
+//		uint RT_DL_count = 0;
+//		for (uint i = 0; i < 8; ++i) {
+//			PathState s = tasks[i * 64].pathStateBase.state;
+//			switch (s) {
+//				case RT_EYE_RAY:
+//					++RT_EYE_RAY_count;
+//					break;
+//				case RT_NEXT_VERTEX:
+//					++RT_NEXT_VERTEX_count;
+//					break;
+//				case RT_DL:
+//					++RT_DL_count;
+//					break;
+//			}
+//		}
+//
+//		printf("%d %d %d\n", RT_EYE_RAY_count, RT_NEXT_VERTEX_count, RT_DL_count);
+//	}
+
+//	if (gid == 0) {
+//		// Statistic study of work group state divergence
+//		// State averages for LuxBall HDR: 49% 51% 0
+//		// State averages for LuxBall:     11% 55% 34%
+//		// State averages for Cornell:     21% 42% 37%
+//		//
+//		// Full state divergence in all scenes
+//
+//		bool noDivergence = true;
+//		bool RT_EYE_RAY_state = false;
+//		bool RT_NEXT_VERTEX_state = false;
+//		bool RT_DL_state = false;
+//		for (uint i = 0; i < 64; ++i) {
+//			PathState s = tasks[i].pathStateBase.state;
+//			switch (s) {
+//				case RT_EYE_RAY:
+//					RT_EYE_RAY_state = true;
+//					noDivergence &= !RT_NEXT_VERTEX_state & !RT_DL_state;
+//					break;
+//				case RT_NEXT_VERTEX:
+//					RT_NEXT_VERTEX_state = true;
+//					noDivergence &= !RT_EYE_RAY_state & !RT_DL_state;
+//					break;
+//				case RT_DL:
+//					RT_DL_state = true;
+//					noDivergence &= !RT_EYE_RAY_state & !RT_NEXT_VERTEX;
+//					break;
+//			}
+//		}
+//
+//		printf("%d\n", noDivergence ? 1 : 0);
+//	}
+
 	// Read the path state
 	PathState pathState = task->pathStateBase.state;
 	const uint depth = task->pathStateBase.depth;
@@ -235,11 +292,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
 	//
-	// From: RT_NEXT_VERTEX
+	// From: RT_NEXT_VERTEX or RT_EYE_RAY
 	// To: SPLAT_SAMPLE or GENERATE_DL_RAY
 	//--------------------------------------------------------------------------
 
-	if (pathState == RT_NEXT_VERTEX) {
+	if ((pathState == RT_NEXT_VERTEX) || (pathState == RT_EYE_RAY)) {
 		if (currentTriangleIndex != NULL_INDEX) {
 			// Something was hit
 
@@ -574,7 +631,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// Evaluation of the Path finite state machine.
 	//
 	// From: SPLAT_SAMPLE
-	// To: RT_NEXT_VERTEX
+	// To: RT_EYE_RAY
 	//--------------------------------------------------------------------------
 
 	if (pathState == SPLAT_SAMPLE) {
@@ -585,8 +642,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				camera, ray);
 		taskStats[gid].sampleCount += 1;
 
-		pathState = RT_NEXT_VERTEX;
+		// task->pathStateBase.state is set to RT_EYE_RAY inside Sampler_NextSample() => GenerateCameraPath()
+	} else {
+		// Save the state
+		task->pathStateBase.state = pathState;
 	}
+		
 
 	//--------------------------------------------------------------------------
 
@@ -594,7 +655,4 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	task->seed.s1 = seed->s1;
 	task->seed.s2 = seed->s2;
 	task->seed.s3 = seed->s3;
-
-	// Save the state
-	task->pathStateBase.state = pathState;
 }

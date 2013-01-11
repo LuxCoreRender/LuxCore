@@ -23,10 +23,8 @@
 #define	_LUXRAYS_SDL_MATERIAL_H
 
 #include <vector>
-
-#if defined (__APPLE__)
 #include <set>
-#endif
+
 
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/sdl/bsdfevents.h"
