@@ -112,7 +112,7 @@ std::string KernelSource_samplers =
 "#endif\n"
 "\n"
 "	// Initialize the path state\n"
-"	task->pathStateBase.state = RT_NEXT_VERTEX;\n"
+"	task->pathStateBase.state = RT_EYE_RAY;\n"
 "	task->pathStateBase.depth = 1;\n"
 "	vstore3(WHITE, 0, &task->pathStateBase.throughput.r);\n"
 "#if defined(PARAM_DIRECT_LIGHT_SAMPLING)\n"
