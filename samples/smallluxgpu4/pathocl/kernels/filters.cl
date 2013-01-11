@@ -38,41 +38,6 @@ uint XY2FrameBufferIndex(const int x, const int y) {
 	return x + 1 + (y + 1) * (PARAM_IMAGE_WIDTH + 2);
 }
 
-uint InitialPixelIndex(const size_t gid) {
-	return gid % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-}
-
-uint NextPixelIndex(const uint i) {
-	return (i + PARAM_TASK_COUNT) % (PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT);
-}
-
-uint PixelIndexFloat(const float u) {
-	const uint pixelCountPerTask = PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT;
-	const uint i = min((uint)floor(pixelCountPerTask * u), (uint)(pixelCountPerTask - 1));
-
-	return i;
-}
-
-uint PixelIndexFloat2D(const float ux, const float uy) {
-	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * ux + .5f), (uint)(PARAM_IMAGE_WIDTH - 1));
-	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * uy + .5f), (uint)(PARAM_IMAGE_HEIGHT - 1));
-
-	return XY2PixelIndex(x, y);
-}
-
-uint PixelIndexFloat2DWithOffset(const float ux, const float uy, float *ox, float *oy) {
-	const float px = PARAM_IMAGE_WIDTH * ux + .5f;
-	const float py = PARAM_IMAGE_HEIGHT * uy + .5f;
-
-	const uint x = min((uint)floor(px), (uint)(PARAM_IMAGE_WIDTH - 1));
-	const uint y = min((uint)floor(py), (uint)(PARAM_IMAGE_HEIGHT - 1));
-
-	*ox = px - (float)x;
-	*oy = py - (float)y;
-
-	return XY2PixelIndex(x, y);
-}
-
 bool IsValidPixelXY(const int x, const int y) {
 	return (x >= 0) && (x < PARAM_IMAGE_WIDTH) && (y >= 0) && (y < PARAM_IMAGE_HEIGHT);
 }
@@ -214,21 +179,16 @@ void Pixel_AddFilteredAlpha(__global AlphaPixel *apixel, const float alpha,
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
 
 void SplatSample(__global Pixel *frameBuffer,
+		const float scrX, const float scrY, const float3 radiance,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		__global AlphaPixel *alphaFrameBuffer,
-#endif
-		const uint pixelIndex, const float3 radiance,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		const float alpha,
 #endif
 		const float weight) {
-	uint ux, uy;
-	PixelIndex2XY(pixelIndex, &ux, &uy);
-	int x = (int)ux;
-	int y = (int)uy;
-	const uint pindex = XY2FrameBufferIndex(x, y);
-	__global Pixel *pixel = &frameBuffer[pindex];
-
+	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * scrX + .5f), (uint)(PARAM_IMAGE_WIDTH - 1));
+	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * scrY + .5f), (uint)(PARAM_IMAGE_HEIGHT - 1));
+	
+	__global Pixel *pixel = &frameBuffer[XY2FrameBufferIndex(x, y)];
 	Pixel_AddRadiance(pixel, radiance, weight);
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -240,18 +200,20 @@ void SplatSample(__global Pixel *frameBuffer,
 #elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
 
 void SplatSample(__global Pixel *frameBuffer,
+		const float scrX, const float scrY, const float3 radiance,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		__global AlphaPixel *alphaFrameBuffer,
-#endif
-		const uint pixelIndex, const float sx, const float sy, const float3 radiance,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		const float alpha,
 #endif
 		const float weight) {
-	uint ux, uy;
-	PixelIndex2XY(pixelIndex, &ux, &uy);
-	int x = (int)ux;
-	int y = (int)uy;
+	const float px = PARAM_IMAGE_WIDTH * scrX + .5f;
+	const float py = PARAM_IMAGE_HEIGHT * scrY + .5f;
+
+	const uint x = min((uint)floor(px), (uint)(PARAM_IMAGE_WIDTH - 1));
+	const uint y = min((uint)floor(py), (uint)(PARAM_IMAGE_HEIGHT - 1));
+
+	const float sx = px - (float)x;
+	const float sy = py - (float)y;
 
 	{
 		__global Pixel *pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y - 1)];
