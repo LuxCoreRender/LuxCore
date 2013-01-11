@@ -196,7 +196,6 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 //------------------------------------------------------------------------------
 
 typedef enum {
-	RT_EYE_RAY, // This is used only for state optimization (otherwise I could just use RT_NEXT_VERTEX)
 	RT_NEXT_VERTEX,
 	GENERATE_DL_RAY,
 	RT_DL,

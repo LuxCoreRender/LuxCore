@@ -199,7 +199,6 @@ std::string KernelSource_datatypes =
 "//------------------------------------------------------------------------------\n"
 "\n"
 "typedef enum {\n"
-"	RT_EYE_RAY, // This is used only for state optimization (otherwise I could just use RT_NEXT_VERTEX)\n"
 "	RT_NEXT_VERTEX,\n"
 "	GENERATE_DL_RAY,\n"
 "	RT_DL,\n"
