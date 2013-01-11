@@ -37,8 +37,8 @@ namespace luxrays {
 
 class OpenCLQBVHKernel : public OpenCLKernel {
 public:
-	OpenCLQBVHKernel(OpenCLIntersectionDevice *dev, unsigned int s) :
-		OpenCLKernel(dev), trisBuff(NULL), qbvhBuff(NULL) {
+	OpenCLQBVHKernel(OpenCLIntersectionDevice *dev, const u_int s, const bool enableMapping) :
+		OpenCLKernel(dev), trisBuff(NULL), qbvhBuff(NULL), enableRayIndexMapping(enableMapping) {
 		stackSize = s;
 		const Context *deviceContext = device->GetContext();
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -49,6 +49,8 @@ public:
 		// Compile sources
 		std::stringstream params;
 		params << "-D QBVH_STACK_SIZE=" << stackSize;
+		if (enableRayIndexMapping)
+			params << " -D ENABLE_RAY_INDEX_MAPPING";
 
 		std::string code(
 			_LUXRAYS_POINT_OCLDEFINE
@@ -100,6 +102,9 @@ public:
 	void SetBuffers(cl::Buffer *trisBuff, cl::Buffer *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const u_int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff, cl::Buffer &mapBuff,
 		const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
@@ -107,12 +112,14 @@ protected:
 	// QBVH fields
 	cl::Buffer *trisBuff;
 	cl::Buffer *qbvhBuff;
+
+	bool enableRayIndexMapping;
 };
 
 class OpenCLQBVHImageKernel : public OpenCLKernel {
 public:
-	OpenCLQBVHImageKernel(OpenCLIntersectionDevice *dev, unsigned int s) :
-		OpenCLKernel(dev), trisBuff(NULL), qbvhBuff(NULL) {
+	OpenCLQBVHImageKernel(OpenCLIntersectionDevice *dev, const u_int s, const bool enableMapping) :
+		OpenCLKernel(dev), trisBuff(NULL), qbvhBuff(NULL), enableRayIndexMapping(enableMapping) {
 		stackSize = s;
 		const Context *deviceContext = device->GetContext();
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -123,6 +130,8 @@ public:
 		// Compile sources
 		std::stringstream params;
 		params << "-D USE_IMAGE_STORAGE -D QBVH_STACK_SIZE=" << stackSize;
+		if (enableRayIndexMapping)
+			params << " -D ENABLE_RAY_INDEX_MAPPING";
 
 		std::string code(
 			_LUXRAYS_POINT_OCLDEFINE
@@ -176,6 +185,9 @@ public:
 	void SetBuffers(cl::Image2D *trisBuff, cl::Image2D *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
+		const u_int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
+	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff, cl::Buffer &mapBuff,
 		const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
@@ -183,6 +195,8 @@ protected:
 	// QBVH with image storage fields
 	cl::Image2D *trisBuff;
 	cl::Image2D *qbvhBuff;
+
+	bool enableRayIndexMapping;
 };
 
 void OpenCLQBVHKernel::FreeBuffers()
@@ -215,12 +229,29 @@ void OpenCLQBVHKernel::SetBuffers(cl::Buffer *t, cl::Buffer *q)
 }
 
 void OpenCLQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-	const unsigned int rayCount, const VECTOR_CLASS<cl::Event> *events,
-	cl::Event *event)
-{
+	const u_int rayCount, const VECTOR_CLASS<cl::Event> *events,
+	cl::Event *event) {
+	if (enableRayIndexMapping)
+		throw std::runtime_error("Internal error: called OpenCLQBVHKernel::EnqueueRayBuffer() with enabled ray index mapping");
+
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(4, rayCount);
+	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
+		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
+		event);
+}
+
+void OpenCLQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff, cl::Buffer &mapBuff,
+	const u_int rayCount, const VECTOR_CLASS<cl::Event> *events,
+	cl::Event *event) {
+	if (!enableRayIndexMapping)
+		throw std::runtime_error("Internal error: called OpenCLQBVHKernel::EnqueueRayBuffer() with disabled ray index mapping");
+
+	kernel->setArg(0, rBuff);
+	kernel->setArg(1, hBuff);
+	kernel->setArg(4, rayCount);
+	kernel->setArg(6, mapBuff);
 	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
 		event);
@@ -255,9 +286,11 @@ void OpenCLQBVHImageKernel::SetBuffers(cl::Image2D *t, cl::Image2D *q)
 }
 
 void OpenCLQBVHImageKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
-	cl::Buffer &hBuff, const unsigned int rayCount,
-	const VECTOR_CLASS<cl::Event> *events, cl::Event *event)
-{
+	cl::Buffer &hBuff, const u_int rayCount,
+	const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+	if (enableRayIndexMapping)
+		throw std::runtime_error("Internal error: called OpenCLQBVHImageKernel::EnqueueRayBuffer() with enabled ray index mapping");
+
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(4, rayCount);
@@ -266,9 +299,24 @@ void OpenCLQBVHImageKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
 		event);
 }
 
+void OpenCLQBVHImageKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff, cl::Buffer &mapBuff,
+	const u_int rayCount, const VECTOR_CLASS<cl::Event> *events,
+	cl::Event *event) {
+	if (!enableRayIndexMapping)
+		throw std::runtime_error("Internal error: called OpenCLQBVHImageKernel::EnqueueRayBuffer() with disabled ray index mapping");
+
+	kernel->setArg(0, rBuff);
+	kernel->setArg(1, hBuff);
+	kernel->setArg(4, rayCount);
+	kernel->setArg(6, mapBuff);
+	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
+		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
+		event);
+}
+
 OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
-	unsigned int stackSize, bool disableImageStorage) const
-{
+		const u_int stackSize, const bool disableImageStorage,
+		const bool enableRayIndexMapping) const {
 	const Context *deviceContext = device->GetContext();
 	cl::Context &oclContext = device->GetOpenCLContext();
 	const std::string &deviceName(device->GetName());
@@ -297,13 +345,13 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 
 		// 7 pixels required for the storage of a QBVH node
 		const size_t nodePixelRequired = nNodes * 7;
-		nodeWidth = Min(RoundUp(static_cast<unsigned int>(sqrtf(nodePixelRequired)), 7u),  0x7fffu);
+		nodeWidth = Min(RoundUp(static_cast<u_int>(sqrtf(nodePixelRequired)), 7u),  0x7fffu);
 		nodeHeight = nodePixelRequired / nodeWidth +
 			(((nodePixelRequired % nodeWidth) == 0) ? 0 : 1);
 
 		// 10 pixels required for the storage of QBVH Triangles
 		const size_t leafPixelRequired = nQuads * 10;
-		leafWidth = Min(RoundUp(static_cast<unsigned int>(sqrtf(leafPixelRequired)), 10u), 32760u);
+		leafWidth = Min(RoundUp(static_cast<u_int>(sqrtf(leafPixelRequired)), 10u), 32760u);
 		leafHeight = leafPixelRequired / leafWidth +
 			(((leafPixelRequired % leafWidth) == 0) ? 0 : 1);
 
@@ -331,11 +379,11 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 	}
 	if (useImage) {
 		OpenCLQBVHImageKernel *kernel = new OpenCLQBVHImageKernel(device,
-			stackSize);
+			stackSize, enableRayIndexMapping);
 
-		unsigned int *inodes = new unsigned int[nodeWidth * nodeHeight * 4];
+		u_int *inodes = new u_int[nodeWidth * nodeHeight * 4];
 		for (size_t i = 0; i < nNodes; ++i) {
-			unsigned int *pnodes = (unsigned int *)(nodes + i);
+			u_int *pnodes = (u_int *)(nodes + i);
 			const size_t offset = i * 7 * 4;
 
 			for (size_t j = 0; j < 6 * 4; ++j)
@@ -370,7 +418,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 		device->AllocMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
 		delete[] inodes;
 
-		unsigned int *iprims = new unsigned int[leafWidth * leafHeight * 4];
+		u_int *iprims = new u_int[leafWidth * leafHeight * 4];
 		memcpy(iprims, prims, sizeof(QuadTriangle) * nQuads);
 		cl::Image2D *trisBuff = new cl::Image2D(oclContext,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
@@ -384,7 +432,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 		return kernel;
 	} else {
 		OpenCLQBVHKernel *kernel = new OpenCLQBVHKernel(device,
-			stackSize);
+			stackSize, enableRayIndexMapping);
 
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 			"] QBVH buffer size: " <<
@@ -411,7 +459,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-	unsigned int stackSize, bool disableImageStorage) const
+	u_int stackSize, bool disableImageStorage) const
 {
 	return NULL;
 }
@@ -443,8 +491,8 @@ QBVHAccel::~QBVHAccel() {
 	}
 }
 
-void QBVHAccel::Init(const std::deque<const Mesh *> &meshes, const unsigned int totalVertexCount,
-		const unsigned int totalTriangleCount) {
+void QBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount,
+		const u_int totalTriangleCount) {
 	assert (!initialized);
 
 	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
@@ -462,7 +510,7 @@ void QBVHAccel::Init(const Mesh *m) {
 	assert (!initialized);
 
 	mesh = m;
-	const unsigned int totalTriangleCount = mesh->GetTotalTriangleCount();
+	const u_int totalTriangleCount = mesh->GetTotalTriangleCount();
 
 	// Temporary data for building
 	u_int *primsIndexes = new u_int[totalTriangleCount + 3]; // For the case where

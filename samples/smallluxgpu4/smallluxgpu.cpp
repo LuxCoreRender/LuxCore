@@ -28,7 +28,7 @@
 #include <stdexcept>
 
 // Required when using XInitThread()
-//#include <X11/Xlib.h>
+#include <X11/Xlib.h>
 
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 	// This is required to run AMD GPU profiler
-	//XInitThreads();
+	XInitThreads();
 
 	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
 

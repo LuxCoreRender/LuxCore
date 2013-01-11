@@ -124,9 +124,8 @@ void GenerateCameraPath(
 
 #if (PARAM_SAMPLER_TYPE == 0)
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
-	const size_t gid = get_global_id(0);
-	return &samplesData[gid * TOTAL_U_SIZE];
+__global float *Sampler_GetSampleData(const uint taskIndex, __global Sample *sample, __global float *samplesData) {
+	return &samplesData[taskIndex * TOTAL_U_SIZE];
 }
 
 __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
@@ -138,9 +137,7 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
-	const size_t gid = get_global_id(0);
-
+void Sampler_Init(const uint taskIndex, Seed *seed, __global Sample *sample, __global float *sampleData) {
 	vstore3(BLACK, 0, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
@@ -190,13 +187,11 @@ void Sampler_NextSample(
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
-__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
-	const size_t gid = get_global_id(0);
-	return &samplesData[gid * (2 *TOTAL_U_SIZE)];
+__global float *Sampler_GetSampleData(const uint taskIndex, __global Sample *sample, __global float *samplesData) {
+	return &samplesData[taskIndex * (2 *TOTAL_U_SIZE)];
 }
 
 __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
-	const size_t gid = get_global_id(0);
 	return &sampleData[sample->proposed * TOTAL_U_SIZE];
 }
 

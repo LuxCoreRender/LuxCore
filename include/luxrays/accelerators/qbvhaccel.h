@@ -66,10 +66,10 @@ class QuadTriangle : public Aligned16 {
 public:
 
 	QuadTriangle(const Triangle *tris, const Point *verts,
-			const unsigned int p1,
-			const unsigned int p2,
-			const unsigned int p3,
-			const unsigned int p4) {
+			const u_int p1,
+			const u_int p2,
+			const u_int p3,
+			const u_int p4) {
 
 		primitives[0] = p1;
 		primitives[1] = p2;
@@ -171,7 +171,7 @@ public:
 	__m128 origx, origy, origz;
 	__m128 edge1x, edge1y, edge1z;
 	__m128 edge2x, edge2y, edge2z;
-	unsigned int primitives[4];
+	u_int primitives[4];
 };
 
 // This code is based on Flexray by Anthony Pajot (anthony.pajot@alumni.enseeiht.fr)
@@ -390,16 +390,17 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
 	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-		unsigned int stackSize, bool disableImageStorage) const;
+		const u_int stackSize, const bool disableImageStorage,
+		const bool enableRayIndexMapping) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
-		const unsigned int totalVertexCount,
-		const unsigned int totalTriangleCount);
+		const u_int totalVertexCount,
+		const u_int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
+	virtual const TriangleMeshID GetMeshID(const u_int index) const {
 		return meshIDs[index];
 	}
 	virtual const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
+	virtual const TriangleID GetMeshTriangleID(const u_int index) const {
 		return meshTriangleIDs[index];
 	}
 	virtual const TriangleID *GetMeshTriangleIDTable() const {

@@ -70,11 +70,13 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	initKernel = NULL;
 	initFBKernel = NULL;
 	advancePathsKernel = NULL;
+	stateSortingKernel = NULL;
 
 	raysBuff = NULL;
 	hitsBuff = NULL;
 	tasksBuff = NULL;
 	sampleDataBuff = NULL;
+	taskMappingBuff = NULL;
 	taskStatsBuff = NULL;
 	frameBufferBuff = NULL;
 	alphaFrameBufferBuff = NULL;
@@ -108,6 +110,13 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 		kernelCache = new luxrays::utils::oclKernelDummyCache();
 	else
 		throw std::runtime_error("Unknown opencl.kernelcache type: " + type);
+
+	if ((re->useStateSorting) && (device->GetDeviceDesc()->GetType() == DEVICE_TYPE_OPENCL_GPU)) {
+		// The device is a GPU, enable state sorting in order to reduce
+		// thread divergence
+		useStateSorting = true;
+	} else
+		useStateSorting = false;
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -119,6 +128,7 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete initKernel;
 	delete initFBKernel;
 	delete advancePathsKernel;
+	delete stateSortingKernel;
 
 	delete[] frameBuffer;
 	delete[] alphaFrameBuffer;
@@ -406,6 +416,9 @@ void PathOCLRenderThread::InitKernels() {
 			assert (false);
 	}
 
+	if (useStateSorting)
+		ss << " -D PARAM_ENABLE_STATE_SORTING";
+
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))
@@ -651,6 +664,16 @@ void PathOCLRenderThread::InitKernels() {
 			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
 
 		//----------------------------------------------------------------------
+		// StateSorting kernel
+		//----------------------------------------------------------------------
+
+		if (useStateSorting) {
+			delete stateSortingKernel;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling StateSorting Kernel");
+			stateSortingKernel = new cl::Kernel(*program, "StateSorting");
+		}
+
+		//----------------------------------------------------------------------
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -739,7 +762,7 @@ void PathOCLRenderThread::InitRender() {
 	AllocOCLBufferRW(&hitsBuff, sizeof(RayHit) * taskCount, "RayHit");
 
 	//--------------------------------------------------------------------------
-	// Allocate GPU task buffers
+	// Allocate GPU task buffer
 	//--------------------------------------------------------------------------
 
 	size_t gpuTaksSize = sizeof(luxrays::ocl::Seed);
@@ -774,7 +797,7 @@ void PathOCLRenderThread::InitRender() {
 	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
 
 	//--------------------------------------------------------------------------
-	// Allocate sample data buffers
+	// Allocate sample data buffer
 	//--------------------------------------------------------------------------
 
 	const size_t uDataEyePathVertexSize =
@@ -807,10 +830,17 @@ void PathOCLRenderThread::InitRender() {
 	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
 
 	//--------------------------------------------------------------------------
-	// Allocate GPU task statistic buffers
+	// Allocate GPU task statistic buffer
 	//--------------------------------------------------------------------------
 
 	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::GPUTaskStats) * taskCount, "GPUTask Stats");
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU task mapping buffer
+	//--------------------------------------------------------------------------
+
+	if (useStateSorting)
+		AllocOCLBufferRW(&taskMappingBuff, sizeof(u_int) * taskCount, "GPUTask Mapping");
 
 	tEnd = WallClockTime();
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -858,6 +888,8 @@ void PathOCLRenderThread::SetKernelArgs() {
 	//--------------------------------------------------------------------------
 	u_int argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
+	if (useStateSorting)
+		advancePathsKernel->setArg(argIndex++, *taskMappingBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
@@ -910,10 +942,21 @@ void PathOCLRenderThread::SetKernelArgs() {
 	argIndex = 0;
 	initKernel->setArg(argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
 	initKernel->setArg(argIndex++, *tasksBuff);
-	initKernel->setArg(argIndex++, *sampleDataBuff);
+	if (useStateSorting)
+		initKernel->setArg(argIndex++, *taskMappingBuff);
 	initKernel->setArg(argIndex++, *taskStatsBuff);
+	initKernel->setArg(argIndex++, *sampleDataBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
 	initKernel->setArg(argIndex++, *cameraBuff);
+
+	//--------------------------------------------------------------------------
+	// stateSortingKernel
+	//--------------------------------------------------------------------------
+
+	if (useStateSorting) {
+		stateSortingKernel->setArg(0, *tasksBuff);
+		stateSortingKernel->setArg(1, *taskMappingBuff);
+	}
 }
 
 void PathOCLRenderThread::Start() {
@@ -956,6 +999,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&hitsBuff);
 	FreeOCLBuffer(&tasksBuff);
 	FreeOCLBuffer(&sampleDataBuff);
+	FreeOCLBuffer(&taskMappingBuff);
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&frameBufferBuff);
 	FreeOCLBuffer(&alphaFrameBufferBuff);
@@ -1139,16 +1183,23 @@ void PathOCLRenderThread::RenderThreadImpl() {
 
 				for (u_int i = 0; i < iterations; ++i) {
 					// Trace rays
-					if (i == 0)
+					if (useStateSorting)
 						intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-								*(hitsBuff), taskCount, NULL, &event);
+								*hitsBuff, *taskMappingBuff, taskCount, NULL,
+								(i == 0) ? &event : NULL);
 					else
 						intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-								*(hitsBuff), taskCount, NULL, NULL);
+								*hitsBuff, taskCount, NULL,
+								(i == 0) ? &event : NULL);
 
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
 							cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
+
+					// Sort task mapping
+					if (useStateSorting)
+						oclQueue.enqueueNDRangeKernel(*stateSortingKernel, cl::NullRange,
+							cl::NDRange(taskCount / 64), cl::NDRange(64));
 				}
 				oclQueue.flush();
 

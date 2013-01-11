@@ -31,15 +31,15 @@ namespace luxrays {
 
 struct BVHAccelTreeNode {
 	BBox bbox;
-	unsigned int primitive;
+	u_int primitive;
 	BVHAccelTreeNode *leftChild;
 	BVHAccelTreeNode *rightSibling;
 };
 
 struct BVHAccelArrayNode {
 	BBox bbox;
-	unsigned int primitive;
-	unsigned int skipIndex;
+	u_int primitive;
+	u_int skipIndex;
 };
 
 // BVHAccel Declarations
@@ -47,24 +47,25 @@ class BVHAccel : public Accelerator {
 public:
 	// BVHAccel Public Methods
 	BVHAccel(const Context *context,
-			const unsigned int treetype, const int csamples, const int icost,
+			const u_int treetype, const int csamples, const int icost,
 			const int tcost, const float ebonus);
 	virtual ~BVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
 	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-		unsigned int stackSize, bool disableImageStorage) const;
+		const u_int stackSize, const bool disableImageStorage,
+		const bool enableRayIndexMapping) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
-		const unsigned int totalVertexCount,
-		const unsigned int totalTriangleCount);
+		const u_int totalVertexCount,
+		const u_int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
+	virtual const TriangleMeshID GetMeshID(const u_int index) const {
 		return preprocessedMeshIDs[index];
 	}
 	virtual const TriangleMeshID *GetMeshIDTable() const {
 		return preprocessedMeshIDs;
 	}
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
+	virtual const TriangleID GetMeshTriangleID(const u_int index) const {
 		return preprocessedMeshTriangleIDs[index];
 	}
 	virtual const TriangleID *GetMeshTriangleIDTable() const {
@@ -80,17 +81,17 @@ public:
 private:
 	// BVHAccel Private Methods
 	BVHAccelTreeNode *BuildHierarchy(std::vector<BVHAccelTreeNode *> &list,
-		unsigned int begin, unsigned int end, unsigned int axis);
+		u_int begin, u_int end, u_int axis);
 	void FindBestSplit(std::vector<BVHAccelTreeNode *> &list,
-		unsigned int begin, unsigned int end, float *splitValue,
-		unsigned int *bestAxis);
-	unsigned int BuildArray(BVHAccelTreeNode *node, unsigned int offset);
+		u_int begin, u_int end, float *splitValue,
+		u_int *bestAxis);
+	u_int BuildArray(BVHAccelTreeNode *node, u_int offset);
 	void FreeHierarchy(BVHAccelTreeNode *node);
 
-	unsigned int treeType;
+	u_int treeType;
 	int costSamples, isectCost, traversalCost;
 	float emptyBonus;
-	unsigned int nNodes;
+	u_int nNodes;
 	BVHAccelArrayNode *bvhTree;
 
 	const Context *ctx;

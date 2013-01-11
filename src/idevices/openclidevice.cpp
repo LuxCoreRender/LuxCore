@@ -47,6 +47,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	deviceName = (desc->GetName() +"Intersect").c_str();
 	reportedPermissionError = false;
 	disableImageStorage = false;
+	enableRayIndexMapping = false;
 	intersectionThread = NULL;
 
 	externalRayBufferQueue = NULL;
@@ -129,7 +130,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	AllocMemory(hitsBuff->getInfo<CL_MEM_SIZE>());
 
 	kernel = dataSet->GetAccelerator()->NewOpenCLKernel(this,
-		stackSize, disableImageStorage);
+		stackSize, disableImageStorage, enableRayIndexMapping);
 }
 
 void OpenCLIntersectionDevice::UpdateDataSet() {
@@ -196,6 +197,15 @@ void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(cl::Buffer &rBuff,
 	const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	if (kernel) {
 		kernel->EnqueueRayBuffer(rBuff, hBuff, rayCount, events, event);
+		statsTotalDataParallelRayCount += rayCount;
+	}
+}
+
+void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(cl::Buffer &rBuff,
+	cl::Buffer &hBuff, cl::Buffer &mapBuff, const unsigned int rayCount,
+	const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+	if (kernel) {
+		kernel->EnqueueRayBuffer(rBuff, hBuff, mapBuff, rayCount, events, event);
 		statsTotalDataParallelRayCount += rayCount;
 	}
 }

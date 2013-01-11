@@ -42,12 +42,13 @@ public:
 	virtual AcceleratorType GetType() const = 0;
 
 	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-		unsigned int stackSize, bool disableImageStorage) const = 0;
+		const u_int stackSize, const bool disableImageStorage,
+		const bool enableRayIndexMapping) const = 0;
 
-	virtual void Init(const std::deque<const Mesh *> &meshes, const unsigned int totalVertexCount, const unsigned int totalTriangleCount) = 0;
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const = 0;
+	virtual void Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount, const u_int totalTriangleCount) = 0;
+	virtual const TriangleMeshID GetMeshID(const u_int index) const = 0;
 	virtual const TriangleMeshID *GetMeshIDTable() const = 0;
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const = 0;
+	virtual const TriangleID GetMeshTriangleID(const u_int index) const = 0;
 	virtual const TriangleID *GetMeshTriangleIDTable() const = 0;
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;

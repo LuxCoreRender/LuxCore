@@ -20,7 +20,6 @@
  ***************************************************************************/
 
 // TODO: metropolis with lazy evaluation
-// TODO: state sorting optimization
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -74,6 +73,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	// Check if I have to disable image storage and set max. QBVH stack size
 	const bool forcedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
 	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
+	useStateSorting = (cfg.GetInt("path.statesorting.enable", 1) != 0);
 	SLG_LOG("OpenCL Devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
 		SLG_LOG("[" << devs[i]->GetName() << "]");
@@ -81,13 +81,19 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		intersectionDevices.push_back(devs[i]);
 
 		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-		oclIntersectionDevice->DisableImageStorage(forcedDisableImageStorage);
+		oclIntersectionDevice->SetDisableImageStorage(forcedDisableImageStorage);
 		// Disable the support for hybrid rendering
 		oclIntersectionDevice->SetDataParallelSupport(false);
 
 		// Check if OpenCL 1.1 is available
 		if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1())
 			throw std::runtime_error("OpenCL version 1.1 or better is required for device: " + devs[i]->GetName());
+
+		if (useStateSorting && (oclIntersectionDevice->GetDeviceDesc()->GetType() == DEVICE_TYPE_OPENCL_GPU)) {
+			// The device is a GPU, enable state sorting in order to reduce
+			// thread divergence
+			oclIntersectionDevice->SetRayIndexMapping(true);
+		}
 	}
 
 	// Set the LuxRays SataSet
@@ -125,7 +131,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 65536));
+	taskCount = std::max(RoundUpPow2(cfg.GetInt("opencl.task.count", 65536)), 512);
 	SLG_LOG("[PathOCLRenderThread] OpenCL task count: " << taskCount);
 
 	if (cfg.IsDefined("opencl.memory.maxpagesize"))
@@ -204,7 +210,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	} else
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 
-	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
+	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);
 
 	//--------------------------------------------------------------------------
 	// Compile the scene
