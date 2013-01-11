@@ -20,7 +20,6 @@
  ***************************************************************************/
 
 // TODO: metropolis with lazy evaluation
-// TODO: state sorting optimization
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 

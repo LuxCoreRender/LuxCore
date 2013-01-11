@@ -109,7 +109,7 @@ void GenerateCameraPath(
 #endif
 
 	// Initialize the path state
-	task->pathStateBase.state = RT_EYE_RAY;
+	task->pathStateBase.state = RT_NEXT_VERTEX;
 	task->pathStateBase.depth = 1;
 	vstore3(WHITE, 0, &task->pathStateBase.throughput.r);
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
