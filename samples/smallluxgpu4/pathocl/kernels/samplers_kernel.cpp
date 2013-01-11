@@ -422,7 +422,7 @@ std::string KernelSource_samplers =
 "						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/\n"
 "\n"
 "			SplatSample(frameBuffer,\n"
-"				scrX, scrY, pixelIndex, contrib,\n"
+"				scrX, scrY, contrib,\n"
 "#if defined(PARAM_ENABLE_ALPHA_CHANNEL)\n"
 "				alphaFrameBuffer,\n"
 "				contribAlpha,\n"

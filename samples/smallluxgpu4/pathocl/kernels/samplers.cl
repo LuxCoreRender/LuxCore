@@ -419,7 +419,7 @@ void Sampler_NextSample(
 						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
 			SplatSample(frameBuffer,
-				scrX, scrY, pixelIndex, contrib,
+				scrX, scrY, contrib,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				alphaFrameBuffer,
 				contribAlpha,
