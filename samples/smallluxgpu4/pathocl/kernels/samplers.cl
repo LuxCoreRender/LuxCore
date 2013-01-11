@@ -162,33 +162,13 @@ void Sampler_NextSample(
 		__global Camera *camera,
 		__global Ray *ray
 		) {
-	const float scrX = sampleData[IDX_SCREEN_X];
-	const float scrY = sampleData[IDX_SCREEN_Y];
-
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
-	const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
 	SplatSample(frameBuffer,
+			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], vload3(0, &sample->radiance.r),
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 			alphaFrameBuffer,
-#endif
-			pixelIndex, vload3(0, &sample->radiance.r),
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 			sample->alpha,
 #endif
 			1.f);
-#else
-	float sx, sy;
-	const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
-	SplatSample(frameBuffer,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			alphaFrameBuffer,
-#endif
-			pixelIndex, sx, sy, vload3(0, &sample->radiance.r),
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			sample->alpha,
-#endif
-			1.f);
-#endif
 
 	// Move to the next assigned pixel
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -438,30 +418,13 @@ void Sampler_NextSample(
 				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
-			const uint pixelIndex = PixelIndexFloat2D(scrX, scrY);
 			SplatSample(frameBuffer,
+				scrX, scrY, pixelIndex, contrib,
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				alphaFrameBuffer,
-#endif
-				pixelIndex, contrib,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				contribAlpha,
 #endif
 				norm);
-#else
-			float sx, sy;
-			const uint pixelIndex = PixelIndexFloat2DWithOffset(scrX, scrY, &sx, &sy);
-			SplatSample(frameBuffer,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-				alphaFrameBuffer,
-#endif
-				pixelIndex, sx, sy, contrib,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-				contribAlpha,
-#endif
-				norm);
-#endif
 		}
 
 		sample->weight = weight;
