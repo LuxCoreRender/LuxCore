@@ -168,15 +168,18 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
 			(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
-return (float3)(1.f, 0.f, 0.f);
+
 	__global Material *mat = &mats[bsdf->materialIndex];
+//	const float sideTest = dotEyeDirNG * dotLightDirNG;
+//	const BSDFEvent matEvent = Material_GetEventTypes(mat
+//			MATERIALS_PARAM);
+//	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
+//			((sideTest < 0.f) && !(matEvent & TRANSMIT)))
+
 	const float sideTest = dotEyeDirNG * dotLightDirNG;
-	const BSDFEvent matEvent = Material_GetEventTypes(mat
-			MATERIALS_PARAM);
-	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
-			((sideTest < 0.f) && !(matEvent & TRANSMIT)) ||
-			(sideTest == 0.f))
+	if (sideTest < 0.f)
 		return BLACK;
+return (float3)(1.f, 0.f, 0.f);
 
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
