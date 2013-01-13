@@ -192,7 +192,7 @@ void SplatSample(__global Pixel *frameBuffer,
 	Pixel_AddRadiance(pixel, radiance, weight);
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	__global AlphaPixel *apixel = &alphaFrameBuffer[pindex];
+	__global AlphaPixel *apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y)];
 	Pixel_AddAlpha(apixel, alpha, weight);
 #endif
 }

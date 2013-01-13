@@ -195,7 +195,7 @@ std::string KernelSource_filters =
 "	Pixel_AddRadiance(pixel, radiance, weight);\n"
 "\n"
 "#if defined(PARAM_ENABLE_ALPHA_CHANNEL)\n"
-"	__global AlphaPixel *apixel = &alphaFrameBuffer[pindex];\n"
+"	__global AlphaPixel *apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y)];\n"
 "	Pixel_AddAlpha(apixel, alpha, weight);\n"
 "#endif\n"
 "}\n"
