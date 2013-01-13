@@ -315,7 +315,7 @@ std::string KernelSource_pathocl_kernels =
 "//				pathState = GENERATE_NEXT_VERTEX_RAY;\n"
 "//#endif\n"
 "//			}\n"
-"			\n"
+"\n"
 "pathState = GENERATE_DL_RAY;\n"
 "		} else {\n"
 "			//------------------------------------------------------------------\n"

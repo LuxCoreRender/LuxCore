@@ -157,6 +157,8 @@ std::string KernelSource_bsdf_funcs =
 "		const float3 generatedDir, BSDFEvent *event, float *directPdfW\n"
 "		MATERIALS_PARAM_DECL\n"
 "		IMAGEMAPS_PARAM_DECL) {\n"
+"return (float3)(1.f, 0.f, 0.f);\n"
+"\n"
 "	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;\n"
 "	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;\n"
 "	const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);\n"

@@ -312,7 +312,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //				pathState = GENERATE_NEXT_VERTEX_RAY;
 //#endif
 //			}
-			
+
 pathState = GENERATE_DL_RAY;
 		} else {
 			//------------------------------------------------------------------
