@@ -361,15 +361,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
 	if (pathState == RT_DL) {
-		if (currentTriangleIndex == NULL_INDEX) {
-			sample->radiance.r = 0.4f;
-			sample->radiance.g = 0.4f;
-			sample->radiance.b = 0.4f;
-		} else {
-			sample->radiance.r = 0.f;
-			sample->radiance.g = 0.f;
-			sample->radiance.b = 0.f;
-		}
+		const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r);
+		vstore3(lightRadiance, 0, &sample->radiance.r);
 		pathState = SPLAT_SAMPLE;
 
 //		pathState = GENERATE_NEXT_VERTEX_RAY;
@@ -427,6 +420,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
 	if (pathState == GENERATE_DL_RAY) {
 		//pathState = GENERATE_NEXT_VERTEX_RAY;
+		pathState = SPLAT_SAMPLE;
 
 		if (!BSDF_IsDelta(bsdf
 				MATERIALS_PARAM)) {
@@ -483,45 +477,40 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 
 			// Setup the shadow ray
-			const float3 hitPoint = vload3(0, &bsdf->hitPoint.x);
-			Ray_Init4(ray, hitPoint, lightRayDir,
-				MachineEpsilon_E_Float3(hitPoint),
-				distance - MachineEpsilon_E(distance));
-			pathState = RT_DL;
 
-//			if (!Spectrum_IsBlack(lightRadiance)) {
-//				BSDFEvent event;
-//				float bsdfPdfW;
-//				const float3 bsdfEval = BSDF_Evaluate(bsdf,
-//						lightRayDir, &event, &bsdfPdfW
-//						MATERIALS_PARAM
-//						IMAGEMAPS_PARAM);
-//
-//				if (!Spectrum_IsBlack(bsdfEval)) {
-//					const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
-//					const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
-//					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-//					const float factor = cosThetaToLight / directLightSamplingPdfW;
-//
-//					// Russian Roulette
-//					bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? fmax(Spectrum_Filter(bsdfEval), PARAM_RR_CAP) : 1.f;
-//
-//					// MIS between direct light sampling and BSDF sampling
-//					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
-//
-//					vstore3((weight * factor) * pathThroughput * bsdfEval * lightRadiance, 0, &task->directLightState.lightRadiance.r);
-//#if defined(PARAM_HAS_PASSTHROUGHT)
-//					task->passThroughState.passThroughEvent = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_A);
-//#endif
-//
-//					// Setup the shadow ray
-//					const float3 hitPoint = vload3(0, &bsdf->hitPoint.x);
-//					Ray_Init4(ray, hitPoint, lightRayDir,
-//						MachineEpsilon_E_Float3(hitPoint),
-//						distance - MachineEpsilon_E(distance));
-//					pathState = RT_DL;
-//				}
-//			}
+			if (!Spectrum_IsBlack(lightRadiance)) {
+				BSDFEvent event;
+				float bsdfPdfW;
+				const float3 bsdfEval = BSDF_Evaluate(bsdf,
+						lightRayDir, &event, &bsdfPdfW
+						MATERIALS_PARAM
+						IMAGEMAPS_PARAM);
+
+				if (!Spectrum_IsBlack(bsdfEval)) {
+					const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
+					const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
+					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+					const float factor = cosThetaToLight / directLightSamplingPdfW;
+
+					// Russian Roulette
+					bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? fmax(Spectrum_Filter(bsdfEval), PARAM_RR_CAP) : 1.f;
+
+					// MIS between direct light sampling and BSDF sampling
+					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+
+					vstore3((weight * factor) * pathThroughput * bsdfEval * lightRadiance, 0, &task->directLightState.lightRadiance.r);
+#if defined(PARAM_HAS_PASSTHROUGHT)
+					task->passThroughState.passThroughEvent = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_A);
+#endif
+
+					// Setup the shadow ray
+					const float3 hitPoint = vload3(0, &bsdf->hitPoint.x);
+					Ray_Init4(ray, hitPoint, lightRayDir,
+						MachineEpsilon_E_Float3(hitPoint),
+						distance - MachineEpsilon_E(distance));
+					pathState = RT_DL;
+				}
+			}
 		}
 	}
 #endif
