@@ -154,8 +154,6 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
-return (float3)(1.f, 0.f, 0.f);
-
 	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
 	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
 	const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
@@ -170,7 +168,7 @@ return (float3)(1.f, 0.f, 0.f);
 	if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
 			(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
-
+return (float3)(1.f, 0.f, 0.f);
 	__global Material *mat = &mats[bsdf->materialIndex];
 	const float sideTest = dotEyeDirNG * dotLightDirNG;
 	const BSDFEvent matEvent = Material_GetEventTypes(mat
