@@ -304,17 +304,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				}
 #endif
 
-				sample->radiance.r = .5f * (bsdf->shadeN.x + 1.f);
-				sample->radiance.g = .5f * (bsdf->shadeN.y + 1.f);
-				sample->radiance.b = .5f * (bsdf->shadeN.z + 1.f);
-				pathState = SPLAT_SAMPLE;
-//#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
-//				// Direct light sampling
-//				pathState = GENERATE_DL_RAY;
-//#else
-//				// Sample next path vertex
-//				pathState = GENERATE_NEXT_VERTEX_RAY;
-//#endif
+#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+				// Direct light sampling
+				pathState = GENERATE_DL_RAY;
+#else
+				// Sample next path vertex
+				pathState = GENERATE_NEXT_VERTEX_RAY;
+#endif
 			}
 		} else {
 			//------------------------------------------------------------------
@@ -363,8 +359,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// To: GENERATE_NEXT_VERTEX_RAY
 	//--------------------------------------------------------------------------
 
-//#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
-//	if (pathState == RT_DL) {
+#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+	if (pathState == RT_DL) {
+		if (currentTriangleIndex == NULL_INDEX) {
+			sample->radiance.r = 0.4f;
+			sample->radiance.g = 0.4f;
+			sample->radiance.b = 0.4f;
+		} else {
+			sample->radiance.r = 0.f;
+			sample->radiance.g = 0.f;
+			sample->radiance.b = 0.f;
+		}
+		pathState = SPLAT_SAMPLE;
+
 //		pathState = GENERATE_NEXT_VERTEX_RAY;
 //
 //		if (currentTriangleIndex == NULL_INDEX) {
@@ -407,8 +414,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //			}
 //		}
 //#endif
-//	}
-//#endif
+	}
+#endif
 
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
@@ -417,60 +424,71 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// To: GENERATE_NEXT_VERTEX_RAY or RT_DL
 	//--------------------------------------------------------------------------
 
-//#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
-//	if (pathState == GENERATE_DL_RAY) {
-//		pathState = GENERATE_NEXT_VERTEX_RAY;
-//
-//		if (!BSDF_IsDelta(bsdf
-//				MATERIALS_PARAM)) {
-//			// TODO: sunlight
-//
-//			// Pick a triangle light source to sample
-//			const float lu0 = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_X);
-//			const float lightPickPdf = Scene_PickLightPdf();
-//
-//			float3 lightRayDir;
-//			float distance, directPdfW;
-//			float3 lightRadiance;
-//#if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
-//			const uint lightIndex = min((uint)floor((PARAM_DL_LIGHT_COUNT + 1) * lu0), (uint)(PARAM_DL_LIGHT_COUNT));
-//
-//			if (lightIndex == PARAM_DL_LIGHT_COUNT) {
-//				lightRadiance = SunLight_Illuminate(
-//					sunLight,
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
-//					&lightRayDir, &distance, &directPdfW);
-//			} else {
-//				lightRadiance = TriangleLight_Illuminate(
-//					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
-//					&lightRayDir, &distance, &directPdfW
-//					MATERIALS_PARAM
-//					IMAGEMAPS_PARAM);
-//			}
-//			
-//#elif (PARAM_DL_LIGHT_COUNT > 0)
-//			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
-//
-//			lightRadiance = TriangleLight_Illuminate(
-//					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
-//					&lightRayDir, &distance, &directPdfW
-//					MATERIALS_PARAM
-//					IMAGEMAPS_PARAM);
-//#elif defined(PARAM_HAS_SUNLIGHT)
-//			lightRadiance = SunLight_Illuminate(
-//					sunLight,
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-//					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
-//					&lightRayDir, &distance, &directPdfW);
-//#endif
-//
+#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+	if (pathState == GENERATE_DL_RAY) {
+		//pathState = GENERATE_NEXT_VERTEX_RAY;
+
+		if (!BSDF_IsDelta(bsdf
+				MATERIALS_PARAM)) {
+			float3 lightRayDir;
+			float distance, directPdfW;
+			float3 lightRadiance;
+#if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+			// Pick a light source to sample
+			const float lu0 = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_X);
+			const float lightPickPdf = Scene_PickLightPdf();
+
+			const uint lightIndex = min((uint)floor((PARAM_DL_LIGHT_COUNT + 1) * lu0), (uint)(PARAM_DL_LIGHT_COUNT));
+
+			if (lightIndex == PARAM_DL_LIGHT_COUNT) {
+				lightRadiance = SunLight_Illuminate(
+					sunLight,
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					&lightRayDir, &distance, &directPdfW);
+			} else {
+				lightRadiance = TriangleLight_Illuminate(
+					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
+					&lightRayDir, &distance, &directPdfW
+					MATERIALS_PARAM
+					IMAGEMAPS_PARAM);
+			}
+#elif (PARAM_DL_LIGHT_COUNT > 0)
+			// Pick a light source to sample
+			const float lu0 = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_X);
+			const float lightPickPdf = Scene_PickLightPdf();
+
+			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
+
+			lightRadiance = TriangleLight_Illuminate(
+					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
+					&lightRayDir, &distance, &directPdfW
+					MATERIALS_PARAM
+					IMAGEMAPS_PARAM);
+#elif defined(PARAM_HAS_SUNLIGHT)
+			// Pick a light source to sample
+			const float lightPickPdf = 1.f;
+
+			lightRadiance = SunLight_Illuminate(
+					sunLight,
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					&lightRayDir, &distance, &directPdfW);
+#endif
+
+			// Setup the shadow ray
+			const float3 hitPoint = vload3(0, &bsdf->hitPoint.x);
+			Ray_Init4(ray, hitPoint, lightRayDir,
+				MachineEpsilon_E_Float3(hitPoint),
+				distance - MachineEpsilon_E(distance));
+			pathState = RT_DL;
+
 //			if (!Spectrum_IsBlack(lightRadiance)) {
 //				BSDFEvent event;
 //				float bsdfPdfW;
@@ -504,9 +522,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //					pathState = RT_DL;
 //				}
 //			}
-//		}
-//	}
-//#endif
+		}
+	}
+#endif
 
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
