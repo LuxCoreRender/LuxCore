@@ -340,7 +340,8 @@ public:
 
 	void GetImageMaps(std::vector<ImageMap *> &ims);
 	u_int GetSize()const { return static_cast<u_int>(maps.size()); }
-  
+	bool IsImageMapDefined(const std::string &name) const { return maps.find(name) != maps.end(); }
+
 private:
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
 
