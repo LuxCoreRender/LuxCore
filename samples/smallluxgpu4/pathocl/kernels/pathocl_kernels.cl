@@ -263,8 +263,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
-				const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r) * passThroughTrans;
-				vstore3(pathThroughput, 0, &task->pathStateBase.throughput.r);
+				const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r) * passThroughTrans;
+				VSTORE3F(pathThroughput, &task->pathStateBase.throughput.r);
 
 				// It is a pass through point, continue to trace the ray
 				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
@@ -289,17 +289,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 						if (!task->directLightState.lastSpecular) {
 							const float lightPickProb = Scene_PickLightPdf();
 							const float directPdfW = PdfAtoW(directPdfA, rayHit->t,
-								fabs(dot(vload3(0, &bsdf->fixedDir.x), vload3(0, &bsdf->shadeN.x))));
+								fabs(dot(VLOAD3F(&bsdf->fixedDir.x), VLOAD3F(&bsdf->shadeN.x))));
 
 							// MIS between BSDF sampling and direct light sampling
 							weight = PowerHeuristic(task->directLightState.lastPdfW, directPdfW * lightPickProb);
 						}
 
-						float3 radiance = vload3(0, &sample->radiance.r);
-						const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
+						float3 radiance = VLOAD3F(&sample->radiance.r);
+						const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r);
 						const float3 le = pathThroughput * weight * emittedRadiance;
 						radiance += le;
-						vstore3(radiance, 0, &sample->radiance.r);
+						VSTORE3F(radiance, &sample->radiance.r);
 					}
 				}
 #endif
@@ -317,9 +317,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			// Nothing was hit, get environmental lights radiance
 			//------------------------------------------------------------------
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT)
-			float3 radiance = vload3(0, &sample->radiance.r);
-			const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
-			const float3 dir = -vload3(0, &ray->d.x);
+			float3 radiance = VLOAD3F(&sample->radiance.r);
+			const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r);
+			const float3 dir = -VLOAD3F(&ray->d.x);
 			float3 lightRadiance = BLACK;
 
 #if defined(PARAM_HAS_INFINITELIGHT)
@@ -340,7 +340,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 
 			radiance += pathThroughput * lightRadiance;
-			vstore3(radiance, 0, &sample->radiance.r);
+			VSTORE3F(radiance, &sample->radiance.r);
 #endif
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -365,44 +365,44 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 		if (currentTriangleIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
-			float3 radiance = vload3(0, &sample->radiance.r);
-			const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r);
+			float3 radiance = VLOAD3F(&sample->radiance.r);
+			const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r);
 			radiance += lightRadiance;
-			vstore3(radiance, 0, &sample->radiance.r);
+			VSTORE3F(radiance, &sample->radiance.r);
 		}
-#if defined(PARAM_HAS_PASSTHROUGHT)
-		else {
-			BSDF_Init(&task->passThroughState.passThroughBsdf,
-#if defined(PARAM_ACCEL_MQBVH)
-					meshFirstTriangleOffset,
-					meshDescs,
-#endif
-					meshMats, meshIDs,
-#if (PARAM_DL_LIGHT_COUNT > 0)
-					meshLights,
-#endif
-					vertices, vertNormals, vertUVs,
-					triangles, ray, rayHit,
-					task->passThroughState.passThroughEvent
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
-					MATERIALS_PARAM
-					IMAGEMAPS_PARAM
-#endif
-					);
-
-			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
-					MATERIALS_PARAM
-					IMAGEMAPS_PARAM);
-			if (!Spectrum_IsBlack(passthroughTrans)) {
-				const float3 lightRadiance = vload3(0, &task->directLightState.lightRadiance.r) * passthroughTrans;
-				vstore3(lightRadiance, 0, &task->directLightState.lightRadiance.r);
-
-				// It is a pass through point, continue to trace the ray
-				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-				pathState = RT_DL;
-			}
-		}
-#endif
+//#if defined(PARAM_HAS_PASSTHROUGHT)
+//		else {
+//			BSDF_Init(&task->passThroughState.passThroughBsdf,
+//#if defined(PARAM_ACCEL_MQBVH)
+//					meshFirstTriangleOffset,
+//					meshDescs,
+//#endif
+//					meshMats, meshIDs,
+//#if (PARAM_DL_LIGHT_COUNT > 0)
+//					meshLights,
+//#endif
+//					vertices, vertNormals, vertUVs,
+//					triangles, ray, rayHit,
+//					task->passThroughState.passThroughEvent
+//#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+//					MATERIALS_PARAM
+//					IMAGEMAPS_PARAM
+//#endif
+//					);
+//
+//			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
+//					MATERIALS_PARAM
+//					IMAGEMAPS_PARAM);
+//			if (!Spectrum_IsBlack(passthroughTrans)) {
+//				const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r) * passthroughTrans;
+//				VSTORE3F(lightRadiance, &task->directLightState.lightRadiance.r);
+//
+//				// It is a pass through point, continue to trace the ray
+//				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+//				pathState = RT_DL;
+//			}
+//		}
+//#endif
 	}
 #endif
 
@@ -437,7 +437,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					&lightRayDir, &distance, &directPdfW);
 			} else {
 				lightRadiance = TriangleLight_Illuminate(
-					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
+					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
@@ -453,7 +453,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 
 			lightRadiance = TriangleLight_Illuminate(
-					&triLightDefs[lightIndex], vload3(0, &bsdf->hitPoint.x),
+					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
@@ -481,8 +481,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 						IMAGEMAPS_PARAM);
 
 				if (!Spectrum_IsBlack(bsdfEval)) {
-					const float3 pathThroughput = vload3(0, &task->pathStateBase.throughput.r);
-					const float cosThetaToLight = fabs(dot(lightRayDir, vload3(0, &bsdf->shadeN.x)));
+					const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r);
+					const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->shadeN.x)));
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
@@ -492,13 +492,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					// MIS between direct light sampling and BSDF sampling
 					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
-					vstore3((weight * factor) * pathThroughput * bsdfEval * lightRadiance, 0, &task->directLightState.lightRadiance.r);
+					VSTORE3F((weight * factor) * pathThroughput * bsdfEval * lightRadiance, &task->directLightState.lightRadiance.r);
 #if defined(PARAM_HAS_PASSTHROUGHT)
 					task->passThroughState.passThroughEvent = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_A);
 #endif
 
 					// Setup the shadow ray
-					const float3 hitPoint = vload3(0, &bsdf->hitPoint.x);
+					const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.x);
 					Ray_Init4(ray, hitPoint, lightRayDir,
 						MachineEpsilon_E_Float3(hitPoint),
 						distance - MachineEpsilon_E(distance));
@@ -542,11 +542,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				if (rrEnabled)
 					lastPdfW *= rrProb; // Russian Roulette
 
-				float3 throughput = vload3(0, &task->pathStateBase.throughput.r);
+				float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
-				vstore3(throughput, 0, &task->pathStateBase.throughput.r);
+				VSTORE3F(throughput, &task->pathStateBase.throughput.r);
 
-				Ray_Init2(ray, vload3(0, &bsdf->hitPoint.x), sampledDir);
+				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.x), sampledDir);
 
 				task->pathStateBase.depth = depth + 1;
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)

@@ -365,7 +365,6 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MIX: {
-				usedMaterialTypes.insert(MIX);
 				MixMaterial *mm = static_cast<MixMaterial *>(m);
 
 				mat->type = luxrays::ocl::MIX;
