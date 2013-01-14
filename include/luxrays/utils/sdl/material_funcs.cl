@@ -206,6 +206,8 @@ float3 GlassMaterial_Sample(__global Material *material, __global Texture *texs,
 // Metal material
 //------------------------------------------------------------------------------
 
+#if defined (PARAM_ENABLE_MAT_METAL)
+
 float3 GlossyReflection(const float3 fixedDir, const float exponent,
 		const float u0, const float u1) {
 	// Ray from outside going in ?
@@ -230,8 +232,6 @@ float3 GlossyReflection(const float3 fixedDir, const float exponent,
 
 	return x * u + y * v + z * w;
 }
-
-#if defined (PARAM_ENABLE_MAT_METAL)
 
 float3 MetalMaterial_Sample(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
@@ -548,7 +548,7 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 float3 Material_SampleNoMix(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
@@ -764,20 +764,20 @@ float3 MixMaterial_Evaluate(__global Material *material,
 			materialStack[++stackIndex] = &mats[m->mix.matBIndex];			
 			totalWeightStack[stackIndex] = totalWeight * weight2;
 		} else {
-			// Normal GetEventTypes() evaluation
+			// Normal Evaluate() evaluation
 			if (totalWeight > 0.f) {
 				BSDFEvent eventMat;
 				float directPdfWMat;
 				const float3 resultMat = Material_EvaluateNoMix(m, texs, uv, lightDir, eyeDir, &eventMat, &directPdfWMat
 						IMAGEMAPS_PARAM);
-				if (!Spectrum_IsBlack(BLACK)) {
+
+				if (!Spectrum_IsBlack(resultMat)) {
+					*event |= eventMat;
 					result += totalWeight * resultMat;
 
 					if (directPdfW)
 						*directPdfW += totalWeight * directPdfWMat;
 				}
-				
-				*event |= eventMat;
 			}
 		}
 	}
@@ -944,7 +944,7 @@ float3 MixMaterial_GetPassThroughTransparency(__global Material *material,
 		IMAGEMAPS_PARAM_DECL) {
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
-//
+//	TODO
 //	for (;;) {
 //		const float factor = Texture_GetGreyValue(&texs[currentMixMat->mix.mixFactorTexIndex], uv
 //				IMAGEMAPS_PARAM);
@@ -1026,7 +1026,7 @@ float3 Material_Evaluate(__global Material *material,
 float3 Material_Sample(__global Material *material,	const float2 uv,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
@@ -1046,7 +1046,7 @@ float3 Material_Sample(__global Material *material,	const float2 uv,
 		return Material_SampleNoMix(material, texs, uv,
 				fixedDir, sampledDir,
 				u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
 #endif
 				pdfW, cosSampledDir, event
@@ -1067,7 +1067,7 @@ float3 Material_GetEmittedRadiance(__global Material *material, const float2 uv
 				IMAGEMAPS_PARAM);
 }
 
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 float3 Material_GetPassThroughTransparency(__global Material *material,
 		const float2 uv, const float3 fixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL

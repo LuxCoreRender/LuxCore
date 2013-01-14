@@ -34,7 +34,7 @@ float3 InfiniteLight_GetRadiance(
 		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F))+ infiniteLight->shiftU,
 		SphericalTheta(-dir) * M_1_PI_F + infiniteLight->shiftV);
 
-	return vload3(0, &infiniteLight->gain.r) * ImageMapInstance_GetColor(
+	return VLOAD3F(&infiniteLight->gain.r) * ImageMapInstance_GetColor(
 			&infiniteLight->imageMapInstance, uv
 			IMAGEMAPS_PARAM);
 }
@@ -99,7 +99,7 @@ float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir) {
 	const float phi = SphericalPhi(-dir);
 	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
 
-	return vload3(0, &skyLight->gain.r) * s;
+	return VLOAD3F(&skyLight->gain.r) * s;
 }
 
 #endif
@@ -114,8 +114,8 @@ float3 SunLight_Illuminate(__global SunLight *sunLight,
 		const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float cosThetaMax = sunLight->cosThetaMax;
-	const float3 sunDir = vload3(0, &sunLight->sunDir.x);
-	*dir = UniformSampleCone(u0, u1, cosThetaMax, vload3(0, &sunLight->x.x), vload3(0, &sunLight->y.x), sunDir);
+	const float3 sunDir = VLOAD3F(&sunLight->sunDir.x);
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sunLight->x.x), VLOAD3F(&sunLight->y.x), sunDir);
 
 	// Check if the point can be inside the sun cone of light
 	const float cosAtLight = dot(sunDir, *dir);
@@ -125,7 +125,7 @@ float3 SunLight_Illuminate(__global SunLight *sunLight,
 	*distance = INFINITY;
 	*directPdfW = UniformConePdf(cosThetaMax);
 
-	return vload3(0, &sunLight->sunColor.r);
+	return VLOAD3F(&sunLight->sunColor.r);
 }
 
 float3 SunLight_GetRadiance(__global SunLight *sunLight, const float3 dir, float *directPdfA) {
@@ -133,13 +133,13 @@ float3 SunLight_GetRadiance(__global SunLight *sunLight, const float3 dir, float
 	// to avoid fireflies).
 	if (sunLight->relSize > 5.f) {
 		const float cosThetaMax = sunLight->cosThetaMax;
-		const float3 sunDir = vload3(0, &sunLight->sunDir.x);
+		const float3 sunDir = VLOAD3F(&sunLight->sunDir.x);
 
 		if ((cosThetaMax < 1.f) && (dot(-dir, sunDir) > cosThetaMax)) {
 			if (directPdfA)
 				*directPdfA = UniformConePdf(cosThetaMax);
 
-			return vload3(0, &sunLight->sunColor.r);
+			return VLOAD3F(&sunLight->sunColor.r);
 		}
 	}
 
@@ -157,9 +157,9 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
 		float3 *dir, float *distance, float *directPdfW
 		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 p0 = vload3(0, &triLight->v0.x);
-	const float3 p1 = vload3(0, &triLight->v1.x);
-	const float3 p2 = vload3(0, &triLight->v2.x);
+	const float3 p0 = VLOAD3F(&triLight->v0.x);
+	const float3 p1 = VLOAD3F(&triLight->v1.x);
+	const float3 p2 = VLOAD3F(&triLight->v2.x);
 	float b0, b1, b2;
 	float3 samplePoint = Triangle_Sample(
 			p0, p1, p2,
@@ -179,9 +179,9 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
 
 	*directPdfW = triLight->invArea * distanceSquared / cosAtLight;
 
-	const float2 uv0 = vload2(0, &triLight->uv0.u);
-	const float2 uv1 = vload2(0, &triLight->uv1.u);
-	const float2 uv2 = vload2(0, &triLight->uv2.u);
+	const float2 uv0 = VLOAD2F(&triLight->uv0.u);
+	const float2 uv1 = VLOAD2F(&triLight->uv1.u);
+	const float2 uv2 = VLOAD2F(&triLight->uv2.u);
 	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
 
 	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], triUV
