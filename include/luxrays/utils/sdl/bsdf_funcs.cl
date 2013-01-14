@@ -156,7 +156,8 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 		IMAGEMAPS_PARAM_DECL) {
 	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
 	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
-	const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
+	//const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
+	const float3 eyeDir = (float3)(bsdf->fixedDir.x, bsdf->fixedDir.y, bsdf->fixedDir.z);
 	const float3 lightDir = generatedDir;
 	const float3 geometryN = vload3(0, &bsdf->geometryN.x);
 
