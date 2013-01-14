@@ -39,7 +39,7 @@ void BSDF_Init(
 		__global Triangle *triangles,
 		__global Ray *ray,
 		__global RayHit *rayHit
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 		, const float u0
 #endif
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
@@ -48,7 +48,7 @@ void BSDF_Init(
 #endif
 		) {
 	//bsdf->fromLight = fromL;
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 	bsdf->passThroughEvent = u0;
 #endif
 
@@ -206,7 +206,7 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 
 	const float3 result = Material_Sample(&mats[bsdf->materialIndex], VLOAD2F(&bsdf->hitPointUV.u),
 			localFixedDir, &localSampledDir, u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->passThroughEvent,
 #endif
 			pdfW, cosSampledDir, event
@@ -249,7 +249,7 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 }
 #endif
 
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL
 		IMAGEMAPS_PARAM_DECL) {

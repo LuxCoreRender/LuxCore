@@ -116,6 +116,13 @@ void GenerateCameraPath(
 	task->directLightState.lastPdfW = 1.f;
 	task->directLightState.lastSpecular = TRUE;
 #endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	// This is a bit tricky. I store the passThroughEvent in the BSDF
+	// before of the initialization because it can be use during the
+	// tracing of next path vertex ray.
+
+	task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+#endif
 }
 
 //------------------------------------------------------------------------------

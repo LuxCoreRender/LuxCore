@@ -31,7 +31,7 @@
 //  PARAM_MAX_RR_DEPTH
 //  PARAM_MAX_RR_CAP
 //  PARAM_HAS_IMAGEMAPS
-//  PARAM_HAS_PASSTHROUGHT
+//  PARAM_HAS_PASSTHROUGH
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_HAS_BUMPMAPS
 //  PARAM_HAS_NORMALMAPS
@@ -249,7 +249,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 					vertices, vertNormals, vertUVs,
 					triangles, ray, rayHit
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 					, task->pathStateBase.bsdf.passThroughEvent
 #endif
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
@@ -258,7 +258,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 					);
 
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
 					MATERIALS_PARAM
 					IMAGEMAPS_PARAM);
@@ -272,7 +272,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				// Keep the same path state
 			}
 #endif
-#if defined(PARAM_HAS_PASSTHROUGHT) && (PARAM_DL_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_PASSTHROUGH) && (PARAM_DL_LIGHT_COUNT > 0)
 			else
 #endif
 			{
@@ -370,39 +370,39 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			radiance += lightRadiance;
 			VSTORE3F(radiance, &sample->radiance.r);
 		}
-//#if defined(PARAM_HAS_PASSTHROUGHT)
-//		else {
-//			BSDF_Init(&task->passThroughState.passThroughBsdf,
-//#if defined(PARAM_ACCEL_MQBVH)
-//					meshFirstTriangleOffset,
-//					meshDescs,
-//#endif
-//					meshMats, meshIDs,
-//#if (PARAM_DL_LIGHT_COUNT > 0)
-//					meshLights,
-//#endif
-//					vertices, vertNormals, vertUVs,
-//					triangles, ray, rayHit,
-//					task->passThroughState.passThroughEvent
-//#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
-//					MATERIALS_PARAM
-//					IMAGEMAPS_PARAM
-//#endif
-//					);
-//
-//			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
-//					MATERIALS_PARAM
-//					IMAGEMAPS_PARAM);
-//			if (!Spectrum_IsBlack(passthroughTrans)) {
-//				const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r) * passthroughTrans;
-//				VSTORE3F(lightRadiance, &task->directLightState.lightRadiance.r);
-//
-//				// It is a pass through point, continue to trace the ray
-//				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-//				pathState = RT_DL;
-//			}
-//		}
-//#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+		else {
+			BSDF_Init(&task->passThroughState.passThroughBsdf,
+#if defined(PARAM_ACCEL_MQBVH)
+					meshFirstTriangleOffset,
+					meshDescs,
+#endif
+					meshMats, meshIDs,
+#if (PARAM_DL_LIGHT_COUNT > 0)
+					meshLights,
+#endif
+					vertices, vertNormals, vertUVs,
+					triangles, ray, rayHit,
+					task->passThroughState.passThroughEvent
+#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+					MATERIALS_PARAM
+					IMAGEMAPS_PARAM
+#endif
+					);
+
+			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
+					MATERIALS_PARAM
+					IMAGEMAPS_PARAM);
+			if (!Spectrum_IsBlack(passthroughTrans)) {
+				const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r) * passthroughTrans;
+				VSTORE3F(lightRadiance, &task->directLightState.lightRadiance.r);
+
+				// It is a pass through point, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+				pathState = RT_DL;
+			}
+		}
+#endif
 	}
 #endif
 
@@ -493,7 +493,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
 					VSTORE3F((weight * factor) * pathThroughput * bsdfEval * lightRadiance, &task->directLightState.lightRadiance.r);
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 					task->passThroughState.passThroughEvent = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_A);
 #endif
 
@@ -553,7 +553,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				task->directLightState.lastPdfW = lastPdfW;
 				task->directLightState.lastSpecular = lastSpecular;
 #endif
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 				// This is a bit tricky. I store the passThroughEvent in the BSDF
 				// before of the initialization because it can be use during the
 				// tracing of next path vertex ray.
@@ -561,7 +561,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
 				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 					sample, sampleDataPathBase, depth + 1);
-				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(IDX_PASSTROUGHT);
+				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(IDX_PASSTROUGH);
 #endif
 				pathState = RT_NEXT_VERTEX;
 			} else
