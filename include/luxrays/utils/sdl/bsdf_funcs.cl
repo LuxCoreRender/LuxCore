@@ -55,7 +55,10 @@ void BSDF_Init(
 	const float3 rayOrig = vload3(0, &ray->o.x);
 	const float3 rayDir = vload3(0, &ray->d.x);
 	vstore3(rayOrig + rayHit->t * rayDir, 0, &bsdf->hitPoint.x);
-	vstore3(-rayDir, 0, &bsdf->fixedDir.x);
+	//vstore3(-rayDir, 0, &bsdf->fixedDir.x);
+bsdf->fixedDir.x = -ray->d.x;
+bsdf->fixedDir.y = -ray->d.y;
+bsdf->fixedDir.z = -ray->d.z;
 
 	const uint currentTriangleIndex = rayHit->index;
 	const uint meshIndex = meshIDs[currentTriangleIndex];
@@ -82,7 +85,11 @@ void BSDF_Init(
 	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
 	const float2 hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2);
 #else
-	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
+	//vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
+	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
+bsdf->geometryN.x = geometryN.x;
+bsdf->geometryN.y = geometryN.y;
+bsdf->geometryN.z = geometryN.z;
 	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
 	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
 #endif
@@ -157,9 +164,10 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
 	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
 	//const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
-	const float3 eyeDir = (float3)(bsdf->fixedDir.x, bsdf->fixedDir.y, bsdf->fixedDir.z);
+const float3 eyeDir = (float3)(bsdf->fixedDir.x, bsdf->fixedDir.y, bsdf->fixedDir.z);
 	const float3 lightDir = generatedDir;
-	const float3 geometryN = vload3(0, &bsdf->geometryN.x);
+	//const float3 geometryN = vload3(0, &bsdf->geometryN.x);
+const float3 geometryN = (float3)(bsdf->geometryN.x, bsdf->geometryN.y, bsdf->geometryN.z);
 
 	const float dotLightDirNG = dot(lightDir, geometryN);
 	const float absDotLightDirNG = fabs(dotLightDirNG);
