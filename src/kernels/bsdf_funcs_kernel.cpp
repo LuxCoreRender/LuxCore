@@ -179,7 +179,7 @@ std::string KernelSource_bsdf_funcs =
 "//	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||\n"
 "//			((sideTest < 0.f) && !(matEvent & TRANSMIT)))\n"
 "\n"
-"	if (dotLightDirNG >= 0.f)\n"
+"	if (dotEyeDirNG >= 0.f)\n"
 "		return (float3)(dotEyeDirNG, 0.f ,0.f);\n"
 "	else\n"
 "		return (float3)(0.f, -dotEyeDirNG, 0.f);\n"
