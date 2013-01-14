@@ -548,7 +548,7 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 float3 Material_SampleNoMix(__global Material *material, __global Texture *texs,
 		const float2 uv, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
@@ -1026,7 +1026,7 @@ float3 Material_Evaluate(__global Material *material,
 float3 Material_Sample(__global Material *material,	const float2 uv,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
@@ -1046,7 +1046,7 @@ float3 Material_Sample(__global Material *material,	const float2 uv,
 		return Material_SampleNoMix(material, texs, uv,
 				fixedDir, sampledDir,
 				u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
 #endif
 				pdfW, cosSampledDir, event
@@ -1067,7 +1067,7 @@ float3 Material_GetEmittedRadiance(__global Material *material, const float2 uv
 				IMAGEMAPS_PARAM);
 }
 
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 float3 Material_GetPassThroughTransparency(__global Material *material,
 		const float2 uv, const float3 fixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL

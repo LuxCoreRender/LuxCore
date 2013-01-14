@@ -437,7 +437,7 @@ void PathOCLRenderThread::InitKernels() {
 			cscene->IsMaterialCompiled(MIX) ||
 			cscene->IsMaterialCompiled(NULLMAT) ||
 			cscene->IsMaterialCompiled(MATTETRANSLUCENT))
-		ss << " -D PARAM_HAS_PASSTHROUGHT";
+		ss << " -D PARAM_HAS_PASSTHROUGH";
 	
 	if (cscene->camera.lensRadius > 0.f)
 		ss << " -D PARAM_CAMERA_HAS_DOF";
@@ -778,8 +778,8 @@ void PathOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	const size_t uDataEyePathVertexSize =
-		// IDX_SCREEN_X, IDX_SCREEN_Y
-		sizeof(float) * 2 +
+		// IDX_SCREEN_X, IDX_SCREEN_Y, IDX_EYE_PASSTROUGHT
+		sizeof(float) * 3 +
 		// IDX_DOF_X, IDX_DOF_Y
 		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =

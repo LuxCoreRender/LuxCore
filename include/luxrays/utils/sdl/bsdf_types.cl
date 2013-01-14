@@ -40,7 +40,7 @@ typedef struct {
 	UV hitPointUV;
 	Normal geometryN;
 	Normal shadeN;
-#if defined(PARAM_HAS_PASSTHROUGHT)
+#if defined(PARAM_HAS_PASSTHROUGH)
 	// passThroughEvent can be stored here in a path state even before to of
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
