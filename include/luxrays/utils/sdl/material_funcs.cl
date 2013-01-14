@@ -36,8 +36,8 @@ float3 MatteMaterial_Evaluate(__global Material *material, __global Texture *tex
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = (float3)(1.f, 0.f, 0.f);/*Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv
-			IMAGEMAPS_PARAM);*/
+	const float3 kd = Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv
+			IMAGEMAPS_PARAM);
 	return M_1_PI_F * kd;
 }
 

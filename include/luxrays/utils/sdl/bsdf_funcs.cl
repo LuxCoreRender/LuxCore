@@ -55,10 +55,7 @@ void BSDF_Init(
 	const float3 rayOrig = vload3(0, &ray->o.x);
 	const float3 rayDir = vload3(0, &ray->d.x);
 	vstore3(rayOrig + rayHit->t * rayDir, 0, &bsdf->hitPoint.x);
-	//vstore3(-rayDir, 0, &bsdf->fixedDir.x);
-bsdf->fixedDir.x = -ray->d.x;
-bsdf->fixedDir.y = -ray->d.y;
-bsdf->fixedDir.z = -ray->d.z;
+	vstore3(-rayDir, 0, &bsdf->fixedDir.x);
 
 	const uint currentTriangleIndex = rayHit->index;
 	const uint meshIndex = meshIDs[currentTriangleIndex];
@@ -85,11 +82,7 @@ bsdf->fixedDir.z = -ray->d.z;
 	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
 	const float2 hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2);
 #else
-	//vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
-	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
-bsdf->geometryN.x = geometryN.x;
-bsdf->geometryN.y = geometryN.y;
-bsdf->geometryN.z = geometryN.z;
+	vstore3(Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex), 0, &bsdf->geometryN.x);
 	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
 	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
 #endif
@@ -163,11 +156,9 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 		IMAGEMAPS_PARAM_DECL) {
 	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
 	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
-	//const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
-const float3 eyeDir = (float3)(bsdf->fixedDir.x, bsdf->fixedDir.y, bsdf->fixedDir.z);
+	const float3 eyeDir = vload3(0, &bsdf->fixedDir.x);
 	const float3 lightDir = generatedDir;
-	//const float3 geometryN = vload3(0, &bsdf->geometryN.x);
-const float3 geometryN = (float3)(bsdf->geometryN.x, bsdf->geometryN.y, bsdf->geometryN.z);
+	const float3 geometryN = vload3(0, &bsdf->geometryN.x);
 
 	const float dotLightDirNG = dot(lightDir, geometryN);
 	const float absDotLightDirNG = fabs(dotLightDirNG);
@@ -179,16 +170,12 @@ const float3 geometryN = (float3)(bsdf->geometryN.x, bsdf->geometryN.y, bsdf->ge
 		return BLACK;
 
 	__global Material *mat = &mats[bsdf->materialIndex];
-//	const float sideTest = dotEyeDirNG * dotLightDirNG;
-//	const BSDFEvent matEvent = Material_GetEventTypes(mat
-//			MATERIALS_PARAM);
-//	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
-//			((sideTest < 0.f) && !(matEvent & TRANSMIT)))
-
-	if (dotEyeDirNG >= 0.f)
-		return (float3)(dotEyeDirNG, 0.f ,0.f);
-	else
-		return (float3)(0.f, -dotEyeDirNG, 0.f);
+	const float sideTest = dotEyeDirNG * dotLightDirNG;
+	const BSDFEvent matEvent = Material_GetEventTypes(mat
+			MATERIALS_PARAM);
+	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
+			((sideTest < 0.f) && !(matEvent & TRANSMIT)))
+		return BLACK;
 
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
