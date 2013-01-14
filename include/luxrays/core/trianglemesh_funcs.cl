@@ -24,9 +24,9 @@
 float3 Mesh_GetGeometryNormal(__global Point *vertices,
 		__global Triangle *triangles, const uint triIndex) {
 	__global Triangle *tri = &triangles[triIndex];
-	const float3 p0 = vload3(0, &vertices[tri->v[0]].x);
-	const float3 p1 = vload3(0, &vertices[tri->v[1]].x);
-	const float3 p2 = vload3(0, &vertices[tri->v[2]].x);
+	const float3 p0 = VLOAD3F(&vertices[tri->v[0]].x);
+	const float3 p1 = VLOAD3F(&vertices[tri->v[1]].x);
+	const float3 p2 = VLOAD3F(&vertices[tri->v[2]].x);
 
 	return Triangle_GetGeometryNormal(p0, p1, p2);
 }
@@ -34,9 +34,9 @@ float3 Mesh_GetGeometryNormal(__global Point *vertices,
 float3 Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *triangles,
 		const uint triIndex, const float b1, const float b2) {
 	__global Triangle *tri = &triangles[triIndex];
-	const float3 n0 = vload3(0, &normals[tri->v[0]].x);
-	const float3 n1 = vload3(0, &normals[tri->v[1]].x);
-	const float3 n2 = vload3(0, &normals[tri->v[2]].x);
+	const float3 n0 = VLOAD3F(&normals[tri->v[0]].x);
+	const float3 n1 = VLOAD3F(&normals[tri->v[1]].x);
+	const float3 n2 = VLOAD3F(&normals[tri->v[2]].x);
 
 	const float b0 = 1.f - b1 - b2;
 	return Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);
@@ -45,9 +45,9 @@ float3 Mesh_InterpolateNormal(__global Vector *normals, __global Triangle *trian
 float2 Mesh_InterpolateUV(__global UV *vertUVs, __global Triangle *triangles,
 		const uint triIndex, const float b1, const float b2) {
 	__global Triangle *tri = &triangles[triIndex];
-	const float2 uv0 = vload2(0, &vertUVs[tri->v[0]].u);
-	const float2 uv1 = vload2(0, &vertUVs[tri->v[1]].u);
-	const float2 uv2 = vload2(0, &vertUVs[tri->v[2]].u);
+	const float2 uv0 = VLOAD2F(&vertUVs[tri->v[0]].u);
+	const float2 uv1 = VLOAD2F(&vertUVs[tri->v[1]].u);
+	const float2 uv2 = VLOAD2F(&vertUVs[tri->v[2]].u);
 
 	const float b0 = 1.f - b1 - b2;
 	return Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);

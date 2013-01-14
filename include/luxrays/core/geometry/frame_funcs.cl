@@ -28,9 +28,9 @@ void Frame_SetFromZ(__global Frame *frame, const float3 z) {
 	const float3 Y = normalize(cross(tmpZ, tmpX));
 	const float3 X = cross(Y, tmpZ);
 
-	vstore3(X, 0, &frame->X.x);
-	vstore3(Y, 0, &frame->Y.x);
-	vstore3(Z, 0, &frame->Z.x);
+	VSTORE3F(X, &frame->X.x);
+	VSTORE3F(Y, &frame->Y.x);
+	VSTORE3F(Z, &frame->Z.x);
 }
 
 float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
@@ -38,7 +38,7 @@ float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
 }
 
 float3 Frame_ToWorld(__global Frame *frame, const float3 v) {
-	return ToWorld(vload3(0, &frame->X.x), vload3(0, &frame->Y.x), vload3(0, &frame->Z.x), v);
+	return ToWorld(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
 }
 
 float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
@@ -46,5 +46,5 @@ float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
 }
 
 float3 Frame_ToLocal(__global Frame *frame, const float3 v) {
-	return ToLocal(vload3(0, &frame->X.x), vload3(0, &frame->Y.x), vload3(0, &frame->Z.x), v);
+	return ToLocal(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
 }

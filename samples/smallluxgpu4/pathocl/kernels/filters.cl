@@ -139,9 +139,9 @@ void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weig
 	AtomicAdd(&pixel->c.b, s.z);
 	AtomicAdd(&pixel->count, s.w);
 #else
-	float4 p = vload4(0, (__global float *)pixel);
+	float4 p = VLOAD4F(&(pixel->c.r));
 	p += s;
-	vstore4(p, 0, (__global float *)pixel);
+	VSTORE4F(p, &(pixel->c.r));
 #endif
 
 #endif

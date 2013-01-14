@@ -120,8 +120,7 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 	const float sideTest = dotEyeDirNG * dotLightDirNG;
 	if (((sideTest > 0.f) && !(material->GetEventTypes() & REFLECT)) ||
-			((sideTest < 0.f) && !(material->GetEventTypes() & TRANSMIT)) ||
-			(sideTest == 0.f))
+			((sideTest < 0.f) && !(material->GetEventTypes() & TRANSMIT)))
 		return Spectrum();
 
 	const Vector localLightDir = frame.ToLocal(lightDir);
