@@ -177,9 +177,9 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 //			((sideTest < 0.f) && !(matEvent & TRANSMIT)))
 
 	if (dotLightDirNG >= 0.f)
-		return (float3)(dotLightDirNG, 0.f ,0.f);
+		return (float3)(dotEyeDirNG, 0.f ,0.f);
 	else
-		return (float3)(0.f, -dotLightDirNG, 0.f);
+		return (float3)(0.f, -dotEyeDirNG, 0.f);
 
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
