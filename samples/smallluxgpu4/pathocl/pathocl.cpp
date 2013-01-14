@@ -20,7 +20,8 @@
  ***************************************************************************/
 
 // TODO: metropolis with lazy evaluation
-
+// TODO: finish MixMaterial_GetPassThroughTransparency()
+		
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <cstdio>
