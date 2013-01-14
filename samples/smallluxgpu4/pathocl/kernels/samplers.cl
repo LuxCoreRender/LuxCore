@@ -103,7 +103,7 @@ void GenerateCameraPath(
 
 	GenerateCameraRay(camera, sample, sampleDataPathBase, seed, ray);
 
-	vstore3(BLACK, 0, &sample->radiance.r);
+	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
@@ -111,7 +111,7 @@ void GenerateCameraPath(
 	// Initialize the path state
 	task->pathStateBase.state = RT_NEXT_VERTEX;
 	task->pathStateBase.depth = 1;
-	vstore3(WHITE, 0, &task->pathStateBase.throughput.r);
+	VSTORE3F(WHITE, &task->pathStateBase.throughput.r);
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	task->directLightState.lastPdfW = 1.f;
 	task->directLightState.lastSpecular = TRUE;
@@ -141,7 +141,7 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	const size_t gid = get_global_id(0);
 
-	vstore3(BLACK, 0, &sample->radiance.r);
+	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
@@ -163,7 +163,7 @@ void Sampler_NextSample(
 		__global Ray *ray
 		) {
 	SplatSample(frameBuffer,
-			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], vload3(0, &sample->radiance.r),
+			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 			alphaFrameBuffer,
 			sample->alpha,
@@ -272,8 +272,8 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	sample->consecutiveRejects = 0;
 
 	sample->weight = 0.f;
-	vstore3(BLACK, 0, &sample->currentRadiance.r);
-	vstore3(BLACK, 0, &sample->radiance.r);
+	VSTORE3F(BLACK, &sample->currentRadiance.r);
+	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->currentAlpha = 1.f;
 	sample->alpha = 1.f;
@@ -302,13 +302,13 @@ void Sampler_NextSample(
 	uint current = sample->current;
 	uint proposed = sample->proposed;
 
-	const float3 radiance = vload3(0, &sample->radiance.r);
+	const float3 radiance = VLOAD3F(&sample->radiance.r);
 
 	if (current == NULL_INDEX) {
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
-		vstore3(radiance, 0, &sample->currentRadiance.r);
+		VSTORE3F(radiance, &sample->currentRadiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		sample->currentAlpha = sample->alpha;
 #endif
@@ -317,7 +317,7 @@ void Sampler_NextSample(
 		current = proposed;
 		proposed ^= 1;
 	} else {
-		const float3 currentL = vload3(0, &sample->currentRadiance.r);
+		const float3 currentL = VLOAD3F(&sample->currentRadiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		const float currentAlpha = sample->currentAlpha;
 #endif
@@ -392,7 +392,7 @@ void Sampler_NextSample(
 
 			weight = newWeight;
 
-			vstore3(proposedL, 0, &sample->currentRadiance.r);
+			VSTORE3F(proposedL, &sample->currentRadiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 			sample->currentAlpha = proposedAlpha;
 #endif

@@ -44,11 +44,11 @@ float3 ConstFloatTexture_GetColorValue(__global Texture *texture, const float2 u
 #if defined (PARAM_ENABLE_TEX_CONST_FLOAT3)
 
 float ConstFloat3Texture_GetGreyValue(__global Texture *texture, const float2 uv) {
-	return Spectrum_Y(vload3(0, &texture->constFloat3.color.r));
+	return Spectrum_Y(VLOAD3F(&texture->constFloat3.color.r));
 }
 
 float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, const float2 uv) {
-	return vload3(0, &texture->constFloat3.color.r);
+	return VLOAD3F(&texture->constFloat3.color.r);
 }
 
 #endif
@@ -60,11 +60,11 @@ float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, const float2 
 #if defined (PARAM_ENABLE_TEX_CONST_FLOAT4)
 
 float ConstFloat4Texture_GetGreyValue(__global Texture *texture, const float2 uv) {
-	return Spectrum_Y(vload3(0, &texture->constFloat4.color.r));
+	return Spectrum_Y(VLOAD3F(&texture->constFloat4.color.r));
 }
 
 float3 ConstFloat4Texture_GetColorValue(__global Texture *texture, const float2 uv) {
-	return vload3(0, &texture->constFloat4.color.r);
+	return VLOAD3F(&texture->constFloat4.color.r);
 }
 
 #endif
@@ -124,7 +124,7 @@ float ImageMap_GetTexel_Grey(__global float *pixels,
 
 	const uint index = channelCount * (v * width + u);
 
-	return (channelCount == 1) ? pixels[index] : Spectrum_Y(vload3(0, &pixels[index]));
+	return (channelCount == 1) ? pixels[index] : Spectrum_Y(VLOAD3F(&pixels[index]));
 }
 
 float3 ImageMap_GetTexel_Color(__global float *pixels,
@@ -135,7 +135,7 @@ float3 ImageMap_GetTexel_Color(__global float *pixels,
 
 	const uint index = channelCount * (v * width + u);
 
-	return (channelCount == 1) ? pixels[index] : vload3(0, &pixels[index]);
+	return (channelCount == 1) ? pixels[index] : VLOAD3F(&pixels[index]);
 }
 
 float ImageMap_GetGrey(__global float *pixels,
@@ -217,8 +217,8 @@ float ImageMapInstance_GetGrey(
 			imageMap->pageIndex, imageMap->pixelsIndex
 		);
 
-	const float2 scale = vload2(0, &imageMapInstance->uScale);
-	const float2 delta = vload2(0, &imageMapInstance->uDelta);
+	const float2 scale = VLOAD2F(&imageMapInstance->uScale);
+	const float2 delta = VLOAD2F(&imageMapInstance->uDelta);
 	const float2 mapUV = uv * scale + delta;
 
 	return imageMapInstance->gain * ImageMap_GetGrey(
@@ -250,8 +250,8 @@ float3 ImageMapInstance_GetColor(
 			imageMap->pageIndex, imageMap->pixelsIndex
 		);
 
-	const float2 scale = vload2(0, &imageMapInstance->uScale);
-	const float2 delta = vload2(0, &imageMapInstance->uDelta);
+	const float2 scale = VLOAD2F(&imageMapInstance->uScale);
+	const float2 delta = VLOAD2F(&imageMapInstance->uDelta);
 	const float2 mapUV = uv * scale + delta;
 
 	return imageMapInstance->gain * ImageMap_GetColor(
@@ -338,7 +338,7 @@ float2 Texture_GetDuDv(__global Texture *texture) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
-			return vload2(0, &texture->imageMapInstance.Du);
+			return VLOAD2F(&texture->imageMapInstance.Du);
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
