@@ -78,5 +78,5 @@ typedef struct {
 // Some macro trick in order to have more readable code
 //------------------------------------------------------------------------------
 
-#define MATERIALS_PARAM_DECL ,__global Material *mats, __global Texture *texs
-#define MATERIALS_PARAM ,mats, texs
+#define MATERIALS_PARAM_DECL , __global Material *mats TEXTURES_PARAM_DECL
+#define MATERIALS_PARAM , mats TEXTURES_PARAM

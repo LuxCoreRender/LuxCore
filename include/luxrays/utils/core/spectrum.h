@@ -142,10 +142,12 @@ public:
 		return 0.212671f * r + 0.715160f * g + 0.072169f * b;
 	}
 
-	void Clamp() {
+	Spectrum Clamp() {
 		luxrays::Clamp(r, 0.f, 1.f);
 		luxrays::Clamp(g, 0.f, 1.f);
 		luxrays::Clamp(b, 0.f, 1.f);
+
+		return *this;
 	}
 
 	float r, g, b;

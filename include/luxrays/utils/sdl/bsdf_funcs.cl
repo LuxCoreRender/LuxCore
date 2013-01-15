@@ -44,7 +44,6 @@ void BSDF_Init(
 #endif
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
 		MATERIALS_PARAM_DECL
-		IMAGEMAPS_PARAM_DECL
 #endif
 		) {
 	//bsdf->fromLight = fromL;
@@ -104,7 +103,7 @@ void BSDF_Init(
 	if (normalTexIndex != NULL_INDEX) {
 		// Apply normal mapping
 		const float3 color = Texture_GetColorValue(&texs[normalTexIndex], hitPointUV
-			IMAGEMAPS_PARAM);
+			TEXTURES_PARAM);
 		const float3 xyz = 2.f * color - 1.f;
 
 		float3 v1, v2;
@@ -122,18 +121,19 @@ void BSDF_Init(
 	if (bumpTexIndex != NULL_INDEX) {
 		// Apply bump mapping
 		__global Texture *tex = &texs[bumpTexIndex];
-		const float2 dudv = Texture_GetDuDv(tex);
+		const float2 dudv = Texture_GetDuDv(tex
+			TEXTURES_PARAM);
 
 		const float b0 = Texture_GetGreyValue(tex, hitPointUV
-			IMAGEMAPS_PARAM);
+			TEXTURES_PARAM);
 
 		const float2 uvdu = (float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1);
 		const float bu = Texture_GetGreyValue(tex, uvdu
-			IMAGEMAPS_PARAM);
+			TEXTURES_PARAM);
 
 		const float2 uvdv = (float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1);
 		const float bv = Texture_GetGreyValue(tex, uvdv
-			IMAGEMAPS_PARAM);
+			TEXTURES_PARAM);
 
 		const float3 bump = (float3)(bu - b0, bv - b0, 1.f);
 
@@ -154,8 +154,7 @@ void BSDF_Init(
 
 float3 BSDF_Evaluate(__global BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
-		MATERIALS_PARAM_DECL
-		IMAGEMAPS_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
 	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
 	const float3 eyeDir = VLOAD3F(&bsdf->fixedDir.x);
@@ -184,8 +183,7 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
 	const float3 result = Material_Evaluate(mat, VLOAD2F(&bsdf->hitPointUV.u),
 			localLightDir, localEyeDir,	event, directPdfW
-			MATERIALS_PARAM
-			IMAGEMAPS_PARAM);
+			MATERIALS_PARAM);
 
 	// Adjoint BSDF
 //	if (fromLight) {
@@ -198,8 +196,7 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 
 float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
-		MATERIALS_PARAM_DECL
-		IMAGEMAPS_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
@@ -210,8 +207,7 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 			bsdf->passThroughEvent,
 #endif
 			pdfW, cosSampledDir, event
-			MATERIALS_PARAM
-			IMAGEMAPS_PARAM);
+			MATERIALS_PARAM);
 	if (Spectrum_IsBlack(result))
 		return 0.f;
 
@@ -236,28 +232,25 @@ bool BSDF_IsDelta(__global BSDF *bsdf
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
-		__global Material *mats, __global Texture *texs,
 		__global TriangleLight *triLightDefs, float *directPdfA
-		IMAGEMAPS_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
 	if (triangleLightSourceIndex == NULL_INDEX)
 		return BLACK;
 	else
-		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex], mats, texs,
+		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex],
 				VLOAD3F(&bsdf->fixedDir.x), VLOAD3F(&bsdf->geometryN.x), VLOAD2F(&bsdf->hitPointUV.u), directPdfA
-				IMAGEMAPS_PARAM);
+				MATERIALS_PARAM);
 }
 #endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL
-		IMAGEMAPS_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->fixedDir.x));
 
 	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
 			VLOAD2F(&bsdf->hitPointUV.u), localFixedDir, bsdf->passThroughEvent
-			MATERIALS_PARAM
-			IMAGEMAPS_PARAM);
+			MATERIALS_PARAM);
 }
 #endif

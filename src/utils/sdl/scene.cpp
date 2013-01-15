@@ -599,6 +599,12 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 	} else if (texType == "constfloat4") {
 		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 4, "1.0 1.0 1.0 1.0");
 		return new ConstFloat4Texture(Spectrum(v.at(0), v.at(1), v.at(2)), v.at(3));
+	} else if (texType == "scale") {
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const Texture *tex1 = GetTexture(tex1Name);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const Texture *tex2 = GetTexture(tex2Name);
+		return new ScaleTexture(tex1, tex2);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

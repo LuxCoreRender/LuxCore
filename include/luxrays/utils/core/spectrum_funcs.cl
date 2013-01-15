@@ -36,3 +36,7 @@ float Spectrum_Filter(const float3 s)  {
 float Spectrum_Y(const float3 s) {
 	return 0.212671f * s.s0 + 0.715160f * s.s1 + 0.072169f * s.s2;
 }
+
+float3 Spectrum_Clamp(const float3 s) {
+	return clamp(s, BLACK, WHITE);
+}

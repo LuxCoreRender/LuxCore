@@ -118,7 +118,7 @@ Spectrum MatteMaterial::Evaluate(const bool fromLight, const UV &uv,
 		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
 
 	*event = DIFFUSE | REFLECT;
-	return Kd->GetColorValue(uv) * INV_PI;
+	return Kd->GetColorValue(uv).Clamp() * INV_PI;
 }
 
 Spectrum MatteMaterial::Sample(const bool fromLight, const UV &uv,
@@ -135,7 +135,7 @@ Spectrum MatteMaterial::Sample(const bool fromLight, const UV &uv,
 		return Spectrum();
 
 	*event = DIFFUSE | REFLECT;
-	return Kd->GetColorValue(uv) * INV_PI;
+	return Kd->GetColorValue(uv).Clamp() * INV_PI;
 }
 
 void MatteMaterial::Pdf(const bool fromLight, const UV &uv,
@@ -151,7 +151,7 @@ void MatteMaterial::Pdf(const bool fromLight, const UV &uv,
 void MatteMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	referencedTexs.insert(Kd);
+	Kd->AddReferencedTextures(referencedTexs);
 }
 
 //------------------------------------------------------------------------------
@@ -175,13 +175,13 @@ Spectrum MirrorMaterial::Sample(const bool fromLight, const UV &uv,
 
 	*cosSampledDir = fabsf(sampledDir->z);
 	// The cosSampledDir is used to compensate the other one used inside the integrator
-	return Kr->GetColorValue(uv) / (*cosSampledDir);
+	return Kr->GetColorValue(uv).Clamp() / (*cosSampledDir);
 }
 
 void MirrorMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	referencedTexs.insert(Kr);
+	Kr->AddReferencedTextures(referencedTexs);
 }
 
 //------------------------------------------------------------------------------
@@ -208,8 +208,8 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector rayDir = -fixedDir;
 	const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
 
-	const float nc = ousideIor->GetGreyValue(uv);
-	const float nt = ior->GetGreyValue(uv);
+	const float nc = Clamp(ousideIor->GetGreyValue(uv), 0.f, 1.f);
+	const float nt = Clamp(ior->GetGreyValue(uv), 0.f, 1.f);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
 	const float ddn = Dot(rayDir, shadeN);
@@ -223,7 +223,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW = 1.f;
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(uv) / (*cosSampledDir);
+		return Kr->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	}
 
 	const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrtf(cos2t));
@@ -249,7 +249,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 			*pdfW = 1.f;
 
 			// The cosSampledDir is used to compensate the other one used inside the integrator
-			return Kr->GetColorValue(uv) / (*cosSampledDir);
+			return Kr->GetColorValue(uv).Clamp() / (*cosSampledDir);
 		}
 	} else if (Re == 0.f) {
 		*event = SPECULAR | TRANSMIT;
@@ -258,9 +258,9 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW = 1.f;
 
 		if (fromLight)
-			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
+			return Kt->GetColorValue(uv).Clamp() * (nnt2 / (*cosSampledDir));
 		else
-			return Kt->GetColorValue(uv) / (*cosSampledDir);
+			return Kt->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	} else if (u0 < P) {
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
@@ -268,7 +268,7 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW = P / Re;
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(uv) / (*cosSampledDir);
+		return Kr->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	} else {
 		*event = SPECULAR | TRANSMIT;
 		*sampledDir = transDir;
@@ -277,19 +277,19 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		if (fromLight)
-			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
+			return Kt->GetColorValue(uv).Clamp() * (nnt2 / (*cosSampledDir));
 		else
-			return Kt->GetColorValue(uv) / (*cosSampledDir);
+			return Kt->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	}
 }
 
 void GlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	referencedTexs.insert(Kr);
-	referencedTexs.insert(Kt);
-	referencedTexs.insert(ousideIor);
-	referencedTexs.insert(ior);
+	Kr->AddReferencedTextures(referencedTexs);
+	Kt->AddReferencedTextures(referencedTexs);
+	ousideIor->AddReferencedTextures(referencedTexs);
+	ior->AddReferencedTextures(referencedTexs);
 }
 
 //------------------------------------------------------------------------------
@@ -340,7 +340,7 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 			*pdfW = 1.f;
 
 			// The cosSampledDir is used to compensate the other one used inside the integrator
-			return Kr->GetColorValue(uv) / (*cosSampledDir);
+			return Kr->GetColorValue(uv).Clamp() / (*cosSampledDir);
 		}
 	} else if (Re == 0.f) {
 		*event = SPECULAR | TRANSMIT;
@@ -348,7 +348,7 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 		*cosSampledDir = fabsf(sampledDir->z);
 		*pdfW = 1.f;
 
-		return Kt->GetColorValue(uv) / (*cosSampledDir);
+		return Kt->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	} else if (passThroughEvent < P) {
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
@@ -356,7 +356,7 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW = P / Re;
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(uv) / (*cosSampledDir);
+		return Kr->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	} else {
 		*event = SPECULAR | TRANSMIT;
 		*sampledDir = transDir;
@@ -364,7 +364,7 @@ Spectrum ArchGlassMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW = (1.f - P) / Tr;
 
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Kt->GetColorValue(uv) / (*cosSampledDir);
+		return Kt->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	}
 }
 
@@ -396,18 +396,18 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const UV &uv,
 	if (Tr == 0.f)
 		return Spectrum();
 	else if (Re == 0.f)
-		return Kt->GetColorValue(uv);
+		return Kt->GetColorValue(uv).Clamp();
 	else if (passThroughEvent < P)
 		return Spectrum();
 	else
-		return Kt->GetColorValue(uv);
+		return Kt->GetColorValue(uv).Clamp();
 }
 
 void ArchGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	referencedTexs.insert(Kr);
-	referencedTexs.insert(Kt);
+	Kr->AddReferencedTextures(referencedTexs);
+	Kt->AddReferencedTextures(referencedTexs);
 }
 
 //------------------------------------------------------------------------------
@@ -449,7 +449,7 @@ Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector &fixedDir, Vector *sampledDir,
 	const float u0, const float u1,  const float passThroughEvent,
 	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
-	const float e = 1.f / (exponent->GetGreyValue(uv) + 1.f);
+	const float e = 1.f / (Max(exponent->GetGreyValue(uv), 0.f) + 1.f);
 	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
 
 	if (sampledDir->z * fixedDir.z > 0.f) {
@@ -457,7 +457,7 @@ Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 		*pdfW = 1.f;
 		*cosSampledDir = fabsf(sampledDir->z);
 		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(uv) / (*cosSampledDir);
+		return Kr->GetColorValue(uv).Clamp() / (*cosSampledDir);
 	} else
 		return Spectrum();
 }
@@ -465,8 +465,8 @@ Spectrum MetalMaterial::Sample(const bool fromLight, const UV &uv,
 void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	referencedTexs.insert(Kr);
-	referencedTexs.insert(exponent);
+	Kr->AddReferencedTextures(referencedTexs);
+	exponent->AddReferencedTextures(referencedTexs);
 }
 
 //------------------------------------------------------------------------------
@@ -645,7 +645,7 @@ void MixMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTex
 
 	matA->AddReferencedTextures(referencedTexs);
 	matB->AddReferencedTextures(referencedTexs);
-	referencedTexs.insert(mixFactor);
+	mixFactor->AddReferencedTextures(referencedTexs);
 }
 
 //------------------------------------------------------------------------------
@@ -683,8 +683,8 @@ Spectrum MatteTranslucentMaterial::Evaluate(const bool fromLight, const UV &uv,
 	if (fabsf(cosSampledDir) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const Spectrum r = Kr->GetColorValue(uv);
-	const Spectrum t = Kt->GetColorValue(uv) * 
+	const Spectrum r = Kr->GetColorValue(uv).Clamp();
+	const Spectrum t = Kt->GetColorValue(uv).Clamp() * 
 		// Energy conservation
 		(Spectrum(1.f) - r);
 
@@ -717,8 +717,8 @@ Spectrum MatteTranslucentMaterial::Sample(const bool fromLight, const UV &uv,
 
 	*pdfW *= .5f;
 
-	const Spectrum r = Kr->GetColorValue(uv);
-	const Spectrum t = Kt->GetColorValue(uv) * 
+	const Spectrum r = Kr->GetColorValue(uv).Clamp();
+	const Spectrum t = Kt->GetColorValue(uv).Clamp() * 
 		// Energy conservation
 		(Spectrum(1.f) - r);
 
@@ -746,6 +746,6 @@ void MatteTranslucentMaterial::Pdf(const bool fromLight, const UV &uv,
 void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	referencedTexs.insert(Kr);
-	referencedTexs.insert(Kt);
+	Kr->AddReferencedTextures(referencedTexs);
+	Kt->AddReferencedTextures(referencedTexs);
 }

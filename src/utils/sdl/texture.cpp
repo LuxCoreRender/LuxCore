@@ -332,3 +332,26 @@ void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
 	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
 		ims.push_back(it->second);
 }
+
+//------------------------------------------------------------------------------
+// Scale texture
+//------------------------------------------------------------------------------
+
+float ScaleTexture::GetGreyValue(const UV &uv) const {
+	return tex1->GetGreyValue(uv) * tex2->GetGreyValue(uv);
+}
+
+Spectrum ScaleTexture::GetColorValue(const UV &uv) const {
+	return tex1->GetColorValue(uv) * tex2->GetColorValue(uv);
+}
+
+float ScaleTexture::GetAlphaValue(const UV &uv) const {
+	return tex1->GetAlphaValue(uv) * tex2->GetAlphaValue(uv);
+}
+
+const UV ScaleTexture::GetDuDv() const {
+	const UV uv1 = tex1->GetDuDv();
+	const UV uv2 = tex2->GetDuDv();
+
+	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
+}

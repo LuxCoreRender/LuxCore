@@ -599,6 +599,21 @@ void CompiledScene::CompileTextures() {
 				tex->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(imt->GetImageMapInstance()->GetImgMap());
 				break;
 			}
+			case SCALE_TEX: {
+				ScaleTexture *st = static_cast<ScaleTexture *>(t);
+
+				tex->type = luxrays::ocl::SCALE_TEX;
+				const Texture *tex1 = st->GetTexture1();
+				if (dynamic_cast<const ScaleTexture *>(tex1))
+					throw std::runtime_error("Recursive scale texture is not supported");
+				tex->scaleTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = st->GetTexture2();
+				if (dynamic_cast<const ScaleTexture *>(tex2))
+					throw std::runtime_error("Recursive scale texture is not supported");
+				tex->scaleTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;
