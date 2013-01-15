@@ -944,37 +944,24 @@ float3 MixMaterial_GetPassThroughTransparency(__global Material *material,
 		IMAGEMAPS_PARAM_DECL) {
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
-//	TODO
-//	for (;;) {
-//		const float factor = Texture_GetGreyValue(&texs[currentMixMat->mix.mixFactorTexIndex], uv
-//				IMAGEMAPS_PARAM);
-//		const float weight2 = clamp(factor, 0.f, 1.f);
-//		const float weight1 = 1.f - weight2;
-//
-//		const bool sampleMatA = (passThroughEvent < weight1);
-//		passThroughEvent = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
-//		const uint matIndex = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
-//		__global Material *mat = &mats[matIndex];
-//
-//		if (mat->type == MIX) {
-//			currentMixMat = mat;
-//			continue;
-//		} else
-//			return Material_GetPassThroughTransparencyNoMix(mat, texs, uv, fixedDir, passThroughEvent
-//					IMAGEMAPS_PARAM);
-//	}
+	for (;;) {
+		const float factor = Texture_GetGreyValue(&texs[currentMixMat->mix.mixFactorTexIndex], uv
+				IMAGEMAPS_PARAM);
+		const float weight2 = clamp(factor, 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
 
-	const float factor = Texture_GetGreyValue(&texs[material->mix.mixFactorTexIndex], uv
-			IMAGEMAPS_PARAM);
-	const float weight2 = clamp(factor, 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
+		const bool sampleMatA = (passThroughEvent < weight1);
+		passThroughEvent = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
+		const uint matIndex = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
+		__global Material *mat = &mats[matIndex];
 
-	if (passThroughEvent < weight1)
-		return Material_GetPassThroughTransparencyNoMix(&mats[material->mix.matAIndex], texs, uv, fixedDir, passThroughEvent / weight1
+		if (mat->type == MIX) {
+			currentMixMat = mat;
+			continue;
+		} else
+			return Material_GetPassThroughTransparencyNoMix(mat, texs, uv, fixedDir, passThroughEvent
 					IMAGEMAPS_PARAM);
-	else
-		return Material_GetPassThroughTransparencyNoMix(&mats[material->mix.matBIndex], texs, uv, fixedDir, (passThroughEvent - weight2) / weight2
-					IMAGEMAPS_PARAM);
+	}
 }
 
 #endif
