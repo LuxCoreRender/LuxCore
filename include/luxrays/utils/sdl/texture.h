@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
