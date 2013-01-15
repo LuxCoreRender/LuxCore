@@ -244,7 +244,7 @@ private:
 		assert (index < width * height);
 
 		if (channelCount == 1)
-			return Spectrum(pixels[index]).Y();
+			return pixels[index];
 		else {
 			// channelCount = (3 or 4)
 			const float *pixel = &pixels[index * channelCount];
