@@ -420,7 +420,7 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 	const float3 r = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.krTexIndex], uv
 			TEXTURES_PARAM));
 	const float3 t = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.ktTexIndex], uv
-			IMAGEMAPS_PARAM)) * 
+			TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
 
@@ -455,7 +455,7 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 	const float3 r = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.krTexIndex], uv
 			TEXTURES_PARAM));
 	const float3 t = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.ktTexIndex], uv
-			IMAGEMAPS_PARAM)) * 
+			TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
 
