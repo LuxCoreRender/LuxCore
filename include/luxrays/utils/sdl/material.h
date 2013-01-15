@@ -107,11 +107,11 @@ public:
 	}
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 		if (emittedTex)
-			referencedTexs.insert(emittedTex);
+			emittedTex->AddReferencedTextures(referencedTexs);
 		if (bumpTex)
-			referencedTexs.insert(bumpTex);
+			bumpTex->AddReferencedTextures(referencedTexs);
 		if (normalTex)
-			referencedTexs.insert(normalTex);
+			normalTex->AddReferencedTextures(referencedTexs);
 	}
 
 protected:

@@ -52,6 +52,7 @@
 //  PARAM_ENABLE_TEX_CONST_FLOAT3
 //  PARAM_ENABLE_TEX_CONST_FLOAT4
 //  PARAM_ENABLE_TEX_IMAGEMAP
+//  PARAM_ENABLE_TEX_SCALE
 
 // (optional)
 //  PARAM_DIRECT_LIGHT_SAMPLING
@@ -254,14 +255,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
 					MATERIALS_PARAM
-					IMAGEMAPS_PARAM
 #endif
 					);
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
-					MATERIALS_PARAM
-					IMAGEMAPS_PARAM);
+					MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
 				const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r) * passThroughTrans;
 				VSTORE3F(pathThroughput, &task->pathStateBase.throughput.r);
@@ -280,9 +279,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				// Check if it is a light source (note: I can hit only triangle area light sources)
 				if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
 					float directPdfA;
-					const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, mats, texs,
+					const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
 							triLightDefs, &directPdfA
-							IMAGEMAPS_PARAM);
+							MATERIALS_PARAM);
 					if (!Spectrum_IsBlack(emittedRadiance)) {
 						// Add emitted radiance
 						float weight = 1.f;
@@ -386,13 +385,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					task->passThroughState.passThroughEvent
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
 					MATERIALS_PARAM
-					IMAGEMAPS_PARAM
 #endif
 					);
 
 			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
-					MATERIALS_PARAM
-					IMAGEMAPS_PARAM);
+					MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passthroughTrans)) {
 				const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r) * passthroughTrans;
 				VSTORE3F(lightRadiance, &task->directLightState.lightRadiance.r);
@@ -442,8 +439,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW
-					MATERIALS_PARAM
-					IMAGEMAPS_PARAM);
+					MATERIALS_PARAM);
 			}
 #elif (PARAM_DL_LIGHT_COUNT > 0)
 			// Pick a light source to sample
@@ -458,8 +454,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW
-					MATERIALS_PARAM
-					IMAGEMAPS_PARAM);
+					MATERIALS_PARAM);
 #elif defined(PARAM_HAS_SUNLIGHT)
 			// Pick a light source to sample
 			const float lightPickPdf = 1.f;
@@ -477,8 +472,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				float bsdfPdfW;
 				const float3 bsdfEval = BSDF_Evaluate(bsdf,
 						lightRayDir, &event, &bsdfPdfW
-						MATERIALS_PARAM
-						IMAGEMAPS_PARAM);
+						MATERIALS_PARAM);
 
 				if (!Spectrum_IsBlack(bsdfEval)) {
 					const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r);
@@ -528,8 +522,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const float3 bsdfSample = BSDF_Sample(bsdf,
 					Sampler_GetSamplePathVertex(IDX_BSDF_X), Sampler_GetSamplePathVertex(IDX_BSDF_Y),
 					&sampledDir, &lastPdfW, &cosSampledDir, &event
-					MATERIALS_PARAM
-					IMAGEMAPS_PARAM);
+					MATERIALS_PARAM);
 			const bool lastSpecular = ((event & SPECULAR) != 0);
 
 			// Russian Roulette

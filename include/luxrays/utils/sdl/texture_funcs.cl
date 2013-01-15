@@ -283,8 +283,13 @@ float3 ImageMapTexture_GetColorValue(__global Texture *texture, const float2 uv
 #endif
 
 //------------------------------------------------------------------------------
+// Generic texture functions
+//
+// They include the support for all texture but Scale
+// (because OpenCL doesn't support recursion)
+//------------------------------------------------------------------------------
 
-float Texture_GetGreyValue(__global Texture *texture, const float2 uv
+float Texture_GetGreyValueNoScale(__global Texture *texture, const float2 uv
 		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
@@ -309,7 +314,7 @@ float Texture_GetGreyValue(__global Texture *texture, const float2 uv
 	}
 }
 
-float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
+float3 Texture_GetColorValueNoScale(__global Texture *texture, const float2 uv
 		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
@@ -334,7 +339,7 @@ float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
 	}
 }
 
-float2 Texture_GetDuDv(__global Texture *texture) {
+float2 Texture_GetDuDvNoScale(__global Texture *texture) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
@@ -352,4 +357,84 @@ float2 Texture_GetDuDv(__global Texture *texture) {
 		default:
 			return 0.f;
 	}
+}
+
+//------------------------------------------------------------------------------
+// Scale texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_SCALE)
+
+float ScaleTexture_GetGreyValue(__global Texture *texture, const float2 uv
+		TEXTURES_PARAM_DECL) {
+	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
+	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
+
+	return Texture_GetGreyValueNoScale(tex1, uv
+				IMAGEMAPS_PARAM) *
+			Texture_GetGreyValueNoScale(tex2, uv
+				IMAGEMAPS_PARAM);
+}
+
+float3 ScaleTexture_GetColorValue(__global Texture *texture, const float2 uv
+		TEXTURES_PARAM_DECL) {
+	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
+	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
+
+	return Texture_GetColorValueNoScale(tex1, uv
+				IMAGEMAPS_PARAM) * 
+			Texture_GetColorValueNoScale(tex2, uv
+				IMAGEMAPS_PARAM);
+}
+
+float2 ScaleTexture_GetDuDv(__global Texture *texture
+		TEXTURES_PARAM_DECL) {
+	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
+	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
+
+	const float2 dudv1 = Texture_GetDuDvNoScale(tex1);
+	const float2 dudv2 = Texture_GetDuDvNoScale(tex2);
+
+	return (float2)(fmax(dudv1.x, dudv2.x), fmax(dudv1.y, dudv2.y));
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Generic texture functions with Scale support
+//------------------------------------------------------------------------------
+
+float Texture_GetGreyValue(__global Texture *texture, const float2 uv
+		TEXTURES_PARAM_DECL) {
+#if defined(PARAM_ENABLE_TEX_SCALE)
+	if (texture->type == SCALE_TEX)
+		return ScaleTexture_GetGreyValue(texture, uv
+				TEXTURES_PARAM);
+	else
+#endif
+		return Texture_GetGreyValueNoScale(texture, uv
+				IMAGEMAPS_PARAM);
+}
+
+float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
+		TEXTURES_PARAM_DECL) {
+#if defined(PARAM_ENABLE_TEX_SCALE)
+	if (texture->type == SCALE_TEX)
+		return ScaleTexture_GetColorValue(texture, uv
+				TEXTURES_PARAM);
+	else
+#endif
+		return Texture_GetColorValueNoScale(texture, uv
+				IMAGEMAPS_PARAM);
+}
+
+float2 Texture_GetDuDv(__global Texture *texture
+		TEXTURES_PARAM_DECL) {
+#if defined(PARAM_ENABLE_TEX_SCALE)
+	if (texture->type == SCALE_TEX) {
+		return ScaleTexture_GetDuDv(texture
+				TEXTURES_PARAM);
+	} else
+#endif
+		return Texture_GetDuDvNoScale(texture);
 }

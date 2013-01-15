@@ -81,6 +81,6 @@ std::string KernelSource_material_types =
 "// Some macro trick in order to have more readable code\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
-"#define MATERIALS_PARAM_DECL ,__global Material *mats, __global Texture *texs\n"
-"#define MATERIALS_PARAM ,mats, texs\n"
+"#define MATERIALS_PARAM_DECL , __global Material *mats TEXTURES_PARAM_DECL\n"
+"#define MATERIALS_PARAM , mats TEXTURES_PARAM\n"
 ; } }

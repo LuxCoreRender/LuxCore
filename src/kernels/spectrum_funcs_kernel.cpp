@@ -39,4 +39,8 @@ std::string KernelSource_spectrum_funcs =
 "float Spectrum_Y(const float3 s) {\n"
 "	return 0.212671f * s.s0 + 0.715160f * s.s1 + 0.072169f * s.s2;\n"
 "}\n"
+"\n"
+"float3 Spectrum_Clamp(const float3 s) {\n"
+"	return clamp(s, BLACK, WHITE);\n"
+"}\n"
 ; } }
