@@ -127,19 +127,26 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 
 #define IDX_SCREEN_X 0
 #define IDX_SCREEN_Y 1
-#define IDX_EYE_PASSTROUGH 2
-#if defined(PARAM_CAMERA_HAS_DOF)
+#if defined(PARAM_CAMERA_HAS_DOF) && defined(PARAM_HAS_PASSTHROUGH)
+#define IDX_EYE_PASSTHROUGH 2
 #define IDX_DOF_X 3
 #define IDX_DOF_Y 4
 #define IDX_BSDF_OFFSET 5
-#else
+#elif defined(PARAM_CAMERA_HAS_DOF)
+#define IDX_DOF_X 2
+#define IDX_DOF_Y 3
+#define IDX_BSDF_OFFSET 4
+#elif defined(PARAM_HAS_PASSTHROUGH)
+#define IDX_EYE_PASSTHROUGH 2
 #define IDX_BSDF_OFFSET 3
+#else
+#define IDX_BSDF_OFFSET 2
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING) && defined(PARAM_HAS_PASSTHROUGH)
 
-#define IDX_PASSTROUGH 0
+#define IDX_PASSTHROUGH 0
 #define IDX_BSDF_X 1
 #define IDX_BSDF_Y 2
 #define IDX_DIRECTLIGHT_X 3
@@ -165,7 +172,7 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 
 #elif defined(PARAM_HAS_PASSTHROUGH)
 
-#define IDX_PASSTROUGH 0
+#define IDX_PASSTHROUGH 0
 #define IDX_BSDF_X 1
 #define IDX_BSDF_Y 2
 #define IDX_RR 3

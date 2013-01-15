@@ -778,8 +778,10 @@ void PathOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	const size_t uDataEyePathVertexSize =
-		// IDX_SCREEN_X, IDX_SCREEN_Y, IDX_EYE_PASSTROUGHT
-		sizeof(float) * 3 +
+		// IDX_SCREEN_X, IDX_SCREEN_Y
+		sizeof(float) * 2 +
+		// IDX_EYE_PASSTROUGHT
+		(hasPassThrough ? sizeof(float) : 0) +
 		// IDX_DOF_X, IDX_DOF_Y
 		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
 	const size_t uDataPerPathVertexSize =
