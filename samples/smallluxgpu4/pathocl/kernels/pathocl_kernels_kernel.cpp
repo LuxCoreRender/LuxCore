@@ -564,7 +564,7 @@ std::string KernelSource_pathocl_kernels =
 "				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro\n"
 "				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(\n"
 "					sample, sampleDataPathBase, depth + 1);\n"
-"				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(IDX_PASSTROUGH);\n"
+"				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(IDX_PASSTHROUGH);\n"
 "#endif\n"
 "				pathState = RT_NEXT_VERTEX;\n"
 "			} else\n"
