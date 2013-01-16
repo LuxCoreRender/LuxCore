@@ -91,7 +91,10 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 		const UV uvdv(hitPointUV.u, hitPointUV.v + dudv.v);
 		const float bv = bm->GetGreyValue(uvdv);
 
-		const Vector bump(bu - b0, bv - b0, 1.f);
+		// bumpScale is a fixed scale factor to try to more closely match
+		// LuxRender bump mapping
+		const float bumpScale = 50.f;
+		const Vector bump(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
 
 		Vector v1, v2;
 		CoordinateSystem(Vector(shadeN), &v1, &v2);

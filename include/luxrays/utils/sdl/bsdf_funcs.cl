@@ -135,7 +135,10 @@ void BSDF_Init(
 		const float bv = Texture_GetGreyValue(tex, uvdv
 			TEXTURES_PARAM);
 
-		const float3 bump = (float3)(bu - b0, bv - b0, 1.f);
+		// bumpScale is a fixed scale factor to try to more closely match
+		// LuxRender bump mapping
+		const float bumpScale = 50.f;
+		const float3 bump = (float3)(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
 
 		float3 v1, v2;
 		CoordinateSystem(shadeN, &v1, &v2);
