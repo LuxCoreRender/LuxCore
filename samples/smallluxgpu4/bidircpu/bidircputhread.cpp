@@ -71,8 +71,10 @@ void BiDirCPURenderThread::ConnectVertices(
 				return;
 
 			// Trace  ray between the two vertices
-			Ray eyeRay(eyeVertex.bsdf.hitPoint, eyeDir);
-			eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
+			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint), MachineEpsilon::E(eyeDistance));
+			Ray eyeRay(eyeVertex.bsdf.hitPoint, eyeDir,
+					epsilon,
+					eyeDistance - epsilon);
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
@@ -126,8 +128,10 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 	Spectrum bsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 	if (!bsdfEval.Black()) {
-		Ray eyeRay(lensPoint, eyeDir);
-		eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
+		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
+		Ray eyeRay(lensPoint, eyeDir,
+				epsilon,
+				eyeDistance - epsilon);
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
@@ -190,9 +194,10 @@ void BiDirCPURenderThread::DirectLightSampling(
 			Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 			if (!bsdfEval.Black()) {
+				const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint), MachineEpsilon::E(distance));
 				Ray shadowRay(eyeVertex.bsdf.hitPoint, lightRayDir,
-						MachineEpsilon::E(eyeVertex.bsdf.hitPoint),
-						distance - MachineEpsilon::E(distance));
+						epsilon,
+						distance - epsilon);
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;

@@ -65,9 +65,10 @@ void PathCPURenderThread::DirectLightSampling(
 			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
 			if (!bsdfEval.Black()) {
+				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint), MachineEpsilon::E(distance));
 				Ray shadowRay(bsdf.hitPoint, lightRayDir,
-						MachineEpsilon::E(bsdf.hitPoint),
-						distance - MachineEpsilon::E(distance));
+						epsilon,
+						distance - epsilon);
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;

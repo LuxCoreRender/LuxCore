@@ -51,8 +51,10 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
 	if (!bsdfEval.Black()) {
-		Ray eyeRay(lensPoint, eyeDir);
-		eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
+		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
+		Ray eyeRay(lensPoint, eyeDir,
+				epsilon,
+				eyeDistance - epsilon);
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
