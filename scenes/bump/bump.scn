@@ -10,7 +10,7 @@ scene.textures.bumpmap.uvscale = 1 1
 #scene.textures.light2.gain = 7.0
 #scene.textures.light2.uvscale = 1 -1
 scene.textures.scaled_bumpmap.type = scale
-scene.textures.scaled_bumpmap.texture1 = 4.0
+scene.textures.scaled_bumpmap.texture1 = 0.1
 scene.textures.scaled_bumpmap.texture2 = bumpmap
 ################################################################################
 scene.materials.mat_light.type = matte
