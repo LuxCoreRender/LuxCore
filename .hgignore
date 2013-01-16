@@ -2,13 +2,13 @@
 ^lib/libsmallluxgpu4.a
 ^doxygen-luxrays.conf
 ^doxygen/luxrays.template
-^doxygen-slg.conf
-^doxygen/slg.template
+^doxygen-slg4.conf
+^doxygen/slg4.template
 ^bin/*
 ^doc/*
 ^samples/luxmark/scenes/room/*
-^samples/(benchpixel|benchsimpel|luxmark|smallluxgpu|smallppmgpu)/(Debug|Release)/
-(benchpixel|luxmark|smallluxgpu|smallppmgpu|slg|LUXRAYS|benchsimple)\.dir
+^samples/(benchsimple|luxmark|smallluxgpu)/(Debug|Release)/
+(luxmark|smallluxgpu|slg|LUXRAYS|benchsimple)\.dir
 ^src/(Debug|Release)/
 ^(Debug|Release|x64)/
 ^nbproject/*

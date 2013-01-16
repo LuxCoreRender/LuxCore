@@ -21,6 +21,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// NOTE: DEFAULT_EPSILON_MIN is very small. A plane passing exactly for the
+// origin will suffer of self shadow problems because the Ray class will use
+// MachineEpsilon(ray.o) as epsilon for the ray.mint. However it is pretty much
+// the only case where there is a problem so better to not change anything.
+// As workaround, moving the plane away from the origin is enough.
 #define DEFAULT_EPSILON_MIN 1e-9f
 #define DEFAULT_EPSILON_MAX 1e-1f
 #define DEFAULT_EPSILON_STATIC 1e-5f

@@ -19,6 +19,51 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
+#############################################################################
+#
+# LuxRays Docs
+#
+#############################################################################
+
+find_package(Doxygen)
+
+if(DOXYGEN_FOUND)
+	message(STATUS "Found Doxygen and generating LuxRays documentation")
+
+	# Generate doxygen.template
+	set(DOXYGEN_LUXRAYS_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/../doxygen/luxrays.template)
+	configure_file(
+	  "${DOXYGEN_LUXRAYS_TEMPLATE}.in"
+	  "${DOXYGEN_LUXRAYS_TEMPLATE}"
+	  )
+
+	set(DOXYGEN_LUXRAYS_INPUT ${CMAKE_CURRENT_BINARY_DIR}/../doxygen-luxrays.conf)
+	set(DOXYGEN_LUXRAYS_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/../doc/luxrays)
+	set(DOXYGEN_LUXRAYS_OUTPUT ${DOXYGEN_OUTPUT_DIR}/html/index.html)
+
+	message(STATUS "Doxygen LuxRays output: " ${DOXYGEN_LUXRAYS_OUTPUT})
+
+	if(DOXYGEN_DOT_FOUND)
+			message(STATUS "Found dot")
+			set(DOXYGEN_DOT_CONF "HAVE_DOT = YES")
+	endif(DOXYGEN_DOT_FOUND)
+
+	add_custom_command(
+		OUTPUT ${DOXYGEN_LUXRAYS_OUTPUT}
+		# Creating custom doxygen-luxrays.conf
+		COMMAND mkdir -p ${DOXYGEN_LUXRAYS_OUTPUT_DIR}
+		COMMAND cp ${DOXYGEN_LUXRAYS_TEMPLATE} ${DOXYGEN_LUXRAYS_INPUT}
+		COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../include  ${CMAKE_CURRENT_SOURCE_DIR}/../src >> ${DOXYGEN_LUXRAYS_INPUT}
+		COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_LUXRAYS_OUTPUT_DIR} >> ${DOXYGEN_LUXRAYS_INPUT}
+		COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_LUXRAYS_INPUT}
+		# Launch doxygen
+		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_LUXRAYS_INPUT}
+		DEPENDS ${DOXYGEN_LUXRAYS_TEMPLATE}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../..
+	)
+
+	add_custom_target(apidoc_luxrays DEPENDS ${DOXYGEN_LUXRAYS_OUTPUT})
+endif(DOXYGEN_FOUND)
 
 ###########################################################################
 #
