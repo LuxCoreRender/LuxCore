@@ -493,9 +493,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 					// Setup the shadow ray
 					const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.x);
+					const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
 					Ray_Init4(ray, hitPoint, lightRayDir,
-						MachineEpsilon_E_Float3(hitPoint),
-						distance - MachineEpsilon_E(distance));
+						epsilon,
+						distance - epsilon);
 					pathState = RT_DL;
 				}
 			}

@@ -89,8 +89,10 @@ void BiDirState::ConnectVertices(HybridRenderThread *renderThread,
 				return;
 
 			// Trace  ray between the two vertices
-			Ray eyeRay(eyeVertex.bsdf.hitPoint, eyeDir);
-			eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
+			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint), MachineEpsilon::E(eyeDistance));
+			Ray eyeRay(eyeVertex.bsdf.hitPoint, eyeDir,
+					epsilon,
+					eyeDistance - epsilon);
 
 			if (eyeVertex.depth >= renderEngine->rrDepth) {
 				// Russian Roulette
@@ -143,8 +145,10 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 	Spectrum bsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 	if (!bsdfEval.Black()) {
-		Ray eyeRay(lensPoint, eyeDir);
-		eyeRay.maxt = eyeDistance - MachineEpsilon::E(eyeDistance);
+		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
+		Ray eyeRay(lensPoint, eyeDistance,
+				epsilon,
+				eyeDistance - epsilon);
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
@@ -207,9 +211,10 @@ void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 			Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 			if (!bsdfEval.Black()) {
+				const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint), MachineEpsilon::E(distance));
 				Ray shadowRay(eyeVertex.bsdf.hitPoint, lightRayDir,
-						MachineEpsilon::E(eyeVertex.bsdf.hitPoint),
-						distance - MachineEpsilon::E(distance));
+						epsilon,
+						distance - epsilon);
 
 				if (eyeVertex.depth >= renderEngine->rrDepth) {
 					// Russian Roulette
