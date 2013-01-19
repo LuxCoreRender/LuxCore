@@ -41,8 +41,7 @@ typedef unsigned int u_int;
 using std::isnan;
 #endif
 
-#if defined(__APPLE__) // OSX adaptions Jens Verwiebe
-#  define memalign(a,b) valloc(b)
+#if defined(__APPLE__)
 #include <string>
 typedef unsigned int u_int;
 #endif
