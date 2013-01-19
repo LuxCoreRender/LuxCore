@@ -197,10 +197,6 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, luxrays::utils::Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
-
-protected:
-	u_int forceGPUWorkSize;
-	u_int forceCPUWorkSize;
 };
 
 //------------------------------------------------------------------------------
