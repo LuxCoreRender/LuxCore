@@ -77,8 +77,8 @@ public:
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 			"] Suggested work group size: " << workGroupSize);
 
-		if (device->GetForceWorkGroupSize() > 0) {
-			workGroupSize = device->GetForceWorkGroupSize();
+		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0) {
+			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				"] Forced work group size: " << workGroupSize);
 		} else if (workGroupSize > 256) {
