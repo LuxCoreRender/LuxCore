@@ -111,22 +111,6 @@ void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weig
 			isnan(rad->b) || isinf(rad->b) ||
 			isnan(weight) || isinf(weight))
 		printf(\"NaN/Inf. error: (%f, %f, %f) [%f]\\n\", rad->r, rad->g, rad->b, weight);*/
-	
-#if defined(__APPLE_FIX__)
-
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&pixel->c.r, weight * rad.r);
-	AtomicAdd(&pixel->c.g, weight * rad.g);
-	AtomicAdd(&pixel->c.b, weight * rad.b);
-	AtomicAdd(&pixel->count, weight);
-#else
-	pixel->c.r += weight * rad.r;
-	pixel->c.g += weight * rad.g;
-	pixel->c.b += weight * rad.b;
-	pixel->count += weight;
-#endif
-
-#else
 
 	float4 s;
 	s.xyz = rad;
@@ -142,8 +126,6 @@ void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weig
 	float4 p = VLOAD4F(&(pixel->c.r));
 	p += s;
 	VSTORE4F(p, &(pixel->c.r));
-#endif
-
 #endif
 }
 

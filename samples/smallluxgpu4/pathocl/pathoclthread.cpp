@@ -35,11 +35,6 @@
 #include "luxrays/opencl/intersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 
-#if defined(__APPLE__)
-//OSX version detection
-#include <sys/utsname.h>
-#endif
-
 using namespace std;
 using namespace luxrays;
 using namespace luxrays::sdl;
@@ -531,14 +526,6 @@ void PathOCLRenderThread::InitKernels() {
 
 	// Check the OpenCL vendor and use some specific compiler options
 
-#if defined(__APPLE__) // OSX version detection
-	{
-		struct utsname retval;
-		uname(&retval);
-		if(retval.release[0] == '1' && retval.release[1] < '1') // result < darwin 11
-			ss << " -D __APPLE_FIX__";
-	}
-#endif
 
 	//--------------------------------------------------------------------------
 
