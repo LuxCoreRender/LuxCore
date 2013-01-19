@@ -615,8 +615,8 @@ void PathOCLRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel");
 		initKernel = new cl::Kernel(*program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		if (intersectionDevice->GetForceWorkGroupSize() > 0)
-			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			initWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 		//--------------------------------------------------------------------------
 		// InitFB kernel
@@ -625,8 +625,8 @@ void PathOCLRenderThread::InitKernels() {
 		delete initFBKernel;
 		initFBKernel = new cl::Kernel(*program, "InitFrameBuffer");
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		if (intersectionDevice->GetForceWorkGroupSize() > 0)
-			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			initFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 		//----------------------------------------------------------------------
 		// AdvancePaths kernel
@@ -636,8 +636,8 @@ void PathOCLRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel");
 		advancePathsKernel = new cl::Kernel(*program, "AdvancePaths");
 		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		if (intersectionDevice->GetForceWorkGroupSize() > 0)
-			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			advancePathsWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 		//----------------------------------------------------------------------
 

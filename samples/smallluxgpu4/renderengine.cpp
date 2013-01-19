@@ -31,6 +31,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
+#include "luxrays/opencl/device.h"
 
 using namespace std;
 using namespace luxrays;
@@ -187,9 +188,9 @@ void RenderEngine::UpdateFilm() {
 		const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
 		if (haltthreshold >= 0.f) {
 			// Check if it is time to run the convergence test again
-			const unsigned int imgWidth = film->GetWidth();
-			const unsigned int imgHeight = film->GetHeight();
-			const unsigned int pixelCount = imgWidth * imgHeight;
+			const u_int imgWidth = film->GetWidth();
+			const u_int imgHeight = film->GetHeight();
+			const u_int pixelCount = imgWidth * imgHeight;
 			const double now = WallClockTime();
 
 			// Do not run the test if we don't have at least 16 new samples per pixel
@@ -315,8 +316,8 @@ void CPURenderThread::Stop() {
 }
 
 void CPURenderThread::StartRenderThread() {
-	const unsigned int filmWidth = renderEngine->film->GetWidth();
-	const unsigned int filmHeight = renderEngine->film->GetHeight();
+	const u_int filmWidth = renderEngine->film->GetWidth();
+	const u_int filmHeight = renderEngine->film->GetHeight();
 
 	delete threadFilm;
 	threadFilm = new Film(filmWidth, filmHeight,
@@ -454,8 +455,8 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
-	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const unsigned int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
+	forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
+	forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 
 	// Start OpenCL devices
@@ -472,7 +473,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 	}
 
 	for (size_t i = 0; i < descs.size(); ++i) {
-		DeviceDescription *desc = descs[i];
+		OpenCLDeviceDescription *desc = static_cast<OpenCLDeviceDescription *>(descs[i]);
 
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
@@ -519,7 +520,7 @@ HybridRenderState::~HybridRenderState() {
 //------------------------------------------------------------------------------
 
 HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
-		const unsigned int index, IntersectionDevice *dev) {
+		const u_int index, IntersectionDevice *dev) {
 	device = dev;
 
 	renderThread = NULL;
@@ -563,8 +564,8 @@ void HybridRenderThread::Stop() {
 }
 
 void HybridRenderThread::StartRenderThread() {
-	const unsigned int filmWidth = renderEngine->film->GetWidth();
-	const unsigned int filmHeight = renderEngine->film->GetHeight();
+	const u_int filmWidth = renderEngine->film->GetWidth();
+	const u_int filmHeight = renderEngine->film->GetHeight();
 
 	delete threadFilm;
 	threadFilm = new Film(filmWidth, filmHeight, true, true, false);
@@ -649,8 +650,8 @@ void HybridRenderThread::RenderFunc() {
 	boost::this_thread::disable_interruption di;
 
 	Film *film = threadFilm;
-	const unsigned int filmWidth = film->GetWidth();
-	const unsigned int filmHeight = film->GetHeight();
+	const u_int filmWidth = film->GetWidth();
+	const u_int filmHeight = film->GetHeight();
 	pixelCount = filmWidth * filmHeight;
 
 	RandomGenerator *rndGen = new RandomGenerator(threadIndex + renderEngine->seedBase);
