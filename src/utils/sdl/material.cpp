@@ -991,6 +991,10 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 		if (coatingF.Black())
 			return Spectrum();
 
+		*cosSampledDir = fabsf(sampledDir->z);
+		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			return Spectrum();
+
 		// Evaluate base BSDF (Matte BSDF)
 		basePdf = fabsf((fromLight ? fixedDir.z : sampledDir->z) * INV_PI);
 		baseF = Kd->GetColorValue(uv).Clamp() * INV_PI;
