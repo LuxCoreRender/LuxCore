@@ -813,8 +813,7 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum ks, const float ro
 	const float cosi = fabsf(sampledDir.z);
 
 	const Vector wh(Normalize(fixedDir + sampledDir));
-	const float u = AbsDot(sampledDir, wh);
-	const Spectrum S = FresnelSlick_Evaluate(ks, u);
+	const Spectrum S = FresnelSlick_Evaluate(ks, AbsDot(sampledDir, wh));
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
 	const float factor = SchlickDistribution_D(roughness, wh) * G / (4.f * cosi);
@@ -901,14 +900,55 @@ float Glossy2Material::SchlickBSDF_CoatingPdf(const float roughness, const Vecto
 Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	if (directPdfW)
-		*directPdfW = fabsf((fromLight ? eyeDir.z : lightDir.z) * INV_PI);
+	const Vector &fixedDir = fromLight ? lightDir : eyeDir;
+	const Vector &sampledDir = fromLight ? eyeDir : lightDir;
 
-	if (reversePdfW)
-		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
+	const Spectrum baseF = Kd->GetColorValue(uv).Clamp() * INV_PI;
+	if (eyeDir.z <= 0.f) {
+		// Back face: no coating
 
+		if (directPdfW)
+			*directPdfW = fabsf(sampledDir.z * INV_PI);
+
+		if (reversePdfW)
+			*reversePdfW = fabsf(fixedDir.z * INV_PI);
+
+		*event = DIFFUSE | REFLECT;
+		return baseF;
+	}
+
+	// Front face: coating+base
 	*event = GLOSSY | REFLECT;
-	return Kd->GetColorValue(uv).Clamp() * INV_PI;
+
+	const Spectrum ks = Ks->GetColorValue(uv).Clamp();
+	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
+	const float roughness = u * u;
+
+	if (directPdfW) {
+		const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
+		const float wBase = 1.f - wCoating;
+
+		*directPdfW = wBase * fabsf(sampledDir.z * INV_PI) +
+				wCoating * SchlickBSDF_CoatingPdf(roughness, fixedDir, sampledDir);
+	}
+
+	if (reversePdfW) {
+		const float wCoatingR = SchlickBSDF_CoatingWeight(ks, sampledDir);
+		const float wBaseR = 1.f - wCoatingR;
+
+		*reversePdfW = wBaseR * fabsf(fixedDir.z * INV_PI) +
+				wCoatingR * SchlickBSDF_CoatingPdf(roughness, sampledDir, fixedDir);
+	}
+
+	// Coating fresnel factor
+	const Vector H(Normalize(fixedDir + sampledDir));
+	const Spectrum S = FresnelSlick_Evaluate(ks, AbsDot(sampledDir, H));
+
+	const Spectrum coatingF = SchlickBSDF_CoatingF(ks, roughness, fixedDir, sampledDir);
+
+	// blend in base layer Schlick style
+	// assumes coating bxdf takes fresnel factor S into account
+	return coatingF + (Spectrum(1.f) - S) * baseF;
 }
 
 Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
@@ -918,10 +958,9 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 	if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const Spectrum ks = Ks->GetColorValue(uv);
+	const Spectrum ks = Ks->GetColorValue(uv).Clamp();
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float roughness = u * u;
-
 
 	// Coating is used only on the front face
 	const float wCoating = (fixedDir.z <= 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, fixedDir);
@@ -965,8 +1004,7 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 
 		// Coating fresnel factor
 		const Vector H(Normalize(fixedDir + *sampledDir));
-		const float u = AbsDot(*sampledDir, H);
-		const Spectrum S = FresnelSlick_Evaluate(ks, u);
+		const Spectrum S = FresnelSlick_Evaluate(ks, AbsDot(*sampledDir, H));
 
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
@@ -981,11 +1019,28 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 void Glossy2Material::Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	if (directPdfW)
-		*directPdfW = fabsf((fromLight ? eyeDir.z : lightDir.z) * INV_PI);
+	const Vector &fixedDir = fromLight ? lightDir : eyeDir;
+	const Vector &sampledDir = fromLight ? eyeDir : lightDir;
 
-	if (reversePdfW)
-		*reversePdfW = fabsf((fromLight ? lightDir.z : eyeDir.z) * INV_PI);
+	const Spectrum ks = Ks->GetColorValue(uv).Clamp();
+	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
+	const float roughness = u * u;
+
+	if (directPdfW) {
+		const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
+		const float wBase = 1.f - wCoating;
+
+		*directPdfW = wBase * fabsf(sampledDir.z * INV_PI) +
+				wCoating * SchlickBSDF_CoatingPdf(roughness, fixedDir, sampledDir);
+	}
+
+	if (reversePdfW) {
+		const float wCoatingR = SchlickBSDF_CoatingWeight(ks, sampledDir);
+		const float wBaseR = 1.f - wCoatingR;
+
+		*reversePdfW = wBaseR * fabsf(fixedDir.z * INV_PI) +
+				wCoatingR * SchlickBSDF_CoatingPdf(roughness, sampledDir, fixedDir);
+	}
 }
 
 void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
