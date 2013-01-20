@@ -713,7 +713,13 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "0.5 0.5 0.5"));
 
 		return new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
-	} else 
+	} else if (matType == "glossy2") {
+		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.5 0.5 0.5"));
+		Texture *ks = GetTexture(props.GetString(propName + ".ks", "0.5 0.5 0.5"));
+		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
+
+		return new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu);
+	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
 

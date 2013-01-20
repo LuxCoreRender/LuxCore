@@ -92,7 +92,7 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	// Used to generate rays
 	const Transform worldToCamera = LookAt(orig, target, up);
 	cameraToWorld = Inverse(worldToCamera);
-	
+
 	// Compute projective camera transformations
 	screenToCamera = Inverse(Perspective(fieldOfView, clipHither, clipYon));
 	screenToWorld = cameraToWorld * screenToCamera;

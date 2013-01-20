@@ -45,7 +45,7 @@ namespace sdl {
 class Scene;
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT, GLOSSY2
 } MaterialType;
 
 class Material {
@@ -472,6 +472,61 @@ public:
 private:
 	const Texture *Kr;
 	const Texture *Kt;
+};
+
+//------------------------------------------------------------------------------
+// Glossy2 material
+//------------------------------------------------------------------------------
+
+class Glossy2Material : public Material {
+public:
+	Glossy2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *kd, const Texture *ks, const Texture *u) : Material(emitted, bump, normal),
+			Kd(kd), Ks(ks), nu(u) { }
+
+	virtual MaterialType GetType() const { return GLOSSY2; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
+
+	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual Spectrum Sample(const bool fromLight, const UV &uv,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float passThroughEvent,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	const Texture *GetKd() const { return Kd; }
+	const Texture *GetKs() const { return Ks; }
+	const Texture *GetNu() const { return nu; }
+
+private:
+
+	float SchlickDistribution_SchlickZ(const float roughness, float cosNH) const;
+	float SchlickDistribution_SchlickA(const Vector &H) const;
+	float SchlickDistribution_D(const float roughness, const Vector &wh) const;
+	float SchlickDistribution_SchlickG(const float roughness, const float costheta) const;
+	float SchlickDistribution_Pdf(const float roughness, const Vector &wh) const;
+
+	float SchlickDistribution_G(const float roughness, const Vector &fixedDir,
+		const Vector &sampledDir) const;
+
+
+	Spectrum FresnelSlick_Evaluate(const Spectrum ks, const float cosi) const;
+
+	float SchlickBSDF_CoatingWeight(const Spectrum ks, const Vector &fixedDir) const;
+	Spectrum SchlickBSDF_CoatingF(const Spectrum ks, const float roughness,
+		const Vector &fixedDir,	const Vector &sampledDir) const;
+	float SchlickBSDF_CoatingPdf(const float roughness, const Vector &fixedDir,
+		const Vector &sampledDir) const;
+
+	const Texture *Kd;
+	const Texture *Ks;
+	const Texture *nu;
 };
 
 } }
