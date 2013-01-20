@@ -822,6 +822,72 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum ks, const float ro
 	return factor * S;
 }
 
+static float GetPhi(const float a, const float b) {
+	return M_PI * .5f * sqrtf(a * b / (1.f - a * (1.f - b)));
+}
+
+void Glossy2Material::SchlickDistribution_SampleH(const float roughness,
+		const float u0, const float u1, Vector *wh, float *d, float *pdf) const {
+	float u1x4 = u1 * 4.f;
+	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
+	const float cosTheta = sqrtf(cos2Theta);
+	const float sinTheta = sqrtf(1.f - cos2Theta);
+	const float p = 1.f;
+	float phi;
+	if (u1x4 < 1.f) {
+		phi = GetPhi(u1x4 * u1x4, p * p);
+	} else if (u1x4 < 2.f) {
+		u1x4 = 2.f - u1x4;
+		phi = M_PI - GetPhi(u1x4 * u1x4, p * p);
+	} else if (u1x4 < 3.f) {
+		u1x4 -= 2.f;
+		phi = M_PI + GetPhi(u1x4 * u1x4, p * p);
+	} else {
+		u1x4 = 4.f - u1x4;
+		phi = M_PI * 2.f - GetPhi(u1x4 * u1x4, p * p);
+	}
+
+	*wh = Vector(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
+	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh) * INV_PI;
+	*pdf = *d;
+}
+
+Spectrum Glossy2Material::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
+		const float roughness, const Vector &fixedDir, Vector *sampledDir,
+		float u0, float u1, float *pdf) const {
+	// No sampling on the back face
+	if (fixedDir.z <= 0.f)
+		return Spectrum();
+
+	Vector wh;
+	float d, specPdf;
+	SchlickDistribution_SampleH(roughness, u0, u1, &wh, &d, &specPdf);
+	const float cosWH = Dot(fixedDir, wh);
+	*sampledDir = 2.f * cosWH * wh - fixedDir;
+
+	if (sampledDir->z <= 0.f)
+		return Spectrum();
+
+	const float coso = fabsf(fixedDir.z);
+	const float cosi = fabsf(sampledDir->z);
+
+	*pdf = specPdf / (4.f * cosWH);
+	if (*pdf <= 0.f)
+		return Spectrum();
+
+	Spectrum S = FresnelSlick_Evaluate(ks, cosWH);
+
+	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
+	if (!fromLight)
+		//CoatingF(sw, *wi, wo, f_);
+		S *= d * G / (4.f * coso);
+	else
+		//CoatingF(sw, wo, *wi, f_);
+		S *= d * G / (4.f * cosi);
+
+	return S;
+}
+
 float Glossy2Material::SchlickBSDF_CoatingPdf(const float roughness, const Vector &fixedDir,
 		const Vector &sampledDir) const {
 	// No sampling on the back face
@@ -853,13 +919,16 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 		return Spectrum();
 
 	const Spectrum ks = Ks->GetColorValue(uv);
+	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
+	const float roughness = u * u;
+
 
 	// Coating is used only on the front face
 	const float wCoating = (fixedDir.z <= 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, fixedDir);
-	const float wBase = 1.f;//1.f - wCoating;
+	const float wBase = 1.f - wCoating;
 
 	float basePdf, coatingPdf;
-	Spectrum baseF, coatingF, slickEval;
+	Spectrum baseF, coatingF;
 
 	if (passThroughEvent < wBase) {
 		// Sample base BSDF (Matte BSDF)
@@ -869,18 +938,25 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
-		*event = DIFFUSE | REFLECT;
 		baseF = Kd->GetColorValue(uv).Clamp() * INV_PI;
 
 		// Evaluate coating BSDF (Schlick BSDF)
-		const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
-		const float roughness = u * u;
-
-
 		coatingF = SchlickBSDF_CoatingF(ks, roughness, fixedDir, *sampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, fixedDir, *sampledDir);
+
+		*event = DIFFUSE | REFLECT;
 	} else {
-		return Spectrum();
+		// Sample coating BSDF (Schlick BSDF)
+		coatingF = SchlickBSDF_CoatingSampleF(fromLight, ks, roughness,
+				fixedDir, sampledDir, u0, u1, &coatingPdf);
+		if (coatingF.Black())
+			return Spectrum();
+
+		// Evaluate base BSDF (Matte BSDF)
+		basePdf = fabsf((fromLight ? fixedDir.z : sampledDir->z) * INV_PI);
+		baseF = Kd->GetColorValue(uv).Clamp() * INV_PI;
+
+		*event = GLOSSY | REFLECT;
 	}
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
@@ -896,7 +972,7 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 		// coatingF already takes fresnel factor S into account
 		return coatingF + (Spectrum(1.f) - S) * baseF;
 	} else {
-		// Front face reflection: coating
+		// Back face reflection: base
 
 		return baseF;
 	}

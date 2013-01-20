@@ -510,17 +510,20 @@ private:
 	float SchlickDistribution_SchlickA(const Vector &H) const;
 	float SchlickDistribution_D(const float roughness, const Vector &wh) const;
 	float SchlickDistribution_SchlickG(const float roughness, const float costheta) const;
+	void SchlickDistribution_SampleH(const float roughness,
+		const float u0, const float u1, Vector *wh, float *d, float *pdf) const;
 	float SchlickDistribution_Pdf(const float roughness, const Vector &wh) const;
-
 	float SchlickDistribution_G(const float roughness, const Vector &fixedDir,
 		const Vector &sampledDir) const;
-
 
 	Spectrum FresnelSlick_Evaluate(const Spectrum ks, const float cosi) const;
 
 	float SchlickBSDF_CoatingWeight(const Spectrum ks, const Vector &fixedDir) const;
 	Spectrum SchlickBSDF_CoatingF(const Spectrum ks, const float roughness,
 		const Vector &fixedDir,	const Vector &sampledDir) const;
+	Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
+		const float roughness, const Vector &fixedDir, Vector *sampledDir,
+		float u0, float u1, float *pdf) const;
 	float SchlickBSDF_CoatingPdf(const float roughness, const Vector &fixedDir,
 		const Vector &sampledDir) const;
 
