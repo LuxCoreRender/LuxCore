@@ -945,7 +945,14 @@ Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 	// Front face: coating+base
 	*event = GLOSSY | REFLECT;
 
-	const Spectrum ks = Ks->GetColorValue(uv).Clamp();
+	Spectrum ks = Ks->GetColorValue(uv);
+	const float i = index->GetGreyValue(uv);
+	if (i > 0.f) {
+		const float ti = (i - 1.f) / (i + 1.f);
+		ks *= ti * ti;
+	}
+	ks.Clamp();
+
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
 	const float u2 = u * u;
@@ -994,7 +1001,14 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 	if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const Spectrum ks = Ks->GetColorValue(uv).Clamp();
+	Spectrum ks = Ks->GetColorValue(uv);
+	const float i = index->GetGreyValue(uv);
+	if (i > 0.f) {
+		const float ti = (i - 1.f) / (i + 1.f);
+		ks *= ti * ti;
+	}
+	ks.Clamp();
+
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
 	const float u2 = u * u;
@@ -1073,7 +1087,14 @@ void Glossy2Material::Pdf(const bool fromLight, const UV &uv,
 	const Vector &fixedDir = fromLight ? lightDir : eyeDir;
 	const Vector &sampledDir = fromLight ? eyeDir : lightDir;
 
-	const Spectrum ks = Ks->GetColorValue(uv).Clamp();
+	Spectrum ks = Ks->GetColorValue(uv);
+	const float i = index->GetGreyValue(uv);
+	if (i > 0.f) {
+		const float ti = (i - 1.f) / (i + 1.f);
+		ks *= ti * ti;
+	}
+	ks.Clamp();
+
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
 	const float u2 = u * u;
