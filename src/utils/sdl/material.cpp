@@ -849,13 +849,17 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum ks, const float ro
 	if (fixedDir.z <= 0.f)
 		return Spectrum();
 
+	const float coso = fabsf(fixedDir.z);
 	const float cosi = fabsf(sampledDir.z);
 
 	const Vector wh(Normalize(fixedDir + sampledDir));
 	const Spectrum S = FresnelSlick_Evaluate(ks, AbsDot(sampledDir, wh));
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
-	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi);
+
+	// Multibounce - alternative with interreflection in the coating creases
+	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi) + 
+		(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
 
 	return factor * S;
 }
@@ -888,10 +892,12 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingSampleF(const bool fromLight, const
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	if (!fromLight)
 		//CoatingF(sw, *wi, wo, f_);
-		S *= d * G / (4.f * coso);
+		S *= d * G / (4.f * coso) + 
+				(multibounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
 	else
 		//CoatingF(sw, wo, *wi, f_);
-		S *= d * G / (4.f * cosi);
+		S *= d * G / (4.f * cosi) + 
+				(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
 
 	return S;
 }

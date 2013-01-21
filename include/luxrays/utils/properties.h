@@ -45,6 +45,7 @@ public:
 
 	bool IsDefined(const std::string propName) const;
 	std::string GetString(const std::string propName, const std::string defaultValue) const;
+	bool GetBoolean(const std::string propName, const bool defaultValue) const;
 	int GetInt(const std::string propName, const int defaultValue) const;
 	size_t GetSize(const std::string propName, const size_t defaultValue) const;
 	float GetFloat(const std::string propName, const float defaultValue) const;

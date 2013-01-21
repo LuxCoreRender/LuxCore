@@ -357,7 +357,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 		throw std::runtime_error("Syntax error in object .ply file name: " + objName);
 
 	// Check if I have to calculate normal or not
-	const bool usePlyNormals = (props.GetInt(key + ".useplynormals", 0) != 0);
+	const bool usePlyNormals = props.GetBoolean(key + ".useplynormals", false);
 
 	// Check if I have to use an instance mesh or not
 	ExtMesh *meshObject;
@@ -718,8 +718,9 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *ks = GetTexture(props.GetString(propName + ".ks", "0.5 0.5 0.5"));
 		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
+		const bool multibounce = props.GetBoolean(propName + ".multibounce", false);
 
-		return new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv);
+		return new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, multibounce);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }

@@ -481,8 +481,9 @@ private:
 class Glossy2Material : public Material {
 public:
 	Glossy2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v) :
-			Material(emitted, bump, normal), Kd(kd), Ks(ks), nu(u), nv(v) { }
+			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
+			const bool mbounce) : Material(emitted, bump, normal), Kd(kd), Ks(ks),
+			nu(u), nv(v), multibounce(mbounce) { }
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
@@ -504,6 +505,7 @@ public:
 	const Texture *GetKs() const { return Ks; }
 	const Texture *GetNu() const { return nu; }
 	const Texture *GetNv() const { return nv; }
+	const bool IsMultibounce() const { return multibounce; }
 
 private:
 
@@ -532,6 +534,7 @@ private:
 	const Texture *Ks;
 	const Texture *nu;
 	const Texture *nv;
+	const bool multibounce;
 };
 
 } }
