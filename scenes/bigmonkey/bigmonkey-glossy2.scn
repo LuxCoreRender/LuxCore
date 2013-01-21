@@ -4,6 +4,7 @@ scene.materials.redmat.type = glossy2
 scene.materials.redmat.kd = 0.2 0.0 0.0
 scene.materials.redmat.ks = 0.4 0.0 0.0
 scene.materials.redmat.uroughness = 0.05
+scene.materials.redmat.vroughness = 0.05
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.whitelight.type = matte
