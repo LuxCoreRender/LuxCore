@@ -720,9 +720,10 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
 		Texture *ka = GetTexture(props.GetString(propName + ".ka", "0.0"));
 		Texture *d = GetTexture(props.GetString(propName + ".d", "0.0"));
+		Texture *index = GetTexture(props.GetString(propName + ".index", "0.0"));
 		const bool multibounce = props.GetBoolean(propName + ".multibounce", false);
 
-		return new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, multibounce);
+		return new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
