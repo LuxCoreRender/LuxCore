@@ -43,4 +43,8 @@ std::string KernelSource_spectrum_funcs =
 "float3 Spectrum_Clamp(const float3 s) {\n"
 "	return clamp(s, BLACK, WHITE);\n"
 "}\n"
+"\n"
+"float3 Spectrum_Exp(const float3 s) {\n"
+"	return (float3)(exp(s.x), exp(s.y), exp(s.z));\n"
+"}\n"
 ; } }

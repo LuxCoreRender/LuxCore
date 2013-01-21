@@ -758,7 +758,7 @@ void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &
 
 float Glossy2Material::SchlickDistribution_SchlickZ(const float roughness, float cosNH) const {
 	const float d = 1.f + (roughness - 1) * cosNH * cosNH;
-	return roughness > 0.f ? roughness / (d * d) : INFINITY;
+	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
 }
 
 float Glossy2Material::SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) const {
@@ -824,12 +824,12 @@ float Glossy2Material::SchlickDistribution_Pdf(const float roughness, const Vect
 	return Glossy2Material::SchlickDistribution_D(roughness, wh, anisotropy);
 }
 
-Spectrum Glossy2Material::FresnelSlick_Evaluate(const Spectrum normalIncidence, const float cosi) const {
+Spectrum Glossy2Material::FresnelSlick_Evaluate(const Spectrum &normalIncidence, const float cosi) const {
 	return normalIncidence + (Spectrum(1.f) - normalIncidence) *
 		powf(1.f - cosi, 5.f);
 }
 
-float Glossy2Material::SchlickBSDF_CoatingWeight(const Spectrum ks, const Vector &fixedDir) const {
+float Glossy2Material::SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &fixedDir) const {
 	// No sampling on the back face
 	if (fixedDir.z <= 0.f)
 		return 0.f;
@@ -843,7 +843,7 @@ float Glossy2Material::SchlickBSDF_CoatingWeight(const Spectrum ks, const Vector
 	return .5f * (1.f + S.Filter());
 }
 
-Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum ks, const float roughness,
+Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum &ks, const float roughness,
 		const float anisotropy, const Vector &fixedDir,	const Vector &sampledDir) const {
 	// No sampling on the back face
 	if (fixedDir.z <= 0.f)
@@ -981,7 +981,7 @@ Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 	const float coso = fabsf(fixedDir.z);
 	const Spectrum alpha = Ka->GetColorValue(uv).Clamp();
 	const float d = depth->GetGreyValue(uv);
-	Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+	const Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
 
 	// Coating fresnel factor
 	const Vector H(Normalize(fixedDir + sampledDir));
@@ -1065,7 +1065,7 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 		const float coso = fabsf(fixedDir.z);
 		const Spectrum alpha = Ka->GetColorValue(uv).Clamp();
 		const float d = depth->GetGreyValue(uv);
-		Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+		const Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Coating fresnel factor
 		const Vector H(Normalize(fixedDir + *sampledDir));
@@ -1128,4 +1128,5 @@ void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &reference
 	nv->AddReferencedTextures(referencedTexs);
 	Ka->AddReferencedTextures(referencedTexs);
 	depth->AddReferencedTextures(referencedTexs);
+	index->AddReferencedTextures(referencedTexs);
 }
