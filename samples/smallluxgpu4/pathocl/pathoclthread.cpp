@@ -428,12 +428,15 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_NULL";
 	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
 		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
+	if (cscene->IsMaterialCompiled(GLOSSY2))
+		ss << " -D PARAM_ENABLE_MAT_GLOSSY2";
 
 	if (cscene->IsMaterialCompiled(GLASS) ||
 			cscene->IsMaterialCompiled(ARCHGLASS) ||
 			cscene->IsMaterialCompiled(MIX) ||
 			cscene->IsMaterialCompiled(NULLMAT) ||
-			cscene->IsMaterialCompiled(MATTETRANSLUCENT))
+			cscene->IsMaterialCompiled(MATTETRANSLUCENT) ||
+			cscene->IsMaterialCompiled(GLOSSY2))
 		ss << " -D PARAM_HAS_PASSTHROUGH";
 	
 	if (cscene->camera.lensRadius > 0.f)
@@ -752,7 +755,8 @@ void PathOCLRenderThread::InitRender() {
 			renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
 			renderEngine->compiledScene->IsMaterialCompiled(MIX) ||
 			renderEngine->compiledScene->IsMaterialCompiled(NULLMAT) ||
-			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT));
+			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT) ||
+			renderEngine->compiledScene->IsMaterialCompiled(GLOSSY2));
 	if ((triAreaLightCount > 0) || sunLightBuff) {
 		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
 

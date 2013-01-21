@@ -20,7 +20,7 @@
  ***************************************************************************/
 
 #ifndef _SLG_COMPILEDSESSION_H
-#define	_SLGCOMPILEDSESSION_H
+#define	_SLG_COMPILEDSESSION_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 

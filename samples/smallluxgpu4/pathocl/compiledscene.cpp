@@ -385,6 +385,20 @@ void CompiledScene::CompileMaterials() {
 				mat->matteTranslucent.ktTexIndex = scene->texDefs.GetTextureIndex(mm->GetKt());
 				break;
 			}
+			case GLOSSY2: {
+				Glossy2Material *g2m = static_cast<Glossy2Material *>(m);
+
+				mat->type = luxrays::ocl::GLOSSY2;
+				mat->glossy2.kdTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKd());
+				mat->glossy2.ksTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKs());
+				mat->glossy2.nuTexIndex = scene->texDefs.GetTextureIndex(g2m->GetNu());
+				mat->glossy2.nvTexIndex = scene->texDefs.GetTextureIndex(g2m->GetNv());
+				mat->glossy2.kaTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKa());
+				mat->glossy2.depthTexIndex = scene->texDefs.GetTextureIndex(g2m->GetDepth());
+				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(g2m->GetIndex());
+				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
 				break;
