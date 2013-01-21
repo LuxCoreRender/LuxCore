@@ -126,6 +126,15 @@ std::string Properties::GetString(const std::string propName, const std::string 
 		return it->second;
 }
 
+bool Properties::GetBoolean(const std::string propName, const bool defaultValue) const {
+	std::string s = GetString(propName, "");
+
+	if (s.compare("") == 0)
+		return defaultValue;
+	else
+		return boost::lexical_cast<bool>(s);
+}
+
 int Properties::GetInt(const std::string propName, const int defaultValue) const {
 	std::string s = GetString(propName, "");
 
