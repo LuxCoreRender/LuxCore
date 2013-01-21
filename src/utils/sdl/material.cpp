@@ -864,6 +864,16 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum ks, const float ro
 	return factor * S;
 }
 
+Spectrum Glossy2Material::SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
+		const Spectrum &alpha, const float depth) const {
+	if (depth > 0.f) {
+		// 1/cosi+1/coso=(cosi+coso)/(cosi*coso)
+		const float depthFactor = depth * (cosi + coso) / (cosi * coso);
+		return Exp(alpha * -depthFactor);
+	} else
+		return Spectrum(1.f);
+}
+
 Spectrum Glossy2Material::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
 		const float roughness, const float anisotropy, const Vector &fixedDir, Vector *sampledDir,
 		float u0, float u1, float *pdf) const {
@@ -940,7 +950,7 @@ Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = u2 < v2 ? 1.f - u2 / v2 : v2 / u2 - 1.f;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
 	const float roughness = u * v;
 
 	if (directPdfW) {
@@ -959,6 +969,13 @@ Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, sampledDir, fixedDir);
 	}
 
+	// Absorption
+	const float cosi = fabsf(sampledDir.z);
+	const float coso = fabsf(fixedDir.z);
+	const Spectrum alpha = Ka->GetColorValue(uv).Clamp();
+	const float d = depth->GetGreyValue(uv);
+	Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+
 	// Coating fresnel factor
 	const Vector H(Normalize(fixedDir + sampledDir));
 	const Spectrum S = FresnelSlick_Evaluate(ks, AbsDot(sampledDir, H));
@@ -967,7 +984,7 @@ Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 
 	// blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
-	return coatingF + (Spectrum(1.f) - S) * baseF;
+	return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
 }
 
 Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
@@ -982,7 +999,7 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = u2 < v2 ? 1.f - u2 / v2 : v2 / u2 - 1.f;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
 	const float roughness = u * v;
 
 	// Coating is used only on the front face
@@ -1029,13 +1046,20 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 	if (fixedDir.z > 0.f) {
 		// Front face reflection: coating+base
 
+		// Absorption
+		const float cosi = fabsf(sampledDir->z);
+		const float coso = fabsf(fixedDir.z);
+		const Spectrum alpha = Ka->GetColorValue(uv).Clamp();
+		const float d = depth->GetGreyValue(uv);
+		Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+
 		// Coating fresnel factor
 		const Vector H(Normalize(fixedDir + *sampledDir));
 		const Spectrum S = FresnelSlick_Evaluate(ks, AbsDot(*sampledDir, H));
 
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
-		return coatingF + (Spectrum(1.f) - S) * baseF;
+		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
 	} else {
 		// Back face reflection: base
 
@@ -1054,7 +1078,7 @@ void Glossy2Material::Pdf(const bool fromLight, const UV &uv,
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = u2 < v2 ? 1.f - u2 / v2 : v2 / u2 - 1.f;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
 	const float roughness = u * v;
 
 	if (directPdfW) {
@@ -1081,4 +1105,6 @@ void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &reference
 	Ks->AddReferencedTextures(referencedTexs);
 	nu->AddReferencedTextures(referencedTexs);
 	nv->AddReferencedTextures(referencedTexs);
+	Ka->AddReferencedTextures(referencedTexs);
+	depth->AddReferencedTextures(referencedTexs);
 }
