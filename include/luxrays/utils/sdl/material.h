@@ -482,8 +482,8 @@ class Glossy2Material : public Material {
 public:
 	Glossy2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
 			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
-			const bool mbounce) : Material(emitted, bump, normal), Kd(kd), Ks(ks),
-			nu(u), nv(v), multibounce(mbounce) { }
+			const Texture *ka, const Texture *d, const bool mbounce) : Material(emitted, bump, normal),
+			Kd(kd), Ks(ks),	nu(u), nv(v), Ka(ka), depth(d), multibounce(mbounce) { }
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
@@ -505,6 +505,8 @@ public:
 	const Texture *GetKs() const { return Ks; }
 	const Texture *GetNu() const { return nu; }
 	const Texture *GetNv() const { return nv; }
+	const Texture *GetKa() const { return Ka; }
+	const Texture *GetDepth() const { return depth; }
 	const bool IsMultibounce() const { return multibounce; }
 
 private:
@@ -529,11 +531,15 @@ private:
 		float u0, float u1, float *pdf) const;
 	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 		const Vector &fixedDir, const Vector &sampledDir) const;
+	Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
+		const Spectrum &alpha, const float depth) const;
 
 	const Texture *Kd;
 	const Texture *Ks;
 	const Texture *nu;
 	const Texture *nv;
+	const Texture *Ka;
+	const Texture *depth;
 	const bool multibounce;
 };
 
