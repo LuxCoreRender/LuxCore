@@ -520,7 +520,7 @@ void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
 	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
 	const float cosTheta = sqrt(cos2Theta);
 	const float sinTheta = sqrt(1.f - cos2Theta);
-	const float p = 1.f;
+	const float p = 1.f - fabs(anisotropy);
 	float phi;
 	if (u1x4 < 1.f) {
 		phi = GetPhi(u1x4 * u1x4, p * p);
@@ -534,6 +534,9 @@ void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
 		u1x4 = 4.f - u1x4;
 		phi = M_PI_F * 2.f - GetPhi(u1x4 * u1x4, p * p);
 	}
+
+	if (anisotropy > 0.f)
+		phi += M_PI_F * .5f;
 
 	*wh = (float3)(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh, anisotropy) * M_1_PI_F;
