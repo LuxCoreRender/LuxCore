@@ -21,12 +21,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-void Frame_SetFromZ(__global Frame *frame, const float3 z) {
-	const float3 Z = normalize(z);
-	const float3 tmpZ = Z;
-	const float3 tmpX = (fabs(tmpZ.x) > 0.99f) ? (float3)(0.f, 1.f, 0.f) : (float3)(1.f, 0.f, 0.f);
-	const float3 Y = normalize(cross(tmpZ, tmpX));
-	const float3 X = cross(Y, tmpZ);
+void Frame_SetFromZ(__global Frame *frame, const float3 Z) {
+	float3 X, Y;
+	CoordinateSystem(Z, &X, &Y);
 
 	VSTORE3F(X, &frame->X.x);
 	VSTORE3F(Y, &frame->Y.x);
