@@ -799,7 +799,7 @@ void Glossy2Material::SchlickDistribution_SampleH(const float roughness, const f
 	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
 	const float cosTheta = sqrtf(cos2Theta);
 	const float sinTheta = sqrtf(1.f - cos2Theta);
-	const float p = 1.f;
+	const float p = 1.f - fabsf(anisotropy);
 	float phi;
 	if (u1x4 < 1.f) {
 		phi = GetPhi(u1x4 * u1x4, p * p);
@@ -813,6 +813,9 @@ void Glossy2Material::SchlickDistribution_SampleH(const float roughness, const f
 		u1x4 = 4.f - u1x4;
 		phi = M_PI * 2.f - GetPhi(u1x4 * u1x4, p * p);
 	}
+
+	if (anisotropy > 0.f)
+		phi += M_PI * .5f;
 
 	*wh = Vector(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
 	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh, anisotropy) * INV_PI;
