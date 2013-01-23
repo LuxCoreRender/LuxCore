@@ -154,6 +154,8 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate,
 					metropolisSharedTotalLuminance, metropolisSharedSampleCount);
 		}
+		case SOBOL:
+			return new SobolSampler(rndGen, film);
 		default:
 			throw std::runtime_error("Unknown sampler.type: " + samplerType);
 	}

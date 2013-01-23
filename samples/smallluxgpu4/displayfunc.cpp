@@ -329,6 +329,9 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'i':
 			session->Stop();
 			if (session->renderConfig->cfg.GetString("sampler.type", "RANDOM") == "RANDOM") {
+				session->renderConfig->cfg.SetString("sampler.type", "SOBOL");
+				session->renderConfig->cfg.SetString("path.sampler.type", "SOBOL");
+			} else if (session->renderConfig->cfg.GetString("sampler.type", "SOBOL") == "SOBOL") {
 				session->renderConfig->cfg.SetString("sampler.type", "METROPOLIS");
 				session->renderConfig->cfg.SetString("path.sampler.type", "METROPOLIS");
 			} else {

@@ -66,7 +66,8 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const Film
 
 typedef enum {
 	RANDOM = 0,
-	METROPOLIS = 1
+	METROPOLIS = 1,
+	SOBOL =2
 } SamplerType;
 
 class Sampler {
@@ -152,6 +153,43 @@ private:
 	std::vector<SampleResult> currentSampleResult;
 
 	bool isLargeMutation, cooldown;
+};
+
+//------------------------------------------------------------------------------
+// Sobol sampler
+//
+// This sampler is based on Blender Cycles Sobol implementation.
+//------------------------------------------------------------------------------
+
+#define SOBOL_BITS 32
+#define SOBOL_MAX_DIMENSIONS 21201
+
+extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions);
+
+class SobolSampler : public Sampler {
+public:
+	SobolSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm), directions(NULL), pass(0) { }
+	virtual ~SobolSampler() { delete directions; }
+
+	virtual SamplerType GetType() const { return SOBOL; }
+	virtual void RequestSamples(const u_int size);
+
+	virtual float GetSample(const u_int index);
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults) {
+		film->AddSampleCount(1.0);
+
+		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
+
+		++pass;
+	}
+
+private:
+	uint SobolDimension(const u_int index, const u_int dimension) const;
+
+	u_int *directions;
+
+	u_int pass;
 };
 
 } }

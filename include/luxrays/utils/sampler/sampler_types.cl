@@ -23,7 +23,8 @@
 
 typedef enum {
 	RANDOM = 0,
-	METROPOLIS = 1
+	METROPOLIS = 1,
+	SOBOL = 2
 } SamplerType;
 
 typedef struct {
