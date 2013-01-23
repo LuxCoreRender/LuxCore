@@ -208,8 +208,8 @@ Spectrum GlassMaterial::Sample(const bool fromLight, const UV &uv,
 	const Vector rayDir = -fixedDir;
 	const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
 
-	const float nc = Clamp(ousideIor->GetGreyValue(uv), 0.f, 1.f);
-	const float nt = Clamp(ior->GetGreyValue(uv), 0.f, 1.f);
+	const float nc = ousideIor->GetGreyValue(uv);
+	const float nt = ior->GetGreyValue(uv);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
 	const float ddn = Dot(rayDir, shadeN);
