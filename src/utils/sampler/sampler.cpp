@@ -253,11 +253,11 @@ void SobolSampler::RequestSamples(const u_int size) {
 	SobolGenerateDirectionVectors(directions, size);
 }
 
-uint SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
+u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
 	u_int result = 0;
 	u_int i = index;
 
-	for (uint j = 0; i; i >>= 1, j++) {
+	for (u_int j = 0; i; i >>= 1, j++) {
 		if (i & 1)
 			result ^= directions[dimension * SOBOL_BITS + j];
 	}
