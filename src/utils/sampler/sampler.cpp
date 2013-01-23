@@ -267,11 +267,11 @@ u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) con
 
 float SobolSampler::GetSample(const u_int index) {
 	const u_int result = SobolDimension(pass, index);
-	const float r = result * (1.f / 0xffffffff);
+	const float r = result * (1.f / 0xffffffffu);
 
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? ((rng >> 16) / ((float) 0xffff)) :
-		((rng & 0xffff) / ((float) 0xffff));
+	const float shift = (index & 1) ? ((rng >> 16) / ((float) 0xffffu)) :
+		((rng & 0xffffu) / ((float) 0xffffu));
 
 	return r + shift - floorf(r + shift);
 }

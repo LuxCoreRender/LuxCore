@@ -47,10 +47,8 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 PathOCLRenderThread::PathOCLRenderThread(const u_int index,
-		const float samplStart, OpenCLIntersectionDevice *device,
-		PathOCLRenderEngine *re) {
+		OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) {
 	intersectionDevice = device;
-	samplingStart = samplStart;
 
 	renderThread = NULL;
 
@@ -520,6 +518,9 @@ void PathOCLRenderThread::InitKernels() {
 					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << sampler->metropolis.imageMutationRange << "f" <<
 					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
 			break;
+		case luxrays::ocl::SOBOL:
+			ss << " -D PARAM_SAMPLER_TYPE=2";
+			break;
 		default:
 			assert (false);
 	}
@@ -539,6 +540,29 @@ void PathOCLRenderThread::InitKernels() {
 	if (kernelsParameters != newKernelParameters) {
 		kernelsParameters = newKernelParameters;
 
+		string sobolLookupTable;
+		if (sampler->type == luxrays::ocl::SOBOL) {
+			// Generate the Sobol vectors
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
+			u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
+
+			SobolGenerateDirectionVectors(directions, sampleDimensions);
+
+			stringstream sobolTableSS;
+			sobolTableSS << "#line 2 \"Sobol Table in pathoclthread.cpp\"\n";
+			sobolTableSS << "__constant uint SOBOL_DIRECTIONS[" << sampleDimensions * SOBOL_BITS << "] = {\n";
+			for (u_int i = 0; i < sampleDimensions * SOBOL_BITS; ++i) {
+				if (i != 0)
+					sobolTableSS << ", ";
+				sobolTableSS << directions[i] << "u";
+			}
+			sobolTableSS << "};\n";
+
+			sobolLookupTable = sobolTableSS.str();
+
+			delete directions;
+		}
+		
 		// Compile sources
 		stringstream ssKernel;
 		ssKernel <<
@@ -585,6 +609,7 @@ void PathOCLRenderThread::InitKernels() {
 			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
 			slg::ocl::KernelSource_filters <<
+			sobolLookupTable <<
 			slg::ocl::KernelSource_samplers <<
 			slg::ocl::KernelSource_pathocl_kernels;
 		string kernelSource = ssKernel.str();
@@ -746,6 +771,11 @@ void PathOCLRenderThread::InitRender() {
 			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithAlphaChannel);
 		else
 			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithoutAlphaChannel);
+	} else if (renderEngine->sampler->type == luxrays::ocl::SOBOL) {
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(slg::ocl::SobolSampleWithAlphaChannel);
+		else
+			gpuTaksSize += sizeof(slg::ocl::SobolSampleWithoutAlphaChannel);
 	} else
 		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
 
@@ -770,33 +800,36 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate sample data buffers
 	//--------------------------------------------------------------------------
 
-	const size_t uDataEyePathVertexSize =
+	const size_t eyePathVertexDimension =
 		// IDX_SCREEN_X, IDX_SCREEN_Y
-		sizeof(float) * 2 +
+		2 +
 		// IDX_EYE_PASSTROUGHT
-		(hasPassThrough ? sizeof(float) : 0) +
+		(hasPassThrough ? 1 : 0) +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
-	const size_t uDataPerPathVertexSize =
+		((scene->camera->lensRadius > 0.f) ? 2 : 0);
+	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
-		(hasPassThrough ? sizeof(float) : 0) +
+		(hasPassThrough ? 1 : 0) +
 		// IDX_BSDF_X, IDX_BSDF_Y
-		sizeof(float) * 2 +
+		2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		(((triAreaLightCount > 0) || sunLightBuff) ? (sizeof(float) * (4 + (hasPassThrough ? 1 : 0))) : 0) +
+		(((triAreaLightCount > 0) || sunLightBuff) ? (4 + (hasPassThrough ? 1 : 0)) : 0) +
 		// IDX_RR
-		sizeof(float);
+		1;
+	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * renderEngine->maxPathDepth;
 
-	size_t uDataSize = 0;
-	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
+	size_t uDataSize;
+	if ((renderEngine->sampler->type == luxrays::ocl::RANDOM) ||
+			(renderEngine->sampler->type == luxrays::ocl::SOBOL)) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
-		uDataSize += sizeof(float) * 2;
+		uDataSize = sizeof(float) * 2;
 	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
-		uDataSize += 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth);
+		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else
 		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
 
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
 	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");

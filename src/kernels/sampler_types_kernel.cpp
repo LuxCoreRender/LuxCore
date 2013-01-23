@@ -39,4 +39,7 @@ std::string KernelSource_sampler_types =
 "		} metropolis;\n"
 "	};\n"
 "} Sampler;\n"
+"\n"
+"#define SOBOL_BITS 32\n"
+"#define SOBOL_MAX_DIMENSIONS 21201\n"
 ; } }

@@ -36,3 +36,6 @@ typedef struct {
 		} metropolis;
 	};
 } Sampler;
+
+#define SOBOL_BITS 32
+#define SOBOL_MAX_DIMENSIONS 21201

@@ -99,6 +99,19 @@ typedef struct {
 	Spectrum currentRadiance;
 } MetropolisSampleWithoutAlphaChannel;
 
+typedef struct {
+	unsigned int rng, pass;
+
+	Spectrum radiance;
+	float alpha;
+} SobolSampleWithAlphaChannel;
+
+typedef struct {
+	unsigned int rng, pass;
+
+	Spectrum radiance;
+} SobolSampleWithoutAlphaChannel;
+
 #if defined(SLG_OPENCL_KERNEL)
 
 #if (PARAM_SAMPLER_TYPE == 0)
@@ -114,6 +127,14 @@ typedef RandomSampleWithoutAlphaChannel Sample;
 typedef MetropolisSampleWithAlphaChannel Sample;
 #else
 typedef MetropolisSampleWithoutAlphaChannel Sample;
+#endif
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 2)
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+typedef SobolSampleWithAlphaChannel Sample;
+#else
+typedef SobolSampleWithoutAlphaChannel Sample;
 #endif
 #endif
 
@@ -143,7 +164,7 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #define IDX_BSDF_OFFSET 2
 #endif
 
-// Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
+// Relative to IDX_BSDF_OFFSET + PathDepth * VERTEX_SAMPLE_SIZE
 #if defined(PARAM_DIRECT_LIGHT_SAMPLING) && defined(PARAM_HAS_PASSTHROUGH)
 
 #define IDX_PASSTHROUGH 0
@@ -156,7 +177,7 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #define IDX_DIRECTLIGHT_A 7
 #define IDX_RR 8
 
-#define SAMPLE_SIZE 9
+#define VERTEX_SAMPLE_SIZE 9
 
 #elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
 
@@ -168,7 +189,7 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #define IDX_DIRECTLIGHT_W 5
 #define IDX_RR 6
 
-#define SAMPLE_SIZE 7
+#define VERTEX_SAMPLE_SIZE 7
 
 #elif defined(PARAM_HAS_PASSTHROUGH)
 
@@ -177,7 +198,7 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #define IDX_BSDF_Y 2
 #define IDX_RR 3
 
-#define SAMPLE_SIZE 4
+#define VERTEX_SAMPLE_SIZE 4
 
 #else
 
@@ -185,16 +206,16 @@ typedef MetropolisSampleWithoutAlphaChannel Sample;
 #define IDX_BSDF_Y 1
 #define IDX_RR 2
 
-#define SAMPLE_SIZE 3
+#define VERTEX_SAMPLE_SIZE 3
 
 #endif
 
-#if (PARAM_SAMPLER_TYPE == 0)
+#if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2)
 #define TOTAL_U_SIZE 2
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 1)
-#define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
+#define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * VERTEX_SAMPLE_SIZE)
 #endif
 
 #endif
