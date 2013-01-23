@@ -168,7 +168,8 @@ extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions
 
 class SobolSampler : public Sampler {
 public:
-	SobolSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm), directions(NULL), pass(0) { }
+	SobolSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm),
+			directions(NULL), rng(rnd->uintValue()), pass(0) { }
 	virtual ~SobolSampler() { delete directions; }
 
 	virtual SamplerType GetType() const { return SOBOL; }
@@ -189,7 +190,7 @@ private:
 
 	u_int *directions;
 
-	u_int pass;
+	u_int rng, pass;
 };
 
 } }
