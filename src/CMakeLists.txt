@@ -226,6 +226,7 @@ SOURCE_GROUP("Source Files\\Utils\\convtest" FILES ${LUXRAYS_SRCS_UTILS_CONVTEST
 
 set(LUXRAYS_SRCS_UTILS_SAMPLER
 	${LuxRays_SOURCE_DIR}/src/utils/sampler/sampler.cpp
+	${LuxRays_SOURCE_DIR}/src/utils/sampler/sobol.cpp
 )
 SOURCE_GROUP("Source Files\\Utils\\sampler" FILES ${LUXRAYS_SRCS_UTILS_SAMPLER})
 
