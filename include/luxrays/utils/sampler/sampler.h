@@ -186,7 +186,7 @@ public:
 	}
 
 private:
-	uint SobolDimension(const u_int index, const u_int dimension) const;
+	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	u_int *directions;
 
