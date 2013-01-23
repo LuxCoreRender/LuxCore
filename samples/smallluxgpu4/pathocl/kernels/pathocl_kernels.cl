@@ -82,7 +82,7 @@
 //  PARAM_IMAGE_FILTER_MITCHELL_C
 
 // (optional)
-//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis)
+//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol)
 // (Metropolis)
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
 //  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
@@ -107,19 +107,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
-	__global Sample *sample = &task->sample;
 
 	// Initialize random number generator
 	Seed seed;
 	Rnd_Init(seedBase + gid, &seed);
 
-	// Initialize the sample
+	// Initialize the sample and path
+	__global Sample *sample = &task->sample;
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, &task->sample, sampleData);
-
-	// Initialize the path
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	GenerateCameraPath(task, sampleDataPathBase, &seed, camera, &rays[gid]);
+	Sampler_Init(&seed, task, sampleData, camera, &rays[gid]);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -421,7 +417,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			float3 lightRadiance;
 #if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
 			// Pick a light source to sample
-			const float lu0 = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_X);
+			const float lu0 = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X);
 			const float lightPickPdf = Scene_PickLightPdf();
 
 			const uint lightIndex = min((uint)floor((PARAM_DL_LIGHT_COUNT + 1) * lu0), (uint)(PARAM_DL_LIGHT_COUNT));
@@ -429,30 +425,30 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			if (lightIndex == PARAM_DL_LIGHT_COUNT) {
 				lightRadiance = SunLight_Illuminate(
 					sunLight,
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					&lightRayDir, &distance, &directPdfW);
 			} else {
 				lightRadiance = TriangleLight_Illuminate(
 					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.x),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW
 					MATERIALS_PARAM);
 			}
 #elif (PARAM_DL_LIGHT_COUNT > 0)
 			// Pick a light source to sample
-			const float lu0 = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_X);
+			const float lu0 = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X);
 			const float lightPickPdf = Scene_PickLightPdf();
 
 			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 
 			lightRadiance = TriangleLight_Illuminate(
 					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.x),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_W),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
 					&lightRayDir, &distance, &directPdfW
 					MATERIALS_PARAM);
 #elif defined(PARAM_HAS_SUNLIGHT)
@@ -461,8 +457,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			lightRadiance = SunLight_Illuminate(
 					sunLight,
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Y),
-					Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_Z),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
+					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					&lightRayDir, &distance, &directPdfW);
 #endif
 
@@ -488,7 +484,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 					VSTORE3F((weight * factor) * pathThroughput * bsdfEval * lightRadiance, &task->directLightState.lightRadiance.r);
 #if defined(PARAM_HAS_PASSTHROUGH)
-					task->passThroughState.passThroughEvent = Sampler_GetSamplePathVertex(IDX_DIRECTLIGHT_A);
+					task->passThroughState.passThroughEvent = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A);
 #endif
 
 					// Setup the shadow ray
@@ -521,7 +517,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			BSDFEvent event;
 
 			const float3 bsdfSample = BSDF_Sample(bsdf,
-					Sampler_GetSamplePathVertex(IDX_BSDF_X), Sampler_GetSamplePathVertex(IDX_BSDF_Y),
+					Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
+					Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
 					&sampledDir, &lastPdfW, &cosSampledDir, &event
 					MATERIALS_PARAM);
 			const bool lastSpecular = ((event & SPECULAR) != 0);
@@ -529,7 +526,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			// Russian Roulette
 			const float rrProb = fmax(Spectrum_Filter(bsdfSample), PARAM_RR_CAP);
 			const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !lastSpecular;
-			const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(IDX_RR) < rrProb);
+			const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(depth, IDX_RR) < rrProb);
 
 			const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath;
 			if (continuePath) {
@@ -555,7 +552,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
 				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 					sample, sampleDataPathBase, depth + 1);
-				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(IDX_PASSTHROUGH);
+				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
 #endif
 				pathState = RT_NEXT_VERTEX;
 			} else

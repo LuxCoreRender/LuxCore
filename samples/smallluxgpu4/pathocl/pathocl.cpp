@@ -162,6 +162,9 @@ void PathOCLRenderEngine::StartLockLess() {
 			sampler->metropolis.maxRejects = maxRejects;
 			break;
 		}
+		case SOBOL:
+			sampler->type = luxrays::ocl::SOBOL;
+			break;
 		default:
 			throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(samplerType));
 	}
@@ -220,7 +223,6 @@ void PathOCLRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (!renderThreads[i]) {
 			renderThreads[i] = new PathOCLRenderThread(i,
-					i / (float)renderThreadCount,
 					(OpenCLIntersectionDevice *)(intersectionDevices[i]),
 					this);
 		}

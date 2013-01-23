@@ -161,9 +161,6 @@ private:
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
-#define SOBOL_BITS 32
-#define SOBOL_MAX_DIMENSIONS 21201
-
 extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions);
 
 class SobolSampler : public Sampler {

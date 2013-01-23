@@ -44,8 +44,7 @@ class PathOCLRenderEngine;
 
 class PathOCLRenderThread {
 public:
-	PathOCLRenderThread(const u_int index,
-			const float samplingStart, OpenCLIntersectionDevice *device,
+	PathOCLRenderThread(const u_int index, OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
 	~PathOCLRenderThread();
 
@@ -125,7 +124,7 @@ private:
 
 	luxrays::utils::oclKernelCache *kernelCache;
 
-	float samplingStart;
+	u_int sampleDimensions;
 
 	boost::thread *renderThread;
 

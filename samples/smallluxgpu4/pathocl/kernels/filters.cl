@@ -105,6 +105,24 @@ Error: unknown image filter !!!
 
 #endif
 
+#if defined(PARAM_USE_PIXEL_ATOMICS)
+void AtomicAdd(__global float *val, const float delta) {
+	union {
+		float f;
+		unsigned int i;
+	} oldVal;
+	union {
+		float f;
+		unsigned int i;
+	} newVal;
+
+	do {
+		oldVal.f = *val;
+		newVal.f = oldVal.f + delta;
+	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
+}
+#endif
+
 void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weight) {
 	/*if (isnan(rad->r) || isinf(rad->r) ||
 			isnan(rad->g) || isinf(rad->g) ||
