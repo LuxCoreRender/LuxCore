@@ -270,10 +270,18 @@ float SobolSampler::GetSample(const u_int index) {
 	const float r = result * (1.f / 0xffffffffu);
 
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? ((rng >> 16) / ((float) 0xffffu)) :
-		((rng & 0xffffu) / ((float) 0xffffu));
+	const float shift = (index & 1) ? rng0 : rng1;
 
 	return r + shift - floorf(r + shift);
+}
+
+void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+	film->AddSampleCount(1.0);
+
+	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+		film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
+
+	++pass;
 }
 
 } }

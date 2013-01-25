@@ -166,28 +166,22 @@ extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions
 class SobolSampler : public Sampler {
 public:
 	SobolSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm),
-			directions(NULL), rng(rnd->uintValue()), pass(0) { }
+			directions(NULL), rng0(rnd->floatValue()), rng1(rnd->floatValue()), pass(0) { }
 	virtual ~SobolSampler() { delete directions; }
 
 	virtual SamplerType GetType() const { return SOBOL; }
 	virtual void RequestSamples(const u_int size);
 
 	virtual float GetSample(const u_int index);
-	virtual void NextSample(const std::vector<SampleResult> &sampleResults) {
-		film->AddSampleCount(1.0);
-
-		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
-
-		++pass;
-	}
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 private:
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	u_int *directions;
 
-	u_int rng, pass;
+	float rng0, rng1;
+	u_int pass;
 };
 
 } }
