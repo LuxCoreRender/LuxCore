@@ -42,6 +42,8 @@ using namespace luxrays::utils;
 
 namespace slg {
 
+#define SOBOL_MAXDEPTH 6
+
 //------------------------------------------------------------------------------
 // PathOCLRenderThread
 //------------------------------------------------------------------------------
@@ -519,7 +521,8 @@ void PathOCLRenderThread::InitKernels() {
 					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
 			break;
 		case luxrays::ocl::SOBOL:
-			ss << " -D PARAM_SAMPLER_TYPE=2";
+			ss << " -D PARAM_SAMPLER_TYPE=2" <<
+					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
 			break;
 		default:
 			assert (false);
@@ -823,6 +826,12 @@ void PathOCLRenderThread::InitRender() {
 			(renderEngine->sampler->type == luxrays::ocl::SOBOL)) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		uDataSize = sizeof(float) * 2;
+		
+		if (renderEngine->sampler->type == luxrays::ocl::SOBOL) {
+			// Limit the number of dimension where I use Sobol sequence (after, I switch
+			// to Random sampler.
+			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
+		}
 	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;

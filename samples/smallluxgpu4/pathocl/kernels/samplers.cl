@@ -577,7 +577,9 @@ float SobolSampler_GetSample(__global Sample *sample, const uint index) {
 }
 
 #define Sampler_GetSamplePath(index) (SobolSampler_GetSample(sample, index))
-#define Sampler_GetSamplePathVertex(depth, index) (SobolSampler_GetSample(sample, IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE + index))
+#define Sampler_GetSamplePathVertex(depth, index) ((depth > PARAM_SAMPLER_SOBOL_MAXDEPTH) ? \
+	Rnd_FloatValue(seed) : \
+	SobolSampler_GetSample(sample, IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE + index))
 
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
