@@ -564,15 +564,13 @@ uint SobolSampler_SobolDimension(const uint index, const uint dimension) {
 }
 
 float SobolSampler_GetSample(__global Sample *sample, const uint index) {
-	const uint rng = sample->rng;
 	const uint pass = sample->pass;
 
 	const uint result = SobolSampler_SobolDimension(pass, index);
 	const float r = result * (1.f / 0xffffffffu);
 
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? ((rng >> 16) / ((float) 0xffffu)) :
-		((rng & 0xffffu) / ((float) 0xffffu));
+	const float shift = (index & 1) ? sample->rng0 : sample->rng1;
 
 	return r + shift - floor(r + shift);
 }
@@ -603,11 +601,17 @@ void Sampler_Init(Seed *seed, __global GPUTask *task, __global float *sampleData
 	sample->alpha = 1.f;
 #endif
 
-	sample->rng = Rnd_UintValue(seed);
+	sample->rng0 = Rnd_FloatValue(seed);
+	sample->rng1 = Rnd_FloatValue(seed);
 	sample->pass = 0;
 
-	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
+	const uint pixelIndex = get_global_id(0);
+	sample->pixelIndex = pixelIndex;
+	uint x, y;
+	PixelIndex2XY(pixelIndex, &x, &y);
+
+	const float scrSampleX = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
+	const float scrSampleY = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
@@ -654,10 +658,18 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
-	sample->pass += 1;
 
-	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
+	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
+	if (nextPixelIndex > PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) {
+		nextPixelIndex = get_global_id(0);
+		sample->pass += 1;
+	}
+	sample->pixelIndex = nextPixelIndex;
+	uint x, y;
+	PixelIndex2XY(nextPixelIndex, &x, &y);
+
+	const float scrSampleX = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
+	const float scrSampleY = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);

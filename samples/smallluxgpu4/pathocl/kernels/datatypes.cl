@@ -100,14 +100,16 @@ typedef struct {
 } MetropolisSampleWithoutAlphaChannel;
 
 typedef struct {
-	unsigned int rng, pass;
+	float rng0, rng1;
+	unsigned int pixelIndex, pass;
 
 	Spectrum radiance;
 	float alpha;
 } SobolSampleWithAlphaChannel;
 
 typedef struct {
-	unsigned int rng, pass;
+	float rng0, rng1;
+	unsigned int pixelIndex, pass;
 
 	Spectrum radiance;
 } SobolSampleWithoutAlphaChannel;
