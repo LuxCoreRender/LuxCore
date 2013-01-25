@@ -552,12 +552,13 @@ void Sampler_NextSample(
 #if (PARAM_SAMPLER_TYPE == 2)
 
 uint SobolSampler_SobolDimension(const uint index, const uint dimension) {
+	const uint offset = dimension * SOBOL_BITS;
 	uint result = 0;
 	uint i = index;
 
 	for (uint j = 0; i; i >>= 1, j++) {
 		if (i & 1)
-			result ^= SOBOL_DIRECTIONS[dimension * SOBOL_BITS + j];
+			result ^= SOBOL_DIRECTIONS[offset + j];
 	}
 
 	return result;
