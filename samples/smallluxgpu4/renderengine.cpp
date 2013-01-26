@@ -31,7 +31,9 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/opencl/device.h"
+#endif
 
 using namespace std;
 using namespace luxrays;
@@ -451,6 +453,7 @@ void CPURenderEngine::UpdateCounters() {
 
 OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
@@ -494,7 +497,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 			}
 		}
 	}
-
+#endif
 	if (fatal && selectedDeviceDescs.size() == 0)
 		throw runtime_error("No OpenCL device selected or available");
 }
