@@ -77,6 +77,8 @@ public:
 	cl::Context &GetOCLContext() const;
 	cl::Device &GetOCLDevice() const { return oclDevice; }
 
+	std::string GetOpenCLVersion() const { return oclDevice.getInfo<CL_DEVICE_VERSION>(); }
+
 	bool IsOpenCL_1_0() const {
 		int major, minor;
 		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
