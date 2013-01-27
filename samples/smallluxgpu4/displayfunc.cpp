@@ -55,7 +55,7 @@ static void PrintString(void *font, const char *string) {
 		glutBitmapCharacter(font, string[i]);
 }
 
-static void PrintHelpString(const unsigned int x, const unsigned int y, const char *key, const char *msg) {
+static void PrintHelpString(const u_int x, const u_int y, const char *key, const char *msg) {
 	glColor3f(0.9f, 0.9f, 0.5f);
 	glRasterPos2i(x, y);
 	PrintString(GLUT_BITMAP_8_BY_13, key);
@@ -341,7 +341,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->Start();
 			break;
 		case 'n': {
-			const unsigned int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
+			const u_int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
 			if (screenRefreshInterval > 1000)
 				session->renderConfig->SetScreenRefreshInterval(max(1000u, screenRefreshInterval - 1000));
 			else
@@ -349,7 +349,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		}
 		case 'm': {
-			const unsigned int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
+			const u_int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
 			if (screenRefreshInterval >= 1000)
 				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 1000);
 			else
@@ -538,13 +538,13 @@ static void motionFunc(int x, int y) {
 	}
 }
 
-void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height) {
+void InitGlut(int argc, char *argv[], const u_int width, const u_int height) {
 	glutInit(&argc, argv);
 
 	glutInitWindowSize(width, height);
 	// Center the window
-	unsigned int scrWidth = glutGet(GLUT_SCREEN_WIDTH);
-	unsigned int scrHeight = glutGet(GLUT_SCREEN_HEIGHT);
+	const u_int scrWidth = glutGet(GLUT_SCREEN_WIDTH);
+	const u_int scrHeight = glutGet(GLUT_SCREEN_HEIGHT);
 	if ((scrWidth + 50 < width) || (scrHeight + 50 < height))
 		glutInitWindowPosition(0, 0);
 	else
