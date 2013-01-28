@@ -49,7 +49,7 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 		case SOBOL:
 			return "SOBOL";
 		default:
-			throw std::runtime_error("Unknown sampler type: " + type);	
+			throw std::runtime_error(&"Unknown sampler type: " [ type]);	
 	}
 }
 

@@ -67,7 +67,7 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const Film
 typedef enum {
 	RANDOM = 0,
 	METROPOLIS = 1,
-	SOBOL =2
+	SOBOL = 2
 } SamplerType;
 
 class Sampler {

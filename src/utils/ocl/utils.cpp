@@ -283,7 +283,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
 	std::string dirName = "kernel_cache/" + appName + "/" + platformName + "/" + deviceName + "/" + deviceUnits;
 	std::string fileName = dirName +"/" +kernelName;
-
+	
 	if (!boost::filesystem::exists(fileName)) {
 		// It isn't available, compile the source
 		cl::Program *program = ForcedCompile(

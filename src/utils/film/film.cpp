@@ -134,7 +134,7 @@ void Film::SetFilterType(const FilterType type) {
 			filter = new MitchellFilterSS(1.5f, 1.5f);
 			break;
 		default:
-			throw std::runtime_error("Unknown filter type: " + type);
+			throw std::runtime_error(&"Unknown filter type: " [ type]);
 	}
 
 	if (filter) {

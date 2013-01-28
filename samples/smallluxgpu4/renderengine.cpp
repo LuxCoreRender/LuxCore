@@ -242,7 +242,7 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 		case BIDIRVMCPU:
 			return "BIDIRVMCPU";
 		default:
-			throw runtime_error("Unknown render engine type: " + type);
+			throw runtime_error(&"Unknown render engine type: " [ type]);
 	}
 }
 

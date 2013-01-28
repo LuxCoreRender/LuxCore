@@ -157,7 +157,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 		case SOBOL:
 			return new SobolSampler(rndGen, film);
 		default:
-			throw std::runtime_error("Unknown sampler.type: " + samplerType);
+			throw std::runtime_error(&"Unknown sampler.type: " [ samplerType]);
 	}
 }
 
