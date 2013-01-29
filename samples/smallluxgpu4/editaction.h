@@ -29,26 +29,25 @@
 namespace slg {
 
 typedef enum {
-	FILM_EDIT, // Use this for image Film resize
-	CAMERA_EDIT, // Use this for any Camera parameter editing
-	GEOMETRY_EDIT, // Use this for any DataSet related editing
-	INSTANCE_TRANS_EDIT, // Use this for any instance transformation related editing
-	MATERIALS_EDIT, // Use this for any Material related editing
-	MATERIAL_TYPES_EDIT, // Use this if the kind of materials changes
-	AREALIGHTS_EDIT, // Use this for any AreaLight related editing
-	INFINITELIGHT_EDIT, // Use this for any InfiniteLight related editing
-	SUNLIGHT_EDIT, // Use this for any SunLight related editing
-	SKYLIGHT_EDIT, // Use this for any SkyLight related editing
-	IMAGEMAPS_EDIT // Use this for any ImageMaps related editing
+	FILM_EDIT           = 0x01,  // Use this for image Film resize
+	CAMERA_EDIT         = 0x02,  // Use this for any Camera parameter editing
+	GEOMETRY_EDIT       = 0x04,  // Use this for any DataSet related editing
+	INSTANCE_TRANS_EDIT = 0x08,  // Use this for any instance transformation related editing
+	MATERIALS_EDIT      = 0x10,  // Use this for any Material related editing
+	MATERIAL_TYPES_EDIT = 0x20,  // Use this if the kind of materials changes
+	AREALIGHTS_EDIT     = 0x40,  // Use this for any AreaLight related editing
+	INFINITELIGHT_EDIT  = 0x80,  // Use this for any InfiniteLight related editing
+	SUNLIGHT_EDIT       = 0x100, // Use this for any SunLight related editing
+	SKYLIGHT_EDIT       = 0x200, // Use this for any SkyLight related editing
+	IMAGEMAPS_EDIT      = 0x400  // Use this for any ImageMaps related editing
 } EditAction;
 
 class EditActionList {
 public:
-	EditActionList() { };
-	~EditActionList() { };
+	EditActionList() { actions = 0; };
 
-	void Reset() { actions.clear(); }
-	void AddAction(const EditAction a) { actions.insert(a); };
+	void Reset() { actions = 0; }
+	void AddAction(const EditAction a) { actions |= a; };
 	void AddAllAction() {
 		AddAction(FILM_EDIT);
 		AddAction(CAMERA_EDIT);
@@ -62,65 +61,74 @@ public:
 		AddAction(SKYLIGHT_EDIT);
 		AddAction(IMAGEMAPS_EDIT);
 	}
-	bool Has(const EditAction a) const { return (actions.find(a) != actions.end()); };
-	size_t Size() const { return actions.size(); };
+	void AddActions(const u_int a) { actions |= a; };
+	u_int GetActions() const { return actions; };
+	bool Has(const EditAction a) const { return (actions & a); };
+	bool HasAnyAction() const { return actions; };
 
 	friend std::ostream &operator<<(std::ostream &os, const EditActionList &eal);
+
 private:
-	std::set<EditAction> actions;
+	u_int actions;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 	os << "EditActionList[";
 
 	bool addSeparetor = false;
-	for (std::set<EditAction>::const_iterator it = eal.actions.begin(); it!=eal.actions.end(); ++it) {
-		if (addSeparetor)
-			os << ", ";
-
-		switch (*it) {
-			case FILM_EDIT:
-				os << "FILM_EDIT";
-				break;
-			case CAMERA_EDIT:
-				os << "CAMERA_EDIT";
-				break;
-			case GEOMETRY_EDIT:
-				os << "GEOMETRY_EDIT";
-				break;
-			case INSTANCE_TRANS_EDIT:
-				os << "INSTANCE_TRANS_EDIT";
-				break;
-			case MATERIALS_EDIT:
-				os << "MATERIALS_EDIT";
-				break;
-			case MATERIAL_TYPES_EDIT:
-				os << "MATERIAL_TYPES_EDIT";
-				break;
-			case AREALIGHTS_EDIT:
-				os << "AREALIGHTS_EDIT";
-				break;
-			case INFINITELIGHT_EDIT:
-				os << "INFINITELIGHT_EDIT";
-				break;
-			case SUNLIGHT_EDIT:
-				os << "SUNLIGHT_EDIT";
-				break;
-			case SKYLIGHT_EDIT:
-				os << "SKYLIGHT_EDIT";
-				break;
-			case IMAGEMAPS_EDIT:
-				os << "IMAGEMAPS_EDIT";
-				break;
-			default:
-				os << "UNKNOWN[" << *it << "]";
-				break;
-		}
-
+#define SHOW_SEP\
+		if (addSeparetor)\
+			os << ", ";\
 		addSeparetor = true;
+
+	if (eal.Has(FILM_EDIT)) {
+        SHOW_SEP;
+		os << "FILM_EDIT";
+    }
+	if (eal.Has(CAMERA_EDIT)) {
+        SHOW_SEP;
+		os << "CAMERA_EDIT";
+    }
+	if (eal.Has(GEOMETRY_EDIT)) {
+        SHOW_SEP;
+		os << "GEOMETRY_EDIT";
+    }
+	if (eal.Has(INSTANCE_TRANS_EDIT)) {
+        SHOW_SEP;
+		os << "INSTANCE_TRANS_EDIT";
+    }
+	if (eal.Has(MATERIALS_EDIT)) {
+        SHOW_SEP;
+		os << "MATERIALS_EDIT";
+    }
+	if (eal.Has(MATERIAL_TYPES_EDIT)) {
+        SHOW_SEP;
+		os << "MATERIAL_TYPES_EDIT";
+    }
+	if (eal.Has(AREALIGHTS_EDIT)) {
+        SHOW_SEP;
+		os << "AREALIGHTS_EDIT";
+    }
+	if (eal.Has(INFINITELIGHT_EDIT)) {
+        SHOW_SEP;
+		os << "INFINITELIGHT_EDIT";
+    }
+	if (eal.Has(SUNLIGHT_EDIT)) {
+        SHOW_SEP;
+		os << "SUNLIGHT_EDIT";
+    }
+	if (eal.Has(SKYLIGHT_EDIT)) {
+        SHOW_SEP;
+		os << "SKYLIGHT_EDIT";
+    }
+	if (eal.Has(IMAGEMAPS_EDIT)) {
+        SHOW_SEP;
+		os << "IMAGEMAPS_EDIT";
 	}
 
 	os << "]";
+
+#undef SHOW_SEP
 
 	return os;
 }
