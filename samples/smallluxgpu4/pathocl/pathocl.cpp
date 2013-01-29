@@ -263,15 +263,15 @@ void PathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
 void PathOCLRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-	const unsigned int imgWidth = film->GetWidth();
-	const unsigned int imgHeight = film->GetHeight();
+	const u_int imgWidth = film->GetWidth();
+	const u_int imgHeight = film->GetHeight();
 
 	film->Reset();
 
-	for (unsigned int y = 0; y < imgHeight; ++y) {
-		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
+	for (u_int y = 0; y < imgHeight; ++y) {
+		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
 
-		for (unsigned int x = 0; x < imgWidth; ++x) {
+		for (u_int x = 0; x < imgWidth; ++x) {
 			Spectrum radiance;
 			float alpha = 0.0f;
 			float count = 0.f;

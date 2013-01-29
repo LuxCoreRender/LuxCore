@@ -1093,14 +1093,14 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
-	if (editActions.Size() > 0)
+	if (editActions.HasAnyAction() > 0)
 		SetKernelArgs();
 
 	//--------------------------------------------------------------------------
 	// Execute initialization kernels
 	//--------------------------------------------------------------------------
 
-	if (editActions.Size() > 0) {
+	if (editActions.HasAnyAction() > 0) {
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 		// Clear the frame buffer

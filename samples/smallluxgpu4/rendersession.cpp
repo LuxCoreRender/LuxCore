@@ -129,7 +129,7 @@ void RenderSession::EndEdit() {
 	assert (started);
 	assert (editMode);
 
-	if (editActions.Size() > 0)
+	if (editActions.HasAnyAction())
 		film->Reset();
 
 	SLG_LOG("[RenderSession] Edit actions: " << editActions);
