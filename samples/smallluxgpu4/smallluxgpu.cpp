@@ -356,7 +356,6 @@ int main(int argc, char *argv[]) {
 	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
 
 	try {
-
 		// Initialize FreeImage Library
 		FreeImage_Initialise(TRUE);
 		FreeImage_SetOutputMessage(FreeImageErrorHandler);
