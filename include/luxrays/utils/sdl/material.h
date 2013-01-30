@@ -45,7 +45,8 @@ namespace sdl {
 class Scene;
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT, GLOSSY2
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
+	GLOSSY2, METAL2
 } MaterialType;
 
 class Material {
@@ -512,19 +513,6 @@ public:
 	const bool IsMultibounce() const { return multibounce; }
 
 private:
-
-	float SchlickDistribution_SchlickZ(const float roughness, float cosNH) const;
-	float SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) const;
-	float SchlickDistribution_D(const float roughness, const Vector &wh, const float anisotropy) const;
-	float SchlickDistribution_SchlickG(const float roughness, const float costheta) const;
-	void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
-		const float u0, const float u1, Vector *wh, float *d, float *pdf) const;
-	float SchlickDistribution_Pdf(const float roughness, const Vector &wh, const float anisotropy) const;
-	float SchlickDistribution_G(const float roughness, const Vector &fixedDir,
-		const Vector &sampledDir) const;
-
-	Spectrum FresnelSlick_Evaluate(const Spectrum &ks, const float cosi) const;
-
 	float SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &fixedDir) const;
 	Spectrum SchlickBSDF_CoatingF(const Spectrum &ks, const float roughness, const float anisotropy,
 		const Vector &fixedDir,	const Vector &sampledDir) const;
@@ -545,6 +533,70 @@ private:
 	const Texture *index;
 	const bool multibounce;
 };
+
+//------------------------------------------------------------------------------
+// Metal2 material
+//------------------------------------------------------------------------------
+
+class Metal2Material : public Material {
+public:
+	Metal2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *e, const Texture *kk, const Texture *u, const Texture *v) :
+			Material(emitted, bump, normal), eta(e), k(kk), nu(u), nv(v) { }
+
+	virtual MaterialType GetType() const { return METAL2; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
+
+	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual Spectrum Sample(const bool fromLight, const UV &uv,
+		const Vector &fixedDir, Vector *sampledDir,
+		const float u0, const float u1,  const float passThroughEvent,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	const Texture *GetEta() const { return eta; }
+	const Texture *GetK() const { return k; }
+	const Texture *GetNu() const { return nu; }
+	const Texture *GetNv() const { return nv; }
+
+private:
+	const Texture *eta;
+	const Texture *k;
+	const Texture *nu;
+	const Texture *nv;
+};
+
+//------------------------------------------------------------------------------
+// SchlickDistribution material
+//------------------------------------------------------------------------------
+
+extern float SchlickDistribution_SchlickZ(const float roughness, const float cosNH);
+extern float SchlickDistribution_SchlickA(const Vector &H, const float anisotropy);
+extern float SchlickDistribution_D(const float roughness, const Vector &wh, const float anisotropy);
+extern float SchlickDistribution_SchlickG(const float roughness, const float costheta);
+extern void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
+	const float u0, const float u1, Vector *wh, float *d, float *pdf);
+extern float SchlickDistribution_Pdf(const float roughness, const Vector &wh, const float anisotropy);
+extern float SchlickDistribution_G(const float roughness, const Vector &fixedDir,
+	const Vector &sampledDir);
+
+//------------------------------------------------------------------------------
+// FresnelSlick material
+//------------------------------------------------------------------------------
+
+extern Spectrum FresnelSlick_Evaluate(const Spectrum &ks, const float cosi);
+
+//------------------------------------------------------------------------------
+// FresnelGeneral material
+//------------------------------------------------------------------------------
+
+extern Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi);
 
 } }
 

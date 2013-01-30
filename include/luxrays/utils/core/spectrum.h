@@ -110,6 +110,17 @@ public:
 		return *this;
 	}
 
+	Spectrum operator/(const Spectrum &s) const {
+		return Spectrum(r / s.r, g / s.g, b / s.b);
+	}
+
+	Spectrum & operator/=(const Spectrum &s) {
+		r /= s.r;
+		g /= s.g;
+		b /= s.b;
+		return *this;
+	}
+
 	Spectrum operator-() const {
 		return Spectrum(-r, -g, -b);
 	}
@@ -164,6 +175,10 @@ inline Spectrum operator*(float f, const Spectrum &v) {
 
 inline Spectrum Exp(const Spectrum &s) {
 	return Spectrum(expf(s.r), expf(s.g), expf(s.b));
+}
+
+inline Spectrum Sqrt(const Spectrum &s) {
+	return Spectrum(sqrtf(s.r), sqrtf(s.g), sqrtf(s.b));
 }
 
 }

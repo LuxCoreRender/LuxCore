@@ -724,6 +724,37 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		const bool multibounce = props.GetBoolean(propName + ".multibounce", false);
 
 		return new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
+	} else if (matType == "metal2") {
+		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
+		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
+
+		Texture *eta, *k;
+		if (props.IsDefined(propName + ".preset")) {
+			const std::string type = props.GetString(propName + ".preset", "aluminium");
+
+			if (type == "aluminium") {
+				eta = GetTexture("1 0.67897427082061767578125 0.5416104793548583984375");
+				k = GetTexture("1 0.783131420612335205078125 0.6841061115264892578125");
+			} else if (type == "silver") {
+				eta = GetTexture("1 0.82966911792755126953125 0.92802989482879638671875");
+				k = GetTexture("1 0.7600715160369873046875 0.6304759979248046875");
+			} else if (type == "gold") {
+				eta = GetTexture("0.387980997562408447265625 0.497408479452133178710938 1");
+				k = GetTexture("1 0.729227721691131591796875 0.6011588573455810546875");
+			} else if (type == "copper") {
+				eta = GetTexture("0.41437041759490966796875 0.8918449878692626953125 1");
+				k = GetTexture("1 0.74207782745361328125 0.695820510387420654296875");
+			} else if (type == "amorphous carbon") {
+				eta = GetTexture("1 0.83763563632965087890625 0.782974779605865478515625");
+				k = GetTexture("1 0.9413394927978515625 0.957833766937255859375");
+			} else
+				throw std::runtime_error("Unknown Metal2 preset: " + type);
+		} else {
+			eta = GetTexture(props.GetString(propName + ".eta", "0.5 0.5 0.5"));
+			k = GetTexture(props.GetString(propName + ".k", "0.5 0.5 0.5"));
+		}
+
+		return new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
