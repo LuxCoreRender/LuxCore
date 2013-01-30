@@ -613,7 +613,7 @@ float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 	const float cosWH = dot(fixedDir, wh);
 	*sampledDir = 2.f * cosWH * wh - fixedDir;
 
-	if ((*sampledDir).z <= 0.f)
+	if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
 		return BLACK;
 
 	const float coso = fabs(fixedDir.z);

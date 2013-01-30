@@ -756,82 +756,6 @@ void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-float Glossy2Material::SchlickDistribution_SchlickZ(const float roughness, float cosNH) const {
-	const float d = 1.f + (roughness - 1) * cosNH * cosNH;
-	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
-}
-
-float Glossy2Material::SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) const {
-	const float h = sqrtf(H.x * H.x + H.y * H.y);
-	if (h > 0.f) {
-		const float w = (anisotropy > 0.f ? H.x : H.y) / h;
-		const float p = 1.f - fabsf(anisotropy);
-		return sqrtf(p / (p * p + w * w * (1.f - p * p)));
-	}
-
-	return 1.f;
-}
-
-float Glossy2Material::SchlickDistribution_D(const float roughness, const Vector &wh,
-		const float anisotropy) const {
-	const float cosTheta = fabsf(wh.z);
-	return SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(wh, anisotropy) * INV_PI;
-}
-
-float Glossy2Material::SchlickDistribution_SchlickG(const float roughness,
-		const float costheta) const {
-	return costheta / (costheta * (1.f - roughness) + roughness);
-}
-
-float Glossy2Material::SchlickDistribution_G(const float roughness, const Vector &fixedDir,
-	const Vector &sampledDir) const {
-	return SchlickDistribution_SchlickG(roughness, fabsf(fixedDir.z)) *
-			SchlickDistribution_SchlickG(roughness, fabsf(sampledDir.z));
-}
-
-static float GetPhi(const float a, const float b) {
-	return M_PI * .5f * sqrtf(a * b / (1.f - a * (1.f - b)));
-}
-
-void Glossy2Material::SchlickDistribution_SampleH(const float roughness, const float anisotropy,
-		const float u0, const float u1, Vector *wh, float *d, float *pdf) const {
-	float u1x4 = u1 * 4.f;
-	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
-	const float cosTheta = sqrtf(cos2Theta);
-	const float sinTheta = sqrtf(1.f - cos2Theta);
-	const float p = 1.f - fabsf(anisotropy);
-	float phi;
-	if (u1x4 < 1.f) {
-		phi = GetPhi(u1x4 * u1x4, p * p);
-	} else if (u1x4 < 2.f) {
-		u1x4 = 2.f - u1x4;
-		phi = M_PI - GetPhi(u1x4 * u1x4, p * p);
-	} else if (u1x4 < 3.f) {
-		u1x4 -= 2.f;
-		phi = M_PI + GetPhi(u1x4 * u1x4, p * p);
-	} else {
-		u1x4 = 4.f - u1x4;
-		phi = M_PI * 2.f - GetPhi(u1x4 * u1x4, p * p);
-	}
-
-	if (anisotropy > 0.f)
-		phi += M_PI * .5f;
-
-	*wh = Vector(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
-	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh, anisotropy) * INV_PI;
-	*pdf = *d;
-}
-
-float Glossy2Material::SchlickDistribution_Pdf(const float roughness, const Vector &wh,
-		const float anisotropy) const {
-	return Glossy2Material::SchlickDistribution_D(roughness, wh, anisotropy);
-}
-
-Spectrum Glossy2Material::FresnelSlick_Evaluate(const Spectrum &normalIncidence, const float cosi) const {
-	return normalIncidence + (Spectrum(1.f) - normalIncidence) *
-		powf(1.f - cosi, 5.f);
-}
-
 float Glossy2Material::SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &fixedDir) const {
 	// No sampling on the back face
 	if (fixedDir.z <= 0.f)
@@ -890,7 +814,7 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingSampleF(const bool fromLight, const
 	const float cosWH = Dot(fixedDir, wh);
 	*sampledDir = 2.f * cosWH * wh - fixedDir;
 
-	if (sampledDir->z <= 0.f)
+	if ((sampledDir->z < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * sampledDir->z < 0.f))
 		return Spectrum();
 
 	const float coso = fabsf(fixedDir.z);
@@ -1133,3 +1057,210 @@ void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &reference
 	depth->AddReferencedTextures(referencedTexs);
 	index->AddReferencedTextures(referencedTexs);
 }
+
+//------------------------------------------------------------------------------
+// Metal2 material
+//
+// LuxRender Metal2 material porting.
+//------------------------------------------------------------------------------
+
+Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
+	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	return Spectrum();
+}
+
+Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
+	const Vector &fixedDir, Vector *sampledDir,
+	const float u0, const float u1,  const float passThroughEvent,
+	float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
+	if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
+	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+
+	Vector wh;
+	float d, specPdf;
+	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
+	const float cosWH = Dot(fixedDir, wh);
+	*sampledDir = 2.f * cosWH * wh - fixedDir;
+
+	*cosSampledDir = fabsf(sampledDir->z);
+	if ((*cosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * sampledDir->z < 0.f))
+		return Spectrum();
+
+	*pdfW = specPdf / (4.f * cosWH);
+	if (*pdfW <= 0.f)
+		return Spectrum();
+
+	const float coso = fabsf(fixedDir.z);
+	const float cosi = fabsf(sampledDir->z);
+	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
+	
+	const Spectrum etaVal = eta->GetColorValue(uv).Clamp();
+	const Spectrum kVal = k->GetColorValue(uv).Clamp();
+	Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+
+	const float factor = d * fabsf(cosWH) * G;
+	F *= factor;
+	if (!fromLight)
+		F /= coso;
+	else
+		F /= cosi;
+
+	*event = GLOSSY | REFLECT;
+	return F;
+}
+
+void Metal2Material::Pdf(const bool fromLight, const UV &uv,
+		const Vector &lightDir, const Vector &eyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = 0.f;
+
+	if (reversePdfW)
+		*reversePdfW = 0.f;
+}
+
+void Metal2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	eta->AddReferencedTextures(referencedTexs);
+	k->AddReferencedTextures(referencedTexs);
+	nu->AddReferencedTextures(referencedTexs);
+	nv->AddReferencedTextures(referencedTexs);
+}
+
+//------------------------------------------------------------------------------
+// SchlickDistribution
+//------------------------------------------------------------------------------
+
+namespace luxrays { namespace sdl {
+
+float SchlickDistribution_SchlickZ(const float roughness, const float cosNH) {
+	const float d = 1.f + (roughness - 1) * cosNH * cosNH;
+	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
+}
+
+float SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) {
+	const float h = sqrtf(H.x * H.x + H.y * H.y);
+	if (h > 0.f) {
+		const float w = (anisotropy > 0.f ? H.x : H.y) / h;
+		const float p = 1.f - fabsf(anisotropy);
+		return sqrtf(p / (p * p + w * w * (1.f - p * p)));
+	}
+
+	return 1.f;
+}
+
+float SchlickDistribution_D(const float roughness, const Vector &wh,
+		const float anisotropy) {
+	const float cosTheta = fabsf(wh.z);
+	return SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(wh, anisotropy) * INV_PI;
+}
+
+float SchlickDistribution_SchlickG(const float roughness,
+		const float costheta) {
+	return costheta / (costheta * (1.f - roughness) + roughness);
+}
+
+float SchlickDistribution_G(const float roughness, const Vector &fixedDir,
+	const Vector &sampledDir) {
+	return SchlickDistribution_SchlickG(roughness, fabsf(fixedDir.z)) *
+			SchlickDistribution_SchlickG(roughness, fabsf(sampledDir.z));
+}
+
+static float GetPhi(const float a, const float b) {
+	return M_PI * .5f * sqrtf(a * b / (1.f - a * (1.f - b)));
+}
+
+void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
+		const float u0, const float u1, Vector *wh, float *d, float *pdf) {
+	float u1x4 = u1 * 4.f;
+	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
+	const float cosTheta = sqrtf(cos2Theta);
+	const float sinTheta = sqrtf(1.f - cos2Theta);
+	const float p = 1.f - fabsf(anisotropy);
+	float phi;
+	if (u1x4 < 1.f) {
+		phi = GetPhi(u1x4 * u1x4, p * p);
+	} else if (u1x4 < 2.f) {
+		u1x4 = 2.f - u1x4;
+		phi = M_PI - GetPhi(u1x4 * u1x4, p * p);
+	} else if (u1x4 < 3.f) {
+		u1x4 -= 2.f;
+		phi = M_PI + GetPhi(u1x4 * u1x4, p * p);
+	} else {
+		u1x4 = 4.f - u1x4;
+		phi = M_PI * 2.f - GetPhi(u1x4 * u1x4, p * p);
+	}
+
+	if (anisotropy > 0.f)
+		phi += M_PI * .5f;
+
+	*wh = Vector(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
+	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh, anisotropy) * INV_PI;
+	*pdf = *d;
+}
+
+float SchlickDistribution_Pdf(const float roughness, const Vector &wh,
+		const float anisotropy) {
+	return SchlickDistribution_D(roughness, wh, anisotropy);
+}
+
+} }
+
+//------------------------------------------------------------------------------
+// FresnelSlick BSDF
+//------------------------------------------------------------------------------
+
+namespace luxrays { namespace sdl {
+
+Spectrum FresnelSlick_Evaluate(const Spectrum &normalIncidence, const float cosi) {
+	return normalIncidence + (Spectrum(1.f) - normalIncidence) *
+		powf(1.f - cosi, 5.f);
+}
+
+} }
+
+//------------------------------------------------------------------------------
+// FresnelGeneral material
+//------------------------------------------------------------------------------
+
+namespace luxrays { namespace sdl {
+
+static Spectrum FrFull(float cosi, const Spectrum &cost, const Spectrum &eta, const Spectrum &k) {
+	Spectrum tmp = (eta * eta + k * k) * (cosi * cosi) + (cost * cost);
+	Spectrum Rparl2 = (tmp - (2.f * cosi * cost) * eta) /
+		(tmp + (2.f * cosi * cost) * eta);
+	Spectrum tmp_f = (eta * eta + k * k) * (cost * cost) + (cosi * cosi);
+	Spectrum Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
+		(tmp_f + (2.f * cosi * cost) * eta);
+	return (Rparl2 + Rperp2) * 0.5f;
+}
+
+Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi) {
+	Spectrum sint2(Max(0.f, 1.f - cosi * cosi));
+	if (cosi > 0.f)
+		sint2 /= eta * eta;
+	else
+		sint2 *= eta * eta;
+	sint2 = sint2.Clamp();
+
+	const Spectrum cost2 = (Spectrum(1.f) - sint2);
+	if (cosi > 0.f) {
+		const Spectrum a(2.f * k * k * sint2);
+		return FrFull(cosi, Sqrt((cost2 + Sqrt(cost2 * cost2 + a * a)) / 2.f), eta, k);
+	} else {
+		const Spectrum a(2.f * k * k * sint2);
+		const Spectrum d2 = eta * eta + k * k;
+		return FrFull(-cosi, Sqrt((cost2 + Sqrt(cost2 * cost2 + a * a)) / 2.f), eta / d2, -k / d2);
+	}
+}
+
+} }

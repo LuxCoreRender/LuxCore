@@ -616,7 +616,7 @@ std::string KernelSource_material_funcs =
 "	const float cosWH = dot(fixedDir, wh);\n"
 "	*sampledDir = 2.f * cosWH * wh - fixedDir;\n"
 "\n"
-"	if ((*sampledDir).z <= 0.f)\n"
+"	if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))\n"
 "		return BLACK;\n"
 "\n"
 "	const float coso = fabs(fixedDir.z);\n"
