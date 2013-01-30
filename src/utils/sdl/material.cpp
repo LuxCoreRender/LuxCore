@@ -1067,7 +1067,39 @@ void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &reference
 Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	return Spectrum();
+	const Vector &fixedDir = fromLight ? lightDir : eyeDir;
+	const Vector &sampledDir = fromLight ? eyeDir : lightDir;
+
+	if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+	
+	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+
+	const Vector wh(Normalize(fixedDir + sampledDir));
+	const float cosWH = Dot(fixedDir, wh);
+
+	if (directPdfW)
+		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(fixedDir, wh));
+
+	if (reversePdfW)
+		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(sampledDir, wh));
+
+	const Spectrum etaVal = eta->GetColorValue(uv).Clamp();
+	const Spectrum kVal = k->GetColorValue(uv).Clamp();
+	Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+
+	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
+
+	const float cosi = fabsf(sampledDir.z);
+	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi);
+
+	*event = GLOSSY | REFLECT;
+	return factor * F;
 }
 
 Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
@@ -1120,11 +1152,23 @@ Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
 void Metal2Material::Pdf(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir,
 		float *directPdfW, float *reversePdfW) const {
+	const Vector &fixedDir = fromLight ? lightDir : eyeDir;
+	const Vector &sampledDir = fromLight ? eyeDir : lightDir;
+
+	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+
+	const Vector wh(Normalize(fixedDir + sampledDir));
+
 	if (directPdfW)
-		*directPdfW = 0.f;
+		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(fixedDir, wh));
 
 	if (reversePdfW)
-		*reversePdfW = 0.f;
+		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(sampledDir, wh));
 }
 
 void Metal2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
