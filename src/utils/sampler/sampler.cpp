@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/utils/sampler/sampler.h"
 #include "luxrays/utils/core/spectrum.h"
 
@@ -49,7 +51,7 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 		case SOBOL:
 			return "SOBOL";
 		default:
-			throw std::runtime_error("Unknown sampler type: " + type);	
+			throw std::runtime_error("Unknown sampler type: " + boost::lexical_cast<std::string>(type));
 	}
 }
 

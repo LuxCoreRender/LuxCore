@@ -242,7 +242,7 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 		case BIDIRVMCPU:
 			return "BIDIRVMCPU";
 		default:
-			throw runtime_error("Unknown render engine type: " + type);
+			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
 }
 
@@ -268,7 +268,7 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 		case BIDIRVMCPU:
 			return new BiDirVMCPURenderEngine(renderConfig, film, filmMutex);
 		default:
-			throw runtime_error("Unknown render engine type");
+			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}
 }
 

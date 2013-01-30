@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/utils/film/film.h"
 
 using namespace luxrays;
@@ -134,7 +136,7 @@ void Film::SetFilterType(const FilterType type) {
 			filter = new MitchellFilterSS(1.5f, 1.5f);
 			break;
 		default:
-			throw std::runtime_error("Unknown filter type: " + type);
+			throw std::runtime_error("Unknown filter type: " + boost::lexical_cast<std::string>(type));
 	}
 
 	if (filter) {
