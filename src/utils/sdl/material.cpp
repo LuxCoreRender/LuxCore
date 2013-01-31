@@ -1095,7 +1095,7 @@ Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
 
 	const Spectrum etaVal = eta->GetColorValue(uv).Clamp();
 	const Spectrum kVal = k->GetColorValue(uv).Clamp();
-	Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
 
@@ -1106,7 +1106,7 @@ Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
 
 	// The cosSampledDir is used to compensate the other one used inside the integrator
 	const float cosSampledDir = fabsf(sampledDir.z);
-	return factor * F / cosSampledDir;
+	return (factor / cosSampledDir) * F;
 }
 
 Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
@@ -1286,12 +1286,12 @@ Spectrum FresnelSlick_Evaluate(const Spectrum &normalIncidence, const float cosi
 
 namespace luxrays { namespace sdl {
 
-static Spectrum FrFull(float cosi, const Spectrum &cost, const Spectrum &eta, const Spectrum &k) {
-	Spectrum tmp = (eta * eta + k * k) * (cosi * cosi) + (cost * cost);
-	Spectrum Rparl2 = (tmp - (2.f * cosi * cost) * eta) /
+static Spectrum FrFull(const float cosi, const Spectrum &cost, const Spectrum &eta, const Spectrum &k) {
+	const Spectrum tmp = (eta * eta + k * k) * (cosi * cosi) + (cost * cost);
+	const Spectrum Rparl2 = (tmp - (2.f * cosi * cost) * eta) /
 		(tmp + (2.f * cosi * cost) * eta);
-	Spectrum tmp_f = (eta * eta + k * k) * (cost * cost) + (cosi * cosi);
-	Spectrum Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
+	const Spectrum tmp_f = (eta * eta + k * k) * (cost * cost) + (cosi * cosi);
+	const Spectrum Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
 		(tmp_f + (2.f * cosi * cost) * eta);
 	return (Rparl2 + Rperp2) * 0.5f;
 }
@@ -1302,7 +1302,7 @@ Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const f
 		sint2 /= eta * eta;
 	else
 		sint2 *= eta * eta;
-	sint2 = sint2.Clamp();
+	sint2.Clamp();
 
 	const Spectrum cost2 = (Spectrum(1.f) - sint2);
 	if (cosi > 0.f) {

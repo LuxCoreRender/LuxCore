@@ -44,3 +44,7 @@ float3 Spectrum_Clamp(const float3 s) {
 float3 Spectrum_Exp(const float3 s) {
 	return (float3)(exp(s.x), exp(s.y), exp(s.z));
 }
+
+float3 Spectrum_Sqrt(const float3 s) {
+	return (float3)(sqrt(s.x), sqrt(s.y), sqrt(s.z));
+}

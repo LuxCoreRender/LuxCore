@@ -430,6 +430,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
 	if (cscene->IsMaterialCompiled(GLOSSY2))
 		ss << " -D PARAM_ENABLE_MAT_GLOSSY2";
+	if (cscene->IsMaterialCompiled(METAL2))
+		ss << " -D PARAM_ENABLE_MAT_METAL2";
 
 	if (cscene->IsMaterialCompiled(GLASS) ||
 			cscene->IsMaterialCompiled(ARCHGLASS) ||
