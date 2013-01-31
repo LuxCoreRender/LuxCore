@@ -709,9 +709,11 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, material->glossy2.multibounce,
 			fixedDir, sampledDir);
 
-	// blend in base layer Schlick style
+	// Blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
-	return coatingF + absorption * (WHITE - S) * baseF;
+
+	// The cosi is used to compensate the other one used inside the integrator
+	return coatingF / cosi + absorption * (WHITE - S) * baseF;
 }
 
 float3 Glossy2Material_Sample(__global Material *material,
@@ -804,7 +806,9 @@ float3 Glossy2Material_Sample(__global Material *material,
 
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
-		return coatingF + absorption * (WHITE - S) * baseF;
+
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return coatingF / (*cosSampledDir) + absorption * (WHITE - S) * baseF;
 	} else {
 		// Back face reflection: base
 
