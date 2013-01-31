@@ -399,6 +399,16 @@ void CompiledScene::CompileMaterials() {
 				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
 				break;
 			}
+			case METAL2: {
+				Metal2Material *m2m = static_cast<Metal2Material *>(m);
+
+				mat->type = luxrays::ocl::METAL2;
+				mat->metal2.etaTexIndex = scene->texDefs.GetTextureIndex(m2m->GetEta());
+				mat->metal2.kTexIndex = scene->texDefs.GetTextureIndex(m2m->GetK());
+				mat->metal2.nuTexIndex = scene->texDefs.GetTextureIndex(m2m->GetNu());
+				mat->metal2.nvTexIndex = scene->texDefs.GetTextureIndex(m2m->GetNv());
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
 				break;

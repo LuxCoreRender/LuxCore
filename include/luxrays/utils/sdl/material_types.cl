@@ -22,7 +22,8 @@
  ***************************************************************************/
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT, GLOSSY2
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
+	GLOSSY2, METAL2
 } MaterialType;
 
 typedef struct {
@@ -71,6 +72,13 @@ typedef struct {
 } Glossy2Param;
 
 typedef struct {
+    unsigned int etaTexIndex;
+	unsigned int kTexIndex;
+	unsigned int nuTexIndex;
+	unsigned int nvTexIndex;
+} Metal2Param;
+
+typedef struct {
 	MaterialType type;
 	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;
 	union {
@@ -83,6 +91,7 @@ typedef struct {
 		// NULLMAT has no parameters
 		MatteTranslucentParam matteTranslucent;
 		Glossy2Param glossy2;
+		Metal2Param metal2;
 	};
 } Material;
 

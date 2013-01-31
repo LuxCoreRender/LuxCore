@@ -22,6 +22,112 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
+// Generic material related functions
+//------------------------------------------------------------------------------
+
+float SchlickDistribution_SchlickZ(const float roughness, float cosNH) {
+	const float d = 1.f + (roughness - 1) * cosNH * cosNH;
+	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
+}
+
+float SchlickDistribution_SchlickA(const float3 H, const float anisotropy) {
+	const float h = sqrt(H.x * H.x + H.y * H.y);
+	if (h > 0.f) {
+		const float w = (anisotropy > 0.f ? H.x : H.y) / h;
+		const float p = 1.f - fabs(anisotropy);
+		return sqrt(p / (p * p + w * w * (1.f - p * p)));
+	}
+
+	return 1.f;
+}
+
+float SchlickDistribution_D(const float roughness, const float3 wh, const float anisotropy) {
+	const float cosTheta = fabs(wh.z);
+	return SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(wh, anisotropy) * M_1_PI_F;
+}
+
+float SchlickDistribution_SchlickG(const float roughness, const float costheta) {
+	return costheta / (costheta * (1.f - roughness) + roughness);
+}
+
+float SchlickDistribution_G(const float roughness, const float3 fixedDir, const float3 sampledDir) {
+	return SchlickDistribution_SchlickG(roughness, fabs(fixedDir.z)) *
+			SchlickDistribution_SchlickG(roughness, fabs(sampledDir.z));
+}
+
+float GetPhi(const float a, const float b) {
+	return M_PI_F * .5f * sqrt(a * b / (1.f - a * (1.f - b)));
+}
+
+void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
+		const float u0, const float u1, float3 *wh, float *d, float *pdf) {
+	float u1x4 = u1 * 4.f;
+	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
+	const float cosTheta = sqrt(cos2Theta);
+	const float sinTheta = sqrt(1.f - cos2Theta);
+	const float p = 1.f - fabs(anisotropy);
+	float phi;
+	if (u1x4 < 1.f) {
+		phi = GetPhi(u1x4 * u1x4, p * p);
+	} else if (u1x4 < 2.f) {
+		u1x4 = 2.f - u1x4;
+		phi = M_PI_F - GetPhi(u1x4 * u1x4, p * p);
+	} else if (u1x4 < 3.f) {
+		u1x4 -= 2.f;
+		phi = M_PI_F + GetPhi(u1x4 * u1x4, p * p);
+	} else {
+		u1x4 = 4.f - u1x4;
+		phi = M_PI_F * 2.f - GetPhi(u1x4 * u1x4, p * p);
+	}
+
+	if (anisotropy > 0.f)
+		phi += M_PI_F * .5f;
+
+	*wh = (float3)(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh, anisotropy) * M_1_PI_F;
+	*pdf = *d;
+}
+
+float SchlickDistribution_Pdf(const float roughness, const float3 wh,
+		const float anisotropy) {
+	return SchlickDistribution_D(roughness, wh, anisotropy);
+}
+
+float3 FresnelSlick_Evaluate(const float3 normalIncidence, const float cosi) {
+	return normalIncidence + (WHITE - normalIncidence) *
+		pow(1.f - cosi, 5.f);
+}
+
+float3 FrFull(const float cosi, const float3 cost, const float3 eta, const float3 k) {
+	const float3 tmp = (eta * eta + k * k) * (cosi * cosi) + (cost * cost);
+	const float3 Rparl2 = (tmp - (2.f * cosi * cost) * eta) /
+		(tmp + (2.f * cosi * cost) * eta);
+	const float3 tmp_f = (eta * eta + k * k) * (cost * cost) + (cosi * cosi);
+	const float3 Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
+		(tmp_f + (2.f * cosi * cost) * eta);
+	return (Rparl2 + Rperp2) * 0.5f;
+}
+
+float3 FresnelGeneral_Evaluate(const float3 eta, const float3 k, const float cosi) {
+	float3 sint2 = fmax(0.f, 1.f - cosi * cosi);
+	if (cosi > 0.f)
+		sint2 /= eta * eta;
+	else
+		sint2 *= eta * eta;
+	sint2 = Spectrum_Clamp(sint2);
+
+	const float3 cost2 = 1.f - sint2;
+	if (cosi > 0.f) {
+		const float3 a = 2.f * k * k * sint2;
+		return FrFull(cosi, Spectrum_Sqrt((cost2 + Spectrum_Sqrt(cost2 * cost2 + a * a)) / 2.f), eta, k);
+	} else {
+		const float3 a = 2.f * k * k * sint2;
+		const float3 d2 = eta * eta + k * k;
+		return FrFull(-cosi, Spectrum_Sqrt((cost2 + Spectrum_Sqrt(cost2 * cost2 + a * a)) / 2.f), eta / d2, -k / d2);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Matte material
 //------------------------------------------------------------------------------
 
@@ -480,79 +586,6 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 
-float SchlickDistribution_SchlickZ(const float roughness, float cosNH) {
-	const float d = 1.f + (roughness - 1) * cosNH * cosNH;
-	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
-}
-
-float SchlickDistribution_SchlickA(const float3 H, const float anisotropy) {
-	const float h = sqrt(H.x * H.x + H.y * H.y);
-	if (h > 0.f) {
-		const float w = (anisotropy > 0.f ? H.x : H.y) / h;
-		const float p = 1.f - fabs(anisotropy);
-		return sqrt(p / (p * p + w * w * (1.f - p * p)));
-	}
-
-	return 1.f;
-}
-
-float SchlickDistribution_D(const float roughness, const float3 wh, const float anisotropy) {
-	const float cosTheta = fabs(wh.z);
-	return SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(wh, anisotropy) * M_1_PI_F;
-}
-
-float SchlickDistribution_SchlickG(const float roughness, const float costheta) {
-	return costheta / (costheta * (1.f - roughness) + roughness);
-}
-
-float SchlickDistribution_G(const float roughness, const float3 fixedDir, const float3 sampledDir) {
-	return SchlickDistribution_SchlickG(roughness, fabs(fixedDir.z)) *
-			SchlickDistribution_SchlickG(roughness, fabs(sampledDir.z));
-}
-
-float GetPhi(const float a, const float b) {
-	return M_PI_F * .5f * sqrt(a * b / (1.f - a * (1.f - b)));
-}
-
-void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
-		const float u0, const float u1, float3 *wh, float *d, float *pdf) {
-	float u1x4 = u1 * 4.f;
-	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
-	const float cosTheta = sqrt(cos2Theta);
-	const float sinTheta = sqrt(1.f - cos2Theta);
-	const float p = 1.f - fabs(anisotropy);
-	float phi;
-	if (u1x4 < 1.f) {
-		phi = GetPhi(u1x4 * u1x4, p * p);
-	} else if (u1x4 < 2.f) {
-		u1x4 = 2.f - u1x4;
-		phi = M_PI_F - GetPhi(u1x4 * u1x4, p * p);
-	} else if (u1x4 < 3.f) {
-		u1x4 -= 2.f;
-		phi = M_PI_F + GetPhi(u1x4 * u1x4, p * p);
-	} else {
-		u1x4 = 4.f - u1x4;
-		phi = M_PI_F * 2.f - GetPhi(u1x4 * u1x4, p * p);
-	}
-
-	if (anisotropy > 0.f)
-		phi += M_PI_F * .5f;
-
-	*wh = (float3)(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
-	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh, anisotropy) * M_1_PI_F;
-	*pdf = *d;
-}
-
-float SchlickDistribution_Pdf(const float roughness, const float3 wh,
-		const float anisotropy) {
-	return SchlickDistribution_D(roughness, wh, anisotropy);
-}
-
-float3 FresnelSlick_Evaluate(const float3 normalIncidence, const float cosi) {
-	return normalIncidence + (WHITE - normalIncidence) *
-		pow(1.f - cosi, 5.f);
-}
-
 float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
 	// No sampling on the back face
 	if (fixedDir.z <= 0.f)
@@ -819,6 +852,113 @@ float3 Glossy2Material_Sample(__global Material *material,
 #endif
 
 //------------------------------------------------------------------------------
+// Metal2 material
+//
+// LuxRender Metal2 material porting.
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_METAL2)
+
+float3 Metal2Material_Evaluate(__global Material *material,
+		const float2 uv, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+	const float3 fixedDir = eyeDir;
+	const float3 sampledDir = lightDir;
+
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+	
+	const float u = clamp(Texture_GetGreyValue(&texs[material->metal2.nuTexIndex], uv
+		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float v = clamp(Texture_GetGreyValue(&texs[material->metal2.nvTexIndex], uv
+		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+
+	const float3 wh = normalize(fixedDir + sampledDir);
+	const float cosWH = dot(fixedDir, wh);
+
+	if (directPdfW)
+		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
+
+	const float3 etaVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.etaTexIndex], uv
+			TEXTURES_PARAM));
+	const float3 kVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
+			TEXTURES_PARAM));
+
+	const float3 F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+
+	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
+
+	const float cosi = fabs(sampledDir.z);
+	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi);
+
+	*event = GLOSSY | REFLECT;
+
+	// The cosSampledDir is used to compensate the other one used inside the integrator
+	const float cosSampledDir = fabs(sampledDir.z);
+	return (factor / cosSampledDir) * F;
+}
+
+float3 Metal2Material_Sample(__global Material *material,
+		const float2 uv, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		TEXTURES_PARAM_DECL) {
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	const float u = clamp(Texture_GetGreyValue(&texs[material->metal2.nuTexIndex], uv
+		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float v = clamp(Texture_GetGreyValue(&texs[material->metal2.nvTexIndex], uv
+		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+
+	float3 wh;
+	float d, specPdf;
+	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
+	const float cosWH = dot(fixedDir, wh);
+	*sampledDir = 2.f * cosWH * wh - fixedDir;
+
+	*cosSampledDir = fabs((*sampledDir).z);
+	if ((*cosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
+		return BLACK;
+
+	*pdfW = specPdf / (4.f * cosWH);
+	if (*pdfW <= 0.f)
+		return BLACK;
+
+	const float coso = fabs(fixedDir.z);
+	const float cosi = fabs((*sampledDir).z);
+	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
+	
+	const float3 etaVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.etaTexIndex], uv
+			TEXTURES_PARAM));
+	const float3 kVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
+			TEXTURES_PARAM));
+	float3 F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+
+	const float factor = d * fabs(cosWH) * G;
+	F *= factor;
+	//if (!fromLight)
+		F /= coso;
+	//else
+	//	F /= cosi;
+
+	*event = GLOSSY | REFLECT;
+	// The cosSampledDir is used to compensate the other one used inside the integrator
+	return F / (*cosSampledDir);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic material functions
 //
 // They include the support for all material but Mix
@@ -828,6 +968,9 @@ float3 Glossy2Material_Sample(__global Material *material,
 bool Material_IsDeltaNoMix(__global Material *material) {
 	switch (material->type) {
 		// Non Specular materials
+#if defined (PARAM_ENABLE_MAT_METAL2)
+		case METAL2:
+#endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
 #endif
@@ -893,7 +1036,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 		case GLOSSY2:
 			return DIFFUSE | GLOSSY | REFLECT;
 #endif
-
+#if defined (PARAM_ENABLE_MAT_METAL2)
+		case METAL2:
+			return GLOSSY | REFLECT;
+#endif
 		default:
 			return NONE;
 	}
@@ -956,6 +1102,12 @@ float3 Material_SampleNoMix(__global Material *material,
 					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
 					TEXTURES_PARAM);
 #endif
+#if defined (PARAM_ENABLE_MAT_METAL2)
+		case METAL2:
+			return Metal2Material_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
 		default:
 			return BLACK;
 	}
@@ -979,6 +1131,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
 			return Glossy2Material_Evaluate(material, uv, lightDir, eyeDir, event, directPdfW
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_GLOSSY2)
+		case METAL2:
+			return Metal2Material_Evaluate(material, uv, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)

@@ -47,4 +47,8 @@ std::string KernelSource_spectrum_funcs =
 "float3 Spectrum_Exp(const float3 s) {\n"
 "	return (float3)(exp(s.x), exp(s.y), exp(s.z));\n"
 "}\n"
+"\n"
+"float3 Spectrum_Sqrt(const float3 s) {\n"
+"	return (float3)(sqrt(s.x), sqrt(s.y), sqrt(s.z));\n"
+"}\n"
 ; } }
