@@ -916,9 +916,11 @@ Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 
 	const Spectrum coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, fixedDir, sampledDir);
 
-	// blend in base layer Schlick style
+	// Blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
-	return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
+	
+	// The cosi is used to compensate the other one used inside the integrator
+	return coatingF / cosi + absorption * (Spectrum(1.f) - S) * baseF;
 }
 
 Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
@@ -1000,7 +1002,9 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
-		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
+		
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return coatingF / (*cosSampledDir) + absorption * (Spectrum(1.f) - S) * baseF;
 	} else {
 		// Back face reflection: base
 
@@ -1099,7 +1103,10 @@ Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
 	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi);
 
 	*event = GLOSSY | REFLECT;
-	return factor * F;
+
+	// The cosSampledDir is used to compensate the other one used inside the integrator
+	const float cosSampledDir = fabsf(sampledDir.z);
+	return factor * F / cosSampledDir;
 }
 
 Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
@@ -1146,7 +1153,8 @@ Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
 		F /= cosi;
 
 	*event = GLOSSY | REFLECT;
-	return F;
+	// The cosSampledDir is used to compensate the other one used inside the integrator
+	return F / (*cosSampledDir);
 }
 
 void Metal2Material::Pdf(const bool fromLight, const UV &uv,
