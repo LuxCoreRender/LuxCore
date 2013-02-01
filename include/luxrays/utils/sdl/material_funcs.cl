@@ -1133,7 +1133,7 @@ float3 Material_EvaluateNoMix(__global Material *material,
 			return Glossy2Material_Evaluate(material, uv, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
-#if defined (PARAM_ENABLE_MAT_GLOSSY2)
+#if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
 			return Metal2Material_Evaluate(material, uv, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
