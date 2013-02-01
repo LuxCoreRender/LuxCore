@@ -750,7 +750,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 			} else
 				throw std::runtime_error("Unknown Metal2 preset: " + type);
 		} else {
-			eta = GetTexture(props.GetString(propName + ".eta", "0.5 0.5 0.5"));
+			eta = GetTexture(props.GetString(propName + ".n", "0.5 0.5 0.5"));
 			k = GetTexture(props.GetString(propName + ".k", "0.5 0.5 0.5"));
 		}
 

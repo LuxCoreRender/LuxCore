@@ -1093,7 +1093,7 @@ Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
 	if (reversePdfW)
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(sampledDir, wh));
 
-	const Spectrum etaVal = eta->GetColorValue(uv).Clamp();
+	const Spectrum etaVal = n->GetColorValue(uv).Clamp();
 	const Spectrum kVal = k->GetColorValue(uv).Clamp();
 	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
@@ -1141,7 +1141,7 @@ Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
 	const float cosi = fabsf(sampledDir->z);
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	
-	const Spectrum etaVal = eta->GetColorValue(uv).Clamp();
+	const Spectrum etaVal = n->GetColorValue(uv).Clamp();
 	const Spectrum kVal = k->GetColorValue(uv).Clamp();
 	Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
@@ -1182,7 +1182,7 @@ void Metal2Material::Pdf(const bool fromLight, const UV &uv,
 void Metal2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	eta->AddReferencedTextures(referencedTexs);
+	n->AddReferencedTextures(referencedTexs);
 	k->AddReferencedTextures(referencedTexs);
 	nu->AddReferencedTextures(referencedTexs);
 	nv->AddReferencedTextures(referencedTexs);
