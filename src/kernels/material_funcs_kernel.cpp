@@ -1136,7 +1136,7 @@ std::string KernelSource_material_funcs =
 "			return Glossy2Material_Evaluate(material, uv, lightDir, eyeDir, event, directPdfW\n"
 "					TEXTURES_PARAM);\n"
 "#endif\n"
-"#if defined (PARAM_ENABLE_MAT_GLOSSY2)\n"
+"#if defined (PARAM_ENABLE_MAT_METAL2)\n"
 "		case METAL2:\n"
 "			return Metal2Material_Evaluate(material, uv, lightDir, eyeDir, event, directPdfW\n"
 "					TEXTURES_PARAM);\n"
