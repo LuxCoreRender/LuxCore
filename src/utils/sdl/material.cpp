@@ -878,7 +878,7 @@ Spectrum Glossy2Material::Evaluate(const bool fromLight, const UV &uv,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks.Clamp();
+	ks = ks.Clamp();
 
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
@@ -936,7 +936,7 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks.Clamp();
+	ks = ks.Clamp();
 
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
@@ -1024,7 +1024,7 @@ void Glossy2Material::Pdf(const bool fromLight, const UV &uv,
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-	ks.Clamp();
+	ks = ks.Clamp();
 
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
@@ -1302,7 +1302,7 @@ Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const f
 		sint2 /= eta * eta;
 	else
 		sint2 *= eta * eta;
-	sint2.Clamp();
+	sint2 = sint2.Clamp();
 
 	const Spectrum cost2 = (Spectrum(1.f) - sint2);
 	if (cosi > 0.f) {

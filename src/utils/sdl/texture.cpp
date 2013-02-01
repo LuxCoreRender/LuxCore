@@ -355,3 +355,67 @@ const UV ScaleTexture::GetDuDv() const {
 
 	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
 }
+
+//------------------------------------------------------------------------------
+// FresnelApproxN & FresnelApproxK texture
+//------------------------------------------------------------------------------
+
+float FresnelApproxN(const float Fr) {
+	const float sqrtReflectance = sqrtf(Clamp(Fr, 0.f, .999f));
+
+	return (1.f + sqrtReflectance) /
+		(1.f - sqrtReflectance);
+}
+
+Spectrum FresnelApproxN(const Spectrum &Fr) {
+	const Spectrum sqrtReflectance = Sqrt(Fr.Clamp(0.f, .999f));
+
+	return (Spectrum(1.f) + sqrtReflectance) /
+		(Spectrum(1.f) - sqrtReflectance);
+}
+
+float FresnelApproxK(const float Fr) {
+	const float reflectance = Clamp(Fr, 0.f, .999f);
+
+	return 2.f * sqrtf(reflectance /
+		(1.f - reflectance));
+}
+
+Spectrum FresnelApproxK(const Spectrum &Fr) {
+	const Spectrum reflectance = Fr.Clamp(0.f, .999f);
+
+	return 2.f * Sqrt(reflectance /
+		(Spectrum(1.f) - reflectance));
+}
+
+float FresnelApproxNTexture::GetGreyValue(const UV &uv) const {
+	return FresnelApproxN(tex->GetGreyValue(uv));
+}
+
+Spectrum FresnelApproxNTexture::GetColorValue(const UV &uv) const {
+	return FresnelApproxN(tex->GetColorValue(uv));
+}
+
+float FresnelApproxNTexture::GetAlphaValue(const UV &uv) const {
+	return tex->GetAlphaValue(uv);
+}
+
+const UV FresnelApproxNTexture::GetDuDv() const {
+	return tex->GetDuDv();
+}
+
+float FresnelApproxKTexture::GetGreyValue(const UV &uv) const {
+	return FresnelApproxK(tex->GetGreyValue(uv));
+}
+
+Spectrum FresnelApproxKTexture::GetColorValue(const UV &uv) const {
+	return FresnelApproxK(tex->GetColorValue(uv));
+}
+
+float FresnelApproxKTexture::GetAlphaValue(const UV &uv) const {
+	return tex->GetAlphaValue(uv);
+}
+
+const UV FresnelApproxKTexture::GetDuDv() const {
+	return tex->GetDuDv();
+}

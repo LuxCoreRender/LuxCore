@@ -72,7 +72,7 @@ typedef struct {
 } Glossy2Param;
 
 typedef struct {
-    unsigned int etaTexIndex;
+    unsigned int nTexIndex;
 	unsigned int kTexIndex;
 	unsigned int nuTexIndex;
 	unsigned int nvTexIndex;

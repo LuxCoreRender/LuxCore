@@ -1,6 +1,16 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
+#scene.textures.fntex.type = fresnelapproxn
+#scene.textures.fntex.texture = 0.5 0.0 0.0
+#scene.textures.fktex.type = fresnelapproxk
+#scene.textures.fktex.texture = 0.5 0.0 0.0
+################################################################################
+#scene.materials.shell.type = metal2
+#scene.materials.shell.n = fntex
+#scene.materials.shell.k = fktex
+#scene.materials.shell.uroughness = 0.05
+#scene.materials.shell.vroughness = 0.05
 scene.materials.shell.type = metal2
 scene.materials.shell.preset = gold
 #scene.materials.shell.preset = silver

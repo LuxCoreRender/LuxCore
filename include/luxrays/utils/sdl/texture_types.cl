@@ -22,7 +22,8 @@
  ***************************************************************************/
 
 typedef enum {
-	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX
+	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
+	FRESNEL_APPROX_K
 } TextureType;
 
 typedef struct {
@@ -55,6 +56,14 @@ typedef struct {
 } ScaleTexParam;
 
 typedef struct {
+	unsigned int texIndex;
+} FresnelApproxNTexParam;
+
+typedef struct {
+	unsigned int texIndex;
+} FresnelApproxKTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		ConstFloatParam constFloat;
@@ -62,6 +71,8 @@ typedef struct {
 		ConstFloat4Param constFloat4;
 		ImageMapInstanceParam imageMapInstance;
 		ScaleTexParam scaleTex;
+		FresnelApproxNTexParam fresnelApproxN;
+		FresnelApproxKTexParam fresnelApproxK;
 	};
 } Texture;
 

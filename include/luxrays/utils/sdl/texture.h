@@ -45,9 +45,10 @@ namespace sdl {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX
+	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
+	FRESNEL_APPROX_K
 } TextureType;
-	
+
 class Texture {
 public:
 	Texture() { }
@@ -401,6 +402,60 @@ public:
 private:
 	const Texture *tex1;
 	const Texture *tex2;
+};
+
+//------------------------------------------------------------------------------
+// FresnelApproxN & FresnelApproxK texture
+//
+// Used mostly to emulate LuxRender FresnelColor texture.
+//------------------------------------------------------------------------------
+
+class FresnelApproxNTexture : public Texture {
+public:
+	FresnelApproxNTexture(const Texture *t) : tex(t) { }
+	virtual ~FresnelApproxNTexture() { }
+
+	virtual TextureType GetType() const { return FRESNEL_APPROX_N; }
+	virtual float GetGreyValue(const UV &uv) const;
+	virtual Spectrum GetColorValue(const UV &uv) const;
+	virtual float GetAlphaValue(const UV &uv) const;
+
+	virtual const UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex->AddReferencedTextures(referencedTexs);
+	}
+
+	const Texture *GetTexture() const { return tex; }
+
+private:
+	const Texture *tex;
+};
+
+class FresnelApproxKTexture : public Texture {
+public:
+	FresnelApproxKTexture(const Texture *t) : tex(t) { }
+	virtual ~FresnelApproxKTexture() { }
+
+	virtual TextureType GetType() const { return FRESNEL_APPROX_K; }
+	virtual float GetGreyValue(const UV &uv) const;
+	virtual Spectrum GetColorValue(const UV &uv) const;
+	virtual float GetAlphaValue(const UV &uv) const;
+
+	virtual const UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex->AddReferencedTextures(referencedTexs);
+	}
+
+	const Texture *GetTexture() const { return tex; }
+
+private:
+	const Texture *tex;
 };
 
 } }
