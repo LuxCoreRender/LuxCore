@@ -605,6 +605,14 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 		return new ScaleTexture(tex1, tex2);
+	} else if (texType == "fresnelapproxn") {
+		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "tex").at(0);
+		const Texture *tex = GetTexture(texName);
+		return new FresnelApproxNTexture(tex);
+	} else if (texType == "fresnelapproxk") {
+		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "tex").at(0);
+		const Texture *tex = GetTexture(texName);
+		return new FresnelApproxKTexture(tex);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

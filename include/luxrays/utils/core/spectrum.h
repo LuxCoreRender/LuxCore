@@ -153,12 +153,13 @@ public:
 		return 0.212671f * r + 0.715160f * g + 0.072169f * b;
 	}
 
-	Spectrum Clamp() {
-		luxrays::Clamp(r, 0.f, 1.f);
-		luxrays::Clamp(g, 0.f, 1.f);
-		luxrays::Clamp(b, 0.f, 1.f);
+	Spectrum Clamp(const float min = 0.f, const float max = 1.f) const {
+		Spectrum s(
+			luxrays::Clamp(r, min, max),
+			luxrays::Clamp(g, min, max),
+			luxrays::Clamp(b, min, max));
 
-		return *this;
+		return s;
 	}
 
 	float r, g, b;

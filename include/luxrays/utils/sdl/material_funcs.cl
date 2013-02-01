@@ -884,12 +884,12 @@ float3 Metal2Material_Evaluate(__global Material *material,
 	if (directPdfW)
 		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
 
-	const float3 etaVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.etaTexIndex], uv
+	const float3 nVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.nTexIndex], uv
 			TEXTURES_PARAM));
 	const float3 kVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
 			TEXTURES_PARAM));
 
-	const float3 F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
 
@@ -938,11 +938,11 @@ float3 Metal2Material_Sample(__global Material *material,
 	const float cosi = fabs((*sampledDir).z);
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	
-	const float3 etaVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.etaTexIndex], uv
+	const float3 nVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.nTexIndex], uv
 			TEXTURES_PARAM));
 	const float3 kVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
 			TEXTURES_PARAM));
-	float3 F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+	float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
 	const float factor = d * fabs(cosWH) * G;
 	F *= factor;
