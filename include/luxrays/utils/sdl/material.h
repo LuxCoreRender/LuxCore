@@ -541,8 +541,8 @@ private:
 class Metal2Material : public Material {
 public:
 	Metal2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *e, const Texture *kk, const Texture *u, const Texture *v) :
-			Material(emitted, bump, normal), eta(e), k(kk), nu(u), nv(v) { }
+			const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
+			Material(emitted, bump, normal), n(nn), k(kk), nu(u), nv(v) { }
 
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -560,13 +560,13 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
-	const Texture *GetEta() const { return eta; }
+	const Texture *GetN() const { return n; }
 	const Texture *GetK() const { return k; }
 	const Texture *GetNu() const { return nu; }
 	const Texture *GetNv() const { return nv; }
 
 private:
-	const Texture *eta;
+	const Texture *n;
 	const Texture *k;
 	const Texture *nu;
 	const Texture *nv;
