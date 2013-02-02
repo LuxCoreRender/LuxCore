@@ -680,8 +680,6 @@ Spectrum MatteTranslucentMaterial::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	const float cosSampledDir = Dot(lightDir, eyeDir);
-	if (fabsf(cosSampledDir) < DEFAULT_COS_EPSILON_STATIC)
-		return Spectrum();
 
 	const Spectrum r = Kr->GetColorValue(uv).Clamp();
 	const Spectrum t = Kt->GetColorValue(uv).Clamp() * 
@@ -1074,9 +1072,6 @@ Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
 	const Vector &fixedDir = fromLight ? lightDir : eyeDir;
 	const Vector &sampledDir = fromLight ? eyeDir : lightDir;
 
-	if (fabsf(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return Spectrum();
-	
 	const float u = Clamp(nu->GetGreyValue(uv), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetGreyValue(uv), 6e-3f, 1.f);
 	const float u2 = u * u;
