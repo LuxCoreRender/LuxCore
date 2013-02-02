@@ -838,8 +838,8 @@ float3 Glossy2Material_Sample(__global Material *material,
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
 
-		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return coatingF / (*cosSampledDir) + absorption * (WHITE - S) * baseF;
+		// The cosi is used to compensate the other one used inside the integrator
+		return coatingF / cosi + absorption * (WHITE - S) * baseF;
 	} else {
 		// Back face reflection: base
 
@@ -879,10 +879,10 @@ float3 Metal2Material_Evaluate(__global Material *material,
 	if (directPdfW)
 		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
 
-	const float3 nVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.nTexIndex], uv
-			TEXTURES_PARAM));
-	const float3 kVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
-			TEXTURES_PARAM));
+	const float3 nVal = Texture_GetColorValue(&texs[material->metal2.nTexIndex], uv
+			TEXTURES_PARAM);
+	const float3 kVal = Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
+			TEXTURES_PARAM);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
@@ -893,9 +893,8 @@ float3 Metal2Material_Evaluate(__global Material *material,
 
 	*event = GLOSSY | REFLECT;
 
-	// The cosSampledDir is used to compensate the other one used inside the integrator
-	const float cosSampledDir = fabs(sampledDir.z);
-	return (factor / cosSampledDir) * F;
+	// The cosi is used to compensate the other one used inside the integrator
+	return (factor / cosi) * F;
 }
 
 float3 Metal2Material_Sample(__global Material *material,
@@ -921,7 +920,9 @@ float3 Metal2Material_Sample(__global Material *material,
 	const float cosWH = dot(fixedDir, wh);
 	*sampledDir = 2.f * cosWH * wh - fixedDir;
 
-	*cosSampledDir = fabs((*sampledDir).z);
+	const float coso = fabs(fixedDir.z);
+	const float cosi = fabs((*sampledDir).z);
+	*cosSampledDir = cosi;
 	if ((*cosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
 		return BLACK;
 
@@ -929,26 +930,24 @@ float3 Metal2Material_Sample(__global Material *material,
 	if (*pdfW <= 0.f)
 		return BLACK;
 
-	const float coso = fabs(fixedDir.z);
-	const float cosi = fabs((*sampledDir).z);
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	
-	const float3 nVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.nTexIndex], uv
-			TEXTURES_PARAM));
-	const float3 kVal = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
-			TEXTURES_PARAM));
+	const float3 nVal = Texture_GetColorValue(&texs[material->metal2.nTexIndex], uv
+			TEXTURES_PARAM);
+	const float3 kVal = Texture_GetColorValue(&texs[material->metal2.kTexIndex], uv
+			TEXTURES_PARAM);
 	float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
-	const float factor = d * fabs(cosWH) * G;
+	const float factor = d * G;
 	F *= factor;
 	//if (!fromLight)
-		F /= coso;
+		F /= 4.f * coso;
 	//else
 	//	F /= cosi;
 
 	*event = GLOSSY | REFLECT;
-	// The cosSampledDir is used to compensate the other one used inside the integrator
-	return F / (*cosSampledDir);
+	// The cosi is used to compensate the other one used inside the integrator
+	return F / cosi;
 }
 
 #endif
