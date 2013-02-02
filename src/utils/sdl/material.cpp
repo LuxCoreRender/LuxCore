@@ -1001,8 +1001,8 @@ Spectrum Glossy2Material::Sample(const bool fromLight, const UV &uv,
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
 		
-		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return coatingF / (*cosSampledDir) + absorption * (Spectrum(1.f) - S) * baseF;
+		// The cosi is used to compensate the other one used inside the integrator
+		return coatingF / cosi + absorption * (Spectrum(1.f) - S) * baseF;
 	} else {
 		// Back face reflection: base
 
@@ -1088,8 +1088,8 @@ Spectrum Metal2Material::Evaluate(const bool fromLight, const UV &uv,
 	if (reversePdfW)
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(sampledDir, wh));
 
-	const Spectrum etaVal = n->GetColorValue(uv).Clamp();
-	const Spectrum kVal = k->GetColorValue(uv).Clamp();
+	const Spectrum etaVal = n->GetColorValue(uv);
+	const Spectrum kVal = k->GetColorValue(uv);
 	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
@@ -1124,7 +1124,9 @@ Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
 	const float cosWH = Dot(fixedDir, wh);
 	*sampledDir = 2.f * cosWH * wh - fixedDir;
 
-	*cosSampledDir = fabsf(sampledDir->z);
+	const float coso = fabsf(fixedDir.z);
+	const float cosi = fabsf(sampledDir->z);
+	*cosSampledDir = cosi;
 	if ((*cosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * sampledDir->z < 0.f))
 		return Spectrum();
 
@@ -1132,24 +1134,22 @@ Spectrum Metal2Material::Sample(const bool fromLight, const UV &uv,
 	if (*pdfW <= 0.f)
 		return Spectrum();
 
-	const float coso = fabsf(fixedDir.z);
-	const float cosi = fabsf(sampledDir->z);
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
-	
-	const Spectrum etaVal = n->GetColorValue(uv).Clamp();
-	const Spectrum kVal = k->GetColorValue(uv).Clamp();
+
+	const Spectrum etaVal = n->GetColorValue(uv);
+	const Spectrum kVal = k->GetColorValue(uv);
 	Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
-	const float factor = d * fabsf(cosWH) * G;
+	const float factor = d * G;
 	F *= factor;
 	if (!fromLight)
-		F /= coso;
+		F /= 4.f * coso;
 	else
-		F /= cosi;
+		F /= 4.f * cosi;
 
 	*event = GLOSSY | REFLECT;
-	// The cosSampledDir is used to compensate the other one used inside the integrator
-	return F / (*cosSampledDir);
+	// The cosi is used to compensate the other one used inside the integrator
+	return F / cosi;
 }
 
 void Metal2Material::Pdf(const bool fromLight, const UV &uv,
@@ -1280,6 +1280,34 @@ Spectrum FresnelSlick_Evaluate(const Spectrum &normalIncidence, const float cosi
 //------------------------------------------------------------------------------
 
 namespace luxrays { namespace sdl {
+	
+//static Spectrum FrDiel2(const float cosi, const Spectrum &cost,
+//		const Spectrum &eta) {
+//	Spectrum Rparl(eta * cosi);
+//	Rparl = (cost - Rparl) / (cost + Rparl);
+//	Spectrum Rperp(eta * cost);
+//	Rperp = (Spectrum(cosi) - Rperp) / (Spectrum(cosi) + Rperp);
+//
+//	return (Rparl * Rparl + Rperp * Rperp) * .5f;
+//}
+//
+//static Spectrum FrDiel(const float cosi, const float cost,
+//		const Spectrum &etai, const Spectrum &etat) {
+//	return FrDiel2(cosi, Spectrum(cost), etat / etai);
+//}
+//
+//static Spectrum FrCond(const float cosi, const Spectrum &eta,
+//		const Spectrum &k) {
+//	const Spectrum tmp = (eta * eta + k*k) * (cosi * cosi) + 1;
+//	const Spectrum Rparl2 = 
+//		(tmp - (2.f * eta * cosi)) /
+//		(tmp + (2.f * eta * cosi));
+//	const Spectrum tmp_f = eta * eta + k*k + (cosi * cosi);
+//	const Spectrum Rperp2 =
+//		(tmp_f - (2.f * eta * cosi)) /
+//		(tmp_f + (2.f * eta * cosi));
+//	return (Rparl2 + Rperp2) * .5f;
+//}
 
 static Spectrum FrFull(const float cosi, const Spectrum &cost, const Spectrum &eta, const Spectrum &k) {
 	const Spectrum tmp = (eta * eta + k * k) * (cosi * cosi) + (cost * cost);
@@ -1288,7 +1316,7 @@ static Spectrum FrFull(const float cosi, const Spectrum &cost, const Spectrum &e
 	const Spectrum tmp_f = (eta * eta + k * k) * (cost * cost) + (cosi * cosi);
 	const Spectrum Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
 		(tmp_f + (2.f * cosi * cost) * eta);
-	return (Rparl2 + Rperp2) * 0.5f;
+	return (Rparl2 + Rperp2) * .5f;
 }
 
 Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi) {
