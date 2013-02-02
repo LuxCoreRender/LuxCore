@@ -741,20 +741,20 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 			const std::string type = props.GetString(propName + ".preset", "aluminium");
 
 			if (type == "aluminium") {
-				eta = GetTexture("1 0.67897427082061767578125 0.5416104793548583984375");
-				k = GetTexture("1 0.783131420612335205078125 0.6841061115264892578125");
+				eta = GetTexture("1.697 0.879833 0.530174");
+				k = GetTexture("9.30201 6.27604 4.89434");
 			} else if (type == "silver") {
-				eta = GetTexture("1 0.82966911792755126953125 0.92802989482879638671875");
-				k = GetTexture("1 0.7600715160369873046875 0.6304759979248046875");
+				eta = GetTexture("0.155706 0.115925 0.138897");
+				k = GetTexture("4.88648 3.12787 2.17797");
 			} else if (type == "gold") {
-				eta = GetTexture("0.387980997562408447265625 0.497408479452133178710938 1");
-				k = GetTexture("1 0.729227721691131591796875 0.6011588573455810546875");
+				eta = GetTexture("0.117959 0.354153 1.43897");
+				k = GetTexture("4.03165 2.39416 1.61967");
 			} else if (type == "copper") {
-				eta = GetTexture("0.41437041759490966796875 0.8918449878692626953125 1");
-				k = GetTexture("1 0.74207782745361328125 0.695820510387420654296875");
+				eta = GetTexture("0.134794 0.928983 1.10888");
+				k = GetTexture("3.98126 2.44098 2.16474");
 			} else if (type == "amorphous carbon") {
-				eta = GetTexture("1 0.83763563632965087890625 0.782974779605865478515625");
-				k = GetTexture("1 0.9413394927978515625 0.957833766937255859375");
+				eta = GetTexture("2.94553 2.22816 1.98665");
+				k = GetTexture("0.876641 0.799505 0.821194");
 			} else
 				throw std::runtime_error("Unknown Metal2 preset: " + type);
 		} else {
