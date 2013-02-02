@@ -520,8 +520,6 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 		BSDFEvent *event, float *directPdfW
 		TEXTURES_PARAM_DECL) {
 	const float cosSampledDir = dot(lightDir, eyeDir);
-	if (fabs(cosSampledDir) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
 
 	const float3 r = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.krTexIndex], uv
 			TEXTURES_PARAM));
@@ -866,9 +864,6 @@ float3 Metal2Material_Evaluate(__global Material *material,
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
-	
 	const float u = clamp(Texture_GetGreyValue(&texs[material->metal2.nuTexIndex], uv
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float v = clamp(Texture_GetGreyValue(&texs[material->metal2.nvTexIndex], uv
