@@ -698,8 +698,10 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	} else if (matType == "archglass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
+		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
+		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
 
-		return new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt);
+		return new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "mix") {
 		Material *matA = matDefs.GetMaterial(props.GetString(propName + ".material1", "mat1"));
 		Material *matB = matDefs.GetMaterial(props.GetString(propName + ".material2", "mat2"));
@@ -831,7 +833,8 @@ float Scene::PickLightPdf() const {
 }
 
 bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
-		const float u0, Ray *ray, RayHit *rayHit, BSDF *bsdf, Spectrum *connectionThroughput) const {
+		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
+		Spectrum *connectionThroughput) const {
 	*connectionThroughput = Spectrum(1.f, 1.f, 1.f);
 	for (;;) {
 		if (!device->TraceRay(ray, rayHit)) {
@@ -839,7 +842,7 @@ bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
 			return false;
 		} else {
 			// Check if it is a pass through point
-			bsdf->Init(fromLight, *this, *ray, *rayHit, u0);
+			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough);
 
 			// Mix material can have IsPassThrough() = true and return Spectrum(0.f)
 			Spectrum t = bsdf->GetPassThroughTransparency();

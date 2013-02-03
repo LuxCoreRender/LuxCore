@@ -51,6 +51,7 @@ std::string KernelSource_material_types =
 "typedef struct {\n"
 "    unsigned int krTexIndex;\n"
 "	unsigned int ktTexIndex;\n"
+"	unsigned int ousideIorTexIndex, iorTexIndex;\n"
 "} ArchGlassParam;\n"
 "\n"
 "typedef struct {\n"
