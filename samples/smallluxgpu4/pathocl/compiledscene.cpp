@@ -362,6 +362,8 @@ void CompiledScene::CompileMaterials() {
 				mat->type = luxrays::ocl::ARCHGLASS;
 				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
 				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
+				mat->archglass.ousideIorTexIndex = scene->texDefs.GetTextureIndex(am->GetOutsideIOR());
+				mat->archglass.iorTexIndex = scene->texDefs.GetTextureIndex(am->GetIOR());
 				break;
 			}
 			case MIX: {

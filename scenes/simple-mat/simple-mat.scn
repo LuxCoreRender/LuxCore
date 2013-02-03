@@ -28,6 +28,7 @@ scene.materials.whitelight2.kd = 0.0 0.0 0.0
 scene.materials.aglass.type = archglass
 scene.materials.aglass.kr = 0.25 0.25 0.25
 scene.materials.aglass.kt = 0.0 0.0 0.8
+scene.materials.aglass.iorinside = 1
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/simple-mat/simple-mat-back.ply

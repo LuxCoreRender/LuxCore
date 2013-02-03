@@ -384,17 +384,42 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 	const float3 rayDir = -fixedDir;
 	const float3 reflDir = rayDir - (2.f * dot(N, rayDir)) * N;
 
+	const float nc = Texture_GetGreyValue(&texs[material->archglass.ousideIorTexIndex], uv
+			TEXTURES_PARAM);
+	const float nt = Texture_GetGreyValue(&texs[material->archglass.iorTexIndex], uv
+			TEXTURES_PARAM);
+	const float nnt = into ? (nc / nt) : (nt / nc);
+	const float nnt2 = nnt * nnt;
 	const float ddn = dot(rayDir, shadeN);
-	const float cos2t = ddn * ddn;
+	const float cos2t = 1.f - nnt2 * (1.f - ddn * ddn);
 
-	// Total internal reflection is not possible
-	const float kk = (into ? 1.f : -1.f) * (ddn + sqrt(cos2t));
+	// Total internal reflection
+	if (cos2t < 0.f) {
+		// Architectural glass reflect only from the outside
+		if (!into)
+			return BLACK;
+
+		*event = SPECULAR | REFLECT;
+		*sampledDir = reflDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		*pdfW = 1.f;
+
+		const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.krTexIndex], uv
+				TEXTURES_PARAM));
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return kr / (*cosSampledDir);
+	}
+
+	const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
 	const float3 nkk = kk * N;
-	const float3 transDir = normalize(rayDir - nkk);
+	const float3 transDir = normalize(nnt * rayDir - nkk);
 
 	const float c = 1.f - (into ? -ddn : dot(transDir, N));
 	const float c2 = c * c;
-	const float Re = c2 * c2 * c;
+	const float a = nt - nc;
+	const float b = nt + nc;
+	const float R0 = a * a / (b * b);
+	const float Re = R0 + (1.f - R0) * c2 * c2 * c;
 	const float Tr = 1.f - Re;
 	const float P = .25f + .5f * Re;
 
@@ -402,6 +427,10 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 		if (Re == 0.f)
 			return BLACK;
 		else {
+			// Architectural glass reflect only from the outside
+			if (!into)
+				return BLACK;
+
 			*event = SPECULAR | REFLECT;
 			*sampledDir = reflDir;
 			*cosSampledDir = fabs((*sampledDir).z);
@@ -418,11 +447,19 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = 1.f;
 
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+//		if (fromLight)
+//			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
+//		else
+//			return Kt->GetColorValue(uv) / (*cosSampledDir);
 		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], uv
 				TEXTURES_PARAM));
-		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kt / (*cosSampledDir);
 	} else if (passThroughEvent < P) {
+		// Architectural glass reflect only from the outside
+		if (!into)
+			return BLACK;
+
 		*event = SPECULAR | REFLECT;
 		*sampledDir = reflDir;
 		*cosSampledDir = fabs((*sampledDir).z);
@@ -438,9 +475,13 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = (1.f - P) / Tr;
 
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+//		if (fromLight)
+//			return Kt->GetColorValue(uv) * (nnt2 / (*cosSampledDir));
+//		else
+//			return Kt->GetColorValue(uv) / (*cosSampledDir);
 		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], uv
 				TEXTURES_PARAM));
-		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kt / (*cosSampledDir);
 	}
 }
@@ -457,29 +498,49 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 
 	const float3 rayDir = -fixedDir;
 
+	const float nc = Texture_GetGreyValue(&texs[material->archglass.ousideIorTexIndex], uv
+			TEXTURES_PARAM);
+	const float nt = Texture_GetGreyValue(&texs[material->archglass.iorTexIndex], uv
+			TEXTURES_PARAM);
+	const float nnt = into ? (nc / nt) : (nt / nc);
+	const float nnt2 = nnt * nnt;
 	const float ddn = dot(rayDir, shadeN);
-	const float cos2t = ddn * ddn;
+	const float cos2t = 1.f - nnt2 * (1.f - ddn * ddn);
 
-	// Total internal reflection is not possible
-	const float kk = (into ? 1.f : -1.f) * (ddn + sqrt(cos2t));
+	// Total internal reflection
+	if (cos2t < 0.f)
+		return BLACK;
+
+	const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrt(cos2t));
 	const float3 nkk = kk * N;
-	const float3 transDir = normalize(rayDir - nkk);
+	const float3 transDir = normalize(nnt * rayDir - nkk);
 
 	const float c = 1.f - (into ? -ddn : dot(transDir, N));
 	const float c2 = c * c;
-	const float Re = c2 * c2 * c;
+	const float a = nt - nc;
+	const float b = nt + nc;
+	const float R0 = a * a / (b * b);
+	const float Re = R0 + (1.f - R0) * c2 * c2 * c;
 	const float Tr = 1.f - Re;
 	const float P = .25f + .5f * Re;
 
-	if (Tr == 0.f)
+	if (Tr == 0.f) {
 		return BLACK;
-	else if (Re == 0.f) {
+	} else if (Re == 0.f) {
+//		if (fromLight)
+//			return Kt->GetColorValue(uv).Clamp() * nnt2;
+//		else
+//			return Kt->GetColorValue(uv).Clamp();
 		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], uv
 				TEXTURES_PARAM));
 		return kt;
-	} else if (passThroughEvent < P)
+	} else if (passThroughEvent < P) {
 		return BLACK;
-	else {
+	} else {
+//		if (fromLight)
+//			return Kt->GetColorValue(uv).Clamp() * nnt2;
+//		else
+//			return Kt->GetColorValue(uv).Clamp();
 		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], uv
 				TEXTURES_PARAM));
 		return kt;

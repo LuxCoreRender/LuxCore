@@ -48,6 +48,7 @@ typedef struct {
 typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
+	unsigned int ousideIorTexIndex, iorTexIndex;
 } ArchGlassParam;
 
 typedef struct {
