@@ -40,7 +40,7 @@
 #include "smalllux.h"
 #include "displayfunc.h"
 #include "rendersession.h"
-#include "pathocl/pathocl.h"
+#include "filesaver/filesaver.h"
 #include "telnet.h"
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
@@ -290,47 +290,51 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 
 	// Start the rendering
 	session->Start();
-	const double startTime = WallClockTime();
 
-	double lastFilmUpdate = WallClockTime();
-	char buf[512];
-	for (;;) {
-		boost::this_thread::sleep(boost::posix_time::millisec(1000));
+	// Nothing to do if it is the FileSaverRenderEngine
+	if (!dynamic_cast<FileSaverRenderEngine *>(engine)) {
+		const double startTime = WallClockTime();
 
-		// Check if periodic save is enabled
-		if (session->NeedPeriodicSave()) {
-			// Time to save the image and film
-			session->SaveFilmImage();
-			lastFilmUpdate =  WallClockTime();
-		} else {
-			// Film update may be required by some render engine to
-			// update statistics, convergence test and more
-			if (WallClockTime() - lastFilmUpdate > 5.0) {
-				session->renderEngine->UpdateFilm();
+		double lastFilmUpdate = WallClockTime();
+		char buf[512];
+		for (;;) {
+			boost::this_thread::sleep(boost::posix_time::millisec(1000));
+
+			// Check if periodic save is enabled
+			if (session->NeedPeriodicSave()) {
+				// Time to save the image and film
+				session->SaveFilmImage();
 				lastFilmUpdate =  WallClockTime();
+			} else {
+				// Film update may be required by some render engine to
+				// update statistics, convergence test and more
+				if (WallClockTime() - lastFilmUpdate > 5.0) {
+					session->renderEngine->UpdateFilm();
+					lastFilmUpdate =  WallClockTime();
+				}
 			}
+
+			const double now = WallClockTime();
+			const double elapsedTime = now - startTime;
+			if ((haltTime > 0) && (elapsedTime >= haltTime))
+				break;
+
+			const unsigned int pass = engine->GetPass();
+			if ((haltSpp > 0) && (pass >= haltSpp))
+				break;
+
+			// Convergence test is update inside UpdateFilm()
+			const float convergence = engine->GetConvergence();
+			if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
+				break;
+
+			// Print some information about the rendering progress
+			sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
+					int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
+					config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+			SLG_LOG(buf);
 		}
-
-		const double now = WallClockTime();
-		const double elapsedTime = now - startTime;
-		if ((haltTime > 0) && (elapsedTime >= haltTime))
-			break;
-
-		const unsigned int pass = engine->GetPass();
-		if ((haltSpp > 0) && (pass >= haltSpp))
-			break;
-
-		// Convergence test is update inside UpdateFilm()
-		const float convergence = engine->GetConvergence();
-		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
-			break;
-
-		// Print some information about the rendering progress
-		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
-				int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
-				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-		SLG_LOG(buf);
 	}
 
 	// Stop the rendering
