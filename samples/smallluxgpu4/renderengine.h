@@ -38,7 +38,8 @@ typedef enum {
 	BIDIRCPU = 7,
 	BIDIRHYBRID = 8,
 	CBIDIRHYBRID = 9,
-	BIDIRVMCPU = 10
+	BIDIRVMCPU = 10,
+	FILESAVER = 11
 } RenderEngineType;
 
 //------------------------------------------------------------------------------
