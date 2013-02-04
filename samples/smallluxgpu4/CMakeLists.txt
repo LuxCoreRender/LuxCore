@@ -124,6 +124,7 @@ set(SLG4LIB_SRCS
 	lightcpu/lightcputhread.cpp
 	pathcpu/pathcpu.cpp
 	pathcpu/pathcputhread.cpp
+	filesaver/filesaver.cpp
 	)
 
 add_library(smallluxgpu4 STATIC ${SLG4LIB_SRCS})

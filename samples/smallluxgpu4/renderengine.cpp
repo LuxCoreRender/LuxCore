@@ -28,6 +28,7 @@
 #include "bidirhybrid/bidirhybrid.h"
 #include "cbidirhybrid/cbidirhybrid.h"
 #include "bidirvmcpu/bidirvmcpu.h"
+#include "filesaver/filesaver.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
@@ -222,6 +223,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return CBIDIRHYBRID;
 	if ((type.compare("10") == 0) || (type.compare("BIDIRVMCPU") == 0))
 		return BIDIRVMCPU;
+	if ((type.compare("11") == 0) || (type.compare("FILESAVER") == 0))
+		return FILESAVER;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -241,6 +244,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "CBIDIRHYBRID";
 		case BIDIRVMCPU:
 			return "BIDIRVMCPU";
+		case FILESAVER:
+			return "FILESAVER";
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
@@ -267,6 +272,8 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			return new CBiDirHybridRenderEngine(renderConfig, film, filmMutex);
 		case BIDIRVMCPU:
 			return new BiDirVMCPURenderEngine(renderConfig, film, filmMutex);
+		case FILESAVER:
+			return new FileSaverRenderEngine(renderConfig, film, filmMutex);
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}
