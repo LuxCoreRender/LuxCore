@@ -27,9 +27,12 @@
 #include <map>
 #include <set>
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/core/spectrum.h"
+#include "luxrays/utils/properties.h"
 
 namespace luxrays {
 
@@ -49,11 +52,12 @@ typedef enum {
 	FRESNEL_APPROX_K
 } TextureType;
 
-class Texture {
+class Texture : public PropertySerializer {
 public:
 	Texture() { }
 	virtual ~Texture() { }
 
+	std::string GetName() const { return "Texture-" + boost::lexical_cast<std::string>(this); }
 	virtual TextureType GetType() const = 0;
 
 	virtual float GetGreyValue(const UV &uv) const = 0;
@@ -117,6 +121,8 @@ public:
 
 	float GetValue() const { return value; };
 
+	virtual Properties PropertySerialize();
+
 private:
 	float value;
 };
@@ -134,6 +140,8 @@ public:
 	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
 
 	const Spectrum &GetColor() const { return color; };
+
+	virtual Properties PropertySerialize();
 
 private:
 	Spectrum color;
@@ -153,6 +161,8 @@ public:
 
 	const Spectrum &GetColor() const { return color; };
 	float GetAlpha() const { return alpha; };
+
+	virtual Properties PropertySerialize();
 
 private:
 	Spectrum color;
@@ -369,6 +379,8 @@ public:
 
 	const ImageMapInstance *GetImageMapInstance() const { return imgMapInstance; }
 
+	virtual Properties PropertySerialize();
+
 private:
 	const ImageMapInstance *imgMapInstance;
 };
@@ -398,6 +410,8 @@ public:
 
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties PropertySerialize();
 
 private:
 	const Texture *tex1;
@@ -430,6 +444,8 @@ public:
 
 	const Texture *GetTexture() const { return tex; }
 
+	virtual Properties PropertySerialize();
+
 private:
 	const Texture *tex;
 };
@@ -453,6 +469,8 @@ public:
 	}
 
 	const Texture *GetTexture() const { return tex; }
+
+	virtual Properties PropertySerialize();
 
 private:
 	const Texture *tex;

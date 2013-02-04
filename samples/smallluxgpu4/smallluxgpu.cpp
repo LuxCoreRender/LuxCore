@@ -291,50 +291,47 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 	// Start the rendering
 	session->Start();
 
-	// Nothing to do if it is the FileSaverRenderEngine
-	if (!dynamic_cast<FileSaverRenderEngine *>(engine)) {
-		const double startTime = WallClockTime();
+	const double startTime = WallClockTime();
 
-		double lastFilmUpdate = WallClockTime();
-		char buf[512];
-		for (;;) {
-			boost::this_thread::sleep(boost::posix_time::millisec(1000));
+	double lastFilmUpdate = WallClockTime();
+	char buf[512];
+	for (;;) {
+		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 
-			// Check if periodic save is enabled
-			if (session->NeedPeriodicSave()) {
-				// Time to save the image and film
-				session->SaveFilmImage();
+		// Check if periodic save is enabled
+		if (session->NeedPeriodicSave()) {
+			// Time to save the image and film
+			session->SaveFilmImage();
+			lastFilmUpdate =  WallClockTime();
+		} else {
+			// Film update may be required by some render engine to
+			// update statistics, convergence test and more
+			if (WallClockTime() - lastFilmUpdate > 5.0) {
+				session->renderEngine->UpdateFilm();
 				lastFilmUpdate =  WallClockTime();
-			} else {
-				// Film update may be required by some render engine to
-				// update statistics, convergence test and more
-				if (WallClockTime() - lastFilmUpdate > 5.0) {
-					session->renderEngine->UpdateFilm();
-					lastFilmUpdate =  WallClockTime();
-				}
 			}
-
-			const double now = WallClockTime();
-			const double elapsedTime = now - startTime;
-			if ((haltTime > 0) && (elapsedTime >= haltTime))
-				break;
-
-			const unsigned int pass = engine->GetPass();
-			if ((haltSpp > 0) && (pass >= haltSpp))
-				break;
-
-			// Convergence test is update inside UpdateFilm()
-			const float convergence = engine->GetConvergence();
-			if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
-				break;
-
-			// Print some information about the rendering progress
-			sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
-					int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
-					config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-			SLG_LOG(buf);
 		}
+
+		const double now = WallClockTime();
+		const double elapsedTime = now - startTime;
+		if ((haltTime > 0) && (elapsedTime >= haltTime))
+			break;
+
+		const unsigned int pass = engine->GetPass();
+		if ((haltSpp > 0) && (pass >= haltSpp))
+			break;
+
+		// Convergence test is update inside UpdateFilm()
+		const float convergence = engine->GetConvergence();
+		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
+			break;
+
+		// Print some information about the rendering progress
+		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
+				int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
+				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+		SLG_LOG(buf);
 	}
 
 	// Stop the rendering
@@ -440,7 +437,21 @@ int main(int argc, char *argv[]) {
 		else
 			batchMode = false;
 
-		if (batchMode) {
+		const bool fileSaverRenderEngine = (RenderEngine::String2RenderEngineType(
+			config->cfg.GetString("renderengine.type", "PATHOCL")) == FILESAVER);
+
+		if (fileSaverRenderEngine) {
+			session = new RenderSession(config);
+
+			// Save the scene and exit
+			session->Start();
+			session->Stop();
+
+			delete session;
+			SLG_LOG("Done.");
+
+			return EXIT_SUCCESS;
+		} else if (batchMode) {
 			session = new RenderSession(config);
 
 			// Check if I have to do tile rendering

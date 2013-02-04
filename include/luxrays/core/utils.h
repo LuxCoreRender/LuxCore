@@ -206,8 +206,14 @@ inline unsigned int Ceil2UInt(float val) {
 }
 
 template <class T> inline std::string ToString(const T& t) {
-	std::stringstream ss;
+	std::ostringstream ss;
 	ss << t;
+	return ss.str();
+}
+
+inline std::string ToString(const float t) {
+	std::ostringstream ss;
+	ss << std::setprecision(24) << t;
 	return ss.str();
 }
 

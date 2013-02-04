@@ -24,7 +24,6 @@
 #endif
 
 #include <FreeImage.h>
-#include <boost/lexical_cast.hpp>
 
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/texture.h"
@@ -334,6 +333,68 @@ void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
 }
 
 //------------------------------------------------------------------------------
+// ConstFloat texture
+//------------------------------------------------------------------------------
+
+Properties ConstFloatTexture::PropertySerialize() {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "constfloat1");
+	props.SetString("scene.textures." + name + ".value", ToString(value));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// ConstFloat3 texture
+//------------------------------------------------------------------------------
+
+Properties ConstFloat3Texture::PropertySerialize() {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "constfloat3");
+	props.SetString("scene.textures." + name + ".value",
+			ToString(color.r) + " " + ToString(color.g) + " " + ToString(color.b));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// ConstFloat4 texture
+//------------------------------------------------------------------------------
+
+Properties ConstFloat4Texture::PropertySerialize() {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "constfloat4");
+	props.SetString("scene.textures." + name + ".value",
+			ToString(color.r) + " " + ToString(color.g) + " " + ToString(color.b) + " " + ToString(alpha));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// ImageMap texture
+//------------------------------------------------------------------------------
+
+Properties ImageMapTexture::PropertySerialize() {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "imagemap");
+	props.SetString("scene.textures." + name + ".file", "imagemap-" + boost::lexical_cast<std::string>(imgMapInstance->GetImgMap()));
+	props.SetString("scene.textures." + name + ".gamma", "1.0");
+	props.SetString("scene.textures." + name + ".gain", ToString(imgMapInstance->GetGain()));
+	props.SetString("scene.textures." + name + ".uvscale", ToString(imgMapInstance->GetUScale()) + " " + ToString(imgMapInstance->GetVScale()));
+	props.SetString("scene.textures." + name + ".uvdelta", ToString(imgMapInstance->GetUDelta()) + " " + ToString(imgMapInstance->GetVDelta()));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Scale texture
 //------------------------------------------------------------------------------
 
@@ -354,6 +415,17 @@ const UV ScaleTexture::GetDuDv() const {
 	const UV uv2 = tex2->GetDuDv();
 
 	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
+}
+
+Properties ScaleTexture::PropertySerialize() {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "scale");
+	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
+	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -418,4 +490,24 @@ float FresnelApproxKTexture::GetAlphaValue(const UV &uv) const {
 
 const UV FresnelApproxKTexture::GetDuDv() const {
 	return tex->GetDuDv();
+}
+
+Properties FresnelApproxNTexture::PropertySerialize() {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "fresnelapproxn");
+	props.SetString("scene.textures." + name + ".texture", tex->GetName());
+
+	return props;
+}
+
+Properties FresnelApproxKTexture::PropertySerialize() {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "fresnelapproxk");
+	props.SetString("scene.textures." + name + ".texture", tex->GetName());
+
+	return props;
 }
