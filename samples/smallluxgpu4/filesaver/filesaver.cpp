@@ -56,6 +56,13 @@ void FileSaverRenderEngine::StartLockLess() {
 	SaveScene();
 }
 
+
+template <class T> static string v2s(T &v) {
+	std::ostringstream ss;
+    ss << std::setprecision(24) << v.x << " " << v.y << " " << v.z;
+	return ss.str();
+}
+
 void FileSaverRenderEngine::SaveScene() {
 	SLG_LOG("[FileSaverRenderEngine] Export directory: " << directoryName);
 
@@ -93,6 +100,36 @@ void FileSaverRenderEngine::SaveScene() {
 			throw std::runtime_error("Error while writing file: " + cfgFileName);
 
 		cfgFile.close();
+	}
+
+	//--------------------------------------------------------------------------
+	// Export the .scn file
+	//--------------------------------------------------------------------------
+	{
+		
+		SLG_LOG("[FileSaverRenderEngine] Scene file name: " << sceneFileName);
+
+		Scene *scene = renderConfig->scene;
+
+		Properties props;
+
+		// Write the camera information
+		props.LoadFromObject(*(scene->camera));
+
+		// Write the texture information
+		SLG_LOG("[FileSaverRenderEngine] Exporting textures:");
+		for (u_int i = 0; i < scene->texDefs.GetSize(); ++i) {
+			Texture *tex = scene->texDefs.GetTexture(i);
+			SLG_LOG("[FileSaverRenderEngine]   " + tex->GetName());
+			props.LoadFromObject(*tex);
+		}
+
+		// Write the scene file
+		std::ofstream sceneFile(sceneFileName.c_str());
+		if(!sceneFile.is_open())
+			throw std::runtime_error("Unable to open: " + sceneFileName);
+		sceneFile << props.ToString();
+		sceneFile.close();
 	}
 }
 

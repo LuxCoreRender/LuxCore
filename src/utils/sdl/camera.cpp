@@ -177,4 +177,27 @@ bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 	return true;
 }
 
+Properties PerspectiveCamera::PropertySerialize() {
+	Properties props;
+
+	props.SetString("scene.camera.lookat",
+			ToString(orig.x) + " " + ToString(orig.y) + " " + ToString(orig.z) + " " +
+			ToString(target.x) + " " + ToString(target.y) + " " + ToString(target.z));
+
+	props.SetString("scene.camera.up", ToString(up.x) + " " + ToString(up.y) + " " + ToString(up.z));
+
+	if (!autoUpdateFilmRegion)
+		props.SetString("scene.camera.screenwindow",
+			ToString(filmRegion[0]) + ToString(filmRegion[1]) +
+			ToString(filmRegion[2]) + ToString(filmRegion[3]));
+
+	props.SetString("scene.camera.cliphither", ToString(clipHither));
+	props.SetString("scene.camera.clipyon", ToString(clipYon));
+	props.SetString("scene.camera.lensradius", ToString(lensRadius));
+	props.SetString("scene.camera.focaldistance", ToString(focalDistance));
+	props.SetString("scene.camera.fieldofview", ToString(fieldOfView));
+
+	return props;
+}
+
 } }

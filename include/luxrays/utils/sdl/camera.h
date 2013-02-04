@@ -22,6 +22,7 @@
 #ifndef _LUXRAYS_SDL_CAMERA_H
 #define	_LUXRAYS_SDL_CAMERA_H
 
+#include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/mc.h"
 
@@ -41,7 +42,7 @@ namespace ocl {
 
 namespace sdl {
 
-class PerspectiveCamera {
+class PerspectiveCamera : public PropertySerializer {
 public:
 	PerspectiveCamera(const Point &o, const Point &t, const Vector &u, const float *region = NULL) :
 		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
@@ -138,6 +139,8 @@ public:
 
 	float GetClipYon() const { return clipYon; }
 	float GetClipHither() const { return clipHither; }
+
+	virtual Properties PropertySerialize();
 
 	// User defined values
 	Point orig, target;
