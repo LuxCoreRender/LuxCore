@@ -256,19 +256,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 					);
 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
-					MATERIALS_PARAM);
-			if (!Spectrum_IsBlack(passThroughTrans)) {
-				const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r) * passThroughTrans;
-				VSTORE3F(pathThroughput, &task->pathStateBase.throughput.r);
-
-				// It is a pass through point, continue to trace the ray
-				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-
-				// Keep the same path state
-			}
-#endif
+//#if defined(PARAM_HAS_PASSTHROUGH)
+//			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+//					MATERIALS_PARAM);
+//			if (!Spectrum_IsBlack(passThroughTrans)) {
+//				const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r) * passThroughTrans;
+//				VSTORE3F(pathThroughput, &task->pathStateBase.throughput.r);
+//
+//				// It is a pass through point, continue to trace the ray
+//				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+//
+//				// Keep the same path state
+//			}
+//#endif
 //#if defined(PARAM_HAS_PASSTHROUGH) && (PARAM_DL_LIGHT_COUNT > 0)
 //			else
 //#endif
@@ -556,7 +556,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					sample, sampleDataPathBase, depth + 1);
 				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
 #endif
-				pathState = RT_NEXT_VERTEX;
+//				pathState = RT_NEXT_VERTEX;
+
+				VSTORE3F(bsdfSample, &sample->radiance.r);
+				pathState = SPLAT_SAMPLE;
 			} else
 				pathState = SPLAT_SAMPLE;
 		} else
