@@ -427,8 +427,8 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir, 
-		const float passThroughEvent) const { return Spectrum(1.f); }
+	virtual Spectrum GetPassThroughTransparency(const bool fromLight, const UV &uv,
+		const Vector &fixedDir, const float passThroughEvent) const { return Spectrum(1.f); }
 
 	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
 		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
