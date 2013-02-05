@@ -245,7 +245,11 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 	if (Spectrum_IsBlack(result))
 		return 0.f;
 
-	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
+	//*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
+
+	(*sampledDir).x = Xx * localSampledDir.x + Yx * localSampledDir.y + Zx * localSampledDir.z;
+	(*sampledDir).y = Xy * localSampledDir.x + Yy * localSampledDir.y + Zy * localSampledDir.z;
+	(*sampledDir).z = Xz * localSampledDir.x + Yz * localSampledDir.y + Zz * localSampledDir.z;
 
 	// Adjoint BSDF
 //	if (fromLight) {

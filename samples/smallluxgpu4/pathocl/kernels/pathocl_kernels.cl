@@ -535,13 +535,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //				if (rrEnabled)
 //					lastPdfW *= rrProb; // Russian Roulette
 
-//				float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
-//				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
-//				VSTORE3F(throughput, &task->pathStateBase.throughput.r);
-//
-//				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.x), sampledDir);
-//
-//				task->pathStateBase.depth = depth + 1;
+				float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
+				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
+				VSTORE3F(throughput, &task->pathStateBase.throughput.r);
+
+				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.x), sampledDir);
+
+				task->pathStateBase.depth = depth + 1;
 //#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
 //				task->directLightState.lastPdfW = lastPdfW;
 //				task->directLightState.lastSpecular = lastSpecular;
@@ -556,10 +556,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //					sample, sampleDataPathBase, depth + 1);
 //				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
 //#endif
-//				pathState = RT_NEXT_VERTEX;
+				pathState = RT_NEXT_VERTEX;
 
-				VSTORE3F(bsdfSample, &sample->radiance.r);
-				pathState = SPLAT_SAMPLE;
+//				VSTORE3F(bsdfSample, &sample->radiance.r);
+//				pathState = SPLAT_SAMPLE;
 //			} else
 //				pathState = SPLAT_SAMPLE;
 		} else
