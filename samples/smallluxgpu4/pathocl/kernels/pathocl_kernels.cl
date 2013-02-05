@@ -513,16 +513,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		if (depth < PARAM_MAX_PATH_DEPTH) {
 			// Sample the BSDF
 			__global BSDF *bsdf = &task->pathStateBase.bsdf;
-			float3 sampledDir;
-			float lastPdfW;
-			float cosSampledDir;
-			BSDFEvent event;
+//			float3 sampledDir;
+//			float lastPdfW;
+//			float cosSampledDir;
+//			BSDFEvent event;
 
-			const float3 bsdfSample = BSDF_Sample(bsdf,
-					Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
-					Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
-					&sampledDir, &lastPdfW, &cosSampledDir, &event
-					MATERIALS_PARAM);
+//			const float3 bsdfSample = BSDF_Sample(bsdf,
+//					Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
+//					Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
+//					&sampledDir, &lastPdfW, &cosSampledDir, &event
+//					MATERIALS_PARAM);
 //			const bool lastSpecular = ((event & SPECULAR) != 0);
 
 			// Russian Roulette
@@ -530,38 +530,59 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //			const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !lastSpecular;
 //			const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(depth, IDX_RR) < rrProb);
 
-			const bool continuePath = !Spectrum_IsBlack(bsdfSample);// && rrContinuePath;
-			if (continuePath) {
+//			const bool continuePath = !Spectrum_IsBlack(bsdfSample);// && rrContinuePath;
+//			if (continuePath) {
 //				if (rrEnabled)
 //					lastPdfW *= rrProb; // Russian Roulette
 
-				float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
-				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
-				VSTORE3F(throughput, &task->pathStateBase.throughput.r);
-
-				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.x), sampledDir);
-
-				task->pathStateBase.depth = depth + 1;
-#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
-				task->directLightState.lastPdfW = lastPdfW;
-				task->directLightState.lastSpecular = lastSpecular;
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-				// This is a bit tricky. I store the passThroughEvent in the BSDF
-				// before of the initialization because it can be use during the
-				// tracing of next path vertex ray.
-
-				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
-				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-					sample, sampleDataPathBase, depth + 1);
-				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
-#endif
+//				float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
+//				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
+//				VSTORE3F(throughput, &task->pathStateBase.throughput.r);
+//
+//				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.x), sampledDir);
+//
+//				task->pathStateBase.depth = depth + 1;
+//#if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+//				task->directLightState.lastPdfW = lastPdfW;
+//				task->directLightState.lastSpecular = lastSpecular;
+//#endif
+//#if defined(PARAM_HAS_PASSTHROUGH)
+//				// This is a bit tricky. I store the passThroughEvent in the BSDF
+//				// before of the initialization because it can be use during the
+//				// tracing of next path vertex ray.
+//
+//				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
+//				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+//					sample, sampleDataPathBase, depth + 1);
+//				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
+//#endif
 //				pathState = RT_NEXT_VERTEX;
 
-				VSTORE3F(bsdfSample * cosSampledDir, &sample->radiance.r);
+				float3 c = (float3)(1.f, 0.f, 1.f);
+				switch (bsdf->materialIndex) {
+					case 0:
+						c = (float3)(1.f, 0.f, 0.f);
+						break;
+					case 1:
+						c = (float3)(0.f, 1.f, 0.f);
+						break;
+					case 2:
+						c = (float3)(0.f, 0.f, 1.f);
+						break;
+					case 3:
+						c = (float3)(0.f, 1.f, 1.f);
+						break;
+					case 4:
+						c = (float3)(1.f, 1.f, 0.f);
+						break;
+					default:
+						c = (float3)(1.f, 1.f, 1.f);
+						break;
+				}
+				VSTORE3F(c, &sample->radiance.r);
 				pathState = SPLAT_SAMPLE;
-			} else
-				pathState = SPLAT_SAMPLE;
+//			} else
+//				pathState = SPLAT_SAMPLE;
 		} else
 			pathState = SPLAT_SAMPLE;
 	}
