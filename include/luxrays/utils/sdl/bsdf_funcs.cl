@@ -201,8 +201,13 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->fixedDir.x);
+
 	//const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
-	const float3 localFixedDir = (float3)(0.f, 0.f, 1.f);
+	float3 X, Y, Z;
+	Z = VLOAD3F(&bsdf->shadeN.x);
+	CoordinateSystem(Z, &X, &Y);
+	const float3 localFixedDir = (float3)(dot(fixedDir, X), dot(fixedDir, Y), dot(fixedDir, Z));
+
 	float3 localSampledDir;
 
 	const float3 result = Material_Sample(&mats[bsdf->materialIndex], VLOAD2F(&bsdf->hitPointUV.u),
