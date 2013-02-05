@@ -152,20 +152,23 @@ float3 MatteMaterial_Sample(__global Material *material,
 		const float u0, const float u1, 
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		TEXTURES_PARAM_DECL) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
-
-	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-
-	*cosSampledDir = fabs((*sampledDir).z);
-	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
-
-	*event = DIFFUSE | REFLECT;
-
 	const float3 kd = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv
-			TEXTURES_PARAM));
-	return M_1_PI_F * kd;
+		TEXTURES_PARAM));
+	return kd;
+//	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+//		return BLACK;
+//
+//	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+//
+//	*cosSampledDir = fabs((*sampledDir).z);
+//	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+//		return BLACK;
+//
+//	*event = DIFFUSE | REFLECT;
+//
+//	const float3 kd = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matte.kdTexIndex], uv
+//			TEXTURES_PARAM));
+//	return M_1_PI_F * kd;
 }
 
 #endif
