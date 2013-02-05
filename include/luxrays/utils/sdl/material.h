@@ -25,13 +25,14 @@
 #include <vector>
 #include <set>
 
+#include <boost/lexical_cast.hpp>
 
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/core/mc.h"
 #include "luxrays/utils/sdl/texture.h"
-#include "texture.h"
+#include "luxrays/utils/properties.h"
 
 namespace luxrays {
 
@@ -54,6 +55,8 @@ public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
 		emittedTex(emitted), bumpTex(bump), normalTex(normal) { }
 	virtual ~Material() { }
+
+	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
 
 	virtual MaterialType GetType() const = 0;
 	virtual BSDFEvent GetEventTypes() const = 0;
@@ -113,6 +116,20 @@ public:
 			bumpTex->AddReferencedTextures(referencedTexs);
 		if (normalTex)
 			normalTex->AddReferencedTextures(referencedTexs);
+	}
+
+	virtual Properties ToProperties() const {
+		Properties props;
+
+		const std::string name = GetName();
+		if (emittedTex)
+			props.SetString("scene.materials." + name + ".emission", emittedTex->GetName());
+		if (bumpTex)
+			props.SetString("scene.materials." + name + ".bumptex", bumpTex->GetName());
+		if (normalTex)
+			props.SetString("scene.materials." + name + ".normaltex", normalTex->GetName());
+
+		return props;
 	}
 
 protected:
@@ -178,6 +195,8 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
+	virtual Properties ToProperties() const;
+
 	const Texture *GetKd() const { return Kd; }
 
 private:
@@ -215,6 +234,8 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKr() const { return Kr; }
 
@@ -256,6 +277,8 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
@@ -307,7 +330,9 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
-const Texture *GetKr() const { return Kr; }
+	virtual Properties ToProperties() const;
+
+	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
 	const Texture *GetOutsideIOR() const { return ousideIor; }
 	const Texture *GetIOR() const { return ior; }
@@ -349,6 +374,8 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetExp() const { return exponent; }
@@ -404,6 +431,8 @@ public:
 	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
+	virtual Properties ToProperties() const;
+
 	const Material *GetMaterialA() const { return matA; }
 	const Material *GetMaterialB() const { return matB; }
 	const Texture *GetMixFactor() const { return mixFactor; }
@@ -445,6 +474,8 @@ public:
 		if (reversePdfW)
 			*reversePdfW = 0.f;
 	}
+
+	virtual Properties ToProperties() const;
 };
 
 //------------------------------------------------------------------------------
@@ -472,6 +503,8 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
@@ -508,6 +541,8 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKd() const { return Kd; }
 	const Texture *GetKs() const { return Ks; }
@@ -565,6 +600,8 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetN() const { return n; }
 	const Texture *GetK() const { return k; }

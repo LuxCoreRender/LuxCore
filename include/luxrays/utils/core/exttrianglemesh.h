@@ -32,6 +32,7 @@
 #include "luxrays/core/geometry/triangle.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/core/spectrum.h"
+#include "luxrays/utils/properties.h"
 
 namespace luxrays {
 
@@ -39,6 +40,8 @@ class ExtMesh : public Mesh {
 public:
 	ExtMesh() { }
 	virtual ~ExtMesh() { }
+
+	std::string GetName() const { return "extmesh-" + boost::lexical_cast<std::string>(this); }
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs() const = 0;
@@ -56,6 +59,7 @@ public:
 	virtual void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
 
 	virtual void Delete() = 0;
+//	virtual Properties ToProperties(const ExtMeshCache &extMeshCache) const = 0;
 };
 
 class ExtTriangleMesh : public ExtMesh {
@@ -120,6 +124,8 @@ public:
 	Triangle *GetTriangles() const { return tris; }
 
 	virtual void ApplyTransform(const Transform &trans);
+
+//	virtual Properties ToProperties(const ExtMeshCache &extMeshCache) const;
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals = false);
 	static ExtTriangleMesh *CreateExtTriangleMesh(
@@ -207,6 +213,8 @@ public:
 	Point *GetVertices() const { return mesh->GetVertices(); }
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
+
+//	virtual Properties ToProperties(const ExtMeshCache &extMeshCache) const { return Properties(); }
 
 private:
 	Transform trans;
