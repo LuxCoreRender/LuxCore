@@ -39,28 +39,28 @@ void GenerateCameraRay(
 
 	const float hither = camera->hither;
 
-#if defined(PARAM_CAMERA_HAS_DOF)
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	const float lensRadius = camera->lensRadius;
-	lensU *= lensRadius;
-	lensV *= lensRadius;
-
-	// Compute point on plane of focus
-	const float focalDistance = camera->focalDistance;
-	const float dist = focalDistance - hither;
-	const float ft = dist / rayDir.z;
-	float3 Pfocus;
-	Pfocus = rayOrig + rayDir * ft;
-
-	// Update ray for effect of lens
-	const float k = dist / focalDistance;
-	rayOrig.x += lensU * k;
-	rayOrig.y += lensV * k;
-
-	rayDir = Pfocus - rayOrig;
-#endif
+//#if defined(PARAM_CAMERA_HAS_DOF)
+//	// Sample point on lens
+//	float lensU, lensV;
+//	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+//	const float lensRadius = camera->lensRadius;
+//	lensU *= lensRadius;
+//	lensV *= lensRadius;
+//
+//	// Compute point on plane of focus
+//	const float focalDistance = camera->focalDistance;
+//	const float dist = focalDistance - hither;
+//	const float ft = dist / rayDir.z;
+//	float3 Pfocus;
+//	Pfocus = rayOrig + rayDir * ft;
+//
+//	// Update ray for effect of lens
+//	const float k = dist / focalDistance;
+//	rayOrig.x += lensU * k;
+//	rayOrig.y += lensV * k;
+//
+//	rayDir = Pfocus - rayOrig;
+//#endif
 
 	rayDir = normalize(rayDir);
 	const float maxt = (camera->yon - hither) / rayDir.z;
@@ -662,11 +662,11 @@ void Sampler_NextSample(
 	sample->alpha = 1.f;
 #endif
 
-	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
-	if (nextPixelIndex > PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) {
-		nextPixelIndex = get_global_id(0);
+	uint nextPixelIndex = sample->pixelIndex;// + PARAM_TASK_COUNT;
+//	if (nextPixelIndex > PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) {
+//		nextPixelIndex = get_global_id(0);
 		sample->pass += 1;
-	}
+//	}
 	sample->pixelIndex = nextPixelIndex;
 	uint x, y;
 	PixelIndex2XY(nextPixelIndex, &x, &y);

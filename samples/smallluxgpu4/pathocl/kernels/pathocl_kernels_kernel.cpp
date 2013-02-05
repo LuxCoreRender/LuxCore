@@ -561,7 +561,7 @@ std::string KernelSource_pathocl_kernels =
 "#endif\n"
 "//				pathState = RT_NEXT_VERTEX;\n"
 "\n"
-"				VSTORE3F(bsdfSample, &sample->radiance.r);\n"
+"				VSTORE3F(bsdfSample * cosSampledDir, &sample->radiance.r);\n"
 "				pathState = SPLAT_SAMPLE;\n"
 "			} else\n"
 "				pathState = SPLAT_SAMPLE;\n"
