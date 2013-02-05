@@ -558,7 +558,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 //				pathState = RT_NEXT_VERTEX;
 
-				VSTORE3F(bsdfSample, &sample->radiance.r);
+				VSTORE3F(bsdfSample * cosSampledDir, &sample->radiance.r);
 				pathState = SPLAT_SAMPLE;
 			} else
 				pathState = SPLAT_SAMPLE;

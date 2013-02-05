@@ -176,7 +176,7 @@ void Pixel_AddFilteredAlpha(__global AlphaPixel *apixel, const float alpha,
 
 #endif
 
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
+//#if (PARAM_IMAGE_FILTER_TYPE == 0)
 
 void SplatSample(__global Pixel *frameBuffer,
 		const float scrX, const float scrY, const float3 radiance,
@@ -196,76 +196,76 @@ void SplatSample(__global Pixel *frameBuffer,
 	Pixel_AddAlpha(apixel, alpha, weight);
 #endif
 }
-
-#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
-
-void SplatSample(__global Pixel *frameBuffer,
-		const float scrX, const float scrY, const float3 radiance,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		__global AlphaPixel *alphaFrameBuffer,
-		const float alpha,
-#endif
-		const float weight) {
-	const float px = PARAM_IMAGE_WIDTH * scrX + .5f;
-	const float py = PARAM_IMAGE_HEIGHT * scrY + .5f;
-
-	const uint x = min((uint)floor(px), (uint)(PARAM_IMAGE_WIDTH - 1));
-	const uint y = min((uint)floor(py), (uint)(PARAM_IMAGE_HEIGHT - 1));
-
-	const float sx = px - (float)x;
-	const float sy = py - (float)y;
-
-	{
-		__global Pixel *pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y - 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f, weight);
-		pixel = &frameBuffer[XY2FrameBufferIndex(x, y - 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy + 1.f, weight);
-		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y - 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f, weight);
-
-		pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy, weight);
-		pixel = &frameBuffer[XY2FrameBufferIndex(x, y)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy, weight);
-		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy, weight);
-
-		pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y + 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f, weight);
-		pixel = &frameBuffer[XY2FrameBufferIndex(x, y + 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy - 1.f, weight);
-		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y + 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f, weight);
-	}
-
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	{
-		__global AlphaPixel *apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x - 1, y - 1)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx + 1.f, sy + 1.f, weight);
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y - 1)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx, sy + 1.f, weight);
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x + 1, y - 1)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx - 1.f, sy + 1.f, weight);
-
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x - 1, y)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx + 1.f, sy, weight);
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx, sy, weight);
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x + 1, y)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx - 1.f, sy, weight);
-
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x - 1, y + 1)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx + 1.f, sy - 1.f, weight);
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y + 1)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx, sy - 1.f, weight);
-		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x + 1, y + 1)];
-		Pixel_AddFilteredAlpha(apixel, alpha, sx - 1.f, sy - 1.f, weight);
-	}
-#endif
-}
-
-#else
-
-Error: unknown image filter !!!
-
-#endif
+//
+//#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
+//
+//void SplatSample(__global Pixel *frameBuffer,
+//		const float scrX, const float scrY, const float3 radiance,
+//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+//		__global AlphaPixel *alphaFrameBuffer,
+//		const float alpha,
+//#endif
+//		const float weight) {
+//	const float px = PARAM_IMAGE_WIDTH * scrX + .5f;
+//	const float py = PARAM_IMAGE_HEIGHT * scrY + .5f;
+//
+//	const uint x = min((uint)floor(px), (uint)(PARAM_IMAGE_WIDTH - 1));
+//	const uint y = min((uint)floor(py), (uint)(PARAM_IMAGE_HEIGHT - 1));
+//
+//	const float sx = px - (float)x;
+//	const float sy = py - (float)y;
+//
+//	{
+//		__global Pixel *pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y - 1)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f, weight);
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x, y - 1)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy + 1.f, weight);
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y - 1)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f, weight);
+//
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy, weight);
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x, y)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy, weight);
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy, weight);
+//
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y + 1)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f, weight);
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x, y + 1)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy - 1.f, weight);
+//		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y + 1)];
+//		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f, weight);
+//	}
+//
+//#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+//	{
+//		__global AlphaPixel *apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x - 1, y - 1)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx + 1.f, sy + 1.f, weight);
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y - 1)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx, sy + 1.f, weight);
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x + 1, y - 1)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx - 1.f, sy + 1.f, weight);
+//
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x - 1, y)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx + 1.f, sy, weight);
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx, sy, weight);
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x + 1, y)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx - 1.f, sy, weight);
+//
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x - 1, y + 1)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx + 1.f, sy - 1.f, weight);
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y + 1)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx, sy - 1.f, weight);
+//		apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x + 1, y + 1)];
+//		Pixel_AddFilteredAlpha(apixel, alpha, sx - 1.f, sy - 1.f, weight);
+//	}
+//#endif
+//}
+//
+//#else
+//
+//Error: unknown image filter !!!
+//
+//#endif
