@@ -1108,73 +1108,64 @@ float3 Material_SampleNoMix(__global Material *material,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		TEXTURES_PARAM_DECL) {
-	if (material->type == MIRROR)
-		return MirrorMaterial_Sample(material, uv, fixedDir, sampledDir,
-				u0, u1,	pdfW, cosSampledDir, event
-				TEXTURES_PARAM);
-	else
-		return MatteMaterial_Sample(material, uv, fixedDir, sampledDir,
-				u0, u1, pdfW, cosSampledDir, event
-				TEXTURES_PARAM);
-
-//	switch (material->type) {
-//#if defined (PARAM_ENABLE_MAT_MATTE)
-//		case MATTE:
-//			return MatteMaterial_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1,	pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_MIRROR)
-//		case MIRROR:
-//			return MirrorMaterial_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1, pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_GLASS)
-//		case GLASS:
-//			return GlassMaterial_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_METAL)
-//		case METAL:
-//			return MetalMaterial_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1,	pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
-//		case ARCHGLASS:
-//			return ArchGlassMaterial_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_NULL)
-//		case NULLMAT:
-//			return NullMaterial_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1, pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
-//		case MATTETRANSLUCENT:
-//			return MatteTranslucentMaterial_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_GLOSSY2)
-//		case GLOSSY2:
-//			return Glossy2Material_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//#if defined (PARAM_ENABLE_MAT_METAL2)
-//		case METAL2:
-//			return Metal2Material_Sample(material, uv, fixedDir, sampledDir,
-//					u0, u1,	pdfW, cosSampledDir, event
-//					TEXTURES_PARAM);
-//#endif
-//		default:
-//			return BLACK;
-//	}
+	switch (material->type) {
+#if defined (PARAM_ENABLE_MAT_MATTE)
+		case MATTE:
+			return MatteMaterial_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_MIRROR)
+		case MIRROR:
+			return MirrorMaterial_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1, pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
+			return GlassMaterial_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL)
+		case METAL:
+			return MetalMaterial_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
+		case ARCHGLASS:
+			return ArchGlassMaterial_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_NULL)
+		case NULLMAT:
+			return NullMaterial_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1, pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
+		case MATTETRANSLUCENT:
+			return MatteTranslucentMaterial_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_GLOSSY2)
+		case GLOSSY2:
+			return Glossy2Material_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL2)
+		case METAL2:
+			return Metal2Material_Sample(material, uv, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
+		default:
+			return BLACK;
+	}
 }
 
 float3 Material_EvaluateNoMix(__global Material *material,
