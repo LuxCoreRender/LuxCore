@@ -176,6 +176,22 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 			props.Load(tex->ToProperties(imgMapCache));
 		}
 
+		// Write the material information
+		SDL_LOG("Saving material information:");
+		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
+			const Material *mat = matDefs.GetMaterial(i);
+			SDL_LOG("  " + mat->GetName());
+			props.Load(mat->ToProperties());
+		}
+
+//		// Write the mesh information
+//		SDL_LOG("Saving object information:");
+//		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
+//			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
+//			SDL_LOG("  " + mesh->GetName());
+//			props.Load(mesh->ToProperties(objectMaterials[i]->GetName(), extMeshCache));
+//		}
+
 		return props;
 }
 

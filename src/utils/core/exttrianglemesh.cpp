@@ -300,3 +300,13 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
 }
+
+//Properties ExtTriangleMesh::ToProperties(const const ExtMeshCache &extMeshCache) const {
+//	Properties props;
+//
+//	const std::string name = GetName();
+//	props.SetString("scene.objects." + name + ".material", "constfloat1");
+//	props.SetString("scene.objects." + name + ".value", ToString(value));
+//
+//	return props;
+//}

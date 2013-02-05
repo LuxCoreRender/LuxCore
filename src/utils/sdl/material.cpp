@@ -154,6 +154,17 @@ void MatteMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 	Kd->AddReferencedTextures(referencedTexs);
 }
 
+Properties MatteMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "matte");
+	props.SetString("scene.materials." + name + ".kd", Kd->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // Mirror material
 //------------------------------------------------------------------------------
@@ -182,6 +193,17 @@ void MirrorMaterial::AddReferencedTextures(std::set<const Texture *> &referenced
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
+}
+
+Properties MirrorMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "mirror");
+	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -290,6 +312,20 @@ void GlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 	Kt->AddReferencedTextures(referencedTexs);
 	ousideIor->AddReferencedTextures(referencedTexs);
 	ior->AddReferencedTextures(referencedTexs);
+}
+
+Properties GlassMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "glass");
+	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
+	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
+	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
+	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -464,6 +500,20 @@ void ArchGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referen
 	ior->AddReferencedTextures(referencedTexs);
 }
 
+Properties ArchGlassMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "archglass");
+	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
+	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
+	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
+	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // Metal material
 //------------------------------------------------------------------------------
@@ -521,6 +571,18 @@ void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 
 	Kr->AddReferencedTextures(referencedTexs);
 	exponent->AddReferencedTextures(referencedTexs);
+}
+
+Properties MetalMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "metal");
+	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
+	props.SetString("scene.materials." + name + ".exp", exponent->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -702,6 +764,18 @@ void MixMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTex
 	mixFactor->AddReferencedTextures(referencedTexs);
 }
 
+Properties MixMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "metal");
+	props.SetString("scene.materials." + name + ".material1", matA->GetName());
+	props.SetString("scene.materials." + name + ".material2", matB->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // Null material
 //------------------------------------------------------------------------------
@@ -724,6 +798,16 @@ Spectrum NullMaterial::Sample(const bool fromLight, const UV &uv,
 	*pdfW = 1.f;
 	*event = SPECULAR | TRANSMIT;
 	return Spectrum(1.f);
+}
+
+Properties NullMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "null");
+	props.Load(Material::ToProperties());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -800,6 +884,18 @@ void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
+}
+
+Properties MatteTranslucentMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "mattetranslucent");
+	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
+	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -1114,6 +1210,23 @@ void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &reference
 	index->AddReferencedTextures(referencedTexs);
 }
 
+Properties Glossy2Material::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "glossy2");
+	props.SetString("scene.materials." + name + ".kd", Kd->GetName());
+	props.SetString("scene.materials." + name + ".ks", Ks->GetName());
+	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
+	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
+	props.SetString("scene.materials." + name + ".ka", Ka->GetName());
+	props.SetString("scene.materials." + name + ".d", depth->GetName());
+	props.SetString("scene.materials." + name + ".index", index->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // Metal2 material
 //
@@ -1235,6 +1348,20 @@ void Metal2Material::AddReferencedTextures(std::set<const Texture *> &referenced
 	k->AddReferencedTextures(referencedTexs);
 	nu->AddReferencedTextures(referencedTexs);
 	nv->AddReferencedTextures(referencedTexs);
+}
+
+Properties Metal2Material::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "metal2");
+	props.SetString("scene.materials." + name + ".n", n->GetName());
+	props.SetString("scene.materials." + name + ".k", k->GetName());
+	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
+	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
