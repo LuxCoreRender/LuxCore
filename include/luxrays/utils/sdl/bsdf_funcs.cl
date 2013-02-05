@@ -204,21 +204,34 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 
 	//const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 
-	float3 X, Y, Z;
-	Z = VLOAD3F(&bsdf->shadeN.x);
+	const float3 Z = VLOAD3F(&bsdf->shadeN.x);
+	const float Zx = Z.x;
+	const float Zy = Z.y;
+	const float Zz = Z.z;
+
+	float Xx, Xy, Xz;
 	//CoordinateSystem(Z, &X, &Y);
 	if (fabs(Z.x) > fabs(Z.y)) {
 		const float invLen = 1.f / sqrt(Z.x * Z.x + Z.z * Z.z);
-		X = (float3)(-Z.z * invLen, 0.f, Z.x * invLen);
+		Xx = -Z.z * invLen;
+		Xy = 0.f;
+		Xz = Z.x * invLen;
 	} else {
 		const float invLen = 1.f / sqrt(Z.y * Z.y + Z.z * Z.z);
-		X = (float3)(0.f, Z.z * invLen, -Z.y * invLen);
+		Xx = 0.f;
+		Xy = Z.z * invLen;
+		Xz = -Z.y * invLen;
 	}
-	Y = (float3)((Z.y * X.z) - (Z.z * X.y),
-			(Z.z * X.x) - (Z.x * X.z),
-			(Z.x * X.y) - (Z.y * X.x));
 
-	const float3 localFixedDir = (float3)(dot(fixedDir, X), dot(fixedDir, Y), dot(fixedDir, Z));
+	float Yx, Yy, Yz;
+	Yx = (Zy * Xz) - (Zz * Xy);
+	Yy = (Zz * Xx) - (Zx * Xz);
+	Yz = (Zx * Xy) - (Zy * Xx);
+
+	float dotx = fixedDir.x * Xx + fixedDir.y * Xy + fixedDir.z * Xz;
+	float doty = fixedDir.x * Yx + fixedDir.y * Yy + fixedDir.z * Yz;
+	float dotz = fixedDir.x * Zx + fixedDir.y * Zy + fixedDir.z * Zz;
+	const float3 localFixedDir = (float3)(dotx, doty, dotz);
 
 	float3 localSampledDir;
 
