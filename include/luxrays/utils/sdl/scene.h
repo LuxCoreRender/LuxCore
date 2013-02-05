@@ -56,6 +56,8 @@ public:
 
 	void UpdateDataSet(Context *ctx);
 
+	Properties ToProperties(const std::string &directoryName);
+
 	//--------------------------------------------------------------------------
 	// Methods to build a scene from scratch
 	//--------------------------------------------------------------------------

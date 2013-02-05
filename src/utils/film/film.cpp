@@ -260,6 +260,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						FIRGBF *pixel = (FIRGBF *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
 							const unsigned int ridx = y * width + x;
+
 							pixel[x].red = frameBuffer->GetPixel(ridx)->r;
 							pixel[x].green = frameBuffer->GetPixel(ridx)->g;
 							pixel[x].blue = frameBuffer->GetPixel(ridx)->b;
@@ -339,6 +340,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						BYTE *pixel = (BYTE *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
 							const int offset = 3 * (x + y * width);
+
 							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
 							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
 							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);

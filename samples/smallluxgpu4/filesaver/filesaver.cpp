@@ -109,20 +109,7 @@ void FileSaverRenderEngine::SaveScene() {
 		
 		SLG_LOG("[FileSaverRenderEngine] Scene file name: " << sceneFileName);
 
-		Scene *scene = renderConfig->scene;
-
-		Properties props;
-
-		// Write the camera information
-		props.LoadFromObject(*(scene->camera));
-
-		// Write the texture information
-		SLG_LOG("[FileSaverRenderEngine] Exporting textures:");
-		for (u_int i = 0; i < scene->texDefs.GetSize(); ++i) {
-			Texture *tex = scene->texDefs.GetTexture(i);
-			SLG_LOG("[FileSaverRenderEngine]   " + tex->GetName());
-			props.LoadFromObject(*tex);
-		}
+		Properties props = renderConfig->scene->ToProperties(dirPath.generic_string());
 
 		// Write the scene file
 		std::ofstream sceneFile(sceneFileName.c_str());

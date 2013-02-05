@@ -177,7 +177,7 @@ bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 	return true;
 }
 
-Properties PerspectiveCamera::PropertySerialize() {
+Properties PerspectiveCamera::ToProperties() const {
 	Properties props;
 
 	props.SetString("scene.camera.lookat",

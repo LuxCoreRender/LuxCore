@@ -25,6 +25,8 @@
 
 #include <FreeImage.h>
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/texture.h"
 
@@ -264,6 +266,94 @@ ImageMap::~ImageMap() {
 	delete[] pixels;
 }
 
+void ImageMap::writeImage(const std::string &fileName) const {
+	if (channelCount == 4) {
+		// RGBA image
+		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBAF, width, height, 128);
+
+		if (dib) {
+			unsigned int pitch = FreeImage_GetPitch(dib);
+			BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+
+			for (unsigned int y = 0; y < height; ++y) {
+				FIRGBAF *pixel = (FIRGBAF *)bits;
+				for (unsigned int x = 0; x < width; ++x) {
+					const unsigned int ridx = (height - y - 1) * width + x;
+
+					pixel[x].red = pixels[ridx * channelCount];
+					pixel[x].green = pixels[ridx * channelCount + 1];
+					pixel[x].blue = pixels[ridx * channelCount + 2];
+					pixel[x].alpha = pixels[ridx * channelCount + 3];
+				}
+
+				// Next line
+				bits += pitch;
+			}
+
+			if (!FreeImage_Save(FIF_EXR, dib, fileName.c_str(), 0))
+				throw std::runtime_error("Failed image save");
+
+			FreeImage_Unload(dib);
+		} else
+			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+	} else if (channelCount == 3) {
+		// RGB image
+		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
+
+		if (dib) {
+			unsigned int pitch = FreeImage_GetPitch(dib);
+			BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+
+			for (unsigned int y = 0; y < height; ++y) {
+				FIRGBF *pixel = (FIRGBF *)bits;
+				for (unsigned int x = 0; x < width; ++x) {
+					const unsigned int ridx = (height - y - 1) * width + x;
+
+					pixel[x].red = pixels[ridx * channelCount];
+					pixel[x].green = pixels[ridx * channelCount + 1];
+					pixel[x].blue = pixels[ridx * channelCount + 2];
+				}
+
+				// Next line
+				bits += pitch;
+			}
+
+			if (!FreeImage_Save(FIF_EXR, dib, fileName.c_str(), 0))
+				throw std::runtime_error("Failed image save");
+
+			FreeImage_Unload(dib);
+		} else
+			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+	} else if (channelCount == 1) {
+		// Grey image
+		FIBITMAP *dib = FreeImage_AllocateT(FIT_FLOAT, width, height, 32);
+
+		if (dib) {
+			unsigned int pitch = FreeImage_GetPitch(dib);
+			BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+
+			for (unsigned int y = 0; y < height; ++y) {
+				float *pixel = (float *)bits;
+				for (unsigned int x = 0; x < width; ++x) {
+					const unsigned int ridx = (height - y - 1) * width + x;
+
+					pixel[x] = pixels[ridx * channelCount];
+				}
+
+				// Next line
+				bits += pitch;
+			}
+
+			if (!FreeImage_Save(FIF_EXR, dib, fileName.c_str(), 0))
+				throw std::runtime_error("Failed image save");
+
+			FreeImage_Unload(dib);
+		} else
+			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+	} else
+		throw std::runtime_error("Unknown channel count in ImageMap::writeImage(" + fileName + "): " + boost::lexical_cast<std::string>(channelCount));
+}
+
 //------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
@@ -336,7 +426,7 @@ void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
 // ConstFloat texture
 //------------------------------------------------------------------------------
 
-Properties ConstFloatTexture::PropertySerialize() {
+Properties ConstFloatTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -350,7 +440,7 @@ Properties ConstFloatTexture::PropertySerialize() {
 // ConstFloat3 texture
 //------------------------------------------------------------------------------
 
-Properties ConstFloat3Texture::PropertySerialize() {
+Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -365,7 +455,7 @@ Properties ConstFloat3Texture::PropertySerialize() {
 // ConstFloat4 texture
 //------------------------------------------------------------------------------
 
-Properties ConstFloat4Texture::PropertySerialize() {
+Properties ConstFloat4Texture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -380,12 +470,13 @@ Properties ConstFloat4Texture::PropertySerialize() {
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-Properties ImageMapTexture::PropertySerialize() {
+Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "imagemap");
-	props.SetString("scene.textures." + name + ".file", "imagemap-" + boost::lexical_cast<std::string>(imgMapInstance->GetImgMap()));
+	props.SetString("scene.textures." + name + ".file", "imagemap-" + boost::lexical_cast<std::string>(
+		imgMapCache.GetImageMapIndex(imgMapInstance->GetImgMap())) + ".exr");
 	props.SetString("scene.textures." + name + ".gamma", "1.0");
 	props.SetString("scene.textures." + name + ".gain", ToString(imgMapInstance->GetGain()));
 	props.SetString("scene.textures." + name + ".uvscale", ToString(imgMapInstance->GetUScale()) + " " + ToString(imgMapInstance->GetVScale()));
@@ -417,7 +508,7 @@ const UV ScaleTexture::GetDuDv() const {
 	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
 }
 
-Properties ScaleTexture::PropertySerialize() {
+Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -492,7 +583,7 @@ const UV FresnelApproxKTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
 
-Properties FresnelApproxNTexture::PropertySerialize() {
+Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
@@ -502,7 +593,7 @@ Properties FresnelApproxNTexture::PropertySerialize() {
 	return props;
 }
 
-Properties FresnelApproxKTexture::PropertySerialize() {
+Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
