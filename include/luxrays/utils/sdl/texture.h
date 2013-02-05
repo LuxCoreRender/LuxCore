@@ -52,12 +52,14 @@ typedef enum {
 	FRESNEL_APPROX_K
 } TextureType;
 
-class Texture : public PropertySerializer {
+class ImageMapCache;
+
+class Texture {
 public:
 	Texture() { }
 	virtual ~Texture() { }
 
-	std::string GetName() const { return "Texture-" + boost::lexical_cast<std::string>(this); }
+	std::string GetName() const { return "texture-" + boost::lexical_cast<std::string>(this); }
 	virtual TextureType GetType() const = 0;
 
 	virtual float GetGreyValue(const UV &uv) const = 0;
@@ -69,6 +71,8 @@ public:
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
 	}
+	
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -121,7 +125,7 @@ public:
 
 	float GetValue() const { return value; };
 
-	virtual Properties PropertySerialize();
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	float value;
@@ -141,7 +145,7 @@ public:
 
 	const Spectrum &GetColor() const { return color; };
 
-	virtual Properties PropertySerialize();
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	Spectrum color;
@@ -162,7 +166,7 @@ public:
 	const Spectrum &GetColor() const { return color; };
 	float GetAlpha() const { return alpha; };
 
-	virtual Properties PropertySerialize();
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	Spectrum color;
@@ -184,6 +188,8 @@ public:
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
 	const float *GetPixels() const { return pixels; }
+
+	void writeImage(const std::string &fileName) const;
 
 	friend class ImageMapInstance;
 
@@ -379,7 +385,7 @@ public:
 
 	const ImageMapInstance *GetImageMapInstance() const { return imgMapInstance; }
 
-	virtual Properties PropertySerialize();
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const ImageMapInstance *imgMapInstance;
@@ -411,7 +417,7 @@ public:
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
 
-	virtual Properties PropertySerialize();
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const Texture *tex1;
@@ -444,7 +450,7 @@ public:
 
 	const Texture *GetTexture() const { return tex; }
 
-	virtual Properties PropertySerialize();
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const Texture *tex;
@@ -470,7 +476,7 @@ public:
 
 	const Texture *GetTexture() const { return tex; }
 
-	virtual Properties PropertySerialize();
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const Texture *tex;

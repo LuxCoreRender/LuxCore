@@ -151,6 +151,34 @@ void Scene::UpdateDataSet(Context *ctx) {
 	dataSet->Preprocess();
 }
 
+Properties Scene::ToProperties(const std::string &directoryName) {
+		Properties props;
+
+		// Write the camera information
+		SDL_LOG("Saving camera information");
+		props.Load(camera->ToProperties());
+
+		// Write the image map information
+		SDL_LOG("Saving image map information:");
+		std::vector<ImageMap *> ims;
+		imgMapCache.GetImageMaps(ims);
+		for (u_int i = 0; i < ims.size(); ++i) {
+			const std::string fileName = directoryName + "/imagemap-" + boost::lexical_cast<std::string>(i) + ".exr";
+			SDL_LOG("  " + fileName);
+			ims[i]->writeImage(fileName);
+		}
+
+		// Write the texture information
+		SDL_LOG("Saving texture information:");
+		for (u_int i = 0; i < texDefs.GetSize(); ++i) {
+			const Texture *tex = texDefs.GetTexture(i);
+			SDL_LOG("  " + tex->GetName());
+			props.Load(tex->ToProperties(imgMapCache));
+		}
+
+		return props;
+}
+
 std::vector<std::string> Scene::GetStringParameters(const Properties &prop, const std::string &paramName,
 		const u_int paramCount, const std::string &defaultValue) {
 	const std::vector<std::string> vf = prop.GetStringVector(paramName, defaultValue);

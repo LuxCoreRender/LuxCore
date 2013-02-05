@@ -95,10 +95,6 @@ void Properties::LoadFromString(const std::string &propDefinitions) {
 	Load(stream);
 }
 
-void Properties::LoadFromObject(PropertySerializer &obj) {
-	Load(obj.PropertySerialize());
-}
-
 const std::vector<std::string> &Properties::GetAllKeys() const {
 	return keys;
 }

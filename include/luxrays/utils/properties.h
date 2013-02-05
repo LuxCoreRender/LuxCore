@@ -29,15 +29,6 @@
 
 namespace luxrays {
 
-class Properties;
-
-class PropertySerializer {
-public:
-	virtual ~PropertySerializer() { }
-
-	virtual Properties PropertySerialize() = 0;
-};
-
 class Properties {
 public:
 	Properties() { }
@@ -48,7 +39,6 @@ public:
 	void Load(std::istream &stream);
 	void LoadFromFile(const std::string &fileName);
 	void LoadFromString(const std::string &propDefinitions);
-	void LoadFromObject(PropertySerializer &obj);
 
 	const std::vector<std::string> &GetAllKeys() const;
 	std::vector<std::string> GetAllKeys(const std::string prefix) const;
