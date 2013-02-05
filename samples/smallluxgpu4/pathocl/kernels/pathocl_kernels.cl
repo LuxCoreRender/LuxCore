@@ -513,16 +513,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		if (depth < PARAM_MAX_PATH_DEPTH) {
 			// Sample the BSDF
 			__global BSDF *bsdf = &task->pathStateBase.bsdf;
-//			float3 sampledDir;
-//			float lastPdfW;
-//			float cosSampledDir;
-//			BSDFEvent event;
+			float3 sampledDir;
+			float lastPdfW;
+			float cosSampledDir;
+			BSDFEvent event;
 
-//			const float3 bsdfSample = BSDF_Sample(bsdf,
-//					Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
-//					Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
-//					&sampledDir, &lastPdfW, &cosSampledDir, &event
-//					MATERIALS_PARAM);
+			const float3 bsdfSample = BSDF_Sample(bsdf,
+					Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
+					Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
+					&sampledDir, &lastPdfW, &cosSampledDir, &event
+					MATERIALS_PARAM);
 //			const bool lastSpecular = ((event & SPECULAR) != 0);
 
 			// Russian Roulette
@@ -558,28 +558,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //#endif
 //				pathState = RT_NEXT_VERTEX;
 
-				float3 c = (float3)(1.f, 0.f, 1.f);
-				switch (bsdf->materialIndex) {
-					case 0:
-						c = (float3)(1.f, 0.f, 0.f);
-						break;
-					case 1:
-						c = (float3)(0.f, 1.f, 0.f);
-						break;
-					case 2:
-						c = (float3)(0.f, 0.f, 1.f);
-						break;
-					case 3:
-						c = (float3)(0.f, 1.f, 1.f);
-						break;
-					case 4:
-						c = (float3)(1.f, 1.f, 0.f);
-						break;
-					default:
-						c = (float3)(1.f, 1.f, 1.f);
-						break;
-				}
-				VSTORE3F(c, &sample->radiance.r);
+				VSTORE3F(bsdfSample, &sample->radiance.r);
 				pathState = SPLAT_SAMPLE;
 //			} else
 //				pathState = SPLAT_SAMPLE;
