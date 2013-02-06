@@ -19,6 +19,16 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
+set(LUXRAYS_VERSION_MAJOR 1)
+set(LUXRAYS_VERSION_MINOR 3devel1)
+
+# Configure a header file to pass some of the CMake settings
+# to the source code
+configure_file(
+  "${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h.in"
+  "${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h"
+  )
+
 #############################################################################
 #
 # LuxRays Docs

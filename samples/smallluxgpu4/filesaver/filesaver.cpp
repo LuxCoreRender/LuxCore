@@ -52,6 +52,7 @@ void FileSaverRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	directoryName = cfg.GetString("filesaver.directory", "slg-exported-scene");
+	renderEngineType = cfg.GetString("filesaver.renderengine.type", "PATHOCL");
 	
 	SaveScene();
 }
@@ -74,20 +75,19 @@ void FileSaverRenderEngine::SaveScene() {
 	if (!is_directory(dirPath))
 		throw std::runtime_error("It is not a directory: " + directoryName);
 
-	const std::string cfgFileName = (dirPath / "render.cfg").generic_string();
-	const std::string sceneFileName = (dirPath / "scene.scn").generic_string();
-
 	//--------------------------------------------------------------------------
 	// Export the .cfg file
 	//--------------------------------------------------------------------------
 	{
-		
+		const std::string cfgFileName = (dirPath / "render.cfg").generic_string();
 		SLG_LOG("[FileSaverRenderEngine] Config file name: " << cfgFileName);
 
 		Properties cfg = renderConfig->cfg;
 
 		// Overwrite the scene file name
-		cfg.SetString("scene.file", sceneFileName);
+		cfg.SetString("scene.file", "scene.scn");
+		// Set render engine type
+		cfg.SetString("renderengine.type", boost::lexical_cast<std::string>(renderEngineType));
 		// Remove FileSaver Option
 		cfg.Delete("filesaver.directory");
 
@@ -103,10 +103,10 @@ void FileSaverRenderEngine::SaveScene() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Export the .scn file
+	// Export the .scn/.ply/.exr files
 	//--------------------------------------------------------------------------
 	{
-		
+		const std::string sceneFileName = (dirPath / "scene.scn").generic_string();
 		SLG_LOG("[FileSaverRenderEngine] Scene file name: " << sceneFileName);
 
 		Properties props = renderConfig->scene->ToProperties(dirPath.generic_string());

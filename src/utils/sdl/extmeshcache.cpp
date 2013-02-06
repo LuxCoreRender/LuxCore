@@ -95,3 +95,16 @@ ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePly
 
 	return imesh;
 }
+
+u_int ExtMeshCache::GetExtMeshIndex(const ExtMesh *m) const {
+	// TODO: use a std::map
+	u_int i = 0;
+	for (std::vector<ExtMesh *>::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
+		if (*it == m)
+			return i;
+		else
+			++i;
+	}
+
+	throw std::runtime_error("Unknown mesh: " + boost::lexical_cast<std::string>(m));
+}

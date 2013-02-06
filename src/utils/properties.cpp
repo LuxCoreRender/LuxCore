@@ -215,7 +215,14 @@ std::string Properties::SetString(const std::string &property) {
 }
 
 void Properties::Delete(const std::string &propName) {
-	std::remove(keys.begin(), keys.end(), propName);
+	std::vector<std::string>::iterator it = keys.begin();
+	while (it != keys.end()) {
+		if (*it == propName)
+			it = keys.erase(it);
+		else
+			++it;
+	}
+
 	props.erase(propName);
 }
 
