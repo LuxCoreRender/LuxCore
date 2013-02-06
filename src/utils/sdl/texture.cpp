@@ -25,7 +25,7 @@
 
 #include <FreeImage.h>
 
-#include <boost/lexical_cast.hpp>
+#include <boost/format.hpp>
 
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/texture.h"
@@ -160,6 +160,28 @@ ImageMap::ImageMap(const std::string &fileName, const float g) {
 						pixels[offset] = powf(pixel[x].red, gamma);
 						pixels[offset + 1] = powf(pixel[x].green, gamma);
 						pixels[offset + 2] = powf(pixel[x].blue, gamma);
+					}
+				}
+
+				// Next line
+				bits += pitch;
+			}
+		} else if ((imageType == FIT_FLOAT) && (bpp == 32)) {
+			channelCount = 1;
+			SDL_LOG("HDR FLOAT (32bit) texture map size: " << width << "x" << height << " (" <<
+					width * height * sizeof(float) * channelCount / 1024 << "Kbytes)");
+			pixels = new float[width * height * channelCount];
+
+			for (u_int y = 0; y < height; ++y) {
+				float *pixel = (float *)bits;
+				for (u_int x = 0; x < width; ++x) {
+					const u_int offset = (x + (height - y - 1) * width) * channelCount;
+
+					if (gamma == 1.f)
+						pixels[offset] = pixel[x];
+					else {
+						// Apply reverse gamma correction
+						pixels[offset] = powf(pixel[x], gamma);
 					}
 				}
 
@@ -475,8 +497,8 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const
 
 	const std::string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "imagemap");
-	props.SetString("scene.textures." + name + ".file", "imagemap-" + boost::lexical_cast<std::string>(
-		imgMapCache.GetImageMapIndex(imgMapInstance->GetImgMap())) + ".exr");
+	props.SetString("scene.textures." + name + ".file", "imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMapInstance->GetImgMap())).str() + ".exr");
 	props.SetString("scene.textures." + name + ".gamma", "1.0");
 	props.SetString("scene.textures." + name + ".gain", ToString(imgMapInstance->GetGain()));
 	props.SetString("scene.textures." + name + ".uvscale", ToString(imgMapInstance->GetUScale()) + " " + ToString(imgMapInstance->GetVScale()));

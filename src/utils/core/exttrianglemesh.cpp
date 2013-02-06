@@ -20,10 +20,14 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <fstream>
 #include <cstring>
+
+#include <boost/format.hpp>
 
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/plymesh/rply.h"
+#include "luxrays/utils/sdl/extmeshcache.h"
 
 using namespace luxrays;
 
@@ -301,12 +305,80 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 		vertices[i] *= trans;
 }
 
-//Properties ExtTriangleMesh::ToProperties(const const ExtMeshCache &extMeshCache) const {
-//	Properties props;
-//
-//	const std::string name = GetName();
-//	props.SetString("scene.objects." + name + ".material", "constfloat1");
-//	props.SetString("scene.objects." + name + ".value", ToString(value));
-//
-//	return props;
-//}
+Properties ExtTriangleMesh::ToProperties(const std::string &matName,
+		const luxrays::sdl::ExtMeshCache &extMeshCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.objects." + name + ".material", matName);
+	props.SetString("scene.objects." + name + ".ply",
+			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(this)).str() + ".ply");
+	if (HasNormals())
+		props.SetString("scene.objects." + name + ".useplynormals", "1");
+	else
+		props.SetString("scene.objects." + name + ".useplynormals", "0");
+
+	return props;
+}
+
+void ExtTriangleMesh::writePly(const std::string &fileName) const {
+	std::ofstream plyFile(fileName.c_str());
+	if(!plyFile.is_open())
+		throw std::runtime_error("Unable to open: " + fileName);
+
+	// Write the PLY header
+	plyFile << "ply\n"
+			"format binary_little_endian 1.0\n"
+			"comment Created by LuxRays v" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR "\n"
+			"element vertex " + boost::lexical_cast<std::string>(vertCount) + "\n"
+			"property float x\n"
+			"property float y\n"
+			"property float z\n";
+
+	if (HasNormals())
+		plyFile << "property float nx\n"
+				"property float ny\n"
+				"property float nz\n";
+
+	if (HasUVs())
+		plyFile << "property float s\n"
+				"property float t\n";
+
+	plyFile << "element face " + boost::lexical_cast<std::string>(triCount) + "\n"
+				"property list uchar uint vertex_indices\n"
+				"end_header\n";
+
+	if (!plyFile.good())
+		throw std::runtime_error("Unable to write PLY header to: " + fileName);
+
+	// Write all vertex data
+	for (u_int i = 0; i < vertCount; ++i) {
+		plyFile.write((char *)&vertices[i], sizeof(Point));
+		if (HasNormals())
+			plyFile.write((char *)&normals[i], sizeof(Normal));
+		if (HasUVs())
+			plyFile.write((char *)&uvs[i], sizeof(UV));
+	}
+	if (!plyFile.good())
+		throw std::runtime_error("Unable to write PLY vertex data to: " + fileName);
+
+	// Write all face data
+	const u_char len = 3;
+	for (u_int i = 0; i < triCount; ++i) {
+		plyFile.write((char *)&len, 1);
+		plyFile.write((char *)&tris[i], sizeof(Triangle));
+	}
+	if (!plyFile.good())
+		throw std::runtime_error("Unable to write PLY face data to: " + fileName);
+
+	plyFile.close();
+}
+
+Properties ExtInstanceTriangleMesh::ToProperties(const std::string &matName,
+		const luxrays::sdl::ExtMeshCache &extMeshCache) const {
+	Properties props;
+
+	props.Load(mesh->ToProperties(matName, extMeshCache));
+// TODO
+	return props;
+}

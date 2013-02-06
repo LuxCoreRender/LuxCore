@@ -55,7 +55,7 @@ protected:
 private:
 	void SaveScene();
 
-	std::string directoryName;
+	std::string directoryName, renderEngineType;
 };
 
 }

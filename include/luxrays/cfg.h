@@ -24,8 +24,8 @@
 
 // The configured options and settings for LuxRays
 
-#define LUXRAYS_VERSION_MAJOR "0"
-#define LUXRAYS_VERSION_MINOR "2dev"
+#define LUXRAYS_VERSION_MAJOR "1"
+#define LUXRAYS_VERSION_MINOR "3devel1"
 
 /* #undef LUXRAYS_DISABLE_OPENCL */
 

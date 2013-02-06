@@ -24,12 +24,13 @@
 #include <stdexcept>
 #include <sstream>
 #include <set>
+#include <vector>
 
 #include <boost/detail/container_fwd.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <vector>
+#include <boost/format.hpp>
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/utils/properties.h"
@@ -163,7 +164,7 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		std::vector<ImageMap *> ims;
 		imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
-			const std::string fileName = directoryName + "/imagemap-" + boost::lexical_cast<std::string>(i) + ".exr";
+			const std::string fileName = directoryName + "/imagemap-" + (boost::format("%05d") % i).str() + ".exr";
 			SDL_LOG("  " + fileName);
 			ims[i]->writeImage(fileName);
 		}
@@ -184,13 +185,21 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 			props.Load(mat->ToProperties());
 		}
 
-//		// Write the mesh information
-//		SDL_LOG("Saving object information:");
-//		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
-//			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
-//			SDL_LOG("  " + mesh->GetName());
-//			props.Load(mesh->ToProperties(objectMaterials[i]->GetName(), extMeshCache));
-//		}
+		// Write the mesh information
+		SDL_LOG("Saving mesh information:");
+		const std::vector<ExtMesh *> &meshes =  extMeshCache.GetMeshes();
+		for (u_int i = 0; i < meshes.size(); ++i) {
+			const std::string fileName = directoryName + "/mesh-" + (boost::format("%05d") % i).str() + ".ply";
+			SDL_LOG("  " + fileName);
+			meshes[i]->writePly(fileName);
+		}
+
+		SDL_LOG("Saving object information:");
+		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
+			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
+			SDL_LOG("  " + mesh->GetName());
+			props.Load(mesh->ToProperties(objectMaterials[i]->GetName(), extMeshCache));
+		}
 
 		return props;
 }
