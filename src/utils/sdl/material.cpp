@@ -768,9 +768,10 @@ Properties MixMaterial::ToProperties() const  {
 	Properties props;
 
 	const std::string name = GetName();
-	props.SetString("scene.materials." + name + ".type", "metal");
+	props.SetString("scene.materials." + name + ".type", "mix");
 	props.SetString("scene.materials." + name + ".material1", matA->GetName());
 	props.SetString("scene.materials." + name + ".material2", matB->GetName());
+	props.SetString("scene.materials." + name + ".amount", mixFactor->GetName());
 	props.Load(Material::ToProperties());
 
 	return props;
