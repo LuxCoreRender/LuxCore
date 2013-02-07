@@ -188,8 +188,8 @@ Properties PerspectiveCamera::ToProperties() const {
 
 	if (!autoUpdateFilmRegion)
 		props.SetString("scene.camera.screenwindow",
-			ToString(filmRegion[0]) + ToString(filmRegion[1]) +
-			ToString(filmRegion[2]) + ToString(filmRegion[3]));
+			ToString(filmRegion[0]) + " " + ToString(filmRegion[1]) + " " + 
+			ToString(filmRegion[2]) + " " + ToString(filmRegion[3]));
 
 	props.SetString("scene.camera.cliphither", ToString(clipHither));
 	props.SetString("scene.camera.clipyon", ToString(clipYon));
