@@ -202,25 +202,33 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->fixedDir.x);
 
-	//const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
+	//--------------------------------------------------------------------------
+	// Original code:
 
-	const float3 Z = VLOAD3F(&bsdf->shadeN.x);
-	const float Zx = Z.x;
-	const float Zy = Z.y;
-	const float Zz = Z.z;
+	//const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
+	//--------------------------------------------------------------------------
+
+	//--------------------------------------------------------------------------
+	// Looking for a work around: 
+
+	const float Zx = bsdf->shadeN.x;
+	const float Zy = bsdf->shadeN.y;
+	const float Zz = bsdf->shadeN.z;
 
 	float Xx, Xy, Xz;
-	//CoordinateSystem(Z, &X, &Y);
-	if (fabs(Z.x) > fabs(Z.y)) {
-		const float invLen = 1.f / sqrt(Z.x * Z.x + Z.z * Z.z);
-		Xx = -Z.z * invLen;
+	//if (fabs(Zx) > fabs(Zy)) {
+	if (Zx * Zx > Zy * Zy) {
+		//const float invLen = 1.f / sqrt(Z.x * Z.x + Z.z * Z.z);
+		const float len = sqrt(Zx * Zx + Zz * Zz);
+		Xx = -Zz / len;
 		Xy = 0.f;
-		Xz = Z.x * invLen;
+		Xz = Zx / len;
 	} else {
-		const float invLen = 1.f / sqrt(Z.y * Z.y + Z.z * Z.z);
+		//const float invLen = 1.f / sqrt(Z.y * Z.y + Z.z * Z.z);
+		const float len = sqrt(Zy * Zy + Zz * Zz);
 		Xx = 0.f;
-		Xy = Z.z * invLen;
-		Xz = -Z.y * invLen;
+		Xy = Zz / len;
+		Xz = -Zy / len;
 	}
 
 	float Yx, Yy, Yz;
@@ -232,6 +240,8 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 	float doty = fixedDir.x * Yx + fixedDir.y * Yy + fixedDir.z * Yz;
 	float dotz = fixedDir.x * Zx + fixedDir.y * Zy + fixedDir.z * Zz;
 	const float3 localFixedDir = (float3)(dotx, doty, dotz);
+
+	//--------------------------------------------------------------------------
 
 	return localFixedDir;
 
