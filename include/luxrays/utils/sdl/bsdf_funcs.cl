@@ -233,33 +233,35 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 	float dotz = fixedDir.x * Zx + fixedDir.y * Zy + fixedDir.z * Zz;
 	const float3 localFixedDir = (float3)(dotx, doty, dotz);
 
-	float3 localSampledDir;
+	return localFixedDir;
 
-	const float3 result = Material_Sample(&mats[bsdf->materialIndex], VLOAD2F(&bsdf->hitPointUV.u),
-			localFixedDir, &localSampledDir, u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
-			bsdf->passThroughEvent,
-#endif
-			pdfW, cosSampledDir, event
-			MATERIALS_PARAM);
-	if (Spectrum_IsBlack(result))
-		return 0.f;
-
-	//*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
-
-	(*sampledDir).x = Xx * localSampledDir.x + Yx * localSampledDir.y + Zx * localSampledDir.z;
-	(*sampledDir).y = Xy * localSampledDir.x + Yy * localSampledDir.y + Zy * localSampledDir.z;
-	(*sampledDir).z = Xz * localSampledDir.x + Yz * localSampledDir.y + Zz * localSampledDir.z;
-
-	// Adjoint BSDF
-//	if (fromLight) {
-//		const float absDotFixedDirNS = fabsf(localFixedDir.z);
-//		const float absDotSampledDirNS = fabsf(localSampledDir.z);
-//		const float absDotFixedDirNG = AbsDot(fixedDir, geometryN);
-//		const float absDotSampledDirNG = AbsDot(*sampledDir, geometryN);
-//		return result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
-//	} else
-		return result;
+//	float3 localSampledDir;
+//
+//	const float3 result = Material_Sample(&mats[bsdf->materialIndex], VLOAD2F(&bsdf->hitPointUV.u),
+//			localFixedDir, &localSampledDir, u0, u1,
+//#if defined(PARAM_HAS_PASSTHROUGH)
+//			bsdf->passThroughEvent,
+//#endif
+//			pdfW, cosSampledDir, event
+//			MATERIALS_PARAM);
+//	if (Spectrum_IsBlack(result))
+//		return 0.f;
+//
+//	//*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
+//
+//	(*sampledDir).x = Xx * localSampledDir.x + Yx * localSampledDir.y + Zx * localSampledDir.z;
+//	(*sampledDir).y = Xy * localSampledDir.x + Yy * localSampledDir.y + Zy * localSampledDir.z;
+//	(*sampledDir).z = Xz * localSampledDir.x + Yz * localSampledDir.y + Zz * localSampledDir.z;
+//
+//	// Adjoint BSDF
+////	if (fromLight) {
+////		const float absDotFixedDirNS = fabsf(localFixedDir.z);
+////		const float absDotSampledDirNS = fabsf(localSampledDir.z);
+////		const float absDotFixedDirNG = AbsDot(fixedDir, geometryN);
+////		const float absDotSampledDirNG = AbsDot(*sampledDir, geometryN);
+////		return result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
+////	} else
+//		return result;
 }
 
 bool BSDF_IsDelta(__global BSDF *bsdf
