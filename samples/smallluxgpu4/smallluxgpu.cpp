@@ -348,7 +348,7 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 
 int main(int argc, char *argv[]) {
 #if defined(__GNUC__) && !defined(__CYGWIN__)
-	//set_terminate(SLGTerminate);
+	set_terminate(SLGTerminate);
 #endif
 
 	// This is required to run AMD GPU profiler
@@ -485,11 +485,10 @@ int main(int argc, char *argv[]) {
 	} catch (runtime_error err) {
 		SLG_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
+	} catch (exception err) {
+		SLG_LOG("ERROR: " << err.what());
+		return EXIT_FAILURE;
 	}
-//	} catch (exception err) {
-//		SLG_LOG("ERROR: " << err.what());
-//		return EXIT_FAILURE;
-//	}
 
 	return EXIT_SUCCESS;
 }
