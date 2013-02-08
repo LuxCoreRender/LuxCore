@@ -211,39 +211,41 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 	//--------------------------------------------------------------------------
 	// Looking for a work around: 
 
-	const float Zx = bsdf->shadeN.x;
-	const float Zy = bsdf->shadeN.y;
-	const float Zz = bsdf->shadeN.z;
+//	const float Zx = bsdf->shadeN.x;
+//	const float Zy = bsdf->shadeN.y;
+//	const float Zz = bsdf->shadeN.z;
+//
+//	float Xx, Xy, Xz;
+//	//if (fabs(Zx) > fabs(Zy)) {
+//	if (Zx * Zx > Zy * Zy) {
+//		//const float invLen = 1.f / sqrt(Z.x * Z.x + Z.z * Z.z);
+//		const float len = sqrt(Zx * Zx + Zz * Zz);
+//		Xx = -Zz / len;
+//		Xy = 0.f;
+//		Xz = Zx / len;
+//	} else {
+//		//const float invLen = 1.f / sqrt(Z.y * Z.y + Z.z * Z.z);
+//		const float len = sqrt(Zy * Zy + Zz * Zz);
+//		Xx = 0.f;
+//		Xy = Zz / len;
+//		Xz = -Zy / len;
+//	}
+//
+//	float Yx, Yy, Yz;
+//	Yx = (Zy * Xz) - (Zz * Xy);
+//	Yy = (Zz * Xx) - (Zx * Xz);
+//	Yz = (Zx * Xy) - (Zy * Xx);
+//
+//	float dotx = fixedDir.x * Xx + fixedDir.y * Xy + fixedDir.z * Xz;
+//	float doty = fixedDir.x * Yx + fixedDir.y * Yy + fixedDir.z * Yz;
+//	float dotz = fixedDir.x * Zx + fixedDir.y * Zy + fixedDir.z * Zz;
+//	const float3 localFixedDir = (float3)(dotx, doty, dotz);
 
-	float Xx, Xy, Xz;
-	//if (fabs(Zx) > fabs(Zy)) {
-	if (Zx * Zx > Zy * Zy) {
-		//const float invLen = 1.f / sqrt(Z.x * Z.x + Z.z * Z.z);
-		const float len = sqrt(Zx * Zx + Zz * Zz);
-		Xx = -Zz / len;
-		Xy = 0.f;
-		Xz = Zx / len;
-	} else {
-		//const float invLen = 1.f / sqrt(Z.y * Z.y + Z.z * Z.z);
-		const float len = sqrt(Zy * Zy + Zz * Zz);
-		Xx = 0.f;
-		Xy = Zz / len;
-		Xz = -Zy / len;
-	}
-
-	float Yx, Yy, Yz;
-	Yx = (Zy * Xz) - (Zz * Xy);
-	Yy = (Zz * Xx) - (Zx * Xz);
-	Yz = (Zx * Xy) - (Zy * Xx);
-
-	float dotx = fixedDir.x * Xx + fixedDir.y * Xy + fixedDir.z * Xz;
-	float doty = fixedDir.x * Yx + fixedDir.y * Yy + fixedDir.z * Yz;
-	float dotz = fixedDir.x * Zx + fixedDir.y * Zy + fixedDir.z * Zz;
-	const float3 localFixedDir = (float3)(dotx, doty, dotz);
+	const float3 localFixedDir = fixedDir;
 
 	//--------------------------------------------------------------------------
 
-	return localFixedDir;
+	return (float3)(fabs(localFixedDir.x), fabs(localFixedDir.y), fabs(localFixedDir.z));
 
 //	float3 localSampledDir;
 //
