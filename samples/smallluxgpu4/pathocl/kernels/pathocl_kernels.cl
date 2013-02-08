@@ -237,24 +237,24 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		if (currentTriangleIndex != NULL_INDEX) {
 			// Something was hit
 
-			BSDF_Init(bsdf,
-#if defined(PARAM_ACCEL_MQBVH)
-					meshFirstTriangleOffset,
-					meshDescs,
-#endif
-					meshMats, meshIDs,
-#if (PARAM_DL_LIGHT_COUNT > 0)
-					meshLights,
-#endif
-					vertices, vertNormals, vertUVs,
-					triangles, ray, rayHit
-#if defined(PARAM_HAS_PASSTHROUGH)
-					, task->pathStateBase.bsdf.passThroughEvent
-#endif
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
-					MATERIALS_PARAM
-#endif
-					);
+//			BSDF_Init(bsdf,
+//#if defined(PARAM_ACCEL_MQBVH)
+//					meshFirstTriangleOffset,
+//					meshDescs,
+//#endif
+//					meshMats, meshIDs,
+//#if (PARAM_DL_LIGHT_COUNT > 0)
+//					meshLights,
+//#endif
+//					vertices, vertNormals, vertUVs,
+//					triangles, ray, rayHit
+//#if defined(PARAM_HAS_PASSTHROUGH)
+//					, task->pathStateBase.bsdf.passThroughEvent
+//#endif
+//#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+//					MATERIALS_PARAM
+//#endif
+//					);
 
 //#if defined(PARAM_HAS_PASSTHROUGH)
 //			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
@@ -306,7 +306,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 //				pathState = GENERATE_DL_RAY;
 //#else
 				// Sample next path vertex
-				pathState = GENERATE_NEXT_VERTEX_RAY;
+				//pathState = GENERATE_NEXT_VERTEX_RAY;
+
+				const float3 rayDir = VLOAD3F(&ray->d.x);
+				VSTORE3F(-rayDir, &bsdf->fixedDir.x);
+				const float3 fixedDir = VLOAD3F(&bsdf->fixedDir.x);
+				const float3 localFixedDir = fixedDir;
+				const float3 bsdfSample = fabs(localFixedDir);
+				VSTORE3F(bsdfSample, &sample->radiance.r);
+
+				pathState = SPLAT_SAMPLE;
 //#endif
 			}
 		} else {
