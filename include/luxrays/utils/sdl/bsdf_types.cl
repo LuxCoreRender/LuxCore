@@ -37,9 +37,9 @@ typedef struct {
 	// lightDir when fromLight = true
 	Vector fixedDir;
 	Point hitPoint;
-	UV hitPointUV;
 	Normal geometryN;
 	Normal shadeN;
+	UV hitPointUV;
 #if defined(PARAM_HAS_PASSTHROUGH)
 	// passThroughEvent can be stored here in a path state even before to of
 	// BSDF initialization (while tracing the next path vertex ray)
