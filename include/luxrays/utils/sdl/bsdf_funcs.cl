@@ -23,136 +23,41 @@
 
 void BSDF_Init(
 		__global BSDF *bsdf,
-		//const bool fromL,
-#if defined(PARAM_ACCEL_MQBVH)
-		__global uint *meshFirstTriangleOffset,
-		__global Mesh *meshDescs,
-#endif
 		__global uint *meshMats,
 		__global uint *meshIDs,
-#if (PARAM_DL_LIGHT_COUNT > 0)
-		__global uint *meshLights,
-#endif
 		__global Point *vertices,
 		__global Vector *vertNormals,
 		__global UV *vertUVs,
 		__global Triangle *triangles,
 		__global Ray *ray,
 		__global RayHit *rayHit
-#if defined(PARAM_HAS_PASSTHROUGH)
-		, const float u0
-#endif
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
-		MATERIALS_PARAM_DECL
-#endif
 		) {
-	//bsdf->fromLight = fromL;
-#if defined(PARAM_HAS_PASSTHROUGH)
-	bsdf->passThroughEvent = u0;
-#endif
-
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
 	VSTORE3F(rayOrig + rayHit->t * rayDir, &bsdf->hitPoint.x);
 	VSTORE3F(-rayDir, &bsdf->fixedDir.x);
 
-	const uint currentTriangleIndex = rayHit->index;
-	const uint meshIndex = meshIDs[currentTriangleIndex];
-
-#if defined(PARAM_ACCEL_MQBVH)
-	__global Mesh *meshDesc = &meshDescs[meshIndex];
-	__global Point *iVertices = &vertices[meshDesc->vertsOffset];
-	__global Vector *iVertNormals = &vertNormals[meshDesc->vertsOffset];
-	__global UV *iVertUVs = &vertUVs[meshDesc->vertsOffset];
-	__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
-	const uint triangleID = currentTriangleIndex - meshFirstTriangleOffset[meshIndex];
-#endif
-
-	// Get the material
-	const uint matIndex = meshMats[meshIndex];
-	bsdf->materialIndex = matIndex;
-
-	// Interpolate face normal and UV coordinates
-	const float b1 = rayHit->b1;
-	const float b2 = rayHit->b2;
-#if defined(PARAM_ACCEL_MQBVH)
-	const float3 geometryN = Mesh_GetGeometryNormal(iVertices, iTriangles, triangleID);
-	VSTORE3F(geometryN, &bsdf->geometryN.x);
-	float3 shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, b1, b2);
-	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
-	const float2 hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2);
-#else
-	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
-	VSTORE3F(geometryN, &bsdf->geometryN.x);
-	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
-	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
-#endif
-	VSTORE2F(hitPointUV, &bsdf->hitPointUV.u);
-
-#if (PARAM_DL_LIGHT_COUNT > 0)
-	// Check if it is a light source
-	bsdf->triangleLightSourceIndex = meshLights[currentTriangleIndex];
-#endif
-
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
-	__global Material *mat = &mats[matIndex];
-
-#if defined(PARAM_HAS_NORMALMAPS)
-	// Check if I have to apply normal mapping
-	const uint normalTexIndex = mat->normalTexIndex;
-	if (normalTexIndex != NULL_INDEX) {
-		// Apply normal mapping
-		const float3 color = Texture_GetColorValue(&texs[normalTexIndex], hitPointUV
-			TEXTURES_PARAM);
-		const float3 xyz = 2.f * color - 1.f;
-
-		float3 v1, v2;
-		CoordinateSystem(shadeN, &v1, &v2);
-		shadeN = normalize((float3)(
-				v1.x * xyz.x + v2.x * xyz.y + shadeN.x * xyz.z,
-				v1.y * xyz.x + v2.y * xyz.y + shadeN.y * xyz.z,
-				v1.z * xyz.x + v2.z * xyz.y + shadeN.z * xyz.z));
-	}
-#endif
-
-#if defined(PARAM_HAS_BUMPMAPS)
-	// Check if I have to apply bump mapping
-	const uint bumpTexIndex = mat->bumpTexIndex;
-	if (bumpTexIndex != NULL_INDEX) {
-		// Apply bump mapping
-		__global Texture *tex = &texs[bumpTexIndex];
-		const float2 dudv = Texture_GetDuDv(tex
-			TEXTURES_PARAM);
-
-		const float b0 = Texture_GetGreyValue(tex, hitPointUV
-			TEXTURES_PARAM);
-
-		const float2 uvdu = (float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1);
-		const float bu = Texture_GetGreyValue(tex, uvdu
-			TEXTURES_PARAM);
-
-		const float2 uvdv = (float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1);
-		const float bv = Texture_GetGreyValue(tex, uvdv
-			TEXTURES_PARAM);
-
-		// bumpScale is a fixed scale factor to try to more closely match
-		// LuxRender bump mapping
-		const float bumpScale = 50.f;
-		const float3 bump = (float3)(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
-
-		float3 v1, v2;
-		CoordinateSystem(shadeN, &v1, &v2);
-		shadeN = normalize((float3)(
-				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
-				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
-				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
-	}
-#endif
-#endif
-
-	Frame_SetFromZ(&bsdf->frame, shadeN);
-
-	VSTORE3F(shadeN, &bsdf->shadeN.x);
+//	const uint currentTriangleIndex = rayHit->index;
+//	const uint meshIndex = meshIDs[currentTriangleIndex];
+//
+//	// Get the material
+//	const uint matIndex = meshMats[meshIndex];
+//	bsdf->materialIndex = matIndex;
+//
+//	// Interpolate face normal and UV coordinates
+//	const float b1 = rayHit->b1;
+//	const float b2 = rayHit->b2;
+//
+//	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
+//	VSTORE3F(geometryN, &bsdf->geometryN.x);
+//	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
+//	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
+//
+//	VSTORE2F(hitPointUV, &bsdf->hitPointUV.u);
+//
+//	Frame_SetFromZ(&bsdf->frame, shadeN);
+//
+//	VSTORE3F(shadeN, &bsdf->shadeN.x);
 }
 
 float3 BSDF_Evaluate(__global BSDF *bsdf,
