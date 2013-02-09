@@ -50,11 +50,11 @@ void BSDF_Init(
 
 	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
 	VSTORE3F(geometryN, &bsdf->geometryN.x);
-	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
-	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
-
-	VSTORE2F(hitPointUV, &bsdf->hitPointUV.u);
-
+//	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
+//	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
+//
+//	VSTORE2F(hitPointUV, &bsdf->hitPointUV.u);
+//
 //	Frame_SetFromZ(&bsdf->frame, shadeN);
 //
 //	VSTORE3F(shadeN, &bsdf->shadeN.x);
