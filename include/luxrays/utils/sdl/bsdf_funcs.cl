@@ -37,24 +37,24 @@ void BSDF_Init(
 	VSTORE3F(rayOrig + rayHit->t * rayDir, &bsdf->hitPoint.x);
 	VSTORE3F(-rayDir, &bsdf->fixedDir.x);
 
-//	const uint currentTriangleIndex = rayHit->index;
-//	const uint meshIndex = meshIDs[currentTriangleIndex];
-//
-//	// Get the material
-//	const uint matIndex = meshMats[meshIndex];
-//	bsdf->materialIndex = matIndex;
-//
-//	// Interpolate face normal and UV coordinates
-//	const float b1 = rayHit->b1;
-//	const float b2 = rayHit->b2;
-//
-//	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
-//	VSTORE3F(geometryN, &bsdf->geometryN.x);
-//	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
-//	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
-//
-//	VSTORE2F(hitPointUV, &bsdf->hitPointUV.u);
-//
+	const uint currentTriangleIndex = rayHit->index;
+	const uint meshIndex = meshIDs[currentTriangleIndex];
+
+	// Get the material
+	const uint matIndex = meshMats[meshIndex];
+	bsdf->materialIndex = matIndex;
+
+	// Interpolate face normal and UV coordinates
+	const float b1 = rayHit->b1;
+	const float b2 = rayHit->b2;
+
+	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
+	VSTORE3F(geometryN, &bsdf->geometryN.x);
+	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
+	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
+
+	VSTORE2F(hitPointUV, &bsdf->hitPointUV.u);
+
 //	Frame_SetFromZ(&bsdf->frame, shadeN);
 //
 //	VSTORE3F(shadeN, &bsdf->shadeN.x);
