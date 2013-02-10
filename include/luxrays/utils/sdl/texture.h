@@ -336,6 +336,8 @@ public:
 	virtual const UV GetDuDv() const { return DuDv; }
 
 	const ImageMap *GetImageMap() const { return imgMap; }
+	const UVMapping &GetUVMapping() const { return mapping; }
+	const float GetGain() const { return gain; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 

@@ -1,4 +1,4 @@
-#line 2 "light_types.cl"
+#line 2 "mapping_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,39 +21,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
-} LightSourceType;
-
-typedef struct {
-	Spectrum gain;
-	UVMapping mapping;
-	unsigned int imageMapIndex;
-} InfiniteLight;
-
-typedef struct {
-	Spectrum gain;
-	float thetaS;
-	float phiS;
-	float zenith_Y, zenith_x, zenith_y;
-	float perez_Y[6], perez_x[6], perez_y[6];
-} SkyLight;
-
-typedef struct {
-	Vector sunDir;
-	Spectrum gain;
-	float turbidity;
-	float relSize;
-	// XY Vectors for cone sampling
-	Vector x, y;
-	float cosThetaMax;
-	Spectrum sunColor;
-} SunLight;
-
-typedef struct {
-	Vector v0, v1, v2;
-	UV uv0, uv1, uv2;
-	float invArea;
-
-	unsigned int materialIndex;
-} TriangleLight;
+float2 UVMapping_Map(__global UVMapping *mapping, const float2 uv) {
+	const float2 scale = VLOAD2F(&mapping->uScale);
+	const float2 delta = VLOAD2F(&mapping->uDelta);
+	
+	return uv * scale + delta;
+}

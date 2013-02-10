@@ -30,13 +30,34 @@
 float3 InfiniteLight_GetRadiance(
 	__global InfiniteLight *infiniteLight, const float3 dir
 	IMAGEMAPS_PARAM_DECL) {
-	const float2 uv = (float2)(
-		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F))+ infiniteLight->shiftU,
-		SphericalTheta(-dir) * M_1_PI_F + infiniteLight->shiftV);
+	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		imageMapBuff4,
+#endif
+		imageMap->pageIndex, imageMap->pixelsIndex);
 
-	return VLOAD3F(&infiniteLight->gain.r) * ImageMapInstance_GetColor(
-			&infiniteLight->imageMapInstance, uv
-			IMAGEMAPS_PARAM);
+	const float2 uv = (float2)(
+		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F)),
+		SphericalTheta(-dir) * M_1_PI_F);
+
+	const float2 mapUV = UVMapping_Map(&infiniteLight->mapping, uv);
+	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetColor(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			mapUV.s0, mapUV.s1);
 }
 
 #endif

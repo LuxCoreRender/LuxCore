@@ -591,6 +591,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_transform_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<
 			luxrays::ocl::KernelSource_trianglemesh_types <<
+			luxrays::ocl::KernelSource_mapping_types <<
 			luxrays::ocl::KernelSource_texture_types <<
 			luxrays::ocl::KernelSource_material_types <<
 			luxrays::ocl::KernelSource_bsdf_types <<
@@ -610,6 +611,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_randomgen_funcs <<
 			luxrays::ocl::KernelSource_triangle_funcs <<
 			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			luxrays::ocl::KernelSource_mapping_funcs <<
 			luxrays::ocl::KernelSource_texture_funcs <<
 			luxrays::ocl::KernelSource_material_funcs <<
 			luxrays::ocl::KernelSource_light_funcs <<
