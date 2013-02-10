@@ -46,11 +46,11 @@ typedef enum e_ply_io_mode_ {
     PLY_WRITE
 } e_ply_io_mode;
 
-static const char *const ply_storage_mode_list[] = {
+const char *const ply_storage_mode_list[] = {
     "binary_big_endian", "binary_little_endian", "ascii", NULL
 };     /* order matches e_ply_storage_mode enum */
 
-static const char *const ply_type_list[] = {
+const char *const ply_type_list[] = {
     "int8", "uint8", "int16", "uint16", 
     "int32", "uint32", "float32", "float64",
     "char", "uchar", "short", "ushort", 
@@ -244,7 +244,7 @@ static void *ply_grow_array(p_ply ply, void **pointer, long *nmemb, long size);
 /* ----------------------------------------------------------------------
  * Special functions
  * ---------------------------------------------------------------------- */
-static e_ply_storage_mode ply_arch_endian(void);
+
 static int ply_type_check(void); 
 
 /* ----------------------------------------------------------------------
@@ -1189,7 +1189,7 @@ static void ply_error(p_ply ply, const char *fmt, ...) {
     ply->error_cb(buffer);
 }
 
-static e_ply_storage_mode ply_arch_endian(void) {
+e_ply_storage_mode ply_arch_endian(void) {
     unsigned long i = 1;
     unsigned char *s = (unsigned char *) &i;
     if (*s == 1) return PLY_LITTLE_ENDIAN;

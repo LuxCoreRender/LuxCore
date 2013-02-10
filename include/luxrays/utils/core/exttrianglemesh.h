@@ -33,7 +33,6 @@
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/properties.h"
-#include "luxrays/utils/properties.h"
 
 namespace luxrays { namespace sdl {
 class ExtMeshCache;
@@ -65,7 +64,7 @@ public:
 
 	virtual void Delete() = 0;
 	virtual Properties ToProperties(const std::string &matName, const luxrays::sdl::ExtMeshCache &extMeshCache) const = 0;
-	virtual void writePly(const std::string &fileName) const = 0;
+	virtual void WritePly(const std::string &fileName) const = 0;
 };
 
 class ExtTriangleMesh : public ExtMesh {
@@ -132,7 +131,7 @@ public:
 	virtual void ApplyTransform(const Transform &trans);
 
 	virtual Properties ToProperties(const std::string &matName, const luxrays::sdl::ExtMeshCache &extMeshCache) const;
-	virtual void writePly(const std::string &fileName) const;
+	virtual void WritePly(const std::string &fileName) const;
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals = false);
 	static ExtTriangleMesh *CreateExtTriangleMesh(
@@ -222,7 +221,7 @@ public:
 	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
 
 	virtual Properties ToProperties(const std::string &matName, const luxrays::sdl::ExtMeshCache &extMeshCache) const;
-	virtual void writePly(const std::string &fileName) const { mesh->writePly(fileName); }
+	virtual void WritePly(const std::string &fileName) const { mesh->WritePly(fileName); }
 
 private:
 	Transform trans;
