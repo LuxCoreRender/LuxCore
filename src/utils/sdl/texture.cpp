@@ -29,6 +29,7 @@
 
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/texture.h"
+#include "luxrays/utils/sdl/bsdf.h"
 
 using namespace luxrays;
 using namespace luxrays::sdl;
@@ -88,7 +89,7 @@ u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
 }
 
 //------------------------------------------------------------------------------
-// ImageMap texture
+// ImageMap
 //------------------------------------------------------------------------------
 
 ImageMap::ImageMap(const std::string &fileName, const float g) {
@@ -288,7 +289,7 @@ ImageMap::~ImageMap() {
 	delete[] pixels;
 }
 
-void ImageMap::writeImage(const std::string &fileName) const {
+void ImageMap::WriteImage(const std::string &fileName) const {
 	if (channelCount == 4) {
 		// RGBA image
 		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBAF, width, height, 128);
@@ -384,9 +385,6 @@ ImageMapCache::ImageMapCache() {
 }
 
 ImageMapCache::~ImageMapCache() {
-	for (size_t i = 0; i < imgMapInstances.size(); ++i)
-		delete imgMapInstances[i];
-
 	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
 		delete it->second;
 }
@@ -414,15 +412,6 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 void ImageMapCache::DefineImgMap(const std::string &name, ImageMap *tm) {
 	SDL_LOG("Define ImageMap: " << name);
 	maps.insert(std::make_pair(name, tm));
-}
-
-ImageMapInstance *ImageMapCache::GetImageMapInstance(const std::string &fileName, const float gamma,
-	const float gain, const float uScale, const float vScale, const float uDelta, const float vDelta) {
-	ImageMap *im = GetImageMap(fileName, gamma);
-	ImageMapInstance *imi = new ImageMapInstance(im, gain, uScale, vScale, uDelta, vDelta);
-	imgMapInstances.push_back(imi);
-
-	return imi;
 }
 
 u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
@@ -492,17 +481,35 @@ Properties ConstFloat4Texture::ToProperties(const ImageMapCache &imgMapCache) co
 // ImageMap texture
 //------------------------------------------------------------------------------
 
+ImageMapTexture::ImageMapTexture(const ImageMap * im, const UVMapping &mp, const float g) :
+	imgMap(im), mapping(mp), gain(g) {
+	DuDv.u = 1.f / (mapping.uScale * imgMap->GetWidth());
+	DuDv.v = 1.f / (mapping.vScale * imgMap->GetHeight());
+}
+
+float ImageMapTexture::GetGreyValue(const BSDF &bsdf) const {
+	return gain * imgMap->GetGrey(mapping.Map(bsdf.hitPointUV));
+}
+
+Spectrum ImageMapTexture::GetColorValue(const BSDF &bsdf) const {
+	return gain * imgMap->GetColor(mapping.Map(bsdf.hitPointUV));
+}
+
+float ImageMapTexture::GetAlphaValue(const BSDF &bsdf) const {
+	return imgMap->GetAlpha(mapping.Map(bsdf.hitPointUV));
+}
+
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "imagemap");
 	props.SetString("scene.textures." + name + ".file", "imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMapInstance->GetImgMap())).str() + ".exr");
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr");
 	props.SetString("scene.textures." + name + ".gamma", "1.0");
-	props.SetString("scene.textures." + name + ".gain", ToString(imgMapInstance->GetGain()));
-	props.SetString("scene.textures." + name + ".uvscale", ToString(imgMapInstance->GetUScale()) + " " + ToString(imgMapInstance->GetVScale()));
-	props.SetString("scene.textures." + name + ".uvdelta", ToString(imgMapInstance->GetUDelta()) + " " + ToString(imgMapInstance->GetVDelta()));
+	props.SetString("scene.textures." + name + ".gain", ToString(gain));
+	props.SetString("scene.textures." + name + ".uvscale", ToString(mapping.GetUScale()) + " " + ToString(mapping.GetVScale()));
+	props.SetString("scene.textures." + name + ".uvdelta", ToString(mapping.GetUDelta()) + " " + ToString(mapping.GetVDelta()));
 
 	return props;
 }
@@ -511,16 +518,16 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const
 // Scale texture
 //------------------------------------------------------------------------------
 
-float ScaleTexture::GetGreyValue(const UV &uv) const {
-	return tex1->GetGreyValue(uv) * tex2->GetGreyValue(uv);
+float ScaleTexture::GetGreyValue(const BSDF &bsdf) const {
+	return tex1->GetGreyValue(bsdf) * tex2->GetGreyValue(bsdf);
 }
 
-Spectrum ScaleTexture::GetColorValue(const UV &uv) const {
-	return tex1->GetColorValue(uv) * tex2->GetColorValue(uv);
+Spectrum ScaleTexture::GetColorValue(const BSDF &bsdf) const {
+	return tex1->GetColorValue(bsdf) * tex2->GetColorValue(bsdf);
 }
 
-float ScaleTexture::GetAlphaValue(const UV &uv) const {
-	return tex1->GetAlphaValue(uv) * tex2->GetAlphaValue(uv);
+float ScaleTexture::GetAlphaValue(const BSDF &bsdf) const {
+	return tex1->GetAlphaValue(bsdf) * tex2->GetAlphaValue(bsdf);
 }
 
 const UV ScaleTexture::GetDuDv() const {
@@ -573,32 +580,32 @@ Spectrum FresnelApproxK(const Spectrum &Fr) {
 		(Spectrum(1.f) - reflectance));
 }
 
-float FresnelApproxNTexture::GetGreyValue(const UV &uv) const {
-	return FresnelApproxN(tex->GetGreyValue(uv));
+float FresnelApproxNTexture::GetGreyValue(const BSDF &bsdf) const {
+	return FresnelApproxN(tex->GetGreyValue(bsdf));
 }
 
-Spectrum FresnelApproxNTexture::GetColorValue(const UV &uv) const {
-	return FresnelApproxN(tex->GetColorValue(uv));
+Spectrum FresnelApproxNTexture::GetColorValue(const BSDF &bsdf) const {
+	return FresnelApproxN(tex->GetColorValue(bsdf));
 }
 
-float FresnelApproxNTexture::GetAlphaValue(const UV &uv) const {
-	return tex->GetAlphaValue(uv);
+float FresnelApproxNTexture::GetAlphaValue(const BSDF &bsdf) const {
+	return tex->GetAlphaValue(bsdf);
 }
 
 const UV FresnelApproxNTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
 
-float FresnelApproxKTexture::GetGreyValue(const UV &uv) const {
-	return FresnelApproxK(tex->GetGreyValue(uv));
+float FresnelApproxKTexture::GetGreyValue(const BSDF &bsdf) const {
+	return FresnelApproxK(tex->GetGreyValue(bsdf));
 }
 
-Spectrum FresnelApproxKTexture::GetColorValue(const UV &uv) const {
-	return FresnelApproxK(tex->GetColorValue(uv));
+Spectrum FresnelApproxKTexture::GetColorValue(const BSDF &bsdf) const {
+	return FresnelApproxK(tex->GetColorValue(bsdf));
 }
 
-float FresnelApproxKTexture::GetAlphaValue(const UV &uv) const {
-	return tex->GetAlphaValue(uv);
+float FresnelApproxKTexture::GetAlphaValue(const BSDF &bsdf) const {
+	return tex->GetAlphaValue(bsdf);
 }
 
 const UV FresnelApproxKTexture::GetDuDv() const {

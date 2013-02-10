@@ -42,7 +42,7 @@ static inline float MIS(const float a) {
 
 const unsigned int sampleEyeBootSize = 6;
 const unsigned int sampleEyeStepSize = 11;
-const unsigned int sampleLightBootSize = 5;
+const unsigned int sampleLightBootSize = 6;
 const unsigned int sampleLightStepSize = 6;
 
 BiDirState::BiDirState(BiDirHybridRenderThread *renderThread,
@@ -201,7 +201,7 @@ void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 
 		Vector lightRayDir;
 		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-		Spectrum lightRadiance = light->Illuminate(scene, eyeVertex.bsdf.hitPoint,
+		Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
 				&cosThetaAtLight);
 
@@ -277,15 +277,15 @@ void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
 
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
-		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW);
+		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
 		DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
 		if (scene->envLight) {
-			const Spectrum lightRadiance = scene->envLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 		if (scene->sunLight) {
-			const Spectrum lightRadiance = scene->sunLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
@@ -309,9 +309,10 @@ void BiDirState::TraceLightPath(HybridRenderThread *renderThread,
 	PathVertex lightVertex;
 	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 	Ray lightRay;
-	lightVertex.throughput = light->Emit(scene,
+	lightVertex.throughput = light->Emit(*scene,
 			sampler->GetSample(lightPathSampleOffset + 1), sampler->GetSample(lightPathSampleOffset + 2),
 			sampler->GetSample(lightPathSampleOffset + 3), sampler->GetSample(lightPathSampleOffset + 4),
+			sampler->GetSample(lightPathSampleOffset + 5),
 			&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
 	if (!lightVertex.throughput.Black()) {
 		lightEmitPdfW *= lightPickPdf;

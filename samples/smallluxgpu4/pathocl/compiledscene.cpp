@@ -499,24 +499,25 @@ void CompiledScene::CompileInfiniteLight() {
 
 	const double tStart = WallClockTime();
 
-	InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
-	if (il) {
-		infiniteLight = new luxrays::ocl::InfiniteLight();
-
-		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
-		infiniteLight->shiftU = il->GetShiftU();
-		infiniteLight->shiftV = il->GetShiftV();
-
-		const ImageMapInstance *im = il->GetImageMapInstance();
-		infiniteLight->imageMapInstance.gain = im->GetGain();
-		infiniteLight->imageMapInstance.uScale = im->GetUScale();
-		infiniteLight->imageMapInstance.vScale = im->GetVScale();
-		infiniteLight->imageMapInstance.uDelta = im->GetUDelta();
-		infiniteLight->imageMapInstance.vDelta = im->GetVDelta();
-		infiniteLight->imageMapInstance.Du = im->GetDuDv().u;
-		infiniteLight->imageMapInstance.Dv = im->GetDuDv().v;
-		infiniteLight->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im->GetImgMap());
-	} else
+//	InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
+	// TOFIX
+//	if (il) {
+//		infiniteLight = new luxrays::ocl::InfiniteLight();
+//
+//		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
+//		infiniteLight->shiftU = il->GetShiftU();
+//		infiniteLight->shiftV = il->GetShiftV();
+//
+//		const ImageMapInstance *im = il->GetImageMapInstance();
+//		infiniteLight->imageMapInstance.gain = im->GetGain();
+//		infiniteLight->imageMapInstance.uScale = im->GetUScale();
+//		infiniteLight->imageMapInstance.vScale = im->GetVScale();
+//		infiniteLight->imageMapInstance.uDelta = im->GetUDelta();
+//		infiniteLight->imageMapInstance.vDelta = im->GetVDelta();
+//		infiniteLight->imageMapInstance.Du = im->GetDuDv().u;
+//		infiniteLight->imageMapInstance.Dv = im->GetDuDv().v;
+//		infiniteLight->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im->GetImgMap());
+//	} else
 		infiniteLight = NULL;
 
 	const double tEnd = WallClockTime();
@@ -611,20 +612,20 @@ void CompiledScene::CompileTextures() {
 				tex->constFloat4.alpha = cft->GetAlpha();
 				break;
 			}
-			case IMAGEMAP: {
-				ImageMapTexture *imt = static_cast<ImageMapTexture *>(t);
-
-				tex->type = luxrays::ocl::IMAGEMAP;
-				tex->imageMapInstance.gain = imt->GetImageMapInstance()->GetGain();
-				tex->imageMapInstance.uScale = imt->GetImageMapInstance()->GetUScale();
-				tex->imageMapInstance.vScale = imt->GetImageMapInstance()->GetVScale();
-				tex->imageMapInstance.uDelta = imt->GetImageMapInstance()->GetUDelta();
-				tex->imageMapInstance.vDelta = imt->GetImageMapInstance()->GetVDelta();
-				tex->imageMapInstance.Du = imt->GetImageMapInstance()->GetDuDv().u;
-				tex->imageMapInstance.Dv = imt->GetImageMapInstance()->GetDuDv().v;
-				tex->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(imt->GetImageMapInstance()->GetImgMap());
-				break;
-			}
+//			case IMAGEMAP: {
+//				ImageMapTexture *imt = static_cast<ImageMapTexture *>(t);
+//
+//				tex->type = luxrays::ocl::IMAGEMAP;
+//				tex->imageMapInstance.gain = imt->GetImageMapInstance()->GetGain();
+//				tex->imageMapInstance.uScale = imt->GetImageMapInstance()->GetUScale();
+//				tex->imageMapInstance.vScale = imt->GetImageMapInstance()->GetVScale();
+//				tex->imageMapInstance.uDelta = imt->GetImageMapInstance()->GetUDelta();
+//				tex->imageMapInstance.vDelta = imt->GetImageMapInstance()->GetVDelta();
+//				tex->imageMapInstance.Du = imt->GetImageMapInstance()->GetDuDv().u;
+//				tex->imageMapInstance.Dv = imt->GetImageMapInstance()->GetDuDv().v;
+//				tex->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(imt->GetImageMapInstance()->GetImgMap());
+//				break;
+//			}
 			case SCALE_TEX: {
 				ScaleTexture *st = static_cast<ScaleTexture *>(t);
 
