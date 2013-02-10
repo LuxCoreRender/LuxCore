@@ -33,6 +33,7 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/sdl/mapping.h"
 
 namespace luxrays {
 
@@ -190,7 +191,7 @@ public:
 	u_int GetHeight() const { return height; }
 	const float *GetPixels() const { return pixels; }
 
-	void writeImage(const std::string &fileName) const;
+	void WriteImage(const std::string &fileName) const;
 
 	float GetGrey(const UV &uv) const {
 		const float s = uv.u * width - .5f;
@@ -303,36 +304,6 @@ private:
 	float *pixels;
 };
 
-class ImageMapInstance {
-public:
-	ImageMapInstance(const ImageMap *im, const float gn,
-			const float uscale, const float vscale,
-			const float udelta, const float vdelta) : imgMap(im), gain(gn),
-		uScale(uscale), vScale(vscale), uDelta(udelta), vDelta(vdelta) {
-		DuDv.u = 1.f / (uScale * imgMap->GetWidth());
-		DuDv.v = 1.f / (vScale * imgMap->GetHeight());
-	}
-	~ImageMapInstance() { }
-
-	const ImageMap *GetImgMap() const { return imgMap; }
-	float GetGain() const { return gain; }
-	float GetUScale() const { return uScale; }
-	float GetVScale() const { return vScale; }
-	float GetUDelta() const { return uDelta; }
-	float GetVDelta() const { return vDelta; }
-
-	float GetGrey(const BSDF &bsdf) const;
-	Spectrum GetColor(const BSDF &bsdf) const;
-	float GetAlpha(const BSDF &bsdf) const;
-
-	const UV &GetDuDv() const { return DuDv; }
-
-protected:
-	const ImageMap *imgMap;
-	float gain, uScale, vScale, uDelta, vDelta;
-	UV DuDv;
-};
-
 class ImageMapCache {
 public:
 	ImageMapCache();
@@ -340,8 +311,7 @@ public:
 
 	void DefineImgMap(const std::string &name, ImageMap *im);
 
-	ImageMapInstance *GetImageMapInstance(const std::string &fileName, const float gamma, const float gain = 1.f,
-		const float uScale = 1.f, const float vScale = 1.f, const float uDelta = 0.f, const float vDelta = 0.f);
+	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
 	void GetImageMaps(std::vector<ImageMap *> &ims);
@@ -349,30 +319,30 @@ public:
 	bool IsImageMapDefined(const std::string &name) const { return maps.find(name) != maps.end(); }
 
 private:
-	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
-
 	std::map<std::string, ImageMap *> maps;
-	std::vector<ImageMapInstance *> imgMapInstances;
 };
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMapInstance * imi) : imgMapInstance(imi) { }
+	ImageMapTexture(const ImageMap* im, const UVMapping &map, const float g);
 	virtual ~ImageMapTexture() { }
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
-	virtual float GetGreyValue(const BSDF &bsdf) const { return imgMapInstance->GetGrey(bsdf); }
-	virtual Spectrum GetColorValue(const BSDF &bsdf) const { return imgMapInstance->GetColor(bsdf); }
-	virtual float GetAlphaValue(const BSDF &bsdf) const { return imgMapInstance->GetAlpha(bsdf); }
+	virtual float GetGreyValue(const BSDF &bsdf) const;
+	virtual Spectrum GetColorValue(const BSDF &bsdf) const;
+	virtual float GetAlphaValue(const BSDF &bsdf) const;
 
-	virtual const UV GetDuDv() const { return imgMapInstance->GetDuDv(); }
+	virtual const UV GetDuDv() const { return DuDv; }
 
-	const ImageMapInstance *GetImageMapInstance() const { return imgMapInstance; }
+	const ImageMap *GetImageMap() const { return imgMap; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const ImageMapInstance *imgMapInstance;
+	const ImageMap *imgMap;
+	const UVMapping mapping;
+	float gain;
+	UV DuDv;
 };
 
 //------------------------------------------------------------------------------

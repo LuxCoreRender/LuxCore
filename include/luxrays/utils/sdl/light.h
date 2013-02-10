@@ -27,6 +27,7 @@
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/sdl/material.h"
+#include "luxrays/utils/sdl/mapping.h"
 
 namespace luxrays {
 
@@ -113,27 +114,20 @@ protected:
 
 class InfiniteLight : public InfiniteLightBase {
 public:
-	InfiniteLight(ImageMap *imgMap);
+	InfiniteLight(const ImageMap *imgMap);
 	virtual ~InfiniteLight() { }
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 
-	void SetShift(const float su, const float sv) {
-		shiftU = su;
-		shiftV = sv;
-	}
-
-	float GetShiftU() const { return shiftU; }
-	float GetShiftV() const { return shiftV; }
-
 	const ImageMap *GetImageMap() const { return imageMap; }
+	UVMapping *GetUVMapping() { return &mapping; }
 
 	virtual Spectrum GetRadiance(const Scene &scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
-	ImageMap *imageMap;
-	float shiftU, shiftV;
+	const ImageMap *imageMap;
+	UVMapping mapping;
 };
 
 //------------------------------------------------------------------------------
