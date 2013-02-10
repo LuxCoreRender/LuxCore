@@ -84,32 +84,36 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Point &p, c
 	}
 
 	// Check if I have to apply bump mapping
-	// TOFIX
-//	if (material->HasBumpTex()) {
-//		// Apply bump mapping
-//		const Texture *bm = material->GetBumpTexture();
-//		const UV &dudv = bm->GetDuDv();
-//
-//		const float b0 = bm->GetGreyValue(*this);
-//
-//		const UV uvdu(hitPointUV.u + dudv.u, hitPointUV.v);
-//		const float bu = bm->GetGreyValue(*this);
-//
-//		const UV uvdv(hitPointUV.u, hitPointUV.v + dudv.v);
-//		const float bv = bm->GetGreyValue(*this);
-//
-//		// bumpScale is a fixed scale factor to try to more closely match
-//		// LuxRender bump mapping
-//		const float bumpScale = 50.f;
-//		const Vector bump(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
-//
-//		Vector v1, v2;
-//		CoordinateSystem(Vector(shadeN), &v1, &v2);
-//		shadeN = Normalize(Normal(
-//				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
-//				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
-//				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
-//	}
+	if (material->HasBumpTex()) {
+		// Apply bump mapping
+		const Texture *bm = material->GetBumpTexture();
+		const UV &dudv = bm->GetDuDv();
+
+		const float b0 = bm->GetGreyValue(*this);
+
+		// This is a simple trick. The correct code would require differential information.
+		BSDF tmpBsdf(*this);
+		tmpBsdf.hitPointUV.u = hitPointUV.u + dudv.u;
+		tmpBsdf.hitPointUV.v = hitPointUV.v;
+		const float bu = bm->GetGreyValue(tmpBsdf);
+
+		// This is a simple trick. The correct code would require differential information.
+		tmpBsdf.hitPointUV.u = hitPointUV.u;
+		tmpBsdf.hitPointUV.v = hitPointUV.v + dudv.u;
+		const float bv = bm->GetGreyValue(tmpBsdf);
+
+		// bumpScale is a fixed scale factor to try to more closely match
+		// LuxRender bump mapping
+		const float bumpScale = 50.f;
+		const Vector bump(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
+
+		Vector v1, v2;
+		CoordinateSystem(Vector(shadeN), &v1, &v2);
+		shadeN = Normalize(Normal(
+				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
+				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
+				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
+	}
 
 	frame.SetFromZ(shadeN);
 }

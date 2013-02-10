@@ -68,6 +68,7 @@ public:
 	virtual Spectrum GetColorValue(const BSDF &bsdf) const = 0;
 	virtual float GetAlphaValue(const BSDF &bsdf) const = 0;
 
+	// Used for bump mapping support
 	virtual const UV GetDuDv() const = 0;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
