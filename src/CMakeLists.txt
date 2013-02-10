@@ -120,6 +120,8 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/scene_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/mapping_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/mapping_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/kernels luxrays ${LUXRAYS_KERNELS})
@@ -208,6 +210,8 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/triangle_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/uv_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/scene_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/mapping_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/mapping_funcs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LUXRAYS_SRCS_KERNELS})
 

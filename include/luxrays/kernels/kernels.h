@@ -67,6 +67,8 @@ extern std::string KernelSource_triangle_types;
 extern std::string KernelSource_triangle_funcs;
 extern std::string KernelSource_uv_types;
 extern std::string KernelSource_scene_funcs;
+extern std::string KernelSource_mapping_types;
+extern std::string KernelSource_mapping_funcs;
 
 } }
 

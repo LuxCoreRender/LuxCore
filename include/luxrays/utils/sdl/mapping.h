@@ -28,9 +28,9 @@
 namespace luxrays {
 
 // OpenCL data types
-//namespace ocl {
-//#include "luxrays/utils/sdl/mapping_types.cl"
-//}
+namespace ocl {
+#include "luxrays/utils/sdl/mapping_types.cl"
+}
 
 namespace sdl {
 

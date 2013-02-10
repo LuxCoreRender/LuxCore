@@ -45,11 +45,11 @@ typedef struct {
 } ImageMap;
 
 typedef struct {
-	float gain, uScale, vScale, uDelta, vDelta;
-	float Du, Dv;
+	UVMapping mapping;
+	float gain, Du, Dv;
 
 	unsigned int imageMapIndex;
-} ImageMapInstanceParam;
+} ImageMapTexParam;
 
 typedef struct {
 	unsigned int tex1Index, tex2Index;
@@ -69,7 +69,7 @@ typedef struct {
 		ConstFloatParam constFloat;
 		ConstFloat3Param constFloat3;
 		ConstFloat4Param constFloat4;
-		ImageMapInstanceParam imageMapInstance;
+		ImageMapTexParam imageMapTex;
 		ScaleTexParam scaleTex;
 		FresnelApproxNTexParam fresnelApproxN;
 		FresnelApproxKTexParam fresnelApproxK;
