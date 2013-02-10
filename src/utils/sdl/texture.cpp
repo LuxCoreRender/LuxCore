@@ -631,3 +631,51 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache)
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// CheckerBoard 2D texture
+//------------------------------------------------------------------------------
+
+float CheckerBoard2DTexture::GetGreyValue(const BSDF &bsdf) const {
+	const UV uv = mapping.Map(bsdf.hitPointUV);
+	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
+		return tex1->GetGreyValue(bsdf);
+	else
+		return tex2->GetGreyValue(bsdf);
+}
+
+Spectrum CheckerBoard2DTexture::GetColorValue(const BSDF &bsdf) const {
+	const UV uv = mapping.Map(bsdf.hitPointUV);
+	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
+		return tex1->GetColorValue(bsdf);
+	else
+		return tex2->GetColorValue(bsdf);
+}
+
+float CheckerBoard2DTexture::GetAlphaValue(const BSDF &bsdf) const {
+	const UV uv = mapping.Map(bsdf.hitPointUV);
+	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
+		return tex1->GetAlphaValue(bsdf);
+	else
+		return tex2->GetAlphaValue(bsdf);
+}
+
+const UV CheckerBoard2DTexture::GetDuDv() const {
+	const UV uv1 = tex1->GetDuDv();
+	const UV uv2 = tex2->GetDuDv();
+
+	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
+}
+
+Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "checkerboard2d");
+	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
+	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	props.SetString("scene.textures." + name + ".uvscale", ToString(mapping.GetUScale()) + " " + ToString(mapping.GetVScale()));
+	props.SetString("scene.textures." + name + ".uvdelta", ToString(mapping.GetUDelta()) + " " + ToString(mapping.GetVDelta()));
+
+	return props;
+}

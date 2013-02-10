@@ -50,7 +50,7 @@ namespace sdl {
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K
+	FRESNEL_APPROX_K, CHECKERBOARD2D
 } TextureType;
 
 class BSDF;
@@ -325,7 +325,7 @@ private:
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMap* im, const UVMapping &map, const float g);
+	ImageMapTexture(const ImageMap* im, const UVMapping &mp, const float g);
 	virtual ~ImageMapTexture() { }
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
@@ -437,6 +437,41 @@ public:
 
 private:
 	const Texture *tex;
+};
+
+//------------------------------------------------------------------------------
+// CheckerBoard 2D texture
+//------------------------------------------------------------------------------
+
+class CheckerBoard2DTexture : public Texture {
+public:
+	CheckerBoard2DTexture(const UVMapping &mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	virtual ~CheckerBoard2DTexture() { }
+
+	virtual TextureType GetType() const { return CHECKERBOARD2D; }
+	virtual float GetGreyValue(const BSDF &bsdf) const;
+	virtual Spectrum GetColorValue(const BSDF &bsdf) const;
+	virtual float GetAlphaValue(const BSDF &bsdf) const;
+
+	virtual const UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	const UVMapping &GetUVMapping() const { return mapping; }
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const UVMapping mapping;
+	const Texture *tex1;
+	const Texture *tex2;
 };
 
 } }
