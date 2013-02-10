@@ -322,7 +322,7 @@ Properties ExtTriangleMesh::ToProperties(const std::string &matName,
 }
 
 void ExtTriangleMesh::WritePly(const std::string &fileName) const {
-	std::ofstream plyFile(fileName.c_str());
+	std::ofstream plyFile(fileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 	if(!plyFile.is_open())
 		throw std::runtime_error("Unable to open: " + fileName);
 
