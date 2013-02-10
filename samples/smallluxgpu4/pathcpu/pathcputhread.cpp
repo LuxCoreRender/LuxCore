@@ -56,7 +56,7 @@ void PathCPURenderThread::DirectLightSampling(
 
 		Vector lightRayDir;
 		float distance, directPdfW;
-		Spectrum lightRadiance = light->Illuminate(scene, bsdf.hitPoint,
+		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 
 		if (!lightRadiance.Black()) {
@@ -102,7 +102,7 @@ void PathCPURenderThread::DirectHitFiniteLight(
 	Scene *scene = engine->renderConfig->scene;
 
 	float directPdfA;
-	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(scene, &directPdfA);
+	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(&directPdfA);
 
 	if (!emittedRadiance.Black()) {
 		float weight;
@@ -129,7 +129,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(
 	// Infinite light
 	float directPdfW;
 	if (scene->envLight) {
-		const Spectrum envRadiance = scene->envLight->GetRadiance(scene, -eyeDir, &directPdfW);
+		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
@@ -141,7 +141,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(
 
 	// Sun light
 	if (scene->sunLight) {
-		const Spectrum sunRadiance = scene->sunLight->GetRadiance(scene, -eyeDir, &directPdfW);
+		const Spectrum sunRadiance = scene->sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!sunRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling

@@ -129,7 +129,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 65536));
-	SLG_LOG("[PathOCLRenderThread] OpenCL task count: " << taskCount);
+	SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
 
 	if (cfg.IsDefined("opencl.memory.maxpagesize"))
 		maxMemPageSize = cfg.GetSize("opencl.memory.maxpagesize", 512 * 1024 * 1024);
@@ -139,7 +139,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		for (u_int i = 1; i < intersectionDevices.size(); ++i)
 			maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
 	}
-	SLG_LOG("[PathOCLRenderThread] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
+	SLG_LOG("[PathOCLRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);

@@ -24,46 +24,52 @@
 
 namespace luxrays { namespace sdl {
 
-void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
-		const RayHit &rayHit, const float u0) {
+void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
+	const RayHit &rayHit, const float passThroughEvent) {
 	assert (!rayHit.Miss());
 
-	fromLight = fromL;
+	Init(fixedFromLight, scene, ray(rayHit.t), ray.d, rayHit.index,
+			rayHit.b1, rayHit.b2, passThroughEvent);
+}
+
+void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Point &p, const Vector &incomingDir,
+		const u_int triGlobalIndex, const float triangleBaryCoord1, const float triangleBaryCoord2,
+		const float u0) {
+	fromLight = fixedFromLight;
 	passThroughEvent = u0;
 
-	hitPoint = ray(rayHit.t);
-	hitPointB1 = rayHit.b1;
-	hitPointB2 = rayHit.b2;
-	fixedDir = -ray.d;
+	hitPoint = p;
+	hitPointB1 = triangleBaryCoord1;
+	hitPointB2 = triangleBaryCoord2;
+	fixedDir = -incomingDir;
 
-	const u_int currentTriangleIndex = rayHit.index;
-	const u_int currentMeshIndex = scene.dataSet->GetMeshID(currentTriangleIndex);
+	const u_int meshIndex = scene.dataSet->GetMeshID(triGlobalIndex);
 
 	// Get the triangle
-	mesh = scene.meshDefs.GetExtMesh(currentMeshIndex);
-	triIndex = scene.dataSet->GetMeshTriangleID(currentTriangleIndex);
+	mesh = scene.meshDefs.GetExtMesh(meshIndex);
+	triIndex = scene.dataSet->GetMeshTriangleID(triGlobalIndex);
 
 	// Get the material
-	material = scene.objectMaterials[currentMeshIndex];
+	material = scene.objectMaterials[meshIndex];
 
 	// Interpolate face normal
 	geometryN = mesh->GetGeometryNormal(triIndex);
-	shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
+	shadeN = mesh->InterpolateTriNormal(triIndex, hitPointB1, hitPointB2);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.triangleLights[currentTriangleIndex];
+		triangleLightSource = scene.triangleLights[triGlobalIndex];
 	else
 		triangleLightSource = NULL;
 
 	// Interpolate UV coordinates
-	hitPointUV = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
+	hitPointUV = mesh->InterpolateTriUV(triIndex, hitPointB1, hitPointB2);
 
 	// Check if I have to apply normal mapping
 	if (material->HasNormalTex()) {
 		// Apply normal mapping
 		const Texture *nm = material->GetNormalTexture();
-		const Spectrum color = nm->GetColorValue(hitPointUV);
+		const Spectrum color = nm->GetColorValue(*this);
 
 		const float x = 2.f * color.r - 1.f;
 		const float y = 2.f * color.g - 1.f;
@@ -78,31 +84,32 @@ void BSDF::Init(const bool fromL, const Scene &scene, const Ray &ray,
 	}
 
 	// Check if I have to apply bump mapping
-	if (material->HasBumpTex()) {
-		// Apply bump mapping
-		const Texture *bm = material->GetBumpTexture();
-		const UV &dudv = bm->GetDuDv();
-
-		const float b0 = bm->GetGreyValue(hitPointUV);
-
-		const UV uvdu(hitPointUV.u + dudv.u, hitPointUV.v);
-		const float bu = bm->GetGreyValue(uvdu);
-
-		const UV uvdv(hitPointUV.u, hitPointUV.v + dudv.v);
-		const float bv = bm->GetGreyValue(uvdv);
-
-		// bumpScale is a fixed scale factor to try to more closely match
-		// LuxRender bump mapping
-		const float bumpScale = 50.f;
-		const Vector bump(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
-
-		Vector v1, v2;
-		CoordinateSystem(Vector(shadeN), &v1, &v2);
-		shadeN = Normalize(Normal(
-				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
-				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
-				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
-	}
+	// TOFIX
+//	if (material->HasBumpTex()) {
+//		// Apply bump mapping
+//		const Texture *bm = material->GetBumpTexture();
+//		const UV &dudv = bm->GetDuDv();
+//
+//		const float b0 = bm->GetGreyValue(*this);
+//
+//		const UV uvdu(hitPointUV.u + dudv.u, hitPointUV.v);
+//		const float bu = bm->GetGreyValue(*this);
+//
+//		const UV uvdv(hitPointUV.u, hitPointUV.v + dudv.v);
+//		const float bv = bm->GetGreyValue(*this);
+//
+//		// bumpScale is a fixed scale factor to try to more closely match
+//		// LuxRender bump mapping
+//		const float bumpScale = 50.f;
+//		const Vector bump(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
+//
+//		Vector v1, v2;
+//		CoordinateSystem(Vector(shadeN), &v1, &v2);
+//		shadeN = Normalize(Normal(
+//				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
+//				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
+//				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
+//	}
 
 	frame.SetFromZ(shadeN);
 }
@@ -128,7 +135,7 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 	const Vector localLightDir = frame.ToLocal(lightDir);
 	const Vector localEyeDir = frame.ToLocal(eyeDir);
-	const Spectrum result = material->Evaluate(fromLight, hitPointUV, localLightDir, localEyeDir,
+	const Spectrum result = material->Evaluate(*this, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
 
 	// Adjoint BSDF
@@ -142,13 +149,13 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 Spectrum BSDF::Sample(Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const {
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	Vector localFixedDir = frame.ToLocal(fixedDir);
 	Vector localSampledDir;
 
-	Spectrum result = material->Sample(fromLight, hitPointUV,
+	Spectrum result = material->Sample(*this,
 			localFixedDir, &localSampledDir, u0, u1, passThroughEvent,
-			pdfW, cosSampledDir, event);
+			pdfW, absCosSampledDir, event);
 	if (result.Black())
 		return result;
 
@@ -171,21 +178,19 @@ void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
 
-	material->Pdf(fromLight, hitPointUV, localLightDir, localEyeDir, directPdfW, reversePdfW);
+	material->Pdf(*this, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
-Spectrum BSDF::GetEmittedRadiance(const Scene *scene,
-			float *directPdfA,
-			float *emissionPdfW) const {
+Spectrum BSDF::GetEmittedRadiance(float *directPdfA, float *emissionPdfW) const {
 	return triangleLightSource ? 
-		triangleLightSource->GetRadiance(scene, fixedDir, hitPointUV, directPdfA, emissionPdfW) :
+		triangleLightSource->GetRadiance(*this, directPdfA, emissionPdfW) :
 		Spectrum();
 }
 
 Spectrum BSDF::GetPassThroughTransparency() const {
 	const Vector localFixedDir = frame.ToLocal(fixedDir);
 
-	return material->GetPassThroughTransparency(fromLight, hitPointUV, localFixedDir, passThroughEvent);
+	return material->GetPassThroughTransparency(*this, localFixedDir, passThroughEvent);
 }
 
 } }

@@ -367,7 +367,7 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 
 			if (objectMaterials[i]->IsLightSource()) {
 				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-					TriangleLight *tl = new TriangleLight(objectMaterials[i], mesh, j);
+					TriangleLight *tl = new TriangleLight(objectMaterials[i], newTriangleLightSources.size(), mesh, j);
 					newTriLights.push_back(tl);
 					newTriangleLightSources.push_back(tl);
 				}
@@ -440,7 +440,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
 
 		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-			TriangleLight *tl = new TriangleLight(mat, meshObject, i);
+			TriangleLight *tl = new TriangleLight(mat, triangleLights.size(), meshObject, i);
 			triLightDefs.push_back(tl);
 			triangleLights.push_back(tl);
 		}
@@ -521,21 +521,22 @@ void Scene::AddInfiniteLight(const std::string &propsString) {
 
 void Scene::AddInfiniteLight(const Properties &props) {
 	const std::vector<std::string> ilParams = props.GetStringVector("scene.infinitelight.file", "");
-	if (ilParams.size() > 0) {
-		const float gamma = props.GetFloat("scene.infinitelight.gamma", 2.2f);
-		ImageMapInstance *imgMap = imgMapCache.GetImageMapInstance(ilParams.at(0), gamma);
-
-		InfiniteLight *il = new InfiniteLight(imgMap);
-
-		std::vector<float> vf = GetFloatParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
-		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
-
-		vf = GetFloatParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
-		il->SetShift(vf.at(0), vf.at(1));
-		il->Preprocess();
-
-		envLight = il;
-	} else
+	// TOFIX
+//	if (ilParams.size() > 0) {
+//		const float gamma = props.GetFloat("scene.infinitelight.gamma", 2.2f);
+//		ImageMapInstance *imgMap = imgMapCache.GetImageMapInstance(ilParams.at(0), gamma);
+//
+//		InfiniteLight *il = new InfiniteLight(imgMap);
+//
+//		std::vector<float> vf = GetFloatParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
+//		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
+//
+//		vf = GetFloatParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
+//		il->SetShift(vf.at(0), vf.at(1));
+//		il->Preprocess();
+//
+//		envLight = il;
+//	} else
 		envLight = NULL;
 }
 
@@ -717,10 +718,10 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
 		GetTexture(props.GetString(propName + ".emission", "0.0 0.0 0.0")) : NULL;
 	// Required to remove light source while editing the scene
-	if (emissionTex && ((emissionTex->GetType() == CONST_FLOAT) ||
-			(emissionTex->GetType() == CONST_FLOAT3) ||
-			(emissionTex->GetType() == CONST_FLOAT4)) &&
-			emissionTex->GetColorValue(UV()).Black())
+	if (emissionTex && (
+			((emissionTex->GetType() == CONST_FLOAT) && (((ConstFloatTexture *)emissionTex)->GetValue() == 0.f)) ||
+			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black())) ||
+			((emissionTex->GetType() == CONST_FLOAT4) && (((ConstFloat4Texture *)emissionTex)->GetColor().Black()))))
 		emissionTex = NULL;
 
 	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
@@ -904,8 +905,12 @@ bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
 
 			*connectionThroughput *= t;
 
-			// It is a shadow transparent material, continue to trace the ray
+			// It is a transparent material, continue to trace the ray
 			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+
+			// A safety check
+			if (ray->mint >= ray->maxt)
+				return false;
 		}
 	}
 }
