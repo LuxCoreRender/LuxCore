@@ -48,8 +48,7 @@ void BSDF_Init(
 //	const float b1 = rayHit->b1;
 //	const float b2 = rayHit->b2;
 
-//	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
-//	VSTORE3F(geometryN, &bsdf->geometryN.x);
+	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
 //	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
 //	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
 //
