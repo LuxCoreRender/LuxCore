@@ -666,6 +666,16 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "tex").at(0);
 		const Texture *tex = GetTexture(texName);
 		return new FresnelApproxKTexture(tex);
+	} else if (texType == "checkerboard2d") {
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const Texture *tex1 = GetTexture(tex1Name);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const Texture *tex2 = GetTexture(tex2Name);
+
+		const std::vector<float> uvScale = GetFloatParameters(props, propName + ".uvscale", 2, "1.0 1.0");
+		const std::vector<float> uvDelta = GetFloatParameters(props, propName + ".uvdelta", 2, "0.0 0.0");
+
+		return new CheckerBoard2DTexture(UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), tex1, tex2);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }
