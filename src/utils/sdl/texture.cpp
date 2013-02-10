@@ -483,9 +483,8 @@ Properties ConstFloat4Texture::ToProperties(const ImageMapCache &imgMapCache) co
 
 ImageMapTexture::ImageMapTexture(const ImageMap * im, const UVMapping &mp, const float g) :
 	imgMap(im), mapping(mp), gain(g) {
-	const UV uv = mapping.GetDuDv();
-	DuDv.u = uv.u * (1.f / imgMap->GetWidth());
-	DuDv.v = uv.v * (1.f / imgMap->GetHeight());
+	DuDv.u = 1.f / (mapping.uScale * imgMap->GetWidth());
+	DuDv.v = 1.f / (mapping.vScale * imgMap->GetHeight());
 }
 
 float ImageMapTexture::GetGreyValue(const BSDF &bsdf) const {

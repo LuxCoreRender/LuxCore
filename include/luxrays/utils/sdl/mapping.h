@@ -54,8 +54,6 @@ public:
 	float GetUDelta() const { return uDelta; }
 	float GetVDelta() const { return vDelta; }
 
-	UV GetDuDv() const { return UV(1.f / uScale, 1.f / vScale); }
-
 	float uScale, vScale, uDelta, vDelta;
 };
 
