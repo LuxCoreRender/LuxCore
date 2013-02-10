@@ -191,7 +191,7 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		for (u_int i = 0; i < meshes.size(); ++i) {
 			const std::string fileName = directoryName + "/mesh-" + (boost::format("%05d") % i).str() + ".ply";
 			SDL_LOG("  " + fileName);
-			meshes[i]->writePly(fileName);
+			meshes[i]->WritePly(fileName);
 		}
 
 		SDL_LOG("Saving object information:");

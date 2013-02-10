@@ -321,14 +321,14 @@ Properties ExtTriangleMesh::ToProperties(const std::string &matName,
 	return props;
 }
 
-void ExtTriangleMesh::writePly(const std::string &fileName) const {
+void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 	std::ofstream plyFile(fileName.c_str());
 	if(!plyFile.is_open())
 		throw std::runtime_error("Unable to open: " + fileName);
 
 	// Write the PLY header
 	plyFile << "ply\n"
-			"format binary_little_endian 1.0\n"
+			"format " + std::string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
 			"comment Created by LuxRays v" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR "\n"
 			"element vertex " + boost::lexical_cast<std::string>(vertCount) + "\n"
 			"property float x\n"
