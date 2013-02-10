@@ -99,10 +99,8 @@ Spectrum InfiniteLightBase::Illuminate(const Scene &scene, const Point &p,
 // InfiniteLight
 //------------------------------------------------------------------------------
 
-InfiniteLight::InfiniteLight(ImageMap *imgMap) {
-	imageMap = imgMap;
-	shiftU = 0.f;
-	shiftV = 0.f;
+InfiniteLight::InfiniteLight(const ImageMap *imgMap) :
+	imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
@@ -117,8 +115,8 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
-	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI + shiftU, SphericalTheta(-dir) * INV_PI + shiftV);
-	return gain * imageMap->GetColor(uv);
+	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI, SphericalTheta(-dir) * INV_PI);
+	return gain * imageMap->GetColor(mapping.Map(uv));
 }
 
 //------------------------------------------------------------------------------

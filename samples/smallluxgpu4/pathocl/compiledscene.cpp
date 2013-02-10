@@ -612,20 +612,20 @@ void CompiledScene::CompileTextures() {
 				tex->constFloat4.alpha = cft->GetAlpha();
 				break;
 			}
-			case IMAGEMAP: {
-				ImageMapTexture *imt = static_cast<ImageMapTexture *>(t);
-
-				tex->type = luxrays::ocl::IMAGEMAP;
-				tex->imageMapInstance.gain = imt->GetImageMapInstance()->GetGain();
-				tex->imageMapInstance.uScale = imt->GetImageMapInstance()->GetUScale();
-				tex->imageMapInstance.vScale = imt->GetImageMapInstance()->GetVScale();
-				tex->imageMapInstance.uDelta = imt->GetImageMapInstance()->GetUDelta();
-				tex->imageMapInstance.vDelta = imt->GetImageMapInstance()->GetVDelta();
-				tex->imageMapInstance.Du = imt->GetImageMapInstance()->GetDuDv().u;
-				tex->imageMapInstance.Dv = imt->GetImageMapInstance()->GetDuDv().v;
-				tex->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(imt->GetImageMapInstance()->GetImgMap());
-				break;
-			}
+//			case IMAGEMAP: {
+//				ImageMapTexture *imt = static_cast<ImageMapTexture *>(t);
+//
+//				tex->type = luxrays::ocl::IMAGEMAP;
+//				tex->imageMapInstance.gain = imt->GetImageMapInstance()->GetGain();
+//				tex->imageMapInstance.uScale = imt->GetImageMapInstance()->GetUScale();
+//				tex->imageMapInstance.vScale = imt->GetImageMapInstance()->GetVScale();
+//				tex->imageMapInstance.uDelta = imt->GetImageMapInstance()->GetUDelta();
+//				tex->imageMapInstance.vDelta = imt->GetImageMapInstance()->GetVDelta();
+//				tex->imageMapInstance.Du = imt->GetImageMapInstance()->GetDuDv().u;
+//				tex->imageMapInstance.Dv = imt->GetImageMapInstance()->GetDuDv().v;
+//				tex->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(imt->GetImageMapInstance()->GetImgMap());
+//				break;
+//			}
 			case SCALE_TEX: {
 				ScaleTexture *st = static_cast<ScaleTexture *>(t);
 

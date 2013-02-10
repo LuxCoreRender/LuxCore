@@ -89,7 +89,7 @@ u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
 }
 
 //------------------------------------------------------------------------------
-// ImageMap texture
+// ImageMap
 //------------------------------------------------------------------------------
 
 ImageMap::ImageMap(const std::string &fileName, const float g) {
@@ -289,7 +289,7 @@ ImageMap::~ImageMap() {
 	delete[] pixels;
 }
 
-void ImageMap::writeImage(const std::string &fileName) const {
+void ImageMap::WriteImage(const std::string &fileName) const {
 	if (channelCount == 4) {
 		// RGBA image
 		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBAF, width, height, 128);
@@ -377,27 +377,6 @@ void ImageMap::writeImage(const std::string &fileName) const {
 		throw std::runtime_error("Unknown channel count in ImageMap::writeImage(" + fileName + "): " + boost::lexical_cast<std::string>(channelCount));
 }
 
-float ImageMapInstance::GetGrey(const BSDF &bsdf) const {
-	const UV &uv = bsdf.hitPointUV;
-	const UV mapUV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
-
-	return gain * imgMap->GetGrey(mapUV);
-}
-
-Spectrum ImageMapInstance::GetColor(const BSDF &bsdf) const {
-	const UV &uv = bsdf.hitPointUV;
-	const UV mapUV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
-
-	return gain * imgMap->GetColor(mapUV);
-}
-
-float ImageMapInstance::GetAlpha(const BSDF &bsdf) const {
-	const UV &uv = bsdf.hitPointUV;
-	const UV mapUV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
-
-	return imgMap->GetAlpha(mapUV);
-}
-
 //------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
@@ -406,9 +385,6 @@ ImageMapCache::ImageMapCache() {
 }
 
 ImageMapCache::~ImageMapCache() {
-	for (size_t i = 0; i < imgMapInstances.size(); ++i)
-		delete imgMapInstances[i];
-
 	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
 		delete it->second;
 }
@@ -436,15 +412,6 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 void ImageMapCache::DefineImgMap(const std::string &name, ImageMap *tm) {
 	SDL_LOG("Define ImageMap: " << name);
 	maps.insert(std::make_pair(name, tm));
-}
-
-ImageMapInstance *ImageMapCache::GetImageMapInstance(const std::string &fileName, const float gamma,
-	const float gain, const float uScale, const float vScale, const float uDelta, const float vDelta) {
-	ImageMap *im = GetImageMap(fileName, gamma);
-	ImageMapInstance *imi = new ImageMapInstance(im, gain, uScale, vScale, uDelta, vDelta);
-	imgMapInstances.push_back(imi);
-
-	return imi;
 }
 
 u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
@@ -514,17 +481,36 @@ Properties ConstFloat4Texture::ToProperties(const ImageMapCache &imgMapCache) co
 // ImageMap texture
 //------------------------------------------------------------------------------
 
+ImageMapTexture::ImageMapTexture(const ImageMap * im, const UVMapping &mp, const float g) :
+	imgMap(im), mapping(mp), gain(g) {
+	const UV uv = mapping.GetDuDv();
+	DuDv.u = uv.u * (1.f / imgMap->GetWidth());
+	DuDv.v = uv.v * (1.f / imgMap->GetHeight());
+}
+
+float ImageMapTexture::GetGreyValue(const BSDF &bsdf) const {
+	return gain * imgMap->GetGrey(mapping.Map(bsdf.hitPointUV));
+}
+
+Spectrum ImageMapTexture::GetColorValue(const BSDF &bsdf) const {
+	return gain * imgMap->GetColor(mapping.Map(bsdf.hitPointUV));
+}
+
+float ImageMapTexture::GetAlphaValue(const BSDF &bsdf) const {
+	return imgMap->GetAlpha(mapping.Map(bsdf.hitPointUV));
+}
+
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const std::string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "imagemap");
 	props.SetString("scene.textures." + name + ".file", "imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMapInstance->GetImgMap())).str() + ".exr");
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr");
 	props.SetString("scene.textures." + name + ".gamma", "1.0");
-	props.SetString("scene.textures." + name + ".gain", ToString(imgMapInstance->GetGain()));
-	props.SetString("scene.textures." + name + ".uvscale", ToString(imgMapInstance->GetUScale()) + " " + ToString(imgMapInstance->GetVScale()));
-	props.SetString("scene.textures." + name + ".uvdelta", ToString(imgMapInstance->GetUDelta()) + " " + ToString(imgMapInstance->GetVDelta()));
+	props.SetString("scene.textures." + name + ".gain", ToString(gain));
+	props.SetString("scene.textures." + name + ".uvscale", ToString(mapping.GetUScale()) + " " + ToString(mapping.GetVScale()));
+	props.SetString("scene.textures." + name + ".uvdelta", ToString(mapping.GetUDelta()) + " " + ToString(mapping.GetVDelta()));
 
 	return props;
 }
