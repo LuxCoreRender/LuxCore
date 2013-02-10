@@ -184,7 +184,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 
 		Vector lightRayDir;
 		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-		Spectrum lightRadiance = light->Illuminate(scene, eyeVertex.bsdf.hitPoint,
+		Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
 				&cosThetaAtLight);
 
@@ -258,15 +258,15 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
-		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW);
+		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
 		DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
 		if (scene->envLight) {
-			const Spectrum lightRadiance = scene->envLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 		if (scene->sunLight) {
-			const Spectrum lightRadiance = scene->sunLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
@@ -287,8 +287,8 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 	PathVertexVM lightVertex;
 	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 	Ray lightRay;
-	lightVertex.throughput = light->Emit(scene,
-		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8),
+	lightVertex.throughput = light->Emit(*scene,
+		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
 		&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
 	if (!lightVertex.throughput.Black()) {
 		lightEmitPdfW *= lightPickPdf;
@@ -470,7 +470,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		eyeSampleResult.screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 		eyeSampleResult.screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
-			sampler->GetSample(9), sampler->GetSample(10));
+			sampler->GetSample(10), sampler->GetSample(11));
 
 		eyeVertex.bsdf.fixedDir = -eyeRay.d;
 		eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
