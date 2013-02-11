@@ -249,7 +249,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					vertices, vertNormals, vertUVs,
 					triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
-					, task->pathStateBase.bsdf.passThroughEvent
+					, task->pathStateBase.bsdf.hitPoint.passThroughEvent
 #endif
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
 					MATERIALS_PARAM
@@ -286,7 +286,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 						if (!task->directLightState.lastSpecular) {
 							const float lightPickProb = Scene_PickLightPdf();
 							const float directPdfW = PdfAtoW(directPdfA, rayHit->t,
-								fabs(dot(VLOAD3F(&bsdf->fixedDir.x), VLOAD3F(&bsdf->shadeN.x))));
+								fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
 
 							// MIS between BSDF sampling and direct light sampling
 							weight = PowerHeuristic(task->directLightState.lastPdfW, directPdfW * lightPickProb);
@@ -447,7 +447,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 
 			lightRadiance = TriangleLight_Illuminate(
-					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.x),
+					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.p.x),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
@@ -474,7 +474,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 				if (!Spectrum_IsBlack(bsdfEval)) {
 					const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r);
-					const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->shadeN.x)));
+					const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
@@ -490,7 +490,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 
 					// Setup the shadow ray
-					const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.x);
+					const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
 					const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
 					Ray_Init4(ray, hitPoint, lightRayDir,
 						epsilon,
@@ -539,7 +539,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
 				VSTORE3F(throughput, &task->pathStateBase.throughput.r);
 
-				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.x), sampledDir);
+				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);
 
 				task->pathStateBase.depth = depth + 1;
 #if defined(PARAM_HAS_SUNLIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
@@ -554,7 +554,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
 				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
 					sample, sampleDataPathBase, depth + 1);
-				task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
+				task->pathStateBase.bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
 #endif
 				pathState = RT_NEXT_VERTEX;
 			} else

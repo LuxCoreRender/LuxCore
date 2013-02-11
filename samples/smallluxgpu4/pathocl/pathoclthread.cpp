@@ -770,41 +770,64 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
-	size_t gpuTaksSize = sizeof(luxrays::ocl::Seed);
-
-	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(slg::ocl::RandomSampleWithAlphaChannel);
-		else
-			gpuTaksSize += sizeof(slg::ocl::RandomSampleWithoutAlphaChannel);
-	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithAlphaChannel);
-		else
-			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithoutAlphaChannel);
-	} else if (renderEngine->sampler->type == luxrays::ocl::SOBOL) {
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(slg::ocl::SobolSampleWithAlphaChannel);
-		else
-			gpuTaksSize += sizeof(slg::ocl::SobolSampleWithoutAlphaChannel);
-	} else
-		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
-
-	gpuTaksSize += sizeof(slg::ocl::PathStateBase);
-
 	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(GLASS) ||
 			renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
 			renderEngine->compiledScene->IsMaterialCompiled(MIX) ||
 			renderEngine->compiledScene->IsMaterialCompiled(NULLMAT) ||
 			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT) ||
 			renderEngine->compiledScene->IsMaterialCompiled(GLOSSY2));
-	if ((triAreaLightCount > 0) || sunLightBuff) {
-		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
 
+	// Add Seed memory size
+	size_t gpuTaksSize = sizeof(luxrays::ocl::Seed);
+
+	// Add Sample memory size
+	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
+		gpuTaksSize += sizeof(Spectrum);
+
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
+		gpuTaksSize += 2 * sizeof(Spectrum) + 3 * sizeof(float) + 5 * sizeof(u_int);
+		
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else if (renderEngine->sampler->type == luxrays::ocl::SOBOL) {
+		gpuTaksSize += 2 * sizeof(float) + 2 * sizeof(u_int) + sizeof(Spectrum);
+
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else
+		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
+
+	// Add PathStateBase memory size
+	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
+
+	// Add PathStateBase.BSDF.HitPoint memory size
+	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	if (hasPassThrough)
+		hitPointSize += sizeof(float);
+
+	// Add PathStateBase.BSDF memory size
+	size_t bsdfSize = hitPointSize;
+	// Add PathStateBase.BSDF.materialIndex memory size
+	bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
+	if (triAreaLightCount > 0)
+		bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.Frame memory size
+	bsdfSize += sizeof(luxrays::ocl::Frame);
+	gpuTaksSize += bsdfSize;
+
+	// Add PathStateDirectLight memory size
+	if ((triAreaLightCount > 0) || sunLightBuff) {
+		gpuTaksSize += sizeof(Spectrum) + sizeof(float) + sizeof(int);
+
+		// Add PathStateDirectLightPassThrough memory size
 		if (hasPassThrough)
-			gpuTaksSize += sizeof(slg::ocl::PathStateDirectLightPassThrough);
+			gpuTaksSize += sizeof(float) + bsdfSize;
 	}
 
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
 
 	//--------------------------------------------------------------------------
