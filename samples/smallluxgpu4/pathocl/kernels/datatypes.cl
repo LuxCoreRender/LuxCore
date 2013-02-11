@@ -62,82 +62,53 @@ typedef struct {
 // Sample data types
 //------------------------------------------------------------------------------
 
-typedef struct {
-	Spectrum radiance;
-	float alpha;
-} RandomSampleWithAlphaChannel;
-
-typedef struct {
-	Spectrum radiance;
-} RandomSampleWithoutAlphaChannel;
-
-typedef struct {
-	Spectrum radiance;
-	float alpha;
-
-	float totalI;
-
-	// Using ushort here totally freeze the ATI driver
-	unsigned int largeMutationCount, smallMutationCount;
-	unsigned int current, proposed, consecutiveRejects;
-
-	float weight;
-	Spectrum currentRadiance;
-	float currentAlpha;
-} MetropolisSampleWithAlphaChannel;
-
-typedef struct {
-	Spectrum radiance;
-
-	float totalI;
-
-	// Using ushort here totally freeze the ATI driver
-	unsigned int largeMutationCount, smallMutationCount;
-	unsigned int current, proposed, consecutiveRejects;
-
-	float weight;
-	Spectrum currentRadiance;
-} MetropolisSampleWithoutAlphaChannel;
-
-typedef struct {
-	float rng0, rng1;
-	unsigned int pixelIndex, pass;
-
-	Spectrum radiance;
-	float alpha;
-} SobolSampleWithAlphaChannel;
-
-typedef struct {
-	float rng0, rng1;
-	unsigned int pixelIndex, pass;
-
-	Spectrum radiance;
-} SobolSampleWithoutAlphaChannel;
-
+// This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
 
-#if (PARAM_SAMPLER_TYPE == 0)
+typedef struct {
+	Spectrum radiance;
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-typedef RandomSampleWithAlphaChannel Sample;
-#else
-typedef RandomSampleWithoutAlphaChannel Sample;
+	float alpha;
 #endif
+} RandomSample;
+
+typedef struct {
+	Spectrum radiance;
+	float alpha;
+
+	float totalI;
+
+	// Using ushort here totally freeze the ATI driver
+	unsigned int largeMutationCount, smallMutationCount;
+	unsigned int current, proposed, consecutiveRejects;
+
+	float weight;
+	Spectrum currentRadiance;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	float currentAlpha;
+#endif
+} MetropolisSample;
+
+typedef struct {
+	float rng0, rng1;
+	unsigned int pixelIndex, pass;
+
+	Spectrum radiance;
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	float alpha;
+#endif
+} SobolSample;
+
+#if (PARAM_SAMPLER_TYPE == 0)
+typedef RandomSample Sample;
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 1)
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-typedef MetropolisSampleWithAlphaChannel Sample;
-#else
-typedef MetropolisSampleWithoutAlphaChannel Sample;
-#endif
+typedef MetropolisSample Sample;
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 2)
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-typedef SobolSampleWithAlphaChannel Sample;
-#else
-typedef SobolSampleWithoutAlphaChannel Sample;
-#endif
+typedef SobolSample Sample;
 #endif
 
 #endif
@@ -234,12 +205,15 @@ typedef enum {
 	SPLAT_SAMPLE
 } PathState;
 
+// This is defined only under OpenCL because of variable size structures
+#if defined(SLG_OPENCL_KERNEL)
+
 typedef struct {
 	PathState state;
 	unsigned int depth;
 
 	Spectrum throughput;
-	BSDF bsdf;
+	BSDF bsdf; // Variable size structure
 } PathStateBase;
 
 typedef struct {
@@ -254,9 +228,6 @@ typedef struct {
 	float passThroughEvent; // The passthrough sample used for the shadow ray
 	BSDF passThroughBsdf;
 } PathStateDirectLightPassThrough;
-
-// This is defined only under OpenCL
-#if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
 	// The task seed

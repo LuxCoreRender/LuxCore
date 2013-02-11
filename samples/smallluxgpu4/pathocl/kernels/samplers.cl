@@ -115,7 +115,7 @@ void GenerateCameraPath(
 	// before of the initialization because it can be use during the
 	// tracing of next path vertex ray.
 
-	task->pathStateBase.bsdf.passThroughEvent = eyePassthrough;
+	task->pathStateBase.bsdf.hitPoint.passThroughEvent = eyePassthrough;
 #endif
 }
 

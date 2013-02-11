@@ -118,7 +118,7 @@ std::string KernelSource_samplers =
 "	// before of the initialization because it can be use during the\n"
 "	// tracing of next path vertex ray.\n"
 "\n"
-"	task->pathStateBase.bsdf.passThroughEvent = eyePassthrough;\n"
+"	task->pathStateBase.bsdf.hitPoint.passThroughEvent = eyePassthrough;\n"
 "#endif\n"
 "}\n"
 "\n"
