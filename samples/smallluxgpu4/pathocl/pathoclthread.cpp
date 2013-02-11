@@ -415,6 +415,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_N";
 	if (cscene->IsTextureCompiled(FRESNEL_APPROX_K))
 		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
+	if (cscene->IsTextureCompiled(CHECKERBOARD2D))
+		ss << " -D PARAM_ENABLE_CHECKERBOARD2D";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";

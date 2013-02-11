@@ -63,10 +63,10 @@ typedef struct {
 	unsigned int texIndex;
 } FresnelApproxKTexParam;
 
-//typedef struct {
-//	UVMapping mapping;
-//	unsigned int tex1Index, tex2Index;
-//} CheckerBoard2DParam;
+typedef struct {
+	UVMapping mapping;
+	unsigned int tex1Index, tex2Index;
+} CheckerBoard2DParam;
 
 typedef struct {
 	TextureType type;
@@ -78,7 +78,7 @@ typedef struct {
 		ScaleTexParam scaleTex;
 		FresnelApproxNTexParam fresnelApproxN;
 		FresnelApproxKTexParam fresnelApproxK;
-//		CheckerBoard2DParam checkerBoard2D;
+		CheckerBoard2DParam checkerBoard2D;
 	};
 } Texture;
 

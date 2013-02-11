@@ -625,15 +625,9 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = luxrays::ocl::SCALE_TEX;
 				const Texture *tex1 = st->GetTexture1();
-				if (dynamic_cast<const ScaleTexture *>(tex1) ||
-						dynamic_cast<const FresnelApproxNTexture *>(tex1) ||
-						dynamic_cast<const FresnelApproxKTexture *>(tex1))
-					throw std::runtime_error("Recursive scale texture is not supported");
 				tex->scaleTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
 
 				const Texture *tex2 = st->GetTexture2();
-				if (dynamic_cast<const ScaleTexture *>(tex2))
-					throw std::runtime_error("Recursive scale texture is not supported");
 				tex->scaleTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
@@ -642,10 +636,6 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = luxrays::ocl::FRESNEL_APPROX_N;
 				const Texture *tx = ft->GetTexture();
-				if (dynamic_cast<const ScaleTexture *>(tx) ||
-						dynamic_cast<const FresnelApproxNTexture *>(tx) ||
-						dynamic_cast<const FresnelApproxKTexture *>(tx))
-					throw std::runtime_error("Recursive fresnel texture is not supported");
 				tex->fresnelApproxN.texIndex = scene->texDefs.GetTextureIndex(tx);
 				break;
 			}
@@ -654,11 +644,23 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = luxrays::ocl::FRESNEL_APPROX_K;
 				const Texture *tx = ft->GetTexture();
-				if (dynamic_cast<const ScaleTexture *>(tx) ||
-						dynamic_cast<const FresnelApproxNTexture *>(tx) ||
-						dynamic_cast<const FresnelApproxKTexture *>(tx))
-					throw std::runtime_error("Recursive fresnel texture is not supported");
 				tex->fresnelApproxK.texIndex = scene->texDefs.GetTextureIndex(tx);
+				break;
+			}
+			case CHECKERBOARD2D: {
+				CheckerBoard2DTexture *cb = static_cast<CheckerBoard2DTexture *>(t);
+
+				tex->type = luxrays::ocl::CHECKERBOARD2D;
+				tex->checkerBoard2D.mapping.uScale = cb->GetUVMapping().uScale;
+				tex->checkerBoard2D.mapping.vScale = cb->GetUVMapping().vScale;
+				tex->checkerBoard2D.mapping.uDelta = cb->GetUVMapping().uDelta;
+				tex->checkerBoard2D.mapping.vDelta = cb->GetUVMapping().vDelta;
+
+				const Texture *tex1 = cb->GetTexture1();
+				tex->checkerBoard2D.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = cb->GetTexture2();
+				tex->checkerBoard2D.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
 			default:
