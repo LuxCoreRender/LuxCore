@@ -56,7 +56,7 @@ void PathCPURenderThread::DirectLightSampling(
 
 		Vector lightRayDir;
 		float distance, directPdfW;
-		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint,
+		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW);
 
 		if (!lightRadiance.Black()) {
@@ -65,8 +65,8 @@ void PathCPURenderThread::DirectLightSampling(
 			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
 			if (!bsdfEval.Black()) {
-				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint), MachineEpsilon::E(distance));
-				Ray shadowRay(bsdf.hitPoint, lightRayDir,
+				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
+				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 						epsilon,
 						distance - epsilon);
 				RayHit shadowRayHit;
@@ -75,7 +75,7 @@ void PathCPURenderThread::DirectLightSampling(
 				// Check if the light source is visible
 				if (!scene->Intersect(device, false, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.shadeN);
+					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
@@ -109,7 +109,7 @@ void PathCPURenderThread::DirectHitFiniteLight(
 		if (!lastSpecular) {
 			const float lightPickProb = scene->PickLightPdf();
 			const float directPdfW = PdfAtoW(directPdfA, distance,
-				AbsDot(bsdf.fixedDir, bsdf.shadeN));
+				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
 			// MIS between BSDF sampling and direct light sampling
 			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
@@ -265,7 +265,7 @@ void PathCPURenderThread::RenderFunc() {
 			pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
 			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
-			eyeRay = Ray(bsdf.hitPoint, sampledDir);
+			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
 			++depth;
 		}
 

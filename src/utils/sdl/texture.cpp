@@ -487,16 +487,16 @@ ImageMapTexture::ImageMapTexture(const ImageMap * im, const UVMapping &mp, const
 	DuDv.v = 1.f / (mapping.vScale * imgMap->GetHeight());
 }
 
-float ImageMapTexture::GetGreyValue(const BSDF &bsdf) const {
-	return gain * imgMap->GetGrey(mapping.Map(bsdf.hitPointUV));
+float ImageMapTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	return gain * imgMap->GetGrey(mapping.Map(hitPoint.uv));
 }
 
-Spectrum ImageMapTexture::GetColorValue(const BSDF &bsdf) const {
-	return gain * imgMap->GetColor(mapping.Map(bsdf.hitPointUV));
+Spectrum ImageMapTexture::GetColorValue(const HitPoint &hitPoint) const {
+	return gain * imgMap->GetColor(mapping.Map(hitPoint.uv));
 }
 
-float ImageMapTexture::GetAlphaValue(const BSDF &bsdf) const {
-	return imgMap->GetAlpha(mapping.Map(bsdf.hitPointUV));
+float ImageMapTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	return imgMap->GetAlpha(mapping.Map(hitPoint.uv));
 }
 
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -518,16 +518,16 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const
 // Scale texture
 //------------------------------------------------------------------------------
 
-float ScaleTexture::GetGreyValue(const BSDF &bsdf) const {
-	return tex1->GetGreyValue(bsdf) * tex2->GetGreyValue(bsdf);
+float ScaleTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	return tex1->GetGreyValue(hitPoint) * tex2->GetGreyValue(hitPoint);
 }
 
-Spectrum ScaleTexture::GetColorValue(const BSDF &bsdf) const {
-	return tex1->GetColorValue(bsdf) * tex2->GetColorValue(bsdf);
+Spectrum ScaleTexture::GetColorValue(const HitPoint &hitPoint) const {
+	return tex1->GetColorValue(hitPoint) * tex2->GetColorValue(hitPoint);
 }
 
-float ScaleTexture::GetAlphaValue(const BSDF &bsdf) const {
-	return tex1->GetAlphaValue(bsdf) * tex2->GetAlphaValue(bsdf);
+float ScaleTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	return tex1->GetAlphaValue(hitPoint) * tex2->GetAlphaValue(hitPoint);
 }
 
 const UV ScaleTexture::GetDuDv() const {
@@ -580,32 +580,32 @@ Spectrum FresnelApproxK(const Spectrum &Fr) {
 		(Spectrum(1.f) - reflectance));
 }
 
-float FresnelApproxNTexture::GetGreyValue(const BSDF &bsdf) const {
-	return FresnelApproxN(tex->GetGreyValue(bsdf));
+float FresnelApproxNTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	return FresnelApproxN(tex->GetGreyValue(hitPoint));
 }
 
-Spectrum FresnelApproxNTexture::GetColorValue(const BSDF &bsdf) const {
-	return FresnelApproxN(tex->GetColorValue(bsdf));
+Spectrum FresnelApproxNTexture::GetColorValue(const HitPoint &hitPoint) const {
+	return FresnelApproxN(tex->GetColorValue(hitPoint));
 }
 
-float FresnelApproxNTexture::GetAlphaValue(const BSDF &bsdf) const {
-	return tex->GetAlphaValue(bsdf);
+float FresnelApproxNTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	return tex->GetAlphaValue(hitPoint);
 }
 
 const UV FresnelApproxNTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
 
-float FresnelApproxKTexture::GetGreyValue(const BSDF &bsdf) const {
-	return FresnelApproxK(tex->GetGreyValue(bsdf));
+float FresnelApproxKTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	return FresnelApproxK(tex->GetGreyValue(hitPoint));
 }
 
-Spectrum FresnelApproxKTexture::GetColorValue(const BSDF &bsdf) const {
-	return FresnelApproxK(tex->GetColorValue(bsdf));
+Spectrum FresnelApproxKTexture::GetColorValue(const HitPoint &hitPoint) const {
+	return FresnelApproxK(tex->GetColorValue(hitPoint));
 }
 
-float FresnelApproxKTexture::GetAlphaValue(const BSDF &bsdf) const {
-	return tex->GetAlphaValue(bsdf);
+float FresnelApproxKTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	return tex->GetAlphaValue(hitPoint);
 }
 
 const UV FresnelApproxKTexture::GetDuDv() const {
@@ -636,28 +636,28 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache)
 // CheckerBoard 2D texture
 //------------------------------------------------------------------------------
 
-float CheckerBoard2DTexture::GetGreyValue(const BSDF &bsdf) const {
-	const UV uv = mapping.Map(bsdf.hitPointUV);
+float CheckerBoard2DTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	const UV uv = mapping.Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
-		return tex1->GetGreyValue(bsdf);
+		return tex1->GetGreyValue(hitPoint);
 	else
-		return tex2->GetGreyValue(bsdf);
+		return tex2->GetGreyValue(hitPoint);
 }
 
-Spectrum CheckerBoard2DTexture::GetColorValue(const BSDF &bsdf) const {
-	const UV uv = mapping.Map(bsdf.hitPointUV);
+Spectrum CheckerBoard2DTexture::GetColorValue(const HitPoint &hitPoint) const {
+	const UV uv = mapping.Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
-		return tex1->GetColorValue(bsdf);
+		return tex1->GetColorValue(hitPoint);
 	else
-		return tex2->GetColorValue(bsdf);
+		return tex2->GetColorValue(hitPoint);
 }
 
-float CheckerBoard2DTexture::GetAlphaValue(const BSDF &bsdf) const {
-	const UV uv = mapping.Map(bsdf.hitPointUV);
+float CheckerBoard2DTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	const UV uv = mapping.Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
-		return tex1->GetAlphaValue(bsdf);
+		return tex1->GetAlphaValue(hitPoint);
 	else
-		return tex2->GetAlphaValue(bsdf);
+		return tex2->GetAlphaValue(hitPoint);
 }
 
 const UV CheckerBoard2DTexture::GetDuDv() const {

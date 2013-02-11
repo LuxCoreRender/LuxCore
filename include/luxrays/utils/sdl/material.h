@@ -44,7 +44,8 @@ namespace ocl {
 namespace sdl {
 
 class Scene;
-class BSDF;
+struct HitPointStruct;
+typedef HitPointStruct HitPoint;
 
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
@@ -74,14 +75,14 @@ public:
 
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
-	virtual Spectrum GetPassThroughTransparency(const BSDF &bsdf,
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const {
 		return Spectrum(0.f);
 	}
 
-	virtual Spectrum GetEmittedRadiance(const BSDF &bsdf) const {
+	virtual Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const {
 		if (emittedTex)
-			return emittedTex->GetColorValue(bsdf);
+			return emittedTex->GetColorValue(hitPoint);
 		else
 			return Spectrum();
 	}
@@ -90,16 +91,16 @@ public:
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const = 0;
 
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const = 0;
 
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const = 0;
 
@@ -183,14 +184,14 @@ public:
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
@@ -218,14 +219,14 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
@@ -261,14 +262,14 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
@@ -310,17 +311,17 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsShadowTransparent() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const BSDF &bsdf, const Vector &localFixedDir,
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint, const Vector &localFixedDir,
 		const float passThroughEvent) const;
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
@@ -358,14 +359,14 @@ public:
 	virtual MaterialType GetType() const { return METAL; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
@@ -411,19 +412,19 @@ public:
 	virtual bool IsPassThrough() const {
 		return (matA->IsPassThrough() || matB->IsPassThrough());
 	}
-	virtual Spectrum GetPassThroughTransparency(const BSDF &bsdf,
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const;
 
-	virtual Spectrum GetEmittedRadiance(const BSDF &bsdf) const;
+	virtual Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	void Pdf(const BSDF &bsdf,
+	void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
@@ -457,17 +458,17 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const BSDF &bsdf,
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const { return Spectrum(1.f); }
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
@@ -492,14 +493,14 @@ public:
 	virtual MaterialType GetType() const { return MATTETRANSLUCENT; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT | TRANSMIT; };
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
@@ -530,14 +531,14 @@ public:
 	virtual MaterialType GetType() const { return GLOSSY2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
@@ -589,14 +590,14 @@ public:
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
-	virtual Spectrum Evaluate(const BSDF &bsdf,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const BSDF &bsdf,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const BSDF &bsdf,
+	virtual void Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 

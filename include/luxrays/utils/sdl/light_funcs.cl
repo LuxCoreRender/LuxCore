@@ -185,7 +185,7 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
 			p0, p1, p2,
 			u0, u1,
 			&b0, &b1, &b2);
-		
+
 	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
 
 	*dir = samplePoint - p;

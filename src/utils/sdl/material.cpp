@@ -109,20 +109,20 @@ void MaterialDefinitions::DeleteMaterial(const std::string &name) {
 // Matte material
 //------------------------------------------------------------------------------
 
-Spectrum MatteMaterial::Evaluate(const BSDF &bsdf,
+Spectrum MatteMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	if (directPdfW)
-		*directPdfW = fabsf((bsdf.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
 
 	if (reversePdfW)
-		*reversePdfW = fabsf((bsdf.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
 
 	*event = DIFFUSE | REFLECT;
-	return Kd->GetColorValue(bsdf).Clamp() * INV_PI;
+	return Kd->GetColorValue(hitPoint).Clamp() * INV_PI;
 }
 
-Spectrum MatteMaterial::Sample(const BSDF &bsdf,
+Spectrum MatteMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
@@ -136,17 +136,17 @@ Spectrum MatteMaterial::Sample(const BSDF &bsdf,
 		return Spectrum();
 
 	*event = DIFFUSE | REFLECT;
-	return Kd->GetColorValue(bsdf).Clamp() * INV_PI;
+	return Kd->GetColorValue(hitPoint).Clamp() * INV_PI;
 }
 
-void MatteMaterial::Pdf(const BSDF &bsdf,
+void MatteMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 	if (directPdfW)
-		*directPdfW = fabsf((bsdf.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
 
 	if (reversePdfW)
-		*reversePdfW = fabsf((bsdf.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
 }
 
 void MatteMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
@@ -170,13 +170,13 @@ Properties MatteMaterial::ToProperties() const  {
 // Mirror material
 //------------------------------------------------------------------------------
 
-Spectrum MirrorMaterial::Evaluate(const BSDF &bsdf,
+Spectrum MirrorMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	return Spectrum();
 }
 
-Spectrum MirrorMaterial::Sample(const BSDF &bsdf,
+Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
@@ -187,7 +187,7 @@ Spectrum MirrorMaterial::Sample(const BSDF &bsdf,
 
 	*absCosSampledDir = fabsf(localSampledDir->z);
 	// The absCosSampledDir is used to compensate the other one used inside the integrator
-	return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+	return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 }
 
 void MirrorMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
@@ -211,13 +211,13 @@ Properties MirrorMaterial::ToProperties() const  {
 // Glass material
 //------------------------------------------------------------------------------
 
-Spectrum GlassMaterial::Evaluate(const BSDF &bsdf,
+Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	return Spectrum();
 }
 
-Spectrum GlassMaterial::Sample(const BSDF &bsdf,
+Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
@@ -231,8 +231,8 @@ Spectrum GlassMaterial::Sample(const BSDF &bsdf,
 	const Vector rayDir = -localFixedDir;
 	const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
 
-	const float nc = ousideIor->GetGreyValue(bsdf);
-	const float nt = ior->GetGreyValue(bsdf);
+	const float nc = ousideIor->GetGreyValue(hitPoint);
+	const float nt = ior->GetGreyValue(hitPoint);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
 	const float ddn = Dot(rayDir, shadeN);
@@ -246,7 +246,7 @@ Spectrum GlassMaterial::Sample(const BSDF &bsdf,
 		*pdfW = 1.f;
 
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+		return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	}
 
 	const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrtf(cos2t));
@@ -272,7 +272,7 @@ Spectrum GlassMaterial::Sample(const BSDF &bsdf,
 			*pdfW = 1.f;
 
 			// The absCosSampledDir is used to compensate the other one used inside the integrator
-			return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+			return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 		}
 	} else if (Re == 0.f) {
 		*event = SPECULAR | TRANSMIT;
@@ -280,10 +280,10 @@ Spectrum GlassMaterial::Sample(const BSDF &bsdf,
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		*pdfW = 1.f;
 
-		if (bsdf.fromLight)
-			return Kt->GetColorValue(bsdf).Clamp() * (nnt2 / (*absCosSampledDir));
+		if (hitPoint.fromLight)
+			return Kt->GetColorValue(hitPoint).Clamp() * (nnt2 / (*absCosSampledDir));
 		else
-			return Kt->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+			return Kt->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	} else if (passThroughEvent < P) {
 		*event = SPECULAR | REFLECT;
 		*localSampledDir = reflDir;
@@ -291,7 +291,7 @@ Spectrum GlassMaterial::Sample(const BSDF &bsdf,
 		*pdfW = P / Re;
 
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+		return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	} else {
 		*event = SPECULAR | TRANSMIT;
 		*localSampledDir = transDir;
@@ -299,10 +299,10 @@ Spectrum GlassMaterial::Sample(const BSDF &bsdf,
 		*pdfW = (1.f - P) / Tr;
 
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
-		if (bsdf.fromLight)
-			return Kt->GetColorValue(bsdf).Clamp() * (nnt2 / (*absCosSampledDir));
+		if (hitPoint.fromLight)
+			return Kt->GetColorValue(hitPoint).Clamp() * (nnt2 / (*absCosSampledDir));
 		else
-			return Kt->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+			return Kt->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	}
 }
 
@@ -333,13 +333,13 @@ Properties GlassMaterial::ToProperties() const  {
 // Architectural glass material
 //------------------------------------------------------------------------------
 
-Spectrum ArchGlassMaterial::Evaluate(const BSDF &bsdf,
+Spectrum ArchGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	return Spectrum();
 }
 
-Spectrum ArchGlassMaterial::Sample(const BSDF &bsdf,
+Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
@@ -353,8 +353,8 @@ Spectrum ArchGlassMaterial::Sample(const BSDF &bsdf,
 	const Vector rayDir = -localFixedDir;
 	const Vector reflDir = rayDir - (2.f * Dot(N, rayDir)) * Vector(N);
 
-	const float nc = ousideIor->GetGreyValue(bsdf);
-	const float nt = ior->GetGreyValue(bsdf);
+	const float nc = ousideIor->GetGreyValue(hitPoint);
+	const float nt = ior->GetGreyValue(hitPoint);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
 	const float ddn = Dot(rayDir, shadeN);
@@ -372,7 +372,7 @@ Spectrum ArchGlassMaterial::Sample(const BSDF &bsdf,
 		*pdfW = 1.f;
 
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+		return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	}
 
 	const float kk = (into ? 1.f : -1.f) * (ddn * nnt + sqrtf(cos2t));
@@ -402,7 +402,7 @@ Spectrum ArchGlassMaterial::Sample(const BSDF &bsdf,
 			*pdfW = 1.f;
 
 			// The absCosSampledDir is used to compensate the other one used inside the integrator
-			return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+			return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 		}
 	} else if (Re == 0.f) {
 		*event = SPECULAR | TRANSMIT;
@@ -410,10 +410,10 @@ Spectrum ArchGlassMaterial::Sample(const BSDF &bsdf,
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		*pdfW = 1.f;
 
-		if (bsdf.fromLight)
-			return Kt->GetColorValue(bsdf).Clamp() * (nnt2 / (*absCosSampledDir));
+		if (hitPoint.fromLight)
+			return Kt->GetColorValue(hitPoint).Clamp() * (nnt2 / (*absCosSampledDir));
 		else
-			return Kt->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+			return Kt->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	} else if (passThroughEvent < P) {
 		// Architectural glass reflect only from the outside
 		if (!into)
@@ -425,7 +425,7 @@ Spectrum ArchGlassMaterial::Sample(const BSDF &bsdf,
 		*pdfW = P / Re;
 
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+		return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	} else {
 		*event = SPECULAR | TRANSMIT;
 		*localSampledDir = transDir;
@@ -433,14 +433,14 @@ Spectrum ArchGlassMaterial::Sample(const BSDF &bsdf,
 		*pdfW = (1.f - P) / Tr;
 
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
-		if (bsdf.fromLight)
-			return Kt->GetColorValue(bsdf).Clamp() * (nnt2 / (*absCosSampledDir));
+		if (hitPoint.fromLight)
+			return Kt->GetColorValue(hitPoint).Clamp() * (nnt2 / (*absCosSampledDir));
 		else
-			return Kt->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+			return Kt->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	}
 }
 
-Spectrum ArchGlassMaterial::GetPassThroughTransparency(const BSDF &bsdf,
+Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const {
 	// Ray from outside going in ?
 	const bool into = (localFixedDir.z > 0.f);
@@ -451,8 +451,8 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const BSDF &bsdf,
 
 	const Vector rayDir = -localFixedDir;
 
-	const float nc = ousideIor->GetGreyValue(bsdf);
-	const float nt = ior->GetGreyValue(bsdf);
+	const float nc = ousideIor->GetGreyValue(hitPoint);
+	const float nt = ior->GetGreyValue(hitPoint);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
 	const float ddn = Dot(rayDir, shadeN);
@@ -478,17 +478,17 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const BSDF &bsdf,
 	if (Tr == 0.f) {
 		return Spectrum();
 	} else if (Re == 0.f) {
-		if (bsdf.fromLight)
-			return Kt->GetColorValue(bsdf).Clamp() * nnt2;
+		if (hitPoint.fromLight)
+			return Kt->GetColorValue(hitPoint).Clamp() * nnt2;
 		else
-			return Kt->GetColorValue(bsdf).Clamp();
+			return Kt->GetColorValue(hitPoint).Clamp();
 	} else if (passThroughEvent < P) {
 		return Spectrum();
 	} else {
-		if (bsdf.fromLight)
-			return Kt->GetColorValue(bsdf).Clamp() * nnt2;
+		if (hitPoint.fromLight)
+			return Kt->GetColorValue(hitPoint).Clamp() * nnt2;
 		else
-			return Kt->GetColorValue(bsdf).Clamp();
+			return Kt->GetColorValue(hitPoint).Clamp();
 	}
 }
 
@@ -519,7 +519,7 @@ Properties ArchGlassMaterial::ToProperties() const  {
 // Metal material
 //------------------------------------------------------------------------------
 
-Spectrum MetalMaterial::Evaluate(const BSDF &bsdf,
+Spectrum MetalMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	return Spectrum();
@@ -550,11 +550,11 @@ Vector MetalMaterial::GlossyReflection(const Vector &localFixedDir, const float 
 	return x * u + y * v + z * w;
 }
 
-Spectrum MetalMaterial::Sample(const BSDF &bsdf,
+Spectrum MetalMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	const float e = 1.f / (Max(exponent->GetGreyValue(bsdf), 0.f) + 1.f);
+	const float e = 1.f / (Max(exponent->GetGreyValue(hitPoint), 0.f) + 1.f);
 	*localSampledDir = GlossyReflection(localFixedDir, e, u0, u1);
 
 	if (localSampledDir->z * localFixedDir.z > 0.f) {
@@ -562,7 +562,7 @@ Spectrum MetalMaterial::Sample(const BSDF &bsdf,
 		*pdfW = 1.f;
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
-		return Kr->GetColorValue(bsdf).Clamp() / (*absCosSampledDir);
+		return Kr->GetColorValue(hitPoint).Clamp() / (*absCosSampledDir);
 	} else
 		return Spectrum();
 }
@@ -590,37 +590,37 @@ Properties MetalMaterial::ToProperties() const  {
 // Mix material
 //------------------------------------------------------------------------------
 
-Spectrum MixMaterial::GetPassThroughTransparency(const BSDF &bsdf,
+Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const {
-	const float weight2 = Clamp(mixFactor->GetGreyValue(bsdf), 0.f, 1.f);
+	const float weight2 = Clamp(mixFactor->GetGreyValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	if (passThroughEvent < weight1)
-		return matA->GetPassThroughTransparency(bsdf, localFixedDir, passThroughEvent / weight1);
+		return matA->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent / weight1);
 	else
-		return matB->GetPassThroughTransparency(bsdf, localFixedDir, (passThroughEvent - weight2) / weight2);
+		return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight2) / weight2);
 }
 
-Spectrum MixMaterial::GetEmittedRadiance(const BSDF &bsdf) const {
+Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint) const {
 	Spectrum result;
 
-	const float weight2 = Clamp(mixFactor->GetGreyValue(bsdf), 0.f, 1.f);
+	const float weight2 = Clamp(mixFactor->GetGreyValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	if (matA->IsLightSource() && (weight1 > 0.f))
-		result += weight1 * matA->GetEmittedRadiance(bsdf);
+		result += weight1 * matA->GetEmittedRadiance(hitPoint);
 	if (matB->IsLightSource() && (weight2 > 0.f))
-		result += weight2 * matB->GetEmittedRadiance(bsdf);
+		result += weight2 * matB->GetEmittedRadiance(hitPoint);
 
 	return result;
 }
 
-Spectrum MixMaterial::Evaluate(const BSDF &bsdf,
+Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	Spectrum result;
 
-	const float weight2 = Clamp(mixFactor->GetGreyValue(bsdf), 0.f, 1.f);
+	const float weight2 = Clamp(mixFactor->GetGreyValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	if (directPdfW)
@@ -631,7 +631,7 @@ Spectrum MixMaterial::Evaluate(const BSDF &bsdf,
 	BSDFEvent eventMatA = NONE;
 	if (weight1 > 0.f) {
 		float directPdfWMatA, reversePdfWMatA;
-		const Spectrum matAResult = matA->Evaluate(bsdf, localLightDir, localEyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
+		const Spectrum matAResult = matA->Evaluate(hitPoint, localLightDir, localEyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
 		if (!matAResult.Black()) {
 			result += weight1 * matAResult;
 
@@ -645,7 +645,7 @@ Spectrum MixMaterial::Evaluate(const BSDF &bsdf,
 	BSDFEvent eventMatB = NONE;
 	if (weight2 > 0.f) {
 		float directPdfWMatB, reversePdfWMatB;
-		const Spectrum matBResult = matB->Evaluate(bsdf, localLightDir, localEyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
+		const Spectrum matBResult = matB->Evaluate(hitPoint, localLightDir, localEyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
 		if (!matBResult.Black()) {
 			result += weight2 * matBResult;
 
@@ -661,11 +661,11 @@ Spectrum MixMaterial::Evaluate(const BSDF &bsdf,
 	return result;
 }
 
-Spectrum MixMaterial::Sample(const BSDF &bsdf,
+Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	const float weight2 = Clamp(mixFactor->GetGreyValue(bsdf), 0.f, 1.f);
+	const float weight2 = Clamp(mixFactor->GetGreyValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	const bool sampleMatA = (passThroughEvent < weight1);
@@ -680,7 +680,7 @@ Spectrum MixMaterial::Sample(const BSDF &bsdf,
 	const Material *matSecond = sampleMatA ? matB : matA;
 
 	// Sample the first material
-	Spectrum result = matFirst->Sample(bsdf, localFixedDir, localSampledDir,
+	Spectrum result = matFirst->Sample(hitPoint, localFixedDir, localSampledDir,
 			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event);
 	if (result.Black())
 		return Spectrum();
@@ -688,11 +688,11 @@ Spectrum MixMaterial::Sample(const BSDF &bsdf,
 	result *= weightFirst;
 
 	// Evaluate the second material
-	const Vector &localLightDir = (bsdf.fromLight) ? localFixedDir : *localSampledDir;
-	const Vector &localEyeDir = (bsdf.fromLight) ? *localSampledDir : localFixedDir;
+	const Vector &localLightDir = (hitPoint.fromLight) ? localFixedDir : *localSampledDir;
+	const Vector &localEyeDir = (hitPoint.fromLight) ? *localSampledDir : localFixedDir;
 	BSDFEvent eventSecond;
 	float pdfWSecond;
-	Spectrum evalSecond = matSecond->Evaluate(bsdf, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
+	Spectrum evalSecond = matSecond->Evaluate(hitPoint, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
 	if (!evalSecond.Black()) {
 		result += weightSecond * evalSecond;
 		*pdfW += weightSecond * pdfWSecond;
@@ -701,21 +701,21 @@ Spectrum MixMaterial::Sample(const BSDF &bsdf,
 	return result;
 }
 
-void MixMaterial::Pdf(const BSDF &bsdf,
+void MixMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	const float weight2 = Clamp(mixFactor->GetGreyValue(bsdf), 0.f, 1.f);
+	const float weight2 = Clamp(mixFactor->GetGreyValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	float directPdfWMatA = 1.f;
 	float reversePdfWMatA = 1.f;
 	if (weight1 > 0.f)
-		matA->Pdf(bsdf, localLightDir, localEyeDir, &directPdfWMatA, &reversePdfWMatA);
+		matA->Pdf(hitPoint, localLightDir, localEyeDir, &directPdfWMatA, &reversePdfWMatA);
 
 	float directPdfWMatB = 1.f;
 	float reversePdfWMatB = 1.f;
 	if (weight2 > 0.f)
-		matB->Pdf(bsdf, localLightDir, localEyeDir, &directPdfWMatB, &reversePdfWMatB);
+		matB->Pdf(hitPoint, localLightDir, localEyeDir, &directPdfWMatB, &reversePdfWMatB);
 
 	if (directPdfW)
 		*directPdfW = weight1 * directPdfWMatA + weight2 *directPdfWMatB;
@@ -782,13 +782,13 @@ Properties MixMaterial::ToProperties() const  {
 // Null material
 //------------------------------------------------------------------------------
 
-Spectrum NullMaterial::Evaluate(const BSDF &bsdf,
+Spectrum NullMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 		return Spectrum();
 }
 
-Spectrum NullMaterial::Sample(const BSDF &bsdf,
+Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
@@ -816,21 +816,21 @@ Properties NullMaterial::ToProperties() const  {
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
-Spectrum MatteTranslucentMaterial::Evaluate(const BSDF &bsdf,
+Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
 	const float absCosSampledDir = Dot(localLightDir, localEyeDir);
 
-	const Spectrum r = Kr->GetColorValue(bsdf).Clamp();
-	const Spectrum t = Kt->GetColorValue(bsdf).Clamp() * 
+	const Spectrum r = Kr->GetColorValue(hitPoint).Clamp();
+	const Spectrum t = Kt->GetColorValue(hitPoint).Clamp() * 
 		// Energy conservation
 		(Spectrum(1.f) - r);
 
 	if (directPdfW)
-		*directPdfW = .5f * fabsf((bsdf.fromLight ? localEyeDir.z : localLightDir.z) * (.5f * INV_PI));
+		*directPdfW = .5f * fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (.5f * INV_PI));
 
 	if (reversePdfW)
-		*reversePdfW = .5f * fabsf((bsdf.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
+		*reversePdfW = .5f * fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
 
 	if (absCosSampledDir > 0.f) {
 		*event = DIFFUSE | REFLECT;
@@ -841,7 +841,7 @@ Spectrum MatteTranslucentMaterial::Evaluate(const BSDF &bsdf,
 	}
 }
 
-Spectrum MatteTranslucentMaterial::Sample(const BSDF &bsdf,
+Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
@@ -855,8 +855,8 @@ Spectrum MatteTranslucentMaterial::Sample(const BSDF &bsdf,
 
 	*pdfW *= .5f;
 
-	const Spectrum r = Kr->GetColorValue(bsdf).Clamp();
-	const Spectrum t = Kt->GetColorValue(bsdf).Clamp() * 
+	const Spectrum r = Kr->GetColorValue(hitPoint).Clamp();
+	const Spectrum t = Kt->GetColorValue(hitPoint).Clamp() * 
 		// Energy conservation
 		(Spectrum(1.f) - r);
 
@@ -871,14 +871,14 @@ Spectrum MatteTranslucentMaterial::Sample(const BSDF &bsdf,
 	}
 }
 
-void MatteTranslucentMaterial::Pdf(const BSDF &bsdf,
+void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 	if (directPdfW)
-		*directPdfW = fabsf((bsdf.fromLight ? localEyeDir.z : localLightDir.z) * (.5f * INV_PI));
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (.5f * INV_PI));
 
 	if (reversePdfW)
-		*reversePdfW = fabsf((bsdf.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
 }
 
 void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
@@ -999,13 +999,13 @@ float Glossy2Material::SchlickBSDF_CoatingPdf(const float roughness, const float
 	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localFixedDir, wh));
 }
 
-Spectrum Glossy2Material::Evaluate(const BSDF &bsdf,
+Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	const Vector &localFixedDir = bsdf.fromLight ? localLightDir : localEyeDir;
-	const Vector &localSampledDir = bsdf.fromLight ? localEyeDir : localLightDir;
+	const Vector &localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
+	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
-	const Spectrum baseF = Kd->GetColorValue(bsdf).Clamp() * INV_PI;
+	const Spectrum baseF = Kd->GetColorValue(hitPoint).Clamp() * INV_PI;
 	if (localEyeDir.z <= 0.f) {
 		// Back face: no coating
 
@@ -1022,16 +1022,16 @@ Spectrum Glossy2Material::Evaluate(const BSDF &bsdf,
 	// Front face: coating+base
 	*event = GLOSSY | REFLECT;
 
-	Spectrum ks = Ks->GetColorValue(bsdf);
-	const float i = index->GetGreyValue(bsdf);
+	Spectrum ks = Ks->GetColorValue(hitPoint);
+	const float i = index->GetGreyValue(hitPoint);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
 	ks = ks.Clamp();
 
-	const float u = Clamp(nu->GetGreyValue(bsdf), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetGreyValue(bsdf), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetGreyValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -1056,8 +1056,8 @@ Spectrum Glossy2Material::Evaluate(const BSDF &bsdf,
 	// Absorption
 	const float cosi = fabsf(localSampledDir.z);
 	const float coso = fabsf(localFixedDir.z);
-	const Spectrum alpha = Ka->GetColorValue(bsdf).Clamp();
-	const float d = depth->GetGreyValue(bsdf);
+	const Spectrum alpha = Ka->GetColorValue(hitPoint).Clamp();
+	const float d = depth->GetGreyValue(hitPoint);
 	const Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
 
 	// Coating fresnel factor
@@ -1073,23 +1073,23 @@ Spectrum Glossy2Material::Evaluate(const BSDF &bsdf,
 	return coatingF / cosi + absorption * (Spectrum(1.f) - S) * baseF;
 }
 
-Spectrum Glossy2Material::Sample(const BSDF &bsdf,
+Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	Spectrum ks = Ks->GetColorValue(bsdf);
-	const float i = index->GetGreyValue(bsdf);
+	Spectrum ks = Ks->GetColorValue(hitPoint);
+	const float i = index->GetGreyValue(hitPoint);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
 	ks = ks.Clamp();
 
-	const float u = Clamp(nu->GetGreyValue(bsdf), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetGreyValue(bsdf), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetGreyValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -1110,7 +1110,7 @@ Spectrum Glossy2Material::Sample(const BSDF &bsdf,
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
-		baseF = Kd->GetColorValue(bsdf).Clamp() * INV_PI;
+		baseF = Kd->GetColorValue(hitPoint).Clamp() * INV_PI;
 
 		// Evaluate coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, localFixedDir, *localSampledDir);
@@ -1119,7 +1119,7 @@ Spectrum Glossy2Material::Sample(const BSDF &bsdf,
 		*event = DIFFUSE | REFLECT;
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
-		coatingF = SchlickBSDF_CoatingSampleF(bsdf.fromLight, ks, roughness, anisotropy,
+		coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy,
 				localFixedDir, localSampledDir, u0, u1, &coatingPdf);
 		if (coatingF.Black())
 			return Spectrum();
@@ -1129,8 +1129,8 @@ Spectrum Glossy2Material::Sample(const BSDF &bsdf,
 			return Spectrum();
 
 		// Evaluate base BSDF (Matte BSDF)
-		basePdf = fabsf((bsdf.fromLight ? localFixedDir.z : localSampledDir->z) * INV_PI);
-		baseF = Kd->GetColorValue(bsdf).Clamp() * INV_PI;
+		basePdf = fabsf((hitPoint.fromLight ? localFixedDir.z : localSampledDir->z) * INV_PI);
+		baseF = Kd->GetColorValue(hitPoint).Clamp() * INV_PI;
 
 		*event = GLOSSY | REFLECT;
 	}
@@ -1142,8 +1142,8 @@ Spectrum Glossy2Material::Sample(const BSDF &bsdf,
 		// Absorption
 		const float cosi = fabsf(localSampledDir->z);
 		const float coso = fabsf(localFixedDir.z);
-		const Spectrum alpha = Ka->GetColorValue(bsdf).Clamp();
-		const float d = depth->GetGreyValue(bsdf);
+		const Spectrum alpha = Ka->GetColorValue(hitPoint).Clamp();
+		const float d = depth->GetGreyValue(hitPoint);
 		const Spectrum absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Coating fresnel factor
@@ -1162,22 +1162,22 @@ Spectrum Glossy2Material::Sample(const BSDF &bsdf,
 	}
 }
 
-void Glossy2Material::Pdf(const BSDF &bsdf,
+void Glossy2Material::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	const Vector &localFixedDir = bsdf.fromLight ? localLightDir : localEyeDir;
-	const Vector &localSampledDir = bsdf.fromLight ? localEyeDir : localLightDir;
+	const Vector &localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
+	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
-	Spectrum ks = Ks->GetColorValue(bsdf);
-	const float i = index->GetGreyValue(bsdf);
+	Spectrum ks = Ks->GetColorValue(hitPoint);
+	const float i = index->GetGreyValue(hitPoint);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
 	ks = ks.Clamp();
 
-	const float u = Clamp(nu->GetGreyValue(bsdf), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetGreyValue(bsdf), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetGreyValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -1235,14 +1235,14 @@ Properties Glossy2Material::ToProperties() const  {
 // LuxRender Metal2 material porting.
 //------------------------------------------------------------------------------
 
-Spectrum Metal2Material::Evaluate(const BSDF &bsdf,
+Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	const Vector &localFixedDir = bsdf.fromLight ? localLightDir : localEyeDir;
-	const Vector &localSampledDir = bsdf.fromLight ? localEyeDir : localLightDir;
+	const Vector &localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
+	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
-	const float u = Clamp(nu->GetGreyValue(bsdf), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetGreyValue(bsdf), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetGreyValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -1257,8 +1257,8 @@ Spectrum Metal2Material::Evaluate(const BSDF &bsdf,
 	if (reversePdfW)
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localSampledDir, wh));
 
-	const Spectrum etaVal = n->GetColorValue(bsdf);
-	const Spectrum kVal = k->GetColorValue(bsdf);
+	const Spectrum etaVal = n->GetColorValue(hitPoint);
+	const Spectrum kVal = k->GetColorValue(hitPoint);
 	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
 	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
@@ -1273,15 +1273,15 @@ Spectrum Metal2Material::Evaluate(const BSDF &bsdf,
 	return (factor / absCosSampledDir) * F;
 }
 
-Spectrum Metal2Material::Sample(const BSDF &bsdf,
+Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const float u = Clamp(nu->GetGreyValue(bsdf), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetGreyValue(bsdf), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetGreyValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -1305,13 +1305,13 @@ Spectrum Metal2Material::Sample(const BSDF &bsdf,
 
 	const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 
-	const Spectrum etaVal = n->GetColorValue(bsdf);
-	const Spectrum kVal = k->GetColorValue(bsdf);
+	const Spectrum etaVal = n->GetColorValue(hitPoint);
+	const Spectrum kVal = k->GetColorValue(hitPoint);
 	Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
 	const float factor = d * G;
 	F *= factor;
-	if (!bsdf.fromLight)
+	if (!hitPoint.fromLight)
 		F /= 4.f * coso;
 	else
 		F /= 4.f * cosi;
@@ -1321,14 +1321,14 @@ Spectrum Metal2Material::Sample(const BSDF &bsdf,
 	return F / cosi;
 }
 
-void Metal2Material::Pdf(const BSDF &bsdf,
+void Metal2Material::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	const Vector &localFixedDir = bsdf.fromLight ? localLightDir : localEyeDir;
-	const Vector &localSampledDir = bsdf.fromLight ? localEyeDir : localLightDir;
+	const Vector &localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
+	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
-	const float u = Clamp(nu->GetGreyValue(bsdf), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetGreyValue(bsdf), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetGreyValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetGreyValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
