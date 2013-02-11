@@ -269,7 +269,7 @@ public:
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum GetRadiance(const BSDF &bsdf,
+	Spectrum GetRadiance(const HitPoint &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 

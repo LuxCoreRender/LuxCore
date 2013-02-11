@@ -450,8 +450,10 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = localDirOut.z;
 
-	const BSDF bsdf(true, scene, *orig, Vector(-N), triGlobalIndex, b1, b2, passThroughEvent);
-	return lightMaterial->GetEmittedRadiance(bsdf) * localDirOut.z;
+	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	const HitPoint hitPoint = { Vector(-N), *orig, triUV, b1, b2, N, N, passThroughEvent, false };
+
+	return lightMaterial->GetEmittedRadiance(hitPoint) * localDirOut.z;
 }
 
 Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
@@ -480,14 +482,16 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
-	const BSDF bsdf(true, scene, samplePoint, Vector(-sampleN), triGlobalIndex, b1, b2, passThroughEvent);
-	return lightMaterial->GetEmittedRadiance(bsdf);
+	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, b1, b2, sampleN, sampleN, passThroughEvent, false };
+
+	return lightMaterial->GetEmittedRadiance(hitPoint);
 }
 
-Spectrum TriangleLight::GetRadiance(const BSDF &bsdf,
+Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const float cosOutLight = Dot(bsdf.geometryN, bsdf.fixedDir);
+	const float cosOutLight = Dot(hitPoint.geometryN, hitPoint.fixedDir);
 	if (cosOutLight <= 0.f)
 		return Spectrum();
 
@@ -497,5 +501,5 @@ Spectrum TriangleLight::GetRadiance(const BSDF &bsdf,
 	if (emissionPdfW)
 		*emissionPdfW = cosOutLight * INV_PI * invArea;
 
-	return lightMaterial->GetEmittedRadiance(bsdf);
+	return lightMaterial->GetEmittedRadiance(hitPoint);
 }

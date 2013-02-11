@@ -43,7 +43,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	Vector eyeDir(bsdf.hitPoint - lensPoint);
+	Vector eyeDir(bsdf.hitPoint.p - lensPoint);
 	const float eyeDistance = eyeDir.Length();
 	eyeDir /= eyeDistance;
 
@@ -64,7 +64,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				const float cosToCamera = Dot(bsdf.shadeN, -eyeDir);
+				const float cosToCamera = Dot(bsdf.hitPoint.shadeN, -eyeDir);
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -141,7 +141,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 				eyePathThroughput *= connectionThroughput * bsdfSample * (cosSampleDir / bsdfPdf);
 				assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
 
-				eyeRay = Ray(bsdf.hitPoint, sampledDir);
+				eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
 			}
 
 			++depth;
@@ -278,7 +278,7 @@ void LightCPURenderThread::RenderFunc() {
 				lightPathFlux *= bsdfSample * (cosSampleDir / bsdfPdf);
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
-				nextEventRay = Ray(bsdf.hitPoint, sampledDir);
+				nextEventRay = Ray(bsdf.hitPoint.p, sampledDir);
 				++depth;
 			} else {
 				// Ray lost in space...

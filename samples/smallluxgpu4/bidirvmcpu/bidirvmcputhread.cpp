@@ -137,7 +137,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
 				sampler->GetSample(9), sampler->GetSample(10));
 
-			eyeVertex.bsdf.fixedDir = -eyeRay.d;
+			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
 			const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 			const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -159,7 +159,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 					// This is a trick, you can not have a BSDF of something that has
 					// not been hit. DirectHitInfiniteLight must be aware of this.
-					eyeVertex.bsdf.fixedDir = -eyeRay.d;
+					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 					eyeVertex.throughput *= connectionThroughput;
 
 					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance);
@@ -173,7 +173,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				// Something was hit
 
 				// Update MIS constants
-				const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.shadeN, eyeVertex.bsdf.fixedDir));
+				const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.hitPoint.shadeN, eyeVertex.bsdf.hitPoint.fixedDir));
 				eyeVertex.dVCM *= MIS(eyeRayHit.t * eyeRayHit.t) * factor;
 				eyeVertex.dVC *= factor;
 				eyeVertex.dVM *= factor;
