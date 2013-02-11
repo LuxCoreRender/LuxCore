@@ -21,53 +21,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// ConstFloat texture
-//------------------------------------------------------------------------------
-
-#if defined (PARAM_ENABLE_TEX_CONST_FLOAT)
-
-float ConstFloatTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint) {
-	return texture->constFloat.value;
-}
-
-float3 ConstFloatTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint) {
-	return texture->constFloat.value;
-}
-
-#endif
-
-//------------------------------------------------------------------------------
-// ConstFloat3 texture
-//------------------------------------------------------------------------------
-
-#if defined (PARAM_ENABLE_TEX_CONST_FLOAT3)
-
-float ConstFloat3Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint) {
-	return Spectrum_Y(VLOAD3F(&texture->constFloat3.color.r));
-}
-
-float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint) {
-	return VLOAD3F(&texture->constFloat3.color.r);
-}
-
-#endif
-
-//------------------------------------------------------------------------------
-// ConstFloat4 texture
-//------------------------------------------------------------------------------
-
-#if defined (PARAM_ENABLE_TEX_CONST_FLOAT4)
-
-float ConstFloat4Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint) {
-	return Spectrum_Y(VLOAD3F(&texture->constFloat4.color.r));
-}
-
-float3 ConstFloat4Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint) {
-	return VLOAD3F(&texture->constFloat4.color.r);
-}
-
-#endif
+#define TEXTURE_STACK_SIZE 16
 
 //------------------------------------------------------------------------------
 // ImageMaps support
@@ -197,13 +151,83 @@ float3 ImageMap_GetColor(__global float *pixels,
 #endif
 
 //------------------------------------------------------------------------------
+// ConstFloat texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_CONST_FLOAT)
+
+void ConstFloatTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = texture->constFloat.value;
+}
+
+void ConstFloatTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = texture->constFloat.value;
+}
+
+void ConstFloatTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = 0.f;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// ConstFloat3 texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_CONST_FLOAT3)
+
+void ConstFloat3Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->constFloat3.color.r));
+}
+
+void ConstFloat3Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = VLOAD3F(&texture->constFloat3.color.r);
+}
+
+void ConstFloat3Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = 0.f;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// ConstFloat4 texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_CONST_FLOAT4)
+
+void ConstFloat4Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->constFloat4.color.r));
+}
+
+void ConstFloat4Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = VLOAD3F(&texture->constFloat4.color.r);
+}
+
+void ConstFloat4Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = 0.f;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // ImageMap texture
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_TEX_IMAGEMAP)
 
-float ImageMapTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
-	IMAGEMAPS_PARAM_DECL) {
+void ImageMapTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
+		IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
@@ -225,14 +249,16 @@ float ImageMapTexture_GetGreyValue(__global Texture *texture, __global HitPoint 
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = UVMapping_Map(&texture->imageMapTex.mapping, uv);
-	return texture->imageMapTex.gain * ImageMap_GetGrey(
+
+	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetGrey(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			mapUV.s0, mapUV.s1);
 }
 
-float3 ImageMapTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
-	IMAGEMAPS_PARAM_DECL) {
+void ImageMapTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
+		IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
@@ -254,90 +280,19 @@ float3 ImageMapTexture_GetColorValue(__global Texture *texture, __global HitPoin
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = UVMapping_Map(&texture->imageMapTex.mapping, uv);
-	return texture->imageMapTex.gain * ImageMap_GetColor(
+
+	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetColor(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			mapUV.s0, mapUV.s1);
 }
 
-#endif
-
-//------------------------------------------------------------------------------
-// Generic texture functions
-//
-// They include the support for all texture but recursive one
-// (because OpenCL doesn't support recursion)
-//------------------------------------------------------------------------------
-
-float Texture_GetGreyValueNoRecursive(__global Texture *texture, __global HitPoint *hitPoint
-		IMAGEMAPS_PARAM_DECL) {
-	switch (texture->type) {
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
-		case CONST_FLOAT:
-			return ConstFloatTexture_GetGreyValue(texture, hitPoint);
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
-		case CONST_FLOAT3:
-			return ConstFloat3Texture_GetGreyValue(texture, hitPoint);
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
-		case CONST_FLOAT4:
-			return ConstFloat4Texture_GetGreyValue(texture, hitPoint);
-#endif
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
-		case IMAGEMAP:
-			return ImageMapTexture_GetGreyValue(texture, hitPoint
-					IMAGEMAPS_PARAM);
-#endif
-		default:
-			return 0.f;
-	}
+void ImageMapTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = VLOAD2F(&texture->imageMapTex.Du);
 }
 
-float3 Texture_GetColorValueNoRecursive(__global Texture *texture, __global HitPoint *hitPoint
-		IMAGEMAPS_PARAM_DECL) {
-	switch (texture->type) {
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
-		case CONST_FLOAT:
-			return ConstFloatTexture_GetColorValue(texture, hitPoint);
 #endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
-		case CONST_FLOAT3:
-			return ConstFloat3Texture_GetColorValue(texture, hitPoint);
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
-		case CONST_FLOAT4:
-			return ConstFloat4Texture_GetColorValue(texture, hitPoint);
-#endif
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
-		case IMAGEMAP:
-			return ImageMapTexture_GetColorValue(texture, hitPoint
-					IMAGEMAPS_PARAM);
-#endif
-		default:
-			return BLACK;
-	}
-}
-
-float2 Texture_GetDuDvNoRecursive(__global Texture *texture) {
-	switch (texture->type) {
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
-		case IMAGEMAP:
-			return VLOAD2F(&texture->imageMapTex.Du);
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
-		case CONST_FLOAT:
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
-		case CONST_FLOAT3:
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
-		case CONST_FLOAT4:
-#endif
-		default:
-			return 0.f;
-	}
-}
 
 //------------------------------------------------------------------------------
 // Scale texture
@@ -345,37 +300,26 @@ float2 Texture_GetDuDvNoRecursive(__global Texture *texture) {
 
 #if defined (PARAM_ENABLE_TEX_SCALE)
 
-float ScaleTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
-	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
+void ScaleTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value = texValues[--(*texValuesSize)] * texValues[--(*texValuesSize)];
 
-	return Texture_GetGreyValueNoRecursive(tex1, hitPoint
-				IMAGEMAPS_PARAM) *
-			Texture_GetGreyValueNoRecursive(tex2, hitPoint
-				IMAGEMAPS_PARAM);
+	texValues[(*texValuesSize)++] = value;
 }
 
-float3 ScaleTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
-	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
+void ScaleTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value = texValues[--(*texValuesSize)] * texValues[--(*texValuesSize)];
 
-	return Texture_GetColorValueNoRecursive(tex1, hitPoint
-				IMAGEMAPS_PARAM) * 
-			Texture_GetColorValueNoRecursive(tex2, hitPoint
-				IMAGEMAPS_PARAM);
+	texValues[(*texValuesSize)++] = value;
 }
 
-float2 ScaleTexture_GetDuDv(__global Texture *texture
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
-	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
+void ScaleTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 dudv1 = texValues[--(*texValuesSize)];
+	const float2 dudv2 = texValues[--(*texValuesSize)];
 
-	const float2 dudv1 = Texture_GetDuDvNoRecursive(tex1);
-	const float2 dudv2 = Texture_GetDuDvNoRecursive(tex2);
-
-	return (float2)(fmax(dudv1.x, dudv2.x), fmax(dudv1.y, dudv2.y));
+	texValues[(*texValuesSize)++] = (float2)(fmax(dudv1.x, dudv2.x), fmax(dudv1.y, dudv2.y));
 }
 
 #endif
@@ -383,6 +327,8 @@ float2 ScaleTexture_GetDuDv(__global Texture *texture
 //------------------------------------------------------------------------------
 // FresnelApproxN & FresnelApproxK texture
 //------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 
 float FresnelApproxN(const float Fr) {
 	const float sqrtReflectance = sqrt(clamp(Fr, 0.f, .999f));
@@ -398,6 +344,29 @@ float3 FresnelApproxN3(const float3 Fr) {
 		(WHITE - sqrtReflectance);
 }
 
+void FresnelApproxNTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = FresnelApproxN(value);
+}
+
+void FresnelApproxN3Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = FresnelApproxN3(value);
+}
+
+void FresnelApproxNTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = texValues[--(*texValuesSize)];
+}
+
+#endif
+
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+
 float FresnelApproxK(const float Fr) {
 	const float reflectance = clamp(Fr, 0.f, .999f);
 
@@ -412,56 +381,23 @@ float3 FresnelApproxK3(const float3 Fr) {
 		(WHITE - reflectance));
 }
 
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
+void FresnelApproxKTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value = texValues[--(*texValuesSize)];
 
-float FresnelApproxNTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex = &texs[texture->fresnelApproxN.texIndex];
-
-	return FresnelApproxN(Texture_GetGreyValueNoRecursive(tex, hitPoint
-				IMAGEMAPS_PARAM));
+	texValues[(*texValuesSize)++] = FresnelApproxK(value);
 }
 
-float3 FresnelApproxNTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex = &texs[texture->fresnelApproxN.texIndex];
+void FresnelApproxKTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value = texValues[--(*texValuesSize)];
 
-	return FresnelApproxN3(Texture_GetColorValueNoRecursive(tex, hitPoint
-				IMAGEMAPS_PARAM));
+	texValues[(*texValuesSize)++] = FresnelApproxK3(value);
 }
 
-float2 FresnelApproxNTexture_GetDuDv(__global Texture *texture
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex = &texs[texture->fresnelApproxN.texIndex];
-
-	return Texture_GetDuDvNoRecursive(tex);
-}
-
-#endif
-
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
-
-float FresnelApproxKTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex = &texs[texture->fresnelApproxK.texIndex];
-
-	return FresnelApproxK(Texture_GetGreyValueNoRecursive(tex, hitPoint
-				IMAGEMAPS_PARAM));
-}
-
-float3 FresnelApproxKTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex = &texs[texture->fresnelApproxK.texIndex];
-
-	return FresnelApproxK3(Texture_GetColorValueNoRecursive(tex, hitPoint
-				IMAGEMAPS_PARAM));
-}
-
-float2 FresnelApproxKTexture_GetDuDv(__global Texture *texture
-		TEXTURES_PARAM_DECL) {
-	__global Texture *tex = &texs[texture->fresnelApproxK.texIndex];
-
-	return Texture_GetDuDvNoRecursive(tex);
+void FresnelApproxKTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = texValues[--(*texValuesSize)];
 }
 
 #endif
@@ -470,73 +406,291 @@ float2 FresnelApproxKTexture_GetDuDv(__global Texture *texture
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
-float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
+bool Texture_AddSubTexture(__global Texture *texture,
+		__global Texture *todoTex[TEXTURE_STACK_SIZE], uint *todoTexSize
 		TEXTURES_PARAM_DECL) {
+	bool hasSubTex;
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
-			return ScaleTexture_GetGreyValue(texture, hitPoint
-				TEXTURES_PARAM);
+			todoTex[(*todoTexSize)++] = &texs[texture->scaleTex.tex1Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->scaleTex.tex2Index];
+			hasSubTex = true;
+			break;
 #endif
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_N:
-			return FresnelApproxNTexture_GetGreyValue(texture, hitPoint
-				TEXTURES_PARAM);
-#endif
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_GetGreyValue(texture, hitPoint
-				TEXTURES_PARAM);
+			todoTex[(*todoTexSize)++] = &texs[texture->fresnelApproxN.texIndex];
+			hasSubTex = true;
+			break;
+#endif
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+		case FRESNEL_APPROX_K:
+			todoTex[(*todoTexSize)++] = &texs[texture->fresnelApproxK.texIndex];
+			hasSubTex = true;
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
+		case CONST_FLOAT:
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
+		case CONST_FLOAT3:
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
+		case CONST_FLOAT4:
+#endif
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
+		case IMAGEMAP:
 #endif
 		default:
-			return Texture_GetGreyValueNoRecursive(texture, hitPoint
-				IMAGEMAPS_PARAM);
+			hasSubTex = false;
+			break;
+	}
+
+	return hasSubTex;
+}
+
+//------------------------------------------------------------------------------
+// Grey texture channel
+//------------------------------------------------------------------------------
+
+void Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
+		IMAGEMAPS_PARAM_DECL) {
+	switch (texture->type) {
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
+		case CONST_FLOAT:
+			return ConstFloatTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
+		case CONST_FLOAT3:
+			return ConstFloat3Texture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
+		case CONST_FLOAT4:
+			return ConstFloat4Texture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
+		case IMAGEMAP:
+			return ImageMapTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize
+					IMAGEMAPS_PARAM);
+#endif
+#if defined(PARAM_ENABLE_TEX_SCALE)
+		case SCALE_TEX:
+			return ScaleTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
+		case FRESNEL_APPROX_K:
+			return FresnelApproxNTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+		case FRESNEL_APPROX_K:
+			return FresnelApproxKTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+#endif
+	}
+}
+
+float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+	__global Texture *todoTex[TEXTURE_STACK_SIZE];
+	uint todoTexSize = 0;
+
+	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
+	uint pendingTexSize = 0;
+
+	float texValues[TEXTURE_STACK_SIZE];
+	uint texValuesSize = 0;
+
+	todoTex[todoTexSize++] = texture;
+	do {
+		if (todoTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = todoTex[--todoTexSize];
+
+			// Check if the texture needs to evaluate some other sub-texture
+			if (!Texture_AddSubTexture(tex, todoTex, &todoTexSize
+					TEXTURES_PARAM)) {
+				// There are not sub-textures, I can directly evaluate the texture
+				Texture_EvaluateGrey(tex, hitPoint, texValues, &texValuesSize
+					IMAGEMAPS_PARAM);
+			} else {
+				// There are sub-textures, add this texture to the list of pending one
+				pendingTex[pendingTexSize++] = tex;
+			}
+			continue;
+		}
+
+		if (pendingTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = pendingTex[--pendingTexSize];
+
+			Texture_EvaluateGrey(tex, hitPoint, texValues, &texValuesSize
+					IMAGEMAPS_PARAM);
+		}
+	} while ((todoTexSize > 0) || (pendingTexSize > 0));
+
+	return texValues[0];
+}
+
+//------------------------------------------------------------------------------
+// Color texture channel
+//------------------------------------------------------------------------------
+
+void Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
+		IMAGEMAPS_PARAM_DECL) {
+	switch (texture->type) {
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
+		case CONST_FLOAT:
+			return ConstFloatTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
+		case CONST_FLOAT3:
+			return ConstFloat3Texture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
+		case CONST_FLOAT4:
+			return ConstFloat4Texture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
+		case IMAGEMAP:
+			return ImageMapTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize
+					IMAGEMAPS_PARAM);
+#endif
+#if defined(PARAM_ENABLE_TEX_SCALE)
+		case SCALE_TEX:
+			return ScaleTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
+		case FRESNEL_APPROX_K:
+			return FresnelApproxNTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+		case FRESNEL_APPROX_K:
+			return FresnelApproxKTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+#endif
 	}
 }
 
 float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
+	__global Texture *todoTex[TEXTURE_STACK_SIZE];
+	uint todoTexSize = 0;
+
+	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
+	uint pendingTexSize = 0;
+
+	float3 texValues[TEXTURE_STACK_SIZE];
+	uint texValuesSize = 0;
+
+	todoTex[todoTexSize++] = texture;
+	do {
+		if (todoTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = todoTex[--todoTexSize];
+
+			// Check if the texture needs to evaluate some other sub-texture
+			if (!Texture_AddSubTexture(tex, todoTex, &todoTexSize
+					TEXTURES_PARAM)) {
+				// There are not sub-textures, I can directly evaluate the texture
+				Texture_EvaluateColor(tex, hitPoint, texValues, &texValuesSize
+					IMAGEMAPS_PARAM);
+			} else {
+				// There are sub-textures, add this texture to the list of pending one
+				pendingTex[pendingTexSize++] = tex;
+			}
+			continue;
+		}
+
+		if (pendingTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = pendingTex[--pendingTexSize];
+
+			Texture_EvaluateColor(tex, hitPoint, texValues, &texValuesSize
+					IMAGEMAPS_PARAM);
+		}
+	} while ((todoTexSize > 0) || (pendingTexSize > 0));
+
+	return texValues[0];
+}
+
+//------------------------------------------------------------------------------
+// DuDv texture information
+//------------------------------------------------------------------------------
+
+void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
+		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
+		case CONST_FLOAT:
+			ConstFloatTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
+		case CONST_FLOAT3:
+			return ConstFloat3Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
+		case CONST_FLOAT4:
+			return ConstFloat4Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+#endif
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
+		case IMAGEMAP:
+			return ImageMapTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+#endif
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
-			return ScaleTexture_GetColorValue(texture, hitPoint
-				TEXTURES_PARAM);
+			return ScaleTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 #endif
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_N:
-			return FresnelApproxNTexture_GetColorValue(texture, hitPoint
-				TEXTURES_PARAM);
-#endif
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_GetColorValue(texture, hitPoint
-				TEXTURES_PARAM);
+			return FresnelApproxNTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 #endif
-		default:
-			return Texture_GetColorValueNoRecursive(texture, hitPoint
-				IMAGEMAPS_PARAM);
+#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+		case FRESNEL_APPROX_K:
+			return FresnelApproxKTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+#endif
 	}
 }
 
-float2 Texture_GetDuDv(__global Texture *texture
+float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
-	switch (texture->type) {
-#if defined(PARAM_ENABLE_TEX_SCALE)
-		case SCALE_TEX:
-			return ScaleTexture_GetDuDv(texture
-					TEXTURES_PARAM);
-#endif
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_N:
-			return FresnelApproxNTexture_GetDuDv(texture
-					TEXTURES_PARAM);
-#endif
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
-		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_GetDuDv(texture
-					TEXTURES_PARAM);
-#endif
-		default:
-			return Texture_GetDuDvNoRecursive(texture);
-	}
+	__global Texture *todoTex[TEXTURE_STACK_SIZE];
+	uint todoTexSize = 0;
+
+	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
+	uint pendingTexSize = 0;
+
+	float2 texValues[TEXTURE_STACK_SIZE];
+	uint texValuesSize = 0;
+
+	todoTex[todoTexSize++] = texture;
+	do {
+		if (todoTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = todoTex[--todoTexSize];
+
+			// Check if the texture needs to evaluate some other sub-texture
+			if (!Texture_AddSubTexture(tex, todoTex, &todoTexSize
+					TEXTURES_PARAM)) {
+				// There are not sub-textures, I can directly evaluate the texture
+				Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
+					IMAGEMAPS_PARAM);
+			} else {
+				// There are sub-textures, add this texture to the list of pending one
+				pendingTex[pendingTexSize++] = tex;
+			}
+			continue;
+		}
+
+		if (pendingTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = pendingTex[--pendingTexSize];
+
+			Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
+					IMAGEMAPS_PARAM);
+		}
+	} while ((todoTexSize > 0) || (pendingTexSize > 0));
+
+	return texValues[0];
 }
