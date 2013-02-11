@@ -403,32 +403,72 @@ void FresnelApproxKTexture_EvaluateDuDv(__global Texture *texture, __global HitP
 #endif
 
 //------------------------------------------------------------------------------
+// CheckerBoard2D texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_CHECKERBOARD2D)
+
+void CheckerBoard2DTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = UVMapping_Map(&texture->checkerBoard2D.mapping, uv);
+	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
+}
+
+void  CheckerBoard2DTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
+
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = UVMapping_Map(&texture->checkerBoard2D.mapping, uv);
+	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
+}
+
+void  CheckerBoard2DTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 value1 = texValues[--(*texValuesSize)];
+	const float2 value2 = texValues[--(*texValuesSize)];
+
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = UVMapping_Map(&texture->checkerBoard2D.mapping, uv);
+	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
-bool Texture_AddSubTexture(__global Texture *texture,
+uint Texture_AddSubTexture(__global Texture *texture,
 		__global Texture *todoTex[TEXTURE_STACK_SIZE], uint *todoTexSize
 		TEXTURES_PARAM_DECL) {
-	bool hasSubTex;
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->scaleTex.tex1Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->scaleTex.tex2Index];
-			hasSubTex = true;
-			break;
+			return 2;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_K:
 			todoTex[(*todoTexSize)++] = &texs[texture->fresnelApproxN.texIndex];
-			hasSubTex = true;
-			break;
+			return 1;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
 			todoTex[(*todoTexSize)++] = &texs[texture->fresnelApproxK.texIndex];
-			hasSubTex = true;
-			break;
+			return 1;
+#endif
+#if defined(PARAM_ENABLE_CHECKERBOARD2D)
+		case CHECKERBOARD2D:
+			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard2D.tex1Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard2D.tex2Index];
+			return 2;
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
@@ -443,11 +483,9 @@ bool Texture_AddSubTexture(__global Texture *texture,
 		case IMAGEMAP:
 #endif
 		default:
-			hasSubTex = false;
-			break;
+			return 0;
 	}
 
-	return hasSubTex;
 }
 
 //------------------------------------------------------------------------------
@@ -487,6 +525,10 @@ void Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint
 		case FRESNEL_APPROX_K:
 			return FresnelApproxKTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
 #endif
+#if defined (PARAM_ENABLE_CHECKERBOARD2D)
+		case CHECKERBOARD2D:
+			return CheckerBoard2DTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+#endif
 	}
 }
 
@@ -496,6 +538,7 @@ float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoin
 	uint todoTexSize = 0;
 
 	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
+	uint pendingSubTexCount[TEXTURE_STACK_SIZE];
 	uint pendingTexSize = 0;
 
 	float texValues[TEXTURE_STACK_SIZE];
@@ -503,29 +546,23 @@ float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoin
 
 	todoTex[todoTexSize++] = texture;
 	do {
-		if (todoTexSize > 0) {
-			// Pop the a texture to do
-			__global Texture *tex = todoTex[--todoTexSize];
-
-			// Check if the texture needs to evaluate some other sub-texture
-			if (!Texture_AddSubTexture(tex, todoTex, &todoTexSize
-					TEXTURES_PARAM)) {
-				// There are not sub-textures, I can directly evaluate the texture
-				Texture_EvaluateGrey(tex, hitPoint, texValues, &texValuesSize
-					IMAGEMAPS_PARAM);
-			} else {
-				// There are sub-textures, add this texture to the list of pending one
-				pendingTex[pendingTexSize++] = tex;
-			}
-			continue;
-		}
-
-		if (pendingTexSize > 0) {
+		if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
 			// Pop the a texture to do
 			__global Texture *tex = pendingTex[--pendingTexSize];
 
 			Texture_EvaluateGrey(tex, hitPoint, texValues, &texValuesSize
 					IMAGEMAPS_PARAM);
+			continue;
+		}
+
+		if (todoTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = todoTex[--todoTexSize];
+
+			// Add this texture to the list of pending one
+			pendingTex[pendingTexSize] = tex;
+			pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+					TEXTURES_PARAM);
 		}
 	} while ((todoTexSize > 0) || (pendingTexSize > 0));
 
@@ -569,6 +606,10 @@ void Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoin
 		case FRESNEL_APPROX_K:
 			return FresnelApproxKTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
 #endif
+#if defined (PARAM_ENABLE_CHECKERBOARD2D)
+		case CHECKERBOARD2D:
+			return CheckerBoard2DTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+#endif
 	}
 }
 
@@ -578,6 +619,7 @@ float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPo
 	uint todoTexSize = 0;
 
 	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
+	uint pendingSubTexCount[TEXTURE_STACK_SIZE];
 	uint pendingTexSize = 0;
 
 	float3 texValues[TEXTURE_STACK_SIZE];
@@ -585,29 +627,23 @@ float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPo
 
 	todoTex[todoTexSize++] = texture;
 	do {
-		if (todoTexSize > 0) {
-			// Pop the a texture to do
-			__global Texture *tex = todoTex[--todoTexSize];
-
-			// Check if the texture needs to evaluate some other sub-texture
-			if (!Texture_AddSubTexture(tex, todoTex, &todoTexSize
-					TEXTURES_PARAM)) {
-				// There are not sub-textures, I can directly evaluate the texture
-				Texture_EvaluateColor(tex, hitPoint, texValues, &texValuesSize
-					IMAGEMAPS_PARAM);
-			} else {
-				// There are sub-textures, add this texture to the list of pending one
-				pendingTex[pendingTexSize++] = tex;
-			}
-			continue;
-		}
-
-		if (pendingTexSize > 0) {
+		if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
 			// Pop the a texture to do
 			__global Texture *tex = pendingTex[--pendingTexSize];
 
 			Texture_EvaluateColor(tex, hitPoint, texValues, &texValuesSize
 					IMAGEMAPS_PARAM);
+			continue;
+		}
+
+		if (todoTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = todoTex[--todoTexSize];
+
+			// Add this texture to the list of pending one
+			pendingTex[pendingTexSize] = tex;
+			pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+					TEXTURES_PARAM);
 		}
 	} while ((todoTexSize > 0) || (pendingTexSize > 0));
 
@@ -650,6 +686,10 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 		case FRESNEL_APPROX_K:
 			return FresnelApproxKTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 #endif
+#if defined (PARAM_ENABLE_CHECKERBOARD2D)
+		case CHECKERBOARD2D:
+			return CheckerBoard2DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+#endif
 	}
 }
 
@@ -659,6 +699,7 @@ float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
 	uint todoTexSize = 0;
 
 	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
+	uint pendingSubTexCount[TEXTURE_STACK_SIZE];
 	uint pendingTexSize = 0;
 
 	float2 texValues[TEXTURE_STACK_SIZE];
@@ -666,29 +707,23 @@ float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
 
 	todoTex[todoTexSize++] = texture;
 	do {
-		if (todoTexSize > 0) {
-			// Pop the a texture to do
-			__global Texture *tex = todoTex[--todoTexSize];
-
-			// Check if the texture needs to evaluate some other sub-texture
-			if (!Texture_AddSubTexture(tex, todoTex, &todoTexSize
-					TEXTURES_PARAM)) {
-				// There are not sub-textures, I can directly evaluate the texture
-				Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
-					IMAGEMAPS_PARAM);
-			} else {
-				// There are sub-textures, add this texture to the list of pending one
-				pendingTex[pendingTexSize++] = tex;
-			}
-			continue;
-		}
-
-		if (pendingTexSize > 0) {
+		if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
 			// Pop the a texture to do
 			__global Texture *tex = pendingTex[--pendingTexSize];
 
 			Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
 					IMAGEMAPS_PARAM);
+			continue;
+		}
+
+		if (todoTexSize > 0) {
+			// Pop the a texture to do
+			__global Texture *tex = todoTex[--todoTexSize];
+
+			// Add this texture to the list of pending one
+			pendingTex[pendingTexSize] = tex;
+			pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+					TEXTURES_PARAM);
 		}
 	} while ((todoTexSize > 0) || (pendingTexSize > 0));
 
