@@ -173,8 +173,8 @@ float3 SunLight_GetRadiance(__global SunLight *sunLight, const float3 dir, float
 // TriangleLight
 //------------------------------------------------------------------------------
 
-float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
-		const float3 p, const float u0, const float u1, const float u2,
+float3 TriangleLight_Illuminate(__global TriangleLight *triLight, __global HitPoint *tmpHitPoint,
+		const float3 p, const float u0, const float u1, const float passThroughEvent,
 		float3 *dir, float *distance, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	const float3 p0 = VLOAD3F(&triLight->v0.x);
@@ -204,14 +204,24 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
 	const float2 uv2 = VLOAD2F(&triLight->uv2.u);
 	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], triUV
+	VSTORE3F(-sampleN, &tmpHitPoint->fixedDir.x);
+	VSTORE3F(samplePoint, &tmpHitPoint->p.x);
+	VSTORE2F(triUV, &tmpHitPoint->uv.u);
+	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
+	VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
+#if defined(PARAM_HAS_PASSTHROUGH)
+	tmpHitPoint->passThroughEvent = passThroughEvent;
+#endif
+
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], tmpHitPoint
 			MATERIALS_PARAM);
 }
 
 float3 TriangleLight_GetRadiance(__global TriangleLight *triLight,
-		const float3 dir, const float3 hitPointNormal,
-		const float2 triUV, float *directPdfA
+		 __global HitPoint *hitPoint, float *directPdfA
 		MATERIALS_PARAM_DECL) {
+	const float3 dir = VLOAD3F(&hitPoint->fixedDir.x);
+	const float3 hitPointNormal = VLOAD3F(&hitPoint->geometryN.x);
 	const float cosOutLight = dot(hitPointNormal, dir);
 	if (cosOutLight <= 0.f)
 		return BLACK;
@@ -219,6 +229,6 @@ float3 TriangleLight_GetRadiance(__global TriangleLight *triLight,
 	if (directPdfA)
 		*directPdfA = triLight->invArea;
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], triUV
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], hitPoint
 			MATERIALS_PARAM);
 }
