@@ -194,66 +194,6 @@ float3 ImageMap_GetColor(__global float *pixels,
 	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
 }
 
-float ImageMapTexture_GetGrey(
-	__global ImageMapTexParam *imageMapTex, __global HitPoint *hitPoint
-	IMAGEMAPS_PARAM_DECL) {
-	__global ImageMap *imageMap = &imageMapDescs[imageMapTex->imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		imageMapBuff4,
-#endif
-		imageMap->pageIndex, imageMap->pixelsIndex);
-
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = UVMapping_Map(&imageMapTex->mapping, uv);
-	return imageMapTex->gain * ImageMap_GetGrey(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			mapUV.s0, mapUV.s1);
-}
-
-float3 ImageMapTexture_GetColor(
-	__global ImageMapTexParam *imageMapTex, __global HitPoint *hitPoint
-	IMAGEMAPS_PARAM_DECL) {
-	__global ImageMap *imageMap = &imageMapDescs[imageMapTex->imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		imageMapBuff4,
-#endif
-		imageMap->pageIndex, imageMap->pixelsIndex);
-
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = UVMapping_Map(&imageMapTex->mapping, uv);
-	return imageMapTex->gain * ImageMap_GetColor(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			mapUV.s0, mapUV.s1);
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -264,14 +204,60 @@ float3 ImageMapTexture_GetColor(
 
 float ImageMapTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
 	IMAGEMAPS_PARAM_DECL) {
-	return ImageMapTexture_GetGrey(&texture->imageMapTex, hitPoint
-			IMAGEMAPS_PARAM);
+	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		imageMapBuff4,
+#endif
+		imageMap->pageIndex, imageMap->pixelsIndex);
+
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = UVMapping_Map(&texture->imageMapTex.mapping, uv);
+	return texture->imageMapTex.gain * ImageMap_GetGrey(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			mapUV.s0, mapUV.s1);
 }
 
 float3 ImageMapTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
 	IMAGEMAPS_PARAM_DECL) {
-	return ImageMapTexture_GetColor(&texture->imageMapTex, hitPoint
-			IMAGEMAPS_PARAM);
+	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		imageMapBuff4,
+#endif
+		imageMap->pageIndex, imageMap->pixelsIndex);
+
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = UVMapping_Map(&texture->imageMapTex.mapping, uv);
+	return texture->imageMapTex.gain * ImageMap_GetColor(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			mapUV.s0, mapUV.s1);
 }
 
 #endif

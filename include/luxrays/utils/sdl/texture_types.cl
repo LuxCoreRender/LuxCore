@@ -23,7 +23,7 @@
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K
+	FRESNEL_APPROX_K, CHECKERBOARD2D
 } TextureType;
 
 typedef struct {
@@ -63,6 +63,11 @@ typedef struct {
 	unsigned int texIndex;
 } FresnelApproxKTexParam;
 
+//typedef struct {
+//	UVMapping mapping;
+//	unsigned int tex1Index, tex2Index;
+//} CheckerBoard2DParam;
+
 typedef struct {
 	TextureType type;
 	union {
@@ -73,6 +78,7 @@ typedef struct {
 		ScaleTexParam scaleTex;
 		FresnelApproxNTexParam fresnelApproxN;
 		FresnelApproxKTexParam fresnelApproxK;
+//		CheckerBoard2DParam checkerBoard2D;
 	};
 } Texture;
 
