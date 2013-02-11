@@ -451,7 +451,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		*cosThetaAtLight = localDirOut.z;
 
 	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
-	const HitPoint hitPoint = { Vector(-N), *orig, triUV, b1, b2, N, N, passThroughEvent, false };
+	const HitPoint hitPoint = { Vector(-N), *orig, triUV, N, N, passThroughEvent, false };
 
 	return lightMaterial->GetEmittedRadiance(hitPoint) * localDirOut.z;
 }
@@ -483,7 +483,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
 	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
-	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, b1, b2, sampleN, sampleN, passThroughEvent, false };
+	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, sampleN, sampleN, passThroughEvent, false };
 
 	return lightMaterial->GetEmittedRadiance(hitPoint);
 }

@@ -47,7 +47,6 @@ struct HitPointStruct {
 	Vector fixedDir;
 	Point p;
 	UV uv;
-	float b1, b2;
 	Normal geometryN;
 	Normal shadeN;
 	float passThroughEvent;

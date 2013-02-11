@@ -822,6 +822,10 @@ void PathOCLRenderThread::InitRender() {
 	if ((triAreaLightCount > 0) || sunLightBuff) {
 		gpuTaksSize += sizeof(Spectrum) + sizeof(float) + sizeof(int);
 
+		// Add PathStateDirectLight.tmpHitPoint memory size
+		if (triAreaLightCount > 0)
+			gpuTaksSize += hitPointSize;
+
 		// Add PathStateDirectLightPassThrough memory size
 		if (hasPassThrough)
 			gpuTaksSize += sizeof(float) + bsdfSize;

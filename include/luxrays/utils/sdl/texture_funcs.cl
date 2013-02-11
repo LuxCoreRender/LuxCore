@@ -27,11 +27,11 @@
 
 #if defined (PARAM_ENABLE_TEX_CONST_FLOAT)
 
-float ConstFloatTexture_GetGreyValue(__global Texture *texture, const float2 uv) {
+float ConstFloatTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint) {
 	return texture->constFloat.value;
 }
 
-float3 ConstFloatTexture_GetColorValue(__global Texture *texture, const float2 uv) {
+float3 ConstFloatTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint) {
 	return texture->constFloat.value;
 }
 
@@ -43,11 +43,11 @@ float3 ConstFloatTexture_GetColorValue(__global Texture *texture, const float2 u
 
 #if defined (PARAM_ENABLE_TEX_CONST_FLOAT3)
 
-float ConstFloat3Texture_GetGreyValue(__global Texture *texture, const float2 uv) {
+float ConstFloat3Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint) {
 	return Spectrum_Y(VLOAD3F(&texture->constFloat3.color.r));
 }
 
-float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, const float2 uv) {
+float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint) {
 	return VLOAD3F(&texture->constFloat3.color.r);
 }
 
@@ -59,11 +59,11 @@ float3 ConstFloat3Texture_GetColorValue(__global Texture *texture, const float2 
 
 #if defined (PARAM_ENABLE_TEX_CONST_FLOAT4)
 
-float ConstFloat4Texture_GetGreyValue(__global Texture *texture, const float2 uv) {
+float ConstFloat4Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint) {
 	return Spectrum_Y(VLOAD3F(&texture->constFloat4.color.r));
 }
 
-float3 ConstFloat4Texture_GetColorValue(__global Texture *texture, const float2 uv) {
+float3 ConstFloat4Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint) {
 	return VLOAD3F(&texture->constFloat4.color.r);
 }
 
@@ -195,7 +195,7 @@ float3 ImageMap_GetColor(__global float *pixels,
 }
 
 float ImageMapTexture_GetGrey(
-	__global ImageMapTexParam *imageMapTex, const float2 uv
+	__global ImageMapTexParam *imageMapTex, __global HitPoint *hitPoint
 	IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[imageMapTex->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
@@ -216,6 +216,7 @@ float ImageMapTexture_GetGrey(
 #endif
 		imageMap->pageIndex, imageMap->pixelsIndex);
 
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = UVMapping_Map(&imageMapTex->mapping, uv);
 	return imageMapTex->gain * ImageMap_GetGrey(
 			pixels,
@@ -224,7 +225,7 @@ float ImageMapTexture_GetGrey(
 }
 
 float3 ImageMapTexture_GetColor(
-	__global ImageMapTexParam *imageMapTex, const float2 uv
+	__global ImageMapTexParam *imageMapTex, __global HitPoint *hitPoint
 	IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[imageMapTex->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
@@ -245,6 +246,7 @@ float3 ImageMapTexture_GetColor(
 #endif
 		imageMap->pageIndex, imageMap->pixelsIndex);
 
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = UVMapping_Map(&imageMapTex->mapping, uv);
 	return imageMapTex->gain * ImageMap_GetColor(
 			pixels,
@@ -260,15 +262,15 @@ float3 ImageMapTexture_GetColor(
 
 #if defined (PARAM_ENABLE_TEX_IMAGEMAP)
 
-float ImageMapTexture_GetGreyValue(__global Texture *texture, const float2 uv
+float ImageMapTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
 	IMAGEMAPS_PARAM_DECL) {
-	return ImageMapTexture_GetGrey(&texture->imageMapTex, uv
+	return ImageMapTexture_GetGrey(&texture->imageMapTex, hitPoint
 			IMAGEMAPS_PARAM);
 }
 
-float3 ImageMapTexture_GetColorValue(__global Texture *texture, const float2 uv
+float3 ImageMapTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
 	IMAGEMAPS_PARAM_DECL) {
-	return ImageMapTexture_GetColor(&texture->imageMapTex, uv
+	return ImageMapTexture_GetColor(&texture->imageMapTex, hitPoint
 			IMAGEMAPS_PARAM);
 }
 
@@ -281,24 +283,24 @@ float3 ImageMapTexture_GetColorValue(__global Texture *texture, const float2 uv
 // (because OpenCL doesn't support recursion)
 //------------------------------------------------------------------------------
 
-float Texture_GetGreyValueNoRecursive(__global Texture *texture, const float2 uv
+float Texture_GetGreyValueNoRecursive(__global Texture *texture, __global HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
-			return ConstFloatTexture_GetGreyValue(texture, uv);
+			return ConstFloatTexture_GetGreyValue(texture, hitPoint);
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
-			return ConstFloat3Texture_GetGreyValue(texture, uv);
+			return ConstFloat3Texture_GetGreyValue(texture, hitPoint);
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
-			return ConstFloat4Texture_GetGreyValue(texture, uv);
+			return ConstFloat4Texture_GetGreyValue(texture, hitPoint);
 #endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
-			return ImageMapTexture_GetGreyValue(texture, uv
+			return ImageMapTexture_GetGreyValue(texture, hitPoint
 					IMAGEMAPS_PARAM);
 #endif
 		default:
@@ -306,24 +308,24 @@ float Texture_GetGreyValueNoRecursive(__global Texture *texture, const float2 uv
 	}
 }
 
-float3 Texture_GetColorValueNoRecursive(__global Texture *texture, const float2 uv
+float3 Texture_GetColorValueNoRecursive(__global Texture *texture, __global HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
-			return ConstFloatTexture_GetColorValue(texture, uv);
+			return ConstFloatTexture_GetColorValue(texture, hitPoint);
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
-			return ConstFloat3Texture_GetColorValue(texture, uv);
+			return ConstFloat3Texture_GetColorValue(texture, hitPoint);
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
-			return ConstFloat4Texture_GetColorValue(texture, uv);
+			return ConstFloat4Texture_GetColorValue(texture, hitPoint);
 #endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
-			return ImageMapTexture_GetColorValue(texture, uv
+			return ImageMapTexture_GetColorValue(texture, hitPoint
 					IMAGEMAPS_PARAM);
 #endif
 		default:
@@ -357,25 +359,25 @@ float2 Texture_GetDuDvNoRecursive(__global Texture *texture) {
 
 #if defined (PARAM_ENABLE_TEX_SCALE)
 
-float ScaleTexture_GetGreyValue(__global Texture *texture, const float2 uv
+float ScaleTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
 	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
 
-	return Texture_GetGreyValueNoRecursive(tex1, uv
+	return Texture_GetGreyValueNoRecursive(tex1, hitPoint
 				IMAGEMAPS_PARAM) *
-			Texture_GetGreyValueNoRecursive(tex2, uv
+			Texture_GetGreyValueNoRecursive(tex2, hitPoint
 				IMAGEMAPS_PARAM);
 }
 
-float3 ScaleTexture_GetColorValue(__global Texture *texture, const float2 uv
+float3 ScaleTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global Texture *tex1 = &texs[texture->scaleTex.tex1Index];
 	__global Texture *tex2 = &texs[texture->scaleTex.tex2Index];
 
-	return Texture_GetColorValueNoRecursive(tex1, uv
+	return Texture_GetColorValueNoRecursive(tex1, hitPoint
 				IMAGEMAPS_PARAM) * 
-			Texture_GetColorValueNoRecursive(tex2, uv
+			Texture_GetColorValueNoRecursive(tex2, hitPoint
 				IMAGEMAPS_PARAM);
 }
 
@@ -426,19 +428,19 @@ float3 FresnelApproxK3(const float3 Fr) {
 
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 
-float FresnelApproxNTexture_GetGreyValue(__global Texture *texture, const float2 uv
+float FresnelApproxNTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global Texture *tex = &texs[texture->fresnelApproxN.texIndex];
 
-	return FresnelApproxN(Texture_GetGreyValueNoRecursive(tex, uv
+	return FresnelApproxN(Texture_GetGreyValueNoRecursive(tex, hitPoint
 				IMAGEMAPS_PARAM));
 }
 
-float3 FresnelApproxNTexture_GetColorValue(__global Texture *texture, const float2 uv
+float3 FresnelApproxNTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global Texture *tex = &texs[texture->fresnelApproxN.texIndex];
 
-	return FresnelApproxN3(Texture_GetColorValueNoRecursive(tex, uv
+	return FresnelApproxN3(Texture_GetColorValueNoRecursive(tex, hitPoint
 				IMAGEMAPS_PARAM));
 }
 
@@ -453,19 +455,19 @@ float2 FresnelApproxNTexture_GetDuDv(__global Texture *texture
 
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
 
-float FresnelApproxKTexture_GetGreyValue(__global Texture *texture, const float2 uv
+float FresnelApproxKTexture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global Texture *tex = &texs[texture->fresnelApproxK.texIndex];
 
-	return FresnelApproxK(Texture_GetGreyValueNoRecursive(tex, uv
+	return FresnelApproxK(Texture_GetGreyValueNoRecursive(tex, hitPoint
 				IMAGEMAPS_PARAM));
 }
 
-float3 FresnelApproxKTexture_GetColorValue(__global Texture *texture, const float2 uv
+float3 FresnelApproxKTexture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global Texture *tex = &texs[texture->fresnelApproxK.texIndex];
 
-	return FresnelApproxK3(Texture_GetColorValueNoRecursive(tex, uv
+	return FresnelApproxK3(Texture_GetColorValueNoRecursive(tex, hitPoint
 				IMAGEMAPS_PARAM));
 }
 
@@ -482,50 +484,50 @@ float2 FresnelApproxKTexture_GetDuDv(__global Texture *texture
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
-float Texture_GetGreyValue(__global Texture *texture, const float2 uv
+float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
-			return ScaleTexture_GetGreyValue(texture, uv
+			return ScaleTexture_GetGreyValue(texture, hitPoint
 				TEXTURES_PARAM);
 #endif
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_N:
-			return FresnelApproxNTexture_GetGreyValue(texture, uv
+			return FresnelApproxNTexture_GetGreyValue(texture, hitPoint
 				TEXTURES_PARAM);
 #endif
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_GetGreyValue(texture, uv
+			return FresnelApproxKTexture_GetGreyValue(texture, hitPoint
 				TEXTURES_PARAM);
 #endif
 		default:
-			return Texture_GetGreyValueNoRecursive(texture, uv
+			return Texture_GetGreyValueNoRecursive(texture, hitPoint
 				IMAGEMAPS_PARAM);
 	}
 }
 
-float3 Texture_GetColorValue(__global Texture *texture, const float2 uv
+float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
-			return ScaleTexture_GetColorValue(texture, uv
+			return ScaleTexture_GetColorValue(texture, hitPoint
 				TEXTURES_PARAM);
 #endif
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_N:
-			return FresnelApproxNTexture_GetColorValue(texture, uv
+			return FresnelApproxNTexture_GetColorValue(texture, hitPoint
 				TEXTURES_PARAM);
 #endif
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_GetColorValue(texture, uv
+			return FresnelApproxKTexture_GetColorValue(texture, hitPoint
 				TEXTURES_PARAM);
 #endif
 		default:
-			return Texture_GetColorValueNoRecursive(texture, uv
+			return Texture_GetColorValueNoRecursive(texture, hitPoint
 				IMAGEMAPS_PARAM);
 	}
 }

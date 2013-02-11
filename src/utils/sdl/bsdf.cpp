@@ -30,8 +30,6 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	hitPoint.passThroughEvent = u0;
 
 	hitPoint.p = ray(rayHit.t);
-	hitPoint.b1 = rayHit.b1;
-	hitPoint.b2 = rayHit.b2;
 	hitPoint.fixedDir = -ray.d;
 
 	const u_int meshIndex = scene.dataSet->GetMeshID(rayHit.index);
@@ -45,7 +43,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 
 	// Interpolate face normal
 	hitPoint.geometryN = mesh->GetGeometryNormal(triIndex);
-	hitPoint.shadeN = mesh->InterpolateTriNormal(triIndex, hitPoint.b1, hitPoint.b2);
+	hitPoint.shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
@@ -54,7 +52,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		triangleLightSource = NULL;
 
 	// Interpolate UV coordinates
-	hitPoint.uv = mesh->InterpolateTriUV(triIndex, hitPoint.b1, hitPoint.b2);
+	hitPoint.uv = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
 
 	// Check if I have to apply normal mapping
 	if (material->HasNormalTex()) {

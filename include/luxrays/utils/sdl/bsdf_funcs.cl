@@ -184,7 +184,7 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
-	const float3 result = Material_Evaluate(mat, VLOAD2F(&bsdf->hitPoint.uv.u),
+	const float3 result = Material_Evaluate(mat, &bsdf->hitPoint,
 			localLightDir, localEyeDir,	event, directPdfW
 			MATERIALS_PARAM);
 
@@ -204,7 +204,7 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-	const float3 result = Material_Sample(&mats[bsdf->materialIndex], VLOAD2F(&bsdf->hitPoint.uv.u),
+	const float3 result = Material_Sample(&mats[bsdf->materialIndex], &bsdf->hitPoint,
 			localFixedDir, &localSampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->hitPoint.passThroughEvent,
@@ -242,7 +242,7 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 		return BLACK;
 	else
 		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex],
-				VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.geometryN.x), VLOAD2F(&bsdf->hitPoint.uv.u), directPdfA
+				&bsdf->hitPoint, directPdfA
 				MATERIALS_PARAM);
 }
 #endif
@@ -253,7 +253,7 @@ float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
 
 	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
-			VLOAD2F(&bsdf->hitPoint.uv.u), localFixedDir, bsdf->hitPoint.passThroughEvent
+			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
 #endif

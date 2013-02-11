@@ -432,7 +432,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					&lightRayDir, &distance, &directPdfW);
 			} else {
 				lightRadiance = TriangleLight_Illuminate(
-					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.x),
+					&triLightDefs[lightIndex], &task->directLightState.tmpHitPoint,
+					VLOAD3F(&bsdf->hitPoint.x),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
@@ -447,7 +448,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const uint lightIndex = min((uint)floor(PARAM_DL_LIGHT_COUNT * lu0), (uint)(PARAM_DL_LIGHT_COUNT - 1));
 
 			lightRadiance = TriangleLight_Illuminate(
-					&triLightDefs[lightIndex], VLOAD3F(&bsdf->hitPoint.p.x),
+					&triLightDefs[lightIndex],  &task->directLightState.tmpHitPoint,
+					VLOAD3F(&bsdf->hitPoint.p.x),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
