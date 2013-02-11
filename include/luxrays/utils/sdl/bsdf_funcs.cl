@@ -102,7 +102,7 @@ void BSDF_Init(
 	const uint normalTexIndex = mat->normalTexIndex;
 	if (normalTexIndex != NULL_INDEX) {
 		// Apply normal mapping
-		const float3 color = Texture_GetColorValue(&texs[normalTexIndex], hitPointUV
+		const float3 color = Texture_GetColorValue(&texs[normalTexIndex], &bsdf->hitPoint
 			TEXTURES_PARAM);
 		const float3 xyz = 2.f * color - 1.f;
 
@@ -121,19 +121,22 @@ void BSDF_Init(
 	if (bumpTexIndex != NULL_INDEX) {
 		// Apply bump mapping
 		__global Texture *tex = &texs[bumpTexIndex];
-		const float2 dudv = Texture_GetDuDv(tex
+		const float2 dudv = Texture_GetDuDv(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
-		const float b0 = Texture_GetGreyValue(tex, hitPointUV
+		const float b0 = Texture_GetGreyValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
-		const float2 uvdu = (float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1);
-		const float bu = Texture_GetGreyValue(tex, uvdu
+		VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
+		const float bu = Texture_GetGreyValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
-		const float2 uvdv = (float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1);
-		const float bv = Texture_GetGreyValue(tex, uvdv
+		VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
+		const float bv = Texture_GetGreyValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
+
+		// Restore uv value
+		VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
 
 		// bumpScale is a fixed scale factor to try to more closely match
 		// LuxRender bump mapping
