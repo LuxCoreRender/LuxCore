@@ -544,27 +544,37 @@ float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoin
 	float texValues[TEXTURE_STACK_SIZE];
 	uint texValuesSize = 0;
 
-	todoTex[todoTexSize++] = texture;
-	do {
-		if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
-			// Pop the a texture to do
-			__global Texture *tex = pendingTex[--pendingTexSize];
+	const uint subTexCount = Texture_AddSubTexture(texture, todoTex, &todoTexSize
+			TEXTURES_PARAM);
+	if (subTexCount == 0) {
+		// A fast path for evaluating non recursive textures
+		Texture_EvaluateGrey(texture, hitPoint, texValues, &texValuesSize
+			IMAGEMAPS_PARAM);
+	} else {
+		// Normal complex path for evaluating non recursive textures
+		pendingTex[pendingTexSize] = texture;
+		pendingSubTexCount[pendingTexSize++] = subTexCount;
+		do {
+			if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
+				// Pop the a texture to do
+				__global Texture *tex = pendingTex[--pendingTexSize];
 
-			Texture_EvaluateGrey(tex, hitPoint, texValues, &texValuesSize
-					IMAGEMAPS_PARAM);
-			continue;
-		}
+				Texture_EvaluateGrey(tex, hitPoint, texValues, &texValuesSize
+						IMAGEMAPS_PARAM);
+				continue;
+			}
 
-		if (todoTexSize > 0) {
-			// Pop the a texture to do
-			__global Texture *tex = todoTex[--todoTexSize];
+			if (todoTexSize > 0) {
+				// Pop the a texture to do
+				__global Texture *tex = todoTex[--todoTexSize];
 
-			// Add this texture to the list of pending one
-			pendingTex[pendingTexSize] = tex;
-			pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
-					TEXTURES_PARAM);
-		}
-	} while ((todoTexSize > 0) || (pendingTexSize > 0));
+				// Add this texture to the list of pending one
+				pendingTex[pendingTexSize] = tex;
+				pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+						TEXTURES_PARAM);
+			}
+		} while ((todoTexSize > 0) || (pendingTexSize > 0));
+	}
 
 	return texValues[0];
 }
@@ -625,27 +635,37 @@ float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPo
 	float3 texValues[TEXTURE_STACK_SIZE];
 	uint texValuesSize = 0;
 
-	todoTex[todoTexSize++] = texture;
-	do {
-		if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
-			// Pop the a texture to do
-			__global Texture *tex = pendingTex[--pendingTexSize];
+	const uint subTexCount = Texture_AddSubTexture(texture, todoTex, &todoTexSize
+			TEXTURES_PARAM);
+	if (subTexCount == 0) {
+		// A fast path for evaluating non recursive textures
+		Texture_EvaluateColor(texture, hitPoint, texValues, &texValuesSize
+			IMAGEMAPS_PARAM);
+	} else {
+		// Normal complex path for evaluating non recursive textures
+		pendingTex[pendingTexSize] = texture;
+		pendingSubTexCount[pendingTexSize++] = subTexCount;
+		do {
+			if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
+				// Pop the a texture to do
+				__global Texture *tex = pendingTex[--pendingTexSize];
 
-			Texture_EvaluateColor(tex, hitPoint, texValues, &texValuesSize
-					IMAGEMAPS_PARAM);
-			continue;
-		}
+				Texture_EvaluateColor(tex, hitPoint, texValues, &texValuesSize
+						IMAGEMAPS_PARAM);
+				continue;
+			}
 
-		if (todoTexSize > 0) {
-			// Pop the a texture to do
-			__global Texture *tex = todoTex[--todoTexSize];
+			if (todoTexSize > 0) {
+				// Pop the a texture to do
+				__global Texture *tex = todoTex[--todoTexSize];
 
-			// Add this texture to the list of pending one
-			pendingTex[pendingTexSize] = tex;
-			pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
-					TEXTURES_PARAM);
-		}
-	} while ((todoTexSize > 0) || (pendingTexSize > 0));
+				// Add this texture to the list of pending one
+				pendingTex[pendingTexSize] = tex;
+				pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+						TEXTURES_PARAM);
+			}
+		} while ((todoTexSize > 0) || (pendingTexSize > 0));
+	}
 
 	return texValues[0];
 }
@@ -705,27 +725,37 @@ float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
 	float2 texValues[TEXTURE_STACK_SIZE];
 	uint texValuesSize = 0;
 
-	todoTex[todoTexSize++] = texture;
-	do {
-		if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
-			// Pop the a texture to do
-			__global Texture *tex = pendingTex[--pendingTexSize];
+	const uint subTexCount = Texture_AddSubTexture(texture, todoTex, &todoTexSize
+			TEXTURES_PARAM);
+	if (subTexCount == 0) {
+		// A fast path for evaluating non recursive textures
+		Texture_EvaluateDuDv(texture, hitPoint, texValues, &texValuesSize
+			IMAGEMAPS_PARAM);
+	} else {
+		// Normal complex path for evaluating non recursive textures
+		pendingTex[pendingTexSize] = texture;
+		pendingSubTexCount[pendingTexSize++] = subTexCount;
+		do {
+			if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
+				// Pop the a texture to do
+				__global Texture *tex = pendingTex[--pendingTexSize];
 
 			Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
-					IMAGEMAPS_PARAM);
-			continue;
-		}
+						IMAGEMAPS_PARAM);
+				continue;
+			}
 
-		if (todoTexSize > 0) {
-			// Pop the a texture to do
-			__global Texture *tex = todoTex[--todoTexSize];
+			if (todoTexSize > 0) {
+				// Pop the a texture to do
+				__global Texture *tex = todoTex[--todoTexSize];
 
-			// Add this texture to the list of pending one
-			pendingTex[pendingTexSize] = tex;
-			pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
-					TEXTURES_PARAM);
-		}
-	} while ((todoTexSize > 0) || (pendingTexSize > 0));
+				// Add this texture to the list of pending one
+				pendingTex[pendingTexSize] = tex;
+				pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+						TEXTURES_PARAM);
+			}
+		} while ((todoTexSize > 0) || (pendingTexSize > 0));
+	}
 
 	return texValues[0];
 }
