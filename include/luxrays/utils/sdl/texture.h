@@ -326,8 +326,8 @@ private:
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMap* im, const UVMapping &mp, const float g);
-	virtual ~ImageMapTexture() { }
+	ImageMapTexture(const ImageMap* im, const TextureMapping *mp, const float g);
+	virtual ~ImageMapTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetGreyValue(const HitPoint &hitPoint) const;
@@ -337,14 +337,14 @@ public:
 	virtual UV GetDuDv() const { return DuDv; }
 
 	const ImageMap *GetImageMap() const { return imgMap; }
-	const UVMapping &GetUVMapping() const { return mapping; }
+	const TextureMapping *GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const ImageMap *imgMap;
-	const UVMapping mapping;
+	const TextureMapping *mapping;
 	float gain;
 	UV DuDv;
 };
@@ -446,8 +446,8 @@ private:
 
 class CheckerBoard2DTexture : public Texture {
 public:
-	CheckerBoard2DTexture(const UVMapping &mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
-	virtual ~CheckerBoard2DTexture() { }
+	CheckerBoard2DTexture(const TextureMapping *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	virtual ~CheckerBoard2DTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return CHECKERBOARD2D; }
 	virtual float GetGreyValue(const HitPoint &hitPoint) const;
@@ -463,14 +463,14 @@ public:
 		tex2->AddReferencedTextures(referencedTexs);
 	}
 
-	const UVMapping &GetUVMapping() const { return mapping; }
+	const TextureMapping *GetTextureMapping() const { return mapping; }
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const UVMapping mapping;
+	const TextureMapping *mapping;
 	const Texture *tex1;
 	const Texture *tex2;
 };
@@ -510,9 +510,9 @@ private:
 
 class FBMTexture : public Texture {
 public:
-	FBMTexture(const GlobalMapping3D &map, const int octs, const float omg) :
-		mapping(map), octaves(octs), omega(omg) { }
-	virtual ~FBMTexture() { }
+	FBMTexture(const TextureMapping *mp, const int octs, const float omg) :
+		mapping(mp), octaves(octs), omega(omg) { }
+	virtual ~FBMTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return FBM_TEX; }
 	virtual float GetGreyValue(const HitPoint &hitPoint) const;
@@ -521,14 +521,14 @@ public:
 
 	virtual UV GetDuDv() const;
 
-	const GlobalMapping3D &GetGlobalMapping3D() const { return mapping; }
+	const TextureMapping *GetTextureMapping() const { return mapping; }
 	int GetOctaves() const { return octaves; }
 	float GetOmega() const { return omega; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const GlobalMapping3D mapping;
+	const TextureMapping *mapping;
 	const int octaves;
 	const float omega;
 };

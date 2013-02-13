@@ -22,6 +22,8 @@
 #ifndef _LUXRAYS_SDL_MAPPING_H
 #define	_LUXRAYS_SDL_MAPPING_H
 
+#include <string>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
@@ -35,25 +37,43 @@ namespace ocl {
 
 namespace sdl {
 
+class TextureMapping {
+public:
+	TextureMapping() { }
+	virtual ~TextureMapping() { }
+
+	virtual UV Map(const UV &uv) const = 0;
+	virtual Point Map(const Point &p) const = 0;
+
+	virtual Properties ToProperties(const std::string &name) const = 0;
+};
+
 //------------------------------------------------------------------------------
 // UVMapping
 //------------------------------------------------------------------------------
 
-class UVMapping {
+class UVMapping : public TextureMapping {
 public:
 	UVMapping(const float uscale, const float vscale,
 			const float udelta, const float vdelta) : uScale(uscale),
 			vScale(vscale), uDelta(udelta), vDelta(vdelta) { }
 	virtual ~UVMapping() { }
 
-	UV Map(const UV &uv) const {
+	virtual UV Map(const UV &uv) const {
 		return UV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
 	}
 
-	float GetUScale() const { return uScale; }
-	float GetVScale() const { return vScale; }
-	float GetUDelta() const { return uDelta; }
-	float GetVDelta() const { return vDelta; }
+	virtual Point Map(const Point &p) const {
+		return Point(p.x * uScale + uDelta, p.x * vScale + vDelta, 0.f);
+	}
+
+	virtual Properties ToProperties(const std::string &name) const {
+		Properties props;
+		props.SetString(name + ".uvscale", ToString(uScale) + " " + ToString(vScale));
+		props.SetString(name + ".uvdelta", ToString(uDelta) + " " + ToString(vDelta));
+
+		return props;
+	}
 
 	float uScale, vScale, uDelta, vDelta;
 };
@@ -62,16 +82,21 @@ public:
 // GlobalMapping3D
 //------------------------------------------------------------------------------
 
-class GlobalMapping3D {
+class GlobalMapping3D : public TextureMapping {
 public:
 	GlobalMapping3D(const Transform &w2l) : worldToLocal(w2l) { }
 	virtual ~GlobalMapping3D() { }
 
-	Point Map(const Point &p) const {
+	virtual UV Map(const UV &uv) const {
+		const Point p = worldToLocal * Point(uv.u, uv.v, 0.f);
+		return UV(p.x, p.y);
+	}
+
+	virtual Point Map(const Point &p) const {
 		return worldToLocal * p;
 	}
 
-	Properties ToProperties(const std::string &name) const {
+	virtual Properties ToProperties(const std::string &name) const {
 		Properties props;
 		props.SetString(name + ".transformation", ToString(worldToLocal.mInv));
 
