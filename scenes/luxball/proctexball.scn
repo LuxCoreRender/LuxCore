@@ -1,9 +1,13 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
+scene.textures.subtex2.type = fbm
+scene.textures.subtex2.octaves = 8
+scene.textures.subtex2.omega = 0.5
+scene.textures.subtex2.transformation = 0.02 1.0 0.0 0.0  0.0 0.02 0.0 0.0  0.0 0.0 0.02 0.0  0.0 0.0 0.0 1.0
 scene.textures.subtex1.type = checkerboard2d
 scene.textures.subtex1.texture1 = 0.7 0.0 0.0
-scene.textures.subtex1.texture2 = 0.7 0.7 0.0
+scene.textures.subtex1.texture2 = 0.7 0.7 0.7
 scene.textures.subtex1.uvscale = 128 -128
 scene.textures.checktex.type = checkerboard2d
 scene.textures.checktex.texture1 = 1.0
@@ -11,11 +15,16 @@ scene.textures.checktex.texture2 = 0.0
 scene.textures.checktex.uvscale = 16 -16
 scene.textures.tex.type = mix
 scene.textures.tex.amount = checktex
-scene.textures.tex.texture1 = 0.7 0.0 0.0
+scene.textures.tex.texture1 = subtex2
 scene.textures.tex.texture2 = subtex1
 ################################################################################
-scene.materials.shell.type = matte
+#scene.materials.shell.type = matte
+#scene.materials.shell.kd = tex
+scene.materials.shell.type = glossy2
 scene.materials.shell.kd = tex
+scene.materials.shell.ks = 0.1 0.1 0.1
+scene.materials.shell.uroughness = 0.05
+scene.materials.shell.vroughness = 0.05
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

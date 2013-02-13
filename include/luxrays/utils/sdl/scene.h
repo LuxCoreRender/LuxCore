@@ -130,10 +130,13 @@ public:
 
 protected:
 	static std::vector<std::string> GetStringParameters(const Properties &prop,
-		const std::string &paramName, const unsigned int paramCount,
+		const std::string &paramName, const u_int paramCount,
+		const std::string &defaultValue);
+	static std::vector<int> GetIntParameters(const Properties &prop,
+		const std::string &paramName, const u_int paramCount,
 		const std::string &defaultValue);
 	static std::vector<float> GetFloatParameters(const Properties &prop,
-		const std::string &paramName, const unsigned int paramCount,
+		const std::string &paramName, const u_int paramCount,
 		const std::string &defaultValue);
 
 	Texture *GetTexture(const std::string &name);
