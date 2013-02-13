@@ -37,10 +37,16 @@ namespace ocl {
 
 namespace sdl {
 
+typedef enum {
+	UVMAPPING, GLOBALMAPPING3D
+} TextureMappingType;
+
 class TextureMapping {
 public:
 	TextureMapping() { }
 	virtual ~TextureMapping() { }
+
+	virtual TextureMappingType GetType() const = 0;
 
 	virtual UV Map(const UV &uv) const = 0;
 	virtual Point Map(const Point &p) const = 0;
@@ -58,6 +64,8 @@ public:
 			const float udelta, const float vdelta) : uScale(uscale),
 			vScale(vscale), uDelta(udelta), vDelta(vdelta) { }
 	virtual ~UVMapping() { }
+
+	virtual TextureMappingType GetType() const { return UVMAPPING; }
 
 	virtual UV Map(const UV &uv) const {
 		return UV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
@@ -86,6 +94,8 @@ class GlobalMapping3D : public TextureMapping {
 public:
 	GlobalMapping3D(const Transform &w2l) : worldToLocal(w2l) { }
 	virtual ~GlobalMapping3D() { }
+
+	virtual TextureMappingType GetType() const { return GLOBALMAPPING3D; }
 
 	virtual UV Map(const UV &uv) const {
 		const Point p = worldToLocal * Point(uv.u, uv.v, 0.f);

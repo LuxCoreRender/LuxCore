@@ -21,9 +21,48 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-float2 UVMapping_Map(__global UVMapping *mapping, const float2 uv) {
-	const float2 scale = VLOAD2F(&mapping->uScale);
-	const float2 delta = VLOAD2F(&mapping->uDelta);
+float2 UVMapping_Map2D(__global TextureMapping *mapping, const float2 uv) {
+	const float2 scale = VLOAD2F(&mapping->uvMapping.uScale);
+	const float2 delta = VLOAD2F(&mapping->uvMapping.uDelta);
 	
 	return uv * scale + delta;
+}
+
+float3 UVMapping_Map3D(__global TextureMapping *mapping, const float3 p) {
+	const float2 scale = VLOAD2F(&mapping->uvMapping.uScale);
+	const float2 delta = VLOAD2F(&mapping->uvMapping.uDelta);
+	const float2 mp = (float2)(p.x, p.y) * scale + delta;
+
+	return (float3)(mp.xy, 0.f);
+}
+
+float2 GlobalMapping3D_Map2D(__global TextureMapping *mapping, const float2 uv) {
+	const float3 p = Transform_ApplyPoint(&mapping->globalMapping3D.worldToLocal, (float3)(uv.xy, 0.f));
+	return p.xy;
+}
+
+float3 GlobalMapping3D_Map3D(__global TextureMapping *mapping, const float3 p) {
+	return Transform_ApplyPoint(&mapping->globalMapping3D.worldToLocal, p);
+}
+
+float2 Mapping_Map2D(__global TextureMapping *mapping, const float2 uv) {
+	switch (mapping->type) {
+		case UVMAPPING:
+			return UVMapping_Map2D(mapping, uv);
+		case GLOBALMAPPING3D:
+			return GlobalMapping3D_Map2D(mapping, uv);
+		default:
+			return 0.f;
+	}
+}
+
+float3 Mapping_Map3D(__global TextureMapping *mapping, const float3 p) {
+	switch (mapping->type) {
+		case UVMAPPING:
+			return UVMapping_Map3D(mapping, p);
+		case GLOBALMAPPING3D:
+			return GlobalMapping3D_Map3D(mapping, p);
+		default:
+			return 0.f;
+	}
 }
