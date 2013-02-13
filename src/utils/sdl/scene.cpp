@@ -206,14 +206,26 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 
 std::vector<std::string> Scene::GetStringParameters(const Properties &prop, const std::string &paramName,
 		const u_int paramCount, const std::string &defaultValue) {
-	const std::vector<std::string> vf = prop.GetStringVector(paramName, defaultValue);
-	if (vf.size() != paramCount) {
+	const std::vector<std::string> vs = prop.GetStringVector(paramName, defaultValue);
+	if (vs.size() != paramCount) {
 		std::stringstream ss;
 		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
 		throw std::runtime_error(ss.str());
 	}
 
-	return vf;
+	return vs;
+}
+
+std::vector<int> Scene::GetIntParameters(const Properties &prop, const std::string &paramName,
+		const u_int paramCount, const std::string &defaultValue) {
+	const std::vector<int> vi = prop.GetIntVector(paramName, defaultValue);
+	if (vi.size() != paramCount) {
+		std::stringstream ss;
+		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
+		throw std::runtime_error(ss.str());
+	}
+
+	return vi;
 }
 
 std::vector<float> Scene::GetFloatParameters(const Properties &prop, const std::string &paramName,
@@ -685,6 +697,19 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new MixTexture(amtTex, tex1, tex2);
+	} else if (texType == "fbm") {
+		const std::vector<float> vf = GetFloatParameters(props, propName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const Matrix4x4 mat(
+				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		const Transform trans(mat);
+
+		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
+		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
+
+		return new FBMTexture(GlobalMapping3D(Inverse(trans)), octaves, omega);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

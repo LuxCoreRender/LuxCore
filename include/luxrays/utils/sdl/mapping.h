@@ -24,6 +24,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
+#include "luxrays/core/geometry/transform.h"
 
 namespace luxrays {
 
@@ -55,6 +56,29 @@ public:
 	float GetVDelta() const { return vDelta; }
 
 	float uScale, vScale, uDelta, vDelta;
+};
+
+//------------------------------------------------------------------------------
+// GlobalMapping3D
+//------------------------------------------------------------------------------
+
+class GlobalMapping3D {
+public:
+	GlobalMapping3D(const Transform &w2l) : worldToLocal(w2l) { }
+	virtual ~GlobalMapping3D() { }
+
+	Point Map(const Point &p) const {
+		return worldToLocal * p;
+	}
+
+	Properties ToProperties(const std::string &name) const {
+		Properties props;
+		props.SetString(name + ".transformation", ToString(worldToLocal.mInv));
+
+		return props;
+	}
+
+	Transform worldToLocal;
 };
 
 } }

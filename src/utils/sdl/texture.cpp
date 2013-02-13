@@ -35,6 +35,108 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 
 //------------------------------------------------------------------------------
+// Texture utility functions
+//------------------------------------------------------------------------------
+
+// Perlin Noise Data
+#define NOISE_PERM_SIZE 256
+static int NoisePerm[2 * NOISE_PERM_SIZE] = {
+	151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96,
+	53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142,
+	// Rest of noise permutation table
+	8, 99, 37, 240, 21, 10, 23,
+	190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
+	88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
+	77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244,
+	102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196,
+	135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123,
+	5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42,
+	223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+	129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
+	251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
+	49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
+	138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
+	151, 160, 137, 91, 90, 15,
+	131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
+	190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
+	88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
+	77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244,
+	102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196,
+	135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123,
+	5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42,
+	223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+	129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
+	251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
+	49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
+	138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
+};
+
+static float Grad(int x, int y, int z, float dx, float dy, float dz) {
+	const int h = NoisePerm[NoisePerm[NoisePerm[x] + y] + z] & 15;
+	const float u = h < 8 || h == 12 || h == 13 ? dx : dy;
+	const float v = h < 4 || h == 12 || h == 13 ? dy : dz;
+	return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+}
+
+static float NoiseWeight(float t) {
+	const float t3 = t * t * t;
+	const float t4 = t3 * t;
+	return 6.f * t4 * t - 15.f * t4 + 10.f * t3;
+}
+
+static float Noise(float x, float y, float z) {
+	// Compute noise cell coordinates and offsets
+	int ix = Floor2Int(x);
+	int iy = Floor2Int(y);
+	int iz = Floor2Int(z);
+	const float dx = x - ix, dy = y - iy, dz = z - iz;
+	// Compute gradient weights
+	ix &= (NOISE_PERM_SIZE - 1);
+	iy &= (NOISE_PERM_SIZE - 1);
+	iz &= (NOISE_PERM_SIZE - 1);
+	const float w000 = Grad(ix, iy, iz, dx, dy, dz);
+	const float w100 = Grad(ix + 1, iy, iz, dx - 1, dy, dz);
+	const float w010 = Grad(ix, iy + 1, iz, dx, dy - 1, dz);
+	const float w110 = Grad(ix + 1, iy + 1, iz, dx - 1, dy - 1, dz);
+	const float w001 = Grad(ix, iy, iz + 1, dx, dy, dz - 1);
+	const float w101 = Grad(ix + 1, iy, iz + 1, dx - 1, dy, dz - 1);
+	const float w011 = Grad(ix, iy + 1, iz + 1, dx, dy - 1, dz - 1);
+	const float w111 = Grad(ix + 1, iy + 1, iz + 1, dx - 1, dy - 1, dz - 1);
+	// Compute trilinear interpolation of weights
+	const float wx = NoiseWeight(dx);
+	const float wy = NoiseWeight(dy);
+	const float wz = NoiseWeight(dz);
+	const float x00 = Lerp(wx, w000, w100);
+	const float x10 = Lerp(wx, w010, w110);
+	const float x01 = Lerp(wx, w001, w101);
+	const float x11 = Lerp(wx, w011, w111);
+	const float y0 = Lerp(wy, x00, x10);
+	const float y1 = Lerp(wy, x01, x11);
+	return Lerp(wz, y0, y1);
+}
+
+static float Noise(const Point &P) {
+	return Noise(P.x, P.y, P.z);
+}
+
+static float FBm(const Point &P, const float omega, const int maxOctaves) {
+	// Compute number of octaves for anti-aliased FBm
+	const float foctaves = Min(static_cast<float>(maxOctaves), 1.f);
+	const int octaves = Floor2Int(foctaves);
+	// Compute sum of octaves of noise for FBm
+	float sum = 0.f, lambda = 1.f, o = 1.f;
+	for (int i = 0; i < octaves; ++i) {
+		sum += o * Noise(lambda * P);
+		lambda *= 1.99f;
+		o *= omega;
+	}
+	const float partialOctave = foctaves - static_cast<float>(octaves);
+	sum += o * SmoothStep(.3f, .7f, partialOctave) *
+			Noise(lambda * P);
+	return sum;
+}
+
+//------------------------------------------------------------------------------
 // TextureDefinitions
 //------------------------------------------------------------------------------
 
@@ -530,7 +632,7 @@ float ScaleTexture::GetAlphaValue(const HitPoint &hitPoint) const {
 	return tex1->GetAlphaValue(hitPoint) * tex2->GetAlphaValue(hitPoint);
 }
 
-const UV ScaleTexture::GetDuDv() const {
+UV ScaleTexture::GetDuDv() const {
 	const UV uv1 = tex1->GetDuDv();
 	const UV uv2 = tex2->GetDuDv();
 
@@ -592,7 +694,7 @@ float FresnelApproxNTexture::GetAlphaValue(const HitPoint &hitPoint) const {
 	return tex->GetAlphaValue(hitPoint);
 }
 
-const UV FresnelApproxNTexture::GetDuDv() const {
+UV FresnelApproxNTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
 
@@ -608,7 +710,7 @@ float FresnelApproxKTexture::GetAlphaValue(const HitPoint &hitPoint) const {
 	return tex->GetAlphaValue(hitPoint);
 }
 
-const UV FresnelApproxKTexture::GetDuDv() const {
+UV FresnelApproxKTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
 
@@ -660,7 +762,7 @@ float CheckerBoard2DTexture::GetAlphaValue(const HitPoint &hitPoint) const {
 		return tex2->GetAlphaValue(hitPoint);
 }
 
-const UV CheckerBoard2DTexture::GetDuDv() const {
+UV CheckerBoard2DTexture::GetDuDv() const {
 	const UV uv1 = tex1->GetDuDv();
 	const UV uv2 = tex2->GetDuDv();
 
@@ -708,7 +810,7 @@ float MixTexture::GetAlphaValue(const HitPoint &hitPoint) const {
 	return Lerp(amt, value1, value2);
 }
 
-const UV MixTexture::GetDuDv() const {
+UV MixTexture::GetDuDv() const {
 	const UV uv1 = tex1->GetDuDv();
 	const UV uv2 = tex2->GetDuDv();
 
@@ -723,6 +825,41 @@ Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.SetString("scene.textures." + name + ".amount", amount->GetName());
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
 	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// FBM texture
+//------------------------------------------------------------------------------
+
+float FBMTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	const Point p(mapping.Map(hitPoint.p));
+	const float value = FBm(p, omega, octaves);
+	
+	return value;
+}
+
+Spectrum FBMTexture::GetColorValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetGreyValue(hitPoint));
+}
+
+float FBMTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	return GetGreyValue(hitPoint);
+}
+
+UV FBMTexture::GetDuDv() const {
+	return UV(0.001f, 0.001f);
+}
+
+Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "fbm");
+	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
+	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
+	props.Load(mapping.ToProperties("scene.textures." + name));
 
 	return props;
 }
