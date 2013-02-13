@@ -26,6 +26,7 @@
 #include <iostream>
 #include <fstream>
 
+#include "luxrays/utils/properties.h"
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/camera.h"
 #include "luxrays/utils/sdl/light.h"
@@ -33,7 +34,7 @@
 #include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/sdl/extmeshcache.h"
 #include "luxrays/utils/sdl/bsdf.h"
-#include "luxrays/utils/properties.h"
+#include "luxrays/utils/sdl/mapping.h"
 
 namespace luxrays { namespace sdl {
 
@@ -107,6 +108,7 @@ public:
 
 	//--------------------------------------------------------------------------
 
+	TextureMapping *CreateTextureMapping(const std::string &prefixName, const Properties &props);
 	Texture *CreateTexture(const std::string &texName, const Properties &props);
 	Material *CreateMaterial(const std::string &matName, const Properties &props);
 

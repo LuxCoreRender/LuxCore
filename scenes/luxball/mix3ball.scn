@@ -4,7 +4,7 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 scene.textures.tex.type = imagemap
 scene.textures.tex.file = scenes/luxball/lux.png
 scene.textures.tex.gain = 1.0
-scene.textures.tex.uvscale = 8 -8
+scene.textures.tex.mapping.uvscale = 8 -8
 ################################################################################
 scene.materials.mat1.type = matte
 scene.materials.mat1.kd = 0.65 0.0 0.0

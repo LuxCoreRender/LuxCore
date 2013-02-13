@@ -33,10 +33,10 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/dataset.h"
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/scene.h"
-#include "luxrays/core/intersectiondevice.h"
 
 using namespace luxrays;
 using namespace luxrays::sdl;
@@ -639,6 +639,28 @@ void Scene::RemoveUnusedTextures() {
 
 //------------------------------------------------------------------------------
 
+TextureMapping *Scene::CreateTextureMapping(const std::string &prefixName, const Properties &props) {
+	const std::string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping").at(0);
+
+	if (mapType == "uvmapping") {
+		const std::vector<float> uvScale = GetFloatParameters(props, prefixName + ".uvscale", 2, "1.0 1.0");
+		const std::vector<float> uvDelta = GetFloatParameters(props, prefixName + ".uvdelta", 2, "0.0 0.0");
+
+		return new UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1));
+	} else if (mapType == "globalmapping3d") {
+		const std::vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const Matrix4x4 mat(
+				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		const Transform trans(mat);
+
+		return new GlobalMapping3D(Inverse(trans));
+	} else
+		throw std::runtime_error("Unknown texture coordinate mapping type: " + mapType);
+}
+
 Texture *Scene::CreateTexture(const std::string &texName, const Properties &props) {
 	const std::string propName = "scene.textures." + texName;
 	const std::string texType = GetStringParameters(props, propName + ".type", 1, "imagemap").at(0);
@@ -650,11 +672,9 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 
 		const std::vector<float> gamma = GetFloatParameters(props, propName + ".gamma", 1, "2.2");
 		const std::vector<float> gain = GetFloatParameters(props, propName + ".gain", 1, "1.0");
-		const std::vector<float> uvScale = GetFloatParameters(props, propName + ".uvscale", 2, "1.0 1.0");
-		const std::vector<float> uvDelta = GetFloatParameters(props, propName + ".uvdelta", 2, "0.0 0.0");
 
 		ImageMap *im = imgMapCache.GetImageMap(vname.at(0), gamma.at(0));
-		return new ImageMapTexture(im, new UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), gain.at(0));
+		return new ImageMapTexture(im, CreateTextureMapping(propName + ".mapping", props), gain.at(0));
 	} else if (texType == "constfloat1") {
 		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 1, "1.0");
 		return new ConstFloatTexture(v.at(0));
@@ -684,10 +704,7 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
-		const std::vector<float> uvScale = GetFloatParameters(props, propName + ".uvscale", 2, "1.0 1.0");
-		const std::vector<float> uvDelta = GetFloatParameters(props, propName + ".uvdelta", 2, "0.0 0.0");
-
-		return new CheckerBoard2DTexture(new UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), tex1, tex2);
+		return new CheckerBoard2DTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
 		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "amount").at(0);
 		const Texture *amtTex = GetTexture(amtName);
@@ -698,18 +715,10 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 
 		return new MixTexture(amtTex, tex1, tex2);
 	} else if (texType == "fbm") {
-		const std::vector<float> vf = GetFloatParameters(props, propName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-		const Matrix4x4 mat(
-				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-		const Transform trans(mat);
-
 		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
 		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
 
-		return new FBMTexture(new GlobalMapping3D(Inverse(trans)), octaves, omega);
+		return new FBMTexture(CreateTextureMapping(propName + ".mapping", props), octaves, omega);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }
