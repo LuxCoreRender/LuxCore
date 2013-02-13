@@ -2,8 +2,8 @@ scene.camera.lookat = 5.951 -7.663 6.017 0.0 0.0 1.0
 ################################################################################
 scene.textures.imagemap.type = imagemap
 scene.textures.imagemap.file = scenes/simple-mat/image.png
-scene.textures.imagemap.uvscale = 2 2
-scene.textures.imagemap.uvdelta = 0.25 0.25
+scene.textures.imagemap.mapping.uvscale = 2 2
+scene.textures.imagemap.mapping.uvdelta = 0.25 0.25
 ################################################################################
 scene.materials.redmirror.type = mirror
 scene.materials.redmirror.kr = 0.75 0.0 0.0
