@@ -30,7 +30,7 @@ std::string KernelSource_light_types =
 "\n"
 "typedef struct {\n"
 "	Spectrum gain;\n"
-"	UVMapping mapping;\n"
+"	TextureMapping mapping;\n"
 "	unsigned int imageMapIndex;\n"
 "} InfiniteLight;\n"
 "\n"

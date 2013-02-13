@@ -53,7 +53,7 @@ float3 InfiniteLight_GetRadiance(
 		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F)),
 		SphericalTheta(-dir) * M_1_PI_F);
 
-	const float2 mapUV = UVMapping_Map(&infiniteLight->mapping, uv);
+	const float2 mapUV = Mapping_Map2D(&infiniteLight->mapping, uv);
 	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetColor(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,

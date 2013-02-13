@@ -45,7 +45,7 @@ typedef struct {
 } ImageMap;
 
 typedef struct {
-	UVMapping mapping;
+	TextureMapping mapping;
 	float gain, Du, Dv;
 
 	unsigned int imageMapIndex;
@@ -64,7 +64,7 @@ typedef struct {
 } FresnelApproxKTexParam;
 
 typedef struct {
-	UVMapping mapping;
+	TextureMapping mapping;
 	unsigned int tex1Index, tex2Index;
 } CheckerBoard2DParam;
 

@@ -488,6 +488,29 @@ void CompiledScene::CompileAreaLights() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Triangle area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
+void CompiledScene::CompileTextureMapping(luxrays::ocl::TextureMapping *mapping, const TextureMapping *m) {
+	switch (m->GetType()) {
+		case UVMAPPING: {
+			mapping->type = luxrays::ocl::UVMAPPING;
+			const UVMapping *gm = static_cast<const UVMapping *>(m);
+			mapping->uvMapping.uScale = gm->uScale;
+			mapping->uvMapping.vScale = gm->vScale;
+			mapping->uvMapping.uDelta = gm->uDelta;
+			mapping->uvMapping.vDelta = gm->vDelta;
+			break;
+		}
+		case GLOBALMAPPING3D: {
+			mapping->type = luxrays::ocl::GLOBALMAPPING3D;
+			const GlobalMapping3D *gm = static_cast<const GlobalMapping3D *>(m);
+			memcpy(&mapping->globalMapping3D.worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
+			memcpy(&mapping->globalMapping3D.worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			break;
+		}
+		default:
+			throw std::runtime_error("Unknown texture mapping: " + boost::lexical_cast<std::string>(m->GetType()));
+	}
+}
+
 void CompiledScene::CompileInfiniteLight() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
 
@@ -504,11 +527,7 @@ void CompiledScene::CompileInfiniteLight() {
 		infiniteLight = new luxrays::ocl::InfiniteLight();
 
 		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
-		infiniteLight->mapping.uScale = il->GetUVMapping()->uScale;
-		infiniteLight->mapping.vScale = il->GetUVMapping()->vScale;
-		infiniteLight->mapping.uDelta = il->GetUVMapping()->uDelta;
-		infiniteLight->mapping.vDelta = il->GetUVMapping()->vDelta;
-
+		CompileTextureMapping(&infiniteLight->mapping, il->GetUVMapping());
 		infiniteLight->imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->GetImageMap());
 	} else
 		infiniteLight = NULL;
@@ -611,11 +630,7 @@ void CompiledScene::CompileTextures() {
 				tex->type = luxrays::ocl::IMAGEMAP;
 				const ImageMap *im = imt->GetImageMap();
 				tex->imageMapTex.gain = imt->GetGain();
-				// TOFIX
-				tex->imageMapTex.mapping.uScale = ((const UVMapping *)imt->GetTextureMapping())->uScale;
-				tex->imageMapTex.mapping.vScale = ((const UVMapping *)imt->GetTextureMapping())->vScale;
-				tex->imageMapTex.mapping.uDelta = ((const UVMapping *)imt->GetTextureMapping())->uDelta;
-				tex->imageMapTex.mapping.vDelta = ((const UVMapping *)imt->GetTextureMapping())->vDelta;
+				CompileTextureMapping(&tex->imageMapTex.mapping, imt->GetTextureMapping());
 				tex->imageMapTex.Du = imt->GetDuDv().u;
 				tex->imageMapTex.Dv = imt->GetDuDv().v;
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
@@ -652,12 +667,7 @@ void CompiledScene::CompileTextures() {
 				CheckerBoard2DTexture *cb = static_cast<CheckerBoard2DTexture *>(t);
 
 				tex->type = luxrays::ocl::CHECKERBOARD2D;
-				// TOFIX
-				tex->checkerBoard2D.mapping.uScale = ((const UVMapping *)cb->GetTextureMapping())->uScale;
-				tex->checkerBoard2D.mapping.vScale = ((const UVMapping *)cb->GetTextureMapping())->vScale;
-				tex->checkerBoard2D.mapping.uDelta = ((const UVMapping *)cb->GetTextureMapping())->uDelta;
-				tex->checkerBoard2D.mapping.vDelta = ((const UVMapping *)cb->GetTextureMapping())->vDelta;
-
+				CompileTextureMapping(&tex->checkerBoard2D.mapping, cb->GetTextureMapping());
 				const Texture *tex1 = cb->GetTexture1();
 				tex->checkerBoard2D.tex1Index = scene->texDefs.GetTextureIndex(tex1);
 

@@ -21,6 +21,22 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+typedef enum {
+	UVMAPPING, GLOBALMAPPING3D
+} TextureMappingType;
+
 typedef struct {
     float uScale, vScale, uDelta, vDelta;
-} UVMapping;
+} UVMappingParam;
+
+typedef struct {
+    Transform worldToLocal;
+} GlobalMapping3DParam;
+
+typedef struct {
+	TextureMappingType type;
+	union {
+		UVMappingParam uvMapping;
+		GlobalMapping3DParam globalMapping3D;
+	};
+} TextureMapping;

@@ -23,7 +23,6 @@
 
 void GenerateCameraRay(
 		__global Camera *camera,
-		__global Sample *sample,
 		__global Ray *ray,
 		const float scrSampleX, const float scrSampleY
 #if defined(PARAM_CAMERA_HAS_DOF)
@@ -90,10 +89,9 @@ void GenerateCameraPath(
 		) {
 	__global Sample *sample = &task->sample;
 
-	GenerateCameraRay(camera, sample, ray,
-			scrSampleX, scrSampleY
+	GenerateCameraRay(camera, ray, scrSampleX, scrSampleY
 #if defined(PARAM_CAMERA_HAS_DOF)
-		, dofSampleX, dofSampleY
+			, dofSampleX, dofSampleY
 #endif
 			);
 

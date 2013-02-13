@@ -248,7 +248,7 @@ void ImageMapTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *
 		imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = UVMapping_Map(&texture->imageMapTex.mapping, uv);
+	const float2 mapUV = Mapping_Map2D(&texture->imageMapTex.mapping, uv);
 
 	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetGrey(
 			pixels,
@@ -279,7 +279,7 @@ void ImageMapTexture_EvaluateColor(__global Texture *texture, __global HitPoint 
 		imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = UVMapping_Map(&texture->imageMapTex.mapping, uv);
+	const float2 mapUV = Mapping_Map2D(&texture->imageMapTex.mapping, uv);
 
 	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetColor(
 			pixels,
@@ -414,7 +414,7 @@ void CheckerBoard2DTexture_EvaluateGrey(__global Texture *texture, __global HitP
 	const float value2 = texValues[--(*texValuesSize)];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = UVMapping_Map(&texture->checkerBoard2D.mapping, uv);
+	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
 	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
@@ -424,7 +424,7 @@ void  CheckerBoard2DTexture_EvaluateColor(__global Texture *texture, __global Hi
 	const float3 value2 = texValues[--(*texValuesSize)];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = UVMapping_Map(&texture->checkerBoard2D.mapping, uv);
+	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
 	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
@@ -434,7 +434,7 @@ void  CheckerBoard2DTexture_EvaluateDuDv(__global Texture *texture, __global Hit
 	const float2 value2 = texValues[--(*texValuesSize)];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = UVMapping_Map(&texture->checkerBoard2D.mapping, uv);
+	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
 	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
@@ -529,6 +529,9 @@ void Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint
 		case CHECKERBOARD2D:
 			return CheckerBoard2DTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
 #endif
+		default:
+			// Do nothing
+			;
 	}
 }
 
@@ -620,6 +623,9 @@ void Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoin
 		case CHECKERBOARD2D:
 			return CheckerBoard2DTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
 #endif
+		default:
+			// Do nothing
+			;
 	}
 }
 
@@ -710,6 +716,9 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 		case CHECKERBOARD2D:
 			return CheckerBoard2DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 #endif
+		default:
+			// Do nothing
+			;
 	}
 }
 

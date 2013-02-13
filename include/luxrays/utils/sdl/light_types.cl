@@ -27,7 +27,7 @@ typedef enum {
 
 typedef struct {
 	Spectrum gain;
-	UVMapping mapping;
+	TextureMapping mapping;
 	unsigned int imageMapIndex;
 } InfiniteLight;
 
