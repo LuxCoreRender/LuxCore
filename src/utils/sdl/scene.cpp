@@ -676,6 +676,15 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::vector<float> uvDelta = GetFloatParameters(props, propName + ".uvdelta", 2, "0.0 0.0");
 
 		return new CheckerBoard2DTexture(UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), tex1, tex2);
+	} else if (texType == "mix") {
+		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "amount").at(0);
+		const Texture *amtTex = GetTexture(amtName);
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const Texture *tex1 = GetTexture(tex1Name);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const Texture *tex2 = GetTexture(tex2Name);
+
+		return new MixTexture(amtTex, tex1, tex2);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

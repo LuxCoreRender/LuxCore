@@ -50,7 +50,7 @@ namespace sdl {
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, CHECKERBOARD2D
+	FRESNEL_APPROX_K, CHECKERBOARD2D, MIX_TEX
 } TextureType;
 
 struct HitPointStruct;
@@ -471,6 +471,35 @@ public:
 
 private:
 	const UVMapping mapping;
+	const Texture *tex1;
+	const Texture *tex2;
+};
+
+//------------------------------------------------------------------------------
+// Mix texture
+//------------------------------------------------------------------------------
+
+class MixTexture : public Texture {
+public:
+	MixTexture(const Texture *amnt, const Texture *t1, const Texture *t2) :
+		amount(amnt), tex1(t1), tex2(t2) { }
+	virtual ~MixTexture() { }
+
+	virtual TextureType GetType() const { return MIX_TEX; }
+	virtual float GetGreyValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
+	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+
+	virtual const UV GetDuDv() const;
+
+	const Texture *GetAmountTexture() const { return amount; }
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const Texture *amount;
 	const Texture *tex1;
 	const Texture *tex2;
 };

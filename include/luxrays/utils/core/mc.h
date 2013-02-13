@@ -30,7 +30,7 @@
 namespace luxrays { namespace sdl {
 
 template<class T> inline T Lerp(float t, T v1, T v2) {
-	return (1.f - t) * v1 + t * v2;
+	return v1 + t * (v2 - v1);
 }
 
 inline void LatLongMappingMap(float s, float t, Vector *wh, float *pdf) {
