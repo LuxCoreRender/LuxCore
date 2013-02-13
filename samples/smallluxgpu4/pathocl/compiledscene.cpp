@@ -611,10 +611,11 @@ void CompiledScene::CompileTextures() {
 				tex->type = luxrays::ocl::IMAGEMAP;
 				const ImageMap *im = imt->GetImageMap();
 				tex->imageMapTex.gain = imt->GetGain();
-				tex->imageMapTex.mapping.uScale = imt->GetUVMapping().uScale;
-				tex->imageMapTex.mapping.vScale = imt->GetUVMapping().vScale;
-				tex->imageMapTex.mapping.uDelta = imt->GetUVMapping().uDelta;
-				tex->imageMapTex.mapping.vDelta = imt->GetUVMapping().vDelta;
+				// TOFIX
+				tex->imageMapTex.mapping.uScale = ((const UVMapping *)imt->GetTextureMapping())->uScale;
+				tex->imageMapTex.mapping.vScale = ((const UVMapping *)imt->GetTextureMapping())->vScale;
+				tex->imageMapTex.mapping.uDelta = ((const UVMapping *)imt->GetTextureMapping())->uDelta;
+				tex->imageMapTex.mapping.vDelta = ((const UVMapping *)imt->GetTextureMapping())->vDelta;
 				tex->imageMapTex.Du = imt->GetDuDv().u;
 				tex->imageMapTex.Dv = imt->GetDuDv().v;
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
@@ -651,10 +652,11 @@ void CompiledScene::CompileTextures() {
 				CheckerBoard2DTexture *cb = static_cast<CheckerBoard2DTexture *>(t);
 
 				tex->type = luxrays::ocl::CHECKERBOARD2D;
-				tex->checkerBoard2D.mapping.uScale = cb->GetUVMapping().uScale;
-				tex->checkerBoard2D.mapping.vScale = cb->GetUVMapping().vScale;
-				tex->checkerBoard2D.mapping.uDelta = cb->GetUVMapping().uDelta;
-				tex->checkerBoard2D.mapping.vDelta = cb->GetUVMapping().vDelta;
+				// TOFIX
+				tex->checkerBoard2D.mapping.uScale = ((const UVMapping *)cb->GetTextureMapping())->uScale;
+				tex->checkerBoard2D.mapping.vScale = ((const UVMapping *)cb->GetTextureMapping())->vScale;
+				tex->checkerBoard2D.mapping.uDelta = ((const UVMapping *)cb->GetTextureMapping())->uDelta;
+				tex->checkerBoard2D.mapping.vDelta = ((const UVMapping *)cb->GetTextureMapping())->vDelta;
 
 				const Texture *tex1 = cb->GetTexture1();
 				tex->checkerBoard2D.tex1Index = scene->texDefs.GetTextureIndex(tex1);

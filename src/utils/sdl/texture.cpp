@@ -583,22 +583,26 @@ Properties ConstFloat4Texture::ToProperties(const ImageMapCache &imgMapCache) co
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-ImageMapTexture::ImageMapTexture(const ImageMap * im, const UVMapping &mp, const float g) :
+ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping *mp, const float g) :
 	imgMap(im), mapping(mp), gain(g) {
-	DuDv.u = 1.f / (mapping.uScale * imgMap->GetWidth());
-	DuDv.v = 1.f / (mapping.vScale * imgMap->GetHeight());
+	const UV o = mapping->Map(UV(0.f, 0.f));
+	const UV i = mapping->Map(UV(imgMap->GetWidth(), imgMap->GetHeight()));
+	const UV io = i - o;
+
+	DuDv.u = 1.f / io.u;
+	DuDv.v = 1.f / io.v;
 }
 
 float ImageMapTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetGrey(mapping.Map(hitPoint.uv));
+	return gain * imgMap->GetGrey(mapping->Map(hitPoint.uv));
 }
 
 Spectrum ImageMapTexture::GetColorValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetColor(mapping.Map(hitPoint.uv));
+	return gain * imgMap->GetColor(mapping->Map(hitPoint.uv));
 }
 
 float ImageMapTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	return imgMap->GetAlpha(mapping.Map(hitPoint.uv));
+	return imgMap->GetAlpha(mapping->Map(hitPoint.uv));
 }
 
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -610,8 +614,7 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr");
 	props.SetString("scene.textures." + name + ".gamma", "1.0");
 	props.SetString("scene.textures." + name + ".gain", ToString(gain));
-	props.SetString("scene.textures." + name + ".uvscale", ToString(mapping.GetUScale()) + " " + ToString(mapping.GetVScale()));
-	props.SetString("scene.textures." + name + ".uvdelta", ToString(mapping.GetUDelta()) + " " + ToString(mapping.GetVDelta()));
+	props.Load(mapping->ToProperties("scene.textures." + name));
 
 	return props;
 }
@@ -739,7 +742,7 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache)
 //------------------------------------------------------------------------------
 
 float CheckerBoard2DTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping.Map(hitPoint.uv);
+	const UV uv = mapping->Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
 		return tex1->GetGreyValue(hitPoint);
 	else
@@ -747,7 +750,7 @@ float CheckerBoard2DTexture::GetGreyValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum CheckerBoard2DTexture::GetColorValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping.Map(hitPoint.uv);
+	const UV uv = mapping->Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
 		return tex1->GetColorValue(hitPoint);
 	else
@@ -755,7 +758,7 @@ Spectrum CheckerBoard2DTexture::GetColorValue(const HitPoint &hitPoint) const {
 }
 
 float CheckerBoard2DTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping.Map(hitPoint.uv);
+	const UV uv = mapping->Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
 		return tex1->GetAlphaValue(hitPoint);
 	else
@@ -776,8 +779,7 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache)
 	props.SetString("scene.textures." + name + ".type", "checkerboard2d");
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
 	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
-	props.SetString("scene.textures." + name + ".uvscale", ToString(mapping.GetUScale()) + " " + ToString(mapping.GetVScale()));
-	props.SetString("scene.textures." + name + ".uvdelta", ToString(mapping.GetUDelta()) + " " + ToString(mapping.GetVDelta()));
+	props.Load(mapping->ToProperties("scene.textures." + name));
 
 	return props;
 }
@@ -834,7 +836,7 @@ Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 //------------------------------------------------------------------------------
 
 float FBMTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	const Point p(mapping.Map(hitPoint.p));
+	const Point p(mapping->Map(hitPoint.p));
 	const float value = FBm(p, omega, octaves);
 	
 	return value;
@@ -859,7 +861,7 @@ Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.SetString("scene.textures." + name + ".type", "fbm");
 	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
 	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
-	props.Load(mapping.ToProperties("scene.textures." + name));
+	props.Load(mapping->ToProperties("scene.textures." + name));
 
 	return props;
 }

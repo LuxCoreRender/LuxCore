@@ -654,7 +654,7 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::vector<float> uvDelta = GetFloatParameters(props, propName + ".uvdelta", 2, "0.0 0.0");
 
 		ImageMap *im = imgMapCache.GetImageMap(vname.at(0), gamma.at(0));
-		return new ImageMapTexture(im, UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), gain.at(0));
+		return new ImageMapTexture(im, new UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), gain.at(0));
 	} else if (texType == "constfloat1") {
 		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 1, "1.0");
 		return new ConstFloatTexture(v.at(0));
@@ -687,7 +687,7 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::vector<float> uvScale = GetFloatParameters(props, propName + ".uvscale", 2, "1.0 1.0");
 		const std::vector<float> uvDelta = GetFloatParameters(props, propName + ".uvdelta", 2, "0.0 0.0");
 
-		return new CheckerBoard2DTexture(UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), tex1, tex2);
+		return new CheckerBoard2DTexture(new UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1)), tex1, tex2);
 	} else if (texType == "mix") {
 		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "amount").at(0);
 		const Texture *amtTex = GetTexture(amtName);
@@ -709,7 +709,7 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
 		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
 
-		return new FBMTexture(GlobalMapping3D(Inverse(trans)), octaves, omega);
+		return new FBMTexture(new GlobalMapping3D(Inverse(trans)), octaves, omega);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }
