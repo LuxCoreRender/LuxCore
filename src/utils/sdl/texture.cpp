@@ -679,3 +679,50 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache)
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// Mix texture
+//------------------------------------------------------------------------------
+
+float MixTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	const float amt = amount->GetGreyValue(hitPoint);
+	const float value1 = tex1->GetGreyValue(hitPoint);
+	const float value2 = tex2->GetGreyValue(hitPoint);
+
+	return Lerp(amt, value1, value2);
+}
+
+Spectrum MixTexture::GetColorValue(const HitPoint &hitPoint) const {
+	const float amt = amount->GetGreyValue(hitPoint);
+	const Spectrum value1 = tex1->GetColorValue(hitPoint);
+	const Spectrum value2 = tex2->GetColorValue(hitPoint);
+
+	return Lerp(amt, value1, value2);
+}
+
+float MixTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	const float amt = amount->GetGreyValue(hitPoint);
+	const float value1 = tex1->GetAlphaValue(hitPoint);
+	const float value2 = tex2->GetAlphaValue(hitPoint);
+
+	return Lerp(amt, value1, value2);
+}
+
+const UV MixTexture::GetDuDv() const {
+	const UV uv1 = tex1->GetDuDv();
+	const UV uv2 = tex2->GetDuDv();
+
+	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
+}
+
+Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "mix");
+	props.SetString("scene.textures." + name + ".amount", amount->GetName());
+	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
+	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+
+	return props;
+}
