@@ -24,6 +24,108 @@
 #define TEXTURE_STACK_SIZE 16
 
 //------------------------------------------------------------------------------
+// Texture utility functions
+//------------------------------------------------------------------------------
+
+// Perlin Noise Data
+#define NOISE_PERM_SIZE 256
+__constant int NoisePerm[2 * NOISE_PERM_SIZE] = {
+	151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96,
+	53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142,
+	// Rest of noise permutation table
+	8, 99, 37, 240, 21, 10, 23,
+	190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
+	88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
+	77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244,
+	102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196,
+	135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123,
+	5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42,
+	223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+	129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
+	251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
+	49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
+	138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
+	151, 160, 137, 91, 90, 15,
+	131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
+	190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
+	88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
+	77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244,
+	102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196,
+	135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123,
+	5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42,
+	223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+	129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
+	251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
+	49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
+	138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
+};
+
+float Grad(int x, int y, int z, float dx, float dy, float dz) {
+	const int h = NoisePerm[NoisePerm[NoisePerm[x] + y] + z] & 15;
+	const float u = h < 8 || h == 12 || h == 13 ? dx : dy;
+	const float v = h < 4 || h == 12 || h == 13 ? dy : dz;
+	return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+}
+
+float NoiseWeight(float t) {
+	const float t3 = t * t * t;
+	const float t4 = t3 * t;
+	return 6.f * t4 * t - 15.f * t4 + 10.f * t3;
+}
+
+float Noise(float x, float y, float z) {
+	// Compute noise cell coordinates and offsets
+	int ix = Floor2Int(x);
+	int iy = Floor2Int(y);
+	int iz = Floor2Int(z);
+	const float dx = x - ix, dy = y - iy, dz = z - iz;
+	// Compute gradient weights
+	ix &= (NOISE_PERM_SIZE - 1);
+	iy &= (NOISE_PERM_SIZE - 1);
+	iz &= (NOISE_PERM_SIZE - 1);
+	const float w000 = Grad(ix, iy, iz, dx, dy, dz);
+	const float w100 = Grad(ix + 1, iy, iz, dx - 1, dy, dz);
+	const float w010 = Grad(ix, iy + 1, iz, dx, dy - 1, dz);
+	const float w110 = Grad(ix + 1, iy + 1, iz, dx - 1, dy - 1, dz);
+	const float w001 = Grad(ix, iy, iz + 1, dx, dy, dz - 1);
+	const float w101 = Grad(ix + 1, iy, iz + 1, dx - 1, dy, dz - 1);
+	const float w011 = Grad(ix, iy + 1, iz + 1, dx, dy - 1, dz - 1);
+	const float w111 = Grad(ix + 1, iy + 1, iz + 1, dx - 1, dy - 1, dz - 1);
+	// Compute trilinear interpolation of weights
+	const float wx = NoiseWeight(dx);
+	const float wy = NoiseWeight(dy);
+	const float wz = NoiseWeight(dz);
+	const float x00 = Lerp(wx, w000, w100);
+	const float x10 = Lerp(wx, w010, w110);
+	const float x01 = Lerp(wx, w001, w101);
+	const float x11 = Lerp(wx, w011, w111);
+	const float y0 = Lerp(wy, x00, x10);
+	const float y1 = Lerp(wy, x01, x11);
+	return Lerp(wz, y0, y1);
+}
+
+float Noise3(const float3 P) {
+	return Noise(P.x, P.y, P.z);
+}
+
+float FBm(const float3 P, const float omega, const int maxOctaves) {
+	// Compute number of octaves for anti-aliased FBm
+	const float foctaves = fmin((float)maxOctaves, 1.f);
+	const int octaves = Floor2Int(foctaves);
+	// Compute sum of octaves of noise for FBm
+	float sum = 0.f, lambda = 1.f, o = 1.f;
+	for (int i = 0; i < octaves; ++i) {
+		sum += o * Noise3(lambda * P);
+		lambda *= 1.99f;
+		o *= omega;
+	}
+	const float partialOctave = foctaves - (float)octaves;
+	sum += o * SmoothStep(.3f, .7f, partialOctave) *
+			Noise3(lambda * P);
+	return sum;
+}
+
+//------------------------------------------------------------------------------
 // ImageMaps support
 //------------------------------------------------------------------------------
 
@@ -98,8 +200,8 @@ float ImageMap_GetGrey(__global float *pixels,
 	const float s = u * width - 0.5f;
 	const float t = v * height - 0.5f;
 
-	const int s0 = (int)floor(s);
-	const int t0 = (int)floor(t);
+	const int s0 = Floor2Int(s);
+	const int t0 = Floor2Int(t);
 
 	const float ds = s - s0;
 	const float dt = t - t0;
@@ -126,8 +228,8 @@ float3 ImageMap_GetColor(__global float *pixels,
 	const float s = u * width - 0.5f;
 	const float t = v * height - 0.5f;
 
-	const int s0 = (int)floor(s);
-	const int t0 = (int)floor(t);
+	const int s0 = Floor2Int(s);
+	const int t0 = Floor2Int(t);
 
 	const float ds = s - s0;
 	const float dt = t - t0;
@@ -319,7 +421,7 @@ void ScaleTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hit
 	const float2 dudv1 = texValues[--(*texValuesSize)];
 	const float2 dudv2 = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = (float2)(fmax(dudv1.x, dudv2.x), fmax(dudv1.y, dudv2.y));
+	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
 }
 
 #endif
@@ -415,27 +517,91 @@ void CheckerBoard2DTexture_EvaluateGrey(__global Texture *texture, __global HitP
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
-	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
+
+	texValues[(*texValuesSize)++] = ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
-void  CheckerBoard2DTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+void CheckerBoard2DTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 value1 = texValues[--(*texValuesSize)];
 	const float3 value2 = texValues[--(*texValuesSize)];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
-	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
+
+	texValues[(*texValuesSize)++] = ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
-void  CheckerBoard2DTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+void CheckerBoard2DTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
 		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 value1 = texValues[--(*texValuesSize)];
-	const float2 value2 = texValues[--(*texValuesSize)];
+	const float2 dudv1 = texValues[--(*texValuesSize)];
+	const float2 dudv2 = texValues[--(*texValuesSize)];
 
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
-	texValues[(*texValuesSize)++] = (((int)floor(mapUV.s0) + (int)floor(mapUV.s1)) % 2 == 0) ? value1 : value2;
+	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Mix texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MIX_TEX)
+
+void MixTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float amt = texValues[--(*texValuesSize)];
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = Lerp(amt, value1, value2);
+}
+
+void MixTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 amt = clamp(texValues[--(*texValuesSize)], 0.f, 1.f);
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = mix(value1, value2, amt);
+}
+
+void MixTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 dudv1 = texValues[--(*texValuesSize)];
+	const float2 dudv2 = texValues[--(*texValuesSize)];
+	const float2 dudv3 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = fmax(fmax(dudv1, dudv2), dudv3);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// FBM texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_FBM_TEX)
+
+void FBMTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float3 mapP = Mapping_Map3D(&texture->fbm.mapping, p);
+
+	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
+}
+
+void FBMTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float3 mapP = Mapping_Map3D(&texture->fbm.mapping, p);
+
+	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
+}
+
+void FBMTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = (float2)(0.001f, 0.001f);
 }
 
 #endif
@@ -470,6 +636,16 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard2D.tex2Index];
 			return 2;
 #endif
+#if defined (PARAM_ENABLE_MIX_TEX)
+		case MIX_TEX:
+			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.amountTexIndex];
+			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex1Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex2Index];
+			return 3;
+#endif
+#if defined (PARAM_ENABLE_FBM_TEX)
+		case FBM_TEX:
+#endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
 #endif
@@ -485,7 +661,6 @@ uint Texture_AddSubTexture(__global Texture *texture,
 		default:
 			return 0;
 	}
-
 }
 
 //------------------------------------------------------------------------------
@@ -498,40 +673,58 @@ void Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
-			return ConstFloatTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			ConstFloatTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
-			return ConstFloat3Texture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			ConstFloat3Texture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
-			return ConstFloat4Texture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			ConstFloat4Texture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
-			return ImageMapTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize
+			ImageMapTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize
 					IMAGEMAPS_PARAM);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
-			return ScaleTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			ScaleTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxNTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			FresnelApproxNTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			FresnelApproxKTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_CHECKERBOARD2D)
 		case CHECKERBOARD2D:
-			return CheckerBoard2DTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			CheckerBoard2DTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_MIX_TEX)
+		case MIX_TEX:
+			MixTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_FBM_TEX)
+		case FBM_TEX:
+			FBMTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 		default:
 			// Do nothing
-			;
+			break;
 	}
 }
 
@@ -541,7 +734,7 @@ float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoin
 	uint todoTexSize = 0;
 
 	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
-	uint pendingSubTexCount[TEXTURE_STACK_SIZE];
+	uint targetTexCount[TEXTURE_STACK_SIZE];
 	uint pendingTexSize = 0;
 
 	float texValues[TEXTURE_STACK_SIZE];
@@ -556,9 +749,9 @@ float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoin
 	} else {
 		// Normal complex path for evaluating non recursive textures
 		pendingTex[pendingTexSize] = texture;
-		pendingSubTexCount[pendingTexSize++] = subTexCount;
+		targetTexCount[pendingTexSize++] = subTexCount;
 		do {
-			if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
+			if ((pendingTexSize > 0) && (texValuesSize == targetTexCount[pendingTexSize - 1])) {
 				// Pop the a texture to do
 				__global Texture *tex = pendingTex[--pendingTexSize];
 
@@ -572,9 +765,10 @@ float Texture_GetGreyValue(__global Texture *texture, __global HitPoint *hitPoin
 				__global Texture *tex = todoTex[--todoTexSize];
 
 				// Add this texture to the list of pending one
-				pendingTex[pendingTexSize] = tex;
-				pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+				const uint subTexCount = Texture_AddSubTexture(tex, todoTex, &todoTexSize
 						TEXTURES_PARAM);
+				pendingTex[pendingTexSize] = tex;
+				targetTexCount[pendingTexSize++] = subTexCount + texValuesSize;
 			}
 		} while ((todoTexSize > 0) || (pendingTexSize > 0));
 	}
@@ -592,40 +786,58 @@ void Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoin
 	switch (texture->type) {
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
-			return ConstFloatTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			ConstFloatTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
-			return ConstFloat3Texture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			ConstFloat3Texture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
-			return ConstFloat4Texture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			ConstFloat4Texture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
-			return ImageMapTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize
+			ImageMapTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize
 					IMAGEMAPS_PARAM);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
-			return ScaleTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			ScaleTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxNTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			FresnelApproxNTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			FresnelApproxKTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_CHECKERBOARD2D)
 		case CHECKERBOARD2D:
-			return CheckerBoard2DTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			CheckerBoard2DTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_MIX_TEX)
+		case MIX_TEX:
+			MixTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_FBM_TEX)
+		case FBM_TEX:
+			FBMTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 		default:
 			// Do nothing
-			;
+			break;
 	}
 }
 
@@ -635,7 +847,7 @@ float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPo
 	uint todoTexSize = 0;
 
 	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
-	uint pendingSubTexCount[TEXTURE_STACK_SIZE];
+	uint targetTexCount[TEXTURE_STACK_SIZE];
 	uint pendingTexSize = 0;
 
 	float3 texValues[TEXTURE_STACK_SIZE];
@@ -650,9 +862,9 @@ float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPo
 	} else {
 		// Normal complex path for evaluating non recursive textures
 		pendingTex[pendingTexSize] = texture;
-		pendingSubTexCount[pendingTexSize++] = subTexCount;
+		targetTexCount[pendingTexSize++] = subTexCount;
 		do {
-			if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
+			if ((pendingTexSize > 0) && (texValuesSize == targetTexCount[pendingTexSize - 1])) {
 				// Pop the a texture to do
 				__global Texture *tex = pendingTex[--pendingTexSize];
 
@@ -666,9 +878,10 @@ float3 Texture_GetColorValue(__global Texture *texture, __global HitPoint *hitPo
 				__global Texture *tex = todoTex[--todoTexSize];
 
 				// Add this texture to the list of pending one
-				pendingTex[pendingTexSize] = tex;
-				pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+				const uint subTexCount = Texture_AddSubTexture(tex, todoTex, &todoTexSize
 						TEXTURES_PARAM);
+				pendingTex[pendingTexSize] = tex;
+				targetTexCount[pendingTexSize++] = subTexCount + texValuesSize;
 			}
 		} while ((todoTexSize > 0) || (pendingTexSize > 0));
 	}
@@ -687,38 +900,56 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 		case CONST_FLOAT:
 			ConstFloatTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
-			return ConstFloat3Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			ConstFloat3Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
 		case CONST_FLOAT4:
-			return ConstFloat4Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			ConstFloat4Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
-			return ImageMapTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			ImageMapTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_SCALE)
 		case SCALE_TEX:
-			return ScaleTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			ScaleTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxNTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			FresnelApproxNTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
-			return FresnelApproxKTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			FresnelApproxKTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 #if defined (PARAM_ENABLE_CHECKERBOARD2D)
 		case CHECKERBOARD2D:
-			return CheckerBoard2DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			CheckerBoard2DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_MIX_TEX)
+		case MIX_TEX:
+			MixTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_FBM_TEX)
+		case FBM_TEX:
+			FBMTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
 #endif
 		default:
 			// Do nothing
-			;
+			break;
 	}
 }
 
@@ -728,7 +959,7 @@ float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
 	uint todoTexSize = 0;
 
 	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
-	uint pendingSubTexCount[TEXTURE_STACK_SIZE];
+	uint targetTexCount[TEXTURE_STACK_SIZE];
 	uint pendingTexSize = 0;
 
 	float2 texValues[TEXTURE_STACK_SIZE];
@@ -743,13 +974,13 @@ float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
 	} else {
 		// Normal complex path for evaluating non recursive textures
 		pendingTex[pendingTexSize] = texture;
-		pendingSubTexCount[pendingTexSize++] = subTexCount;
+		targetTexCount[pendingTexSize++] = subTexCount;
 		do {
-			if ((pendingTexSize > 0) && (texValuesSize >= pendingSubTexCount[pendingTexSize - 1])) {
+			if ((pendingTexSize > 0) && (texValuesSize == targetTexCount[pendingTexSize - 1])) {
 				// Pop the a texture to do
 				__global Texture *tex = pendingTex[--pendingTexSize];
 
-			Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
+				Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
 						IMAGEMAPS_PARAM);
 				continue;
 			}
@@ -759,9 +990,10 @@ float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
 				__global Texture *tex = todoTex[--todoTexSize];
 
 				// Add this texture to the list of pending one
-				pendingTex[pendingTexSize] = tex;
-				pendingSubTexCount[pendingTexSize++] = Texture_AddSubTexture(tex, todoTex, &todoTexSize
+				const uint subTexCount = Texture_AddSubTexture(tex, todoTex, &todoTexSize
 						TEXTURES_PARAM);
+				pendingTex[pendingTexSize] = tex;
+				targetTexCount[pendingTexSize++] = subTexCount + texValuesSize;
 			}
 		} while ((todoTexSize > 0) || (pendingTexSize > 0));
 	}

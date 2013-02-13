@@ -492,6 +492,14 @@ public:
 
 	virtual UV GetDuDv() const;
 
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		amount->AddReferencedTextures(referencedTexs);
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+	}
+
 	const Texture *GetAmountTexture() const { return amount; }
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }

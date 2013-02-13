@@ -19,10 +19,10 @@ scene.textures.tex.amount = checktex
 scene.textures.tex.texture1 = subtex2
 scene.textures.tex.texture2 = subtex1
 ################################################################################
-#scene.materials.shell.type = matte
-#scene.materials.shell.kd = tex
-scene.materials.shell.type = glossy2
+scene.materials.shell.type = matte
 scene.materials.shell.kd = tex
+#scene.materials.shell.type = glossy2
+#scene.materials.shell.kd = tex
 scene.materials.shell.ks = 0.1 0.1 0.1
 scene.materials.shell.uroughness = 0.05
 scene.materials.shell.vroughness = 0.05

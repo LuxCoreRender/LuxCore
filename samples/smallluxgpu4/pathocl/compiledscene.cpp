@@ -675,6 +675,28 @@ void CompiledScene::CompileTextures() {
 				tex->checkerBoard2D.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case MIX_TEX: {
+				MixTexture *mt = static_cast<MixTexture *>(t);
+
+				tex->type = luxrays::ocl::MIX_TEX;
+				const Texture *amount = mt->GetAmountTexture();
+				tex->mixTex.amountTexIndex = scene->texDefs.GetTextureIndex(amount);
+
+				const Texture *tex1 = mt->GetTexture1();
+				tex->mixTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+				const Texture *tex2 = mt->GetTexture2();
+				tex->mixTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case FBM_TEX: {
+				FBMTexture *ft = static_cast<FBMTexture *>(t);
+
+				tex->type = luxrays::ocl::FBM_TEX;
+				CompileTextureMapping(&tex->fbm.mapping, ft->GetTextureMapping());
+				tex->fbm.octaves = ft->GetOctaves();
+				tex->fbm.omega = ft->GetOmega();
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;
