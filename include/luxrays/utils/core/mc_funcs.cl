@@ -101,17 +101,6 @@ float UniformConePdf(const float costhetamax) {
 	return 1.f / (2.f * M_PI_F * (1.f - costhetamax));
 }
 
-int Mod(int a, int b) {
-	if (b == 0)
-		b = 1;
-
-	a %= b;
-	if (a < 0)
-		a += b;
-
-	return a;
-}
-
 float PowerHeuristic(const float fPdf, const float gPdf) {
 	const float f = fPdf;
 	const float g = gPdf;

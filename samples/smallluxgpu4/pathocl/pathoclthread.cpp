@@ -417,6 +417,10 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
 	if (cscene->IsTextureCompiled(CHECKERBOARD2D))
 		ss << " -D PARAM_ENABLE_CHECKERBOARD2D";
+	if (cscene->IsTextureCompiled(MIX_TEX))
+		ss << " -D PARAM_ENABLE_MIX_TEX";
+	if (cscene->IsTextureCompiled(FBM_TEX))
+		ss << " -D PARAM_ENABLE_FBM_TEX";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -603,6 +607,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_light_types <<
 			// OpenCL Funcs
 			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_utils_funcs <<
 			luxrays::ocl::KernelSource_vector_funcs <<
 			luxrays::ocl::KernelSource_ray_funcs <<
 			luxrays::ocl::KernelSource_spectrum_funcs <<

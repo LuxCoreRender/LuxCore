@@ -789,7 +789,7 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache)
 //------------------------------------------------------------------------------
 
 float MixTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	const float amt = amount->GetGreyValue(hitPoint);
+	const float amt = Clamp(amount->GetGreyValue(hitPoint), 0.f, 1.f);
 	const float value1 = tex1->GetGreyValue(hitPoint);
 	const float value2 = tex2->GetGreyValue(hitPoint);
 
@@ -797,7 +797,7 @@ float MixTexture::GetGreyValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum MixTexture::GetColorValue(const HitPoint &hitPoint) const {
-	const float amt = amount->GetGreyValue(hitPoint);
+	const float amt = Clamp(amount->GetGreyValue(hitPoint), 0.f, 1.f);
 	const Spectrum value1 = tex1->GetColorValue(hitPoint);
 	const Spectrum value2 = tex2->GetColorValue(hitPoint);
 
@@ -805,7 +805,7 @@ Spectrum MixTexture::GetColorValue(const HitPoint &hitPoint) const {
 }
 
 float MixTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	const float amt = amount->GetGreyValue(hitPoint);
+	const float amt = Clamp(amount->GetGreyValue(hitPoint), 0.f, 1.f);
 	const float value1 = tex1->GetAlphaValue(hitPoint);
 	const float value2 = tex2->GetAlphaValue(hitPoint);
 
@@ -813,10 +813,11 @@ float MixTexture::GetAlphaValue(const HitPoint &hitPoint) const {
 }
 
 UV MixTexture::GetDuDv() const {
-	const UV uv1 = tex1->GetDuDv();
-	const UV uv2 = tex2->GetDuDv();
+	const UV uv1 = amount->GetDuDv();
+	const UV uv2 = tex1->GetDuDv();
+	const UV uv3 = tex2->GetDuDv();
 
-	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
+	return UV(Max(Max(uv1.u, uv2.u), uv3.u), Max(Max(uv1.v, uv2.v), uv3.v));
 }
 
 Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
