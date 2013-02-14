@@ -50,7 +50,7 @@ namespace sdl {
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, CHECKERBOARD2D, MIX_TEX, FBM_TEX
+	FRESNEL_APPROX_K, CHECKERBOARD2D, MIX_TEX, FBM_TEX, MARBLE
 } TextureType;
 
 struct HitPointStruct;
@@ -539,6 +539,38 @@ private:
 	const TextureMapping *mapping;
 	const int octaves;
 	const float omega;
+};
+
+//------------------------------------------------------------------------------
+// Marble texture
+//------------------------------------------------------------------------------
+
+class MarbleTexture : public Texture {
+public:
+	MarbleTexture(const TextureMapping *mp, const int octs, const float omg,
+			float sc, float var) :
+			mapping(mp), octaves(octs), omega(omg), scale(sc), variation(var) { }
+	virtual ~MarbleTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return MARBLE; }
+	virtual float GetGreyValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
+	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	int GetOctaves() const { return octaves; }
+	float GetOmega() const { return omega; }
+	float GetScale() const { return scale; }
+	float GetVariation() const { return variation; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping *mapping;
+	const int octaves;
+	const float omega, scale, variation;
 };
 
 } }

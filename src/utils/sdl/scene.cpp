@@ -719,6 +719,13 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
 
 		return new FBMTexture(CreateTextureMapping(propName + ".mapping", props), octaves, omega);
+	} else if (texType == "marble") {
+		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
+		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
+		const float scale = GetFloatParameters(props, propName + ".scale", 1, "1.0").at(0);
+		const float variation = GetFloatParameters(props, propName + ".variation", 1, "0.2").at(0);
+
+		return new MarbleTexture(CreateTextureMapping(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }
