@@ -697,6 +697,17 @@ void CompiledScene::CompileTextures() {
 				tex->fbm.omega = ft->GetOmega();
 				break;
 			}
+			case MARBLE: {
+				MarbleTexture *mt = static_cast<MarbleTexture *>(t);
+
+				tex->type = luxrays::ocl::MARBLE;
+				CompileTextureMapping(&tex->fbm.mapping, mt->GetTextureMapping());
+				tex->marble.octaves = mt->GetOctaves();
+				tex->marble.omega = mt->GetOmega();
+				tex->marble.scale = mt->GetScale();
+				tex->marble.variation = mt->GetVariation();
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;

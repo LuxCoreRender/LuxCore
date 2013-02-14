@@ -607,6 +607,70 @@ void FBMTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPo
 #endif
 
 //------------------------------------------------------------------------------
+// Marble texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MARBLE)
+
+// Evaluate marble spline at _t_
+__constant float MarbleTexture_c[9][3] = {
+	{ .58f, .58f, .6f},
+	{ .58f, .58f, .6f},
+	{ .58f, .58f, .6f},
+	{ .5f, .5f, .5f},
+	{ .6f, .59f, .58f},
+	{ .58f, .58f, .6f},
+	{ .58f, .58f, .6f},
+	{.2f, .2f, .33f},
+	{ .58f, .58f, .6f}
+};
+
+float3 MarbleTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint) {
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float3 P = texture->marble.scale * Mapping_Map3D(&texture->marble.mapping, p);
+
+	float marble = P.y + texture->marble.variation * FBm(P, texture->marble.omega, texture->marble.octaves);
+	float t = .5f + .5f * sin(marble);
+#define NC  sizeof(MarbleTexture_c) / sizeof(MarbleTexture_c[0])
+#define NSEG (NC-3)
+	const int first = Floor2Int(t * NSEG);
+	t = (t * NSEG - first);
+#undef NC
+#undef NSEG
+#define ASSIGN_CF3(a) (float3)(a[0], a[1], a[2])
+	const float3 c0 = ASSIGN_CF3(MarbleTexture_c[first]);
+	const float3 c1 = ASSIGN_CF3(MarbleTexture_c[first + 1]);
+	const float3 c2 = ASSIGN_CF3(MarbleTexture_c[first + 2]);
+	const float3 c3 = ASSIGN_CF3(MarbleTexture_c[first + 3]);
+#undef ASSIGN_CF3
+	// Bezier spline evaluated with de Castilejau's algorithm
+	float3 s0 = mix(c0, c1, t);
+	float3 s1 = mix(c1, c2, t);
+	float3 s2 = mix(c2, c3, t);
+	s0 = mix(s0, s1, t);
+	s1 = mix(s1, s2, t);
+	// Extra scale of 1.5 to increase variation among colors
+	return 1.5f * mix(s0, s1, t);
+}
+
+void MarbleTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = Spectrum_Y(MarbleTexture_Evaluate(texture, hitPoint));
+}
+
+void MarbleTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = MarbleTexture_Evaluate(texture, hitPoint);
+}
+
+void MarbleTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = (float2)(0.001f, 0.001f);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -642,6 +706,9 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex1Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex2Index];
 			return 3;
+#endif
+#if defined (PARAM_ENABLE_MARBLE)
+		case MARBLE:
 #endif
 #if defined (PARAM_ENABLE_FBM_TEX)
 		case FBM_TEX:
@@ -720,6 +787,11 @@ void Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint
 #if defined (PARAM_ENABLE_FBM_TEX)
 		case FBM_TEX:
 			FBMTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_MARBLE)
+		case MARBLE:
+			MarbleTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -835,6 +907,11 @@ void Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoin
 			FBMTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined (PARAM_ENABLE_MARBLE)
+		case MARBLE:
+			MarbleTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -945,6 +1022,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined (PARAM_ENABLE_FBM_TEX)
 		case FBM_TEX:
 			FBMTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_MARBLE)
+		case MARBLE:
+			MarbleTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

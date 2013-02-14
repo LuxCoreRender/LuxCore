@@ -866,3 +866,68 @@ Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// Marble texture
+//------------------------------------------------------------------------------
+
+Spectrum MarbleTexture::GetColorValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint.p));
+	P *= scale;
+
+	float marble = P.y + variation * FBm(P, omega, octaves);
+	float t = .5f + .5f * sinf(marble);
+	// Evaluate marble spline at _t_
+	static float c[9][3] = {
+		{ .58f, .58f, .6f},
+		{ .58f, .58f, .6f},
+		{ .58f, .58f, .6f},
+		{ .5f, .5f, .5f},
+		{ .6f, .59f, .58f},
+		{ .58f, .58f, .6f},
+		{ .58f, .58f, .6f},
+		{.2f, .2f, .33f},
+		{ .58f, .58f, .6f}
+	};
+#define NC  sizeof(c) / sizeof(c[0])
+#define NSEG (NC-3)
+	int first = Floor2Int(t * NSEG);
+	t = (t * NSEG - first);
+#undef NC
+#undef NSEG
+	Spectrum c0(c[first]), c1(c[first + 1]), c2(c[first + 2]), c3(c[first + 3]);
+	// Bezier spline evaluated with de Castilejau's algorithm
+	Spectrum s0(Lerp(t, c0, c1));
+	Spectrum s1(Lerp(t, c1, c2));
+	Spectrum s2(Lerp(t, c2, c3));
+	s0 = Lerp(t, s0, s1);
+	s1 = Lerp(t, s1, s2);
+	// Extra scale of 1.5 to increase variation among colors
+	return 1.5f * Lerp(t, s0, s1);
+}
+
+float MarbleTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	return GetColorValue(hitPoint).Y();
+}
+
+float MarbleTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	return GetColorValue(hitPoint).Y();
+}
+
+UV MarbleTexture::GetDuDv() const {
+	return UV(0.001f, 0.001f);
+}
+
+Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "marble");
+	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
+	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
+	props.SetString("scene.textures." + name + ".scale", ToString(scale));
+	props.SetString("scene.textures." + name + ".variation", ToString(variation));
+	props.Load(mapping->ToProperties("scene.textures." + name));
+
+	return props;
+}

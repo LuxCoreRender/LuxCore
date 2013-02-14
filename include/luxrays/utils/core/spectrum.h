@@ -41,6 +41,10 @@ public:
 		: r(rr), g(gg), b(bb) {
 	}
 
+	Spectrum(const float rgb[3])
+		: r(rgb[0]), g(rgb[1]), b(rgb[2]) {
+	}
+
 	Spectrum(const float v)
 		: r(v), g(v), b(v) {
 	}
