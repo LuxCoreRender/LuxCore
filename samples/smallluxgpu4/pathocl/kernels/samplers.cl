@@ -21,60 +21,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-void GenerateCameraRay(
-		__global Camera *camera,
-		__global Ray *ray,
-		const float scrSampleX, const float scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-		, const float dofSampleX, const float dofSampleY
-#endif
-		) {
-	const float screenX = min(scrSampleX * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min(scrSampleY * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
-
-	float3 Pras = (float3)(screenX, PARAM_IMAGE_HEIGHT - screenY - 1.f, 0.f);
-	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera, Pras);
-	float3 rayDir = rayOrig;
-
-	const float hither = camera->hither;
-
-#if defined(PARAM_CAMERA_HAS_DOF)
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	const float lensRadius = camera->lensRadius;
-	lensU *= lensRadius;
-	lensV *= lensRadius;
-
-	// Compute point on plane of focus
-	const float focalDistance = camera->focalDistance;
-	const float dist = focalDistance - hither;
-	const float ft = dist / rayDir.z;
-	float3 Pfocus;
-	Pfocus = rayOrig + rayDir * ft;
-
-	// Update ray for effect of lens
-	const float k = dist / focalDistance;
-	rayOrig.x += lensU * k;
-	rayOrig.y += lensV * k;
-
-	rayDir = Pfocus - rayOrig;
-#endif
-
-	rayDir = normalize(rayDir);
-	const float maxt = (camera->yon - hither) / rayDir.z;
-
-	// Transform ray in world coordinates
-	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld, rayOrig);
-	rayDir = Transform_ApplyVector(&camera->cameraToWorld, rayDir);
-
-	Ray_Init3(ray, rayOrig, rayDir, maxt);
-
-	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
-		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
-		ray->mint, ray->maxt);*/
-}
-
 void GenerateCameraPath(
 		__global GPUTask *task,
 		__global Camera *camera,
@@ -89,7 +35,7 @@ void GenerateCameraPath(
 		) {
 	__global Sample *sample = &task->sample;
 
-	GenerateCameraRay(camera, ray, scrSampleX, scrSampleY
+	Camera_GenerateRay(camera, ray, scrSampleX, scrSampleY
 #if defined(PARAM_CAMERA_HAS_DOF)
 			, dofSampleX, dofSampleY
 #endif

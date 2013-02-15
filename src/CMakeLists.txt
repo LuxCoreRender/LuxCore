@@ -89,6 +89,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_types.cl
@@ -180,6 +181,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/sampler_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/filter_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/camera_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/camera_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgen_types_kernel.cpp
