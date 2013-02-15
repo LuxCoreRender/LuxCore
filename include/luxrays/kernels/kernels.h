@@ -34,7 +34,9 @@ extern std::string KernelSource_qbvh;
 extern std::string KernelSource_mqbvh;
 
 extern std::string KernelSource_sampler_types;
+extern std::string KernelSource_sampler_funcs;
 extern std::string KernelSource_filter_types;
+extern std::string KernelSource_filter_funcs;
 extern std::string KernelSource_camera_types;
 extern std::string KernelSource_camera_funcs;
 extern std::string KernelSource_trianglemesh_types;

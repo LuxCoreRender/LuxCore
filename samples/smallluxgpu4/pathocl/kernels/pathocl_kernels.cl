@@ -97,6 +97,75 @@
 // Init Kernel
 //------------------------------------------------------------------------------
 
+void GenerateCameraPath(
+		__global GPUTask *task,
+		__global float *sampleData,
+		__global Camera *camera,
+		__global Ray *ray,
+		Seed *seed) {
+	__global Sample *sample = &task->sample;
+
+#if (PARAM_SAMPLER_TYPE == 0)
+
+	const float scrSampleX = sampleData[IDX_SCREEN_X];
+	const float scrSampleY = sampleData[IDX_SCREEN_Y];
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Rnd_FloatValue(seed);
+	const float dofSampleY = Rnd_FloatValue(seed);
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassthrough = Rnd_FloatValue(seed);
+#endif
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 1)
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
+	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+#endif
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 2)
+	const float scrSampleX = sampleData[IDX_SCREEN_X];
+	const float scrSampleY = sampleData[IDX_SCREEN_Y];
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+#endif
+#endif
+
+	Camera_GenerateRay(camera, ray, scrSampleX, scrSampleY
+#if defined(PARAM_CAMERA_HAS_DOF)
+			, dofSampleX, dofSampleY
+#endif
+			);
+
+	// Initialize the path state
+	task->pathStateBase.state = RT_NEXT_VERTEX;
+	task->pathStateBase.depth = 1;
+	VSTORE3F(WHITE, &task->pathStateBase.throughput.r);
+#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
+	task->directLightState.lastPdfW = 1.f;
+	task->directLightState.lastSpecular = TRUE;
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	// This is a bit tricky. I store the passThroughEvent in the BSDF
+	// before of the initialization because it can be use during the
+	// tracing of next path vertex ray.
+
+	task->pathStateBase.bsdf.hitPoint.passThroughEvent = eyePassthrough;
+#endif
+}
+
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		uint seedBase,
 		__global GPUTask *tasks,
@@ -117,7 +186,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	// Initialize the sample and path
 	__global Sample *sample = &task->sample;
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, task, sampleData, camera, &rays[gid]);
+	Sampler_Init(&seed, sample, sampleData);
+	GenerateCameraPath(task, sampleData, camera, &rays[gid], &seed);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -573,13 +643,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == SPLAT_SAMPLE) {
-		Sampler_NextSample(task, sample, sampleData, seed, frameBuffer,
+		Sampler_NextSample(sample, sampleData, seed, frameBuffer
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-				alphaFrameBuffer,
+				, alphaFrameBuffer
 #endif
-				camera, ray);
+				);
 		taskStats[gid].sampleCount += 1;
 
+		GenerateCameraPath(task, sampleData, camera, ray, seed);
 		// task->pathStateBase.state is set to RT_NEXT_VERTEX inside Sampler_NextSample() => GenerateCameraPath()
 	} else {
 		// Save the state

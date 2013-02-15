@@ -27,8 +27,6 @@
 namespace slg { namespace ocl {
 
 extern std::string KernelSource_datatypes;
-extern std::string KernelSource_filters;
-extern std::string KernelSource_samplers;
 extern std::string KernelSource_pathocl_kernels;
 
 } }

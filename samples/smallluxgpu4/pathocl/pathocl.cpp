@@ -277,7 +277,9 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 			float count = 0.f;
 			for (size_t i = 0; i < renderThreads.size(); ++i) {
 				if (renderThreads[i]->frameBuffer) {
-					radiance += renderThreads[i]->frameBuffer[pGPU].c;
+					radiance.r += renderThreads[i]->frameBuffer[pGPU].c.r;
+					radiance.g += renderThreads[i]->frameBuffer[pGPU].c.g;
+					radiance.b += renderThreads[i]->frameBuffer[pGPU].c.b;
 					count += renderThreads[i]->frameBuffer[pGPU].count;
 				}
 

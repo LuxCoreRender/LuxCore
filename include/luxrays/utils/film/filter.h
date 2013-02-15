@@ -22,6 +22,7 @@
 #ifndef _LUXRAYS_UTILS_FILTER_H
 #define	_LUXRAYS_UTILS_FILTER_H
 
+#include "luxrays/utils/core/spectrum.h"
 #include "luxrays/core/utils.h"
 
 namespace luxrays {

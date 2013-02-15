@@ -1,7 +1,7 @@
 #include <string>
-namespace slg { namespace ocl {
-std::string KernelSource_filters = 
-"#line 2 \"filters.cl\"\n"
+namespace luxrays { namespace ocl {
+std::string KernelSource_filter_funcs = 
+"#line 2 \"filter_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"

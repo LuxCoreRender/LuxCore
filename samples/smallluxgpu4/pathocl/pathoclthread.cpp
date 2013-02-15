@@ -213,7 +213,7 @@ void PathOCLRenderThread::InitFrameBuffer() {
 
 	// Delete previous allocated frameBuffer
 	delete[] frameBuffer;
-	frameBuffer = new slg::ocl::Pixel[frameBufferPixelCount];
+	frameBuffer = new luxrays::ocl::Pixel[frameBufferPixelCount];
 
 	for (u_int i = 0; i < frameBufferPixelCount; ++i) {
 		frameBuffer[i].c.r = 0.f;
@@ -222,19 +222,19 @@ void PathOCLRenderThread::InitFrameBuffer() {
 		frameBuffer[i].count = 0.f;
 	}
 
-	AllocOCLBufferRW(&frameBufferBuff, sizeof(slg::ocl::Pixel) * frameBufferPixelCount, "FrameBuffer");
+	AllocOCLBufferRW(&frameBufferBuff, sizeof(luxrays::ocl::Pixel) * frameBufferPixelCount, "FrameBuffer");
 
 	delete[] alphaFrameBuffer;
 	alphaFrameBuffer = NULL;
 
 	// Check if the film has an alpha channel
 	if (renderEngine->film->IsAlphaChannelEnabled()) {
-		alphaFrameBuffer = new slg::ocl::AlphaPixel[frameBufferPixelCount];
+		alphaFrameBuffer = new luxrays::ocl::AlphaPixel[frameBufferPixelCount];
 
 		for (u_int i = 0; i < frameBufferPixelCount; ++i)
 			alphaFrameBuffer[i].alpha = 0.f;
 
-		AllocOCLBufferRW(&alphaFrameBufferBuff, sizeof(slg::ocl::AlphaPixel) * frameBufferPixelCount, "Alpha Channel FrameBuffer");
+		AllocOCLBufferRW(&alphaFrameBufferBuff, sizeof(luxrays::ocl::AlphaPixel) * frameBufferPixelCount, "Alpha Channel FrameBuffer");
 	}
 }
 
@@ -625,13 +625,13 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_material_funcs <<
 			luxrays::ocl::KernelSource_camera_funcs <<
 			luxrays::ocl::KernelSource_light_funcs <<
+			luxrays::ocl::KernelSource_filter_funcs <<
+			sobolLookupTable <<
+			luxrays::ocl::KernelSource_sampler_funcs <<
 			luxrays::ocl::KernelSource_bsdf_funcs <<
 			luxrays::ocl::KernelSource_scene_funcs <<
 			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
-			slg::ocl::KernelSource_filters <<
-			sobolLookupTable <<
-			slg::ocl::KernelSource_samplers <<
 			slg::ocl::KernelSource_pathocl_kernels;
 		string kernelSource = ssKernel.str();
 

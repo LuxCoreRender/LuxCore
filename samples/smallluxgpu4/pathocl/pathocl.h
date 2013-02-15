@@ -130,8 +130,8 @@ private:
 
 	u_int threadIndex;
 	PathOCLRenderEngine *renderEngine;
-	slg::ocl::Pixel *frameBuffer;
-	slg::ocl::AlphaPixel *alphaFrameBuffer;
+	luxrays::ocl::Pixel *frameBuffer;
+	luxrays::ocl::AlphaPixel *alphaFrameBuffer;
 	u_int frameBufferPixelCount;
 
 	bool started, editMode;
