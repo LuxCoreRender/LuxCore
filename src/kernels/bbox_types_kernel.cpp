@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_ray_types = 
-"#line 2 \"ray_types.cl\"\n"
+std::string KernelSource_bbox_types = 
+"#line 2 \"bbox_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
@@ -25,14 +25,6 @@ std::string KernelSource_ray_types =
 " ***************************************************************************/\n"
 "\n"
 "typedef struct {\n"
-"	Point o;\n"
-"	Vector d;\n"
-"	float mint, maxt, time;\n"
-"	float pad[3]; // TODO: remove (here and in ray.h)\n"
-"} Ray;\n"
-"\n"
-"typedef struct {\n"
-"	float t, b1, b2;\n"
-"	unsigned int index;\n"
-"} RayHit;\n"
+"	Point pMin, pMax;\n"
+"} BBox;\n"
 ; } }

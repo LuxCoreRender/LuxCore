@@ -55,12 +55,11 @@ public:
 		const std::string &deviceName(device->GetName());
 		// Compile sources
 		std::string code(
-			_LUXRAYS_POINT_OCLDEFINE
-			+ luxrays::ocl::KernelSource_vector_types +
+			luxrays::ocl::KernelSource_point_types +
+			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
-			_LUXRAYS_RAYHIT_OCLDEFINE
-			+ luxrays::ocl::KernelSource_triangle_types +
-			_LUXRAYS_BBOX_OCLDEFINE);
+			luxrays::ocl::KernelSource_bbox_types +
+			luxrays::ocl::KernelSource_triangle_types);
 		code += luxrays::ocl::KernelSource_bvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
