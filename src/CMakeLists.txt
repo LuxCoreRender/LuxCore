@@ -87,7 +87,9 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
@@ -179,7 +181,9 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/sampler_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/sampler_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/filter_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/filter_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/camera_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/camera_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_types_kernel.cpp

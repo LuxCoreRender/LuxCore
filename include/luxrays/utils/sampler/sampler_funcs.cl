@@ -1,4 +1,4 @@
-#line 2 "samplers.cl"
+#line 2 "sampler_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -20,48 +20,6 @@
  *                                                                         *
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
-
-void GenerateCameraPath(
-		__global GPUTask *task,
-		__global Camera *camera,
-		__global Ray *ray,
-		const float scrSampleX, const float scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-		, const float dofSampleX, const float dofSampleY
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-		, const float eyePassthrough
-#endif
-		) {
-	__global Sample *sample = &task->sample;
-
-	Camera_GenerateRay(camera, ray, scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-			);
-
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
-
-	// Initialize the path state
-	task->pathStateBase.state = RT_NEXT_VERTEX;
-	task->pathStateBase.depth = 1;
-	VSTORE3F(WHITE, &task->pathStateBase.throughput.r);
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	task->directLightState.lastPdfW = 1.f;
-	task->directLightState.lastSpecular = TRUE;
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	// This is a bit tricky. I store the passThroughEvent in the BSDF
-	// before of the initialization because it can be use during the
-	// tracing of next path vertex ray.
-
-	task->pathStateBase.bsdf.hitPoint.passThroughEvent = eyePassthrough;
-#endif
-}
 
 //------------------------------------------------------------------------------
 // Random Sampler Kernel
@@ -86,50 +44,24 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global GPUTask *task, __global float *sampleData,
-		__global Camera *camera, __global Ray *ray) {
-	__global Sample *sample = &task->sample;
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
-
-	const float scrSampleX = Rnd_FloatValue(seed);
-	const float scrSampleY = Rnd_FloatValue(seed);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Rnd_FloatValue(seed);
-	const float dofSampleY = Rnd_FloatValue(seed);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Rnd_FloatValue(seed);
-#endif
-
-	sampleData[IDX_SCREEN_X] = scrSampleX;
-	sampleData[IDX_SCREEN_Y] = scrSampleY;
-
-	GenerateCameraPath(task, camera, ray,
-			scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, eyePassthrough
-#endif
-			);
 }
 
 void Sampler_NextSample(
-		__global GPUTask *task,
 		__global Sample *sample,
 		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer,
+		__global Pixel *frameBuffer
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		__global AlphaPixel *alphaFrameBuffer,
+		, __global AlphaPixel *alphaFrameBuffer
 #endif
-		__global Camera *camera,
-		__global Ray *ray
 		) {
 	SplatSample(frameBuffer,
 			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
@@ -140,33 +72,13 @@ void Sampler_NextSample(
 			1.f);
 
 	// Move to the next assigned pixel
+	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+
+	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
-
-	const float scrSampleX = Rnd_FloatValue(seed);
-	const float scrSampleY = Rnd_FloatValue(seed);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Rnd_FloatValue(seed);
-	const float dofSampleY = Rnd_FloatValue(seed);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Rnd_FloatValue(seed);
-#endif
-
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	sampleData[IDX_SCREEN_X] = scrSampleX;
-	sampleData[IDX_SCREEN_Y] = scrSampleY;
-
-	GenerateCameraPath(task, camera, ray,
-			scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, eyePassthrough
-#endif
-			);
 }
 
 #endif
@@ -250,10 +162,7 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(seed, currentU[i]);
 }
 
-void Sampler_Init(Seed *seed, __global GPUTask *task, __global float *sampleData,
-		__global Camera *camera, __global Ray *ray) {
-	__global Sample *sample = &task->sample;
-
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
 
@@ -274,38 +183,20 @@ void Sampler_Init(Seed *seed, __global GPUTask *task, __global float *sampleData
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	LargeStep(seed, 0, sampleDataPathBase);
 
-	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
-
-	GenerateCameraPath(task, camera, ray,
-			scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, eyePassthrough
-#endif
-			);
 }
 
 void Sampler_NextSample(
-		__global GPUTask *task,
 		__global Sample *sample,
 		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer,
+		__global Pixel *frameBuffer
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		__global AlphaPixel *alphaFrameBuffer,
+		, __global AlphaPixel *alphaFrameBuffer
 #endif
-		__global Camera *camera,
-		__global Ray *ray
 		) {
 	//--------------------------------------------------------------------------
 	// Accept/Reject the sample
@@ -476,15 +367,10 @@ void Sampler_NextSample(
 	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
 #endif
 
-	GenerateCameraPath(task, camera, ray,
-			scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, eyePassthrough
-#endif
-			);
 }
 
 #endif
@@ -539,10 +425,7 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global GPUTask *task, __global float *sampleData,
-		__global Camera *camera, __global Ray *ray) {
-	__global Sample *sample = &task->sample;
-
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
@@ -557,41 +440,23 @@ void Sampler_Init(Seed *seed, __global GPUTask *task, __global float *sampleData
 	uint x, y;
 	PixelIndex2XY(pixelIndex, &x, &y);
 
-	const float scrSampleX = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
-	const float scrSampleY = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
+	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
+	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
 
-	sampleData[IDX_SCREEN_X] = scrSampleX;
-	sampleData[IDX_SCREEN_Y] = scrSampleY;
-
-	GenerateCameraPath(task, camera, ray,
-			scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, eyePassthrough
-#endif
-			);
 }
 
 void Sampler_NextSample(
-		__global GPUTask *task,
 		__global Sample *sample,
 		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer,
+		__global Pixel *frameBuffer
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		__global AlphaPixel *alphaFrameBuffer,
+		, __global AlphaPixel *alphaFrameBuffer
 #endif
-		__global Camera *camera,
-		__global Ray *ray
 		) {
 	SplatSample(frameBuffer,
 			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
@@ -602,10 +467,6 @@ void Sampler_NextSample(
 			1.f);
 
 	// Move to the next assigned pixel
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
-
 	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
 	if (nextPixelIndex > PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) {
 		nextPixelIndex = get_global_id(0);
@@ -615,28 +476,13 @@ void Sampler_NextSample(
 	uint x, y;
 	PixelIndex2XY(nextPixelIndex, &x, &y);
 
-	const float scrSampleX = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
-	const float scrSampleY = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
+	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
+	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
 
-	sampleData[IDX_SCREEN_X] = scrSampleX;
-	sampleData[IDX_SCREEN_Y] = scrSampleY;
-
-	GenerateCameraPath(task, camera, ray,
-			scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, eyePassthrough
-#endif
-			);
 }
 
 #endif
