@@ -623,6 +623,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_mapping_funcs <<
 			luxrays::ocl::KernelSource_texture_funcs <<
 			luxrays::ocl::KernelSource_material_funcs <<
+			luxrays::ocl::KernelSource_camera_funcs <<
 			luxrays::ocl::KernelSource_light_funcs <<
 			luxrays::ocl::KernelSource_bsdf_funcs <<
 			luxrays::ocl::KernelSource_scene_funcs <<
