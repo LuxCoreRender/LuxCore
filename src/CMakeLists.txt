@@ -117,8 +117,11 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/point_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/normal_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bbox_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
@@ -211,8 +214,11 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/ray_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/light_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/light_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/point_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/vector_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/vector_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/normal_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/bbox_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/triangle_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/triangle_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/uv_types_kernel.cpp

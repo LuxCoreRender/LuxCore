@@ -579,18 +579,17 @@ void PathOCLRenderThread::InitKernels() {
 
 			delete directions;
 		}
-		
+
 		// Compile sources
 		stringstream ssKernel;
 		ssKernel <<
 			luxrays::ocl::KernelSource_luxrays_types <<
 			luxrays::ocl::KernelSource_uv_types <<
-			_LUXRAYS_POINT_OCLDEFINE <<
+			luxrays::ocl::KernelSource_point_types <<
 			luxrays::ocl::KernelSource_vector_types <<
-			_LUXRAYS_NORMAL_OCLDEFINE <<
+			luxrays::ocl::KernelSource_normal_types <<
 			luxrays::ocl::KernelSource_triangle_types <<
 			luxrays::ocl::KernelSource_ray_types <<
-			_LUXRAYS_RAYHIT_OCLDEFINE <<
 			// OpenCL Types
 			luxrays::ocl::KernelSource_epsilon_types <<
 			luxrays::ocl::KernelSource_spectrum_types <<

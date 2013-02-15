@@ -1,4 +1,4 @@
-#line 2 "ray_types.cl"
+#line 2 "normal_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -22,13 +22,5 @@
  ***************************************************************************/
 
 typedef struct {
-	Point o;
-	Vector d;
-	float mint, maxt, time;
-	float pad[3]; // TODO: remove (here and in ray.h)
-} Ray;
-
-typedef struct {
-	float t, b1, b2;
-	unsigned int index;
-} RayHit;
+	float x, y, z;
+} Normal;

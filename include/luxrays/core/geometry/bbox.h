@@ -31,6 +31,11 @@ using std::vector;
 
 namespace luxrays {
 
+	// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/bbox_types.cl"
+}
+
 class Normal;
 class Ray;
 
@@ -124,7 +129,6 @@ public:
 
 	// BBox Public Data
 	Point pMin, pMax;
-#define _LUXRAYS_BBOX_OCLDEFINE "typedef struct { Point pMin, pMax; } BBox;\n"
 };
 
 extern BBox Union(const BBox &b, const Point &p);
