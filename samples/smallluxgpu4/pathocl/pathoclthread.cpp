@@ -546,8 +546,10 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_ALPHA_CHANNEL";
 
 	// Check the OpenCL vendor and use some specific compiler options
-
-
+	
+#if defined(__APPLE__)
+	ss << " -D __APPLE_CL__";
+#endif
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
