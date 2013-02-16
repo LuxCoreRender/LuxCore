@@ -1,0 +1,13 @@
+scene.camera.fieldofview = 49.1343
+scene.camera.lookat = -4.44406 -54.3348 45.7424 -4.36122 -53.8099 44.8952
+scene.camera.up = 0 0 1
+scene.materials.glass.Cubo_Prism_01_MAT = 1. 1. 1. 1. 1. 1. 1.0 1.45 1 1
+scene.materials.light.Light_01_MAT = 25000 25000 25000
+scene.materials.matte.Ground_01_MAT = 0.8 0.8 0.8
+scene.materials.matte.nomat = 0.75 0.75 0.75
+scene.objects.Cubo_Prism_01_MAT.Cubo_Prism_01_MAT = scenes/psor-cube/Cubo_Prism_01_MAT.ply
+scene.objects.Cubo_Prism_01_MAT.Cubo_Prism_01_MAT.useplynormals = 1
+scene.objects.Ground_01_MAT.Ground_01_MAT = scenes/psor-cube/Ground_01_MAT.ply
+scene.objects.Ground_01_MAT.Ground_01_MAT.useplynormals = 1
+scene.objects.Light_01_MAT.Light_01_MAT = scenes/psor-cube/Light_01_MAT.ply
+scene.objects.Light_01_MAT.Light_01_MAT.useplynormals = 1

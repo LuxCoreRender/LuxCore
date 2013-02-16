@@ -1,0 +1,16 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: sky.blend
+element vertex 4
+property float x
+property float y
+property float z
+element face 2
+property list uchar uint vertex_indices
+end_header
+7.977624 7.977623 0.000000
+-7.977621 7.977627 0.000000
+-7.977625 -7.977623 0.000000
+7.977624 -7.977624 0.000000
+3 0 1 2
+3 0 2 3
