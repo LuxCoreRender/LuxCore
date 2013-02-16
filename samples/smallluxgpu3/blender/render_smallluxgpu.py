@@ -63,7 +63,7 @@ class SLGTelnet:
     def send(self, cmd):
         try:
             self.slgtn.write(str.encode(cmd+'\n'))
-            r = self.slgtn.expect([b'OK',b'ERROR'],2)
+            r = self.slgtn.expect([b'OK\n',b'ERROR\n'],5)
             if r[0] == 0:
                 return True
             else:
@@ -847,8 +847,12 @@ class SLGRender(bpy.types.Operator):
         self.report({'ERROR'}, "SLGBP: " + msg)
 
     def _reset(self, context):
-        context.region.callback_remove(self._pdcb)
-        context.region.callback_remove(self._icb)
+        if bpy.app.version >= (2, 65, 10):
+            bpy.types.SpaceView3D.draw_handler_remove(self._pdcb, 'WINDOW')
+            bpy.types.SpaceView3D.draw_handler_remove(self._icb, 'WINDOW')
+        else:
+            context.region.callback_remove(self._pdcb)
+            context.region.callback_remove(self._icb)
         context.area.tag_redraw()
         if self.properties.animation:
             context.window_manager.event_timer_remove(SLGBP.animtimer)
@@ -915,8 +919,12 @@ class SLGRender(bpy.types.Operator):
         SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
         SLGBP.msgrefresh = context.area.tag_redraw
         context.window_manager.modal_handler_add(self)
-        self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-        self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
+        if bpy.app.version >= (2, 65, 10):
+            self._icb = bpy.types.SpaceView3D.draw_handler_add(info_callback, (context,), 'WINDOW', 'POST_PIXEL')
+            self._pdcb = bpy.types.SpaceView3D.draw_handler_add(pre_draw_callback, (), 'WINDOW', 'PRE_VIEW')
+        else:
+            self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
+            self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
         SLGBP.msgrefresh()
         SLGBP.thread = Thread(target=SLGBP.exportrun,args=[context.scene, self._error])
         SLGBP.thread.start()
@@ -942,8 +950,12 @@ class SLGLive(bpy.types.Operator):
                 SLGBP.liveanim = False
             SLGBP.live = False
             SLGBP.telnet.close()
-            context.region.callback_remove(self._pdcb)
-            context.region.callback_remove(self._icb)
+            if bpy.app.version >= (2, 65, 10):
+                bpy.types.SpaceView3D.draw_handler_remove(self._pdcb, 'WINDOW')
+                bpy.types.SpaceView3D.draw_handler_remove(self._icb, 'WINDOW')
+            else:
+                context.region.callback_remove(self._pdcb)
+                context.region.callback_remove(self._icb)
             context.area.tag_redraw()
             bpy.context.user_preferences.edit.use_global_undo = self._undo
             return {'FINISHED'}
@@ -988,8 +1000,12 @@ class SLGLive(bpy.types.Operator):
         SLGBP.msg = 'SLG Live!'
         SLGBP.msgrefresh = context.area.tag_redraw
         SLGBP.curframe = context.scene.frame_current
-        self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-        self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
+        if bpy.app.version >= (2, 65, 10):
+            self._icb = bpy.types.SpaceView3D.draw_handler_add(info_callback, (context,), 'WINDOW', 'POST_PIXEL')
+            self._pdcb = bpy.types.SpaceView3D.draw_handler_add(pre_draw_callback, (), 'WINDOW', 'PRE_VIEW')
+        else:        
+            self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
+            self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
         SLGBP.thread = Thread(target=SLGBP.liveconnect,args=[context.scene, self._error])
         SLGBP.thread.start()
         return {'RUNNING_MODAL'}
@@ -1376,6 +1392,13 @@ def slg_add_properties():
 
     for member in dir(bl_ui.properties_data_camera):
         subclass = getattr(bl_ui.properties_data_camera, member)
+        try:
+            subclass.COMPAT_ENGINES.add('SLG_RENDER')
+        except:
+            pass
+
+    for member in dir(bl_ui.properties_scene):
+        subclass = getattr(bl_ui.properties_scene, member)
         try:
             subclass.COMPAT_ENGINES.add('SLG_RENDER')
         except:
