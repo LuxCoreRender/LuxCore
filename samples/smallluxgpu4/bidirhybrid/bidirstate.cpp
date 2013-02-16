@@ -26,11 +26,6 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/opencl/utils.h"
 
-#if defined(__APPLE__)
-//OSX version detection
-#include <sys/utsname.h>
-#endif
-
 //------------------------------------------------------------------------------
 // BiDirState
 //------------------------------------------------------------------------------
