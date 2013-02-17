@@ -705,6 +705,13 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new CheckerBoard2DTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2);
+	} else if (texType == "checkerboard3d") {
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const Texture *tex1 = GetTexture(tex1Name);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const Texture *tex2 = GetTexture(tex2Name);
+
+		return new CheckerBoard3DTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
 		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "amount").at(0);
 		const Texture *amtTex = GetTexture(amtName);

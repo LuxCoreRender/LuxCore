@@ -675,6 +675,18 @@ void CompiledScene::CompileTextures() {
 				tex->checkerBoard2D.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case CHECKERBOARD3D: {
+				CheckerBoard3DTexture *cb = static_cast<CheckerBoard3DTexture *>(t);
+
+				tex->type = luxrays::ocl::CHECKERBOARD3D;
+				CompileTextureMapping(&tex->checkerBoard3D.mapping, cb->GetTextureMapping());
+				const Texture *tex1 = cb->GetTexture1();
+				tex->checkerBoard3D.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = cb->GetTexture2();
+				tex->checkerBoard3D.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
 			case MIX_TEX: {
 				MixTexture *mt = static_cast<MixTexture *>(t);
 

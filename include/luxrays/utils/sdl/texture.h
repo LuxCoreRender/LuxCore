@@ -50,7 +50,9 @@ namespace sdl {
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, CHECKERBOARD2D, MIX_TEX, FBM_TEX, MARBLE
+	FRESNEL_APPROX_K, MIX_TEX, FBM_TEX, MARBLE,
+	// Procedural textures
+	CHECKERBOARD2D, CHECKERBOARD3D
 } TextureType;
 
 struct HitPointStruct;
@@ -441,7 +443,7 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// CheckerBoard 2D texture
+// CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
 class CheckerBoard2DTexture : public Texture {
@@ -450,6 +452,37 @@ public:
 	virtual ~CheckerBoard2DTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return CHECKERBOARD2D; }
+	virtual float GetGreyValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
+	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping *mapping;
+	const Texture *tex1;
+	const Texture *tex2;
+};
+
+class CheckerBoard3DTexture : public Texture {
+public:
+	CheckerBoard3DTexture(const TextureMapping *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	virtual ~CheckerBoard3DTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return CHECKERBOARD3D; }
 	virtual float GetGreyValue(const HitPoint &hitPoint) const;
 	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
 	virtual float GetAlphaValue(const HitPoint &hitPoint) const;

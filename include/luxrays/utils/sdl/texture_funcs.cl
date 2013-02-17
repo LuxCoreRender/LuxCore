@@ -505,7 +505,7 @@ void FresnelApproxKTexture_EvaluateDuDv(__global Texture *texture, __global HitP
 #endif
 
 //------------------------------------------------------------------------------
-// CheckerBoard2D texture
+// CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_CHECKERBOARD2D)
@@ -533,6 +533,40 @@ void CheckerBoard2DTexture_EvaluateColor(__global Texture *texture, __global Hit
 }
 
 void CheckerBoard2DTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 dudv1 = texValues[--(*texValuesSize)];
+	const float2 dudv2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
+}
+
+#endif
+
+#if defined (PARAM_ENABLE_CHECKERBOARD3D)
+
+void CheckerBoard3DTexture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float3 mapP = Mapping_Map3D(&texture->checkerBoard3D.mapping, p);
+
+	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
+}
+
+void CheckerBoard3DTexture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
+
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float3 mapP = Mapping_Map3D(&texture->checkerBoard3D.mapping, p);
+
+	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
+}
+
+void CheckerBoard3DTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
 		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float2 dudv1 = texValues[--(*texValuesSize)];
 	const float2 dudv2 = texValues[--(*texValuesSize)];
@@ -733,6 +767,12 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard2D.tex2Index];
 			return 2;
 #endif
+#if defined(PARAM_ENABLE_CHECKERBOARD3D)
+		case CHECKERBOARD3D:
+			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard3D.tex1Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard3D.tex2Index];
+			return 2;
+#endif
 #if defined (PARAM_ENABLE_MIX_TEX)
 		case MIX_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.amountTexIndex];
@@ -810,6 +850,11 @@ void Texture_EvaluateGrey(__global Texture *texture, __global HitPoint *hitPoint
 #if defined (PARAM_ENABLE_CHECKERBOARD2D)
 		case CHECKERBOARD2D:
 			CheckerBoard2DTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_CHECKERBOARD3D)
+		case CHECKERBOARD3D:
+			CheckerBoard3DTexture_EvaluateGrey(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined (PARAM_ENABLE_MIX_TEX)
@@ -930,6 +975,11 @@ void Texture_EvaluateColor(__global Texture *texture, __global HitPoint *hitPoin
 			CheckerBoard2DTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined (PARAM_ENABLE_CHECKERBOARD3D)
+		case CHECKERBOARD3D:
+			CheckerBoard3DTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 #if defined (PARAM_ENABLE_MIX_TEX)
 		case MIX_TEX:
 			MixTexture_EvaluateColor(texture, hitPoint, texValues, texValuesSize);
@@ -1045,6 +1095,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined (PARAM_ENABLE_CHECKERBOARD2D)
 		case CHECKERBOARD2D:
 			CheckerBoard2DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_CHECKERBOARD3D)
+		case CHECKERBOARD3D:
+			CheckerBoard3DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined (PARAM_ENABLE_MIX_TEX)

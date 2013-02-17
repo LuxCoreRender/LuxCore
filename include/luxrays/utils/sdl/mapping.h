@@ -77,6 +77,7 @@ public:
 
 	virtual Properties ToProperties(const std::string &name) const {
 		Properties props;
+		props.SetString(name + ".type", "uvmapping");
 		props.SetString(name + ".uvscale", ToString(uScale) + " " + ToString(vScale));
 		props.SetString(name + ".uvdelta", ToString(uDelta) + " " + ToString(vDelta));
 
@@ -108,6 +109,7 @@ public:
 
 	virtual Properties ToProperties(const std::string &name) const {
 		Properties props;
+		props.SetString(name + ".type", "globalmapping3d");
 		props.SetString(name + ".transformation", ToString(worldToLocal.mInv));
 
 		return props;

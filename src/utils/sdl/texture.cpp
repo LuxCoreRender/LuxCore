@@ -614,7 +614,7 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr");
 	props.SetString("scene.textures." + name + ".gamma", "1.0");
 	props.SetString("scene.textures." + name + ".gain", ToString(gain));
-	props.Load(mapping->ToProperties("scene.textures." + name));
+	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -738,7 +738,7 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache)
 }
 
 //------------------------------------------------------------------------------
-// CheckerBoard 2D texture
+// CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
 float CheckerBoard2DTexture::GetGreyValue(const HitPoint &hitPoint) const {
@@ -779,7 +779,50 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache)
 	props.SetString("scene.textures." + name + ".type", "checkerboard2d");
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
 	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
-	props.Load(mapping->ToProperties("scene.textures." + name));
+	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+float CheckerBoard3DTexture::GetGreyValue(const HitPoint &hitPoint) const {
+	const Point p = mapping->Map(hitPoint.p);
+	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
+		return tex1->GetGreyValue(hitPoint);
+	else
+		return tex2->GetGreyValue(hitPoint);
+}
+
+Spectrum CheckerBoard3DTexture::GetColorValue(const HitPoint &hitPoint) const {
+	const Point p = mapping->Map(hitPoint.p);
+	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
+		return tex1->GetColorValue(hitPoint);
+	else
+		return tex2->GetColorValue(hitPoint);
+}
+
+float CheckerBoard3DTexture::GetAlphaValue(const HitPoint &hitPoint) const {
+	const Point p = mapping->Map(hitPoint.p);
+	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
+		return tex1->GetAlphaValue(hitPoint);
+	else
+		return tex2->GetAlphaValue(hitPoint);
+}
+
+UV CheckerBoard3DTexture::GetDuDv() const {
+	const UV uv1 = tex1->GetDuDv();
+	const UV uv2 = tex2->GetDuDv();
+
+	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
+}
+
+Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "checkerboard3d");
+	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
+	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -862,7 +905,7 @@ Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.SetString("scene.textures." + name + ".type", "fbm");
 	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
 	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
-	props.Load(mapping->ToProperties("scene.textures." + name));
+	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -927,7 +970,7 @@ Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
 	props.SetString("scene.textures." + name + ".scale", ToString(scale));
 	props.SetString("scene.textures." + name + ".variation", ToString(variation));
-	props.Load(mapping->ToProperties("scene.textures." + name));
+	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
