@@ -656,7 +656,7 @@ TextureMapping *Scene::CreateTextureMapping(const std::string &prefixName, const
 				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
 		const Transform trans(mat);
 
-		return new GlobalMapping3D(Inverse(trans));
+		return new GlobalMapping3D(trans);
 	} else
 		throw std::runtime_error("Unknown texture coordinate mapping type: " + mapType);
 }
