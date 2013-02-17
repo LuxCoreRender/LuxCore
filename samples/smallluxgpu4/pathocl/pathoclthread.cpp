@@ -417,6 +417,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
 	if (cscene->IsTextureCompiled(CHECKERBOARD2D))
 		ss << " -D PARAM_ENABLE_CHECKERBOARD2D";
+	if (cscene->IsTextureCompiled(CHECKERBOARD3D))
+		ss << " -D PARAM_ENABLE_CHECKERBOARD3D";
 	if (cscene->IsTextureCompiled(MIX_TEX))
 		ss << " -D PARAM_ENABLE_MIX_TEX";
 	if (cscene->IsTextureCompiled(FBM_TEX))
