@@ -139,12 +139,10 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 	const u_int originalFilmHeight = session->film->GetHeight();
 
 	// Allocate a film where to merge all tiles
-	Film mergeTileFilm(originalFilmWidth, originalFilmWidth,
-			session->film->HasPerPixelNormalizedBuffer(), session->film->HasPerScreenNormalizedBuffer(),
-			true);
+	Film mergeTileFilm(originalFilmWidth, originalFilmWidth);
 	mergeTileFilm.CopyDynamicSettings(*(session->film));
-	mergeTileFilm.EnableOverlappedScreenBufferUpdate(false);
-	mergeTileFilm.Init(originalFilmWidth, originalFilmWidth);
+	mergeTileFilm.SetOverlappedScreenBufferUpdateFlag(false);
+	mergeTileFilm.Init();
 
 	// Get the tile size
 	vector<int> tileSize = config->cfg.GetIntVector("batch.tile", "256 256");
@@ -485,9 +483,9 @@ int main(int argc, char *argv[]) {
 	} catch (runtime_error err) {
 		SLG_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
-	} catch (exception err) {
-		SLG_LOG("ERROR: " << err.what());
-		return EXIT_FAILURE;
+//	} catch (exception err) {
+//		SLG_LOG("ERROR: " << err.what());
+//		return EXIT_FAILURE;
 	}
 
 	return EXIT_SUCCESS;

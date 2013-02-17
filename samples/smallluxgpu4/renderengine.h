@@ -39,7 +39,8 @@ typedef enum {
 	BIDIRHYBRID = 8,
 	CBIDIRHYBRID = 9,
 	BIDIRVMCPU = 10,
-	FILESAVER = 11
+	FILESAVER = 11,
+	RTPATHOCL = 12
 } RenderEngineType;
 
 //------------------------------------------------------------------------------
@@ -57,6 +58,7 @@ public:
 	void EndEdit(const EditActionList &editActions);
 
 	void UpdateFilm();
+	virtual bool WaitNewFrame() { return false; };
 
 	virtual RenderEngineType GetEngineType() const = 0;
 

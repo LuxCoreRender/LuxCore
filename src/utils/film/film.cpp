@@ -26,21 +26,22 @@
 using namespace luxrays;
 using namespace luxrays::utils;
 
-Film::Film(const unsigned int w, const unsigned int h,
-			const bool enablePerPixelNormBuffer,
-			const bool enablePerScreenNormBuffer,
-			const bool enableFrameBuf) {
+Film::Film(const unsigned int w, const unsigned int h) {
+	width = w;
+	height = h;
+
 	sampleFrameBuffer[PER_PIXEL_NORMALIZED] = NULL;
 	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
 	alphaFrameBuffer = NULL;
 	frameBuffer = NULL;
 	convTest = NULL;
 
+	enablePerPixelNormalizedBuffer = true;
+
+	enablePerScreenNormalizedBuffer = false;
 	enableAlphaChannel = false;
+	enableFrameBuffer = true;
 	enabledOverlappedScreenBufferUpdate = true;
-	enablePerPixelNormalizedBuffer = enablePerPixelNormBuffer;
-	enablePerScreenNormalizedBuffer = enablePerScreenNormBuffer;
-	enableFrameBuffer = enableFrameBuf;
 
 	filter = NULL;
 	filterLUTs = NULL;
@@ -49,7 +50,7 @@ Film::Film(const unsigned int w, const unsigned int h,
 	toneMapParams = new LinearToneMapParams();
 
 	InitGammaTable();
-	Init(w, h);
+	Init();
 }
 
 Film::~Film() {
@@ -71,11 +72,19 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 	height = h;
 	pixelCount = w * h;
 
+	// Delete all already allocated buffers
 	delete sampleFrameBuffer[PER_PIXEL_NORMALIZED];
 	delete sampleFrameBuffer[PER_SCREEN_NORMALIZED];
 	delete alphaFrameBuffer;
 	delete frameBuffer;
+	delete convTest;
+	sampleFrameBuffer[PER_PIXEL_NORMALIZED]  = NULL;
+	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
+	alphaFrameBuffer = NULL;
+	frameBuffer = NULL;
+	convTest = NULL;
 
+	// Allocate all required buffers
 	if (enablePerPixelNormalizedBuffer) {
 		sampleFrameBuffer[PER_PIXEL_NORMALIZED] = new SampleFrameBuffer(width, height);
 		sampleFrameBuffer[PER_PIXEL_NORMALIZED]->Clear();
@@ -98,10 +107,10 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 		convTest = new ConvergenceTest(width, height);
 	}
 
+	// Initialize the stats
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
-
 }
 
 void Film::InitGammaTable(const float gamma) {
