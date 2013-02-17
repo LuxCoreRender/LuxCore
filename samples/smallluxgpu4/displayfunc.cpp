@@ -44,6 +44,7 @@
 #include "luxrays/utils/film/film.h"
 
 bool OSDPrintHelp = false;
+bool RealtimeMode = false;
 
 static char captionBuffer[512];
 
@@ -104,6 +105,7 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(320, fontOffset, "6", "Hybrid combinatorial bidir. path tracing");
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "7", "CPU bidir. VM path tracing");
+	PrintHelpString(320, fontOffset, "8", "RT OpenCL path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -186,6 +188,12 @@ static void PrintCaptions() {
 }
 
 void displayFunc(void) {
+	sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
+		session->renderEngine->GetPass(),
+		session->renderEngine->GetTotalSamplesSec() / 1000000.0,
+		int(session->renderEngine->GetTotalRaysSec() / 1000.0),
+		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
+
 	session->film->UpdateScreenBuffer();
 	const float *pixels = session->film->GetScreenBuffer();
 
@@ -206,6 +214,11 @@ void displayFunc(void) {
 	}
 
 	glutSwapBuffers();
+}
+
+void idleFunc(void) {
+	session->renderEngine->WaitNewFrame();
+	displayFunc();
 }
 
 void reshapeFunc(int newWidth, int newHeight) {
@@ -232,12 +245,6 @@ void reshapeFunc(int newWidth, int newHeight) {
 }
 
 void timerFunc(int value) {
-	sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-		session->renderEngine->GetPass(),
-		session->renderEngine->GetTotalSamplesSec() / 1000000.0,
-		int(session->renderEngine->GetTotalRaysSec() / 1000.0),
-		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
-
 	// Need to update the Film
 	session->renderEngine->UpdateFilm();
 
@@ -248,8 +255,8 @@ void timerFunc(int value) {
 	}
 
 	glutPostRedisplay();
-
-	glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+	if (!RealtimeMode)
+		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 }
 
 #define MOVE_STEP 0.5f
@@ -368,24 +375,50 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case '1':
 			session->SetRenderingEngineType(PATHOCL);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			RealtimeMode = false;
 			break;
 		case '2':
 			session->SetRenderingEngineType(LIGHTCPU);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			RealtimeMode = false;
 			break;
 		case '3':
 			session->SetRenderingEngineType(PATHCPU);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			RealtimeMode = false;
 			break;
 		case '4':
 			session->SetRenderingEngineType(BIDIRCPU);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			RealtimeMode = false;
 			break;
 		case '5':
 			session->SetRenderingEngineType(BIDIRHYBRID);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			RealtimeMode = false;
 			break;
 		case '6':
 			session->SetRenderingEngineType(CBIDIRHYBRID);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			RealtimeMode = false;
 			break;
 		case '7':
 			session->SetRenderingEngineType(BIDIRVMCPU);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			RealtimeMode = false;
+			break;
+		case '8':
+			session->SetRenderingEngineType(RTPATHOCL);
+			glutIdleFunc(idleFunc);
+			RealtimeMode = true;
 			break;
 		case 'o': {
 #if defined(WIN32)
@@ -404,7 +437,8 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 	}
 
-	displayFunc();
+	if (!RealtimeMode)
+		displayFunc();
 }
 
 void specialFunc(int key, int x, int y) {
@@ -445,7 +479,8 @@ void specialFunc(int key, int x, int y) {
 			break;
 	}
 
-	displayFunc();
+	if (!RealtimeMode)
+		displayFunc();
 }
 
 static int mouseButton0 = 0;
@@ -481,7 +516,7 @@ static void motionFunc(int x, int y) {
 
 	if (mouseButton0) {
 		// Check elapsed time since last update
-		if (WallClockTime() - lastMouseUpdate > minInterval) {
+		if (RealtimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
@@ -504,12 +539,13 @@ static void motionFunc(int x, int y) {
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			displayFunc();
+			if (!RealtimeMode)
+				displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
 	} else if (mouseButton2) {
 		// Check elapsed time since last update
-		if (WallClockTime() - lastMouseUpdate > minInterval) {
+		if (RealtimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
@@ -532,7 +568,8 @@ static void motionFunc(int x, int y) {
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			displayFunc();
+			if (!RealtimeMode)
+				displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
 	}
@@ -561,7 +598,13 @@ void RunGlut() {
 	glutDisplayFunc(displayFunc);
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
-	glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
+		glutIdleFunc(idleFunc);
+		RealtimeMode = true;
+	} else {
+		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+		RealtimeMode = false;
+	}
 
 	glMatrixMode(GL_PROJECTION);
 	glViewport(0, 0, session->film->GetWidth(), session->film->GetHeight());

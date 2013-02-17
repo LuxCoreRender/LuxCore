@@ -38,7 +38,10 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
 
-	film->EnableOverlappedScreenBufferUpdate(true);
+	film->SetPerPixelNormalizedBufferFlag(true);
+	film->SetPerScreenNormalizedBufferFlag(true);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->Init();
 }
 
 void BiDirCPURenderEngine::StartLockLess() {

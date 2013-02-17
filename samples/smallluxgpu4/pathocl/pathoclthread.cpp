@@ -847,7 +847,8 @@ void PathOCLRenderThread::InitRender() {
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
-	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
+	// TOFIX
+	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount + 1, "SampleData"); // +1 to avoid METROPOLIS + Intel\AMD OpenCL crash
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
@@ -1099,14 +1100,13 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
-	if (editActions.HasAnyAction())
+	if (editActions.HasAnyAction()) {
 		SetKernelArgs();
 
-	//--------------------------------------------------------------------------
-	// Execute initialization kernels
-	//--------------------------------------------------------------------------
+		//--------------------------------------------------------------------------
+		// Execute initialization kernels
+		//--------------------------------------------------------------------------
 
-	if (editActions.HasAnyAction()) {
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 		// Clear the frame buffer
