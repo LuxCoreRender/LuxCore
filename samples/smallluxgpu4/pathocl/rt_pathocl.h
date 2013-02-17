@@ -19,40 +19,73 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "lightcpu/lightcpu.h"
+#ifndef _SLG_RT_PATHOCL_H
+#define	_SLG_RT_PATHOCL_H
 
-using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+#include "pathocl.h"
 
 namespace slg {
 
+class RTPathOCLRenderEngine;
+
 //------------------------------------------------------------------------------
-// LightCPURenderEngine
+// Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex) {
-	film->SetPerPixelNormalizedBufferFlag(true);
-	film->SetPerScreenNormalizedBufferFlag(true);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->Init();
+class RTPathOCLRenderThread : public PathOCLRenderThread {
+	friend class RTPathOCLRenderEngine;
+public:
+	RTPathOCLRenderThread(const u_int index, OpenCLIntersectionDevice *device,
+			PathOCLRenderEngine *re);
+	~RTPathOCLRenderThread();
+
+	void Interrupt();
+
+	void BeginEdit();
+	void EndEdit(const EditActionList &editActions);
+	void SetAssignedTaskCount(u_int taskCount);
+	u_int GetAssignedTaskCount() const { return assignedTaskCount; };
+	double GetFrameTime() const { return frameTime; };
+
+private:
+	void UpdateOclBuffers();
+	void RenderThreadImpl();
+
+	void balance_lock()   { balanceMutex.lock(); };
+	void balance_unlock() { balanceMutex.unlock(); };
+
+	boost::mutex editMutex;
+	boost::mutex balanceMutex;
+	boost::barrier *frameBarrier;
+	EditActionList updateActions;
+	volatile double frameTime;
+	volatile u_int assignedTaskCount;
+};
+
+//------------------------------------------------------------------------------
+// Path Tracing 100% OpenCL render engine
+//------------------------------------------------------------------------------
+
+class RTPathOCLRenderEngine : public PathOCLRenderEngine {
+	friend class RTPathOCLRenderThread;
+public:
+	RTPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	virtual ~RTPathOCLRenderEngine();
+
+	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
+	bool WaitNewFrame();
+
+protected:
+	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
+		OpenCLIntersectionDevice *device);
+
+	boost::barrier *frameBarrier;
+};
 
 }
 
-void LightCPURenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
+#endif
 
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
-
-	maxPathDepth = cfg.GetInt("light.maxdepth", cfg.GetInt("path.maxdepth", 5));
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
-
-	CPURenderEngine::StartLockLess();
-}
-
-}
+#endif	/* _SLG_RT_PATHOCL_H */

@@ -116,6 +116,8 @@ set(SLG4LIB_SRCS
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
 	pathocl/pathoclthread.cpp
+	pathocl/rt_pathocl.cpp
+	pathocl/rt_pathoclthread.cpp
 	lightcpu/lightcpu.cpp
 	lightcpu/lightcputhread.cpp
 	pathcpu/pathcpu.cpp

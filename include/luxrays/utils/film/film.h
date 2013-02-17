@@ -59,12 +59,10 @@ typedef enum {
 
 class Film {
 public:
-	Film(const unsigned int w, const unsigned int h,
-			const bool enablePerPixelNormalizedBuffer,
-			const bool enablePerScreenNormalizedBuffer,
-			const bool enableFrameBuffer);
+	Film(const unsigned int w, const unsigned int h);
 	~Film();
 
+	void Init() { Init(width, height); }
 	void Init(const unsigned int w, const unsigned int h);
 	void InitGammaTable(const float gamma = 2.2f);
 	void Reset();
@@ -73,7 +71,21 @@ public:
 	// Dynamic settings
 	//--------------------------------------------------------------------------
 
-	void EnableAlphaChannel(const bool alphaChannel) {
+	void SetPerPixelNormalizedBufferFlag(const bool enablePerPixelNormBuffer) {
+		enablePerPixelNormalizedBuffer = enablePerPixelNormBuffer;
+	}
+	void SetPerScreenNormalizedBufferFlag(const bool enablePerScreenNormBuffer) {
+		enablePerScreenNormalizedBuffer = enablePerScreenNormBuffer;
+	}
+	void SetFrameBufferFlag(const bool enableFrmBuffer) {
+		enableFrameBuffer = enableFrmBuffer;
+	}
+
+	bool HasPerPixelNormalizedBuffer() const { return enablePerPixelNormalizedBuffer; }
+	bool HasPerScreenNormalizedBuffer() const { return enablePerScreenNormalizedBuffer; }
+	bool HasFrameBuffer() const { return enableFrameBuffer; }
+
+	void SetAlphaChannelFlag(const bool alphaChannel) {
 		// Alpha buffer uses the weights in PER_PIXEL_NORMALIZED buffer
 		assert (!alphaChannel || (alphaChannel && enablePerPixelNormalizedBuffer));
 
@@ -81,13 +93,10 @@ public:
 	}
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
 
-	void EnableOverlappedScreenBufferUpdate(const bool overlappedScreenBufferUpdate) {
+	void SetOverlappedScreenBufferUpdateFlag(const bool overlappedScreenBufferUpdate) {
 		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
-
-	bool HasPerPixelNormalizedBuffer() const { return enablePerPixelNormalizedBuffer; }
-	bool HasPerScreenNormalizedBuffer() const { return enablePerScreenNormalizedBuffer; }
 
 	void SetFilterType(const FilterType filter);
 	FilterType GetFilterType() const { return filterType; }
@@ -100,10 +109,13 @@ public:
 	}
 
 	void CopyDynamicSettings(const Film &film) {
-		EnableAlphaChannel(film.IsAlphaChannelEnabled());
+		SetPerPixelNormalizedBufferFlag(HasPerPixelNormalizedBuffer());
+		SetPerScreenNormalizedBufferFlag(HasPerScreenNormalizedBuffer());
+		SetFrameBufferFlag(HasFrameBuffer());
+		SetAlphaChannelFlag(film.IsAlphaChannelEnabled());
 		SetFilterType(film.GetFilterType());
 		SetToneMapParams(*(film.GetToneMapParams()));
-		EnableOverlappedScreenBufferUpdate(film.IsOverlappedScreenBufferUpdate());
+		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	}
 
 	//--------------------------------------------------------------------------
@@ -183,9 +195,7 @@ private:
 		// Very slow !
 		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
 
-		const unsigned int index = Min<unsigned int>(
-			Floor2UInt(GAMMA_TABLE_SIZE * Clamp(x, 0.f, 1.f)),
-				GAMMA_TABLE_SIZE - 1);
+		const u_int index = Clamp(Floor2Int(GAMMA_TABLE_SIZE * x), 0, GAMMA_TABLE_SIZE - 1);
 		return gammaTable[index];
 	}
 
