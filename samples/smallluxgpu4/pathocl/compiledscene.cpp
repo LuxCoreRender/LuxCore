@@ -56,7 +56,7 @@ CompiledScene::~CompiledScene() {
 }
 
 void CompiledScene::CompileCamera() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Camera");
+	//SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Camera");
 
 	//--------------------------------------------------------------------------
 	// Camera definition

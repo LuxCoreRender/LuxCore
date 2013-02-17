@@ -21,7 +21,7 @@
 
 #include "renderengine.h"
 #include "renderconfig.h"
-#include "pathocl/pathocl.h"
+#include "pathocl/rt_pathocl.h"
 #include "lightcpu/lightcpu.h"
 #include "pathcpu/pathcpu.h"
 #include "bidircpu/bidircpu.h"
@@ -225,6 +225,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return BIDIRVMCPU;
 	if ((type.compare("11") == 0) || (type.compare("FILESAVER") == 0))
 		return FILESAVER;
+	if ((type.compare("12") == 0) || (type.compare("RTPATHOCL") == 0))
+		return RTPATHOCL;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -246,6 +248,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "BIDIRVMCPU";
 		case FILESAVER:
 			return "FILESAVER";
+		case RTPATHOCL:
+			return "RTPATHOCL";
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
@@ -274,6 +278,13 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			return new BiDirVMCPURenderEngine(renderConfig, film, filmMutex);
 		case FILESAVER:
 			return new FileSaverRenderEngine(renderConfig, film, filmMutex);
+		case RTPATHOCL:
+#ifndef LUXRAYS_DISABLE_OPENCL
+			return new RTPathOCLRenderEngine(renderConfig, film, filmMutex);
+#else
+			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
+			return new PathCPURenderEngine(renderConfig, film, filmMutex);
+#endif
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}
@@ -329,10 +340,13 @@ void CPURenderThread::StartRenderThread() {
 	const u_int filmHeight = renderEngine->film->GetHeight();
 
 	delete threadFilm;
-	threadFilm = new Film(filmWidth, filmHeight,
-			enablePerPixelNormBuffer, enablePerScreenNormBuffer, false);
+
+	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->Init(filmWidth, filmHeight);
+	threadFilm->SetPerPixelNormalizedBufferFlag(enablePerPixelNormBuffer);
+	threadFilm->SetPerScreenNormalizedBufferFlag(enablePerScreenNormBuffer);
+	threadFilm->SetFrameBufferFlag(false);
+	threadFilm->Init();
 
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
@@ -578,9 +592,12 @@ void HybridRenderThread::StartRenderThread() {
 	const u_int filmHeight = renderEngine->film->GetHeight();
 
 	delete threadFilm;
-	threadFilm = new Film(filmWidth, filmHeight, true, true, false);
+	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->Init(filmWidth, filmHeight);
+	threadFilm->SetPerPixelNormalizedBufferFlag(true);
+	threadFilm->SetPerScreenNormalizedBufferFlag(true);
+	threadFilm->SetFrameBufferFlag(false);
+	threadFilm->Init();
 
 	samplesCount = 0.0;
 

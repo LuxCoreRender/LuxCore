@@ -19,40 +19,68 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "lightcpu/lightcpu.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+#include "slg.h"
+#include "pathocl/rt_pathocl.h"
 
 using namespace std;
-using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// LightCPURenderEngine
+// RTPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex) {
-	film->SetPerPixelNormalizedBufferFlag(true);
-	film->SetPerScreenNormalizedBufferFlag(true);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->Init();
+RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		PathOCLRenderEngine(rcfg, flm, flmMutex) {
+	frameBarrier = new boost::barrier(renderThreads.size() + 1);
+}
+
+RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
+}
+
+PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
+	OpenCLIntersectionDevice *device) {
+	return new RTPathOCLRenderThread(index, device, this);
+}
+
+bool RTPathOCLRenderEngine::WaitNewFrame()
+{
+	frameBarrier->wait();
+	// re-balance threads
+	double minSampleTime = 1000;
+	size_t fatest_dev = 0;
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
+		t->balance_lock();
+		const double sampleTime = t->GetFrameTime() * taskCount / t->GetAssignedTaskCount();
+		if (minSampleTime > sampleTime) {
+			minSampleTime = sampleTime;
+			fatest_dev = i;
+		}
+	}
+	//printf("balance:");
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
+		if (i == fatest_dev) {
+			t->SetAssignedTaskCount(taskCount);
+			//printf(" %d(%.3f)", t->GetAssignedTaskCount(), t->GetFrameTime());
+			continue;
+			}
+			double sampleTime = t->GetFrameTime() * taskCount / t->GetAssignedTaskCount();
+			t->SetAssignedTaskCount(taskCount * minSampleTime / sampleTime);
+		//printf(" %d(%.3f)", t->GetAssignedTaskCount(), t->GetFrameTime());
+	}
+	//printf("\n");
+
+	UpdateFilm();
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		((RTPathOCLRenderThread *)renderThreads[i])->balance_unlock();
+
+	return true;
+}
 
 }
 
-void LightCPURenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
-
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
-
-	maxPathDepth = cfg.GetInt("light.maxdepth", cfg.GetInt("path.maxdepth", 5));
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
-
-	CPURenderEngine::StartLockLess();
-}
-
-}
+#endif

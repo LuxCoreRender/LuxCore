@@ -61,6 +61,11 @@ namespace slg {
 
 PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		OCLRenderEngine(rcfg, flm, flmMutex) {
+	film->SetPerPixelNormalizedBufferFlag(true);
+	film->SetPerScreenNormalizedBufferFlag(false);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->Init();
+
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
 
@@ -96,8 +101,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 	// Set the LuxRays SataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
-	film->EnableOverlappedScreenBufferUpdate(true);
-
 	//--------------------------------------------------------------------------
 	// Setup render threads array
 	//--------------------------------------------------------------------------
@@ -119,6 +122,11 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 	delete compiledScene;
 	delete sampler;
 	delete filter;
+}
+
+PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
+    OpenCLIntersectionDevice *device) {
+    return new PathOCLRenderThread(index, device, this);
 }
 
 void PathOCLRenderEngine::StartLockLess() {
@@ -226,9 +234,8 @@ void PathOCLRenderEngine::StartLockLess() {
 	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (!renderThreads[i]) {
-			renderThreads[i] = new PathOCLRenderThread(i,
-					(OpenCLIntersectionDevice *)(intersectionDevices[i]),
-					this);
+			renderThreads[i] = CreateOCLThread(i,
+					(OpenCLIntersectionDevice *)(intersectionDevices[i]));
 		}
 	}
 

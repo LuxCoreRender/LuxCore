@@ -41,7 +41,7 @@ namespace slg {
 
 FileSaverRenderEngine::FileSaverRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		RenderEngine(rcfg, flm, flmMutex) {
-
+	film->Init();
 }
 
 void FileSaverRenderEngine::StartLockLess() {
