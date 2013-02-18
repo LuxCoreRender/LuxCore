@@ -24,6 +24,8 @@ std::string KernelSource_texture_types =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
+"#define DUDV_VALUE 0.001f\n"
+"\n"
 "typedef enum {\n"
 "	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,\n"
 "	FRESNEL_APPROX_K, MIX_TEX,\n"

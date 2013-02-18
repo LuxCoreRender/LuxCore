@@ -58,7 +58,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	if (material->HasNormalTex()) {
 		// Apply normal mapping
 		const Texture *nm = material->GetNormalTexture();
-		const Spectrum color = nm->GetSpectrumValue(this->hitPoint);
+		const Spectrum color = nm->GetSpectrumValue(hitPoint);
 
 		const float x = 2.f * color.r - 1.f;
 		const float y = 2.f * color.g - 1.f;
@@ -78,23 +78,33 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		const Texture *bm = material->GetBumpTexture();
 		const UV &dudv = bm->GetDuDv();
 
-		const float b0 = bm->GetFloatValue(this->hitPoint);
+		const float b0 = bm->GetFloatValue(hitPoint);
 
-		// This is a simple trick. The correct code would require differential information.
-		HitPoint tmpHitPoint = this->hitPoint;
-		tmpHitPoint.uv.u = tmpHitPoint.uv.u + dudv.u;
-		tmpHitPoint.uv.v = tmpHitPoint.uv.v;
-		const float bu = bm->GetFloatValue(tmpHitPoint);
+		float dbdu;
+		if (dudv.u > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			HitPoint tmpHitPoint = hitPoint;
+			tmpHitPoint.p.x += dudv.u;
+			tmpHitPoint.uv.u += dudv.u;
+			const float bu = bm->GetFloatValue(tmpHitPoint);
 
-		// This is a simple trick. The correct code would require differential information.
-		tmpHitPoint.uv.u = tmpHitPoint.uv.u;
-		tmpHitPoint.uv.v = tmpHitPoint.uv.v + dudv.u;
-		const float bv = bm->GetFloatValue(tmpHitPoint);
+			dbdu = (bu - b0) / dudv.u;
+		} else
+			dbdu = 0.f;
 
-		// bumpScale is a fixed scale factor to try to more closely match
-		// LuxRender bump mapping
-		const float bumpScale = 50.f;
-		const Vector bump(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
+		float dbdv;
+		if (dudv.v > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			HitPoint tmpHitPoint = hitPoint;
+			tmpHitPoint.p.y += dudv.v;
+			tmpHitPoint.uv.v += dudv.v;
+			const float bv = bm->GetFloatValue(tmpHitPoint);
+
+			dbdv = (bv - b0) / dudv.v;
+		} else
+			dbdv = 0.f;
+
+		const Vector bump(dbdu, dbdv, 1.f);
 
 		Vector v1, v2;
 		CoordinateSystem(Vector(hitPoint.shadeN), &v1, &v2);
@@ -128,7 +138,7 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 	const Vector localLightDir = frame.ToLocal(lightDir);
 	const Vector localEyeDir = frame.ToLocal(eyeDir);
-	const Spectrum result = material->Evaluate(this->hitPoint, localLightDir, localEyeDir,
+	const Spectrum result = material->Evaluate(hitPoint, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
 
 	// Adjoint BSDF
@@ -146,7 +156,7 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 	Vector localSampledDir;
 
-	Spectrum result = material->Sample(this->hitPoint,
+	Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
 			pdfW, absCosSampledDir, event);
 	if (result.Black())
@@ -171,19 +181,19 @@ void BSDF::Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) 
 	Vector localLightDir = frame.ToLocal(lightDir);
 	Vector localEyeDir = frame.ToLocal(eyeDir);
 
-	material->Pdf(this->hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
+	material->Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
 Spectrum BSDF::GetEmittedRadiance(float *directPdfA, float *emissionPdfW) const {
 	return triangleLightSource ? 
-		triangleLightSource->GetRadiance(this->hitPoint, directPdfA, emissionPdfW) :
+		triangleLightSource->GetRadiance(hitPoint, directPdfA, emissionPdfW) :
 		Spectrum();
 }
 
 Spectrum BSDF::GetPassThroughTransparency() const {
 	const Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 
-	return material->GetPassThroughTransparency(this->hitPoint, localFixedDir, hitPoint.passThroughEvent);
+	return material->GetPassThroughTransparency(hitPoint, localFixedDir, hitPoint.passThroughEvent);
 }
 
 } }

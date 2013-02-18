@@ -21,6 +21,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#define DUDV_VALUE 0.001f
+
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX,

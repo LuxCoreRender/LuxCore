@@ -635,7 +635,7 @@ void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 
 void FBMTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
 		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float2)(0.001f, 0.001f);
+	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
 }
 
 #endif
@@ -732,7 +732,7 @@ void MarbleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint
 
 void MarbleTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
 		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float2)(0.001f, 0.001f);
+	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
 }
 
 #endif
