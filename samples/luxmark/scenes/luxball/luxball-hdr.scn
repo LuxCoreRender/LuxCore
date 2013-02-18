@@ -1,0 +1,16 @@
+scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
+scene.camera.lensradius = 0.015
+scene.camera.focaldistance = 2.0
+scene.materials.mirror.shell = 0.75 0.75 0.75 1
+scene.materials.matte.whitematte = 0.75 0.75 0.75
+scene.materials.matte.luxtext = 0.0 0.0 0.75
+scene.materials.matte.blacktext = 0.0 0.0 0.0
+scene.objects.whitematte.room = scenes/luxball/room-nowall.ply
+scene.objects.whitematte.luxinner = scenes/luxball/luxball-inner.ply
+scene.objects.luxtext.luxtext = scenes/luxball/luxball-text.ply
+scene.objects.shell.luxshell = scenes/luxball/luxball-shell.ply
+scene.objects.blacktext.blacktext = scenes/luxball/blacktext.ply
+scene.infinitelight.file = scenes/luxball/arch.exr
+scene.infinitelight.gain = 3.0 3.0 3.0
+scene.infinitelight.usebruteforce = 1
+scene.infinitelight.gamma = 1.0
