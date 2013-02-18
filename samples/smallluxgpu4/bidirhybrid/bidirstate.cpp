@@ -146,7 +146,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 
 	if (!bsdfEval.Black()) {
 		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
-		Ray eyeRay(lensPoint, eyeDistance,
+		Ray eyeRay(lensPoint, eyeDir,
 				epsilon,
 				eyeDistance - epsilon);
 
