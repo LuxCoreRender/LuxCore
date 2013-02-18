@@ -22,7 +22,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg.h"
-#include "pathocl/rt_pathocl.h"
+#include "pathocl/rtpathocl.h"
 
 using namespace std;
 

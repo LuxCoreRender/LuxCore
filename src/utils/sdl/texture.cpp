@@ -836,7 +836,7 @@ Spectrum FBMTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 }
 
 UV FBMTexture::GetDuDv() const {
-	return UV(0.001f, 0.001f);
+	return UV(DUDV_VALUE, DUDV_VALUE);
 }
 
 Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -895,7 +895,7 @@ float MarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 UV MarbleTexture::GetDuDv() const {
-	return UV(0.001f, 0.001f);
+	return UV(DUDV_VALUE, DUDV_VALUE);
 }
 
 Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {

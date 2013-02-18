@@ -53,7 +53,8 @@ void BSDF_Init(
 
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
-	VSTORE3F(rayOrig + rayHit->t * rayDir, &bsdf->hitPoint.p.x);
+	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
+	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
 	VSTORE3F(-rayDir, &bsdf->hitPoint.fixedDir.x);
 
 	const uint currentTriangleIndex = rayHit->index;
@@ -127,21 +128,35 @@ void BSDF_Init(
 		const float b0 = Texture_GetFloatValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
-		VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
-		const float bu = Texture_GetFloatValue(tex, &bsdf->hitPoint
-			TEXTURES_PARAM);
+		float dbdu;
+		if (dudv.s0 > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			VSTORE3F((float3)(hitPointP.x + dudv.s0, hitPointP.y, hitPointP.z), &bsdf->hitPoint.p.x);
+			VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
+			const float bu = Texture_GetFloatValue(tex, &bsdf->hitPoint
+				TEXTURES_PARAM);
 
-		VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
-		const float bv = Texture_GetFloatValue(tex, &bsdf->hitPoint
-			TEXTURES_PARAM);
+			dbdu = (bu - b0) / dudv.s0;
+		} else
+			dbdu = 0.f;
 
-		// Restore uv value
+		float dbdv;
+		if (dudv.s1 > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			VSTORE3F((float3)(hitPointP.x, hitPointP.y + dudv.s1, hitPointP.z), &bsdf->hitPoint.p.x);
+			VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
+			const float bv = Texture_GetFloatValue(tex, &bsdf->hitPoint
+				TEXTURES_PARAM);
+
+			dbdv = (bv - b0) / dudv.s1;
+		} else
+			dbdv = 0.f;
+
+		// Restore p and uv value
+		VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
 		VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
 
-		// bumpScale is a fixed scale factor to try to more closely match
-		// LuxRender bump mapping
-		const float bumpScale = 50.f;
-		const float3 bump = (float3)(bumpScale * (bu - b0), bumpScale * (bv - b0), 1.f);
+		const float3 bump = (float3)(dbdu, dbdv, 1.f);
 
 		float3 v1, v2;
 		CoordinateSystem(shadeN, &v1, &v2);

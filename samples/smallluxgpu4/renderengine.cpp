@@ -21,7 +21,7 @@
 
 #include "renderengine.h"
 #include "renderconfig.h"
-#include "pathocl/rt_pathocl.h"
+#include "pathocl/rtpathocl.h"
 #include "lightcpu/lightcpu.h"
 #include "pathcpu/pathcpu.h"
 #include "bidircpu/bidircpu.h"
