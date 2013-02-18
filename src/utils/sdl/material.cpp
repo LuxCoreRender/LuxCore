@@ -920,8 +920,8 @@ float Glossy2Material::SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vecto
 	return .5f * (1.f + S.Filter());
 }
 
-Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum &ks, const float roughness,
-		const float anisotropy, const Vector &localFixedDir,	const Vector &localSampledDir) const {
+Spectrum Glossy2Material::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, const float roughness,
+		const float anisotropy, const Vector &localFixedDir, const Vector &localSampledDir) const {
 	// No sampling on the back face
 	if (localFixedDir.z <= 0.f)
 		return Spectrum();
@@ -935,9 +935,16 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingF(const Spectrum &ks, const float r
 	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
 
 	// Multibounce - alternative with interreflection in the coating creases
-	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi) + 
-		(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
+	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
+	if (!fromLight)
+		factor = factor / 4.f * coso +
+				(multibounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
+	else
+		factor = factor / (4.f * cosi) + 
+				(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
 
+	// The cosi is used to compensate the other one used inside the integrator
+	factor /= cosi;
 	return factor * S;
 }
 
@@ -986,7 +993,8 @@ Spectrum Glossy2Material::SchlickBSDF_CoatingSampleF(const bool fromLight, const
 		S *= d * G / (4.f * cosi) + 
 				(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
 
-	return S;
+	// The cosi is used to compensate the other one used inside the integrator
+	return S / cosi;
 }
 
 float Glossy2Material::SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
@@ -1064,13 +1072,12 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector H(Normalize(localFixedDir + localSampledDir));
 	const Spectrum S = FresnelSlick_Evaluate(ks, AbsDot(localSampledDir, H));
 
-	const Spectrum coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, localFixedDir, localSampledDir);
+	const Spectrum coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, localFixedDir, localSampledDir);
 
 	// Blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
-	
-	// The cosi is used to compensate the other one used inside the integrator
-	return coatingF / cosi + absorption * (Spectrum(1.f) - S) * baseF;
+
+	return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
 }
 
 Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
@@ -1113,7 +1120,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		baseF = Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI;
 
 		// Evaluate coating BSDF (Schlick BSDF)
-		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, localFixedDir, *localSampledDir);
+		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, localFixedDir, *localSampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
 
 		*event = DIFFUSE | REFLECT;
@@ -1152,9 +1159,8 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
-		
-		// The cosi is used to compensate the other one used inside the integrator
-		return coatingF / cosi + absorption * (Spectrum(1.f) - S) * baseF;
+
+		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
 	} else {
 		// Back face reflection: base
 
@@ -1263,14 +1269,19 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 
 	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
 
+	const float coso = fabsf(localFixedDir.z);
 	const float cosi = fabsf(localSampledDir.z);
-	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi);
+	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
+	if (!hitPoint.fromLight)
+		factor /= 4.f * coso;
+	else
+		factor /= 4.f * cosi;
 
 	*event = GLOSSY | REFLECT;
 
-	// The absCosSampledDir is used to compensate the other one used inside the integrator
-	const float absCosSampledDir = fabsf(localSampledDir.z);
-	return (factor / absCosSampledDir) * F;
+	// The cosi is used to compensate the other one used inside the integrator
+	factor /= cosi;
+	return factor * F;
 }
 
 Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
@@ -1307,18 +1318,19 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 
 	const Spectrum etaVal = n->GetSpectrumValue(hitPoint);
 	const Spectrum kVal = k->GetSpectrumValue(hitPoint);
-	Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
-	const float factor = d * G;
-	F *= factor;
+	float factor = d * G;
 	if (!hitPoint.fromLight)
-		F /= 4.f * coso;
+		factor /= 4.f * coso;
 	else
-		F /= 4.f * cosi;
+		factor /= 4.f * cosi;
 
 	*event = GLOSSY | REFLECT;
+
 	// The cosi is used to compensate the other one used inside the integrator
-	return F / cosi;
+	factor /= cosi;
+	return factor * F;
 }
 
 void Metal2Material::Pdf(const HitPoint &hitPoint,

@@ -557,7 +557,7 @@ public:
 
 private:
 	float SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &localFixedDir) const;
-	Spectrum SchlickBSDF_CoatingF(const Spectrum &ks, const float roughness, const float anisotropy,
+	Spectrum SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, const float roughness, const float anisotropy,
 		const Vector &localFixedDir,	const Vector &localSampledDir) const;
 	Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
 		const float roughness, const float anisotropy, const Vector &localFixedDir, Vector *localSampledDir,

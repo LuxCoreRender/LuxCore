@@ -675,9 +675,16 @@ float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
 
 	// Multibounce - alternative with interreflection in the coating creases
-	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi) + 
-		(multibounce ? coso * clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
+	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
+	//if (!fromLight)
+		factor = factor / 4.f * coso +
+				(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
+	//else
+	//	factor = factor / (4.f * cosi) + 
+	//			(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
 
+	// The cosi is used to compensate the other one used inside the integrator
+	factor /= cosi;
 	return factor * S;
 }
 
@@ -723,7 +730,8 @@ float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 	S *= d * G / (4.f * coso) + 
 			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
 
-	return S;
+	// The cosi is used to compensate the other one used inside the integrator
+	return S / cosi;
 }
 
 float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
@@ -804,8 +812,7 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	// Blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
 
-	// The cosi is used to compensate the other one used inside the integrator
-	return coatingF / cosi + absorption * (WHITE - S) * baseF;
+	return coatingF + absorption * (WHITE - S) * baseF;
 }
 
 float3 Glossy2Material_Sample(__global Material *material,
@@ -899,8 +906,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
 
-		// The cosi is used to compensate the other one used inside the integrator
-		return coatingF / cosi + absorption * (WHITE - S) * baseF;
+		return coatingF + absorption * (WHITE - S) * baseF;
 	} else {
 		// Back face reflection: base
 
@@ -949,13 +955,19 @@ float3 Metal2Material_Evaluate(__global Material *material,
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
 
+	const float coso = fabs(fixedDir.z);
 	const float cosi = fabs(sampledDir.z);
-	const float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * cosi);
+	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
+	//if (!hitPoint.fromLight)
+		factor /= 4.f * coso;
+	//else
+	//	factor /= 4.f * cosi;
 
 	*event = GLOSSY | REFLECT;
 
 	// The cosi is used to compensate the other one used inside the integrator
-	return (factor / cosi) * F;
+	factor /= cosi;
+	return factor * F;
 }
 
 float3 Metal2Material_Sample(__global Material *material,
@@ -997,18 +1009,19 @@ float3 Metal2Material_Sample(__global Material *material,
 			TEXTURES_PARAM);
 	const float3 kVal = Texture_GetSpectrumValue(&texs[material->metal2.kTexIndex], hitPoint
 			TEXTURES_PARAM);
-	float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
+	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
-	const float factor = d * G;
-	F *= factor;
+	float factor = d * G;
 	//if (!fromLight)
-		F /= 4.f * coso;
+		factor /= 4.f * coso;
 	//else
-	//	F /= cosi;
+	//	factor /= cosi;
 
 	*event = GLOSSY | REFLECT;
+
 	// The cosi is used to compensate the other one used inside the integrator
-	return F / cosi;
+	factor /= cosi;
+	return factor * F;
 }
 
 #endif
