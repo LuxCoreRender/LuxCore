@@ -82,7 +82,7 @@ public:
 
 	virtual Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const {
 		if (emittedTex)
-			return emittedTex->GetColorValue(hitPoint);
+			return emittedTex->GetSpectrumValue(hitPoint);
 		else
 			return Spectrum();
 	}

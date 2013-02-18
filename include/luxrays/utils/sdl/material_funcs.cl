@@ -142,7 +142,7 @@ float3 MatteMaterial_Evaluate(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matte.kdTexIndex], hitPoint
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matte.kdTexIndex], hitPoint
 			TEXTURES_PARAM));
 	return M_1_PI_F * kd;
 }
@@ -163,7 +163,7 @@ float3 MatteMaterial_Sample(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matte.kdTexIndex], hitPoint
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matte.kdTexIndex], hitPoint
 			TEXTURES_PARAM));
 	return M_1_PI_F * kd;
 }
@@ -187,7 +187,7 @@ float3 MirrorMaterial_Sample(__global Material *material,
 	*pdfW = 1.f;
 
 	*cosSampledDir = fabs((*sampledDir).z);
-	const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->mirror.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->mirror.krTexIndex], hitPoint
 			TEXTURES_PARAM));
 	// The cosSampledDir is used to compensate the other one used inside the integrator
 	return kr / (*cosSampledDir);
@@ -216,9 +216,9 @@ float3 GlassMaterial_Sample(__global Material *material,
 	const float3 rayDir = -fixedDir;
 	const float3 reflDir = rayDir - (2.f * dot(N, rayDir)) * N;
 
-	const float nc = Texture_GetGreyValue(&texs[material->glass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->glass.ousideIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetGreyValue(&texs[material->glass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->glass.iorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
@@ -232,7 +232,7 @@ float3 GlassMaterial_Sample(__global Material *material,
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = 1.f;
 
-		const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glass.krTexIndex], hitPoint
+		const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
 				TEXTURES_PARAM));
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kr / (*cosSampledDir);
@@ -260,7 +260,7 @@ float3 GlassMaterial_Sample(__global Material *material,
 			*cosSampledDir = fabs((*sampledDir).z);
 			*pdfW = 1.f;
 
-			const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glass.krTexIndex], hitPoint
+			const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
 					TEXTURES_PARAM));
 			// The cosSampledDir is used to compensate the other one used inside the integrator
 			return kr / (*cosSampledDir);
@@ -276,7 +276,7 @@ float3 GlassMaterial_Sample(__global Material *material,
 //			return Kt->GetColorValue(hitPoint) * (nnt2 / (*cosSampledDir));
 //		else
 //			return Kt->GetColorValue(hitPoint) / (*cosSampledDir);
-		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glass.ktTexIndex], hitPoint
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.ktTexIndex], hitPoint
 				TEXTURES_PARAM));
 		return kt / (*cosSampledDir);
 	} else if (passThroughEvent < P) {
@@ -285,7 +285,7 @@ float3 GlassMaterial_Sample(__global Material *material,
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = P / Re;
 
-		const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glass.krTexIndex], hitPoint
+		const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
 				TEXTURES_PARAM));
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kr / (*cosSampledDir);
@@ -300,7 +300,7 @@ float3 GlassMaterial_Sample(__global Material *material,
 //			return Kt->GetColorValue(hitPoint) * (nnt2 / (*cosSampledDir));
 //		else
 //			return Kt->GetColorValue(hitPoint) / (*cosSampledDir);
-		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glass.ktTexIndex], hitPoint
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.ktTexIndex], hitPoint
 				TEXTURES_PARAM));
 		return kt / (*cosSampledDir);
 	}
@@ -344,7 +344,7 @@ float3 MetalMaterial_Sample(__global Material *material,
 		const float u0, const float u1,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event
 		TEXTURES_PARAM_DECL) {
-	const float e = 1.f / (Texture_GetGreyValue(&texs[material->metal.expTexIndex], hitPoint
+	const float e = 1.f / (Texture_GetFloatValue(&texs[material->metal.expTexIndex], hitPoint
 				TEXTURES_PARAM) + 1.f);
 	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
 
@@ -353,7 +353,7 @@ float3 MetalMaterial_Sample(__global Material *material,
 		*pdfW = 1.f;
 		*cosSampledDir = fabs((*sampledDir).z);
 
-		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->metal.krTexIndex], hitPoint
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->metal.krTexIndex], hitPoint
 				TEXTURES_PARAM));
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kt / (*cosSampledDir);
@@ -384,9 +384,9 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 	const float3 rayDir = -fixedDir;
 	const float3 reflDir = rayDir - (2.f * dot(N, rayDir)) * N;
 
-	const float nc = Texture_GetGreyValue(&texs[material->archglass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->archglass.ousideIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetGreyValue(&texs[material->archglass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->archglass.iorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
@@ -404,7 +404,7 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = 1.f;
 
-		const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.krTexIndex], hitPoint
+		const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.krTexIndex], hitPoint
 				TEXTURES_PARAM));
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kr / (*cosSampledDir);
@@ -436,7 +436,7 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 			*cosSampledDir = fabs((*sampledDir).z);
 			*pdfW = 1.f;
 
-			const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.krTexIndex], hitPoint
+			const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.krTexIndex], hitPoint
 					TEXTURES_PARAM));
 			// The cosSampledDir is used to compensate the other one used inside the integrator
 			return kr / (*cosSampledDir);
@@ -452,7 +452,7 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 //			return Kt->GetColorValue(hitPoint) * (nnt2 / (*cosSampledDir));
 //		else
 //			return Kt->GetColorValue(hitPoint) / (*cosSampledDir);
-		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], hitPoint
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.ktTexIndex], hitPoint
 				TEXTURES_PARAM));
 		return kt / (*cosSampledDir);
 	} else if (passThroughEvent < P) {
@@ -465,7 +465,7 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 		*cosSampledDir = fabs((*sampledDir).z);
 		*pdfW = P / Re;
 
-		const float3 kr = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.krTexIndex], hitPoint
+		const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.krTexIndex], hitPoint
 				TEXTURES_PARAM));
 		// The cosSampledDir is used to compensate the other one used inside the integrator
 		return kr / (*cosSampledDir);
@@ -480,7 +480,7 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 //			return Kt->GetColorValue(hitPoint) * (nnt2 / (*cosSampledDir));
 //		else
 //			return Kt->GetColorValue(hitPoint) / (*cosSampledDir);
-		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], hitPoint
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.ktTexIndex], hitPoint
 				TEXTURES_PARAM));
 		return kt / (*cosSampledDir);
 	}
@@ -498,9 +498,9 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 
 	const float3 rayDir = -fixedDir;
 
-	const float nc = Texture_GetGreyValue(&texs[material->archglass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->archglass.ousideIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetGreyValue(&texs[material->archglass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->archglass.iorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float nnt = into ? (nc / nt) : (nt / nc);
 	const float nnt2 = nnt * nnt;
@@ -531,7 +531,7 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 //			return Kt->GetColorValue(hitPoint).Clamp() * nnt2;
 //		else
 //			return Kt->GetColorValue(hitPoint).Clamp();
-		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], hitPoint
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.ktTexIndex], hitPoint
 				TEXTURES_PARAM));
 		return kt;
 	} else if (passThroughEvent < P) {
@@ -541,7 +541,7 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 //			return Kt->GetColorValue(hitPoint).Clamp() * nnt2;
 //		else
 //			return Kt->GetColorValue(hitPoint).Clamp();
-		const float3 kt = Spectrum_Clamp(Texture_GetColorValue(&texs[material->archglass.ktTexIndex], hitPoint
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.ktTexIndex], hitPoint
 				TEXTURES_PARAM));
 		return kt;
 	}
@@ -582,9 +582,9 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 		TEXTURES_PARAM_DECL) {
 	const float cosSampledDir = dot(lightDir, eyeDir);
 
-	const float3 r = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
+	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
 			TEXTURES_PARAM));
-	const float3 t = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
+	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
 			TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
@@ -617,9 +617,9 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 
 	*pdfW *= .5f;
 
-	const float3 r = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
+	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
 			TEXTURES_PARAM));
-	const float3 t = Spectrum_Clamp(Texture_GetColorValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
+	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
 			TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
@@ -743,7 +743,7 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
-	const float3 baseF = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glossy2.kdTexIndex], hitPoint
+	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
 			TEXTURES_PARAM)) * M_1_PI_F;
 	if (eyeDir.z <= 0.f) {
 		// Back face: no coating
@@ -758,9 +758,9 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	// Front face: coating+base
 	*event = GLOSSY | REFLECT;
 
-	float3 ks = Texture_GetColorValue(&texs[material->glossy2.ksTexIndex], hitPoint
+	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float i = Texture_GetGreyValue(&texs[material->glossy2.indexTexIndex], hitPoint
+	const float i = Texture_GetFloatValue(&texs[material->glossy2.indexTexIndex], hitPoint
 			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
@@ -768,9 +768,9 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	}
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(Texture_GetGreyValue(&texs[material->glossy2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(&texs[material->glossy2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
-	const float v = clamp(Texture_GetGreyValue(&texs[material->glossy2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(&texs[material->glossy2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -788,9 +788,9 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	// Absorption
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
-	const float3 alpha = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glossy2.kaTexIndex], hitPoint
+	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
 			TEXTURES_PARAM));
-	const float d = Texture_GetGreyValue(&texs[material->glossy2.depthTexIndex], hitPoint
+	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
 
@@ -817,9 +817,9 @@ float3 Glossy2Material_Sample(__global Material *material,
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	float3 ks = Texture_GetColorValue(&texs[material->glossy2.ksTexIndex], hitPoint
+	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float i = Texture_GetGreyValue(&texs[material->glossy2.indexTexIndex], hitPoint
+	const float i = Texture_GetFloatValue(&texs[material->glossy2.indexTexIndex], hitPoint
 			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
@@ -827,9 +827,9 @@ float3 Glossy2Material_Sample(__global Material *material,
 	}
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(Texture_GetGreyValue(&texs[material->glossy2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(&texs[material->glossy2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
-	const float v = clamp(Texture_GetGreyValue(&texs[material->glossy2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(&texs[material->glossy2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -851,7 +851,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
-		baseF = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glossy2.kdTexIndex], hitPoint
+		baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
 			TEXTURES_PARAM)) * M_1_PI_F;
 
 		// Evaluate coating BSDF (Schlick BSDF)
@@ -873,7 +873,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 
 		// Evaluate base BSDF (Matte BSDF)
 		basePdf = fabs((*sampledDir).z * M_1_PI_F);
-		baseF = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glossy2.kdTexIndex], hitPoint
+		baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
 			TEXTURES_PARAM)) * M_1_PI_F;
 
 		*event = GLOSSY | REFLECT;
@@ -886,9 +886,9 @@ float3 Glossy2Material_Sample(__global Material *material,
 		// Absorption
 		const float cosi = fabs((*sampledDir).z);
 		const float coso = fabs(fixedDir.z);
-		const float3 alpha = Spectrum_Clamp(Texture_GetColorValue(&texs[material->glossy2.kaTexIndex], hitPoint
+		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
 			TEXTURES_PARAM));
-		const float d = Texture_GetGreyValue(&texs[material->glossy2.depthTexIndex], hitPoint
+		const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
 			TEXTURES_PARAM);
 		const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
 
@@ -925,9 +925,9 @@ float3 Metal2Material_Evaluate(__global Material *material,
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
-	const float u = clamp(Texture_GetGreyValue(&texs[material->metal2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
-	const float v = clamp(Texture_GetGreyValue(&texs[material->metal2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(&texs[material->metal2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -940,9 +940,9 @@ float3 Metal2Material_Evaluate(__global Material *material,
 	if (directPdfW)
 		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
 
-	const float3 nVal = Texture_GetColorValue(&texs[material->metal2.nTexIndex], hitPoint
+	const float3 nVal = Texture_GetSpectrumValue(&texs[material->metal2.nTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float3 kVal = Texture_GetColorValue(&texs[material->metal2.kTexIndex], hitPoint
+	const float3 kVal = Texture_GetSpectrumValue(&texs[material->metal2.kTexIndex], hitPoint
 			TEXTURES_PARAM);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
@@ -966,9 +966,9 @@ float3 Metal2Material_Sample(__global Material *material,
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	const float u = clamp(Texture_GetGreyValue(&texs[material->metal2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
-	const float v = clamp(Texture_GetGreyValue(&texs[material->metal2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(&texs[material->metal2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -993,9 +993,9 @@ float3 Metal2Material_Sample(__global Material *material,
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	
-	const float3 nVal = Texture_GetColorValue(&texs[material->metal2.nTexIndex], hitPoint
+	const float3 nVal = Texture_GetSpectrumValue(&texs[material->metal2.nTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float3 kVal = Texture_GetColorValue(&texs[material->metal2.kTexIndex], hitPoint
+	const float3 kVal = Texture_GetSpectrumValue(&texs[material->metal2.kTexIndex], hitPoint
 			TEXTURES_PARAM);
 	float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
@@ -1219,7 +1219,7 @@ float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Hi
 	if (emitTexIndex == NULL_INDEX)
 		return BLACK;
 
-	return Texture_GetColorValue(&texs[emitTexIndex], hitPoint
+	return Texture_GetSpectrumValue(&texs[emitTexIndex], hitPoint
 			TEXTURES_PARAM);
 }
 
@@ -1329,7 +1329,7 @@ float3 MixMaterial_Evaluate(__global Material *material,
 		// Check if it is a Mix material too
 		if (m->type == MIX) {
 			// Add both material to the stack
-			const float factor = Texture_GetGreyValue(&texs[m->mix.mixFactorTexIndex], hitPoint
+			const float factor = Texture_GetFloatValue(&texs[m->mix.mixFactorTexIndex], hitPoint
 					TEXTURES_PARAM);
 			const float weight2 = clamp(factor, 0.f, 1.f);
 			const float weight1 = 1.f - weight2;
@@ -1379,7 +1379,7 @@ float3 MixMaterial_Sample(__global Material *material,
 	float passThroughEvent = passEvent;
 	float parentWeight = 1.f;
 	for (;;) {
-		const float factor = Texture_GetGreyValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
 			TEXTURES_PARAM);
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
@@ -1486,7 +1486,7 @@ float3 MixMaterial_GetEmittedRadiance(__global Material *material, __global HitP
 		float totalWeight = totalWeightStack[stackIndex--];
 
 		if (m->type == MIX) {
-			const float factor = Texture_GetGreyValue(&texs[m->mix.mixFactorTexIndex], hitPoint
+			const float factor = Texture_GetFloatValue(&texs[m->mix.mixFactorTexIndex], hitPoint
 					TEXTURES_PARAM);
 			const float weight2 = clamp(factor, 0.f, 1.f);
 			const float weight1 = 1.f - weight2;
@@ -1517,7 +1517,7 @@ float3 MixMaterial_GetPassThroughTransparency(__global Material *material,
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
 	for (;;) {
-		const float factor = Texture_GetGreyValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
 				TEXTURES_PARAM);
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;

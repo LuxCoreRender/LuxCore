@@ -102,7 +102,7 @@ void BSDF_Init(
 	const uint normalTexIndex = mat->normalTexIndex;
 	if (normalTexIndex != NULL_INDEX) {
 		// Apply normal mapping
-		const float3 color = Texture_GetColorValue(&texs[normalTexIndex], &bsdf->hitPoint
+		const float3 color = Texture_GetSpectrumValue(&texs[normalTexIndex], &bsdf->hitPoint
 			TEXTURES_PARAM);
 		const float3 xyz = 2.f * color - 1.f;
 
@@ -124,15 +124,15 @@ void BSDF_Init(
 		const float2 dudv = Texture_GetDuDv(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
-		const float b0 = Texture_GetGreyValue(tex, &bsdf->hitPoint
+		const float b0 = Texture_GetFloatValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
 		VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
-		const float bu = Texture_GetGreyValue(tex, &bsdf->hitPoint
+		const float bu = Texture_GetFloatValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
 		VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
-		const float bv = Texture_GetGreyValue(tex, &bsdf->hitPoint
+		const float bv = Texture_GetFloatValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
 		// Restore uv value

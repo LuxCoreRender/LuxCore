@@ -103,8 +103,6 @@ void GenerateCameraPath(
 		__global Camera *camera,
 		__global Ray *ray,
 		Seed *seed) {
-	__global Sample *sample = &task->sample;
-
 #if (PARAM_SAMPLER_TYPE == 0)
 
 	const float scrSampleX = sampleData[IDX_SCREEN_X];
@@ -119,6 +117,7 @@ void GenerateCameraPath(
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 1)
+	__global Sample *sample = &task->sample;
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
 	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);

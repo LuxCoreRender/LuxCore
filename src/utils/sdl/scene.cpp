@@ -681,9 +681,6 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 	} else if (texType == "constfloat3") {
 		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 3, "1.0 1.0 1.0");
 		return new ConstFloat3Texture(Spectrum(v.at(0), v.at(1), v.at(2)));
-	} else if (texType == "constfloat4") {
-		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 4, "1.0 1.0 1.0 1.0");
-		return new ConstFloat4Texture(Spectrum(v.at(0), v.at(1), v.at(2)), v.at(3));
 	} else if (texType == "scale") {
 		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
@@ -764,11 +761,6 @@ Texture *Scene::GetTexture(const std::string &name) {
 				texDefs.DefineTexture("Implicit-ConstFloatTexture3-" + boost::lexical_cast<std::string>(tex), tex);
 
 				return tex;
-			} else if (floats.size() == 4) {
-				ConstFloat4Texture *tex = new ConstFloat4Texture(Spectrum(floats.at(0), floats.at(1), floats.at(2)), floats.at(3));
-				texDefs.DefineTexture("Implicit-ConstFloatTexture4-" + boost::lexical_cast<std::string>(tex), tex);
-
-				return tex;
 			} else
 				throw std::runtime_error("Wrong number of arguments in the implicit definition of a constant texture");
 		} catch (boost::bad_lexical_cast) {
@@ -786,8 +778,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	// Required to remove light source while editing the scene
 	if (emissionTex && (
 			((emissionTex->GetType() == CONST_FLOAT) && (((ConstFloatTexture *)emissionTex)->GetValue() == 0.f)) ||
-			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black())) ||
-			((emissionTex->GetType() == CONST_FLOAT4) && (((ConstFloat4Texture *)emissionTex)->GetColor().Black()))))
+			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black()))))
 		emissionTex = NULL;
 
 	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 

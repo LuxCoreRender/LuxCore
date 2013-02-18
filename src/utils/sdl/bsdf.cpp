@@ -58,7 +58,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	if (material->HasNormalTex()) {
 		// Apply normal mapping
 		const Texture *nm = material->GetNormalTexture();
-		const Spectrum color = nm->GetColorValue(this->hitPoint);
+		const Spectrum color = nm->GetSpectrumValue(this->hitPoint);
 
 		const float x = 2.f * color.r - 1.f;
 		const float y = 2.f * color.g - 1.f;
@@ -78,18 +78,18 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		const Texture *bm = material->GetBumpTexture();
 		const UV &dudv = bm->GetDuDv();
 
-		const float b0 = bm->GetGreyValue(this->hitPoint);
+		const float b0 = bm->GetFloatValue(this->hitPoint);
 
 		// This is a simple trick. The correct code would require differential information.
 		HitPoint tmpHitPoint = this->hitPoint;
 		tmpHitPoint.uv.u = tmpHitPoint.uv.u + dudv.u;
 		tmpHitPoint.uv.v = tmpHitPoint.uv.v;
-		const float bu = bm->GetGreyValue(tmpHitPoint);
+		const float bu = bm->GetFloatValue(tmpHitPoint);
 
 		// This is a simple trick. The correct code would require differential information.
 		tmpHitPoint.uv.u = tmpHitPoint.uv.u;
 		tmpHitPoint.uv.v = tmpHitPoint.uv.v + dudv.u;
-		const float bv = bm->GetGreyValue(tmpHitPoint);
+		const float bv = bm->GetFloatValue(tmpHitPoint);
 
 		// bumpScale is a fixed scale factor to try to more closely match
 		// LuxRender bump mapping
