@@ -49,10 +49,10 @@ namespace sdl {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, MIX_TEX, FBM_TEX, MARBLE,
+	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
+	FRESNEL_APPROX_K, MIX_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE
 } TextureType;
 
 struct HitPointStruct;
@@ -67,9 +67,8 @@ public:
 	std::string GetName() const { return "texture-" + boost::lexical_cast<std::string>(this); }
 	virtual TextureType GetType() const = 0;
 
-	virtual float GetGreyValue(const HitPoint &hitPoint) const = 0;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const = 0;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const = 0;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const = 0;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const = 0;
 
 	// Used for bump mapping support
 	virtual UV GetDuDv() const = 0;
@@ -123,9 +122,8 @@ public:
 	virtual ~ConstFloatTexture() { }
 
 	virtual TextureType GetType() const { return CONST_FLOAT; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const { return value; }
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const { return Spectrum(value); }
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const { return value; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const { return value; }
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return Spectrum(value); }
 
 	virtual UV GetDuDv() const { return UV(0.f, 0.f); }
 
@@ -143,9 +141,8 @@ public:
 	virtual ~ConstFloat3Texture() { }
 
 	virtual TextureType GetType() const { return CONST_FLOAT3; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const { return color.Y(); }
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const { return color; }
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const { return 1.f; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const { return color.Y(); }
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
 
 	virtual UV GetDuDv() const { return UV(0.f, 0.f); }
 
@@ -155,28 +152,6 @@ public:
 
 private:
 	Spectrum color;
-};
-
-class ConstFloat4Texture : public Texture {
-public:
-	ConstFloat4Texture(const Spectrum &c, const float a) : color(c), alpha(a) { }
-	virtual ~ConstFloat4Texture() { }
-
-	virtual TextureType GetType() const { return CONST_FLOAT4; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const { return color.Y(); }
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const { return color; }
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const { return alpha; }
-
-	virtual UV GetDuDv() const { return UV(0.f, 0.f); }
-
-	const Spectrum &GetColor() const { return color; };
-	float GetAlpha() const { return alpha; };
-
-	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	Spectrum color;
-	float alpha;
 };
 
 //------------------------------------------------------------------------------
@@ -197,7 +172,7 @@ public:
 
 	void WriteImage(const std::string &fileName) const;
 
-	float GetGrey(const UV &uv) const {
+	float GetFloat(const UV &uv) const {
 		const float s = uv.u * width - .5f;
 		const float t = uv.v * height - .5f;
 
@@ -210,13 +185,13 @@ public:
 		const float ids = 1.f - ds;
 		const float idt = 1.f - dt;
 
-		return ids * idt * GetGreyTexel(s0, t0) +
-				ids * dt * GetGreyTexel(s0, t0 + 1) +
-				ds * idt * GetGreyTexel(s0 + 1, t0) +
-				ds * dt * GetGreyTexel(s0 + 1, t0 + 1);
+		return ids * idt * GetFloatTexel(s0, t0) +
+				ids * dt * GetFloatTexel(s0, t0 + 1) +
+				ds * idt * GetFloatTexel(s0 + 1, t0) +
+				ds * dt * GetFloatTexel(s0 + 1, t0 + 1);
 	}
 
-	Spectrum GetColor(const UV &uv) const {
+	Spectrum GetSpectrum(const UV &uv) const {
 		const float s = uv.u * width - .5f;
 		const float t = uv.v * height - .5f;
 
@@ -229,10 +204,10 @@ public:
 		const float ids = 1.f - ds;
 		const float idt = 1.f - dt;
 
-		return ids * idt * GetColorTexel(s0, t0) +
-				ids * dt * GetColorTexel(s0, t0 + 1) +
-				ds * idt * GetColorTexel(s0 + 1, t0) +
-				ds * dt * GetColorTexel(s0 + 1, t0 + 1);
+		return ids * idt * GetSpectrumTexel(s0, t0) +
+				ids * dt * GetSpectrumTexel(s0, t0 + 1) +
+				ds * idt * GetSpectrumTexel(s0 + 1, t0) +
+				ds * dt * GetSpectrumTexel(s0 + 1, t0 + 1);
 	};
 
 	float GetAlpha(const UV &uv) const {
@@ -255,7 +230,7 @@ public:
 	}
 
 private:
-	float GetGreyTexel(const int s, const int t) const {
+	float GetFloatTexel(const int s, const int t) const {
 		const u_int u = Mod<int>(s, width);
 		const u_int v = Mod<int>(t, height);
 
@@ -272,7 +247,7 @@ private:
 		}
 	}
 
-	Spectrum GetColorTexel(const int s, const int t) const {
+	Spectrum GetSpectrumTexel(const int s, const int t) const {
 		const u_int u = Mod<int>(s, width);
 		const u_int v = Mod<int>(t, height);
 
@@ -332,9 +307,8 @@ public:
 	virtual ~ImageMapTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const { return DuDv; }
 
@@ -361,9 +335,8 @@ public:
 	virtual ~ScaleTexture() { }
 
 	virtual TextureType GetType() const { return SCALE_TEX; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const;
 
@@ -396,9 +369,8 @@ public:
 	virtual ~FresnelApproxNTexture() { }
 
 	virtual TextureType GetType() const { return FRESNEL_APPROX_N; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const;
 
@@ -422,9 +394,8 @@ public:
 	virtual ~FresnelApproxKTexture() { }
 
 	virtual TextureType GetType() const { return FRESNEL_APPROX_K; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const;
 
@@ -452,9 +423,8 @@ public:
 	virtual ~CheckerBoard2DTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return CHECKERBOARD2D; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const;
 
@@ -483,9 +453,8 @@ public:
 	virtual ~CheckerBoard3DTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return CHECKERBOARD3D; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const;
 
@@ -519,9 +488,8 @@ public:
 	virtual ~MixTexture() { }
 
 	virtual TextureType GetType() const { return MIX_TEX; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const;
 
@@ -556,9 +524,9 @@ public:
 	virtual ~FBMTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return FBM_TEX; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
 
 	virtual UV GetDuDv() const;
 
@@ -586,9 +554,8 @@ public:
 	virtual ~MarbleTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return MARBLE; }
-	virtual float GetGreyValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetColorValue(const HitPoint &hitPoint) const;
-	virtual float GetAlphaValue(const HitPoint &hitPoint) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual UV GetDuDv() const;
 

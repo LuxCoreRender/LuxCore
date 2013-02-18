@@ -565,21 +565,6 @@ Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) co
 }
 
 //------------------------------------------------------------------------------
-// ConstFloat4 texture
-//------------------------------------------------------------------------------
-
-Properties ConstFloat4Texture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "constfloat4");
-	props.SetString("scene.textures." + name + ".value",
-			ToString(color.r) + " " + ToString(color.g) + " " + ToString(color.b) + " " + ToString(alpha));
-
-	return props;
-}
-
-//------------------------------------------------------------------------------
 // ImageMap texture
 //------------------------------------------------------------------------------
 
@@ -593,16 +578,12 @@ ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping *mp, 
 	DuDv.v = 1.f / io.v;
 }
 
-float ImageMapTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetGrey(mapping->Map(hitPoint.uv));
+float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return gain * imgMap->GetFloat(mapping->Map(hitPoint.uv));
 }
 
-Spectrum ImageMapTexture::GetColorValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetColor(mapping->Map(hitPoint.uv));
-}
-
-float ImageMapTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	return imgMap->GetAlpha(mapping->Map(hitPoint.uv));
+Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return gain * imgMap->GetSpectrum(mapping->Map(hitPoint.uv));
 }
 
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -623,16 +604,12 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const
 // Scale texture
 //------------------------------------------------------------------------------
 
-float ScaleTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	return tex1->GetGreyValue(hitPoint) * tex2->GetGreyValue(hitPoint);
+float ScaleTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return tex1->GetFloatValue(hitPoint) * tex2->GetFloatValue(hitPoint);
 }
 
-Spectrum ScaleTexture::GetColorValue(const HitPoint &hitPoint) const {
-	return tex1->GetColorValue(hitPoint) * tex2->GetColorValue(hitPoint);
-}
-
-float ScaleTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	return tex1->GetAlphaValue(hitPoint) * tex2->GetAlphaValue(hitPoint);
+Spectrum ScaleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex1->GetSpectrumValue(hitPoint) * tex2->GetSpectrumValue(hitPoint);
 }
 
 UV ScaleTexture::GetDuDv() const {
@@ -685,32 +662,24 @@ Spectrum FresnelApproxK(const Spectrum &Fr) {
 		(Spectrum(1.f) - reflectance));
 }
 
-float FresnelApproxNTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	return FresnelApproxN(tex->GetGreyValue(hitPoint));
+float FresnelApproxNTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return FresnelApproxN(tex->GetFloatValue(hitPoint));
 }
 
-Spectrum FresnelApproxNTexture::GetColorValue(const HitPoint &hitPoint) const {
-	return FresnelApproxN(tex->GetColorValue(hitPoint));
-}
-
-float FresnelApproxNTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	return tex->GetAlphaValue(hitPoint);
+Spectrum FresnelApproxNTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return FresnelApproxN(tex->GetSpectrumValue(hitPoint));
 }
 
 UV FresnelApproxNTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
 
-float FresnelApproxKTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	return FresnelApproxK(tex->GetGreyValue(hitPoint));
+float FresnelApproxKTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return FresnelApproxK(tex->GetFloatValue(hitPoint));
 }
 
-Spectrum FresnelApproxKTexture::GetColorValue(const HitPoint &hitPoint) const {
-	return FresnelApproxK(tex->GetColorValue(hitPoint));
-}
-
-float FresnelApproxKTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	return tex->GetAlphaValue(hitPoint);
+Spectrum FresnelApproxKTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return FresnelApproxK(tex->GetSpectrumValue(hitPoint));
 }
 
 UV FresnelApproxKTexture::GetDuDv() const {
@@ -741,28 +710,20 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache)
 // CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
-float CheckerBoard2DTexture::GetGreyValue(const HitPoint &hitPoint) const {
+float CheckerBoard2DTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const UV uv = mapping->Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
-		return tex1->GetGreyValue(hitPoint);
+		return tex1->GetFloatValue(hitPoint);
 	else
-		return tex2->GetGreyValue(hitPoint);
+		return tex2->GetFloatValue(hitPoint);
 }
 
-Spectrum CheckerBoard2DTexture::GetColorValue(const HitPoint &hitPoint) const {
+Spectrum CheckerBoard2DTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const UV uv = mapping->Map(hitPoint.uv);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
-		return tex1->GetColorValue(hitPoint);
+		return tex1->GetSpectrumValue(hitPoint);
 	else
-		return tex2->GetColorValue(hitPoint);
-}
-
-float CheckerBoard2DTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint.uv);
-	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
-		return tex1->GetAlphaValue(hitPoint);
-	else
-		return tex2->GetAlphaValue(hitPoint);
+		return tex2->GetSpectrumValue(hitPoint);
 }
 
 UV CheckerBoard2DTexture::GetDuDv() const {
@@ -784,28 +745,20 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache)
 	return props;
 }
 
-float CheckerBoard3DTexture::GetGreyValue(const HitPoint &hitPoint) const {
+float CheckerBoard3DTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const Point p = mapping->Map(hitPoint.p);
 	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
-		return tex1->GetGreyValue(hitPoint);
+		return tex1->GetFloatValue(hitPoint);
 	else
-		return tex2->GetGreyValue(hitPoint);
+		return tex2->GetFloatValue(hitPoint);
 }
 
-Spectrum CheckerBoard3DTexture::GetColorValue(const HitPoint &hitPoint) const {
+Spectrum CheckerBoard3DTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const Point p = mapping->Map(hitPoint.p);
 	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
-		return tex1->GetColorValue(hitPoint);
+		return tex1->GetSpectrumValue(hitPoint);
 	else
-		return tex2->GetColorValue(hitPoint);
-}
-
-float CheckerBoard3DTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	const Point p = mapping->Map(hitPoint.p);
-	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
-		return tex1->GetAlphaValue(hitPoint);
-	else
-		return tex2->GetAlphaValue(hitPoint);
+		return tex2->GetSpectrumValue(hitPoint);
 }
 
 UV CheckerBoard3DTexture::GetDuDv() const {
@@ -831,26 +784,18 @@ Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache)
 // Mix texture
 //------------------------------------------------------------------------------
 
-float MixTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	const float amt = Clamp(amount->GetGreyValue(hitPoint), 0.f, 1.f);
-	const float value1 = tex1->GetGreyValue(hitPoint);
-	const float value2 = tex2->GetGreyValue(hitPoint);
+float MixTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float value1 = tex1->GetFloatValue(hitPoint);
+	const float value2 = tex2->GetFloatValue(hitPoint);
 
 	return Lerp(amt, value1, value2);
 }
 
-Spectrum MixTexture::GetColorValue(const HitPoint &hitPoint) const {
-	const float amt = Clamp(amount->GetGreyValue(hitPoint), 0.f, 1.f);
-	const Spectrum value1 = tex1->GetColorValue(hitPoint);
-	const Spectrum value2 = tex2->GetColorValue(hitPoint);
-
-	return Lerp(amt, value1, value2);
-}
-
-float MixTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	const float amt = Clamp(amount->GetGreyValue(hitPoint), 0.f, 1.f);
-	const float value1 = tex1->GetAlphaValue(hitPoint);
-	const float value2 = tex2->GetAlphaValue(hitPoint);
+Spectrum MixTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
+	const Spectrum value1 = tex1->GetSpectrumValue(hitPoint);
+	const Spectrum value2 = tex2->GetSpectrumValue(hitPoint);
 
 	return Lerp(amt, value1, value2);
 }
@@ -879,19 +824,15 @@ Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 // FBM texture
 //------------------------------------------------------------------------------
 
-float FBMTexture::GetGreyValue(const HitPoint &hitPoint) const {
+float FBMTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const Point p(mapping->Map(hitPoint.p));
 	const float value = FBm(p, omega, octaves);
 	
 	return value;
 }
 
-Spectrum FBMTexture::GetColorValue(const HitPoint &hitPoint) const {
-	return Spectrum(GetGreyValue(hitPoint));
-}
-
-float FBMTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	return GetGreyValue(hitPoint);
+Spectrum FBMTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
 }
 
 UV FBMTexture::GetDuDv() const {
@@ -914,7 +855,7 @@ Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 // Marble texture
 //------------------------------------------------------------------------------
 
-Spectrum MarbleTexture::GetColorValue(const HitPoint &hitPoint) const {
+Spectrum MarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	Point P(mapping->Map(hitPoint.p));
 	P *= scale;
 
@@ -949,12 +890,8 @@ Spectrum MarbleTexture::GetColorValue(const HitPoint &hitPoint) const {
 	return 1.5f * Lerp(t, s0, s1);
 }
 
-float MarbleTexture::GetGreyValue(const HitPoint &hitPoint) const {
-	return GetColorValue(hitPoint).Y();
-}
-
-float MarbleTexture::GetAlphaValue(const HitPoint &hitPoint) const {
-	return GetColorValue(hitPoint).Y();
+float MarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return GetSpectrumValue(hitPoint).Y();
 }
 
 UV MarbleTexture::GetDuDv() const {

@@ -57,7 +57,7 @@ std::string KernelSource_light_funcs =
 "		SphericalTheta(-dir) * M_1_PI_F);\n"
 "\n"
 "	const float2 mapUV = Mapping_Map2D(&infiniteLight->mapping, uv);\n"
-"	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetColor(\n"
+"	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetSpectrum(\n"
 "			pixels,\n"
 "			imageMap->width, imageMap->height, imageMap->channelCount,\n"
 "			mapUV.s0, mapUV.s1);\n"

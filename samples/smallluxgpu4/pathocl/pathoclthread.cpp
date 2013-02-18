@@ -405,8 +405,6 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))
 		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
-	if (cscene->IsTextureCompiled(CONST_FLOAT4))
-		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT4";
 	if (cscene->IsTextureCompiled(IMAGEMAP))
 		ss << " -D PARAM_ENABLE_TEX_IMAGEMAP";
 	if (cscene->IsTextureCompiled(SCALE_TEX))

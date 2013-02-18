@@ -22,10 +22,10 @@
  ***************************************************************************/
 
 typedef enum {
-	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, MIX_TEX, FBM_TEX, MARBLE,
+	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
+	FRESNEL_APPROX_K, MIX_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE
 } TextureType;
 
 typedef struct {
@@ -35,11 +35,6 @@ typedef struct {
 typedef struct {
 	Spectrum color;
 } ConstFloat3Param;
-
-typedef struct {
-	Spectrum color;
-	float alpha;
-} ConstFloat4Param;
 
 typedef struct {
 	unsigned int channelCount, width, height;
@@ -96,7 +91,6 @@ typedef struct {
 	union {
 		ConstFloatParam constFloat;
 		ConstFloat3Param constFloat3;
-		ConstFloat4Param constFloat4;
 		ImageMapTexParam imageMapTex;
 		ScaleTexParam scaleTex;
 		FresnelApproxNTexParam fresnelApproxN;

@@ -616,14 +616,6 @@ void CompiledScene::CompileTextures() {
 				ASSIGN_SPECTRUM(tex->constFloat3.color, cft->GetColor());
 				break;
 			}
-			case CONST_FLOAT4: {
-				ConstFloat4Texture *cft = static_cast<ConstFloat4Texture *>(t);
-
-				tex->type = luxrays::ocl::CONST_FLOAT4;
-				ASSIGN_SPECTRUM(tex->constFloat4.color, cft->GetColor());
-				tex->constFloat4.alpha = cft->GetAlpha();
-				break;
-			}
 			case IMAGEMAP: {
 				ImageMapTexture *imt = static_cast<ImageMapTexture *>(t);
 
