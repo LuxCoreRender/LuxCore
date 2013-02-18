@@ -299,29 +299,6 @@ void ConstFloat3Texture_EvaluateDuDv(__global Texture *texture, __global HitPoin
 #endif
 
 //------------------------------------------------------------------------------
-// ConstFloat4 texture
-//------------------------------------------------------------------------------
-
-#if defined (PARAM_ENABLE_TEX_CONST_FLOAT4)
-
-void ConstFloat4Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->constFloat4.color.r));
-}
-
-void ConstFloat4Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = VLOAD3F(&texture->constFloat4.color.r);
-}
-
-void ConstFloat4Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = 0.f;
-}
-
-#endif
-
-//------------------------------------------------------------------------------
 // ImageMap texture
 //------------------------------------------------------------------------------
 
@@ -792,9 +769,6 @@ uint Texture_AddSubTexture(__global Texture *texture,
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
 #endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
-		case CONST_FLOAT4:
-#endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
 #endif
@@ -819,11 +793,6 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
 			ConstFloat3Texture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
-		case CONST_FLOAT4:
-			ConstFloat4Texture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
@@ -944,11 +913,6 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			ConstFloat3Texture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
-		case CONST_FLOAT4:
-			ConstFloat4Texture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 		case IMAGEMAP:
 			ImageMapTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize
@@ -1065,11 +1029,6 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 		case CONST_FLOAT3:
 			ConstFloat3Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT4)
-		case CONST_FLOAT4:
-			ConstFloat4Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP)
