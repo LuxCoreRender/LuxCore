@@ -19,6 +19,16 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
+set(LUXRAYS_VERSION_MAJOR 1)
+set(LUXRAYS_VERSION_MINOR 3devel1)
+
+# Configure a header file to pass some of the CMake settings
+# to the source code
+configure_file(
+  "${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h.in"
+  "${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h"
+  )
+
 #############################################################################
 #
 # LuxRays Docs
@@ -77,8 +87,11 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sampler/sampler_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/film/filter_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/camera_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/core/randomgen_types.cl
@@ -104,12 +117,18 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/light_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/point_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/normal_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bbox_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/scene_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/mapping_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/sdl/mapping_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/kernels luxrays ${LUXRAYS_KERNELS})
@@ -165,8 +184,11 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/qbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/sampler_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/sampler_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/filter_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/filter_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/camera_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/camera_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/trianglemesh_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/randomgen_types_kernel.cpp
@@ -192,12 +214,18 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/kernels/ray_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/light_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/light_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/point_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/vector_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/vector_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/normal_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/bbox_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/triangle_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/triangle_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/uv_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/kernels/scene_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/mapping_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/mapping_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/kernels/utils_funcs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\Kernels" FILES ${LUXRAYS_SRCS_KERNELS})
 
@@ -226,6 +254,7 @@ SOURCE_GROUP("Source Files\\Utils\\convtest" FILES ${LUXRAYS_SRCS_UTILS_CONVTEST
 
 set(LUXRAYS_SRCS_UTILS_SAMPLER
 	${LuxRays_SOURCE_DIR}/src/utils/sampler/sampler.cpp
+	${LuxRays_SOURCE_DIR}/src/utils/sampler/sobol.cpp
 )
 SOURCE_GROUP("Source Files\\Utils\\sampler" FILES ${LUXRAYS_SRCS_UTILS_SAMPLER})
 

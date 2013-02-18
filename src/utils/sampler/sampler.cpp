@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/utils/sampler/sampler.h"
 #include "luxrays/utils/core/spectrum.h"
 
@@ -34,6 +36,8 @@ SamplerType Sampler::String2SamplerType(const std::string &type) {
 		return RANDOM;
 	if (type.compare("METROPOLIS") == 0)
 		return METROPOLIS;
+	if (type.compare("SOBOL") == 0)
+		return SOBOL;
 
 	throw std::runtime_error("Unknown sampler type: " + type);
 }
@@ -44,8 +48,10 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 			return "RANDOM";
 		case METROPOLIS:
 			return "METROPOLIS";
+		case SOBOL:
+			return "SOBOL";
 		default:
-			throw std::runtime_error("Unknown sampler type: " + type);	
+			throw std::runtime_error("Unknown sampler type: " + boost::lexical_cast<std::string>(type));
 	}
 }
 
@@ -236,6 +242,49 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
 	} else
 		++stamp;
+}
+
+//------------------------------------------------------------------------------
+// Sobol sampler
+//
+// This sampler is based on Blender Cycles Sobol implementation.
+//------------------------------------------------------------------------------
+
+void SobolSampler::RequestSamples(const u_int size) {
+	directions = new u_int[size * SOBOL_BITS];
+	SobolGenerateDirectionVectors(directions, size);
+}
+
+u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
+	const u_int offset = dimension * SOBOL_BITS;
+	u_int result = 0;
+	u_int i = index;
+
+	for (u_int j = 0; i; i >>= 1, j++) {
+		if (i & 1)
+			result ^= directions[offset + j];
+	}
+
+	return result;
+}
+
+float SobolSampler::GetSample(const u_int index) {
+	const u_int result = SobolDimension(pass, index);
+	const float r = result * (1.f / 0xffffffffu);
+
+	// Cranley-Patterson rotation to reduce visible regular patterns
+	const float shift = (index & 1) ? rng0 : rng1;
+
+	return r + shift - floorf(r + shift);
+}
+
+void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+	film->AddSampleCount(1.0);
+
+	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+		film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
+
+	++pass;
 }
 
 } }

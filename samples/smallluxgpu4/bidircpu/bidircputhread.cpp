@@ -46,7 +46,7 @@ void BiDirCPURenderThread::ConnectVertices(
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	Vector eyeDir(lightVertex.bsdf.hitPoint - eyeVertex.bsdf.hitPoint);
+	Vector eyeDir(lightVertex.bsdf.hitPoint.p - eyeVertex.bsdf.hitPoint.p);
 	const float eyeDistance2 = eyeDir.LengthSquared();
 	const float eyeDistance = sqrtf(eyeDistance2);
 	eyeDir /= eyeDistance;
@@ -64,15 +64,15 @@ void BiDirCPURenderThread::ConnectVertices(
 
 		if (!lightBsdfEval.Black()) {
 			// Check the 2 surfaces can see each other
-			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.shadeN, eyeDir);
-			const float cosThetaAtLight = Dot(lightVertex.bsdf.shadeN, -eyeDir);
+			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.hitPoint.shadeN, eyeDir);
+			const float cosThetaAtLight = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
 			const float geometryTerm = cosThetaAtLight * cosThetaAtLight / eyeDistance2;
 			if (geometryTerm <= 0.f)
 				return;
 
 			// Trace  ray between the two vertices
-			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint), MachineEpsilon::E(eyeDistance));
-			Ray eyeRay(eyeVertex.bsdf.hitPoint, eyeDir,
+			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(eyeDistance));
+			Ray eyeRay(eyeVertex.bsdf.hitPoint.p, eyeDir,
 					epsilon,
 					eyeDistance - epsilon);
 			RayHit eyeRayHit;
@@ -119,7 +119,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	Vector eyeDir(lightVertex.bsdf.hitPoint - lensPoint);
+	Vector eyeDir(lightVertex.bsdf.hitPoint.p - lensPoint);
 	const float eyeDistance = eyeDir.Length();
 	eyeDir /= eyeDistance;
 
@@ -147,7 +147,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 					bsdfRevPdfW *= prob;
 				}
 
-				const float cosToCamera = Dot(lightVertex.bsdf.shadeN, -eyeDir);
+				const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -184,7 +184,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 
 		Vector lightRayDir;
 		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-		Spectrum lightRadiance = light->Illuminate(scene, eyeVertex.bsdf.hitPoint,
+		Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint.p,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
 				&cosThetaAtLight);
 
@@ -194,8 +194,8 @@ void BiDirCPURenderThread::DirectLightSampling(
 			Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 			if (!bsdfEval.Black()) {
-				const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint), MachineEpsilon::E(distance));
-				Ray shadowRay(eyeVertex.bsdf.hitPoint, lightRayDir,
+				const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(distance));
+				Ray shadowRay(eyeVertex.bsdf.hitPoint.p, lightRayDir,
 						epsilon,
 						distance - epsilon);
 				RayHit shadowRayHit;
@@ -210,7 +210,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 						bsdfRevPdfW *= prob;
 					}
 
-					const float cosThetaToLight = AbsDot(lightRayDir, eyeVertex.bsdf.shadeN);
+					const float cosThetaToLight = AbsDot(lightRayDir, eyeVertex.bsdf.hitPoint.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 
 					// emissionPdfA / directPdfA = emissionPdfW / directPdfW
@@ -258,15 +258,15 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
-		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(scene, &directPdfA, &emissionPdfW);
+		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
 		DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
 		if (scene->envLight) {
-			const Spectrum lightRadiance = scene->envLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 		if (scene->sunLight) {
-			const Spectrum lightRadiance = scene->sunLight->GetRadiance(scene, eyeVertex.bsdf.fixedDir, &directPdfA, &emissionPdfW);
+			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
@@ -287,8 +287,8 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 	PathVertexVM lightVertex;
 	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 	Ray lightRay;
-	lightVertex.throughput = light->Emit(scene,
-		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8),
+	lightVertex.throughput = light->Emit(*scene,
+		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
 		&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
 	if (!lightVertex.throughput.Black()) {
 		lightEmitPdfW *= lightPickPdf;
@@ -319,7 +319,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 				// Infinite lights use MIS based on solid angle instead of area
 				if((lightVertex.depth > 1) || !light->IsEnvironmental())
 					lightVertex.dVCM *= MIS(nextEventRayHit.t * nextEventRayHit.t);
-				const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.shadeN, lightRay.d));
+				const float factor = 1.f / MIS(AbsDot(lightVertex.bsdf.hitPoint.shadeN, lightRay.d));
 				lightVertex.dVCM *= factor;
 				lightVertex.dVC *= factor;
 				lightVertex.dVM *= factor;
@@ -402,7 +402,7 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 		pathVertex->dVCM = MIS(1.f / bsdfPdfW);
 	}
 
-	*nextEventRay = Ray(pathVertex->bsdf.hitPoint, sampledDir);
+	*nextEventRay = Ray(pathVertex->bsdf.hitPoint.p, sampledDir);
 
 	return true;
 }
@@ -470,9 +470,9 @@ void BiDirCPURenderThread::RenderFunc() {
 		eyeSampleResult.screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 		eyeSampleResult.screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
-			sampler->GetSample(9), sampler->GetSample(10));
+			sampler->GetSample(10), sampler->GetSample(11));
 
-		eyeVertex.bsdf.fixedDir = -eyeRay.d;
+		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 		eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
 		const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 		const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -494,7 +494,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				// This is a trick, you can not have a BSDF of something that has
 				// not been hit. DirectHitInfiniteLight must be aware of this.
-				eyeVertex.bsdf.fixedDir = -eyeRay.d;
+				eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 				eyeVertex.throughput *= connectionThroughput;
 
 				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance);
@@ -508,7 +508,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			// Something was hit
 
 			// Update MIS constants
-			const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.shadeN, eyeVertex.bsdf.fixedDir));
+			const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.hitPoint.shadeN, eyeVertex.bsdf.hitPoint.fixedDir));
 			eyeVertex.dVCM *= MIS(eyeRayHit.t * eyeRayHit.t) * factor;
 			eyeVertex.dVC *= factor;
 			eyeVertex.dVM *= factor;

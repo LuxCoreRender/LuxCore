@@ -113,7 +113,6 @@ public:
 	}
 	// Normal Public Data
 	float x, y, z;
-#define _LUXRAYS_NORMAL_OCLDEFINE "typedef struct { float x, y, z; } Normal;\n"
 
 private:
 	template<class Archive>

@@ -59,6 +59,10 @@ public:
 		return UV(u + p.u, v + p.v);
 	}
 
+	UV operator-(const UV &p) const {
+		return UV(u - p.u, v - p.v);
+	}
+
 	UV operator*(float f) const {
 		return UV(f*u, f*v);
 	}

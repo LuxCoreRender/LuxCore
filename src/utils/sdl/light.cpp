@@ -36,13 +36,13 @@ static const float worldRadiusScale = 10.f;
 // InfiniteLightBase
 //------------------------------------------------------------------------------
 
-Spectrum InfiniteLightBase::Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
+Spectrum InfiniteLightBase::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Choose two points p1 and p2 on scene bounding sphere
-	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
 	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
 	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
@@ -63,12 +63,12 @@ Spectrum InfiniteLightBase::Emit(const Scene *scene,
 	return GetRadiance(scene, *dir);
 }
 
-Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
+Spectrum InfiniteLightBase::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
 	*dir = UniformSampleSphere(u0, u1);
 
@@ -99,13 +99,11 @@ Spectrum InfiniteLightBase::Illuminate(const Scene *scene, const Point &p,
 // InfiniteLight
 //------------------------------------------------------------------------------
 
-InfiniteLight::InfiniteLight(ImageMapInstance *tx) {
-	imageMapInstance = tx;
-	shiftU = 0.f;
-	shiftV = 0.f;
+InfiniteLight::InfiniteLight(const ImageMap *imgMap) :
+	imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
 }
 
-Spectrum InfiniteLight::GetRadiance(const Scene *scene,
+Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
@@ -113,12 +111,12 @@ Spectrum InfiniteLight::GetRadiance(const Scene *scene,
 		*directPdfA = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW) {
-		const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
+		const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
-	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI + shiftU, SphericalTheta(-dir) * INV_PI + shiftV);
-	return gain * imageMapInstance->GetColor(uv);
+	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI, SphericalTheta(-dir) * INV_PI);
+	return gain * imageMap->GetSpectrum(mapping.Map(uv));
 }
 
 //------------------------------------------------------------------------------
@@ -229,7 +227,7 @@ void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectr
 	ChromaticityToSpectrum(Y, x, y, spect);
 }
 
-Spectrum SkyLight::GetRadiance(const Scene *scene,
+Spectrum SkyLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
@@ -242,7 +240,7 @@ Spectrum SkyLight::GetRadiance(const Scene *scene,
 		*directPdfA = INV_PI * .25f;
 
 	if (emissionPdfW) {
-		const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad * 1.01f;
+		const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
@@ -333,12 +331,12 @@ void SunLight::SetGain(const Spectrum &g) {
 	gain = g;
 }
 
-Spectrum SunLight::Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
+Spectrum SunLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	const Point worldCenter = scene->dataSet->GetBSphere().center;
-	const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad;
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad;
 
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
@@ -356,8 +354,8 @@ Spectrum SunLight::Emit(const Scene *scene,
 	return sunColor;
 }
 
-Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
+Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, sunDir);
@@ -374,14 +372,14 @@ Spectrum SunLight::Illuminate(const Scene *scene, const Point &p,
 		*cosThetaAtLight = cosAtLight;
 
 	if (emissionPdfW) {
-		const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad;
+		const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad;
 		*emissionPdfW =  UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 	}
 	
 	return sunColor;
 }
 
-Spectrum SunLight::GetRadiance(const Scene *scene,
+Spectrum SunLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
@@ -393,7 +391,7 @@ Spectrum SunLight::GetRadiance(const Scene *scene,
 				*directPdfA = UniformConePdf(cosThetaMax);
 
 			if (emissionPdfW) {
-				const float worldRadius = worldRadiusScale * scene->dataSet->GetBSphere().rad;
+				const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad;
 				*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 			}
 
@@ -408,9 +406,10 @@ Spectrum SunLight::GetRadiance(const Scene *scene,
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight(const Material *mat,
-		const ExtMesh *m, const unsigned int triangleIndex) {
+TriangleLight::TriangleLight(const Material *mat, const u_int triangleGlobalIndex, const ExtMesh *m,
+		const unsigned int triangleIndex) {
 	lightMaterial = mat;
+	triGlobalIndex = triangleGlobalIndex;
 	mesh = m;
 	triIndex = triangleIndex;
 
@@ -422,8 +421,8 @@ void TriangleLight::Init() {
 	invArea = 1.f / area;
 }
 
-Spectrum TriangleLight::Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
+Spectrum TriangleLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Origin
@@ -452,11 +451,13 @@ Spectrum TriangleLight::Emit(const Scene *scene,
 		*cosThetaAtLight = localDirOut.z;
 
 	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
-	return lightMaterial->GetEmittedRadiance(triUV) * localDirOut.z;
+	const HitPoint hitPoint = { Vector(-N), *orig, triUV, N, N, passThroughEvent, false };
+
+	return lightMaterial->GetEmittedRadiance(hitPoint) * localDirOut.z;
 }
 
-Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
+Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	Point samplePoint;
@@ -482,17 +483,15 @@ Spectrum TriangleLight::Illuminate(const Scene *scene, const Point &p,
 		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
 	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
-	return lightMaterial->GetEmittedRadiance(triUV);
+	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, sampleN, sampleN, passThroughEvent, false };
+
+	return lightMaterial->GetEmittedRadiance(hitPoint);
 }
 
-Spectrum TriangleLight::GetRadiance(const Scene *scene,
-		const Vector &dir,
-		const UV &triUV,
+Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const Normal geometryN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
-
-	const float cosOutLight = Dot(geometryN, dir);
+	const float cosOutLight = Dot(hitPoint.geometryN, hitPoint.fixedDir);
 	if (cosOutLight <= 0.f)
 		return Spectrum();
 
@@ -502,5 +501,5 @@ Spectrum TriangleLight::GetRadiance(const Scene *scene,
 	if (emissionPdfW)
 		*emissionPdfW = cosOutLight * INV_PI * invArea;
 
-	return lightMaterial->GetEmittedRadiance(triUV);
+	return lightMaterial->GetEmittedRadiance(hitPoint);
 }

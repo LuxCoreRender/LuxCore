@@ -34,8 +34,11 @@ extern std::string KernelSource_qbvh;
 extern std::string KernelSource_mqbvh;
 
 extern std::string KernelSource_sampler_types;
+extern std::string KernelSource_sampler_funcs;
 extern std::string KernelSource_filter_types;
+extern std::string KernelSource_filter_funcs;
 extern std::string KernelSource_camera_types;
+extern std::string KernelSource_camera_funcs;
 extern std::string KernelSource_trianglemesh_types;
 extern std::string KernelSource_trianglemesh_funcs;
 extern std::string KernelSource_randomgen_types;
@@ -61,12 +64,18 @@ extern std::string KernelSource_ray_types;
 extern std::string KernelSource_ray_funcs;
 extern std::string KernelSource_light_types;
 extern std::string KernelSource_light_funcs;
+extern std::string KernelSource_point_types;
 extern std::string KernelSource_vector_types;
 extern std::string KernelSource_vector_funcs;
+extern std::string KernelSource_normal_types;
+extern std::string KernelSource_bbox_types;
 extern std::string KernelSource_triangle_types;
 extern std::string KernelSource_triangle_funcs;
 extern std::string KernelSource_uv_types;
 extern std::string KernelSource_scene_funcs;
+extern std::string KernelSource_mapping_types;
+extern std::string KernelSource_mapping_funcs;
+extern std::string KernelSource_utils_funcs;
 
 } }
 

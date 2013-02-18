@@ -40,7 +40,8 @@ public:
 			GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE>())),
 		deviceIndex(devIndex),
 		oclDevice(device), oclContext(NULL),
-		enableOpenGLInterop(false) { }
+		enableOpenGLInterop(false),
+		forceWorkGroupSize(0) { }
 
 	virtual ~OpenCLDeviceDescription() {
 		delete oclContext;
@@ -56,6 +57,9 @@ public:
 	virtual size_t GetMaxMemoryAllocSize() const {
 		return oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
 	}
+
+	u_int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
+	void SetForceWorkGroupSize(const u_int size) const { forceWorkGroupSize = size; }
 
 	bool HasImageSupport() const { return oclDevice.getInfo<CL_DEVICE_IMAGE_SUPPORT>() != 0 ; }
 	size_t GetImage2DMaxWidth() const { return oclDevice.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(); }
@@ -73,22 +77,21 @@ public:
 	cl::Context &GetOCLContext() const;
 	cl::Device &GetOCLDevice() const { return oclDevice; }
 
+	std::string GetOpenCLVersion() const { return oclDevice.getInfo<CL_DEVICE_VERSION>(); }
+
 	bool IsOpenCL_1_0() const {
-		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
 		int major, minor;
-		sscanf(platform.getInfo<CL_PLATFORM_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
+		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
 		return (major >= 1) && (minor >= 0);
 	}
 	bool IsOpenCL_1_1() const {
-		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
 		int major, minor;
-		sscanf(platform.getInfo<CL_PLATFORM_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
+		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
 		return (major >= 1) && (minor >= 1);
 	}
 	bool IsOpenCL_1_2() const {
-		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
 		int major, minor;
-		sscanf(platform.getInfo<CL_PLATFORM_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
+		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
 		return (major >= 1) && (minor >= 2);
 	}
 
@@ -114,6 +117,7 @@ private:
 	mutable cl::Device oclDevice;
 	mutable cl::Context *oclContext;
 	mutable bool enableOpenGLInterop;
+	mutable u_int forceWorkGroupSize;
 };
 
 }

@@ -38,7 +38,7 @@ void HashGrid::Build(vector<vector<PathVertexVM> > &pathsVertices, const float r
 		vertexCount += pathsVertices[i].size();
 
 		for (u_int j = 0; j < pathsVertices[i].size(); ++j)
-			vertexBBox = Union(vertexBBox, pathsVertices[i][j].bsdf.hitPoint);
+			vertexBBox = Union(vertexBBox, pathsVertices[i][j].bsdf.hitPoint.p);
 	}
 
 	if (vertexCount <= 0)
@@ -59,7 +59,7 @@ void HashGrid::Build(vector<vector<PathVertexVM> > &pathsVertices, const float r
 		for (u_int j = 0; j < pathsVertices[i].size(); ++j, ++k) {
 			const PathVertexVM *vertex = &pathsVertices[i][j];
 
-			cellEnds[Hash(vertex->bsdf.hitPoint)]++;
+			cellEnds[Hash(vertex->bsdf.hitPoint.p)]++;
 		}
 	}
 
@@ -74,7 +74,7 @@ void HashGrid::Build(vector<vector<PathVertexVM> > &pathsVertices, const float r
 		for (u_int j = 0; j < pathsVertices[i].size(); ++j) {
 			const PathVertexVM *vertex = &pathsVertices[i][j];
 
-			const int targetIdx = cellEnds[Hash(vertex->bsdf.hitPoint)]++;
+			const int targetIdx = cellEnds[Hash(vertex->bsdf.hitPoint.p)]++;
             lightVertices[targetIdx] = vertex;
 		}
 	}
@@ -83,10 +83,10 @@ void HashGrid::Build(vector<vector<PathVertexVM> > &pathsVertices, const float r
 void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, Spectrum *radiance) const {
 	if ((vertexCount <= 0) ||
-			!vertexBBox.Inside(eyeVertex.bsdf.hitPoint))
+			!vertexBBox.Inside(eyeVertex.bsdf.hitPoint.p))
 		return;
 
-	const Vector distMin = eyeVertex.bsdf.hitPoint - vertexBBox.pMin;
+	const Vector distMin = eyeVertex.bsdf.hitPoint.p - vertexBBox.pMin;
 	const Vector cellPoint = invCellSize * distMin;
 	const Vector coordFloor(floorf(cellPoint.x), floorf(cellPoint.y), floorf(cellPoint.z));
 
@@ -131,12 +131,12 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, const PathVertexVM *lightVertex,
 		Spectrum *radiance) const {
-	const float distance2 = (lightVertex->bsdf.hitPoint - eyeVertex.bsdf.hitPoint).LengthSquared();
+	const float distance2 = (lightVertex->bsdf.hitPoint.p - eyeVertex.bsdf.hitPoint.p).LengthSquared();
 
 	if (distance2 <= radius2) {
 		float eyeBsdfPdfW, eyeBsdfRevPdfW;
 		BSDFEvent eyeEvent;
-		const Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(lightVertex->bsdf.fixedDir,
+		const Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(lightVertex->bsdf.hitPoint.fixedDir,
 				&eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW);
 		if(eyeBsdfEval.Black())
 			return;

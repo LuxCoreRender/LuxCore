@@ -79,7 +79,6 @@ public:
 	float t;
 	float b1, b2; // Barycentric coordinates of the hit point
 	unsigned int index;
-#define _LUXRAYS_RAYHIT_OCLDEFINE "typedef struct { float t, b1, b2; unsigned int index; } RayHit;\n"
 
 	void SetMiss() { index = 0xffffffffu; };
 	bool Miss() const { return (index == 0xffffffffu); };

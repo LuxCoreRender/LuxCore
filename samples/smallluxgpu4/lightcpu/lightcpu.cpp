@@ -34,7 +34,11 @@ namespace slg {
 
 LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPURenderEngine(rcfg, flm, flmMutex) {
-	film->EnableOverlappedScreenBufferUpdate(true);
+	film->SetPerPixelNormalizedBufferFlag(true);
+	film->SetPerScreenNormalizedBufferFlag(true);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->Init();
+
 }
 
 void LightCPURenderEngine::StartLockLess() {

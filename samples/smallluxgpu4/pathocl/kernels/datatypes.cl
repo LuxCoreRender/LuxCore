@@ -46,160 +46,6 @@ Error: PARAM_HAS_SUNLIGHT requires PARAM_DIRECT_LIGHT_SAMPLING !
 #endif
 
 //------------------------------------------------------------------------------
-// Frame buffer data types
-//------------------------------------------------------------------------------
-
-typedef struct {
-	Spectrum c;
-	float count;
-} Pixel;
-
-typedef struct {
-	float alpha;
-} AlphaPixel;
-
-//------------------------------------------------------------------------------
-// Sample data types
-//------------------------------------------------------------------------------
-
-typedef struct {
-	Spectrum radiance;
-	float alpha;
-} RandomSampleWithAlphaChannel;
-
-typedef struct {
-	Spectrum radiance;
-} RandomSampleWithoutAlphaChannel;
-
-typedef struct {
-	Spectrum radiance;
-	float alpha;
-
-	float totalI;
-
-	// Using ushort here totally freeze the ATI driver
-	unsigned int largeMutationCount, smallMutationCount;
-	unsigned int current, proposed, consecutiveRejects;
-
-	float weight;
-	Spectrum currentRadiance;
-	float currentAlpha;
-} MetropolisSampleWithAlphaChannel;
-
-typedef struct {
-	Spectrum radiance;
-
-	float totalI;
-
-	// Using ushort here totally freeze the ATI driver
-	unsigned int largeMutationCount, smallMutationCount;
-	unsigned int current, proposed, consecutiveRejects;
-
-	float weight;
-	Spectrum currentRadiance;
-} MetropolisSampleWithoutAlphaChannel;
-
-#if defined(SLG_OPENCL_KERNEL)
-
-#if (PARAM_SAMPLER_TYPE == 0)
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-typedef RandomSampleWithAlphaChannel Sample;
-#else
-typedef RandomSampleWithoutAlphaChannel Sample;
-#endif
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 1)
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-typedef MetropolisSampleWithAlphaChannel Sample;
-#else
-typedef MetropolisSampleWithoutAlphaChannel Sample;
-#endif
-#endif
-
-#endif
-
-//------------------------------------------------------------------------------
-// Indices of Sample related u[] array
-//------------------------------------------------------------------------------
-
-#if defined(SLG_OPENCL_KERNEL)
-
-#define IDX_SCREEN_X 0
-#define IDX_SCREEN_Y 1
-#if defined(PARAM_CAMERA_HAS_DOF) && defined(PARAM_HAS_PASSTHROUGH)
-#define IDX_EYE_PASSTHROUGH 2
-#define IDX_DOF_X 3
-#define IDX_DOF_Y 4
-#define IDX_BSDF_OFFSET 5
-#elif defined(PARAM_CAMERA_HAS_DOF)
-#define IDX_DOF_X 2
-#define IDX_DOF_Y 3
-#define IDX_BSDF_OFFSET 4
-#elif defined(PARAM_HAS_PASSTHROUGH)
-#define IDX_EYE_PASSTHROUGH 2
-#define IDX_BSDF_OFFSET 3
-#else
-#define IDX_BSDF_OFFSET 2
-#endif
-
-// Relative to IDX_BSDF_OFFSET + PathDepth * SAMPLE_SIZE
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING) && defined(PARAM_HAS_PASSTHROUGH)
-
-#define IDX_PASSTHROUGH 0
-#define IDX_BSDF_X 1
-#define IDX_BSDF_Y 2
-#define IDX_DIRECTLIGHT_X 3
-#define IDX_DIRECTLIGHT_Y 4
-#define IDX_DIRECTLIGHT_Z 5
-#define IDX_DIRECTLIGHT_W 6
-#define IDX_DIRECTLIGHT_A 7
-#define IDX_RR 8
-
-#define SAMPLE_SIZE 9
-
-#elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
-
-#define IDX_BSDF_X 0
-#define IDX_BSDF_Y 1
-#define IDX_DIRECTLIGHT_X 2
-#define IDX_DIRECTLIGHT_Y 3
-#define IDX_DIRECTLIGHT_Z 4
-#define IDX_DIRECTLIGHT_W 5
-#define IDX_RR 6
-
-#define SAMPLE_SIZE 7
-
-#elif defined(PARAM_HAS_PASSTHROUGH)
-
-#define IDX_PASSTHROUGH 0
-#define IDX_BSDF_X 1
-#define IDX_BSDF_Y 2
-#define IDX_RR 3
-
-#define SAMPLE_SIZE 4
-
-#else
-
-#define IDX_BSDF_X 0
-#define IDX_BSDF_Y 1
-#define IDX_RR 2
-
-#define SAMPLE_SIZE 3
-
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 0)
-#define TOTAL_U_SIZE 2
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 1)
-#define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * SAMPLE_SIZE)
-#endif
-
-#endif
-
-//------------------------------------------------------------------------------
 // GPUTask data types
 //------------------------------------------------------------------------------
 
@@ -211,12 +57,15 @@ typedef enum {
 	SPLAT_SAMPLE
 } PathState;
 
+// This is defined only under OpenCL because of variable size structures
+#if defined(SLG_OPENCL_KERNEL)
+
 typedef struct {
 	PathState state;
 	unsigned int depth;
 
 	Spectrum throughput;
-	BSDF bsdf;
+	BSDF bsdf; // Variable size structure
 } PathStateBase;
 
 typedef struct {
@@ -225,15 +74,18 @@ typedef struct {
 
 	float lastPdfW;
 	int lastSpecular;
+
+#if (PARAM_DL_LIGHT_COUNT > 0)
+	// This is used by TriangleLight_Illuminate() to temporary store the
+	// point on the light sources
+	HitPoint tmpHitPoint;
+#endif
 } PathStateDirectLight;
 
 typedef struct {
 	float passThroughEvent; // The passthrough sample used for the shadow ray
 	BSDF passThroughBsdf;
 } PathStateDirectLightPassThrough;
-
-// This is defined only under OpenCL
-#if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
 	// The task seed

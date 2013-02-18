@@ -41,6 +41,10 @@ public:
 		: r(rr), g(gg), b(bb) {
 	}
 
+	Spectrum(const float rgb[3])
+		: r(rgb[0]), g(rgb[1]), b(rgb[2]) {
+	}
+
 	Spectrum(const float v)
 		: r(v), g(v), b(v) {
 	}
@@ -110,6 +114,17 @@ public:
 		return *this;
 	}
 
+	Spectrum operator/(const Spectrum &s) const {
+		return Spectrum(r / s.r, g / s.g, b / s.b);
+	}
+
+	Spectrum & operator/=(const Spectrum &s) {
+		r /= s.r;
+		g /= s.g;
+		b /= s.b;
+		return *this;
+	}
+
 	Spectrum operator-() const {
 		return Spectrum(-r, -g, -b);
 	}
@@ -142,12 +157,13 @@ public:
 		return 0.212671f * r + 0.715160f * g + 0.072169f * b;
 	}
 
-	Spectrum Clamp() {
-		luxrays::Clamp(r, 0.f, 1.f);
-		luxrays::Clamp(g, 0.f, 1.f);
-		luxrays::Clamp(b, 0.f, 1.f);
+	Spectrum Clamp(const float min = 0.f, const float max = 1.f) const {
+		Spectrum s(
+			luxrays::Clamp(r, min, max),
+			luxrays::Clamp(g, min, max),
+			luxrays::Clamp(b, min, max));
 
-		return *this;
+		return s;
 	}
 
 	float r, g, b;
@@ -164,6 +180,10 @@ inline Spectrum operator*(float f, const Spectrum &v) {
 
 inline Spectrum Exp(const Spectrum &s) {
 	return Spectrum(expf(s.r), expf(s.g), expf(s.b));
+}
+
+inline Spectrum Sqrt(const Spectrum &s) {
+	return Spectrum(sqrtf(s.r), sqrtf(s.g), sqrtf(s.b));
 }
 
 }

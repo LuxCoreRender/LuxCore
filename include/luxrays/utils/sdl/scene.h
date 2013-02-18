@@ -26,6 +26,7 @@
 #include <iostream>
 #include <fstream>
 
+#include "luxrays/utils/properties.h"
 #include "luxrays/utils/sdl/sdl.h"
 #include "luxrays/utils/sdl/camera.h"
 #include "luxrays/utils/sdl/light.h"
@@ -33,7 +34,7 @@
 #include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/sdl/extmeshcache.h"
 #include "luxrays/utils/sdl/bsdf.h"
-#include "luxrays/utils/properties.h"
+#include "luxrays/utils/sdl/mapping.h"
 
 namespace luxrays { namespace sdl {
 
@@ -55,6 +56,8 @@ public:
 		BSDF *bsdf, Spectrum *connectionThroughput) const;
 
 	void UpdateDataSet(Context *ctx);
+
+	Properties ToProperties(const std::string &directoryName);
 
 	//--------------------------------------------------------------------------
 	// Methods to build a scene from scratch
@@ -105,6 +108,7 @@ public:
 
 	//--------------------------------------------------------------------------
 
+	TextureMapping *CreateTextureMapping(const std::string &prefixName, const Properties &props);
 	Texture *CreateTexture(const std::string &texName, const Properties &props);
 	Material *CreateMaterial(const std::string &matName, const Properties &props);
 
@@ -128,10 +132,13 @@ public:
 
 protected:
 	static std::vector<std::string> GetStringParameters(const Properties &prop,
-		const std::string &paramName, const unsigned int paramCount,
+		const std::string &paramName, const u_int paramCount,
+		const std::string &defaultValue);
+	static std::vector<int> GetIntParameters(const Properties &prop,
+		const std::string &paramName, const u_int paramCount,
 		const std::string &defaultValue);
 	static std::vector<float> GetFloatParameters(const Properties &prop,
-		const std::string &paramName, const unsigned int paramCount,
+		const std::string &paramName, const u_int paramCount,
 		const std::string &defaultValue);
 
 	Texture *GetTexture(const std::string &name);

@@ -41,8 +41,7 @@ typedef unsigned int u_int;
 using std::isnan;
 #endif
 
-#if defined(__APPLE__) // OSX adaptions Jens Verwiebe
-#  define memalign(a,b) valloc(b)
+#if defined(__APPLE__)
 #include <string>
 typedef unsigned int u_int;
 #endif
@@ -96,6 +95,8 @@ using std::isinf;
 #ifndef INV_TWOPI
 #define INV_TWOPI  0.15915494309189533577f
 #endif
+
+#include "luxrays/core/geometry/matrix4x4.h"
 
 namespace luxrays {
 
@@ -166,6 +167,15 @@ inline int Sgn(int a) {
 	return a < 0 ? -1 : 1;
 }
 
+template<class T> inline T Lerp(float t, T v1, T v2) {
+	return v1 + t * (v2 - v1);
+}
+
+inline float SmoothStep(const float min, const float max, const float value) {
+	const float v = Clamp((value - min) / (max - min), 0.f, 1.f);
+	return v * v * (-2.f * v  + 3.f);
+}
+
 template<class T> inline int Float2Int(T val) {
 	return static_cast<int> (val);
 }
@@ -207,8 +217,28 @@ inline unsigned int Ceil2UInt(float val) {
 }
 
 template <class T> inline std::string ToString(const T& t) {
-	std::stringstream ss;
+	std::ostringstream ss;
 	ss << t;
+	return ss.str();
+}
+
+inline std::string ToString(const float t) {
+	std::ostringstream ss;
+	ss << std::setprecision(24) << t;
+	return ss.str();
+}
+
+inline std::string ToString(const Matrix4x4 &m) {
+	std::ostringstream ss;
+	ss << std::setprecision(24);
+
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			if ((i != 0) || (j != 0))
+				ss << " ";
+			ss << m.m[j][i];
+		}
+	}
 	return ss.str();
 }
 

@@ -35,11 +35,6 @@
 #include "luxrays/opencl/intersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 
-#if defined(__APPLE__)
-//OSX version detection
-#include <sys/utsname.h>
-#endif
-
 using namespace std;
 using namespace luxrays;
 using namespace luxrays::sdl;
@@ -47,15 +42,15 @@ using namespace luxrays::utils;
 
 namespace slg {
 
+#define SOBOL_MAXDEPTH 6
+
 //------------------------------------------------------------------------------
 // PathOCLRenderThread
 //------------------------------------------------------------------------------
 
 PathOCLRenderThread::PathOCLRenderThread(const u_int index,
-		const float samplStart, OpenCLIntersectionDevice *device,
-		PathOCLRenderEngine *re) {
+		OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) {
 	intersectionDevice = device;
-	samplingStart = samplStart;
 
 	renderThread = NULL;
 
@@ -218,7 +213,7 @@ void PathOCLRenderThread::InitFrameBuffer() {
 
 	// Delete previous allocated frameBuffer
 	delete[] frameBuffer;
-	frameBuffer = new slg::ocl::Pixel[frameBufferPixelCount];
+	frameBuffer = new luxrays::ocl::Pixel[frameBufferPixelCount];
 
 	for (u_int i = 0; i < frameBufferPixelCount; ++i) {
 		frameBuffer[i].c.r = 0.f;
@@ -227,19 +222,19 @@ void PathOCLRenderThread::InitFrameBuffer() {
 		frameBuffer[i].count = 0.f;
 	}
 
-	AllocOCLBufferRW(&frameBufferBuff, sizeof(slg::ocl::Pixel) * frameBufferPixelCount, "FrameBuffer");
+	AllocOCLBufferRW(&frameBufferBuff, sizeof(luxrays::ocl::Pixel) * frameBufferPixelCount, "FrameBuffer");
 
 	delete[] alphaFrameBuffer;
 	alphaFrameBuffer = NULL;
 
 	// Check if the film has an alpha channel
 	if (renderEngine->film->IsAlphaChannelEnabled()) {
-		alphaFrameBuffer = new slg::ocl::AlphaPixel[frameBufferPixelCount];
+		alphaFrameBuffer = new luxrays::ocl::AlphaPixel[frameBufferPixelCount];
 
 		for (u_int i = 0; i < frameBufferPixelCount; ++i)
 			alphaFrameBuffer[i].alpha = 0.f;
 
-		AllocOCLBufferRW(&alphaFrameBufferBuff, sizeof(slg::ocl::AlphaPixel) * frameBufferPixelCount, "Alpha Channel FrameBuffer");
+		AllocOCLBufferRW(&alphaFrameBufferBuff, sizeof(luxrays::ocl::AlphaPixel) * frameBufferPixelCount, "Alpha Channel FrameBuffer");
 	}
 }
 
@@ -410,12 +405,24 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))
 		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
-	if (cscene->IsTextureCompiled(CONST_FLOAT4))
-		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT4";
 	if (cscene->IsTextureCompiled(IMAGEMAP))
 		ss << " -D PARAM_ENABLE_TEX_IMAGEMAP";
 	if (cscene->IsTextureCompiled(SCALE_TEX))
 		ss << " -D PARAM_ENABLE_TEX_SCALE";
+	if (cscene->IsTextureCompiled(FRESNEL_APPROX_N))
+		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_N";
+	if (cscene->IsTextureCompiled(FRESNEL_APPROX_K))
+		ss << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
+	if (cscene->IsTextureCompiled(CHECKERBOARD2D))
+		ss << " -D PARAM_ENABLE_CHECKERBOARD2D";
+	if (cscene->IsTextureCompiled(CHECKERBOARD3D))
+		ss << " -D PARAM_ENABLE_CHECKERBOARD3D";
+	if (cscene->IsTextureCompiled(MIX_TEX))
+		ss << " -D PARAM_ENABLE_MIX_TEX";
+	if (cscene->IsTextureCompiled(FBM_TEX))
+		ss << " -D PARAM_ENABLE_FBM_TEX";
+	if (cscene->IsTextureCompiled(MARBLE))
+		ss << " -D PARAM_ENABLE_MARBLE";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -433,12 +440,17 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_NULL";
 	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
 		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
+	if (cscene->IsMaterialCompiled(GLOSSY2))
+		ss << " -D PARAM_ENABLE_MAT_GLOSSY2";
+	if (cscene->IsMaterialCompiled(METAL2))
+		ss << " -D PARAM_ENABLE_MAT_METAL2";
 
 	if (cscene->IsMaterialCompiled(GLASS) ||
 			cscene->IsMaterialCompiled(ARCHGLASS) ||
 			cscene->IsMaterialCompiled(MIX) ||
 			cscene->IsMaterialCompiled(NULLMAT) ||
-			cscene->IsMaterialCompiled(MATTETRANSLUCENT))
+			cscene->IsMaterialCompiled(MATTETRANSLUCENT) ||
+			cscene->IsMaterialCompiled(GLOSSY2))
 		ss << " -D PARAM_HAS_PASSTHROUGH";
 	
 	if (cscene->camera.lensRadius > 0.f)
@@ -522,6 +534,10 @@ void PathOCLRenderThread::InitKernels() {
 					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << sampler->metropolis.imageMutationRange << "f" <<
 					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
 			break;
+		case luxrays::ocl::SOBOL:
+			ss << " -D PARAM_SAMPLER_TYPE=2" <<
+					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
+			break;
 		default:
 			assert (false);
 	}
@@ -530,16 +546,10 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_ALPHA_CHANNEL";
 
 	// Check the OpenCL vendor and use some specific compiler options
-
-#if defined(__APPLE__) // OSX version detection
-	{
-		struct utsname retval;
-		uname(&retval);
-		if(retval.release[0] == '1' && retval.release[1] < '1') // result < darwin 11
-			ss << " -D __APPLE_FIX__";
-	}
+	
+#if defined(__APPLE__)
+	ss << " -D __APPLE_CL__";
 #endif
-
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
@@ -549,17 +559,39 @@ void PathOCLRenderThread::InitKernels() {
 	if (kernelsParameters != newKernelParameters) {
 		kernelsParameters = newKernelParameters;
 
+		string sobolLookupTable;
+		if (sampler->type == luxrays::ocl::SOBOL) {
+			// Generate the Sobol vectors
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
+			u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
+
+			SobolGenerateDirectionVectors(directions, sampleDimensions);
+
+			stringstream sobolTableSS;
+			sobolTableSS << "#line 2 \"Sobol Table in pathoclthread.cpp\"\n";
+			sobolTableSS << "__constant uint SOBOL_DIRECTIONS[" << sampleDimensions * SOBOL_BITS << "] = {\n";
+			for (u_int i = 0; i < sampleDimensions * SOBOL_BITS; ++i) {
+				if (i != 0)
+					sobolTableSS << ", ";
+				sobolTableSS << directions[i] << "u";
+			}
+			sobolTableSS << "};\n";
+
+			sobolLookupTable = sobolTableSS.str();
+
+			delete directions;
+		}
+
 		// Compile sources
 		stringstream ssKernel;
 		ssKernel <<
 			luxrays::ocl::KernelSource_luxrays_types <<
 			luxrays::ocl::KernelSource_uv_types <<
-			_LUXRAYS_POINT_OCLDEFINE <<
+			luxrays::ocl::KernelSource_point_types <<
 			luxrays::ocl::KernelSource_vector_types <<
-			_LUXRAYS_NORMAL_OCLDEFINE <<
+			luxrays::ocl::KernelSource_normal_types <<
 			luxrays::ocl::KernelSource_triangle_types <<
 			luxrays::ocl::KernelSource_ray_types <<
-			_LUXRAYS_RAYHIT_OCLDEFINE <<
 			// OpenCL Types
 			luxrays::ocl::KernelSource_epsilon_types <<
 			luxrays::ocl::KernelSource_spectrum_types <<
@@ -568,6 +600,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_transform_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<
 			luxrays::ocl::KernelSource_trianglemesh_types <<
+			luxrays::ocl::KernelSource_mapping_types <<
 			luxrays::ocl::KernelSource_texture_types <<
 			luxrays::ocl::KernelSource_material_types <<
 			luxrays::ocl::KernelSource_bsdf_types <<
@@ -577,6 +610,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_light_types <<
 			// OpenCL Funcs
 			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_utils_funcs <<
 			luxrays::ocl::KernelSource_vector_funcs <<
 			luxrays::ocl::KernelSource_ray_funcs <<
 			luxrays::ocl::KernelSource_spectrum_funcs <<
@@ -587,15 +621,18 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_randomgen_funcs <<
 			luxrays::ocl::KernelSource_triangle_funcs <<
 			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			luxrays::ocl::KernelSource_mapping_funcs <<
 			luxrays::ocl::KernelSource_texture_funcs <<
 			luxrays::ocl::KernelSource_material_funcs <<
+			luxrays::ocl::KernelSource_camera_funcs <<
 			luxrays::ocl::KernelSource_light_funcs <<
+			luxrays::ocl::KernelSource_filter_funcs <<
+			sobolLookupTable <<
+			luxrays::ocl::KernelSource_sampler_funcs <<
 			luxrays::ocl::KernelSource_bsdf_funcs <<
 			luxrays::ocl::KernelSource_scene_funcs <<
 			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
-			slg::ocl::KernelSource_filters <<
-			slg::ocl::KernelSource_samplers <<
 			slg::ocl::KernelSource_pathocl_kernels;
 		string kernelSource = ssKernel.str();
 
@@ -628,8 +665,8 @@ void PathOCLRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling Init Kernel");
 		initKernel = new cl::Kernel(*program, "Init");
 		initKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initWorkGroupSize);
-		if (intersectionDevice->GetForceWorkGroupSize() > 0)
-			initWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			initWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 		//--------------------------------------------------------------------------
 		// InitFB kernel
@@ -638,8 +675,8 @@ void PathOCLRenderThread::InitKernels() {
 		delete initFBKernel;
 		initFBKernel = new cl::Kernel(*program, "InitFrameBuffer");
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
-		if (intersectionDevice->GetForceWorkGroupSize() > 0)
-			initFBWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			initFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 		//----------------------------------------------------------------------
 		// AdvancePaths kernel
@@ -649,8 +686,8 @@ void PathOCLRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling AdvancePaths Kernel");
 		advancePathsKernel = new cl::Kernel(*program, "AdvancePaths");
 		advancePathsKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &advancePathsWorkGroupSize);
-		if (intersectionDevice->GetForceWorkGroupSize() > 0)
-			advancePathsWorkGroupSize = intersectionDevice->GetForceWorkGroupSize();
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			advancePathsWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 		//----------------------------------------------------------------------
 
@@ -744,71 +781,114 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
-	size_t gpuTaksSize = sizeof(luxrays::ocl::Seed);
-
-	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(slg::ocl::RandomSampleWithAlphaChannel);
-		else
-			gpuTaksSize += sizeof(slg::ocl::RandomSampleWithoutAlphaChannel);
-	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithAlphaChannel);
-		else
-			gpuTaksSize += sizeof(slg::ocl::MetropolisSampleWithoutAlphaChannel);
-	} else
-		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
-
-	gpuTaksSize += sizeof(slg::ocl::PathStateBase);
-
 	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(GLASS) ||
 			renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
 			renderEngine->compiledScene->IsMaterialCompiled(MIX) ||
 			renderEngine->compiledScene->IsMaterialCompiled(NULLMAT) ||
-			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT));
-	if ((triAreaLightCount > 0) || sunLightBuff) {
-		gpuTaksSize += sizeof(slg::ocl::PathStateDirectLight);
+			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT) ||
+			renderEngine->compiledScene->IsMaterialCompiled(GLOSSY2));
 
+	// Add Seed memory size
+	size_t gpuTaksSize = sizeof(luxrays::ocl::Seed);
+
+	// Add Sample memory size
+	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
+		gpuTaksSize += sizeof(Spectrum);
+
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
+		gpuTaksSize += 2 * sizeof(Spectrum) + 3 * sizeof(float) + 5 * sizeof(u_int);
+		
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else if (renderEngine->sampler->type == luxrays::ocl::SOBOL) {
+		gpuTaksSize += 2 * sizeof(float) + 2 * sizeof(u_int) + sizeof(Spectrum);
+
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else
+		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
+
+	// Add PathStateBase memory size
+	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
+
+	// Add PathStateBase.BSDF.HitPoint memory size
+	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	if (hasPassThrough)
+		hitPointSize += sizeof(float);
+
+	// Add PathStateBase.BSDF memory size
+	size_t bsdfSize = hitPointSize;
+	// Add PathStateBase.BSDF.materialIndex memory size
+	bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
+	if (triAreaLightCount > 0)
+		bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.Frame memory size
+	bsdfSize += sizeof(luxrays::ocl::Frame);
+	gpuTaksSize += bsdfSize;
+
+	// Add PathStateDirectLight memory size
+	if ((triAreaLightCount > 0) || sunLightBuff) {
+		gpuTaksSize += sizeof(Spectrum) + sizeof(float) + sizeof(int);
+
+		// Add PathStateDirectLight.tmpHitPoint memory size
+		if (triAreaLightCount > 0)
+			gpuTaksSize += hitPointSize;
+
+		// Add PathStateDirectLightPassThrough memory size
 		if (hasPassThrough)
-			gpuTaksSize += sizeof(slg::ocl::PathStateDirectLightPassThrough);
+			gpuTaksSize += sizeof(float) + bsdfSize;
 	}
 
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
 
 	//--------------------------------------------------------------------------
 	// Allocate sample data buffers
 	//--------------------------------------------------------------------------
 
-	const size_t uDataEyePathVertexSize =
+	const size_t eyePathVertexDimension =
 		// IDX_SCREEN_X, IDX_SCREEN_Y
-		sizeof(float) * 2 +
+		2 +
 		// IDX_EYE_PASSTROUGHT
-		(hasPassThrough ? sizeof(float) : 0) +
+		(hasPassThrough ? 1 : 0) +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? (sizeof(float) * 2) : 0);
-	const size_t uDataPerPathVertexSize =
+		((scene->camera->lensRadius > 0.f) ? 2 : 0);
+	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
-		(hasPassThrough ? sizeof(float) : 0) +
+		(hasPassThrough ? 1 : 0) +
 		// IDX_BSDF_X, IDX_BSDF_Y
-		sizeof(float) * 2 +
+		2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		(((triAreaLightCount > 0) || sunLightBuff) ? (sizeof(float) * (4 + (hasPassThrough ? 1 : 0))) : 0) +
+		(((triAreaLightCount > 0) || sunLightBuff) ? (4 + (hasPassThrough ? 1 : 0)) : 0) +
 		// IDX_RR
-		sizeof(float);
+		1;
+	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * renderEngine->maxPathDepth;
 
-	size_t uDataSize = 0;
-	if (renderEngine->sampler->type == luxrays::ocl::RANDOM) {
+	size_t uDataSize;
+	if ((renderEngine->sampler->type == luxrays::ocl::RANDOM) ||
+			(renderEngine->sampler->type == luxrays::ocl::SOBOL)) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
-		uDataSize += sizeof(float) * 2;
+		uDataSize = sizeof(float) * 2;
+		
+		if (renderEngine->sampler->type == luxrays::ocl::SOBOL) {
+			// Limit the number of dimension where I use Sobol sequence (after, I switch
+			// to Random sampler.
+			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
+		}
 	} else if (renderEngine->sampler->type == luxrays::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
-		uDataSize += 2 * (uDataEyePathVertexSize + uDataPerPathVertexSize * renderEngine->maxPathDepth);
+		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else
 		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
 
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
-	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
+	// TOFIX
+	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount + 1, "SampleData"); // +1 to avoid METROPOLIS + Intel\AMD OpenCL crash
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
@@ -1060,14 +1140,13 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
-	if (editActions.Size() > 0)
+	if (editActions.HasAnyAction()) {
 		SetKernelArgs();
 
-	//--------------------------------------------------------------------------
-	// Execute initialization kernels
-	//--------------------------------------------------------------------------
+		//--------------------------------------------------------------------------
+		// Execute initialization kernels
+		//--------------------------------------------------------------------------
 
-	if (editActions.Size() > 0) {
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 		// Clear the frame buffer

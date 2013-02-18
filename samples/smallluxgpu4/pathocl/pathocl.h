@@ -44,22 +44,21 @@ class PathOCLRenderEngine;
 
 class PathOCLRenderThread {
 public:
-	PathOCLRenderThread(const u_int index,
-			const float samplingStart, OpenCLIntersectionDevice *device,
+	PathOCLRenderThread(const u_int index, OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
-	~PathOCLRenderThread();
+	virtual ~PathOCLRenderThread();
 
 	void Start();
-    void Interrupt();
+	virtual void Interrupt();
 	void Stop();
 
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
+	virtual void BeginEdit();
+	virtual void EndEdit(const EditActionList &editActions);
 
 	friend class PathOCLRenderEngine;
 
-private:
-	void RenderThreadImpl();
+protected:
+	virtual void RenderThreadImpl();
 
 	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc);
 	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc);
@@ -125,14 +124,14 @@ private:
 
 	luxrays::utils::oclKernelCache *kernelCache;
 
-	float samplingStart;
+	u_int sampleDimensions;
 
 	boost::thread *renderThread;
 
 	u_int threadIndex;
 	PathOCLRenderEngine *renderEngine;
-	slg::ocl::Pixel *frameBuffer;
-	slg::ocl::AlphaPixel *alphaFrameBuffer;
+	luxrays::ocl::Pixel *frameBuffer;
+	luxrays::ocl::AlphaPixel *alphaFrameBuffer;
 	u_int frameBufferPixelCount;
 
 	bool started, editMode;
@@ -149,7 +148,7 @@ public:
 	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLRenderEngine();
 
-	RenderEngineType GetEngineType() const { return PATHOCL; }
+	virtual RenderEngineType GetEngineType() const { return PATHOCL; }
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
@@ -167,7 +166,9 @@ public:
 	size_t maxMemPageSize;
 	bool usePixelAtomics;
 
-private:
+protected:
+	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, OpenCLIntersectionDevice *device);
+
 	void StartLockLess();
 	void StopLockLess();
 

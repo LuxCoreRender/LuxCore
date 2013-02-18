@@ -197,9 +197,8 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(std::vector
 		else if (deviceDesc[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
-			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, i,
-					oclDeviceDesc->GetForceWorkGroupSize());
 
+			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, i);
 			oclDevices.push_back((OpenCLIntersectionDevice *)device);
 		}
 #endif

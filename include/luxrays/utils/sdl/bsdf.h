@@ -41,17 +41,30 @@ namespace sdl {
 
 class Scene;
 
+struct HitPointStruct {
+	// The incoming direction. It is the eyeDir when fromLight = false and
+	// lightDir when fromLight = true
+	Vector fixedDir;
+	Point p;
+	UV uv;
+	Normal geometryN;
+	Normal shadeN;
+	float passThroughEvent;
+	bool fromLight;
+};
+typedef HitPointStruct HitPoint;
+
 class BSDF {
 public:
 	// An empty BSDF
 	BSDF() : material(NULL) { };
 
 	// A BSDF initialized from a ray hit
-	BSDF(const bool l2e, const Scene &scene, const Ray &ray,
+	BSDF(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float passThroughEvent) {
-		Init(l2e, scene, ray, rayHit, passThroughEvent);
+		assert (!rayHit.Miss());
+		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent);
 	}
-
 	void Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float passThroughEvent);
 
@@ -65,23 +78,13 @@ public:
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	Spectrum Sample(Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	void Pdf(const Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
-	Spectrum GetEmittedRadiance(const Scene *scene,
-			float *directPdfA = NULL,
-			float *emissionPdfW = NULL) const ;
+	Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	Vector fixedDir;
-	Point hitPoint;
-	UV hitPointUV;
-	float hitPointB1, hitPointB2;
-	Normal geometryN;
-	Normal shadeN;
+	HitPoint hitPoint;
 
 private:
-	float passThroughEvent;
 	const ExtMesh *mesh;
 	u_int triIndex;
 
@@ -89,7 +92,6 @@ private:
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
 	Frame frame;
 
-	bool fromLight;
 };
 	
 } }

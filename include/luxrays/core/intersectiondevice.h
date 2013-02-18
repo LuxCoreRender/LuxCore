@@ -38,9 +38,6 @@ public:
 		stackSize = s;
 	}
 
-	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
-	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
-
 	//--------------------------------------------------------------------------
 	// Statistics
 	//--------------------------------------------------------------------------
@@ -108,8 +105,6 @@ protected:
 		statsDeviceIdleTime, statsDeviceTotalTime;
 
 	size_t stackSize;
-
-	mutable unsigned int forceWorkGroupSize;
 
 	bool dataParallelSupport;
 };

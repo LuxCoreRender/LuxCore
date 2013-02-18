@@ -30,13 +30,34 @@
 float3 InfiniteLight_GetRadiance(
 	__global InfiniteLight *infiniteLight, const float3 dir
 	IMAGEMAPS_PARAM_DECL) {
-	const float2 uv = (float2)(
-		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F))+ infiniteLight->shiftU,
-		SphericalTheta(-dir) * M_1_PI_F + infiniteLight->shiftV);
+	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		imageMapBuff0,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		imageMapBuff1,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		imageMapBuff2,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		imageMapBuff3,
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		imageMapBuff4,
+#endif
+		imageMap->pageIndex, imageMap->pixelsIndex);
 
-	return VLOAD3F(&infiniteLight->gain.r) * ImageMapInstance_GetColor(
-			&infiniteLight->imageMapInstance, uv
-			IMAGEMAPS_PARAM);
+	const float2 uv = (float2)(
+		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F)),
+		SphericalTheta(-dir) * M_1_PI_F);
+
+	const float2 mapUV = Mapping_Map2D(&infiniteLight->mapping, uv);
+	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetSpectrum(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			mapUV.s0, mapUV.s1);
 }
 
 #endif
@@ -152,8 +173,8 @@ float3 SunLight_GetRadiance(__global SunLight *sunLight, const float3 dir, float
 // TriangleLight
 //------------------------------------------------------------------------------
 
-float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
-		const float3 p, const float u0, const float u1, const float u2,
+float3 TriangleLight_Illuminate(__global TriangleLight *triLight, __global HitPoint *tmpHitPoint,
+		const float3 p, const float u0, const float u1, const float passThroughEvent,
 		float3 *dir, float *distance, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	const float3 p0 = VLOAD3F(&triLight->v0.x);
@@ -164,7 +185,7 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
 			p0, p1, p2,
 			u0, u1,
 			&b0, &b1, &b2);
-		
+
 	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
 
 	*dir = samplePoint - p;
@@ -183,14 +204,24 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight,
 	const float2 uv2 = VLOAD2F(&triLight->uv2.u);
 	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], triUV
+	VSTORE3F(-sampleN, &tmpHitPoint->fixedDir.x);
+	VSTORE3F(samplePoint, &tmpHitPoint->p.x);
+	VSTORE2F(triUV, &tmpHitPoint->uv.u);
+	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
+	VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
+#if defined(PARAM_HAS_PASSTHROUGH)
+	tmpHitPoint->passThroughEvent = passThroughEvent;
+#endif
+
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], tmpHitPoint
 			MATERIALS_PARAM);
 }
 
 float3 TriangleLight_GetRadiance(__global TriangleLight *triLight,
-		const float3 dir, const float3 hitPointNormal,
-		const float2 triUV, float *directPdfA
+		 __global HitPoint *hitPoint, float *directPdfA
 		MATERIALS_PARAM_DECL) {
+	const float3 dir = VLOAD3F(&hitPoint->fixedDir.x);
+	const float3 hitPointNormal = VLOAD3F(&hitPoint->geometryN.x);
 	const float cosOutLight = dot(hitPointNormal, dir);
 	if (cosOutLight <= 0.f)
 		return BLACK;
@@ -198,6 +229,6 @@ float3 TriangleLight_GetRadiance(__global TriangleLight *triLight,
 	if (directPdfA)
 		*directPdfA = triLight->invArea;
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], triUV
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], hitPoint
 			MATERIALS_PARAM);
 }

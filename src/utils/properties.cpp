@@ -24,6 +24,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+#include <algorithm>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -126,6 +127,15 @@ std::string Properties::GetString(const std::string propName, const std::string 
 		return it->second;
 }
 
+bool Properties::GetBoolean(const std::string propName, const bool defaultValue) const {
+	std::string s = GetString(propName, "");
+
+	if (s.compare("") == 0)
+		return defaultValue;
+	else
+		return boost::lexical_cast<bool>(s);
+}
+
 int Properties::GetInt(const std::string propName, const int defaultValue) const {
 	std::string s = GetString(propName, "");
 
@@ -202,6 +212,27 @@ std::string Properties::SetString(const std::string &property) {
 	SetString(strs[0], strs[1]);
 
 	return strs[0];
+}
+
+void Properties::Delete(const std::string &propName) {
+	std::vector<std::string>::iterator it = keys.begin();
+	while (it != keys.end()) {
+		if (*it == propName)
+			it = keys.erase(it);
+		else
+			++it;
+	}
+
+	props.erase(propName);
+}
+
+std::string Properties::ToString() const {
+	std::stringstream ss;
+
+	for (std::vector<std::string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
+		ss << *i << " = " << GetString(*i, "") << "\n";
+
+	return ss.str();
 }
 
 std::string Properties::ExtractField(const std::string &value, const size_t index) {

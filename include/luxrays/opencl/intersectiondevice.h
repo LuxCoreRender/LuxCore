@@ -55,8 +55,7 @@ protected:
 class OpenCLIntersectionDevice : public HardwareIntersectionDevice {
 public:
 	OpenCLIntersectionDevice(const Context *context,
-		OpenCLDeviceDescription *desc, const size_t index,
-		const unsigned int forceWGSize);
+		OpenCLDeviceDescription *desc, const size_t index);
 	virtual ~OpenCLIntersectionDevice();
 
 	virtual void SetDataSet(const DataSet *newDataSet);

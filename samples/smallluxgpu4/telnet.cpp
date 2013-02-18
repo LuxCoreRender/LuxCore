@@ -242,8 +242,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 							if (il) {
 								std::ostream respStream(&response);
-								respStream << il->GetShiftU() << " " <<
-										il->GetShiftV() << "\n";
+								respStream << il->GetUVMapping()->uDelta << " " <<
+										il->GetUVMapping()->vDelta << "\n";
 								respStream << "OK\n";
 								boost::asio::write(socket, response);
 							} else {
@@ -572,7 +572,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 									if (il) {
 										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0");
-										il->SetShift(vf.at(0), vf.at(1));
+										il->GetUVMapping()->uDelta = vf.at(0);
+										il->GetUVMapping()->vDelta = vf.at(1);
 										session->editActions.AddAction(INFINITELIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);

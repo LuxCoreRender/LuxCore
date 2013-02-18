@@ -36,12 +36,10 @@ size_t OpenCLIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
 OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
-		const size_t index,
-		const unsigned int forceWGSize) :
+		const size_t index) :
 		HardwareIntersectionDevice(context, desc->type, index),
 		oclQueue(new cl::CommandQueue(desc->GetOCLContext(),
 		desc->GetOCLDevice())), kernel(NULL) {
-	forceWorkGroupSize = forceWGSize;
 	stackSize = 24;
 	deviceDesc = desc;
 	deviceName = (desc->GetName() +"Intersect").c_str();

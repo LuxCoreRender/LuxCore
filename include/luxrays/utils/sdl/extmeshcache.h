@@ -52,6 +52,10 @@ public:
 	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals,
 		const Transform &trans);
 
+	u_int GetExtMeshIndex(const ExtMesh *m) const;
+
+	const std::vector<ExtMesh *> &GetMeshes() const { return meshes; }
+
 private:
 	std::map<std::string, ExtTriangleMesh *> maps;
 	std::vector<ExtMesh *> meshes;
