@@ -22,6 +22,7 @@
 #ifndef _LUXRAYS_SDL_CAMERA_H
 #define	_LUXRAYS_SDL_CAMERA_H
 
+#include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/core/mc.h"
 
@@ -138,6 +139,8 @@ public:
 
 	float GetClipYon() const { return clipYon; }
 	float GetClipHither() const { return clipHither; }
+
+	Properties ToProperties() const;
 
 	// User defined values
 	Point orig, target;

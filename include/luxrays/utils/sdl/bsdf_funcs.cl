@@ -48,13 +48,14 @@ void BSDF_Init(
 		) {
 	//bsdf->fromLight = fromL;
 #if defined(PARAM_HAS_PASSTHROUGH)
-	bsdf->passThroughEvent = u0;
+	bsdf->hitPoint.passThroughEvent = u0;
 #endif
 
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
-	VSTORE3F(rayOrig + rayHit->t * rayDir, &bsdf->hitPoint.x);
-	VSTORE3F(-rayDir, &bsdf->fixedDir.x);
+	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
+	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
+	VSTORE3F(-rayDir, &bsdf->hitPoint.fixedDir.x);
 
 	const uint currentTriangleIndex = rayHit->index;
 	const uint meshIndex = meshIDs[currentTriangleIndex];
@@ -77,17 +78,17 @@ void BSDF_Init(
 	const float b2 = rayHit->b2;
 #if defined(PARAM_ACCEL_MQBVH)
 	const float3 geometryN = Mesh_GetGeometryNormal(iVertices, iTriangles, triangleID);
-	VSTORE3F(geometryN, &bsdf->geometryN.x);
+	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
 	float3 shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleID, b1, b2);
 	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
 	const float2 hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleID, b1, b2);
 #else
 	const float3 geometryN = Mesh_GetGeometryNormal(vertices, triangles, currentTriangleIndex);
-	VSTORE3F(geometryN, &bsdf->geometryN.x);
+	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
 	float3 shadeN = Mesh_InterpolateNormal(vertNormals, triangles, currentTriangleIndex, b1, b2);
 	const float2 hitPointUV = Mesh_InterpolateUV(vertUVs, triangles, currentTriangleIndex, b1, b2);
 #endif
-	VSTORE2F(hitPointUV, &bsdf->hitPointUV.u);
+	VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 	// Check if it is a light source
@@ -102,7 +103,7 @@ void BSDF_Init(
 	const uint normalTexIndex = mat->normalTexIndex;
 	if (normalTexIndex != NULL_INDEX) {
 		// Apply normal mapping
-		const float3 color = Texture_GetColorValue(&texs[normalTexIndex], hitPointUV
+		const float3 color = Texture_GetSpectrumValue(&texs[normalTexIndex], &bsdf->hitPoint
 			TEXTURES_PARAM);
 		const float3 xyz = 2.f * color - 1.f;
 
@@ -121,21 +122,41 @@ void BSDF_Init(
 	if (bumpTexIndex != NULL_INDEX) {
 		// Apply bump mapping
 		__global Texture *tex = &texs[bumpTexIndex];
-		const float2 dudv = Texture_GetDuDv(tex
+		const float2 dudv = Texture_GetDuDv(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
-		const float b0 = Texture_GetGreyValue(tex, hitPointUV
+		const float b0 = Texture_GetFloatValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
-		const float2 uvdu = (float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1);
-		const float bu = Texture_GetGreyValue(tex, uvdu
-			TEXTURES_PARAM);
+		float dbdu;
+		if (dudv.s0 > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			VSTORE3F((float3)(hitPointP.x + dudv.s0, hitPointP.y, hitPointP.z), &bsdf->hitPoint.p.x);
+			VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
+			const float bu = Texture_GetFloatValue(tex, &bsdf->hitPoint
+				TEXTURES_PARAM);
 
-		const float2 uvdv = (float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1);
-		const float bv = Texture_GetGreyValue(tex, uvdv
-			TEXTURES_PARAM);
+			dbdu = (bu - b0) / dudv.s0;
+		} else
+			dbdu = 0.f;
 
-		const float3 bump = (float3)(bu - b0, bv - b0, 1.f);
+		float dbdv;
+		if (dudv.s1 > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			VSTORE3F((float3)(hitPointP.x, hitPointP.y + dudv.s1, hitPointP.z), &bsdf->hitPoint.p.x);
+			VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
+			const float bv = Texture_GetFloatValue(tex, &bsdf->hitPoint
+				TEXTURES_PARAM);
+
+			dbdv = (bv - b0) / dudv.s1;
+		} else
+			dbdv = 0.f;
+
+		// Restore p and uv value
+		VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
+		VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
+
+		const float3 bump = (float3)(dbdu, dbdv, 1.f);
 
 		float3 v1, v2;
 		CoordinateSystem(shadeN, &v1, &v2);
@@ -149,17 +170,17 @@ void BSDF_Init(
 
 	Frame_SetFromZ(&bsdf->frame, shadeN);
 
-	VSTORE3F(shadeN, &bsdf->shadeN.x);
+	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
 }
 
 float3 BSDF_Evaluate(__global BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
-	//const Vector &eyeDir = fromLight ? generatedDir : fixedDir;
-	//const Vector &lightDir = fromLight ? fixedDir : generatedDir;
-	const float3 eyeDir = VLOAD3F(&bsdf->fixedDir.x);
+	//const Vector &eyeDir = fromLight ? generatedDir : hitPoint.fixedDir;
+	//const Vector &lightDir = fromLight ? hitPoint.fixedDir : generatedDir;
+	const float3 eyeDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 lightDir = generatedDir;
-	const float3 geometryN = VLOAD3F(&bsdf->geometryN.x);
+	const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
 
 	const float dotLightDirNG = dot(lightDir, geometryN);
 	const float absDotLightDirNG = fabs(dotLightDirNG);
@@ -181,7 +202,7 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
-	const float3 result = Material_Evaluate(mat, VLOAD2F(&bsdf->hitPointUV.u),
+	const float3 result = Material_Evaluate(mat, &bsdf->hitPoint,
 			localLightDir, localEyeDir,	event, directPdfW
 			MATERIALS_PARAM);
 
@@ -197,14 +218,14 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
-	const float3 fixedDir = VLOAD3F(&bsdf->fixedDir.x);
+	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-	const float3 result = Material_Sample(&mats[bsdf->materialIndex], VLOAD2F(&bsdf->hitPointUV.u),
+	const float3 result = Material_Sample(&mats[bsdf->materialIndex], &bsdf->hitPoint,
 			localFixedDir, &localSampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
-			bsdf->passThroughEvent,
+			bsdf->hitPoint.passThroughEvent,
 #endif
 			pdfW, cosSampledDir, event
 			MATERIALS_PARAM);
@@ -239,7 +260,7 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 		return BLACK;
 	else
 		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex],
-				VLOAD3F(&bsdf->fixedDir.x), VLOAD3F(&bsdf->geometryN.x), VLOAD2F(&bsdf->hitPointUV.u), directPdfA
+				&bsdf->hitPoint, directPdfA
 				MATERIALS_PARAM);
 }
 #endif
@@ -247,10 +268,10 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 #if defined(PARAM_HAS_PASSTHROUGH)
 float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->fixedDir.x));
+	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
 
 	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
-			VLOAD2F(&bsdf->hitPointUV.u), localFixedDir, bsdf->passThroughEvent
+			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
 #endif

@@ -46,11 +46,10 @@ public:
 		const std::string &deviceName(device->GetName());
 		// Compile sources
 		std::string code(
-			_LUXRAYS_POINT_OCLDEFINE
-			+ luxrays::ocl::KernelSource_vector_types +
+			luxrays::ocl::KernelSource_point_types +
+			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
-			_LUXRAYS_RAYHIT_OCLDEFINE
-			_LUXRAYS_BBOX_OCLDEFINE +
+			luxrays::ocl::KernelSource_bbox_types +
 			luxrays::ocl::KernelSource_matrix4x4_types);
 		code += luxrays::ocl::KernelSource_mqbvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
@@ -77,8 +76,8 @@ public:
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 			"] Suggested work group size: " << workGroupSize);
 
-		if (device->GetForceWorkGroupSize() > 0) {
-			workGroupSize = device->GetForceWorkGroupSize();
+		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0) {
+			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				"] Forced work group size: " << workGroupSize);
 		} else if (workGroupSize > 256) {

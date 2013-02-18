@@ -83,8 +83,6 @@ endif(DOXYGEN_FOUND)
 
 set(SLG_KERNELS
 	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/datatypes.cl
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/filters.cl
-	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/samplers.cl
 	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernels.cl
 )
 
@@ -114,16 +112,17 @@ set(SLG4LIB_SRCS
 	bidirvmcpu/hashgrid.cpp
 	cbidirhybrid/cbidirhybrid.cpp
 	pathocl/kernels/datatypes_kernel.cpp
-	pathocl/kernels/filters_kernel.cpp
-	pathocl/kernels/samplers_kernel.cpp
 	pathocl/kernels/pathocl_kernels_kernel.cpp
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
 	pathocl/pathoclthread.cpp
+	pathocl/rtpathocl.cpp
+	pathocl/rtpathoclthread.cpp
 	lightcpu/lightcpu.cpp
 	lightcpu/lightcputhread.cpp
 	pathcpu/pathcpu.cpp
 	pathcpu/pathcputhread.cpp
+	filesaver/filesaver.cpp
 	)
 
 add_library(smallluxgpu4 STATIC ${SLG4LIB_SRCS})

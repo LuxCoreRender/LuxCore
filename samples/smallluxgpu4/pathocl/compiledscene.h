@@ -20,7 +20,7 @@
  ***************************************************************************/
 
 #ifndef _SLG_COMPILEDSESSION_H
-#define	_SLGCOMPILEDSESSION_H
+#define	_SLG_COMPILEDSESSION_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -92,6 +92,7 @@ private:
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();
+	void CompileTextureMapping(luxrays::ocl::TextureMapping *mapping, const TextureMapping *m);
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileAreaLights();

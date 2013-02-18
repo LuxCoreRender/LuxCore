@@ -43,7 +43,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	Vector eyeDir(bsdf.hitPoint - lensPoint);
+	Vector eyeDir(bsdf.hitPoint.p - lensPoint);
 	const float eyeDistance = eyeDir.Length();
 	eyeDir /= eyeDistance;
 
@@ -64,7 +64,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				const float cosToCamera = Dot(bsdf.shadeN, -eyeDir);
+				const float cosToCamera = Dot(bsdf.hitPoint.shadeN, -eyeDir);
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -97,7 +97,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 	const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 	const float screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 	camera->GenerateRay(screenX, screenY, &eyeRay,
-		sampler->GetSample(9), sampler->GetSample(10));
+		sampler->GetSample(10), sampler->GetSample(11));
 
 	Spectrum radiance, eyePathThroughput(1.f, 1.f, 1.f);
 	int depth = 1;
@@ -113,14 +113,14 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 			// Nothing was hit, check infinite lights (including sun)
 			const Spectrum throughput = eyePathThroughput * connectionThroughput;
 			if (scene->envLight)
-				radiance +=  throughput * scene->envLight->GetRadiance(scene, -eyeRay.d);
+				radiance +=  throughput * scene->envLight->GetRadiance(*scene, -eyeRay.d);
 			if (scene->sunLight)
-				radiance +=  throughput * scene->sunLight->GetRadiance(scene, -eyeRay.d);
+				radiance +=  throughput * scene->sunLight->GetRadiance(*scene, -eyeRay.d);
 			break;
 		} else {
 			// Something was hit, check if it is a light source
 			if (bsdf.IsLightSource())
-				radiance = eyePathThroughput * connectionThroughput * bsdf.GetEmittedRadiance(scene);
+				radiance = eyePathThroughput * connectionThroughput * bsdf.GetEmittedRadiance();
 			else {
 				// Check if it is a specular bounce
 
@@ -141,7 +141,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 				eyePathThroughput *= connectionThroughput * bsdfSample * (cosSampleDir / bsdfPdf);
 				assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
 
-				eyeRay = Ray(bsdf.hitPoint, sampledDir);
+				eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
 			}
 
 			++depth;
@@ -171,7 +171,7 @@ void LightCPURenderThread::RenderFunc() {
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
-	const u_int sampleBootSize = 11;
+	const u_int sampleBootSize = 12;
 	const u_int sampleEyeStepSize = 4;
 	const u_int sampleLightStepSize = 5;
 	const u_int sampleSize = 
@@ -195,8 +195,8 @@ void LightCPURenderThread::RenderFunc() {
 		// Initialize the light path
 		float lightEmitPdfW;
 		Ray nextEventRay;
-		Spectrum lightPathFlux = light->Emit(scene,
-			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6),
+		Spectrum lightPathFlux = light->Emit(*scene,
+			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
 		if (lightPathFlux.Black()) {
 			sampler->NextSample(sampleResults);
@@ -207,7 +207,7 @@ void LightCPURenderThread::RenderFunc() {
 
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!camera->SampleLens(sampler->GetSample(7), sampler->GetSample(8),
+		if (!camera->SampleLens(sampler->GetSample(8), sampler->GetSample(9),
 				&lensPoint)) {
 			sampler->NextSample(sampleResults);
 			continue;
@@ -278,7 +278,7 @@ void LightCPURenderThread::RenderFunc() {
 				lightPathFlux *= bsdfSample * (cosSampleDir / bsdfPdf);
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
-				nextEventRay = Ray(bsdf.hitPoint, sampledDir);
+				nextEventRay = Ray(bsdf.hitPoint.p, sampledDir);
 				++depth;
 			} else {
 				// Ray lost in space...

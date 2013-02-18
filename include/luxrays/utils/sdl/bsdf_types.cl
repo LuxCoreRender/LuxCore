@@ -32,12 +32,15 @@ typedef enum {
 
 typedef int BSDFEvent;
 
+// This is defined only under OpenCL because of variable size structures
+#if defined(SLG_OPENCL_KERNEL)
+
 typedef struct {
 	// The incoming direction. It is the eyeDir when fromLight = false and
 	// lightDir when fromLight = true
 	Vector fixedDir;
-	Point hitPoint;
-	UV hitPointUV;
+	Point p;
+	UV uv;
 	Normal geometryN;
 	Normal shadeN;
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -45,13 +48,17 @@ typedef struct {
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
 #endif
+} HitPoint;
+
+typedef struct {
+	HitPoint hitPoint;
+
 	unsigned int materialIndex;
 #if (PARAM_DL_LIGHT_COUNT > 0)
 	unsigned int triangleLightSourceIndex;
 #endif
 
 	Frame frame;
-
-	// This will be used for BiDir
-	//bool fromLight;
 } BSDF;
+
+#endif

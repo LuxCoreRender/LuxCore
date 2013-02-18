@@ -32,6 +32,7 @@ typedef enum e_ply_storage_mode_ {
     PLY_ASCII,   
     PLY_DEFAULT      /* has to be the last in enum */
 } e_ply_storage_mode; /* order matches ply_storage_mode_list */
+extern const char *const ply_storage_mode_list[];
 
 /* ply data type */
 typedef enum e_ply_type {
@@ -41,6 +42,8 @@ typedef enum e_ply_type {
     PLY_INT, PLY_UINT, PLY_FLOAT, PLY_DOUBLE,
     PLY_LIST    /* has to be the last in enum */
 } e_ply_type;   /* order matches ply_type_list */
+extern const char *const ply_type_list[];
+extern e_ply_storage_mode ply_arch_endian(void);
 
 /* ----------------------------------------------------------------------
  * Property reading callback prototype

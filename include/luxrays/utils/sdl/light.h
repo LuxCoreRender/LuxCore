@@ -27,6 +27,7 @@
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/sdl/material.h"
+#include "luxrays/utils/sdl/mapping.h"
 
 namespace luxrays {
 
@@ -57,20 +58,16 @@ public:
 	virtual bool IsEnvironmental() const { return false; }
 
 	// Emits particle from the light
-	virtual Spectrum Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
+	virtual Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *pos, Vector *dir,
-		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const {
-		throw std::runtime_error("Internal error, called LightSource::Emit()");
-	}
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
 
 	// Illuminates a point in the scene
-    virtual Spectrum Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
+    virtual Spectrum Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const {
-		throw std::runtime_error("Internal error, called LightSource::Illuminate()");
-	}
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -94,17 +91,17 @@ public:
 		return gain;
 	}
 
-	virtual Spectrum Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
+	virtual Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-    virtual Spectrum Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
+    virtual Spectrum Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum GetRadiance(const Scene *scene, const Vector &dir,
+	virtual Spectrum GetRadiance(const Scene &scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
 protected:
@@ -117,27 +114,20 @@ protected:
 
 class InfiniteLight : public InfiniteLightBase {
 public:
-	InfiniteLight(ImageMapInstance *tx);
+	InfiniteLight(const ImageMap *imgMap);
 	virtual ~InfiniteLight() { }
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 
-	void SetShift(const float su, const float sv) {
-		shiftU = su;
-		shiftV = sv;
-	}
+	const ImageMap *GetImageMap() const { return imageMap; }
+	UVMapping *GetUVMapping() { return &mapping; }
 
-	float GetShiftU() const { return shiftU; }
-	float GetShiftV() const { return shiftV; }
-
-	const ImageMapInstance *GetImageMapInstance() const { return imageMapInstance; }
-
-	virtual Spectrum GetRadiance(const Scene *scene, const Vector &dir,
+	virtual Spectrum GetRadiance(const Scene &scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
-	ImageMapInstance *imageMapInstance;
-	float shiftU, shiftV;
+	const ImageMap *imageMap;
+	UVMapping mapping;
 };
 
 //------------------------------------------------------------------------------
@@ -174,7 +164,7 @@ public:
 		}
 	}
 
-	virtual Spectrum GetRadiance(const Scene *scene, const Vector &dir,
+	virtual Spectrum GetRadiance(const Scene &scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
@@ -223,17 +213,17 @@ public:
 		*suncolorData = sunColor;
 	}
 
-	virtual Spectrum Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
+	virtual Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
+	virtual Spectrum Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum GetRadiance(const Scene *scene, const Vector &dir,
+	Spectrum GetRadiance(const Scene &scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
@@ -255,7 +245,7 @@ private:
 class TriangleLight : public LightSource {
 public:
 	TriangleLight() { }
-	TriangleLight(const Material *mat, const ExtMesh *mesh,
+	TriangleLight(const Material *mat, const u_int triangleGlobalIndex, const ExtMesh *mesh,
 		const unsigned int triangleIndex);
 	virtual ~TriangleLight() { }
 
@@ -269,26 +259,24 @@ public:
 	unsigned int GetTriIndex() const { return triIndex; }
 	float GetArea() const { return area; }
 
-	virtual Spectrum Emit(const Scene *scene,
-		const float u0, const float u1, const float u2, const float u3,
+	virtual Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *pos, Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum Illuminate(const Scene *scene, const Point &p,
-		const float u0, const float u1, const float u2,
+	virtual Spectrum Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum GetRadiance(const Scene *scene,
-			const Vector &dir,
-			const UV &triUV,
+	Spectrum GetRadiance(const HitPoint &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
 private:
 	const Material *lightMaterial;
 	const ExtMesh *mesh;
-	u_int triIndex;
+	u_int triGlobalIndex, triIndex;
 	float area, invArea;
 };
 

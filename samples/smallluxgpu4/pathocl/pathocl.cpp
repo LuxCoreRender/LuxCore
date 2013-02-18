@@ -61,6 +61,11 @@ namespace slg {
 
 PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		OCLRenderEngine(rcfg, flm, flmMutex) {
+	film->SetPerPixelNormalizedBufferFlag(true);
+	film->SetPerScreenNormalizedBufferFlag(false);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->Init();
+
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
 
@@ -85,14 +90,16 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		oclIntersectionDevice->SetDataParallelSupport(false);
 
 		// Check if OpenCL 1.1 is available
-		if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1())
-			throw std::runtime_error("OpenCL version 1.1 or better is required for device: " + devs[i]->GetName());
+		SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
+		if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1()) {
+			// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
+			// print a warning instead of throwing an exception
+			SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + devs[i]->GetName() + " may not work.");
+		}
 	}
 
 	// Set the LuxRays SataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
-
-	film->EnableOverlappedScreenBufferUpdate(true);
 
 	//--------------------------------------------------------------------------
 	// Setup render threads array
@@ -117,6 +124,11 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 	delete filter;
 }
 
+PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
+    OpenCLIntersectionDevice *device) {
+    return new PathOCLRenderThread(index, device, this);
+}
+
 void PathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -125,7 +137,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 65536));
-	SLG_LOG("[PathOCLRenderThread] OpenCL task count: " << taskCount);
+	SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
 
 	if (cfg.IsDefined("opencl.memory.maxpagesize"))
 		maxMemPageSize = cfg.GetSize("opencl.memory.maxpagesize", 512 * 1024 * 1024);
@@ -135,7 +147,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		for (u_int i = 1; i < intersectionDevices.size(); ++i)
 			maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
 	}
-	SLG_LOG("[PathOCLRenderThread] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
+	SLG_LOG("[PathOCLRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
@@ -162,6 +174,9 @@ void PathOCLRenderEngine::StartLockLess() {
 			sampler->metropolis.maxRejects = maxRejects;
 			break;
 		}
+		case SOBOL:
+			sampler->type = luxrays::ocl::SOBOL;
+			break;
 		default:
 			throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(samplerType));
 	}
@@ -219,10 +234,8 @@ void PathOCLRenderEngine::StartLockLess() {
 	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		if (!renderThreads[i]) {
-			renderThreads[i] = new PathOCLRenderThread(i,
-					i / (float)renderThreadCount,
-					(OpenCLIntersectionDevice *)(intersectionDevices[i]),
-					this);
+			renderThreads[i] = CreateOCLThread(i,
+					(OpenCLIntersectionDevice *)(intersectionDevices[i]));
 		}
 	}
 
@@ -257,21 +270,23 @@ void PathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
 void PathOCLRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-	const unsigned int imgWidth = film->GetWidth();
-	const unsigned int imgHeight = film->GetHeight();
+	const u_int imgWidth = film->GetWidth();
+	const u_int imgHeight = film->GetHeight();
 
 	film->Reset();
 
-	for (unsigned int y = 0; y < imgHeight; ++y) {
-		unsigned int pGPU = 1 + (y + 1) * (imgWidth + 2);
+	for (u_int y = 0; y < imgHeight; ++y) {
+		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
 
-		for (unsigned int x = 0; x < imgWidth; ++x) {
+		for (u_int x = 0; x < imgWidth; ++x) {
 			Spectrum radiance;
 			float alpha = 0.0f;
 			float count = 0.f;
 			for (size_t i = 0; i < renderThreads.size(); ++i) {
 				if (renderThreads[i]->frameBuffer) {
-					radiance += renderThreads[i]->frameBuffer[pGPU].c;
+					radiance.r += renderThreads[i]->frameBuffer[pGPU].c.r;
+					radiance.g += renderThreads[i]->frameBuffer[pGPU].c.g;
+					radiance.b += renderThreads[i]->frameBuffer[pGPU].c.b;
 					count += renderThreads[i]->frameBuffer[pGPU].count;
 				}
 

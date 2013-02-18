@@ -192,8 +192,18 @@ void OpenCLDeviceDescription::AddDeviceDescs(const cl::Platform &oclPlatform,
 
 	// Build the descriptions
 	for (size_t i = 0; i < oclDevices.size(); ++i) {
-		if (filter & GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>()))
-			descriptions.push_back(new OpenCLDeviceDescription(oclDevices[i], i));
+		DeviceType dev_type = GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>());
+		if (filter & dev_type)
+		{
+			/*if (dev_type == DEVICE_TYPE_OPENCL_CPU)
+			{
+				cl_device_partition_property_ext props[4] = { CL_DEVICE_PARTITION_BY_COUNTS_EXT, 1, 0, 0 };
+				std::vector<cl::Device> subDevices;
+				oclDevices[i].createSubDevices(props, &subDevices);
+				descriptions.push_back(new OpenCLDeviceDescription(subDevices[0], i));
+			} else*/
+				descriptions.push_back(new OpenCLDeviceDescription(oclDevices[i], i));
+		}
 	}
 }
 
@@ -250,7 +260,7 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 
 IntersectionDevice::IntersectionDevice(const Context *context,
 	const DeviceType type, const size_t index) :
-	Device(context, type, index), dataSet(NULL), forceWorkGroupSize(0),
+	Device(context, type, index), dataSet(NULL),
 	dataParallelSupport(true) {
 }
 

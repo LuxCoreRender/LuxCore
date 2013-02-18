@@ -21,6 +21,23 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+//------------------------------------------------------------------------------
+// Frame buffer data types
+//------------------------------------------------------------------------------
+
+typedef struct {
+	Spectrum c;
+	float count;
+} Pixel;
+
+typedef struct {
+	float alpha;
+} AlphaPixel;
+
+//------------------------------------------------------------------------------
+// Filter data types
+//------------------------------------------------------------------------------
+
 typedef enum {
 	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL
 } FilterType;

@@ -4,11 +4,11 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 scene.textures.smalltex.type = imagemap
 scene.textures.smalltex.file = scenes/luxball/lux.png
 scene.textures.smalltex.gain = 1.0
-scene.textures.smalltex.uvscale = 512 -512
+scene.textures.smalltex.mapping.uvscale = 512 -512
 scene.textures.tex.type = imagemap
 scene.textures.tex.file = scenes/luxball/lux.png
 scene.textures.tex.gain = 1.0
-scene.textures.tex.uvscale = 16 -16
+scene.textures.tex.mapping.uvscale = 16 -16
 ################################################################################
 scene.materials.mat1.type = matte
 scene.materials.mat1.kd = 0.65 0.0 0.0

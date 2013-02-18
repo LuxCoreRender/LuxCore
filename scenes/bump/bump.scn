@@ -2,15 +2,15 @@ scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
 ################################################################################
 scene.textures.normalmap.file = scenes/bump/normal.png
 scene.textures.normalmap.gamma = 1.0
-scene.textures.normalmap.uvscale = 2 2
+scene.textures.normalmap.mapping.uvscale = 2 2
 scene.textures.bumpmap.file = scenes/bump/map2.png
 scene.textures.bumpmap.gamma = 1.0
-scene.textures.bumpmap.uvscale = 1 1
+scene.textures.bumpmap.mapping.uvscale = 1 1
 #scene.textures.light2.file = scenes/simple-mat/arch.exr
 #scene.textures.light2.gain = 7.0
-#scene.textures.light2.uvscale = 1 -1
+#scene.textures.light2.mapping.uvscale = 1 -1
 scene.textures.scaled_bumpmap.type = scale
-scene.textures.scaled_bumpmap.texture1 = 4.0
+scene.textures.scaled_bumpmap.texture1 = 0.01
 scene.textures.scaled_bumpmap.texture2 = bumpmap
 ################################################################################
 scene.materials.mat_light.type = matte

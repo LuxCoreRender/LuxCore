@@ -50,7 +50,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	//--------------------------------------------------------------------------
 
 	film = new Film(renderConfig->scene->camera->GetFilmWeight(),
-			renderConfig->scene->camera->GetFilmHeight(), true, true, true);
+			renderConfig->scene->camera->GetFilmHeight());
 
 	const FilterType filterType = Filter::String2FilterType(cfg.GetString("film.filter.type", "GAUSSIAN"));
 	film->SetFilterType(filterType);
@@ -73,13 +73,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 		film->InitGammaTable(gamma);
 
 	// Check if I have to enable the alpha channel
-	if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
-		film->EnableAlphaChannel(true);
-	else
-		film->EnableAlphaChannel(false);
-
-	film->Init(renderConfig->scene->camera->GetFilmWeight(),
-			renderConfig->scene->camera->GetFilmHeight());
+	film->SetAlphaChannelFlag(cfg.GetInt("film.alphachannel.enable", 0) != 0);
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
@@ -129,10 +123,11 @@ void RenderSession::EndEdit() {
 	assert (started);
 	assert (editMode);
 
-	if (editActions.Size() > 0)
+	if (editActions.HasAnyAction())
 		film->Reset();
 
-	SLG_LOG("[RenderSession] Edit actions: " << editActions);
+	if (renderEngine->GetEngineType() != RTPATHOCL)
+		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 	renderEngine->EndEdit(editActions);
 	editMode = false;
 }
@@ -143,7 +138,6 @@ void RenderSession::SetRenderingEngineType(const RenderEngineType engineType) {
 
 		delete renderEngine;
 
-		film->Reset();
 		renderEngine = RenderEngine::AllocRenderEngine(engineType,
 				renderConfig, film, &filmMutex);
 

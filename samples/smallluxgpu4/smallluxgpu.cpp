@@ -40,7 +40,7 @@
 #include "smalllux.h"
 #include "displayfunc.h"
 #include "rendersession.h"
-#include "pathocl/pathocl.h"
+#include "filesaver/filesaver.h"
 #include "telnet.h"
 
 string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
@@ -139,12 +139,10 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 	const u_int originalFilmHeight = session->film->GetHeight();
 
 	// Allocate a film where to merge all tiles
-	Film mergeTileFilm(originalFilmWidth, originalFilmWidth,
-			session->film->HasPerPixelNormalizedBuffer(), session->film->HasPerScreenNormalizedBuffer(),
-			true);
+	Film mergeTileFilm(originalFilmWidth, originalFilmWidth);
 	mergeTileFilm.CopyDynamicSettings(*(session->film));
-	mergeTileFilm.EnableOverlappedScreenBufferUpdate(false);
-	mergeTileFilm.Init(originalFilmWidth, originalFilmWidth);
+	mergeTileFilm.SetOverlappedScreenBufferUpdateFlag(false);
+	mergeTileFilm.Init();
 
 	// Get the tile size
 	vector<int> tileSize = config->cfg.GetIntVector("batch.tile", "256 256");
@@ -290,6 +288,7 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 
 	// Start the rendering
 	session->Start();
+
 	const double startTime = WallClockTime();
 
 	double lastFilmUpdate = WallClockTime();
@@ -356,7 +355,6 @@ int main(int argc, char *argv[]) {
 	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
 
 	try {
-
 		// Initialize FreeImage Library
 		FreeImage_Initialise(TRUE);
 		FreeImage_SetOutputMessage(FreeImageErrorHandler);
@@ -437,7 +435,21 @@ int main(int argc, char *argv[]) {
 		else
 			batchMode = false;
 
-		if (batchMode) {
+		const bool fileSaverRenderEngine = (RenderEngine::String2RenderEngineType(
+			config->cfg.GetString("renderengine.type", "PATHOCL")) == FILESAVER);
+
+		if (fileSaverRenderEngine) {
+			session = new RenderSession(config);
+
+			// Save the scene and exit
+			session->Start();
+			session->Stop();
+
+			delete session;
+			SLG_LOG("Done.");
+
+			return EXIT_SUCCESS;
+		} else if (batchMode) {
 			session = new RenderSession(config);
 
 			// Check if I have to do tile rendering
@@ -471,9 +483,9 @@ int main(int argc, char *argv[]) {
 	} catch (runtime_error err) {
 		SLG_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
-	} catch (exception err) {
-		SLG_LOG("ERROR: " << err.what());
-		return EXIT_FAILURE;
+//	} catch (exception err) {
+//		SLG_LOG("ERROR: " << err.what());
+//		return EXIT_FAILURE;
 	}
 
 	return EXIT_SUCCESS;

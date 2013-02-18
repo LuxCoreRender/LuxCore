@@ -19,26 +19,29 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/utils/film/film.h"
 
 using namespace luxrays;
 using namespace luxrays::utils;
 
-Film::Film(const unsigned int w, const unsigned int h,
-			const bool enablePerPixelNormBuffer,
-			const bool enablePerScreenNormBuffer,
-			const bool enableFrameBuf) {
+Film::Film(const unsigned int w, const unsigned int h) {
+	width = w;
+	height = h;
+
 	sampleFrameBuffer[PER_PIXEL_NORMALIZED] = NULL;
 	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
 	alphaFrameBuffer = NULL;
 	frameBuffer = NULL;
 	convTest = NULL;
 
+	enablePerPixelNormalizedBuffer = true;
+
+	enablePerScreenNormalizedBuffer = false;
 	enableAlphaChannel = false;
+	enableFrameBuffer = true;
 	enabledOverlappedScreenBufferUpdate = true;
-	enablePerPixelNormalizedBuffer = enablePerPixelNormBuffer;
-	enablePerScreenNormalizedBuffer = enablePerScreenNormBuffer;
-	enableFrameBuffer = enableFrameBuf;
 
 	filter = NULL;
 	filterLUTs = NULL;
@@ -47,7 +50,7 @@ Film::Film(const unsigned int w, const unsigned int h,
 	toneMapParams = new LinearToneMapParams();
 
 	InitGammaTable();
-	Init(w, h);
+	Init();
 }
 
 Film::~Film() {
@@ -69,11 +72,19 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 	height = h;
 	pixelCount = w * h;
 
+	// Delete all already allocated buffers
 	delete sampleFrameBuffer[PER_PIXEL_NORMALIZED];
 	delete sampleFrameBuffer[PER_SCREEN_NORMALIZED];
 	delete alphaFrameBuffer;
 	delete frameBuffer;
+	delete convTest;
+	sampleFrameBuffer[PER_PIXEL_NORMALIZED]  = NULL;
+	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
+	alphaFrameBuffer = NULL;
+	frameBuffer = NULL;
+	convTest = NULL;
 
+	// Allocate all required buffers
 	if (enablePerPixelNormalizedBuffer) {
 		sampleFrameBuffer[PER_PIXEL_NORMALIZED] = new SampleFrameBuffer(width, height);
 		sampleFrameBuffer[PER_PIXEL_NORMALIZED]->Clear();
@@ -96,10 +107,10 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 		convTest = new ConvergenceTest(width, height);
 	}
 
+	// Initialize the stats
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
-
 }
 
 void Film::InitGammaTable(const float gamma) {
@@ -134,7 +145,7 @@ void Film::SetFilterType(const FilterType type) {
 			filter = new MitchellFilterSS(1.5f, 1.5f);
 			break;
 		default:
-			throw std::runtime_error("Unknown filter type: " + type);
+			throw std::runtime_error("Unknown filter type: " + boost::lexical_cast<std::string>(type));
 	}
 
 	if (filter) {
@@ -258,6 +269,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						FIRGBF *pixel = (FIRGBF *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
 							const unsigned int ridx = y * width + x;
+
 							pixel[x].red = frameBuffer->GetPixel(ridx)->r;
 							pixel[x].green = frameBuffer->GetPixel(ridx)->g;
 							pixel[x].blue = frameBuffer->GetPixel(ridx)->b;
@@ -337,6 +349,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						BYTE *pixel = (BYTE *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
 							const int offset = 3 * (x + y * width);
+
 							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
 							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
 							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);

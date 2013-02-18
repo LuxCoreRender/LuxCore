@@ -66,7 +66,8 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const Film
 
 typedef enum {
 	RANDOM = 0,
-	METROPOLIS = 1
+	METROPOLIS = 1,
+	SOBOL = 2
 } SamplerType;
 
 class Sampler {
@@ -152,6 +153,35 @@ private:
 	std::vector<SampleResult> currentSampleResult;
 
 	bool isLargeMutation, cooldown;
+};
+
+//------------------------------------------------------------------------------
+// Sobol sampler
+//
+// This sampler is based on Blender Cycles Sobol implementation.
+//------------------------------------------------------------------------------
+
+extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions);
+
+class SobolSampler : public Sampler {
+public:
+	SobolSampler(RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm),
+			directions(NULL), rng0(rnd->floatValue()), rng1(rnd->floatValue()), pass(0) { }
+	virtual ~SobolSampler() { delete directions; }
+
+	virtual SamplerType GetType() const { return SOBOL; }
+	virtual void RequestSamples(const u_int size);
+
+	virtual float GetSample(const u_int index);
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
+
+private:
+	u_int SobolDimension(const u_int index, const u_int dimension) const;
+
+	u_int *directions;
+
+	float rng0, rng1;
+	u_int pass;
 };
 
 } }

@@ -30,4 +30,9 @@ std::string KernelSource_ray_types =
 "	float mint, maxt, time;\n"
 "	float pad[3]; // TODO: remove (here and in ray.h)\n"
 "} Ray;\n"
+"\n"
+"typedef struct {\n"
+"	float t, b1, b2;\n"
+"	unsigned int index;\n"
+"} RayHit;\n"
 ; } }

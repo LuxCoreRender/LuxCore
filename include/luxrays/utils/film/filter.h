@@ -22,6 +22,7 @@
 #ifndef _LUXRAYS_UTILS_FILTER_H
 #define	_LUXRAYS_UTILS_FILTER_H
 
+#include "luxrays/utils/core/spectrum.h"
 #include "luxrays/core/utils.h"
 
 namespace luxrays {
@@ -109,8 +110,7 @@ public:
 	// GaussianFilter Public Methods
 	MitchellFilter(const float xw = 2.f, const float yw = 2.f,
 			const float b = 1.f / 3.f, const float c = 1.f / 3.f) :
-		Filter(xw, yw), B(b), C(c),
-		a0((76.f - 16.f * B + 8.f * C) / 81.f), a1((1.f - a0)/ 2.f) { }
+		Filter(xw, yw), B(b), C(c) { }
 	virtual ~MitchellFilter() { }
 
 	virtual FilterType GetType() const { return FILTER_MITCHELL; }
@@ -137,7 +137,7 @@ private:
 				(1.f - B / 3.f);
 	}
 
-	const float B, C, a0, a1;
+	const float B, C;
 };
 
 class MitchellFilterSS : public Filter {

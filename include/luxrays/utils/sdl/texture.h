@@ -27,9 +27,13 @@
 #include <map>
 #include <set>
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/core/spectrum.h"
+#include "luxrays/utils/properties.h"
+#include "luxrays/utils/sdl/mapping.h"
 
 namespace luxrays {
 
@@ -45,25 +49,35 @@ namespace sdl {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX
+	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
+	FRESNEL_APPROX_K, MIX_TEX,
+	// Procedural textures
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE
 } TextureType;
-	
+
+struct HitPointStruct;
+typedef HitPointStruct HitPoint;
+class ImageMapCache;
+
 class Texture {
 public:
 	Texture() { }
 	virtual ~Texture() { }
 
+	std::string GetName() const { return "texture-" + boost::lexical_cast<std::string>(this); }
 	virtual TextureType GetType() const = 0;
 
-	virtual float GetGreyValue(const UV &uv) const = 0;
-	virtual Spectrum GetColorValue(const UV &uv) const = 0;
-	virtual float GetAlphaValue(const UV &uv) const = 0;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const = 0;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const = 0;
 
-	virtual const UV GetDuDv() const = 0;
+	// Used for bump mapping support
+	virtual UV GetDuDv() const = 0;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
 	}
+	
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -108,13 +122,14 @@ public:
 	virtual ~ConstFloatTexture() { }
 
 	virtual TextureType GetType() const { return CONST_FLOAT; }
-	virtual float GetGreyValue(const UV &uv) const { return value; }
-	virtual Spectrum GetColorValue(const UV &uv) const { return Spectrum(value); }
-	virtual float GetAlphaValue(const UV &uv) const { return value; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const { return value; }
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return Spectrum(value); }
 
-	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
+	virtual UV GetDuDv() const { return UV(0.f, 0.f); }
 
 	float GetValue() const { return value; };
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	float value;
@@ -126,36 +141,17 @@ public:
 	virtual ~ConstFloat3Texture() { }
 
 	virtual TextureType GetType() const { return CONST_FLOAT3; }
-	virtual float GetGreyValue(const UV &uv) const { return color.Y(); }
-	virtual Spectrum GetColorValue(const UV &uv) const { return color; }
-	virtual float GetAlphaValue(const UV &uv) const { return 1.f; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const { return color.Y(); }
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
 
-	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
+	virtual UV GetDuDv() const { return UV(0.f, 0.f); }
 
 	const Spectrum &GetColor() const { return color; };
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	Spectrum color;
-};
-
-class ConstFloat4Texture : public Texture {
-public:
-	ConstFloat4Texture(const Spectrum &c, const float a) : color(c), alpha(a) { }
-	virtual ~ConstFloat4Texture() { }
-
-	virtual TextureType GetType() const { return CONST_FLOAT4; }
-	virtual float GetGreyValue(const UV &uv) const { return color.Y(); }
-	virtual Spectrum GetColorValue(const UV &uv) const { return color; }
-	virtual float GetAlphaValue(const UV &uv) const { return alpha; }
-
-	virtual const UV GetDuDv() const { return UV(0.f, 0.f); }
-
-	const Spectrum &GetColor() const { return color; };
-	float GetAlpha() const { return alpha; };
-
-private:
-	Spectrum color;
-	float alpha;
 };
 
 //------------------------------------------------------------------------------
@@ -174,10 +170,9 @@ public:
 	u_int GetHeight() const { return height; }
 	const float *GetPixels() const { return pixels; }
 
-	friend class ImageMapInstance;
+	void WriteImage(const std::string &fileName) const;
 
-protected:
-	float GetGrey(const UV &uv) const {
+	float GetFloat(const UV &uv) const {
 		const float s = uv.u * width - .5f;
 		const float t = uv.v * height - .5f;
 
@@ -190,13 +185,13 @@ protected:
 		const float ids = 1.f - ds;
 		const float idt = 1.f - dt;
 
-		return ids * idt * GetGreyTexel(s0, t0) +
-				ids * dt * GetGreyTexel(s0, t0 + 1) +
-				ds * idt * GetGreyTexel(s0 + 1, t0) +
-				ds * dt * GetGreyTexel(s0 + 1, t0 + 1);
+		return ids * idt * GetFloatTexel(s0, t0) +
+				ids * dt * GetFloatTexel(s0, t0 + 1) +
+				ds * idt * GetFloatTexel(s0 + 1, t0) +
+				ds * dt * GetFloatTexel(s0 + 1, t0 + 1);
 	}
 
-	Spectrum GetColor(const UV &uv) const {
+	Spectrum GetSpectrum(const UV &uv) const {
 		const float s = uv.u * width - .5f;
 		const float t = uv.v * height - .5f;
 
@@ -209,10 +204,10 @@ protected:
 		const float ids = 1.f - ds;
 		const float idt = 1.f - dt;
 
-		return ids * idt * GetColorTexel(s0, t0) +
-				ids * dt * GetColorTexel(s0, t0 + 1) +
-				ds * idt * GetColorTexel(s0 + 1, t0) +
-				ds * dt * GetColorTexel(s0 + 1, t0 + 1);
+		return ids * idt * GetSpectrumTexel(s0, t0) +
+				ids * dt * GetSpectrumTexel(s0, t0 + 1) +
+				ds * idt * GetSpectrumTexel(s0 + 1, t0) +
+				ds * dt * GetSpectrumTexel(s0 + 1, t0 + 1);
 	};
 
 	float GetAlpha(const UV &uv) const {
@@ -235,7 +230,7 @@ protected:
 	}
 
 private:
-	float GetGreyTexel(const int s, const int t) const {
+	float GetFloatTexel(const int s, const int t) const {
 		const u_int u = Mod<int>(s, width);
 		const u_int v = Mod<int>(t, height);
 
@@ -252,7 +247,7 @@ private:
 		}
 	}
 
-	Spectrum GetColorTexel(const int s, const int t) const {
+	Spectrum GetSpectrumTexel(const int s, const int t) const {
 		const u_int u = Mod<int>(s, width);
 		const u_int v = Mod<int>(t, height);
 
@@ -288,50 +283,6 @@ private:
 	float *pixels;
 };
 
-class ImageMapInstance {
-public:
-	ImageMapInstance(const ImageMap *im, const float gn,
-			const float uscale, const float vscale,
-			const float udelta, const float vdelta) : imgMap(im), gain(gn),
-		uScale(uscale), vScale(vscale), uDelta(udelta), vDelta(vdelta) {
-		DuDv.u = 1.f / (uScale * imgMap->GetWidth());
-		DuDv.v = 1.f / (vScale * imgMap->GetHeight());
-	}
-	~ImageMapInstance() { }
-
-	const ImageMap *GetImgMap() const { return imgMap; }
-	float GetGain() const { return gain; }
-	float GetUScale() const { return uScale; }
-	float GetVScale() const { return vScale; }
-	float GetUDelta() const { return uDelta; }
-	float GetVDelta() const { return vDelta; }
-
-	float GetGrey(const UV &uv) const {
-		const UV mapUV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
-
-		return gain * imgMap->GetGrey(mapUV);
-	}
-
-	Spectrum GetColor(const UV &uv) const {
-		const UV mapUV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
-
-		return gain * imgMap->GetColor(mapUV);
-	}
-
-	float GetAlpha(const UV &uv) const {
-		const UV mapUV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
-
-		return imgMap->GetAlpha(mapUV);
-	}
-
-	const UV &GetDuDv() const { return DuDv; }
-
-protected:
-	const ImageMap *imgMap;
-	float gain, uScale, vScale, uDelta, vDelta;
-	UV DuDv;
-};
-
 class ImageMapCache {
 public:
 	ImageMapCache();
@@ -339,8 +290,7 @@ public:
 
 	void DefineImgMap(const std::string &name, ImageMap *im);
 
-	ImageMapInstance *GetImageMapInstance(const std::string &fileName, const float gamma, const float gain = 1.f,
-		const float uScale = 1.f, const float vScale = 1.f, const float uDelta = 0.f, const float vDelta = 0.f);
+	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
 	void GetImageMaps(std::vector<ImageMap *> &ims);
@@ -348,28 +298,31 @@ public:
 	bool IsImageMapDefined(const std::string &name) const { return maps.find(name) != maps.end(); }
 
 private:
-	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
-
 	std::map<std::string, ImageMap *> maps;
-	std::vector<ImageMapInstance *> imgMapInstances;
 };
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMapInstance * imi) : imgMapInstance(imi) { }
-	virtual ~ImageMapTexture() { }
+	ImageMapTexture(const ImageMap* im, const TextureMapping *mp, const float g);
+	virtual ~ImageMapTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
-	virtual float GetGreyValue(const UV &uv) const { return imgMapInstance->GetGrey(uv); }
-	virtual Spectrum GetColorValue(const UV &uv) const { return imgMapInstance->GetColor(uv); }
-	virtual float GetAlphaValue(const UV &uv) const { return imgMapInstance->GetAlpha(uv); }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
-	virtual const UV GetDuDv() const { return imgMapInstance->GetDuDv(); }
+	virtual UV GetDuDv() const { return DuDv; }
 
-	const ImageMapInstance *GetImageMapInstance() const { return imgMapInstance; }
+	const ImageMap *GetImageMap() const { return imgMap; }
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const float GetGain() const { return gain; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const ImageMapInstance *imgMapInstance;
+	const ImageMap *imgMap;
+	const TextureMapping *mapping;
+	float gain;
+	UV DuDv;
 };
 
 //------------------------------------------------------------------------------
@@ -382,11 +335,10 @@ public:
 	virtual ~ScaleTexture() { }
 
 	virtual TextureType GetType() const { return SCALE_TEX; }
-	virtual float GetGreyValue(const UV &uv) const;
-	virtual Spectrum GetColorValue(const UV &uv) const;
-	virtual float GetAlphaValue(const UV &uv) const;
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
-	virtual const UV GetDuDv() const;
+	virtual UV GetDuDv() const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -398,9 +350,227 @@ public:
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
 
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
 private:
 	const Texture *tex1;
 	const Texture *tex2;
+};
+
+//------------------------------------------------------------------------------
+// FresnelApproxN & FresnelApproxK texture
+//
+// Used mostly to emulate LuxRender FresnelColor texture.
+//------------------------------------------------------------------------------
+
+class FresnelApproxNTexture : public Texture {
+public:
+	FresnelApproxNTexture(const Texture *t) : tex(t) { }
+	virtual ~FresnelApproxNTexture() { }
+
+	virtual TextureType GetType() const { return FRESNEL_APPROX_N; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex->AddReferencedTextures(referencedTexs);
+	}
+
+	const Texture *GetTexture() const { return tex; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const Texture *tex;
+};
+
+class FresnelApproxKTexture : public Texture {
+public:
+	FresnelApproxKTexture(const Texture *t) : tex(t) { }
+	virtual ~FresnelApproxKTexture() { }
+
+	virtual TextureType GetType() const { return FRESNEL_APPROX_K; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex->AddReferencedTextures(referencedTexs);
+	}
+
+	const Texture *GetTexture() const { return tex; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const Texture *tex;
+};
+
+//------------------------------------------------------------------------------
+// CheckerBoard 2D & 3D texture
+//------------------------------------------------------------------------------
+
+class CheckerBoard2DTexture : public Texture {
+public:
+	CheckerBoard2DTexture(const TextureMapping *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	virtual ~CheckerBoard2DTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return CHECKERBOARD2D; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping *mapping;
+	const Texture *tex1;
+	const Texture *tex2;
+};
+
+class CheckerBoard3DTexture : public Texture {
+public:
+	CheckerBoard3DTexture(const TextureMapping *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	virtual ~CheckerBoard3DTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return CHECKERBOARD3D; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping *mapping;
+	const Texture *tex1;
+	const Texture *tex2;
+};
+
+//------------------------------------------------------------------------------
+// Mix texture
+//------------------------------------------------------------------------------
+
+class MixTexture : public Texture {
+public:
+	MixTexture(const Texture *amnt, const Texture *t1, const Texture *t2) :
+		amount(amnt), tex1(t1), tex2(t2) { }
+	virtual ~MixTexture() { }
+
+	virtual TextureType GetType() const { return MIX_TEX; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		amount->AddReferencedTextures(referencedTexs);
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	const Texture *GetAmountTexture() const { return amount; }
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const Texture *amount;
+	const Texture *tex1;
+	const Texture *tex2;
+};
+
+//------------------------------------------------------------------------------
+// FBM texture
+//------------------------------------------------------------------------------
+
+class FBMTexture : public Texture {
+public:
+	FBMTexture(const TextureMapping *mp, const int octs, const float omg) :
+		mapping(mp), octaves(octs), omega(omg) { }
+	virtual ~FBMTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return FBM_TEX; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+
+	virtual UV GetDuDv() const;
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	int GetOctaves() const { return octaves; }
+	float GetOmega() const { return omega; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping *mapping;
+	const int octaves;
+	const float omega;
+};
+
+//------------------------------------------------------------------------------
+// Marble texture
+//------------------------------------------------------------------------------
+
+class MarbleTexture : public Texture {
+public:
+	MarbleTexture(const TextureMapping *mp, const int octs, const float omg,
+			float sc, float var) :
+			mapping(mp), octaves(octs), omega(omg), scale(sc), variation(var) { }
+	virtual ~MarbleTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return MARBLE; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	int GetOctaves() const { return octaves; }
+	float GetOmega() const { return omega; }
+	float GetScale() const { return scale; }
+	float GetVariation() const { return variation; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping *mapping;
+	const int octaves;
+	const float omega, scale, variation;
 };
 
 } }

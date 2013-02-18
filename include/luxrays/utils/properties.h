@@ -45,6 +45,7 @@ public:
 
 	bool IsDefined(const std::string propName) const;
 	std::string GetString(const std::string propName, const std::string defaultValue) const;
+	bool GetBoolean(const std::string propName, const bool defaultValue) const;
 	int GetInt(const std::string propName, const int defaultValue) const;
 	size_t GetSize(const std::string propName, const size_t defaultValue) const;
 	float GetFloat(const std::string propName, const float defaultValue) const;
@@ -55,6 +56,9 @@ public:
 
 	void SetString(const std::string &propName, const std::string &value);
 	std::string SetString(const std::string &property);
+	void Delete(const std::string &propName);
+
+	std::string ToString() const;
 
 	static std::string ExtractField(const std::string &value, const size_t index);
 	static std::vector<std::string> ConvertToStringVector(const std::string &values);

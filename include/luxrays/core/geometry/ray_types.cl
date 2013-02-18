@@ -27,3 +27,8 @@ typedef struct {
 	float mint, maxt, time;
 	float pad[3]; // TODO: remove (here and in ray.h)
 } Ray;
+
+typedef struct {
+	float t, b1, b2;
+	unsigned int index;
+} RayHit;

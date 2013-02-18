@@ -21,16 +21,20 @@
 
 #include "renderengine.h"
 #include "renderconfig.h"
-#include "pathocl/pathocl.h"
+#include "pathocl/rtpathocl.h"
 #include "lightcpu/lightcpu.h"
 #include "pathcpu/pathcpu.h"
 #include "bidircpu/bidircpu.h"
 #include "bidirhybrid/bidirhybrid.h"
 #include "cbidirhybrid/cbidirhybrid.h"
 #include "bidirvmcpu/bidirvmcpu.h"
+#include "filesaver/filesaver.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/sdl/bsdf.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/opencl/device.h"
+#endif
 
 using namespace std;
 using namespace luxrays;
@@ -187,9 +191,9 @@ void RenderEngine::UpdateFilm() {
 		const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
 		if (haltthreshold >= 0.f) {
 			// Check if it is time to run the convergence test again
-			const unsigned int imgWidth = film->GetWidth();
-			const unsigned int imgHeight = film->GetHeight();
-			const unsigned int pixelCount = imgWidth * imgHeight;
+			const u_int imgWidth = film->GetWidth();
+			const u_int imgHeight = film->GetHeight();
+			const u_int pixelCount = imgWidth * imgHeight;
 			const double now = WallClockTime();
 
 			// Do not run the test if we don't have at least 16 new samples per pixel
@@ -219,6 +223,10 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return CBIDIRHYBRID;
 	if ((type.compare("10") == 0) || (type.compare("BIDIRVMCPU") == 0))
 		return BIDIRVMCPU;
+	if ((type.compare("11") == 0) || (type.compare("FILESAVER") == 0))
+		return FILESAVER;
+	if ((type.compare("12") == 0) || (type.compare("RTPATHOCL") == 0))
+		return RTPATHOCL;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -238,8 +246,12 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "CBIDIRHYBRID";
 		case BIDIRVMCPU:
 			return "BIDIRVMCPU";
+		case FILESAVER:
+			return "FILESAVER";
+		case RTPATHOCL:
+			return "RTPATHOCL";
 		default:
-			throw runtime_error("Unknown render engine type: " + type);
+			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
 }
 
@@ -264,8 +276,17 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			return new CBiDirHybridRenderEngine(renderConfig, film, filmMutex);
 		case BIDIRVMCPU:
 			return new BiDirVMCPURenderEngine(renderConfig, film, filmMutex);
+		case FILESAVER:
+			return new FileSaverRenderEngine(renderConfig, film, filmMutex);
+		case RTPATHOCL:
+#ifndef LUXRAYS_DISABLE_OPENCL
+			return new RTPathOCLRenderEngine(renderConfig, film, filmMutex);
+#else
+			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
+			return new PathCPURenderEngine(renderConfig, film, filmMutex);
+#endif
 		default:
-			throw runtime_error("Unknown render engine type");
+			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}
 }
 
@@ -315,14 +336,17 @@ void CPURenderThread::Stop() {
 }
 
 void CPURenderThread::StartRenderThread() {
-	const unsigned int filmWidth = renderEngine->film->GetWidth();
-	const unsigned int filmHeight = renderEngine->film->GetHeight();
+	const u_int filmWidth = renderEngine->film->GetWidth();
+	const u_int filmHeight = renderEngine->film->GetHeight();
 
 	delete threadFilm;
-	threadFilm = new Film(filmWidth, filmHeight,
-			enablePerPixelNormBuffer, enablePerScreenNormBuffer, false);
+
+	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->Init(filmWidth, filmHeight);
+	threadFilm->SetPerPixelNormalizedBufferFlag(enablePerPixelNormBuffer);
+	threadFilm->SetPerScreenNormalizedBufferFlag(enablePerScreenNormBuffer);
+	threadFilm->SetFrameBufferFlag(false);
+	threadFilm->Init();
 
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
@@ -450,12 +474,13 @@ void CPURenderEngine::UpdateCounters() {
 
 OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
-	const unsigned int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const unsigned int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
+	const u_int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
+	const u_int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 
 	// Start OpenCL devices
@@ -472,7 +497,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 	}
 
 	for (size_t i = 0; i < descs.size(); ++i) {
-		DeviceDescription *desc = descs[i];
+		OpenCLDeviceDescription *desc = static_cast<OpenCLDeviceDescription *>(descs[i]);
 
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
@@ -493,7 +518,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 			}
 		}
 	}
-
+#endif
 	if (fatal && selectedDeviceDescs.size() == 0)
 		throw runtime_error("No OpenCL device selected or available");
 }
@@ -519,7 +544,7 @@ HybridRenderState::~HybridRenderState() {
 //------------------------------------------------------------------------------
 
 HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
-		const unsigned int index, IntersectionDevice *dev) {
+		const u_int index, IntersectionDevice *dev) {
 	device = dev;
 
 	renderThread = NULL;
@@ -563,13 +588,16 @@ void HybridRenderThread::Stop() {
 }
 
 void HybridRenderThread::StartRenderThread() {
-	const unsigned int filmWidth = renderEngine->film->GetWidth();
-	const unsigned int filmHeight = renderEngine->film->GetHeight();
+	const u_int filmWidth = renderEngine->film->GetWidth();
+	const u_int filmHeight = renderEngine->film->GetHeight();
 
 	delete threadFilm;
-	threadFilm = new Film(filmWidth, filmHeight, true, true, false);
+	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->Init(filmWidth, filmHeight);
+	threadFilm->SetPerPixelNormalizedBufferFlag(true);
+	threadFilm->SetPerScreenNormalizedBufferFlag(true);
+	threadFilm->SetFrameBufferFlag(false);
+	threadFilm->Init();
 
 	samplesCount = 0.0;
 
@@ -649,8 +677,8 @@ void HybridRenderThread::RenderFunc() {
 	boost::this_thread::disable_interruption di;
 
 	Film *film = threadFilm;
-	const unsigned int filmWidth = film->GetWidth();
-	const unsigned int filmHeight = film->GetHeight();
+	const u_int filmWidth = film->GetWidth();
+	const u_int filmHeight = film->GetHeight();
 	pixelCount = filmWidth * filmHeight;
 
 	RandomGenerator *rndGen = new RandomGenerator(threadIndex + renderEngine->seedBase);

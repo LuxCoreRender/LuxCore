@@ -1,4 +1,4 @@
-#line 2 "samplers.cl"
+#line 2 "sampler_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,115 +21,14 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#if (PARAM_SAMPLER_TYPE == 0)
-#define Sampler_GetSamplePath(index) (Rnd_FloatValue(seed))
-#define Sampler_GetSamplePathVertex(index) (Rnd_FloatValue(seed))
-#elif (PARAM_SAMPLER_TYPE == 1)
-#define Sampler_GetSamplePath(index) (sampleDataPathBase[index])
-#define Sampler_GetSamplePathVertex(index) (sampleDataPathVertexBase[index])
-#endif
-
-void GenerateCameraRay(
-		__global Camera *camera,
-		__global Sample *sample,
-		__global float *sampleDataPathBase,
-		Seed *seed,
-		__global Ray *ray) {
-#if (PARAM_SAMPLER_TYPE == 0)
-	// Don't use Sampler_GetSample() here
-	const float scrSampleX = sampleDataPathBase[IDX_SCREEN_X];
-	const float scrSampleY = sampleDataPathBase[IDX_SCREEN_Y];
-#else
-	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
-#endif
-
-	const float screenX = min(scrSampleX * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min(scrSampleY * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
-
-	float3 Pras = (float3)(screenX, PARAM_IMAGE_HEIGHT - screenY - 1.f, 0.f);
-	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera, Pras);
-	float3 rayDir = rayOrig;
-
-	const float hither = camera->hither;
-
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-
-	// Sample point on lens
-	float lensU, lensV;
-	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	const float lensRadius = camera->lensRadius;
-	lensU *= lensRadius;
-	lensV *= lensRadius;
-
-	// Compute point on plane of focus
-	const float focalDistance = camera->focalDistance;
-	const float dist = focalDistance - hither;
-	const float ft = dist / rayDir.z;
-	float3 Pfocus;
-	Pfocus = rayOrig + rayDir * ft;
-
-	// Update ray for effect of lens
-	const float k = dist / focalDistance;
-	rayOrig.x += lensU * k;
-	rayOrig.y += lensV * k;
-
-	rayDir = Pfocus - rayOrig;
-#endif
-
-	rayDir = normalize(rayDir);
-	const float maxt = (camera->yon - hither) / rayDir.z;
-
-	// Transform ray in world coordinates
-	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld, rayOrig);
-	rayDir = Transform_ApplyVector(&camera->cameraToWorld, rayDir);
-
-	Ray_Init3(ray, rayOrig, rayDir, maxt);
-
-	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
-		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
-		ray->mint, ray->maxt);*/
-}
-
-void GenerateCameraPath(
-		__global GPUTask *task,
-		__global float *sampleDataPathBase,
-		Seed *seed,
-		__global Camera *camera,
-		__global Ray *ray) {
-	__global Sample *sample = &task->sample;
-
-	GenerateCameraRay(camera, sample, sampleDataPathBase, seed, ray);
-
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
-
-	// Initialize the path state
-	task->pathStateBase.state = RT_NEXT_VERTEX;
-	task->pathStateBase.depth = 1;
-	VSTORE3F(WHITE, &task->pathStateBase.throughput.r);
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
-	task->directLightState.lastPdfW = 1.f;
-	task->directLightState.lastSpecular = TRUE;
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	// This is a bit tricky. I store the passThroughEvent in the BSDF
-	// before of the initialization because it can be use during the
-	// tracing of next path vertex ray.
-
-	task->pathStateBase.bsdf.passThroughEvent = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
-}
-
 //------------------------------------------------------------------------------
 // Random Sampler Kernel
 //------------------------------------------------------------------------------
 
 #if (PARAM_SAMPLER_TYPE == 0)
+
+#define Sampler_GetSamplePath(index) (Rnd_FloatValue(seed))
+#define Sampler_GetSamplePathVertex(depth, index) (Rnd_FloatValue(seed))
 
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
@@ -142,32 +41,27 @@ __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global 
 
 __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
-	const size_t gid = get_global_id(0);
+	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
 #endif
-
-	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 }
 
 void Sampler_NextSample(
-		__global GPUTask *task,
 		__global Sample *sample,
 		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer,
+		__global Pixel *frameBuffer
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		__global AlphaPixel *alphaFrameBuffer,
+		, __global AlphaPixel *alphaFrameBuffer
 #endif
-		__global Camera *camera,
-		__global Ray *ray
 		) {
 	SplatSample(frameBuffer,
 			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
@@ -178,15 +72,13 @@ void Sampler_NextSample(
 			1.f);
 
 	// Move to the next assigned pixel
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
-
 	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
 	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	GenerateCameraPath(task, sampleDataPathBase, seed, camera, ray);
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
 }
 
 #endif
@@ -197,19 +89,21 @@ void Sampler_NextSample(
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
+#define Sampler_GetSamplePath(index) (sampleDataPathBase[index])
+#define Sampler_GetSamplePathVertex(depth, index) (sampleDataPathVertexBase[index])
+
 __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
-	return &samplesData[gid * (2 *TOTAL_U_SIZE)];
+	return &samplesData[gid * (2 * TOTAL_U_SIZE)];
 }
 
 __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
-	const size_t gid = get_global_id(0);
 	return &sampleData[sample->proposed * TOTAL_U_SIZE];
 }
 
 __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 		__global float *sampleDataPathBase, const uint depth) {
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * SAMPLE_SIZE];
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
 void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU) {
@@ -288,19 +182,21 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	LargeStep(seed, 0, sampleDataPathBase);
+
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
 }
 
 void Sampler_NextSample(
-		__global GPUTask *task,
 		__global Sample *sample,
 		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer,
+		__global Pixel *frameBuffer
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		__global AlphaPixel *alphaFrameBuffer,
+		, __global AlphaPixel *alphaFrameBuffer
 #endif
-		__global Camera *camera,
-		__global Ray *ray
 		) {
 	//--------------------------------------------------------------------------
 	// Accept/Reject the sample
@@ -461,7 +357,133 @@ void Sampler_NextSample(
 	//--------------------------------------------------------------------------
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	GenerateCameraPath(task, sampleDataPathBase, seed, camera, ray);
+	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
+	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+#endif
+
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Sobol Sampler Kernel
+//------------------------------------------------------------------------------
+
+#if (PARAM_SAMPLER_TYPE == 2)
+
+uint SobolSampler_SobolDimension(const uint index, const uint dimension) {
+	const uint offset = dimension * SOBOL_BITS;
+	uint result = 0;
+	uint i = index;
+
+	for (uint j = 0; i; i >>= 1, j++) {
+		if (i & 1)
+			result ^= SOBOL_DIRECTIONS[offset + j];
+	}
+
+	return result;
+}
+
+float SobolSampler_GetSample(__global Sample *sample, const uint index) {
+	const uint pass = sample->pass;
+
+	const uint result = SobolSampler_SobolDimension(pass, index);
+	const float r = result * (1.f / 0xffffffffu);
+
+	// Cranley-Patterson rotation to reduce visible regular patterns
+	const float shift = (index & 1) ? sample->rng0 : sample->rng1;
+
+	return r + shift - floor(r + shift);
+}
+
+#define Sampler_GetSamplePath(index) (SobolSampler_GetSample(sample, index))
+#define Sampler_GetSamplePathVertex(depth, index) ((depth > PARAM_SAMPLER_SOBOL_MAXDEPTH) ? \
+	Rnd_FloatValue(seed) : \
+	SobolSampler_GetSample(sample, IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE + index))
+
+__global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
+	const size_t gid = get_global_id(0);
+	return &samplesData[gid * TOTAL_U_SIZE];
+}
+
+__global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+	return sampleData;
+}
+
+__global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
+		__global float *sampleDataPathBase, const uint depth) {
+	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
+}
+
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
+
+	sample->rng0 = Rnd_FloatValue(seed);
+	sample->rng1 = Rnd_FloatValue(seed);
+	sample->pass = 0;
+
+	const uint pixelIndex = get_global_id(0);
+	sample->pixelIndex = pixelIndex;
+	uint x, y;
+	PixelIndex2XY(pixelIndex, &x, &y);
+
+	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
+	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
+
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
+}
+
+void Sampler_NextSample(
+		__global Sample *sample,
+		__global float *sampleData,
+		Seed *seed,
+		__global Pixel *frameBuffer
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+		, __global AlphaPixel *alphaFrameBuffer
+#endif
+		) {
+	SplatSample(frameBuffer,
+			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+			alphaFrameBuffer,
+			sample->alpha,
+#endif
+			1.f);
+
+	// Move to the next assigned pixel
+	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
+	if (nextPixelIndex > PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) {
+		nextPixelIndex = get_global_id(0);
+		sample->pass += 1;
+	}
+	sample->pixelIndex = nextPixelIndex;
+	uint x, y;
+	PixelIndex2XY(nextPixelIndex, &x, &y);
+
+	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
+	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
+
+	VSTORE3F(BLACK, &sample->radiance.r);
+#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
+	sample->alpha = 1.f;
+#endif
+}
+
+#endif
+

@@ -25,13 +25,14 @@
 #include <vector>
 #include <set>
 
+#include <boost/lexical_cast.hpp>
 
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/core/exttrianglemesh.h"
 #include "luxrays/utils/core/mc.h"
 #include "luxrays/utils/sdl/texture.h"
-#include "texture.h"
+#include "luxrays/utils/properties.h"
 
 namespace luxrays {
 
@@ -43,9 +44,12 @@ namespace ocl {
 namespace sdl {
 
 class Scene;
+struct HitPointStruct;
+typedef HitPointStruct HitPoint;
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT
+	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
+	GLOSSY2, METAL2
 } MaterialType;
 
 class Material {
@@ -53,6 +57,8 @@ public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
 		emittedTex(emitted), bumpTex(bump), normalTex(normal) { }
 	virtual ~Material() { }
+
+	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
 
 	virtual MaterialType GetType() const = 0;
 	virtual BSDFEvent GetEventTypes() const = 0;
@@ -69,14 +75,14 @@ public:
 
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
-	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir,
-		const float passThroughEvent) const {
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
+		const Vector &localFixedDir, const float passThroughEvent) const {
 		return Spectrum(0.f);
 	}
 
-	virtual Spectrum GetEmittedRadiance(const UV &uv) const {
+	virtual Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const {
 		if (emittedTex)
-			return emittedTex->GetColorValue(uv);
+			return emittedTex->GetSpectrumValue(hitPoint);
 		else
 			return Spectrum();
 	}
@@ -85,17 +91,17 @@ public:
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const = 0;
 
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const = 0;
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const = 0;
 
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const = 0;
 
 	// Update any reference to oldMat with newMat (mostly used for updating Mix material)
@@ -112,6 +118,20 @@ public:
 			bumpTex->AddReferencedTextures(referencedTexs);
 		if (normalTex)
 			normalTex->AddReferencedTextures(referencedTexs);
+	}
+
+	virtual Properties ToProperties() const {
+		Properties props;
+
+		const std::string name = GetName();
+		if (emittedTex)
+			props.SetString("scene.materials." + name + ".emission", emittedTex->GetName());
+		if (bumpTex)
+			props.SetString("scene.materials." + name + ".bumptex", bumpTex->GetName());
+		if (normalTex)
+			props.SetString("scene.materials." + name + ".normaltex", normalTex->GetName());
+
+		return props;
 	}
 
 protected:
@@ -164,18 +184,20 @@ public:
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKd() const { return Kd; }
 
@@ -197,15 +219,15 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
@@ -214,6 +236,8 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKr() const { return Kr; }
 
@@ -238,15 +262,15 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
@@ -255,6 +279,8 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
@@ -275,26 +301,28 @@ private:
 class ArchGlassMaterial : public Material {
 public:
 	ArchGlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *refl, const Texture *trans) :
-			Material(emitted, bump, normal), Kr(refl), Kt(trans) { }
+			const Texture *refl, const Texture *trans,
+			const Texture *outsideIorFact, const Texture *iorFact) :
+			Material(emitted, bump, normal),
+			Kr(refl), Kt(trans), ousideIor(outsideIorFact), ior(iorFact) { }
 
 	virtual MaterialType GetType() const { return ARCHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsShadowTransparent() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir,
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint, const Vector &localFixedDir,
 		const float passThroughEvent) const;
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
@@ -304,12 +332,18 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
+	virtual Properties ToProperties() const;
+
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
+	const Texture *GetOutsideIOR() const { return ousideIor; }
+	const Texture *GetIOR() const { return ior; }
 
 private:
 	const Texture *Kr;
 	const Texture *Kt;
+	const Texture *ousideIor;
+	const Texture *ior;
 };
 
 //------------------------------------------------------------------------------
@@ -325,15 +359,15 @@ public:
 	virtual MaterialType GetType() const { return METAL; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
@@ -343,11 +377,13 @@ public:
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
 
+	virtual Properties ToProperties() const;
+
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetExp() const { return exponent; }
 
 private:
-	static Vector GlossyReflection(const Vector &fixedDir, const float exponent,
+	static Vector GlossyReflection(const Vector &localFixedDir, const float exponent,
 			const float u0, const float u1);
 
 	const Texture *Kr;
@@ -376,26 +412,28 @@ public:
 	virtual bool IsPassThrough() const {
 		return (matA->IsPassThrough() || matB->IsPassThrough());
 	}
-	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir,
-		const float passThroughEvent) const;
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
+		const Vector &localFixedDir, const float passThroughEvent) const;
 
-	virtual Spectrum GetEmittedRadiance(const UV &uv) const;
+	virtual Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
 	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Material *GetMaterialA() const { return matA; }
 	const Material *GetMaterialB() const { return matB; }
@@ -420,24 +458,26 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const UV &uv, const Vector &fixedDir, 
-		const float passThroughEvent) const { return Spectrum(1.f); }
+	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
+		const Vector &localFixedDir, const float passThroughEvent) const { return Spectrum(1.f); }
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
 		if (directPdfW)
 			*directPdfW = 0.f;
 		if (reversePdfW)
 			*reversePdfW = 0.f;
 	}
+
+	virtual Properties ToProperties() const;
 };
 
 //------------------------------------------------------------------------------
@@ -453,18 +493,20 @@ public:
 	virtual MaterialType GetType() const { return MATTETRANSLUCENT; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT | TRANSMIT; };
 
-	virtual Spectrum Evaluate(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir, BSDFEvent *event,
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const bool fromLight, const UV &uv,
-		const Vector &fixedDir, Vector *sampledDir,
-		const float u0, const float u1,  const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event) const;
-	virtual void Pdf(const bool fromLight, const UV &uv,
-		const Vector &lightDir, const Vector &eyeDir,
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
@@ -473,6 +515,133 @@ private:
 	const Texture *Kr;
 	const Texture *Kt;
 };
+
+//------------------------------------------------------------------------------
+// Glossy2 material
+//------------------------------------------------------------------------------
+
+class Glossy2Material : public Material {
+public:
+	Glossy2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
+			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
+			Material(emitted, bump, normal), Kd(kd), Ks(ks), nu(u), nv(v),
+			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
+
+	virtual MaterialType GetType() const { return GLOSSY2; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
+
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
+
+	const Texture *GetKd() const { return Kd; }
+	const Texture *GetKs() const { return Ks; }
+	const Texture *GetNu() const { return nu; }
+	const Texture *GetNv() const { return nv; }
+	const Texture *GetKa() const { return Ka; }
+	const Texture *GetDepth() const { return depth; }
+	const Texture *GetIndex() const { return index; }
+	const bool IsMultibounce() const { return multibounce; }
+
+private:
+	float SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &localFixedDir) const;
+	Spectrum SchlickBSDF_CoatingF(const Spectrum &ks, const float roughness, const float anisotropy,
+		const Vector &localFixedDir,	const Vector &localSampledDir) const;
+	Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
+		const float roughness, const float anisotropy, const Vector &localFixedDir, Vector *localSampledDir,
+		float u0, float u1, float *pdf) const;
+	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
+		const Vector &localFixedDir, const Vector &localSampledDir) const;
+	Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
+		const Spectrum &alpha, const float depth) const;
+
+	const Texture *Kd;
+	const Texture *Ks;
+	const Texture *nu;
+	const Texture *nv;
+	const Texture *Ka;
+	const Texture *depth;
+	const Texture *index;
+	const bool multibounce;
+};
+
+//------------------------------------------------------------------------------
+// Metal2 material
+//------------------------------------------------------------------------------
+
+class Metal2Material : public Material {
+public:
+	Metal2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
+			Material(emitted, bump, normal), n(nn), k(kk), nu(u), nv(v) { }
+
+	virtual MaterialType GetType() const { return METAL2; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
+
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual Properties ToProperties() const;
+
+	const Texture *GetN() const { return n; }
+	const Texture *GetK() const { return k; }
+	const Texture *GetNu() const { return nu; }
+	const Texture *GetNv() const { return nv; }
+
+private:
+	const Texture *n;
+	const Texture *k;
+	const Texture *nu;
+	const Texture *nv;
+};
+
+//------------------------------------------------------------------------------
+// SchlickDistribution material
+//------------------------------------------------------------------------------
+
+extern float SchlickDistribution_SchlickZ(const float roughness, const float cosNH);
+extern float SchlickDistribution_SchlickA(const Vector &H, const float anisotropy);
+extern float SchlickDistribution_D(const float roughness, const Vector &wh, const float anisotropy);
+extern float SchlickDistribution_SchlickG(const float roughness, const float costheta);
+extern void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
+	const float u0, const float u1, Vector *wh, float *d, float *pdf);
+extern float SchlickDistribution_Pdf(const float roughness, const Vector &wh, const float anisotropy);
+extern float SchlickDistribution_G(const float roughness, const Vector &localFixedDir,
+	const Vector &localSampledDir);
+
+//------------------------------------------------------------------------------
+// FresnelSlick material
+//------------------------------------------------------------------------------
+
+extern Spectrum FresnelSlick_Evaluate(const Spectrum &ks, const float cosi);
+
+//------------------------------------------------------------------------------
+// FresnelGeneral material
+//------------------------------------------------------------------------------
+
+extern Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi);
 
 } }
 

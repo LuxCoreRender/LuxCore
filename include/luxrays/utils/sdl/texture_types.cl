@@ -21,8 +21,13 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#define DUDV_VALUE 0.001f
+
 typedef enum {
-	CONST_FLOAT, CONST_FLOAT3, CONST_FLOAT4, IMAGEMAP, SCALE_TEX
+	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
+	FRESNEL_APPROX_K, MIX_TEX,
+	// Procedural textures
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE
 } TextureType;
 
 typedef struct {
@@ -34,34 +39,69 @@ typedef struct {
 } ConstFloat3Param;
 
 typedef struct {
-	Spectrum color;
-	float alpha;
-} ConstFloat4Param;
-
-typedef struct {
 	unsigned int channelCount, width, height;
 	unsigned int pageIndex, pixelsIndex;
 } ImageMap;
 
 typedef struct {
-	float gain, uScale, vScale, uDelta, vDelta;
-	float Du, Dv;
+	TextureMapping mapping;
+	float gain, Du, Dv;
 
 	unsigned int imageMapIndex;
-} ImageMapInstanceParam;
+} ImageMapTexParam;
 
 typedef struct {
 	unsigned int tex1Index, tex2Index;
 } ScaleTexParam;
 
 typedef struct {
+	unsigned int texIndex;
+} FresnelApproxNTexParam;
+
+typedef struct {
+	unsigned int texIndex;
+} FresnelApproxKTexParam;
+
+typedef struct {
+	TextureMapping mapping;
+	unsigned int tex1Index, tex2Index;
+} CheckerBoard2DTexParam;
+
+typedef struct {
+	TextureMapping mapping;
+	unsigned int tex1Index, tex2Index;
+} CheckerBoard3DTexParam;
+
+typedef struct {
+	unsigned int amountTexIndex, tex1Index, tex2Index;
+} MixTexParam;
+
+typedef struct {
+	TextureMapping mapping;
+	int octaves;
+	float omega;
+} FBMTexParam;
+
+typedef struct {
+	TextureMapping mapping;
+	int octaves;
+	float omega, scale, variation;
+} MarbleTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		ConstFloatParam constFloat;
 		ConstFloat3Param constFloat3;
-		ConstFloat4Param constFloat4;
-		ImageMapInstanceParam imageMapInstance;
+		ImageMapTexParam imageMapTex;
 		ScaleTexParam scaleTex;
+		FresnelApproxNTexParam fresnelApproxN;
+		FresnelApproxKTexParam fresnelApproxK;
+		CheckerBoard2DTexParam checkerBoard2D;
+		CheckerBoard3DTexParam checkerBoard3D;
+		MixTexParam mixTex;
+		FBMTexParam fbm;
+		MarbleTexParam marble;
 	};
 } Texture;
 
@@ -104,4 +144,3 @@ typedef struct {
 
 #define TEXTURES_PARAM_DECL , __global Texture *texs IMAGEMAPS_PARAM_DECL
 #define TEXTURES_PARAM , texs IMAGEMAPS_PARAM
-

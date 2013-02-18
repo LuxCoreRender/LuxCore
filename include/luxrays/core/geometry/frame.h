@@ -58,10 +58,8 @@ public:
 	}
 
 	void SetFromZ(const Vector &z) {
-		Vector tmpZ = Z = Normalize(z);
-		Vector tmpX = (std::abs(tmpZ.x) > 0.99f) ? Vector(0.f, 1.f, 0.f) : Vector(1.f, 0.f, 0.f);
-		Y = Normalize(Cross(tmpZ, tmpX));
-		X = Cross(Y, tmpZ);
+		Z = z;
+		CoordinateSystem(Z, &X, &Y);
 	}
 
 	Vector ToWorld(const Vector &a) const {

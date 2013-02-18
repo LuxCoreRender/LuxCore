@@ -56,7 +56,7 @@ CompiledScene::~CompiledScene() {
 }
 
 void CompiledScene::CompileCamera() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Camera");
+	//SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Camera");
 
 	//--------------------------------------------------------------------------
 	// Camera definition
@@ -362,6 +362,8 @@ void CompiledScene::CompileMaterials() {
 				mat->type = luxrays::ocl::ARCHGLASS;
 				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
 				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
+				mat->archglass.ousideIorTexIndex = scene->texDefs.GetTextureIndex(am->GetOutsideIOR());
+				mat->archglass.iorTexIndex = scene->texDefs.GetTextureIndex(am->GetIOR());
 				break;
 			}
 			case MIX: {
@@ -383,6 +385,30 @@ void CompiledScene::CompileMaterials() {
 				mat->type = luxrays::ocl::MATTETRANSLUCENT;
 				mat->matteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
 				mat->matteTranslucent.ktTexIndex = scene->texDefs.GetTextureIndex(mm->GetKt());
+				break;
+			}
+			case GLOSSY2: {
+				Glossy2Material *g2m = static_cast<Glossy2Material *>(m);
+
+				mat->type = luxrays::ocl::GLOSSY2;
+				mat->glossy2.kdTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKd());
+				mat->glossy2.ksTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKs());
+				mat->glossy2.nuTexIndex = scene->texDefs.GetTextureIndex(g2m->GetNu());
+				mat->glossy2.nvTexIndex = scene->texDefs.GetTextureIndex(g2m->GetNv());
+				mat->glossy2.kaTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKa());
+				mat->glossy2.depthTexIndex = scene->texDefs.GetTextureIndex(g2m->GetDepth());
+				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(g2m->GetIndex());
+				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
+				break;
+			}
+			case METAL2: {
+				Metal2Material *m2m = static_cast<Metal2Material *>(m);
+
+				mat->type = luxrays::ocl::METAL2;
+				mat->metal2.nTexIndex = scene->texDefs.GetTextureIndex(m2m->GetN());
+				mat->metal2.kTexIndex = scene->texDefs.GetTextureIndex(m2m->GetK());
+				mat->metal2.nuTexIndex = scene->texDefs.GetTextureIndex(m2m->GetNu());
+				mat->metal2.nvTexIndex = scene->texDefs.GetTextureIndex(m2m->GetNv());
 				break;
 			}
 			default:
@@ -462,6 +488,29 @@ void CompiledScene::CompileAreaLights() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Triangle area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
+void CompiledScene::CompileTextureMapping(luxrays::ocl::TextureMapping *mapping, const TextureMapping *m) {
+	switch (m->GetType()) {
+		case UVMAPPING: {
+			mapping->type = luxrays::ocl::UVMAPPING;
+			const UVMapping *gm = static_cast<const UVMapping *>(m);
+			mapping->uvMapping.uScale = gm->uScale;
+			mapping->uvMapping.vScale = gm->vScale;
+			mapping->uvMapping.uDelta = gm->uDelta;
+			mapping->uvMapping.vDelta = gm->vDelta;
+			break;
+		}
+		case GLOBALMAPPING3D: {
+			mapping->type = luxrays::ocl::GLOBALMAPPING3D;
+			const GlobalMapping3D *gm = static_cast<const GlobalMapping3D *>(m);
+			memcpy(&mapping->globalMapping3D.worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
+			memcpy(&mapping->globalMapping3D.worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			break;
+		}
+		default:
+			throw std::runtime_error("Unknown texture mapping: " + boost::lexical_cast<std::string>(m->GetType()));
+	}
+}
+
 void CompiledScene::CompileInfiniteLight() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
 
@@ -478,18 +527,8 @@ void CompiledScene::CompileInfiniteLight() {
 		infiniteLight = new luxrays::ocl::InfiniteLight();
 
 		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
-		infiniteLight->shiftU = il->GetShiftU();
-		infiniteLight->shiftV = il->GetShiftV();
-
-		const ImageMapInstance *im = il->GetImageMapInstance();
-		infiniteLight->imageMapInstance.gain = im->GetGain();
-		infiniteLight->imageMapInstance.uScale = im->GetUScale();
-		infiniteLight->imageMapInstance.vScale = im->GetVScale();
-		infiniteLight->imageMapInstance.uDelta = im->GetUDelta();
-		infiniteLight->imageMapInstance.vDelta = im->GetVDelta();
-		infiniteLight->imageMapInstance.Du = im->GetDuDv().u;
-		infiniteLight->imageMapInstance.Dv = im->GetDuDv().v;
-		infiniteLight->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im->GetImgMap());
+		CompileTextureMapping(&infiniteLight->mapping, il->GetUVMapping());
+		infiniteLight->imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->GetImageMap());
 	} else
 		infiniteLight = NULL;
 
@@ -577,26 +616,16 @@ void CompiledScene::CompileTextures() {
 				ASSIGN_SPECTRUM(tex->constFloat3.color, cft->GetColor());
 				break;
 			}
-			case CONST_FLOAT4: {
-				ConstFloat4Texture *cft = static_cast<ConstFloat4Texture *>(t);
-
-				tex->type = luxrays::ocl::CONST_FLOAT4;
-				ASSIGN_SPECTRUM(tex->constFloat4.color, cft->GetColor());
-				tex->constFloat4.alpha = cft->GetAlpha();
-				break;
-			}
 			case IMAGEMAP: {
 				ImageMapTexture *imt = static_cast<ImageMapTexture *>(t);
 
 				tex->type = luxrays::ocl::IMAGEMAP;
-				tex->imageMapInstance.gain = imt->GetImageMapInstance()->GetGain();
-				tex->imageMapInstance.uScale = imt->GetImageMapInstance()->GetUScale();
-				tex->imageMapInstance.vScale = imt->GetImageMapInstance()->GetVScale();
-				tex->imageMapInstance.uDelta = imt->GetImageMapInstance()->GetUDelta();
-				tex->imageMapInstance.vDelta = imt->GetImageMapInstance()->GetVDelta();
-				tex->imageMapInstance.Du = imt->GetImageMapInstance()->GetDuDv().u;
-				tex->imageMapInstance.Dv = imt->GetImageMapInstance()->GetDuDv().v;
-				tex->imageMapInstance.imageMapIndex = scene->imgMapCache.GetImageMapIndex(imt->GetImageMapInstance()->GetImgMap());
+				const ImageMap *im = imt->GetImageMap();
+				tex->imageMapTex.gain = imt->GetGain();
+				CompileTextureMapping(&tex->imageMapTex.mapping, imt->GetTextureMapping());
+				tex->imageMapTex.Du = imt->GetDuDv().u;
+				tex->imageMapTex.Dv = imt->GetDuDv().v;
+				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
 				break;
 			}
 			case SCALE_TEX: {
@@ -604,14 +633,83 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = luxrays::ocl::SCALE_TEX;
 				const Texture *tex1 = st->GetTexture1();
-				if (dynamic_cast<const ScaleTexture *>(tex1))
-					throw std::runtime_error("Recursive scale texture is not supported");
 				tex->scaleTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
 
 				const Texture *tex2 = st->GetTexture2();
-				if (dynamic_cast<const ScaleTexture *>(tex2))
-					throw std::runtime_error("Recursive scale texture is not supported");
 				tex->scaleTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case FRESNEL_APPROX_N: {
+				FresnelApproxNTexture *ft = static_cast<FresnelApproxNTexture *>(t);
+
+				tex->type = luxrays::ocl::FRESNEL_APPROX_N;
+				const Texture *tx = ft->GetTexture();
+				tex->fresnelApproxN.texIndex = scene->texDefs.GetTextureIndex(tx);
+				break;
+			}
+			case FRESNEL_APPROX_K: {
+				FresnelApproxKTexture *ft = static_cast<FresnelApproxKTexture *>(t);
+
+				tex->type = luxrays::ocl::FRESNEL_APPROX_K;
+				const Texture *tx = ft->GetTexture();
+				tex->fresnelApproxK.texIndex = scene->texDefs.GetTextureIndex(tx);
+				break;
+			}
+			case CHECKERBOARD2D: {
+				CheckerBoard2DTexture *cb = static_cast<CheckerBoard2DTexture *>(t);
+
+				tex->type = luxrays::ocl::CHECKERBOARD2D;
+				CompileTextureMapping(&tex->checkerBoard2D.mapping, cb->GetTextureMapping());
+				const Texture *tex1 = cb->GetTexture1();
+				tex->checkerBoard2D.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = cb->GetTexture2();
+				tex->checkerBoard2D.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case CHECKERBOARD3D: {
+				CheckerBoard3DTexture *cb = static_cast<CheckerBoard3DTexture *>(t);
+
+				tex->type = luxrays::ocl::CHECKERBOARD3D;
+				CompileTextureMapping(&tex->checkerBoard3D.mapping, cb->GetTextureMapping());
+				const Texture *tex1 = cb->GetTexture1();
+				tex->checkerBoard3D.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = cb->GetTexture2();
+				tex->checkerBoard3D.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case MIX_TEX: {
+				MixTexture *mt = static_cast<MixTexture *>(t);
+
+				tex->type = luxrays::ocl::MIX_TEX;
+				const Texture *amount = mt->GetAmountTexture();
+				tex->mixTex.amountTexIndex = scene->texDefs.GetTextureIndex(amount);
+
+				const Texture *tex1 = mt->GetTexture1();
+				tex->mixTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+				const Texture *tex2 = mt->GetTexture2();
+				tex->mixTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
+			case FBM_TEX: {
+				FBMTexture *ft = static_cast<FBMTexture *>(t);
+
+				tex->type = luxrays::ocl::FBM_TEX;
+				CompileTextureMapping(&tex->fbm.mapping, ft->GetTextureMapping());
+				tex->fbm.octaves = ft->GetOctaves();
+				tex->fbm.omega = ft->GetOmega();
+				break;
+			}
+			case MARBLE: {
+				MarbleTexture *mt = static_cast<MarbleTexture *>(t);
+
+				tex->type = luxrays::ocl::MARBLE;
+				CompileTextureMapping(&tex->fbm.mapping, mt->GetTextureMapping());
+				tex->marble.octaves = mt->GetOctaves();
+				tex->marble.omega = mt->GetOmega();
+				tex->marble.scale = mt->GetScale();
+				tex->marble.variation = mt->GetVariation();
 				break;
 			}
 			default:
