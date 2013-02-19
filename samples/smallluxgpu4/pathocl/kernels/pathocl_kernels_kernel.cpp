@@ -134,6 +134,7 @@ std::string KernelSource_pathocl_kernels =
 "#endif\n"
 "\n"
 "#if (PARAM_SAMPLER_TYPE == 2)\n"
+"	__global Sample *sample = &task->sample;\n"
 "	const float scrSampleX = sampleData[IDX_SCREEN_X];\n"
 "	const float scrSampleY = sampleData[IDX_SCREEN_Y];\n"
 "#if defined(PARAM_CAMERA_HAS_DOF)\n"

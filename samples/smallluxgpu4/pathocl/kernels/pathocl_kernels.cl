@@ -131,6 +131,7 @@ void GenerateCameraPath(
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 2)
+	__global Sample *sample = &task->sample;
 	const float scrSampleX = sampleData[IDX_SCREEN_X];
 	const float scrSampleY = sampleData[IDX_SCREEN_Y];
 #if defined(PARAM_CAMERA_HAS_DOF)
