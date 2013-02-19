@@ -730,6 +730,13 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const float variation = GetFloatParameters(props, propName + ".variation", 1, "0.2").at(0);
 
 		return new MarbleTexture(CreateTextureMapping(propName + ".mapping", props), octaves, omega, scale, variation);
+	} else if (texType == "dots") {
+		const std::string insideTexName = GetStringParameters(props, propName + ".inside", 1, "tex1").at(0);
+		const Texture *insideTex = GetTexture(insideTexName);
+		const std::string outsideTexName = GetStringParameters(props, propName + ".outside", 1, "tex2").at(0);
+		const Texture *outsideTex = GetTexture(outsideTexName);
+
+		return new DotsTexture(CreateTextureMapping(propName + ".mapping", props), insideTex, outsideTex);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

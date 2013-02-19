@@ -423,6 +423,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_FBM_TEX";
 	if (cscene->IsTextureCompiled(MARBLE))
 		ss << " -D PARAM_ENABLE_MARBLE";
+	if (cscene->IsTextureCompiled(DOTS))
+		ss << " -D PARAM_ENABLE_DOTS";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";

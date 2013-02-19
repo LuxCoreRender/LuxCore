@@ -52,7 +52,7 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS
 } TextureType;
 
 struct HitPointStruct;
@@ -571,6 +571,41 @@ private:
 	const TextureMapping *mapping;
 	const int octaves;
 	const float omega, scale, variation;
+};
+
+//------------------------------------------------------------------------------
+// Dots texture
+//------------------------------------------------------------------------------
+
+class DotsTexture : public Texture {
+public:
+	DotsTexture(const TextureMapping *mp, const Texture *insideTx, const Texture *outsideTx) :
+		mapping(mp), insideTex(insideTx), outsideTex(outsideTx) { }
+	virtual ~DotsTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return DOTS; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		insideTex->AddReferencedTextures(referencedTexs);
+		outsideTex->AddReferencedTextures(referencedTexs);
+	}
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const Texture *GetInsideTex() const { return insideTex; }
+	const Texture *GetOutsideTex() const { return outsideTex; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping *mapping;
+	const Texture *insideTex;
+	const Texture *outsideTex;
 };
 
 } }

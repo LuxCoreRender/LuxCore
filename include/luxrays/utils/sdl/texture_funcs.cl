@@ -715,6 +715,76 @@ void MarbleTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hi
 #endif
 
 //------------------------------------------------------------------------------
+// Dots texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_DOTS)
+
+void DotsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+
+	const float2 uv = Mapping_Map2D(&texture->dots.mapping, VLOAD2F(&hitPoint->uv.u));
+
+	const int sCell = Floor2Int(uv.s0 + .5f);
+	const int tCell = Floor2Int(uv.s1 + .5f);
+	// Return _insideDot_ result if point is inside dot
+	if (Noise(sCell + .5f, tCell + .5f, .5f) > 0.f) {
+		const float radius = .35f;
+		const float maxShift = 0.5f - radius;
+		const float sCenter = sCell + maxShift *
+			Noise(sCell + 1.5f, tCell + 2.8f, .5f);
+		const float tCenter = tCell + maxShift *
+			Noise(sCell + 4.5f, tCell + 9.8f, .5f);
+		const float ds = uv.s0 - sCenter, dt = uv.s1 - tCenter;
+		if (ds * ds + dt * dt < radius * radius) {
+			texValues[(*texValuesSize)++] = value1;
+			return;
+		}
+	}
+
+	texValues[(*texValuesSize)++] = value2;
+}
+
+void DotsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
+
+	const float2 uv = Mapping_Map2D(&texture->dots.mapping, VLOAD2F(&hitPoint->uv.u));
+
+	const int sCell = Floor2Int(uv.s0 + .5f);
+	const int tCell = Floor2Int(uv.s1 + .5f);
+	// Return _insideDot_ result if point is inside dot
+	if (Noise(sCell + .5f, tCell + .5f, .5f) > 0.f) {
+		const float radius = .35f;
+		const float maxShift = 0.5f - radius;
+		const float sCenter = sCell + maxShift *
+			Noise(sCell + 1.5f, tCell + 2.8f, .5f);
+		const float tCenter = tCell + maxShift *
+			Noise(sCell + 4.5f, tCell + 9.8f, .5f);
+		const float ds = uv.s0 - sCenter, dt = uv.s1 - tCenter;
+		if (ds * ds + dt * dt < radius * radius) {
+			texValues[(*texValuesSize)++] = value1;
+			return;
+		}
+	}
+
+	texValues[(*texValuesSize)++] = value2;
+}
+
+void DotsTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 dudv1 = texValues[--(*texValuesSize)];
+	const float2 dudv2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -756,6 +826,12 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex1Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex2Index];
 			return 3;
+#endif
+#if defined(PARAM_ENABLE_DOTS)
+		case DOTS:
+			todoTex[(*todoTexSize)++] = &texs[texture->dots.insideIndex];
+			todoTex[(*todoTexSize)++] = &texs[texture->dots.outsideIndex];
+			return 2;
 #endif
 #if defined (PARAM_ENABLE_MARBLE)
 		case MARBLE:
@@ -839,6 +915,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined (PARAM_ENABLE_MARBLE)
 		case MARBLE:
 			MarbleTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_DOTS)
+		case DOTS:
+			DotsTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -959,6 +1040,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			MarbleTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined (PARAM_ENABLE_DOTS)
+		case DOTS:
+			DotsTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1074,6 +1160,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined (PARAM_ENABLE_MARBLE)
 		case MARBLE:
 			MarbleTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_DOTS)
+		case DOTS:
+			DotsTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

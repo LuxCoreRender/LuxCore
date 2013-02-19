@@ -712,6 +712,18 @@ void CompiledScene::CompileTextures() {
 				tex->marble.variation = mt->GetVariation();
 				break;
 			}
+			case DOTS: {
+				DotsTexture *dt = static_cast<DotsTexture *>(t);
+
+				tex->type = luxrays::ocl::DOTS;
+				CompileTextureMapping(&tex->dots.mapping, dt->GetTextureMapping());
+				const Texture *insideTex = dt->GetInsideTex();
+				tex->dots.insideIndex = scene->texDefs.GetTextureIndex(insideTex);
+
+				const Texture *outsideTex = dt->GetOutsideTex();
+				tex->dots.outsideIndex = scene->texDefs.GetTextureIndex(outsideTex);
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;
