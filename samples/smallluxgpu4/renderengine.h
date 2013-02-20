@@ -73,6 +73,10 @@ public:
 		return intersectionDevices;
 	}
 
+	const std::vector<luxrays::DeviceDescription *> &GetAvailableDeviceDescriptions() const {
+		return ctx->GetAvailableDeviceDescriptions();
+	}
+
 	//--------------------------------------------------------------------------
 	// Statistics related methods
 	//--------------------------------------------------------------------------

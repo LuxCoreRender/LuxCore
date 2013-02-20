@@ -27,7 +27,7 @@
 #include "resultdialog.h"
 #include "renderengine.h"
 #include "pathocl/pathocl.h"
-#include "smalllux.h"
+#include "slgdefs.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -169,7 +169,8 @@ void LuxMarkApp::InitRendering(LuxMarkAppMode m, const char *scnName) {
 void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 	try {
 		// Initialize the new mode
-		RenderConfig *renderConfig = new RenderConfig(app->sceneName);
+		string sname(app->sceneName); 
+		RenderConfig *renderConfig = new RenderConfig(&sname, NULL);
 
 		// Overwrite properties according the current mode
 		Properties prop;
@@ -210,7 +211,7 @@ void LuxMarkApp::EngineInitThreadImpl(LuxMarkApp *app) {
 		if (!app->hardwareTreeModel) {
 			if (app->renderSession->renderEngine->GetEngineType() == PATHOCL)
 				app->hardwareTreeModel = new HardwareTreeModel(app->mainWin,
-						((PathOCLRenderEngine *)app->renderSession->renderEngine)->GetAvailableDeviceDescriptions());
+						app->renderSession->renderEngine->GetAvailableDeviceDescriptions());
 			else {
 				const vector<DeviceDescription *> devDescs;
 				app->hardwareTreeModel = new HardwareTreeModel(app->mainWin, devDescs);
@@ -251,8 +252,8 @@ void LuxMarkApp::RenderRefreshTimeout() {
 	mainWin->ShowFrameBuffer(pixels, film->GetWidth(), film->GetHeight());
 
 	// Update the statistics
-	const vector<OpenCLIntersectionDevice *> &intersectionDevices =
-		((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices();
+	const vector<IntersectionDevice *> &intersectionDevices =
+		renderEngine->GetIntersectionDevices();
 
 	double raysSec = 0.0;
 	vector<double> raysSecs(intersectionDevices.size(), 0.0);
@@ -325,8 +326,9 @@ void LuxMarkApp::RenderRefreshTimeout() {
 
 			exit(EXIT_SUCCESS);
 		} else {
-			vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(
-					((PathOCLRenderEngine *)renderEngine)->GetIntersectionDevices());
+			const vector<OpenCLIntersectionDevice *> &devices =
+				((const vector<OpenCLIntersectionDevice *> &)renderEngine->GetIntersectionDevices());
+			vector<BenchmarkDeviceDescription> descs = BuildDeviceDescriptions(devices);
 
 			Stop();
 

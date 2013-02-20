@@ -26,6 +26,8 @@ using namespace luxrays;
 using namespace luxrays::sdl;
 using namespace luxrays::utils;
 
+string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
+
 namespace slg {
 
 RenderSession::RenderSession(RenderConfig *rcfg) {

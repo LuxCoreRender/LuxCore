@@ -35,7 +35,7 @@
 #include <GL/glut.h>
 #endif
 
-#include "smalllux.h"
+#include "smallluxgpu.h"
 #include "displayfunc.h"
 #include "renderconfig.h"
 #include "rendersession.h"

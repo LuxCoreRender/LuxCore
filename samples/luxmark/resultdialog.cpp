@@ -50,6 +50,9 @@ ResultDialog::ResultDialog(LuxMarkAppMode mode,
 			(strcmp(sceneName, SCENE_SALA) !=0) &&
 			(strcmp(sceneName, SCENE_LUXBALL_HDR) !=0))
 		ui->submitButton->setEnabled(false);
+
+	// To re-enable only with official release
+	ui->submitButton->setEnabled(false);
 }
 
 ResultDialog::~ResultDialog() {

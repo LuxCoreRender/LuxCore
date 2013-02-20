@@ -22,7 +22,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "smalllux.h"
+#include "slgdefs.h"
 #include "mainwindow.h"
 #include "luxmarkapp.h"
 
