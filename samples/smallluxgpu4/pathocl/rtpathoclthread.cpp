@@ -32,17 +32,19 @@ using namespace luxrays::utils;
 
 namespace slg {
 
-#ifdef _WIN32
-static double PreciseClockTime()
-{
-	unsigned __int64 t, freq;
-	QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
-	QueryPerformanceCounter((LARGE_INTEGER*)&t);
-	return (double)t/freq;
-}
-#else
+// To check if it is still required
+// NOTE: WallClockTime() return the time in seconds.
+//#ifdef _WIN32
+//static double PreciseClockTime()
+//{
+//	unsigned __int64 t, freq;
+//	QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+//	QueryPerformanceCounter((LARGE_INTEGER*)&t);
+//	return (double)t/freq;
+//}
+//#else
 #define PreciseClockTime WallClockTime
-#endif
+//#endif
 
 //------------------------------------------------------------------------------
 // RTPathOCLRenderThread
@@ -51,8 +53,8 @@ static double PreciseClockTime()
 RTPathOCLRenderThread::RTPathOCLRenderThread(const u_int index,
 	OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) : 
 	PathOCLRenderThread(index, device, re) {
-	frameBarrier = ((RTPathOCLRenderEngine *)re)->frameBarrier;
-	assignedTaskCount = renderEngine->taskCount;
+	assignedIters = ((RTPathOCLRenderEngine*)renderEngine)->renderConfig->GetMinIterationsToShow();
+	frameTime = 0.0;
 }
 
 RTPathOCLRenderThread::~RTPathOCLRenderThread() {
@@ -71,7 +73,7 @@ void RTPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 		StopRenderThread();
 
 		updateActions.AddActions(editActions.GetActions());
-		UpdateOclBuffers();
+		UpdateOCLBuffers();
 		StartRenderThread();
 	} else {
 		updateActions.AddActions(editActions.GetActions());
@@ -79,7 +81,7 @@ void RTPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	}
 }
 
-void RTPathOCLRenderThread::UpdateOclBuffers() {
+void RTPathOCLRenderThread::UpdateOCLBuffers() {
 	editMutex.lock();
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
@@ -160,35 +162,29 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	const u_int minIterationsToShow =
-		((RTPathOCLRenderEngine*)renderEngine)->renderConfig->GetMinIterationsToShow();
-	u_int iterations = minIterationsToShow;
 
 	try {
+		boost::barrier *frameBarrier = ((RTPathOCLRenderEngine *)renderEngine)->frameBarrier;
+		
 		while (!boost::this_thread::interruption_requested()) {
-			if (updateActions.HasAnyAction()) {
-				UpdateOclBuffers();
-				iterations = minIterationsToShow;
-			}
+			if (updateActions.HasAnyAction())
+				UpdateOCLBuffers();
 
-			double startTime = PreciseClockTime();
-			u_int taskCount = assignedTaskCount;
+			//------------------------------------------------------------------
+			// Render a frame (i.e. taskCount * assignedIters samples)
+			//------------------------------------------------------------------
+			const double startTime = PreciseClockTime();
+			u_int iterations = assignedIters;
 
 			for (u_int i = 0; i < iterations; ++i) {
 				// Trace rays
 				intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-					*(hitsBuff), taskCount, NULL, NULL);
+					*(hitsBuff), renderEngine->taskCount, NULL, NULL);
 				// Advance to next path state
 				oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-					cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
+					cl::NDRange(renderEngine->taskCount), cl::NDRange(advancePathsWorkGroupSize));
 			}
 
-			oclQueue.finish();
-			double frameTime = PreciseClockTime() - startTime;
-			balanceMutex.lock();
-			double endTime = PreciseClockTime();
-			balanceMutex.lock();
-			frameTime = endTime - startTime;
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(*frameBufferBuff, CL_FALSE, 0,
 				frameBufferBuff->getInfo<CL_MEM_SIZE>(), frameBuffer);
@@ -200,12 +196,16 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			}
 			// Async. transfer of GPU task statistics
 			oclQueue.enqueueReadBuffer(*(taskStatsBuff), CL_FALSE, 0,
-				sizeof(slg::ocl::GPUTaskStats) * taskCount, gpuTaskStats);
+				sizeof(slg::ocl::GPUTaskStats) * renderEngine->taskCount, gpuTaskStats);
 
 			oclQueue.finish();
-			balanceMutex.unlock();
+			const double endTime = PreciseClockTime();
+
+			frameTime = endTime - startTime;
 			frameBarrier->wait();
-			//iterations = 1;
+			// Main thread re-balance each assigned iterations to each task and
+			// merge all frame buffers
+			frameBarrier->wait();
 		}
 		//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
@@ -215,15 +215,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				"(" << luxrays::utils::oclErrorString(err.err()) << ")");
 	}
 	oclQueue.finish();
-}
-
-void RTPathOCLRenderThread::SetAssignedTaskCount(u_int taskCount)
-{
-	if (taskCount > renderEngine->taskCount)
-		taskCount = renderEngine->taskCount;
-	if (taskCount < advancePathsWorkGroupSize)
-		taskCount = advancePathsWorkGroupSize;
-	assignedTaskCount = taskCount/advancePathsWorkGroupSize*advancePathsWorkGroupSize;
 }
 
 }
