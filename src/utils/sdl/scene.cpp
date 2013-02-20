@@ -352,6 +352,8 @@ void Scene::UpdateMaterial(const std::string &name, const std::string &propsStri
 }
 
 void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
+	//SDL_LOG("Updating material " << name << " with:\n" << props.ToString());
+
 	// Look for old material
 	Material *oldMat = matDefs.GetMaterial(name);
 	const bool wasLightSource = oldMat->IsLightSource();

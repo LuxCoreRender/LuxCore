@@ -1111,7 +1111,8 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	}
 
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
-		// Update Scene Materials
+		// Update Scene Textures and Materials
+		InitTextures();
 		InitMaterials();
 	}
 
