@@ -45,38 +45,37 @@ PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	return new RTPathOCLRenderThread(index, device, this);
 }
 
-bool RTPathOCLRenderEngine::WaitNewFrame()
-{
+bool RTPathOCLRenderEngine::WaitNewFrame() {
+	// Re-balance threads
 	frameBarrier->wait();
-	// re-balance threads
-	double minSampleTime = 1000;
-	size_t fatest_dev = 0;
+
+	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
+	const double targetFrameTime = renderConfig->GetScreenRefreshInterval() / 1000.0;
+	const u_int minIteration = renderConfig->GetMinIterationsToShow();
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
-		t->balance_lock();
-		const double sampleTime = t->GetFrameTime() * taskCount / t->GetAssignedTaskCount();
-		if (minSampleTime > sampleTime) {
-			minSampleTime = sampleTime;
-			fatest_dev = i;
+		if (t->GetFrameTime() > 0.0) {
+			//const double iterationSec = t->GetAssignedIterations() / t->GetFrameTime();
+			//const double frameTime = t->GetFrameTime() * 1000.0;
+			//SLG_LOG("[RTPathOCLRenderEngine] Device " << i << ":");
+			//SLG_LOG("[RTPathOCLRenderEngine]   " << iterationSec << " iterations/sec");
+			//SLG_LOG("[RTPathOCLRenderEngine]   " << frameTime << " msec");
+
+			// Check how far I'm from target frame rate
+			if (t->GetFrameTime() < targetFrameTime) {
+				// Too fast, increase the number of iterations
+				t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIteration));
+			} else {
+				// Too slow, decrease the number of iterations
+				t->SetAssignedIterations(Max(t->GetAssignedIterations() - 1, minIteration));
+			}
+
+			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " iterations");
 		}
 	}
-	//printf("balance:");
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
-		if (i == fatest_dev) {
-			t->SetAssignedTaskCount(taskCount);
-			//printf(" %d(%.3f)", t->GetAssignedTaskCount(), t->GetFrameTime());
-			continue;
-			}
-			double sampleTime = t->GetFrameTime() * taskCount / t->GetAssignedTaskCount();
-			t->SetAssignedTaskCount(taskCount * minSampleTime / sampleTime);
-		//printf(" %d(%.3f)", t->GetAssignedTaskCount(), t->GetFrameTime());
-	}
-	//printf("\n");
 
 	UpdateFilm();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		((RTPathOCLRenderThread *)renderThreads[i])->balance_unlock();
+	frameBarrier->wait();
 
 	return true;
 }

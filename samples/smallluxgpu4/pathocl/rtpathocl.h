@@ -31,7 +31,7 @@ namespace slg {
 class RTPathOCLRenderEngine;
 
 //------------------------------------------------------------------------------
-// Path Tracing GPU-only render threads
+// Real-Time Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
 class RTPathOCLRenderThread : public PathOCLRenderThread {
@@ -45,27 +45,22 @@ public:
 
 	void BeginEdit();
 	void EndEdit(const EditActionList &editActions);
-	void SetAssignedTaskCount(u_int taskCount);
-	u_int GetAssignedTaskCount() const { return assignedTaskCount; };
-	double GetFrameTime() const { return frameTime; };
+	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
+	u_int GetAssignedIterations() const { return assignedIters; }
+	double GetFrameTime() const { return frameTime; }
 
 private:
-	void UpdateOclBuffers();
+	void UpdateOCLBuffers();
 	void RenderThreadImpl();
 
-	void balance_lock()   { balanceMutex.lock(); };
-	void balance_unlock() { balanceMutex.unlock(); };
-
 	boost::mutex editMutex;
-	boost::mutex balanceMutex;
-	boost::barrier *frameBarrier;
 	EditActionList updateActions;
 	volatile double frameTime;
-	volatile u_int assignedTaskCount;
+	volatile u_int assignedIters;
 };
 
 //------------------------------------------------------------------------------
-// Path Tracing 100% OpenCL render engine
+// Real-Time Path Tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
 class RTPathOCLRenderEngine : public PathOCLRenderEngine {
