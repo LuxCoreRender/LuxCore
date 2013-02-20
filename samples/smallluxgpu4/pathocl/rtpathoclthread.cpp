@@ -186,7 +186,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			oclQueue.finish();
 			double frameTime = PreciseClockTime() - startTime;
 			balanceMutex.lock();
-			frameTime = frameTime;
+			double endTime = PreciseClockTime();
+			balanceMutex.lock();
+			frameTime = endTime - startTime;
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(*frameBufferBuff, CL_FALSE, 0,
 				frameBufferBuff->getInfo<CL_MEM_SIZE>(), frameBuffer);
