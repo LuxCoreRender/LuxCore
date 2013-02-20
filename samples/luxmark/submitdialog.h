@@ -28,7 +28,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 
-#include "smalllux.h"
+#include "slgdefs.h"
 #include "hardwaretree.h"
 #include "ui_submitdialog.h"
 

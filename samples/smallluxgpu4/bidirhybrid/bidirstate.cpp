@@ -19,7 +19,7 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "smalllux.h"
+#include "smallluxgpu.h"
 #include "renderconfig.h"
 #include "bidirhybrid/bidirhybrid.h"
 
