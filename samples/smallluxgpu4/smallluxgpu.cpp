@@ -37,13 +37,11 @@
 #include "luxrays/core/device.h"
 #include "luxrays/opencl/utils.h"
 
-#include "smalllux.h"
+#include "smallluxgpu.h"
 #include "displayfunc.h"
 #include "rendersession.h"
 #include "filesaver/filesaver.h"
 #include "telnet.h"
-
-string SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
 
 RenderSession *session = NULL;
 

@@ -28,10 +28,10 @@
 
 #include "mainwindow.h"
 #include "aboutdialog.h"
-#include "smalllux.h"
+#include "slgdefs.h"
 #include "renderconfig.h"
 #include "luxmarkapp.h"
-#include "smalllux.h"
+#include "slgdefs.h"
 
 MainWindow *LogWindow = NULL;
 
@@ -50,8 +50,8 @@ void DebugHandler(const char *msg) {
 	LM_LOG_LUXRAYS(msg);
 }
 
-void SDLDebugHandler(const char *msg) {
-	LM_LOG_SDL(msg);
+void SLGDebugHandler(const char *msg) {
+	LM_LOG_SLG(msg);
 }
 
 //------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	luxFrameBuffer = new LuxFrameBuffer(QPixmap(":/images/resources/luxlogo_bg.png"));
 	renderScene->addItem(luxFrameBuffer);
 
-	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG2 by Michael \"neo2068\" Klemm"));
+	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG by Michael \"neo2068\" Klemm"));
 	renderScene->addItem(authorLabelBack);
 	authorLabelBack->setBrush(Qt::black);
 	authorLabel = new QGraphicsSimpleTextItem(authorLabelBack->text());
@@ -178,7 +178,7 @@ void MainWindow::setRoomScene() {
 
 void MainWindow::setSalaScene() {
 	LM_LOG("Set Sala scene");
-	authorLabelBack->setText(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG2 by Michael \"neo2068\" Klemm"));
+	authorLabelBack->setText(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG by Michael \"neo2068\" Klemm"));
 	authorLabel->setText(authorLabelBack->text());
 	((LuxMarkApp *)qApp)->SetScene(SCENE_SALA);
 }

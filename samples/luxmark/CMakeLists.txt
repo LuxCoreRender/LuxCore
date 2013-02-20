@@ -19,8 +19,8 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 
-set(LUXMARK_VERSION_MAJOR 2)
-set(LUXMARK_VERSION_MINOR 1beta2)
+set(LUXMARK_VERSION_MAJOR 3)
+set(LUXMARK_VERSION_MINOR 0devel)
 
 find_package(Qt4 REQUIRED)
 IF(QT4_FOUND)
@@ -37,40 +37,6 @@ configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/luxmarkcfg.h.in"
   "${CMAKE_CURRENT_SOURCE_DIR}/luxmarkcfg.h"
   )
-
-###########################################################################
-#
-# Generate kernel files
-#
-###########################################################################
-
-#
-# PathOCL kernel
-#
-SET(KERNELS kernel_core kernel_datatypes kernel_filters kernel_samplers kernel_scene kernels)
-FOREACH(kernel ${KERNELS})
-	STRING(TOLOWER ${kernel} kernel_lowercase)
-
-	IF(WIN32)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo "#include \"slg2/pathocl/kernels/kernels.h\"" > ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo std::string luxrays::KernelSource_PathOCL_${kernel} = >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND for /F \"usebackq tokens=*\" %%a in (${CMAKE_CURRENT_SOURCE_DIR}\\slg2\\pathocl\\kernels\\pathocl_${kernel_lowercase}.cl) do echo \"%%a\\n\" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo ";" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cl
-		)
-	ELSE(WIN32)
-		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo \"\#include \\"pathocl/kernels/kernels.h\\"\" > ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo "std::string luxrays::KernelSource_PathOCL_${kernel} = " >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND cat slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cl | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			COMMAND echo "\;" >> ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cpp
-			MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/slg2/pathocl/kernels/pathocl_${kernel_lowercase}.cl
-		)
-	ENDIF(WIN32)
-ENDFOREACH(kernel)
 
 #############################################################################
 #
@@ -89,21 +55,6 @@ set(LUXMARK_SRCS
 	mainwindow.cpp
     resultdialog.cpp
 	submitdialog.cpp
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#!!! Files copied from SLG, do not edit the files !!!
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	slg2/renderconfig.cpp
-	slg2/renderengine.cpp
-	slg2/rendersession.cpp
-	slg2/pathocl/kernels/pathocl_kernel_core.cpp
-	slg2/pathocl/kernels/pathocl_kernel_datatypes.cpp
-	slg2/pathocl/kernels/pathocl_kernel_filters.cpp
-	slg2/pathocl/kernels/pathocl_kernel_samplers.cpp
-	slg2/pathocl/kernels/pathocl_kernel_scene.cpp
-	slg2/pathocl/kernels/pathocl_kernels.cpp
-	slg2/pathocl/compiledscene.cpp
-	slg2/pathocl/pathocl.cpp
-	slg2/pathocl/renderthread.cpp
 	)
 set(LUXMARK_MOC
 	aboutdialog.h
@@ -129,7 +80,7 @@ QT4_WRAP_CPP(LUXMARK_MOC_SRCS ${LUXMARK_MOC})
 
 include_directories(${LUXRAYS_INCLUDE_DIR})
 include_directories(".")
-include_directories("slg2")
+include_directories("../smallluxgpu4")
 link_directories (${LUXRAYS_LIB_DIR})
 
 set(LUXMARK_SRCS
@@ -164,7 +115,7 @@ ENDIF(APPLE)
 
 IF(APPLE)
 	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
-	target_link_libraries(LuxMark luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+	target_link_libraries(LuxMark smallluxgpu4 luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 	set_target_properties(LuxMark PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/osx-bundle/Info.plist)
 	ADD_CUSTOM_COMMAND(
 			TARGET LuxMark POST_BUILD
@@ -177,7 +128,7 @@ ELSE(APPLE)
 
 	ADD_EXECUTABLE(luxmark ${LUXMARK_SRCS})
 
-	TARGET_LINK_LIBRARIES(luxmark luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+	TARGET_LINK_LIBRARIES(luxmark smallluxgpu4 luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 	
 	# This instructs FREEGLUT to emit a pragma for the static version
 	SET_TARGET_PROPERTIES(luxmark PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)

@@ -27,8 +27,8 @@
 
 #include <boost/thread.hpp>
 
+#include "slgdefs.h"
 #include "mainwindow.h"
-#include "rendersession.h"
 #include "hardwaretree.h"
 
 //------------------------------------------------------------------------------
