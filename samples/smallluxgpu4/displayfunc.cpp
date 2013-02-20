@@ -351,16 +351,20 @@ void keyFunc(unsigned char key, int x, int y) {
 			const u_int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
 			if (screenRefreshInterval > 1000)
 				session->renderConfig->SetScreenRefreshInterval(max(1000u, screenRefreshInterval - 1000));
-			else
+			else if (screenRefreshInterval > 100)
 				session->renderConfig->SetScreenRefreshInterval(max(50u, screenRefreshInterval - 50));
+			else
+				session->renderConfig->SetScreenRefreshInterval(max(10u, screenRefreshInterval - 10));
 			break;
 		}
 		case 'm': {
 			const u_int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
 			if (screenRefreshInterval >= 1000)
 				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 1000);
-			else
+			else if (screenRefreshInterval >= 100)
 				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 50);
+			else
+				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 10);
 			break;
 		}
 		case 't':
