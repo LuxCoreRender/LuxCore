@@ -24,7 +24,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "smalllux.h"
+#include "smallluxgpu.h"
 
 namespace slg { namespace ocl {
 #include "kernels/datatypes.cl"
