@@ -47,6 +47,7 @@ PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
 
 bool RTPathOCLRenderEngine::WaitNewFrame() {
 	// Re-balance threads
+	const double startTime = WallClockTime();
 	frameBarrier->wait();
 
 	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
@@ -55,11 +56,9 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
 		if (t->GetFrameTime() > 0.0) {
-			//const double iterationSec = t->GetAssignedIterations() / t->GetFrameTime();
-			//const double frameTime = t->GetFrameTime() * 1000.0;
 			//SLG_LOG("[RTPathOCLRenderEngine] Device " << i << ":");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << iterationSec << " iterations/sec");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << frameTime << " msec");
+			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() / t->GetFrameTime() << " iterations/sec");
+			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetFrameTime() * 1000.0 << " msec");
 
 			// Check how far I'm from target frame rate
 			if (t->GetFrameTime() < targetFrameTime) {
@@ -76,6 +75,8 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 
 	UpdateFilm();
 	frameBarrier->wait();
+
+	frameTime = WallClockTime() - startTime;
 
 	return true;
 }

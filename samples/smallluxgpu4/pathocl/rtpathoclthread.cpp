@@ -199,9 +199,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				sizeof(slg::ocl::GPUTaskStats) * renderEngine->taskCount, gpuTaskStats);
 
 			oclQueue.finish();
-			const double endTime = PreciseClockTime();
-
-			frameTime = endTime - startTime;
+			frameTime = PreciseClockTime() - startTime;
 			frameBarrier->wait();
 			// Main thread re-balance each assigned iterations to each task and
 			// merge all frame buffers

@@ -42,6 +42,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/film/film.h"
+#include "pathocl/rtpathocl.h"
 
 bool OSDPrintHelp = false;
 bool RealtimeMode = false;
@@ -120,9 +121,15 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms]",
-			int(session->renderEngine->GetRenderingTime()),
-			session->renderConfig->GetScreenRefreshInterval());
+	if (dynamic_cast<RTPathOCLRenderEngine *>(session->renderEngine))
+		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms]",
+				int(session->renderEngine->GetRenderingTime()),
+				int(((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime() * 1000.0),
+				session->renderConfig->GetScreenRefreshInterval());
+	else
+		sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms]",
+				int(session->renderEngine->GetRenderingTime()),
+				session->renderConfig->GetScreenRefreshInterval());
 	PrintString(GLUT_BITMAP_8_BY_13, buf);
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);

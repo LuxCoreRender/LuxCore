@@ -70,6 +70,8 @@ public:
 	virtual ~RTPathOCLRenderEngine();
 
 	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
+	double GetFrameTime() const { return frameTime; }
+
 	bool WaitNewFrame();
 
 protected:
@@ -77,6 +79,7 @@ protected:
 		OpenCLIntersectionDevice *device);
 
 	boost::barrier *frameBarrier;
+	double frameTime;
 };
 
 }
