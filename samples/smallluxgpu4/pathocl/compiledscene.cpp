@@ -297,6 +297,7 @@ void CompiledScene::CompileMaterials() {
 	for (u_int i = 0; i < materialsCount; ++i) {
 		Material *m = scene->matDefs.GetMaterial(i);
 		luxrays::ocl::Material *mat = &mats[i];
+		//SLG_LOG("[PathOCLRenderThread::CompiledScene]  Type: " << m->GetType());
 
 		// Material emission
 		const Texture *emitTex = m->GetEmitTexture();
