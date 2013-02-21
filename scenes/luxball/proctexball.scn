@@ -27,7 +27,7 @@ scene.textures.tex.mortartex = 1.0 1.0 1.0
 scene.textures.tex.brickmodtex = 1.0 1.0 1.0
 scene.textures.tex.brickbond = herringbone
 scene.textures.tex.mapping.type = uvmapping3d
-scene.textures.tex.mapping.uvscale = 10.0 10.0
+scene.textures.tex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.01 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
 ################################################################################
 scene.textures.stex.type = scale
 scene.textures.stex.texture1 = 0.65

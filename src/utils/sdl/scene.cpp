@@ -657,9 +657,6 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const std::string &prefixName, c
 	const std::string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping3d").at(0);
 
 	if (mapType == "uvmapping3d") {
-		const std::vector<float> uvScale = GetFloatParameters(props, prefixName + ".uvscale", 2, "1.0 1.0");
-		const std::vector<float> uvDelta = GetFloatParameters(props, prefixName + ".uvdelta", 2, "0.0 0.0");
-
 		const std::vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
@@ -668,7 +665,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const std::string &prefixName, c
 				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
 		const Transform trans(mat);
 
-		return new UVMapping3D(trans, uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1));
+		return new UVMapping3D(trans);
 	} else if (mapType == "globalmapping3d") {
 		const std::vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(

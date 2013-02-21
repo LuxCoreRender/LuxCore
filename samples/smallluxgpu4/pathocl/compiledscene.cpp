@@ -510,10 +510,6 @@ void CompiledScene::CompileTextureMapping3D(luxrays::ocl::TextureMapping3D *mapp
 		case UVMAPPING3D: {
 			mapping->type = luxrays::ocl::UVMAPPING3D;
 			const UVMapping3D *uvm = static_cast<const UVMapping3D *>(m);
-			mapping->uvMapping3D.uScale = uvm->uScale;
-			mapping->uvMapping3D.vScale = uvm->vScale;
-			mapping->uvMapping3D.uDelta = uvm->uDelta;
-			mapping->uvMapping3D.vDelta = uvm->vDelta;
 			memcpy(&mapping->worldToLocal.m, &uvm->worldToLocal.m, sizeof(float[4][4]));
 			memcpy(&mapping->worldToLocal.mInv, &uvm->worldToLocal.mInv, sizeof(float[4][4]));
 			break;

@@ -50,14 +50,10 @@ typedef enum {
 } TextureMapping3DType;
 
 typedef struct {
-    float uScale, vScale, uDelta, vDelta;
-} UVMapping3DParam;
-
-typedef struct {
 	TextureMapping3DType type;
 	Transform worldToLocal;
-	union {
-		UVMapping3DParam uvMapping3D;
+	//union {
+		// UVMapping3D has no parameters
 		// GlobalMapping3D has no parameters
-	};
+	//};
 } TextureMapping3D;
