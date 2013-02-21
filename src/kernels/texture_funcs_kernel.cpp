@@ -604,7 +604,7 @@ std::string KernelSource_texture_funcs =
 "\n"
 "void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,\n"
 "		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {\n"
-"	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitpoint);\n"
+"	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);\n"
 "\n"
 "	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);\n"
 "}\n"

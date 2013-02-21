@@ -601,7 +601,7 @@ void FBMTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitP
 
 void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitpoint);
+	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
 }
