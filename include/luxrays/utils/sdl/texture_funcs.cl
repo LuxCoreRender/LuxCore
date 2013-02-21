@@ -526,7 +526,6 @@ void CheckerBoard3DTexture_EvaluateFloat(__global Texture *texture, __global Hit
 	const float value1 = texValues[--(*texValuesSize)];
 	const float value2 = texValues[--(*texValuesSize)];
 
-	const float3 p = VLOAD3F(&hitPoint->p.x);
 	const float3 mapP = TextureMapping3D_Map(&texture->checkerBoard3D.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
@@ -537,7 +536,6 @@ void CheckerBoard3DTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	const float3 value1 = texValues[--(*texValuesSize)];
 	const float3 value2 = texValues[--(*texValuesSize)];
 
-	const float3 p = VLOAD3F(&hitPoint->p.x);
 	const float3 mapP = TextureMapping3D_Map(&texture->checkerBoard3D.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
@@ -596,7 +594,6 @@ void MixTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPo
 
 void FBMTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 p = VLOAD3F(&hitPoint->p.x);
 	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
@@ -604,7 +601,6 @@ void FBMTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitP
 
 void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 p = VLOAD3F(&hitPoint->p.x);
 	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitpoint);
 
 	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
@@ -637,7 +633,6 @@ __constant float MarbleTexture_c[9][3] = {
 };
 
 float3 MarbleTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint) {
-	const float3 p = VLOAD3F(&hitPoint->p.x);
 	const float3 P = texture->marble.scale * TextureMapping3D_Map(&texture->marble.mapping, hitPoint);
 
 	float marble = P.y + texture->marble.variation * FBm(P, texture->marble.omega, texture->marble.octaves);
@@ -785,6 +780,204 @@ void DotsTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitP
 #endif
 
 //------------------------------------------------------------------------------
+// Brick texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_BRICK)
+
+bool BrickTexture_RunningAlternate(__global Texture *texture, const float3 p, float3 *i, float3 *b,
+		int nWhole) {
+	const float run = texture->brick.run;
+	const float mortarwidth = texture->brick.mortarwidth;
+	const float mortarheight = texture->brick.mortarheight;
+	const float mortardepth = texture->brick.mortardepth;
+
+	const float sub = nWhole + 0.5f;
+	const float rsub = ceil(sub);
+	(*i).z = floor(p.z);
+	(*b).x = (p.x + (*i).z * run) / sub;
+	(*b).y = (p.y + (*i).z * run) / sub;
+	(*i).x = floor((*b).x);
+	(*i).y = floor((*b).y);
+	(*b).x = ((*b).x - (*i).x) * sub;
+	(*b).y = ((*b).y - (*i).y) * sub;
+	(*b).z = (p.z - (*i).z) * sub;
+	(*i).x += floor((*b).x) / rsub;
+	(*i).y += floor((*b).y) / rsub;
+	(*b).x -= floor((*b).x);
+	(*b).y -= floor((*b).y);
+	return (*b).z > mortarheight && (*b).y > mortardepth &&
+		(*b).x > mortarwidth;
+}
+
+bool BrickTexture_Basket(__global Texture *texture, const float3 p, float3 *i) {
+	const float mortarwidth = texture->brick.mortarwidth;
+	const float mortardepth = texture->brick.mortardepth;
+	const float proportion = texture->brick.proportion;
+	const float invproportion = texture->brick.invproportion;
+
+	(*i).x = floor(p.x);
+	(*i).y = floor(p.y);
+	float bx = p.x - (*i).x;
+	float by = p.y - (*i).y;
+	(*i).x += (*i).y - 2.f * floor(0.5f * (*i).y);
+	const bool split = ((*i).x - 2.f * floor(0.5f * (*i).x)) < 1.f;
+	if (split) {
+		bx = fmod(bx, invproportion);
+		(*i).x = floor(proportion * p.x) * invproportion;
+	} else {
+		by = fmod(by, invproportion);
+		(*i).y = floor(proportion * p.y) * invproportion;
+	}
+	return by > mortardepth && bx > mortarwidth;
+}
+
+bool BrickTexture_Herringbone(__global Texture *texture, const float3 p, float3 *i) {
+	const float mortarwidth = texture->brick.mortarwidth;
+	const float mortarheight = texture->brick.mortarheight;
+	const float proportion = texture->brick.proportion;
+	const float invproportion = texture->brick.invproportion;
+
+	(*i).y = floor(proportion * p.y);
+	const float px = p.x + (*i).y * invproportion;
+	(*i).x = floor(px);
+	float bx = 0.5f * px - floor(px * 0.5f);
+	bx *= 2.f;
+	float by = proportion * p.y - floor(proportion * p.y);
+	by *= invproportion;
+	if (bx > 1.f + invproportion) {
+		bx = proportion * (bx - 1.f);
+		(*i).y -= floor(bx - 1.f);
+		bx -= floor(bx);
+		bx *= invproportion;
+		by = 1.f;
+	} else if (bx > 1.f) {
+		bx = proportion * (bx - 1.f);
+		(*i).y -= floor(bx - 1.f);
+		bx -= floor(bx);
+		bx *= invproportion;
+	}
+	return by > mortarheight && bx > mortarwidth;
+}
+
+bool BrickTexture_Running(__global Texture *texture, const float3 p, float3 *i, float3 *b) {
+	const float run = texture->brick.run;
+	const float mortarwidth = texture->brick.mortarwidth;
+	const float mortarheight = texture->brick.mortarheight;
+	const float mortardepth = texture->brick.mortardepth;
+
+	(*i).z = floor(p.z);
+	(*b).x = p.x + (*i).z * run;
+	(*b).y = p.y - (*i).z * run;
+	(*i).x = floor((*b).x);
+	(*i).y = floor((*b).y);
+	(*b).z = p.z - (*i).z;
+	(*b).x -= (*i).x;
+	(*b).y -= (*i).y;
+	return (*b).z > mortarheight && (*b).y > mortardepth &&
+		(*b).x > mortarwidth;
+}
+
+bool BrickTexture_English(__global Texture *texture, const float3 p, float3 *i, float3 *b) {
+	const float run = texture->brick.run;
+	const float mortarwidth = texture->brick.mortarwidth;
+	const float mortarheight = texture->brick.mortarheight;
+	const float mortardepth = texture->brick.mortardepth;
+
+	(*i).z = floor(p.z);
+	(*b).x = p.x + (*i).z * run;
+	(*b).y = p.y - (*i).z * run;
+	(*i).x = floor((*b).x);
+	(*i).y = floor((*b).y);
+	(*b).z = p.z - (*i).z;
+	const float divider = floor(fmod(fabs((*i).z), 2.f)) + 1.f;
+	(*b).x = (divider * (*b).x - floor(divider * (*b).x)) / divider;
+	(*b).y = (divider * (*b).y - floor(divider * (*b).y)) / divider;
+	return (*b).z > mortarheight && (*b).y > mortardepth &&
+		(*b).x > mortarwidth;
+}
+
+bool BrickTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint) {
+#define BRICK_EPSILON 1e-3f
+	const float3 P = TextureMapping3D_Map(&texture->brick.mapping, hitPoint);
+
+	const float offs = BRICK_EPSILON + texture->brick.mortarsize;
+	float3 bP = P + (float3)(offs, offs, offs);
+
+	// Normalize coordinates according brick dimensions
+	bP.x /= texture->brick.brickwidth;
+	bP.y /= texture->brick.brickdepth;
+	bP.z /= texture->brick.brickheight;
+
+	bP += VLOAD3F(&texture->brick.offsetx);
+
+	float3 brickIndex;
+	float3 bevel;
+	bool b;
+	switch (texture->brick.bond) {
+		case FLEMISH:
+			b = BrickTexture_RunningAlternate(texture, bP, &brickIndex, &bevel, 1);
+			break;
+		case RUNNING:
+			b = BrickTexture_Running(texture, bP, &brickIndex, &bevel);
+			break;
+		case ENGLISH:
+			b = BrickTexture_English(texture, bP, &brickIndex, &bevel);
+			break;
+		case HERRINGBONE:
+			b = BrickTexture_Herringbone(texture, bP, &brickIndex);
+			break;
+		case BASKET:
+			b = BrickTexture_Basket(texture, bP, &brickIndex);
+			break;
+		case KETTING:
+			b = BrickTexture_RunningAlternate(texture, bP, &brickIndex, &bevel, 2);
+			break; 
+		default:
+			b = true;
+			break;
+	}
+
+	return b;
+#undef BRICK_EPSILON
+}
+
+void BrickTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+	const float value3 = texValues[--(*texValuesSize)];
+
+	if (BrickTexture_Evaluate(texture, hitPoint))
+		texValues[(*texValuesSize)++] = value1 * value3;
+	else
+		texValues[(*texValuesSize)++] = value2;
+}
+
+void BrickTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
+	const float3 value3 = texValues[--(*texValuesSize)];
+
+	if (BrickTexture_Evaluate(texture, hitPoint))
+		texValues[(*texValuesSize)++] = value1 * value3;
+	else
+		texValues[(*texValuesSize)++] = value2;
+}
+
+void BrickTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 dudv1 = texValues[--(*texValuesSize)];
+	const float2 dudv2 = texValues[--(*texValuesSize)];
+	const float2 dudv3 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = fmax(fmax(dudv1, dudv2), dudv3);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -832,6 +1025,13 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->dots.insideIndex];
 			todoTex[(*todoTexSize)++] = &texs[texture->dots.outsideIndex];
 			return 2;
+#endif
+#if defined(PARAM_ENABLE_BRICK)
+		case BRICK:
+			todoTex[(*todoTexSize)++] = &texs[texture->brick.tex1Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->brick.tex2Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->brick.tex3Index];
+			return 3;
 #endif
 #if defined (PARAM_ENABLE_MARBLE)
 		case MARBLE:
@@ -920,6 +1120,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined (PARAM_ENABLE_DOTS)
 		case DOTS:
 			DotsTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_BRICK)
+		case BRICK:
+			BrickTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1045,6 +1250,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			DotsTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined (PARAM_ENABLE_BRICK)
+		case BRICK:
+			BrickTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1165,6 +1375,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined (PARAM_ENABLE_DOTS)
 		case DOTS:
 			DotsTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_BRICK)
+		case BRICK:
+			BrickTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

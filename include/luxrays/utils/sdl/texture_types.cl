@@ -27,7 +27,7 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK
 } TextureType;
 
 typedef struct {
@@ -93,6 +93,22 @@ typedef struct {
 	unsigned int insideIndex, outsideIndex;
 } DotsTexParam;
 
+typedef enum {
+	FLEMISH, RUNNING, ENGLISH, HERRINGBONE, BASKET, KETTING
+} MasonryBond;
+
+typedef struct {
+	TextureMapping3D mapping;
+	unsigned int tex1Index, tex2Index, tex3Index;
+	MasonryBond bond;
+	float offsetx, offsety, offsetz;
+	float brickwidth, brickheight, brickdepth, mortarsize;
+	float proportion, invproportion, run;
+	float mortarwidth, mortarheight, mortardepth;
+	float bevelwidth, bevelheight, beveldepth;
+	int usebevel;
+} BrickTexParam;
+
 typedef struct {
 	TextureType type;
 	union {
@@ -108,6 +124,7 @@ typedef struct {
 		FBMTexParam fbm;
 		MarbleTexParam marble;
 		DotsTexParam dots;
+		BrickTexParam brick;
 	};
 } Texture;
 
