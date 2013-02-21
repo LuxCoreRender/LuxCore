@@ -36,21 +36,6 @@ typedef int BSDFEvent;
 #if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	Vector fixedDir;
-	Point p;
-	UV uv;
-	Normal geometryN;
-	Normal shadeN;
-#if defined(PARAM_HAS_PASSTHROUGH)
-	// passThroughEvent can be stored here in a path state even before to of
-	// BSDF initialization (while tracing the next path vertex ray)
-	float passThroughEvent;
-#endif
-} HitPoint;
-
-typedef struct {
 	HitPoint hitPoint;
 
 	unsigned int materialIndex;

@@ -1,4 +1,4 @@
-#line 2 "mapping_types.cl"
+#line 2 "hitpoint_types.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
@@ -21,43 +21,22 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// TextureMapping2D
-//------------------------------------------------------------------------------
-
-typedef enum {
-	UVMAPPING2D
-} TextureMapping2DType;
+// This is defined only under OpenCL because of variable size structures
+#if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
-    float uScale, vScale, uDelta, vDelta;
-} UVMappingParam;
+	// The incoming direction. It is the eyeDir when fromLight = false and
+	// lightDir when fromLight = true
+	Vector fixedDir;
+	Point p;
+	UV uv;
+	Normal geometryN;
+	Normal shadeN;
+#if defined(PARAM_HAS_PASSTHROUGH)
+	// passThroughEvent can be stored here in a path state even before of
+	// BSDF initialization (while tracing the next path vertex ray)
+	float passThroughEvent;
+#endif
+} HitPoint;
 
-
-typedef struct {
-	TextureMapping2DType type;
-	union {
-		UVMappingParam uvMapping2D;
-	};
-} TextureMapping2D;
-
-//------------------------------------------------------------------------------
-// TextureMapping3D
-//------------------------------------------------------------------------------
-
-typedef enum {
-	UVMAPPING3D, GLOBALMAPPING3D
-} TextureMapping3DType;
-
-typedef struct {
-    float uScale, vScale, uDelta, vDelta;
-} UVMapping3DParam;
-
-typedef struct {
-	TextureMapping3DType type;
-	Transform worldToLocal;
-	union {
-		UVMapping3DParam uvMapping3D;
-		// GlobalMapping3D has no parameters
-	};
-} TextureMapping3D;
+#endif

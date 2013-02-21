@@ -568,7 +568,7 @@ Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) co
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping *mp, const float g) :
+ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping2D *mp, const float g) :
 	imgMap(im), mapping(mp), gain(g) {
 	const UV o = mapping->Map(UV(0.f, 0.f));
 	const UV i = mapping->Map(UV(imgMap->GetWidth(), imgMap->GetHeight()));
@@ -579,11 +579,11 @@ ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping *mp, 
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetFloat(mapping->Map(hitPoint.uv));
+	return gain * imgMap->GetFloat(mapping->Map(hitPoint));
 }
 
 Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetSpectrum(mapping->Map(hitPoint.uv));
+	return gain * imgMap->GetSpectrum(mapping->Map(hitPoint));
 }
 
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -711,7 +711,7 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache)
 //------------------------------------------------------------------------------
 
 float CheckerBoard2DTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint.uv);
+	const UV uv = mapping->Map(hitPoint);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
 		return tex1->GetFloatValue(hitPoint);
 	else
@@ -719,7 +719,7 @@ float CheckerBoard2DTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum CheckerBoard2DTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint.uv);
+	const UV uv = mapping->Map(hitPoint);
 	if ((Floor2Int(uv.u) + Floor2Int(uv.v)) % 2 == 0)
 		return tex1->GetSpectrumValue(hitPoint);
 	else
@@ -746,7 +746,7 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache)
 }
 
 float CheckerBoard3DTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const Point p = mapping->Map(hitPoint.p);
+	const Point p = mapping->Map(hitPoint);
 	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
 		return tex1->GetFloatValue(hitPoint);
 	else
@@ -754,7 +754,7 @@ float CheckerBoard3DTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum CheckerBoard3DTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const Point p = mapping->Map(hitPoint.p);
+	const Point p = mapping->Map(hitPoint);
 	if ((Floor2Int(p.x) + Floor2Int(p.y) + Floor2Int(p.z)) % 2 == 0)
 		return tex1->GetSpectrumValue(hitPoint);
 	else
@@ -825,7 +825,7 @@ Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 //------------------------------------------------------------------------------
 
 float FBMTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const Point p(mapping->Map(hitPoint.p));
+	const Point p(mapping->Map(hitPoint));
 	const float value = FBm(p, omega, octaves);
 	
 	return value;
@@ -856,7 +856,7 @@ Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 //------------------------------------------------------------------------------
 
 Spectrum MarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	Point P(mapping->Map(hitPoint.p));
+	Point P(mapping->Map(hitPoint));
 	P *= scale;
 
 	float marble = P.y + variation * FBm(P, omega, octaves);
@@ -917,7 +917,7 @@ Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 //------------------------------------------------------------------------------
 
 float DotsTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint.uv);
+	const UV uv = mapping->Map(hitPoint);
 
 	const int sCell = Floor2Int(uv.u + .5f);
 	const int tCell = Floor2Int(uv.v + .5f);
@@ -938,7 +938,7 @@ float DotsTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum DotsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint.uv);
+	const UV uv = mapping->Map(hitPoint);
 
 	const int sCell = Floor2Int(uv.u + .5f);
 	const int tCell = Floor2Int(uv.v + .5f);
@@ -981,7 +981,7 @@ Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 // Brick texture
 //------------------------------------------------------------------------------
 
-BrickTexture::BrickTexture(const TextureMapping *mp, const Texture *t1,
+BrickTexture::BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 		const Texture *t2, const Texture *t3,
 		float brickw, float brickh, float brickd, float mortar,
 		float r, float bev, const std::string &b) :
@@ -1115,9 +1115,7 @@ bool BrickTexture::English(const Point &p, Point &i, Point &b) const {
 
 Spectrum BrickTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 #define BRICK_EPSILON 1e-3f
-	//const Point P(mapping->Map(hitPoint.p));
-	const UV uv = mapping->Map(hitPoint.uv);
-	const Point P(uv.u, uv.v, 0.f);
+	const Point P(mapping->Map(hitPoint));
 
 	const float offs = BRICK_EPSILON + mortarsize;
 	Point bP(P + Point(offs, offs, offs));

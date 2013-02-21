@@ -92,7 +92,8 @@ private:
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();
-	void CompileTextureMapping(luxrays::ocl::TextureMapping *mapping, const TextureMapping *m);
+	void CompileTextureMapping2D(luxrays::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
+	void CompileTextureMapping3D(luxrays::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileAreaLights();

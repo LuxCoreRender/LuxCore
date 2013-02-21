@@ -1,5 +1,3 @@
-#line 2 "mapping_types.cl"
-
 /***************************************************************************
  *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
  *                                                                         *
@@ -21,43 +19,33 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// TextureMapping2D
-//------------------------------------------------------------------------------
+#ifndef _LUXRAYS_SDL_HITPOINT_H
+#define	_LUXRAYS_SDL_HITPOINT_H
 
-typedef enum {
-	UVMAPPING2D
-} TextureMapping2DType;
+#include "luxrays/luxrays.h"
 
-typedef struct {
-    float uScale, vScale, uDelta, vDelta;
-} UVMappingParam;
+namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/utils/sdl/hitpoint_types.cl"
+}
 
-typedef struct {
-	TextureMapping2DType type;
-	union {
-		UVMappingParam uvMapping2D;
-	};
-} TextureMapping2D;
+namespace sdl {
 
-//------------------------------------------------------------------------------
-// TextureMapping3D
-//------------------------------------------------------------------------------
-
-typedef enum {
-	UVMAPPING3D, GLOBALMAPPING3D
-} TextureMapping3DType;
 
 typedef struct {
-    float uScale, vScale, uDelta, vDelta;
-} UVMapping3DParam;
+	// The incoming direction. It is the eyeDir when fromLight = false and
+	// lightDir when fromLight = true
+	Vector fixedDir;
+	Point p;
+	UV uv;
+	Normal geometryN;
+	Normal shadeN;
+	float passThroughEvent;
+	bool fromLight;
+} HitPoint;
 
-typedef struct {
-	TextureMapping3DType type;
-	Transform worldToLocal;
-	union {
-		UVMapping3DParam uvMapping3D;
-		// GlobalMapping3D has no parameters
-	};
-} TextureMapping3D;
+} }
+
+#endif	/* _LUXRAYS_SDL_HITPOINT_H */

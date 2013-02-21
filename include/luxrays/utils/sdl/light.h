@@ -120,14 +120,14 @@ public:
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 
 	const ImageMap *GetImageMap() const { return imageMap; }
-	UVMapping *GetUVMapping() { return &mapping; }
+	UVMapping2D *GetUVMapping() { return &mapping; }
 
 	virtual Spectrum GetRadiance(const Scene &scene, const Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 private:
 	const ImageMap *imageMap;
-	UVMapping mapping;
+	UVMapping2D mapping;
 };
 
 //------------------------------------------------------------------------------

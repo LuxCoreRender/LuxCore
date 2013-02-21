@@ -44,7 +44,7 @@ typedef struct {
 } ImageMap;
 
 typedef struct {
-	TextureMapping mapping;
+	TextureMapping2D mapping;
 	float gain, Du, Dv;
 
 	unsigned int imageMapIndex;
@@ -63,12 +63,12 @@ typedef struct {
 } FresnelApproxKTexParam;
 
 typedef struct {
-	TextureMapping mapping;
+	TextureMapping2D mapping;
 	unsigned int tex1Index, tex2Index;
 } CheckerBoard2DTexParam;
 
 typedef struct {
-	TextureMapping mapping;
+	TextureMapping3D mapping;
 	unsigned int tex1Index, tex2Index;
 } CheckerBoard3DTexParam;
 
@@ -77,19 +77,19 @@ typedef struct {
 } MixTexParam;
 
 typedef struct {
-	TextureMapping mapping;
+	TextureMapping3D mapping;
 	int octaves;
 	float omega;
 } FBMTexParam;
 
 typedef struct {
-	TextureMapping mapping;
+	TextureMapping3D mapping;
 	int octaves;
 	float omega, scale, variation;
 } MarbleTexParam;
 
 typedef struct {
-	TextureMapping mapping;
+	TextureMapping2D mapping;
 	unsigned int insideIndex, outsideIndex;
 } DotsTexParam;
 

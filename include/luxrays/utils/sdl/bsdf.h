@@ -29,6 +29,7 @@
 #include "luxrays/utils/sdl/bsdfevents.h"
 #include "luxrays/utils/sdl/material.h"
 #include "luxrays/utils/sdl/light.h"
+#include "luxrays/utils/sdl/hitpoint.h"
 
 namespace luxrays {
 
@@ -40,19 +41,6 @@ namespace ocl {
 namespace sdl {
 
 class Scene;
-
-struct HitPointStruct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	Vector fixedDir;
-	Point p;
-	UV uv;
-	Normal geometryN;
-	Normal shadeN;
-	float passThroughEvent;
-	bool fromLight;
-};
-typedef HitPointStruct HitPoint;
 
 class BSDF {
 public:

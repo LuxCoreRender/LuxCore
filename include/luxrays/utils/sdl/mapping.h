@@ -27,6 +27,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
+#include "luxrays/utils/sdl/hitpoint.h"
 
 namespace luxrays {
 
@@ -38,48 +39,95 @@ namespace ocl {
 namespace sdl {
 
 typedef enum {
-	UVMAPPING, GLOBALMAPPING3D
-} TextureMappingType;
+	UVMAPPING2D
+} TextureMapping2DType;
 
-class TextureMapping {
+class TextureMapping2D {
 public:
-	TextureMapping() { }
-	virtual ~TextureMapping() { }
+	TextureMapping2D() { }
+	virtual ~TextureMapping2D() { }
 
-	virtual TextureMappingType GetType() const = 0;
+	virtual TextureMapping2DType GetType() const = 0;
 
+	virtual UV Map(const HitPoint &hitPoint) const {
+		return Map(hitPoint.uv);
+	}
+	// Directly used only in InfiniteLight and ImageMapTexture
 	virtual UV Map(const UV &uv) const = 0;
-	virtual Point Map(const Point &p) const = 0;
 
 	virtual Properties ToProperties(const std::string &name) const = 0;
 };
 
+typedef enum {
+	UVMAPPING3D, GLOBALMAPPING3D
+} TextureMapping3DType;
+
+class TextureMapping3D {
+public:
+	TextureMapping3D(const Transform &w2l) : worldToLocal(w2l) { }
+	virtual ~TextureMapping3D() { }
+
+	virtual TextureMapping3DType GetType() const = 0;
+
+	virtual Point Map(const HitPoint &hitPoint) const = 0;
+
+	virtual Properties ToProperties(const std::string &name) const = 0;
+
+	Transform worldToLocal;
+};
+
 //------------------------------------------------------------------------------
-// UVMapping
+// UVMapping2D
 //------------------------------------------------------------------------------
 
-class UVMapping : public TextureMapping {
+class UVMapping2D : public TextureMapping2D {
 public:
-	UVMapping(const float uscale, const float vscale,
+	UVMapping2D(const float uscale, const float vscale,
 			const float udelta, const float vdelta) : uScale(uscale),
 			vScale(vscale), uDelta(udelta), vDelta(vdelta) { }
-	virtual ~UVMapping() { }
+	virtual ~UVMapping2D() { }
 
-	virtual TextureMappingType GetType() const { return UVMAPPING; }
+	virtual TextureMapping2DType GetType() const { return UVMAPPING2D; }
 
 	virtual UV Map(const UV &uv) const {
 		return UV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
 	}
 
-	virtual Point Map(const Point &p) const {
-		return Point(p.x * uScale + uDelta, p.x * vScale + vDelta, 0.f);
+	virtual Properties ToProperties(const std::string &name) const {
+		Properties props;
+		props.SetString(name + ".type", "uvmapping2d");
+		props.SetString(name + ".uvscale", ToString(uScale) + " " + ToString(vScale));
+		props.SetString(name + ".uvdelta", ToString(uDelta) + " " + ToString(vDelta));
+
+		return props;
+	}
+
+	float uScale, vScale, uDelta, vDelta;
+};
+
+//------------------------------------------------------------------------------
+// UVMapping3D
+//------------------------------------------------------------------------------
+
+class UVMapping3D : public TextureMapping3D {
+public:
+	UVMapping3D(const Transform &w2l, const float uscale, const float vscale,
+			const float udelta, const float vdelta) : TextureMapping3D(w2l), uScale(uscale),
+			vScale(vscale), uDelta(udelta), vDelta(vdelta) { }
+	virtual ~UVMapping3D() { }
+
+	virtual TextureMapping3DType GetType() const { return UVMAPPING3D; }
+
+	virtual Point Map(const HitPoint &hitPoint) const {
+		return worldToLocal * Point(hitPoint.uv.u * uScale + uDelta, hitPoint.uv.v * vScale + vDelta, 0.f);
 	}
 
 	virtual Properties ToProperties(const std::string &name) const {
 		Properties props;
-		props.SetString(name + ".type", "uvmapping");
+		props.SetString(name + ".type", "uvmapping3d");
 		props.SetString(name + ".uvscale", ToString(uScale) + " " + ToString(vScale));
 		props.SetString(name + ".uvdelta", ToString(uDelta) + " " + ToString(vDelta));
+		props.SetString(name + ".transformation", ToString(worldToLocal.mInv));
 
 		return props;
 	}
@@ -91,20 +139,15 @@ public:
 // GlobalMapping3D
 //------------------------------------------------------------------------------
 
-class GlobalMapping3D : public TextureMapping {
+class GlobalMapping3D : public TextureMapping3D {
 public:
-	GlobalMapping3D(const Transform &w2l) : worldToLocal(w2l) { }
+	GlobalMapping3D(const Transform &w2l) : TextureMapping3D(w2l) { }
 	virtual ~GlobalMapping3D() { }
 
-	virtual TextureMappingType GetType() const { return GLOBALMAPPING3D; }
+	virtual TextureMapping3DType GetType() const { return GLOBALMAPPING3D; }
 
-	virtual UV Map(const UV &uv) const {
-		const Point p = worldToLocal * Point(uv.u, uv.v, 0.f);
-		return UV(p.x, p.y);
-	}
-
-	virtual Point Map(const Point &p) const {
-		return worldToLocal * p;
+	virtual Point Map(const HitPoint &hitPoint) const {
+		return worldToLocal * hitPoint.p;
 	}
 
 	virtual Properties ToProperties(const std::string &name) const {
@@ -114,8 +157,6 @@ public:
 
 		return props;
 	}
-
-	Transform worldToLocal;
 };
 
 } }
