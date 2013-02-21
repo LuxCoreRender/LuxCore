@@ -327,7 +327,7 @@ void ImageMapTexture_EvaluateFloat(__global Texture *texture, __global HitPoint 
 		imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = Mapping_Map2D(&texture->imageMapTex.mapping, uv);
+	const float2 mapUV = TextureMapping2D_Map(&texture->imageMapTex.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetFloat(
 			pixels,
@@ -358,7 +358,7 @@ void ImageMapTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoi
 		imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = Mapping_Map2D(&texture->imageMapTex.mapping, uv);
+	const float2 mapUV = TextureMapping2D_Map(&texture->imageMapTex.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetSpectrum(
 			pixels,
@@ -493,7 +493,7 @@ void CheckerBoard2DTexture_EvaluateFloat(__global Texture *texture, __global Hit
 	const float value2 = texValues[--(*texValuesSize)];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
+	const float2 mapUV = TextureMapping2D_Map(&texture->checkerBoard2D.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
@@ -504,7 +504,7 @@ void CheckerBoard2DTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	const float3 value2 = texValues[--(*texValuesSize)];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = Mapping_Map2D(&texture->checkerBoard2D.mapping, uv);
+	const float2 mapUV = TextureMapping2D_Map(&texture->checkerBoard2D.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
@@ -527,7 +527,7 @@ void CheckerBoard3DTexture_EvaluateFloat(__global Texture *texture, __global Hit
 	const float value2 = texValues[--(*texValuesSize)];
 
 	const float3 p = VLOAD3F(&hitPoint->p.x);
-	const float3 mapP = Mapping_Map3D(&texture->checkerBoard3D.mapping, p);
+	const float3 mapP = TextureMapping3D_Map(&texture->checkerBoard3D.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }
@@ -538,7 +538,7 @@ void CheckerBoard3DTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	const float3 value2 = texValues[--(*texValuesSize)];
 
 	const float3 p = VLOAD3F(&hitPoint->p.x);
-	const float3 mapP = Mapping_Map3D(&texture->checkerBoard3D.mapping, p);
+	const float3 mapP = TextureMapping3D_Map(&texture->checkerBoard3D.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }
@@ -597,7 +597,7 @@ void MixTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPo
 void FBMTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 p = VLOAD3F(&hitPoint->p.x);
-	const float3 mapP = Mapping_Map3D(&texture->fbm.mapping, p);
+	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
 }
@@ -605,7 +605,7 @@ void FBMTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitP
 void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 p = VLOAD3F(&hitPoint->p.x);
-	const float3 mapP = Mapping_Map3D(&texture->fbm.mapping, p);
+	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitpoint);
 
 	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
 }
@@ -638,7 +638,7 @@ __constant float MarbleTexture_c[9][3] = {
 
 float3 MarbleTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint) {
 	const float3 p = VLOAD3F(&hitPoint->p.x);
-	const float3 P = texture->marble.scale * Mapping_Map3D(&texture->marble.mapping, p);
+	const float3 P = texture->marble.scale * TextureMapping3D_Map(&texture->marble.mapping, hitPoint);
 
 	float marble = P.y + texture->marble.variation * FBm(P, texture->marble.omega, texture->marble.octaves);
 	float t = .5f + .5f * sin(marble);
@@ -725,7 +725,7 @@ void DotsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hit
 	const float value1 = texValues[--(*texValuesSize)];
 	const float value2 = texValues[--(*texValuesSize)];
 
-	const float2 uv = Mapping_Map2D(&texture->dots.mapping, VLOAD2F(&hitPoint->uv.u));
+	const float2 uv = TextureMapping2D_Map(&texture->dots.mapping, hitPoint);
 
 	const int sCell = Floor2Int(uv.s0 + .5f);
 	const int tCell = Floor2Int(uv.s1 + .5f);
@@ -752,7 +752,7 @@ void DotsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 	const float3 value1 = texValues[--(*texValuesSize)];
 	const float3 value2 = texValues[--(*texValuesSize)];
 
-	const float2 uv = Mapping_Map2D(&texture->dots.mapping, VLOAD2F(&hitPoint->uv.u));
+	const float2 uv = TextureMapping2D_Map(&texture->dots.mapping, hitPoint);
 
 	const int sCell = Floor2Int(uv.s0 + .5f);
 	const int tCell = Floor2Int(uv.s1 + .5f);
