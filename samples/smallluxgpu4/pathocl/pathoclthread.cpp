@@ -602,6 +602,7 @@ void PathOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_transform_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<
 			luxrays::ocl::KernelSource_trianglemesh_types <<
+			luxrays::ocl::KernelSource_hitpoint_types <<
 			luxrays::ocl::KernelSource_mapping_types <<
 			luxrays::ocl::KernelSource_texture_types <<
 			luxrays::ocl::KernelSource_material_types <<
