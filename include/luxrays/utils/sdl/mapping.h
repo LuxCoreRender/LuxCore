@@ -111,28 +111,22 @@ public:
 
 class UVMapping3D : public TextureMapping3D {
 public:
-	UVMapping3D(const Transform &w2l, const float uscale, const float vscale,
-			const float udelta, const float vdelta) : TextureMapping3D(w2l), uScale(uscale),
-			vScale(vscale), uDelta(udelta), vDelta(vdelta) { }
+	UVMapping3D(const Transform &w2l) : TextureMapping3D(w2l) { }
 	virtual ~UVMapping3D() { }
 
 	virtual TextureMapping3DType GetType() const { return UVMAPPING3D; }
 
 	virtual Point Map(const HitPoint &hitPoint) const {
-		return worldToLocal * Point(hitPoint.uv.u * uScale + uDelta, hitPoint.uv.v * vScale + vDelta, 0.f);
+		return worldToLocal * Point(hitPoint.uv.u, hitPoint.uv.v, 0.f);
 	}
 
 	virtual Properties ToProperties(const std::string &name) const {
 		Properties props;
 		props.SetString(name + ".type", "uvmapping3d");
-		props.SetString(name + ".uvscale", ToString(uScale) + " " + ToString(vScale));
-		props.SetString(name + ".uvdelta", ToString(uDelta) + " " + ToString(vDelta));
 		props.SetString(name + ".transformation", ToString(worldToLocal.mInv));
 
 		return props;
 	}
-
-	float uScale, vScale, uDelta, vDelta;
 };
 
 //------------------------------------------------------------------------------
