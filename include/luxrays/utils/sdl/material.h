@@ -33,6 +33,7 @@
 #include "luxrays/utils/core/mc.h"
 #include "luxrays/utils/sdl/texture.h"
 #include "luxrays/utils/properties.h"
+#include "luxrays/utils/sdl/hitpoint.h"
 
 namespace luxrays {
 
@@ -44,8 +45,6 @@ namespace ocl {
 namespace sdl {
 
 class Scene;
-struct HitPointStruct;
-typedef HitPointStruct HitPoint;
 
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,

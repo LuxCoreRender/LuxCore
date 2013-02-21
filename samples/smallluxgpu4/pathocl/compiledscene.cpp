@@ -489,22 +489,40 @@ void CompiledScene::CompileAreaLights() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Triangle area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
-void CompiledScene::CompileTextureMapping(luxrays::ocl::TextureMapping *mapping, const TextureMapping *m) {
+void CompiledScene::CompileTextureMapping2D(luxrays::ocl::TextureMapping2D *mapping, const TextureMapping2D *m) {
 	switch (m->GetType()) {
-		case UVMAPPING: {
-			mapping->type = luxrays::ocl::UVMAPPING;
-			const UVMapping *gm = static_cast<const UVMapping *>(m);
-			mapping->uvMapping.uScale = gm->uScale;
-			mapping->uvMapping.vScale = gm->vScale;
-			mapping->uvMapping.uDelta = gm->uDelta;
-			mapping->uvMapping.vDelta = gm->vDelta;
+		case UVMAPPING2D: {
+			mapping->type = luxrays::ocl::UVMAPPING2D;
+			const UVMapping2D *uvm = static_cast<const UVMapping2D *>(m);
+			mapping->uvMapping2D.uScale = uvm->uScale;
+			mapping->uvMapping2D.vScale = uvm->vScale;
+			mapping->uvMapping2D.uDelta = uvm->uDelta;
+			mapping->uvMapping2D.vDelta = uvm->vDelta;
+			break;
+		}
+		default:
+			throw std::runtime_error("Unknown 2D texture mapping: " + boost::lexical_cast<std::string>(m->GetType()));
+	}
+}
+
+void CompiledScene::CompileTextureMapping3D(luxrays::ocl::TextureMapping3D *mapping, const TextureMapping3D *m) {
+	switch (m->GetType()) {
+		case UVMAPPING3D: {
+			mapping->type = luxrays::ocl::UVMAPPING3D;
+			const UVMapping3D *uvm = static_cast<const UVMapping3D *>(m);
+			mapping->uvMapping3D.uScale = uvm->uScale;
+			mapping->uvMapping3D.vScale = uvm->vScale;
+			mapping->uvMapping3D.uDelta = uvm->uDelta;
+			mapping->uvMapping3D.vDelta = uvm->vDelta;
+			memcpy(&mapping->worldToLocal.m, &uvm->worldToLocal.m, sizeof(float[4][4]));
+			memcpy(&mapping->worldToLocal.mInv, &uvm->worldToLocal.mInv, sizeof(float[4][4]));
 			break;
 		}
 		case GLOBALMAPPING3D: {
 			mapping->type = luxrays::ocl::GLOBALMAPPING3D;
 			const GlobalMapping3D *gm = static_cast<const GlobalMapping3D *>(m);
-			memcpy(&mapping->globalMapping3D.worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
-			memcpy(&mapping->globalMapping3D.worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
+			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
 			break;
 		}
 		default:
@@ -528,7 +546,7 @@ void CompiledScene::CompileInfiniteLight() {
 		infiniteLight = new luxrays::ocl::InfiniteLight();
 
 		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
-		CompileTextureMapping(&infiniteLight->mapping, il->GetUVMapping());
+		CompileTextureMapping2D(&infiniteLight->mapping, il->GetUVMapping());
 		infiniteLight->imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->GetImageMap());
 	} else
 		infiniteLight = NULL;
@@ -623,7 +641,7 @@ void CompiledScene::CompileTextures() {
 				tex->type = luxrays::ocl::IMAGEMAP;
 				const ImageMap *im = imt->GetImageMap();
 				tex->imageMapTex.gain = imt->GetGain();
-				CompileTextureMapping(&tex->imageMapTex.mapping, imt->GetTextureMapping());
+				CompileTextureMapping2D(&tex->imageMapTex.mapping, imt->GetTextureMapping());
 				tex->imageMapTex.Du = imt->GetDuDv().u;
 				tex->imageMapTex.Dv = imt->GetDuDv().v;
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
@@ -660,7 +678,7 @@ void CompiledScene::CompileTextures() {
 				CheckerBoard2DTexture *cb = static_cast<CheckerBoard2DTexture *>(t);
 
 				tex->type = luxrays::ocl::CHECKERBOARD2D;
-				CompileTextureMapping(&tex->checkerBoard2D.mapping, cb->GetTextureMapping());
+				CompileTextureMapping2D(&tex->checkerBoard2D.mapping, cb->GetTextureMapping());
 				const Texture *tex1 = cb->GetTexture1();
 				tex->checkerBoard2D.tex1Index = scene->texDefs.GetTextureIndex(tex1);
 
@@ -672,7 +690,7 @@ void CompiledScene::CompileTextures() {
 				CheckerBoard3DTexture *cb = static_cast<CheckerBoard3DTexture *>(t);
 
 				tex->type = luxrays::ocl::CHECKERBOARD3D;
-				CompileTextureMapping(&tex->checkerBoard3D.mapping, cb->GetTextureMapping());
+				CompileTextureMapping3D(&tex->checkerBoard3D.mapping, cb->GetTextureMapping());
 				const Texture *tex1 = cb->GetTexture1();
 				tex->checkerBoard3D.tex1Index = scene->texDefs.GetTextureIndex(tex1);
 
@@ -697,7 +715,7 @@ void CompiledScene::CompileTextures() {
 				FBMTexture *ft = static_cast<FBMTexture *>(t);
 
 				tex->type = luxrays::ocl::FBM_TEX;
-				CompileTextureMapping(&tex->fbm.mapping, ft->GetTextureMapping());
+				CompileTextureMapping3D(&tex->fbm.mapping, ft->GetTextureMapping());
 				tex->fbm.octaves = ft->GetOctaves();
 				tex->fbm.omega = ft->GetOmega();
 				break;
@@ -706,7 +724,7 @@ void CompiledScene::CompileTextures() {
 				MarbleTexture *mt = static_cast<MarbleTexture *>(t);
 
 				tex->type = luxrays::ocl::MARBLE;
-				CompileTextureMapping(&tex->fbm.mapping, mt->GetTextureMapping());
+				CompileTextureMapping3D(&tex->fbm.mapping, mt->GetTextureMapping());
 				tex->marble.octaves = mt->GetOctaves();
 				tex->marble.omega = mt->GetOmega();
 				tex->marble.scale = mt->GetScale();
@@ -717,7 +735,7 @@ void CompiledScene::CompileTextures() {
 				DotsTexture *dt = static_cast<DotsTexture *>(t);
 
 				tex->type = luxrays::ocl::DOTS;
-				CompileTextureMapping(&tex->dots.mapping, dt->GetTextureMapping());
+				CompileTextureMapping2D(&tex->dots.mapping, dt->GetTextureMapping());
 				const Texture *insideTex = dt->GetInsideTex();
 				tex->dots.insideIndex = scene->texDefs.GetTextureIndex(insideTex);
 

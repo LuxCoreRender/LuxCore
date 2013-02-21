@@ -108,7 +108,8 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	TextureMapping *CreateTextureMapping(const std::string &prefixName, const Properties &props);
+	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const Properties &props);
+	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const Properties &props);
 	Texture *CreateTexture(const std::string &texName, const Properties &props);
 	Material *CreateMaterial(const std::string &matName, const Properties &props);
 

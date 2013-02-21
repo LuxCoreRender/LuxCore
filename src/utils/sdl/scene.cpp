@@ -641,14 +641,34 @@ void Scene::RemoveUnusedTextures() {
 
 //------------------------------------------------------------------------------
 
-TextureMapping *Scene::CreateTextureMapping(const std::string &prefixName, const Properties &props) {
-	const std::string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping").at(0);
+TextureMapping2D *Scene::CreateTextureMapping2D(const std::string &prefixName, const Properties &props) {
+	const std::string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping2d").at(0);
 
-	if (mapType == "uvmapping") {
+	if (mapType == "uvmapping2d") {
 		const std::vector<float> uvScale = GetFloatParameters(props, prefixName + ".uvscale", 2, "1.0 1.0");
 		const std::vector<float> uvDelta = GetFloatParameters(props, prefixName + ".uvdelta", 2, "0.0 0.0");
 
-		return new UVMapping(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1));
+		return new UVMapping2D(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1));
+	} else
+		throw std::runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
+}
+
+TextureMapping3D *Scene::CreateTextureMapping3D(const std::string &prefixName, const Properties &props) {
+	const std::string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping3d").at(0);
+
+	if (mapType == "uvmapping3d") {
+		const std::vector<float> uvScale = GetFloatParameters(props, prefixName + ".uvscale", 2, "1.0 1.0");
+		const std::vector<float> uvDelta = GetFloatParameters(props, prefixName + ".uvdelta", 2, "0.0 0.0");
+
+		const std::vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const Matrix4x4 mat(
+				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		const Transform trans(mat);
+
+		return new UVMapping3D(trans, uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1));
 	} else if (mapType == "globalmapping3d") {
 		const std::vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
@@ -660,7 +680,7 @@ TextureMapping *Scene::CreateTextureMapping(const std::string &prefixName, const
 
 		return new GlobalMapping3D(trans);
 	} else
-		throw std::runtime_error("Unknown texture coordinate mapping type: " + mapType);
+		throw std::runtime_error("Unknown 3D texture coordinate mapping type: " + mapType);
 }
 
 Texture *Scene::CreateTexture(const std::string &texName, const Properties &props) {
@@ -676,7 +696,7 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::vector<float> gain = GetFloatParameters(props, propName + ".gain", 1, "1.0");
 
 		ImageMap *im = imgMapCache.GetImageMap(vname.at(0), gamma.at(0));
-		return new ImageMapTexture(im, CreateTextureMapping(propName + ".mapping", props), gain.at(0));
+		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain.at(0));
 	} else if (texType == "constfloat1") {
 		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 1, "1.0");
 		return new ConstFloatTexture(v.at(0));
@@ -703,14 +723,14 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
-		return new CheckerBoard2DTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2);
+		return new CheckerBoard2DTexture(CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "checkerboard3d") {
 		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
 		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
-		return new CheckerBoard3DTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2);
+		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
 		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
 		const Texture *amtTex = GetTexture(amtName);
@@ -724,21 +744,21 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
 		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
 
-		return new FBMTexture(CreateTextureMapping(propName + ".mapping", props), octaves, omega);
+		return new FBMTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "marble") {
 		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
 		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
 		const float scale = GetFloatParameters(props, propName + ".scale", 1, "1.0").at(0);
 		const float variation = GetFloatParameters(props, propName + ".variation", 1, "0.2").at(0);
 
-		return new MarbleTexture(CreateTextureMapping(propName + ".mapping", props), octaves, omega, scale, variation);
+		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "dots") {
 		const std::string insideTexName = GetStringParameters(props, propName + ".inside", 1, "1.0").at(0);
 		const Texture *insideTex = GetTexture(insideTexName);
 		const std::string outsideTexName = GetStringParameters(props, propName + ".outside", 1, "0.0").at(0);
 		const Texture *outsideTex = GetTexture(outsideTexName);
 
-		return new DotsTexture(CreateTextureMapping(propName + ".mapping", props), insideTex, outsideTex);
+		return new DotsTexture(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
 	} else if (texType == "brick") {
 		const std::string tex1Name = GetStringParameters(props, propName + ".bricktex", 1, "1.0 1.0 1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
@@ -755,7 +775,7 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const float brickrun = GetFloatParameters(props, propName + ".brickrun", 1, "0.75").at(0);
 		const float brickbevel = GetFloatParameters(props, propName + ".brickbevel", 1, "0.0").at(0);
 
-		return new BrickTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2, tex3,
+		return new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);

@@ -34,6 +34,7 @@
 #include "luxrays/utils/core/spectrum.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/sdl/mapping.h"
+#include "luxrays/utils/sdl/hitpoint.h"
 
 namespace luxrays {
 
@@ -55,8 +56,6 @@ typedef enum {
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK
 } TextureType;
 
-struct HitPointStruct;
-typedef HitPointStruct HitPoint;
 class ImageMapCache;
 
 class Texture {
@@ -303,7 +302,7 @@ private:
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMap* im, const TextureMapping *mp, const float g);
+	ImageMapTexture(const ImageMap* im, const TextureMapping2D *mp, const float g);
 	virtual ~ImageMapTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
@@ -313,14 +312,14 @@ public:
 	virtual UV GetDuDv() const { return DuDv; }
 
 	const ImageMap *GetImageMap() const { return imgMap; }
-	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const ImageMap *imgMap;
-	const TextureMapping *mapping;
+	const TextureMapping2D *mapping;
 	float gain;
 	UV DuDv;
 };
@@ -419,7 +418,7 @@ private:
 
 class CheckerBoard2DTexture : public Texture {
 public:
-	CheckerBoard2DTexture(const TextureMapping *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	CheckerBoard2DTexture(const TextureMapping2D *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
 	virtual ~CheckerBoard2DTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return CHECKERBOARD2D; }
@@ -435,21 +434,21 @@ public:
 		tex2->AddReferencedTextures(referencedTexs);
 	}
 
-	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const TextureMapping *mapping;
+	const TextureMapping2D *mapping;
 	const Texture *tex1;
 	const Texture *tex2;
 };
 
 class CheckerBoard3DTexture : public Texture {
 public:
-	CheckerBoard3DTexture(const TextureMapping *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	CheckerBoard3DTexture(const TextureMapping3D *mp, const Texture *t1, const Texture *t2) : mapping(mp), tex1(t1), tex2(t2) { }
 	virtual ~CheckerBoard3DTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return CHECKERBOARD3D; }
@@ -465,14 +464,14 @@ public:
 		tex2->AddReferencedTextures(referencedTexs);
 	}
 
-	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const TextureMapping *mapping;
+	const TextureMapping3D *mapping;
 	const Texture *tex1;
 	const Texture *tex2;
 };
@@ -519,7 +518,7 @@ private:
 
 class FBMTexture : public Texture {
 public:
-	FBMTexture(const TextureMapping *mp, const int octs, const float omg) :
+	FBMTexture(const TextureMapping3D *mp, const int octs, const float omg) :
 		mapping(mp), octaves(octs), omega(omg) { }
 	virtual ~FBMTexture() { delete mapping; }
 
@@ -530,14 +529,14 @@ public:
 
 	virtual UV GetDuDv() const;
 
-	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	int GetOctaves() const { return octaves; }
 	float GetOmega() const { return omega; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const TextureMapping *mapping;
+	const TextureMapping3D *mapping;
 	const int octaves;
 	const float omega;
 };
@@ -548,7 +547,7 @@ private:
 
 class MarbleTexture : public Texture {
 public:
-	MarbleTexture(const TextureMapping *mp, const int octs, const float omg,
+	MarbleTexture(const TextureMapping3D *mp, const int octs, const float omg,
 			float sc, float var) :
 			mapping(mp), octaves(octs), omega(omg), scale(sc), variation(var) { }
 	virtual ~MarbleTexture() { delete mapping; }
@@ -559,7 +558,7 @@ public:
 
 	virtual UV GetDuDv() const;
 
-	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	int GetOctaves() const { return octaves; }
 	float GetOmega() const { return omega; }
 	float GetScale() const { return scale; }
@@ -568,7 +567,7 @@ public:
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const TextureMapping *mapping;
+	const TextureMapping3D *mapping;
 	const int octaves;
 	const float omega, scale, variation;
 };
@@ -579,7 +578,7 @@ private:
 
 class DotsTexture : public Texture {
 public:
-	DotsTexture(const TextureMapping *mp, const Texture *insideTx, const Texture *outsideTx) :
+	DotsTexture(const TextureMapping2D *mp, const Texture *insideTx, const Texture *outsideTx) :
 		mapping(mp), insideTex(insideTx), outsideTex(outsideTx) { }
 	virtual ~DotsTexture() { delete mapping; }
 
@@ -596,14 +595,14 @@ public:
 		outsideTex->AddReferencedTextures(referencedTexs);
 	}
 
-	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const Texture *GetInsideTex() const { return insideTex; }
 	const Texture *GetOutsideTex() const { return outsideTex; }
 
 	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const TextureMapping *mapping;
+	const TextureMapping2D *mapping;
 	const Texture *insideTex;
 	const Texture *outsideTex;
 };
@@ -618,7 +617,7 @@ typedef enum {
 
 class BrickTexture : public Texture {
 public:
-	BrickTexture(const TextureMapping *mp, const Texture *t1,
+	BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 			const Texture *t2, const Texture *t3,
 			float brickw, float brickh, float brickd, float mortar,
 			float r, float bev, const std::string &b);
@@ -638,7 +637,7 @@ public:
 		tex3->AddReferencedTextures(referencedTexs);
 	}
 
-	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
 	const Texture *GetTexture3() const { return tex3; }
@@ -668,7 +667,7 @@ private:
 	bool Running(const Point &p, Point &i, Point &b) const;
 	bool English(const Point &p, Point &i, Point &b) const;
 
-	const TextureMapping *mapping;
+	const TextureMapping3D *mapping;
 	const Texture *tex1, *tex2, *tex3;
 
 	MasonryBond bond;
