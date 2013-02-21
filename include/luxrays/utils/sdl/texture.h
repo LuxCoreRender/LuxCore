@@ -52,7 +52,7 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK
 } TextureType;
 
 struct HitPointStruct;
@@ -606,6 +606,78 @@ private:
 	const TextureMapping *mapping;
 	const Texture *insideTex;
 	const Texture *outsideTex;
+};
+
+//------------------------------------------------------------------------------
+// Brick texture
+//------------------------------------------------------------------------------
+
+typedef enum {
+	FLEMISH, RUNNING, ENGLISH, HERRINGBONE, BASKET, KETTING
+} MasonryBond;
+
+class BrickTexture : public Texture {
+public:
+	BrickTexture(const TextureMapping *mp, const Texture *t1,
+			const Texture *t2, const Texture *t3,
+			float brickw, float brickh, float brickd, float mortar,
+			float r, float bev, const std::string &b);
+	virtual ~BrickTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BRICK; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+		tex3->AddReferencedTextures(referencedTexs);
+	}
+
+	const TextureMapping *GetTextureMapping() const { return mapping; }
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+	const Texture *GetTexture3() const { return tex3; }
+	MasonryBond GetBond() const { return bond; }
+	const Point &GetOffset() const { return offset; }
+	float GetBrickWidth() const { return brickwidth; }
+	float GetBrickHeight() const { return brickheight; }
+	float GetBrickDepth() const { return brickdepth; }
+	float GetMortarSize() const { return mortarsize; }
+	float GetProportion() const { return proportion; }
+	float GetInvProportion() const { return invproportion; }
+	float GetRun() const { return run; }
+	float GetMortarWidth() const { return mortarwidth; }
+	float GetMortarHeight() const { return mortarheight; }
+	float GetMortarDepth() const { return mortardepth; }
+	float GetBevelWidth() const { return bevelwidth; }
+	float GetBevelHeight() const { return bevelheight; }
+	float GetBevelDepth() const { return beveldepth; }
+	bool GetUseBevel() const { return usebevel; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	bool RunningAlternate(const Point &p, Point &i, Point &b, int nWhole) const;
+	bool Basket(const Point &p, Point &i) const;
+	bool Herringbone(const Point &p, Point &i) const;
+	bool Running(const Point &p, Point &i, Point &b) const;
+	bool English(const Point &p, Point &i, Point &b) const;
+
+	const TextureMapping *mapping;
+	const Texture *tex1, *tex2, *tex3;
+
+	MasonryBond bond;
+	Point offset;
+	float brickwidth, brickheight, brickdepth, mortarsize;
+	float proportion, invproportion, run;
+	float mortarwidth, mortarheight, mortardepth;
+	float bevelwidth, bevelheight, beveldepth;
+	bool usebevel;
 };
 
 } }

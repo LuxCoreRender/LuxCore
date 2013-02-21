@@ -684,39 +684,39 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 3, "1.0 1.0 1.0");
 		return new ConstFloat3Texture(Spectrum(v.at(0), v.at(1), v.at(2)));
 	} else if (texType == "scale") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 		return new ScaleTexture(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
-		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "tex").at(0);
+		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
 		const Texture *tex = GetTexture(texName);
 		return new FresnelApproxNTexture(tex);
 	} else if (texType == "fresnelapproxk") {
-		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "tex").at(0);
+		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
 		const Texture *tex = GetTexture(texName);
 		return new FresnelApproxKTexture(tex);
 	} else if (texType == "checkerboard2d") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new CheckerBoard2DTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "checkerboard3d") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new CheckerBoard3DTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
-		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "amount").at(0);
+		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
 		const Texture *amtTex = GetTexture(amtName);
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "tex1").at(0);
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "0.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "tex2").at(0);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new MixTexture(amtTex, tex1, tex2);
@@ -733,12 +733,30 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 
 		return new MarbleTexture(CreateTextureMapping(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "dots") {
-		const std::string insideTexName = GetStringParameters(props, propName + ".inside", 1, "tex1").at(0);
+		const std::string insideTexName = GetStringParameters(props, propName + ".inside", 1, "1.0").at(0);
 		const Texture *insideTex = GetTexture(insideTexName);
-		const std::string outsideTexName = GetStringParameters(props, propName + ".outside", 1, "tex2").at(0);
+		const std::string outsideTexName = GetStringParameters(props, propName + ".outside", 1, "0.0").at(0);
 		const Texture *outsideTex = GetTexture(outsideTexName);
 
 		return new DotsTexture(CreateTextureMapping(propName + ".mapping", props), insideTex, outsideTex);
+	} else if (texType == "brick") {
+		const std::string tex1Name = GetStringParameters(props, propName + ".bricktex", 1, "1.0 1.0 1.0").at(0);
+		const Texture *tex1 = GetTexture(tex1Name);
+		const std::string tex2Name = GetStringParameters(props, propName + ".mortartex", 1, "0.2 0.2 0.2").at(0);
+		const Texture *tex2 = GetTexture(tex2Name);
+		const std::string tex3Name = GetStringParameters(props, propName + ".brickmodtex", 1, "1.0 1.0 1.0").at(0);
+		const Texture *tex3 = GetTexture(tex3Name);
+
+		const std::string brickbond = GetStringParameters(props, propName + ".brickbond", 1, "running").at(0);
+		const float brickwidth = GetFloatParameters(props, propName + ".brickwidth", 1, "0.3").at(0);
+		const float brickheight = GetFloatParameters(props, propName + ".brickheight", 1, "0.1").at(0);
+		const float brickdepth = GetFloatParameters(props, propName + ".brickdepth", 1, "0.15").at(0);
+		const float mortarsize = GetFloatParameters(props, propName + ".mortarsize", 1, "0.01").at(0);
+		const float brickrun = GetFloatParameters(props, propName + ".brickrun", 1, "0.75").at(0);
+		const float brickbevel = GetFloatParameters(props, propName + ".brickbevel", 1, "0.0").at(0);
+
+		return new BrickTexture(CreateTextureMapping(propName + ".mapping", props), tex1, tex2, tex3,
+				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }
