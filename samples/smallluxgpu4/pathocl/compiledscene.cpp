@@ -743,6 +743,59 @@ void CompiledScene::CompileTextures() {
 				tex->dots.outsideIndex = scene->texDefs.GetTextureIndex(outsideTex);
 				break;
 			}
+			case BRICK: {
+				BrickTexture *bt = static_cast<BrickTexture *>(t);
+
+				tex->type = luxrays::ocl::BRICK;
+				CompileTextureMapping3D(&tex->brick.mapping, bt->GetTextureMapping());
+				const Texture *tex1 = bt->GetTexture1();
+				tex->brick.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+				const Texture *tex2 = bt->GetTexture2();
+				tex->brick.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				const Texture *tex3 = bt->GetTexture3();
+				tex->brick.tex3Index = scene->texDefs.GetTextureIndex(tex3);
+
+				switch (bt->GetBond()) {
+					case FLEMISH:
+						tex->brick.bond = luxrays::ocl::FLEMISH;
+						break;
+					default:
+					case RUNNING:
+						tex->brick.bond = luxrays::ocl::RUNNING;
+						break;
+					case ENGLISH:
+						tex->brick.bond = luxrays::ocl::ENGLISH;
+						break;
+					case HERRINGBONE:
+						tex->brick.bond = luxrays::ocl::HERRINGBONE;
+						break;
+					case BASKET:
+						tex->brick.bond = luxrays::ocl::BASKET;
+						break;
+					case KETTING:
+						tex->brick.bond = luxrays::ocl::KETTING;
+						break; 
+				}
+
+				tex->brick.offsetx = bt->GetOffset().x;
+				tex->brick.offsety = bt->GetOffset().y;
+				tex->brick.offsetz = bt->GetOffset().z;
+				tex->brick.brickwidth = bt->GetBrickWidth();
+				tex->brick.brickheight = bt->GetBrickHeight();
+				tex->brick.brickdepth = bt->GetBrickDepth();
+				tex->brick.mortarsize = bt->GetMortarSize();
+				tex->brick.proportion = bt->GetProportion();
+				tex->brick.invproportion = bt->GetInvProportion();
+				tex->brick.run = bt->GetRun();
+				tex->brick.mortarwidth = bt->GetMortarWidth();
+				tex->brick.mortarheight = bt->GetMortarHeight();
+				tex->brick.mortardepth = bt->GetMortarDepth();
+				tex->brick.bevelwidth = bt->GetBevelWidth();
+				tex->brick.bevelheight = bt->GetBevelHeight();
+				tex->brick.beveldepth = bt->GetBevelDepth();
+				tex->brick.usebevel = bt->GetUseBevel();
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;

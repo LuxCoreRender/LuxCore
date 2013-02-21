@@ -38,7 +38,7 @@ std::string KernelSource_mapping_funcs =
 "	const float2 uv = VLOAD2F(&hitPoint->uv.u);\n"
 "\n"
 "	const float2 muv = uv * scale + delta;\n"
-"	const float3 p = (float3)(uv.xy, 0.f);\n"
+"	const float3 p = (float3)(muv.xy, 0.f);\n"
 "	return Transform_ApplyPoint(&mapping->worldToLocal, p);\n"
 "}\n"
 "\n"

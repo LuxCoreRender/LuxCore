@@ -35,7 +35,7 @@ float3 UVMapping3D_Map(__global TextureMapping3D *mapping, __global HitPoint *hi
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 
 	const float2 muv = uv * scale + delta;
-	const float3 p = (float3)(uv.xy, 0.f);
+	const float3 p = (float3)(muv.xy, 0.f);
 	return Transform_ApplyPoint(&mapping->worldToLocal, p);
 }
 
