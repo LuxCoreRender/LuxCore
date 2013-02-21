@@ -201,7 +201,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			oclQueue.finish();
 			frameTime = PreciseClockTime() - startTime;
 			frameBarrier->wait();
-			// Main thread re-balance each assigned iterations to each task and
+			// Main thread re-balance assigned iterations to each task and
 			// merge all frame buffers
 			frameBarrier->wait();
 		}
