@@ -427,6 +427,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_DOTS";
 	if (cscene->IsTextureCompiled(BRICK))
 		ss << " -D PARAM_ENABLE_BRICK";
+	if (cscene->IsTextureCompiled(ADD_TEX))
+		ss << " -D PARAM_ENABLE_TEX_ADD";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
