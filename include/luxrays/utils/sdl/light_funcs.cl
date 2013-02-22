@@ -53,7 +53,11 @@ float3 InfiniteLight_GetRadiance(
 		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F)),
 		SphericalTheta(-dir) * M_1_PI_F);
 
-	const float2 mapUV = Mapping_Map2D(&infiniteLight->mapping, uv);
+	// TextureMapping2D_Map() is expendaded here
+	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);
+	const float2 delta = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uDelta);
+	const float2 mapUV = uv * scale + delta;
+	
 	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
