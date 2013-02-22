@@ -124,6 +124,8 @@ protected:
 	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue) = 0;
 
 	virtual double GetLoad() const {
+		if (!started)
+			return 0.0;
 		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
 	}
 
