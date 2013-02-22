@@ -792,6 +792,17 @@ void CompiledScene::CompileTextures() {
 				tex->brick.usebevel = bt->GetUseBevel();
 				break;
 			}
+			case ADD_TEX: {
+				ScaleTexture *st = static_cast<ScaleTexture *>(t);
+
+				tex->type = luxrays::ocl::ADD_TEX;
+				const Texture *tex1 = st->GetTexture1();
+				tex->addTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+
+				const Texture *tex2 = st->GetTexture2();
+				tex->addTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;

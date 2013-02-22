@@ -51,7 +51,7 @@ namespace sdl {
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, MIX_TEX,
+	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK
 } TextureType;
@@ -677,6 +677,38 @@ private:
 	float mortarwidth, mortarheight, mortardepth;
 	float bevelwidth, bevelheight, beveldepth;
 	bool usebevel;
+};
+
+//------------------------------------------------------------------------------
+// Add texture
+//------------------------------------------------------------------------------
+
+class AddTexture : public Texture {
+public:
+	AddTexture(const Texture *t1, const Texture *t2) : tex1(t1), tex2(t2) { }
+	virtual ~AddTexture() { }
+
+	virtual TextureType GetType() const { return ADD_TEX; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	const Texture *GetTexture1() const { return tex1; }
+	const Texture *GetTexture2() const { return tex2; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const Texture *tex1;
+	const Texture *tex2;
 };
 
 } }

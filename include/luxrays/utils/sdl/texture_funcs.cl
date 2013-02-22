@@ -978,6 +978,36 @@ void BrickTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hit
 #endif
 
 //------------------------------------------------------------------------------
+// Add texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_ADD)
+
+void AddTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value = texValues[--(*texValuesSize)] + texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = value;
+}
+
+void AddTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value = texValues[--(*texValuesSize)] + texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = value;
+}
+
+void AddTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 dudv1 = texValues[--(*texValuesSize)];
+	const float2 dudv2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -1032,6 +1062,12 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->brick.tex2Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->brick.tex3Index];
 			return 3;
+#endif
+#if defined(PARAM_ENABLE_TEX_ADD)
+		case ADD_TEX:
+			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex1Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex2Index];
+			return 2;
 #endif
 #if defined (PARAM_ENABLE_MARBLE)
 		case MARBLE:
@@ -1125,6 +1161,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined (PARAM_ENABLE_BRICK)
 		case BRICK:
 			BrickTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_ADD)
+		case ADD_TEX:
+			AddTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1255,6 +1296,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			BrickTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_TEX_ADD)
+		case ADD_TEX:
+			AddTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1380,6 +1426,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined (PARAM_ENABLE_BRICK)
 		case BRICK:
 			BrickTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_ADD)
+		case ADD_TEX:
+			AddTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

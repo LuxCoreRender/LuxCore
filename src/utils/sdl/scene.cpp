@@ -774,6 +774,12 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 
 		return new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
+	} else if (texType == "add") {
+		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const Texture *tex1 = GetTexture(tex1Name);
+		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
+		const Texture *tex2 = GetTexture(tex2Name);
+		return new AddTexture(tex1, tex2);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

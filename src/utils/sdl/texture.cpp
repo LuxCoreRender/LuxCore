@@ -1216,3 +1216,33 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// Add texture
+//------------------------------------------------------------------------------
+
+float AddTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return tex1->GetFloatValue(hitPoint) + tex2->GetFloatValue(hitPoint);
+}
+
+Spectrum AddTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex1->GetSpectrumValue(hitPoint) + tex2->GetSpectrumValue(hitPoint);
+}
+
+UV AddTexture::GetDuDv() const {
+	const UV uv1 = tex1->GetDuDv();
+	const UV uv2 = tex2->GetDuDv();
+
+	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
+}
+
+Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "add");
+	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
+	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+
+	return props;
+}
