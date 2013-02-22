@@ -68,7 +68,7 @@ private:
 			return virtualDevice->realDevice->TraceRay(ray, rayHit);
 		}
 
-		double GetLoad() const { return virtualDevice->realDevice->GetLoad(); }
+		double GetLoad() const { return started ? virtualDevice->realDevice->GetLoad() : 0.0; }
 
 		void SetDataSet(const DataSet *newDataSet);
 		void Start();
@@ -134,7 +134,7 @@ private:
 			return virtualDevice->realDevices[traceRayRealDeviceIndex]->TraceRay(ray, rayHit);
 		}
 
-		double GetLoad() const { return 1.0; }
+		double GetLoad() const { return started ? 1.0 : 0.0; }
 
 		friend class VirtualM2MHardwareIntersectionDevice;
 
