@@ -59,11 +59,11 @@ typedef enum {
 
 class Film {
 public:
-	Film(const unsigned int w, const unsigned int h);
+	Film(const u_int w, const u_int h);
 	~Film();
 
 	void Init() { Init(width, height); }
-	void Init(const unsigned int w, const unsigned int h);
+	void Init(const u_int w, const u_int h);
 	void InitGammaTable(const float gamma = 2.2f);
 	void Reset();
 
@@ -130,14 +130,15 @@ public:
 
 	void SaveScreenBuffer(const std::string &filmFile);
 	void UpdateScreenBuffer();
-	const float *GetScreenBuffer() const {
-		return (const float *)frameBuffer->GetPixels();
+	float *GetScreenBuffer() const {
+		return (float *)frameBuffer->GetPixels();
 	}
 
 	//--------------------------------------------------------------------------
 
-	unsigned int GetWidth() const { return width; }
-	unsigned int GetHeight() const { return height; }
+	float GetGamma() const { return gamma; }
+	u_int GetWidth() const { return width; }
+	u_int GetHeight() const { return height; }
 	double GetTotalSampleCount() const {
 		return statsTotalSampleCount;
 	}
@@ -149,18 +150,18 @@ public:
 	}
 
 	const SamplePixel *GetSamplePixel(const FilmBufferType type,
-		const unsigned int x, const unsigned int y) const {
+		const u_int x, const u_int y) const {
 		return sampleFrameBuffer[type]->GetPixel(x, y);
 	}
 
-	const AlphaPixel *GetAlphaPixel(const unsigned int x, const unsigned int y) const {
+	const AlphaPixel *GetAlphaPixel(const u_int x, const u_int y) const {
 		return alphaFrameBuffer->GetPixel(x, y);
 	}
 
 	//--------------------------------------------------------------------------
 
 	void ResetConvergenceTest();
-	unsigned int RunConvergenceTest();
+	u_int RunConvergenceTest();
 
 	//--------------------------------------------------------------------------
 
@@ -168,7 +169,7 @@ public:
 		statsTotalSampleCount += count;
 	}
 
-	void AddRadiance(const FilmBufferType type, const unsigned int x, const unsigned int y,
+	void AddRadiance(const FilmBufferType type, const u_int x, const u_int y,
 		const Spectrum &radiance, const float weight) {
 		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
 
@@ -176,7 +177,11 @@ public:
 		sp->weight += weight;
 	}
 
-	void AddAlpha(const unsigned int x, const unsigned int y, const float alpha,
+	void SetAlpha(const u_int x, const u_int y, const float alpha) {
+		alphaFrameBuffer->SetPixel(x, y, alpha);
+	}
+
+	void AddAlpha(const u_int x, const u_int y, const float alpha,
 		const float weight) {
 		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
 
@@ -206,10 +211,11 @@ private:
 				Radiance2PixelFloat(c.b));
 	}
 
-	unsigned int width, height, pixelCount;
+	u_int width, height, pixelCount;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
+	float gamma;
 	float gammaTable[GAMMA_TABLE_SIZE];
 
 	FilterType filterType;

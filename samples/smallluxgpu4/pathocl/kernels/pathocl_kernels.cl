@@ -212,7 +212,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 	if (gid >= (PARAM_IMAGE_WIDTH + 2) * (PARAM_IMAGE_HEIGHT + 2))
 		return;
 
-	VSTORE4F(0.f, &frameBuffer[gid]);
+	VSTORE4F(0.f, &frameBuffer[gid].c.r);
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	__global AlphaPixel *ap = &alphaFrameBuffer[gid];
@@ -660,59 +660,4 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	task->seed.s1 = seed->s1;
 	task->seed.s2 = seed->s2;
 	task->seed.s3 = seed->s3;
-}
-
-//------------------------------------------------------------------------------
-// The following kernels are used only by RTPathOCL
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// InitFrameBuffer Kernel
-//------------------------------------------------------------------------------
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitDisplayFrameBuffer(
-		__global Pixel *frameBuffer
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		, __global AlphaPixel *alphaFrameBuffer
-#endif
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= (PARAM_IMAGE_WIDTH + 2) * (PARAM_IMAGE_HEIGHT + 2))
-		return;
-
-	VSTORE4F(0.f, &frameBuffer[gid]);
-
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	__global AlphaPixel *ap = &alphaFrameBuffer[gid];
-	ap->alpha = 0.f;
-#endif
-}
-
-//------------------------------------------------------------------------------
-// MergeFrameBuffer Kernel
-//------------------------------------------------------------------------------
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
-		__global Pixel *srcFrameBuffer,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		__global AlphaPixel *srcAlphaFrameBuffer,
-#endif
-		__global Pixel *dstFrameBuffer
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		, __global AlphaPixel *dstAlphaFrameBuffer
-#endif
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= (PARAM_IMAGE_WIDTH + 2) * (PARAM_IMAGE_HEIGHT + 2))
-		return;
-
-	const float4 srcRGBC = VLOAD4F(&srcFrameBuffer[gid]);
-	const float4 dstRGBC = VLOAD4F(&dstFrameBuffer[gid]);
-	VSTORE4F(srcRGBC + dstRGBC, &dstFrameBuffer[gid]);
-
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	__global AlphaPixel *srcAP = &srcAlphaFrameBuffer[gid];
-	__global AlphaPixel *dstAP = &dstAlphaFrameBuffer[gid];
-	*srcAP += *dstAP;
-#endif
 }

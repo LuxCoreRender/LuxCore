@@ -113,11 +113,13 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 	statsStartSampleTime = WallClockTime();
 }
 
-void Film::InitGammaTable(const float gamma) {
+void Film::InitGammaTable(const float g) {
+	gamma = g;
+
 	float x = 0.f;
 	const float dx = 1.f / GAMMA_TABLE_SIZE;
 	for (unsigned int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
-		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / gamma);
+		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
 }
 
 void Film::SetFilterType(const FilterType type) {
@@ -213,6 +215,12 @@ void Film::AddFilm(const Film &film,
 }
 
 void Film::SaveScreenBuffer(const std::string &fileName) {
+	if ((!enablePerPixelNormalizedBuffer && !enablePerScreenNormalizedBuffer) ||
+			!enableFrameBuffer) {
+		// I can not save the image in this case
+		return;
+	}
+
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fileName.c_str());
 	if (fif != FIF_UNKNOWN) {
 		if ((fif == FIF_HDR) || (fif == FIF_EXR)) {
@@ -422,6 +430,12 @@ void Film::MergeSampleBuffers(Pixel *p, std::vector<bool> &frameBufferMask) cons
 }
 
 void Film::UpdateScreenBufferImpl(const ToneMapType type) {
+	if ((!enablePerPixelNormalizedBuffer && !enablePerScreenNormalizedBuffer) ||
+			!enableFrameBuffer) {
+		// Nothing to do
+		return;
+	}
+
 	switch (type) {
 		case TONEMAP_NONE: {
 			Pixel *p = frameBuffer->GetPixels();

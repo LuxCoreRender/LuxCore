@@ -39,6 +39,7 @@
 #include "slg.h"
 
 #include "pathocl/pathocl.h"
+#include "pathocl/rtpathocl.h"
 #include "pathocl/kernels/kernels.h"
 #include "renderconfig.h"
 #include "luxrays/core/geometry/transform.h"
@@ -195,7 +196,8 @@ void PathOCLRenderEngine::StartLockLess() {
 		throw std::runtime_error("path.filter.width.y must be between 0.0 and 1.5");
 
 	filter = new luxrays::ocl::Filter();
-	if (filterType.compare("NONE") == 0)
+	// Force pixel filter to NONE if I'm RTOPENCL
+	if ((filterType.compare("NONE") == 0) || (dynamic_cast<RTPathOCLRenderEngine *>(this)))
 		filter->type = luxrays::ocl::FILTER_NONE;
 	else if (filterType.compare("BOX") == 0) {
 		filter->type = luxrays::ocl::FILTER_BOX;

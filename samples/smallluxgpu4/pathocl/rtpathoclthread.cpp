@@ -40,9 +40,8 @@ RTPathOCLRenderThread::RTPathOCLRenderThread(const u_int index,
 	OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) : 
 	PathOCLRenderThread(index, device, re) {
 	tmpFrameBufferBuff = NULL;
-	tmpAlphaFrameBufferBuff = NULL;
 	mergedFrameBufferBuff = NULL;
-	mergedAlphaFrameBufferBuff = NULL;
+	screenBufferBuff = NULL;
 	assignedIters = ((RTPathOCLRenderEngine*)renderEngine)->minIterations;
 	frameTime = 0.0;
 }
@@ -57,9 +56,8 @@ void RTPathOCLRenderThread::Stop() {
 	PathOCLRenderThread::Stop();
 
 	FreeOCLBuffer(&tmpFrameBufferBuff);
-	FreeOCLBuffer(&tmpAlphaFrameBufferBuff);
 	FreeOCLBuffer(&mergedFrameBufferBuff);
-	FreeOCLBuffer(&mergedAlphaFrameBufferBuff);
+	FreeOCLBuffer(&screenBufferBuff);
 }
 
 void RTPathOCLRenderThread::BeginEdit() {
@@ -82,15 +80,11 @@ void RTPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 
 void RTPathOCLRenderThread::InitDisplayThread() {
 	frameBufferPixelCount =	(renderEngine->film->GetWidth() + 2) * (renderEngine->film->GetHeight() + 2);
-
 	AllocOCLBufferRW(&tmpFrameBufferBuff, sizeof(luxrays::ocl::Pixel) * frameBufferPixelCount, "Tmp FrameBuffer");
 	AllocOCLBufferRW(&mergedFrameBufferBuff, sizeof(luxrays::ocl::Pixel) * frameBufferPixelCount, "Merged FrameBuffer");
 
-	// Check if the film has an alpha channel
-	if (renderEngine->film->IsAlphaChannelEnabled()) {
-		AllocOCLBufferRW(&tmpAlphaFrameBufferBuff, sizeof(luxrays::ocl::AlphaPixel) * frameBufferPixelCount, "Tmp Alpha Channel FrameBuffer");
-		AllocOCLBufferRW(&mergedAlphaFrameBufferBuff, sizeof(luxrays::ocl::AlphaPixel) * frameBufferPixelCount, "Merged Alpha Channel FrameBuffer");
-	}
+	AllocOCLBufferRW(&screenBufferBuff, sizeof(Spectrum) * renderEngine->film->GetWidth() *
+			renderEngine->film->GetHeight(), "Screen FrameBuffer");
 }
 
 void RTPathOCLRenderThread::InitRender() {
@@ -108,8 +102,14 @@ void RTPathOCLRenderThread::SetKernelArgs() {
 
 		u_int argIndex = 0;
 		initDisplayFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		if (alphaFrameBufferBuff)
-			initDisplayFBKernel->setArg(argIndex++, *mergedAlphaFrameBufferBuff);
+
+		argIndex = 0;
+		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+
+		argIndex = 0;
+		updateScreenBufferKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		updateScreenBufferKernel->setArg(argIndex++, *screenBufferBuff);
 	}
 }
 
@@ -235,12 +235,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Async. transfer of the frame buffer
 				oclQueue.enqueueReadBuffer(*frameBufferBuff, CL_FALSE, 0,
 					frameBufferBuff->getInfo<CL_MEM_SIZE>(), frameBuffer);
-				// Check if I have to transfer the alpha channel too
-				if (alphaFrameBufferBuff) {
-					// Async. transfer of the alpha channel
-					oclQueue.enqueueReadBuffer(*alphaFrameBufferBuff, CL_FALSE, 0,
-						alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(), alphaFrameBuffer);
-				}
 			}
 
 			// Async. transfer of GPU task statistics
@@ -249,7 +243,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 			oclQueue.finish();
 			frameTime = WallClockTime() - startTime;
-			
+
 			//------------------------------------------------------------------
 
 			frameBarrier->wait();
@@ -257,6 +251,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			// If I'm the display thread, my OpenCL device must merge all frame buffers
 			// and do all frame post-processing steps
 			if (engine->displayDeviceIndex == threadIndex) {
+				// Last step include a film update
+				boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
+
 				// Clear the merged frame buffer
 				oclQueue.enqueueNDRangeKernel(*initDisplayFBKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, initDisplayFBWorkGroupSize)),
@@ -271,11 +268,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						// Merge the my frame buffer
 						u_int argIndex = 0;
 						mergeFBKernel->setArg(argIndex++, *frameBufferBuff);
-						if (alphaFrameBufferBuff)
-							mergeFBKernel->setArg(argIndex++, *alphaFrameBufferBuff);
 						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-						if (alphaFrameBufferBuff)
-							mergeFBKernel->setArg(argIndex++, *mergedAlphaFrameBufferBuff);
 						oclQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
 								cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, mergeFBWorkGroupSize)),
 								cl::NDRange(mergeFBWorkGroupSize));
@@ -284,32 +277,35 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						oclQueue.enqueueWriteBuffer(*tmpFrameBufferBuff, CL_FALSE, 0,
 								tmpFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
 								engine->renderThreads[i]->frameBuffer);
-						if (engine->film->IsAlphaChannelEnabled())
-							oclQueue.enqueueWriteBuffer(*tmpAlphaFrameBufferBuff, CL_FALSE, 0,
-									tmpAlphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
-									engine->renderThreads[i]->alphaFrameBuffer);
 
 						// Merge the frame buffers
 						u_int argIndex = 0;
 						mergeFBKernel->setArg(argIndex++, *tmpFrameBufferBuff);
-						if (alphaFrameBufferBuff)
-							mergeFBKernel->setArg(argIndex++, *tmpAlphaFrameBufferBuff);
 						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-						if (alphaFrameBufferBuff)
-							mergeFBKernel->setArg(argIndex++, *mergedAlphaFrameBufferBuff);
 						oclQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
 								cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, mergeFBWorkGroupSize)),
 								cl::NDRange(mergeFBWorkGroupSize));
 					}
 				}
 
-				// Transfer the merged frame buffer
-				oclQueue.enqueueReadBuffer(*mergedFrameBufferBuff, CL_FALSE, 0,
-						mergedFrameBufferBuff->getInfo<CL_MEM_SIZE>(), frameBuffer);
-				// Check if I have to transfer the alpha channel too
-				if (alphaFrameBufferBuff)
-					oclQueue.enqueueReadBuffer(*mergedAlphaFrameBufferBuff, CL_FALSE, 0,
-						mergedAlphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(), alphaFrameBuffer);
+				// Apply Gaussian filter to the merged frame buffer
+				// TODO
+
+				// Apply tone mapping
+				oclQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, toneMapLinearWorkGroupSize)),
+						cl::NDRange(toneMapLinearWorkGroupSize));
+
+				// Update the screen buffer
+				oclQueue.enqueueNDRangeKernel(*updateScreenBufferKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, updateScreenBufferWorkGroupSize)),
+						cl::NDRange(updateScreenBufferWorkGroupSize));
+
+				// Transfer the screen frame buffer
+				// The film has been locked before
+				oclQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
+						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->GetScreenBuffer());
+				oclQueue.finish();
 			}
 
 			//------------------------------------------------------------------
