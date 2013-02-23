@@ -67,7 +67,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	initFBKernel = NULL;
 	advancePathsKernel = NULL;
 
-	initDisplayFBKernel = NULL;
+	initMergedFBKernel = NULL;
 	mergeFBKernel = NULL;
 	applyBlurLightFilterXR1Kernel = NULL;
 	applyBlurLightFilterYR1Kernel = NULL;
@@ -124,7 +124,7 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete initKernel;
 	delete initFBKernel;
 	delete advancePathsKernel;
-	delete initDisplayFBKernel;
+	delete initMergedFBKernel;
 	delete mergeFBKernel;
 	delete applyBlurLightFilterXR1Kernel;
 	delete applyBlurLightFilterYR1Kernel;
@@ -577,6 +577,7 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_TONEMAP_LINEAR_SCALE=1.f";
 
 	ss << " -D PARAM_GAMMA=" << renderEngine->film->GetGamma() << "f";
+	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
 	// Check the OpenCL vendor and use some specific compiler options
 #if defined(__APPLE__)
@@ -733,12 +734,12 @@ void PathOCLRenderThread::InitKernels() {
 			// InitRTFrameBuffer kernel
 			//------------------------------------------------------------------
 
-			delete initDisplayFBKernel;
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling InitDisplayFrameBuffer Kernel");
-			initDisplayFBKernel = new cl::Kernel(*program, "InitDisplayFrameBuffer");
-			initDisplayFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initDisplayFBWorkGroupSize);
+			delete initMergedFBKernel;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling InitMergedFrameBuffer Kernel");
+			initMergedFBKernel = new cl::Kernel(*program, "InitMergedFrameBuffer");
+			initMergedFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initMergedFBWorkGroupSize);
 			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				initDisplayFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+				initMergedFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 			//------------------------------------------------------------------
 			// MergeFrameBuffer kernel

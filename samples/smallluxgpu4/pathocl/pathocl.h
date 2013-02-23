@@ -101,8 +101,8 @@ protected:
 	size_t advancePathsWorkGroupSize;
 
 	// The following kernels are used only by RTPathOCL
-	cl::Kernel *initDisplayFBKernel;
-	size_t initDisplayFBWorkGroupSize;
+	cl::Kernel *initMergedFBKernel;
+	size_t initMergedFBWorkGroupSize;
 	cl::Kernel *mergeFBKernel;
 	size_t mergeFBWorkGroupSize;
 	cl::Kernel *applyBlurLightFilterXR1Kernel;

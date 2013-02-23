@@ -25,10 +25,10 @@
 #define FRAMEBUFFER_HEIGHT (PARAM_IMAGE_HEIGHT + 2)
 
 //------------------------------------------------------------------------------
-// InitDisplayFrameBuffer Kernel
+// InitMergedFrameBuffer Kernel
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitDisplayFrameBuffer(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitMergedFrameBuffer(
 		__global Pixel *frameBuffer) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
@@ -43,14 +43,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitDisplayFrameBu
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 		__global Pixel *srcFrameBuffer,
-		__global Pixel *dstFrameBuffer) {
+		__global Spectrum *dstFrameBuffer) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
 		return;
 
-	const float4 srcRGBC = VLOAD4F(&srcFrameBuffer[gid].c.r);
-	const float4 dstRGBC = VLOAD4F(&dstFrameBuffer[gid].c.r);
-	VSTORE4F(srcRGBC + dstRGBC, &dstFrameBuffer[gid].c.r);
+	float4 srcRGBC = VLOAD4F(&srcFrameBuffer[gid].c.r);
+
+	// Normalize
+	float3 srcRGB;
+	if (srcRGBC.w > 0.f) {
+		const float k = 1.f / (srcRGBC.w * PARAM_DEVICE_COUNT);
+		srcRGB = (float3)(srcRGBC.x * k, srcRGBC.y * k, srcRGBC.z * k);
+	} else
+		srcRGB = 0.f;
+
+	const float3 dstRGB = VLOAD3F(&dstFrameBuffer[gid].r);
+	VSTORE3F(srcRGB + dstRGB, &dstFrameBuffer[gid].r);
 }
 
 //------------------------------------------------------------------------------
@@ -58,26 +67,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 //------------------------------------------------------------------------------
 
 void ApplyBlurFilterXR1(
-		__global Pixel *src,
-		__global Pixel *dst,
+		__global Spectrum *src,
+		__global Spectrum *dst,
 		const float aF,
 		const float bF,
 		const float cF
 		) {
 	// Do left edge
-	Pixel a;
-	Pixel b = src[0];
-	Pixel c = src[1];
-	float invACount, invBCount, invCCount;
+	Spectrum a;
+	Spectrum b = src[0];
+	Spectrum c = src[1];
 
 	const float leftTotF = bF + cF;
 	const float bLeftK = bF / leftTotF;
 	const float cLeftK = cF / leftTotF;
-	invBCount = 1.f / b.count;
-	invCCount = 1.f / c.count;
-	dst[0].c.r = bLeftK * b.c.r * invBCount + cLeftK * c.c.r * invCCount;
-	dst[0].c.g = bLeftK * b.c.g * invBCount + cLeftK * c.c.g * invCCount;
-	dst[0].c.b = bLeftK * b.c.b * invBCount + cLeftK * c.c.b * invCCount;
+	dst[0].r = bLeftK  * b.r + cLeftK * c.r;
+	dst[0].g = bLeftK  * b.g + cLeftK * c.g;
+	dst[0].b = bLeftK  * b.b + cLeftK * c.b;
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -87,15 +93,12 @@ void ApplyBlurFilterXR1(
 
 	for (unsigned int x = 1; x < FRAMEBUFFER_WIDTH - 1; ++x) {
 		a = b;
-		invACount = invBCount;
 		b = c;
-		invBCount = invCCount;
 		c = src[x + 1];
-		invCCount = 1.f / c.count;
 
-		dst[x].c.r = aK * a.c.r * invACount + bK * b.c.r * invBCount + cK * c.c.r * invCCount;
-		dst[x].c.g = aK * a.c.g * invACount + bK * b.c.g * invBCount + cK * c.c.g * invCCount;
-		dst[x].c.b = aK * a.c.b * invACount + bK * b.c.b * invBCount + cK * c.c.b * invCCount;
+		dst[x].r = aK * a.r + bK * b.r + cK * c.r;
+		dst[x].g = aK * a.g + bK * b.g + cK * c.g;
+		dst[x].b = aK * a.b + bK * b.b + cK * c.b;
     }
 
     // Do right edge
@@ -104,33 +107,30 @@ void ApplyBlurFilterXR1(
 	const float bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	dst[FRAMEBUFFER_WIDTH - 1].c.r = aRightK * a.c.r + bRightK * b.c.r;
-	dst[FRAMEBUFFER_WIDTH - 1].c.g = aRightK * a.c.g + bRightK * b.c.g;
-	dst[FRAMEBUFFER_WIDTH - 1].c.b = aRightK * a.c.b + bRightK * b.c.b;
+	dst[FRAMEBUFFER_WIDTH - 1].r = aRightK * a.r + bRightK * b.r;
+	dst[FRAMEBUFFER_WIDTH - 1].g = aRightK * a.g + bRightK * b.g;
+	dst[FRAMEBUFFER_WIDTH - 1].b = aRightK * a.b + bRightK * b.b;
 
 }
 
 void ApplyBlurFilterYR1(
-		__global Pixel *src,
-		__global Pixel *dst,
+		__global Spectrum *src,
+		__global Spectrum *dst,
 		const float aF,
 		const float bF,
 		const float cF
 		) {
 	// Do left edge
-	Pixel a;
-	Pixel b = src[0];
-	Pixel c = src[FRAMEBUFFER_WIDTH];
-	float invACount, invBCount, invCCount;
+	Spectrum a;
+	Spectrum b = src[0];
+	Spectrum c = src[FRAMEBUFFER_WIDTH];
 
 	const float leftTotF = bF + cF;
 	const float bLeftK = bF / leftTotF;
 	const float cLeftK = cF / leftTotF;
-	invBCount = 1.f / b.count;
-	invCCount = 1.f / c.count;
-	dst[0].c.r = bLeftK * b.c.r * invBCount + cLeftK * c.c.r * invCCount;
-	dst[0].c.g = bLeftK * b.c.g * invBCount + cLeftK * c.c.g * invCCount;
-	dst[0].c.b = bLeftK * b.c.b * invBCount + cLeftK * c.c.b * invCCount;
+	dst[0].r = bLeftK  * b.r + cLeftK * c.r;
+	dst[0].g = bLeftK  * b.g + cLeftK * c.g;
+	dst[0].b = bLeftK  * b.b + cLeftK * c.b;
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -142,15 +142,12 @@ void ApplyBlurFilterYR1(
 		const unsigned index = y * FRAMEBUFFER_WIDTH;
 
 		a = b;
-		invACount = invBCount;
 		b = c;
-		invBCount = invCCount;
 		c = src[index + FRAMEBUFFER_WIDTH];
-		invCCount = 1.f / c.count;
 
-		dst[index].c.r = aK * a.c.r * invACount + bK * b.c.r * invBCount + cK * c.c.r * invCCount;
-		dst[index].c.g = aK * a.c.g * invACount + bK * b.c.g * invBCount + cK * c.c.g * invCCount;
-		dst[index].c.b = aK * a.c.b * invACount + bK * b.c.b * invBCount + cK * c.c.b * invCCount;
+		dst[index].r = aK * a.r + bK * b.r + cK * c.r;
+		dst[index].g = aK * a.g + bK * b.g + cK * c.g;
+		dst[index].b = aK * a.b + bK * b.b + cK * c.b;
     }
 
     // Do right edge
@@ -159,14 +156,14 @@ void ApplyBlurFilterYR1(
 	const float bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].c.r = aRightK * a.c.r + bRightK * b.c.r;
-	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].c.g = aRightK * a.c.g + bRightK * b.c.g;
-	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].c.b = aRightK * a.c.b + bRightK * b.c.b;
+	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].r = aRightK * a.r + bRightK * b.r;
+	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].g = aRightK * a.g + bRightK * b.g;
+	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].b = aRightK * a.b + bRightK * b.b;
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterXR1(
-		__global Pixel *src,
-		__global Pixel *dst
+		__global Spectrum *src,
+		__global Spectrum *dst
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_HEIGHT)
@@ -183,8 +180,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilt
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterYR1(
-		__global Pixel *src,
-		__global Pixel *dst
+		__global Spectrum *src,
+		__global Spectrum *dst
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH)
@@ -193,16 +190,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilt
 	src += gid;
 	dst += gid;
 
-	const float aF = .15f;
+	const float aF = .1f;
 	const float bF = 1.f;
-	const float cF = .15f;
+	const float cF = .1f;
 
 	ApplyBlurFilterYR1(src, dst, aF, bF, cF);
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurHeavyFilterXR1(
-		__global Pixel *src,
-		__global Pixel *dst
+		__global Spectrum *src,
+		__global Spectrum *dst
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_HEIGHT)
@@ -219,8 +216,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurHeavyFilt
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurHeavyFilterYR1(
-		__global Pixel *src,
-		__global Pixel *dst
+		__global Spectrum *src,
+		__global Spectrum *dst
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH)
@@ -232,42 +229,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurHeavyFilt
 	const float aF = .35f;
 	const float bF = 1.f;
 	const float cF = .35f;
-
-	ApplyBlurFilterYR1(src, dst, aF, bF, cF);
-}
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBoxFilterXR1(
-		__global Pixel *src,
-		__global Pixel *dst
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= FRAMEBUFFER_HEIGHT)
-		return;
-
-	src += gid * FRAMEBUFFER_WIDTH;
-	dst += gid * FRAMEBUFFER_WIDTH;
-
-	const float aF = .35f;
-	const float bF = 1.f;
-	const float cF = .35f;
-
-	ApplyBlurFilterXR1(src, dst, aF, bF, cF);
-}
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBoxFilterYR1(
-		__global Pixel *src,
-		__global Pixel *dst
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= FRAMEBUFFER_WIDTH)
-		return;
-
-	src += gid;
-	dst += gid;
-
-	const float aF = 1.f / 3.f;
-	const float bF = 1.f / 3.f;
-	const float cF = 1.f / 3.f;
 
 	ApplyBlurFilterYR1(src, dst, aF, bF, cF);
 }
@@ -276,17 +237,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBoxFilterYR1(
 // Linear Tone Map Kernel
 //------------------------------------------------------------------------------
 
-__kernel void ToneMapLinear(
-		__global Pixel *src,
-		__global Pixel *dst) {
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ToneMapLinear(
+		__global Spectrum *src,
+		__global Spectrum *dst) {
 	const int gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
 		return;
 
 	const float4 k = (float4)(PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, 1.f);
-	const float4 sp = VLOAD4F(&src[gid].c.r);
+	const float4 sp = VLOAD4F(&src[gid].r);
 
-	VSTORE4F(k * sp, &dst[gid].c.r);
+	VSTORE4F(k * sp, &dst[gid].r);
 }
 
 //------------------------------------------------------------------------------
@@ -302,7 +263,7 @@ float Radiance2PixelFloat(const float x) {
 }
 
 __kernel void UpdateScreenBuffer(
-		__global Pixel *frameBuffer,
+		__global Spectrum *frameBuffer,
 		__global Spectrum *pbo) {
 	const int gid = get_global_id(0);
 	const int x = gid % FRAMEBUFFER_WIDTH - 2;
@@ -310,20 +271,12 @@ __kernel void UpdateScreenBuffer(
 	if ((x < 0) || (y < 0) || (x >= PARAM_IMAGE_WIDTH) || (y >= PARAM_IMAGE_HEIGHT))
 		return;
 
-	__global Pixel *sp = &frameBuffer[gid];
+	__global Spectrum *sp = &frameBuffer[gid];
 
 	Spectrum rgb;
-	const float count = sp->count;
-	if (count > 0.f) {
-		const float invCount = 1.f / count;
-		rgb.r = Radiance2PixelFloat(sp->c.r * invCount);
-		rgb.g = Radiance2PixelFloat(sp->c.g * invCount);
-		rgb.b = Radiance2PixelFloat(sp->c.b * invCount);
-	} else {
-		rgb.r = 0.f;
-		rgb.g = 0.f;
-		rgb.b = 0.f;
-	}
+	rgb.r = Radiance2PixelFloat(sp->r);
+	rgb.g = Radiance2PixelFloat(sp->g);
+	rgb.b = Radiance2PixelFloat(sp->b);
 
 	pbo[(x + y * PARAM_IMAGE_WIDTH)] = rgb;
 }
