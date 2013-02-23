@@ -45,6 +45,19 @@ PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	return new RTPathOCLRenderThread(index, device, this);
 }
 
+
+void RTPathOCLRenderEngine::StartLockLess() {
+	const Properties &cfg = renderConfig->cfg;
+
+	//--------------------------------------------------------------------------
+	// Rendering parameters
+	//--------------------------------------------------------------------------
+
+	minIterations = cfg.GetInt("rtpath.miniterations", 2);
+
+	PathOCLRenderEngine::StartLockLess();
+}
+
 bool RTPathOCLRenderEngine::WaitNewFrame() {
 	// Re-balance threads
 	const double startTime = WallClockTime();
@@ -52,7 +65,6 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 
 	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
 	const double targetFrameTime = renderConfig->GetScreenRefreshInterval() / 1000.0;
-	const u_int minIteration = renderConfig->GetMinIterationsToShow();
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
 		if (t->GetFrameTime() > 0.0) {
@@ -63,10 +75,10 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 			// Check how far I'm from target frame rate
 			if (t->GetFrameTime() < targetFrameTime) {
 				// Too fast, increase the number of iterations
-				t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIteration));
+				t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIterations));
 			} else {
 				// Too slow, decrease the number of iterations
-				t->SetAssignedIterations(Max(t->GetAssignedIterations() - 1, minIteration));
+				t->SetAssignedIterations(Max(t->GetAssignedIterations() - 1, minIterations));
 			}
 
 			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " iterations");

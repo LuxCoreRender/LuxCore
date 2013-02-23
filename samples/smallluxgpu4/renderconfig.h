@@ -40,9 +40,7 @@ public:
 	~RenderConfig();
 
 	void SetScreenRefreshInterval(const unsigned int t);
-	void SetMinIterationsToShow(const unsigned int t);
 	unsigned int GetScreenRefreshInterval() const;
-	unsigned int GetMinIterationsToShow() const;
 	void GetScreenSize(u_int *width, u_int *height) const;
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
@@ -58,7 +56,6 @@ private:
 		luxrays::sdl::Scene *scene);
 
 	unsigned int screenRefreshInterval;
-	unsigned int minIterationsToShow;
 };
 
 }

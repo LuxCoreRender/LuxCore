@@ -32,20 +32,6 @@ using namespace luxrays::utils;
 
 namespace slg {
 
-// To check if it is still required
-// NOTE: WallClockTime() return the time in seconds.
-//#ifdef _WIN32
-//static double PreciseClockTime()
-//{
-//	unsigned __int64 t, freq;
-//	QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
-//	QueryPerformanceCounter((LARGE_INTEGER*)&t);
-//	return (double)t/freq;
-//}
-//#else
-#define PreciseClockTime WallClockTime
-//#endif
-
 //------------------------------------------------------------------------------
 // RTPathOCLRenderThread
 //------------------------------------------------------------------------------
@@ -53,7 +39,7 @@ namespace slg {
 RTPathOCLRenderThread::RTPathOCLRenderThread(const u_int index,
 	OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) : 
 	PathOCLRenderThread(index, device, re) {
-	assignedIters = ((RTPathOCLRenderEngine*)renderEngine)->renderConfig->GetMinIterationsToShow();
+	assignedIters = ((RTPathOCLRenderEngine*)renderEngine)->minIterations;
 	frameTime = 0.0;
 }
 
@@ -173,7 +159,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 			// Render a frame (i.e. taskCount * assignedIters samples)
 			//------------------------------------------------------------------
-			const double startTime = PreciseClockTime();
+			const double startTime = WallClockTime();
 			u_int iterations = assignedIters;
 
 			for (u_int i = 0; i < iterations; ++i) {
@@ -199,7 +185,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				sizeof(slg::ocl::GPUTaskStats) * renderEngine->taskCount, gpuTaskStats);
 
 			oclQueue.finish();
-			frameTime = PreciseClockTime() - startTime;
+			frameTime = WallClockTime() - startTime;
 			frameBarrier->wait();
 			// Main thread re-balance assigned iterations to each task and
 			// merge all frame buffers

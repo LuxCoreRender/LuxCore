@@ -48,6 +48,7 @@ public:
 	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
 	u_int GetAssignedIterations() const { return assignedIters; }
 	double GetFrameTime() const { return frameTime; }
+	u_int GetMinIterationsToShow() const;
 
 private:
 	void UpdateOCLBuffers();
@@ -78,6 +79,10 @@ protected:
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
 		OpenCLIntersectionDevice *device);
 
+	virtual void StartLockLess();
+
+	u_int minIterations;
+ 
 	boost::barrier *frameBarrier;
 	double frameTime;
 };
