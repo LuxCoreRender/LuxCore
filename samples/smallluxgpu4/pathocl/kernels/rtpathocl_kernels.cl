@@ -29,12 +29,12 @@
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitMergedFrameBuffer(
-		__global Pixel *frameBuffer) {
+		__global Spectrum *frameBuffer) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
 		return;
 
-	VSTORE4F(0.f, &frameBuffer[gid].c.r);
+	VSTORE3F(0.f, &frameBuffer[gid].r);
 }
 
 //------------------------------------------------------------------------------
@@ -74,43 +74,36 @@ void ApplyBlurFilterXR1(
 		const float cF
 		) {
 	// Do left edge
-	Spectrum a;
-	Spectrum b = src[0];
-	Spectrum c = src[1];
+	float3 a;
+	float3 b = VLOAD3F(&src[0].r);
+	float3 c = VLOAD3F(&src[1].r);
 
 	const float leftTotF = bF + cF;
-	const float bLeftK = bF / leftTotF;
-	const float cLeftK = cF / leftTotF;
-	dst[0].r = bLeftK  * b.r + cLeftK * c.r;
-	dst[0].g = bLeftK  * b.g + cLeftK * c.g;
-	dst[0].b = bLeftK  * b.b + cLeftK * c.b;
+	const float3 bLeftK = bF / leftTotF;
+	const float3 cLeftK = cF / leftTotF;
+	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
 
     // Main loop
 	const float totF = aF + bF + cF;
-	const float aK = aF / totF;
-	const float bK = bF / totF;
-	const float cK = cF / totF;
+	const float3 aK = aF / totF;
+	const float3 bK = bF / totF;
+	const float3 cK = cF / totF;
 
 	for (unsigned int x = 1; x < FRAMEBUFFER_WIDTH - 1; ++x) {
 		a = b;
 		b = c;
-		c = src[x + 1];
+		c = VLOAD3F(&src[x + 1].r);
 
-		dst[x].r = aK * a.r + bK * b.r + cK * c.r;
-		dst[x].g = aK * a.g + bK * b.g + cK * c.g;
-		dst[x].b = aK * a.b + bK * b.b + cK * c.b;
+		VSTORE3F(aK * a + bK  * b + cK * c, &dst[x].r);
     }
 
     // Do right edge
 	const float rightTotF = aF + bF;
-	const float aRightK = aF / rightTotF;
-	const float bRightK = bF / rightTotF;
+	const float3 aRightK = aF / rightTotF;
+	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	dst[FRAMEBUFFER_WIDTH - 1].r = aRightK * a.r + bRightK * b.r;
-	dst[FRAMEBUFFER_WIDTH - 1].g = aRightK * a.g + bRightK * b.g;
-	dst[FRAMEBUFFER_WIDTH - 1].b = aRightK * a.b + bRightK * b.b;
-
+	VSTORE3F(aRightK  * a + bRightK * b, &dst[FRAMEBUFFER_WIDTH - 1].r);
 }
 
 void ApplyBlurFilterYR1(
@@ -121,44 +114,38 @@ void ApplyBlurFilterYR1(
 		const float cF
 		) {
 	// Do left edge
-	Spectrum a;
-	Spectrum b = src[0];
-	Spectrum c = src[FRAMEBUFFER_WIDTH];
+	float3 a;
+	float3 b = VLOAD3F(&src[0].r);
+	float3 c = VLOAD3F(&src[FRAMEBUFFER_WIDTH].r);
 
 	const float leftTotF = bF + cF;
-	const float bLeftK = bF / leftTotF;
-	const float cLeftK = cF / leftTotF;
-	dst[0].r = bLeftK  * b.r + cLeftK * c.r;
-	dst[0].g = bLeftK  * b.g + cLeftK * c.g;
-	dst[0].b = bLeftK  * b.b + cLeftK * c.b;
+	const float3 bLeftK = bF / leftTotF;
+	const float3 cLeftK = cF / leftTotF;
+	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
 
     // Main loop
 	const float totF = aF + bF + cF;
-	const float aK = aF / totF;
-	const float bK = bF / totF;
-	const float cK = cF / totF;
+	const float3 aK = aF / totF;
+	const float3 bK = bF / totF;
+	const float3 cK = cF / totF;
 
     for (unsigned int y = 1; y < FRAMEBUFFER_HEIGHT - 1; ++y) {
 		const unsigned index = y * FRAMEBUFFER_WIDTH;
 
 		a = b;
 		b = c;
-		c = src[index + FRAMEBUFFER_WIDTH];
+		c = VLOAD3F(&src[index + FRAMEBUFFER_WIDTH].r);
 
-		dst[index].r = aK * a.r + bK * b.r + cK * c.r;
-		dst[index].g = aK * a.g + bK * b.g + cK * c.g;
-		dst[index].b = aK * a.b + bK * b.b + cK * c.b;
+		VSTORE3F(aK * a + bK  * b + cK * c, &dst[index].r);
     }
 
     // Do right edge
 	const float rightTotF = aF + bF;
-	const float aRightK = aF / rightTotF;
-	const float bRightK = bF / rightTotF;
+	const float3 aRightK = aF / rightTotF;
+	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].r = aRightK * a.r + bRightK * b.r;
-	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].g = aRightK * a.g + bRightK * b.g;
-	dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].b = aRightK * a.b + bRightK * b.b;
+	VSTORE3F(aRightK  * a + bRightK * b, &dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].r);
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterXR1(
