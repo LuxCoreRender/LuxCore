@@ -37,6 +37,8 @@
 namespace slg {
 
 class PathOCLRenderEngine;
+class RTPathOCLRenderEngine;
+class RTPathOCLRenderThread;
 
 //------------------------------------------------------------------------------
 // Path Tracing GPU-only render threads
@@ -48,14 +50,16 @@ public:
 			PathOCLRenderEngine *re);
 	virtual ~PathOCLRenderThread();
 
-	void Start();
+	virtual void Start();
 	virtual void Interrupt();
-	void Stop();
+	virtual void Stop();
 
 	virtual void BeginEdit();
 	virtual void EndEdit(const EditActionList &editActions);
 
 	friend class PathOCLRenderEngine;
+	friend class RTPathOCLRenderEngine;
+	friend class RTPathOCLRenderThread;
 
 protected:
 	virtual void RenderThreadImpl();
@@ -67,7 +71,7 @@ protected:
 	void StartRenderThread();
 	void StopRenderThread();
 
-	void InitRender();
+	virtual void InitRender();
 
 	void InitFrameBuffer();
 	void InitCamera();
@@ -81,7 +85,7 @@ protected:
 	void InitSkyLight();
 	void InitKernels();
 
-	void SetKernelArgs();
+	virtual void SetKernelArgs();
 
 	OpenCLIntersectionDevice *intersectionDevice;
 
@@ -95,6 +99,12 @@ protected:
 	size_t samplerWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	size_t advancePathsWorkGroupSize;
+
+	// The following kernels are used only by RTPathOCL
+	cl::Kernel *initDisplayFBKernel;
+	size_t initDisplayFBWorkGroupSize;
+	cl::Kernel *mergeFBKernel;
+	size_t mergeFBWorkGroupSize;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
@@ -155,6 +165,7 @@ public:
 	}
 
 	friend class PathOCLRenderThread;
+	friend class RTPathOCLRenderThread;
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
@@ -177,6 +188,8 @@ protected:
 
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
+
+	boost::mutex setKernelArgsMutex;
 
 	CompiledScene *compiledScene;
 

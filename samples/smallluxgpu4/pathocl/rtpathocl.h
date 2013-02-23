@@ -35,29 +35,42 @@ class RTPathOCLRenderEngine;
 //------------------------------------------------------------------------------
 
 class RTPathOCLRenderThread : public PathOCLRenderThread {
-	friend class RTPathOCLRenderEngine;
 public:
 	RTPathOCLRenderThread(const u_int index, OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
-	~RTPathOCLRenderThread();
+	virtual ~RTPathOCLRenderThread();
 
-	void Interrupt();
+	virtual void Interrupt();
+	virtual void Stop();
 
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
+	virtual void BeginEdit();
+	virtual void EndEdit(const EditActionList &editActions);
+
 	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
 	u_int GetAssignedIterations() const { return assignedIters; }
 	double GetFrameTime() const { return frameTime; }
 	u_int GetMinIterationsToShow() const;
 
-private:
+	friend class RTPathOCLRenderEngine;
+
+protected:
+	void InitDisplayThread();
 	void UpdateOCLBuffers();
 	void RenderThreadImpl();
 
+	virtual void InitRender();
+	virtual void SetKernelArgs();
+	
 	boost::mutex editMutex;
 	EditActionList updateActions;
 	volatile double frameTime;
 	volatile u_int assignedIters;
+
+	// OpenCL variables
+	cl::Buffer *tmpFrameBufferBuff;
+	cl::Buffer *tmpAlphaFrameBufferBuff;
+	cl::Buffer *mergedFrameBufferBuff;
+	cl::Buffer *mergedAlphaFrameBufferBuff;
 };
 
 //------------------------------------------------------------------------------
@@ -65,7 +78,6 @@ private:
 //------------------------------------------------------------------------------
 
 class RTPathOCLRenderEngine : public PathOCLRenderEngine {
-	friend class RTPathOCLRenderThread;
 public:
 	RTPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTPathOCLRenderEngine();
@@ -75,13 +87,17 @@ public:
 
 	bool WaitNewFrame();
 
+	friend class RTPathOCLRenderThread;
+
 protected:
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
 		OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
+	virtual void UpdateFilmLockLess();
 
 	u_int minIterations;
+	u_int displayDeviceIndex;
  
 	boost::barrier *frameBarrier;
 	double frameTime;

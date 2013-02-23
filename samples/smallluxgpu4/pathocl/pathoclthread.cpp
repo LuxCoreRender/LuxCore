@@ -66,6 +66,9 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	initFBKernel = NULL;
 	advancePathsKernel = NULL;
 
+	initDisplayFBKernel = NULL;
+	mergeFBKernel = NULL;
+
 	raysBuff = NULL;
 	hitsBuff = NULL;
 	tasksBuff = NULL;
@@ -680,6 +683,7 @@ void PathOCLRenderThread::InitKernels() {
 		//--------------------------------------------------------------------------
 
 		delete initFBKernel;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling InitFrameBuffer Kernel");
 		initFBKernel = new cl::Kernel(*program, "InitFrameBuffer");
 		initFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initFBWorkGroupSize);
 		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
@@ -696,6 +700,32 @@ void PathOCLRenderThread::InitKernels() {
 		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 			advancePathsWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
+		//----------------------------------------------------------------------
+		// The following kernels are used only by RTPathOCL
+		//----------------------------------------------------------------------
+
+		//----------------------------------------------------------------------
+		// InitRTFrameBuffer kernel
+		//----------------------------------------------------------------------
+
+		delete initDisplayFBKernel;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling InitDisplayFrameBuffer Kernel");
+		initDisplayFBKernel = new cl::Kernel(*program, "InitDisplayFrameBuffer");
+		initDisplayFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initDisplayFBWorkGroupSize);
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			initDisplayFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+
+		//----------------------------------------------------------------------
+		// MergeFrameBuffer kernel
+		//----------------------------------------------------------------------
+
+		delete mergeFBKernel;
+		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling MergeFrameBuffer Kernel");
+		mergeFBKernel = new cl::Kernel(*program, "MergeFrameBuffer");
+		mergeFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &mergeFBWorkGroupSize);
+		if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			mergeFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+		
 		//----------------------------------------------------------------------
 
 		const double tEnd = WallClockTime();
@@ -935,18 +965,17 @@ void PathOCLRenderThread::InitRender() {
 	intersectionDevice->ResetPerformaceStats();
 }
 
-static boost::mutex setKernelArgsMutex;
-
 void PathOCLRenderThread::SetKernelArgs() {
 	// Set OpenCL kernel arguments
 
 	// OpenCL kernel setArg() is the only no thread safe function in OpenCL 1.1 so
 	// I need to use a mutex here
-	boost::unique_lock<boost::mutex> lock(setKernelArgsMutex);
+	boost::unique_lock<boost::mutex> lock(renderEngine->setKernelArgsMutex);
 
 	//--------------------------------------------------------------------------
 	// advancePathsKernel
 	//--------------------------------------------------------------------------
+
 	u_int argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
