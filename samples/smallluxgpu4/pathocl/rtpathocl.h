@@ -94,6 +94,7 @@ protected:
 		OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
+	virtual void EndEditLockLess(const EditActionList &editActions);
 	virtual void UpdateFilmLockLess();
 
 	u_int minIterations;
