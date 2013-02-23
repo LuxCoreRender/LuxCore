@@ -54,15 +54,63 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	minIterations = cfg.GetInt("rtpath.miniterations", 2);
+	displayDeviceIndex = cfg.GetInt("rtpath.displaydevice.index", 0);
+	if (displayDeviceIndex >= intersectionDevices.size())
+		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
+				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
 
 	PathOCLRenderEngine::StartLockLess();
 }
 
+void RTPathOCLRenderEngine::UpdateFilmLockLess() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	const u_int imgWidth = film->GetWidth();
+	const u_int imgHeight = film->GetHeight();
+
+	film->Reset();
+
+	RTPathOCLRenderThread *renderThread = (RTPathOCLRenderThread *)renderThreads[displayDeviceIndex];
+	for (u_int y = 0; y < imgHeight; ++y) {
+		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
+
+		for (u_int x = 0; x < imgWidth; ++x) {
+			Spectrum radiance;
+			float alpha = 0.0f;
+			float count = 0.f;
+
+			if (renderThread->frameBuffer) {
+				radiance.r = renderThread->frameBuffer[pGPU].c.r;
+				radiance.g = renderThread->frameBuffer[pGPU].c.g;
+				radiance.b = renderThread->frameBuffer[pGPU].c.b;
+				count = renderThread->frameBuffer[pGPU].count;
+			}
+
+			if (renderThread->alphaFrameBuffer)
+				alpha = renderThread->alphaFrameBuffer[pGPU].alpha;
+
+			if ((count > 0) && !radiance.IsNaN()) {
+				film->AddSampleCount(1.f);
+				// -.5f is to align correctly the pixel after the splat
+				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
+						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
+			}
+
+			++pGPU;
+		}
+	}
+}
+
 bool RTPathOCLRenderEngine::WaitNewFrame() {
-	// Re-balance threads
+	// Threads do the rendering
 	const double startTime = WallClockTime();
 	frameBarrier->wait();
 
+	// Display thread merges all frame buffers and do all frame post-processing steps 
+
+	frameBarrier->wait();
+
+	// Re-balance threads
 	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
 	const double targetFrameTime = renderConfig->GetScreenRefreshInterval() / 1000.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
@@ -86,6 +134,7 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 	}
 
 	UpdateFilm();
+
 	frameBarrier->wait();
 
 	frameTime = WallClockTime() - startTime;
