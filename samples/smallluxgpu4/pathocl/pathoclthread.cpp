@@ -67,12 +67,12 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	initFBKernel = NULL;
 	advancePathsKernel = NULL;
 
-	initMergedFBKernel = NULL;
+	clearFBKernel = NULL;
+	clearSBKernel = NULL;
 	mergeFBKernel = NULL;
+	normalizeFBKernel = NULL;
 	applyBlurLightFilterXR1Kernel = NULL;
 	applyBlurLightFilterYR1Kernel = NULL;
-	applyBlurHeavyFilterXR1Kernel = NULL;
-	applyBlurHeavyFilterYR1Kernel = NULL;
 	toneMapLinearKernel = NULL;
 	updateScreenBufferKernel = NULL;
 
@@ -124,12 +124,12 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete initKernel;
 	delete initFBKernel;
 	delete advancePathsKernel;
-	delete initMergedFBKernel;
+	delete clearFBKernel;
+	delete clearSBKernel;
 	delete mergeFBKernel;
+	delete normalizeFBKernel;
 	delete applyBlurLightFilterXR1Kernel;
 	delete applyBlurLightFilterYR1Kernel;
-	delete applyBlurHeavyFilterXR1Kernel;
-	delete applyBlurHeavyFilterYR1Kernel;
 	delete toneMapLinearKernel;
 	delete updateScreenBufferKernel;
 
@@ -731,15 +731,26 @@ void PathOCLRenderThread::InitKernels() {
 
 		if (dynamic_cast<RTPathOCLRenderEngine *>(renderEngine)) {
 			//------------------------------------------------------------------
+			// ClearFrameBuffer kernel
+			//------------------------------------------------------------------
+
+			delete clearFBKernel;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ClearFrameBuffer Kernel");
+			clearFBKernel = new cl::Kernel(*program, "ClearFrameBuffer");
+			clearFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &clearFBWorkGroupSize);
+			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+				clearFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+
+			//------------------------------------------------------------------
 			// InitRTFrameBuffer kernel
 			//------------------------------------------------------------------
 
-			delete initMergedFBKernel;
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling InitMergedFrameBuffer Kernel");
-			initMergedFBKernel = new cl::Kernel(*program, "InitMergedFrameBuffer");
-			initMergedFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &initMergedFBWorkGroupSize);
+			delete clearSBKernel;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ClearScreenBuffer Kernel");
+			clearSBKernel = new cl::Kernel(*program, "ClearScreenBuffer");
+			clearSBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &clearSBWorkGroupSize);
 			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				initMergedFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+				clearSBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 			//------------------------------------------------------------------
 			// MergeFrameBuffer kernel
@@ -751,6 +762,17 @@ void PathOCLRenderThread::InitKernels() {
 			mergeFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &mergeFBWorkGroupSize);
 			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				mergeFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+
+			//------------------------------------------------------------------
+			// NormalizeFrameBuffer kernel
+			//------------------------------------------------------------------
+
+			delete normalizeFBKernel;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling NormalizeFrameBuffer Kernel");
+			normalizeFBKernel = new cl::Kernel(*program, "NormalizeFrameBuffer");
+			normalizeFBKernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &normalizeFBWorkGroupSize);
+			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+				normalizeFBWorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 			//------------------------------------------------------------------
 			// Gaussian blur frame buffer filter kernel
@@ -769,20 +791,6 @@ void PathOCLRenderThread::InitKernels() {
 			applyBlurLightFilterYR1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &applyBlurLightFilterYR1WorkGroupSize);
 			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				applyBlurLightFilterYR1WorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
-
-			delete applyBlurHeavyFilterXR1Kernel;
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ApplyBlurHeavyFilterXR1 Kernel");
-			applyBlurHeavyFilterXR1Kernel = new cl::Kernel(*program, "ApplyBlurHeavyFilterXR1");
-			applyBlurHeavyFilterXR1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &applyBlurHeavyFilterXR1WorkGroupSize);
-			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				applyBlurHeavyFilterXR1WorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
-
-			delete applyBlurHeavyFilterYR1Kernel;
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ApplyBlurHeavyFilterYR1 Kernel");
-			applyBlurHeavyFilterYR1Kernel = new cl::Kernel(*program, "ApplyBlurHeavyFilterYR1");
-			applyBlurHeavyFilterYR1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &applyBlurHeavyFilterYR1WorkGroupSize);
-			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				applyBlurHeavyFilterYR1WorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 			//------------------------------------------------------------------
 			// ToneMapLinear kernel

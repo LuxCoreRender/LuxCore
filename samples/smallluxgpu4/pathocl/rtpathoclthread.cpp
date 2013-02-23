@@ -81,7 +81,7 @@ void RTPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 void RTPathOCLRenderThread::InitDisplayThread() {
 	frameBufferPixelCount =	(renderEngine->film->GetWidth() + 2) * (renderEngine->film->GetHeight() + 2);
 	AllocOCLBufferRW(&tmpFrameBufferBuff, sizeof(luxrays::ocl::Pixel) * frameBufferPixelCount, "Tmp FrameBuffer");
-	AllocOCLBufferRW(&mergedFrameBufferBuff, sizeof(Spectrum) * frameBufferPixelCount, "Merged FrameBuffer");
+	AllocOCLBufferRW(&mergedFrameBufferBuff, sizeof(luxrays::ocl::Pixel) * frameBufferPixelCount, "Merged FrameBuffer");
 
 	AllocOCLBufferRW(&screenBufferBuff, sizeof(Spectrum) * renderEngine->film->GetWidth() *
 			renderEngine->film->GetHeight(), "Screen FrameBuffer");
@@ -101,7 +101,10 @@ void RTPathOCLRenderThread::SetKernelArgs() {
 		boost::unique_lock<boost::mutex> lock(renderEngine->setKernelArgsMutex);
 
 		u_int argIndex = 0;
-		initMergedFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		clearFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+
+		argIndex = 0;
+		normalizeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
 		applyBlurLightFilterXR1Kernel->setArg(argIndex++, *mergedFrameBufferBuff);
@@ -111,19 +114,13 @@ void RTPathOCLRenderThread::SetKernelArgs() {
 		applyBlurLightFilterYR1Kernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
-		applyBlurHeavyFilterXR1Kernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		applyBlurHeavyFilterXR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
-		argIndex = 0;
-		applyBlurHeavyFilterYR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
-		applyBlurHeavyFilterYR1Kernel->setArg(argIndex++, *mergedFrameBufferBuff);
-
-		argIndex = 0;
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
 		updateScreenBufferKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 		updateScreenBufferKernel->setArg(argIndex++, *screenBufferBuff);
+
 	}
 }
 
@@ -202,11 +199,6 @@ void RTPathOCLRenderThread::UpdateOCLBuffers() {
 	oclQueue.enqueueNDRangeKernel(*initFBKernel, cl::NullRange,
 		cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, initFBWorkGroupSize)),
 		cl::NDRange(initFBWorkGroupSize));
-	if (amiDisplayThread)
-		oclQueue.enqueueNDRangeKernel(*initMergedFBKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, initMergedFBWorkGroupSize)),
-				cl::NDRange(initMergedFBWorkGroupSize));
-		
 
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
@@ -227,6 +219,14 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 	try {
+		const bool amiDisplayThread = (engine->displayDeviceIndex == threadIndex);
+		if (amiDisplayThread) {
+			clearSBKernel->setArg(0, *screenBufferBuff);
+			oclQueue.enqueueNDRangeKernel(*clearSBKernel, cl::NullRange,
+					cl::NDRange(RoundUp<u_int>(renderEngine->film->GetWidth() * renderEngine->film->GetHeight(), clearSBWorkGroupSize)),
+					cl::NDRange(clearSBWorkGroupSize));
+		}
+
 		while (!boost::this_thread::interruption_requested()) {
 			if (updateActions.HasAnyAction())
 				UpdateOCLBuffers();
@@ -266,16 +266,22 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 			// If I'm the display thread, my OpenCL device must merge all frame buffers
 			// and do all frame post-processing steps
-			if (engine->displayDeviceIndex == threadIndex) {
+			if (amiDisplayThread) {
 				// Last step include a film update
 				boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
 
+				//--------------------------------------------------------------
 				// Clear the merged frame buffer
-				oclQueue.enqueueNDRangeKernel(*initMergedFBKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, initMergedFBWorkGroupSize)),
-						cl::NDRange(initMergedFBWorkGroupSize));
+				//--------------------------------------------------------------
 
+				oclQueue.enqueueNDRangeKernel(*clearFBKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, clearFBWorkGroupSize)),
+						cl::NDRange(clearFBWorkGroupSize));
+
+				//--------------------------------------------------------------
 				// Merge all frame buffers
+				//--------------------------------------------------------------
+
 				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
 					// I don't need to lock renderEngine->setKernelArgsMutex
 					// because I'm the only thread running
@@ -305,21 +311,29 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				}
 
 				//--------------------------------------------------------------
-				// Apply Gaussian filter to the merged frame buffer
+				// Normalize the merged buffer
+				//--------------------------------------------------------------
+
+				oclQueue.enqueueNDRangeKernel(*normalizeFBKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, normalizeFBWorkGroupSize)),
+						cl::NDRange(normalizeFBWorkGroupSize));
+
+				//--------------------------------------------------------------
+				// Apply Gaussian filter to the merged buffer
 				//--------------------------------------------------------------
 
 				for (u_int i = 0; i < 3; ++i) {
 					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterXR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(engine->film->GetHeight() + 2, applyBlurLightFilterXR1WorkGroupSize)),
+							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterXR1WorkGroupSize)),
 							cl::NDRange(applyBlurLightFilterXR1WorkGroupSize));
 
 					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterYR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(engine->film->GetWidth() + 2, applyBlurLightFilterYR1WorkGroupSize)),
+							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterYR1WorkGroupSize)),
 							cl::NDRange(applyBlurLightFilterYR1WorkGroupSize));
 				}
 
 				//--------------------------------------------------------------
-				// Apply tone mapping
+				// Apply tone mapping to merged buffer
 				//--------------------------------------------------------------
 
 				oclQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
@@ -333,8 +347,11 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				oclQueue.enqueueNDRangeKernel(*updateScreenBufferKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, updateScreenBufferWorkGroupSize)),
 						cl::NDRange(updateScreenBufferWorkGroupSize));
-
+				
+				//--------------------------------------------------------------
 				// Transfer the screen frame buffer
+				//--------------------------------------------------------------
+
 				// The film has been locked before
 				oclQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
 						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->GetScreenBuffer());
