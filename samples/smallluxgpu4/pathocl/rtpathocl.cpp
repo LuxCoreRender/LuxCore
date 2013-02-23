@@ -66,6 +66,18 @@ void RTPathOCLRenderEngine::StartLockLess() {
 				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
 
 	PathOCLRenderEngine::StartLockLess();
+
+	// To start all threads at the same time
+	frameBarrier->wait();
+}
+
+void RTPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	PathOCLRenderEngine::EndEditLockLess(editActions);
+
+	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+		// In this particular case I have really stopped all threads
+		frameBarrier->wait();
+	}
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {

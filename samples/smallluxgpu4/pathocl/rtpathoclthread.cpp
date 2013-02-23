@@ -205,12 +205,14 @@ void RTPathOCLRenderThread::UpdateOCLBuffers() {
 void RTPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
+	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
+	boost::barrier *frameBarrier = engine->frameBarrier;
+	// To start all threads at the same time
+	frameBarrier->wait();
+
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 	try {
-		RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
-		boost::barrier *frameBarrier = engine->frameBarrier;
-
 		while (!boost::this_thread::interruption_requested()) {
 			if (updateActions.HasAnyAction())
 				UpdateOCLBuffers();
