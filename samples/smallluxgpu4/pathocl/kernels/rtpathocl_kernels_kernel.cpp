@@ -89,8 +89,6 @@ std::string KernelSource_rtpathocl_kernels =
 "\n"
 "	float4 srcRGBC = VLOAD4F(&srcFrameBuffer[gid].c.r);\n"
 "\n"
-"	// Normalize\n"
-"	float3 srcRGB;\n"
 "	if (srcRGBC.w > 0.f) {\n"
 "		const float4 dstRGBC = VLOAD4F(&dstFrameBuffer[gid].c.r);\n"
 "		VSTORE4F(srcRGBC + dstRGBC, &dstFrameBuffer[gid].c.r);\n"

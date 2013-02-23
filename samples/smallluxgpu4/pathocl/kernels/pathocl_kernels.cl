@@ -499,7 +499,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			} else {
 				lightRadiance = TriangleLight_Illuminate(
 					&triLightDefs[lightIndex], &task->directLightState.tmpHitPoint,
-					VLOAD3F(&bsdf->hitPoint.x),
+					VLOAD3F(&bsdf->hitPoint.p),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
