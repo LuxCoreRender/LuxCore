@@ -65,7 +65,6 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 		SLG_LOG("  " << *i << " = " << cfg.GetString(*i, ""));
 
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
-	minIterationsToShow   = cfg.GetInt("screen.refresh.iterations", 4);
 
 	if (scn) {
 		scene = scn;
@@ -87,16 +86,8 @@ void RenderConfig::SetScreenRefreshInterval(const unsigned int t) {
 	screenRefreshInterval = t;
 }
 
-void RenderConfig::SetMinIterationsToShow(const unsigned int t) {
-	minIterationsToShow = t;
-}
-
 unsigned int RenderConfig::GetScreenRefreshInterval() const {
 	return screenRefreshInterval;
-}
-
-unsigned int RenderConfig::GetMinIterationsToShow() const {
-	return minIterationsToShow;
 }
 
 bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,

@@ -169,14 +169,14 @@ public:
 protected:
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, OpenCLIntersectionDevice *device);
 
-	void StartLockLess();
-	void StopLockLess();
+	virtual void StartLockLess();
+	virtual void StopLockLess();
 
-	void BeginEditLockLess();
-	void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginEditLockLess();
+	virtual void EndEditLockLess(const EditActionList &editActions);
 
-	void UpdateFilmLockLess();
-	void UpdateCounters();
+	virtual void UpdateFilmLockLess();
+	virtual void UpdateCounters();
 
 	CompiledScene *compiledScene;
 
