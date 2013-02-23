@@ -19,8 +19,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-// TODO: metropolis with lazy evaluation
-		
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <cstdio>

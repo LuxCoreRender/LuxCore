@@ -86,7 +86,7 @@ void RTPathOCLRenderEngine::UpdateFilmLockLess() {
 
 bool RTPathOCLRenderEngine::WaitNewFrame() {
 	// Threads do the rendering
-	const double startTime = WallClockTime();
+	const double t0 = WallClockTime();
 	frameBarrier->wait();
 
 	// Display thread merges all frame buffers and do all frame post-processing steps 
@@ -118,7 +118,11 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 
 	frameBarrier->wait();
 
-	frameTime = WallClockTime() - startTime;
+	// Update the statistics
+	elapsedTime = WallClockTime() - startTime;
+	UpdateCounters();
+
+	frameTime = WallClockTime() - t0;
 
 	return true;
 }
