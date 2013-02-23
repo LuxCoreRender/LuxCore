@@ -502,7 +502,7 @@ std::string KernelSource_pathocl_kernels =
 "			} else {\n"
 "				lightRadiance = TriangleLight_Illuminate(\n"
 "					&triLightDefs[lightIndex], &task->directLightState.tmpHitPoint,\n"
-"					VLOAD3F(&bsdf->hitPoint.x),\n"
+"					VLOAD3F(&bsdf->hitPoint.p),\n"
 "					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),\n"
 "					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),\n"
 "					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),\n"

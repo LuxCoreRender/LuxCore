@@ -352,21 +352,6 @@ void Sampler_NextSample(
 		sample->smallMutationCount += 1;
 	}
 
-	//--------------------------------------------------------------------------
-	// Generate a new camera path
-	//--------------------------------------------------------------------------
-
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
-
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;

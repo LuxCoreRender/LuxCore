@@ -86,8 +86,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 
 	float4 srcRGBC = VLOAD4F(&srcFrameBuffer[gid].c.r);
 
-	// Normalize
-	float3 srcRGB;
 	if (srcRGBC.w > 0.f) {
 		const float4 dstRGBC = VLOAD4F(&dstFrameBuffer[gid].c.r);
 		VSTORE4F(srcRGBC + dstRGBC, &dstFrameBuffer[gid].c.r);
