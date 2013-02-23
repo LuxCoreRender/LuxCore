@@ -25,16 +25,52 @@
 #define FRAMEBUFFER_HEIGHT (PARAM_IMAGE_HEIGHT + 2)
 
 //------------------------------------------------------------------------------
-// InitMergedFrameBuffer Kernel
+// ClearFrameBuffer Kernel
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitMergedFrameBuffer(
-		__global Spectrum *frameBuffer) {
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ClearFrameBuffer(
+		__global Pixel *frameBuffer) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
 		return;
 
-	VSTORE3F(0.f, &frameBuffer[gid].r);
+	VSTORE4F(0.f, &frameBuffer[gid].c.r);
+}
+
+//------------------------------------------------------------------------------
+// ClearScreenBuffer Kernel
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ClearScreenBuffer(
+		__global Spectrum *screenBuffer) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT)
+		return;
+
+	VSTORE3F(0.f, &screenBuffer[gid].r);
+}
+
+//------------------------------------------------------------------------------
+// NormalizeFrameBuffer Kernel
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void NormalizeFrameBuffer(
+		__global Pixel *frameBuffer) {
+	const size_t gid = get_global_id(0);
+	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
+		return;
+
+	float4 rgbc = VLOAD4F(&frameBuffer[gid].c.r);
+
+	if (rgbc.w > 0.f) {
+		const float k = 1.f / rgbc.w;
+		rgbc.s0 *= k;
+		rgbc.s1 *= k;
+		rgbc.s2 *= k;
+
+		VSTORE4F(rgbc, &frameBuffer[gid].c.r);
+	} else
+		VSTORE4F(0.f, &frameBuffer[gid].c.r);
 }
 
 //------------------------------------------------------------------------------
@@ -43,7 +79,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitMergedFrameBuf
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 		__global Pixel *srcFrameBuffer,
-		__global Spectrum *dstFrameBuffer) {
+		__global Pixel *dstFrameBuffer) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
 		return;
@@ -53,13 +89,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 	// Normalize
 	float3 srcRGB;
 	if (srcRGBC.w > 0.f) {
-		const float k = 1.f / (srcRGBC.w * PARAM_DEVICE_COUNT);
-		srcRGB = (float3)(srcRGBC.x * k, srcRGBC.y * k, srcRGBC.z * k);
-	} else
-		srcRGB = 0.f;
-
-	const float3 dstRGB = VLOAD3F(&dstFrameBuffer[gid].r);
-	VSTORE3F(srcRGB + dstRGB, &dstFrameBuffer[gid].r);
+		const float4 dstRGBC = VLOAD4F(&dstFrameBuffer[gid].c.r);
+		VSTORE4F(srcRGBC + dstRGBC, &dstFrameBuffer[gid].c.r);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -67,21 +99,21 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 //------------------------------------------------------------------------------
 
 void ApplyBlurFilterXR1(
-		__global Spectrum *src,
-		__global Spectrum *dst,
+		__global Pixel *src,
+		__global Pixel *dst,
 		const float aF,
 		const float bF,
 		const float cF
 		) {
 	// Do left edge
 	float3 a;
-	float3 b = VLOAD3F(&src[0].r);
-	float3 c = VLOAD3F(&src[1].r);
+	float3 b = VLOAD3F(&src[0].c.r);
+	float3 c = VLOAD3F(&src[1].c.r);
 
 	const float leftTotF = bF + cF;
 	const float3 bLeftK = bF / leftTotF;
 	const float3 cLeftK = cF / leftTotF;
-	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
+	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].c.r);
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -92,9 +124,9 @@ void ApplyBlurFilterXR1(
 	for (unsigned int x = 1; x < FRAMEBUFFER_WIDTH - 1; ++x) {
 		a = b;
 		b = c;
-		c = VLOAD3F(&src[x + 1].r);
+		c = VLOAD3F(&src[x + 1].c.r);
 
-		VSTORE3F(aK * a + bK  * b + cK * c, &dst[x].r);
+		VSTORE3F(aK * a + bK  * b + cK * c, &dst[x].c.r);
     }
 
     // Do right edge
@@ -103,25 +135,25 @@ void ApplyBlurFilterXR1(
 	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	VSTORE3F(aRightK  * a + bRightK * b, &dst[FRAMEBUFFER_WIDTH - 1].r);
+	VSTORE3F(aRightK  * a + bRightK * b, &dst[FRAMEBUFFER_WIDTH - 1].c.r);
 }
 
 void ApplyBlurFilterYR1(
-		__global Spectrum *src,
-		__global Spectrum *dst,
+		__global Pixel *src,
+		__global Pixel *dst,
 		const float aF,
 		const float bF,
 		const float cF
 		) {
 	// Do left edge
 	float3 a;
-	float3 b = VLOAD3F(&src[0].r);
-	float3 c = VLOAD3F(&src[FRAMEBUFFER_WIDTH].r);
+	float3 b = VLOAD3F(&src[0].c.r);
+	float3 c = VLOAD3F(&src[FRAMEBUFFER_WIDTH].c.r);
 
 	const float leftTotF = bF + cF;
 	const float3 bLeftK = bF / leftTotF;
 	const float3 cLeftK = cF / leftTotF;
-	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
+	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].c.r);
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -134,9 +166,9 @@ void ApplyBlurFilterYR1(
 
 		a = b;
 		b = c;
-		c = VLOAD3F(&src[index + FRAMEBUFFER_WIDTH].r);
+		c = VLOAD3F(&src[index + FRAMEBUFFER_WIDTH].c.r);
 
-		VSTORE3F(aK * a + bK  * b + cK * c, &dst[index].r);
+		VSTORE3F(aK * a + bK  * b + cK * c, &dst[index].c.r);
     }
 
     // Do right edge
@@ -145,12 +177,12 @@ void ApplyBlurFilterYR1(
 	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	VSTORE3F(aRightK  * a + bRightK * b, &dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].r);
+	VSTORE3F(aRightK  * a + bRightK * b, &dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].c.r);
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterXR1(
-		__global Spectrum *src,
-		__global Spectrum *dst
+		__global Pixel *src,
+		__global Pixel *dst
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_HEIGHT)
@@ -167,8 +199,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilt
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterYR1(
-		__global Spectrum *src,
-		__global Spectrum *dst
+		__global Pixel *src,
+		__global Pixel *dst
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH)
@@ -184,86 +216,51 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilt
 	ApplyBlurFilterYR1(src, dst, aF, bF, cF);
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurHeavyFilterXR1(
-		__global Spectrum *src,
-		__global Spectrum *dst
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= FRAMEBUFFER_HEIGHT)
-		return;
-
-	src += gid * FRAMEBUFFER_WIDTH;
-	dst += gid * FRAMEBUFFER_WIDTH;
-
-	const float aF = .35f;
-	const float bF = 1.f;
-	const float cF = .35f;
-
-	ApplyBlurFilterXR1(src, dst, aF, bF, cF);
-}
-
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurHeavyFilterYR1(
-		__global Spectrum *src,
-		__global Spectrum *dst
-		) {
-	const size_t gid = get_global_id(0);
-	if (gid >= FRAMEBUFFER_WIDTH)
-		return;
-
-	src += gid;
-	dst += gid;
-
-	const float aF = .35f;
-	const float bF = 1.f;
-	const float cF = .35f;
-
-	ApplyBlurFilterYR1(src, dst, aF, bF, cF);
-}
-
 //------------------------------------------------------------------------------
 // Linear Tone Map Kernel
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ToneMapLinear(
-		__global Spectrum *src,
-		__global Spectrum *dst) {
+		__global Pixel *src,
+		__global Pixel *dst) {
 	const int gid = get_global_id(0);
 	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
 		return;
 
 	const float4 k = (float4)(PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, 1.f);
-	const float4 sp = VLOAD4F(&src[gid].r);
+	const float4 sp = VLOAD4F(&src[gid].c.r);
 
-	VSTORE4F(k * sp, &dst[gid].r);
+	VSTORE4F(k * sp, &dst[gid].c.r);
 }
 
 //------------------------------------------------------------------------------
 // UpdateScreenBuffer Kernel
 //------------------------------------------------------------------------------
 
-//uint Radiance2PixelUInt(const float x) {
-//	return (uint)(pow(clamp(x, 0.f, 1.f), 1.f / PARAM_GAMMA) * 255.f + .5f);
-//}
-
 float Radiance2PixelFloat(const float x) {
 	return pow(clamp(x, 0.f, 1.f), 1.f / PARAM_GAMMA);
 }
 
 __kernel void UpdateScreenBuffer(
-		__global Spectrum *frameBuffer,
-		__global Spectrum *pbo) {
+		__global Pixel *srcFrameBuffer,
+		__global Spectrum *screenBuffer) {
 	const int gid = get_global_id(0);
 	const int x = gid % FRAMEBUFFER_WIDTH - 2;
 	const int y = gid / FRAMEBUFFER_WIDTH - 2;
 	if ((x < 0) || (y < 0) || (x >= PARAM_IMAGE_WIDTH) || (y >= PARAM_IMAGE_HEIGHT))
 		return;
 
-	__global Spectrum *sp = &frameBuffer[gid];
+	float4 newRgbc = VLOAD4F(&srcFrameBuffer[gid].c.r);
 
-	Spectrum rgb;
-	rgb.r = Radiance2PixelFloat(sp->r);
-	rgb.g = Radiance2PixelFloat(sp->g);
-	rgb.b = Radiance2PixelFloat(sp->b);
+	if (newRgbc.s3 > 0.f) {
+		float3 newRgb = (float3)(
+				newRgb.s0 = Radiance2PixelFloat(newRgbc.s0),
+				newRgb.s1 = Radiance2PixelFloat(newRgbc.s1),
+				newRgb.s2 = Radiance2PixelFloat(newRgbc.s2));
 
-	pbo[(x + y * PARAM_IMAGE_WIDTH)] = rgb;
+		const float3 oldRgb = VLOAD3F(&screenBuffer[(x + y * PARAM_IMAGE_WIDTH)].r);
+
+		// Blend old and new RGB value in for ghost effect
+		VSTORE3F(mix(oldRgb, newRgb, .85f), &screenBuffer[(x + y * PARAM_IMAGE_WIDTH)].r);
+	}
 }
