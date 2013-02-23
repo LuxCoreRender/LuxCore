@@ -361,7 +361,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			else if (screenRefreshInterval > 100)
 				session->renderConfig->SetScreenRefreshInterval(max(50u, screenRefreshInterval - 50));
 			else
-				session->renderConfig->SetScreenRefreshInterval(max(10u, screenRefreshInterval - 10));
+				session->renderConfig->SetScreenRefreshInterval(max(10u, screenRefreshInterval - 5));
 			break;
 		}
 		case 'm': {
@@ -371,7 +371,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			else if (screenRefreshInterval >= 100)
 				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 50);
 			else
-				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 10);
+				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 5);
 			break;
 		}
 		case 't':
@@ -430,6 +430,8 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->SetRenderingEngineType(RTPATHOCL);
 			glutIdleFunc(idleFunc);
 			RealtimeMode = true;
+			if (session->renderConfig->GetScreenRefreshInterval() > 25)
+				session->renderConfig->SetScreenRefreshInterval(25);
 			break;
 		case 'o': {
 #if defined(WIN32)
