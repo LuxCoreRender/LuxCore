@@ -84,6 +84,7 @@ endif(DOXYGEN_FOUND)
 set(SLG_KERNELS
 	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/datatypes.cl
 	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/pathocl_kernels.cl
+	${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels/rtpathocl_kernels.cl
 )
 
 PreprocessOCLKernels(${CMAKE_CURRENT_SOURCE_DIR}/pathocl/kernels slg ${SLG_KERNELS})
@@ -113,6 +114,7 @@ set(SLG4LIB_SRCS
 	cbidirhybrid/cbidirhybrid.cpp
 	pathocl/kernels/datatypes_kernel.cpp
 	pathocl/kernels/pathocl_kernels_kernel.cpp
+	pathocl/kernels/rtpathocl_kernels_kernel.cpp
 	pathocl/compiledscene.cpp
 	pathocl/pathocl.cpp
 	pathocl/pathoclthread.cpp

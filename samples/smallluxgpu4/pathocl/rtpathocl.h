@@ -56,7 +56,8 @@ public:
 protected:
 	void InitDisplayThread();
 	void UpdateOCLBuffers();
-	void RenderThreadImpl();
+
+	virtual void RenderThreadImpl();
 
 	virtual void InitRender();
 	virtual void SetKernelArgs();
@@ -68,9 +69,8 @@ protected:
 
 	// OpenCL variables
 	cl::Buffer *tmpFrameBufferBuff;
-	cl::Buffer *tmpAlphaFrameBufferBuff;
 	cl::Buffer *mergedFrameBufferBuff;
-	cl::Buffer *mergedAlphaFrameBufferBuff;
+	cl::Buffer *screenBufferBuff;
 };
 
 //------------------------------------------------------------------------------

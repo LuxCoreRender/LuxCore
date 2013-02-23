@@ -105,6 +105,18 @@ protected:
 	size_t initDisplayFBWorkGroupSize;
 	cl::Kernel *mergeFBKernel;
 	size_t mergeFBWorkGroupSize;
+	cl::Kernel *applyBlurLightFilterXR1Kernel;
+	size_t applyBlurLightFilterXR1WorkGroupSize;
+	cl::Kernel *applyBlurLightFilterYR1Kernel;
+	size_t applyBlurLightFilterYR1WorkGroupSize;
+	cl::Kernel *applyBlurHeavyFilterXR1Kernel;
+	size_t applyBlurHeavyFilterXR1WorkGroupSize;
+	cl::Kernel *applyBlurHeavyFilterYR1Kernel;
+	size_t applyBlurHeavyFilterYR1WorkGroupSize;
+	cl::Kernel *toneMapLinearKernel;
+	size_t toneMapLinearWorkGroupSize;
+	cl::Kernel *updateScreenBufferKernel;
+	size_t updateScreenBufferWorkGroupSize;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;

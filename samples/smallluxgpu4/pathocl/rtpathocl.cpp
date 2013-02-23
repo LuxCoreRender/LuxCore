@@ -34,6 +34,12 @@ namespace slg {
 
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		PathOCLRenderEngine(rcfg, flm, flmMutex) {
+	// Re-initialize the file in order to not have any sample buffer
+	film->SetPerPixelNormalizedBufferFlag(false);
+	film->SetPerScreenNormalizedBufferFlag(false);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->Init();
+
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
 }
 
@@ -63,42 +69,7 @@ void RTPathOCLRenderEngine::StartLockLess() {
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-	const u_int imgWidth = film->GetWidth();
-	const u_int imgHeight = film->GetHeight();
-
-	film->Reset();
-
-	RTPathOCLRenderThread *renderThread = (RTPathOCLRenderThread *)renderThreads[displayDeviceIndex];
-	for (u_int y = 0; y < imgHeight; ++y) {
-		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
-
-		for (u_int x = 0; x < imgWidth; ++x) {
-			Spectrum radiance;
-			float alpha = 0.0f;
-			float count = 0.f;
-
-			if (renderThread->frameBuffer) {
-				radiance.r = renderThread->frameBuffer[pGPU].c.r;
-				radiance.g = renderThread->frameBuffer[pGPU].c.g;
-				radiance.b = renderThread->frameBuffer[pGPU].c.b;
-				count = renderThread->frameBuffer[pGPU].count;
-			}
-
-			if (renderThread->alphaFrameBuffer)
-				alpha = renderThread->alphaFrameBuffer[pGPU].alpha;
-
-			if ((count > 0) && !radiance.IsNaN()) {
-				film->AddSampleCount(1.f);
-				// -.5f is to align correctly the pixel after the splat
-				film->SplatFiltered(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
-						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
-			}
-
-			++pGPU;
-		}
-	}
+	// Nothing to do: the display thread is in charge to update the film
 }
 
 bool RTPathOCLRenderEngine::WaitNewFrame() {
@@ -132,8 +103,6 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " iterations");
 		}
 	}
-
-	UpdateFilm();
 
 	frameBarrier->wait();
 
