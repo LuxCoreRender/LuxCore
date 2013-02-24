@@ -33,6 +33,7 @@
 
 #include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>
+#include <bits/stl_vector.h>
 
 #include "slg.h"
 
@@ -135,7 +136,19 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	taskCount = RoundUpPow2(cfg.GetInt("opencl.task.count", 65536));
+	if (!cfg.IsDefined("opencl.task.count") && dynamic_cast<RTPathOCLRenderEngine *>(this)) {
+		// In this case, I will tune task count for RTPATHOCL
+
+		// The task count is set in order to have one task per pixel
+		// +2 because the frame buffer on the dice is 2 pixels larger
+		taskCount = (film->GetWidth() + 2) * (film->GetHeight() + 2) / intersectionDevices.size();
+	} else 
+		taskCount = cfg.GetInt("opencl.task.count", 65536);
+	// I don't know yet the workgroup size of each device so I can not
+	// round up task count to be a multiply of workgroups size of all devices
+	// used. rounding to 2048 is a simple trick base don the assumption that
+	// workgroup size is a power of 2 and <= 2048.
+	taskCount = RoundUp<u_int>(taskCount, 2048);
 	SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
 
 	if (cfg.IsDefined("opencl.memory.maxpagesize"))
