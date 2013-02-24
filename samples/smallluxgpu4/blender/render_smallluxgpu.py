@@ -20,12 +20,12 @@
 #   LuxRays website: http://www.luxrender.net                             #
 ###########################################################################
 #
-# SmallLuxGPU v3.0devel1 Blender 2.5 plug-in
+# SmallLuxGPU v4.0devel1 Blender 2.5 plug-in
 
 bl_info = {
     "name": "SmallLuxGPU",
     "author": "see (SLG) AUTHORS.txt",
-    "version": (3, 0, 1),
+    "version": (4, 0, 1),
     "blender": (2, 6, 0),
     "location": "Info Header > Engine dropdown menu",
     "description": "SmallLuxGPU Exporter and Live! mode Plugin",
@@ -302,52 +302,101 @@ class SLGBP:
     def getmatscn(scene, m):
         scn = {}
         matn = m.name.replace('.','_')
+        matprop = 'scene.materials.{}'.format(matn)       
         if m.use_shadeless:
             matprop = None
         elif m.emit:
-            matprop = 'scene.materials.light.{}'.format(matn)
-            scn[matprop] = '{} {} {}'.format(ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2]))
+            scn['{}.type'.format(matprop)] = 'matte'            
+            scn['{}.emission'.format(matprop)] = '{} {} {}'.format(ff(m.emit*m.diffuse_color[0]),ff(m.emit*m.diffuse_color[1]),ff(m.emit*m.diffuse_color[2]))            
+        elif m.translucency > 0:
+            scn['{}.type'.format(matprop)] = 'mattetranslucent'            
+            scn['{}.kr'.format(matprop)] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
+            scn['{}.kt'.format(matprop)] = '{} {} {}'.format(ff(m.mirror_color[0]),ff(m.mirror_color[1]),ff(m.mirror_color[2]))
+            if m.diffuse_color.v+m.mirror_color.v > 1.0001:
+                SLGBP.warn = m.name + ': transluted + reflected color greater than 1.0!'
+                print('WARNING: ' + SLGBP.warn)
         elif m.use_transparency:
             if m.raytrace_transparency.ior == 1.0:
-                matprop = 'scene.materials.archglass.{}'.format(matn)
-                scn[matprop] = '{} {} {} {} {} {} {:b} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),
-                    ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
-                    ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
-                    m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
+                scn['{}.type'.format(matprop)] = 'archglass'
+                scn['{}.kr'.format(matprop)] = '{} {} {}'.format(ff(m.mirror_color[0]), ff(m.mirror_color[1]), ff(m.mirror_color[2]))
+                scn['{}.kt'.format(matprop)] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
             else:
-                matprop = 'scene.materials.glass.{}'.format(matn)
-                scn[matprop] = '{} {} {} {} {} {} 1.0 {} {:b} {:b}'.format(ff(m.mirror_color[0]),ff(m.mirror_color[1]),ff(m.mirror_color[2]),
-                    ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
-                    ff(m.raytrace_transparency.ior),m.raytrace_mirror.depth>0,m.raytrace_transparency.depth>0)
-        else:
-            if not m.raytrace_mirror.use or not m.raytrace_mirror.reflect_factor:
-                matprop = 'scene.materials.matte.{}'.format(matn)
-                scn[matprop] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
+                scn['{}.type'.format(matprop)] = 'glass'
+                scn['{}.kr'.format(matprop)] = '{} {} {}'.format(ff(m.mirror_color[0]),ff(m.mirror_color[1]),ff(m.mirror_color[2]))
+                scn['{}.kt'.format(matprop)] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
+                scn['{}.iorinside'.format(matprop)] = '{}'.format(ff(m.raytrace_transparency.ior))
+                scn['{}.ioroutside'.format(matprop)] = '1.0'
+        elif m.raytrace_mirror.use:
+            if m.raytrace_mirror.reflect_factor < 1:
+                scn['{}.type'.format(matprop)] = 'glossy2'
+                scn['{}.kd'.format(matprop)] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
+                scn['{}.ks'.format(matprop)] = '{} {} {}'.format(ff(m.mirror_color[0]), ff(m.mirror_color[1]), ff(m.mirror_color[2]))
+                scn['{}.uroughness'.format(matprop)] = '{}'.format(ff(m.raytrace_mirror.gloss_factor))
+                scn['{}.vroughness'.format(matprop)] = '{}'.format(ff(m.raytrace_mirror.gloss_factor))
             else:
-                if m.raytrace_mirror.fresnel > 0:
-                    matprop = 'scene.materials.alloy.{}'.format(matn)
-                    scn[matprop] = '{} {} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
-                        ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
-                        ff(pow(10000.0,m.raytrace_mirror.gloss_factor)),m.raytrace_mirror.fresnel,m.raytrace_mirror.depth>0)
+                if m.raytrace_mirror.gloss_factor > 0:
+                    refltype = 'metal2'
+                    scn['{}.n'.format(matprop)] = '{}_fresnelapproxN'.format(matn)
+                    scn['{}.k'.format(matprop)] = '{}_fresnelapproxK'.format(matn)
+                    scn['scene.textures.{}_fresnelapproxN.type'.format(matn)] = 'fresnelapproxn'
+                    scn['scene.textures.{}_fresnelapproxN.texture'.format(matn)] = '{} {} {}'.format(ff(m.mirror_color[0]), ff(m.mirror_color[1]), ff(m.mirror_color[2]))
+                    scn['scene.textures.{}_fresnelapproxK.type'.format(matn)] = 'fresnelapproxk'
+                    scn['scene.textures.{}_fresnelapproxK.texture'.format(matn)] = '{} {} {}'.format(ff(m.mirror_color[0]), ff(m.mirror_color[1]), ff(m.mirror_color[2]))
                 else:
-                    if m.raytrace_mirror.gloss_factor < 1:
-                        refltype = 'metal'
-                        gloss = ff(pow(10000.0,m.raytrace_mirror.gloss_factor))
-                    else:
-                        refltype = 'mirror'
-                        gloss = ''
-                    if m.raytrace_mirror.reflect_factor == 1:
-                        matprop = 'scene.materials.{}.{}'.format(refltype,matn)
-                        scn[matprop] = '{} {} {} {} {:b}'.format(ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),
-                            ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),gloss,m.raytrace_mirror.depth>0)
-                    else:
-                        matprop = 'scene.materials.matte{}.{}'.format(refltype,matn)
-                        scn[matprop] = '{} {} {} {} {} {} {} {:b}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]),
-                            ff(m.raytrace_mirror.reflect_factor*m.mirror_color[0]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[1]),ff(m.raytrace_mirror.reflect_factor*m.mirror_color[2]),
-                            gloss,m.raytrace_mirror.depth>0)
-                        if m.diffuse_color.v+m.raytrace_mirror.reflect_factor*m.mirror_color.v > 1.0001:
-                            SLGBP.warn = m.name + ': diffuse + reflected color greater than 1.0!'
-                            print('WARNING: ' + SLGBP.warn)
+                    refltype = 'mirror'
+                    scn['{}.kr'.format(matprop)] = '{} {} {}'.format(ff(m.mirror_color[0]), ff(m.mirror_color[1]), ff(m.mirror_color[2]))                
+                    scn['{}.kd'.format(matprop)] = '{} {} {}'.format(ff(m.diffuse_color[0]), ff(m.diffuse_color[1]), ff(m.diffuse_color[2]))
+                            
+                scn['{}.type'.format(matprop)] = refltype
+                scn['{}.uroughness'.format(matprop)] = '{}'.format(ff(m.raytrace_mirror.gloss_factor))
+                scn['{}.vroughness'.format(matprop)] = '{}'.format(ff(m.raytrace_mirror.gloss_factor))                        
+        else:
+            scn['{}.type'.format(matprop)] = 'matte'            
+            scn['{}.kd'.format(matprop)] = '{} {} {}'.format(ff(m.diffuse_color[0]),ff(m.diffuse_color[1]),ff(m.diffuse_color[2]))
+
+        if scene.slg.vuvs:
+            texmap = next((ts for ts in m.texture_slots if ts and ts.use_map_color_diffuse and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
+            if texmap:                        
+                texn = texmap.name.replace('.','_')
+                texprop = 'scene.textures.{}'.format(texn)
+                scn['{}.file'.format(texprop)] = bpy.path.abspath(texmap.texture.image.filepath).replace('\\','/')
+                scn['{}.gamma'.format(texprop)] = ff(texmap.texture.slg_gamma)
+                scn['{}.mapping.uvscale'.format(texprop)] = '{} {}'.format(ff(1.), ff(1.))
+                scn['{}.kd'.format(matprop)] = texn
+            texspect = next((ts for ts in m.texture_slots if ts and ts.use_map_color_spec and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
+            if texspect:
+                texspectn = texspect.name.replace('.','_')
+                texspectprop = 'scene.textures.{}'.format(texspectn)
+                scn['{}.file'.format(texspectprop)] = bpy.path.abspath(texspect.texture.image.filepath).replace('\\','/')
+                scn['{}.gamma'.format(texspectprop)] = ff(texspect.texture.slg_gamma)
+                scn['{}.mapping.uvscale'.format(texspectprop)] = '{} {}'.format(ff(1.), ff(1.))
+                scn['{}.ks'.format(matprop)] = texspectn                
+            texbump = next((ts for ts in m.texture_slots if ts and ts.use_map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
+            if texbump:
+                texbumpn = texbump.name.replace('.','_')                
+                texbumpprop = 'scene.textures.{}'.format(texbumpn)                
+                if texbump.texture.use_normal_map:                    
+                    scn['{}.normaltex'.format(matprop)] = texbumpn
+                else:                    
+                    scaledn = 'scaled_{}'.format(texbumpn)
+                    scaledprop = 'scene.textures.{}'.format(scaledn)
+                    scn['{}.type'.format(scaledprop)] = 'scale'
+                    scn['{}.texture1'.format(scaledprop)] = ff(texbump.normal_factor)
+                    scn['{}.texture2'.format(scaledprop)] = texbumpn
+                    scn['{}.bumptex'.format(matprop)] = scaledn                                                          
+                scn['{}.file'.format(texbumpprop)] = bpy.path.abspath(texbump.texture.image.filepath).replace('\\','/')
+                scn['{}.gamma'.format(texbumpprop)] = ff(texbump.texture.slg_gamma)
+                scn['{}.mapping.uvscale'.format(texbumpprop)] = '{} {}'.format(ff(1.), ff(1.))
+            
+        matprop = ''
+        for p in scn:            
+            if matn in p:
+                if 'type' in p:
+                    matprop = p+' = '+scn[p]+','+matprop                    
+                else:
+                    matprop = matprop+p+' = '+scn[p]+','
+        matprop = matprop[:-1]
+
         return matprop, scn
 
     # Get SLG .scn obj properties
@@ -357,30 +406,19 @@ class SLGBP:
         def objscn(plyn, matn, objn, mat, tm):
             if tm:
                 if bpy.app.version >= (2, 62, 0 ) : # matrix change between 2.61 and 2.62
-                    scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
+                    scn['scene.objects.{}.transformation'.format(objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
                         ff(tm[0][0]),ff(tm[1][0]),ff(tm[2][0]),ff(tm[3][0]),ff(tm[0][1]),ff(tm[1][1]),ff(tm[2][1]),ff(tm[3][1]),
                         ff(tm[0][2]),ff(tm[1][2]),ff(tm[2][2]),ff(tm[3][2]),ff(tm[0][3]),ff(tm[1][3]),ff(tm[2][3]),ff(tm[3][3]))
                 else:
-                    scn['scene.objects.{}.{}.transformation'.format(matn,objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
+                    scn['scene.objects.{}.transformation'.format(objn)] = '{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}'.format(
                         ff(tm[0][0]),ff(tm[0][1]),ff(tm[0][2]),ff(tm[0][3]),ff(tm[1][0]),ff(tm[1][1]),ff(tm[1][2]),ff(tm[1][3]),
                         ff(tm[2][0]),ff(tm[2][1]),ff(tm[2][2]),ff(tm[2][3]),ff(tm[3][0]),ff(tm[3][1]),ff(tm[3][2]),ff(tm[3][3]))
 
             if not SLGBP.live:
-                scn['scene.objects.{}.{}'.format(matn,objn)] = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,plyn)
+                scn['scene.objects.{}.material'.format(objn)] = '{}'.format(matn)
+                scn['scene.objects.{}.ply'.format(objn)] = '{}/{}/{}.ply'.format(SLGBP.spath,SLGBP.sname,plyn)
                 if scene.slg.vnormals:
-                    scn['scene.objects.{}.{}.useplynormals'.format(matn,objn)] = '1'
-                if scene.slg.vuvs and mat:
-                    texmap = next((ts for ts in mat.texture_slots if ts and ts.use_map_color_diffuse and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
-                    if texmap:
-                        scn['scene.objects.{}.{}.texmap'.format(matn,objn)] = bpy.path.abspath(texmap.texture.image.filepath).replace('\\','/')
-                        scn['scene.objects.{}.{}.texmap.gamma'.format(matn,objn)] = ff(texmap.texture.slg_gamma)
-                    texbump = next((ts for ts in mat.texture_slots if ts and ts.use_map_normal and hasattr(ts.texture,'image') and hasattr(ts.texture.image,'filepath') and ts.use), None)
-                    if texbump:
-                        if texbump.texture.use_normal_map:
-                            scn['scene.objects.{}.{}.normalmap'.format(matn,objn)] = bpy.path.abspath(texbump.texture.image.filepath).replace('\\','/')
-                        else:
-                            scn['scene.objects.{}.{}.bumpmap'.format(matn,objn)] = bpy.path.abspath(texbump.texture.image.filepath).replace('\\','/')
-                            scn['scene.objects.{}.{}.bumpmap.scale'.format(matn,objn)] = ff(texbump.normal_factor)
+                    scn['scene.objects.{}.useplynormals'.format(objn)] = '1'
 
         for ply in SLGBP.plys:
             plyn = ply.replace('.','_')
@@ -688,7 +726,8 @@ class SLGBP:
                     matprop, scn = SLGBP.getmatscn(scene, m)
                     SLGBP.matprops[m.name] = matprop
                     SLGBP.scn.update(scn)
-            SLGBP.scn['scene.materials.matte.'+SLGBP.nomatn] = '0.75 0.75 0.75'
+            SLGBP.scn['scene.materials.'+SLGBP.nomatn+'.type'] = 'matte'
+            SLGBP.scn['scene.materials.'+SLGBP.nomatn+'.kd'] = '0.75 0.75 0.75'
             SLGBP.scn.update(SLGBP.getobjscn(scene))
             fscn = open('{}/{}/{}.scn'.format(SLGBP.spath,SLGBP.sname,SLGBP.sname), 'w')
             for k in sorted(SLGBP.scn):
@@ -780,11 +819,26 @@ class SLGBP:
                     if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
                         wasreset = True
             if act & SLGBP.LIVEMTL > 0:
+                wasreset = False
                 if SLGBP.livemat:
-                    matprop, scn = SLGBP.getmatscn(scene, SLGBP.livemat)
-                    if matprop != SLGBP.matprops[SLGBP.livemat.name]:
-                        del SLGBP.scn[SLGBP.matprops[SLGBP.livemat.name]]
-                        SLGBP.matprops[SLGBP.livemat.name] = matprop
+                    matprop, scn = SLGBP.getmatscn(scene, SLGBP.livemat)                    
+                    for p in scn:
+                        if 'type' in p:
+                            print(p+'  '+scn[p]+' '+SLGBP.scn[p])
+                            if scn[p] != SLGBP.scn[p]:
+                                #material type changed, update properties in scene desciption
+                                for mp in scn:
+                                    if SLGBP.livemat.name in p:
+                                        del SLGBP.scn[p]
+                                SLGBP.scn.update(scn)
+                                wasreset = True
+                            else:
+                                for p in scn:
+                                    if scn[p] != SLGBP.scn[p]:
+                                        SLGBP.scn.update(scn)
+                                        wasreset = True
+                                
+                    SLGBP.matprops[SLGBP.livemat.name] = matprop
                     SLGBP.livemat = None
                 else:
                     scn = {}
@@ -793,11 +847,14 @@ class SLGBP:
                             matprop, matscn = SLGBP.getmatscn(scene, m)
                             scn.update(matscn)
                             if matprop != SLGBP.matprops[m.name]:
-                                del SLGBP.scn[SLGBP.matprops[m.name]]
+                                wasreset = True
                                 SLGBP.matprops[m.name] = matprop
-                for k in scn:
-                    if cmpupd(k, scn, SLGBP.scn, not wasreset, False):
-                        wasreset = True
+
+                if wasreset:
+                    SLGBP.telnet.send('render.stop')
+                    SLGBP.telnet.send('edit.start')
+                    SLGBP.telnet.send('set ' +matprop)
+                    SLGBP.telnet.send('edit.stop')                    
             if act & SLGBP.LIVEOBJ > 0:
                 scn = SLGBP.getobjscn(scene)
                 for k in scn:
@@ -847,8 +904,12 @@ class SLGRender(bpy.types.Operator):
         self.report({'ERROR'}, "SLGBP: " + msg)
 
     def _reset(self, context):
-        context.region.callback_remove(self._pdcb)
-        context.region.callback_remove(self._icb)
+        if bpy.app.version >= (2, 65, 10):
+            bpy.types.SpaceView3D.draw_handler_remove(self._pdcb, 'WINDOW')
+            bpy.types.SpaceView3D.draw_handler_remove(self._icb, 'WINDOW')
+        else:
+            context.region.callback_remove(self._pdcb)
+            context.region.callback_remove(self._icb)
         context.area.tag_redraw()
         if self.properties.animation:
             context.window_manager.event_timer_remove(SLGBP.animtimer)
@@ -915,8 +976,12 @@ class SLGRender(bpy.types.Operator):
         SLGBP.msg = 'SLG exporting and rendering... (ESC to abort)'
         SLGBP.msgrefresh = context.area.tag_redraw
         context.window_manager.modal_handler_add(self)
-        self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-        self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
+        if bpy.app.version >= (2, 65, 10):
+            self._icb = bpy.types.SpaceView3D.draw_handler_add(info_callback, (context,), 'WINDOW', 'POST_PIXEL')
+            self._pdcb = bpy.types.SpaceView3D.draw_handler_add(pre_draw_callback, (), 'WINDOW', 'PRE_VIEW')
+        else:
+            self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
+            self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
         SLGBP.msgrefresh()
         SLGBP.thread = Thread(target=SLGBP.exportrun,args=[context.scene, self._error])
         SLGBP.thread.start()
@@ -942,8 +1007,12 @@ class SLGLive(bpy.types.Operator):
                 SLGBP.liveanim = False
             SLGBP.live = False
             SLGBP.telnet.close()
-            context.region.callback_remove(self._pdcb)
-            context.region.callback_remove(self._icb)
+            if bpy.app.version >= (2, 65, 10):
+                bpy.types.SpaceView3D.draw_handler_remove(self._pdcb, 'WINDOW')
+                bpy.types.SpaceView3D.draw_handler_remove(self._icb, 'WINDOW')
+            else:
+                context.region.callback_remove(self._pdcb)
+                context.region.callback_remove(self._icb)
             context.area.tag_redraw()
             bpy.context.user_preferences.edit.use_global_undo = self._undo
             return {'FINISHED'}
@@ -988,8 +1057,12 @@ class SLGLive(bpy.types.Operator):
         SLGBP.msg = 'SLG Live!'
         SLGBP.msgrefresh = context.area.tag_redraw
         SLGBP.curframe = context.scene.frame_current
-        self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
-        self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
+        if bpy.app.version >= (2, 65, 10):
+            self._icb = bpy.types.SpaceView3D.draw_handler_add(info_callback, (context,), 'WINDOW', 'POST_PIXEL')
+            self._pdcb = bpy.types.SpaceView3D.draw_handler_add(pre_draw_callback, (), 'WINDOW', 'PRE_VIEW')
+        else:        
+            self._icb = context.region.callback_add(info_callback, (context,), 'POST_PIXEL')
+            self._pdcb = context.region.callback_add(pre_draw_callback, (), 'PRE_VIEW')
         SLGBP.thread = Thread(target=SLGBP.liveconnect,args=[context.scene, self._error])
         SLGBP.thread.start()
         return {'RUNNING_MODAL'}
@@ -1137,12 +1210,14 @@ def slg_add_properties():
                ("BIDIRCPU", "BiDirCPU", "Bidirectional path tracing using CPU only"),
                ("BIDIRHYBRID", "BiDirHybrid", "Bidirectional path tracing using CPU and OpenCL"),
                ("CBIDIRHYBRID", "CBiDirHybrid", "Combinatorial bidirectional path tracing using CPU and OpenCL"),
-               ("BIDIRVMCPU", "BiDirVMCPU", "Bidirectional path tracing with Vertex Merging using CPU only")),
+               ("BIDIRVMCPU", "BiDirVMCPU", "Bidirectional path tracing with Vertex Merging using CPU only"),
+               ("RTPATHOCL", "RTPathOCL", "Low Latency 'Realtime' Path tracing using OpenCL only")),
         default="PATHOCL")
 
     SLGSettings.sampler_type = EnumProperty(name="Sampler Type",
         description="Sampler Type",
         items=(("INLINED_RANDOM", "Random", "Random"),
+               ("SOBOL", "Sobol", "Sobol"),
                ("METROPOLIS", "Metropolis", "Metropolis")),
         default="METROPOLIS")
 
@@ -1293,7 +1368,7 @@ def slg_add_properties():
 
     SLGSettings.platform = IntProperty(name="OpenCL platform",
         description="OpenCL Platform to use; if you have multiple OpenCL ICDs installed",
-        default=0, min=0, max=256, soft_min=0, soft_max=256)
+        default=-1, min=-1, max=256, soft_min=-1, soft_max=256)
 
     SLGSettings.devices = StringProperty(name="OpenCL devices to use",
         description="blank = default (bitwise on/off value for each device, see SLG docs)",
@@ -1592,7 +1667,7 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col = split.column()
             col.prop(slg, "bidirvm_alpha")
 
-        if slg.rendering_type in ('PATHOCL', 'PATHCPU', 'BIDIRCPU', 'BIDIRVMCPU', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
+        if slg.rendering_type in ('PATHOCL', 'RTPATHOCL', 'PATHCPU', 'BIDIRCPU', 'BIDIRVMCPU', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
             split = layout.split()
             col = split.column()
             col.prop(slg, "path_maxdepth", text="Eye Path Depth")
@@ -1602,7 +1677,7 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col.prop(slg, "light_maxdepth", text="Light Path Depth")
 
 		# All *OCL or Hybrid
-        if slg.rendering_type in ('PATHOCL', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
+        if slg.rendering_type in ('PATHOCL', 'RTPATHOCL', 'BIDIRHYBRID', 'CBIDIRHYBRID'):
             split = layout.split(percentage=0.33)
             col = split.column()
             col.label(text="OpenCL devs:")
@@ -1619,8 +1694,8 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             col = split.column()
             col.prop(slg, "devices", text='Devs')
 
-		# PATHOCL
-        if slg.rendering_type in ('PATHOCL'):
+		# PATHOCL or RTPATHOCL
+        if slg.rendering_type in ('PATHOCL', 'RTPATHOCL'):
             col = split.column()
             col.prop(slg, "opencl_task_count")
             split = layout.split()
