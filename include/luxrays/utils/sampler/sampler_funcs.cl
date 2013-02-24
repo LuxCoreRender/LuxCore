@@ -418,9 +418,9 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 
 	sample->rng0 = Rnd_FloatValue(seed);
 	sample->rng1 = Rnd_FloatValue(seed);
-	sample->pass = 0;
+	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET;
 
-	const uint pixelIndex = get_global_id(0);
+	const uint pixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
 	sample->pixelIndex = pixelIndex;
 	uint x, y;
 	PixelIndex2XY(pixelIndex, &x, &y);
