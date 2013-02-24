@@ -430,8 +430,8 @@ void FresnelApproxNTexture_EvaluateFloat(__global Texture *texture, __global Hit
 	texValues[(*texValuesSize)++] = FresnelApproxN(value);
 }
 
-void FresnelApproxN3Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+void FresnelApproxNTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 value = texValues[--(*texValuesSize)];
 
 	texValues[(*texValuesSize)++] = FresnelApproxN3(value);
@@ -468,7 +468,7 @@ void FresnelApproxKTexture_EvaluateFloat(__global Texture *texture, __global Hit
 }
 
 void FresnelApproxKTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 value = texValues[--(*texValuesSize)];
 
 	texValues[(*texValuesSize)++] = FresnelApproxK3(value);
@@ -1022,7 +1022,7 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			return 2;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_K:
+		case FRESNEL_APPROX_N:
 			todoTex[(*todoTexSize)++] = &texs[texture->fresnelApproxN.texIndex];
 			return 1;
 #endif
@@ -1119,7 +1119,7 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_K:
+		case FRESNEL_APPROX_N:
 			FresnelApproxNTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
@@ -1252,7 +1252,7 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_K:
+		case FRESNEL_APPROX_N:
 			FresnelApproxNTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
@@ -1384,7 +1384,7 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 			break;
 #endif
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_K:
+		case FRESNEL_APPROX_N:
 			FresnelApproxNTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
