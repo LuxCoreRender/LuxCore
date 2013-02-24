@@ -36,6 +36,8 @@
 //  PARAM_HAS_BUMPMAPS
 //  PARAM_HAS_NORMALMAPS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
+//  PARAM_DEVICE_INDEX
+//  PARAM_DEVICE_COUNT
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -87,7 +89,8 @@
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
 //  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
 //  PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE
-// (SOBOL)
+// (Sobol)
+//  PARAM_SAMPLER_SOBOL_STARTOFFSET
 //  PARAM_SAMPLER_SOBOL_MAXDEPTH
 
 // (optional)
@@ -499,7 +502,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			} else {
 				lightRadiance = TriangleLight_Illuminate(
 					&triLightDefs[lightIndex], &task->directLightState.tmpHitPoint,
-					VLOAD3F(&bsdf->hitPoint.p),
+					VLOAD3F(&bsdf->hitPoint.p.x),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),

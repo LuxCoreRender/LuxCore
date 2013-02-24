@@ -560,6 +560,7 @@ void PathOCLRenderThread::InitKernels() {
 			break;
 		case luxrays::ocl::SOBOL:
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
+					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << 32 <<
 					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
 			break;
 		default:
@@ -569,6 +570,14 @@ void PathOCLRenderThread::InitKernels() {
 	if (renderEngine->film->IsAlphaChannelEnabled())
 		ss << " -D PARAM_ENABLE_ALPHA_CHANNEL";
 
+	// Some information about our place in the universe...
+	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;
+	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
+
+	//--------------------------------------------------------------------------
+	// PARAMs used only by RTPATHOCL
+	//--------------------------------------------------------------------------
+
 	// Tonemapping is done on device only by RTPATHOCL
 	if (renderEngine->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
 		const LinearToneMapParams *ltm = (const LinearToneMapParams *)renderEngine->film->GetToneMapParams();
@@ -577,7 +586,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_TONEMAP_LINEAR_SCALE=1.f";
 
 	ss << " -D PARAM_GAMMA=" << renderEngine->film->GetGamma() << "f";
-	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
+	
+	//--------------------------------------------------------------------------
 
 	// Check the OpenCL vendor and use some specific compiler options
 #if defined(__APPLE__)
