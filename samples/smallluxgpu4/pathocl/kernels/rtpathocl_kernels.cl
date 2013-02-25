@@ -178,9 +178,10 @@ void ApplyBlurFilterYR1(
 	VSTORE3F(aRightK  * a + bRightK * b, &dst[(PARAM_IMAGE_HEIGHT - 1) * PARAM_IMAGE_WIDTH].r);
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterXR1(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyGaussianBlurFilterXR1(
 		__global Spectrum *src,
-		__global Spectrum *dst
+		__global Spectrum *dst,
+		const float weight
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_IMAGE_HEIGHT)
@@ -196,9 +197,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilt
 	ApplyBlurFilterXR1(src, dst, aF, bF, cF);
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterYR1(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyGaussianBlurFilterYR1(
 		__global Spectrum *src,
-		__global Spectrum *dst
+		__global Spectrum *dst,
+		const float weight
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_IMAGE_WIDTH)
@@ -207,9 +209,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilt
 	src += gid;
 	dst += gid;
 
-	const float aF = .1f;
+	const float aF = weight;
 	const float bF = 1.f;
-	const float cF = .1f;
+	const float cF = weight;
 
 	ApplyBlurFilterYR1(src, dst, aF, bF, cF);
 }
