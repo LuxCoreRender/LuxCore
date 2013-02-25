@@ -654,7 +654,7 @@ std::string KernelSource_texture_funcs =
 "#undef ASSIGN_CF3\n"
 "	// Bezier spline evaluated with de Castilejau's algorithm\n"
 "	\n"
-"#if defined(__APPLE_CL__)\n"
+"#if defined(__APPLE_CLx__)\n"
 "	float3 s0;\n"
 "	s0.x = c0.x + (c1.x - c0.x) * t;\n"
 "	s0.y = c0.y + (c1.y - c0.y) * t;\n"
