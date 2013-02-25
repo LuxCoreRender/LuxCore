@@ -649,39 +649,7 @@ float3 MarbleTexture_Evaluate(__global Texture *texture, __global HitPoint *hitP
 	const float3 c2 = ASSIGN_CF3(MarbleTexture_c[first + 2]);
 	const float3 c3 = ASSIGN_CF3(MarbleTexture_c[first + 3]);
 #undef ASSIGN_CF3
-	// Bezier spline evaluated with de Castilejau's algorithm
-	
-#if defined(__APPLE_CL__)
-	float3 s0;
-	s0.x = c0.x + (c1.x - c0.x) * t;
-	s0.y = c0.y + (c1.y - c0.y) * t;
-	s0.z = c0.z + (c1.z - c0.z) * t;
-	
-	float3 s1;
-	s1.x = c1.x + (c2.x - c1.x) * t;
-	s1.y = c1.y + (c2.y - c1.y) * t;
-	s1.z = c1.z + (c2.z - c1.z) * t;
-	
-	float3 s2;
-	s2.x = c2.x + (c3.x - c2.x) * t;
-	s2.y = c2.y + (c3.y - c2.y) * t;
-	s2.z = c2.z + (c3.z - c2.z) * t;
-
-	s0.x = s0.x + (s1.x - s0.x) * t;
-	s0.y = s0.y + (s1.y - s0.y) * t;
-	s0.z = s0.z + (s1.z - s0.z) * t;
-
-	s1.x = s1.x + (s2.x - s1.x) * t;
-	s1.y = s1.y + (s2.y - s1.y) * t;
-	s1.z = s1.z + (s2.z - s1.z) * t;
-
-	float3 s4;
-	s4.x = s0.x + (s1.x - s0.x) * t;
-	s4.y = s0.y + (s1.y - s0.y) * t;
-	s4.z = s0.z + (s1.z - s0.z) * t;
-	// Extra scale of 1.5 to increase variation among colors
-	return 1.5f * s4;
-#else
+	// Bezier spline evaluated with de Castilejau's algorithm	
 	float3 s0 = mix(c0, c1, t);
 	float3 s1 = mix(c1, c2, t);
 	float3 s2 = mix(c2, c3, t);
@@ -689,7 +657,6 @@ float3 MarbleTexture_Evaluate(__global Texture *texture, __global HitPoint *hitP
 	s1 = mix(s1, s2, t);
 	// Extra scale of 1.5 to increase variation among colors
 	return 1.5f * mix(s0, s1, t);
-#endif
 }
 
 void MarbleTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,

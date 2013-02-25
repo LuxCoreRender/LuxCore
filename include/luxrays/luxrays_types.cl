@@ -24,6 +24,14 @@
 #define NULL_INDEX (0xffffffffu)
 
 #if defined(LUXRAYS_OPENCL_KERNEL)
+
+#if defined(__APPLE_CL__)
+float3 __OVERLOAD__ mix(float3 a, float3 b, float t)
+{
+	return a + ( b - a ) * t;
+}
+#endif
+
 #if defined(__APPLE_FIX__)
 
 float2 VLOAD2F(__global float *p) {
