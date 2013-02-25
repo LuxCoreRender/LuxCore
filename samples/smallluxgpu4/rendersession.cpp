@@ -139,7 +139,6 @@ void RenderSession::SetRenderingEngineType(const RenderEngineType engineType) {
 		Stop();
 
 		delete renderEngine;
-
 		renderEngine = RenderEngine::AllocRenderEngine(engineType,
 				renderConfig, film, &filmMutex);
 

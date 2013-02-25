@@ -51,7 +51,6 @@ PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	return new RTPathOCLRenderThread(index, device, this);
 }
 
-
 void RTPathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -66,18 +65,18 @@ void RTPathOCLRenderEngine::StartLockLess() {
 				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
 
 	PathOCLRenderEngine::StartLockLess();
-
-	// To start all threads at the same time
-	frameBarrier->wait();
 }
 
-void RTPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	PathOCLRenderEngine::EndEditLockLess(editActions);
+void RTPathOCLRenderEngine::StopLockLess() {
+	frameBarrier->wait();
+	frameBarrier->wait();
+	// All render threads are now suspended and I can set the interrupt signal
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->renderThread->interrupt();
+	frameBarrier->wait();
+	// Render threads will now detect the interruption
 
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
-		// In this particular case I have really stopped all threads
-		frameBarrier->wait();
-	}
+	PathOCLRenderEngine::StopLockLess();
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {

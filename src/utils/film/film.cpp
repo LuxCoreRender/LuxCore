@@ -37,7 +37,6 @@ Film::Film(const unsigned int w, const unsigned int h) {
 	convTest = NULL;
 
 	enablePerPixelNormalizedBuffer = true;
-
 	enablePerScreenNormalizedBuffer = false;
 	enableAlphaChannel = false;
 	enableFrameBuffer = true;

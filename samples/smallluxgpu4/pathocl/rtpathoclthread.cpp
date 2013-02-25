@@ -61,21 +61,17 @@ void RTPathOCLRenderThread::Stop() {
 }
 
 void RTPathOCLRenderThread::BeginEdit() {
+	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
+	// but the threads are still using the intersection devices in RTPATHOCL.
 	editMutex.lock();
 }
 
 void RTPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
-		editMutex.unlock();
-		StopRenderThread();
+	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
+		throw std::runtime_error("RTPATHOCL doesn't support FILM_EDIT or MATERIAL_TYPES_EDIT actions");
 
-		updateActions.AddActions(editActions.GetActions());
-		UpdateOCLBuffers();
-		StartRenderThread();
-	} else {
-		updateActions.AddActions(editActions.GetActions());
-		editMutex.unlock();
-	}
+	updateActions.AddActions(editActions.GetActions());
+	editMutex.unlock();
 }
 
 void RTPathOCLRenderThread::InitDisplayThread() {
@@ -211,10 +207,13 @@ void RTPathOCLRenderThread::UpdateOCLBuffers() {
 void RTPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
+	// Boost barriers are supposed to be not interruptable but they are
+	// and seems to missing a way to reset them. So better to disable
+	// interruptions.
+	boost::this_thread::disable_interruption di;
+
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
-	// To start all threads at the same time
-	frameBarrier->wait();
 
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 

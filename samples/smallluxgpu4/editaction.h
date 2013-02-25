@@ -29,12 +29,12 @@
 namespace slg {
 
 typedef enum {
-	FILM_EDIT           = 0x01,  // Use this for image Film resize
+	FILM_EDIT           = 0x01,  // Use this for image Film resize (note: not supported by RTPATHOCL)
 	CAMERA_EDIT         = 0x02,  // Use this for any Camera parameter editing
 	GEOMETRY_EDIT       = 0x04,  // Use this for any DataSet related editing
 	INSTANCE_TRANS_EDIT = 0x08,  // Use this for any instance transformation related editing
 	MATERIALS_EDIT      = 0x10,  // Use this for any Material related editing
-	MATERIAL_TYPES_EDIT = 0x20,  // Use this if the kind of materials changes
+	MATERIAL_TYPES_EDIT = 0x20,  // Use this if the kind of materials used changes
 	AREALIGHTS_EDIT     = 0x40,  // Use this for any AreaLight related editing
 	INFINITELIGHT_EDIT  = 0x80,  // Use this for any InfiniteLight related editing
 	SUNLIGHT_EDIT       = 0x100, // Use this for any SunLight related editing

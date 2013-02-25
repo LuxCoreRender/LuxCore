@@ -61,6 +61,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	editMode = false;
 	frameBuffer = NULL;
 	alphaFrameBuffer = NULL;
+	gpuTaskStats = NULL;
 
 	kernelsParameters = "";
 	initKernel = NULL;
@@ -100,8 +101,6 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	triLightDefsBuff = NULL;
 	meshLightsBuff = NULL;
 	imageMapDescsBuff = NULL;
-
-	gpuTaskStats = new slg::ocl::GPUTaskStats[renderEngine->taskCount];
 
 	// Check the kind of kernel cache to use
 	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "NONE");
@@ -839,6 +838,10 @@ void PathOCLRenderThread::InitRender() {
 	Scene *scene = renderEngine->renderConfig->scene;
 	const u_int taskCount = renderEngine->taskCount;
 	double tStart, tEnd;
+
+	// In case renderEngine->taskCount has changed
+	delete gpuTaskStats;
+	gpuTaskStats = new slg::ocl::GPUTaskStats[renderEngine->taskCount];
 
 	//--------------------------------------------------------------------------
 	// FrameBuffer definition

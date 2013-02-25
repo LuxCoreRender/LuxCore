@@ -121,12 +121,17 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	if (dynamic_cast<RTPathOCLRenderEngine *>(session->renderEngine))
-		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms]",
+	if (dynamic_cast<RTPathOCLRenderEngine *>(session->renderEngine)) {
+		static float fps = 0.f;
+		// This is a simple trick to smooth the fps counter
+		fps = Lerp<float>(.025f, fps, 1.f / ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime());
+		
+		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]",
 				int(session->renderEngine->GetRenderingTime()),
-				int(((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime() * 1000.0),
-				session->renderConfig->GetScreenRefreshInterval());
-	else
+				int(1000.f / fps),
+				session->renderConfig->GetScreenRefreshInterval(),
+				fps);
+	} else
 		sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms]",
 				int(session->renderEngine->GetRenderingTime()),
 				session->renderConfig->GetScreenRefreshInterval());
@@ -236,16 +241,14 @@ void reshapeFunc(int newWidth, int newHeight) {
 		glLoadIdentity();
 		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
 
-		session->BeginEdit();
+		// RTPATHOCL doesn't support FILM_EDIT so I use a stop/start here
+		session->Stop();
 
 		session->renderConfig->scene->camera->Update(newWidth, newHeight);
-		session->editActions.AddAction(CAMERA_EDIT);
-
 		session->film->Init(session->renderConfig->scene->camera->GetFilmWeight(),
 			session->renderConfig->scene->camera->GetFilmHeight());
-		session->editActions.AddAction(FILM_EDIT);
 
-		session->EndEdit();
+		session->Start();
 
 		glutPostRedisplay();
 	}
