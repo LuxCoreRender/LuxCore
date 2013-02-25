@@ -103,11 +103,11 @@ void RTPathOCLRenderThread::SetKernelArgs() {
 		normalizeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
-		applyBlurLightFilterXR1Kernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		applyBlurLightFilterXR1Kernel->setArg(argIndex++, *screenBufferBuff);
 		applyBlurLightFilterXR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
 		argIndex = 0;
 		applyBlurLightFilterYR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
-		applyBlurLightFilterYR1Kernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		applyBlurLightFilterYR1Kernel->setArg(argIndex++, *screenBufferBuff);
 
 		argIndex = 0;
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
@@ -318,20 +318,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						cl::NDRange(normalizeFBWorkGroupSize));
 
 				//--------------------------------------------------------------
-				// Apply Gaussian filter to the merged buffer
-				//--------------------------------------------------------------
-
-				for (u_int i = 0; i < 3; ++i) {
-					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterXR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterXR1WorkGroupSize)),
-							cl::NDRange(applyBlurLightFilterXR1WorkGroupSize));
-
-					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterYR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterYR1WorkGroupSize)),
-							cl::NDRange(applyBlurLightFilterYR1WorkGroupSize));
-				}
-
-				//--------------------------------------------------------------
 				// Apply tone mapping to merged buffer
 				//--------------------------------------------------------------
 
@@ -346,6 +332,20 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				oclQueue.enqueueNDRangeKernel(*updateScreenBufferKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(frameBufferPixelCount, updateScreenBufferWorkGroupSize)),
 						cl::NDRange(updateScreenBufferWorkGroupSize));
+
+				//--------------------------------------------------------------
+				// Apply Gaussian filter to the screen buffer
+				//--------------------------------------------------------------
+
+				for (u_int i = 0; i < 3; ++i) {
+					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterXR1Kernel, cl::NullRange,
+							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterXR1WorkGroupSize)),
+							cl::NDRange(applyBlurLightFilterXR1WorkGroupSize));
+
+					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterYR1Kernel, cl::NullRange,
+							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterYR1WorkGroupSize)),
+							cl::NDRange(applyBlurLightFilterYR1WorkGroupSize));
+				}
 				
 				//--------------------------------------------------------------
 				// Transfer the screen frame buffer

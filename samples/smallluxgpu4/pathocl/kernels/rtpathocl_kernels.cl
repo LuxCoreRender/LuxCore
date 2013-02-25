@@ -97,21 +97,21 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 //------------------------------------------------------------------------------
 
 void ApplyBlurFilterXR1(
-		__global Pixel *src,
-		__global Pixel *dst,
+		__global Spectrum *src,
+		__global Spectrum *dst,
 		const float aF,
 		const float bF,
 		const float cF
 		) {
 	// Do left edge
 	float3 a;
-	float3 b = VLOAD3F(&src[0].c.r);
-	float3 c = VLOAD3F(&src[1].c.r);
+	float3 b = VLOAD3F(&src[0].r);
+	float3 c = VLOAD3F(&src[1].r);
 
 	const float leftTotF = bF + cF;
 	const float3 bLeftK = bF / leftTotF;
 	const float3 cLeftK = cF / leftTotF;
-	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].c.r);
+	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -119,12 +119,12 @@ void ApplyBlurFilterXR1(
 	const float3 bK = bF / totF;
 	const float3 cK = cF / totF;
 
-	for (unsigned int x = 1; x < FRAMEBUFFER_WIDTH - 1; ++x) {
+	for (unsigned int x = 1; x < PARAM_IMAGE_WIDTH - 1; ++x) {
 		a = b;
 		b = c;
-		c = VLOAD3F(&src[x + 1].c.r);
+		c = VLOAD3F(&src[x + 1].r);
 
-		VSTORE3F(aK * a + bK  * b + cK * c, &dst[x].c.r);
+		VSTORE3F(aK * a + bK  * b + cK * c, &dst[x].r);
     }
 
     // Do right edge
@@ -133,25 +133,25 @@ void ApplyBlurFilterXR1(
 	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	VSTORE3F(aRightK  * a + bRightK * b, &dst[FRAMEBUFFER_WIDTH - 1].c.r);
+	VSTORE3F(aRightK  * a + bRightK * b, &dst[PARAM_IMAGE_WIDTH - 1].r);
 }
 
 void ApplyBlurFilterYR1(
-		__global Pixel *src,
-		__global Pixel *dst,
+		__global Spectrum *src,
+		__global Spectrum *dst,
 		const float aF,
 		const float bF,
 		const float cF
 		) {
 	// Do left edge
 	float3 a;
-	float3 b = VLOAD3F(&src[0].c.r);
-	float3 c = VLOAD3F(&src[FRAMEBUFFER_WIDTH].c.r);
+	float3 b = VLOAD3F(&src[0].r);
+	float3 c = VLOAD3F(&src[PARAM_IMAGE_WIDTH].r);
 
 	const float leftTotF = bF + cF;
 	const float3 bLeftK = bF / leftTotF;
 	const float3 cLeftK = cF / leftTotF;
-	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].c.r);
+	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -159,14 +159,14 @@ void ApplyBlurFilterYR1(
 	const float3 bK = bF / totF;
 	const float3 cK = cF / totF;
 
-    for (unsigned int y = 1; y < FRAMEBUFFER_HEIGHT - 1; ++y) {
-		const unsigned index = y * FRAMEBUFFER_WIDTH;
+    for (unsigned int y = 1; y < PARAM_IMAGE_HEIGHT - 1; ++y) {
+		const unsigned index = y * PARAM_IMAGE_WIDTH;
 
 		a = b;
 		b = c;
-		c = VLOAD3F(&src[index + FRAMEBUFFER_WIDTH].c.r);
+		c = VLOAD3F(&src[index + PARAM_IMAGE_WIDTH].r);
 
-		VSTORE3F(aK * a + bK  * b + cK * c, &dst[index].c.r);
+		VSTORE3F(aK * a + bK  * b + cK * c, &dst[index].r);
     }
 
     // Do right edge
@@ -175,19 +175,19 @@ void ApplyBlurFilterYR1(
 	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	VSTORE3F(aRightK  * a + bRightK * b, &dst[(FRAMEBUFFER_HEIGHT - 1) * FRAMEBUFFER_WIDTH].c.r);
+	VSTORE3F(aRightK  * a + bRightK * b, &dst[(PARAM_IMAGE_HEIGHT - 1) * PARAM_IMAGE_WIDTH].r);
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterXR1(
-		__global Pixel *src,
-		__global Pixel *dst
+		__global Spectrum *src,
+		__global Spectrum *dst
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= FRAMEBUFFER_HEIGHT)
+	if (gid >= PARAM_IMAGE_HEIGHT)
 		return;
 
-	src += gid * FRAMEBUFFER_WIDTH;
-	dst += gid * FRAMEBUFFER_WIDTH;
+	src += gid * PARAM_IMAGE_WIDTH;
+	dst += gid * PARAM_IMAGE_WIDTH;
 
 	const float aF = .15f;
 	const float bF = 1.f;
@@ -197,11 +197,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilt
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyBlurLightFilterYR1(
-		__global Pixel *src,
-		__global Pixel *dst
+		__global Spectrum *src,
+		__global Spectrum *dst
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= FRAMEBUFFER_WIDTH)
+	if (gid >= PARAM_IMAGE_WIDTH)
 		return;
 
 	src += gid;
