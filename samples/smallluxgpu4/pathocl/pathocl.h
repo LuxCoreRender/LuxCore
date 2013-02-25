@@ -109,10 +109,10 @@ protected:
 	size_t mergeFBWorkGroupSize;
 	cl::Kernel *normalizeFBKernel;
 	size_t normalizeFBWorkGroupSize;
-	cl::Kernel *applyBlurLightFilterXR1Kernel;
-	size_t applyBlurLightFilterXR1WorkGroupSize;
-	cl::Kernel *applyBlurLightFilterYR1Kernel;
-	size_t applyBlurLightFilterYR1WorkGroupSize;
+	cl::Kernel *applyBlurFilterXR1Kernel;
+	size_t applyBlurFilterXR1WorkGroupSize;
+	cl::Kernel *applyBlurFilterYR1Kernel;
+	size_t applyBlurFilterYR1WorkGroupSize;
 	cl::Kernel *toneMapLinearKernel;
 	size_t toneMapLinearWorkGroupSize;
 	cl::Kernel *updateScreenBufferKernel;

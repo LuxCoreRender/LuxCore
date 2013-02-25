@@ -103,11 +103,11 @@ void RTPathOCLRenderThread::SetKernelArgs() {
 		normalizeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
-		applyBlurLightFilterXR1Kernel->setArg(argIndex++, *screenBufferBuff);
-		applyBlurLightFilterXR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		applyBlurFilterXR1Kernel->setArg(argIndex++, *screenBufferBuff);
+		applyBlurFilterXR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
 		argIndex = 0;
-		applyBlurLightFilterYR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
-		applyBlurLightFilterYR1Kernel->setArg(argIndex++, *screenBufferBuff);
+		applyBlurFilterYR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		applyBlurFilterYR1Kernel->setArg(argIndex++, *screenBufferBuff);
 
 		argIndex = 0;
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
@@ -226,9 +226,12 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(clearSBWorkGroupSize));
 		}
 
+		double lastEditTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
-			if (updateActions.HasAnyAction())
+			if (updateActions.HasAnyAction()) {
 				UpdateOCLBuffers();
+				lastEditTime = WallClockTime();
+			}
 
 			//------------------------------------------------------------------
 			// Render a frame (i.e. taskCount * assignedIters samples)
@@ -337,14 +340,20 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Apply Gaussian filter to the screen buffer
 				//--------------------------------------------------------------
 
-				for (u_int i = 0; i < 3; ++i) {
-					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterXR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterXR1WorkGroupSize)),
-							cl::NDRange(applyBlurLightFilterXR1WorkGroupSize));
+				// Base the amount of blur on the time since the last update (using a 5secs window)
+				const double timeSinceLastUpdate = WallClockTime() - lastEditTime;
+				const float weight = Lerp(Clamp<float>(timeSinceLastUpdate, 0.f, 5.f) / 5.f, 0.25f, 0.025f);
 
-					oclQueue.enqueueNDRangeKernel(*applyBlurLightFilterYR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurLightFilterYR1WorkGroupSize)),
-							cl::NDRange(applyBlurLightFilterYR1WorkGroupSize));
+				applyBlurFilterXR1Kernel->setArg(2, weight);
+				applyBlurFilterYR1Kernel->setArg(2, weight);
+				for (u_int i = 0; i < 3; ++i) {
+					oclQueue.enqueueNDRangeKernel(*applyBlurFilterXR1Kernel, cl::NullRange,
+							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurFilterXR1WorkGroupSize)),
+							cl::NDRange(applyBlurFilterXR1WorkGroupSize));
+
+					oclQueue.enqueueNDRangeKernel(*applyBlurFilterYR1Kernel, cl::NullRange,
+							cl::NDRange(RoundUp<unsigned int>(frameBufferPixelCount, applyBlurFilterYR1WorkGroupSize)),
+							cl::NDRange(applyBlurFilterYR1WorkGroupSize));
 				}
 				
 				//--------------------------------------------------------------

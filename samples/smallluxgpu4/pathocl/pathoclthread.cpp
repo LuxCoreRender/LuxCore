@@ -72,8 +72,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	clearSBKernel = NULL;
 	mergeFBKernel = NULL;
 	normalizeFBKernel = NULL;
-	applyBlurLightFilterXR1Kernel = NULL;
-	applyBlurLightFilterYR1Kernel = NULL;
+	applyBlurFilterXR1Kernel = NULL;
+	applyBlurFilterYR1Kernel = NULL;
 	toneMapLinearKernel = NULL;
 	updateScreenBufferKernel = NULL;
 
@@ -127,8 +127,8 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete clearSBKernel;
 	delete mergeFBKernel;
 	delete normalizeFBKernel;
-	delete applyBlurLightFilterXR1Kernel;
-	delete applyBlurLightFilterYR1Kernel;
+	delete applyBlurFilterXR1Kernel;
+	delete applyBlurFilterYR1Kernel;
 	delete toneMapLinearKernel;
 	delete updateScreenBufferKernel;
 
@@ -787,19 +787,19 @@ void PathOCLRenderThread::InitKernels() {
 			// Gaussian blur frame buffer filter kernel
 			//------------------------------------------------------------------
 
-			delete applyBlurLightFilterXR1Kernel;
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ApplyBlurLightFilterXR1 Kernel");
-			applyBlurLightFilterXR1Kernel = new cl::Kernel(*program, "ApplyBlurLightFilterXR1");
-			applyBlurLightFilterXR1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &applyBlurLightFilterXR1WorkGroupSize);
+			delete applyBlurFilterXR1Kernel;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ApplyGaussianBlurFilterXR1 Kernel");
+			applyBlurFilterXR1Kernel = new cl::Kernel(*program, "ApplyGaussianBlurFilterXR1");
+			applyBlurFilterXR1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &applyBlurFilterXR1WorkGroupSize);
 			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				applyBlurLightFilterXR1WorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+				applyBlurFilterXR1WorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
-			delete applyBlurLightFilterYR1Kernel;
-			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ApplyBlurLightFilterYR1 Kernel");
-			applyBlurLightFilterYR1Kernel = new cl::Kernel(*program, "ApplyBlurLightFilterYR1");
-			applyBlurLightFilterYR1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &applyBlurLightFilterYR1WorkGroupSize);
+			delete applyBlurFilterYR1Kernel;
+			SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling ApplyGaussianBlurFilterYR1 Kernel");
+			applyBlurFilterYR1Kernel = new cl::Kernel(*program, "ApplyGaussianBlurFilterYR1");
+			applyBlurFilterYR1Kernel->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, &applyBlurFilterYR1WorkGroupSize);
 			if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				applyBlurLightFilterYR1WorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+				applyBlurFilterYR1WorkGroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 
 			//------------------------------------------------------------------
 			// ToneMapLinear kernel
