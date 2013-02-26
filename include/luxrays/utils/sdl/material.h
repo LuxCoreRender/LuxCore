@@ -617,7 +617,7 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// SchlickDistribution material
+// SchlickDistribution related functions
 //------------------------------------------------------------------------------
 
 extern float SchlickDistribution_SchlickZ(const float roughness, const float cosNH);
@@ -631,17 +631,12 @@ extern float SchlickDistribution_G(const float roughness, const Vector &localFix
 	const Vector &localSampledDir);
 
 //------------------------------------------------------------------------------
-// FresnelSlick material
+// Fresnel related functions
 //------------------------------------------------------------------------------
 
 extern Spectrum FresnelSlick_Evaluate(const Spectrum &ks, const float cosi);
-
-//------------------------------------------------------------------------------
-// FresnelGeneral material
-//------------------------------------------------------------------------------
-
 extern Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi);
-
+extern Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi);
 } }
 
 #endif	/* _LUXRAYS_SDL_MATERIAL_H */
