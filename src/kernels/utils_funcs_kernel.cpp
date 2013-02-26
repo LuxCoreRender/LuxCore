@@ -47,4 +47,12 @@ std::string KernelSource_utils_funcs =
 "	const float v = clamp((value - min) / (max - min), 0.f, 1.f);\n"
 "	return v * v * (-2.f * v  + 3.f);\n"
 "}\n"
+"\n"
+"float CosTheta(const float3 v) {\n"
+"	return v.z;\n"
+"}\n"
+"\n"
+"float SinTheta2(const float3 w) {\n"
+"	return fmax(0.f, 1.f - CosTheta(w) * CosTheta(w));\n"
+"}\n"
 ; } }

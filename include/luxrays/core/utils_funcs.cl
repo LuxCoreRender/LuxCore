@@ -44,3 +44,11 @@ float SmoothStep(const float min, const float max, const float value) {
 	const float v = clamp((value - min) / (max - min), 0.f, 1.f);
 	return v * v * (-2.f * v  + 3.f);
 }
+
+float CosTheta(const float3 v) {
+	return v.z;
+}
+
+float SinTheta2(const float3 w) {
+	return fmax(0.f, 1.f - CosTheta(w) * CosTheta(w));
+}
