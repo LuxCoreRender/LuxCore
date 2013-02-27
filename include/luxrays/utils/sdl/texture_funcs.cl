@@ -125,6 +125,28 @@ float FBm(const float3 P, const float omega, const int maxOctaves) {
 	return sum;
 }
 
+float Turbulence(const float3 P, const float omega, const int maxOctaves) {
+	// Compute number of octaves for anti-aliased FBm
+	const float foctaves = fmin((float)maxOctaves, 1.f);
+	const int octaves = Floor2Int(foctaves);
+	// Compute sum of octaves of noise for turbulence
+	float sum = 0.f, lambda = 1.f, o = 1.f;
+	for (int i = 0; i < octaves; ++i) {
+		sum += o * fabs(Noise3(lambda * P));
+		lambda *= 1.99f;
+		o *= omega;
+	}
+	const float partialOctave = foctaves - (float)(octaves);
+	sum += o * SmoothStep(.3f, .7f, partialOctave) *
+	       fabs(Noise3(lambda * P));
+
+	// finally, add in value to account for average value of fabsf(Noise())
+	// (~0.2) for the remaining octaves...
+	sum += (maxOctaves - foctaves) * 0.2f;
+
+	return sum;
+}
+
 //------------------------------------------------------------------------------
 // ImageMaps support
 //------------------------------------------------------------------------------
@@ -1008,6 +1030,33 @@ void WindyTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hit
 #endif
 
 //------------------------------------------------------------------------------
+// Wrinkled texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_WRINKLED)
+
+void WrinkledTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 mapP = TextureMapping3D_Map(&texture->wrinkled.mapping, hitPoint);
+
+	texValues[(*texValuesSize)++] = Turbulence(mapP, texture->wrinkled.omega, texture->wrinkled.octaves);
+}
+
+void WrinkledTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 mapP = TextureMapping3D_Map(&texture->wrinkled.mapping, hitPoint);
+
+	texValues[(*texValuesSize)++] = Turbulence(mapP, texture->wrinkled.omega, texture->wrinkled.octaves);
+}
+
+void WrinkledTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -1068,6 +1117,9 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex1Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex2Index];
 			return 2;
+#endif
+#if defined (PARAM_ENABLE_WRINKLED)
+		case WRINKLED:
 #endif
 #if defined (PARAM_ENABLE_WINDY)
 		case WINDY:
@@ -1174,6 +1226,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 			WindyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_WRINKLED)
+		case WRINKLED:
+			WrinkledTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1314,6 +1371,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			WindyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_WRINKLED)
+		case WRINKLED:
+			WrinkledTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1449,6 +1511,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 			WindyTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_WRINKLED)
+		case WRINKLED:
+			WrinkledTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

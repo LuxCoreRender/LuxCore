@@ -782,6 +782,11 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		return new AddTexture(tex1, tex2);
 	} else if (texType == "windy") {
 		return new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
+	} else if (texType == "wrinkled") {
+		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
+		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
+
+		return new WrinkledTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

@@ -53,7 +53,8 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
+	WRINKLED
 } TextureType;
 
 class ImageMapCache;
@@ -526,7 +527,6 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
-
 	virtual UV GetDuDv() const;
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
@@ -732,6 +732,34 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
+};
+
+//------------------------------------------------------------------------------
+// Wrinkled texture
+//------------------------------------------------------------------------------
+
+class WrinkledTexture : public Texture {
+public:
+	WrinkledTexture(const TextureMapping3D *mp, const int octs, const float omg) :
+		mapping(mp), octaves(octs), omega(omg) { }
+	virtual ~WrinkledTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return WRINKLED; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	int GetOctaves() const { return octaves; }
+	float GetOmega() const { return omega; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	const int octaves;
+	const float omega;
 };
 
 } }

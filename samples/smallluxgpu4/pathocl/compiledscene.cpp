@@ -804,10 +804,19 @@ void CompiledScene::CompileTextures() {
 				break;
 			}
 			case WINDY: {
-				WindyTexture *ft = static_cast<WindyTexture *>(t);
+				WindyTexture *wt = static_cast<WindyTexture *>(t);
 
 				tex->type = luxrays::ocl::WINDY;
-				CompileTextureMapping3D(&tex->windy.mapping, ft->GetTextureMapping());
+				CompileTextureMapping3D(&tex->windy.mapping, wt->GetTextureMapping());
+				break;
+			}
+			case WRINKLED: {
+				WrinkledTexture *wt = static_cast<WrinkledTexture *>(t);
+
+				tex->type = luxrays::ocl::WRINKLED;
+				CompileTextureMapping3D(&tex->wrinkled.mapping, wt->GetTextureMapping());
+				tex->wrinkled.octaves = wt->GetOctaves();
+				tex->wrinkled.omega = wt->GetOmega();
 				break;
 			}
 			default:
