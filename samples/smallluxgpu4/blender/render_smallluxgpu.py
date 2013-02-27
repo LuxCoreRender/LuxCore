@@ -200,7 +200,7 @@ class SLGBP:
             cfg['opencl.devices.select'] = scene.slg.devices
         cfg['opencl.gpu.workgroup.size'] = format(scene.slg.gpu_workgroup_size)
         cfg['film.gamma'] = format(scene.slg.film_gamma, 'g')
-        if scene.slg.rendering_type == 'PATHOCL' and scene.slg.ocl_filter_type != 'NONE':
+        if (scene.slg.rendering_type == 'PATHOCL' or scene.slg.rendering_type == 'RTPATHOCL') and scene.slg.ocl_filter_type != 'NONE':
             cfg['film.filter.type'] = '0'
         else:
             cfg['film.filter.type'] = scene.slg.film_filter_type
@@ -216,7 +216,6 @@ class SLGBP:
         cfg['path.filter.B'] = ff(scene.slg.filter_B)
         cfg['path.filter.C'] = ff(scene.slg.filter_C)
         cfg['path.maxdepth'] = format(scene.slg.path_maxdepth)
-        cfg['path.maxdiffusebounce'] = format(scene.slg.diffusebounce)
         cfg['path.russianroulette.depth'] = format(scene.slg.rrdepth)
         cfg['path.russianroulette.cap'] = ff(scene.slg.rrcap)
         cfg['accelerator.type'] = scene.slg.accelerator_type
@@ -1280,9 +1279,12 @@ def slg_add_properties():
 
     SLGSettings.film_filter_type = EnumProperty(name="Film Filter Type",
         description="Select the desired film filter type",
-        items=(("0", "None", "No filter"),
-               ("1", "Gaussian", "Gaussian filter")),
-        default="1")
+        items=(("NONE", "None", "No filter"),
+               ("BOX", "Box", "Box filter"),
+               ("GAUSSIAN", "Gaussian", "Gaussian filter"),
+               ("MITCHELL", "Mitchell", "Mitchell"),
+               ("MITCHELL_SS", "Mitchell SS", "Mitchell with supersampling")),
+        default="GAUSSIAN")
 
     SLGSettings.film_tonemap_type = EnumProperty(name="Tonemap Type",
         description="Select the desired film tonemap type",
@@ -1290,7 +1292,7 @@ def slg_add_properties():
                ("1", "Reinhard '02 tonemapping", "Reinhard '02 tonemapping")),
         default="0")
 
-    SLGSettings.linear_scale = FloatProperty(name="scale",
+    SLGSettings.linear_scale = FloatProperty(name="Scale",
         description="Linear tonemapping scale",
         default=1.0, min=0, max=10, soft_min=0, soft_max=10, precision=3)
 
@@ -1313,10 +1315,6 @@ def slg_add_properties():
     SLGSettings.alphachannel = BoolProperty(name="Alpha Background",
         description="Render background as transparent alpha channel in image file",
         default=False)
-
-    SLGSettings.diffusebounce = IntProperty(name="Max Diffuse Bounces",
-        description="Maximum path tracing diffuse bounce",
-        default=5, min=0, max=1024, soft_min=0, soft_max=1024)
 
     SLGSettings.rrdepth = IntProperty(name="Russian Roulette Depth",
         description="Russian roulette depth",
@@ -1554,7 +1552,6 @@ class AddPresetSLG(bl_operators.presets.AddPresetBase, bpy.types.Operator):
         "scene.slg.film_gamma",
         "scene.slg.path_maxdepth",
         "scene.slg.light_maxdepth",
-		"scene.slg.diffusebounce",
         "scene.slg.rrdepth",
         "scene.slg.rrcap",
         "scene.slg.refreshrate",
@@ -1701,8 +1698,6 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             split = layout.split()
             col = split.column()
             col.prop(slg, "pixelatomics_enable")
-            col = split.column()
-            col.prop(slg, "diffusebounce", text="Diffuse Bounces")
 
 		# All *CPU
         if slg.rendering_type in ('PATHCPU', 'LIGHTCPU', 'BIDIRCPU', 'BIDIRVMCPU'):
@@ -1738,21 +1733,21 @@ class RENDER_PT_slg_settings(bpy.types.Panel, RenderButtonsPanel):
             split = layout.split()
             col = split.column()
             col.prop(slg, "ocl_filter_type")
+        split = layout.split()
+        col = split.column()
+        col.prop(slg, "filter_width_x")
+        col = split.column()
+        col.prop(slg, "filter_width_y")
+        if slg.ocl_filter_type == 'GAUSSIAN' or slg.film_filter_type == 'GAUSSIAN':
             split = layout.split()
             col = split.column()
-            col.prop(slg, "filter_width_x")
+            col.prop(slg, "filter_alpha")
+        elif slg.ocl_filter_type == 'MITCHELL' or slg.film_filter_type == 'MITCHELL' or slg.ocl_filter_type == 'MITCHELL_SS' or slg.film_filter_type == 'MITCHELL_SS':
+            split = layout.split()
             col = split.column()
-            col.prop(slg, "filter_width_y")
-            if slg.ocl_filter_type == 'GAUSSIAN':
-                split = layout.split()
-                col = split.column()
-                col.prop(slg, "filter_alpha")
-            elif slg.ocl_filter_type == 'MITCHELL':
-                split = layout.split()
-                col = split.column()
-                col.prop(slg, "filter_B")
-                col = split.column()
-                col.prop(slg, "filter_C")
+            col.prop(slg, "filter_B")
+            col = split.column()
+            col.prop(slg, "filter_C")
         split = layout.split()
         col = split.column()
         col.prop(slg, "film_tonemap_type")
