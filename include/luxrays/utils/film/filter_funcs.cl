@@ -119,7 +119,7 @@ void AtomicAdd(__global float *val, const float delta) {
 	do {
 		oldVal.f = *val;
 		newVal.f = oldVal.f + delta;
-	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
+	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
 }
 #endif
 
