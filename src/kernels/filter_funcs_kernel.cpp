@@ -122,7 +122,7 @@ std::string KernelSource_filter_funcs =
 "	do {\n"
 "		oldVal.f = *val;\n"
 "		newVal.f = oldVal.f + delta;\n"
-"	} while (atom_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);\n"
+"	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);\n"
 "}\n"
 "#endif\n"
 "\n"
