@@ -136,6 +136,28 @@ static float FBm(const Point &P, const float omega, const int maxOctaves) {
 	return sum;
 }
 
+static float Turbulence(const Point &P, const float omega, const int maxOctaves) {
+	// Compute number of octaves for anti-aliased FBm
+	const float foctaves = Min(static_cast<float>(maxOctaves), 1.f);
+	const int octaves = Floor2Int(foctaves);
+	// Compute sum of octaves of noise for turbulence
+	float sum = 0.f, lambda = 1.f, o = 1.f;
+	for (int i = 0; i < octaves; ++i) {
+		sum += o * fabsf(Noise(lambda * P));
+		lambda *= 1.99f;
+		o *= omega;
+	}
+	const float partialOctave = foctaves - static_cast<float>(octaves);
+	sum += o * SmoothStep(.3f, .7f, partialOctave) *
+	       fabsf(Noise(lambda * P));
+
+	// finally, add in value to account for average value of fabsf(Noise())
+	// (~0.2) for the remaining octaves...
+	sum += (maxOctaves - foctaves) * 0.2f;
+
+	return sum;
+}
+
 //------------------------------------------------------------------------------
 // TextureDefinitions
 //------------------------------------------------------------------------------
@@ -1272,6 +1294,35 @@ Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	const std::string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "windy");
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// Wrinkled texture
+//------------------------------------------------------------------------------
+
+float WrinkledTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	const Point p(mapping->Map(hitPoint));
+	return Turbulence(p, omega, octaves);
+}
+
+Spectrum WrinkledTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+UV WrinkledTexture::GetDuDv() const {
+	return UV(DUDV_VALUE, DUDV_VALUE);
+}
+
+Properties WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "wrinkled");
+	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
+	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
+	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

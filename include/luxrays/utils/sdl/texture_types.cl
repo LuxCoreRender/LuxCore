@@ -27,7 +27,8 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
+	WRINKLED
 } TextureType;
 
 typedef struct {
@@ -120,6 +121,12 @@ typedef struct {
 } WindyTexParam;
 
 typedef struct {
+	TextureMapping3D mapping;
+	int octaves;
+	float omega;
+} WrinkledTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		ConstFloatParam constFloat;
@@ -137,6 +144,7 @@ typedef struct {
 		BrickTexParam brick;
 		AddTexParam addTex;
 		WindyTexParam windy;
+		WrinkledTexParam wrinkled;
 	};
 } Texture;
 
