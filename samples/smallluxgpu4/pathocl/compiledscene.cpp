@@ -803,6 +803,13 @@ void CompiledScene::CompileTextures() {
 				tex->addTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case WINDY: {
+				WindyTexture *ft = static_cast<WindyTexture *>(t);
+
+				tex->type = luxrays::ocl::WINDY;
+				CompileTextureMapping3D(&tex->windy.mapping, ft->GetTextureMapping());
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;

@@ -975,6 +975,39 @@ void AddTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPo
 #endif
 
 //------------------------------------------------------------------------------
+// Windy texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_WINDY)
+
+void WindyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 mapP = TextureMapping3D_Map(&texture->windy.mapping, hitPoint);
+
+	const float windStrength = FBm(.1f * mapP, .5f, 3);
+	const float waveHeight = FBm(mapP, .5f, 6);
+
+	texValues[(*texValuesSize)++] = fabs(windStrength) * waveHeight;
+}
+
+void WindyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 mapP = TextureMapping3D_Map(&texture->windy.mapping, hitPoint);
+
+	const float windStrength = FBm(.1f * mapP, .5f, 3);
+	const float waveHeight = FBm(mapP, .5f, 6);
+
+	texValues[(*texValuesSize)++] = fabs(windStrength) * waveHeight;
+}
+
+void WindyTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -1035,6 +1068,9 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex1Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex2Index];
 			return 2;
+#endif
+#if defined (PARAM_ENABLE_WINDY)
+		case WINDY:
 #endif
 #if defined (PARAM_ENABLE_MARBLE)
 		case MARBLE:
@@ -1133,6 +1169,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_TEX_ADD)
 		case ADD_TEX:
 			AddTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_WINDY)
+		case WINDY:
+			WindyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1268,6 +1309,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			AddTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_WINDY)
+		case WINDY:
+			WindyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1398,6 +1444,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_TEX_ADD)
 		case ADD_TEX:
 			AddTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_WINDY)
+		case WINDY:
+			WindyTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

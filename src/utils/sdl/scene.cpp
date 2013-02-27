@@ -780,6 +780,8 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 		return new AddTexture(tex1, tex2);
+	} else if (texType == "windy") {
+		return new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }
