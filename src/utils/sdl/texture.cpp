@@ -1246,3 +1246,32 @@ Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// Windy texture
+//------------------------------------------------------------------------------
+
+float WindyTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	const Point P(mapping->Map(hitPoint));
+	const float windStrength = FBm(.1f * P, .5f, 3);
+	const float waveHeight = FBm(P, .5f, 6);
+
+	return fabsf(windStrength) * waveHeight;
+}
+
+Spectrum WindyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+UV WindyTexture::GetDuDv() const {
+	return UV(DUDV_VALUE, DUDV_VALUE);
+}
+
+Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "windy");
+
+	return props;
+}

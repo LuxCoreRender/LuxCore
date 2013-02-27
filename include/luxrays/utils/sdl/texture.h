@@ -53,7 +53,7 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY
 } TextureType;
 
 class ImageMapCache;
@@ -709,6 +709,29 @@ public:
 private:
 	const Texture *tex1;
 	const Texture *tex2;
+};
+
+//------------------------------------------------------------------------------
+// Windy texture
+//------------------------------------------------------------------------------
+
+class WindyTexture : public Texture {
+public:
+	WindyTexture(const TextureMapping3D *mp) : mapping(mp) { }
+	virtual ~WindyTexture() { }
+
+	virtual TextureType GetType() const { return WINDY; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual UV GetDuDv() const;
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+
+	virtual Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
 };
 
 } }

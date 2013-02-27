@@ -446,6 +446,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_BRICK";
 	if (cscene->IsTextureCompiled(ADD_TEX))
 		ss << " -D PARAM_ENABLE_TEX_ADD";
+	if (cscene->IsTextureCompiled(WINDY))
+		ss << " -D PARAM_ENABLE_WINDY";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
