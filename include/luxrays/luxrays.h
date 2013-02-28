@@ -54,7 +54,6 @@ class RayBufferQueue;
 class RayBufferQueueO2O;
 class RayHit;
 class SampleBuffer;
-class Spectrum;
 class Triangle;
 class TriangleMesh;
 class UV;

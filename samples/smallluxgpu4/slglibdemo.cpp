@@ -33,7 +33,7 @@ using namespace luxrays::sdl;
 using namespace luxrays::utils;
 using namespace slg;
 
-void DebugHandler(const char *msg) {
+void LuxRaysDebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
 }
 

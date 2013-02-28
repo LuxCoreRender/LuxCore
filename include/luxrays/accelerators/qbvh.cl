@@ -21,8 +21,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
-
 typedef struct QuadRay {
 	float4 ox, oy, oz;
 	float4 dx, dy, dz;
