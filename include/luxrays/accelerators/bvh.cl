@@ -21,8 +21,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
-
 typedef struct {
 	BBox bbox;
 	unsigned int primitive;

@@ -47,11 +47,7 @@
 
 using namespace std;
 using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
 using namespace slg;
-
-extern string SLG_LABEL;
 
 extern RenderSession *session;
 
