@@ -555,6 +555,7 @@ class SLGBP:
                     if type(obj) == bpy.types.Object and obj not in instobjs:
                         print("SLGBP        Xform render mesh: {}".format(obj.name))
                         mesh.transform(obj.matrix_world)
+                        mesh.update(calc_tessface=True)
                     # Make copy of verts for fast direct index access (mesh.vertices was very slow)
                     if scene.slg.vnormals:
                         v = [vert.co[:] + vert.normal[:] for vert in mesh.vertices]
