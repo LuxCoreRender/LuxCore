@@ -4,7 +4,7 @@ std::string KernelSource_qbvh =
 "#line 2 \"qbvh_kernel.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
+" *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRays.                                         *\n"
 " *                                                                         *\n"

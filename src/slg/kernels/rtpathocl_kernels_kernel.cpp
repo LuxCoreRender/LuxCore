@@ -4,7 +4,7 @@ std::string KernelSource_rtpathocl_kernels =
 "#line 2 \"rtpatchocl_kernels.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
+" *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRays.                                         *\n"
 " *                                                                         *\n"
