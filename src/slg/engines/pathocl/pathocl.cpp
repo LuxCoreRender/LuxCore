@@ -33,7 +33,6 @@
 
 #include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>
-#include <bits/stl_vector.h>
 
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/accelerators/mqbvhaccel.h"
