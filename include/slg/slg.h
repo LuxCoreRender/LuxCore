@@ -49,7 +49,7 @@ extern void (*SLG_DebugHandler)(const char *msg); // SLG handler
 // Empty debug handler
 extern void NullDebugHandler(const char *msg);
 
-#define SLG_LOG(a) { if (SLG_DebugHandler) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); } }
+#define SLG_LOG(a) { if (slg::SLG_DebugHandler) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; slg::SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); } }
 
 }
 
