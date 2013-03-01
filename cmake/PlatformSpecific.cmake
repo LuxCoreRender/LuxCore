@@ -155,7 +155,7 @@ IF(APPLE)
 
 	### options
 	option(OSX_BUILD_LUXMARK "Compile LuxMark too" FALSE)
-	option(OSX_UPDATE_LUXRAYS_REPO "Copy LibLuxRays over to macos repo after compile" FALSE)
+	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" FALSE)
 
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
 	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
