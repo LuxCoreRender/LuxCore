@@ -126,7 +126,7 @@ static void XYZToLAB(float x, float y, float z, float &L, float &A, float &B)
 	B = 200.0f * (f[1] - f[2]);
 }
 
-unsigned int Yee_Compare(
+unsigned int slg::Yee_Compare(
 		const float *rgbA,
 		const float *rgbB,
 		std::vector<bool> *diff,

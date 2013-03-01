@@ -21,12 +21,13 @@
 
 #include <QGraphicsSceneMouseEvent>
 
+#include "slg/film/film.h"
+#include "slg/renderengine.h"
+#include "slg/engines/pathocl/pathocl.h"
+
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
-#include "luxrays/utils/film/film.h"
 #include "resultdialog.h"
-#include "renderengine.h"
-#include "pathocl/pathocl.h"
 #include "slgdefs.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {

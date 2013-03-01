@@ -80,7 +80,6 @@ QT4_WRAP_CPP(LUXMARK_MOC_SRCS ${LUXMARK_MOC})
 
 include_directories(${LUXRAYS_INCLUDE_DIR})
 include_directories(".")
-include_directories("../smallluxgpu4")
 link_directories (${LUXRAYS_LIB_DIR})
 
 set(LUXMARK_SRCS
@@ -115,7 +114,7 @@ ENDIF(APPLE)
 
 IF(APPLE)
 	add_executable(LuxMark  ${GUI_TYPE} ${LUXMARK_SRCS})
-	target_link_libraries(LuxMark smallluxgpu4 luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+	target_link_libraries(LuxMark smallluxgpu luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 	set_target_properties(LuxMark PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/osx-bundle/Info.plist)
 	ADD_CUSTOM_COMMAND(
 			TARGET LuxMark POST_BUILD
@@ -128,7 +127,7 @@ ELSE(APPLE)
 
 	ADD_EXECUTABLE(luxmark ${LUXMARK_SRCS})
 
-	TARGET_LINK_LIBRARIES(luxmark smallluxgpu4 luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
+	TARGET_LINK_LIBRARIES(luxmark smallluxgpu luxrays ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 	
 	# This instructs FREEGLUT to emit a pragma for the static version
 	SET_TARGET_PROPERTIES(luxmark PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)

@@ -39,16 +39,13 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
+#include "slg/sdl/scene.h"
+#include "slg/film/film.h"
+#include "slg/rendersession.h"
+#include "luxrays/utils/atomic.h"
 
-#include "slg.h"
+#include "slg/slg.h"
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
-
-extern RenderSession *session;
+extern slg::RenderSession *session;
 
 #endif	/* _SMALLLUX_H */

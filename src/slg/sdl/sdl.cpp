@@ -23,8 +23,4 @@
 
 #include "slg/sdl/sdl.h"
 
-namespace luxrays { namespace sdl {
-
-void (*LuxRaysSDLDebugHandler)(const char *msg) = NULL;
-
-} }
+void (*slg::SLG_SDLDebugHandler)(const char *msg) = NULL;

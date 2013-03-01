@@ -55,7 +55,7 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 
 	// Create LuxRays context
 	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
-	ctx = new Context(LuxRays_DebugHandler, oclPlatformIndex);
+	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
 	renderConfig->scene->UpdateDataSet(ctx);
 }

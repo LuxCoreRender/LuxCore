@@ -21,16 +21,15 @@
 
 #include <iostream>
 
-#include "slg.h"
-#include "rendersession.h"
+#include "slg/slg.h"
+#include "slg/sdl/sdl.h"
+#include "slg/rendersession.h"
 
 #include "luxrays/core/utils.h"
-#include "luxrays/opencl/utils.h"
+#include "luxrays/utils/ocl.h"
 
 using namespace std;
 using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
 using namespace slg;
 
 void LuxRaysDebugHandler(const char *msg) {
@@ -38,7 +37,7 @@ void LuxRaysDebugHandler(const char *msg) {
 }
 
 void SDLDebugHandler(const char *msg) {
-	cerr << "[LuxRays::SDL] " << msg << endl;
+	cerr << "[SDL] " << msg << endl;
 }
 
 void SLGDebugHandler(const char *msg) {
@@ -162,7 +161,9 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 }
 
 int main(int argc, char *argv[]) {
-	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
+	LuxRays_DebugHandler = ::LuxRaysDebugHandler;
+	SLG_DebugHandler = ::SLGDebugHandler;
+	SLG_SDLDebugHandler = ::SDLDebugHandler;
 
 	try {
 		// Initialize FreeImage Library
@@ -317,7 +318,7 @@ int main(int argc, char *argv[]) {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
-		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << luxrays::utils::oclErrorString(err.err()) << ")");
+		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
 	} catch (runtime_error err) {

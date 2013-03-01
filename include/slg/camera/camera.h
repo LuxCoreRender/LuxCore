@@ -65,51 +65,51 @@ public:
 	const u_int GetFilmWeight() const { return filmWidth; }
 	const u_int GetFilmHeight() const { return filmHeight; }
 
-	void TranslateLeft(const float k) {
-		luxrays::Vector t = -k * luxrays::Normalize(x);
-		luxrays::Translate(t);
-	}
-
-	void TranslateRight(const float k) {
-		luxrays::Vector t = k * luxrays::Normalize(x);
-		luxrays::Translate(t);
-	}
-
-	void TranslateForward(const float k) {
-		luxrays::Vector t = k * dir;
-		luxrays::Translate(t);
-	}
-
-	void TranslateBackward(const float k) {
-		luxrays::Vector t = -k * dir;
-		luxrays::Translate(t);
-	}
-
 	void Translate(const luxrays::Vector &t) {
 		orig += t;
 		target += t;
 	}
 
-	void RotateLeft(const float k) {
-		luxrays::Rotate(k, y);
+	void TranslateLeft(const float k) {
+		luxrays::Vector t = -k * luxrays::Normalize(x);
+		Translate(t);
 	}
 
-	void RotateRight(const float k) {
-		luxrays::Rotate(-k, y);
+	void TranslateRight(const float k) {
+		luxrays::Vector t = k * luxrays::Normalize(x);
+		Translate(t);
 	}
 
-	void RotateUp(const float k) {
-		luxrays::Rotate(k, x);
+	void TranslateForward(const float k) {
+		luxrays::Vector t = k * dir;
+		Translate(t);
 	}
 
-	void RotateDown(const float k) {
-		luxrays::Rotate(-k, x);
+	void TranslateBackward(const float k) {
+		luxrays::Vector t = -k * dir;
+		Translate(t);
 	}
 
 	void Rotate(const float angle, const luxrays::Vector &axis) {
 		luxrays::Vector p = target - orig;
 		luxrays::Transform t = luxrays::Rotate(angle, axis);
 		target = orig + t * p;
+	}
+
+	void RotateLeft(const float k) {
+		Rotate(k, y);
+	}
+
+	void RotateRight(const float k) {
+		Rotate(-k, y);
+	}
+
+	void RotateUp(const float k) {
+		Rotate(k, x);
+	}
+
+	void RotateDown(const float k) {
+		Rotate(-k, x);
 	}
 
 	void Update(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion = NULL);
