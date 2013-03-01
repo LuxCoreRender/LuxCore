@@ -37,12 +37,17 @@
 
 #include "smallluxgpu.h"
 #include "displayfunc.h"
-#include "renderconfig.h"
-#include "rendersession.h"
 
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/film/film.h"
-#include "pathocl/rtpathocl.h"
+
+#include "slg/renderconfig.h"
+#include "slg/rendersession.h"
+#include "slg/film/film.h"
+#include "slg/engines/pathocl/rtpathocl.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 bool OSDPrintHelp = false;
 bool RealtimeMode = false;

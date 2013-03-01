@@ -122,12 +122,13 @@ add_subdirectory(src/slg)
 #
 ###########################################################################
 
-#add_subdirectory(samples/benchsimple)
+add_subdirectory(samples/benchsimple)
+add_subdirectory(samples/slglibdemo)
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	if(NOT LUXRAYS_DISABLE_OPENCL)
 		if(BUILD_LUXMARK)
 			message(STATUS "Building LuxMark too - this will require QT4")
-			#add_subdirectory(samples/luxmark)
+			add_subdirectory(samples/luxmark)
 		endif(BUILD_LUXMARK)
 	else(NOT LUXRAYS_DISABLE_OPENCL)
 		if(BUILD_LUXMARK)
@@ -135,7 +136,7 @@ if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 		endif(BUILD_LUXMARK)
 	endif(NOT LUXRAYS_DISABLE_OPENCL)
 
-	#add_subdirectory(samples/smallluxgpu4)
+	add_subdirectory(samples/smallluxgpu4)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 

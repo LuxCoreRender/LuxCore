@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_H
-#define	_SLG_H
+#ifndef _SLG_SDL_H
+#define	_SLG_SDL_H
 
 #include "luxrays/luxrays.h"
 #include "slg/core/spectrum.h"
@@ -33,4 +33,4 @@ extern void (*SLG_SDLDebugHandler)(const char *msg);
 
 }
 
-#endif	/* _SLG_H */
+#endif	/* _SLG_SDL_H */

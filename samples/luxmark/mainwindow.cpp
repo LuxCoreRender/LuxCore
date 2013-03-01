@@ -26,10 +26,11 @@
 #include <QTextStream>
 #include <QGraphicsItem>
 
+#include "slg/renderconfig.h"
+
 #include "mainwindow.h"
 #include "aboutdialog.h"
 #include "slgdefs.h"
-#include "renderconfig.h"
 #include "luxmarkapp.h"
 #include "slgdefs.h"
 
@@ -46,12 +47,16 @@ LuxErrorEvent::LuxErrorEvent(QString msg) : QEvent((QEvent::Type)EVT_LUX_ERR_MES
 	setAccepted(false);
 }
 
-void DebugHandler(const char *msg) {
+void LuxRaysDebugHandler(const char *msg) {
 	LM_LOG_LUXRAYS(msg);
 }
 
 void SLGDebugHandler(const char *msg) {
 	LM_LOG_SLG(msg);
+}
+
+void SDLDebugHandler(const char *msg) {
+	LM_LOG_SDL(msg);
 }
 
 //------------------------------------------------------------------------------
@@ -115,6 +120,10 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	}
 
 	ShowLogo();
+
+	LuxRays_DebugHandler = ::LuxRaysDebugHandler;
+	SLG_DebugHandler = ::SLGDebugHandler;
+	SLG_SDLDebugHandler = ::SDLDebugHandler;
 }
 
 MainWindow::~MainWindow() {

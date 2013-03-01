@@ -21,18 +21,14 @@
 
 #############################################################################
 #
-# SLG binary
+# SLG library demo
 #
 #############################################################################
 
-set(SMALLLUXGPU_SRCS
-	smallluxgpu.cpp
-	displayfunc.cpp
+set(SLGLIBDEMO_SRCS
+	slglibdemo.cpp
 	)
 
-add_executable(slg4 ${SMALLLUXGPU_SRCS})
+add_executable(slg4libdemo ${SLGLIBDEMO_SRCS})
 
-TARGET_LINK_LIBRARIES(slg4 smallluxgpu luxrays ${GLEW_LIBRARY} ${GLUT_LIBRARY})
-
-# This instructs FREEGLUT to emit a pragma for the static version
-SET_TARGET_PROPERTIES(slg4 PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)
+TARGET_LINK_LIBRARIES(slg4libdemo smallluxgpu luxrays)

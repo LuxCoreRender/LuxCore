@@ -29,22 +29,28 @@
 
 /*! \namespace slg
  *
- * \brief The SLG core classes are defined within this namespace.
+ * \brief The SLG classes are defined within this namespace.
  */
 
 namespace slg {
+
 class RenderSession;
 class RenderConfig;
 class RenderEngine;
 class EditActionList;
 
 extern std::string SLG_LABEL;
+
+// The next two functions pointers (plus the one in sdl.h) have to be
+// set by the application using SLG library
+extern void (*LuxRays_DebugHandler)(const char *msg); // LuxRays handler
+extern void (*SLG_DebugHandler)(const char *msg); // SLG handler
+
+// Empty debug handler
+extern void NullDebugHandler(const char *msg);
+
+#define SLG_LOG(a) { if (SLG_DebugHandler) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); } }
+
 }
-
-// The next two functions have to be defined by the application using SLG library
-extern void LuxRays_DebugHandler(const char *msg); // LuxRays handler
-extern void SLG_DebugHandler(const char *msg); // SLG handler
-
-#define SLG_LOG(a) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); }
 
 #endif	/* _LUXRAYS_H */

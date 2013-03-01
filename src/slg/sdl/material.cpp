@@ -1326,14 +1326,12 @@ Properties Metal2Material::ToProperties() const  {
 // SchlickDistribution
 //------------------------------------------------------------------------------
 
-namespace luxrays { namespace sdl {
-
-float SchlickDistribution_SchlickZ(const float roughness, const float cosNH) {
+float slg::SchlickDistribution_SchlickZ(const float roughness, const float cosNH) {
 	const float d = 1.f + (roughness - 1) * cosNH * cosNH;
 	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
 }
 
-float SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) {
+float slg::SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) {
 	const float h = sqrtf(H.x * H.x + H.y * H.y);
 	if (h > 0.f) {
 		const float w = (anisotropy > 0.f ? H.x : H.y) / h;
@@ -1344,18 +1342,18 @@ float SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) {
 	return 1.f;
 }
 
-float SchlickDistribution_D(const float roughness, const Vector &wh,
+float slg::SchlickDistribution_D(const float roughness, const Vector &wh,
 		const float anisotropy) {
 	const float cosTheta = fabsf(wh.z);
 	return SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(wh, anisotropy) * INV_PI;
 }
 
-float SchlickDistribution_SchlickG(const float roughness,
+float slg::SchlickDistribution_SchlickG(const float roughness,
 		const float costheta) {
 	return costheta / (costheta * (1.f - roughness) + roughness);
 }
 
-float SchlickDistribution_G(const float roughness, const Vector &localFixedDir,
+float slg::SchlickDistribution_G(const float roughness, const Vector &localFixedDir,
 	const Vector &localSampledDir) {
 	return SchlickDistribution_SchlickG(roughness, fabsf(localFixedDir.z)) *
 			SchlickDistribution_SchlickG(roughness, fabsf(localSampledDir.z));
@@ -1365,7 +1363,7 @@ static float GetPhi(const float a, const float b) {
 	return M_PI * .5f * sqrtf(a * b / (1.f - a * (1.f - b)));
 }
 
-void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
+void slg::SchlickDistribution_SampleH(const float roughness, const float anisotropy,
 		const float u0, const float u1, Vector *wh, float *d, float *pdf) {
 	float u1x4 = u1 * 4.f;
 	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
@@ -1394,32 +1392,24 @@ void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
 	*pdf = *d;
 }
 
-float SchlickDistribution_Pdf(const float roughness, const Vector &wh,
+float slg::SchlickDistribution_Pdf(const float roughness, const Vector &wh,
 		const float anisotropy) {
 	return SchlickDistribution_D(roughness, wh, anisotropy);
 }
-
-} }
 
 //------------------------------------------------------------------------------
 // FresnelSlick BSDF
 //------------------------------------------------------------------------------
 
-namespace luxrays { namespace sdl {
-
-Spectrum FresnelSlick_Evaluate(const Spectrum &normalIncidence, const float cosi) {
+Spectrum slg::FresnelSlick_Evaluate(const Spectrum &normalIncidence, const float cosi) {
 	return normalIncidence + (Spectrum(1.f) - normalIncidence) *
 		powf(1.f - cosi, 5.f);
 }
-
-} }
 
 //------------------------------------------------------------------------------
 // FresnelGeneral material
 //------------------------------------------------------------------------------
 
-namespace luxrays { namespace sdl {
-	
 static Spectrum FrDiel2(const float cosi, const Spectrum &cost,
 		const Spectrum &eta) {
 	Spectrum Rparl(eta * cosi);
@@ -1458,7 +1448,7 @@ static Spectrum FrFull(const float cosi, const Spectrum &cost, const Spectrum &e
 	return (Rparl2 + Rperp2) * .5f;
 }
 
-Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi) {
+Spectrum slg::FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi) {
 	Spectrum sint2(Max(0.f, 1.f - cosi * cosi));
 	if (cosi > 0.f)
 		sint2 /= eta * eta;
@@ -1477,7 +1467,7 @@ Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const f
 	}
 }
 
-Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi) {
+Spectrum slg::FresnelCauchy_Evaluate(const float eta, const float cosi) {
 	// Compute indices of refraction for dielectric
 	const bool entering = (cosi > 0.f);
 
@@ -1492,5 +1482,3 @@ Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi) {
 		return FrDiel2(fabsf(cosi), Spectrum(sqrtf(Max(0.f, 1.f - sint2))),
 			entering ? eta : Spectrum(1.f) / eta);
 }
-
-} }

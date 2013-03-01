@@ -39,20 +39,18 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
-#include "luxrays/utils/sdl/scene.h"
-#include "luxrays/utils/film/film.h"
-#include "luxrays/utils/core/atomic.h"
+#include "luxrays/utils/atomic.h"
 
-#include "slg.h"
-#include "rendersession.h"
-#include "renderconfig.h"
+#include "slg/slg.h"
+#include "slg/rendersession.h"
+#include "slg/renderconfig.h"
+#include "slg/sdl/scene.h"
+#include "slg/film/film.h"
 
 #include "mainwindow.h"
 
 using namespace std;
 using namespace luxrays;
-using namespace luxrays::sdl;
-using namespace luxrays::utils;
 using namespace slg;
 
 extern MainWindow *LogWindow;
@@ -80,6 +78,7 @@ private:
 #define LM_LOG(a) { if (LogWindow) { std::stringstream _LM_LOG_LOCAL_SS; _LM_LOG_LOCAL_SS << a; qApp->postEvent(LogWindow, new LuxLogEvent(QString(_LM_LOG_LOCAL_SS.str().c_str()))); }}
 #define LM_LOG_LUXRAYS(a) { LM_LOG("<FONT COLOR=\"#002200\"><B>[LuxRays]</B></FONT> " << a); }
 #define LM_LOG_SLG(a) { LM_LOG("<FONT COLOR=\"#009900\"><B>[SLG]</B></FONT> " << a); }
+#define LM_LOG_SDL(a) { LM_LOG("<FONT COLOR=\"#004400\"><B>[SDL]</B></FONT> " << a); }
 
 #define LM_ERROR(a) { if (LogWindow) { std::stringstream _LM_ERR_LOCAL_SS; _LM_ERR_LOCAL_SS << a; qApp->postEvent(LogWindow, new LuxErrorEvent(QString(_LM_ERR_LOCAL_SS.str().c_str()))); }}
 

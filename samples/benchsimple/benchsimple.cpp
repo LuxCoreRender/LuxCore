@@ -27,7 +27,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/core/randomgen.h"
+#include "luxrays/core/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
 #define TRIANGLE_COUNT 500

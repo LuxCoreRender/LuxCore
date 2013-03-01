@@ -28,7 +28,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
-#include "luxrays/opencl/intersectiondeviceocl.h"
+#include "luxrays/core/oclintersectiondevice.h"
 
 using namespace std;
 using namespace luxrays;
