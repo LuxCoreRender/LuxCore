@@ -29,7 +29,7 @@ namespace slg {
 
 extern void (*SLG_SDLDebugHandler)(const char *msg);
 
-#define SDL_LOG(a) { if (SLG_SDLDebugHandler) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; SLG_SDLDebugHandler(_LR_LOG_LOCAL_SS.str().c_str()); } }
+#define SDL_LOG(a) { if (slg::SLG_SDLDebugHandler) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; slg::SLG_SDLDebugHandler(_LR_LOG_LOCAL_SS.str().c_str()); } }
 
 }
 
