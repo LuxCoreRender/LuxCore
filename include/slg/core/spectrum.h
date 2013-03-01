@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2009 by David Bucciarelli (davibu@interfree.it)    *
+ *   Copyright (C) 1998-2013 by David Bucciarelli (davibu@interfree.it)    *
  *                                                                         *
  *   This file is part of SmallLuxGPU.                                     *
  *                                                                         *

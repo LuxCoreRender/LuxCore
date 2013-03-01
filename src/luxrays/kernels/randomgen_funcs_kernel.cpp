@@ -4,7 +4,7 @@ std::string KernelSource_randomgen_funcs =
 "#line 2 \"randomgen_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *\n"
+" *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRays.                                         *\n"
 " *                                                                         *\n"
