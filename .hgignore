@@ -2,8 +2,8 @@
 ^lib/libsmallluxgpu.a
 ^doxygen-luxrays.conf
 ^doxygen/luxrays.template
-^doxygen-slg4.conf
-^doxygen/slg4.template
+^doxygen-slg.conf
+^doxygen/slg.template
 ^bin/*
 ^doc/*
 ^samples/luxmark/scenes/room/*
