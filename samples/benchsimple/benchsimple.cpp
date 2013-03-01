@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -27,7 +27,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/core/randomgen.h"
+#include "luxrays/core/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
 #define TRIANGLE_COUNT 500

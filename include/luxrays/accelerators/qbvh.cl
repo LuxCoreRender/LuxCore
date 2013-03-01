@@ -1,7 +1,7 @@
 #line 2 "qbvh_kernel.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -20,8 +20,6 @@
  *                                                                         *
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
-
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
 typedef struct QuadRay {
 	float4 ox, oy, oz;

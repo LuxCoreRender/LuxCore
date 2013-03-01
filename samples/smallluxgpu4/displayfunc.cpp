@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -37,12 +37,17 @@
 
 #include "smallluxgpu.h"
 #include "displayfunc.h"
-#include "renderconfig.h"
-#include "rendersession.h"
 
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/film/film.h"
-#include "pathocl/rtpathocl.h"
+
+#include "slg/renderconfig.h"
+#include "slg/rendersession.h"
+#include "slg/film/film.h"
+#include "slg/engines/pathocl/rtpathocl.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 bool OSDPrintHelp = false;
 bool RealtimeMode = false;

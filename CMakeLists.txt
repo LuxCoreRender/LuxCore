@@ -1,5 +1,5 @@
 ###########################################################################
-#   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 #
+#   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  #
 #                                                                         #
 #   This file is part of LuxRays.                                         #
 #                                                                         #
@@ -108,12 +108,12 @@ endif()
 
 ###########################################################################
 #
-# LuxRays
+# LuxRays and SLG libraries
 #
 ###########################################################################
 
-# Add source files to LuxRays
-add_subdirectory(src)
+add_subdirectory(src/luxrays)
+add_subdirectory(src/slg)
 
 
 ###########################################################################
@@ -123,6 +123,7 @@ add_subdirectory(src)
 ###########################################################################
 
 add_subdirectory(samples/benchsimple)
+add_subdirectory(samples/slglibdemo)
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	if(NOT LUXRAYS_DISABLE_OPENCL)
 		if(BUILD_LUXMARK)

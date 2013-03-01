@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -60,7 +60,6 @@ public:
 	QBVHNode *GetTree() const { return nodes; }
 	unsigned int GetNLeafs() const { return nLeafs; }
 	const Transform **GetTransforms() const { return leafsTransform; }
-
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
