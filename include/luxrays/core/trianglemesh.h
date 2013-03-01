@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -32,13 +32,18 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/trianglemesh_types.cl"
+}
+
 typedef unsigned int TriangleMeshID;
 typedef unsigned int TriangleID;
 
-enum MeshType {
+typedef enum {
 	TYPE_TRIANGLE, TYPE_TRIANGLE_INSTANCE,
 	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE
-};
+} MeshType;
 
 class Mesh {
 public:
@@ -96,13 +101,13 @@ public:
 	virtual void ApplyTransform(const Transform &trans);
 
 	static TriangleMesh *Merge(
-		const std::deque<Mesh *> &meshes,
+		const std::deque<const Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 	static TriangleMesh *Merge(
 		const unsigned int totalVerticesCount,
 		const unsigned int totalIndicesCount,
-		const std::deque<Mesh *> &meshes,
+		const std::deque<const Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 

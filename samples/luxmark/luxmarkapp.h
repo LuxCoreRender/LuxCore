@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -27,8 +27,8 @@
 
 #include <boost/thread.hpp>
 
+#include "slgdefs.h"
 #include "mainwindow.h"
-#include "rendersession.h"
 #include "hardwaretree.h"
 
 //------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -24,21 +24,39 @@
 
 #include <string>
 
-namespace luxrays {
+namespace luxrays { namespace ocl {
 
+extern std::string KernelSource_luxrays_types;
+	
 // Intersection kernels
-extern std::string KernelSource_BVH;
-extern std::string KernelSource_QBVH;
-extern std::string KernelSource_MQBVH;
+extern std::string KernelSource_bvh;
+extern std::string KernelSource_qbvh;
+extern std::string KernelSource_mqbvh;
 
-// Pixel kernels
-extern std::string KernelSource_Pixel_ClearFB;
-extern std::string KernelSource_Pixel_ClearSampleFB;
-extern std::string KernelSource_Pixel_UpdateFrameBuffer;
-extern std::string KernelSource_Pixel_AddSampleBuffer;
-extern std::string KernelSource_Pixel_AddSampleBufferPreview;
-extern std::string KernelSource_Pixel_AddSampleBufferGaussian2x2;
+extern std::string KernelSource_trianglemesh_types;
+extern std::string KernelSource_trianglemesh_funcs;
+extern std::string KernelSource_randomgen_types;
+extern std::string KernelSource_randomgen_funcs;
+extern std::string KernelSource_matrix4x4_types;
+extern std::string KernelSource_matrix4x4_funcs;
+extern std::string KernelSource_transform_types;
+extern std::string KernelSource_transform_funcs;
+extern std::string KernelSource_frame_types;
+extern std::string KernelSource_frame_funcs;
+extern std::string KernelSource_epsilon_types;
+extern std::string KernelSource_epsilon_funcs;
+extern std::string KernelSource_ray_types;
+extern std::string KernelSource_ray_funcs;
+extern std::string KernelSource_point_types;
+extern std::string KernelSource_vector_types;
+extern std::string KernelSource_vector_funcs;
+extern std::string KernelSource_normal_types;
+extern std::string KernelSource_bbox_types;
+extern std::string KernelSource_triangle_types;
+extern std::string KernelSource_triangle_funcs;
+extern std::string KernelSource_uv_types;
+extern std::string KernelSource_utils_funcs;
 
-}
+} }
 
 #endif	/* _LUXRAYS_KERNELS_H */

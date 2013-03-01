@@ -1,5 +1,5 @@
  /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -50,6 +50,9 @@ ResultDialog::ResultDialog(LuxMarkAppMode mode,
 			(strcmp(sceneName, SCENE_SALA) !=0) &&
 			(strcmp(sceneName, SCENE_LUXBALL_HDR) !=0))
 		ui->submitButton->setEnabled(false);
+
+	// To re-enable only with official release
+	ui->submitButton->setEnabled(false);
 }
 
 ResultDialog::~ResultDialog() {

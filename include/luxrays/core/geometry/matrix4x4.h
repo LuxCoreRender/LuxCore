@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -25,6 +25,11 @@
 #include <ostream>
 
 namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/matrix4x4_types.cl"
+}
 
 class Matrix4x4 {
 public:
@@ -76,7 +81,6 @@ public:
 	friend std::ostream &operator<<(std::ostream &, const Matrix4x4 &);
 
 	float m[4][4];
-#define _LUXRAYS_MATRIX4X4_OCLDEFINE "typedef struct { float m[4][4]; } Matrix4x4;\n"
 };
 
 inline std::ostream & operator<<(std::ostream &os, const Matrix4x4 &m) {

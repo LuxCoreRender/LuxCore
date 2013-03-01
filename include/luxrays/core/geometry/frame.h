@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -29,6 +29,11 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/frame_types.cl"
+}
+
 class Frame {
 public:
 	Frame() {
@@ -53,10 +58,8 @@ public:
 	}
 
 	void SetFromZ(const Vector &z) {
-		Vector tmpZ = Z = Normalize(z);
-		Vector tmpX = (std::abs(tmpZ.x) > 0.99f) ? Vector(0, 1, 0) : Vector(1, 0, 0);
-		Y = Normalize(Cross(tmpZ, tmpX));
-		X = Cross(Y, tmpZ);
+		Z = z;
+		CoordinateSystem(Z, &X, &Y);
 	}
 
 	Vector ToWorld(const Vector &a) const {

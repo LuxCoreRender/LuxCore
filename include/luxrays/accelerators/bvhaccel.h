@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -54,7 +54,7 @@ public:
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
 	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		unsigned int stackSize, bool disableImageStorage) const;
-	virtual void Init(const std::deque<Mesh *> &meshes,
+	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 

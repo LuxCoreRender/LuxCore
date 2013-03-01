@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -24,7 +24,7 @@
 
 #include <cstddef>
 
-#include "smalllux.h"
+#include "slgdefs.h"
 #include "hardwaretree.h"
 
 #include "ui_resultdialog.h"

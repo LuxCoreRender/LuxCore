@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2009 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -31,6 +31,11 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/ray_types.cl"
+}
+
 class  Ray {
 public:
 	// Ray Public Methods
@@ -61,8 +66,7 @@ public:
 	Vector d;
 	mutable float mint, maxt;
 	float time;
-	float pad[3]; // Add padding to avoid size discrepancies with OpenCL
-#define _LUXRAYS_RAY_OCLDEFINE "typedef struct { Point o; Vector d; float mint, maxt, time, pad[3]; } Ray;\n"
+	float pad[3]; // Add padding to avoid size discrepancies with OpenCL (TODO: remove)
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ray &r) {
@@ -75,7 +79,6 @@ public:
 	float t;
 	float b1, b2; // Barycentric coordinates of the hit point
 	unsigned int index;
-#define _LUXRAYS_RAYHIT_OCLDEFINE "typedef struct { float t, b1, b2; unsigned int index; } RayHit;\n"
 
 	void SetMiss() { index = 0xffffffffu; };
 	bool Miss() const { return (index == 0xffffffffu); };

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -44,7 +44,7 @@ public:
 	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
 		unsigned int stackSize, bool disableImageStorage) const = 0;
 
-	virtual void Init(const std::deque<Mesh *> &meshes, const unsigned int totalVertexCount, const unsigned int totalTriangleCount) = 0;
+	virtual void Init(const std::deque<const Mesh *> &meshes, const unsigned int totalVertexCount, const unsigned int totalTriangleCount) = 0;
 	virtual const TriangleMeshID GetMeshID(const unsigned int index) const = 0;
 	virtual const TriangleMeshID *GetMeshIDTable() const = 0;
 	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const = 0;

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -24,9 +24,7 @@
 
 // The configured options and settings for LuxRays
 
-#define LUXRAYS_VERSION_MAJOR "0"
-#define LUXRAYS_VERSION_MINOR "2dev"
-
-/* #undef LUXRAYS_DISABLE_OPENCL */
+#define LUXRAYS_VERSION_MAJOR "1"
+#define LUXRAYS_VERSION_MINOR "3devel2"
 
 #endif	/* _LUXRAYS_CFG_H */
