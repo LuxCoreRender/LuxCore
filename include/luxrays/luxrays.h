@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -54,7 +54,6 @@ class RayBufferQueue;
 class RayBufferQueueO2O;
 class RayHit;
 class SampleBuffer;
-class Spectrum;
 class Triangle;
 class TriangleMesh;
 class UV;

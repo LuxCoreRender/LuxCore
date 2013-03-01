@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -21,12 +21,13 @@
 
 #include <QGraphicsSceneMouseEvent>
 
+#include "slg/film/film.h"
+#include "slg/renderengine.h"
+#include "slg/engines/pathocl/pathocl.h"
+
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
-#include "luxrays/utils/film/film.h"
 #include "resultdialog.h"
-#include "renderengine.h"
-#include "pathocl/pathocl.h"
 #include "slgdefs.h"
 
 void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {

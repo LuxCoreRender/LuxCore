@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -35,13 +35,17 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/device.h"
-#include "luxrays/opencl/utils.h"
+#include "luxrays/utils/ocl.h"
 
 #include "smallluxgpu.h"
 #include "displayfunc.h"
-#include "rendersession.h"
-#include "filesaver/filesaver.h"
-#include "telnet.h"
+#include "slg/rendersession.h"
+#include "slg/engines/filesaver/filesaver.h"
+#include "slg/telnet/telnet.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 RenderSession *session = NULL;
 
@@ -50,12 +54,12 @@ RenderSession *session = NULL;
 
 bool mouseGrabMode = false;
 
-void DebugHandler(const char *msg) {
+void LuxRaysDebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
 }
 
 void SDLDebugHandler(const char *msg) {
-	cerr << "[LuxRays::SDL] " << msg << endl;
+	cerr << "[SDL] " << msg << endl;
 }
 
 void SLGDebugHandler(const char *msg) {
@@ -350,7 +354,9 @@ int main(int argc, char *argv[]) {
 	// This is required to run AMD GPU profiler
 	//XInitThreads();
 
-	luxrays::sdl::LuxRaysSDLDebugHandler = SDLDebugHandler;
+	LuxRays_DebugHandler = ::LuxRaysDebugHandler;
+	SLG_DebugHandler = ::SLGDebugHandler;
+	SLG_SDLDebugHandler = ::SDLDebugHandler;
 
 	try {
 		// Initialize FreeImage Library
@@ -475,15 +481,15 @@ int main(int argc, char *argv[]) {
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
-		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << luxrays::utils::oclErrorString(err.err()) << ")");
+		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
 	} catch (runtime_error err) {
 		SLG_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
-//	} catch (exception err) {
-//		SLG_LOG("ERROR: " << err.what());
-//		return EXIT_FAILURE;
+	} catch (exception err) {
+		SLG_LOG("ERROR: " << err.what());
+		return EXIT_FAILURE;
 	}
 
 	return EXIT_SUCCESS;
