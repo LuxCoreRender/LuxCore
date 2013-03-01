@@ -27,6 +27,4 @@
 #define LUXRAYS_VERSION_MAJOR "1"
 #define LUXRAYS_VERSION_MINOR "3devel2"
 
-/* #undef LUXRAYS_DISABLE_OPENCL */
-
 #endif	/* _LUXRAYS_CFG_H */

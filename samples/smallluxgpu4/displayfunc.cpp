@@ -126,6 +126,7 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (dynamic_cast<RTPathOCLRenderEngine *>(session->renderEngine)) {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
@@ -137,6 +138,7 @@ static void PrintHelpAndSettings() {
 				session->renderConfig->GetScreenRefreshInterval(),
 				fps);
 	} else
+#endif
 		sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms]",
 				int(session->renderEngine->GetRenderingTime()),
 				session->renderConfig->GetScreenRefreshInterval());
@@ -434,6 +436,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			RealtimeMode = false;
 			break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '8':
 			session->SetRenderingEngineType(RTPATHOCL);
 			glutIdleFunc(idleFunc);
@@ -441,6 +444,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			if (session->renderConfig->GetScreenRefreshInterval() > 25)
 				session->renderConfig->SetScreenRefreshInterval(25);
 			break;
+#endif
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
@@ -619,10 +623,13 @@ void RunGlut() {
 	glutDisplayFunc(displayFunc);
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
 		glutIdleFunc(idleFunc);
 		RealtimeMode = true;
-	} else {
+	} else
+#endif
+	{
 		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 		RealtimeMode = false;
 	}
