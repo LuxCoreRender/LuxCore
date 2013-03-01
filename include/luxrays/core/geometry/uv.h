@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -25,6 +25,11 @@
 #include <ostream>
 
 namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/uv_types.cl"
+}
 
 class UV {
 public:
@@ -52,6 +57,10 @@ public:
 
 	UV operator+(const UV &p) const {
 		return UV(u + p.u, v + p.v);
+	}
+
+	UV operator-(const UV &p) const {
+		return UV(u - p.u, v - p.v);
 	}
 
 	UV operator*(float f) const {
@@ -86,7 +95,6 @@ public:
 
 	// UV Public Data
 	float u, v;
-#define _LUXRAYS_UV_OCLDEFINE "typedef struct { float u,v; } UV;\n"
 };
 
 inline std::ostream & operator<<(std::ostream &os, const UV &v) {

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -37,9 +37,6 @@ public:
 	void SetMaxStackSize(const size_t s) {
 		stackSize = s;
 	}
-
-	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
-	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
 
 	//--------------------------------------------------------------------------
 	// Statistics
@@ -108,8 +105,6 @@ protected:
 		statsDeviceIdleTime, statsDeviceTotalTime;
 
 	size_t stackSize;
-
-	mutable unsigned int forceWorkGroupSize;
 
 	bool dataParallelSupport;
 };

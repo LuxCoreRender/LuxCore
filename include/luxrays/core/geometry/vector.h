@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -32,6 +32,11 @@
 #include "luxrays/core/utils.h"
 
 namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/vector_types.cl"
+}
 
 class Point;
 class Normal;
@@ -109,7 +114,7 @@ public:
 	}
 
 	float LengthSquared() const {
-		return x * x + y * y + z*z;
+		return x * x + y * y + z * z;
 	}
 
 	float Length() const {
@@ -119,7 +124,6 @@ public:
 
 	// Vector Public Data
 	float x, y, z;
-#define _LUXRAYS_VECTOR_OCLDEFINE "typedef struct { float x, y, z; } Vector;\n"
 
 private:
 	template<class Archive>

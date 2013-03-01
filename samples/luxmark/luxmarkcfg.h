@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -24,7 +24,7 @@
 
 // The configured options and settings for LuxMark
 
-#define LUXMARK_VERSION_MAJOR "2"
-#define LUXMARK_VERSION_MINOR "1beta2"
+#define LUXMARK_VERSION_MAJOR "3"
+#define LUXMARK_VERSION_MINOR "0devel"
 
 #endif	/* _LUXMARK_CFG_H */

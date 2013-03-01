@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -113,7 +113,6 @@ public:
 	}
 	// Normal Public Data
 	float x, y, z;
-#define _LUXRAYS_NORMAL_OCLDEFINE "typedef struct { float x, y, z; } Normal;\n"
 
 private:
 	template<class Archive>

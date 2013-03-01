@@ -1,5 +1,5 @@
  /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -26,12 +26,13 @@
 #include <QTextStream>
 #include <QGraphicsItem>
 
+#include "slg/renderconfig.h"
+
 #include "mainwindow.h"
 #include "aboutdialog.h"
-#include "smalllux.h"
-#include "renderconfig.h"
+#include "slgdefs.h"
 #include "luxmarkapp.h"
-#include "smalllux.h"
+#include "slgdefs.h"
 
 MainWindow *LogWindow = NULL;
 
@@ -46,8 +47,12 @@ LuxErrorEvent::LuxErrorEvent(QString msg) : QEvent((QEvent::Type)EVT_LUX_ERR_MES
 	setAccepted(false);
 }
 
-void DebugHandler(const char *msg) {
+void LuxRaysDebugHandler(const char *msg) {
 	LM_LOG_LUXRAYS(msg);
+}
+
+void SLGDebugHandler(const char *msg) {
+	LM_LOG_SLG(msg);
 }
 
 void SDLDebugHandler(const char *msg) {
@@ -86,7 +91,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	luxFrameBuffer = new LuxFrameBuffer(QPixmap(":/images/resources/luxlogo_bg.png"));
 	renderScene->addItem(luxFrameBuffer);
 
-	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG2 by Michael \"neo2068\" Klemm"));
+	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG by Michael \"neo2068\" Klemm"));
 	renderScene->addItem(authorLabelBack);
 	authorLabelBack->setBrush(Qt::black);
 	authorLabel = new QGraphicsSimpleTextItem(authorLabelBack->text());
@@ -115,6 +120,10 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	}
 
 	ShowLogo();
+
+	LuxRays_DebugHandler = ::LuxRaysDebugHandler;
+	SLG_DebugHandler = ::SLGDebugHandler;
+	SLG_SDLDebugHandler = ::SDLDebugHandler;
 }
 
 MainWindow::~MainWindow() {
@@ -178,7 +187,7 @@ void MainWindow::setRoomScene() {
 
 void MainWindow::setSalaScene() {
 	LM_LOG("Set Sala scene");
-	authorLabelBack->setText(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG2 by Michael \"neo2068\" Klemm"));
+	authorLabelBack->setText(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG by Michael \"neo2068\" Klemm"));
 	authorLabel->setText(authorLabelBack->text());
 	((LuxMarkApp *)qApp)->SetScene(SCENE_SALA);
 }

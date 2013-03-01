@@ -1,5 +1,5 @@
 ###########################################################################
-#   Copyright (C) 1998-2011 by authors (see AUTHORS.txt )                 #
+#   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  #
 #                                                                         #
 #   This file is part of LuxRays.                                         #
 #                                                                         #
@@ -24,7 +24,7 @@ MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
 
 ###########################################################################
 #
-# check and configure cmake
+# Check and configure cmake
 #
 ###########################################################################
 # Fresh start
@@ -55,6 +55,7 @@ set(CMAKE_MODULE_PATH
 
 INCLUDE(PlatformSpecific)
 INCLUDE(Configuration)
+INCLUDE(KernelPreprocess)
 
 # Install CMake modules
 #add_subdirectory(CMake)
@@ -101,23 +102,18 @@ if (NOT GLUT_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required GLUT files, disabling samples build - Please check ${GLUT_SEARCH_PATH}")
 endif()
 
-#set (GLUT_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/../freeglut/include")
-#set (GLUT_LIBRARY_DBG "${LuxRays_SOURCE_DIR}/../freeglut/lib/freeglut_staticd.lib")
-#set (GLUT_LIBRARY_REL "${LuxRays_SOURCE_DIR}/../freeglut/lib/freeglut_static.lib")
-#include_directories(${GLUT_INCLUDE_DIR})
-
 if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
 endif()
 
 ###########################################################################
 #
-# LuxRays
+# LuxRays and SLG libraries
 #
 ###########################################################################
 
-# Add source files to LuxRays
-add_subdirectory(src)
+add_subdirectory(src/luxrays)
+add_subdirectory(src/slg)
 
 
 ###########################################################################
@@ -127,22 +123,20 @@ add_subdirectory(src)
 ###########################################################################
 
 add_subdirectory(samples/benchsimple)
+add_subdirectory(samples/slglibdemo)
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	if(NOT LUXRAYS_DISABLE_OPENCL)
 		if(BUILD_LUXMARK)
 			message(STATUS "Building LuxMark too - this will require QT4")
 			add_subdirectory(samples/luxmark)
 		endif(BUILD_LUXMARK)
-		message(STATUS "Building SLG2 too")
-		add_subdirectory(samples/smallluxgpu2)
 	else(NOT LUXRAYS_DISABLE_OPENCL)
 		if(BUILD_LUXMARK)
 			message(WARNING "LuxMark requires OpenCL support, not building")
 		endif(BUILD_LUXMARK)
-		message(WARNING "SLG2 requires OpenCL support, not building")
 	endif(NOT LUXRAYS_DISABLE_OPENCL)
 
-	add_subdirectory(samples/smallluxgpu3)
+	add_subdirectory(samples/smallluxgpu4)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 

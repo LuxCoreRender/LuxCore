@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -61,9 +61,6 @@ public:
 	virtual size_t GetMaxMemory() const { return 0; }
 	virtual size_t GetMaxMemoryAllocSize() const { return 0; }
 
-	unsigned int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
-	void SetForceWorkGroupSize(const unsigned int size) const { forceWorkGroupSize = size; }
-
 	static void FilterOne(std::vector<DeviceDescription *> &deviceDescriptions);
 	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 	static std::string GetDeviceType(const DeviceType type);
@@ -71,8 +68,6 @@ public:
 protected:
 	std::string name;
 	DeviceType type;
-
-	mutable unsigned int forceWorkGroupSize;
 };
 
 class Device {

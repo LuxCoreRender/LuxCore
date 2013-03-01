@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2009 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
@@ -30,6 +30,11 @@
 #include "luxrays/core/geometry/matrix4x4.h"
 
 namespace luxrays {
+
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/transform_types.cl"
+}
 
 class Transform;
 
@@ -67,7 +72,6 @@ public:
 	Transform operator/(const Transform &t2) const {
 		return Transform(m * t2.mInv, t2.m * mInv);
 	}
-
 
 	// Transform Data kept public so that transforms of new objects are
 	// easily added

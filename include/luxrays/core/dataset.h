@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2010 by authors (see AUTHORS.txt )                 *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRays.                                         *
  *                                                                         *
@@ -35,7 +35,7 @@ public:
 	DataSet(const Context *luxRaysContext);
 	~DataSet();
 
-	TriangleMeshID Add(Mesh *mesh);
+	TriangleMeshID Add(const Mesh *mesh);
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
 
@@ -72,7 +72,7 @@ private:
 
 	unsigned int totalVertexCount;
 	unsigned int totalTriangleCount;
-	std::deque<Mesh *> meshes;
+	std::deque<const Mesh *> meshes;
 
 	bool preprocessed;
 

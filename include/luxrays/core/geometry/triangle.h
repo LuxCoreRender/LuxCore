@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 1998-2009 by David Bucciarelli (davibu@interfree.it)    *
+ *   Copyright (C) 1998-2013 by David Bucciarelli (davibu@interfree.it)    *
  *                                                                         *
  *   This file is part of SmallLuxGPU.                                     *
  *                                                                         *
@@ -32,8 +32,13 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/triangle_types.cl"
+}
+
 inline void UniformSampleTriangle(const float u0, const float u1, float *u, float *v) {
-	float su1 = sqrtf(u0);
+	const float su1 = sqrtf(u0);
 	*u = 1.f - su1;
 	*v = u1 * su1;
 }
@@ -162,11 +167,10 @@ public:
 		*b1 = r;
 		*b2 = t;
 
-		return ((r <= 1) && (t <= 1) && (r + t <= 1.f));
+		return ((r <= 1.f) && (t <= 1.f) && (r + t <= 1.f));
 	}
 
 	unsigned int v[3];
-#define _LUXRAYS_TRIANGLE_OCLDEFINE "typedef struct { unsigned int v[3]; } Triangle;\n"
 };
 
 inline std::ostream & operator<<(std::ostream &os, const Triangle &tri) {
