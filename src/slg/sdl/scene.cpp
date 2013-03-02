@@ -159,6 +159,12 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		SDL_LOG("Saving camera information");
 		props.Load(camera->ToProperties());
 
+		if (envLight) {
+			// Write the camera information
+			SDL_LOG("Saving infinite light information");
+			props.Load(envLight->ToProperties(imgMapCache));
+		}
+
 		// Write the image map information
 		SDL_LOG("Saving image map information:");
 		std::vector<ImageMap *> ims;

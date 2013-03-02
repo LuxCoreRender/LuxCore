@@ -102,6 +102,8 @@ public:
 	virtual Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
+
 protected:
 	Spectrum gain;
 };
@@ -122,6 +124,8 @@ public:
 
 	virtual Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const ImageMap *imageMap;
@@ -164,6 +168,8 @@ public:
 
 	virtual Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const { return luxrays::Properties(); }
 
 private:
 	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
