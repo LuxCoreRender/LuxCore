@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+
 #include "luxrays/core/geometry/frame.h"
 #include "slg/core/spd.h"
 #include "slg/core/data/sun_spect.h"
@@ -117,6 +119,18 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 
 	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI, SphericalTheta(-dir) * INV_PI);
 	return gain * imageMap->GetSpectrum(mapping.Map(uv));
+}
+
+Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	props.SetString("scene.infinitelight.file", "imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr");
+	props.SetString("scene.infinitelight.gain",
+			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
+	props.SetString("scene.infinitelight.shift", ToString(mapping.uDelta) + " " + ToString(mapping.uDelta));
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
