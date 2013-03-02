@@ -128,7 +128,7 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr");
 	props.SetString("scene.infinitelight.gain",
 			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
-	props.SetString("scene.infinitelight.shift", ToString(mapping.uDelta) + " " + ToString(mapping.uDelta));
+	props.SetString("scene.infinitelight.shift", ToString(mapping.uDelta) + " " + ToString(mapping.vDelta));
 
 	return props;
 }
