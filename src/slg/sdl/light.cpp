@@ -428,6 +428,19 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 	return Spectrum();
 }
 
+Properties SunLight::ToProperties() const {
+	Properties props;
+
+	props.SetString("scene.sunlight.dir",
+			ToString(sunDir.x) + " " + ToString(sunDir.y) + " " + ToString(sunDir.z));
+	props.SetString("scene.sunlight.gain",
+			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
+	props.SetString("scene.sunlight.turbidity", ToString(turbidity));
+	props.SetString("scene.sunlight.relsize", ToString(relSize));
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // Triangle Area Light
 //------------------------------------------------------------------------------
