@@ -40,13 +40,17 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.textures.tex.mapping.type = uvmapping3d
 #scene.textures.tex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.01 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
 ################################################################################
-scene.textures.tex.type = windy
-scene.textures.tex.mapping.type = globalmapping3d
-scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
+#scene.textures.tex.type = windy
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
 ################################################################################
 scene.textures.tex.type = wrinkled
 scene.textures.tex.mapping.type = globalmapping3d
 scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.tex.type = uv
+#scene.textures.tex.mapping.type = uvmapping2d
+#scene.textures.tex.mapping.uvscale = 10.0 10.0
 ################################################################################
 scene.textures.stex.type = scale
 scene.textures.stex.texture1 = 0.005

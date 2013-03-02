@@ -816,6 +816,13 @@ void CompiledScene::CompileTextures() {
 				tex->wrinkled.omega = wt->GetOmega();
 				break;
 			}
+			case UV_TEX: {
+				UVTexture *uvt = static_cast<UVTexture *>(t);
+
+				tex->type = slg::ocl::UV_TEX;
+				CompileTextureMapping2D(&tex->uvTex.mapping, uvt->GetTextureMapping());
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;

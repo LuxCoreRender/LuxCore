@@ -118,7 +118,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_funcs.cl
 )
 
-PreprocessOCLKernels(${CMAKE_CURRENT_SOURCE_DIR}/slg/kernels slg ${SLG_KERNELS})
+PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
 
 #############################################################################
 #

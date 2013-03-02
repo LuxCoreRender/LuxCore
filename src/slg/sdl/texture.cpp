@@ -1326,3 +1326,31 @@ Properties WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache) const
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// UV texture
+//------------------------------------------------------------------------------
+
+float UVTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return GetSpectrumValue(hitPoint).Y();
+}
+
+Spectrum UVTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	const UV uv = mapping->Map(hitPoint);
+	
+	return Spectrum(uv.u - Floor2Int(uv.u), uv.v - Floor2Int(uv.v), 0.f);
+}
+
+UV UVTexture::GetDuDv() const {
+	return UV(DUDV_VALUE, DUDV_VALUE);
+}
+
+Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "uv");
+	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}

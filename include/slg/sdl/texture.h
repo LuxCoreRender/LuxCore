@@ -52,7 +52,7 @@ typedef enum {
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
-	WRINKLED
+	WRINKLED, UV_TEX
 } TextureType;
 
 class ImageMapCache;
@@ -758,6 +758,29 @@ private:
 	const TextureMapping3D *mapping;
 	const int octaves;
 	const float omega;
+};
+
+//------------------------------------------------------------------------------
+// UV texture
+//------------------------------------------------------------------------------
+
+class UVTexture : public Texture {
+public:
+	UVTexture(const TextureMapping2D *mp) : mapping(mp) { }
+	virtual ~UVTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return UV_TEX; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual luxrays::UV GetDuDv() const;
+
+	const TextureMapping2D *GetTextureMapping() const { return mapping; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping2D *mapping;
 };
 
 }
