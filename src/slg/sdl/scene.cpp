@@ -787,6 +787,8 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
 
 		return new WrinkledTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
+	} else if (texType == "uv") {
+		return new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

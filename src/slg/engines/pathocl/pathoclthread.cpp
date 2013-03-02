@@ -432,7 +432,7 @@ void PathOCLRenderThread::InitKernels() {
 	if (cscene->IsTextureCompiled(CHECKERBOARD3D))
 		ss << " -D PARAM_ENABLE_CHECKERBOARD3D";
 	if (cscene->IsTextureCompiled(MIX_TEX))
-		ss << " -D PARAM_ENABLE_MIX_TEX";
+		ss << " -D PARAM_ENABLE_TEX_MIX";
 	if (cscene->IsTextureCompiled(FBM_TEX))
 		ss << " -D PARAM_ENABLE_FBM_TEX";
 	if (cscene->IsTextureCompiled(MARBLE))
@@ -447,6 +447,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_WINDY";
 	if (cscene->IsTextureCompiled(WRINKLED))
 		ss << " -D PARAM_ENABLE_WRINKLED";
+	if (cscene->IsTextureCompiled(UV_TEX))
+		ss << " -D PARAM_ENABLE_TEX_UV";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";

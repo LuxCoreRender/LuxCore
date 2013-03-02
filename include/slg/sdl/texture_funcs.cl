@@ -577,7 +577,7 @@ void CheckerBoard3DTexture_EvaluateDuDv(__global Texture *texture, __global HitP
 // Mix texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MIX_TEX)
+#if defined (PARAM_ENABLE_TEX_MIX)
 
 void MixTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
@@ -1057,6 +1057,33 @@ void WrinkledTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *
 #endif
 
 //------------------------------------------------------------------------------
+// UV texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_UV)
+
+void UVTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 uv = TextureMapping2D_Map(&texture->uvTex.mapping, hitPoint);
+
+	texValues[(*texValuesSize)++] = Spectrum_Y((float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f));
+}
+
+void UVTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float2 uv = TextureMapping2D_Map(&texture->uvTex.mapping, hitPoint);
+
+	texValues[(*texValuesSize)++] = (float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f);
+}
+
+void UVTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -1092,7 +1119,7 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard3D.tex2Index];
 			return 2;
 #endif
-#if defined (PARAM_ENABLE_MIX_TEX)
+#if defined (PARAM_ENABLE_TEX_MIX)
 		case MIX_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.amountTexIndex];
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex1Index];
@@ -1117,6 +1144,9 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex1Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex2Index];
 			return 2;
+#endif
+#if defined (PARAM_ENABLE_TEX_UV)
+		case UV_TEX:
 #endif
 #if defined (PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
@@ -1193,7 +1223,7 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 			CheckerBoard3DTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_MIX_TEX)
+#if defined (PARAM_ENABLE_TEX_MIX)
 		case MIX_TEX:
 			MixTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
@@ -1231,6 +1261,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 			WrinkledTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_UV)
+		case UV_TEX:
+			UVTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1336,7 +1371,7 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			CheckerBoard3DTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_MIX_TEX)
+#if defined (PARAM_ENABLE_TEX_MIX)
 		case MIX_TEX:
 			MixTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
@@ -1374,6 +1409,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 #if defined(PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 			WrinkledTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_UV)
+		case UV_TEX:
+			UVTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1478,7 +1518,7 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 			CheckerBoard3DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_MIX_TEX)
+#if defined (PARAM_ENABLE_TEX_MIX)
 		case MIX_TEX:
 			MixTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
@@ -1516,6 +1556,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 			WrinkledTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_UV)
+		case UV_TEX:
+			UVTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
