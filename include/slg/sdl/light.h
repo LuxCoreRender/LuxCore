@@ -230,6 +230,8 @@ public:
 	Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
+	luxrays::Properties ToProperties() const;
+
 private:
 	luxrays::Vector sunDir;
 	Spectrum gain;

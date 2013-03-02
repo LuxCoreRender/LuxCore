@@ -160,9 +160,15 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		props.Load(camera->ToProperties());
 
 		if (envLight) {
-			// Write the camera information
-			SDL_LOG("Saving infinite light information");
+			// Write the infinitelight/skylight information
+			SDL_LOG("Saving infinitelight/skylight information");
 			props.Load(envLight->ToProperties(imgMapCache));
+		}
+		
+		if (sunLight) {
+			// Write the sunlight information
+			SDL_LOG("Saving sunlight information");
+			props.Load(sunLight->ToProperties());
 		}
 
 		// Write the image map information
