@@ -169,7 +169,7 @@ public:
 	virtual Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const { return luxrays::Properties(); }
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;

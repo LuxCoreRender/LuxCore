@@ -261,6 +261,18 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 	return gain * s;
 }
 
+Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	props.SetString("scene.skylight.dir",
+			ToString(sundir.x) + " " + ToString(sundir.y) + " " + ToString(sundir.z));
+	props.SetString("scene.skylight.gain",
+			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
+	props.SetString("scene.skylight.turbidity", ToString(turbidity));
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // SunLight
 //------------------------------------------------------------------------------
