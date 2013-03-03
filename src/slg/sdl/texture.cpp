@@ -121,7 +121,7 @@ static float Noise(const Point &P) {
 
 static float FBm(const Point &P, const float omega, const int maxOctaves) {
 	// Compute number of octaves for anti-aliased FBm
-	const float foctaves = Min(static_cast<float>(maxOctaves), 1.f);
+	const float foctaves = static_cast<float>(maxOctaves);
 	const int octaves = Floor2Int(foctaves);
 	// Compute sum of octaves of noise for FBm
 	float sum = 0.f, lambda = 1.f, o = 1.f;
@@ -138,7 +138,7 @@ static float FBm(const Point &P, const float omega, const int maxOctaves) {
 
 static float Turbulence(const Point &P, const float omega, const int maxOctaves) {
 	// Compute number of octaves for anti-aliased FBm
-	const float foctaves = Min(static_cast<float>(maxOctaves), 1.f);
+	const float foctaves = static_cast<float>(maxOctaves);
 	const int octaves = Floor2Int(foctaves);
 	// Compute sum of octaves of noise for turbulence
 	float sum = 0.f, lambda = 1.f, o = 1.f;
