@@ -641,9 +641,9 @@ public:
 	const Texture *GetTexture3() const { return tex3; }
 	MasonryBond GetBond() const { return bond; }
 	const luxrays::Point &GetOffset() const { return offset; }
-	float GetBrickWidth() const { return brickwidth; }
-	float GetBrickHeight() const { return brickheight; }
-	float GetBrickDepth() const { return brickdepth; }
+	float GetBrickWidth() const { return initialbrickwidth; }
+	float GetBrickHeight() const { return initialbrickheight; }
+	float GetBrickDepth() const { return initialbrickdepth; }
 	float GetMortarSize() const { return mortarsize; }
 	float GetProportion() const { return proportion; }
 	float GetInvProportion() const { return invproportion; }
@@ -675,6 +675,10 @@ private:
 	float mortarwidth, mortarheight, mortardepth;
 	float bevelwidth, bevelheight, beveldepth;
 	bool usebevel;
+
+	// brickwidth, brickheight, brickdepth are modified by HERRINGBONE
+	// and BASKET brick types. I need to save the initial values here.
+	float initialbrickwidth, initialbrickheight, initialbrickdepth;
 };
 
 //------------------------------------------------------------------------------
