@@ -53,7 +53,7 @@ scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.
 #scene.textures.tex.mapping.uvscale = 10.0 10.0
 ################################################################################
 scene.textures.stex.type = scale
-scene.textures.stex.texture1 = 0.005
+scene.textures.stex.texture1 = 0.01
 scene.textures.stex.texture2 = tex
 ################################################################################
 #scene.materials.shell.type = glossy2
