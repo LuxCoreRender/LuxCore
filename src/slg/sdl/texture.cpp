@@ -1009,7 +1009,7 @@ BrickTexture::BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 		float r, float bev, const std::string &b) :
 		mapping(mp), tex1(t1), tex2(t3), tex3(t3),
 		brickwidth(brickw), brickheight(brickh), brickdepth(brickd), mortarsize(mortar),
-		run(r) {
+		run(r), initialbrickwidth(brickw), initialbrickheight(brickh), initialbrickdepth(brickd) {
 	if (b == "stacked") {
 		bond = RUNNING;
 		run = 0.f;
