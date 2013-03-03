@@ -1204,7 +1204,7 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.SetString("scene.textures." + name + ".mortartex", tex2->GetName());
 	props.SetString("scene.textures." + name + ".brickmodtex", tex3->GetName());
 	props.SetString("scene.textures." + name + ".brickwidth", ToString(brickwidth));
-	props.SetString("scene.textures." + name + ".brickheight", ToString(brickwidth));
+	props.SetString("scene.textures." + name + ".brickheight", ToString(brickheight));
 	props.SetString("scene.textures." + name + ".brickdepth", ToString(brickdepth));
 	props.SetString("scene.textures." + name + ".mortarsize", ToString(mortarsize));
 	props.SetString("scene.textures." + name + ".brickrun", ToString(run));
