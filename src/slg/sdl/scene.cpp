@@ -268,7 +268,7 @@ void Scene::CreateCamera(const Properties &props) {
 	Point orig(vf.at(0), vf.at(1), vf.at(2));
 	Point target(vf.at(3), vf.at(4), vf.at(5));
 
-	SDL_LOG("Camera postion: " << orig);
+	SDL_LOG("Camera position: " << orig);
 	SDL_LOG("Camera target: " << target);
 
 	vf = GetFloatParameters(props, "scene.camera.up", 3, "0.0 0.0 0.1");
