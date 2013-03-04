@@ -21,6 +21,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <limits>
+
 #include <boost/lexical_cast.hpp>
 
 #include"slg/engines/pathocl/compiledscene.h"
@@ -273,6 +275,35 @@ void CompiledScene::CompileGeometry() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
+static bool IsTexConstant(const Texture *tex) {
+	return (dynamic_cast<const ConstFloatTexture *>(tex)) ||
+			(dynamic_cast<const ConstFloat3Texture *>(tex));
+}
+
+static float GetTexConstantFloatValue(const Texture *tex) {
+	// Check if a texture is constant and return the value
+	const ConstFloatTexture *cft = dynamic_cast<const ConstFloatTexture *>(tex);
+	if (cft)
+		return cft->GetValue();
+	const ConstFloat3Texture *cf3t = dynamic_cast<const ConstFloat3Texture *>(tex);
+	if (cf3t)
+		return cf3t->GetColor().Y();
+
+	return std::numeric_limits<float>::infinity();
+}
+
+//static Spectrum GetTexConstantFloat3Value(const Texture *tex) {
+//	// Check if a texture is constant and return the value
+//	const ConstFloatTexture *cft = dynamic_cast<const ConstFloatTexture *>(tex);
+//	if (cft)
+//		return Spectrum(cft->GetValue());
+//	const ConstFloat3Texture *cf3t = dynamic_cast<const ConstFloat3Texture *>(tex);
+//	if (cf3t)
+//		return cf3t->GetColor();
+//
+//	return std::numeric_limits<float>::infinity();
+//}
+
 void CompiledScene::CompileMaterials() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
 
@@ -391,12 +422,33 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::GLOSSY2;
 				mat->glossy2.kdTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKd());
 				mat->glossy2.ksTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKs());
-				mat->glossy2.nuTexIndex = scene->texDefs.GetTextureIndex(g2m->GetNu());
-				mat->glossy2.nvTexIndex = scene->texDefs.GetTextureIndex(g2m->GetNv());
+
+				const Texture *nuTex = g2m->GetNu();
+				const Texture *nvTex = g2m->GetNv();
+				mat->glossy2.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
+				mat->glossy2.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				// Check if it an anisotropic material
+				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
+						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
+					usedMaterialTypes.insert(GLOSSY2_ANISOTROPIC);
+
+				const Texture *depthTex = g2m->GetDepth();
 				mat->glossy2.kaTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKa());
-				mat->glossy2.depthTexIndex = scene->texDefs.GetTextureIndex(g2m->GetDepth());
-				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(g2m->GetIndex());
+				mat->glossy2.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
+				// Check if depth is just 0.0
+				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f))
+					usedMaterialTypes.insert(GLOSSY2_ABSORPTION);
+
+				const Texture *indexTex = g2m->GetIndex();
+				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
+				// Check if index is just 0.0
+				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
+					usedMaterialTypes.insert(GLOSSY2_INDEX);
+
 				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
+				// Check if multibounce is enabled
+				if (g2m->IsMultibounce())
+					usedMaterialTypes.insert(GLOSSY2_MULTIBOUNCE);
 				break;
 			}
 			case METAL2: {
@@ -405,8 +457,15 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::METAL2;
 				mat->metal2.nTexIndex = scene->texDefs.GetTextureIndex(m2m->GetN());
 				mat->metal2.kTexIndex = scene->texDefs.GetTextureIndex(m2m->GetK());
-				mat->metal2.nuTexIndex = scene->texDefs.GetTextureIndex(m2m->GetNu());
-				mat->metal2.nvTexIndex = scene->texDefs.GetTextureIndex(m2m->GetNv());
+
+				const Texture *nuTex = m2m->GetNu();
+				const Texture *nvTex = m2m->GetNv();
+				mat->metal2.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
+				mat->metal2.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				// Check if it an anisotropic material
+				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
+						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
+					usedMaterialTypes.insert(METAL2_ANISOTROPIC);
 				break;
 			}
 			default:

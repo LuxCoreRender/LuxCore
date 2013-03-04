@@ -466,10 +466,23 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_NULL";
 	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
 		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
-	if (cscene->IsMaterialCompiled(GLOSSY2))
+	if (cscene->IsMaterialCompiled(GLOSSY2)) {
 		ss << " -D PARAM_ENABLE_MAT_GLOSSY2";
-	if (cscene->IsMaterialCompiled(METAL2))
+
+		if (cscene->IsMaterialCompiled(GLOSSY2_ANISOTROPIC))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC";
+		if (cscene->IsMaterialCompiled(GLOSSY2_ABSORPTION))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION";
+		if (cscene->IsMaterialCompiled(GLOSSY2_INDEX))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_INDEX";
+		if (cscene->IsMaterialCompiled(GLOSSY2_MULTIBOUNCE))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE";
+	}
+	if (cscene->IsMaterialCompiled(METAL2)) {
 		ss << " -D PARAM_ENABLE_MAT_METAL2";
+		if (cscene->IsMaterialCompiled(METAL2_ANISOTROPIC))
+			ss << " -D PARAM_ENABLE_MAT_METAL2_ANISOTROPIC";
+	}
 
 	if (cscene->IsMaterialCompiled(GLASS) ||
 			cscene->IsMaterialCompiled(ARCHGLASS) ||

@@ -711,22 +711,29 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 
 	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
 			TEXTURES_PARAM);
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 	const float i = Texture_GetFloatValue(&texs[material->glossy2.indexTexIndex], hitPoint
 			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
+#endif
 	ks = Spectrum_Clamp(ks);
 
 	const float u = clamp(Texture_GetFloatValue(&texs[material->glossy2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 	const float v = clamp(Texture_GetFloatValue(&texs[material->glossy2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
 	const float roughness = u * v;
+#else
+	const float anisotropy = 0.f;
+	const float roughness = u * u;
+#endif
 
 	if (directPdfW) {
 		const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
@@ -739,17 +746,27 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	// Absorption
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
+
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
 			TEXTURES_PARAM));
 	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+#else
+	const float3 absorption = WHITE;
+#endif
 
 	// Coating fresnel factor
 	const float3 H = normalize(fixedDir + sampledDir);
 	const float3 S = FresnelSlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
-	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, material->glossy2.multibounce,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+	const int multibounce = material->glossy2.multibounce;
+#else
+	const int multibounce = 0;
+#endif
+	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
 			fixedDir, sampledDir);
 
 	// Blend in base layer Schlick style
@@ -769,30 +786,45 @@ float3 Glossy2Material_Sample(__global Material *material,
 
 	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
 			TEXTURES_PARAM);
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 	const float i = Texture_GetFloatValue(&texs[material->glossy2.indexTexIndex], hitPoint
 			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
+#endif
 	ks = Spectrum_Clamp(ks);
 
 	const float u = clamp(Texture_GetFloatValue(&texs[material->glossy2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 	const float v = clamp(Texture_GetFloatValue(&texs[material->glossy2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
 	const float roughness = u * v;
+#else
+	const float anisotropy = 0.f;
+	const float roughness = u * u;
+#endif
 
 	// Coating is used only on the front face
 	const float wCoating = (fixedDir.z <= 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-	float basePdf, coatingPdf;
-	float3 baseF, coatingF;
+	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
+		TEXTURES_PARAM)) * M_1_PI_F;
 
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+	const int multibounce = material->glossy2.multibounce;
+#else
+	const int multibounce = 0;
+#endif
+
+	float basePdf, coatingPdf;
+	float3 coatingF;
 	if (passThroughEvent < wBase) {
 		// Sample base BSDF (Matte BSDF)
 		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
@@ -801,11 +833,8 @@ float3 Glossy2Material_Sample(__global Material *material,
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
-		baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
-			TEXTURES_PARAM)) * M_1_PI_F;
-
 		// Evaluate coating BSDF (Schlick BSDF)
-		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, material->glossy2.multibounce,
+		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
 				fixedDir, *sampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, *sampledDir);
 
@@ -813,7 +842,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(ks, roughness, anisotropy,
-				material->glossy2.multibounce, fixedDir, sampledDir, u0, u1, &coatingPdf);
+				multibounce, fixedDir, sampledDir, u0, u1, &coatingPdf);
 		if (Spectrum_IsBlack(coatingF))
 			return BLACK;
 
@@ -823,8 +852,6 @@ float3 Glossy2Material_Sample(__global Material *material,
 
 		// Evaluate base BSDF (Matte BSDF)
 		basePdf = fabs((*sampledDir).z * M_1_PI_F);
-		baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
-			TEXTURES_PARAM)) * M_1_PI_F;
 
 		*event = GLOSSY | REFLECT;
 	}
@@ -836,11 +863,16 @@ float3 Glossy2Material_Sample(__global Material *material,
 		// Absorption
 		const float cosi = fabs((*sampledDir).z);
 		const float coso = fabs(fixedDir.z);
+
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
 			TEXTURES_PARAM));
 		const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
 			TEXTURES_PARAM);
 		const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+#else
+		const float3 absorption = WHITE;
+#endif
 
 		// Coating fresnel factor
 		const float3 H = normalize(fixedDir + *sampledDir);
@@ -876,12 +908,17 @@ float3 Metal2Material_Evaluate(__global Material *material,
 
 	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
+#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 	const float v = clamp(Texture_GetFloatValue(&texs[material->metal2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
 	const float roughness = u * v;
+#else
+	const float anisotropy = 0.f;
+	const float roughness = u * u;
+#endif
 
 	const float3 wh = normalize(fixedDir + sampledDir);
 	const float cosWH = dot(fixedDir, wh);
@@ -923,12 +960,17 @@ float3 Metal2Material_Sample(__global Material *material,
 
 	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
+#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 	const float v = clamp(Texture_GetFloatValue(&texs[material->metal2.nvTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
 	const float roughness = u * v;
+#else
+	const float anisotropy = 0.f;
+	const float roughness = u * u;
+#endif
 
 	float3 wh;
 	float d, specPdf;

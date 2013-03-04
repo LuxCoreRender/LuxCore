@@ -46,7 +46,12 @@ class Scene;
 
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2
+	GLOSSY2, METAL2,
+
+	// The following types are used (in PATHOCL CompiledScene class) only to
+	// recognize the usage of some specific material option
+	GLOSSY2_ANISOTROPIC, GLOSSY2_ABSORPTION, GLOSSY2_INDEX, GLOSSY2_MULTIBOUNCE,
+	METAL2_ANISOTROPIC
 } MaterialType;
 
 class Material {
