@@ -28,7 +28,7 @@ typedef enum {
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
-	WRINKLED, UV_TEX
+	WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
 
 typedef struct {
@@ -130,6 +130,15 @@ typedef struct {
 	TextureMapping2D mapping;
 } UVTexParam;
 
+#define BAND_TEX_MAX_SIZE 16
+
+typedef struct {
+	unsigned int amountTexIndex;
+	unsigned int size;
+	float offsets[BAND_TEX_MAX_SIZE];
+	Spectrum values[BAND_TEX_MAX_SIZE];
+} BandTexParam;
+
 typedef struct {
 	TextureType type;
 	union {
@@ -150,6 +159,7 @@ typedef struct {
 		WindyTexParam windy;
 		WrinkledTexParam wrinkled;
 		UVTexParam uvTex;
+		BandTexParam band;
 	};
 } Texture;
 
