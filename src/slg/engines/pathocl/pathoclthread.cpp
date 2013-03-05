@@ -449,6 +449,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_WRINKLED";
 	if (cscene->IsTextureCompiled(UV_TEX))
 		ss << " -D PARAM_ENABLE_TEX_UV";
+	if (cscene->IsTextureCompiled(BAND_TEX))
+		ss << " -D PARAM_ENABLE_TEX_BAND";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";

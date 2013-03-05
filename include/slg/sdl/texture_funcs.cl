@@ -581,7 +581,7 @@ void CheckerBoard3DTexture_EvaluateDuDv(__global Texture *texture, __global HitP
 
 void MixTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float amt = texValues[--(*texValuesSize)];
+	const float amt = clamp(texValues[--(*texValuesSize)], 0.f, 1.f);;
 	const float value1 = texValues[--(*texValuesSize)];
 	const float value2 = texValues[--(*texValuesSize)];
 
@@ -1084,6 +1084,69 @@ void UVTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoi
 #endif
 
 //------------------------------------------------------------------------------
+// Band texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_BAND)
+
+void BandTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float a = clamp(texValues[--(*texValuesSize)], 0.f, 1.f);
+
+	const uint last = texture->band.size - 1;
+	if (a < texture->band.offsets[0])
+		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->band.values[0].r));
+	else if (a >= texture->band.offsets[last])
+		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->band.values[last].r));
+	else {
+		uint p = 0;
+		for (; p <= last; ++p) {
+			if (a < texture->band.offsets[p])
+				break;
+		}
+
+		const float p1 = Spectrum_Y(VLOAD3F(&texture->band.values[p - 1].r));
+		const float p0 = Spectrum_Y(VLOAD3F(&texture->band.values[p].r));
+		const float o1 = texture->band.offsets[p - 1];
+		const float o0 = texture->band.offsets[p];
+		texValues[(*texValuesSize)++] = Lerp((a - o1) / (o0 - o1), p1, p0);
+	}
+}
+
+void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float a = clamp(Spectrum_Y(texValues[--(*texValuesSize)]), 0.f, 1.f);
+
+	const uint last = texture->band.size - 1;
+	if (a < texture->band.offsets[0])
+		texValues[(*texValuesSize)++] = VLOAD3F(&texture->band.values[0].r);
+	else if (a >= texture->band.offsets[last])
+		texValues[(*texValuesSize)++] = VLOAD3F(&texture->band.values[last].r);
+	else {
+		uint p = 0;
+		for (; p <= last; ++p) {
+			if (a < texture->band.offsets[p])
+				break;
+		}
+
+		const float3 p1 = VLOAD3F(&texture->band.values[p - 1].r);
+		const float3 p0 = VLOAD3F(&texture->band.values[p].r);
+		const float o1 = texture->band.offsets[p - 1];
+		const float o0 = texture->band.offsets[p];
+		texValues[(*texValuesSize)++] = Lerp3((a - o1) / (o0 - o1), p1, p0);
+	}
+}
+
+void BandTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	// Nothing to do:
+	//const float2 dudv = texValues[--(*texValuesSize)];
+	//texValues[(*texValuesSize)++] = dudv;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -1144,6 +1207,11 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex1Index];
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex2Index];
 			return 2;
+#endif
+#if defined (PARAM_ENABLE_TEX_BAND)
+		case BAND_TEX:
+			todoTex[(*todoTexSize)++] = &texs[texture->band.amountTexIndex];
+			return 1;
 #endif
 #if defined (PARAM_ENABLE_TEX_UV)
 		case UV_TEX:
@@ -1266,6 +1334,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_TEX_UV)
 		case UV_TEX:
 			UVTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_BAND)
+		case BAND_TEX:
+			BandTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1416,6 +1489,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			UVTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_TEX_BAND)
+		case BAND_TEX:
+			BandTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1561,6 +1639,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_TEX_UV)
 		case UV_TEX:
 			UVTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_BAND)
+		case BAND_TEX:
+			BandTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

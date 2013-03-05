@@ -801,6 +801,24 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		return new WrinkledTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "uv") {
 		return new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
+	} else if (texType == "band") {
+		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
+		const Texture *amtTex = GetTexture(amtName);
+
+		vector<float> offsets;
+		vector<Spectrum> values;
+		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
+			const float offset = GetFloatParameters(props, propName + ".offset" + ToString(i), 1, "0.0").at(0);
+			const std::vector<float> v = GetFloatParameters(props, propName + ".value" + ToString(i), 3, "1.0 1.0 1.0");
+			const Spectrum value(v.at(0), v.at(1), v.at(2));
+
+			offsets.push_back(offset);
+			values.push_back(value);
+		}
+		if (offsets.size() == 0)
+			throw std::runtime_error("Empty Band texture: " + texName);
+
+		return new BandTexture(amtTex, offsets, values);
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

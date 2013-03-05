@@ -25,7 +25,9 @@
 
 #include <FreeImage.h>
 
+#include <sstream>
 #include <boost/format.hpp>
+#include <boost/foreach.hpp>
 
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/texture.h"
@@ -1351,6 +1353,53 @@ Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	const std::string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "uv");
 	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// Band texture
+//------------------------------------------------------------------------------
+
+float BandTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return GetSpectrumValue(hitPoint).Y();
+}
+
+Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	const float a = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
+
+	if (a < offsets.front())
+		return values.front();
+	if (a >= offsets.back())
+		return values.back();
+	// std::upper_bound is not available on OpenCL
+	//const u_int p = std::upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
+	u_int p = 0;
+	for (; p < offsets.size(); ++p) {
+		if (a < offsets[p])
+			break;
+	}
+
+	return Lerp((a - offsets[p - 1]) / (offsets[p] - offsets[p - 1]),
+			values[p - 1], values[p]);
+}
+
+UV BandTexture::GetDuDv() const {
+	return amount->GetDuDv();
+}
+
+Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "band");
+	props.SetString("scene.textures." + name + ".amount", amount->GetName());
+
+	for (u_int i = 0; i < offsets.size(); ++i) {
+		props.SetString("scene.textures." + name + ".offset" + ToString(i), ToString(offsets[i]));
+		props.SetString("scene.textures." + name + ".value" + ToString(i),
+				ToString(values[i].r) + " " + ToString(values[i].g) + " " + ToString(values[i].b));
+	}
 
 	return props;
 }

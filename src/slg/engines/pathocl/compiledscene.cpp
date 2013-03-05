@@ -596,6 +596,7 @@ void CompiledScene::CompileSkyLight() {
 
 void CompiledScene::CompileTextures() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene]   Texture size: " << sizeof(slg::ocl::Texture));
 
 	//--------------------------------------------------------------------------
 	// Translate textures
@@ -821,6 +822,31 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::UV_TEX;
 				CompileTextureMapping2D(&tex->uvTex.mapping, uvt->GetTextureMapping());
+				break;
+			}
+			case BAND_TEX: {
+				BandTexture *bt = static_cast<BandTexture *>(t);
+
+				tex->type = slg::ocl::BAND_TEX;
+				const Texture *amount = bt->GetAmountTexture();
+				tex->band.amountTexIndex = scene->texDefs.GetTextureIndex(amount);
+
+				const std::vector<float> &offsets = bt->GetOffsets();
+				const std::vector<Spectrum> &values = bt->GetValues();
+				if (offsets.size() > BAND_TEX_MAX_SIZE)
+					throw std::runtime_error("BandTexture with more than " + ToString(BAND_TEX_MAX_SIZE) + " are not supported");
+				tex->band.size = offsets.size();
+				for (u_int i = 0; i < BAND_TEX_MAX_SIZE; ++i) {
+					if (i < offsets.size()) {
+						tex->band.offsets[i] = offsets[i];
+						ASSIGN_SPECTRUM(tex->band.values[i], values[i]);
+					} else {
+						tex->band.offsets[i] = 1.f;
+						tex->band.values[i].r = 0.f;
+						tex->band.values[i].g = 0.f;
+						tex->band.values[i].b = 0.f;
+					}
+				}
 				break;
 			}
 			default:
