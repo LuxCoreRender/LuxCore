@@ -52,7 +52,7 @@ typedef enum {
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
-	WRINKLED, UV_TEX
+	WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
 
 class ImageMapCache;
@@ -785,6 +785,40 @@ public:
 
 private:
 	const TextureMapping2D *mapping;
+};
+
+//------------------------------------------------------------------------------
+// Band texture
+//------------------------------------------------------------------------------
+
+class BandTexture : public Texture {
+public:
+	BandTexture(const Texture *amnt, const std::vector<float> &os, const std::vector<Spectrum> &vs) :
+		amount(amnt), offsets(os), values(vs) { }
+	virtual ~BandTexture() { }
+
+	virtual TextureType GetType() const { return BAND_TEX; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual luxrays::UV GetDuDv() const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		amount->AddReferencedTextures(referencedTexs);
+	}
+
+	const Texture *GetAmountTexture() const { return amount; }
+	const std::vector<float> &GetOffsets() const { return offsets; }
+	const std::vector<Spectrum> &GetValues() const { return values; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const Texture *amount;
+	const std::vector<float> offsets;
+	const std::vector<Spectrum> values; 
 };
 
 }

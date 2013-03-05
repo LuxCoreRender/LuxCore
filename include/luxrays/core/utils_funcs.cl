@@ -40,6 +40,10 @@ float Lerp(const float t, const float v1, const float v2) {
 	return mix(v1, v2, t);
 }
 
+float3 Lerp3(const float t, const float3 v1, const float3 v2) {
+	return mix(v1, v2, t);
+}
+
 float SmoothStep(const float min, const float max, const float value) {
 	const float v = clamp((value - min) / (max - min), 0.f, 1.f);
 	return v * v * (-2.f * v  + 3.f);

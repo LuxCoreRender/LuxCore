@@ -52,6 +52,18 @@ scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.
 #scene.textures.tex.mapping.type = uvmapping2d
 #scene.textures.tex.mapping.uvscale = 10.0 10.0
 ################################################################################
+#scene.textures.wrtex.type = wrinkled
+#scene.textures.wrtex.mapping.type = globalmapping3d
+#scene.textures.wrtex.mapping.transformation = 40.0 0.0 0.0 0.0  0.0 40.0 0.01 0.0  0.0 0.0 40.0 0.0  0.0 0.0 0.0 1.0
+#scene.textures.tex.type = band
+#scene.textures.tex.amount = wrtex
+#cene.textures.tex.offset0 = 0.33
+#cene.textures.tex.value0 = 0.75 0.0 0.0
+#cene.textures.tex.offset1 = 0.6
+#scene.textures.tex.value1 = 0.0 0.75 0.0
+#scene.textures.tex.offset2 = 1.0
+#scene.textures.tex.value2 = 0.0 0.0 0.75
+################################################################################
 scene.textures.stex.type = scale
 scene.textures.stex.texture1 = 0.01
 scene.textures.stex.texture2 = tex
@@ -72,7 +84,7 @@ scene.materials.shell.bumptex = stex
 #scene.materials.shell.type = glass
 #scene.materials.shell.kt = 0.0 0.5 1.0
 #scene.materials.shell.kr = 0.8 0.8 0.8
-scene.materials.shell.bumptex = stex
+#scene.materials.shell.bumptex = stex
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte
