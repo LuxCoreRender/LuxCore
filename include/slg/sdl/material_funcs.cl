@@ -26,7 +26,7 @@
 //------------------------------------------------------------------------------
 
 float SchlickDistribution_SchlickZ(const float roughness, float cosNH) {
-	const float d = 1.f + (roughness - 1) * cosNH * cosNH;
+	const float d = 1.f + (roughness - 1.f) * cosNH * cosNH;
 	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
 }
 
@@ -62,7 +62,9 @@ float GetPhi(const float a, const float b) {
 void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
 		const float u0, const float u1, float3 *wh, float *d, float *pdf) {
 	float u1x4 = u1 * 4.f;
-	const float cos2Theta = u0 / (roughness * (1 - u0) + u0);
+	// Values of roughness < .0001f seems to trigger some kind of exceptions with
+	// AMD OpenCL on GPUs. The result is a nearly freeze of the PC.
+	const float cos2Theta = (roughness < .0001f) ? 1.f : (u0 / (roughness * (1.f - u0) + u0));
 	const float cosTheta = sqrt(cos2Theta);
 	const float sinTheta = sqrt(1.f - cos2Theta);
 	const float p = 1.f - fabs(anisotropy);
