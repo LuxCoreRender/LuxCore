@@ -280,7 +280,7 @@ std::string KernelSource_material_funcs =
 "		//if (!hitPoint.fromLight)\n"
 "			result = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;\n"
 "		//else\n"
-"		//	result = (1.f - FresnelCauchy_Evaluate(ntc, costheta)) * fabsf(costheta / cost);\n"
+"		//	result = (1.f - FresnelCauchy_Evaluate(ntc, costheta));\n"
 "\n"
 "		result *= kt;\n"
 "	} else {\n"

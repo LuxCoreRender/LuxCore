@@ -261,7 +261,7 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		if (!hitPoint.fromLight)
 			result = (Spectrum(1.f) - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
 		else
-			result = (Spectrum(1.f) - FresnelCauchy_Evaluate(ntc, costheta)) * fabsf(costheta / cost);
+			result = (Spectrum(1.f) - FresnelCauchy_Evaluate(ntc, costheta));
 
 		result *= kt;
 	} else {
