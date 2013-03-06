@@ -277,7 +277,7 @@ float3 GlassMaterial_Sample(__global Material *material,
 		//if (!hitPoint.fromLight)
 			result = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
 		//else
-		//	result = (1.f - FresnelCauchy_Evaluate(ntc, costheta)) * fabsf(costheta / cost);
+		//	result = (1.f - FresnelCauchy_Evaluate(ntc, costheta));
 
 		result *= kt;
 	} else {
