@@ -58,6 +58,9 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
 	renderConfig->scene->UpdateDataSet(ctx);
+
+	samplesCount = 0;
+	elapsedTime = 0.0f;
 }
 
 RenderEngine::~RenderEngine() {

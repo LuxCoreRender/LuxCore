@@ -127,11 +127,12 @@ static void PrintHelpAndSettings() {
 	if (dynamic_cast<RTPathOCLRenderEngine *>(session->renderEngine)) {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
-		fps = Lerp<float>(.025f, fps, 1.f / ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime());
-		
+		const double frameTime = ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
+		fps = Lerp<float>(.025f, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
+
 		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]",
 				int(session->renderEngine->GetRenderingTime()),
-				int(1000.f / fps),
+				int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 				session->renderConfig->GetScreenRefreshInterval(),
 				fps);
 	} else
