@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SMALLLUX_H
-#define	_SMALLLUX_H
+#ifndef _SMALLLUXGPU_H
+#define	_SMALLLUXGPU_H
 
 #include <cmath>
 #include <sstream>
@@ -48,4 +48,7 @@
 
 extern slg::RenderSession *session;
 
-#endif	/* _SMALLLUX_H */
+extern bool mouseGrabMode;
+extern bool useLuxVRName;
+
+#endif	/* _SMALLLUXGPU_H */

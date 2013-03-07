@@ -26,6 +26,7 @@ using namespace luxrays;
 using namespace slg;
 
 string slg::SLG_LABEL = "SmallLuxGPU v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (LuxRays demo: http://www.luxrender.net)";
+string slg::LUXVR_LABEL = "LuxVR v" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR " (http://www.luxrender.net)";
 
 void (*slg::LuxRays_DebugHandler)(const char *msg) = NULL;
 void (*slg::SLG_DebugHandler)(const char *msg) = NULL;

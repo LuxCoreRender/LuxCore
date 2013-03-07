@@ -25,7 +25,6 @@
 #include <cmath>
 
 extern bool OSDPrintHelp;
-extern bool mouseGrabMode;
 
 extern void InitGlut(int argc, char *argv[], const unsigned int width, const unsigned int height);
 extern void RunGlut();

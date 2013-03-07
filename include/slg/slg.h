@@ -40,6 +40,7 @@ class RenderEngine;
 class EditActionList;
 
 extern std::string SLG_LABEL;
+extern std::string LUXVR_LABEL;
 
 // The next two functions pointers (plus the one in sdl.h) have to be
 // set by the application using SLG library

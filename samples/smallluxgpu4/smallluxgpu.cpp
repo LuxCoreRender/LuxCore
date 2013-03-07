@@ -53,6 +53,7 @@ RenderSession *session = NULL;
 // The flag is off by default but can be turned on by using the -m switch
 
 bool mouseGrabMode = false;
+bool useLuxVRName = false;
 
 void LuxRaysDebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
@@ -63,7 +64,10 @@ void SDLDebugHandler(const char *msg) {
 }
 
 void SLGDebugHandler(const char *msg) {
-	cerr << "[SLG] " << msg << endl;
+	if (useLuxVRName)
+		cerr << "[LuxVR] " << msg << endl;
+	else
+		cerr << "[SLG] " << msg << endl;
 }
 
 #if defined(__GNUC__) && !defined(__CYGWIN__)
@@ -382,6 +386,7 @@ int main(int argc, char *argv[]) {
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
 							" -m Makes the mouse operations work in \"grab mode\"" << endl << 
+							" -R <use LuxVR name>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
 				}
@@ -410,6 +415,8 @@ int main(int argc, char *argv[]) {
 				}
 
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
+
+				else if (argv[i][1] == 'R') useLuxVRName = true;
 
 				else {
 					SLG_LOG("Invalid option: " << argv[i]);

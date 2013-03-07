@@ -203,7 +203,10 @@ static void PrintCaptions() {
 
 	// Title
 	glRasterPos2i(4, session->film->GetHeight() - 10);
-	PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
+	if (useLuxVRName)
+		PrintString(GLUT_BITMAP_8_BY_13, LUXVR_LABEL.c_str());
+	else
+		PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
 }
 
 void displayFunc(void) {
@@ -448,7 +451,10 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
-			ws.assign(SLG_LABEL.begin (), SLG_LABEL.end());
+			if (useLuxVRName)
+				ws.assign(LUXVR_LABEL.begin (), LUXVR_LABEL.end());
+			else
+				ws.assign(SLG_LABEL.begin (), SLG_LABEL.end());
 			HWND hWnd = FindWindowW(NULL, ws.c_str());
 			if (GetWindowLongPtr(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
 				SetWindowPos(hWnd, HWND_NOTOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE);
@@ -613,7 +619,10 @@ void InitGlut(int argc, char *argv[], const u_int width, const u_int height) {
 		glutInitWindowPosition((scrWidth - width) / 2, (scrHeight - height) / 2);
 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-	glutCreateWindow(SLG_LABEL.c_str());
+	if (useLuxVRName)
+		glutCreateWindow(LUXVR_LABEL.c_str());
+	else
+		glutCreateWindow(SLG_LABEL.c_str());
 }
 
 void RunGlut() {
