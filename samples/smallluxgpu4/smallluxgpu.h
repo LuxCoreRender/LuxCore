@@ -48,7 +48,15 @@
 
 extern slg::RenderSession *session;
 
-extern bool mouseGrabMode;
-extern bool useLuxVRName;
+// Options
+extern bool optMouseGrabMode;
+extern bool optUseLuxVRName;
+extern bool optOSDPrintHelp;
+extern bool optRealTimeMode;
+extern float optMoveScale;
+extern float optMoveStep;
+extern float optRotateStep;
+
+extern void UpdateMoveStep();
 
 #endif	/* _SMALLLUXGPU_H */
