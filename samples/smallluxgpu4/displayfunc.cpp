@@ -393,6 +393,16 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->film->SetToneMapParams(params);
 			}
 			break;
+		case 'v':
+			optMoveScale = Max(.0125f, optMoveScale - ((optMoveScale>= 1.f) ? .25f : 0.0125f));
+			UpdateMoveStep();
+			SLG_LOG("Camera move scale: " << optMoveScale);
+			break;
+		case 'b':
+			optMoveScale = Min(100.f, optMoveScale +  ((optMoveScale>= 1.f) ? .25f : 0.0125f));
+			UpdateMoveStep();
+			SLG_LOG("Camera move scale: " << optMoveScale);
+			break;
 		case '1':
 			session->SetRenderingEngineType(PATHOCL);
 			glutIdleFunc(NULL);
