@@ -450,8 +450,8 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->SetRenderingEngineType(RTPATHOCL);
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
-			if (session->renderConfig->GetScreenRefreshInterval() > 25)
-				session->renderConfig->SetScreenRefreshInterval(25);
+			if (session->renderConfig->GetScreenRefreshInterval() > 33)
+				session->renderConfig->SetScreenRefreshInterval(33);
 			break;
 #endif
 		case 'o': {
