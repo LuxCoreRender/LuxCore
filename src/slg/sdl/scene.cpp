@@ -965,6 +965,15 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		}
 
 		return new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
+//	} else if (matType == "roughglass") {
+//		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
+//		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
+//		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
+//		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
+//		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
+//		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
+//
+//		return new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 }
