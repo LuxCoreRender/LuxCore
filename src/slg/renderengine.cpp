@@ -82,7 +82,7 @@ void RenderEngine::Start() {
 	MachineEpsilon::SetMin(epsilonMin);
 	const float epsilonMax = renderConfig->cfg.GetFloat("scene.epsilon.max", DEFAULT_EPSILON_MAX);
 	MachineEpsilon::SetMax(epsilonMax);
-	
+
 	ctx->Start();
 
 	StartLockLess();
