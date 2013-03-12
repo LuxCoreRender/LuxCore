@@ -1328,233 +1328,245 @@ Properties Metal2Material::ToProperties() const  {
 // LuxRender RoughGlass material porting.
 //------------------------------------------------------------------------------
 
-//Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
-//	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
-//	float *directPdfW, float *reversePdfW) const {
-//	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
-//	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
-//
-//	const bool isKtBlack = kt.Black();
-//	const bool isKrBlack = kr.Black();
-//	if (isKtBlack && isKrBlack)
-//		return Spectrum();
-//
-//	const float nc = ousideIor->GetFloatValue(hitPoint);
-//	const float nt = ior->GetFloatValue(hitPoint);
-//	const float ntc = nt / nc;
-//
-//	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-//	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
-//	const float u2 = u * u;
-//	const float v2 = v * v;
-//	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
-//	const float roughness = u * v;
-//
-//	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
-//
-//	if (Dot(localLightDir, localEyeDir) < 0.f) {
-//		// Transmit
-//
-//		const bool entering = (CosTheta(localLightDir) > 0.f);
-//		const float eta = entering ? (nc / nt) : ntc;
-//
-//		Vector wh = eta * localLightDir + localEyeDir;
-//		if (wh.z < 0.f)
-//			wh = -wh;
-//
-//		const float lengthSquared = wh.LengthSquared();
-//		if (!(lengthSquared > 0.f))
-//			return Spectrum();
-//		wh /= sqrtf(lengthSquared);
-//		const float cosThetaI = fabsf(CosTheta(localEyeDir));
-//		const float cosThetaIH = AbsDot(localEyeDir, wh);
-//		const float cosThetaOH = Dot(localLightDir, wh);
-//
-//		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
-//		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
-//		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-//		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
-//
-//		if (directPdfW)
-//			*directPdfW = threshold * specPdf * fabsf(cosThetaIH) / lengthSquared;
-//
-//		if (reversePdfW)
-//			*reversePdfW = threshold * specPdf * fabsf(cosThetaOH) * eta * eta / lengthSquared;
-//
-//		Spectrum result = fabsf(cosThetaOH) * cosThetaIH * D *
-//			G / (cosThetaI * lengthSquared) *
-//			kt * (Spectrum(1.f) - F);
-//
-//		result /= fabsf(CosTheta(localLightDir));
-//
-//		return result;
-//	} else {
-//		// Reflect
-//		const float cosThetaO = fabsf(CosTheta(localLightDir));
-//		const float cosThetaI = fabsf(CosTheta(localEyeDir));
-//		if (cosThetaO == 0.f || cosThetaI == 0.f)
-//			return Spectrum();
-//		Vector wh = localEyeDir + localLightDir;
-//		if (wh == Vector(0.f))
-//			return Spectrum();
-//		wh = Normalize(wh);
-//		if (wh.z < 0.f)
-//			wh = -wh;
-//
-//		float cosThetaH = Dot(localEyeDir, wh);
-//		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
-//		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
-//		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-//		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaH);
-//
-//		if (directPdfW)
-//			*directPdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localEyeDir, wh));
-//
-//		if (reversePdfW)
-//			*reversePdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localLightDir, wh));
-//
-//		Spectrum result = D * G / (4.f * cosThetaI) * kr * F;
-//
-//		result /= fabsf(CosTheta(localLightDir));
-//
-//		return result;
-//	}
-//}
-//
-//Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
-//	const Vector &localFixedDir, Vector *localSampledDir,
-//	const float u0, const float u1, const float passThroughEvent,
-//	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-//	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-//		return Spectrum();
-//
-//	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
-//	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
-//
-//	const bool isKtBlack = kt.Black();
-//	const bool isKrBlack = kr.Black();
-//	if (isKtBlack && isKrBlack)
-//		return Spectrum();
-//
-//	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-//	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
-//	const float u2 = u * u;
-//	const float v2 = v * v;
-//	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
-//	const float roughness = u * v;
-//
-//	Vector wh;
-//	float d, specPdf;
-//	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
-//	if (wh.z < 0.f)
-//		wh = -wh;
-//	const float cosThetaOH = Dot(localFixedDir, wh);
-//
-//	const float nc = ousideIor->GetFloatValue(hitPoint);
-//	const float nt = ior->GetFloatValue(hitPoint);
-//	const float ntc = nt / nc;
-//
-//	const float coso = fabsf(localFixedDir.z);
-//
-//	// Decide to transmit or reflect
-//	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
-//	Spectrum result;
-//	if (passThroughEvent < threshold) {
-//		// Transmit
-//
-//		const bool entering = (CosTheta(localFixedDir) > 0.f);
-//		const float eta = entering ? (nc / nt) : ntc;
-//		const float eta2 = eta * eta;
-//		const float sinThetaIH2 = eta2 * Max(0.f, 1.f - cosThetaOH * cosThetaOH);
-//		if (sinThetaIH2 >= 1.f)
-//			return Spectrum();
-//		float cosThetaIH = sqrtf(1.f - sinThetaIH2);
-//		if (entering)
-//			cosThetaIH = -cosThetaIH;
-//		const float length = eta * cosThetaOH + cosThetaIH;
-//		*localSampledDir = length * wh - eta * localFixedDir;
-//
-//		const float lengthSquared = length * length;
-//		*pdfW = threshold * specPdf * fabsf(cosThetaIH) / lengthSquared;
-//		if (*pdfW <= 0.f)
-//			return Spectrum();
-//
-//		const float cosi = fabsf(localSampledDir->z);
-//		*absCosSampledDir = cosi;
-//
-//		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
-//		float factor = d * G * fabsf(cosThetaOH) / specPdf;
-//
-//		if (!hitPoint.fromLight) {
-//			const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
-//			result = (factor / coso) * kt * (Spectrum(1.f) - F);
-//		} else {
-//			const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
-//			result = (factor / cosi) * kt * (Spectrum(1.f) - F);
-//		}
-//
-//		result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
-//		*event = GLOSSY | TRANSMIT;
-//	} else {
-//		// Reflect
-//
-//		*pdfW = (1.f - threshold) * specPdf / (4.f * cosThetaOH);
-//		if (*pdfW <= 0.f)
-//			return Spectrum();
-//
-//		*localSampledDir = 2.f * cosThetaOH * wh - localFixedDir;
-//
-//		const float cosi = fabsf(localSampledDir->z);
-//		*absCosSampledDir = cosi;
-//		if ((*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
-//			return Spectrum();
-//
-//		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
-//		float factor = d * G * fabsf(cosThetaOH) / specPdf;
-//
-//		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
-//		factor /= (!hitPoint.fromLight) ? coso : cosi;
-//		result = factor * F * kr;
-//
-//		result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
-//		*event = GLOSSY | REFLECT;
-//	}
-//
-//	return result;
-//}
-//
-//void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
-//		const Vector &localLightDir, const Vector &localEyeDir,
-//		float *directPdfW, float *reversePdfW) const {
-//}
-//
-//void RoughGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
-//	Material::AddReferencedTextures(referencedTexs);
-//
-//	Kr->AddReferencedTextures(referencedTexs);
-//	Kt->AddReferencedTextures(referencedTexs);
-//	ousideIor->AddReferencedTextures(referencedTexs);
-//	ior->AddReferencedTextures(referencedTexs);
-//	nu->AddReferencedTextures(referencedTexs);
-//	nv->AddReferencedTextures(referencedTexs);
-//}
-//
-//
-//Properties RoughGlassMaterial::ToProperties() const  {
-//	Properties props;
-//
-//	const std::string name = GetName();
-//	props.SetString("scene.materials." + name + ".type", "roughglass");
-//	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
-//	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
-//	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
-//	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
-//	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
-//	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
-//	props.Load(Material::ToProperties());
-//
-//	return props;
-//}
+Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
+	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+
+	const bool isKtBlack = kt.Black();
+	const bool isKrBlack = kr.Black();
+	if (isKtBlack && isKrBlack)
+		return Spectrum();
+
+	const float nc = ousideIor->GetFloatValue(hitPoint);
+	const float nt = ior->GetFloatValue(hitPoint);
+	const float ntc = nt / nc;
+
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+
+	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	if (Dot(localLightDir, localEyeDir) < 0.f) {
+		// Transmit
+
+		const bool entering = (CosTheta(localLightDir) > 0.f);
+		const float eta = entering ? (nc / nt) : ntc;
+
+		Vector wh = eta * localLightDir + localEyeDir;
+		if (wh.z < 0.f)
+			wh = -wh;
+
+		const float lengthSquared = wh.LengthSquared();
+		if (!(lengthSquared > 0.f))
+			return Spectrum();
+		wh /= sqrtf(lengthSquared);
+		const float cosThetaI = fabsf(CosTheta(localEyeDir));
+		const float cosThetaIH = AbsDot(localEyeDir, wh);
+		const float cosThetaOH = Dot(localLightDir, wh);
+
+		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
+		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
+		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
+		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+
+		if (directPdfW)
+			*directPdfW = threshold * specPdf * fabsf(cosThetaOH) / lengthSquared;
+
+		if (reversePdfW)
+			*reversePdfW = threshold * specPdf * cosThetaIH * eta * eta / lengthSquared;
+
+		Spectrum result = (fabsf(cosThetaOH) * cosThetaIH * D *
+			G / (cosThetaI * lengthSquared)) *
+			kt * (Spectrum(1.f) - F);
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wl). So I have to remove that term.
+		result /= fabsf(CosTheta(localLightDir));
+		return result;
+	} else {
+		// Reflect
+		const float cosThetaO = fabsf(CosTheta(localLightDir));
+		const float cosThetaI = fabsf(CosTheta(localEyeDir));
+		if (cosThetaO == 0.f || cosThetaI == 0.f)
+			return Spectrum();
+		Vector wh = localEyeDir + localLightDir;
+		if (wh == Vector(0.f))
+			return Spectrum();
+		wh = Normalize(wh);
+		if (wh.z < 0.f)
+			wh = -wh;
+
+		float cosThetaH = Dot(localEyeDir, wh);
+		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
+		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
+		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
+		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaH);
+
+		if (directPdfW)
+			*directPdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localEyeDir, wh));
+
+		if (reversePdfW)
+			*reversePdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localLightDir, wh));
+
+		Spectrum result = (D * G / (4.f * cosThetaI)) * kr * F;
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wl). So I have to remove that term.
+		result /= fabsf(CosTheta(localLightDir));
+		return result;
+	}
+}
+
+Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
+	const Vector &localFixedDir, Vector *localSampledDir,
+	const float u0, const float u1, const float passThroughEvent,
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+
+	const bool isKtBlack = kt.Black();
+	const bool isKrBlack = kr.Black();
+	if (isKtBlack && isKrBlack)
+		return Spectrum();
+
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+
+	Vector wh;
+	float d, specPdf;
+	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
+	if (wh.z < 0.f)
+		wh = -wh;
+	const float cosThetaOH = Dot(localFixedDir, wh);
+
+	const float nc = ousideIor->GetFloatValue(hitPoint);
+	const float nt = ior->GetFloatValue(hitPoint);
+	const float ntc = nt / nc;
+
+	const float coso = fabsf(localFixedDir.z);
+
+	// Decide to transmit or reflect
+	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	Spectrum result;
+	if (passThroughEvent < threshold) {
+		// Transmit
+
+		const bool entering = (CosTheta(localFixedDir) > 0.f);
+		const float eta = entering ? (nc / nt) : ntc;
+		const float eta2 = eta * eta;
+		const float sinThetaIH2 = eta2 * Max(0.f, 1.f - cosThetaOH * cosThetaOH);
+		if (sinThetaIH2 >= 1.f)
+			return Spectrum();
+		float cosThetaIH = sqrtf(1.f - sinThetaIH2);
+		if (entering)
+			cosThetaIH = -cosThetaIH;
+		const float length = eta * cosThetaOH + cosThetaIH;
+		*localSampledDir = length * wh - eta * localFixedDir;
+
+		const float lengthSquared = length * length;
+		*pdfW = specPdf * fabsf(cosThetaIH) / lengthSquared;
+		if (*pdfW <= 0.f)
+			return Spectrum();
+
+		const float cosi = fabsf(localSampledDir->z);
+		*absCosSampledDir = cosi;
+
+		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
+		float factor = d * G * fabsf(cosThetaOH) / specPdf;
+
+		if (!hitPoint.fromLight) {
+			const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
+			result = (factor / coso) * kt * (Spectrum(1.f) - F);
+		} else {
+			const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+			result = (factor / cosi) * kt * (Spectrum(1.f) - F);
+		}
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
+		// So I have to remove that terms.
+		result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
+		*pdfW *= threshold;
+		*event = GLOSSY | TRANSMIT;
+	} else {
+		// Reflect
+		*pdfW = specPdf / (4.f * fabsf(cosThetaOH));
+		if (*pdfW <= 0.f)
+			return Spectrum();
+
+		*localSampledDir = 2.f * cosThetaOH * wh - localFixedDir;
+
+		const float cosi = fabsf(localSampledDir->z);
+		*absCosSampledDir = cosi;
+		if ((*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
+			return Spectrum();
+
+		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
+		float factor = d * G * fabsf(cosThetaOH) / specPdf;
+
+		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+		factor /= (!hitPoint.fromLight) ? coso : cosi;
+		result = factor * F * kr;
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
+		// So I have to remove that terms.
+		result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
+		*pdfW *= (1.f - threshold);
+		*event = GLOSSY | REFLECT;
+	}
+
+	return result;
+}
+
+void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = 0.f;
+	if (reversePdfW)
+		*reversePdfW = 0.f;
+}
+
+void RoughGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	Kr->AddReferencedTextures(referencedTexs);
+	Kt->AddReferencedTextures(referencedTexs);
+	ousideIor->AddReferencedTextures(referencedTexs);
+	ior->AddReferencedTextures(referencedTexs);
+	nu->AddReferencedTextures(referencedTexs);
+	nv->AddReferencedTextures(referencedTexs);
+}
+
+
+Properties RoughGlassMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".type", "roughglass");
+	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
+	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
+	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
+	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
+	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
+	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
+	props.Load(Material::ToProperties());
+
+	return props;
+}
 
 //------------------------------------------------------------------------------
 // SchlickDistribution
