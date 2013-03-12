@@ -46,7 +46,7 @@ class Scene;
 
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, //ROUGHGLASS,
+	GLOSSY2, METAL2, ROUGHGLASS,
 
 	// The following types are used (in PATHOCL CompiledScene class) only to
 	// recognize the usage of some specific material option
@@ -623,48 +623,48 @@ private:
 // RoughGlass material
 //------------------------------------------------------------------------------
 
-//class RoughGlassMaterial : public Material {
-//public:
-//	RoughGlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
-//			const Texture *refl, const Texture *trans,
-//			const Texture *outsideIorFact, const Texture *iorFact,
-//			const Texture *u, const Texture *v) :
-//			Material(emitted, bump, normal), Kr(refl), Kt(trans),
-//			ousideIor(outsideIorFact), ior(iorFact), nu(u), nv(v) { }
-//
-//	virtual MaterialType GetType() const { return ROUGHGLASS; }
-//	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
-//
-//	virtual Spectrum Evaluate(const HitPoint &hitPoint,
-//		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
-//		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-//	virtual Spectrum Sample(const HitPoint &hitPoint,
-//		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
-//		const float u0, const float u1, const float passThroughEvent,
-//		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
-//	virtual void Pdf(const HitPoint &hitPoint,
-//		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
-//		float *directPdfW, float *reversePdfW) const;
-//
-//	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
-//
-//	virtual luxrays::Properties ToProperties() const;
-//
-//	const Texture *GetKr() const { return Kr; }
-//	const Texture *GetKt() const { return Kt; }
-//	const Texture *GetOutsideIOR() const { return ousideIor; }
-//	const Texture *GetIOR() const { return ior; }
-//	const Texture *GetNu() const { return nu; }
-//	const Texture *GetNv() const { return nv; }
-//
-//private:
-//	const Texture *Kr;
-//	const Texture *Kt;
-//	const Texture *ousideIor;
-//	const Texture *ior;
-//	const Texture *nu;
-//	const Texture *nv;
-//};
+class RoughGlassMaterial : public Material {
+public:
+	RoughGlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *refl, const Texture *trans,
+			const Texture *outsideIorFact, const Texture *iorFact,
+			const Texture *u, const Texture *v) :
+			Material(emitted, bump, normal), Kr(refl), Kt(trans),
+			ousideIor(outsideIorFact), ior(iorFact), nu(u), nv(v) { }
+
+	virtual MaterialType GetType() const { return ROUGHGLASS; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
+
+	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+
+	virtual luxrays::Properties ToProperties() const;
+
+	const Texture *GetKr() const { return Kr; }
+	const Texture *GetKt() const { return Kt; }
+	const Texture *GetOutsideIOR() const { return ousideIor; }
+	const Texture *GetIOR() const { return ior; }
+	const Texture *GetNu() const { return nu; }
+	const Texture *GetNv() const { return nv; }
+
+private:
+	const Texture *Kr;
+	const Texture *Kt;
+	const Texture *ousideIor;
+	const Texture *ior;
+	const Texture *nu;
+	const Texture *nv;
+};
 
 //------------------------------------------------------------------------------
 // SchlickDistribution related functions
