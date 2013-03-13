@@ -1387,7 +1387,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 			G / (cosThetaI * lengthSquared)) *
 			kt * (Spectrum(1.f) - F);
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wl). So I have to remove that term.
 		result /= fabsf(CosTheta(localLightDir));
 		return result;
@@ -1418,7 +1418,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 
 		Spectrum result = (D * G / (4.f * cosThetaI)) * kr * F;
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wl). So I have to remove that term.
 		result /= fabsf(CosTheta(localLightDir));
 		return result;
@@ -1497,7 +1497,7 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 			result = (factor / cosi) * kt * (Spectrum(1.f) - F);
 		}
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
 		// So I have to remove that terms.
 		result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
@@ -1523,7 +1523,7 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		factor /= (!hitPoint.fromLight) ? coso : cosi;
 		result = factor * F * kr;
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
 		// So I have to remove that terms.
 		result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
