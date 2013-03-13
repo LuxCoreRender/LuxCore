@@ -1093,7 +1093,7 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wl). So I have to remove that term.
 		result /= fabs(CosTheta(localLightDir));
 		return result;
@@ -1124,7 +1124,7 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 
 		float3 result = (D * G / (4.f * cosThetaI)) * kr * F;
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wl). So I have to remove that term.
 		result /= fabs(CosTheta(localLightDir));
 		return result;
@@ -1215,7 +1215,7 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 		//	result = (factor / cosi) * kt * (Spectrum(1.f) - F);
 		//}
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
 		// So I have to remove that terms.
 		//result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
@@ -1243,7 +1243,7 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 		factor /= coso;
 		result = factor * F * kr;
 
-		// This is a porting of LuxRender cone and there, the result is multiplied
+		// This is a porting of LuxRender code and there, the result is multiplied
 		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
 		// So I have to remove that terms.
 		//result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
