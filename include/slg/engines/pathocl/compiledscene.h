@@ -44,6 +44,16 @@ public:
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;
 
+	bool RequiresPassThrough() {
+		return (IsMaterialCompiled(GLASS) ||
+				IsMaterialCompiled(ARCHGLASS) ||
+				IsMaterialCompiled(MIX) ||
+				IsMaterialCompiled(NULLMAT) ||
+				IsMaterialCompiled(MATTETRANSLUCENT) ||
+				IsMaterialCompiled(GLOSSY2) ||
+				IsMaterialCompiled(ROUGHGLASS));
+	}
+
 	Scene *scene;
 	Film *film;
 	u_int maxMemPageSize;

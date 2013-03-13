@@ -51,7 +51,7 @@ typedef enum {
 	// The following types are used (in PATHOCL CompiledScene class) only to
 	// recognize the usage of some specific material option
 	GLOSSY2_ANISOTROPIC, GLOSSY2_ABSORPTION, GLOSSY2_INDEX, GLOSSY2_MULTIBOUNCE,
-	METAL2_ANISOTROPIC //, ROUGHGLASS_ANISOTROPIC
+	METAL2_ANISOTROPIC, ROUGHGLASS_ANISOTROPIC
 } MaterialType;
 
 class Material {

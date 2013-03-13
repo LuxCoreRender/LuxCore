@@ -23,7 +23,7 @@
 
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2
+	GLOSSY2, METAL2, ROUGHGLASS
 } MaterialType;
 
 typedef struct {
@@ -80,6 +80,14 @@ typedef struct {
 } Metal2Param;
 
 typedef struct {
+    unsigned int krTexIndex;
+	unsigned int ktTexIndex;
+	unsigned int ousideIorTexIndex, iorTexIndex;
+	unsigned int nuTexIndex;
+	unsigned int nvTexIndex;
+} RoughGlassParam;
+
+typedef struct {
 	MaterialType type;
 	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;
 	union {
@@ -93,6 +101,7 @@ typedef struct {
 		MatteTranslucentParam matteTranslucent;
 		Glossy2Param glossy2;
 		Metal2Param metal2;
+		RoughGlassParam roughglass;
 	};
 } Material;
 

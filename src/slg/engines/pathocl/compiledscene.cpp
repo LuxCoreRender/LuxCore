@@ -468,6 +468,25 @@ void CompiledScene::CompileMaterials() {
 					usedMaterialTypes.insert(METAL2_ANISOTROPIC);
 				break;
 			}
+			case ROUGHGLASS: {
+				RoughGlassMaterial *rgm = static_cast<RoughGlassMaterial *>(m);
+
+				mat->type = slg::ocl::ROUGHGLASS;
+				mat->roughglass.krTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKr());
+				mat->roughglass.ktTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKt());
+				mat->roughglass.ousideIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetOutsideIOR());
+				mat->roughglass.iorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetIOR());
+
+				const Texture *nuTex = rgm->GetNu();
+				const Texture *nvTex = rgm->GetNv();
+				mat->roughglass.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
+				mat->roughglass.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				// Check if it an anisotropic material
+				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
+						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
+					usedMaterialTypes.insert(ROUGHGLASS_ANISOTROPIC);
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
 				break;
