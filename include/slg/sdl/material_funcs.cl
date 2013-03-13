@@ -1014,6 +1014,250 @@ float3 Metal2Material_Sample(__global Material *material,
 #endif
 
 //------------------------------------------------------------------------------
+// RoughGlass material
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
+
+float3 RoughGlassMaterial_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.ktTexIndex], hitPoint
+		TEXTURES_PARAM));
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.krTexIndex], hitPoint
+		TEXTURES_PARAM));
+
+	const bool isKtBlack = Spectrum_IsBlack(kt);
+	const bool isKrBlack = Spectrum_IsBlack(kr);
+	if (isKtBlack && isKrBlack)
+		return BLACK;
+	
+	//const float3 localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
+	//const float3 localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
+	const float3 localFixedDir = localEyeDir;
+	const float3 localSampledDir = localLightDir;
+
+	const float nc = Texture_GetFloatValue(&texs[material->roughglass.ousideIorTexIndex], hitPoint
+			TEXTURES_PARAM);
+	const float nt = Texture_GetFloatValue(&texs[material->roughglass.iorTexIndex], hitPoint
+			TEXTURES_PARAM);
+	const float ntc = nt / nc;
+
+	const float u = clamp(Texture_GetFloatValue(&texs[material->roughglass.nuTexIndex], hitPoint
+		TEXTURES_PARAM), 6e-3f, 1.f);
+#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
+	const float v = clamp(Texture_GetFloatValue(&texs[material->roughglass.nvTexIndex], hitPoint
+		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+#else
+	const float anisotropy = 0.f;
+	const float roughness = u * u;
+#endif
+
+	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	if (dot(localFixedDir, localSampledDir) < 0.f) {
+		// Transmit
+
+		const bool entering = (CosTheta(localFixedDir) > 0.f);
+		const float eta = entering ? (nc / nt) : ntc;
+
+		float3 wh = eta * localFixedDir + localSampledDir;
+		if (wh.z < 0.f)
+			wh = -wh;
+
+		//const float lengthSquared = wh.LengthSquared();
+		const float lengthSquared = dot(wh, wh);
+		if (!(lengthSquared > 0.f))
+			return BLACK;
+		wh /= sqrt(lengthSquared);
+		const float cosThetaI = fabs(CosTheta(localSampledDir));
+		const float cosThetaIH = fabs(dot(localSampledDir, wh));
+		const float cosThetaOH = dot(localFixedDir, wh);
+
+		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
+		const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
+		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
+		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+
+		if (directPdfW)
+			*directPdfW = threshold * specPdf * fabs(cosThetaOH) / lengthSquared;
+
+		//if (reversePdfW)
+		//	*reversePdfW = threshold * specPdf * cosThetaIH * eta * eta / lengthSquared;
+
+		float3 result = (fabs(cosThetaOH) * cosThetaIH * D *
+			G / (cosThetaI * lengthSquared)) *
+			kt * (1.f - F);
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wl). So I have to remove that term.
+		result /= fabs(CosTheta(localLightDir));
+		return result;
+	} else {
+		// Reflect
+		const float cosThetaO = fabs(CosTheta(localFixedDir));
+		const float cosThetaI = fabs(CosTheta(localSampledDir));
+		if (cosThetaO == 0.f || cosThetaI == 0.f)
+			return BLACK;
+		float3 wh = localFixedDir + localSampledDir;
+		if (all(isequal(wh, BLACK)))
+			return BLACK;
+		wh = normalize(wh);
+		if (wh.z < 0.f)
+			wh = -wh;
+
+		float cosThetaH = dot(localEyeDir, wh);
+		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
+		const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
+		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
+		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaH);
+
+		if (directPdfW)
+			*directPdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localFixedDir, wh)));
+
+		//if (reversePdfW)
+		//	*reversePdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localSampledDir, wh));
+
+		float3 result = (D * G / (4.f * cosThetaI)) * kr * F;
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wl). So I have to remove that term.
+		result /= fabs(CosTheta(localLightDir));
+		return result;
+	}
+}
+
+float3 RoughGlassMaterial_Sample(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event
+		TEXTURES_PARAM_DECL) {
+	if (fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.ktTexIndex], hitPoint
+		TEXTURES_PARAM));
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.krTexIndex], hitPoint
+		TEXTURES_PARAM));
+
+	const bool isKtBlack = Spectrum_IsBlack(kt);
+	const bool isKrBlack = Spectrum_IsBlack(kr);
+	if (isKtBlack && isKrBlack)
+		return BLACK;
+
+	const float u = clamp(Texture_GetFloatValue(&texs[material->roughglass.nuTexIndex], hitPoint
+		TEXTURES_PARAM), 6e-3f, 1.f);
+#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
+	const float v = clamp(Texture_GetFloatValue(&texs[material->roughglass.nvTexIndex], hitPoint
+		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float u2 = u * u;
+	const float v2 = v * v;
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float roughness = u * v;
+#else
+	const float anisotropy = 0.f;
+	const float roughness = u * u;
+#endif
+
+	float3 wh;
+	float d, specPdf;
+	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
+	if (wh.z < 0.f)
+		wh = -wh;
+	const float cosThetaOH = dot(localFixedDir, wh);
+
+	const float nc = Texture_GetFloatValue(&texs[material->roughglass.ousideIorTexIndex], hitPoint
+			TEXTURES_PARAM);
+	const float nt = Texture_GetFloatValue(&texs[material->roughglass.iorTexIndex], hitPoint
+			TEXTURES_PARAM);
+	const float ntc = nt / nc;
+
+	const float coso = fabs(localFixedDir.z);
+
+	// Decide to transmit or reflect
+	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float3 result;
+	if (passThroughEvent < threshold) {
+		// Transmit
+
+		const bool entering = (CosTheta(localFixedDir) > 0.f);
+		const float eta = entering ? (nc / nt) : ntc;
+		const float eta2 = eta * eta;
+		const float sinThetaIH2 = eta2 * fmax(0.f, 1.f - cosThetaOH * cosThetaOH);
+		if (sinThetaIH2 >= 1.f)
+			return BLACK;
+		float cosThetaIH = sqrt(1.f - sinThetaIH2);
+		if (entering)
+			cosThetaIH = -cosThetaIH;
+		const float length = eta * cosThetaOH + cosThetaIH;
+		*localSampledDir = length * wh - eta * localFixedDir;
+
+		const float lengthSquared = length * length;
+		*pdfW = specPdf * fabs(cosThetaIH) / lengthSquared;
+		if (*pdfW <= 0.f)
+			return BLACK;
+
+		const float cosi = fabs((*localSampledDir).z);
+		*absCosSampledDir = cosi;
+
+		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
+		float factor = d * G * fabs(cosThetaOH) / specPdf;
+
+		//if (!hitPoint.fromLight) {
+			const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
+			result = (factor / coso) * kt * (1.f - F);
+		//} else {
+		//	const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+		//	result = (factor / cosi) * kt * (Spectrum(1.f) - F);
+		//}
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
+		// So I have to remove that terms.
+		//result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
+			result *= *pdfW / cosi;
+		*pdfW *= threshold;
+		*event = GLOSSY | TRANSMIT;
+	} else {
+		// Reflect
+		*pdfW = specPdf / (4.f * fabs(cosThetaOH));
+		if (*pdfW <= 0.f)
+			return BLACK;
+
+		*localSampledDir = 2.f * cosThetaOH * wh - localFixedDir;
+
+		const float cosi = fabs((*localSampledDir).z);
+		*absCosSampledDir = cosi;
+		if ((*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * (*localSampledDir).z < 0.f))
+			return BLACK;
+
+		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
+		float factor = d * G * fabs(cosThetaOH) / specPdf;
+
+		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+		//factor /= (!hitPoint.fromLight) ? coso : cosi;
+		factor /= coso;
+		result = factor * F * kr;
+
+		// This is a porting of LuxRender cone and there, the result is multiplied
+		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
+		// So I have to remove that terms.
+		//result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
+		result *= *pdfW / cosi;
+		*pdfW *= (1.f - threshold);
+		*event = GLOSSY | REFLECT;
+	}
+
+	return result;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic material functions
 //
 // They include the support for all material but Mix
@@ -1023,6 +1267,9 @@ float3 Metal2Material_Sample(__global Material *material,
 bool Material_IsDeltaNoMix(__global Material *material) {
 	switch (material->type) {
 		// Non Specular materials
+#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
+		case ROUGHGLASS:
+#endif
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
 #endif
@@ -1095,6 +1342,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 		case METAL2:
 			return GLOSSY | REFLECT;
 #endif
+#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
+		case ROUGHGLASS:
+			return GLOSSY | REFLECT | TRANSMIT;
+#endif
 		default:
 			return NONE;
 	}
@@ -1163,6 +1414,12 @@ float3 Material_SampleNoMix(__global Material *material,
 					u0, u1,	pdfW, cosSampledDir, event
 					TEXTURES_PARAM);
 #endif
+#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
+		case ROUGHGLASS:
+			return RoughGlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					TEXTURES_PARAM);
+#endif
 		default:
 			return BLACK;
 	}
@@ -1191,6 +1448,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
 			return Metal2Material_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
+		case ROUGHGLASS:
+			return RoughGlassMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
