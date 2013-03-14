@@ -247,7 +247,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 			(newHeight != (int)session->film->GetHeight())) {
 		glViewport(0, 0, newWidth, newHeight);
 		glLoadIdentity();
-		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
+		glOrtho(0.f, newWidth - 1.f, 0.f, newHeight - 1.f, -1.f, 1.f);
 
 		// RTPATHOCL doesn't support FILM_EDIT so I use a stop/start here
 		session->Stop();

@@ -91,7 +91,7 @@ MainWindow::MainWindow(QWidget *parent, Qt::WindowFlags flags) : QMainWindow(par
 	luxFrameBuffer = new LuxFrameBuffer(QPixmap(":/images/resources/luxlogo_bg.png"));
 	renderScene->addItem(luxFrameBuffer);
 
-	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by Daniel \"ZanQdo\" Salazar (http://www.3developer.com)\nand adapted for SLG by Michael \"neo2068\" Klemm"));
+	authorLabelBack = new QGraphicsSimpleTextItem(QString("Scene designed by LuxRender project"));
 	renderScene->addItem(authorLabelBack);
 	authorLabelBack->setBrush(Qt::black);
 	authorLabel = new QGraphicsSimpleTextItem(authorLabelBack->text());
