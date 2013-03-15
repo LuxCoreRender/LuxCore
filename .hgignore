@@ -1,0 +1,26 @@
+^lib/libluxrays.a
+^lib/libsmallluxgpu.a
+^doxygen-luxrays.conf
+^doxygen/luxrays.template
+^doxygen-slg.conf
+^doxygen/slg.template
+^bin/*
+^doc/*
+^samples/luxmark/scenes/room/*
+^samples/(benchsimple|luxmark|smallluxgpu)/(Debug|Release)/
+(luxmark|smallluxgpu|slg|LUXRAYS|benchsimple)\.dir
+^src/(Debug|Release)/
+^(Debug|Release|x64)/
+^nbproject/*
+syntax: glob
+*~
+*CMakeFiles
+*CMakeCache.txt
+*Makefile
+*cmake_install.cmake
+moc_*.cxx
+ui_*.h
+qrc_*.cxx
+*.sdf
+*.vcxproj*
+
