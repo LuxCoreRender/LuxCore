@@ -523,6 +523,19 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 		throw runtime_error("No OpenCL device selected or available");
 }
 
+size_t OCLRenderEngine::GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet) {
+	if (dataSet.GetTotalTriangleCount() < 250000)
+		return 24;
+	else if (dataSet.GetTotalTriangleCount() < 500000)
+		return 32;
+	else if (dataSet.GetTotalTriangleCount() < 1000000)
+		return 40;
+	else if (dataSet.GetTotalTriangleCount() < 2000000)
+		return 48;
+	else 
+		return 64;
+}
+
 //------------------------------------------------------------------------------
 // HybridRenderState
 //------------------------------------------------------------------------------
@@ -791,6 +804,13 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 		// Multiple intersection devices, use a M2M device
 		intersectionDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
 	}
+
+	// Check if I have to set max. QBVH stack size
+	const size_t qbvhStackSize = renderConfig->cfg.GetInt("accelerator.qbvh.stacksize.max",
+			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		intersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
+
 	devices = ctx->GetIntersectionDevices();
 
 	// Set the LuxRays DataSet
