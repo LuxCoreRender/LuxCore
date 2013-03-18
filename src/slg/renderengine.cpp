@@ -501,18 +501,18 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
+				if (desc->GetType() & DEVICE_TYPE_OPENCL_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
+				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
 				selectedDeviceDescs.push_back(desc);
 			}
 		} else {
-			if ((useCPUs && desc->GetType() == DEVICE_TYPE_OPENCL_CPU) ||
-					(useGPUs && desc->GetType() == DEVICE_TYPE_OPENCL_GPU)) {
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
+			if ((useCPUs && desc->GetType() & DEVICE_TYPE_OPENCL_CPU) ||
+					(useGPUs && desc->GetType() & DEVICE_TYPE_OPENCL_GPU)) {
+				if (desc->GetType() & DEVICE_TYPE_OPENCL_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
+				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
 				selectedDeviceDescs.push_back(descs[i]);
 			}
