@@ -210,6 +210,8 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
+
+	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
 };
 
 //------------------------------------------------------------------------------
