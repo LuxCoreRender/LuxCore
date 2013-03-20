@@ -145,7 +145,7 @@ vector<Point> BBox::ClipPolygon(const vector<Point> &vertexList) const {
 #pragma float_control(push)
 #pragma float_control(precise, on)
 #endif
-bool BBox::IntersectP(const Ray &ray, float *hitt0, float *hitt1) const
+bool BBox::IntersectP(const Ray &ray, float *hitt0, float *hitt1, bool null_shp_isect) const
 {
 	float t0 = ray.mint, t1 = ray.maxt;
 	for (int i = 0; i < 3; ++i) {

@@ -129,8 +129,8 @@ void DataSet::UpdateMeshes() {
 	mqbvh->Update();
 }
 
-bool DataSet::Intersect(const Ray *ray, RayHit *hit) const {
-	return accel->Intersect(ray, hit);
+bool DataSet::Intersect(const Ray *ray, RayHit *hit, bool null_shp_isect) const {
+	return accel->Intersect(ray, hit, null_shp_isect);
 }
 
 bool DataSet::IsEqual(const DataSet *dataSet) const {

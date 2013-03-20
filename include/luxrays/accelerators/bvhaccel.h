@@ -71,7 +71,7 @@ public:
 		return preprocessedMeshTriangleIDs;
 	}
 
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
+	virtual bool Intersect(const Ray *ray, RayHit *hit, bool null_shp_isect = false) const;
 
 	const TriangleMesh *GetPreprocessedMesh() const {
 		return preprocessedMesh;

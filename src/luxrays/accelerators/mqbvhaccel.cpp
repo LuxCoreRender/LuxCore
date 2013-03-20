@@ -697,7 +697,7 @@ void MQBVHAccel::CreateLeaf(int32_t parentIndex, int32_t childIndex,
 	node.InitializeLeaf(childIndex, 1, start);
 }
 
-bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
+bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit, bool shp_null_isect) const {
 	Ray ray(*initialRay);
 	rayHit->SetMiss();
 
@@ -808,7 +808,7 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 			if (leafsTransform[leafIndex]) {
 				Ray r(Inverse(*leafsTransform[leafIndex]) * ray);
 				RayHit rh;
-				if (qbvh->Intersect(&r, &rh)) {
+				if (qbvh->Intersect(&r, &rh, shp_null_isect)) {
 					rayHit->t = rh.t;
 					rayHit->b1 = rh.b1;
 					rayHit->b2 = rh.b2;
@@ -818,7 +818,7 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 				}
 			} else {
 				RayHit rh;
-				if (qbvh->Intersect(&ray, &rh)) {
+				if (qbvh->Intersect(&ray, &rh, shp_null_isect)) {
 					rayHit->t = rh.t;
 					rayHit->b1 = rh.b1;
 					rayHit->b2 = rh.b2;

@@ -50,7 +50,7 @@ public:
 	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const = 0;
 	virtual const TriangleID *GetMeshTriangleIDTable() const = 0;
 
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
+	virtual bool Intersect(const Ray *ray, RayHit *hit, bool null_shp_isect) const = 0;
 };
 
 }

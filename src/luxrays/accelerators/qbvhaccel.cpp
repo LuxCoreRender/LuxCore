@@ -781,7 +781,7 @@ void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
 
 /***************************************************/
 
-bool QBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
+bool QBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit, bool null_shp_isect) const {
 	Ray ray(*initialRay);
 	rayHit->SetMiss();
 
@@ -891,7 +891,7 @@ bool QBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 			const u_int offset = QBVHNode::FirstQuadIndex(leafData);
 
 			for (u_int primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber)
-				prims[primNumber].Intersect(ray4, ray, rayHit);
+				prims[primNumber].Intersect(ray4, ray, rayHit, null_shp_isect);
 		}//end of the else
 	}
 

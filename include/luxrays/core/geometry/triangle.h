@@ -60,7 +60,12 @@ public:
 		return Union(BBox(p0, p1), p2);
 	}
 
-	bool Intersect(const Ray &ray, const Point *verts, RayHit *triangleHit) const {
+	bool Intersect(const Ray &ray, const Point *verts, RayHit *triangleHit, 
+			bool null_shp_isect = false) const {
+
+//		if ( null_shp_isect && GetPrimitiveType() == ShapeType(AR_SHAPE) ) 
+//			return false;
+
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
