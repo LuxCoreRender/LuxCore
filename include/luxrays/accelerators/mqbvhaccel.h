@@ -61,7 +61,7 @@ public:
 	unsigned int GetNLeafs() const { return nLeafs; }
 	const Transform **GetTransforms() const { return leafsTransform; }
 
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
+	virtual bool Intersect(const Ray *ray, RayHit *hit, bool null_shp_isect = false) const;
 
 	void Update();
 

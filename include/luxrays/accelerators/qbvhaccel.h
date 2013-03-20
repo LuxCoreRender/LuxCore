@@ -102,7 +102,7 @@ public:
 				Union(tris[primitives[2]].WorldBound(verts), tris[primitives[3]].WorldBound(verts)));
 	}
 
-	bool Intersect(const QuadRay &ray4, const Ray &ray, RayHit *rayHit) const {
+	bool Intersect(const QuadRay &ray4, const Ray &ray, RayHit *rayHit, bool null_shp_isect = false) const {
 		const __m128 zero = _mm_setzero_ps();
 		const __m128 s1x = _mm_sub_ps(_mm_mul_ps(ray4.dy, edge2z),
 				_mm_mul_ps(ray4.dz, edge2y));
@@ -410,7 +410,7 @@ public:
 	   Intersect a ray in world space against the
 	   primitive and fills in an Intersection object.
 	*/
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
+	virtual bool Intersect(const Ray *ray, RayHit *hit, bool null_shp_isect = false) const;
 
 	const TriangleMesh *GetPreprocessedMesh() const {
 		return preprocessedMesh;

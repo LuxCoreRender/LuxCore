@@ -110,7 +110,7 @@ public:
 
 	bool IntersectP(const Ray &ray,
 			float *hitt0 = NULL,
-			float *hitt1 = NULL) const;
+			float *hitt1 = NULL, bool null_shp_isect = false) const;
 
 	// Returns the list of vertices of the clipped polygon
 	// against this bounding box

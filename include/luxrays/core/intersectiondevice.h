@@ -83,9 +83,9 @@ public:
 	// Serial interface: to trace a single ray (on the CPU)
 	//--------------------------------------------------------------------------
 
-	virtual bool TraceRay(const Ray *ray, RayHit *rayHit) {
+	virtual bool TraceRay(const Ray *ray, RayHit *rayHit, bool null_shp_isect = false) {
 		statsTotalSerialRayCount += 1.0;
-		return dataSet->Intersect(ray, rayHit);
+		return dataSet->Intersect(ray, rayHit, null_shp_isect);
 	}
 
 	friend class Context;

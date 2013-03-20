@@ -434,7 +434,7 @@ unsigned int BVHAccel::BuildArray(BVHAccelTreeNode *node, unsigned int offset) {
 	return offset;
 }
 
-bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
+bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit, bool null_shp_isect) const {
 	assert (initialized);
 
 	unsigned int currentNode = 0; // Root Node
@@ -448,7 +448,7 @@ bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	const Triangle *triangles = preprocessedMesh->GetTriangles();
 
 	while (currentNode < stopNode) {
-		if (bvhTree[currentNode].bbox.IntersectP(*ray)) {
+		if (bvhTree[currentNode].bbox.IntersectP(*ray, NULL, NULL, null_shp_isect)) {
 			if (bvhTree[currentNode].primitive != 0xffffffffu) {
 				if (triangles[bvhTree[currentNode].primitive].Intersect(*ray, vertices, &triangleHit)) {
 					hit = true; // Continue testing for closer intersections

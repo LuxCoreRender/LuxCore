@@ -39,7 +39,7 @@ public:
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
 
-	bool Intersect(const Ray *ray, RayHit *hit) const;
+	bool Intersect(const Ray *ray, RayHit *hit, bool null_shp_isect=false) const;
 
 	const TriangleMeshID GetMeshID(const unsigned int index) const { return accel->GetMeshID(index); }
 	const TriangleMeshID *GetMeshIDTable() const { return accel->GetMeshIDTable(); }
