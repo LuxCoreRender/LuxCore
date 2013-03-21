@@ -80,14 +80,14 @@ void BiDirCPURenderThread::ConnectVertices(
 
 				if (eyeVertex.depth >= engine->rrDepth) {
 					// Russian Roulette
-					const float prob = Max(eyeBsdfEval.Filter(), engine->rrImportanceCap);
+					const float prob = RenderEngine::RussianRouletteProb(eyeBsdfEval, engine->rrImportanceCap);
 					eyeBsdfPdfW *= prob;
 					eyeBsdfRevPdfW *= prob;
 				}
 
 				if (lightVertex.depth >= engine->rrDepth) {
 					// Russian Roulette
-					const float prob = Max(lightBsdfEval.Filter(), engine->rrImportanceCap);
+					const float prob = RenderEngine::RussianRouletteProb(lightBsdfEval, engine->rrImportanceCap);
 					lightBsdfPdfW *= prob;
 					lightBsdfRevPdfW *= prob;
 				}
@@ -140,7 +140,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				if (lightVertex.depth >= engine->rrDepth) {
 					// Russian Roulette
-					const float prob = Max(bsdfEval.Filter(), engine->rrImportanceCap);
+					const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 					bsdfRevPdfW *= prob;
 				}
 
@@ -202,7 +202,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 				if (!scene->Intersect(device, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					if (eyeVertex.depth >= engine->rrDepth) {
 						// Russian Roulette
-						const float prob = Max(bsdfEval.Filter(), engine->rrImportanceCap);
+						const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 						bsdfPdfW *= prob;
 						bsdfRevPdfW *= prob;
 					}
@@ -374,7 +374,7 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 
 	if (pathVertex->depth >= engine->rrDepth) {
 		// Russian Roulette
-		const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
+		const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
 		if (sampler->GetSample(sampleOffset + 2) < prob) {
 			bsdfPdfW *= prob;
 			bsdfRevPdfW *= prob;

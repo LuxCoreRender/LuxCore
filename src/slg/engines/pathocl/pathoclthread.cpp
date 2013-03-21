@@ -485,13 +485,13 @@ void PathOCLRenderThread::InitKernels() {
 		if (cscene->IsMaterialCompiled(METAL2_ANISOTROPIC))
 			ss << " -D PARAM_ENABLE_MAT_METAL2_ANISOTROPIC";
 	}
+	if (cscene->IsMaterialCompiled(ROUGHGLASS)) {
+		ss << " -D PARAM_ENABLE_MAT_ROUGHGLASS";
+		if (cscene->IsMaterialCompiled(ROUGHGLASS_ANISOTROPIC))
+			ss << " -D PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC";
+	}
 
-	if (cscene->IsMaterialCompiled(GLASS) ||
-			cscene->IsMaterialCompiled(ARCHGLASS) ||
-			cscene->IsMaterialCompiled(MIX) ||
-			cscene->IsMaterialCompiled(NULLMAT) ||
-			cscene->IsMaterialCompiled(MATTETRANSLUCENT) ||
-			cscene->IsMaterialCompiled(GLOSSY2))
+	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";
 	
 	if (cscene->camera.lensRadius > 0.f)
@@ -938,12 +938,7 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
-	const bool hasPassThrough = (renderEngine->compiledScene->IsMaterialCompiled(GLASS) ||
-			renderEngine->compiledScene->IsMaterialCompiled(ARCHGLASS) ||
-			renderEngine->compiledScene->IsMaterialCompiled(MIX) ||
-			renderEngine->compiledScene->IsMaterialCompiled(NULLMAT) ||
-			renderEngine->compiledScene->IsMaterialCompiled(MATTETRANSLUCENT) ||
-			renderEngine->compiledScene->IsMaterialCompiled(GLOSSY2));
+	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 
 	// Add Seed memory size
 	size_t gpuTaksSize = sizeof(slg::ocl::Seed);

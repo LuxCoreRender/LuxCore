@@ -58,6 +58,9 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
 	renderConfig->scene->UpdateDataSet(ctx);
+
+	samplesCount = 0;
+	elapsedTime = 0.0f;
 }
 
 RenderEngine::~RenderEngine() {
@@ -79,7 +82,7 @@ void RenderEngine::Start() {
 	MachineEpsilon::SetMin(epsilonMin);
 	const float epsilonMax = renderConfig->cfg.GetFloat("scene.epsilon.max", DEFAULT_EPSILON_MAX);
 	MachineEpsilon::SetMax(epsilonMax);
-	
+
 	ctx->Start();
 
 	StartLockLess();
@@ -498,18 +501,18 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
+				if (desc->GetType() & DEVICE_TYPE_OPENCL_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
+				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
 				selectedDeviceDescs.push_back(desc);
 			}
 		} else {
-			if ((useCPUs && desc->GetType() == DEVICE_TYPE_OPENCL_CPU) ||
-					(useGPUs && desc->GetType() == DEVICE_TYPE_OPENCL_GPU)) {
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU)
+			if ((useCPUs && desc->GetType() & DEVICE_TYPE_OPENCL_CPU) ||
+					(useGPUs && desc->GetType() & DEVICE_TYPE_OPENCL_GPU)) {
+				if (desc->GetType() & DEVICE_TYPE_OPENCL_GPU)
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() == DEVICE_TYPE_OPENCL_CPU)
+				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
 				selectedDeviceDescs.push_back(descs[i]);
 			}
@@ -518,6 +521,19 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 #endif
 	if (fatal && selectedDeviceDescs.size() == 0)
 		throw runtime_error("No OpenCL device selected or available");
+}
+
+size_t OCLRenderEngine::GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet) {
+	if (dataSet.GetTotalTriangleCount() < 250000)
+		return 24;
+	else if (dataSet.GetTotalTriangleCount() < 500000)
+		return 32;
+	else if (dataSet.GetTotalTriangleCount() < 1000000)
+		return 40;
+	else if (dataSet.GetTotalTriangleCount() < 2000000)
+		return 48;
+	else 
+		return 64;
 }
 
 //------------------------------------------------------------------------------
@@ -788,6 +804,13 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 		// Multiple intersection devices, use a M2M device
 		intersectionDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
 	}
+
+	// Check if I have to set max. QBVH stack size
+	const size_t qbvhStackSize = renderConfig->cfg.GetInt("accelerator.qbvh.stacksize.max",
+			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
+	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+		intersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
+
 	devices = ctx->GetIntersectionDevices();
 
 	// Set the LuxRays DataSet

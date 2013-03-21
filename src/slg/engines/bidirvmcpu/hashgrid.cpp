@@ -141,7 +141,7 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 		BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)thread->renderEngine;
 		if (eyeVertex.depth >= engine->rrDepth) {
 			// Russian Roulette
-			const float prob = Max(eyeBsdfEval.Filter(), engine->rrImportanceCap);
+			const float prob = RenderEngine::RussianRouletteProb(eyeBsdfEval, engine->rrImportanceCap);
 			eyeBsdfPdfW *= prob;
 			eyeBsdfRevPdfW *= prob; // Note: SmallVCM uses light prob here
 		}

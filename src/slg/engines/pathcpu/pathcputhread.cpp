@@ -77,7 +77,7 @@ void PathCPURenderThread::DirectLightSampling(
 
 					if (depth >= engine->rrDepth) {
 						// Russian Roulette
-						bsdfPdfW *= Max(bsdfEval.Filter(), engine->rrImportanceCap);
+						bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 					}
 
 					// MIS between direct light sampling and BSDF sampling
@@ -251,7 +251,7 @@ void PathCPURenderThread::RenderFunc() {
 
 			if ((depth >= engine->rrDepth) && !lastSpecular) {
 				// Russian Roulette
-				const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
+				const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
 				if (sampler->GetSample(sampleOffset + 8) < prob)
 					lastPdfW *= prob;
 				else

@@ -93,14 +93,14 @@ void BiDirState::ConnectVertices(HybridRenderThread *renderThread,
 
 			if (eyeVertex.depth >= renderEngine->rrDepth) {
 				// Russian Roulette
-				const float prob = Max(eyeBsdfEval.Filter(), renderEngine->rrImportanceCap);
+				const float prob = RenderEngine::RussianRouletteProb(eyeBsdfEval, renderEngine->rrImportanceCap);
 				eyeBsdfPdfW *= prob;
 				eyeBsdfRevPdfW *= prob;
 			}
 
 			if (lightVertex.depth >= renderEngine->rrDepth) {
 				// Russian Roulette
-				const float prob = Max(lightBsdfEval.Filter(), renderEngine->rrImportanceCap);
+				const float prob = RenderEngine::RussianRouletteProb(lightBsdfEval, renderEngine->rrImportanceCap);
 				lightBsdfPdfW *= prob;
 				lightBsdfRevPdfW *= prob;
 			}
@@ -151,7 +151,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
 			if (lightVertex.depth >= renderEngine->rrDepth) {
 				// Russian Roulette
-				const float prob = Max(bsdfEval.Filter(), renderEngine->rrImportanceCap);
+				const float prob = RenderEngine::RussianRouletteProb(bsdfEval, renderEngine->rrImportanceCap);
 				bsdfPdfW *= prob;
 				bsdfRevPdfW *= prob;
 			}
@@ -215,7 +215,7 @@ void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 
 				if (eyeVertex.depth >= renderEngine->rrDepth) {
 					// Russian Roulette
-					const float prob = Max(bsdfEval.Filter(), renderEngine->rrImportanceCap);
+					const float prob = RenderEngine::RussianRouletteProb(bsdfEval, renderEngine->rrImportanceCap);
 					bsdfPdfW *= prob;
 					bsdfRevPdfW *= prob;
 				}
@@ -391,7 +391,7 @@ bool BiDirState::Bounce(HybridRenderThread *renderThread,
 
 	if (pathVertex->depth >= renderEngine->rrDepth) {
 		// Russian Roulette
-		const float prob = Max(bsdfSample.Filter(), renderEngine->rrImportanceCap);
+		const float prob = RenderEngine::RussianRouletteProb(bsdfSample, renderEngine->rrImportanceCap);
 		if (sampler->GetSample(sampleOffset + 3) < prob) {
 			bsdfPdfW *= prob;
 			bsdfRevPdfW *= prob;

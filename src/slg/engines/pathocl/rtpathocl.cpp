@@ -41,6 +41,7 @@ RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boos
 	film->Init();
 
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
+	frameTime = 0.f;
 }
 
 RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {

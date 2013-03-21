@@ -49,9 +49,6 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-bool OSDPrintHelp = false;
-bool RealtimeMode = false;
-
 static char captionBuffer[512];
 
 static void PrintString(void *font, const char *string) {
@@ -130,11 +127,12 @@ static void PrintHelpAndSettings() {
 	if (dynamic_cast<RTPathOCLRenderEngine *>(session->renderEngine)) {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
-		fps = Lerp<float>(.025f, fps, 1.f / ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime());
-		
+		const double frameTime = ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
+		fps = Lerp<float>(.025f, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
+
 		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]",
 				int(session->renderEngine->GetRenderingTime()),
-				int(1000.f / fps),
+				int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 				session->renderConfig->GetScreenRefreshInterval(),
 				fps);
 	} else
@@ -203,7 +201,7 @@ static void PrintCaptions() {
 
 	// Title
 	glRasterPos2i(4, session->film->GetHeight() - 10);
-	if (useLuxVRName)
+	if (optUseLuxVRName)
 		PrintString(GLUT_BITMAP_8_BY_13, LUXVR_LABEL.c_str());
 	else
 		PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
@@ -224,7 +222,7 @@ void displayFunc(void) {
 
 	PrintCaptions();
 
-	if (OSDPrintHelp) {
+	if (optOSDPrintHelp) {
 		glPushMatrix();
 		glLoadIdentity();
 		glOrtho(-0.5f, session->film->GetWidth() - 0.5f,
@@ -249,7 +247,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 			(newHeight != (int)session->film->GetHeight())) {
 		glViewport(0, 0, newWidth, newHeight);
 		glLoadIdentity();
-		glOrtho(0.f, newWidth - 1.0f, 0.f, newHeight - 1.0f, -1.f, 1.f);
+		glOrtho(0.f, newWidth - 1.f, 0.f, newHeight - 1.f, -1.f, 1.f);
 
 		// RTPATHOCL doesn't support FILM_EDIT so I use a stop/start here
 		session->Stop();
@@ -275,12 +273,10 @@ void timerFunc(int value) {
 	}
 
 	glutPostRedisplay();
-	if (!RealtimeMode)
+	if (!optRealTimeMode)
 		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 }
 
-#define MOVE_STEP 0.5f
-#define ROTATE_STEP 4.f
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
@@ -300,7 +296,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'a': {
 			session->BeginEdit();
-			session->renderConfig->scene->camera->TranslateLeft(MOVE_STEP);
+			session->renderConfig->scene->camera->TranslateLeft(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -309,7 +305,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		}
 		case 'd': {
 			session->BeginEdit();
-			session->renderConfig->scene->camera->TranslateRight(MOVE_STEP);
+			session->renderConfig->scene->camera->TranslateRight(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -318,7 +314,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		}
 		case 'w': {
 			session->BeginEdit();
-			session->renderConfig->scene->camera->TranslateForward(MOVE_STEP);
+			session->renderConfig->scene->camera->TranslateForward(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -327,7 +323,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		}
 		case 's': {
 			session->BeginEdit();
-			session->renderConfig->scene->camera->TranslateBackward(MOVE_STEP);
+			session->renderConfig->scene->camera->TranslateBackward(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -336,7 +332,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		}
 		case 'r':
 			session->BeginEdit();
-			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, MOVE_STEP));
+			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, optMoveStep));
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -344,14 +340,14 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'f':
 			session->BeginEdit();
-			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -MOVE_STEP));
+			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -optMoveStep));
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
 			session->EndEdit();
 			break;
 		case 'h':
-			OSDPrintHelp = (!OSDPrintHelp);
+			optOSDPrintHelp = (!optOSDPrintHelp);
 			break;
 		case 'i':
 			session->Stop();
@@ -397,61 +393,71 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->film->SetToneMapParams(params);
 			}
 			break;
+		case 'v':
+			optMoveScale = Max(.0125f, optMoveScale - ((optMoveScale>= 1.f) ? .25f : 0.0125f));
+			UpdateMoveStep();
+			SLG_LOG("Camera move scale: " << optMoveScale);
+			break;
+		case 'b':
+			optMoveScale = Min(100.f, optMoveScale +  ((optMoveScale>= 1.f) ? .25f : 0.0125f));
+			UpdateMoveStep();
+			SLG_LOG("Camera move scale: " << optMoveScale);
+			break;
 		case '1':
 			session->SetRenderingEngineType(PATHOCL);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			RealtimeMode = false;
+			optRealTimeMode = false;
 			break;
 		case '2':
 			session->SetRenderingEngineType(LIGHTCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			RealtimeMode = false;
+			optRealTimeMode = false;
 			break;
 		case '3':
 			session->SetRenderingEngineType(PATHCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			RealtimeMode = false;
+			optRealTimeMode = false;
 			break;
 		case '4':
 			session->SetRenderingEngineType(BIDIRCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			RealtimeMode = false;
+			optRealTimeMode = false;
 			break;
 		case '5':
 			session->SetRenderingEngineType(BIDIRHYBRID);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			RealtimeMode = false;
+			optRealTimeMode = false;
 			break;
 		case '6':
 			session->SetRenderingEngineType(CBIDIRHYBRID);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			RealtimeMode = false;
+			optRealTimeMode = false;
 			break;
 		case '7':
 			session->SetRenderingEngineType(BIDIRVMCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			RealtimeMode = false;
+			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '8':
 			session->SetRenderingEngineType(RTPATHOCL);
 			glutIdleFunc(idleFunc);
-			RealtimeMode = true;
-			if (session->renderConfig->GetScreenRefreshInterval() > 25)
-				session->renderConfig->SetScreenRefreshInterval(25);
+			optRealTimeMode = true;
+			if (session->renderConfig->GetScreenRefreshInterval() > 33)
+				session->renderConfig->SetScreenRefreshInterval(33);
 			break;
 #endif
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
-			if (useLuxVRName)
+			if (optUseLuxVRName)
 				ws.assign(LUXVR_LABEL.begin (), LUXVR_LABEL.end());
 			else
 				ws.assign(SLG_LABEL.begin (), SLG_LABEL.end());
@@ -468,7 +474,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 	}
 
-	if (!RealtimeMode)
+	if (!optRealTimeMode)
 		displayFunc();
 }
 
@@ -476,7 +482,7 @@ void specialFunc(int key, int x, int y) {
 	switch (key) {
 		case GLUT_KEY_UP:
 			session->BeginEdit();
-			session->renderConfig->scene->camera->RotateUp(ROTATE_STEP);
+			session->renderConfig->scene->camera->RotateUp(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -484,7 +490,7 @@ void specialFunc(int key, int x, int y) {
 			break;
 		case GLUT_KEY_DOWN:
 			session->BeginEdit();
-			session->renderConfig->scene->camera->RotateDown(ROTATE_STEP);
+			session->renderConfig->scene->camera->RotateDown(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -492,7 +498,7 @@ void specialFunc(int key, int x, int y) {
 			break;
 		case GLUT_KEY_LEFT:
 			session->BeginEdit();
-			session->renderConfig->scene->camera->RotateLeft(ROTATE_STEP);
+			session->renderConfig->scene->camera->RotateLeft(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -500,7 +506,7 @@ void specialFunc(int key, int x, int y) {
 			break;
 		case GLUT_KEY_RIGHT:
 			session->BeginEdit();
-			session->renderConfig->scene->camera->RotateRight(ROTATE_STEP);
+			session->renderConfig->scene->camera->RotateRight(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -510,7 +516,7 @@ void specialFunc(int key, int x, int y) {
 			break;
 	}
 
-	if (!RealtimeMode)
+	if (!optRealTimeMode)
 		displayFunc();
 }
 
@@ -547,19 +553,19 @@ static void motionFunc(int x, int y) {
 
 	if (mouseButton0) {
 		// Check elapsed time since last update
-		if (RealtimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
+		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
 			session->BeginEdit();
 
-			if (mouseGrabMode) {
-				session->renderConfig->scene->camera->RotateUp(0.04f * distY * ROTATE_STEP);
-				session->renderConfig->scene->camera->RotateLeft(0.04f * distX * ROTATE_STEP);
+			if (optMouseGrabMode) {
+				session->renderConfig->scene->camera->RotateUp(0.04f * distY * optRotateStep);
+				session->renderConfig->scene->camera->RotateLeft(0.04f * distX * optRotateStep);
 			}
 			else {
-				session->renderConfig->scene->camera->RotateDown(0.04f * distY * ROTATE_STEP);
-				session->renderConfig->scene->camera->RotateRight(0.04f * distX * ROTATE_STEP);
+				session->renderConfig->scene->camera->RotateDown(0.04f * distY * optRotateStep);
+				session->renderConfig->scene->camera->RotateRight(0.04f * distX * optRotateStep);
 			};
 
 			session->renderConfig->scene->camera->Update(
@@ -570,25 +576,25 @@ static void motionFunc(int x, int y) {
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			if (!RealtimeMode)
+			if (!optRealTimeMode)
 				displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
 	} else if (mouseButton2) {
 		// Check elapsed time since last update
-		if (RealtimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
+		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
 			session->BeginEdit();
 
-			if (mouseGrabMode) {
-				session->renderConfig->scene->camera->TranslateLeft(0.04f * distX * MOVE_STEP);
-				session->renderConfig->scene->camera->TranslateForward(0.04f * distY * MOVE_STEP);
+			if (optMouseGrabMode) {
+				session->renderConfig->scene->camera->TranslateLeft(0.04f * distX * optMoveStep);
+				session->renderConfig->scene->camera->TranslateForward(0.04f * distY * optMoveStep);
 			}
 			else {
-				session->renderConfig->scene->camera->TranslateRight(0.04f * distX * MOVE_STEP);
-				session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * MOVE_STEP);				
+				session->renderConfig->scene->camera->TranslateRight(0.04f * distX * optMoveStep);
+				session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * optMoveStep);				
 			}
 
 			session->renderConfig->scene->camera->Update(
@@ -599,7 +605,7 @@ static void motionFunc(int x, int y) {
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
 
-			if (!RealtimeMode)
+			if (!optRealTimeMode)
 				displayFunc();
 			lastMouseUpdate = WallClockTime();
 		}
@@ -619,7 +625,7 @@ void InitGlut(int argc, char *argv[], const u_int width, const u_int height) {
 		glutInitWindowPosition((scrWidth - width) / 2, (scrHeight - height) / 2);
 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-	if (useLuxVRName)
+	if (optUseLuxVRName)
 		glutCreateWindow(LUXVR_LABEL.c_str());
 	else
 		glutCreateWindow(SLG_LABEL.c_str());
@@ -635,12 +641,12 @@ void RunGlut() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
 		glutIdleFunc(idleFunc);
-		RealtimeMode = true;
+		optRealTimeMode = true;
 	} else
 #endif
 	{
 		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-		RealtimeMode = false;
+		optRealTimeMode = false;
 	}
 
 	glMatrixMode(GL_PROJECTION);

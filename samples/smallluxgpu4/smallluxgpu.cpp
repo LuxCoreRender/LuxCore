@@ -34,6 +34,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/device.h"
 #include "luxrays/utils/ocl.h"
 
@@ -49,11 +50,21 @@ using namespace slg;
 
 RenderSession *session = NULL;
 
+//------------------------------------------------------------------------------
+// Global options
+//------------------------------------------------------------------------------
+
 // Mouse "grab" mode. This is the natural way cameras are usually manipulated
 // The flag is off by default but can be turned on by using the -m switch
+bool optMouseGrabMode = false;
+bool optUseLuxVRName = false;
+bool optOSDPrintHelp = false;
+bool optRealTimeMode = false;
+float optMoveScale = 1.f;
+float optMoveStep = .5f;
+float optRotateStep = 4.f;
 
-bool mouseGrabMode = false;
-bool useLuxVRName = false;
+//------------------------------------------------------------------------------
 
 void LuxRaysDebugHandler(const char *msg) {
 	cerr << "[LuxRays] " << msg << endl;
@@ -64,7 +75,7 @@ void SDLDebugHandler(const char *msg) {
 }
 
 void SLGDebugHandler(const char *msg) {
-	if (useLuxVRName)
+	if (optUseLuxVRName)
 		cerr << "[LuxVR] " << msg << endl;
 	else
 		cerr << "[SLG] " << msg << endl;
@@ -350,6 +361,14 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 	return EXIT_SUCCESS;
 }
 
+void UpdateMoveStep() {
+	const BBox &worldBBox = session->renderConfig->scene->dataSet->GetBBox();
+	int maxExtent = worldBBox.MaximumExtent();
+
+	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
+	optMoveStep = optMoveScale * worldSize / 50.f;
+}
+
 int main(int argc, char *argv[]) {
 #if defined(__GNUC__) && !defined(__CYGWIN__)
 	set_terminate(SLGTerminate);
@@ -407,7 +426,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'T') telnetServerEnabled = true;
 
-				else if (argv[i][1] == 'm') mouseGrabMode = true;
+				else if (argv[i][1] == 'm') optMouseGrabMode = true;
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);
@@ -416,7 +435,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
-				else if (argv[i][1] == 'R') useLuxVRName = true;
+				else if (argv[i][1] == 'R') optUseLuxVRName = true;
 
 				else {
 					SLG_LOG("Invalid option: " << argv[i]);
@@ -479,6 +498,7 @@ int main(int argc, char *argv[]) {
 
 			// Start the rendering
 			session->Start();
+			UpdateMoveStep();
 
 			if (telnetServerEnabled) {
 				TelnetServer telnetServer(18081, session);

@@ -28,8 +28,8 @@
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
 //  PARAM_MAX_PATH_DEPTH
-//  PARAM_MAX_RR_DEPTH
-//  PARAM_MAX_RR_CAP
+//  PARAM_RR_DEPTH
+//  PARAM_RR_CAP
 //  PARAM_HAS_IMAGEMAPS
 //  PARAM_HAS_PASSTHROUGH
 //  PARAM_USE_PIXEL_ATOMICS
@@ -226,6 +226,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 //------------------------------------------------------------------------------
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
+
+float RussianRouletteProb(const float3 color) {
+	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
+}
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global GPUTask *tasks,
@@ -550,7 +554,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
 
 					// Russian Roulette
-					bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? fmax(Spectrum_Filter(bsdfEval), PARAM_RR_CAP) : 1.f;
+					bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
 
 					// MIS between direct light sampling and BSDF sampling
 					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
@@ -597,7 +601,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const bool lastSpecular = ((event & SPECULAR) != 0);
 
 			// Russian Roulette
-			const float rrProb = fmax(Spectrum_Filter(bsdfSample), PARAM_RR_CAP);
+			const float rrProb = RussianRouletteProb(bsdfSample);
 			const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !lastSpecular;
 			const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(depth, IDX_RR) < rrProb);
 
