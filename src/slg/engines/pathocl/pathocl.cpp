@@ -73,7 +73,8 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 
 	// Check if I have to disable image storage and set max. QBVH stack size
 	const bool forcedDisableImageStorage = (renderConfig->scene->GetAccelType() == 2);
-	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max", 24);
+	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max",
+			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
 	SLG_LOG("OpenCL Devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
 		SLG_LOG("[" << devs[i]->GetName() << "]");

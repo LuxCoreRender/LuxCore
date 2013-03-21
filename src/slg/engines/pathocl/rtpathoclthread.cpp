@@ -337,9 +337,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Apply Gaussian filter to the screen buffer
 				//--------------------------------------------------------------
 
-				// Base the amount of blur on the time since the last update (using a 5secs window)
+				// Base the amount of blur on the time since the last update (using a 3secs window)
 				const double timeSinceLastUpdate = WallClockTime() - lastEditTime;
-				const float weight = Lerp(Clamp<float>(timeSinceLastUpdate, 0.f, 5.f) / 5.f, 0.25f, 0.025f);
+				const float weight = Lerp(Clamp<float>(timeSinceLastUpdate, 0.f, 3.f) / 5.f, 0.25f, 0.025f);
 
 				applyBlurFilterXR1Kernel->setArg(2, weight);
 				applyBlurFilterYR1Kernel->setArg(2, weight);

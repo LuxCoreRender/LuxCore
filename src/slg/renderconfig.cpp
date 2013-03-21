@@ -22,6 +22,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "slg/renderconfig.h"
+#include "slg/renderengine.h"
 
 using namespace std;
 using namespace luxrays;
@@ -61,7 +62,10 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
 		SLG_LOG("  " << *i << " = " << cfg.GetString(*i, ""));
 
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", 100);
+	// RTPATHOCL has a different default screen.refresh.interval value
+	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.GetString("renderengine.type", "PATHOCL"));
+	const int interval = (renderEngineType == RTPATHOCL) ? 33 : 100;
+	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", interval);
 
 	if (scn) {
 		scene = scn;

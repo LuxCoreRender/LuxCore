@@ -22,6 +22,8 @@
 #ifndef _SLG_RENDERENGINE_H
 #define	_SLG_RENDERENGINE_H
 
+#include "luxrays/core/utils.h"
+
 #include "slg/slg.h"
 #include "slg/renderconfig.h"
 #include "slg/editaction.h"
@@ -93,6 +95,10 @@ public:
 	double GetRenderingTime() const { return elapsedTime; }
 
 	//--------------------------------------------------------------------------
+
+	static float RussianRouletteProb(const Spectrum &color, const float cap) {
+		return luxrays::Clamp(color.Filter(), cap, 1.f);
+	}
 
 	static RenderEngineType String2RenderEngineType(const std::string &type);
 	static const std::string RenderEngineType2String(const RenderEngineType type);
@@ -204,6 +210,8 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
+
+	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
 };
 
 //------------------------------------------------------------------------------

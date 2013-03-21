@@ -265,7 +265,7 @@ void LightCPURenderThread::RenderFunc() {
 
 				if (depth >= engine->rrDepth) {
 					// Russian Roulette
-					const float prob = Max(bsdfSample.Filter(), engine->rrImportanceCap);
+					const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
 					if (sampler->GetSample(sampleOffset + 4) < prob)
 						bsdfPdf *= prob;
 					else

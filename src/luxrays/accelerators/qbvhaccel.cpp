@@ -279,7 +279,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 			"] Disable forced for QBVH scene storage inside image");
 		useImage = false;
 	} else if (!deviceDesc->HasImageSupport() ||
-		(deviceDesc->GetType() != DEVICE_TYPE_OPENCL_GPU)) {
+		(!(deviceDesc->GetType() & DEVICE_TYPE_OPENCL_GPU))) {
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 			"] OpenCL image support is not available");
 		useImage = false;
