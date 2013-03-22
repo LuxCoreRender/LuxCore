@@ -39,6 +39,8 @@ typedef struct {
 	luxrays::UV uv;
 	luxrays::Normal geometryN;
 	luxrays::Normal shadeN;
+	luxrays::Spectrum color;
+	float alpha;
 	float passThroughEvent;
 	bool fromLight;
 } HitPoint;
