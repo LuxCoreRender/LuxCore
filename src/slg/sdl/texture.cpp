@@ -1403,3 +1403,45 @@ Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// HitPointColor texture
+//------------------------------------------------------------------------------
+
+float HitPointColorTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return hitPoint.color.Y();
+}
+
+Spectrum HitPointColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return hitPoint.color;
+}
+
+Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "hitpointcolor");
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// HitPointAlpha texture
+//------------------------------------------------------------------------------
+
+float HitPointAlphaTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return hitPoint.alpha;
+}
+
+Spectrum HitPointAlphaTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(hitPoint.alpha);
+}
+
+Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "hitpointalpha");
+
+	return props;
+}

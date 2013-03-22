@@ -819,6 +819,10 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 			throw std::runtime_error("Empty Band texture: " + texName);
 
 		return new BandTexture(amtTex, offsets, values);
+	} else if (texType == "hitpointcolor") {
+		return new HitPointColorTexture();
+	} else if (texType == "hitpointalpha") {
+		return new HitPointAlphaTexture();
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

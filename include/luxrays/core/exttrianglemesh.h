@@ -132,15 +132,21 @@ public:
 	}
 
 	Spectrum InterpolateTriColor(const unsigned int index, const float b1, const float b2) const {
-		const Triangle &tri = tris[index];
-		const float b0 = 1.f - b1 - b2;
-		return b0 * cols[tri.v[0]] + b1 * cols[tri.v[1]] + b2 * cols[tri.v[2]];
+		if (cols) {
+			const Triangle &tri = tris[index];
+			const float b0 = 1.f - b1 - b2;
+			return b0 * cols[tri.v[0]] + b1 * cols[tri.v[1]] + b2 * cols[tri.v[2]];
+		} else
+			return Spectrum(1.f);
 	}
-	
+
 	float InterpolateTriAlpha(const unsigned int index, const float b1, const float b2) const {
-		const Triangle &tri = tris[index];
-		const float b0 = 1.f - b1 - b2;
-		return b0 * alphas[tri.v[0]] + b1 * alphas[tri.v[1]] + b2 * alphas[tri.v[2]];
+		if (alphas) {
+			const Triangle &tri = tris[index];
+			const float b0 = 1.f - b1 - b2;
+			return b0 * alphas[tri.v[0]] + b1 * alphas[tri.v[1]] + b2 * alphas[tri.v[2]];
+		} else
+			return 1.f;
 	}
 
 	void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {

@@ -50,7 +50,7 @@ using luxrays::ocl::Spectrum;
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
+	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
 	WRINKLED, UV_TEX, BAND_TEX
@@ -820,6 +820,50 @@ private:
 	const Texture *amount;
 	const std::vector<float> offsets;
 	const std::vector<luxrays::Spectrum> values; 
+};
+
+//------------------------------------------------------------------------------
+// HitPointColor texture
+//------------------------------------------------------------------------------
+
+class HitPointColorTexture : public Texture {
+public:
+	HitPointColorTexture() { }
+	virtual ~HitPointColorTexture() { }
+
+	virtual TextureType GetType() const { return HITPOINTCOLOR; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+	}
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+};
+
+//------------------------------------------------------------------------------
+// HitPointAlpha texture
+//------------------------------------------------------------------------------
+
+class HitPointAlphaTexture : public Texture {
+public:
+	HitPointAlphaTexture() { }
+	virtual ~HitPointAlphaTexture() { }
+
+	virtual TextureType GetType() const { return HITPOINTALPHA; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+	}
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
 
 }
