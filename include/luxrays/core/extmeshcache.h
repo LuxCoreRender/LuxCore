@@ -26,6 +26,7 @@
 #include <vector>
 #include <map>
 
+#include "luxrays/core/spectrum.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
@@ -42,6 +43,7 @@ public:
 	void DefineExtMesh(const std::string &fileName,
 		const long plyNbVerts, const long plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
+		luxrays::Spectrum *cols, float *alphas,
 		const bool usePlyNormals);
 	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals);

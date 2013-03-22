@@ -38,7 +38,7 @@ namespace slg {
 
 typedef struct {
 	BSDF bsdf;
-	Spectrum throughput;
+	luxrays::Spectrum throughput;
 	int depth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
@@ -75,12 +75,12 @@ protected:
 	void DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
-		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 	void DirectHitLight(const bool finiteLightSource,
-		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
-	void DirectHitLight(const Spectrum &lightRadiance,
+		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
+	void DirectHitLight(const luxrays::Spectrum &lightRadiance,
 		const float directPdfA, const float emissionPdfW,
-		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
 	void ConnectVertices(const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
 		SampleResult *eyeSampleResult, const float u0) const;

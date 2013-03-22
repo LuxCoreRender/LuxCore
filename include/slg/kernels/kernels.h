@@ -38,8 +38,6 @@ extern std::string KernelSource_camera_funcs;
 extern std::string KernelSource_mc_funcs;
 extern std::string KernelSource_bsdf_types;
 extern std::string KernelSource_bsdf_funcs;
-extern std::string KernelSource_spectrum_types;
-extern std::string KernelSource_spectrum_funcs;
 extern std::string KernelSource_material_types;
 extern std::string KernelSource_material_funcs;
 extern std::string KernelSource_texture_types;

@@ -24,7 +24,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "slg/core/spectrum.h"
+#include "luxrays/core/spectrum.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/mapping.h"
@@ -56,13 +56,13 @@ public:
 	virtual bool IsEnvironmental() const { return false; }
 
 	// Emits particle from the light
-	virtual Spectrum Emit(const Scene &scene,
+	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		luxrays::Point *pos, luxrays::Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
 
 	// Illuminates a luxrays::Point in the scene
-    virtual Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
@@ -81,31 +81,31 @@ public:
 
 	virtual bool IsEnvironmental() const { return true; }
 
-	void SetGain(const Spectrum &g) {
+	void SetGain(const luxrays::Spectrum &g) {
 		gain = g;
 	}
 
-	Spectrum GetGain() const {
+	luxrays::Spectrum GetGain() const {
 		return gain;
 	}
 
-	virtual Spectrum Emit(const Scene &scene,
+	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		luxrays::Point *pos, luxrays::Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-    virtual Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 
 protected:
-	Spectrum gain;
+	luxrays::Spectrum gain;
 };
 
 //------------------------------------------------------------------------------
@@ -122,7 +122,7 @@ public:
 	const ImageMap *GetImageMap() const { return imageMap; }
 	UVMapping2D *GetUVMapping() { return &mapping; }
 
-	virtual Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
@@ -166,13 +166,13 @@ public:
 		}
 	}
 
-	virtual Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	void GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const;
+	void GetSkySpectralRadiance(const float theta, const float phi, luxrays::Spectrum * const spect) const;
 
 	luxrays::Vector sundir;
 	float turbidity;
@@ -200,13 +200,13 @@ public:
 	const luxrays::Vector &GetDir() const { return sunDir; }
 	void SetDir(const luxrays::Vector &dir) { sunDir = Normalize(dir); }
 
-	void SetGain(const Spectrum &g);
-	const Spectrum GetGain() const { return gain; }
+	void SetGain(const luxrays::Spectrum &g);
+	const luxrays::Spectrum GetGain() const { return gain; }
 
 	void GetInitData(luxrays::Vector *xData, luxrays::Vector *yData,
 		float *thetaSData, float *phiSData, float *VData,
 		float *cosThetaMaxData, float *sin2ThetaMaxData,
-		Spectrum *suncolorData) const {
+		luxrays::Spectrum *suncolorData) const {
 		*xData = x;
 		*yData = y;
 		*thetaSData = thetaS;
@@ -217,31 +217,31 @@ public:
 		*suncolorData = sunColor;
 	}
 
-	virtual Spectrum Emit(const Scene &scene,
+	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		luxrays::Point *pos, luxrays::Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+	virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+	luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
 	luxrays::Properties ToProperties() const;
 
 private:
 	luxrays::Vector sunDir;
-	Spectrum gain;
+	luxrays::Spectrum gain;
 	float turbidity;
 	float relSize;
 	// XY Vectors for cone sampling
 	luxrays::Vector x, y;
 	float thetaS, phiS, V;
 	float cosThetaMax, sin2ThetaMax;
-	Spectrum sunColor;
+	luxrays::Spectrum sunColor;
 };
 
 //------------------------------------------------------------------------------
@@ -265,17 +265,17 @@ public:
 	unsigned int GetTriIndex() const { return triIndex; }
 	float GetArea() const { return area; }
 
-	virtual Spectrum Emit(const Scene &scene,
+	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		luxrays::Point *pos, luxrays::Vector *dir,
 		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+	virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	Spectrum GetRadiance(const HitPoint &hitPoint,
+	luxrays::Spectrum GetRadiance(const HitPoint &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 

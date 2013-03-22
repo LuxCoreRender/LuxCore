@@ -37,7 +37,7 @@ namespace slg {
 
 typedef struct {
 	BSDF bsdf;
-	Spectrum throughput;
+	luxrays::Spectrum throughput;
 	int depth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
@@ -53,9 +53,9 @@ typedef struct {
 	u_int lightPathVertexConnections;
 	float screenX, screenY;
 	float alpha;
-	Spectrum radiance;
+	luxrays::Spectrum radiance;
 	vector<float> sampleValue; // Used for pass-through sampling
-	vector<Spectrum> sampleRadiance;
+	vector<luxrays::Spectrum> sampleRadiance;
 } BiDirEyeSampleResult;
 
 class BiDirState : public HybridRenderState {
@@ -73,12 +73,12 @@ protected:
 			const float u3, const float u4,
 			const PathVertex &eyeVertex);
 	void DirectHitLight(HybridRenderThread *renderThread,
-			const Spectrum &lightRadiance,
+			const luxrays::Spectrum &lightRadiance,
 			const float directPdfA, const float emissionPdfW,
-			const PathVertex &eyeVertex, Spectrum *radiance) const;
+			const PathVertex &eyeVertex, luxrays::Spectrum *radiance) const;
 	void DirectHitLight(HybridRenderThread *renderThread,
 			const bool finiteLightSource, const PathVertex &eyeVertex,
-			Spectrum *radiance) const;
+			luxrays::Spectrum *radiance) const;
 
 	bool ConnectToEye(HybridRenderThread *renderThread,
 			const PathVertex &lightVertex, const float u0,
@@ -105,7 +105,7 @@ protected:
 private:
 	bool ValidResult(BiDirHybridRenderThread *renderThread,
 		const luxrays::Ray *ray, const luxrays::RayHit *rayHit,
-		const float u0, Spectrum *radiance);
+		const float u0, luxrays::Spectrum *radiance);
 };
 
 class BiDirHybridRenderThread : public HybridRenderThread {

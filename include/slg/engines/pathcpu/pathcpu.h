@@ -51,15 +51,15 @@ private:
 
 	void DirectLightSampling(const float u0, const float u1,
 			const float u2, const float u3, const float u4,
-			const Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
-			Spectrum *radiance);
+			const luxrays::Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
+			luxrays::Spectrum *radiance);
 
 	void DirectHitFiniteLight(const bool lastSpecular,
-			const Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
-			const float lastPdfW, Spectrum *radiance);
+			const luxrays::Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
+			const float lastPdfW, luxrays::Spectrum *radiance);
 
-	void DirectHitInfiniteLight(const bool lastSpecular, const Spectrum &pathThrouput,
-			const luxrays::Vector &eyeDir, const float lastPdfW, Spectrum *radiance);
+	void DirectHitInfiniteLight(const bool lastSpecular, const luxrays::Spectrum &pathThrouput,
+			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
 };
 
 class PathCPURenderEngine : public CPURenderEngine {

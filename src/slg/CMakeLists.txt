@@ -92,8 +92,6 @@ endif(DOXYGEN_FOUND)
 ###########################################################################
 
 set(SLG_KERNELS
-	${LuxRays_SOURCE_DIR}/include/slg/core/spectrum_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/core/spectrum_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/core/mc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_funcs.cl
@@ -178,8 +176,6 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mc_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/spectrum_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/spectrum_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
