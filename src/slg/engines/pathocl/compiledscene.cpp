@@ -85,6 +85,8 @@ void CompiledScene::CompileGeometry() {
 	verts.resize(0);
 	normals.resize(0);
 	uvs.resize(0);
+	cols.resize(0);
+	alphas.resize(0);
 	tris.resize(0);
 	meshDescs.resize(0);
 
@@ -104,8 +106,8 @@ void CompiledScene::CompileGeometry() {
 	newMeshDesc.colsOffset = 0;
 	newMeshDesc.alphasOffset = 0;
 	newMeshDesc.firstTriangleOffset = 0;
-	memcpy(&newMeshDesc.trans.m, Matrix4x4().m, sizeof(float[4][4]));
-	memcpy(&newMeshDesc.trans.mInv, Matrix4x4().m, sizeof(float[4][4]));
+	memcpy(&newMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+	memcpy(&newMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
 
 	slg::ocl::Mesh currentMeshDesc;
 	for (u_int i = 0; i < objCount; ++i) {
@@ -128,6 +130,10 @@ void CompiledScene::CompileGeometry() {
 					newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
 				if (mesh->HasUVs())
 					newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
+				if (mesh->HasColors())
+					newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
+				if (mesh->HasAlphas())
+					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
 
 				newMeshDesc.firstTriangleOffset += mesh->GetTotalTriangleCount();
 
@@ -156,6 +162,10 @@ void CompiledScene::CompileGeometry() {
 				newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
 			if (mesh->HasUVs())
 				newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
+			if (mesh->HasColors())
+				newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
+			if (mesh->HasAlphas())
+				newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
 
 			newMeshDesc.firstTriangleOffset += mesh->GetTotalTriangleCount();
 
@@ -168,9 +178,9 @@ void CompiledScene::CompileGeometry() {
 		if (!isExistingInstance) {
 			assert (mesh->GetType() == TYPE_EXT_TRIANGLE);
 
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 			// Translate mesh normals
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			if (mesh->HasNormals()) {
 				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
@@ -178,9 +188,9 @@ void CompiledScene::CompileGeometry() {
 			} else
 				currentMeshDesc.normalsOffset = NULL_INDEX;
 
-			//----------------------------------------------------------------------
+			//------------------------------------------------------------------
 			// Translate vertex uvs
-			//----------------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			if (mesh->HasUVs()) {
 				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
@@ -188,16 +198,36 @@ void CompiledScene::CompileGeometry() {
 			} else
 				currentMeshDesc.uvsOffset = NULL_INDEX;
 
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
+			// Translate vertex colors
+			//------------------------------------------------------------------
+
+			if (mesh->HasColors()) {
+				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
+					cols.push_back(mesh->GetColor(j));
+			} else
+				currentMeshDesc.colsOffset = NULL_INDEX;
+
+			//------------------------------------------------------------------
+			// Translate vertex alphas
+			//------------------------------------------------------------------
+
+			if (mesh->HasAlphas()) {
+				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
+					alphas.push_back(mesh->GetAlpha(j));
+			} else
+				currentMeshDesc.alphasOffset = NULL_INDEX;
+
+			//------------------------------------------------------------------
 			// Translate mesh vertices
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
 				verts.push_back(mesh->GetVertex(j));
 
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 			// Translate mesh indices
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			Triangle *mtris = mesh->GetTriangles();
 			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j)

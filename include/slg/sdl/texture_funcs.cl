@@ -1147,6 +1147,53 @@ void BandTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitP
 #endif
 
 //------------------------------------------------------------------------------
+// HitPointColor texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_HITPOINTCOLOR)
+
+void HitPointColorTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+}
+
+void HitPointColorTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = VLOAD3F(&hitPoint->color.r);
+}
+
+void HitPointColorTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = 0.f;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// HitPointAlpha texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_HITPOINTALPHA)
+
+void HitPointAlphaTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = hitPoint->alpha;
+}
+
+void HitPointAlphaTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float alpha = hitPoint->alpha;
+	texValues[(*texValuesSize)++] = (float3)(alpha, alpha, alpha);
+}
+
+void HitPointAlphaTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = 0.f;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
 
@@ -1212,6 +1259,12 @@ uint Texture_AddSubTexture(__global Texture *texture,
 		case BAND_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->band.amountTexIndex];
 			return 1;
+#endif
+#if defined (PARAM_ENABLE_TEX_HITPOINTALPHA)
+		case HITPOINTALPHA:
+#endif
+#if defined (PARAM_ENABLE_TEX_HITPOINTCOLOR)
+		case HITPOINTCOLOR:
 #endif
 #if defined (PARAM_ENABLE_TEX_UV)
 		case UV_TEX:
@@ -1339,6 +1392,16 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_TEX_BAND)
 		case BAND_TEX:
 			BandTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+		case HITPOINTCOLOR:
+			HitPointColorTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+		case HITPOINTALPHA:
+			HitPointAlphaTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1494,6 +1557,16 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			BandTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+		case HITPOINTCOLOR:
+			HitPointColorTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+		case HITPOINTALPHA:
+			HitPointAlphaTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1644,6 +1717,16 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_TEX_BAND)
 		case BAND_TEX:
 			BandTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+		case HITPOINTCOLOR:
+			HitPointColorTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+		case HITPOINTALPHA:
+			HitPointAlphaTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:

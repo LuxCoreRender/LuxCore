@@ -136,6 +136,8 @@ protected:
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *uvsBuff;
+	cl::Buffer *colsBuff;
+	cl::Buffer *alphasBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *triLightDefsBuff;
