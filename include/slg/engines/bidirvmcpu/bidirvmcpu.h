@@ -42,15 +42,15 @@ public:
 	void Build(vector<vector<PathVertexVM> > &pathsVertices, const float radius);
 
 	void Process(const BiDirVMCPURenderThread *thread,
-		const PathVertexVM &eyeVertex, Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
 private:
 	void Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, const int i0, const int i1,
-		Spectrum *radiance) const;
+		luxrays::Spectrum *radiance) const;
 	void Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, const PathVertexVM *lightVertex,
-		Spectrum *radiance) const;
+		luxrays::Spectrum *radiance) const;
 
 	void HashRange(const u_int i, int *i0, int *i1) const {
 		if (i == 0) {

@@ -22,7 +22,7 @@
 #ifndef _SLG_FILTER_H
 #define	_SLG_FILTER_H
 
-#include "slg/core/spectrum.h"
+#include "luxrays/core/spectrum.h"
 #include "luxrays/core/utils.h"
 
 namespace slg {
@@ -32,6 +32,7 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 namespace ocl {
+using luxrays::ocl::Spectrum;
 #include "slg/film/filter_types.cl"
 } 
 

@@ -25,7 +25,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "slg/core/spectrum.h"
+#include "luxrays/core/spectrum.h"
 #include "slg/sdl/bsdfevents.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/light.h"
@@ -58,15 +58,15 @@ public:
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
 
-	Spectrum GetPassThroughTransparency() const;
+	luxrays::Spectrum GetPassThroughTransparency() const;
 
-	Spectrum Evaluate(const luxrays::Vector &generatedDir,
+	luxrays::Spectrum Evaluate(const luxrays::Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	Spectrum Sample(luxrays::Vector *sampledDir,
+	luxrays::Spectrum Sample(luxrays::Vector *sampledDir,
 		const float u0, const float u1,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
-	Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
+	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
 	HitPoint hitPoint;
 

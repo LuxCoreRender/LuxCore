@@ -93,6 +93,8 @@ endif(DOXYGEN_FOUND)
 
 set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/spectrum_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/spectrum_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvh.cl
@@ -177,6 +179,8 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bbox_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/spectrum_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/spectrum_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/uv_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/utils_funcs_kernel.cpp
 )

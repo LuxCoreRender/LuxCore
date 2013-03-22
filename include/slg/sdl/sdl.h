@@ -23,7 +23,7 @@
 #define	_SLG_SDL_H
 
 #include "luxrays/luxrays.h"
-#include "slg/core/spectrum.h"
+#include "luxrays/core/spectrum.h"
 
 namespace slg {
 

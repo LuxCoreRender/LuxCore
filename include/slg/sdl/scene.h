@@ -54,7 +54,7 @@ public:
 	float PickLightPdf() const;
 	bool Intersect(luxrays::IntersectionDevice *device, const bool fromLight,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
-		BSDF *bsdf, Spectrum *connectionThroughput) const;
+		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 
 	void UpdateDataSet(luxrays::Context *ctx);
 
@@ -86,8 +86,9 @@ public:
 	void DefineObject(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
+		luxrays::Spectrum *cols, float *alphas,
 		const bool usePlyNormals) {
-		extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
+		extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
 	}
 
 	void AddObject(const std::string &objName, const std::string &meshName, const std::string &propsString);

@@ -32,7 +32,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/uv.h"
-#include "slg/core/spectrum.h"
+#include "luxrays/core/spectrum.h"
 #include "slg/sdl/mapping.h"
 #include "slg/sdl/hitpoint.h"
 
@@ -40,6 +40,7 @@ namespace slg {
 
 // OpenCL data types
 namespace ocl {
+using luxrays::ocl::Spectrum;
 #include "slg/sdl/texture_types.cl"
 }
 
@@ -66,7 +67,7 @@ public:
 	virtual TextureType GetType() const = 0;
 
 	virtual float GetFloatValue(const HitPoint &hitPoint) const = 0;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const = 0;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const = 0;
 
 	// Used for bump mapping support
 	virtual luxrays::UV GetDuDv() const = 0;
@@ -121,7 +122,7 @@ public:
 
 	virtual TextureType GetType() const { return CONST_FLOAT; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return value; }
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return Spectrum(value); }
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return luxrays::Spectrum(value); }
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
 
@@ -135,21 +136,21 @@ private:
 
 class ConstFloat3Texture : public Texture {
 public:
-	ConstFloat3Texture(const Spectrum &c) : color(c) { }
+	ConstFloat3Texture(const luxrays::Spectrum &c) : color(c) { }
 	virtual ~ConstFloat3Texture() { }
 
 	virtual TextureType GetType() const { return CONST_FLOAT3; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return color.Y(); }
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
 
-	const Spectrum &GetColor() const { return color; };
+	const luxrays::Spectrum &GetColor() const { return color; };
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	Spectrum color;
+	luxrays::Spectrum color;
 };
 
 //------------------------------------------------------------------------------
@@ -189,7 +190,7 @@ public:
 				ds * dt * GetFloatTexel(s0 + 1, t0 + 1);
 	}
 
-	Spectrum GetSpectrum(const luxrays::UV &uv) const {
+	luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const {
 		const float s = uv.u * width - .5f;
 		const float t = uv.v * height - .5f;
 
@@ -241,11 +242,11 @@ private:
 		else {
 			// channelCount = (3 or 4)
 			const float *pixel = &pixels[index * channelCount];
-			return Spectrum(pixel[0], pixel[1], pixel[2]).Y();
+			return luxrays::Spectrum(pixel[0], pixel[1], pixel[2]).Y();
 		}
 	}
 
-	Spectrum GetSpectrumTexel(const int s, const int t) const {
+	luxrays::Spectrum GetSpectrumTexel(const int s, const int t) const {
 		const u_int u = luxrays::Mod<int>(s, width);
 		const u_int v = luxrays::Mod<int>(t, height);
 
@@ -254,11 +255,11 @@ private:
 		assert (index < width * height);
 
 		if (channelCount == 1) 
-			return Spectrum(pixels[index]);
+			return luxrays::Spectrum(pixels[index]);
 		else {
 			// channelCount = (3 or 4)
 			const float *pixel = &pixels[index * channelCount];
-			return Spectrum(pixel[0], pixel[1], pixel[2]);
+			return luxrays::Spectrum(pixel[0], pixel[1], pixel[2]);
 		}
 	}
 
@@ -306,7 +307,7 @@ public:
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const { return DuDv; }
 
@@ -334,7 +335,7 @@ public:
 
 	virtual TextureType GetType() const { return SCALE_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -368,7 +369,7 @@ public:
 
 	virtual TextureType GetType() const { return FRESNEL_APPROX_N; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -393,7 +394,7 @@ public:
 
 	virtual TextureType GetType() const { return FRESNEL_APPROX_K; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -422,7 +423,7 @@ public:
 
 	virtual TextureType GetType() const { return CHECKERBOARD2D; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -452,7 +453,7 @@ public:
 
 	virtual TextureType GetType() const { return CHECKERBOARD3D; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -487,7 +488,7 @@ public:
 
 	virtual TextureType GetType() const { return MIX_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -523,7 +524,7 @@ public:
 
 	virtual TextureType GetType() const { return FBM_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -552,7 +553,7 @@ public:
 
 	virtual TextureType GetType() const { return MARBLE; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -582,7 +583,7 @@ public:
 
 	virtual TextureType GetType() const { return DOTS; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -623,7 +624,7 @@ public:
 
 	virtual TextureType GetType() const { return BRICK; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -692,7 +693,7 @@ public:
 
 	virtual TextureType GetType() const { return ADD_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -724,7 +725,7 @@ public:
 
 	virtual TextureType GetType() const { return WINDY; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -748,7 +749,7 @@ public:
 
 	virtual TextureType GetType() const { return WRINKLED; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -775,7 +776,7 @@ public:
 
 	virtual TextureType GetType() const { return UV_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -793,13 +794,13 @@ private:
 
 class BandTexture : public Texture {
 public:
-	BandTexture(const Texture *amnt, const std::vector<float> &os, const std::vector<Spectrum> &vs) :
+	BandTexture(const Texture *amnt, const std::vector<float> &os, const std::vector<luxrays::Spectrum> &vs) :
 		amount(amnt), offsets(os), values(vs) { }
 	virtual ~BandTexture() { }
 
 	virtual TextureType GetType() const { return BAND_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -811,14 +812,14 @@ public:
 
 	const Texture *GetAmountTexture() const { return amount; }
 	const std::vector<float> &GetOffsets() const { return offsets; }
-	const std::vector<Spectrum> &GetValues() const { return values; }
+	const std::vector<luxrays::Spectrum> &GetValues() const { return values; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const Texture *amount;
 	const std::vector<float> offsets;
-	const std::vector<Spectrum> values; 
+	const std::vector<luxrays::Spectrum> values; 
 };
 
 }

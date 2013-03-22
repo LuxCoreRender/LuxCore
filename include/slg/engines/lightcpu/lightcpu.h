@@ -50,7 +50,7 @@ private:
 	void RenderFunc();
 
 	void ConnectToEye(const float u0,
-			const BSDF &bsdf, const luxrays::Point &lensPoint, const Spectrum &flux,
+			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
 			vector<SampleResult> &sampleResults);
 	void TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults);
 };

@@ -46,12 +46,12 @@ namespace ocl {
 typedef struct {
 	FilmBufferType type;
 	float screenX, screenY;
-	Spectrum radiance;
+	luxrays::Spectrum radiance;
 	float alpha;
 } SampleResult;
 
 inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const FilmBufferType type,
-	const float screenX, const float screenY, const Spectrum &radiance, const float alpha) {
+	const float screenX, const float screenY, const luxrays::Spectrum &radiance, const float alpha) {
 	SampleResult sr;
 	sr.type = type;
 	sr.screenX = screenX;

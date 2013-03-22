@@ -96,7 +96,7 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	static float RussianRouletteProb(const Spectrum &color, const float cap) {
+	static float RussianRouletteProb(const luxrays::Spectrum &color, const float cap) {
 		return luxrays::Clamp(color.Filter(), cap, 1.f);
 	}
 
