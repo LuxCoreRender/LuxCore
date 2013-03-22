@@ -65,6 +65,8 @@ public:
 	vector<luxrays::Point> verts;
 	vector<luxrays::Normal> normals;
 	vector<luxrays::UV> uvs;
+	vector<luxrays::Spectrum> cols;
+	vector<float> alphas;
 	vector<luxrays::Triangle> tris;
 	vector<luxrays::ocl::Mesh> meshDescs;
 	const luxrays::TriangleMeshID *meshIDs;

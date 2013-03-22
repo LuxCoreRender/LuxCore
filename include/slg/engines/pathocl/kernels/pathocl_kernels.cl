@@ -99,6 +99,8 @@
 // (optional)
 //  PARAM_HAS_NORMALS_BUFFER
 //  PARAM_HAS_UVS_BUFFER
+//  PARAM_HAS_COLS_BUFFER
+//  PARAM_HAS_ALPHAS_BUFFER
 
 //------------------------------------------------------------------------------
 // Init Kernel
@@ -254,10 +256,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_UVS_BUFFER)
 		__global UV *vertUVs,
 #endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+#if defined(PARAM_HAS_COLS_BUFFER)
 		__global Spectrum *vertCols,
 #endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
 		__global float *vertAlphas,
 #endif
 		__global Triangle *triangles,
@@ -333,6 +335,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 					vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+					vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+					vertAlphas,
 #endif
 					triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -468,6 +476,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 					vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+					vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+					vertAlphas,
 #endif
 					triangles, ray, rayHit,
 					task->passThroughState.passThroughEvent

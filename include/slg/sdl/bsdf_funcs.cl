@@ -37,11 +37,11 @@ void BSDF_Init(
 #if defined(PARAM_HAS_UVS_BUFFER)
 		__global UV *vertUVs,
 #endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+#if defined(PARAM_HAS_COLS_BUFFER)
 		__global Spectrum *vertCols,
 #endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-		__global float *vertAlpha,
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
 #endif
 		__global Triangle *triangles,
 		__global Ray *ray,
@@ -109,15 +109,22 @@ void BSDF_Init(
 	} else
 #endif
 		hitPointUV = 0.f;
+	VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
 
 	//--------------------------------------------------------------------------
 	// Get color value
 	//--------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
-	// TODO
-	__global Spectrum *iVertCols = &vertCols[meshDesc->colsOffset];
-	const float3 hitPointColor = Mesh_InterpolateColor(iVertCols, iTriangles, triangleID, b1, b2);
+	float3 hitPointColor;
+#if defined(PARAM_HAS_COLS_BUFFER)
+	if (meshDesc->colsOffset != NULL_INDEX) {
+		__global Spectrum *iVertCols = &vertCols[meshDesc->colsOffset];
+		hitPointColor = Mesh_InterpolateColor(iVertCols, iTriangles, triangleID, b1, b2);
+	} else
+#endif
+		hitPointColor = WHITE;
+	VSTORE3F(hitPointColor, &bsdf->hitPoint.color.r);
 #endif
 
 	//--------------------------------------------------------------------------
@@ -125,16 +132,14 @@ void BSDF_Init(
 	//--------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	// TODO
-	__global float *iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
-	const float3 hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleID, b1, b2);
+	float hitPointAlpha;
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+	if (meshDesc->colsOffset != NULL_INDEX) {
+		__global float *iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
+		hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleID, b1, b2);
+	} else
 #endif
-
-	VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
-	VSTORE2F(hitPointColor, &bsdf->hitPoint.color.r);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+		hitPointAlpha = 1.f;
 	bsdf->hitPoint.alpha = hitPointAlpha;
 #endif
 

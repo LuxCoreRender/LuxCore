@@ -92,6 +92,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	vertsBuff = NULL;
 	normalsBuff = NULL;
 	uvsBuff = NULL;
+	colsBuff = NULL;
+	alphasBuff = NULL;
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
 	triLightDefsBuff = NULL;
@@ -276,6 +278,18 @@ void PathOCLRenderThread::InitGeometry() {
 	else
 		FreeOCLBuffer(&uvsBuff);
 
+	if (cscene->cols.size() > 0)
+		AllocOCLBufferRO(&colsBuff, &cscene->cols[0],
+			sizeof(Spectrum) * cscene->cols.size(), "Colors");
+	else
+		FreeOCLBuffer(&colsBuff);
+
+	if (cscene->alphas.size() > 0)
+		AllocOCLBufferRO(&alphasBuff, &cscene->alphas[0],
+			sizeof(float) * cscene->alphas.size(), "Alphas");
+	else
+		FreeOCLBuffer(&alphasBuff);
+
 	AllocOCLBufferRO(&vertsBuff, &cscene->verts[0],
 		sizeof(Point) * cscene->verts.size(), "Vertices");
 
@@ -413,6 +427,10 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_NORMALS_BUFFER";
 	if (uvsBuff)
 		ss << " -D PARAM_HAS_UVS_BUFFER";
+	if (colsBuff)
+		ss << " -D PARAM_HAS_COLS_BUFFER";
+	if (alphasBuff)
+		ss << " -D PARAM_HAS_ALPHAS_BUFFER";
 
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
@@ -970,6 +988,10 @@ void PathOCLRenderThread::InitRender() {
 
 	// Add PathStateBase.BSDF.HitPoint memory size
 	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR))
+		hitPointSize += sizeof(Spectrum);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
+		hitPointSize += sizeof(float);
 	if (hasPassThrough)
 		hitPointSize += sizeof(float);
 
@@ -1111,6 +1133,10 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *normalsBuff);
 	if (uvsBuff)
 		advancePathsKernel->setArg(argIndex++, *uvsBuff);
+	if (colsBuff)
+		advancePathsKernel->setArg(argIndex++, *colsBuff);
+	if (alphasBuff)
+		advancePathsKernel->setArg(argIndex++, *alphasBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
 	if (infiniteLightBuff)
@@ -1203,6 +1229,8 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&meshMatsBuff);
 	FreeOCLBuffer(&normalsBuff);
 	FreeOCLBuffer(&uvsBuff);
+	FreeOCLBuffer(&colsBuff);
+	FreeOCLBuffer(&alphasBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);
 	FreeOCLBuffer(&infiniteLightBuff);
