@@ -36,7 +36,7 @@ std::string KernelSource_trianglemesh_types =
 "	unsigned int trisOffset;\n"
 "\n"
 "	// Information used by MQBVH\n"
-"	uint firstTriangleOffset;\n"
+"	unsigned int firstTriangleOffset;\n"
 "	Transform trans;\n"
 "} Mesh;\n"
 ; } }
