@@ -128,7 +128,6 @@ protected:
 	cl::Buffer *materialsBuff;
 	cl::Buffer *texturesBuff;
 	cl::Buffer *meshIDBuff;
-	cl::Buffer *triangleIDBuff;
 	cl::Buffer *meshDescsBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;

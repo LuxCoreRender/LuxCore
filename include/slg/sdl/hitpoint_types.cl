@@ -32,6 +32,14 @@ typedef struct {
 	UV uv;
 	Normal geometryN;
 	Normal shadeN;
+
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+	Spectrum color;
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+	float alpha;
+#endif
+
 #if defined(PARAM_HAS_PASSTHROUGH)
 	// passThroughEvent can be stored here in a path state even before of
 	// BSDF initialization (while tracing the next path vertex ray)

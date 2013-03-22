@@ -50,7 +50,7 @@ protected:
 class Transform {
 public:
 	// Transform Public Methods
-	Transform() : m(MAT_IDENTITY), mInv(MAT_IDENTITY) { }
+	Transform() : m(Matrix4x4::MAT_IDENTITY), mInv(Matrix4x4::MAT_IDENTITY) { }
 
 	Transform(float mat[4][4]) : m(mat) { mInv = m.Inverse(); }
 
@@ -76,10 +76,6 @@ public:
 	// Transform Data kept public so that transforms of new objects are
 	// easily added
 	Matrix4x4 m, mInv;
-
-private:
-	// Transform private static data
-	static const Matrix4x4 MAT_IDENTITY;
 };
 
 inline InvTransform Inverse(const Transform &t)
