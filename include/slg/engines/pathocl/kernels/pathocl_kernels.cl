@@ -96,6 +96,10 @@
 // (optional)
 //  PARAM_ENABLE_ALPHA_CHANNEL
 
+// (optional)
+//  PARAM_HAS_NORMALS_BUFFER
+//  PARAM_HAS_UVS_BUFFER
+
 //------------------------------------------------------------------------------
 // Init Kernel
 //------------------------------------------------------------------------------
@@ -242,13 +246,20 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global Texture *texs,
 		__global uint *meshMats,
 		__global uint *meshIDs,
-#if defined(PARAM_ACCEL_MQBVH)
-		__global uint *meshFirstTriangleOffset,
 		__global Mesh *meshDescs,
-#endif
 		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
 		__global UV *vertUVs,
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+		__global float *vertAlphas,
+#endif
 		__global Triangle *triangles,
 		__global Camera *camera
 #if defined(PARAM_HAS_INFINITELIGHT)
@@ -311,15 +322,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			// Something was hit
 
 			BSDF_Init(bsdf,
-#if defined(PARAM_ACCEL_MQBVH)
-					meshFirstTriangleOffset,
 					meshDescs,
-#endif
 					meshMats, meshIDs,
 #if (PARAM_DL_LIGHT_COUNT > 0)
 					meshLights,
 #endif
-					vertices, vertNormals, vertUVs,
+					vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+					vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+					vertUVs,
+#endif
 					triangles, ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 					, task->pathStateBase.bsdf.hitPoint.passThroughEvent
@@ -443,15 +457,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		else {
 			BSDF_Init(&task->passThroughState.passThroughBsdf,
-#if defined(PARAM_ACCEL_MQBVH)
-					meshFirstTriangleOffset,
 					meshDescs,
-#endif
 					meshMats, meshIDs,
 #if (PARAM_DL_LIGHT_COUNT > 0)
 					meshLights,
 #endif
-					vertices, vertNormals, vertUVs,
+					vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+					vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+					vertUVs,
+#endif
 					triangles, ray, rayHit,
 					task->passThroughState.passThroughEvent
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
