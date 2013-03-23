@@ -51,6 +51,7 @@ using luxrays::ocl::Spectrum;
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
+	HITPOINTGREY,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
 	WRINKLED, UV_TEX, BAND_TEX
@@ -854,6 +855,28 @@ public:
 	virtual ~HitPointAlphaTexture() { }
 
 	virtual TextureType GetType() const { return HITPOINTALPHA; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+
+	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
+
+	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+	}
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+};
+
+//------------------------------------------------------------------------------
+// HitPointGrey texture
+//------------------------------------------------------------------------------
+
+class HitPointGreyTexture : public Texture {
+public:
+	HitPointGreyTexture() { }
+	virtual ~HitPointGreyTexture() { }
+
+	virtual TextureType GetType() const { return HITPOINTGREY; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 

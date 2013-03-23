@@ -823,6 +823,8 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		return new HitPointColorTexture();
 	} else if (texType == "hitpointalpha") {
 		return new HitPointAlphaTexture();
+	} else if (texType == "hitpointgrey") {
+		return new HitPointGreyTexture();
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }
