@@ -901,6 +901,10 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::HITPOINTALPHA;
 				break;
 			}
+			case HITPOINTGREY: {
+				tex->type = slg::ocl::HITPOINTGREY;
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
 				break;

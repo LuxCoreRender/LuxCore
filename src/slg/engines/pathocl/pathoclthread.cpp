@@ -472,6 +472,8 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_HITPOINTCOLOR";
 	if (cscene->IsTextureCompiled(HITPOINTALPHA))
 		ss << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
+	if (cscene->IsTextureCompiled(HITPOINTGREY))
+		ss << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -988,7 +990,8 @@ void PathOCLRenderThread::InitRender() {
 
 	// Add PathStateBase.BSDF.HitPoint memory size
 	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
-	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR))
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
+			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY))
 		hitPointSize += sizeof(Spectrum);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
 		hitPointSize += sizeof(float);
