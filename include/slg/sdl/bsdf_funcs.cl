@@ -115,7 +115,7 @@ void BSDF_Init(
 	// Get color value
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 	float3 hitPointColor;
 #if defined(PARAM_HAS_COLS_BUFFER)
 	if (meshDesc->colsOffset != NULL_INDEX) {
