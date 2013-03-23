@@ -118,7 +118,7 @@ std::string KernelSource_bsdf_funcs =
 "	// Get color value\n"
 "	//--------------------------------------------------------------------------\n"
 "\n"
-"#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)\n"
+"#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)\n"
 "	float3 hitPointColor;\n"
 "#if defined(PARAM_HAS_COLS_BUFFER)\n"
 "	if (meshDesc->colsOffset != NULL_INDEX) {\n"

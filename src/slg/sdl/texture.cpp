@@ -1445,3 +1445,25 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) 
 
 	return props;
 }
+
+//------------------------------------------------------------------------------
+// HitPointGrey texture
+//------------------------------------------------------------------------------
+
+float HitPointGreyTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return hitPoint.color.Y();
+}
+
+Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	const float v = hitPoint.color.Y();
+	return Spectrum(v);
+}
+
+Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.textures." + name + ".type", "hitpointgrey");
+
+	return props;
+}
