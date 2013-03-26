@@ -824,7 +824,10 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 	} else if (texType == "hitpointalpha") {
 		return new HitPointAlphaTexture();
 	} else if (texType == "hitpointgrey") {
-		return new HitPointGreyTexture();
+		const int channel = GetIntParameters(props, propName + ".channel", 1, "-1").at(0);
+
+		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ? 
+			std::numeric_limits<u_int>::max() : static_cast<u_int>(channel));
 	} else
 		throw std::runtime_error("Unknown texture type: " + texType);
 }

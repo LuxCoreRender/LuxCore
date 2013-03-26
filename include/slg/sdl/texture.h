@@ -873,7 +873,7 @@ public:
 
 class HitPointGreyTexture : public Texture {
 public:
-	HitPointGreyTexture() { }
+	HitPointGreyTexture(const u_int ch) : channel(ch) { }
 	virtual ~HitPointGreyTexture() { }
 
 	virtual TextureType GetType() const { return HITPOINTGREY; }
@@ -886,7 +886,12 @@ public:
 		Texture::AddReferencedTextures(referencedTexs);
 	}
 
+	u_int GetChannel() const { return channel; }
+
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	u_int channel;
 };
 
 }

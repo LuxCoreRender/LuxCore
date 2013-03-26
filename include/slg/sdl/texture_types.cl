@@ -141,6 +141,10 @@ typedef struct {
 } BandTexParam;
 
 typedef struct {
+	unsigned int channel;
+} HitPointGreyTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		ConstFloatParam constFloat;
@@ -161,6 +165,7 @@ typedef struct {
 		WrinkledTexParam wrinkled;
 		UVTexParam uvTex;
 		BandTexParam band;
+		HitPointGreyTexParam hitPointGrey;
 	};
 } Texture;
 
