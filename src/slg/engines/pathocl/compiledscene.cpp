@@ -902,7 +902,10 @@ void CompiledScene::CompileTextures() {
 				break;
 			}
 			case HITPOINTGREY: {
+				HitPointGreyTexture *hpg = static_cast<HitPointGreyTexture *>(t);
+
 				tex->type = slg::ocl::HITPOINTGREY;
+				tex->hitPointGrey.channel = hpg->GetChannel();
 				break;
 			}
 			default:

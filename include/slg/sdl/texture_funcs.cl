@@ -1201,12 +1201,44 @@ void HitPointAlphaTexture_EvaluateDuDv(__global Texture *texture, __global HitPo
 
 void HitPointGreyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+	const uint channel = texture->hitPointGrey.channel;
+	switch (channel) {
+		case 0:
+			texValues[*texValuesSize] = hitPoint->color.r;
+			break;
+		case 1:
+			texValues[*texValuesSize] = hitPoint->color.g;
+			break;
+		case 2:
+			texValues[*texValuesSize] = hitPoint->color.b;
+			break;
+		default:
+			texValues[*texValuesSize] = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+			break;
+	}
+
+	++(*texValuesSize);
 }
 
 void HitPointGreyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float v = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+	const uint channel = texture->hitPointGrey.channel;
+	float v;
+	switch (channel) {
+		case 0:
+			v = hitPoint->color.r;
+			break;
+		case 1:
+			v = hitPoint->color.g;
+			break;
+		case 2:
+			v = hitPoint->color.b;
+			break;
+		default:
+			v = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+			break;
+	}
+
 	texValues[(*texValuesSize)++] = (float3)(v, v, v);
 }
 

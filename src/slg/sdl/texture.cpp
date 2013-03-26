@@ -1451,11 +1451,11 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) 
 //------------------------------------------------------------------------------
 
 float HitPointGreyTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return hitPoint.color.Y();
+	return (channel > 2) ? hitPoint.color.Y() : hitPoint.color[channel];
 }
 
 Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float v = hitPoint.color.Y();
+	const float v = (channel > 2) ? hitPoint.color.Y() : hitPoint.color[channel];
 	return Spectrum(v);
 }
 
@@ -1464,6 +1464,8 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) c
 
 	const std::string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "hitpointgrey");
+	props.SetString("scene.textures." + name + ".channel", ToString(
+		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
 
 	return props;
 }
