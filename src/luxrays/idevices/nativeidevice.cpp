@@ -20,9 +20,11 @@
  ***************************************************************************/
 
 #include <cstdio>
+#include <boost/foreach.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/context.h"
+#include "luxrays/utils/atomic.h"
 
 using namespace luxrays;
 
@@ -32,27 +34,22 @@ using namespace luxrays;
 
 size_t NativeThreadIntersectionDevice::RayBufferSize = 512;
 
-NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(const Context *context,
-	const size_t threadIndex, const size_t devIndex) :
+NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(
+	const Context *context, const size_t devIndex) :
 	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
-	char buf[64];
-	sprintf(buf, "NativeIntersectThread-%03d", (int)threadIndex);
-	deviceName = std::string(buf);
+	deviceName = std::string("NativeIntersect");
 	reportedPermissionError = false;
-	externalRayBufferQueue = NULL;
-	intersectionThread = NULL;
+	rayBufferQueue = NULL;
+	threadCount = boost::thread::hardware_concurrency();
 }
 
 NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
 	if (started)
 		Stop();
-	delete intersectionThread;
-}
 
-void NativeThreadIntersectionDevice::SetExternalRayBufferQueue(RayBufferQueue *queue) {
-	assert (!started);
-
-	externalRayBufferQueue = queue;
+	BOOST_FOREACH(boost::thread *intersectionThread, intersectionThreads)
+		delete intersectionThread;
+	delete rayBufferQueue;
 }
 
 void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
@@ -62,15 +59,28 @@ void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 void NativeThreadIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
+	threadDeviceIdleTime.resize(0);
+	threadTotalDataParallelRayCount.resize(0);
+	threadDeviceTotalTime.resize(0);
 	if (dataParallelSupport) {
-		// Create the thread for the rendering
-		intersectionThread = new boost::thread(boost::bind(NativeThreadIntersectionDevice::IntersectionThread, this));
+		// Create all the required queues
+		rayBufferQueue = new RayBufferQueueM2M(queueCount);
 
-		// Set intersectionThread priority
-		bool res = SetThreadRRPriority(intersectionThread);
-		if (res && !reportedPermissionError) {
-			LR_LOG(deviceContext, "[NativeThread device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
-			reportedPermissionError = true;
+		// Create all threads for the rendering
+		for (u_int i = 0; i < threadCount; ++i) {
+			boost::thread *intersectionThread = new boost::thread(boost::bind(NativeThreadIntersectionDevice::IntersectionThread, this, i));
+
+			// Set intersectionThread priority
+			bool res = SetThreadRRPriority(intersectionThread);
+			if (res && !reportedPermissionError) {
+				LR_LOG(deviceContext, "[NativeThread device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
+				reportedPermissionError = true;
+			}
+
+			intersectionThreads.push_back(intersectionThread);
+			threadDeviceIdleTime.push_back(0.0);
+			threadTotalDataParallelRayCount.push_back(0.0);
+			threadDeviceTotalTime.push_back(0.0);
 		}
 	}
 }
@@ -78,21 +88,24 @@ void NativeThreadIntersectionDevice::Start() {
 void NativeThreadIntersectionDevice::Interrupt() {
 	assert (started);
 
-	if (dataParallelSupport)
-		intersectionThread->interrupt();
+	if (dataParallelSupport) {
+		BOOST_FOREACH(boost::thread *intersectionThread, intersectionThreads)
+			intersectionThread->interrupt();
+	}
 }
 
 void NativeThreadIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 
 	if (dataParallelSupport) {
-		intersectionThread->interrupt();
-		intersectionThread->join();
-		delete intersectionThread;
-		intersectionThread = NULL;
-
-		if (!externalRayBufferQueue)
-			rayBufferQueue.Clear();
+		BOOST_FOREACH(boost::thread *intersectionThread, intersectionThreads) {
+			intersectionThread->interrupt();
+			intersectionThread->join();
+			delete intersectionThread;
+		}
+		intersectionThreads.resize(0);
+		delete rayBufferQueue;
+		rayBufferQueue = NULL;
 	}
 }
 
@@ -104,34 +117,32 @@ RayBuffer *NativeThreadIntersectionDevice::NewRayBuffer(const size_t size) {
 	return new RayBuffer(RoundUpPow2<size_t>(size));
 }
 
-void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer) {
+void NativeThreadIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex) {
 	assert (started);
-	assert (!externalRayBufferQueue);
 	assert (dataParallelSupport);
 
-	rayBufferQueue.PushToDo(rayBuffer, 0);
+	rayBufferQueue->PushToDo(rayBuffer, queueIndex);
 }
 
-RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer() {
+RayBuffer *NativeThreadIntersectionDevice::PopRayBuffer(const u_int queueIndex) {
 	assert (started);
-	assert (!externalRayBufferQueue);
 	assert (dataParallelSupport);
 
-	return rayBufferQueue.PopDone(0);
+	return rayBufferQueue->PopDone(queueIndex);
 }
 
-void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersectionDevice *renderDevice) {
-	LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "] Rendering thread started");
+void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersectionDevice *renderDevice, const u_int threadIndex) {
+	//LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "::" << threadIndex <<"] Rendering thread started");
 
 	try {
-		RayBufferQueue *queue = renderDevice->externalRayBufferQueue ?
-			renderDevice->externalRayBufferQueue : &(renderDevice->rayBufferQueue);
+		RayBufferQueue *queue = renderDevice->rayBufferQueue;
 
 		const double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
 			const double t1 = WallClockTime();
 			RayBuffer *rayBuffer = queue->PopToDo();
-			renderDevice->statsDeviceIdleTime += WallClockTime() - t1;
+			renderDevice->threadDeviceIdleTime[threadIndex] += WallClockTime() - t1;
+
 			// Trace rays
 			const Ray *rb = rayBuffer->GetRayBuffer();
 			RayHit *hb = rayBuffer->GetHitBuffer();
@@ -140,14 +151,68 @@ void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersection
 				hb[i].SetMiss();
 				renderDevice->dataSet->Intersect(&rb[i], &hb[i]);
 			}
-			renderDevice->statsTotalDataParallelRayCount += rayCount;
+			renderDevice->threadTotalDataParallelRayCount[threadIndex] += rayCount;
 			queue->PushDone(rayBuffer);
 
-			renderDevice->statsDeviceTotalTime = WallClockTime() - startTime;
+			renderDevice->threadDeviceTotalTime[threadIndex] = WallClockTime() - startTime;
 		}
 
-		LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "] Rendering thread halted");
+		//LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "::" << threadIndex <<"] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
-		LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "] Rendering thread halted");
+		//LR_LOG(renderDevice->deviceContext, "[NativeThread device::" << renderDevice->deviceName << "::" << threadIndex <<"] Rendering thread halted");
 	}
+}
+
+//------------------------------------------------------------------------------
+// Statistics
+//------------------------------------------------------------------------------
+
+double NativeThreadIntersectionDevice::GetLoad() const {
+	double totalIdle = 0.0;
+	BOOST_FOREACH(double &idleTime, threadDeviceIdleTime)
+		totalIdle += idleTime;
+	statsDeviceIdleTime = totalIdle;
+
+	double total = 0.0;
+	BOOST_FOREACH(double &totalTime, threadDeviceIdleTime)
+		total += totalTime;
+	statsDeviceTotalTime = total;
+
+	return HardwareIntersectionDevice::GetLoad();
+}
+
+void NativeThreadIntersectionDevice::UpdateTotalDataParallelRayCount() const {
+	double total = 0.0;
+	BOOST_FOREACH(double &rayCount, threadTotalDataParallelRayCount)
+		total +=rayCount;
+	statsTotalDataParallelRayCount = total;
+}
+
+double NativeThreadIntersectionDevice::GetTotalRaysCount() const {
+	UpdateTotalDataParallelRayCount();
+
+	return HardwareIntersectionDevice::GetTotalRaysCount();
+}
+
+double NativeThreadIntersectionDevice::GetTotalPerformance() const {
+	UpdateTotalDataParallelRayCount();
+
+	return HardwareIntersectionDevice::GetTotalPerformance();
+}
+
+double NativeThreadIntersectionDevice::GetDataParallelPerformance() const {
+	UpdateTotalDataParallelRayCount();
+
+	return HardwareIntersectionDevice::GetDataParallelPerformance();
+}
+
+void NativeThreadIntersectionDevice::ResetPerformaceStats() {
+	HardwareIntersectionDevice::ResetPerformaceStats();
+
+	BOOST_FOREACH(double &idelTime, threadDeviceIdleTime)
+			idelTime = 0.0;
+	BOOST_FOREACH(double &rayCount, threadTotalDataParallelRayCount)
+			rayCount = 0.0;
+	BOOST_FOREACH(double &totalTime, threadDeviceTotalTime)
+			totalTime = 0.0;
 }

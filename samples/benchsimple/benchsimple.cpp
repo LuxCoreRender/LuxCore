@@ -39,7 +39,7 @@ void DebugHandler(const char *msg) {
 
 int main(int argc, char** argv) {
 	std::cerr << "LuxRays Simple IntersectionDevice Benchmark v" << LUXRAYS_VERSION_MAJOR << "." << LUXRAYS_VERSION_MINOR << std::endl;
-	std::cerr << "Usage (easy mode): " << argv[0] << std::endl;
+	std::cerr << "Usage: " << argv[0] << std::endl;
 
 	//--------------------------------------------------------------------------
 	// Create the context
@@ -47,17 +47,29 @@ int main(int argc, char** argv) {
 
 	luxrays::Context *ctx = new luxrays::Context(DebugHandler);
 
-	// Looks for the first GPU device
+	// Get the list of all devices available
 	std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
-	luxrays::DeviceDescription::FilterOne(deviceDescs);
 
-	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+	// Use the first device available
+	//luxrays::DeviceDescription::FilterOne(deviceDescs);
 
+	// Use the first native C++ device available
+	luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+
+	// Use the first OpenCL device available
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
+	//luxrays::DeviceDescription::FilterOne(deviceDescs);
+
+	// Use the first OpenCL CPU device available
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
+	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
+
+	// Use the first OpenCL GPU device available
 	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
 	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
 
 	if (deviceDescs.size() < 1) {
-		std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
+		std::cerr << "Unable to find an usable intersection device" << std::endl;
 		return (EXIT_FAILURE);
 	}
 	deviceDescs.resize(1);
@@ -66,6 +78,10 @@ int main(int argc, char** argv) {
 	std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(deviceDescs);
 	luxrays::IntersectionDevice *device = devices[0];
 
+	// It it is a NativeThreadIntersectionDevice, you can set the number of threads
+	// to use. The default is to use one for each core available.
+	//((luxrays::NativeThreadIntersectionDevice *)device)->SetThreadCount(1);
+	
 	//--------------------------------------------------------------------------
 	// Build the data set
 	//--------------------------------------------------------------------------
@@ -187,13 +203,13 @@ int main(int argc, char** argv) {
 	double raySec = (bufferDone * todoRayBuffers.front()->GetRayCount()) / tTime;
 	if (raySec < 10000.0)
 		std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
-				raySec <<" sample/sec" << std::endl;
+				raySec <<" rays/sec" << std::endl;
 	else if (raySec < 1000000.0)
 		std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
-				(raySec / 1000.0) <<"K ray/sec" << std::endl;
+				(raySec / 1000.0) <<"K rays/sec" << std::endl;
 	else
 		std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
-				(raySec / 1000000.0) <<"M ray/sec" << std::endl;
+				(raySec / 1000000.0) <<"M rays/sec" << std::endl;
 
 	//--------------------------------------------------------------------------
 	// Free everything
