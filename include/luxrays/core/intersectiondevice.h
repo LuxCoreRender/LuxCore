@@ -42,20 +42,20 @@ public:
 	// Statistics
 	//--------------------------------------------------------------------------
 
-	double GetTotalRaysCount() const { return statsTotalSerialRayCount + statsTotalDataParallelRayCount; }
-	double GetTotalPerformance() const {
+	virtual double GetTotalRaysCount() const { return statsTotalSerialRayCount + statsTotalDataParallelRayCount; }
+	virtual double GetTotalPerformance() const {
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
 		return (statsTotalRayTime == 0.0) ?	1.0 : ((statsTotalSerialRayCount + statsTotalDataParallelRayCount) / statsTotalRayTime);
 	}
-	double GetSerialPerformance() const {
+	virtual double GetSerialPerformance() const {
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
 		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalSerialRayCount / statsTotalRayTime);
 	}
-	double GetDataParallelPerformance() const {
+	virtual double GetDataParallelPerformance() const {
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
 		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalDataParallelRayCount / statsTotalRayTime);
 	}
-	void ResetPerformaceStats() {
+	virtual void ResetPerformaceStats() {
 		statsStartTime = WallClockTime();
 		statsTotalSerialRayCount = 0.0;
 		statsTotalDataParallelRayCount = 0.0;
@@ -66,10 +66,14 @@ public:
 	// Data parallel interface: to trace large set of rays (from the CPU)
 	//--------------------------------------------------------------------------
 
+	// Set the number of queues to use (default 1). The device must be in stop state.
+	virtual void SetQueueCount(const u_int count);
+	virtual u_int GetQueueCount() const { return queueCount; }
+
 	virtual RayBuffer *NewRayBuffer() = 0;
 	virtual RayBuffer *NewRayBuffer(const size_t size) = 0;
-	virtual void PushRayBuffer(RayBuffer *rayBuffer) = 0;
-	virtual RayBuffer *PopRayBuffer() = 0;
+	virtual void PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex = 0) = 0;
+	virtual RayBuffer *PopRayBuffer(const u_int queueIndex = 0) = 0;
 
 	// This method can be used to save resources by disabling the support
 	// for PushRayBuffer()/PopRayBuffer() interface. Note: this is really
@@ -101,9 +105,10 @@ protected:
 	virtual void Start();
 
 	const DataSet *dataSet;
-	double statsStartTime, statsTotalSerialRayCount, statsTotalDataParallelRayCount,
+	mutable double statsStartTime, statsTotalSerialRayCount, statsTotalDataParallelRayCount,
 		statsDeviceIdleTime, statsDeviceTotalTime;
 
+	u_int queueCount;
 	size_t stackSize;
 
 	bool dataParallelSupport;
@@ -115,8 +120,6 @@ protected:
 		const DeviceType type, const size_t index) :
 		IntersectionDevice(context, type, index) { }
 	virtual ~HardwareIntersectionDevice() { }
-
-	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue) = 0;
 
 	virtual double GetLoad() const {
 		if (!started)
@@ -134,9 +137,11 @@ protected:
 
 class NativeThreadIntersectionDevice : public HardwareIntersectionDevice {
 public:
-	NativeThreadIntersectionDevice(const Context *context,
-		const size_t threadIndex, const size_t devIndex);
+	NativeThreadIntersectionDevice(const Context *context, const size_t devIndex);
 	virtual ~NativeThreadIntersectionDevice();
+
+	void SetThreadCount(const u_int count) { threadCount = count; }
+	u_int GetThreadCount() { return threadCount; }
 
 	virtual void SetDataSet(const DataSet *newDataSet);
 	virtual void Start();
@@ -145,23 +150,39 @@ public:
 
 	virtual RayBuffer *NewRayBuffer();
 	virtual RayBuffer *NewRayBuffer(const size_t size);
-	virtual size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
-	virtual void PushRayBuffer(RayBuffer *rayBuffer);
-	virtual RayBuffer *PopRayBuffer();
+	virtual size_t GetQueueSize() { return rayBufferQueue ? rayBufferQueue->GetSizeToDo() : 0; }
+	virtual void PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex = 0);
+	virtual RayBuffer *PopRayBuffer(const u_int queueIndex = 0);
+
+	//--------------------------------------------------------------------------
+	// Statistics
+	//--------------------------------------------------------------------------
+
+	virtual double GetLoad() const;
+
+	virtual double GetTotalRaysCount() const;
+	virtual double GetTotalPerformance() const;
+	virtual double GetDataParallelPerformance() const;
+	virtual void ResetPerformaceStats();
 
 	static size_t RayBufferSize;
 
 	friend class Context;
 
-protected:
-	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue);
-
 private:
-	static void IntersectionThread(NativeThreadIntersectionDevice *renderDevice);
-	boost::thread *intersectionThread;
-	RayBufferQueueO2O rayBufferQueue;
-	RayBufferQueue *externalRayBufferQueue;
+	void UpdateTotalDataParallelRayCount() const;
 
+	static void IntersectionThread(NativeThreadIntersectionDevice *renderDevice,
+			const u_int threadIndex);
+
+	u_int threadCount;
+	vector<boost::thread *> intersectionThreads;
+	RayBufferQueueM2M *rayBufferQueue;
+	
+	// Per thread statistics
+	mutable vector<double> threadDeviceIdleTime, threadTotalDataParallelRayCount,
+		threadDeviceTotalTime;
+	
 	bool reportedPermissionError;
 };
 

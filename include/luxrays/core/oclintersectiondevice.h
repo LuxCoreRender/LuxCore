@@ -67,7 +67,7 @@ public:
 
 	virtual RayBuffer *NewRayBuffer();
 	virtual RayBuffer *NewRayBuffer(const size_t size);
-	virtual size_t GetQueueSize() { return rayBufferQueue.GetSizeToDo(); }
+	virtual size_t GetQueueSize() { return pendingRayBuffers; }
 	virtual void PushRayBuffer(RayBuffer *rayBuffer);
 	virtual RayBuffer *PopRayBuffer();
 
@@ -87,7 +87,7 @@ public:
 
 	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
-	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
+	cl::CommandQueue &GetOpenCLQueue() { return *(oclQueues[0]); }
 
 	//--------------------------------------------------------------------------
 	// Data parallel interface: to trace large set of rays directly from the GPU
@@ -102,7 +102,6 @@ public:
 	static size_t RayBufferSize;
 
 protected:
-	virtual void SetExternalRayBufferQueue(RayBufferQueue *queue);
 	virtual void UpdateDataSet();
 
 private:
@@ -114,18 +113,15 @@ private:
 	void FreeDataSetBuffers();
 
 	OpenCLDeviceDescription *deviceDesc;
-	boost::thread *intersectionThread;
 
-	// OpenCL items
-	cl::CommandQueue *oclQueue;
+	u_int pendingRayBuffers;
 
-	OpenCLKernel *kernel;
-
-	cl::Buffer *raysBuff;
-	cl::Buffer *hitsBuff;
-
-	RayBufferQueueO2O rayBufferQueue;
-	RayBufferQueue *externalRayBufferQueue;
+	// OpenCL items, one for each instanced queue
+	u_int queueCount;
+	vector<cl::CommandQueue *> oclQueues;
+	vector<OpenCLKernel *> kernels;
+	vector<cl::Buffer *> raysBuffs;
+	vector<cl::Buffer *> hitsBuffs;
 
 	bool reportedPermissionError, disableImageStorage;
 };

@@ -95,13 +95,13 @@ public:
 	 *
 	 *	\return the vector of all VirtualM2O in the Context.
 	 */
-	const std::vector<VirtualM2OHardwareIntersectionDevice *> &GetVirtualM2OIntersectionDevices() const;
+//	const std::vector<VirtualM2OHardwareIntersectionDevice *> &GetVirtualM2OIntersectionDevices() const;
 
 	/*!	\brief Return a list of all VirtualM2O intersection device created within the Context.
 	 *
 	 *	\return the vector of all VirtualM2O in the Context.
 	 */
-	const std::vector<VirtualM2MHardwareIntersectionDevice *> &GetVirtualM2MIntersectionDevices() const;
+//	const std::vector<VirtualM2MHardwareIntersectionDevice *> &GetVirtualM2MIntersectionDevices() const;
 
 	/*!	\brief Create an IntersectionDevice within the Context.
 	 *
@@ -123,8 +123,8 @@ public:
 	 *	\return the vector of all real IntersectionDevice created from deviceDescs. They are
 	 * deleted once the virtual M2M device is deleted.
 	 */
-	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
-		std::vector<DeviceDescription *> &deviceDescs);
+//	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
+//		std::vector<DeviceDescription *> &deviceDescs);
 
 	/*!	\brief Create an Virtual Many-To-One IntersectionDevice within the Context.
 	 *
@@ -139,8 +139,8 @@ public:
 	 *	\return the vector of all real IntersectionDevice created from deviceDescs (for
 	 * M2O device, the size is always 1). It is deleted once the virtual M2M device is deleted.
 	 */
-	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
-		std::vector<DeviceDescription *> &deviceDescs);
+//	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
+//		std::vector<DeviceDescription *> &deviceDescs);
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to DataSet definition
@@ -170,7 +170,9 @@ public:
 			debugHandler(msg);
 	}
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	friend class OpenCLIntersectionDevice;
+#endif
 
 private:
 	std::vector<IntersectionDevice *> CreateIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc);
@@ -182,11 +184,13 @@ private:
 
 	// All intersection devices (including virtual)
 	std::vector<IntersectionDevice *> idevices;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// All OpenCL devices
 	std::vector<OpenCLIntersectionDevice *> oclDevices;
+#endif
 	// Virtual intersection devices
-	std::vector<VirtualM2MHardwareIntersectionDevice *> m2mDevices;
-	std::vector<VirtualM2OHardwareIntersectionDevice *> m2oDevices;
+//	std::vector<VirtualM2MHardwareIntersectionDevice *> m2mDevices;
+//	std::vector<VirtualM2OHardwareIntersectionDevice *> m2oDevices;
 
 	bool started;
 };

@@ -112,17 +112,13 @@ protected:
 
 class NativeThreadDeviceDescription : public DeviceDescription {
 public:
-	NativeThreadDeviceDescription(const std::string deviceName, const size_t threadIdx) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD), threadIndex(threadIdx) { }
-
-	size_t GetThreadIndex() const { return threadIndex; };
+	NativeThreadDeviceDescription(const std::string deviceName) :
+		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD) { }
 
 	friend class Context;
 
 protected:
 	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
-
-	size_t threadIndex;
 };
 
 }
