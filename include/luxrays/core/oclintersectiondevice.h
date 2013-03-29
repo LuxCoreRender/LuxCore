@@ -43,8 +43,8 @@ public:
 
 	virtual void FreeBuffers() = 0;
 	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
 
 	void SetMaxStackSize(const size_t s) { stackSize = s; }
@@ -100,7 +100,7 @@ public:
 
 	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
-	cl::CommandQueue &GetOpenCLQueue() { return *(oclQueues[0]->oclQueue); }
+	cl::CommandQueue &GetOpenCLQueue(const u_int queueIndex = 0) { return *(oclQueues[queueIndex]->oclQueue); }
 
 	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
 		const unsigned int rayCount,

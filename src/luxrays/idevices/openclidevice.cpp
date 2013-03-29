@@ -80,7 +80,7 @@ void OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PushRay
 			sizeof(Ray) * rayCount, rayBuffer->GetRayBuffer());
 
 	// Enqueue the intersection kernel
-	kernel->EnqueueRayBuffer(*rayBuff, *hitBuff, rayCount, NULL, NULL);
+	kernel->EnqueueRayBuffer(*oclQueue, *rayBuff, *hitBuff, rayCount, NULL, NULL);
 
 	// Enqueue the download of the results
 	oclQueue->enqueueReadBuffer(*hitBuff, CL_FALSE, 0,
