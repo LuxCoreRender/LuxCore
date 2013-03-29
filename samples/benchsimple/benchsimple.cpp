@@ -27,6 +27,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/core/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
@@ -47,7 +48,7 @@ int main(int argc, char** argv) {
 
 	luxrays::Context *ctx = new luxrays::Context(DebugHandler);
 
-	// Looks for the first GPU device
+	// Looks for the first device
 	std::vector<luxrays::DeviceDescription *> deviceDescs = std::vector<luxrays::DeviceDescription *>(ctx->GetAvailableDeviceDescriptions());
 	luxrays::DeviceDescription::FilterOne(deviceDescs);
 
@@ -55,6 +56,9 @@ int main(int argc, char** argv) {
 
 	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
 	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
+
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
+	//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
 
 	if (deviceDescs.size() < 1) {
 		std::cerr << "Unable to find a GPU or CPU intersection device" << std::endl;
