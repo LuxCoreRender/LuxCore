@@ -93,8 +93,8 @@ public:
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 		cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o);
 	virtual void UpdateDataSet(const DataSet *newDataSet);
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 protected:
@@ -107,8 +107,7 @@ protected:
 	cl::Buffer *trisOffsetBuff;
 };
 
-void OpenCLMQBVHKernel::FreeBuffers()
-{
+void OpenCLMQBVHKernel::FreeBuffers() {
 	delete kernel;
 	kernel = NULL;
 	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
@@ -132,8 +131,7 @@ void OpenCLMQBVHKernel::FreeBuffers()
 }
 
 void OpenCLMQBVHKernel::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
-	cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o)
-{
+	cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o) {
 	mqbvhBuff = m;
 	leafBuff = l;
 	leafQuadTrisBuff = q;
@@ -188,21 +186,19 @@ void OpenCLMQBVHKernel::UpdateDataSet(const DataSet *newDataSet) {
 	kernel->setArg(2, *mqbvhBuff);
 }
 
-void OpenCLMQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-	const unsigned int rayCount, const VECTOR_CLASS<cl::Event> *events,
-	cl::Event *event)
-{
+void OpenCLMQBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(3, rayCount);
-	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
+	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
 		event);
 }
 
 OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
-	unsigned int stackSize, bool disableImageStorage) const
-{
+	unsigned int stackSize, bool disableImageStorage) const {
 	OpenCLMQBVHKernel *kernel = new OpenCLMQBVHKernel(device);
 	const Context *deviceContext = device->GetContext();
 	cl::Context &oclContext = device->GetOpenCLContext();
@@ -325,8 +321,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-	unsigned int stackSize, bool disableImageStorage) const
-{
+	unsigned int stackSize, bool disableImageStorage) const {
 	return NULL;
 }
 

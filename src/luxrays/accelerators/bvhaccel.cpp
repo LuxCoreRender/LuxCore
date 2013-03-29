@@ -98,8 +98,8 @@ public:
 	void SetBuffers(cl::Buffer *v, unsigned int nt, cl::Buffer *t,
 		unsigned int nn, cl::Buffer *b);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 	// BVH fields
@@ -108,8 +108,7 @@ public:
 	cl::Buffer *bvhBuff;
 };
 
-void OpenCLBVHKernel::FreeBuffers()
-{
+void OpenCLBVHKernel::FreeBuffers() {
 	delete kernel;
 	kernel = NULL;
 	device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
@@ -124,8 +123,7 @@ void OpenCLBVHKernel::FreeBuffers()
 }
 
 void OpenCLBVHKernel::SetBuffers(cl::Buffer *v,
-	unsigned int nt, cl::Buffer *t, unsigned int nn, cl::Buffer *b)
-{
+	unsigned int nt, cl::Buffer *t, unsigned int nn, cl::Buffer *b) {
 	vertsBuff = v;
 	trisBuff = t;
 	bvhBuff = b;
@@ -137,21 +135,19 @@ void OpenCLBVHKernel::SetBuffers(cl::Buffer *v,
 	kernel->setArg(6, *bvhBuff);
 }
 
-void OpenCLBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-	const unsigned int rayCount, const VECTOR_CLASS<cl::Event> *events,
-	cl::Event *event)
-{
+void OpenCLBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,\
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(7, rayCount);
-	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
+	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
 		event);
 }
 
 OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
-	unsigned int stackSize, bool disableImageStorage) const
-{
+	unsigned int stackSize, bool disableImageStorage) const {
 	OpenCLBVHKernel *kernel = new OpenCLBVHKernel(device);
 
 	const Context *deviceContext = device->GetContext();
@@ -196,8 +192,7 @@ OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-	unsigned int stackSize, bool disableImageStorage) const
-{
+	unsigned int stackSize, bool disableImageStorage) const {
 	return NULL;
 }
 

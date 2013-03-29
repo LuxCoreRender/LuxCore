@@ -98,8 +98,8 @@ public:
 	virtual void FreeBuffers();
 	void SetBuffers(cl::Buffer *trisBuff, cl::Buffer *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 protected:
@@ -173,8 +173,8 @@ public:
 	virtual void FreeBuffers();
 	void SetBuffers(cl::Image2D *trisBuff, cl::Image2D *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 protected:
@@ -183,8 +183,7 @@ protected:
 	cl::Image2D *qbvhBuff;
 };
 
-void OpenCLQBVHKernel::FreeBuffers()
-{
+void OpenCLQBVHKernel::FreeBuffers() {
 	delete kernel;
 	kernel = NULL;
 	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
@@ -195,8 +194,7 @@ void OpenCLQBVHKernel::FreeBuffers()
 	qbvhBuff = NULL;
 }
 
-void OpenCLQBVHKernel::SetBuffers(cl::Buffer *t, cl::Buffer *q)
-{
+void OpenCLQBVHKernel::SetBuffers(cl::Buffer *t, cl::Buffer *q) {
 	trisBuff = t;
 	qbvhBuff = q;
 
@@ -212,20 +210,18 @@ void OpenCLQBVHKernel::SetBuffers(cl::Buffer *t, cl::Buffer *q)
 	kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
 }
 
-void OpenCLQBVHKernel::EnqueueRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-	const unsigned int rayCount, const VECTOR_CLASS<cl::Event> *events,
-	cl::Event *event)
-{
+void OpenCLQBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(4, rayCount);
-	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
+	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
 		event);
 }
 
-void OpenCLQBVHImageKernel::FreeBuffers()
-{
+void OpenCLQBVHImageKernel::FreeBuffers() {
 	delete kernel;
 	kernel = NULL;
 	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
@@ -236,8 +232,7 @@ void OpenCLQBVHImageKernel::FreeBuffers()
 	qbvhBuff = NULL;
 }
 
-void OpenCLQBVHImageKernel::SetBuffers(cl::Image2D *t, cl::Image2D *q)
-{
+void OpenCLQBVHImageKernel::SetBuffers(cl::Image2D *t, cl::Image2D *q) {
 	trisBuff = t;
 	qbvhBuff = q;
 
@@ -252,21 +247,19 @@ void OpenCLQBVHImageKernel::SetBuffers(cl::Image2D *t, cl::Image2D *q)
 	kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
 }
 
-void OpenCLQBVHImageKernel::EnqueueRayBuffer(cl::Buffer &rBuff,
-	cl::Buffer &hBuff, const unsigned int rayCount,
-	const VECTOR_CLASS<cl::Event> *events, cl::Event *event)
-{
+void OpenCLQBVHImageKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
+	const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernel->setArg(0, rBuff);
 	kernel->setArg(1, hBuff);
 	kernel->setArg(4, rayCount);
-	device->GetOpenCLQueue().enqueueNDRangeKernel(*kernel, cl::NullRange,
+	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
 		event);
 }
 
 OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
-	unsigned int stackSize, bool disableImageStorage) const
-{
+	unsigned int stackSize, bool disableImageStorage) const {
 	const Context *deviceContext = device->GetContext();
 	cl::Context &oclContext = device->GetOpenCLContext();
 	const std::string &deviceName(device->GetName());
@@ -409,8 +402,7 @@ OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernel *QBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-	unsigned int stackSize, bool disableImageStorage) const
-{
+	unsigned int stackSize, bool disableImageStorage) const {
 	return NULL;
 }
 
