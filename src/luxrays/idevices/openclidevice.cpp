@@ -70,6 +70,10 @@ void OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::UpdateD
 }
 
 void OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PushRayBuffer(RayBuffer *rayBuffer) {
+	// A safety check
+	if (pendingRayBuffer)
+		throw std::runtime_error("Double push in OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PushRayBuffer()");
+
 	// Enqueue the upload of the rays to the device
 	const size_t rayCount = rayBuffer->GetRayCount();
 	oclQueue->enqueueWriteBuffer(*rayBuff, CL_FALSE, 0,
@@ -87,9 +91,15 @@ void OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PushRay
 }
 
 RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PopRayBuffer() {
-	event->wait();
-	
-	return pendingRayBuffer;
+	// A safety check
+	if (!pendingRayBuffer)
+		throw std::runtime_error("Pop without a push in OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PopRayBuffer()");
+
+	event->wait();	
+	RayBuffer *result = pendingRayBuffer;
+	pendingRayBuffer = NULL;
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
@@ -142,6 +152,9 @@ void OpenCLIntersectionDevice::OpenCLDeviceQueue::PushRayBuffer(RayBuffer *rayBu
 }
 
 RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::PopRayBuffer() {
+	if (busyElem.size() == 0)
+		throw std::runtime_error("Double pop in OpenCLIntersectionDevice::OpenCLDeviceQueue::PopRayBuffer()");
+
 	OpenCLDeviceQueueElem *elem = busyElem.back();
 	busyElem.pop_back();
 
