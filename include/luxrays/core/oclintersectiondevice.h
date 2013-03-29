@@ -22,6 +22,8 @@
 #ifndef _LUXRAYS_OPENCL_INTERSECTIONDEVICE_H
 #define	_LUXRAYS_OPENCL_INTERSECTIONDEVICE_H
 
+#include <deque>
+
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/ocldevice.h"
 
@@ -65,12 +67,6 @@ public:
 	virtual void Interrupt();
 	virtual void Stop();
 
-	virtual RayBuffer *NewRayBuffer();
-	virtual RayBuffer *NewRayBuffer(const size_t size);
-	virtual size_t GetQueueSize() { return pendingRayBuffers; }
-	virtual void PushRayBuffer(RayBuffer *rayBuffer);
-	virtual RayBuffer *PopRayBuffer();
-
 	// OpenCL Device specific methods
 	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
 	virtual size_t GetMaxMemory() const {
@@ -81,21 +77,34 @@ public:
 		disableImageStorage = v;
 	}
 
+	// Used to set the number of buffer allocated on the OpenCL device. It
+	// represents the number of RayBuffer you can push before to have to call
+	// pop. Otherwise you end with an exception.
+	void SetDeviceBufferCount(const u_int count) { assert(!started); deviceBufferCount = count; }
+	u_int GetDeviceBufferCount() const { return deviceBufferCount; }
+
+	//--------------------------------------------------------------------------
+	// Data parallel interface: to trace large set of rays directly from the GPU
+	//--------------------------------------------------------------------------
+
+	virtual RayBuffer *NewRayBuffer();
+	virtual RayBuffer *NewRayBuffer(const size_t size);
+	virtual size_t GetQueueSize() { return pendingRayBuffers; }
+	virtual void PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex = 0);
+	virtual RayBuffer *PopRayBuffer(const u_int queueIndex = 0);
+
+
 	//--------------------------------------------------------------------------
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
 
 	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
-	cl::CommandQueue &GetOpenCLQueue() { return *(oclQueues[0]); }
-
-	//--------------------------------------------------------------------------
-	// Data parallel interface: to trace large set of rays directly from the GPU
-	//--------------------------------------------------------------------------
+	cl::CommandQueue &GetOpenCLQueue() { return *(oclQueues[0]->oclQueue); }
 
 	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
 		const unsigned int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);	
 
 	friend class Context;
 
@@ -107,21 +116,58 @@ protected:
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 
-	void TraceRayBuffer(RayBuffer *rayBuffer,
-		VECTOR_CLASS<cl::Event> &readEvent,
-		VECTOR_CLASS<cl::Event> &traceEvent, cl::Event *event);
-	void FreeDataSetBuffers();
+	//--------------------------------------------------------------------------
+	// OpenCLDeviceQueue
+	//--------------------------------------------------------------------------
+
+	class OpenCLDeviceQueue {
+	public:
+		OpenCLDeviceQueue(OpenCLIntersectionDevice *device);
+		~OpenCLDeviceQueue();
+
+		void UpdateDataSet();
+
+		void PushRayBuffer(RayBuffer *rayBuffer);
+		RayBuffer *PopRayBuffer();
+
+		class OpenCLDeviceQueueElem {
+		public:
+			OpenCLDeviceQueueElem(OpenCLIntersectionDevice *device, cl::CommandQueue *oclQueue);
+			~OpenCLDeviceQueueElem();
+
+			void UpdateDataSet();
+
+			void PushRayBuffer(RayBuffer *rayBuffer);
+			RayBuffer *PopRayBuffer();
+
+			OpenCLIntersectionDevice *device;
+			cl::CommandQueue *oclQueue;
+
+			OpenCLKernel *kernel;
+
+			// Free buffers and events
+			cl::Buffer *rayBuff;
+			cl::Buffer *hitBuff;
+			cl::Event *event;
+			RayBuffer *pendingRayBuffer;
+		};
+
+		OpenCLIntersectionDevice *device;
+		cl::CommandQueue *oclQueue;
+
+		std::deque<OpenCLDeviceQueueElem *> freeElem;
+		std::deque<OpenCLDeviceQueueElem *> busyElem;
+
+		double statsTotalDataParallelRayCount;
+	};
 
 	OpenCLDeviceDescription *deviceDesc;
 
+	u_int deviceBufferCount;
 	u_int pendingRayBuffers;
 
-	// OpenCL items, one for each instanced queue
-	u_int queueCount;
-	vector<cl::CommandQueue *> oclQueues;
-	vector<OpenCLKernel *> kernels;
-	vector<cl::Buffer *> raysBuffs;
-	vector<cl::Buffer *> hitsBuffs;
+	// OpenCL queues
+	vector<OpenCLDeviceQueue *> oclQueues;
 
 	bool reportedPermissionError, disableImageStorage;
 };

@@ -72,7 +72,9 @@ public:
 
 	virtual RayBuffer *NewRayBuffer() = 0;
 	virtual RayBuffer *NewRayBuffer(const size_t size) = 0;
+	// This method is thread safe if each thread uses a different queue
 	virtual void PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex = 0) = 0;
+	// This method is thread safe if each thread uses a different queue
 	virtual RayBuffer *PopRayBuffer(const u_int queueIndex = 0) = 0;
 
 	// This method can be used to save resources by disabling the support
@@ -140,7 +142,7 @@ public:
 	NativeThreadIntersectionDevice(const Context *context, const size_t devIndex);
 	virtual ~NativeThreadIntersectionDevice();
 
-	void SetThreadCount(const u_int count) { threadCount = count; }
+	void SetThreadCount(const u_int count) { assert(!started); threadCount = count; }
 	u_int GetThreadCount() { return threadCount; }
 
 	virtual void SetDataSet(const DataSet *newDataSet);

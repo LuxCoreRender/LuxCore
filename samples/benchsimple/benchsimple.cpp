@@ -27,6 +27,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/core/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
@@ -54,19 +55,19 @@ int main(int argc, char** argv) {
 	//luxrays::DeviceDescription::FilterOne(deviceDescs);
 
 	// Use the first native C++ device available
-	luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
 
 	// Use the first OpenCL device available
-	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
 	//luxrays::DeviceDescription::FilterOne(deviceDescs);
 
 	// Use the first OpenCL CPU device available
-	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
-	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
+	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
+	//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_CPU, deviceDescs);
 
 	// Use the first OpenCL GPU device available
-	//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL, deviceDescs);
-	//luxrays::OpenCLDeviceDescription::Filter(luxrays::OCL_DEVICE_TYPE_CPU, deviceDescs);
+	luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
+	luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
 
 	if (deviceDescs.size() < 1) {
 		std::cerr << "Unable to find an usable intersection device" << std::endl;
@@ -78,10 +79,14 @@ int main(int argc, char** argv) {
 	std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(deviceDescs);
 	luxrays::IntersectionDevice *device = devices[0];
 
-	// It it is a NativeThreadIntersectionDevice, you can set the number of threads
+	// If it is a NativeThreadIntersectionDevice, you can set the number of threads
 	// to use. The default is to use one for each core available.
 	//((luxrays::NativeThreadIntersectionDevice *)device)->SetThreadCount(1);
-	
+
+	// If it is an OpenCLIntersectionDevice you have to set the max. number of
+	// buffer you can push between 2 pop.
+	((luxrays::OpenCLIntersectionDevice *)device)->SetDeviceBufferCount(RAYBUFFERS_COUNT);
+
 	//--------------------------------------------------------------------------
 	// Build the data set
 	//--------------------------------------------------------------------------

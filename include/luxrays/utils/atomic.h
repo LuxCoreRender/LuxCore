@@ -88,6 +88,14 @@ inline void AtomicInc(unsigned int *val) {
 #endif
 }
 
+inline void AtomicDec(unsigned int *val) {
+#if (BOOST_VERSION < 104800)
+	boost::interprocess::detail::atomic_dec32(((boost::uint32_t *)val));
+#else
+	boost::interprocess::ipcdetail::atomic_dec32(((boost::uint32_t *)val));
+#endif
+}
+
 }
 
 #endif	/* _LUXRAYS_ATOMIC_H */

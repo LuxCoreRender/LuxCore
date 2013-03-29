@@ -73,7 +73,7 @@ public:
 		if (!oclContext || enableOpenGLInterop)
 			enableOpenGLInterop = true;
 		else
-			throw std::runtime_error("It is not possible to enable OpenGL interoperability when the OpenCL context has laready been created");
+			throw std::runtime_error("It is not possible to enable OpenGL interoperability when the OpenCL context has already been created");
 	}
 
 	cl::Context &GetOCLContext() const;
@@ -104,8 +104,6 @@ public:
 
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
-	friend class OpenCLPixelDevice;
-	friend class OpenCLSampleBuffer;
 
 protected:
 	static std::string GetDeviceType(const cl_int type);
