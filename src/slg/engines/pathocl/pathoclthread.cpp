@@ -600,7 +600,7 @@ void PathOCLRenderThread::InitKernels() {
 			break;
 		case slg::ocl::SOBOL:
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << 32 <<
+					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
 					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
 			break;
 		default:
