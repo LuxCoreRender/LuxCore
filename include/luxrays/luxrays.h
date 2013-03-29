@@ -46,7 +46,6 @@ class DataSet;
 class IntersectionDevice;
 class Mesh;
 class Normal;
-class PixelDevice;
 class Point;
 class Ray;
 class RayBuffer;
