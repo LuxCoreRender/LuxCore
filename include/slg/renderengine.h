@@ -84,7 +84,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	unsigned int GetPass() const {
-		return samplesCount / (film->GetWidth() * film->GetHeight());
+		return static_cast<unsigned int>(samplesCount / (film->GetWidth() * film->GetHeight()));
 	}
 	double GetTotalSampleCount() const { return samplesCount; }
 	float GetConvergence() const { return convergence; }
