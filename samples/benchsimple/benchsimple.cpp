@@ -31,7 +31,7 @@
 #include "luxrays/core/randomgen.h"
 
 #define RAYBUFFERS_COUNT 10
-#define TRIANGLE_COUNT 5000
+#define TRIANGLE_COUNT 500
 #define SPACE_SIZE 1000.f
 
 void DebugHandler(const char *msg) {
@@ -67,12 +67,12 @@ int main(int argc, char** argv) {
 		//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_CPU, deviceDescs);
 
 		// Use the first OpenCL GPU device available
-		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
-		//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
-
-		// Use all GPU devices available (for virtual device)
 		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
 		luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
+
+		// Use all GPU devices available (for virtual device)
+		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
+		//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
 		
 		if (deviceDescs.size() < 1) {
 			std::cerr << "Unable to find an usable intersection device" << std::endl;
@@ -80,13 +80,13 @@ int main(int argc, char** argv) {
 		}
 
 		// Single device
-		//deviceDescs.resize(1);
-		//std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
-		//luxrays::IntersectionDevice *device = ctx->AddIntersectionDevices(deviceDescs)[0];
+		deviceDescs.resize(1);
+		std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
+		luxrays::IntersectionDevice *device = ctx->AddIntersectionDevices(deviceDescs)[0];
 
 		// Multiple devices
-		ctx->AddVirtualIntersectionDevices(deviceDescs);
-		luxrays::IntersectionDevice *device = ctx->GetIntersectionDevices()[0];
+		//ctx->AddVirtualIntersectionDevices(deviceDescs);
+		//luxrays::IntersectionDevice *device = ctx->GetIntersectionDevices()[0];
 		
 
 		// If it is a NativeThreadIntersectionDevice, you can set the number of threads

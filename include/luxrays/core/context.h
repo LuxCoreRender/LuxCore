@@ -99,7 +99,7 @@ public:
 	 */
 	std::vector<IntersectionDevice *> AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDescs);
 
-	/*!	\brief Create an Virtual IntersectionDevice within the Context.
+	/*!	\brief Create a Virtual IntersectionDevice within the Context.
 	 *
 	 *	Create an Virtual IntersectionDevice. This kind of device is
 	 *	useful when you have multiple threads producing work for multiple GPUs. All
@@ -110,7 +110,7 @@ public:
 	 *	\return the vector of all real IntersectionDevice created from deviceDescs. They are
 	 * deleted once the virtual device is deleted.
 	 */
-	std::vector<IntersectionDevice *> AddVirtualIntersectionDevices(std::vector<DeviceDescription *> &deviceDescs);
+	std::vector<IntersectionDevice *> AddVirtualIntersectionDevice(std::vector<DeviceDescription *> &deviceDescs);
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to DataSet definition

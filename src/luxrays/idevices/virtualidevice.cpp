@@ -97,6 +97,13 @@ void VirtualIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 }
 
+void VirtualIntersectionDevice::SetMaxStackSize(const size_t s) {
+	IntersectionDevice::SetMaxStackSize(s);
+
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realDevices[i]->SetMaxStackSize(stackSize);
+}
+
 void VirtualIntersectionDevice::SetQueueCount(const u_int count) {
 	IntersectionDevice::SetQueueCount(count);
 
@@ -147,4 +154,43 @@ RayBuffer *VirtualIntersectionDevice::PopRayBuffer(const u_int queueIndex) {
 	statsTotalDataParallelRayCount += rayBuffer->GetRayCount();
 
 	return rayBuffer;
+}
+
+//------------------------------------------------------------------------------
+// Statistics
+//------------------------------------------------------------------------------
+
+double VirtualIntersectionDevice::GetLoad() const {
+	double tot = 0.f;
+
+	if (started) {
+		BOOST_FOREACH(IntersectionDevice *device, realDevices)
+			tot += device->GetLoad();
+		tot /= realDevices.size();
+	}
+
+	return tot;
+}
+
+double VirtualIntersectionDevice::GetTotalRaysCount() const {
+//	double tot = 0.0;
+//	BOOST_FOREACH(IntersectionDevice *device, realDevices)
+//		tot += device->GetTotalRaysCount;
+
+	return IntersectionDevice::GetTotalRaysCount();
+}
+
+double VirtualIntersectionDevice::GetTotalPerformance() const {
+	return IntersectionDevice::GetTotalPerformance();
+}
+
+double VirtualIntersectionDevice::GetDataParallelPerformance() const {
+	return IntersectionDevice::GetDataParallelPerformance();
+}
+
+void VirtualIntersectionDevice::ResetPerformaceStats() {
+	BOOST_FOREACH(IntersectionDevice *device, realDevices)
+		device->ResetPerformaceStats();
+	
+	IntersectionDevice::ResetPerformaceStats();
 }

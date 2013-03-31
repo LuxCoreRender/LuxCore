@@ -385,11 +385,9 @@ CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 	vector<DeviceDescription *>  devDescs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, devDescs);
+	devDescs.resize(1);
 
-	selectedDeviceDescs.resize(renderThreadCount, NULL);
-	for (size_t i = 0; i < selectedDeviceDescs.size(); ++i)
-		selectedDeviceDescs[i] = devDescs[i % devDescs.size()];
-
+	selectedDeviceDescs.resize(renderThreadCount, devDescs[0]);
 	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
@@ -632,9 +630,6 @@ void HybridRenderThread::BeginEdit() {
 }
 
 void HybridRenderThread::EndEdit(const EditActionList &editActions) {
-	// Reset statistics in order to be more accurate
-	device->ResetPerformaceStats();
-
 	StartRenderThread();
 }
 
@@ -656,7 +651,7 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 	// Check if the buffer is now full
 	if (currentRayBufferToSend->IsFull()) {
 		// Send the work to the device
-		device->PushRayBuffer(currentRayBufferToSend);
+		device->PushRayBuffer(currentRayBufferToSend, threadIndex);
 		currentRayBufferToSend = NULL;
 		++pendingRayBuffers;
 	}
@@ -667,7 +662,7 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 	// Check if I have to get  the results out of intersection device
 	if (!currentReiceivedRayBuffer) {
-		currentReiceivedRayBuffer = device->PopRayBuffer();
+		currentReiceivedRayBuffer = device->PopRayBuffer(threadIndex);
 		--pendingRayBuffers;
 		currentReiceivedRayBufferIndex = 0;
 	} else if (currentReiceivedRayBufferIndex >= currentReiceivedRayBuffer->GetSize()) {
@@ -676,7 +671,7 @@ void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 		freeRayBuffers.push_back(currentReiceivedRayBuffer);
 
 		// Get a new buffer
-		currentReiceivedRayBuffer = device->PopRayBuffer();
+		currentReiceivedRayBuffer = device->PopRayBuffer(threadIndex);
 		--pendingRayBuffers;
 		currentReiceivedRayBufferIndex = 0;
 	}
@@ -771,7 +766,7 @@ void HybridRenderThread::RenderFunc() {
 
 	// Remove all pending ray buffers
 	while (pendingRayBuffers > 0) {
-		RayBuffer *rayBuffer = device->PopRayBuffer();
+		RayBuffer *rayBuffer = device->PopRayBuffer(threadIndex);
 		--(pendingRayBuffers);
 		rayBuffer->Reset();
 		freeRayBuffers.push_back(rayBuffer);
@@ -798,20 +793,20 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 	}
 	const size_t renderThreadCount = boost::thread::hardware_concurrency();
 	if (selectedDeviceDescs.size() == 1) {
-		// Only one intersection device, use a M2O device
-		intersectionDevices = ctx->AddVirtualM2OIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+		// Only one intersection device, use directly the device
+		ctx->AddIntersectionDevices(selectedDeviceDescs);
 	} else {
-		// Multiple intersection devices, use a M2M device
-		intersectionDevices = ctx->AddVirtualM2MIntersectionDevices(renderThreadCount, selectedDeviceDescs);
+		// Multiple intersection devices, use a virtual device
+		ctx->AddVirtualIntersectionDevice(selectedDeviceDescs);
 	}
+	intersectionDevices.push_back(ctx->GetIntersectionDevices()[0]);
+	intersectionDevices[0]->SetQueueCount(renderThreadCount);
 
 	// Check if I have to set max. QBVH stack size
 	const size_t qbvhStackSize = renderConfig->cfg.GetInt("accelerator.qbvh.stacksize.max",
 			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		intersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
-
-	devices = ctx->GetIntersectionDevices();
 
 	// Set the LuxRays DataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
@@ -823,7 +818,7 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 void HybridRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (!renderThreads[i])
-			renderThreads[i] = NewRenderThread(i, devices[i]);
+			renderThreads[i] = NewRenderThread(i, intersectionDevices[0]);
 		renderThreads[i]->Start();
 	}
 }
@@ -843,6 +838,9 @@ void HybridRenderEngine::BeginEditLockLess() {
 }
 
 void HybridRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	// Reset statistics in order to be more accurate
+	intersectionDevices[0]->ResetPerformaceStats();
+
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->EndEdit(editActions);
 }
@@ -867,8 +865,5 @@ void HybridRenderEngine::UpdateCounters() {
 	samplesCount = totalCount;
 
 	// Update the ray count statistic
-	totalCount = 0.0;
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		totalCount += renderThreads[i]->device->GetTotalRaysCount();
-	raysCount = totalCount;
+	raysCount = intersectionDevices[0]->GetTotalRaysCount();
 }
