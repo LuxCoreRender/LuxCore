@@ -57,8 +57,7 @@ class Triangle;
 class TriangleMesh;
 class UV;
 class Vector;
-class VirtualM2MHardwareIntersectionDevice;
-class VirtualM2OHardwareIntersectionDevice;
+class VirtualIntersectionDevice;
 }
 
 #endif	/* _LUXRAYS_H */

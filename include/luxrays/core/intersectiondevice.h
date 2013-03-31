@@ -101,8 +101,7 @@ public:
 	}
 
 	friend class Context;
-	friend class VirtualM2OHardwareIntersectionDevice;
-	friend class VirtualM2MHardwareIntersectionDevice;
+	friend class VirtualIntersectionDevice;
 
 protected:
 	IntersectionDevice(const Context *context, const DeviceType type, const size_t index);
@@ -135,8 +134,7 @@ protected:
 		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
 	}
 
-	friend class VirtualM2OHardwareIntersectionDevice;
-	friend class VirtualM2MHardwareIntersectionDevice;
+	friend class VirtualIntersectionDevice;
 };
 
 //------------------------------------------------------------------------------

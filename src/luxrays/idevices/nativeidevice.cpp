@@ -59,9 +59,9 @@ void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 void NativeThreadIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
-	threadDeviceIdleTime.resize(0);
-	threadTotalDataParallelRayCount.resize(0);
-	threadDeviceTotalTime.resize(0);
+	threadDeviceIdleTime.clear();
+	threadTotalDataParallelRayCount.clear();
+	threadDeviceTotalTime.clear();
 	if (dataParallelSupport) {
 		// Create all the required queues
 		rayBufferQueue = new RayBufferQueueM2M(queueCount);
@@ -103,7 +103,7 @@ void NativeThreadIntersectionDevice::Stop() {
 			intersectionThread->join();
 			delete intersectionThread;
 		}
-		intersectionThreads.resize(0);
+		intersectionThreads.clear();
 		delete rayBufferQueue;
 		rayBufferQueue = NULL;
 	}

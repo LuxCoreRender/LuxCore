@@ -224,9 +224,8 @@ void OpenCLIntersectionDevice::UpdateDataSet() {
 void OpenCLIntersectionDevice::Start() {
 	IntersectionDevice::Start();
 
-	oclQueues.resize(0);
+	oclQueues.clear();
 	if (dataParallelSupport) {
-std::cout<<"==================================="<<queueCount<<"="<<bufferCount<<"\n";;
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
 			oclQueues.push_back(new OpenCLDeviceQueue(this));
@@ -245,7 +244,7 @@ void OpenCLIntersectionDevice::Stop() {
 		BOOST_FOREACH(OpenCLDeviceQueue *queue, oclQueues)
 			delete queue;
 
-		oclQueues.resize(0);
+		oclQueues.clear();
 	}
 	pendingRayBuffers = 0;
 }
