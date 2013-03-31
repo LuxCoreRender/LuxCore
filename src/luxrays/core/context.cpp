@@ -99,10 +99,8 @@ Context::~Context() {
 		if (idevices[i]->GetType() != DEVICE_TYPE_VIRTUAL)
 			delete idevices[i];
 	}
-//	for (size_t i = 0; i < m2mDevices.size(); ++i)
-//		delete m2mDevices[i];
-//	for (size_t i = 0; i < m2oDevices.size(); ++i)
-//		delete m2oDevices[i];
+	for (size_t i = 0; i < m2mDevices.size(); ++i)
+		delete m2mDevices[i];
 
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
@@ -169,13 +167,9 @@ const std::vector<IntersectionDevice *> &Context::GetIntersectionDevices() const
 	return idevices;
 }
 
-//const std::vector<VirtualM2OHardwareIntersectionDevice *> &Context::GetVirtualM2OIntersectionDevices() const {
-//	return m2oDevices;
-//}
-//
-//const std::vector<VirtualM2MHardwareIntersectionDevice *> &Context::GetVirtualM2MIntersectionDevices() const {
-//	return m2mDevices;
-//}
+const std::vector<VirtualM2MHardwareIntersectionDevice *> &Context::GetVirtualM2MIntersectionDevices() const {
+	return m2mDevices;
+}
 
 std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
@@ -220,37 +214,22 @@ std::vector<IntersectionDevice *> Context::AddIntersectionDevices(std::vector<De
 	return newDevices;
 }
 
-//std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(const unsigned int count,
-//		std::vector<DeviceDescription *> &deviceDescs) {
-//	assert (!started);
-//	assert (deviceDescs.size() > 0);
-//
-//	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs);
-//	// OpenCL are the only HardwareIntersectionDevice supported at the moment
-//	std::vector<HardwareIntersectionDevice *> realHDevices;
-//	for (size_t i = 0; i < realDevices.size(); ++i)
-//		realHDevices.push_back((HardwareIntersectionDevice *)realDevices[i]);
-//
-//	VirtualM2MHardwareIntersectionDevice *m2mDevice = new VirtualM2MHardwareIntersectionDevice(count, realHDevices);
-//
-//	m2mDevices.push_back(m2mDevice);
-//	for (unsigned int i = 0; i < count; ++i)
-//		idevices.push_back(m2mDevice->GetVirtualDevice(i));
-//
-//	return realDevices;
-//}
-//
-//std::vector<IntersectionDevice *> Context::AddVirtualM2OIntersectionDevices(const unsigned int count,
-//		std::vector<DeviceDescription *> &deviceDescs) {
-//	assert (!started);
-//	assert (deviceDescs.size() == 1);
-//
-//	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs);
-//	VirtualM2OHardwareIntersectionDevice *m2oDevice = new VirtualM2OHardwareIntersectionDevice(count, (HardwareIntersectionDevice *)realDevices[0]);
-//
-//	m2oDevices.push_back(m2oDevice);
-//	for (unsigned int i = 0; i < count; ++i)
-//		idevices.push_back(m2oDevice->GetVirtualDevice(i));
-//
-//	return realDevices;
-//}
+std::vector<IntersectionDevice *> Context::AddVirtualM2MIntersectionDevices(const unsigned int count,
+		std::vector<DeviceDescription *> &deviceDescs) {
+	assert (!started);
+	assert (deviceDescs.size() > 0);
+
+	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs);
+	// OpenCL are the only HardwareIntersectionDevice supported at the moment
+	std::vector<HardwareIntersectionDevice *> realHDevices;
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realHDevices.push_back((HardwareIntersectionDevice *)realDevices[i]);
+
+	VirtualM2MHardwareIntersectionDevice *m2mDevice = new VirtualM2MHardwareIntersectionDevice(count, realHDevices);
+
+	m2mDevices.push_back(m2mDevice);
+	for (unsigned int i = 0; i < count; ++i)
+		idevices.push_back(m2mDevice->GetVirtualDevice(i));
+
+	return realDevices;
+}

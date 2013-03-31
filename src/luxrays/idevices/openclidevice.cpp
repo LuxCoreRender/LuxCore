@@ -114,7 +114,7 @@ OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(OpenCLIntersectio
 	oclQueue = new cl::CommandQueue(oclContext, device->deviceDesc->GetOCLDevice());
 
 	// Allocated all associated buffers
-	for (u_int i = 0; i < device->deviceBufferCount; ++i)
+	for (u_int i = 0; i < device->bufferCount; ++i)
 		freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue));
 
 	statsTotalDataParallelRayCount = 0.0;
@@ -147,7 +147,6 @@ void OpenCLIntersectionDevice::OpenCLDeviceQueue::PushRayBuffer(RayBuffer *rayBu
 
 	busyElem.push_front(elem);
 
-	statsTotalDataParallelRayCount += rayBuffer->GetRayCount();
 	AtomicInc(&device->pendingRayBuffers);
 }
 
@@ -160,6 +159,7 @@ RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::PopRayBuffer() {
 
 	RayBuffer *rayBuffer = elem->PopRayBuffer();
 	AtomicDec(&device->pendingRayBuffers);
+	statsTotalDataParallelRayCount += rayBuffer->GetRayCount();
 
 	freeElem.push_front(elem);
 
@@ -180,7 +180,6 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	stackSize = 24;
 	deviceDesc = desc;
 	deviceName = (desc->GetName() + "Intersect").c_str();
-	deviceBufferCount = 3;
 	pendingRayBuffers = 0;
 	reportedPermissionError = false;
 	disableImageStorage = false;
@@ -227,6 +226,7 @@ void OpenCLIntersectionDevice::Start() {
 
 	oclQueues.resize(0);
 	if (dataParallelSupport) {
+std::cout<<"==================================="<<queueCount<<"="<<bufferCount<<"\n";;
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
 			oclQueues.push_back(new OpenCLDeviceQueue(this));

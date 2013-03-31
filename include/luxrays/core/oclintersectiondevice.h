@@ -77,12 +77,6 @@ public:
 		disableImageStorage = v;
 	}
 
-	// Used to set the number of buffer allocated on the OpenCL device. It
-	// represents the number of RayBuffer you can push before to have to call
-	// pop. Otherwise you end with an exception.
-	void SetDeviceBufferCount(const u_int count) { assert(!started); deviceBufferCount = count; }
-	u_int GetDeviceBufferCount() const { return deviceBufferCount; }
-
 	//--------------------------------------------------------------------------
 	// Data parallel interface: to trace large set of rays directly from the GPU
 	//--------------------------------------------------------------------------
@@ -163,7 +157,6 @@ private:
 
 	OpenCLDeviceDescription *deviceDesc;
 
-	u_int deviceBufferCount;
 	u_int pendingRayBuffers;
 
 	// OpenCL queues

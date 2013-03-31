@@ -23,6 +23,7 @@
 #ifndef _LUXRAYS_VIRTUALDEVICE_H
 #define	_LUXRAYS_VIRTUALDEVICE_H
 
+#include <deque>
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
@@ -30,67 +31,8 @@
 
 namespace luxrays {
 
-//------------------------------------------------------------------------------
-// Virtual Many to One hardware device
-//------------------------------------------------------------------------------
-
-class VirtualM2OHardwareIntersectionDevice {
-public:
-	VirtualM2OHardwareIntersectionDevice(const size_t count, HardwareIntersectionDevice *device);
-	~VirtualM2OHardwareIntersectionDevice();
-
-	IntersectionDevice *GetVirtualDevice(size_t index);
-	IntersectionDevice *AddVirtualDevice();
-	void RemoveVirtualDevice(IntersectionDevice *dev);
-
-	static size_t RayBufferSize;
-
-private:
-	class VirtualM2ODevHInstance : public IntersectionDevice {
-	public:
-		VirtualM2ODevHInstance(VirtualM2OHardwareIntersectionDevice *device, const size_t index);
-		~VirtualM2ODevHInstance();
-
-		RayBuffer *NewRayBuffer();
-		RayBuffer *NewRayBuffer(const size_t size);
-		void PushRayBuffer(RayBuffer *rayBuffer);
-		RayBuffer *PopRayBuffer();
-		size_t GetQueueSize() { return virtualDevice->rayBufferQueue.GetSizeToDo(); }
-
-		void PushRayBufferDone(RayBuffer *rayBuffer);
-
-		bool TraceRay(const Ray *ray, RayHit *rayHit) {
-			// Update this device statistics
-			statsTotalSerialRayCount += 1.0;
-
-			// Using the underlay real device mostly to account for
-			// statsTotalSerialRayCount statistics
-			return virtualDevice->realDevice->TraceRay(ray, rayHit);
-		}
-
-		double GetLoad() const { return started ? virtualDevice->realDevice->GetLoad() : 0.0; }
-
-		void SetDataSet(const DataSet *newDataSet);
-		void Start();
-		void Interrupt();
-		void Stop();
-
-	private:
-		void StopNoLock();
-
-		size_t instanceIndex;
-		VirtualM2OHardwareIntersectionDevice *virtualDevice;
-
-		size_t pendingRayBuffers;
-	};
-
-	size_t virtualDeviceCount;
-	HardwareIntersectionDevice *realDevice;
-	RayBufferQueueM2O rayBufferQueue;
-
-	boost::mutex virtualDeviceMutex;
-	std::vector<VirtualM2ODevHInstance *> virtualDeviceInstances;
-};
+// The old VirtualM2OHardwareIntersectionDevice (Virtual Many to One hardware device)
+// has been replaced by the new IntersectionDevice interface
 
 //------------------------------------------------------------------------------
 // Virtual Many to Many hardware device
@@ -116,15 +58,16 @@ private:
 		VirtualM2MDevHInstance(VirtualM2MHardwareIntersectionDevice *device, const size_t index);
 		~VirtualM2MDevHInstance();
 
-		RayBuffer *NewRayBuffer();
-		RayBuffer *NewRayBuffer(const size_t size);
-		void PushRayBuffer(RayBuffer *rayBuffer);
-		RayBuffer *PopRayBuffer();
-		size_t GetQueueSize() { return virtualDevice->rayBufferQueue.GetSizeToDo(); }
+		virtual void SetQueueCount(const u_int count);
+		virtual void SetBufferCount(const u_int count);
 
-		void PushRayBufferDone(RayBuffer *rayBuffer);
+		virtual RayBuffer *NewRayBuffer();
+		virtual RayBuffer *NewRayBuffer(const size_t size);
+		virtual void PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex = 0);
+		virtual RayBuffer *PopRayBuffer(const u_int queueIndex = 0);
+		virtual size_t GetQueueSize() { return pendingRayBufferDeviceIndex.size(); }
 
-		bool TraceRay(const Ray *ray, RayHit *rayHit) {
+		virtual bool TraceRay(const Ray *ray, RayHit *rayHit) {
 			// Update this device statistics
 			statsTotalSerialRayCount += 1.0;
 
@@ -134,7 +77,7 @@ private:
 			return virtualDevice->realDevices[traceRayRealDeviceIndex]->TraceRay(ray, rayHit);
 		}
 
-		double GetLoad() const { return started ? 1.0 : 0.0; }
+		virtual double GetLoad() const { return started ? 1.0 : 0.0; }
 
 		friend class VirtualM2MHardwareIntersectionDevice;
 
@@ -149,7 +92,7 @@ private:
 	private:
 		VirtualM2MHardwareIntersectionDevice *virtualDevice;
 
-		size_t pendingRayBuffers;
+		std::deque<u_int> pendingRayBufferDeviceIndex;
 		// This is used to spread the TraceRay() calls uniformly over
 		// all real devices
 		u_int traceRayRealDeviceIndex;
@@ -157,7 +100,6 @@ private:
 
 	size_t virtualDeviceCount;
 	std::vector<HardwareIntersectionDevice *> realDevices;
-	RayBufferQueueM2M rayBufferQueue;
 
 	boost::mutex virtualDeviceMutex;
 	std::vector<VirtualM2MDevHInstance *> virtualDeviceInstances;
