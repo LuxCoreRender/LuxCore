@@ -95,13 +95,7 @@ public:
 	 *
 	 *	\return the vector of all VirtualM2O in the Context.
 	 */
-//	const std::vector<VirtualM2OHardwareIntersectionDevice *> &GetVirtualM2OIntersectionDevices() const;
-
-	/*!	\brief Return a list of all VirtualM2O intersection device created within the Context.
-	 *
-	 *	\return the vector of all VirtualM2O in the Context.
-	 */
-//	const std::vector<VirtualM2MHardwareIntersectionDevice *> &GetVirtualM2MIntersectionDevices() const;
+	const std::vector<VirtualM2MHardwareIntersectionDevice *> &GetVirtualM2MIntersectionDevices() const;
 
 	/*!	\brief Create an IntersectionDevice within the Context.
 	 *
@@ -123,24 +117,8 @@ public:
 	 *	\return the vector of all real IntersectionDevice created from deviceDescs. They are
 	 * deleted once the virtual M2M device is deleted.
 	 */
-//	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
-//		std::vector<DeviceDescription *> &deviceDescs);
-
-	/*!	\brief Create an Virtual Many-To-One IntersectionDevice within the Context.
-	 *
-	 *	Create an Virtual Many-To-One IntersectionDevice. This kind of device is
-	 *	useful when you have multiple threads producing work for a single GPU. All
-	 *	the routing of the work forward to the GPU and backward is handled by LuxRays.
-	 *
-	 *	\param count is the number of virtual devices to create.
-	 *	\param deviceDescs is a DeviceDescription vector of the devices used by virtual
-	 * devices (for M2O devices, the size must be 1).
-	 *
-	 *	\return the vector of all real IntersectionDevice created from deviceDescs (for
-	 * M2O device, the size is always 1). It is deleted once the virtual M2M device is deleted.
-	 */
-//	std::vector<IntersectionDevice *> AddVirtualM2OIntersectionDevices(const unsigned int count,
-//		std::vector<DeviceDescription *> &deviceDescs);
+	std::vector<IntersectionDevice *> AddVirtualM2MIntersectionDevices(const unsigned int count,
+		std::vector<DeviceDescription *> &deviceDescs);
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to DataSet definition
@@ -189,8 +167,7 @@ private:
 	std::vector<OpenCLIntersectionDevice *> oclDevices;
 #endif
 	// Virtual intersection devices
-//	std::vector<VirtualM2MHardwareIntersectionDevice *> m2mDevices;
-//	std::vector<VirtualM2OHardwareIntersectionDevice *> m2oDevices;
+	std::vector<VirtualM2MHardwareIntersectionDevice *> m2mDevices;
 
 	bool started;
 };

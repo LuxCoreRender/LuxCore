@@ -70,6 +70,12 @@ public:
 	virtual void SetQueueCount(const u_int count);
 	virtual u_int GetQueueCount() const { return queueCount; }
 
+	// Used to set the number of buffer allocated on the device. It
+	// represents the number of RayBuffer you can push before to have to call
+	// pop. Otherwise you end with an exception.
+	virtual void SetBufferCount(const u_int count) { assert(!started); bufferCount = count; }
+	virtual u_int GetBufferCount() const { return bufferCount; }
+
 	virtual RayBuffer *NewRayBuffer() = 0;
 	virtual RayBuffer *NewRayBuffer(const size_t size) = 0;
 	// This method is thread safe if each thread uses a different queue
@@ -110,7 +116,7 @@ protected:
 	mutable double statsStartTime, statsTotalSerialRayCount, statsTotalDataParallelRayCount,
 		statsDeviceIdleTime, statsDeviceTotalTime;
 
-	u_int queueCount;
+	u_int queueCount, bufferCount;
 	size_t stackSize;
 
 	bool dataParallelSupport;

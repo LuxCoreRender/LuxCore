@@ -67,18 +67,28 @@ int main(int argc, char** argv) {
 		//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_CPU, deviceDescs);
 
 		// Use the first OpenCL GPU device available
+		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
+		//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
+
+		// Use all GPU devices available (for virtual device)
 		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
 		luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
-
+		
 		if (deviceDescs.size() < 1) {
 			std::cerr << "Unable to find an usable intersection device" << std::endl;
 			return (EXIT_FAILURE);
 		}
-		deviceDescs.resize(1);
 
-		std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
-		std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(deviceDescs);
-		luxrays::IntersectionDevice *device = devices[0];
+		// Single device
+		//deviceDescs.resize(1);
+		//std::cerr << "Selected intersection device: " << deviceDescs[0]->GetName();
+		//std::vector<luxrays::IntersectionDevice *> devices = ctx->AddIntersectionDevices(deviceDescs);
+		//luxrays::IntersectionDevice *device = devices[0];
+
+		// Multiple devices
+		ctx->AddVirtualM2MIntersectionDevices(RAYBUFFERS_COUNT, deviceDescs);
+		const vector<luxrays::IntersectionDevice *> &devices = ctx->GetIntersectionDevices();
+		
 
 		// If it is a NativeThreadIntersectionDevice, you can set the number of threads
 		// to use. The default is to use one for each core available.
@@ -139,7 +149,7 @@ int main(int argc, char** argv) {
 		std::queue<luxrays::RayBuffer *> todoRayBuffers;
 		std::vector<luxrays::RayBuffer *> rayBuffers;
 		for (size_t i = 0; i < RAYBUFFERS_COUNT; ++i) {
-			luxrays::RayBuffer *rayBuffer = device->NewRayBuffer();
+			luxrays::RayBuffer *rayBuffer = devices[i]->NewRayBuffer();
 			todoRayBuffers.push(rayBuffer);
 			rayBuffers.push_back(rayBuffer);
 
@@ -165,64 +175,64 @@ int main(int argc, char** argv) {
 		// rays to trace.
 		//--------------------------------------------------------------------------
 
-		{
-			// If it is an OpenCLIntersectionDevice you have to set the max. number of
-			// buffer you can push between 2 pop.
-			((luxrays::OpenCLIntersectionDevice *)device)->SetDeviceBufferCount(RAYBUFFERS_COUNT);
-			device->SetQueueCount(1);
-
-			ctx->Start();
-
-			std::cerr << "Running the serial benchmark for 15 seconds..." << std::endl;
-			double tStart = luxrays::WallClockTime();
-			double tLastCheck = tStart;
-			double bufferDone = 0.0;
-			bool done = false;
-			while (!done) {
-				while (todoRayBuffers.size() > 0) {
-					device->PushRayBuffer(todoRayBuffers.front());
-					todoRayBuffers.pop();
-	
-					// Check if it is time to stop
-					const double tNow = luxrays::WallClockTime();
-					if (tNow - tLastCheck > 1.0) {
-						if (tNow - tStart > 15.0) {
-							done = true;
-							break;
-						}
-	
-						std::cerr << int(tNow - tStart) << "/15secs" << std::endl;
-						tLastCheck = tNow;
-					}
-				}
-	
-				todoRayBuffers.push(device->PopRayBuffer());
-				bufferDone += 1.0;
-			}
-	
-			while (todoRayBuffers.size() != RAYBUFFERS_COUNT) {
-				todoRayBuffers.push(device->PopRayBuffer());
-				bufferDone += 1.0;
-			}
-			double tStop = luxrays::WallClockTime();
-			double tTime = tStop - tStart;
-	
-			ctx->Stop();
-
-			std::cerr << "Test total time: " << tTime << std::endl;
-			std::cerr << "Test total ray buffer count: " << int(bufferDone) << std::endl;
-			std::cerr << "Test ray buffer size: " << todoRayBuffers.front()->GetRayCount() << std::endl;
-			double raySec = (bufferDone * todoRayBuffers.front()->GetRayCount()) / tTime;
-			if (raySec < 10000.0)
-				std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
-						raySec <<" rays/sec" << std::endl;
-			else if (raySec < 1000000.0)
-				std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
-						(raySec / 1000.0) <<"K rays/sec" << std::endl;
-			else
-				std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
-						(raySec / 1000000.0) <<"M rays/sec" << std::endl;
-		}
+//		{
+//			// The number of queues used
+//			device->SetQueueCount(1);
+//			// You have to set the max. number of buffers you can push between 2 pop.
+//			device->SetBufferCount(RAYBUFFERS_COUNT);
+//
+//			ctx->Start();
+//
+//			std::cerr << "Running the serial benchmark for 15 seconds..." << std::endl;
+//			double tStart = luxrays::WallClockTime();
+//			double tLastCheck = tStart;
+//			double bufferDone = 0.0;
+//			bool done = false;
+//			while (!done) {
+//				while (todoRayBuffers.size() > 0) {
+//					device->PushRayBuffer(todoRayBuffers.front());
+//					todoRayBuffers.pop();
+//	
+//					// Check if it is time to stop
+//					const double tNow = luxrays::WallClockTime();
+//					if (tNow - tLastCheck > 1.0) {
+//						if (tNow - tStart > 15.0) {
+//							done = true;
+//							break;
+//						}
+//	
+//						std::cerr << int(tNow - tStart) << "/15secs" << std::endl;
+//						tLastCheck = tNow;
+//					}
+//				}
+//	
+//				todoRayBuffers.push(device->PopRayBuffer());
+//				bufferDone += 1.0;
+//			}
+//	
+//			while (todoRayBuffers.size() != RAYBUFFERS_COUNT) {
+//				todoRayBuffers.push(device->PopRayBuffer());
+//				bufferDone += 1.0;
+//			}
+//			double tStop = luxrays::WallClockTime();
+//			double tTime = tStop - tStart;
+//	
+//			ctx->Stop();
+//
+//			std::cerr << "Test total time: " << tTime << std::endl;
+//			std::cerr << "Test total ray buffer count: " << int(bufferDone) << std::endl;
+//			std::cerr << "Test ray buffer size: " << todoRayBuffers.front()->GetRayCount() << std::endl;
+//			double raySec = (bufferDone * todoRayBuffers.front()->GetRayCount()) / tTime;
+//			if (raySec < 10000.0)
+//				std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
+//						raySec <<" rays/sec" << std::endl;
+//			else if (raySec < 1000000.0)
+//				std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
+//						(raySec / 1000.0) <<"K rays/sec" << std::endl;
+//			else
+//				std::cerr << "Test performance: " << std::setiosflags(std::ios::fixed) << std::setprecision(2) <<
+//						(raySec / 1000000.0) <<"M rays/sec" << std::endl;
+//		}
 
 		//--------------------------------------------------------------------------
 		// Run the parallel benchmark. This simulate multiple threads pushing
@@ -230,10 +240,10 @@ int main(int argc, char** argv) {
 		//--------------------------------------------------------------------------
 
 		{
-			// If it is an OpenCLIntersectionDevice you have to set the max. number of
-			// buffer you can push between 2 pop.
-			((luxrays::OpenCLIntersectionDevice *)device)->SetDeviceBufferCount(1);
-			device->SetQueueCount(RAYBUFFERS_COUNT);
+			// The number of queues used
+			//device->SetQueueCount(RAYBUFFERS_COUNT);
+			// You have to set the max. number of buffers you can push between 2 pop.
+			//device->SetBufferCount(1);
 
 			ctx->Start();
 
@@ -241,17 +251,17 @@ int main(int argc, char** argv) {
 			double tStart = luxrays::WallClockTime();
 
 			for (u_int i = 0; i < RAYBUFFERS_COUNT; ++i)
-				device->PushRayBuffer(rayBuffers[i], i);
+				devices[i]->PushRayBuffer(rayBuffers[i]);
 
 			double tLastCheck = tStart;
 			double bufferDone = 0.0;
 			bool done = false;
 			u_int queueIndex = 0;
 			while (!done) {
-				device->PopRayBuffer(queueIndex);
+				devices[queueIndex]->PopRayBuffer();
 				bufferDone += 1.0;
 	
-				device->PushRayBuffer(rayBuffers[queueIndex], queueIndex);
+				devices[queueIndex]->PushRayBuffer(rayBuffers[queueIndex]);
 	
 				// Check if it is time to stop
 				const double tNow = luxrays::WallClockTime();
@@ -269,7 +279,7 @@ int main(int argc, char** argv) {
 			}
 
 			for (u_int i = 0; i < RAYBUFFERS_COUNT; ++i)
-				device->PopRayBuffer(i);
+				devices[i]->PopRayBuffer();
 			bufferDone += RAYBUFFERS_COUNT;
 
 			double tStop = luxrays::WallClockTime();
