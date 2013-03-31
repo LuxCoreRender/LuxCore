@@ -47,6 +47,7 @@ public:
 			const size_t index);
 	~VirtualIntersectionDevice();
 
+	virtual void SetMaxStackSize(const size_t s);
 	virtual void SetQueueCount(const u_int count);
 	virtual void SetBufferCount(const u_int count);
 
@@ -66,7 +67,16 @@ public:
 		return realDevices[traceRayRealDeviceIndex]->TraceRay(ray, rayHit);
 	}
 
-	virtual double GetLoad() const { return started ? 1.0 : 0.0; }
+	//--------------------------------------------------------------------------
+	// Statistics
+	//--------------------------------------------------------------------------
+
+	virtual double GetLoad() const;
+
+	virtual double GetTotalRaysCount() const;
+	virtual double GetTotalPerformance() const;
+	virtual double GetDataParallelPerformance() const;
+	virtual void ResetPerformaceStats();
 
 	static size_t RayBufferSize;
 

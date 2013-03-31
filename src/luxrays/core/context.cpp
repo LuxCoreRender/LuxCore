@@ -207,7 +207,7 @@ std::vector<IntersectionDevice *> Context::AddIntersectionDevices(std::vector<De
 	return newDevices;
 }
 
-std::vector<IntersectionDevice *> Context::AddVirtualIntersectionDevices(
+std::vector<IntersectionDevice *> Context::AddVirtualIntersectionDevice(
 	std::vector<DeviceDescription *> &deviceDescs) {
 	assert (!started);
 	assert (deviceDescs.size() > 0);

@@ -178,13 +178,13 @@ double NativeThreadIntersectionDevice::GetLoad() const {
 		total += totalTime;
 	statsDeviceTotalTime = total;
 
-	return HardwareIntersectionDevice::GetLoad();
+	return IntersectionDevice::GetLoad();
 }
 
 void NativeThreadIntersectionDevice::UpdateTotalDataParallelRayCount() const {
 	double total = 0.0;
 	BOOST_FOREACH(double &rayCount, threadTotalDataParallelRayCount)
-		total +=rayCount;
+		total += rayCount;
 	statsTotalDataParallelRayCount = total;
 }
 

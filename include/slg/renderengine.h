@@ -308,7 +308,6 @@ protected:
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 
-	vector<luxrays::IntersectionDevice *> devices; // Virtual M20 or M2M intersection device
 	vector<HybridRenderThread *> renderThreads;
 };
 

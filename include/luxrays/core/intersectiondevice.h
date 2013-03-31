@@ -34,13 +34,19 @@ public:
 
 	virtual size_t GetQueueSize() = 0;
 
-	void SetMaxStackSize(const size_t s) {
+	virtual void SetMaxStackSize(const size_t s) {
 		stackSize = s;
 	}
 
 	//--------------------------------------------------------------------------
 	// Statistics
 	//--------------------------------------------------------------------------
+
+	virtual double GetLoad() const {
+		if (!started)
+			return 0.0;
+		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
+	}
 
 	virtual double GetTotalRaysCount() const { return statsTotalSerialRayCount + statsTotalDataParallelRayCount; }
 	virtual double GetTotalPerformance() const {
@@ -60,7 +66,6 @@ public:
 		statsTotalSerialRayCount = 0.0;
 		statsTotalDataParallelRayCount = 0.0;
 	}
-	virtual double GetLoad() const = 0;
 
 	//--------------------------------------------------------------------------
 	// Data parallel interface: to trace large set of rays (from the CPU)
@@ -127,12 +132,6 @@ protected:
 		const DeviceType type, const size_t index) :
 		IntersectionDevice(context, type, index) { }
 	virtual ~HardwareIntersectionDevice() { }
-
-	virtual double GetLoad() const {
-		if (!started)
-			return 0.0;
-		return (statsDeviceTotalTime == 0.0) ? 0.0 : (1.0 - statsDeviceIdleTime / statsDeviceTotalTime);
-	}
 
 	friend class VirtualIntersectionDevice;
 };

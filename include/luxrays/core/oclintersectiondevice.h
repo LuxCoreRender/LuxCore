@@ -87,7 +87,6 @@ public:
 	virtual void PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex = 0);
 	virtual RayBuffer *PopRayBuffer(const u_int queueIndex = 0);
 
-
 	//--------------------------------------------------------------------------
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
@@ -98,7 +97,25 @@ public:
 
 	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
 		const unsigned int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);	
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event,
+		const u_int queueIndex = 0) {
+		// Enqueue the intersection kernel
+		oclQueues[queueIndex]->EnqueueTraceRayBuffer(rBuff, hBuff, rayCount, events, event);
+
+		statsTotalDataParallelRayCount += rayCount;
+	}
+
+	//--------------------------------------------------------------------------
+	// Statistics
+	//--------------------------------------------------------------------------
+
+	// TODO
+	virtual double GetLoad() const { return 1.0; }
+
+	virtual double GetTotalRaysCount() const;
+	virtual double GetTotalPerformance() const;
+	virtual double GetDataParallelPerformance() const;
+	virtual void ResetPerformaceStats();
 
 	friend class Context;
 
@@ -109,6 +126,8 @@ protected:
 
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
+
+	void UpdateTotalDataParallelRayCount() const;
 
 	//--------------------------------------------------------------------------
 	// OpenCLDeviceQueue
@@ -124,6 +143,12 @@ private:
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
 
+		void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
+			const unsigned int rayCount,
+			const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+			freeElem[0]->EnqueueTraceRayBuffer(rBuff, hBuff, rayCount, events, event);
+		}
+
 		class OpenCLDeviceQueueElem {
 		public:
 			OpenCLDeviceQueueElem(OpenCLIntersectionDevice *device, cl::CommandQueue *oclQueue);
@@ -133,6 +158,12 @@ private:
 
 			void PushRayBuffer(RayBuffer *rayBuffer);
 			RayBuffer *PopRayBuffer();
+
+			void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
+			const unsigned int rayCount,
+			const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+				kernel->EnqueueRayBuffer(*oclQueue, rBuff, hBuff, rayCount, events, event);
+			}
 
 			OpenCLIntersectionDevice *device;
 			cl::CommandQueue *oclQueue;

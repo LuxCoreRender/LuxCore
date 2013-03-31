@@ -113,9 +113,14 @@ OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(OpenCLIntersectio
 	// Create the OpenCL queue
 	oclQueue = new cl::CommandQueue(oclContext, device->deviceDesc->GetOCLDevice());
 
-	// Allocated all associated buffers
-	for (u_int i = 0; i < device->bufferCount; ++i)
+	// Allocated all associated buffers if using data parallel mode
+	if (device->dataParallelSupport) {
+		for (u_int i = 0; i < device->bufferCount; ++i)
+			freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue));
+	} else {
+		// Only need one buffer
 		freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue));
+	}
 
 	statsTotalDataParallelRayCount = 0.0;
 }
@@ -230,6 +235,9 @@ void OpenCLIntersectionDevice::Start() {
 			// Create the OpenCL queue
 			oclQueues.push_back(new OpenCLDeviceQueue(this));
 		}
+	} else {
+		// I need to create at least one queue (for GPU rendering)
+		oclQueues.push_back(new OpenCLDeviceQueue(this));
 	}
 }
 
@@ -240,13 +248,48 @@ void OpenCLIntersectionDevice::Interrupt() {
 void OpenCLIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 
-	if (dataParallelSupport) {
-		BOOST_FOREACH(OpenCLDeviceQueue *queue, oclQueues)
-			delete queue;
 
-		oclQueues.clear();
-	}
+	BOOST_FOREACH(OpenCLDeviceQueue *queue, oclQueues)
+		delete queue;
+	oclQueues.clear();
+
 	pendingRayBuffers = 0;
+}
+
+//------------------------------------------------------------------------------
+// Statistics
+//------------------------------------------------------------------------------
+
+void OpenCLIntersectionDevice::UpdateTotalDataParallelRayCount() const {
+	double total = 0.0;
+	BOOST_FOREACH(OpenCLDeviceQueue *oclQueue, oclQueues)
+		total += oclQueue->statsTotalDataParallelRayCount;
+	statsTotalDataParallelRayCount = total;
+}
+
+double OpenCLIntersectionDevice::GetTotalRaysCount() const {
+	UpdateTotalDataParallelRayCount();
+
+	return HardwareIntersectionDevice::GetTotalRaysCount();
+}
+
+double OpenCLIntersectionDevice::GetTotalPerformance() const {
+	UpdateTotalDataParallelRayCount();
+
+	return HardwareIntersectionDevice::GetTotalPerformance();
+}
+
+double OpenCLIntersectionDevice::GetDataParallelPerformance() const {
+	UpdateTotalDataParallelRayCount();
+
+	return HardwareIntersectionDevice::GetDataParallelPerformance();
+}
+
+void OpenCLIntersectionDevice::ResetPerformaceStats() {
+	HardwareIntersectionDevice::ResetPerformaceStats();
+
+	BOOST_FOREACH(OpenCLDeviceQueue *oclQueue, oclQueues)
+			oclQueue->statsTotalDataParallelRayCount = 0.0;
 }
 
 #endif
