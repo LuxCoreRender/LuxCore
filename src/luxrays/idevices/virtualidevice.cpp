@@ -27,210 +27,122 @@
 using namespace luxrays;
 
 //------------------------------------------------------------------------------
-// Virtual Many To Many Hardware Device
+// VirtualIntersectionDevice class
 //------------------------------------------------------------------------------
 
-size_t VirtualM2MHardwareIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
+size_t VirtualIntersectionDevice::RayBufferSize = RAYBUFFER_SIZE;
 
-VirtualM2MHardwareIntersectionDevice::VirtualM2MHardwareIntersectionDevice(const size_t count,
-		const std::vector<HardwareIntersectionDevice *> &devices) {
-	assert (devices.size() > 0);
+VirtualIntersectionDevice::VirtualIntersectionDevice(
+		const std::vector<IntersectionDevice *> &devices, const size_t index) :
+		IntersectionDevice(devices[0]->GetContext(), DEVICE_TYPE_VIRTUAL, index) {
+	char buf[256];
+	sprintf(buf, "VirtualDevice-%03d", (int)index);
+	deviceName = std::string(buf);
 
 	realDevices = devices;
-	virtualDeviceCount = count;
-	
-	BOOST_FOREACH(HardwareIntersectionDevice *device, realDevices) {
-		device->SetQueueCount(virtualDeviceCount);
-		device->SetBufferCount(1);
-	}
+	traceRayRealDeviceIndex = 0;
 
-	for (size_t i = 0; i < virtualDeviceCount; ++i)
-		virtualDeviceInstances.push_back(new VirtualM2MDevHInstance(this, i));
+	for (size_t i = 0; i < realDevices.size(); ++i) {
+		realDevices[i]->SetQueueCount(queueCount);
+		realDevices[i]->SetBufferCount(bufferCount);
+	}
 }
 
-VirtualM2MHardwareIntersectionDevice::~VirtualM2MHardwareIntersectionDevice() {
-	std::vector<VirtualM2MDevHInstance *> devs = virtualDeviceInstances;
-
-	// The virtual devices must always be removed in reverse order
-	for (size_t i = 0; i < devs.size(); ++i)
-		RemoveVirtualDevice(devs[devs.size() - i - 1]);
+VirtualIntersectionDevice::~VirtualIntersectionDevice() {
+	if (started)
+		Stop();
 
 	for (size_t i = 0; i < realDevices.size(); ++i)
 		delete realDevices[i];
 }
 
-IntersectionDevice *VirtualM2MHardwareIntersectionDevice::GetVirtualDevice(size_t index) {
-	return virtualDeviceInstances[index];
-}
-
-IntersectionDevice *VirtualM2MHardwareIntersectionDevice::AddVirtualDevice() {
-	VirtualM2MDevHInstance *dev;
-
-	{
-		boost::mutex::scoped_lock lock(virtualDeviceMutex);
-
-		dev = new VirtualM2MDevHInstance(this, virtualDeviceInstances.size());
-		virtualDeviceInstances.push_back(dev);
-		++virtualDeviceCount;
-	}
-
-	// I assume all real devices have the same DataSet and state
-	const Context *ctx = realDevices[0]->deviceContext;
-
-	if (ctx->GetCurrentDataSet())
-		dev->SetDataSet(ctx->GetCurrentDataSet());
-
-	if (ctx->IsRunning())
-		dev->Start();
-
-	return dev;
-}
-
-void VirtualM2MHardwareIntersectionDevice::RemoveVirtualDevice(IntersectionDevice *d) {
-	VirtualM2MDevHInstance *dev = (VirtualM2MDevHInstance *)d;
-	
-	{
-		boost::mutex::scoped_lock lock(virtualDeviceMutex);
-
-		virtualDeviceInstances.erase(virtualDeviceInstances.begin() + dev->instanceIndex);
-		--virtualDeviceCount;
-	}
-
-	delete dev;
-}
-
-//------------------------------------------------------------------------------
-// VirtualM2MDevHInstance class
-//------------------------------------------------------------------------------
-
-VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::VirtualM2MDevHInstance(
-	VirtualM2MHardwareIntersectionDevice *device, const size_t index) :
-			IntersectionDevice(device->realDevices[0]->GetContext(), DEVICE_TYPE_VIRTUAL, index) {
-	char buf[256];
-	sprintf(buf, "VirtualM2MHDevice-%03d", (int)index);
-	deviceName = std::string(buf);
-
-	instanceIndex = index;
-	virtualDevice = device;
-
-	traceRayRealDeviceIndex = 0;
-}
-
-VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::~VirtualM2MDevHInstance() {
-	if (started)
-		Stop();
-}
-
-void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::SetDataSet(const DataSet *newDataSet) {
-	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+void VirtualIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
-	// Set the real devices data set if it is a new one
-	for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
-		const DataSet *oldDataSet = virtualDevice->realDevices[i]->GetDataSet();
-
-		if ((oldDataSet == NULL) || !oldDataSet->IsEqual(newDataSet))
-			virtualDevice->realDevices[i]->SetDataSet(newDataSet);
-	}
+	// Set the real devices data set
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realDevices[i]->SetDataSet(newDataSet);
 }
 
-void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Start() {
-	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
-
+void VirtualIntersectionDevice::Start() {
 	IntersectionDevice::Start();
-	pendingRayBufferDeviceIndex.resize(0);
+	pendingRayBufferDeviceIndex.resize(queueCount);
+	for (size_t i = 0; i < queueCount; ++i)
+		pendingRayBufferDeviceIndex[i].clear();
 
 	// Start the real devices if required
-	for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
-		if (!virtualDevice->realDevices[i]->IsRunning()) {
-			LR_LOG(deviceContext, "[VirtualM2MHDevice::" << deviceName << "] Starting real device: " << i);
-			virtualDevice->realDevices[i]->Start();
-		}
+	for (size_t i = 0; i < realDevices.size(); ++i) {
+		LR_LOG(deviceContext, "[VirtualIntersectionDevice::" << deviceName << "] Starting real device: " << i);
+		realDevices[i]->Start();
 	}
-
 }
 
-void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Interrupt() {
+void VirtualIntersectionDevice::Interrupt() {
 }
 
-void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::Stop() {
-	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
-
+void VirtualIntersectionDevice::Stop() {
 	// Need to wait for all my pending RayBuffer
-	while (pendingRayBufferDeviceIndex.size() > 0)
-		PopRayBuffer();
+	for (size_t i = 0; i < queueCount; ++i) {
+		while (pendingRayBufferDeviceIndex[i].size() > 0) {
+			u_int deviceIndex = pendingRayBufferDeviceIndex[i].back();
+			pendingRayBufferDeviceIndex[i].pop_back();
 
-	// Check if I'm the last one running
-	bool lastOne = true;
-	for (size_t i = 0; i < virtualDevice->virtualDeviceCount; ++i) {
-		if ((i != instanceIndex) && (virtualDevice->virtualDeviceInstances[i]->IsRunning())) {
-			lastOne = false;
-			break;
+			realDevices[deviceIndex]->PopRayBuffer(i);
 		}
 	}
 
-	if (lastOne) {
-		for (size_t i = 0; i < virtualDevice->realDevices.size(); ++i) {
-			LR_LOG(deviceContext, "[VirtualM2MDevice::" << deviceName << "] Stopping real device: " << i);
-			virtualDevice->realDevices[i]->Stop();
-		}
-	}
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realDevices[i]->Stop();
 
 	IntersectionDevice::Stop();
 }
 
-void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::SetQueueCount(const u_int count) {
-	if (count != 1)
-		throw std::runtime_error("Error in VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::SetQueueCount(): virtual device supports only 1 queue");
+void VirtualIntersectionDevice::SetQueueCount(const u_int count) {
+	IntersectionDevice::SetQueueCount(count);
+
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realDevices[i]->SetQueueCount(queueCount);
+
+	pendingRayBufferDeviceIndex.resize(queueCount);
 }
 
-void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::SetBufferCount(const u_int count) {
-	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
+void VirtualIntersectionDevice::SetBufferCount(const u_int count) {
+	IntersectionDevice::SetBufferCount(count);
 
-	BOOST_FOREACH(HardwareIntersectionDevice *dev, virtualDevice->realDevices)
-		dev->SetBufferCount(count);
+	for (size_t i = 0; i < realDevices.size(); ++i)
+		realDevices[i]->SetBufferCount(bufferCount);
 }
 
-RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::NewRayBuffer() {
+RayBuffer *VirtualIntersectionDevice::NewRayBuffer() {
 	return NewRayBuffer(RayBufferSize);
 }
 
-RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::NewRayBuffer(const size_t size) {
+RayBuffer *VirtualIntersectionDevice::NewRayBuffer(const size_t size) {
 	return new RayBuffer(size);
 }
 
-void VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PushRayBuffer(
+void VirtualIntersectionDevice::PushRayBuffer(
 	RayBuffer *rayBuffer, const u_int queueIndex) {
-	if (queueIndex != 0)
-		throw std::runtime_error("Error in VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PushRayBuffer(): "
-				"virtual devices can be used only with a single queue");
-
-	boost::mutex::scoped_lock lock(virtualDevice->virtualDeviceMutex);
-
 	// Look for the hardware device with less pending work
 	u_int deviceIndex = 0;
-	size_t minCount = virtualDevice->realDevices[0]->GetQueueSize();
-	for (u_int i = 1; i < virtualDevice->realDevices.size(); ++i) {
-		const size_t count = virtualDevice->realDevices[i]->GetQueueSize();
+	size_t minCount = realDevices[0]->GetQueueSize();
+	for (u_int i = 1; i < realDevices.size(); ++i) {
+		const size_t count = realDevices[i]->GetQueueSize();
 		if (count < minCount) {
 			deviceIndex = i;
 			minCount = count;
 		}
 	}
 
-	virtualDevice->realDevices[deviceIndex]->PushRayBuffer(rayBuffer, instanceIndex);
-	pendingRayBufferDeviceIndex.push_front(deviceIndex);
+	realDevices[deviceIndex]->PushRayBuffer(rayBuffer, queueIndex);
+	pendingRayBufferDeviceIndex[queueIndex].push_front(deviceIndex);
 }
 
-RayBuffer *VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PopRayBuffer(const u_int queueIndex) {
-	if (queueIndex != 0)
-		throw std::runtime_error("Error in VirtualM2MHardwareIntersectionDevice::VirtualM2MDevHInstance::PopRayBuffer(): "
-				" virtual devices can be used only with a single queue");
+RayBuffer *VirtualIntersectionDevice::PopRayBuffer(const u_int queueIndex) {
+	const u_int deviceIndex = pendingRayBufferDeviceIndex[queueIndex].back();
+	pendingRayBufferDeviceIndex[queueIndex].pop_back();
 
-	const u_int deviceIndex = pendingRayBufferDeviceIndex.back();
-	pendingRayBufferDeviceIndex.pop_back();
-
-	RayBuffer *rayBuffer = virtualDevice->realDevices[deviceIndex]->PopRayBuffer(instanceIndex);
+	RayBuffer *rayBuffer = realDevices[deviceIndex]->PopRayBuffer(queueIndex);
 
 	statsTotalDataParallelRayCount += rayBuffer->GetRayCount();
 
