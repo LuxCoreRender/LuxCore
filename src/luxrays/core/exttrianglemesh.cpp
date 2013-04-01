@@ -101,6 +101,76 @@ static int UVCB(p_ply_argument argument) {
 	return 1;
 }
 
+// rply color callback
+static int ColorCB(p_ply_argument argument) {
+	long userIndex = 0;
+	void *userData = NULL;
+	ply_get_argument_user_data(argument, &userData, &userIndex);
+
+	float *c = *static_cast<float **> (userData);
+
+	long colIndex;
+	ply_get_argument_element(argument, NULL, &colIndex);
+
+	// Check the type of value used
+	p_ply_property property;
+	ply_get_argument_property(argument, &property, NULL, NULL);
+	e_ply_type dataType;
+	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
+	if (dataType == PLY_UCHAR) {
+		if (userIndex == 0)
+			c[colIndex * 3] =
+				static_cast<float>(ply_get_argument_value(argument) / 255.0);
+		else if (userIndex == 1)
+			c[colIndex * 3 + 1] =
+				static_cast<float>(ply_get_argument_value(argument) / 255.0);
+		else if (userIndex == 2)
+			c[colIndex * 3 + 2] =
+				static_cast<float>(ply_get_argument_value(argument) / 255.0);
+	} else {
+		if (userIndex == 0)
+			c[colIndex * 3] =
+				static_cast<float>(ply_get_argument_value(argument));
+		else if (userIndex == 1)
+			c[colIndex * 3 + 1] =
+				static_cast<float>(ply_get_argument_value(argument));
+		else if (userIndex == 2)
+			c[colIndex * 3 + 2] =
+				static_cast<float>(ply_get_argument_value(argument));
+	}
+
+	return 1;
+}
+
+// rply vertex callback
+static int AlphaCB(p_ply_argument argument) {
+	long userIndex = 0;
+	void *userData = NULL;
+	ply_get_argument_user_data(argument, &userData, &userIndex);
+
+	float *c = *static_cast<float **> (userData);
+
+	long alphaIndex;
+	ply_get_argument_element(argument, NULL, &alphaIndex);
+
+	// Check the type of value used
+	p_ply_property property;
+	ply_get_argument_property(argument, &property, NULL, NULL);
+	e_ply_type dataType;
+	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
+	if (dataType == PLY_UCHAR) {
+		if (userIndex == 0)
+			c[alphaIndex] =
+				static_cast<float>(ply_get_argument_value(argument) / 255.0);
+	} else {
+		if (userIndex == 0)
+			c[alphaIndex] =
+				static_cast<float>(ply_get_argument_value(argument));		
+	}
+
+	return 1;
+}
+
 // rply face callback
 static int FaceCB(p_ply_argument argument) {
 	void *userData = NULL;
@@ -154,6 +224,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		throw std::runtime_error(ss.str());
 	}
 
+	// Check if the file includes normal informations
 	Normal *n;
 	long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
@@ -164,9 +235,35 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		throw std::runtime_error(ss.str());
 	}
 
+	// Check if the file includes uv informations
 	UV *uv;
 	long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
 	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
+	if ((plyNbUVs > 0) && (plyNbUVs != plyNbVerts)) {
+		std::stringstream ss;
+		ss << "Wrong count of uvs in '" << fileName << "'";
+		throw std::runtime_error(ss.str());
+	}
+
+	// Check if the file includes color informations
+	Spectrum *cols;
+	long plyNbColors = ply_set_read_cb(plyfile, "vertex", "red", ColorCB, &cols, 0);
+	ply_set_read_cb(plyfile, "vertex", "green", ColorCB, &cols, 1);
+	ply_set_read_cb(plyfile, "vertex", "blue", ColorCB, &cols, 2);
+	if ((plyNbColors > 0) && (plyNbColors != plyNbVerts)) {
+		std::stringstream ss;
+		ss << "Wrong count of colors in '" << fileName << "'";
+		throw std::runtime_error(ss.str());
+	}
+
+	// Check if the file includes alpha informations
+	float *alphas;
+	long plyNbAlphas = ply_set_read_cb(plyfile, "vertex", "alpha", AlphaCB, &alphas, 0);
+	if ((plyNbAlphas > 0) && (plyNbAlphas != plyNbVerts)) {
+		std::stringstream ss;
+		ss << "Wrong count of alphas in '" << fileName << "'";
+		throw std::runtime_error(ss.str());
+	}
 
 	p = new Point[plyNbVerts];
 	vi = new Triangle[plyNbTris];
@@ -175,6 +272,14 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		uv = NULL;
 	else
 		uv = new UV[plyNbUVs];
+	if (plyNbColors == 0)
+		cols = NULL;
+	else
+		cols = new Spectrum[plyNbColors];
+	if (plyNbAlphas == 0)
+		alphas = NULL;
+	else
+		alphas = new float[plyNbAlphas];
 
 	if (!ply_read(plyfile)) {
 		std::stringstream ss;
@@ -184,28 +289,22 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		delete[] vi;
 		delete[] n;
 		delete[] uv;
+		delete[] cols;
+		delete[] alphas;
 
 		throw std::runtime_error(ss.str());
 	}
 
 	ply_close(plyfile);
 
-	return CreateExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, usePlyNormals);
+	return CreateExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 	const long plyNbVerts, const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n, UV *uv,
+	Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas,
 	const bool usePlyNormals) {
-
-	const u_int vertexCount = plyNbVerts;
-	const u_int triangleCount = plyNbTris;
-	Point *vertices = p;
-	Triangle *triangles = vi;
-	Normal *vertNormals = n;
-	UV *vertUV = uv;
-
-	ExtTriangleMesh *mesh = new ExtTriangleMesh(vertexCount, triangleCount, vertices, triangles, vertNormals, vertUV);
+	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 
 	if (!usePlyNormals) {
 		// It looks like normals exported by Blender are bugged
@@ -232,10 +331,13 @@ ExtTriangleMesh::ExtTriangleMesh(ExtTriangleMesh *mesh) {
 	normals = mesh->normals;
 	triNormals = mesh->triNormals;
 	uvs = mesh->uvs;
+	cols = mesh->cols;
+	alphas = mesh->alphas;
 }
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV) {
+		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
+			Spectrum *meshCols, float *meshAlpha) {
 	assert (meshVertCount > 0);
 	assert (meshTriCount > 0);
 	assert (meshVertices != NULL);
@@ -248,6 +350,8 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 
 	normals = meshNormals;
 	uvs = meshUV;
+	cols = meshCols;
+	alphas = meshAlpha;
 
 	// Compute all triangle normals
 	triNormals = new Normal[triCount];
@@ -344,6 +448,14 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 		plyFile << "property float s\n"
 				"property float t\n";
 
+	if (HasColors())
+		plyFile << "property float red\n"
+				"property float green\n"
+				"property float blue\n";
+
+	if (HasAlphas())
+		plyFile << "property float alpha\n";
+
 	plyFile << "element face " + boost::lexical_cast<std::string>(triCount) + "\n"
 				"property list uchar uint vertex_indices\n"
 				"end_header\n";
@@ -358,6 +470,10 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 			plyFile.write((char *)&normals[i], sizeof(Normal));
 		if (HasUVs())
 			plyFile.write((char *)&uvs[i], sizeof(UV));
+		if (HasColors())
+			plyFile.write((char *)&cols[i], sizeof(Spectrum));
+		if (HasAlphas())
+			plyFile.write((char *)&alphas[i], sizeof(float));
 	}
 	if (!plyFile.good())
 		throw std::runtime_error("Unable to write PLY vertex data to: " + fileName);

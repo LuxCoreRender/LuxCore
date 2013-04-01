@@ -84,7 +84,6 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	materialsBuff = NULL;
 	texturesBuff = NULL;
 	meshIDBuff = NULL;
-	triangleIDBuff = NULL;
 	meshDescsBuff = NULL;
 	meshMatsBuff = NULL;
 	infiniteLightBuff = NULL;
@@ -93,6 +92,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	vertsBuff = NULL;
 	normalsBuff = NULL;
 	uvsBuff = NULL;
+	colsBuff = NULL;
+	alphasBuff = NULL;
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
 	triLightDefsBuff = NULL;
@@ -265,11 +266,29 @@ void PathOCLRenderThread::InitGeometry() {
 	AllocOCLBufferRO(&meshIDBuff, (void *)cscene->meshIDs,
 			sizeof(u_int) * trianglesCount, "MeshIDs");
 
-	AllocOCLBufferRO(&normalsBuff, &cscene->normals[0],
-		sizeof(Normal) * cscene->normals.size(), "Normals");
+	if (cscene->normals.size() > 0)
+		AllocOCLBufferRO(&normalsBuff, &cscene->normals[0],
+				sizeof(Normal) * cscene->normals.size(), "Normals");
+	else
+		FreeOCLBuffer(&normalsBuff);
 
-	AllocOCLBufferRO(&uvsBuff, &cscene->uvs[0],
-		sizeof(UV) * cscene->uvs.size(), "UVs");
+	if (cscene->uvs.size() > 0)
+		AllocOCLBufferRO(&uvsBuff, &cscene->uvs[0],
+			sizeof(UV) * cscene->uvs.size(), "UVs");
+	else
+		FreeOCLBuffer(&uvsBuff);
+
+	if (cscene->cols.size() > 0)
+		AllocOCLBufferRO(&colsBuff, &cscene->cols[0],
+			sizeof(Spectrum) * cscene->cols.size(), "Colors");
+	else
+		FreeOCLBuffer(&colsBuff);
+
+	if (cscene->alphas.size() > 0)
+		AllocOCLBufferRO(&alphasBuff, &cscene->alphas[0],
+			sizeof(float) * cscene->alphas.size(), "Alphas");
+	else
+		FreeOCLBuffer(&alphasBuff);
 
 	AllocOCLBufferRO(&vertsBuff, &cscene->verts[0],
 		sizeof(Point) * cscene->verts.size(), "Vertices");
@@ -277,19 +296,8 @@ void PathOCLRenderThread::InitGeometry() {
 	AllocOCLBufferRO(&trianglesBuff, &cscene->tris[0],
 		sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
-	// Check the used accelerator type
-	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) {
-		// MQBVH geometry must be defined in a specific way.
-
-		AllocOCLBufferRO(&triangleIDBuff, (void *)cscene->meshFirstTriangleOffset,
-				sizeof(u_int) * cscene->meshDescs.size(), "First mesh triangle offset");
-
-		AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
-				sizeof(slg::ocl::Mesh) * cscene->meshDescs.size(), "Mesh description");
-	} else {
-		FreeOCLBuffer(&triangleIDBuff);
-		FreeOCLBuffer(&meshDescsBuff);
-	}
+	AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
+			sizeof(slg::ocl::Mesh) * cscene->meshDescs.size(), "Mesh description");
 }
 
 void PathOCLRenderThread::InitMaterials() {
@@ -415,6 +423,15 @@ void PathOCLRenderThread::InitKernels() {
 			assert (false);
 	}
 
+	if (normalsBuff)
+		ss << " -D PARAM_HAS_NORMALS_BUFFER";
+	if (uvsBuff)
+		ss << " -D PARAM_HAS_UVS_BUFFER";
+	if (colsBuff)
+		ss << " -D PARAM_HAS_COLS_BUFFER";
+	if (alphasBuff)
+		ss << " -D PARAM_HAS_ALPHAS_BUFFER";
+
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ss << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))
@@ -451,6 +468,12 @@ void PathOCLRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_UV";
 	if (cscene->IsTextureCompiled(BAND_TEX))
 		ss << " -D PARAM_ENABLE_TEX_BAND";
+	if (cscene->IsTextureCompiled(HITPOINTCOLOR))
+		ss << " -D PARAM_ENABLE_TEX_HITPOINTCOLOR";
+	if (cscene->IsTextureCompiled(HITPOINTALPHA))
+		ss << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
+	if (cscene->IsTextureCompiled(HITPOINTGREY))
+		ss << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -577,7 +600,7 @@ void PathOCLRenderThread::InitKernels() {
 			break;
 		case slg::ocl::SOBOL:
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << 32 <<
+					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
 					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
 			break;
 		default:
@@ -967,6 +990,11 @@ void PathOCLRenderThread::InitRender() {
 
 	// Add PathStateBase.BSDF.HitPoint memory size
 	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
+			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY))
+		hitPointSize += sizeof(Spectrum);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
+		hitPointSize += sizeof(float);
 	if (hasPassThrough)
 		hitPointSize += sizeof(float);
 
@@ -1102,13 +1130,16 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *texturesBuff);
 	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
-	if (triangleIDBuff)
-		advancePathsKernel->setArg(argIndex++, *triangleIDBuff);
-	if (meshDescsBuff)
-		advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
+	advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, *vertsBuff);
-	advancePathsKernel->setArg(argIndex++, *normalsBuff);
-	advancePathsKernel->setArg(argIndex++, *uvsBuff);
+	if (normalsBuff)
+		advancePathsKernel->setArg(argIndex++, *normalsBuff);
+	if (uvsBuff)
+		advancePathsKernel->setArg(argIndex++, *uvsBuff);
+	if (colsBuff)
+		advancePathsKernel->setArg(argIndex++, *colsBuff);
+	if (alphasBuff)
+		advancePathsKernel->setArg(argIndex++, *alphasBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
 	if (infiniteLightBuff)
@@ -1197,11 +1228,12 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&materialsBuff);
 	FreeOCLBuffer(&texturesBuff);
 	FreeOCLBuffer(&meshIDBuff);
-	FreeOCLBuffer(&triangleIDBuff);
 	FreeOCLBuffer(&meshDescsBuff);
 	FreeOCLBuffer(&meshMatsBuff);
 	FreeOCLBuffer(&normalsBuff);
 	FreeOCLBuffer(&uvsBuff);
+	FreeOCLBuffer(&colsBuff);
+	FreeOCLBuffer(&alphasBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);
 	FreeOCLBuffer(&infiniteLightBuff);

@@ -21,8 +21,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "luxrays/core/spectrum.h"
 #include "slg/sampler/sampler.h"
-#include "slg/core/spectrum.h"
 
 using namespace luxrays;
 using namespace slg;

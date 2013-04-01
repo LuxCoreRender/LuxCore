@@ -49,3 +49,13 @@ float2 Triangle_InterpolateUV(const float2 uv0, const float2 uv1, const float2 u
 		const float b0, const float b1, const float b2) {
 	return b0 * uv0 + b1 * uv1 + b2 * uv2;
 }
+
+float3 Triangle_InterpolateColor(const float3 rgb0, const float3 rgb1, const float3 rgb2,
+		const float b0, const float b1, const float b2) {
+	return b0 * rgb0 + b1 * rgb1 + b2 * rgb2;
+}
+
+float Triangle_InterpolateAlpha(const float a0, const float a1, const float a2,
+		const float b0, const float b1, const float b2) {
+	return b0 * a0 + b1 * a1 + b2 * a2;
+}

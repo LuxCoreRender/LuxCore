@@ -46,6 +46,12 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	hitPoint.geometryN = mesh->GetGeometryNormal(triIndex);
 	hitPoint.shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
 
+	// Interpolate color
+	hitPoint.color = mesh->InterpolateTriColor(triIndex, rayHit.b1, rayHit.b2);
+
+	// Interpolate alpha
+	hitPoint.alpha = mesh->InterpolateTriAlpha(triIndex, rayHit.b1, rayHit.b2);
+
 	// Check if it is a light source
 	if (material->IsLightSource())
 		triangleLightSource = scene.triangleLights[rayHit.index];

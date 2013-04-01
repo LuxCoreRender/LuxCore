@@ -27,8 +27,8 @@
 #include <cstddef>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/spectrum.h"
 #include "slg/core/mc.h"
-#include "slg/core/spectrum.h"
 
 namespace slg {
 
@@ -79,7 +79,7 @@ public:
 	void Clamp();
 	void Scale(float s);
 	void Whitepoint(float temp);
-	Spectrum ToRGB();
+	luxrays::Spectrum ToRGB();
 
 protected:
 	unsigned int nSamples;

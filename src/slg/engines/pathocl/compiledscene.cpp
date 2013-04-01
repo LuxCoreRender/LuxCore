@@ -76,8 +76,6 @@ static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
 void CompiledScene::CompileGeometry() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Geometry");
 
-	const u_int verticesCount = scene->dataSet->GetTotalVertexCount();
-	const u_int trianglesCount = scene->dataSet->GetTotalTriangleCount();
 	const u_int objCount = scene->meshDefs.GetSize();
 	std::vector<ExtMesh *> &objs = scene->meshDefs.GetAllMesh();
 
@@ -87,188 +85,156 @@ void CompiledScene::CompileGeometry() {
 	verts.resize(0);
 	normals.resize(0);
 	uvs.resize(0);
+	cols.resize(0);
+	alphas.resize(0);
 	tris.resize(0);
 	meshDescs.resize(0);
 
 	meshIDs = scene->dataSet->GetMeshIDTable();
 
-	// Check the used accelerator type
-	if (scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) {
-		// MQBVH geometry must be defined in a specific way.
+	//----------------------------------------------------------------------
+	// Translate geometry
+	//----------------------------------------------------------------------
 
-		//----------------------------------------------------------------------
-		// Translate mesh IDs
-		//----------------------------------------------------------------------
+	std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
 
-		delete[] meshFirstTriangleOffset;
+	slg::ocl::Mesh newMeshDesc;
+	newMeshDesc.vertsOffset = 0;
+	newMeshDesc.trisOffset = 0;
+	newMeshDesc.normalsOffset = 0;
+	newMeshDesc.uvsOffset = 0;
+	newMeshDesc.colsOffset = 0;
+	newMeshDesc.alphasOffset = 0;
+	newMeshDesc.firstTriangleOffset = 0;
+	memcpy(&newMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+	memcpy(&newMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
 
-		// This is a bit a trick, it does some assumption about how the merge
-		// of Mesh works
-		meshFirstTriangleOffset = new TriangleID[objCount];
-		size_t currentIndex = 0;
-		for (u_int i = 0; i < objCount; ++i) {
-			ExtMesh *mesh = objs[i];
-			meshFirstTriangleOffset[i] = currentIndex;
-			currentIndex += mesh->GetTotalTriangleCount();
-		}
+	slg::ocl::Mesh currentMeshDesc;
+	for (u_int i = 0; i < objCount; ++i) {
+		ExtMesh *mesh = objs[i];
 
-		//----------------------------------------------------------------------
-		// Translate geometry
-		//----------------------------------------------------------------------
+		bool isExistingInstance;
+		if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+			// It is a instanced mesh
+			ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
 
-		std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
-
-		slg::ocl::Mesh newMeshDesc;
-		newMeshDesc.vertsOffset = 0;
-		newMeshDesc.trisOffset = 0;
-		memcpy(&newMeshDesc.trans.m, Matrix4x4().m, sizeof(float[4][4]));
-		memcpy(&newMeshDesc.trans.mInv, Matrix4x4().m, sizeof(float[4][4]));
-
-		slg::ocl::Mesh currentMeshDesc;
-
-		for (u_int i = 0; i < objCount; ++i) {
-			ExtMesh *mesh = objs[i];
-
-			bool isExistingInstance;
-			if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-				ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
-
-				// Check if is one of the already defined meshes
-				std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
-				if (it == definedMeshs.end()) {
-					// It is a new one
-					currentMeshDesc = newMeshDesc;
-
-					newMeshDesc.vertsOffset += imesh->GetTotalVertexCount();
-					newMeshDesc.trisOffset += imesh->GetTotalTriangleCount();
-
-					isExistingInstance = false;
-
-					const u_int index = meshDescs.size();
-					definedMeshs[imesh->GetExtTriangleMesh()] = index;
-				} else {
-					currentMeshDesc = meshDescs[it->second];
-
-					isExistingInstance = true;
-				}
-
-				memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
-				mesh = imesh->GetExtTriangleMesh();
-			} else {
+			// Check if is one of the already defined meshes
+			std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
+			if (it == definedMeshs.end()) {
+				// It is a new one
 				currentMeshDesc = newMeshDesc;
 
 				newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
 				newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
+				if (mesh->HasNormals())
+					newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
+				if (mesh->HasUVs())
+					newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
+				if (mesh->HasColors())
+					newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
+				if (mesh->HasAlphas())
+					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
+
+				newMeshDesc.firstTriangleOffset += mesh->GetTotalTriangleCount();
 
 				isExistingInstance = false;
+
+				const u_int index = meshDescs.size();
+				definedMeshs[imesh->GetExtTriangleMesh()] = index;
+			} else {
+				currentMeshDesc = meshDescs[it->second];
+
+				isExistingInstance = true;
 			}
 
-			meshDescs.push_back(currentMeshDesc);
+			// Overwrite the only different fields in an instanced mesh
+			memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
+			memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
 
-			if (!isExistingInstance) {
-				assert (mesh->GetType() == TYPE_EXT_TRIANGLE);
+			mesh = imesh->GetExtTriangleMesh();
+		} else {
+			// It is a not instanced mesh
+			currentMeshDesc = newMeshDesc;
 
-				//--------------------------------------------------------------
-				// Translate mesh normals
-				//--------------------------------------------------------------
+			newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
+			newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
+			if (mesh->HasNormals())
+				newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
+			if (mesh->HasUVs())
+				newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
+			if (mesh->HasColors())
+				newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
+			if (mesh->HasAlphas())
+				newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
 
+			newMeshDesc.firstTriangleOffset += mesh->GetTotalTriangleCount();
+
+			memcpy(&currentMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+			memcpy(&currentMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
+
+			isExistingInstance = false;
+		}
+
+		if (!isExistingInstance) {
+			assert (mesh->GetType() == TYPE_EXT_TRIANGLE);
+
+			//------------------------------------------------------------------
+			// Translate mesh normals
+			//------------------------------------------------------------------
+
+			if (mesh->HasNormals()) {
 				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
 					normals.push_back(mesh->GetShadeNormal(j));
+			} else
+				currentMeshDesc.normalsOffset = NULL_INDEX;
 
-				//----------------------------------------------------------------------
-				// Translate vertex uvs
-				//----------------------------------------------------------------------
+			//------------------------------------------------------------------
+			// Translate vertex uvs
+			//------------------------------------------------------------------
 
-				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-					if (mesh->HasUVs())
-						uvs.push_back(mesh->GetUV(j));
-					else
-						uvs.push_back(UV(0.f, 0.f));
-				}
-
-				//--------------------------------------------------------------
-				// Translate mesh vertices
-				//--------------------------------------------------------------
-
+			if (mesh->HasUVs()) {
 				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					verts.push_back(mesh->GetVertex(j));
-
-				//--------------------------------------------------------------
-				// Translate mesh indices
-				//--------------------------------------------------------------
-
-				Triangle *mtris = mesh->GetTriangles();
-				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j)
-					tris.push_back(mtris[j]);
-			}
-		}
-	} else {
-		meshFirstTriangleOffset = NULL;
-
-		//----------------------------------------------------------------------
-		// Translate mesh normals
-		//----------------------------------------------------------------------
-
-		normals.reserve(verticesCount);
-		for (u_int i = 0; i < objCount; ++i) {
-			ExtMesh *mesh = objs[i];
-
-			for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				normals.push_back(mesh->GetShadeNormal(j));
-		}
-
-		//----------------------------------------------------------------------
-		// Translate vertex uvs
-		//----------------------------------------------------------------------
-
-		uvs.reserve(verticesCount);
-		for (u_int i = 0; i < objCount; ++i) {
-			ExtMesh *mesh = objs[i];
-
-			for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j) {
-				if (mesh->HasUVs())
 					uvs.push_back(mesh->GetUV(j));
-				else
-					uvs.push_back(UV(0.f, 0.f));
-			}
-		}
+			} else
+				currentMeshDesc.uvsOffset = NULL_INDEX;
 
-		//----------------------------------------------------------------------
-		// Translate mesh vertices
-		//----------------------------------------------------------------------
+			//------------------------------------------------------------------
+			// Translate vertex colors
+			//------------------------------------------------------------------
 
-		u_int *meshOffsets = new u_int[objCount];
-		verts.reserve(verticesCount);
-		u_int vIndex = 0;
-		for (u_int i = 0; i < objCount; ++i) {
-			ExtMesh *mesh = objs[i];
+			if (mesh->HasColors()) {
+				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
+					cols.push_back(mesh->GetColor(j));
+			} else
+				currentMeshDesc.colsOffset = NULL_INDEX;
 
-			meshOffsets[i] = vIndex;
+			//------------------------------------------------------------------
+			// Translate vertex alphas
+			//------------------------------------------------------------------
+
+			if (mesh->HasAlphas()) {
+				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
+					alphas.push_back(mesh->GetAlpha(j));
+			} else
+				currentMeshDesc.alphasOffset = NULL_INDEX;
+
+			//------------------------------------------------------------------
+			// Translate mesh vertices
+			//------------------------------------------------------------------
+
 			for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
 				verts.push_back(mesh->GetVertex(j));
 
-			vIndex += mesh->GetTotalVertexCount();
-		}
-
-		//----------------------------------------------------------------------
-		// Translate mesh indices
-		//----------------------------------------------------------------------
-
-		tris.reserve(trianglesCount);
-		for (u_int i = 0; i < objCount; ++i) {
-			ExtMesh *mesh = objs[i];
+			//------------------------------------------------------------------
+			// Translate mesh indices
+			//------------------------------------------------------------------
 
 			Triangle *mtris = mesh->GetTriangles();
-			const u_int moffset = meshOffsets[i];
-			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-				tris.push_back(Triangle(
-						mtris[j].v[0] + moffset,
-						mtris[j].v[1] + moffset,
-						mtris[j].v[2] + moffset));
-			}
+			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j)
+				tris.push_back(mtris[j]);
 		}
-		delete[] meshOffsets;
+
+		meshDescs.push_back(currentMeshDesc);
 	}
 
 	const double tEnd = WallClockTime();
@@ -925,6 +891,21 @@ void CompiledScene::CompileTextures() {
 						tex->band.values[i].b = 0.f;
 					}
 				}
+				break;
+			}
+			case HITPOINTCOLOR: {
+				tex->type = slg::ocl::HITPOINTCOLOR;
+				break;
+			}
+			case HITPOINTALPHA: {
+				tex->type = slg::ocl::HITPOINTALPHA;
+				break;
+			}
+			case HITPOINTGREY: {
+				HitPointGreyTexture *hpg = static_cast<HitPointGreyTexture *>(t);
+
+				tex->type = slg::ocl::HITPOINTGREY;
+				tex->hitPointGrey.channel = hpg->GetChannel();
 				break;
 			}
 			default:

@@ -170,7 +170,7 @@ public:
 	}
 
 	void AddRadiance(const FilmBufferType type, const u_int x, const u_int y,
-		const Spectrum &radiance, const float weight) {
+		const luxrays::Spectrum &radiance, const float weight) {
 		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
 
 		sp->radiance += weight * radiance;
@@ -189,7 +189,7 @@ public:
 	}
 
 	void SplatFiltered(const FilmBufferType type, const float screenX,
-		const float screenY, const Spectrum &radiance, const float alpha,
+		const float screenY, const luxrays::Spectrum &radiance, const float alpha,
 		const float weight = 1.f);
 
 private:
@@ -204,8 +204,8 @@ private:
 		return gammaTable[index];
 	}
 
-	Pixel Radiance2Pixel(const Spectrum& c) const {
-		return Spectrum(
+	Pixel Radiance2Pixel(const luxrays::Spectrum& c) const {
+		return luxrays::Spectrum(
 				Radiance2PixelFloat(c.r),
 				Radiance2PixelFloat(c.g),
 				Radiance2PixelFloat(c.b));

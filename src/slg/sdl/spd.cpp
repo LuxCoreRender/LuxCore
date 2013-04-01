@@ -19,9 +19,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include "luxrays/core/spectrum.h"
 #include "slg/core/spd.h"
 #include "slg/core/data/xyzbasis.h"
-#include "slg/core/spectrum.h"
 
 using namespace luxrays;
 using namespace slg;

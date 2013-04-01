@@ -80,6 +80,8 @@ public:
 
 	friend std::ostream &operator<<(std::ostream &, const Matrix4x4 &);
 
+	static const Matrix4x4 MAT_IDENTITY;
+
 	float m[4][4];
 };
 

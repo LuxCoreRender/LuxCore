@@ -22,8 +22,17 @@
  ***************************************************************************/
 
 typedef struct {
+	// Vertex informaiton
 	unsigned int vertsOffset;
+	unsigned int normalsOffset;
+	unsigned int uvsOffset;
+	unsigned int colsOffset;
+	unsigned int alphasOffset;
+
+	// Triangle information
 	unsigned int trisOffset;
 
+	// Information used by MQBVH
+	unsigned int firstTriangleOffset;
 	Transform trans;
 } Mesh;

@@ -26,8 +26,6 @@
 
 namespace luxrays {
 
-const Matrix4x4 Transform::MAT_IDENTITY = Matrix4x4();
-
 // Transform Method Definitions
 
 std::ostream & operator<<(std::ostream &os, const Transform &t) {

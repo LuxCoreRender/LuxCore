@@ -25,7 +25,8 @@
 
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
-	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX,
+	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
+	HITPOINTGREY,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
 	WRINKLED, UV_TEX, BAND_TEX
@@ -140,6 +141,10 @@ typedef struct {
 } BandTexParam;
 
 typedef struct {
+	unsigned int channel;
+} HitPointGreyTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		ConstFloatParam constFloat;
@@ -160,6 +165,7 @@ typedef struct {
 		WrinkledTexParam wrinkled;
 		UVTexParam uvTex;
 		BandTexParam band;
+		HitPointGreyTexParam hitPointGrey;
 	};
 } Texture;
 
