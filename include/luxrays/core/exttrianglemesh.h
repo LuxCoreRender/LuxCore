@@ -117,6 +117,8 @@ public:
 	}
 	
 	Normal InterpolateTriNormal(const unsigned int index, const float b1, const float b2) const {
+		if (!normals)
+			return GetGeometryNormal(index);
 		const Triangle &tri = tris[index];
 		const float b0 = 1.f - b1 - b2;
 		return Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
