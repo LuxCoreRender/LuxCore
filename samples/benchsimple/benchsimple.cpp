@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 
 		// Multiple devices
 		//ctx->AddVirtualIntersectionDevices(deviceDescs);
-		//luxrays::IntersectionDevice *device = ctx->GetIntersectionDevices()[0];
+		//luxrays::IntersectionDevice *device = ctx->GetIntersectionDevice()[0];
 		
 
 		// If it is a NativeThreadIntersectionDevice, you can set the number of threads
