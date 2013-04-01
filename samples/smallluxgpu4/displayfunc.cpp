@@ -44,6 +44,7 @@
 #include "slg/rendersession.h"
 #include "slg/film/film.h"
 #include "slg/engines/pathocl/rtpathocl.h"
+#include "luxrays/core/virtualdevice.h"
 
 using namespace std;
 using namespace luxrays;
@@ -154,28 +155,39 @@ static void PrintHelpAndSettings() {
 	// Intersection devices
 	const vector<IntersectionDevice *> &idevices = session->renderEngine->GetIntersectionDevices();
 
-	double minPerf = idevices[0]->GetTotalPerformance();
-	double totalPerf = idevices[0]->GetTotalPerformance();
-	for (size_t i = 1; i < idevices.size(); ++i) {
-		minPerf = min(minPerf, idevices[i]->GetTotalPerformance());
-		totalPerf += idevices[i]->GetTotalPerformance();
+	// Replace all virtual devices with real
+	vector<IntersectionDevice *> realDevices;
+	for (size_t i = 0; i < idevices.size(); ++i) {
+		VirtualIntersectionDevice *vdev = dynamic_cast<VirtualIntersectionDevice *>(idevices[i]);
+		if (vdev) {
+			const vector<IntersectionDevice *> &realDevs = vdev->GetRealDevices();
+			realDevices.insert(realDevices.end(), realDevs.begin(), realDevs.end());
+		} else
+			realDevices.push_back(idevices[i]);
+	}
+
+	double minPerf = realDevices[0]->GetTotalPerformance();
+	double totalPerf = realDevices[0]->GetTotalPerformance();
+	for (size_t i = 1; i < realDevices.size(); ++i) {
+		minPerf = min(minPerf, realDevices[i]->GetTotalPerformance());
+		totalPerf += realDevices[i]->GetTotalPerformance();
 	}
 
 	glColor3f(1.0f, 0.5f, 0.f);
 	int offset = 45;
-	size_t deviceCount = idevices.size();
+	size_t deviceCount = realDevices.size();
 
 	char buff[512];
 	for (size_t i = 0; i < deviceCount; ++i) {
 		sprintf(buff, "[%s][Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-			idevices[i]->GetName().c_str(),
-			int(idevices[i]->GetTotalPerformance() / 1000.0),
-				int(idevices[i]->GetSerialPerformance() / 1000.0),
-				int(idevices[i]->GetDataParallelPerformance() / 1000.0),
-			idevices[i]->GetTotalPerformance() / minPerf,
-			100.0 * idevices[i]->GetTotalPerformance() / totalPerf,
-			int(idevices[i]->GetUsedMemory() / (1024 * 1024)),
-			int(idevices[i]->GetMaxMemory() / (1024 * 1024)));
+			realDevices[i]->GetName().c_str(),
+			int(realDevices[i]->GetTotalPerformance() / 1000.0),
+				int(realDevices[i]->GetSerialPerformance() / 1000.0),
+				int(realDevices[i]->GetDataParallelPerformance() / 1000.0),
+			realDevices[i]->GetTotalPerformance() / minPerf,
+			100.0 * realDevices[i]->GetTotalPerformance() / totalPerf,
+			int(realDevices[i]->GetUsedMemory() / (1024 * 1024)),
+			int(realDevices[i]->GetMaxMemory() / (1024 * 1024)));
 		glRasterPos2i(20, offset);
 		PrintString(GLUT_BITMAP_8_BY_13, buff);
 		offset += 15;

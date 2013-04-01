@@ -47,6 +47,8 @@ public:
 			const size_t index);
 	~VirtualIntersectionDevice();
 
+	const std::vector<IntersectionDevice *> &GetRealDevices() const { return realDevices; }
+
 	virtual void SetMaxStackSize(const size_t s);
 	virtual void SetQueueCount(const u_int count);
 	virtual void SetBufferCount(const u_int count);
@@ -72,10 +74,6 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual double GetLoad() const;
-
-	virtual double GetTotalRaysCount() const;
-	virtual double GetTotalPerformance() const;
-	virtual double GetDataParallelPerformance() const;
 	virtual void ResetPerformaceStats();
 
 	static size_t RayBufferSize;

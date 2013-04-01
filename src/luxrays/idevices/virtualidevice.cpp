@@ -162,7 +162,6 @@ RayBuffer *VirtualIntersectionDevice::PopRayBuffer(const u_int queueIndex) {
 
 double VirtualIntersectionDevice::GetLoad() const {
 	double tot = 0.f;
-
 	if (started) {
 		BOOST_FOREACH(IntersectionDevice *device, realDevices)
 			tot += device->GetLoad();
@@ -170,22 +169,6 @@ double VirtualIntersectionDevice::GetLoad() const {
 	}
 
 	return tot;
-}
-
-double VirtualIntersectionDevice::GetTotalRaysCount() const {
-//	double tot = 0.0;
-//	BOOST_FOREACH(IntersectionDevice *device, realDevices)
-//		tot += device->GetTotalRaysCount;
-
-	return IntersectionDevice::GetTotalRaysCount();
-}
-
-double VirtualIntersectionDevice::GetTotalPerformance() const {
-	return IntersectionDevice::GetTotalPerformance();
-}
-
-double VirtualIntersectionDevice::GetDataParallelPerformance() const {
-	return IntersectionDevice::GetDataParallelPerformance();
 }
 
 void VirtualIntersectionDevice::ResetPerformaceStats() {
