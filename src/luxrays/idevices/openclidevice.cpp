@@ -264,11 +264,13 @@ void OpenCLIntersectionDevice::UpdateTotalDataParallelRayCount() const {
 	double total = 0.0;
 	BOOST_FOREACH(OpenCLDeviceQueue *oclQueue, oclQueues)
 		total += oclQueue->statsTotalDataParallelRayCount;
+
 	statsTotalDataParallelRayCount = total;
 }
 
 double OpenCLIntersectionDevice::GetTotalRaysCount() const {
-	UpdateTotalDataParallelRayCount();
+	if (dataParallelSupport)
+		UpdateTotalDataParallelRayCount();
 
 	return HardwareIntersectionDevice::GetTotalRaysCount();
 }

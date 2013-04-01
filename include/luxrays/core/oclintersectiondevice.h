@@ -101,8 +101,6 @@ public:
 		const u_int queueIndex = 0) {
 		// Enqueue the intersection kernel
 		oclQueues[queueIndex]->EnqueueTraceRayBuffer(rBuff, hBuff, rayCount, events, event);
-
-		statsTotalDataParallelRayCount += rayCount;
 	}
 
 	//--------------------------------------------------------------------------
@@ -147,6 +145,7 @@ private:
 			const unsigned int rayCount,
 			const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 			freeElem[0]->EnqueueTraceRayBuffer(rBuff, hBuff, rayCount, events, event);
+			statsTotalDataParallelRayCount += rayCount;
 		}
 
 		class OpenCLDeviceQueueElem {
