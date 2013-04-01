@@ -174,7 +174,7 @@ void OpenCLMQBVHKernel::UpdateDataSet(const DataSet *newDataSet) {
 		0,
 		mqbvh->GetNLeafs() * sizeof(Matrix4x4),
 		invTrans);
-	delete invTrans;
+	delete[] invTrans;
 
 	// Update MQBVH nodes
 	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
@@ -263,7 +263,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		nLeafs * sizeof(unsigned int) * 2, memMap);
 	device->AllocMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
-	delete memMap;
+	delete[] memMap;
 
 	// Upload QBVH leafs
 	size_t nodesMemOffset = 0;
@@ -306,7 +306,7 @@ OpenCLKernel *MQBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		invTransMemSize, invTrans);
 	device->AllocMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
-	delete invTrans;
+	delete[] invTrans;
 
 	// Upload primitive offsets
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
