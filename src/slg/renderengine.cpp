@@ -791,7 +791,7 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 		if (selectedDeviceDescs.empty())
 			throw runtime_error("No native CPU device found");
 	}
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const unsigned int renderThreadCount = boost::thread::hardware_concurrency();
 	if (selectedDeviceDescs.size() == 1) {
 		// Only one intersection device, use directly the device
 		ctx->AddIntersectionDevices(selectedDeviceDescs);
