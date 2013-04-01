@@ -46,12 +46,12 @@ namespace ocl {
 typedef struct {
 	FilmBufferType type;
 	float screenX, screenY;
-	Spectrum radiance;
+	luxrays::Spectrum radiance;
 	float alpha;
 } SampleResult;
 
 inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const FilmBufferType type,
-	const float screenX, const float screenY, const Spectrum &radiance, const float alpha) {
+	const float screenX, const float screenY, const luxrays::Spectrum &radiance, const float alpha) {
 	SampleResult sr;
 	sr.type = type;
 	sr.screenX = screenX;
@@ -159,12 +159,15 @@ private:
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
+#define SOBOL_STARTOFFSET 32
+
 extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions);
 
 class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm),
-			directions(NULL), rng0(rnd->floatValue()), rng1(rnd->floatValue()), pass(0) { }
+			directions(NULL), rng0(rnd->floatValue()), rng1(rnd->floatValue()),
+			pass(SOBOL_STARTOFFSET) { }
 	virtual ~SobolSampler() { delete directions; }
 
 	virtual SamplerType GetType() const { return SOBOL; }

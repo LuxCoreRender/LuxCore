@@ -44,10 +44,10 @@ void ExtMeshCache::DefineExtMesh(const std::string &fileName, ExtTriangleMesh *m
 
 void ExtMeshCache::DefineExtMesh(const std::string &fileName,
 		const long plyNbVerts, const long plyNbTris,
-		Point *p, Triangle *vi, Normal *n, UV *uv,
+		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas,
 		const bool usePlyNormals) {
 	ExtTriangleMesh *mesh = ExtTriangleMesh::CreateExtTriangleMesh(
-			plyNbVerts, plyNbTris, p, vi, n, uv,
+			plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas,
 			usePlyNormals);
 
 	DefineExtMesh(fileName, mesh, usePlyNormals);

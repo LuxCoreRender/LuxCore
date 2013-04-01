@@ -128,7 +128,6 @@ protected:
 	cl::Buffer *materialsBuff;
 	cl::Buffer *texturesBuff;
 	cl::Buffer *meshIDBuff;
-	cl::Buffer *triangleIDBuff;
 	cl::Buffer *meshDescsBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
@@ -137,6 +136,8 @@ protected:
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *uvsBuff;
+	cl::Buffer *colsBuff;
+	cl::Buffer *alphasBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *triLightDefsBuff;

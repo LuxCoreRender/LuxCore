@@ -20,19 +20,18 @@
  *   and Lux Renderer website : http://www.luxrender.net                   *
  ***************************************************************************/
 
-#ifndef _SLG_SPECTRUM_H_H
-#define _SLG_SPECTRUM_H_H
+#ifndef _LUXRAYS_SPECTRUM_H_H
+#define _LUXRAYS_SPECTRUM_H_H
 
 #include <ostream>
 
 #include "luxrays/core/utils.h"
-#include "slg/slg.h"
 
-namespace slg {
+namespace luxrays {
 
 // OpenCL data types
 namespace ocl {
-#include "slg/core/spectrum_types.cl"
+#include "luxrays/core/spectrum_types.cl"
 }
 
 class Spectrum {

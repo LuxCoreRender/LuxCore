@@ -22,12 +22,12 @@
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
-#include "slg/core/spectrum.h"
+#include "luxrays/core/spectrum.h"
 
 namespace slg {
 
 typedef struct {
-	Spectrum radiance;
+	luxrays::Spectrum radiance;
 	float weight;
 } SamplePixel;
 
@@ -54,7 +54,7 @@ public:
 
 	SamplePixel *GetPixels() const { return pixels; }
 
-	void AddPixel(const unsigned int x, const unsigned int y, const Spectrum& r, const float w) {
+	void AddPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum &r, const float w) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
@@ -65,7 +65,7 @@ public:
 		pixel->weight += w;
 	}
 
-	void AddPixel(const unsigned int index, const Spectrum& r, const float w) {
+	void AddPixel(const unsigned int index, const luxrays::Spectrum &r, const float w) {
 		assert (index >= 0);
 		assert (index < width * height);
 
@@ -73,7 +73,7 @@ public:
 		pixels[index].weight += w;
 	}
 
-	void SetPixel(const unsigned int x, const unsigned int y, const Spectrum& r, const float w) {
+	void SetPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum &r, const float w) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
@@ -84,7 +84,7 @@ public:
 		pixel->weight = w;
 	}
 
-	void SetPixel(const unsigned int index, const Spectrum& r, const float w) {
+	void SetPixel(const unsigned int index, const luxrays::Spectrum &r, const float w) {
 		assert (index >= 0);
 		assert (index < width * height);
 
@@ -117,7 +117,7 @@ private:
 	SamplePixel *pixels;
 };
 
-typedef Spectrum Pixel;
+typedef luxrays::Spectrum Pixel;
 
 class FrameBuffer {
 public:
@@ -141,7 +141,7 @@ public:
 
 	Pixel *GetPixels() const { return pixels; }
 
-	void SetPixel(const unsigned int x, const unsigned int y, const Spectrum& r) {
+	void SetPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum& r) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
@@ -150,7 +150,7 @@ public:
 		pixels[x + y * width] = r;
 	}
 
-	void SetPixel(const unsigned int index, const Spectrum& r) {
+	void SetPixel(const unsigned int index, const luxrays::Spectrum& r) {
 		assert (index >= 0);
 		assert (index < width * height);
 

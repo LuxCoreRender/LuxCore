@@ -84,7 +84,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	unsigned int GetPass() const {
-		return samplesCount / (film->GetWidth() * film->GetHeight());
+		return static_cast<unsigned int>(samplesCount / (film->GetWidth() * film->GetHeight()));
 	}
 	double GetTotalSampleCount() const { return samplesCount; }
 	float GetConvergence() const { return convergence; }
@@ -96,7 +96,7 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	static float RussianRouletteProb(const Spectrum &color, const float cap) {
+	static float RussianRouletteProb(const luxrays::Spectrum &color, const float cap) {
 		return luxrays::Clamp(color.Filter(), cap, 1.f);
 	}
 

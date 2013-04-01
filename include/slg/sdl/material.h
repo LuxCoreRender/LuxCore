@@ -29,7 +29,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
-#include "slg/core/spectrum.h"
+#include "luxrays/core/spectrum.h"
 #include "slg/sdl/bsdfevents.h"
 #include "slg/core/mc.h"
 #include "slg/sdl/texture.h"
@@ -77,27 +77,27 @@ public:
 
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
-	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const {
-		return Spectrum(0.f);
+		return luxrays::Spectrum(0.f);
 	}
 
-	virtual Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const {
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const {
 		if (emittedTex)
 			return emittedTex->GetSpectrumValue(hitPoint);
 		else
-			return Spectrum();
+			return luxrays::Spectrum();
 	}
 
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const = 0;
 
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const = 0;
@@ -186,10 +186,10 @@ public:
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -221,10 +221,10 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -264,10 +264,10 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -313,13 +313,13 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsShadowTransparent() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint, const luxrays::Vector &localFixedDir,
+	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint, const luxrays::Vector &localFixedDir,
 		const float passThroughEvent) const;
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -361,10 +361,10 @@ public:
 	virtual MaterialType GetType() const { return METAL; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -414,15 +414,15 @@ public:
 	virtual bool IsPassThrough() const {
 		return (matA->IsPassThrough() || matB->IsPassThrough());
 	}
-	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
-	virtual Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -460,13 +460,13 @@ public:
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
-	virtual Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, const float passThroughEvent) const { return Spectrum(1.f); }
+	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const { return luxrays::Spectrum(1.f); }
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -495,10 +495,10 @@ public:
 	virtual MaterialType GetType() const { return MATTETRANSLUCENT; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT | TRANSMIT; };
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -533,10 +533,10 @@ public:
 	virtual MaterialType GetType() const { return GLOSSY2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -558,16 +558,16 @@ public:
 	const bool IsMultibounce() const { return multibounce; }
 
 private:
-	float SchlickBSDF_CoatingWeight(const Spectrum &ks, const luxrays::Vector &localFixedDir) const;
-	Spectrum SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, const float roughness, const float anisotropy,
+	float SchlickBSDF_CoatingWeight(const luxrays::Spectrum &ks, const luxrays::Vector &localFixedDir) const;
+	luxrays::Spectrum SchlickBSDF_CoatingF(const bool fromLight, const luxrays::Spectrum &ks, const float roughness, const float anisotropy,
 		const luxrays::Vector &localFixedDir,	const luxrays::Vector &localSampledDir) const;
-	Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
+	luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const luxrays::Spectrum ks,
 		const float roughness, const float anisotropy, const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		float u0, float u1, float *pdf) const;
 	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
-	Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
-		const Spectrum &alpha, const float depth) const;
+	luxrays::Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
+		const luxrays::Spectrum &alpha, const float depth) const;
 
 	const Texture *Kd;
 	const Texture *Ks;
@@ -592,10 +592,10 @@ public:
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -635,10 +635,10 @@ public:
 	virtual MaterialType GetType() const { return ROUGHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
 
-	virtual Spectrum Evaluate(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual Spectrum Sample(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
@@ -684,9 +684,9 @@ extern float SchlickDistribution_G(const float roughness, const luxrays::Vector 
 // Fresnel related functions
 //------------------------------------------------------------------------------
 
-extern Spectrum FresnelSlick_Evaluate(const Spectrum &ks, const float cosi);
-extern Spectrum FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi);
-extern Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi);
+extern luxrays::Spectrum FresnelSlick_Evaluate(const luxrays::Spectrum &ks, const float cosi);
+extern luxrays::Spectrum FresnelGeneral_Evaluate(const luxrays::Spectrum &eta, const luxrays::Spectrum &k, const float cosi);
+extern luxrays::Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi);
 
 }
 
