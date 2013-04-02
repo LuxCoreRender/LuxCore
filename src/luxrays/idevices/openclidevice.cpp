@@ -246,6 +246,9 @@ void OpenCLIntersectionDevice::Stop() {
 		delete queue;
 	oclQueues.clear();
 
+	delete kernels;
+	kernels = NULL;
+
 	pendingRayBuffers = 0;
 }
 
