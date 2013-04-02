@@ -23,6 +23,7 @@
 #define	_LUXRAYS_OPENCL_INTERSECTIONDEVICE_H
 
 #include <deque>
+#include <boost/foreach.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/ocldevice.h"
@@ -35,15 +36,20 @@ namespace luxrays {
 // OpenCL devices
 //------------------------------------------------------------------------------
 
-class OpenCLKernel {
+class OpenCLKernels {
 public:
-	OpenCLKernel(OpenCLIntersectionDevice *dev) : device(dev), kernel(NULL),
-		stackSize(24) { }
-	virtual ~OpenCLKernel() { delete kernel; }
+	OpenCLKernels(OpenCLIntersectionDevice *dev, const u_int count) :
+		device(dev), stackSize(24) {
+		kernels.resize(count, NULL);
+	}
+	virtual ~OpenCLKernels() {
+		BOOST_FOREACH(cl::Kernel *kernel, kernels)
+			delete kernel;
+	}
 
 	virtual void FreeBuffers() = 0;
 	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
 
@@ -51,7 +57,7 @@ public:
 
 protected:
 	OpenCLIntersectionDevice *device;
-	cl::Kernel *kernel;
+	std::vector<cl::Kernel *> kernels;
 	size_t workGroupSize;
 	size_t stackSize;
 };
@@ -133,10 +139,8 @@ private:
 
 	class OpenCLDeviceQueue {
 	public:
-		OpenCLDeviceQueue(OpenCLIntersectionDevice *device);
+		OpenCLDeviceQueue(OpenCLIntersectionDevice *device, const u_int kernelIndexOffset);
 		~OpenCLDeviceQueue();
-
-		void UpdateDataSet();
 
 		void PushRayBuffer(RayBuffer *rayBuffer);
 		RayBuffer *PopRayBuffer();
@@ -150,10 +154,9 @@ private:
 
 		class OpenCLDeviceQueueElem {
 		public:
-			OpenCLDeviceQueueElem(OpenCLIntersectionDevice *device, cl::CommandQueue *oclQueue);
+			OpenCLDeviceQueueElem(OpenCLIntersectionDevice *device, cl::CommandQueue *oclQueue,
+					const u_int kernelIndex);
 			~OpenCLDeviceQueueElem();
-
-			void UpdateDataSet();
 
 			void PushRayBuffer(RayBuffer *rayBuffer);
 			RayBuffer *PopRayBuffer();
@@ -161,13 +164,13 @@ private:
 			void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
 			const unsigned int rayCount,
 			const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-				kernel->EnqueueRayBuffer(*oclQueue, rBuff, hBuff, rayCount, events, event);
+				device->kernels->EnqueueRayBuffer(*oclQueue, kernelIndex, rBuff, hBuff, rayCount, events, event);
 			}
 
 			OpenCLIntersectionDevice *device;
 			cl::CommandQueue *oclQueue;
 
-			OpenCLKernel *kernel;
+			u_int kernelIndex;
 
 			// Free buffers and events
 			cl::Buffer *rayBuff;
@@ -191,6 +194,7 @@ private:
 
 	// OpenCL queues
 	vector<OpenCLDeviceQueue *> oclQueues;
+	OpenCLKernels *kernels;
 
 	bool reportedPermissionError, disableImageStorage;
 };

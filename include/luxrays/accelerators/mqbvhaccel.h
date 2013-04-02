@@ -40,8 +40,8 @@ public:
 	virtual ~MQBVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
-	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-		unsigned int stackSize, bool disableImageStorage) const;
+	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
+		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);

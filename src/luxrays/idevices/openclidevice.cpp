@@ -35,12 +35,9 @@ using namespace luxrays;
 //------------------------------------------------------------------------------
 
 OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::OpenCLDeviceQueueElem(
-	OpenCLIntersectionDevice *dev, cl::CommandQueue *q) : device(dev), oclQueue(q) {
+	OpenCLIntersectionDevice *dev, cl::CommandQueue *q, const u_int index) :
+	device(dev), oclQueue(q), kernelIndex(index) {
 	cl::Context &oclContext = device->deviceDesc->GetOCLContext();
-	
-	// Create the associated kernel
-	kernel = device->dataSet->GetAccelerator()->NewOpenCLKernel(device,
-			device->stackSize, device->disableImageStorage);
 
 	// Allocate OpenCL buffers
 	rayBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY,
@@ -62,11 +59,6 @@ OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::~OpenCLDevic
 	delete rayBuff;
 	device->FreeMemory(hitBuff->getInfo<CL_MEM_SIZE>());
 	delete hitBuff;
-	delete kernel;
-}
-
-void OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::UpdateDataSet() {
-	kernel->UpdateDataSet(device->dataSet);
 }
 
 void OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PushRayBuffer(RayBuffer *rayBuffer) {
@@ -80,7 +72,7 @@ void OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::PushRay
 			sizeof(Ray) * rayCount, rayBuffer->GetRayBuffer());
 
 	// Enqueue the intersection kernel
-	kernel->EnqueueRayBuffer(*oclQueue, *rayBuff, *hitBuff, rayCount, NULL, NULL);
+	device->kernels->EnqueueRayBuffer(*oclQueue, kernelIndex, *rayBuff, *hitBuff, rayCount, NULL, NULL);
 
 	// Enqueue the download of the results
 	oclQueue->enqueueReadBuffer(*hitBuff, CL_FALSE, 0,
@@ -106,8 +98,8 @@ RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueueElem::P
 // OpenCL Intersection Queue
 //------------------------------------------------------------------------------
 
-OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(OpenCLIntersectionDevice *dev) :
-	device(dev) {
+OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(
+	OpenCLIntersectionDevice *dev, const u_int kernelIndexOffset) : device(dev) {
 	cl::Context &oclContext = device->deviceDesc->GetOCLContext();
 
 	// Create the OpenCL queue
@@ -116,10 +108,10 @@ OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(OpenCLIntersectio
 	// Allocated all associated buffers if using data parallel mode
 	if (device->dataParallelSupport) {
 		for (u_int i = 0; i < device->bufferCount; ++i)
-			freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue));
+			freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue, kernelIndexOffset + i));
 	} else {
 		// Only need one buffer
-		freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue));
+		freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue, kernelIndexOffset));
 	}
 
 	statsTotalDataParallelRayCount = 0.0;
@@ -134,11 +126,6 @@ OpenCLIntersectionDevice::OpenCLDeviceQueue::~OpenCLDeviceQueue() {
 		delete elem;
 
 	delete oclQueue;
-}
-
-void OpenCLIntersectionDevice::OpenCLDeviceQueue::UpdateDataSet() {
-	BOOST_FOREACH(OpenCLDeviceQueueElem *elem, freeElem)
-		elem->UpdateDataSet();
 }
 
 void OpenCLIntersectionDevice::OpenCLDeviceQueue::PushRayBuffer(RayBuffer *rayBuffer) {
@@ -222,8 +209,7 @@ void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
 }
 
 void OpenCLIntersectionDevice::UpdateDataSet() {
-	BOOST_FOREACH(OpenCLDeviceQueue *queue, oclQueues)
-		queue->UpdateDataSet();
+	kernels->UpdateDataSet(dataSet);
 }
 
 void OpenCLIntersectionDevice::Start() {
@@ -231,13 +217,21 @@ void OpenCLIntersectionDevice::Start() {
 
 	oclQueues.clear();
 	if (dataParallelSupport) {
+		// Compile all required kernels
+		kernels = dataSet->GetAccelerator()->NewOpenCLKernels(this,
+				queueCount * bufferCount, stackSize, disableImageStorage);
+
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
-			oclQueues.push_back(new OpenCLDeviceQueue(this));
+			oclQueues.push_back(new OpenCLDeviceQueue(this, i * bufferCount));
 		}
 	} else {
+		// Compile all required kernels
+		kernels = dataSet->GetAccelerator()->NewOpenCLKernels(this,
+				1, stackSize, disableImageStorage);
+
 		// I need to create at least one queue (for GPU rendering)
-		oclQueues.push_back(new OpenCLDeviceQueue(this));
+		oclQueues.push_back(new OpenCLDeviceQueue(this, 0));
 	}
 }
 
@@ -247,7 +241,6 @@ void OpenCLIntersectionDevice::Interrupt() {
 
 void OpenCLIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
-
 
 	BOOST_FOREACH(OpenCLDeviceQueue *queue, oclQueues)
 		delete queue;

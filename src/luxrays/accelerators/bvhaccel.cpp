@@ -45,14 +45,15 @@ namespace luxrays {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-class OpenCLBVHKernel : public OpenCLKernel {
+class OpenCLBVHKernels : public OpenCLKernels {
 public:
-	OpenCLBVHKernel(OpenCLIntersectionDevice *dev) : OpenCLKernel(dev),
-		vertsBuff(NULL), trisBuff(NULL), bvhBuff(NULL) {
+	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount) :
+		OpenCLKernels(dev, kernelCount), vertsBuff(NULL), trisBuff(NULL), bvhBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
+		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
 		cl::Device &oclDevice = device->GetOpenCLDevice();
-		const std::string &deviceName(device->GetName());
+
 		// Compile sources
 		std::string code(
 			luxrays::ocl::KernelSource_point_types +
@@ -74,31 +75,33 @@ public:
 			throw err;
 		}
 
-		delete kernel;
-		kernel = new cl::Kernel(program, "Intersect");
-		kernel->getWorkGroupInfo<size_t>(oclDevice,
-			CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] BVH kernel work group size: " << workGroupSize);
+		// Setup kernels
+		for (u_int i = 0; i < kernelCount; ++i) {
+			kernels[i] = new cl::Kernel(program, "Intersect");
+			kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
+				CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
+			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			//	"] BVH kernel work group size: " << workGroupSize);
 
-		kernel->getWorkGroupInfo<size_t>(oclDevice,
-			CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] Suggested work group size: " << workGroupSize);
+			kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
+				CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
+			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			//	"] Suggested work group size: " << workGroupSize);
 
-		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0) {
-			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] Forced work group size: " << workGroupSize);
+			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0) {
+				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+				//	"] Forced work group size: " << workGroupSize);
+			}
 		}
 	}
-	virtual ~OpenCLBVHKernel() { FreeBuffers(); }
+	virtual ~OpenCLBVHKernels() { FreeBuffers(); }
 
 	virtual void FreeBuffers();
 	void SetBuffers(cl::Buffer *v, unsigned int nt, cl::Buffer *t,
 		unsigned int nn, cl::Buffer *b);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
@@ -108,9 +111,12 @@ public:
 	cl::Buffer *bvhBuff;
 };
 
-void OpenCLBVHKernel::FreeBuffers() {
-	delete kernel;
-	kernel = NULL;
+void OpenCLBVHKernels::FreeBuffers() {
+	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
+		delete kernel;
+		kernel = NULL;
+	}
+
 	device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 	delete vertsBuff;
 	vertsBuff = NULL;
@@ -122,37 +128,40 @@ void OpenCLBVHKernel::FreeBuffers() {
 	bvhBuff = NULL;
 }
 
-void OpenCLBVHKernel::SetBuffers(cl::Buffer *v,
+void OpenCLBVHKernels::SetBuffers(cl::Buffer *v,
 	unsigned int nt, cl::Buffer *t, unsigned int nn, cl::Buffer *b) {
 	vertsBuff = v;
 	trisBuff = t;
 	bvhBuff = b;
+
 	// Set arguments
-	kernel->setArg(2, *vertsBuff);
-	kernel->setArg(3, *trisBuff);
-	kernel->setArg(4, nt);
-	kernel->setArg(5, nn);
-	kernel->setArg(6, *bvhBuff);
+	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
+		kernel->setArg(2, *vertsBuff);
+		kernel->setArg(3, *trisBuff);
+		kernel->setArg(4, nt);
+		kernel->setArg(5, nn);
+		kernel->setArg(6, *bvhBuff);
+	}
 }
 
-void OpenCLBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,\
+void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernel->setArg(0, rBuff);
-	kernel->setArg(1, hBuff);
-	kernel->setArg(7, rayCount);
-	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
+	kernels[kernelIndex]->setArg(0, rBuff);
+	kernels[kernelIndex]->setArg(1, hBuff);
+	kernels[kernelIndex]->setArg(7, rayCount);
+	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
 		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
 		event);
 }
 
-OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
-	unsigned int stackSize, bool disableImageStorage) const {
-	OpenCLBVHKernel *kernel = new OpenCLBVHKernel(device);
-
+OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
+		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
 	const Context *deviceContext = device->GetContext();
 	cl::Context &oclContext = device->GetOpenCLContext();
 	const std::string &deviceName(device->GetName());
+
+	// Allocate buffers
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] Vertices buffer size: " <<
 		(sizeof(Point) * preprocessedMesh->GetTotalVertexCount() / 1024) <<
@@ -183,16 +192,18 @@ OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device,
 		(void*)bvhTree);
 	device->AllocMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
 
-	kernel->SetBuffers(vertsBuff, preprocessedMesh->GetTotalTriangleCount(),
+	// Setup kernels
+	OpenCLBVHKernels *kernels = new OpenCLBVHKernels(device, kernelCount);
+	kernels->SetBuffers(vertsBuff, preprocessedMesh->GetTotalTriangleCount(),
 		trisBuff, nNodes, bvhBuff);
 
-	return kernel;
+	return kernels;
 }
 
 #else
 
-OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *dev,
-	unsigned int stackSize, bool disableImageStorage) const {
+OpenCLKernels *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device, const u_int kernelCount,
+		const u_int stackSize, const bool disableImageStorage) const {
 	return NULL;
 }
 
