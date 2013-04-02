@@ -89,9 +89,27 @@ public:
 			}
 		}
 	}
-	virtual ~OpenCLMQBVHKernels() { FreeBuffers(); }
+	virtual ~OpenCLMQBVHKernels() {
+		device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+		delete mqbvhBuff;
+		mqbvhBuff = NULL;
+		device->FreeMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
+		delete memMapBuff;
+		memMapBuff = NULL;
+		device->FreeMemory(leafBuff->getInfo<CL_MEM_SIZE>());
+		delete leafBuff;
+		leafBuff = NULL;
+		device->FreeMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
+		delete leafQuadTrisBuff;
+		leafQuadTrisBuff = NULL;
+		device->FreeMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
+		delete invTransBuff;
+		invTransBuff = NULL;
+		device->FreeMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
+		delete trisOffsetBuff;
+		trisOffsetBuff = NULL;
+	}
 
-	virtual void FreeBuffers();
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 		cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o);
 	virtual void UpdateDataSet(const DataSet *newDataSet);
@@ -108,32 +126,6 @@ protected:
 	cl::Buffer *invTransBuff;
 	cl::Buffer *trisOffsetBuff;
 };
-
-void OpenCLMQBVHKernels::FreeBuffers() {
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		delete kernel;
-		kernel = NULL;
-	}
-
-	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
-	delete mqbvhBuff;
-	mqbvhBuff = NULL;
-	device->FreeMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
-	delete memMapBuff;
-	memMapBuff = NULL;
-	device->FreeMemory(leafBuff->getInfo<CL_MEM_SIZE>());
-	delete leafBuff;
-	leafBuff = NULL;
-	device->FreeMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
-	delete leafQuadTrisBuff;
-	leafQuadTrisBuff = NULL;
-	device->FreeMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
-	delete invTransBuff;
-	invTransBuff = NULL;
-	device->FreeMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
-	delete trisOffsetBuff;
-	trisOffsetBuff = NULL;
-}
 
 void OpenCLMQBVHKernels::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 	cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o) {

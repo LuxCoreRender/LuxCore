@@ -43,11 +43,11 @@ public:
 		kernels.resize(count, NULL);
 	}
 	virtual ~OpenCLKernels() {
-		BOOST_FOREACH(cl::Kernel *kernel, kernels)
+		BOOST_FOREACH(cl::Kernel *kernel, kernels) {
 			delete kernel;
+		}
 	}
 
-	virtual void FreeBuffers() = 0;
 	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,

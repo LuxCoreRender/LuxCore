@@ -94,9 +94,15 @@ public:
 			}
 		}
 	}
-	virtual ~OpenCLQBVHKernels() { FreeBuffers(); }
+	virtual ~OpenCLQBVHKernels() {
+		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+		delete trisBuff;
+		trisBuff = NULL;
+		device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+		delete qbvhBuff;
+		qbvhBuff = NULL;
+	}
 
-	virtual void FreeBuffers();
 	void SetBuffers(cl::Buffer *trisBuff, cl::Buffer *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
@@ -170,9 +176,15 @@ public:
 			}
 		}
 	}
-	virtual ~OpenCLQBVHImageKernels() { FreeBuffers(); }
+	virtual ~OpenCLQBVHImageKernels() {
+		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+		delete trisBuff;
+		trisBuff = NULL;
+		device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+		delete qbvhBuff;
+		qbvhBuff = NULL;
+	}
 
-	virtual void FreeBuffers();
 	void SetBuffers(cl::Image2D *trisBuff, cl::Image2D *qbvhBuff);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
@@ -184,20 +196,6 @@ protected:
 	cl::Image2D *trisBuff;
 	cl::Image2D *qbvhBuff;
 };
-
-void OpenCLQBVHKernels::FreeBuffers() {
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		delete kernel;
-		kernel = NULL;
-	}
-
-	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-	delete trisBuff;
-	trisBuff = NULL;
-	device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
-	delete qbvhBuff;
-	qbvhBuff = NULL;
-}
 
 void OpenCLQBVHKernels::SetBuffers(cl::Buffer *t, cl::Buffer *q) {
 	trisBuff = t;
@@ -226,20 +224,6 @@ void OpenCLQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int
 	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
 		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
 		event);
-}
-
-void OpenCLQBVHImageKernels::FreeBuffers() {
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		delete kernel;
-		kernel = NULL;
-	}
-
-	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-	delete trisBuff;
-	trisBuff = NULL;
-	device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
-	delete qbvhBuff;
-	qbvhBuff = NULL;
 }
 
 void OpenCLQBVHImageKernels::SetBuffers(cl::Image2D *t, cl::Image2D *q) {
