@@ -118,9 +118,6 @@ void RenderEngine::BeginEdit() {
 	editMode = true;
 
 	BeginEditLockLess();
-
-	// Stop all intersection devices
-	ctx->Stop();
 }
 
 void RenderEngine::EndEdit(const EditActionList &editActions) {
@@ -133,6 +130,9 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			((renderConfig->scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH) &&
 			editActions.Has(INSTANCE_TRANS_EDIT))) {
+		// Stop all intersection devices
+		ctx->Stop();
+
 		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
 		ctx->SetDataSet(NULL);
 
@@ -142,12 +142,12 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 		// Set the LuxRays SataSet
 		ctx->SetDataSet(renderConfig->scene->dataSet);
 
+		// Restart all intersection devices
+		ctx->Start();
+
 		dataSetUpdated = true;
 	} else
 		dataSetUpdated = false;
-
-	// Restart all intersection devices
-	ctx->Start();
 
 	if (!dataSetUpdated &&
 			(renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) &&

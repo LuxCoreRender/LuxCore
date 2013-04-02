@@ -60,6 +60,7 @@ void RTPathOCLRenderThread::Stop() {
 void RTPathOCLRenderThread::BeginEdit() {
 	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
 	// but the threads are still using the intersection devices in RTPATHOCL.
+	// The result is that stuff like geometry edit will not work.
 	editMutex.lock();
 }
 
