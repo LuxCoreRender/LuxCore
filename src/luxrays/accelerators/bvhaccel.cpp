@@ -95,9 +95,18 @@ public:
 			}
 		}
 	}
-	virtual ~OpenCLBVHKernels() { FreeBuffers(); }
+	virtual ~OpenCLBVHKernels() {
+		device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
+		delete vertsBuff;
+		vertsBuff = NULL;
+		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+		delete trisBuff;
+		trisBuff = NULL;
+		device->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
+		delete bvhBuff;
+		bvhBuff = NULL;
+	}
 
-	virtual void FreeBuffers();
 	void SetBuffers(cl::Buffer *v, unsigned int nt, cl::Buffer *t,
 		unsigned int nn, cl::Buffer *b);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
@@ -110,23 +119,6 @@ public:
 	cl::Buffer *trisBuff;
 	cl::Buffer *bvhBuff;
 };
-
-void OpenCLBVHKernels::FreeBuffers() {
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		delete kernel;
-		kernel = NULL;
-	}
-
-	device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-	delete vertsBuff;
-	vertsBuff = NULL;
-	device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-	delete trisBuff;
-	trisBuff = NULL;
-	device->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
-	delete bvhBuff;
-	bvhBuff = NULL;
-}
 
 void OpenCLBVHKernels::SetBuffers(cl::Buffer *v,
 	unsigned int nt, cl::Buffer *t, unsigned int nn, cl::Buffer *b) {
