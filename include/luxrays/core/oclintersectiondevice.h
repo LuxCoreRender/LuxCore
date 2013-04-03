@@ -89,7 +89,7 @@ public:
 
 	virtual RayBuffer *NewRayBuffer();
 	virtual RayBuffer *NewRayBuffer(const size_t size);
-	virtual size_t GetQueueSize() { return pendingRayBuffers; }
+	virtual size_t GetQueueSize();
 	virtual void PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex = 0);
 	virtual RayBuffer *PopRayBuffer(const u_int queueIndex = 0);
 
@@ -113,8 +113,7 @@ public:
 	// Statistics
 	//--------------------------------------------------------------------------
 
-	// TODO
-	virtual double GetLoad() const { return 1.0; }
+	virtual double GetLoad() const;
 
 	virtual double GetTotalRaysCount() const;
 	virtual double GetTotalPerformance() const;
@@ -131,7 +130,7 @@ protected:
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);
 
-	void UpdateTotalDataParallelRayCount() const;
+	void UpdateCounters() const;
 
 	//--------------------------------------------------------------------------
 	// OpenCLDeviceQueue
@@ -185,12 +184,13 @@ private:
 		std::deque<OpenCLDeviceQueueElem *> freeElem;
 		std::deque<OpenCLDeviceQueueElem *> busyElem;
 
-		double statsTotalDataParallelRayCount;
+		u_int pendingRayBuffers;
+		double lastTimeEmptyQueue;
+
+		double statsTotalDataParallelRayCount, statsDeviceIdleTime;
 	};
 
 	OpenCLDeviceDescription *deviceDesc;
-
-	u_int pendingRayBuffers;
 
 	// OpenCL queues
 	vector<OpenCLDeviceQueue *> oclQueues;

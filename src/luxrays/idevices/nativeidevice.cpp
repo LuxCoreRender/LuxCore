@@ -174,7 +174,7 @@ double NativeThreadIntersectionDevice::GetLoad() const {
 	statsDeviceIdleTime = totalIdle;
 
 	double total = 0.0;
-	BOOST_FOREACH(double &totalTime, threadDeviceIdleTime)
+	BOOST_FOREACH(double &totalTime, threadDeviceTotalTime)
 		total += totalTime;
 	statsDeviceTotalTime = total;
 

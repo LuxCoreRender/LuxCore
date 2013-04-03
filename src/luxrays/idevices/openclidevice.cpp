@@ -114,7 +114,11 @@ OpenCLIntersectionDevice::OpenCLDeviceQueue::OpenCLDeviceQueue(
 		freeElem.push_back(new OpenCLDeviceQueueElem(device, oclQueue, kernelIndexOffset));
 	}
 
+	pendingRayBuffers = 0;
+	lastTimeEmptyQueue = WallClockTime();
+
 	statsTotalDataParallelRayCount = 0.0;
+	statsDeviceIdleTime = 0.0;
 }
 
 OpenCLIntersectionDevice::OpenCLDeviceQueue::~OpenCLDeviceQueue() {
@@ -139,7 +143,10 @@ void OpenCLIntersectionDevice::OpenCLDeviceQueue::PushRayBuffer(RayBuffer *rayBu
 
 	busyElem.push_front(elem);
 
-	AtomicInc(&device->pendingRayBuffers);
+	if (pendingRayBuffers == 0)
+		statsDeviceIdleTime += WallClockTime() - lastTimeEmptyQueue;
+
+	++pendingRayBuffers;
 }
 
 RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::PopRayBuffer() {
@@ -150,10 +157,13 @@ RayBuffer *OpenCLIntersectionDevice::OpenCLDeviceQueue::PopRayBuffer() {
 	busyElem.pop_back();
 
 	RayBuffer *rayBuffer = elem->PopRayBuffer();
-	AtomicDec(&device->pendingRayBuffers);
+	--pendingRayBuffers;
 	statsTotalDataParallelRayCount += rayBuffer->GetRayCount();
 
 	freeElem.push_front(elem);
+
+	if (pendingRayBuffers == 0)
+		lastTimeEmptyQueue = WallClockTime();
 
 	return rayBuffer;
 }
@@ -172,7 +182,6 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	stackSize = 24;
 	deviceDesc = desc;
 	deviceName = (desc->GetName() + "Intersect").c_str();
-	pendingRayBuffers = 0;
 	reportedPermissionError = false;
 	disableImageStorage = false;
 
@@ -195,6 +204,17 @@ RayBuffer *OpenCLIntersectionDevice::NewRayBuffer() {
 
 RayBuffer *OpenCLIntersectionDevice::NewRayBuffer(const size_t size) {
 	return new RayBuffer(RoundUpPow2<size_t>(size));
+}
+
+size_t OpenCLIntersectionDevice::GetQueueSize() {
+	if (started) {
+		size_t count = 0;
+		BOOST_FOREACH(OpenCLDeviceQueue *oclQueue, oclQueues)
+			count += oclQueue->pendingRayBuffers;
+
+		return count;
+	} else
+		return 0;
 }
 
 void OpenCLIntersectionDevice::PushRayBuffer(RayBuffer *rayBuffer, const u_int queueIndex) {
@@ -255,36 +275,45 @@ void OpenCLIntersectionDevice::Stop() {
 
 	delete kernels;
 	kernels = NULL;
-
-	pendingRayBuffers = 0;
 }
 
 //------------------------------------------------------------------------------
 // Statistics
 //------------------------------------------------------------------------------
 
-void OpenCLIntersectionDevice::UpdateTotalDataParallelRayCount() const {
-	double total = 0.0;
-	BOOST_FOREACH(OpenCLDeviceQueue *oclQueue, oclQueues)
-		total += oclQueue->statsTotalDataParallelRayCount;
+double OpenCLIntersectionDevice::GetLoad() const {
+	UpdateCounters();
 
-	statsTotalDataParallelRayCount = total;
+	return HardwareIntersectionDevice::GetLoad();
+}
+
+void OpenCLIntersectionDevice::UpdateCounters() const {
+	double totalCount = 0.0;
+	double totalIdle = 0.0;
+	BOOST_FOREACH(OpenCLDeviceQueue *oclQueue, oclQueues) {
+		totalCount += oclQueue->statsTotalDataParallelRayCount;
+		totalIdle += oclQueue->statsDeviceIdleTime;
+	}
+
+	statsDeviceIdleTime = totalIdle / oclQueues.size();
+	statsDeviceTotalTime = WallClockTime() - statsStartTime;
+	statsTotalDataParallelRayCount = totalCount;
 }
 
 double OpenCLIntersectionDevice::GetTotalRaysCount() const {
-	UpdateTotalDataParallelRayCount();
+	UpdateCounters();
 
 	return HardwareIntersectionDevice::GetTotalRaysCount();
 }
 
 double OpenCLIntersectionDevice::GetTotalPerformance() const {
-	UpdateTotalDataParallelRayCount();
+	UpdateCounters();
 
 	return HardwareIntersectionDevice::GetTotalPerformance();
 }
 
 double OpenCLIntersectionDevice::GetDataParallelPerformance() const {
-	UpdateTotalDataParallelRayCount();
+	UpdateCounters();
 
 	return HardwareIntersectionDevice::GetDataParallelPerformance();
 }
