@@ -175,6 +175,13 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	pendingRayBuffers = 0;
 	reportedPermissionError = false;
 	disableImageStorage = false;
+
+	// Check if OpenCL 1.1 is available
+	if (!desc->IsOpenCL_1_1()) {
+		// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
+		// print a warning instead of throwing an exception
+		LR_LOG(context, "WARNING: OpenCL version 1.1 or better is required. Device " + deviceName + " may not work.");
+	}
 }
 
 OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
