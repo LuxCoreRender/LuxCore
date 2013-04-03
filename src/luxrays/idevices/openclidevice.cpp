@@ -272,8 +272,7 @@ void OpenCLIntersectionDevice::UpdateTotalDataParallelRayCount() const {
 }
 
 double OpenCLIntersectionDevice::GetTotalRaysCount() const {
-	if (dataParallelSupport)
-		UpdateTotalDataParallelRayCount();
+	UpdateTotalDataParallelRayCount();
 
 	return HardwareIntersectionDevice::GetTotalRaysCount();
 }
