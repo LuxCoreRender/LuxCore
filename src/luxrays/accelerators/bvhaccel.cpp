@@ -142,8 +142,10 @@ void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int 
 	kernels[kernelIndex]->setArg(0, rBuff);
 	kernels[kernelIndex]->setArg(1, hBuff);
 	kernels[kernelIndex]->setArg(7, rayCount);
+
+	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
 	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
-		cl::NDRange(rayCount), cl::NDRange(workGroupSize), events,
+		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
 		event);
 }
 
