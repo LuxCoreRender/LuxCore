@@ -65,6 +65,8 @@ public:
 class QuadTriangle : public Aligned16 {
 public:
 
+	QuadTriangle() { };
+
 	QuadTriangle(const Triangle *tris, const Point *verts,
 			const unsigned int p1,
 			const unsigned int p2,
