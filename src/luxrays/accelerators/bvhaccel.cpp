@@ -196,8 +196,8 @@ OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 
 #else
 
-OpenCLKernels *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device, const u_int kernelCount,
-		const u_int stackSize, const bool disableImageStorage) const {
+OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
+		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
 	return NULL;
 }
 

@@ -405,7 +405,7 @@ OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 
 #else
 
-OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device, const u_int kernelCount,
+OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device, const u_int kernelCount,
 		const u_int stackSize, const bool disableImageStorage) const {
 	return NULL;
 }

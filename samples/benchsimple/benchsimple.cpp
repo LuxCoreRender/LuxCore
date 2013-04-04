@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 		//luxrays::DeviceDescription::FilterOne(deviceDescs);
 
 		// Use the first native C++ device available
-		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
+		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_NATIVE_THREAD, deviceDescs);
 
 		// Use the first OpenCL device available
 		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
 		//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_CPU, deviceDescs);
 
 		// Use the first OpenCL GPU device available
-		luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
-		luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
+		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
+		//luxrays::OpenCLDeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_GPU, deviceDescs);
 
 		// Use all GPU devices available (for virtual device)
 		//luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescs);
