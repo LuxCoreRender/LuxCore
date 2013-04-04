@@ -96,6 +96,8 @@ void CompiledScene::CompileGeometry() {
 	// Translate geometry
 	//----------------------------------------------------------------------
 
+	const AcceleratorType accType = scene->dataSet->GetAcceleratorType();
+
 	std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
 
 	slg::ocl::Mesh newMeshDesc;
@@ -114,7 +116,8 @@ void CompiledScene::CompileGeometry() {
 		ExtMesh *mesh = objs[i];
 
 		bool isExistingInstance;
-		if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+		// Only MQBVH really support instances
+		if ((accType == ACCEL_MQBVH) && (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE)) {
 			// It is a instanced mesh
 			ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
 
