@@ -233,21 +233,46 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		totalQuadTrisCount += qbvh->nQuads;
 	}
 
+	// Pack together all QBVH Leafs
+	QBVHNode *allLeafs = new QBVHNode[totalNodesCount];
+	u_int nodesOffset = 0;
+	for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+		const QBVHAccel *qbvh = it->second;
+
+		const size_t nodesMemSize = sizeof(QBVHNode) * qbvh->nNodes;
+		memcpy(&allLeafs[nodesOffset], qbvh->nodes, nodesMemSize);
+		nodesOffset += qbvh->nNodes;
+	}
+
 	// Allocate memory for QBVH Leafs
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] MQBVH leaf Nodes buffer size: " <<
 		(totalNodesCount * sizeof(QBVHNode) / 1024) << "Kbytes");
-	cl::Buffer *leafBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY,
-		totalNodesCount * sizeof(QBVHNode));
+	cl::Buffer *leafBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+		totalNodesCount * sizeof(QBVHNode), allLeafs);
 	device->AllocMemory(leafBuff->getInfo<CL_MEM_SIZE>());
+	delete[] allLeafs;
 
+	// Pack together all QuadTriangle
+	QuadTriangle *allQuadTris = new QuadTriangle[totalQuadTrisCount];
+
+	u_int quadTrisOffset = 0;
+	for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+		const QBVHAccel *qbvh = it->second;
+
+		const size_t quadTrisMemSize = sizeof(QuadTriangle) * qbvh->nQuads;
+		memcpy(&allQuadTris[quadTrisOffset], qbvh->prims, quadTrisMemSize);
+		quadTrisOffset += qbvh->nQuads;
+	}
+
+	// Allocate memory for QBVH QuadTriangles
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] MQBVH QuadTriangle buffer size: " <<
 		(totalQuadTrisCount * sizeof(QuadTriangle) / 1024) << "Kbytes");
-	cl::Buffer *leafQuadTrisBuff = new cl::Buffer(oclContext,
-		CL_MEM_READ_ONLY,
-		totalQuadTrisCount * sizeof(QuadTriangle));
+	cl::Buffer *leafQuadTrisBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+		totalQuadTrisCount * sizeof(QuadTriangle), allQuadTris);
 	device->AllocMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
+	delete[] allQuadTris;
 
 	u_int *memMap = new u_int[nLeafs * 2];
 	for (u_int i = 0; i < nLeafs; ++i) {
@@ -263,31 +288,6 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		nLeafs * sizeof(u_int) * 2, memMap);
 	device->AllocMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
 	delete[] memMap;
-
-	// Upload QBVH leafs
-	size_t nodesMemOffset = 0;
-	size_t quadTrisMemOffset = 0;
-	for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
-		const QBVHAccel *qbvh = it->second;
-
-		const size_t nodesMemSize = sizeof(QBVHNode) * qbvh->nNodes;
-		device->GetOpenCLQueue().enqueueWriteBuffer(
-			*leafBuff,
-			CL_FALSE,
-			nodesMemOffset,
-			nodesMemSize,
-			qbvh->nodes);
-		nodesMemOffset += nodesMemSize;
-
-		const size_t quadTrisMemSize = sizeof(QuadTriangle) * qbvh->nQuads;
-		device->GetOpenCLQueue().enqueueWriteBuffer(
-			*leafQuadTrisBuff,
-			CL_FALSE,
-			quadTrisMemOffset,
-			quadTrisMemSize,
-			qbvh->prims);
-		quadTrisMemOffset += quadTrisMemSize;
-	}
 
 	// Upload QBVH leafs transformations
 	Matrix4x4 *invTrans = new Matrix4x4[nLeafs];
