@@ -97,7 +97,7 @@ std::string KernelSource_bsdf_funcs =
 "#endif\n"
 "		shadeN = geometryN;\n"
 "#if defined(PARAM_ACCEL_MQBVH)\n"
-"	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);\n"
+"	shadeN = normalize(Transform_InvApplyVector(&meshDesc->trans, shadeN));\n"
 "#endif\n"
 "\n"
 "	//--------------------------------------------------------------------------\n"
