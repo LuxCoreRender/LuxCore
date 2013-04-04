@@ -96,8 +96,6 @@ void CompiledScene::CompileGeometry() {
 	// Translate geometry
 	//----------------------------------------------------------------------
 
-	const AcceleratorType accType = scene->dataSet->GetAcceleratorType();
-
 	std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
 
 	slg::ocl::Mesh newMeshDesc;
@@ -112,12 +110,12 @@ void CompiledScene::CompileGeometry() {
 	memcpy(&newMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
 
 	slg::ocl::Mesh currentMeshDesc;
+	u_int firstTriangleOffset = 0;
 	for (u_int i = 0; i < objCount; ++i) {
 		ExtMesh *mesh = objs[i];
 
 		bool isExistingInstance;
-		// Only MQBVH really support instances
-		if ((accType == ACCEL_MQBVH) && (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE)) {
+		if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 			// It is a instanced mesh
 			ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
 
@@ -137,8 +135,6 @@ void CompiledScene::CompileGeometry() {
 					newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
 				if (mesh->HasAlphas())
 					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
-
-				newMeshDesc.firstTriangleOffset += mesh->GetTotalTriangleCount();
 
 				isExistingInstance = false;
 
@@ -170,17 +166,16 @@ void CompiledScene::CompileGeometry() {
 			if (mesh->HasAlphas())
 				newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
 
-			newMeshDesc.firstTriangleOffset += mesh->GetTotalTriangleCount();
-
 			memcpy(&currentMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
 			memcpy(&currentMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
 
 			isExistingInstance = false;
 		}
 
-		if (!isExistingInstance) {
-			assert (mesh->GetType() == TYPE_EXT_TRIANGLE);
+		currentMeshDesc.firstTriangleOffset = firstTriangleOffset;
+		firstTriangleOffset += mesh->GetTotalTriangleCount();
 
+		if (!isExistingInstance) {
 			//------------------------------------------------------------------
 			// Translate mesh normals
 			//------------------------------------------------------------------

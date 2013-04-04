@@ -94,7 +94,7 @@ void BSDF_Init(
 #endif
 		shadeN = geometryN;
 #if defined(PARAM_ACCEL_MQBVH)
-	shadeN = Transform_InvApplyVector(&meshDesc->trans, shadeN);
+	shadeN = normalize(Transform_InvApplyVector(&meshDesc->trans, shadeN));
 #endif
 
 	//--------------------------------------------------------------------------
