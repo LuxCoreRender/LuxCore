@@ -200,10 +200,22 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		// Write the mesh information
 		SDL_LOG("Saving mesh information:");
 		const std::vector<ExtMesh *> &meshes =  extMeshCache.GetMeshes();
+		std::set<std::string> savedMeshes;
 		for (u_int i = 0; i < meshes.size(); ++i) {
-			const std::string fileName = directoryName + "/mesh-" + (boost::format("%05d") % i).str() + ".ply";
-			SDL_LOG("  " + fileName);
-			meshes[i]->WritePly(fileName);
+			u_int meshIndex;
+			if (meshes[i]->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+				const ExtInstanceTriangleMesh *m = (ExtInstanceTriangleMesh *)meshes[i];
+				meshIndex = extMeshCache.GetExtMeshIndex(m->GetExtTriangleMesh());
+			} else
+				meshIndex = extMeshCache.GetExtMeshIndex(meshes[i]);
+			const std::string fileName = directoryName + "/mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply";
+
+			// Check if I have already saved this mesh (mostly useful for instances)
+			if (savedMeshes.find(fileName) == savedMeshes.end()) {
+				SDL_LOG("  " + fileName);
+				meshes[i]->WritePly(fileName);
+				savedMeshes.insert(fileName);
+			}
 		}
 
 		SDL_LOG("Saving object information:");
