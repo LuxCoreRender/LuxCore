@@ -583,6 +583,9 @@ void CompiledScene::CompileInfiniteLight() {
 		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
 		CompileTextureMapping2D(&infiniteLight->mapping, il->GetUVMapping());
 		infiniteLight->imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->GetImageMap());
+
+		memcpy(&infiniteLight->light2World.m, &il->GetTransformation().m, sizeof(float[4][4]));
+		memcpy(&infiniteLight->light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
 	} else
 		infiniteLight = NULL;
 
@@ -603,7 +606,8 @@ void CompiledScene::CompileSunLight() {
 	if (sl) {
 		sunLight = new slg::ocl::SunLight();
 
-		ASSIGN_VECTOR(sunLight->sunDir, sl->GetDir());
+		const Vector globalSunDir = Normalize(sl->GetTransformation() * sl->GetDir());
+		ASSIGN_VECTOR(sunLight->sunDir, globalSunDir);
 		ASSIGN_SPECTRUM(sunLight->gain, sl->GetGain());
 		sunLight->turbidity = sl->GetTubidity();
 		sunLight->relSize= sl->GetRelSize();
@@ -632,6 +636,9 @@ void CompiledScene::CompileSkyLight() {
 		sl->GetInitData(&skyLight->thetaS, &skyLight->phiS,
 				&skyLight->zenith_Y, &skyLight->zenith_x, &skyLight->zenith_y,
 				skyLight->perez_Y, skyLight->perez_x, skyLight->perez_y);
+
+		memcpy(&skyLight->light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
+		memcpy(&skyLight->light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
 	} else
 		skyLight = NULL;
 }

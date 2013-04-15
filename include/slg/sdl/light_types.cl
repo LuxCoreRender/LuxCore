@@ -26,12 +26,14 @@ typedef enum {
 } LightSourceType;
 
 typedef struct {
+	Transform light2World;
 	Spectrum gain;
 	TextureMapping2D mapping;
 	unsigned int imageMapIndex;
 } InfiniteLight;
 
 typedef struct {
+	Transform light2World;
 	Spectrum gain;
 	float thetaS;
 	float phiS;

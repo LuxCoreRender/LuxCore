@@ -49,9 +49,10 @@ float3 InfiniteLight_GetRadiance(
 #endif
 		imageMap->pageIndex, imageMap->pixelsIndex);
 
+	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->light2World, -dir));
 	const float2 uv = (float2)(
-		1.f - SphericalPhi(-dir) * (1.f / (2.f * M_PI_F)),
-		SphericalTheta(-dir) * M_1_PI_F);
+		SphericalPhi(localDir) * (1.f / (2.f * M_PI_F)),
+		SphericalTheta(localDir) * M_1_PI_F);
 
 	// TextureMapping2D_Map() is expendaded here
 	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);
@@ -120,8 +121,9 @@ float3 SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
 }
 
 float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir) {
-	const float theta = SphericalTheta(-dir);
-	const float phi = SphericalPhi(-dir);
+	const float3 localDir = normalize(Transform_InvApplyVector(&skyLight->light2World, -dir));
+	const float theta = SphericalTheta(localDir);
+	const float phi = SphericalPhi(localDir);
 	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
 
 	return VLOAD3F(&skyLight->gain.r) * s;
