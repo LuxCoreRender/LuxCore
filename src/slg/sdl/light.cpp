@@ -51,7 +51,7 @@ Spectrum InfiniteLightBase::Emit(const Scene &scene,
 
 	// Construct ray between p1 and p2
 	*orig = p1;
-	*dir = Normalize(p2 - p1);
+	*dir = Normalize(lightToWorld * (p2 - p1));
 
 	// Compute InfiniteAreaLight ray weight
 	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
@@ -72,7 +72,7 @@ Spectrum InfiniteLightBase::Illuminate(const Scene &scene, const Point &p,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
-	*dir = UniformSampleSphere(u0, u1);
+	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
@@ -101,8 +101,8 @@ Spectrum InfiniteLightBase::Illuminate(const Scene &scene, const Point &p,
 // InfiniteLight
 //------------------------------------------------------------------------------
 
-InfiniteLight::InfiniteLight(const ImageMap *imgMap) :
-	imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
+InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
+	InfiniteLightBase(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
@@ -117,7 +117,8 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
-	const UV uv(1.f - SphericalPhi(-dir) * INV_TWOPI, SphericalTheta(-dir) * INV_PI);
+	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
+	const UV uv(SphericalPhi(localDir) * INV_TWOPI, SphericalTheta(localDir) * INV_PI);
 	return gain * imageMap->GetSpectrum(mapping.Map(uv));
 }
 
@@ -129,6 +130,12 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.SetString("scene.infinitelight.gain",
 			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
 	props.SetString("scene.infinitelight.shift", ToString(mapping.uDelta) + " " + ToString(mapping.vDelta));
+	props.SetString("scene.infinitelight.transformation",
+			ToString(lightToWorld.m.m[0][0]) + " " + ToString(lightToWorld.m.m[1][0]) + " " + ToString(lightToWorld.m.m[2][0]) + " " + ToString(lightToWorld.m.m[3][0]) + " " +
+			ToString(lightToWorld.m.m[0][1]) + " " + ToString(lightToWorld.m.m[1][1]) + " " + ToString(lightToWorld.m.m[2][1]) + " " + ToString(lightToWorld.m.m[3][1]) + " " +
+			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
+			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
+		);
 
 	return props;
 }
@@ -171,14 +178,15 @@ static void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 	s->b =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
 }
 
-SkyLight::SkyLight(float turb, const Vector &sd) {
+SkyLight::SkyLight(const luxrays::Transform &l2w, float turb,
+		const Vector &sd) : InfiniteLightBase(l2w) {
 	turbidity = turb;
-	sundir = Normalize(sd);
+	sunDir = Normalize(lightToWorld * sd);
 }
 
 void SkyLight::Preprocess() {
-	thetaS = SphericalTheta(sundir);
-	phiS = SphericalPhi(sundir);
+	thetaS = SphericalTheta(sunDir);
+	phiS = SphericalPhi(sunDir);
 
 	float aconst = 1.0f;
 	float bconst = 1.0f;
@@ -245,8 +253,9 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const float theta = SphericalTheta(-dir);
-	const float phi = SphericalPhi(-dir);
+	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
+	const float theta = SphericalTheta(localDir);
+	const float phi = SphericalPhi(localDir);
 	Spectrum s;
 	GetSkySpectralRadiance(theta, phi, &s);
 
@@ -264,11 +273,18 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
+	const Vector localSunDir = GetSunDir();
 	props.SetString("scene.skylight.dir",
-			ToString(sundir.x) + " " + ToString(sundir.y) + " " + ToString(sundir.z));
+			ToString(localSunDir.x) + " " + ToString(localSunDir.y) + " " + ToString(localSunDir.z));
 	props.SetString("scene.skylight.gain",
 			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
 	props.SetString("scene.skylight.turbidity", ToString(turbidity));
+	props.SetString("scene.skylight.transformation",
+			ToString(lightToWorld.m.m[0][0]) + " " + ToString(lightToWorld.m.m[1][0]) + " " + ToString(lightToWorld.m.m[2][0]) + " " + ToString(lightToWorld.m.m[3][0]) + " " +
+			ToString(lightToWorld.m.m[0][1]) + " " + ToString(lightToWorld.m.m[1][1]) + " " + ToString(lightToWorld.m.m[2][1]) + " " + ToString(lightToWorld.m.m[3][1]) + " " +
+			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
+			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
+		);
 
 	return props;
 }
@@ -277,9 +293,10 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 // SunLight
 //------------------------------------------------------------------------------
 
-SunLight::SunLight(float turb, float size, const Vector &sd) : LightSource() {
+SunLight::SunLight(const luxrays::Transform &l2w, float turb, float size,
+		const Vector &sd) : lightToWorld(l2w) {
 	turbidity = turb;
-	sunDir = Normalize(sd);
+	sunDir = Normalize(lightToWorld * sd);
 	gain = Spectrum(1.0f, 1.0f, 1.0f);
 	relSize = size;
 }
@@ -431,12 +448,19 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 Properties SunLight::ToProperties() const {
 	Properties props;
 
+	const Vector localSunDir = GetDir();
 	props.SetString("scene.sunlight.dir",
-			ToString(sunDir.x) + " " + ToString(sunDir.y) + " " + ToString(sunDir.z));
+			ToString(localSunDir.x) + " " + ToString(localSunDir.y) + " " + ToString(localSunDir.z));
 	props.SetString("scene.sunlight.gain",
 			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
 	props.SetString("scene.sunlight.turbidity", ToString(turbidity));
 	props.SetString("scene.sunlight.relsize", ToString(relSize));
+	props.SetString("scene.sunlight.transformation",
+			ToString(lightToWorld.m.m[0][0]) + " " + ToString(lightToWorld.m.m[1][0]) + " " + ToString(lightToWorld.m.m[2][0]) + " " + ToString(lightToWorld.m.m[3][0]) + " " +
+			ToString(lightToWorld.m.m[0][1]) + " " + ToString(lightToWorld.m.m[1][1]) + " " + ToString(lightToWorld.m.m[2][1]) + " " + ToString(lightToWorld.m.m[3][1]) + " " +
+			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
+			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
+		);
 
 	return props;
 }

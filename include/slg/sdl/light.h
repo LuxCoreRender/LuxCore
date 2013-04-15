@@ -23,6 +23,7 @@
 #define	_SLG_LIGHT_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/spectrum.h"
 #include "slg/sdl/texture.h"
@@ -74,17 +75,18 @@ public:
 
 class InfiniteLightBase : public LightSource {
 public:
-	InfiniteLightBase() : gain(1.f, 1.f, 1.f) { }
+	InfiniteLightBase(const luxrays::Transform &l2w) : lightToWorld(l2w), gain(1.f, 1.f, 1.f) { }
 	virtual ~InfiniteLightBase() { }
 
 	virtual void Preprocess() { }
 
 	virtual bool IsEnvironmental() const { return true; }
 
+	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
+
 	void SetGain(const luxrays::Spectrum &g) {
 		gain = g;
 	}
-
 	luxrays::Spectrum GetGain() const {
 		return gain;
 	}
@@ -105,6 +107,7 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 
 protected:
+	const luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
 };
 
@@ -114,7 +117,7 @@ protected:
 
 class InfiniteLight : public InfiniteLightBase {
 public:
-	InfiniteLight(const ImageMap *imgMap);
+	InfiniteLight(const luxrays::Transform &l2w, const ImageMap *imgMap);
 	virtual ~InfiniteLight() { }
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
@@ -138,7 +141,7 @@ private:
 
 class SkyLight : public InfiniteLightBase {
 public:
-	SkyLight(float turbidity, const luxrays::Vector &sundir);
+	SkyLight(const luxrays::Transform &l2w, float turbidity, const luxrays::Vector &sundir);
 	virtual ~SkyLight() { }
 
 	virtual void Preprocess();
@@ -148,8 +151,8 @@ public:
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
 
-	void SetSunDir(const luxrays::Vector &dir) { sundir = dir; }
-	const luxrays::Vector &GetSunDir() const { return sundir; }
+	const luxrays::Vector GetSunDir() const { return Normalize(luxrays::Inverse(lightToWorld) * sunDir); }
+	void SetSunDir(const luxrays::Vector &dir) { sunDir = Normalize(lightToWorld * dir); }
 
 	void GetInitData(float *thetaSData, float *phiSData,
 		float *zenith_YData, float *zenith_xData, float *zenith_yData,
@@ -174,7 +177,7 @@ public:
 private:
 	void GetSkySpectralRadiance(const float theta, const float phi, luxrays::Spectrum * const spect) const;
 
-	luxrays::Vector sundir;
+	luxrays::Vector sunDir;
 	float turbidity;
 	float thetaS;
 	float phiS;
@@ -184,12 +187,14 @@ private:
 
 class SunLight : public LightSource {
 public:
-	SunLight(float turbidity, float relSize, const luxrays::Vector &sunDir);
+	SunLight(const luxrays::Transform &l2w, float turbidity, float relSize, const luxrays::Vector &sunDir);
 	virtual ~SunLight() { }
 
 	virtual void Preprocess();
 
 	virtual LightSourceType GetType() const { return TYPE_SUN; }
+
+	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
@@ -197,8 +202,8 @@ public:
 	void SetRelSize(const float s) { relSize = s; }
 	float GetRelSize() const { return relSize; }
 
-	const luxrays::Vector &GetDir() const { return sunDir; }
-	void SetDir(const luxrays::Vector &dir) { sunDir = Normalize(dir); }
+	const luxrays::Vector GetDir() const { return Normalize(luxrays::Inverse(lightToWorld) * sunDir); }
+	void SetDir(const luxrays::Vector &dir) { sunDir = Normalize(lightToWorld * dir); }
 
 	void SetGain(const luxrays::Spectrum &g);
 	const luxrays::Spectrum GetGain() const { return gain; }
@@ -233,6 +238,8 @@ public:
 	luxrays::Properties ToProperties() const;
 
 private:
+	const luxrays::Transform lightToWorld;
+
 	luxrays::Vector sunDir;
 	luxrays::Spectrum gain;
 	float turbidity;

@@ -561,11 +561,22 @@ void Scene::AddInfiniteLight(const Properties &props) {
 	const std::vector<std::string> ilParams = props.GetStringVector("scene.infinitelight.file", "");
 
 	if (ilParams.size() > 0) {
+		if (envLight)
+			throw std::runtime_error("Can not define an infinitelight when there is already an skylight defined");
+
+		std::vector<float> vf = GetFloatParameters(props, "scene.infinitelight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const Matrix4x4 mat(
+				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		const Transform light2World(mat);
+
 		const float gamma = props.GetFloat("scene.infinitelight.gamma", 2.2f);
 		ImageMap *imgMap = imgMapCache.GetImageMap(ilParams.at(0), gamma);
-		InfiniteLight *il = new InfiniteLight(imgMap);
+		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
 
-		std::vector<float> vf = GetFloatParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
+		vf = GetFloatParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
 		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
 
 		vf = GetFloatParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
@@ -587,15 +598,24 @@ void Scene::AddSkyLight(const std::string &propsString) {
 
 void Scene::AddSkyLight(const Properties &props) {
 	const std::vector<std::string> silParams = props.GetStringVector("scene.skylight.dir", "");
+
 	if (silParams.size() > 0) {
 		if (envLight)
 			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
+
+		std::vector<float> vf = GetFloatParameters(props, "scene.skylight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const Matrix4x4 mat(
+				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		const Transform light2World(mat);
 
 		std::vector<float> sdir = GetFloatParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
 		const float turb = props.GetFloat("scene.skylight.turbidity", 2.2f);
 		std::vector<float> gain = GetFloatParameters(props, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
-		SkyLight *sl = new SkyLight(turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		SkyLight *sl = new SkyLight(light2World, turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->Preprocess();
 
@@ -613,12 +633,20 @@ void Scene::AddSunLight(const std::string &propsString) {
 void Scene::AddSunLight(const Properties &props) {
 	const std::vector<std::string> sulParams = props.GetStringVector("scene.sunlight.dir", "");
 	if (sulParams.size() > 0) {
+		std::vector<float> vf = GetFloatParameters(props, "scene.sunlight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const Matrix4x4 mat(
+				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
+				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
+				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
+				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		const Transform light2World(mat);
+
 		std::vector<float> sdir = GetFloatParameters(props, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
 		const float turb = props.GetFloat("scene.sunlight.turbidity", 2.2f);
 		const float relSize = props.GetFloat("scene.sunlight.relsize", 1.0f);
 		std::vector<float> gain = GetFloatParameters(props, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
 
-		SunLight *sl = new SunLight(turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
+		SunLight *sl = new SunLight(light2World, turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->Preprocess();
 
