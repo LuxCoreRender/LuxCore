@@ -424,7 +424,7 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	delete[] pixels;
 	pixels = NULL;
 
-	FIBITMAP *scaleDib = FreeImage_Rescale(dib, newWidth, newHeight, FILTER_BICUBIC);
+	FIBITMAP *scaleDib = FreeImage_Rescale(dib, newWidth, newHeight, FILTER_CATMULLROM);
 	FreeImage_Unload(dib);
 
 	Init(scaleDib);
