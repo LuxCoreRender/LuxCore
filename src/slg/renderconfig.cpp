@@ -73,8 +73,9 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 		// Create the Scene
 		const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
 		const int accelType = cfg.GetInt("accelerator.type", -1);
+		const float imageScale = Max(.01f, cfg.GetFloat("images.scale", 1.f));
 
-		scene = new Scene(sceneFileName, accelType);
+		scene = new Scene(sceneFileName, accelType, imageScale);
 	}
 
 	// Remove unused material

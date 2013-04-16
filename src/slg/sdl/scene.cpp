@@ -52,8 +52,9 @@ Scene::Scene(const int accType) {
 	accelType = accType;
 }
 
-Scene::Scene(const std::string &fileName, const int accType) {
+Scene::Scene(const std::string &fileName, const int accType, const float imageScale) {
 	accelType = accType;
+	imgMapCache.SetImageResize(imageScale);
 
 	SDL_LOG("Reading scene: " << fileName);
 
