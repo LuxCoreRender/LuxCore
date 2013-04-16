@@ -22,6 +22,12 @@
 #ifndef _SLG_TEXTURE_H
 #define	_SLG_TEXTURE_H
 
+#if defined (WIN32)
+#include <windows.h>
+#endif
+
+#include <FreeImage.h>
+
 #include <string>
 #include <vector>
 #include <map>
@@ -170,6 +176,8 @@ public:
 	u_int GetHeight() const { return height; }
 	const float *GetPixels() const { return pixels; }
 
+	void Resize(const u_int width, const u_int height);
+
 	void WriteImage(const std::string &fileName) const;
 
 	float GetFloat(const luxrays::UV &uv) const {
@@ -230,6 +238,9 @@ public:
 	}
 
 private:
+	void Init(FIBITMAP *dib);
+	FIBITMAP *GetFreeImageBitMap() const;
+
 	float GetFloatTexel(const int s, const int t) const {
 		const u_int u = luxrays::Mod<int>(s, width);
 		const u_int v = luxrays::Mod<int>(t, height);
@@ -288,6 +299,8 @@ public:
 	ImageMapCache();
 	~ImageMapCache();
 
+	void SetImageResize(const float s) { allImageScale = s; }
+
 	void DefineImgMap(const std::string &name, ImageMap *im);
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
@@ -299,6 +312,7 @@ public:
 
 private:
 	std::map<std::string, ImageMap *> maps;
+	float allImageScale;
 };
 
 class ImageMapTexture : public Texture {
