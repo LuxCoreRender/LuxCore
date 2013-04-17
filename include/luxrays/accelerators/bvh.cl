@@ -134,9 +134,9 @@ __kernel void Intersect(
 	//float minT = rays[gid].mint;
 	//float maxT = rays[gid].maxt;
 
-	float4 invRayDir = (float4) 1.f / rayDir;
+	const float4 invRayDir = (float4) 1.f / rayDir;
 
-	unsigned int hitIndex = 0xffffffffu;
+	unsigned int hitIndex = NULL_INDEX;
 	unsigned int currentNode = 0; // Root Node
 	float b1, b2;
 	unsigned int stopNode = bvhTree[0].skipIndex; // Non-existent
@@ -164,12 +164,12 @@ __kernel void Intersect(
 			//const unsigned int triIndex = bvhTree[currentNode].primitive;
 			const unsigned int triIndex = as_uint(data1.z);
 
-			if (triIndex != 0xffffffffu)
+			if (triIndex != NULL_INDEX)
 				TriangleIntersect(rayOrig, rayDir, minT, &maxT, &hitIndex, &b1, &b2, triIndex, verts, tris);
 
 			currentNode++;
 		} else {
-			//bvhTree[currentNode].skipIndex;
+			//currentNode = bvhTree[currentNode].skipIndex;
 			currentNode = as_uint(data1.w);
 		}
 	}

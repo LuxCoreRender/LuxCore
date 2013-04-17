@@ -150,7 +150,7 @@ void QuadTriangle_Intersect(
     maxt = select(maxt, t.s0, cond0);
     _b1 = select(0.f, b1.s0, cond0);
     _b2 = select(0.f, b2.s0, cond0);
-    index = select(0xffffffffu, primitives.s0, cond0);
+    index = select(NULL_INDEX, primitives.s0, cond0);
 
     const int cond1 = cond.s1 && (t.s1 < maxt);
     maxt = select(maxt, t.s1, cond1);
@@ -170,7 +170,7 @@ void QuadTriangle_Intersect(
     _b2 = select(_b2, b2.s3, cond3);
     index = select(index, primitives.s3, cond3);
 
-	if (index == 0xffffffffu)
+	if (index == NULL_INDEX)
 		return;
 
 	ray4->maxt = (float4)maxt;
@@ -207,7 +207,7 @@ void LeafIntersect(
 	const int signs1 = (ray4.dy.s0 < 0.f);
 	const int signs2 = (ray4.dz.s0 < 0.f);
 
-	rayHit->index = 0xffffffffu;
+	rayHit->index = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
@@ -318,12 +318,12 @@ __kernel void Intersect(
 	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
 	const float4 invDir2 = (float4)(1.f / ray4.dz.s0);
 
-        const int signs0 = signbit(ray4.dx.s0);
-        const int signs1 = signbit(ray4.dy.s0);
-        const int signs2 = signbit(ray4.dz.s0);
+	const int signs0 = signbit(ray4.dx.s0);
+	const int signs1 = signbit(ray4.dy.s0);
+	const int signs2 = signbit(ray4.dz.s0);
 
 	RayHit rayHit;
-	rayHit.index = 0xffffffffu;
+	rayHit.index = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
@@ -376,7 +376,7 @@ __kernel void Intersect(
             RayHit tmpRayHit;
             LeafIntersect(&tray, &tmpRayHit, n, qt);
 
-            if (tmpRayHit.index != 0xffffffffu) {
+            if (tmpRayHit.index != NULL_INDEX) {
                 rayHit.t = tmpRayHit.t;
                 rayHit.b1 = tmpRayHit.b1;
                 rayHit.b2 = tmpRayHit.b2;

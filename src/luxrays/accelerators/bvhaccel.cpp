@@ -56,6 +56,7 @@ public:
 
 		// Compile sources
 		std::string code(
+			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
@@ -67,7 +68,7 @@ public:
 		try {
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
-			program.build(buildDevice);
+			program.build(buildDevice, "-D LUXRAYS_OPENCL_KERNEL");
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
