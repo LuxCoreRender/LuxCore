@@ -34,7 +34,7 @@ float3 __OVERLOAD__ mix(float3 a, float3 b, float t)
 
 #if defined(__APPLE_FIX__)
 
-float2 VLOAD2F(__global float *p) {
+float2 VLOAD2F(const __global float *p) {
 	return (float2)(p[0], p[1]);
 }
 
@@ -43,7 +43,7 @@ void VSTORE2F(const float2 v, __global float *p) {
 	p[1] = v.y;
 }
 
-float3 VLOAD3F(__global float *p) {
+float3 VLOAD3F(const __global float *p) {
 	return (float3)(p[0], p[1], p[2]);
 }
 
@@ -53,7 +53,7 @@ void VSTORE3F(const float3 v, __global float *p) {
 	p[2] = v.z;
 }
 
-float4 VLOAD4F(__global float *p) {
+float4 VLOAD4F(const __global float *p) {
 	return (float4)(p[0], p[1], p[2], p[3]);
 }
 
@@ -66,7 +66,7 @@ void VSTORE4F(const float4 v, __global float *p) {
 
 #else
 
-float2 VLOAD2F(__global float *p) {
+float2 VLOAD2F(const __global float *p) {
 	return vload2(0, p);
 }
 
@@ -74,7 +74,7 @@ void VSTORE2F(const float2 v, __global float *p) {
 	vstore2(v, 0, p);
 }
 
-float3 VLOAD3F(__global float *p) {
+float3 VLOAD3F(const __global float *p) {
 	return vload3(0, p);
 }
 
@@ -82,7 +82,7 @@ void VSTORE3F(const float3 v, __global float *p) {
 	vstore3(v, 0, p);
 }
 
-float4 VLOAD4F(__global float *p) {
+float4 VLOAD4F(const __global float *p) {
 	return vload4(0, p);
 }
 

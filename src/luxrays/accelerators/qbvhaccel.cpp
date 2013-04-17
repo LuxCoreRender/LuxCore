@@ -48,9 +48,11 @@ public:
 
 		// Compile the source
 		std::stringstream params;
-		params << "-D QBVH_STACK_SIZE=" << stackSize;
+		params << "-D LUXRAYS_OPENCL_KERNEL"
+				" -D QBVH_STACK_SIZE=" << stackSize;
 
 		std::string code(
+			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
@@ -128,9 +130,12 @@ public:
 
 		// Compile the source
 		std::stringstream params;
-		params << "-D USE_IMAGE_STORAGE -D QBVH_STACK_SIZE=" << stackSize;
+		params << "-D LUXRAYS_OPENCL_KERNEL"
+				" -D USE_IMAGE_STORAGE"
+				" -D QBVH_STACK_SIZE=" << stackSize;
 
 		std::string code(
+			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +

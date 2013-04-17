@@ -125,7 +125,7 @@ void QuadTriangle_Intersect(
     maxt = select(maxt, t.s0, cond0);
     _b1 = select(0.f, b1.s0, cond0);
     _b2 = select(0.f, b2.s0, cond0);
-    index = select(0xffffffffu, primitives.s0, cond0);
+    index = select(NULL_INDEX, primitives.s0, cond0);
 
     const int cond1 = cond.s1 && (t.s1 < maxt);
     maxt = select(maxt, t.s1, cond1);
@@ -145,7 +145,7 @@ void QuadTriangle_Intersect(
     _b2 = select(_b2, b2.s3, cond3);
     index = select(index, primitives.s3, cond3);
 
-	if (index == 0xffffffffu)
+	if (index == NULL_INDEX)
 		return;
 
 	ray4->maxt = (float4)maxt;
@@ -201,7 +201,7 @@ __kernel void Intersect(
         const int signs2 = signbit(ray4.dz.s0);
 
 	RayHit rayHit;
-	rayHit.index = 0xffffffffu;
+	rayHit.index = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
