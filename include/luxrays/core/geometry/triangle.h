@@ -60,7 +60,7 @@ public:
 		return Union(BBox(p0, p1), p2);
 	}
 
-	bool Intersect(const Ray &ray, const Point *verts, RayHit *triangleHit) const {
+	bool Intersect(const Ray &ray, const Point *verts, float *t, float *b1, float *b2) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
@@ -76,28 +76,24 @@ public:
 
 		// Compute first barycentric coordinate
 		const Vector d = ray.o - p0;
-		const float b1 = Dot(d, s1) * invDivisor;
-		if (b1 < 0.f)
+		*b1 = Dot(d, s1) * invDivisor;
+		if (*b1 < 0.f)
 			return false;
 
 		// Compute second barycentric coordinate
 		const Vector s2 = Cross(d, e1);
-		const float b2 = Dot(ray.d, s2) * invDivisor;
-		if (b2 < 0.f)
+		*b2 = Dot(ray.d, s2) * invDivisor;
+		if (*b2 < 0.f)
 			return false;
 
-		const float b0 = 1.f - b1 - b2;
+		const float b0 = 1.f - *b1 - *b2;
 		if (b0 < 0.f)
 			return false;
 
 		// Compute _t_ to intersection point
-		const float t = Dot(e2, s2) * invDivisor;
-		if (t < ray.mint || t > ray.maxt)
+		*t = Dot(e2, s2) * invDivisor;
+		if (*t < ray.mint || *t > ray.maxt)
 			return false;
-
-		triangleHit->t = t;
-		triangleHit->b1 = b1;
-		triangleHit->b2 = b2;
 
 		return true;
 	}
