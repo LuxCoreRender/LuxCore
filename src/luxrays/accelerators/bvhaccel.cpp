@@ -440,24 +440,22 @@ bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 
 	unsigned int currentNode = 0; // Root Node
 	unsigned int stopNode = bvhTree[0].skipIndex; // Non-existent
-	bool hit = false;
 	rayHit->t = ray->maxt;
 	rayHit->SetMiss();
-	RayHit triangleHit;
 
 	const Point *vertices = preprocessedMesh->GetVertices();
 	const Triangle *triangles = preprocessedMesh->GetTriangles();
-
+	float t, b1, b2;
 	while (currentNode < stopNode) {
 		if (bvhTree[currentNode].bbox.IntersectP(*ray)) {
 			if (bvhTree[currentNode].primitive != 0xffffffffu) {
-				if (triangles[bvhTree[currentNode].primitive].Intersect(*ray, vertices, &triangleHit)) {
-					hit = true; // Continue testing for closer intersections
-					if (triangleHit.t < rayHit->t) {
-						rayHit->t = triangleHit.t;
-						rayHit->b1 = triangleHit.b1;
-						rayHit->b2 = triangleHit.b2;
+				if (triangles[bvhTree[currentNode].primitive].Intersect(*ray, vertices, &t, &b1, &b2)) {
+					if (t < rayHit->t) {
+						rayHit->t = t;
+						rayHit->b1 = b1;
+						rayHit->b2 = b2;
 						rayHit->index = bvhTree[currentNode].primitive;
+						// Continue testing for closer intersections
 					}
 				}
 			}
@@ -467,7 +465,7 @@ bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			currentNode = bvhTree[currentNode].skipIndex;
 	}
 
-	return hit;
+	return !rayHit->Miss();
 }
 
 }

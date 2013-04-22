@@ -21,6 +21,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// Using a large stack size to avoid the allocation of the array on
+// GPU registers (otherwise the GPU can easily run out of registers)
 #define STACK_SIZE 64
 
 typedef struct QuadRay {

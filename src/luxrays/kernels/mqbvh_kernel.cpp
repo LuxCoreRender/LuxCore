@@ -24,6 +24,8 @@ std::string KernelSource_mqbvh =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
+"// Using a large stack size to avoid the allocation of the array on\n"
+"// GPU registers (otherwise the GPU can easily run out of registers)\n"
 "#define STACK_SIZE 64\n"
 "\n"
 "typedef struct QuadRay {\n"
