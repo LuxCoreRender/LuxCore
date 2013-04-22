@@ -46,29 +46,28 @@ typedef struct {
 #define QBVHNode_NbQuadPrimitives(index) ((uint)(((index >> 27) & 0xf) + 1))
 #define QBVHNode_FirstQuadIndex(index) (index & 0x07ffffff)
 
-// Using invDir0/invDir1/invDir2 and sign0/sign1/sign2 instead of an
+// Using invDir0/invDir1/invDir2 instead of an
 // array because I dont' trust OpenCL compiler =)
 int4 QBVHNode_BBoxIntersect(
         const float4 bboxes_minX, const float4 bboxes_maxX,
         const float4 bboxes_minY, const float4 bboxes_maxY,
         const float4 bboxes_minZ, const float4 bboxes_maxZ,
         const QuadRay *ray4,
-		const float4 invDir0, const float4 invDir1, const float4 invDir2,
-		const int signs0, const int signs1, const int signs2) {
+		const float4 invDir0, const float4 invDir1, const float4 invDir2) {
 	float4 tMin = ray4->mint;
 	float4 tMax = ray4->maxt;
 
 	// X coordinate
-	tMin = max(tMin, (bboxes_minX - ray4->ox) * invDir0);
-	tMax = min(tMax, (bboxes_maxX - ray4->ox) * invDir0);
+	tMin = fmax(tMin, (bboxes_minX - ray4->ox) * invDir0);
+	tMax = fmin(tMax, (bboxes_maxX - ray4->ox) * invDir0);
 
 	// Y coordinate
-	tMin = max(tMin, (bboxes_minY - ray4->oy) * invDir1);
-	tMax = min(tMax, (bboxes_maxY - ray4->oy) * invDir1);
+	tMin = fmax(tMin, (bboxes_minY - ray4->oy) * invDir1);
+	tMax = fmin(tMax, (bboxes_maxY - ray4->oy) * invDir1);
 
 	// Z coordinate
-	tMin = max(tMin, (bboxes_minZ - ray4->oz) * invDir2);
-	tMax = min(tMax, (bboxes_maxZ - ray4->oz) * invDir2);
+	tMin = fmax(tMin, (bboxes_minZ - ray4->oz) * invDir2);
+	tMax = fmin(tMax, (bboxes_maxZ - ray4->oz) * invDir2);
 
 	// Return the visit flags
 	return  (tMax >= tMin);
@@ -196,9 +195,13 @@ __kernel void Intersect(
 	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
 	const float4 invDir2 = (float4)(1.f / ray4.dz.s0);
 
-        const int signs0 = signbit(ray4.dx.s0);
-        const int signs1 = signbit(ray4.dy.s0);
-        const int signs2 = signbit(ray4.dz.s0);
+	const int signs0 = signbit(ray4.dx.s0);
+	const int signs1 = signbit(ray4.dy.s0);
+	const int signs2 = signbit(ray4.dz.s0);
+
+	const int isigns0 = 1 - signs0;
+	const int isigns1 = 1 - signs1;
+	const int isigns2 = 1 - signs2;
 
 	RayHit rayHit;
 	rayHit.index = NULL_INDEX;
@@ -217,11 +220,11 @@ __kernel void Intersect(
     const int quadTrisImageWidth = get_image_width(quadTris);
 
     const int bboxes_minXIndex = (signs0 * 3);
-    const int bboxes_maxXIndex = ((1 - signs0) * 3);
+    const int bboxes_maxXIndex = (isigns0 * 3);
     const int bboxes_minYIndex = (signs1 * 3) + 1;
-    const int bboxes_maxYIndex = ((1 - signs1) * 3) + 1;
+    const int bboxes_maxYIndex = (isigns1 * 3) + 1;
     const int bboxes_minZIndex = (signs2 * 3) + 2;
-    const int bboxes_maxZIndex = ((1 - signs2) * 3) + 2;
+    const int bboxes_maxZIndex = (isigns2 * 3) + 2;
 
     const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
 #endif
@@ -250,17 +253,15 @@ __kernel void Intersect(
                 bboxes_minY, bboxes_maxY,
                 bboxes_minZ, bboxes_maxZ,
                 &ray4,
-				invDir0, invDir1, invDir2,
-				signs0, signs1, signs2);
+				invDir0, invDir1, invDir2);
 #else
 			__global QBVHNode *node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
-                node->bboxes[signs0][0], node->bboxes[1 - signs0][0],
-                node->bboxes[signs1][1], node->bboxes[1 - signs1][1],
-                node->bboxes[signs2][2], node->bboxes[1 - signs2][2],
+                node->bboxes[signs0][0], node->bboxes[isigns0][0],
+                node->bboxes[signs1][1], node->bboxes[isigns1][1],
+                node->bboxes[signs2][2], node->bboxes[isigns2][2],
                 &ray4,
-				invDir0, invDir1, invDir2,
-				signs0, signs1, signs2);
+				invDir0, invDir1, invDir2);
 
 			const int4 children = node->children;
 #endif
