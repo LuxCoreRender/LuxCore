@@ -21,6 +21,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#define STACK_SIZE 64
+
 typedef struct QuadRay {
 	float4 ox, oy, oz;
 	float4 dx, dy, dz;
@@ -71,29 +73,28 @@ void TransformV(Vector *ptrans, Vector *p, __global Matrix4x4 *m) {
 #define QBVHNode_NbQuadPrimitives(index) ((uint)(((index >> 27) & 0xf) + 1))
 #define QBVHNode_FirstQuadIndex(index) (index & 0x07ffffff)
 
-// Using invDir0/invDir1/invDir2 and sign0/sign1/sign2 instead of an
+// Using invDir0/invDir1/invDir2 instead of an
 // array because I dont' trust OpenCL compiler =)
 int4 QBVHNode_BBoxIntersect(
         const float4 bboxes_minX, const float4 bboxes_maxX,
         const float4 bboxes_minY, const float4 bboxes_maxY,
         const float4 bboxes_minZ, const float4 bboxes_maxZ,
         const QuadRay *ray4,
-		const float4 invDir0, const float4 invDir1, const float4 invDir2,
-		const int signs0, const int signs1, const int signs2) {
+		const float4 invDir0, const float4 invDir1, const float4 invDir2) {
 	float4 tMin = ray4->mint;
 	float4 tMax = ray4->maxt;
 
 	// X coordinate
-	tMin = max(tMin, (bboxes_minX - ray4->ox) * invDir0);
-	tMax = min(tMax, (bboxes_maxX - ray4->ox) * invDir0);
+	tMin = fmax(tMin, (bboxes_minX - ray4->ox) * invDir0);
+	tMax = fmin(tMax, (bboxes_maxX - ray4->ox) * invDir0);
 
 	// Y coordinate
-	tMin = max(tMin, (bboxes_minY - ray4->oy) * invDir1);
-	tMax = min(tMax, (bboxes_maxY - ray4->oy) * invDir1);
+	tMin = fmax(tMin, (bboxes_minY - ray4->oy) * invDir1);
+	tMax = fmin(tMax, (bboxes_maxY - ray4->oy) * invDir1);
 
 	// Z coordinate
-	tMin = max(tMin, (bboxes_minZ - ray4->oz) * invDir2);
-	tMax = min(tMax, (bboxes_maxZ - ray4->oz) * invDir2);
+	tMin = fmax(tMin, (bboxes_minZ - ray4->oz) * invDir2);
+	tMax = fmin(tMax, (bboxes_maxZ - ray4->oz) * invDir2);
 
 	// Return the visit flags
 	return  (tMax >= tMin);
@@ -203,16 +204,16 @@ void LeafIntersect(
 	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
 	const float4 invDir2 = (float4)(1.f / ray4.dz.s0);
 
-	const int signs0 = (ray4.dx.s0 < 0.f);
-	const int signs1 = (ray4.dy.s0 < 0.f);
-	const int signs2 = (ray4.dz.s0 < 0.f);
+	const int signs0 = signbit(ray4.dx.s0);
+	const int signs1 = signbit(ray4.dy.s0);
+	const int signs2 = signbit(ray4.dz.s0);
 
 	rayHit->index = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
-	int nodeStack[24];
+	int nodeStack[STACK_SIZE];
 	nodeStack[0] = 0; // first node to handle: root node
 
 	while (todoNode >= 0) {
@@ -227,8 +228,7 @@ void LeafIntersect(
                 node->bboxes[signs1][1], node->bboxes[1 - signs1][1],
                 node->bboxes[signs2][2], node->bboxes[1 - signs2][2],
                 &ray4,
-				invDir0, invDir1, invDir2,
-				signs0, signs1, signs2);
+				invDir0, invDir1, invDir2);
 
 			const int4 children = node->children;
 
@@ -328,7 +328,7 @@ __kernel void Intersect(
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
-	int nodeStack[24];
+	int nodeStack[STACK_SIZE];
 	nodeStack[0] = 0; // first node to handle: root node
 
 	while (todoNode >= 0) {
@@ -343,8 +343,7 @@ __kernel void Intersect(
                 node->bboxes[signs1][1], node->bboxes[1 - signs1][1],
                 node->bboxes[signs2][2], node->bboxes[1 - signs2][2],
                 &ray4,
-				invDir0, invDir1, invDir2,
-				signs0, signs1, signs2);
+				invDir0, invDir1, invDir2);
 
 			const int4 children = node->children;
 
