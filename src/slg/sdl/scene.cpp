@@ -140,6 +140,9 @@ void Scene::UpdateDataSet(Context *ctx) {
 		case 3:
 			dataSet->SetAcceleratorType(ACCEL_MQBVH);
 			break;
+		case 4:
+			dataSet->SetAcceleratorType(ACCEL_MBVH);
+			break;
 		default:
 			throw std::runtime_error("Unknown accelerator.type");
 			break;

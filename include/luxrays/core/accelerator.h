@@ -28,7 +28,7 @@
 namespace luxrays {
 
 typedef enum {
-	ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH
+	ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH, ACCEL_MBVH
 } AcceleratorType;
 
 class OpenCLKernels;

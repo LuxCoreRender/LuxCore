@@ -135,6 +135,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/qbvhaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/dataset.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp
