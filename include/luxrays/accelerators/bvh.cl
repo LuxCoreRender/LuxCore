@@ -21,37 +21,47 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+
 typedef struct {
-	BBox bbox;
-	unsigned int primitive;
-	unsigned int skipIndex;
+	union {
+		struct {
+			// I can not use BBox here because objects with a constructor are not
+			// allowed inside an union.
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			uint v[3];
+			uint triangleIndex;
+		} triangleLeaf;
+		struct {
+			uint index;
+		} bvhLeaf;
+	};
+	// Most significant bit is used to mark leafs
+	uint nodeData;
 } BVHAccelArrayNode;
 
-void TriangleIntersect(
-		const float4 rayOrig,
-		const float4 rayDir,
-		const float minT,
-		float *maxT,
-		unsigned int *hitIndex,
+#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+
+void Triangle_Intersect(
+		const float3 rayOrig,
+		const float3 rayDir,
+		const float mint,
+		float *maxt,
+		uint *hitIndex,
 		float *hitB1,
 		float *hitB2,
-		const unsigned int currentIndex,
-		__global Point *verts,
-		__global Triangle *tris) {
-
-	// Load triangle vertices
-	__global Point *p0 = &verts[tris[currentIndex].v[0]];
-	__global Point *p1 = &verts[tris[currentIndex].v[1]];
-	__global Point *p2 = &verts[tris[currentIndex].v[2]];
-
-	float4 v0 = (float4) (p0->x, p0->y, p0->z, 0.f);
-	float4 v1 = (float4) (p1->x, p1->y, p1->z, 0.f);
-	float4 v2 = (float4) (p2->x, p2->y, p2->z, 0.f);
+		const uint currentIndex,
+		const float3 v0,
+		const float3 v1,
+		const float3 v2) {
 
 	// Calculate intersection
-	float4 e1 = v1 - v0;
-	float4 e2 = v2 - v0;
-	float4 s1 = cross(rayDir, e2);
+	const float3 e1 = v1 - v0;
+	const float3 e2 = v2 - v0;
+	const float3 s1 = cross(rayDir, e2);
 
 	const float divisor = dot(s1, e1);
 	if (divisor == 0.f)
@@ -60,13 +70,13 @@ void TriangleIntersect(
 	const float invDivisor = 1.f / divisor;
 
 	// Compute first barycentric coordinate
-	const float4 d = rayOrig - v0;
+	const float3 d = rayOrig - v0;
 	const float b1 = dot(d, s1) * invDivisor;
 	if (b1 < 0.f)
 		return;
 
 	// Compute second barycentric coordinate
-	const float4 s2 = cross(d, e1);
+	const float3 s2 = cross(d, e1);
 	const float b2 = dot(rayDir, s2) * invDivisor;
 	if (b2 < 0.f)
 		return;
@@ -77,26 +87,26 @@ void TriangleIntersect(
 
 	// Compute _t_ to intersection point
 	const float t = dot(e2, s2) * invDivisor;
-	if (t < minT || t > *maxT)
+	if (t < mint || t > *maxt)
 		return;
 
-	*maxT = t;
+	*maxt = t;
 	*hitB1 = b1;
 	*hitB2 = b2;
 	*hitIndex = currentIndex;
 }
 
-int BBoxIntersectP(
-		const float4 rayOrig, const float4 invRayDir,
+int BBox_IntersectP(
+		const float3 rayOrig, const float3 invRayDir,
 		const float mint, const float maxt,
-		const float4 pMin, const float4 pMax) {
-	const float4 l1 = (pMin - rayOrig) * invRayDir;
-	const float4 l2 = (pMax - rayOrig) * invRayDir;
-	const float4 tNear = fmin(l1, l2);
-	const float4 tFar = fmax(l1, l2);
+		const float3 pMin, const float3 pMax) {
+	const float3 l1 = (pMin - rayOrig) * invRayDir;
+	const float3 l2 = (pMax - rayOrig) * invRayDir;
+	const float3 tNear = fmin(l1, l2);
+	const float3 tFar = fmax(l1, l2);
 
-	float t0 = max(max(max(tNear.x, tNear.y), max(tNear.x, tNear.z)), mint);
-    float t1 = min(min(min(tFar.x, tFar.y), min(tFar.x, tFar.z)), maxt);
+	float t0 = fmax(fmax(fmax(tNear.x, tNear.y), fmax(tNear.x, tNear.z)), mint);
+    float t1 = fmin(fmin(fmin(tFar.x, tFar.y), fmin(tFar.x, tFar.z)), maxt);
 
 	return (t1 > t0);
 }
@@ -105,78 +115,58 @@ __kernel void Intersect(
 		__global Ray *rays,
 		__global RayHit *rayHits,
 		__global Point *verts,
-		__global Triangle *tris,
-		const unsigned int triangleCount,
-		const unsigned int nodeCount,
 		__global BVHAccelArrayNode *bvhTree,
-		const unsigned int rayCount) {
+		const uint rayCount) {
 	// Select the ray to check
 	const int gid = get_global_id(0);
 	if (gid >= rayCount)
 		return;
 
-	float4 rayOrig,rayDir;
-	float minT, maxT;
-	{
-		__global float4 *basePtr =(__global float4 *)&rays[gid];
-		float4 data0 = (*basePtr++);
-		float4 data1 = (*basePtr);
+	__global Ray *ray = &rays[gid];
+	const float3 rayOrig = VLOAD3F(&ray->o.x);
+	const float3 rayDir = VLOAD3F(&ray->d.x);
+	const float mint = ray->mint;
+	float maxt = ray->maxt;
 
-		rayOrig = (float4)(data0.x, data0.y, data0.z, 0.f);
-		rayDir = (float4)(data0.w, data1.x, data1.y, 0.f);
+	const float3 invRayDir = 1.f / rayDir;
 
-		minT = data1.z;
-		maxT = data1.w;
-	}
+	uint hitIndex = NULL_INDEX;
+	uint currentNode = 0; // Root Node
+	const uint stopNode = BVHNodeData_GetSkipIndex(bvhTree[0].nodeData); // Non-existent
 
-	//float4 rayOrig = (float4) (rays[gid].o.x, rays[gid].o.y, rays[gid].o.z, 0.f);
-	//float4 rayDir = (float4) (rays[gid].d.x, rays[gid].d.y, rays[gid].d.z, 0.f);
-	//float minT = rays[gid].mint;
-	//float maxT = rays[gid].maxt;
-
-	const float4 invRayDir = (float4) 1.f / rayDir;
-
-	unsigned int hitIndex = NULL_INDEX;
-	unsigned int currentNode = 0; // Root Node
 	float b1, b2;
-	unsigned int stopNode = bvhTree[0].skipIndex; // Non-existent
-
-	float4 pMin, pMax, data0, data1;
-	__global float4 *basePtr;
 	while (currentNode < stopNode) {
-		/*float4 pMin = (float4)(bvhTree[currentNode].bbox.pMin.x,
-				bvhTree[currentNode].bbox.pMin.y,
-				bvhTree[currentNode].bbox.pMin.z,
-				0.f);
-		float4 pMax = (float4)(bvhTree[currentNode].bbox.pMax.x,
-				bvhTree[currentNode].bbox.pMax.y,
-				bvhTree[currentNode].bbox.pMax.z,
-				0.f);*/
+		__global BVHAccelArrayNode *node = &bvhTree[currentNode];
 
-		basePtr =(__global float4 *)&bvhTree[currentNode];
-		data0 = (*basePtr++);
-		data1 = (*basePtr);
+		const uint nodeData = node->nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the triangle
+			const float3 p0 = VLOAD3F(&verts[node->triangleLeaf.v[0]].x);
+			const float3 p1 = VLOAD3F(&verts[node->triangleLeaf.v[1]].x);
+			const float3 p2 = VLOAD3F(&verts[node->triangleLeaf.v[2]].x);
 
-		pMin = (float4)(data0.x, data0.y, data0.z, 0.f);
-		pMax = (float4)(data0.w, data1.x, data1.y, 0.f);
-
-		if (BBoxIntersectP(rayOrig, invRayDir, minT, maxT, pMin, pMax)) {
-			//const unsigned int triIndex = bvhTree[currentNode].primitive;
-			const unsigned int triIndex = as_uint(data1.z);
-
-			if (triIndex != NULL_INDEX)
-				TriangleIntersect(rayOrig, rayDir, minT, &maxT, &hitIndex, &b1, &b2, triIndex, verts, tris);
-
-			currentNode++;
+			Triangle_Intersect(rayOrig, rayDir, mint, &maxt, &hitIndex, &b1, &b2,
+					node->triangleLeaf.triangleIndex, p0, p1, p2);
+			++currentNode;
 		} else {
-			//currentNode = bvhTree[currentNode].skipIndex;
-			currentNode = as_uint(data1.w);
+			// It is a node, check the bounding box
+			const float3 pMin = VLOAD3F(&node->bvhNode.bboxMin[0]);
+			const float3 pMax = VLOAD3F(&node->bvhNode.bboxMax[0]);
+
+			if (BBox_IntersectP(rayOrig, invRayDir, mint, maxt, pMin, pMax))
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the flag is 0
+				currentNode = nodeData;
+			}
 		}
 	}
 
 	// Write result
-	rayHits[gid].t = maxT;
-	rayHits[gid].b1 = b1;
-	rayHits[gid].b2 = b2;
-	rayHits[gid].index = hitIndex;
+	__global RayHit *rayHit = &rayHits[gid];
+	rayHit->t = maxt;
+	rayHit->b1 = b1;
+	rayHit->b2 = b2;
+	rayHit->index = hitIndex;
 }

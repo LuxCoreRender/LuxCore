@@ -60,10 +60,8 @@ public:
 		return Union(BBox(p0, p1), p2);
 	}
 
-	bool Intersect(const Ray &ray, const Point *verts, float *t, float *b1, float *b2) const {
-		const Point &p0 = verts[v[0]];
-		const Point &p1 = verts[v[1]];
-		const Point &p2 = verts[v[2]];
+	static bool Intersect(const Ray &ray, const Point &p0, const Point &p1, const Point &p2,
+		float *t, float *b1, float *b2) {
 		const Vector e1 = p1 - p0;
 		const Vector e2 = p2 - p0;
 		const Vector s1 = Cross(ray.d, e2);
@@ -96,6 +94,14 @@ public:
 			return false;
 
 		return true;
+	}
+
+	bool Intersect(const Ray &ray, const Point *verts, float *t, float *b1, float *b2) const {
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+
+		return Intersect(ray, p0, p1, p2, t, b1, b2);
 	}
 
 	float Area(const Point *verts) const {
