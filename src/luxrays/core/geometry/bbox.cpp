@@ -145,8 +145,9 @@ vector<Point> BBox::ClipPolygon(const vector<Point> &vertexList) const {
 #pragma float_control(push)
 #pragma float_control(precise, on)
 #endif
-bool BBox::IntersectP(const Ray &ray, float *hitt0, float *hitt1) const
-{
+bool BBox::IntersectP(const Ray &ray,
+		const Point &pMin, const Point &pMax,
+		float *hitt0, float *hitt1) {
 	float t0 = ray.mint, t1 = ray.maxt;
 	for (int i = 0; i < 3; ++i) {
 		// Update interval for _i_th bounding box slab
@@ -162,6 +163,10 @@ bool BBox::IntersectP(const Ray &ray, float *hitt0, float *hitt1) const
 	if (hitt0) *hitt0 = t0;
 	if (hitt1) *hitt1 = t1;
 	return true;
+}
+
+bool BBox::IntersectP(const Ray &ray, float *hitt0, float *hitt1) const {
+	return IntersectP(ray, pMin, pMax, hitt0, hitt1);
 }
 #if defined(WIN32) && !defined(__CYGWIN__)
 #pragma float_control(pop)

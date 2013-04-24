@@ -37,10 +37,27 @@ struct BVHAccelTreeNode {
 };
 
 struct BVHAccelArrayNode {
-	BBox bbox;
-	u_int primitive;
-	u_int skipIndex;
+	union {
+		struct {
+			// I can not use BBox here because objects with a constructor are not
+			// allowed inside an union.
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			u_int v[3];
+			u_int triangleIndex;
+		} triangleLeaf;
+		struct {
+			u_int index;
+		} bvhLeaf;
+	};
+	// Most significant bit is used to mark leafs
+	u_int nodeData;
 };
+
+#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
 
 // BVHAccel Declarations
 class BVHAccel : public Accelerator {
@@ -92,7 +109,8 @@ private:
 		u_int begin, u_int end, float *splitValue,
 		u_int *bestAxis);
 
-	static u_int BuildArray(BVHAccelTreeNode *node, u_int offset, BVHAccelArrayNode *bvhTree);
+	static u_int BuildArray(const Triangle *triangles, BVHAccelTreeNode *node,
+		u_int offset, BVHAccelArrayNode *bvhTree);
 
 	// A special initialization method used only by MBVHAccel
 	void Init(const Mesh *m);

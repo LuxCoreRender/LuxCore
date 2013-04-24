@@ -329,11 +329,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 	bvList.reserve(totalTriangleCount);
 	for (u_int i = 0; i < nLeafs; ++i) {
 		BVHAccelTreeNode *ptr = new BVHAccelTreeNode();
-		ptr->bbox = leafs[i]->bvhTree[0].bbox;
-		if (leafsTransformIndex[i] != NULL_INDEX) {
-			// Transform the bounding box to global coordinate system
-			ptr->bbox = leafsTransform[leafsTransformIndex[i]] * ptr->bbox;
-		}
+		// Get the bounding box from the mesh so it is in global coordinates
+		ptr->bbox = meshes[i]->GetBBox();
 		ptr->primitive = i;
 		ptr->leftChild = NULL;
 		ptr->rightSibling = NULL;
@@ -346,7 +343,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 	LR_LOG(ctx, "Pre-processing Multilevel Bounding Volume Hierarchy, total nodes: " << nRootNodes);
 
 	bvhRootTree = new BVHAccelArrayNode[nRootNodes];
-	BVHAccel::BuildArray(rootNode, 0, bvhRootTree);
+	BVHAccel::BuildArray(NULL, rootNode, 0, bvhRootTree);
 	BVHAccel::FreeHierarchy(rootNode);
 
 	size_t totalMem = nRootNodes;
@@ -379,7 +376,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	bool insideLeafTree = false;
 	u_int currentLeafIndex = 0;
 	u_int currentRootNode = 0;
-	u_int rootStopNode = bvhRootTree[0].skipIndex; // Non-existent
+	u_int rootStopNode = BVHNodeData_GetSkipIndex(bvhRootTree[0].nodeData); // Non-existent
 	u_int currentNode = currentRootNode;
 	u_int currentStopNode = rootStopNode; // Non-existent
 	BVHAccelArrayNode *currentTree = bvhRootTree;
@@ -410,50 +407,61 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			}
 		}
 
-		if (currentTree[currentNode].bbox.IntersectP(currentRay)) {
-			// Check if it is empty
-			const u_int primIndex = currentTree[currentNode].primitive;
-			if (primIndex != 0xffffffffu) {
-				if (insideLeafTree) {
-					// I'm inside a leaf tree, I have to check the primitive
-					const Point *vertices = currentMesh->GetVertices();
-					const Triangle *triangles = currentMesh->GetTriangles();
+		const BVHAccelArrayNode &node = currentTree[currentNode];
 
-					if (triangles[primIndex].Intersect(currentRay, vertices, &t, &b1, &b2)) {
-						if (t < rayHit->t) {
-							currentRay.maxt = t;
-							rayHit->t = t;
-							rayHit->b1 = b1;
-							rayHit->b2 = b2;
-							rayHit->index = currentTree[currentNode].primitive + leafsOffset[currentLeafIndex];
-							// Continue testing for closer intersections
-						}
+		const u_int nodeData = node.nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			if (insideLeafTree) {
+				// I'm inside a leaf tree, I have to check the triangle
+				// It is a leaf, check the triangle
+				const Point *vertices = currentMesh->GetVertices();
+				const Point &p0 = vertices[node.triangleLeaf.v[0]];
+				const Point &p1 = vertices[node.triangleLeaf.v[1]];
+				const Point &p2 = vertices[node.triangleLeaf.v[2]];
+
+				if (Triangle::Intersect(currentRay, p0, p1, p2, &t, &b1, &b2)) {
+					if (t < rayHit->t) {
+						currentRay.maxt = t;
+						rayHit->t = t;
+						rayHit->b1 = b1;
+						rayHit->b2 = b2;
+						rayHit->index = node.triangleLeaf.triangleIndex + leafsOffset[currentLeafIndex];
+						// Continue testing for closer intersections
 					}
-
-					++currentNode;
-				} else {
-					// I have to check a leaf tree
-					currentLeafIndex = primIndex;
-					BVHAccel *leaf = leafs[currentLeafIndex];
-					currentTree = leaf->bvhTree;
-					currentMesh = leaf->mesh;
-					// Transform the ray in the local coordinate system
-					if (leafsTransformIndex[currentLeafIndex] != NULL_INDEX) {
-						currentRay = Inverse(leafsTransform[leafsTransformIndex[currentLeafIndex]]) * (*ray);
-						currentRay.maxt = rayHit->t;
-					}
-
-					currentRootNode = currentNode + 1;
-					currentNode = 0;
-					currentStopNode = currentTree[0].skipIndex;
-
-					// Now I'm inside a leaf tree
-					insideLeafTree = true;
 				}
-			} else
+
 				++currentNode;
-		} else
-			currentNode = currentTree[currentNode].skipIndex;
+			} else {
+				// I have to check a leaf tree
+				currentLeafIndex = node.bvhLeaf.index;
+				BVHAccel *leaf = leafs[currentLeafIndex];
+				currentTree = leaf->bvhTree;
+				currentMesh = leaf->mesh;
+				// Transform the ray in the local coordinate system
+				if (leafsTransformIndex[currentLeafIndex] != NULL_INDEX) {
+					currentRay = Inverse(leafsTransform[leafsTransformIndex[currentLeafIndex]]) * (*ray);
+					currentRay.maxt = rayHit->t;
+				}
+
+				currentRootNode = currentNode + 1;
+				currentNode = 0;
+				currentStopNode = BVHNodeData_GetSkipIndex(currentTree[0].nodeData);
+
+				// Now, I'm inside a leaf tree
+				insideLeafTree = true;
+			}
+		} else {
+			// It is a node, check the bounding box
+			if (BBox::IntersectP(currentRay,
+					*reinterpret_cast<const Point *>(&node.bvhNode.bboxMin[0]),
+					*reinterpret_cast<const Point *>(&node.bvhNode.bboxMax[0])))
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
 	}
 
 	return !rayHit->Miss();

@@ -48,7 +48,7 @@ namespace luxrays {
 class OpenCLBVHKernels : public OpenCLKernels {
 public:
 	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount) :
-		OpenCLKernels(dev, kernelCount), vertsBuff(NULL), trisBuff(NULL), bvhBuff(NULL) {
+		OpenCLKernels(dev, kernelCount), vertsBuff(NULL), bvhBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
 		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -100,16 +100,12 @@ public:
 		device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 		delete vertsBuff;
 		vertsBuff = NULL;
-		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-		delete trisBuff;
-		trisBuff = NULL;
 		device->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
 		delete bvhBuff;
 		bvhBuff = NULL;
 	}
 
-	void SetBuffers(cl::Buffer *v, u_int nt, cl::Buffer *t,
-		u_int nn, cl::Buffer *b);
+	void SetBuffers(cl::Buffer *v, cl::Buffer *b);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -117,23 +113,17 @@ public:
 
 	// BVH fields
 	cl::Buffer *vertsBuff;
-	cl::Buffer *trisBuff;
 	cl::Buffer *bvhBuff;
 };
 
-void OpenCLBVHKernels::SetBuffers(cl::Buffer *v,
-	u_int nt, cl::Buffer *t, u_int nn, cl::Buffer *b) {
+void OpenCLBVHKernels::SetBuffers(cl::Buffer *v, cl::Buffer *b) {
 	vertsBuff = v;
-	trisBuff = t;
 	bvhBuff = b;
 
 	// Set arguments
 	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
 		kernel->setArg(2, *vertsBuff);
-		kernel->setArg(3, *trisBuff);
-		kernel->setArg(4, nt);
-		kernel->setArg(5, nn);
-		kernel->setArg(6, *bvhBuff);
+		kernel->setArg(3, *bvhBuff);
 	}
 }
 
@@ -142,7 +132,7 @@ void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int 
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernels[kernelIndex]->setArg(0, rBuff);
 	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(7, rayCount);
+	kernels[kernelIndex]->setArg(4, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
 	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
@@ -168,16 +158,6 @@ OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	device->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
 
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-		"] Triangle indices buffer size: " <<
-		(sizeof(Triangle) * preprocessedMesh->GetTotalTriangleCount() / 1024) <<
-		"Kbytes");
-	cl::Buffer *trisBuff = new cl::Buffer(oclContext,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		sizeof(Triangle) * preprocessedMesh->GetTotalTriangleCount(),
-		preprocessedMesh->GetTriangles());
-	device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] BVH buffer size: " <<
 		(sizeof(BVHAccelArrayNode) * nNodes / 1024) <<
 		"Kbytes");
@@ -189,8 +169,7 @@ OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 
 	// Setup kernels
 	OpenCLBVHKernels *kernels = new OpenCLBVHKernels(device, kernelCount);
-	kernels->SetBuffers(vertsBuff, preprocessedMesh->GetTotalTriangleCount(),
-		trisBuff, nNodes, bvhBuff);
+	kernels->SetBuffers(vertsBuff, bvhBuff);
 
 	return kernels;
 }
@@ -269,7 +248,7 @@ void BVHAccel::Init(const Mesh *m) {
 	LR_LOG(ctx, "Pre-processing Bounding Volume Hierarchy, total nodes: " << nNodes);
 
 	bvhTree = new BVHAccelArrayNode[nNodes];
-	BuildArray(rootNode, 0, bvhTree);
+	BuildArray(p, rootNode, 0, bvhTree);
 	FreeHierarchy(rootNode);
 
 	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(BVHAccelArrayNode) / 1024 << "Kbytes");
@@ -441,15 +420,35 @@ void BVHAccel::FindBestSplit(const BVHParams &params, std::vector<BVHAccelTreeNo
 	}
 }
 
-u_int BVHAccel::BuildArray(BVHAccelTreeNode *node, u_int offset, BVHAccelArrayNode *bvhTree) {
+u_int BVHAccel::BuildArray(const Triangle *triangles, BVHAccelTreeNode *node,
+		u_int offset, BVHAccelArrayNode *bvhTree) {
 	// Build array by recursively traversing the tree depth-first
 	while (node) {
 		BVHAccelArrayNode *p = &bvhTree[offset];
 
-		p->bbox = node->bbox;
-		p->primitive = node->primitive;
-		offset = BuildArray(node->leftChild, offset + 1, bvhTree);
-		p->skipIndex = offset;
+		if (node->leftChild) {
+			// It is a BVH node
+			memcpy(&p->bvhNode.bboxMin[0], &node->bbox, sizeof(float) * 6);
+			offset = BuildArray(triangles, node->leftChild, offset + 1, bvhTree);
+			p->nodeData = offset;
+		} else {
+			// It is a leaf
+			if (triangles) {
+				// It is a BVH of triangles
+				const Triangle *triangle = &triangles[node->primitive];
+				p->triangleLeaf.v[0] = triangle->v[0];
+				p->triangleLeaf.v[1] = triangle->v[1];
+				p->triangleLeaf.v[2] = triangle->v[2];
+				p->triangleLeaf.triangleIndex = node->primitive;
+			} else {
+				// It is a BVH of BVHs (i.e. MBVH)
+				p->bvhLeaf.index = node->primitive;
+			}
+
+			// Mark as a leaf
+			++offset;
+			p->nodeData = offset | 0x80000000u;
+		}
 
 		node = node->rightSibling;
 	}
@@ -463,31 +462,46 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 	Ray ray(*initialRay);
 
 	u_int currentNode = 0; // Root Node
-	u_int stopNode = bvhTree[0].skipIndex; // Non-existent
+	u_int stopNode = BVHNodeData_GetSkipIndex(bvhTree[0].nodeData); // Non-existent
 	rayHit->t = ray.maxt;
 	rayHit->SetMiss();
 
 	const Point *vertices = preprocessedMesh->GetVertices();
-	const Triangle *triangles = preprocessedMesh->GetTriangles();
 	float t, b1, b2;
 	while (currentNode < stopNode) {
-		if (bvhTree[currentNode].bbox.IntersectP(ray)) {
-			if (bvhTree[currentNode].primitive != 0xffffffffu) {
-				if (triangles[bvhTree[currentNode].primitive].Intersect(ray, vertices, &t, &b1, &b2)) {
-					if (t < rayHit->t) {
-						ray.maxt = t;
-						rayHit->t = t;
-						rayHit->b1 = b1;
-						rayHit->b2 = b2;
-						rayHit->index = bvhTree[currentNode].primitive;
-						// Continue testing for closer intersections
-					}
+		const BVHAccelArrayNode &node = bvhTree[currentNode];
+
+		const u_int nodeData = node.nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			// It is a leaf, check the triangle
+			const Point &p0 = vertices[node.triangleLeaf.v[0]];
+			const Point &p1 = vertices[node.triangleLeaf.v[1]];
+			const Point &p2 = vertices[node.triangleLeaf.v[2]];
+
+			if (Triangle::Intersect(ray, p0, p1, p2, &t, &b1, &b2)) {
+				if (t < rayHit->t) {
+					ray.maxt = t;
+					rayHit->t = t;
+					rayHit->b1 = b1;
+					rayHit->b2 = b2;
+					rayHit->index = node.triangleLeaf.triangleIndex;
+					// Continue testing for closer intersections
 				}
 			}
 
 			++currentNode;
-		} else
-			currentNode = bvhTree[currentNode].skipIndex;
+		} else {
+			// It is a node, check the bounding box
+			if (BBox::IntersectP(ray,
+					*reinterpret_cast<const Point *>(&node.bvhNode.bboxMin[0]),
+					*reinterpret_cast<const Point *>(&node.bvhNode.bboxMax[0])))
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
 	}
 
 	return !rayHit->Miss();
