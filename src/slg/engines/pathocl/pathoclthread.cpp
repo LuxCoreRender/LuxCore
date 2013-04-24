@@ -419,6 +419,9 @@ void PathOCLRenderThread::InitKernels() {
 		case ACCEL_MQBVH:
 			ss << " -D PARAM_ACCEL_MQBVH";
 			break;
+		case ACCEL_MBVH:
+			ss << " -D PARAM_ACCEL_MBVH";
+			break;
 		default:
 			assert (false);
 	}

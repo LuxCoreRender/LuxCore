@@ -19,52 +19,39 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_BVHACCEL_H
-#define	_LUXRAYS_BVHACCEL_H
+#ifndef _LUXRAYS_MBVHACCEL_H
+#define	_LUXRAYS_MBVHACCEL_H
 
 #include <vector>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/accelerator.h"
+#include "luxrays/accelerators/bvhaccel.h"
 
 namespace luxrays {
 
-struct BVHAccelTreeNode {
-	BBox bbox;
-	u_int primitive;
-	BVHAccelTreeNode *leftChild;
-	BVHAccelTreeNode *rightSibling;
-};
-
-struct BVHAccelArrayNode {
-	BBox bbox;
-	u_int primitive;
-	u_int skipIndex;
-};
-
-// BVHAccel Declarations
-class BVHAccel : public Accelerator {
+// MBVHAccel Declarations
+class MBVHAccel : public Accelerator {
 public:
-	// BVHAccel Public Methods
-	BVHAccel(const Context *context,
-			const u_int treetype, const int csamples, const int icost,
+	// MBVHAccel Public Methods
+	MBVHAccel(const Context *context,
+			const unsigned int treetype, const int csamples, const int icost,
 			const int tcost, const float ebonus);
-	virtual ~BVHAccel();
+	virtual ~MBVHAccel();
 
-	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
+	virtual AcceleratorType GetType() const { return ACCEL_MBVH; }
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
-		const u_int totalVertexCount,
-		const u_int totalTriangleCount);
+		const unsigned int totalVertexCount,
+		const unsigned int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const u_int index) const {
+	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
 		return meshIDs[index];
 	}
 	virtual const TriangleMeshID *GetMeshIDTable() const {
 		return meshIDs;
 	}
-	virtual const TriangleID GetMeshTriangleID(const u_int index) const {
+	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
 		return meshTriangleIDs[index];
 	}
 	virtual const TriangleID *GetMeshTriangleIDTable() const {
@@ -73,38 +60,21 @@ public:
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	friend class MBVHAccel;
-
 private:
-	typedef struct {
-		u_int treeType;
-		int costSamples, isectCost, traversalCost;
-		float emptyBonus;
-	} BVHParams;
+	static bool MeshPtrCompare(const Mesh *, const Mesh *);
 
-	// BVHAccel Private Methods
-	static BVHAccelTreeNode *BuildHierarchy(u_int *nNodes, const BVHParams &params,
-		std::vector<BVHAccelTreeNode *> &list,
-		u_int begin, u_int end, u_int axis);
-	static void FreeHierarchy(BVHAccelTreeNode *node);
-	static void FindBestSplit(const BVHParams &params,
-		std::vector<BVHAccelTreeNode *> &list,
-		u_int begin, u_int end, float *splitValue,
-		u_int *bestAxis);
+	BVHAccel::BVHParams params;
 
-	static u_int BuildArray(BVHAccelTreeNode *node, u_int offset, BVHAccelArrayNode *bvhTree);
+	unsigned int nRootNodes;
+	BVHAccelArrayNode *bvhRootTree;
 
-	// A special initialization method used only by MBVHAccel
-	void Init(const Mesh *m);
-
-	BVHParams params;
-
-	u_int nNodes;
-	BVHAccelArrayNode *bvhTree;
-
+	std::vector<BVHAccel *> leafs;
+	std::vector<Transform> leafsTransform;
+	std::vector<u_int> leafsOffset;
+	std::vector<u_int> leafsTransformIndex;
+	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> leafIndexByMesh;
+	
 	const Context *ctx;
-	TriangleMesh *preprocessedMesh;
-	const Mesh *mesh;
 	TriangleMeshID *meshIDs;
 	TriangleID *meshTriangleIDs;
 
@@ -113,4 +83,4 @@ private:
 
 }
 
-#endif	/* _LUXRAYS_BVHACCEL_H */
+#endif	/* _LUXRAYS_MBVHACCEL_H */

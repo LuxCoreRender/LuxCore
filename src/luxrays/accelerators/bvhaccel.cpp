@@ -108,11 +108,11 @@ public:
 		bvhBuff = NULL;
 	}
 
-	void SetBuffers(cl::Buffer *v, unsigned int nt, cl::Buffer *t,
-		unsigned int nn, cl::Buffer *b);
+	void SetBuffers(cl::Buffer *v, u_int nt, cl::Buffer *t,
+		u_int nn, cl::Buffer *b);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 	// BVH fields
@@ -122,7 +122,7 @@ public:
 };
 
 void OpenCLBVHKernels::SetBuffers(cl::Buffer *v,
-	unsigned int nt, cl::Buffer *t, unsigned int nn, cl::Buffer *b) {
+	u_int nt, cl::Buffer *t, u_int nn, cl::Buffer *b) {
 	vertsBuff = v;
 	trisBuff = t;
 	bvhBuff = b;
@@ -138,7 +138,7 @@ void OpenCLBVHKernels::SetBuffers(cl::Buffer *v,
 }
 
 void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernels[kernelIndex]->setArg(0, rBuff);
 	kernels[kernelIndex]->setArg(1, hBuff);
@@ -207,34 +207,50 @@ OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 // BVHAccel Method Definitions
 
 BVHAccel::BVHAccel(const Context *context,
-		const unsigned int treetype, const int csamples, const int icost,
-		const int tcost, const float ebonus) :
-		costSamples(csamples), isectCost(icost), traversalCost(tcost), emptyBonus(ebonus), ctx(context) {
+		const u_int treetype, const int csamples, const int icost,
+		const int tcost, const float ebonus) : ctx(context) {
 	// Make sure treeType is 2, 4 or 8
-	if (treetype <= 2) treeType = 2;
-	else if (treetype <= 4) treeType = 4;
-	else treeType = 8;
+	if (treetype <= 2) params.treeType = 2;
+	else if (treetype <= 4) params.treeType = 4;
+	else params.treeType = 8;
+
+	params.costSamples = csamples;
+	params.isectCost = icost;
+	params.traversalCost = tcost;
+	params.emptyBonus = ebonus;
+
+	preprocessedMesh = NULL;
+	meshIDs = NULL;
+	meshTriangleIDs = NULL;
 
 	initialized = false;
 }
 
-void BVHAccel::Init(const std::deque<const Mesh *> &meshes, const unsigned int totalVertexCount,
-		const unsigned int totalTriangleCount) {
+void BVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount,
+		const u_int totalTriangleCount) {
 	assert (!initialized);
 
+	// Build the preprocessed mesh
 	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
-			meshes, &preprocessedMeshIDs, &preprocessedMeshTriangleIDs);
+			meshes, &meshIDs, &meshTriangleIDs);
 	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
 	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
 
 	LR_LOG(ctx, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
 	LR_LOG(ctx, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");
 
-	const Point *v = preprocessedMesh->GetVertices();
-	const Triangle *p = preprocessedMesh->GetTriangles();
+	Init(preprocessedMesh);
+}
+
+void BVHAccel::Init(const Mesh *m) {
+	mesh = m;
+
+	const Point *v = mesh->GetVertices();
+	const Triangle *p = mesh->GetTriangles();
 
 	std::vector<BVHAccelTreeNode *> bvList;
-	for (unsigned int i = 0; i < totalTriangleCount; ++i) {
+	bvList.reserve(mesh->GetTotalTriangleCount());
+	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 		BVHAccelTreeNode *ptr = new BVHAccelTreeNode();
 		ptr->bbox = p[i].WorldBound(v);
 		// NOTE - Ratow - Expand bbox a little to make sure rays collide
@@ -245,29 +261,33 @@ void BVHAccel::Init(const std::deque<const Mesh *> &meshes, const unsigned int t
 		bvList.push_back(ptr);
 	}
 
-	LR_LOG(ctx, "Building Bounding Volume Hierarchy, primitives: " << totalTriangleCount);
+	LR_LOG(ctx, "Building Bounding Volume Hierarchy, primitives: " << mesh->GetTotalTriangleCount());
 
 	nNodes = 0;
-	BVHAccelTreeNode *rootNode = BuildHierarchy(bvList, 0, bvList.size(), 2);
+	BVHAccelTreeNode *rootNode = BuildHierarchy(&nNodes, params, bvList, 0, bvList.size(), 2);
 
 	LR_LOG(ctx, "Pre-processing Bounding Volume Hierarchy, total nodes: " << nNodes);
 
 	bvhTree = new BVHAccelArrayNode[nNodes];
-	BuildArray(rootNode, 0);
+	BuildArray(rootNode, 0, bvhTree);
 	FreeHierarchy(rootNode);
 
 	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(BVHAccelArrayNode) / 1024 << "Kbytes");
-	LR_LOG(ctx, "Finished building Bounding Volume Hierarchy array");
+	//LR_LOG(ctx, "Finished building Bounding Volume Hierarchy array");
 
 	initialized = true;
 }
 
 BVHAccel::~BVHAccel() {
 	if (initialized) {
-		preprocessedMesh->Delete();
-		delete preprocessedMesh;
-		delete[] preprocessedMeshIDs;
-		delete[] preprocessedMeshTriangleIDs;
+		if (preprocessedMesh) {
+			// preprocessedMesh is not allocated when BVHAccel is used by MBVHAccel
+			preprocessedMesh->Delete();
+			delete preprocessedMesh;
+		}
+
+		delete[] meshIDs;
+		delete[] meshTriangleIDs;
 		delete bvhTree;
 	}
 }
@@ -283,25 +303,26 @@ void BVHAccel::FreeHierarchy(BVHAccelTreeNode *node) {
 
 // Build an array of comparators for each axis
 
-bool bvh_ltf_x(BVHAccelTreeNode *n, float v) {
+static bool bvh_ltf_x(BVHAccelTreeNode *n, float v) {
 	return n->bbox.pMax.x + n->bbox.pMin.x < v;
 }
 
-bool bvh_ltf_y(BVHAccelTreeNode *n, float v) {
+static bool bvh_ltf_y(BVHAccelTreeNode *n, float v) {
 	return n->bbox.pMax.y + n->bbox.pMin.y < v;
 }
 
-bool bvh_ltf_z(BVHAccelTreeNode *n, float v) {
+static bool bvh_ltf_z(BVHAccelTreeNode *n, float v) {
 	return n->bbox.pMax.z + n->bbox.pMin.z < v;
 }
 
 bool (* const bvh_ltf[3])(BVHAccelTreeNode *n, float v) = {bvh_ltf_x, bvh_ltf_y, bvh_ltf_z};
 
-BVHAccelTreeNode *BVHAccel::BuildHierarchy(std::vector<BVHAccelTreeNode *> &list, unsigned int begin, unsigned int end, unsigned int axis) {
-	unsigned int splitAxis = axis;
+BVHAccelTreeNode *BVHAccel::BuildHierarchy(u_int *nNodes, const BVHParams &params,
+		std::vector<BVHAccelTreeNode *> &list, u_int begin, u_int end, u_int axis) {
+	u_int splitAxis = axis;
 	float splitValue;
 
-	nNodes += 1;
+	*nNodes += 1;
 	if (end - begin == 1) // Only a single item in list so return it
 		return list[begin];
 
@@ -310,23 +331,23 @@ BVHAccelTreeNode *BVHAccel::BuildHierarchy(std::vector<BVHAccelTreeNode *> &list
 	parent->leftChild = NULL;
 	parent->rightSibling = NULL;
 
-	std::vector<unsigned int> splits;
-	splits.reserve(treeType + 1);
+	std::vector<u_int> splits;
+	splits.reserve(params.treeType + 1);
 	splits.push_back(begin);
 	splits.push_back(end);
-	for (unsigned int i = 2; i <= treeType; i *= 2) { // Calculate splits, according to tree type and do partition
-		for (unsigned int j = 0, offset = 0; j + offset < i && splits.size() > j + 1; j += 2) {
+	for (u_int i = 2; i <= params.treeType; i *= 2) { // Calculate splits, according to tree type and do partition
+		for (u_int j = 0, offset = 0; j + offset < i && splits.size() > j + 1; j += 2) {
 			if (splits[j + 1] - splits[j] < 2) {
 				j--;
 				offset++;
 				continue; // Less than two elements: no need to split
 			}
 
-			FindBestSplit(list, splits[j], splits[j + 1], &splitValue, &splitAxis);
+			FindBestSplit(params, list, splits[j], splits[j + 1], &splitValue, &splitAxis);
 
 			std::vector<BVHAccelTreeNode *>::iterator it =
 					partition(list.begin() + splits[j], list.begin() + splits[j + 1], bind2nd(ptr_fun(bvh_ltf[splitAxis]), splitValue));
-			unsigned int middle = distance(list.begin(), it);
+			u_int middle = distance(list.begin(), it);
 			middle = Max(splits[j] + 1, Min(splits[j + 1] - 1, middle)); // Make sure coincidental BBs are still split
 			splits.insert(splits.begin() + j + 1, middle);
 		}
@@ -334,14 +355,14 @@ BVHAccelTreeNode *BVHAccel::BuildHierarchy(std::vector<BVHAccelTreeNode *> &list
 
 	BVHAccelTreeNode *child, *lastChild;
 	// Left Child
-	child = BuildHierarchy(list, splits[0], splits[1], splitAxis);
+	child = BuildHierarchy(nNodes, params, list, splits[0], splits[1], splitAxis);
 	parent->leftChild = child;
 	parent->bbox = child->bbox;
 	lastChild = child;
 
 	// Add remaining children
-	for (unsigned int i = 1; i < splits.size() - 1; i++) {
-		child = BuildHierarchy(list, splits[i], splits[i + 1], splitAxis);
+	for (u_int i = 1; i < splits.size() - 1; i++) {
+		child = BuildHierarchy(nNodes, params, list, splits[i], splits[i + 1], splitAxis);
 		lastChild->rightSibling = child;
 		parent->bbox = Union(parent->bbox, child->bbox);
 		lastChild = child;
@@ -350,7 +371,8 @@ BVHAccelTreeNode *BVHAccel::BuildHierarchy(std::vector<BVHAccelTreeNode *> &list
 	return parent;
 }
 
-void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int begin, unsigned int end, float *splitValue, unsigned int *bestAxis) {
+void BVHAccel::FindBestSplit(const BVHParams &params, std::vector<BVHAccelTreeNode *> &list,
+		u_int begin, u_int end, float *splitValue, u_int *bestAxis) {
 	if (end - begin == 2) {
 		// Trivial case with two elements
 		*splitValue = (list[begin]->bbox.pMax[0] + list[begin]->bbox.pMin[0] +
@@ -359,12 +381,12 @@ void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int
 	} else {
 		// Calculate BBs mean center (times 2)
 		Point mean2(0, 0, 0), var(0, 0, 0);
-		for (unsigned int i = begin; i < end; i++)
+		for (u_int i = begin; i < end; i++)
 			mean2 += list[i]->bbox.pMax + list[i]->bbox.pMin;
 		mean2 /= static_cast<float>(end - begin);
 
 		// Calculate variance
-		for (unsigned int i = begin; i < end; i++) {
+		for (u_int i = begin; i < end; i++) {
 			Vector v = list[i]->bbox.pMax + list[i]->bbox.pMin - mean2;
 			v.x *= v.x;
 			v.y *= v.y;
@@ -379,21 +401,21 @@ void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int
 		else
 			*bestAxis = 2;
 
-		if (costSamples > 1) {
+		if (params.costSamples > 1) {
 			BBox nodeBounds;
-			for (unsigned int i = begin; i < end; i++)
+			for (u_int i = begin; i < end; i++)
 				nodeBounds = Union(nodeBounds, list[i]->bbox);
 
 			Vector d = nodeBounds.pMax - nodeBounds.pMin;
 			const float invTotalSA = 1.f / nodeBounds.SurfaceArea();
 
 			// Sample cost for split at some points
-			float increment = 2 * d[*bestAxis] / (costSamples + 1);
+			float increment = 2 * d[*bestAxis] / (params.costSamples + 1);
 			float bestCost = INFINITY;
 			for (float splitVal = 2 * nodeBounds.pMin[*bestAxis] + increment; splitVal < 2 * nodeBounds.pMax[*bestAxis]; splitVal += increment) {
 				int nBelow = 0, nAbove = 0;
 				BBox bbBelow, bbAbove;
-				for (unsigned int j = begin; j < end; j++) {
+				for (u_int j = begin; j < end; j++) {
 					if ((list[j]->bbox.pMax[*bestAxis] + list[j]->bbox.pMin[*bestAxis]) < splitVal) {
 						nBelow++;
 						bbBelow = Union(bbBelow, list[j]->bbox);
@@ -404,8 +426,8 @@ void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int
 				}
 				const float pBelow = bbBelow.SurfaceArea() * invTotalSA;
 				const float pAbove = bbAbove.SurfaceArea() * invTotalSA;
-				float eb = (nAbove == 0 || nBelow == 0) ? emptyBonus : 0.f;
-				float cost = traversalCost + isectCost * (1.f - eb) * (pBelow * nBelow + pAbove * nAbove);
+				float eb = (nAbove == 0 || nBelow == 0) ? params.emptyBonus : 0.f;
+				float cost = params.traversalCost + params.isectCost * (1.f - eb) * (pBelow * nBelow + pAbove * nAbove);
 				// Update best split if this is lowest cost so far
 				if (cost < bestCost) {
 					bestCost = cost;
@@ -419,14 +441,14 @@ void BVHAccel::FindBestSplit(std::vector<BVHAccelTreeNode *> &list, unsigned int
 	}
 }
 
-unsigned int BVHAccel::BuildArray(BVHAccelTreeNode *node, unsigned int offset) {
+u_int BVHAccel::BuildArray(BVHAccelTreeNode *node, u_int offset, BVHAccelArrayNode *bvhTree) {
 	// Build array by recursively traversing the tree depth-first
 	while (node) {
 		BVHAccelArrayNode *p = &bvhTree[offset];
 
 		p->bbox = node->bbox;
 		p->primitive = node->primitive;
-		offset = BuildArray(node->leftChild, offset + 1);
+		offset = BuildArray(node->leftChild, offset + 1, bvhTree);
 		p->skipIndex = offset;
 
 		node = node->rightSibling;
@@ -435,22 +457,25 @@ unsigned int BVHAccel::BuildArray(BVHAccelTreeNode *node, unsigned int offset) {
 	return offset;
 }
 
-bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
+bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 	assert (initialized);
 
-	unsigned int currentNode = 0; // Root Node
-	unsigned int stopNode = bvhTree[0].skipIndex; // Non-existent
-	rayHit->t = ray->maxt;
+	Ray ray(*initialRay);
+
+	u_int currentNode = 0; // Root Node
+	u_int stopNode = bvhTree[0].skipIndex; // Non-existent
+	rayHit->t = ray.maxt;
 	rayHit->SetMiss();
 
 	const Point *vertices = preprocessedMesh->GetVertices();
 	const Triangle *triangles = preprocessedMesh->GetTriangles();
 	float t, b1, b2;
 	while (currentNode < stopNode) {
-		if (bvhTree[currentNode].bbox.IntersectP(*ray)) {
+		if (bvhTree[currentNode].bbox.IntersectP(ray)) {
 			if (bvhTree[currentNode].primitive != 0xffffffffu) {
-				if (triangles[bvhTree[currentNode].primitive].Intersect(*ray, vertices, &t, &b1, &b2)) {
+				if (triangles[bvhTree[currentNode].primitive].Intersect(ray, vertices, &t, &b1, &b2)) {
 					if (t < rayHit->t) {
+						ray.maxt = t;
 						rayHit->t = t;
 						rayHit->b1 = b1;
 						rayHit->b2 = b2;
@@ -460,7 +485,7 @@ bool BVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 				}
 			}
 
-			currentNode++;
+			++currentNode;
 		} else
 			currentNode = bvhTree[currentNode].skipIndex;
 	}

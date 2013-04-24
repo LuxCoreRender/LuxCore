@@ -30,6 +30,7 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/accelerators/qbvhaccel.h"
 #include "luxrays/accelerators/mqbvhaccel.h"
+#include "luxrays/accelerators/mbvhaccel.h"
 #include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
@@ -107,6 +108,16 @@ void DataSet::Preprocess() {
 			const int skipFactor = 1;
 
 			accel = new MQBVHAccel(context, fullSweepThreshold, skipFactor);
+			break;
+		}
+		case ACCEL_MBVH: {
+			const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
+			const int costSamples = 0; // Samples to get for cost minimization
+			const int isectCost = 80;
+			const int travCost = 10;
+			const float emptyBonus = 0.5f;
+
+			accel = new MBVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
 			break;
 		}
 		default:

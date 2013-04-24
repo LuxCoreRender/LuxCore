@@ -379,7 +379,7 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 	for (u_int i = 0; i < nLeafs; ++i) {
 		const double now = WallClockTime();
 		if (now - lastPrint > 2.0) {
-			LR_LOG(ctx, "Building QBVH for MQBVH leaf: " << i);
+			LR_LOG(ctx, "Building QBVH for MQBVH leaf: " << i << "/" << nLeafs);
 			lastPrint = now;
 		}
 
