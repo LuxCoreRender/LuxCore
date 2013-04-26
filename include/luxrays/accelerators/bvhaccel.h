@@ -50,7 +50,7 @@ struct BVHAccelArrayNode {
 		} triangleLeaf;
 		struct {
 			u_int index;
-		} bvhLeaf;
+		} bvhLeaf; // Used by MBVH
 	};
 	// Most significant bit is used to mark leafs
 	u_int nodeData;
@@ -91,6 +91,9 @@ public:
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	friend class MBVHAccel;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	friend class OpenCLBVHKernels;
+#endif
 
 private:
 	typedef struct {

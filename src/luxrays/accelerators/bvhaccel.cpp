@@ -47,14 +47,87 @@ namespace luxrays {
 
 class OpenCLBVHKernels : public OpenCLKernels {
 public:
-	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount) :
-		OpenCLKernels(dev, kernelCount), vertsBuff(NULL), bvhBuff(NULL) {
+	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const BVHAccel *bvh) :
+		OpenCLKernels(dev, kernelCount), bvhBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
 		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
 		cl::Device &oclDevice = device->GetOpenCLDevice();
 
-		// Compile sources
+		// Check the max. number of vertices I can store in a single page
+		const size_t maxMemAlloc = device->GetDeviceDesc()->GetMaxMemoryAllocSize();
+		const size_t maxVertCount = maxMemAlloc / (sizeof(Point) * 3);
+
+		//----------------------------------------------------------------------
+		// Allocate buffers
+		//----------------------------------------------------------------------
+
+		// Check how many pages I have to allocate
+		const u_int totalVertCount = bvh->preprocessedMesh->GetTotalVertexCount();
+		const Point *verts = bvh->preprocessedMesh->GetVertices();
+		u_int vertIndex = 0;
+		do {
+			const u_int leftVertCount = totalVertCount - vertIndex;
+			const u_int pageVertCount = Min<size_t>(leftVertCount, maxVertCount);
+
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+				"] Vertices buffer size (Page " << vertsBuffs.size() <<", " <<
+				pageVertCount << " vertices): " <<
+				(sizeof(Point) * pageVertCount / 1024) <<
+				"Kbytes");
+			cl::Buffer *vb = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(Point) * pageVertCount,
+				(void *)&verts[vertIndex]);
+			device->AllocMemory(vb->getInfo<CL_MEM_SIZE>());
+			vertsBuffs.push_back(vb);
+
+			if (vertsBuffs.size() > 8)
+				throw std::runtime_error("Too many pages required in OpenCLBVHKernels()");
+
+			vertIndex += pageVertCount;
+		} while (vertIndex < totalVertCount);
+
+		// Allocate a copy of the BVH nodes
+		BVHAccelArrayNode *oclBvh = new BVHAccelArrayNode[bvh->nNodes];
+		memcpy(oclBvh, bvh->bvhTree, sizeof(BVHAccelArrayNode) * bvh->nNodes);
+
+		// Update the vertex references
+		for (u_int i = 0; i < bvh->nNodes; ++i) {
+			BVHAccelArrayNode *node = &oclBvh[i];
+			if (BVHNodeData_IsLeaf(node->nodeData)) {
+				// Update the vertex references
+				for (u_int j = 0; j < 3; ++j) {
+					const u_int vertexPage = node->triangleLeaf.v[j] / maxVertCount;
+					const u_int vertexIndex = node->triangleLeaf.v[j] % maxVertCount;
+					// Encode the page in the last 3 bits of the vertex index
+					node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
+				}
+			}
+		}
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			"] BVH buffer size: " <<
+			(sizeof(BVHAccelArrayNode) * bvh->nNodes / 1024) <<
+			"Kbytes");
+		bvhBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(BVHAccelArrayNode) * bvh->nNodes,
+			(void *)oclBvh);
+		device->AllocMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
+		delete oclBvh;
+
+		//----------------------------------------------------------------------
+		// Compile kernel sources
+		//----------------------------------------------------------------------
+
+		// Compile options
+		std::stringstream opts;
+		opts << "-D LUXRAYS_OPENCL_KERNEL "
+				"-D BVH_VERTS_PAGE_COUNT=" << vertsBuffs.size();
+		for (u_int i = 0; i < vertsBuffs.size(); ++i)
+			opts << " -D BVH_VERTS_PAGE" << i << "=1";
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compile options: " << opts.str());
+
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_point_types +
@@ -68,7 +141,7 @@ public:
 		try {
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-D LUXRAYS_OPENCL_KERNEL");
+			program.build(buildDevice, opts.str().c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
@@ -94,45 +167,38 @@ public:
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				//	"] Forced work group size: " << workGroupSize);
 			}
+
+			// Set arguments
+			kernels[i]->setArg(3, *bvhBuff);
+			for (u_int j = 0; j < vertsBuffs.size(); ++j)
+				kernels[i]->setArg(4 + j, *vertsBuffs[j]);
 		}
 	}
 	virtual ~OpenCLBVHKernels() {
-		device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-		delete vertsBuff;
-		vertsBuff = NULL;
+		BOOST_FOREACH(cl::Buffer *buf, vertsBuffs) {
+			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
+			delete buf;
+		}
 		device->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
 		delete bvhBuff;
-		bvhBuff = NULL;
 	}
 
-	void SetBuffers(cl::Buffer *v, cl::Buffer *b);
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 	// BVH fields
-	cl::Buffer *vertsBuff;
+	vector<cl::Buffer *> vertsBuffs;
 	cl::Buffer *bvhBuff;
 };
-
-void OpenCLBVHKernels::SetBuffers(cl::Buffer *v, cl::Buffer *b) {
-	vertsBuff = v;
-	bvhBuff = b;
-
-	// Set arguments
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		kernel->setArg(2, *vertsBuff);
-		kernel->setArg(3, *bvhBuff);
-	}
-}
 
 void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernels[kernelIndex]->setArg(0, rBuff);
 	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(4, rayCount);
+	kernels[kernelIndex]->setArg(2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
 	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
@@ -142,36 +208,8 @@ void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int 
 
 OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
-	const Context *deviceContext = device->GetContext();
-	cl::Context &oclContext = device->GetOpenCLContext();
-	const std::string &deviceName(device->GetName());
-
-	// Allocate buffers
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-		"] Vertices buffer size: " <<
-		(sizeof(Point) * preprocessedMesh->GetTotalVertexCount() / 1024) <<
-		"Kbytes");
-	cl::Buffer *vertsBuff = new cl::Buffer(oclContext,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		sizeof(Point) * preprocessedMesh->GetTotalVertexCount(),
-		preprocessedMesh->GetVertices());
-	device->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-		"] BVH buffer size: " <<
-		(sizeof(BVHAccelArrayNode) * nNodes / 1024) <<
-		"Kbytes");
-	cl::Buffer *bvhBuff = new cl::Buffer(oclContext,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		sizeof(BVHAccelArrayNode) * nNodes,
-		(void*)bvhTree);
-	device->AllocMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
-
 	// Setup kernels
-	OpenCLBVHKernels *kernels = new OpenCLBVHKernels(device, kernelCount);
-	kernels->SetBuffers(vertsBuff, bvhBuff);
-
-	return kernels;
+	return new OpenCLBVHKernels(device, kernelCount, this);
 }
 
 #else
