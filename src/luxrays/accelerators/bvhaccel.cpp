@@ -48,7 +48,7 @@ namespace luxrays {
 class OpenCLBVHKernels : public OpenCLKernels {
 public:
 	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const BVHAccel *bvh) :
-		OpenCLKernels(dev, kernelCount), bvhBuff(NULL) {
+		OpenCLKernels(dev, kernelCount) {
 		const Context *deviceContext = device->GetContext();
 		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -56,16 +56,17 @@ public:
 
 		// Check the max. number of vertices I can store in a single page
 		const size_t maxMemAlloc = device->GetDeviceDesc()->GetMaxMemoryAllocSize();
-		const size_t maxVertCount = maxMemAlloc / (sizeof(Point) * 3);
 
 		//----------------------------------------------------------------------
-		// Allocate buffers
+		// Allocate vertex buffers
 		//----------------------------------------------------------------------
 
 		// Check how many pages I have to allocate
+		const size_t maxVertCount = maxMemAlloc / (sizeof(Point) * 3);
 		const u_int totalVertCount = bvh->preprocessedMesh->GetTotalVertexCount();
 		const Point *verts = bvh->preprocessedMesh->GetVertices();
 		u_int vertIndex = 0;
+
 		do {
 			const u_int leftVertCount = totalVertCount - vertIndex;
 			const u_int pageVertCount = Min<size_t>(leftVertCount, maxVertCount);
@@ -83,37 +84,70 @@ public:
 			vertsBuffs.push_back(vb);
 
 			if (vertsBuffs.size() > 8)
-				throw std::runtime_error("Too many pages required in OpenCLBVHKernels()");
+				throw std::runtime_error("Too many vertex pages required in OpenCLBVHKernels()");
 
 			vertIndex += pageVertCount;
 		} while (vertIndex < totalVertCount);
 
-		// Allocate a copy of the BVH nodes
-		BVHAccelArrayNode *oclBvh = new BVHAccelArrayNode[bvh->nNodes];
-		memcpy(oclBvh, bvh->bvhTree, sizeof(BVHAccelArrayNode) * bvh->nNodes);
+		//----------------------------------------------------------------------
+		// Allocate BVH node buffers
+		//----------------------------------------------------------------------
 
-		// Update the vertex references
-		for (u_int i = 0; i < bvh->nNodes; ++i) {
-			BVHAccelArrayNode *node = &oclBvh[i];
-			if (BVHNodeData_IsLeaf(node->nodeData)) {
-				// Update the vertex references
-				for (u_int j = 0; j < 3; ++j) {
-					const u_int vertexPage = node->triangleLeaf.v[j] / maxVertCount;
-					const u_int vertexIndex = node->triangleLeaf.v[j] % maxVertCount;
-					// Encode the page in the last 3 bits of the vertex index
-					node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
+		// Check how many pages I have to allocate
+		const size_t maxNodeCount = maxMemAlloc / sizeof(BVHAccelArrayNode);
+		const u_int totalNodeCount = bvh->nNodes;
+		const BVHAccelArrayNode *nodes = bvh->bvhTree;
+		// Allocate a temporary buffer for the copy of the BVH nodes
+		BVHAccelArrayNode *oclBvh = new BVHAccelArrayNode[
+				(totalNodeCount < maxNodeCount) ? bvh->nNodes : maxNodeCount];
+		u_int nodeIndex = 0;
+
+		do {
+			const u_int leftNodeCount = totalNodeCount - nodeIndex;
+			const u_int pageNodeCount = Min<size_t>(leftNodeCount, maxNodeCount);
+
+			// Make a copy of the nodes
+			memcpy(oclBvh, &nodes[nodeIndex], sizeof(BVHAccelArrayNode) * pageNodeCount);
+
+			// Update the vertex references
+			for (u_int i = 0; i < pageNodeCount; ++i) {
+				BVHAccelArrayNode *node = &oclBvh[i];
+				if (BVHNodeData_IsLeaf(node->nodeData)) {
+					// Update the vertex references
+					for (u_int j = 0; j < 3; ++j) {
+						const u_int vertexPage = node->triangleLeaf.v[j] / maxVertCount;
+						const u_int vertexIndex = node->triangleLeaf.v[j] % maxVertCount;
+						// Encode the page in the last 3 bits of the vertex index
+						node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
+					}
+				} else {
+					const u_int nextNodeIndex = BVHNodeData_GetSkipIndex(node->nodeData);
+					const u_int nodePage = nextNodeIndex / maxNodeCount;
+					const u_int nodeIndex = nextNodeIndex % maxNodeCount;
+					// Encode the page in 30, 29, 28 bits of the node index (last
+					// bit is used to encode if it is a leaf or not)
+					node->nodeData = (nodePage << 28) | nodeIndex;
 				}
 			}
-		}
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] BVH buffer size: " <<
-			(sizeof(BVHAccelArrayNode) * bvh->nNodes / 1024) <<
-			"Kbytes");
-		bvhBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(BVHAccelArrayNode) * bvh->nNodes,
-			(void *)oclBvh);
-		device->AllocMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
+
+			// Allocate OpenCL buffer
+			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+				"] BVH buffer size (Page " << nodeBuffs.size() <<", " <<
+				pageNodeCount << " nodes): " <<
+				(sizeof(BVHAccelArrayNode) * pageNodeCount / 1024) <<
+				"Kbytes");
+			cl::Buffer *bb = new cl::Buffer(oclContext,
+				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+				sizeof(BVHAccelArrayNode) * pageNodeCount,
+				(void *)oclBvh);
+			device->AllocMemory(bb->getInfo<CL_MEM_SIZE>());
+			nodeBuffs.push_back(bb);
+
+			if (nodeBuffs.size() > 8)
+				throw std::runtime_error("Too many node pages required in OpenCLBVHKernels()");
+
+			nodeIndex += pageNodeCount;
+		} while (nodeIndex < totalNodeCount);
 		delete oclBvh;
 
 		//----------------------------------------------------------------------
@@ -122,10 +156,14 @@ public:
 
 		// Compile options
 		std::stringstream opts;
-		opts << "-D LUXRAYS_OPENCL_KERNEL "
-				"-D BVH_VERTS_PAGE_COUNT=" << vertsBuffs.size();
+		opts << " -D LUXRAYS_OPENCL_KERNEL"
+				" -D BVH_VERTS_PAGE_COUNT=" << vertsBuffs.size() <<
+				" -D BVH_NODES_PAGE_SIZE=" << maxNodeCount <<
+				" -D BVH_NODES_PAGE_COUNT=" << nodeBuffs.size();
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			opts << " -D BVH_VERTS_PAGE" << i << "=1";
+		for (u_int i = 0; i < nodeBuffs.size(); ++i)
+			opts << " -D BVH_NODES_PAGE" << i << "=1";
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compile options: " << opts.str());
 
 		std::string code(
@@ -169,9 +207,11 @@ public:
 			}
 
 			// Set arguments
-			kernels[i]->setArg(3, *bvhBuff);
+			u_int argIndex = 3;
 			for (u_int j = 0; j < vertsBuffs.size(); ++j)
-				kernels[i]->setArg(4 + j, *vertsBuffs[j]);
+				kernels[i]->setArg(argIndex++, *vertsBuffs[j]);
+			for (u_int j = 0; j < nodeBuffs.size(); ++j)
+				kernels[i]->setArg(argIndex++, *nodeBuffs[j]);
 		}
 	}
 	virtual ~OpenCLBVHKernels() {
@@ -179,8 +219,10 @@ public:
 			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
 			delete buf;
 		}
-		device->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
-		delete bvhBuff;
+		BOOST_FOREACH(cl::Buffer *buf, nodeBuffs) {
+			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
+			delete buf;
+		}
 	}
 
 	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
@@ -190,7 +232,7 @@ public:
 
 	// BVH fields
 	vector<cl::Buffer *> vertsBuffs;
-	cl::Buffer *bvhBuff;
+	vector<cl::Buffer *> nodeBuffs;
 };
 
 void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,

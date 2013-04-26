@@ -44,6 +44,10 @@ typedef struct {
 
 #define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
 #define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+#if (BVH_NODES_PAGE_COUNT > 1)
+#define BVHNodeData_GetPageIndex(nodeData) (((nodeData) & 0x70000000u) >> 28)
+#define BVHNodeData_GetNodeIndex(nodeData) ((nodeData) & 0x0fffffffu)
+#endif
 
 void Triangle_Intersect(
 		const float3 rayOrig,
@@ -111,11 +115,20 @@ int BBox_IntersectP(
 	return (t1 > t0);
 }
 
+#if (BVH_NODES_PAGE_COUNT > 1)
+void NextNode(uint *pageIndex, uint *nodeIndex) {
+	++(*nodeIndex);
+	if (*nodeIndex >= BVH_NODES_PAGE_SIZE) {
+		*nodeIndex = 0;
+		++(*pageIndex);
+	}
+}
+#endif
+
 __kernel void Intersect(
 		__global Ray *rays,
 		__global RayHit *rayHits,
-		const uint rayCount,
-		__global BVHAccelArrayNode *bvhTree
+		const uint rayCount
 #if defined(BVH_VERTS_PAGE0)
 		, __global Point *vertPage0
 #endif
@@ -139,6 +152,30 @@ __kernel void Intersect(
 #endif
 #if defined(BVH_VERTS_PAGE7)
 		, __global Point *vertPage7
+#endif
+#if defined(BVH_NODES_PAGE0)
+		, __global BVHAccelArrayNode *nodePage0
+#endif
+#if defined(BVH_NODES_PAGE1)
+		, __global BVHAccelArrayNode *nodePage1
+#endif
+#if defined(BVH_NODES_PAGE2)
+		, __global BVHAccelArrayNode *nodePage2
+#endif
+#if defined(BVH_NODES_PAGE3)
+		, __global BVHAccelArrayNode *nodePage3
+#endif
+#if defined(BVH_NODES_PAGE4)
+		, __global BVHAccelArrayNode *nodePage4
+#endif
+#if defined(BVH_NODES_PAGE5)
+		, __global BVHAccelArrayNode *nodePage5
+#endif
+#if defined(BVH_NODES_PAGE6)
+		, __global BVHAccelArrayNode *nodePage6
+#endif
+#if defined(BVH_NODES_PAGE7)
+		, __global BVHAccelArrayNode *nodePage7
 #endif
 		) {
 	// Select the ray to check
@@ -175,6 +212,41 @@ __kernel void Intersect(
 #endif
 #endif
 
+	// Initialize node page references
+#if (BVH_NODES_PAGE_COUNT > 1)
+	__global BVHAccelArrayNode *nodePages[BVH_NODES_PAGE_COUNT];
+#if defined(BVH_NODES_PAGE0)
+	nodePages[0] = nodePage0;
+#endif
+#if defined(BVH_NODES_PAGE1)
+	nodePages[1] = nodePage1;
+#endif
+#if defined(BVH_NODES_PAGE2)
+	nodePages[2] = nodePage2;
+#endif
+#if defined(BVH_NODES_PAGE3)
+	nodePages[3] = nodePage3;
+#endif
+#if defined(BVH_NODES_PAGE4)
+	nodePages[4] = nodePage4;
+#endif
+#if defined(BVH_NODES_PAGE5)
+	nodePages[5] = nodePage5;
+#endif
+#if defined(BVH_NODES_PAGE6)
+	nodePages[6] = nodePage6;
+#endif
+#if defined(BVH_NODES_PAGE7)
+	nodePages[7] = nodePage7;
+#endif
+
+	const uint stopPage = BVHNodeData_GetPageIndex(nodePage0[0].nodeData);
+	const uint stopNode = BVHNodeData_GetNodeIndex(nodePage0[0].nodeData); // Non-existent
+	uint currentPage = 0; // Root Node Page
+#else
+	const uint stopNode = BVHNodeData_GetSkipIndex(nodePage0[0].nodeData); // Non-existent
+#endif
+
 	__global Ray *ray = &rays[gid];
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
@@ -185,11 +257,16 @@ __kernel void Intersect(
 
 	uint hitIndex = NULL_INDEX;
 	uint currentNode = 0; // Root Node
-	const uint stopNode = BVHNodeData_GetSkipIndex(bvhTree[0].nodeData); // Non-existent
 
 	float b1, b2;
+#if (BVH_NODES_PAGE_COUNT == 1)
 	while (currentNode < stopNode) {
-		__global BVHAccelArrayNode *node = &bvhTree[currentNode];
+		__global BVHAccelArrayNode *node = &nodePage0[currentNode];
+#else
+	while ((currentPage < stopPage) || (currentNode < stopNode)) {
+		__global BVHAccelArrayNode *nodePage = nodePages[currentPage];
+		__global BVHAccelArrayNode *node = &nodePage[currentNode];
+#endif
 
 		const uint nodeData = node->nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
@@ -222,18 +299,31 @@ __kernel void Intersect(
 
 			Triangle_Intersect(rayOrig, rayDir, mint, &maxt, &hitIndex, &b1, &b2,
 					node->triangleLeaf.triangleIndex, p0, p1, p2);
+#if (BVH_NODES_PAGE_COUNT == 1)
 			++currentNode;
+#else
+			NextNode(&currentPage, &currentNode);
+#endif
 		} else {
 			// It is a node, check the bounding box
 			const float3 pMin = VLOAD3F(&node->bvhNode.bboxMin[0]);
 			const float3 pMax = VLOAD3F(&node->bvhNode.bboxMax[0]);
 
-			if (BBox_IntersectP(rayOrig, invRayDir, mint, maxt, pMin, pMax))
+			if (BBox_IntersectP(rayOrig, invRayDir, mint, maxt, pMin, pMax)) {
+#if (BVH_NODES_PAGE_COUNT == 1)
 				++currentNode;
-			else {
+#else
+				NextNode(&currentPage, &currentNode);
+#endif
+			} else {
+#if (BVH_NODES_PAGE_COUNT == 1)
 				// I don't need to use BVHNodeData_GetSkipIndex() here because
-				// I already know the flag is 0
+				// I already know the flag (i.e. the last bit) is 0
 				currentNode = nodeData;
+#else
+				currentPage = BVHNodeData_GetPageIndex(nodeData);
+				currentNode = BVHNodeData_GetNodeIndex(nodeData);
+#endif
 			}
 		}
 	}
