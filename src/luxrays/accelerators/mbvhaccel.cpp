@@ -395,7 +395,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				}
 
 				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
-				uniqueLeafsTransform.push_back(itm->GetTransformation());
+				uniqueLeafsTransform.push_back(itm->GetTransformation().mInv);
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
@@ -419,7 +419,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				}
 
 				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
-				uniqueLeafsTransform.push_back(eitm->GetTransformation());
+				uniqueLeafsTransform.push_back(eitm->GetTransformation().mInv);
 				break;
 			}
 			default:
@@ -557,7 +557,21 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 				currentMesh = leaf->mesh;
 				// Transform the ray in the local coordinate system
 				if (node.bvhLeaf.transformIndex != NULL_INDEX) {
-					currentRay = Inverse(uniqueLeafsTransform[node.bvhLeaf.transformIndex]) * (*ray);
+					const Matrix4x4 &m = uniqueLeafsTransform[node.bvhLeaf.transformIndex];
+
+					// Transform ray origin
+					currentRay.o.x = m.m[0][0] * ray->o.x + m.m[0][1] * ray->o.x + m.m[0][2] * ray->o.x + m.m[0][3];
+					currentRay.o.y = m.m[1][0] * ray->o.x + m.m[1][1] * ray->o.y + m.m[1][2] * ray->o.z + m.m[1][3];
+					currentRay.o.z = m.m[2][0] * ray->o.x + m.m[2][1] * ray->o.y + m.m[2][2] * ray->o.z + m.m[2][3];
+					const float w = m.m[3][0] * ray->o.x + m.m[3][1] * ray->o.y + m.m[3][2] * ray->o.z + m.m[3][3];
+					if (w != 1.f)
+						currentRay.o /= w;
+
+					// Transform ray direction
+					currentRay.d.x = m.m[0][0] * ray->d.x + m.m[0][1] * ray->d.y + m.m[0][2] * ray->d.z;
+					currentRay.d.y = m.m[1][0] * ray->d.x + m.m[1][1] * ray->d.y + m.m[1][2] * ray->d.z;
+					currentRay.d.z = m.m[2][0] * ray->d.x + m.m[2][1] * ray->d.y + m.m[2][2] * ray->d.z;
+
 					currentRay.maxt = rayHit->t;
 				}
 				currentTriangleOffset = node.bvhLeaf.triangleOffsetIndex;

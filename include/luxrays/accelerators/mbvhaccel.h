@@ -74,7 +74,7 @@ private:
 	BVHAccelArrayNode *bvhRootTree;
 
 	std::vector<BVHAccel *> uniqueLeafs;
-	std::vector<Transform> uniqueLeafsTransform;
+	std::vector<Matrix4x4> uniqueLeafsTransform;
 	
 	const Context *ctx;
 	TriangleMeshID *meshIDs;
