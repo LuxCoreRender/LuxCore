@@ -31,7 +31,17 @@ namespace luxrays {
 
 struct BVHAccelTreeNode {
 	BBox bbox;
-	u_int primitive;
+	union {
+		struct {
+			u_int index;
+		} triangleLeaf;
+		struct {
+			u_int leafIndex;
+			u_int transformIndex;
+			u_int triangleOffsetIndex;
+		} bvhLeaf;
+	};
+
 	BVHAccelTreeNode *leftChild;
 	BVHAccelTreeNode *rightSibling;
 };
@@ -49,7 +59,9 @@ struct BVHAccelArrayNode {
 			u_int triangleIndex;
 		} triangleLeaf;
 		struct {
-			u_int index;
+			u_int leafIndex;
+			u_int transformIndex;
+			u_int triangleOffsetIndex;
 		} bvhLeaf; // Used by MBVH
 	};
 	// Most significant bit is used to mark leafs
@@ -93,6 +105,7 @@ public:
 	friend class MBVHAccel;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	friend class OpenCLBVHKernels;
+	friend class OpenCLMBVHKernels;
 #endif
 
 private:

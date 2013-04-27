@@ -96,6 +96,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/spectrum_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/spectrum_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mqbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
@@ -157,8 +158,9 @@ SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/luxrays_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bvh_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mqbvh_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/qbvh_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mqbvh_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/randomgen_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/randomgen_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/trianglemesh_types_kernel.cpp
