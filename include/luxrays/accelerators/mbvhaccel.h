@@ -60,19 +60,21 @@ public:
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	friend class OpenCLMBVHKernels;
+#endif
+
 private:
 	static bool MeshPtrCompare(const Mesh *, const Mesh *);
 
 	BVHAccel::BVHParams params;
 
+	// The root BVH tree
 	unsigned int nRootNodes;
 	BVHAccelArrayNode *bvhRootTree;
 
-	std::vector<BVHAccel *> leafs;
-	std::vector<Transform> leafsTransform;
-	std::vector<u_int> leafsOffset;
-	std::vector<u_int> leafsTransformIndex;
-	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> leafIndexByMesh;
+	std::vector<BVHAccel *> uniqueLeafs;
+	std::vector<Transform> uniqueLeafsTransform;
 	
 	const Context *ctx;
 	TriangleMeshID *meshIDs;

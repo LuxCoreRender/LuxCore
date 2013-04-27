@@ -98,8 +98,7 @@ public:
 		const u_int totalNodeCount = bvh->nNodes;
 		const BVHAccelArrayNode *nodes = bvh->bvhTree;
 		// Allocate a temporary buffer for the copy of the BVH nodes
-		BVHAccelArrayNode *oclBvh = new BVHAccelArrayNode[
-				(totalNodeCount < maxNodeCount) ? bvh->nNodes : maxNodeCount];
+		BVHAccelArrayNode *tmpBvh = new BVHAccelArrayNode[Min<size_t>(bvh->nNodes, maxNodeCount)];
 		u_int nodeIndex = 0;
 
 		do {
@@ -107,11 +106,11 @@ public:
 			const u_int pageNodeCount = Min<size_t>(leftNodeCount, maxNodeCount);
 
 			// Make a copy of the nodes
-			memcpy(oclBvh, &nodes[nodeIndex], sizeof(BVHAccelArrayNode) * pageNodeCount);
+			memcpy(tmpBvh, &nodes[nodeIndex], sizeof(BVHAccelArrayNode) * pageNodeCount);
 
-			// Update the vertex references
+			// Update the vertex and node references
 			for (u_int i = 0; i < pageNodeCount; ++i) {
-				BVHAccelArrayNode *node = &oclBvh[i];
+				BVHAccelArrayNode *node = &tmpBvh[i];
 				if (BVHNodeData_IsLeaf(node->nodeData)) {
 					// Update the vertex references
 					for (u_int j = 0; j < 3; ++j) {
@@ -139,7 +138,7 @@ public:
 			cl::Buffer *bb = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(BVHAccelArrayNode) * pageNodeCount,
-				(void *)oclBvh);
+				(void *)tmpBvh);
 			device->AllocMemory(bb->getInfo<CL_MEM_SIZE>());
 			nodeBuffs.push_back(bb);
 
@@ -148,7 +147,7 @@ public:
 
 			nodeIndex += pageNodeCount;
 		} while (nodeIndex < totalNodeCount);
-		delete oclBvh;
+		delete tmpBvh;
 
 		//----------------------------------------------------------------------
 		// Compile kernel sources
@@ -314,7 +313,7 @@ void BVHAccel::Init(const Mesh *m) {
 		ptr->bbox = p[i].WorldBound(v);
 		// NOTE - Ratow - Expand bbox a little to make sure rays collide
 		ptr->bbox.Expand(MachineEpsilon::E(ptr->bbox));
-		ptr->primitive = i;
+		ptr->triangleLeaf.index = i;
 		ptr->leftChild = NULL;
 		ptr->rightSibling = NULL;
 		bvList.push_back(ptr);
@@ -386,7 +385,6 @@ BVHAccelTreeNode *BVHAccel::BuildHierarchy(u_int *nNodes, const BVHParams &param
 		return list[begin];
 
 	BVHAccelTreeNode *parent = new BVHAccelTreeNode();
-	parent->primitive = 0xffffffffu;
 	parent->leftChild = NULL;
 	parent->rightSibling = NULL;
 
@@ -515,14 +513,16 @@ u_int BVHAccel::BuildArray(const Triangle *triangles, BVHAccelTreeNode *node,
 			// It is a leaf
 			if (triangles) {
 				// It is a BVH of triangles
-				const Triangle *triangle = &triangles[node->primitive];
+				const Triangle *triangle = &triangles[node->triangleLeaf.index];
 				p->triangleLeaf.v[0] = triangle->v[0];
 				p->triangleLeaf.v[1] = triangle->v[1];
 				p->triangleLeaf.v[2] = triangle->v[2];
-				p->triangleLeaf.triangleIndex = node->primitive;
+				p->triangleLeaf.triangleIndex = node->triangleLeaf.index;
 			} else {
 				// It is a BVH of BVHs (i.e. MBVH)
-				p->bvhLeaf.index = node->primitive;
+				p->bvhLeaf.leafIndex = node->bvhLeaf.leafIndex;
+				p->bvhLeaf.transformIndex = node->bvhLeaf.transformIndex;
+				p->bvhLeaf.triangleOffsetIndex = node->bvhLeaf.triangleOffsetIndex;
 			}
 
 			// Mark as a leaf

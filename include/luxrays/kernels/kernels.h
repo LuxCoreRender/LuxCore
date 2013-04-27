@@ -30,6 +30,7 @@ extern std::string KernelSource_luxrays_types;
 	
 // Intersection kernels
 extern std::string KernelSource_bvh;
+extern std::string KernelSource_mbvh;
 extern std::string KernelSource_qbvh;
 extern std::string KernelSource_mqbvh;
 

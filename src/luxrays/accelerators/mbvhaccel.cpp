@@ -45,17 +45,164 @@ using std::ptr_fun;
 namespace luxrays {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-//
-//class OpenCLBVHKernels : public OpenCLKernels {
+
+//class OpenCLMBVHKernels : public OpenCLKernels {
 //public:
-//	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount) :
-//		OpenCLKernels(dev, kernelCount), vertsBuff(NULL), trisBuff(NULL), bvhBuff(NULL) {
+//	OpenCLMBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MBVHAccel *mbvh) :
+//		OpenCLKernels(dev, kernelCount), leafNodeOffsetBuff(NULL),
+//		leafsTriangleOffsetBuff(NULL), leafsTransformIndexBuff(NULL) {
 //		const Context *deviceContext = device->GetContext();
 //		const std::string &deviceName(device->GetName());
 //		cl::Context &oclContext = device->GetOpenCLContext();
 //		cl::Device &oclDevice = device->GetOpenCLDevice();
 //
-//		// Compile sources
+//		// Check the max. number of vertices I can store in a single page
+//		const size_t maxMemAlloc = device->GetDeviceDesc()->GetMaxMemoryAllocSize();
+//
+//		//----------------------------------------------------------------------
+//		// Allocate vertex buffers
+//		//----------------------------------------------------------------------
+//
+//		// Check how many pages I have to allocate
+//		const size_t maxVertCount = maxMemAlloc / (sizeof(Point) * 3);
+//		u_int totalVertCount = 0;
+//		for (u_int i = 0; i < mbvh->leafs.size(); ++i)
+//			totalVertCount += mbvh->leafs[i]->mesh->GetTotalVertexCount();
+//		// Allocate a temporary buffer for the copy of the BVH vertices
+//		const u_int pageVertCount = Min<size_t>(totalVertCount, maxVertCount);
+//		Point *tmpVerts = new Point[pageVertCount];
+//		u_int tmpVertIndex = 0;
+//
+//		u_int meshVertIndex = 0;
+//		u_int currentLeafIndex = 0;
+//		const Mesh *currentMesh = mbvh->leafs[currentLeafIndex]->mesh;
+//
+//		while (currentLeafIndex < mbvh->leafs.size()) {
+//			const u_int tmpLeftVertCount = pageVertCount - tmpVertIndex;
+//
+//			// Check if there is enough space in the temporary buffer for all vertices
+//			if (tmpLeftVertCount > currentMesh->GetTotalVertexCount()) {
+//				// There is enough space for all mesh vertices
+//				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[meshVertIndex]),
+//						sizeof(Point) * currentMesh->GetTotalVertexCount());
+//				tmpVertIndex += currentMesh->GetTotalVertexCount();
+//
+//				// Move to the next mesh
+//				++currentLeafIndex;
+//				currentMesh = mbvh->leafs[currentLeafIndex]->mesh;
+//			} else {
+//				// There isn't enough space for all mesh vertices. Fill the current buffer.
+//				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[meshVertIndex]),
+//						sizeof(Point) * tmpLeftVertCount);
+//
+//				meshVertIndex += tmpLeftVertCount;
+//				tmpVertIndex += tmpLeftVertCount;
+//			}
+//
+//			if ((tmpVertIndex >= pageVertCount) || (currentLeafIndex >=  mbvh->leafs.size())) {
+//				// The temporary buffer is full, send the data to the OpenCL device
+//				LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+//						"] Vertices buffer size (Page " << vertsBuffs.size() <<", " <<
+//						pageVertCount << " vertices): " <<
+//						(sizeof(Point) * pageVertCount / 1024) <<
+//						"Kbytes");
+//				cl::Buffer *vb = new cl::Buffer(oclContext,
+//					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+//					sizeof(Point) * tmpVertIndex,
+//					(void *)&tmpVerts[0]);
+//				device->AllocMemory(vb->getInfo<CL_MEM_SIZE>());
+//				vertsBuffs.push_back(vb);
+//				if (vertsBuffs.size() > 8)
+//					throw std::runtime_error("Too many vertex pages required in OpenCLMBVHKernels()");
+//
+//				tmpVertIndex = 0;
+//			}
+//		}
+//
+//		//----------------------------------------------------------------------
+//		// Allocate BVH node buffers
+//		//----------------------------------------------------------------------
+//
+//		u_int totalNodeCount = mbvh->nRootNodes;
+//		for (u_int i = 0; i < mbvh->leafs.size(); ++i)
+//			totalNodeCount += mbvh->leafs[i]->nNodes;
+//
+//		// Copy the root nodes
+//		BVHAccelArrayNode *tmpNodes = new BVHAccelArrayNode[totalNodeCount];
+//		memcpy(tmpNodes, mbvh->bvhRootTree, sizeof(BVHAccelArrayNode) * mbvh->nRootNodes);
+//		u_int currentBVHNodeCount = mbvh->nRootNodes;
+//		u_int currentVertOffset = 0;
+//		std::vector<u_int> leafNodeOffset;
+//		
+//		for (u_int i = 0; i < mbvh->leafs.size(); ++i) {
+//			const BVHAccel *leafBVH = mbvh->leafs[i];
+//
+//			memcpy(&tmpNodes[currentBVHNodeCount], leafBVH->bvhTree, sizeof(BVHAccelArrayNode) * leafBVH->nNodes);
+//			// Update the vertex references
+//			for (u_int i = currentBVHNodeCount; i < currentBVHNodeCount + leafBVH->nNodes; ++i) {
+//				BVHAccelArrayNode *node = &tmpNodes[i];
+//				if (BVHNodeData_IsLeaf(node->nodeData)) {
+//					// Update the vertex references
+//					for (u_int j = 0; j < 3; ++j) {
+//						const u_int vertIndex = node->triangleLeaf.v[j] + currentVertOffset;
+//						const u_int vertexPage = vertIndex / maxVertCount;
+//						const u_int vertexIndex = vertIndex % maxVertCount;
+//						// Encode the page in the last 3 bits of the vertex index
+//						node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
+//					}
+//				}
+//			}
+//
+//			currentVertOffset += leafBVH->mesh->GetTotalVertexCount();
+//			leafNodeOffset.push_back(currentBVHNodeCount);
+//			currentBVHNodeCount += leafBVH->nNodes;
+//		}
+//
+//		// Allocate bvh node OpenCL buffer
+//		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+//			"] BVH buffer size (Page " << nodeBuffs.size() <<", " <<
+//			totalNodeCount << " nodes): " <<
+//			(sizeof(BVHAccelArrayNode) * totalNodeCount / 1024) <<
+//			"Kbytes");
+//		cl::Buffer *bb = new cl::Buffer(oclContext,
+//			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+//			sizeof(BVHAccelArrayNode) * totalNodeCount,
+//			(void *)tmpNodes);
+//		device->AllocMemory(bb->getInfo<CL_MEM_SIZE>());
+//		nodeBuffs.push_back(bb);
+//		delete tmpNodes;
+//
+//		// Allocate leaf node offset buffer
+//		std::vector<u_int> leafNodeOffset;
+//		leafNodeOffset.reserve(mbvh->leafs.size());
+//		for (u_int i = 0; i < mbvh->leafs.size(); ++i)
+//			leafNodeOffset.push_back();
+//		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+//			"] Leaf node offset buffer size: " <<
+//			(sizeof(u_int) * mvbh->leafs.size() / 1024) <<
+//			"Kbytes");
+//		leafNodeOffsetBuff = new cl::Buffer(oclContext,
+//			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+//			sizeof(u_int) * mbvh->leafs.size(),
+//			(void *)&leafNodeOffset[0]);
+//		device->AllocMemory(leafNodeOffsetBuff->getInfo<CL_MEM_SIZE>());
+//
+//		//----------------------------------------------------------------------
+//		// Compile kernel sources
+//		//----------------------------------------------------------------------
+//
+//		// Compile options
+//		std::stringstream opts;
+//		opts << " -D LUXRAYS_OPENCL_KERNEL"
+//				" -D MBVH_VERTS_PAGE_COUNT=" << vertsBuffs.size() <<
+//				" -D MBVH_NODES_PAGE_SIZE=" << 1 <<
+//				" -D MBVH_NODES_PAGE_COUNT=" << nodeBuffs.size();
+//		for (u_int i = 0; i < vertsBuffs.size(); ++i)
+//			opts << " -D MBVH_VERTS_PAGE" << i << "=1";
+//		for (u_int i = 0; i < nodeBuffs.size(); ++i)
+//			opts << " -D MBVH_NODES_PAGE" << i << "=1";
+//		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH compile options: " << opts.str());
+//
 //		std::string code(
 //			luxrays::ocl::KernelSource_luxrays_types +
 //			luxrays::ocl::KernelSource_point_types +
@@ -63,16 +210,16 @@ namespace luxrays {
 //			luxrays::ocl::KernelSource_ray_types +
 //			luxrays::ocl::KernelSource_bbox_types +
 //			luxrays::ocl::KernelSource_triangle_types);
-//		code += luxrays::ocl::KernelSource_bvh;
+//		code += luxrays::ocl::KernelSource_mbvh;
 //		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 //		cl::Program program = cl::Program(oclContext, source);
 //		try {
 //			VECTOR_CLASS<cl::Device> buildDevice;
 //			buildDevice.push_back(oclDevice);
-//			program.build(buildDevice, "-D LUXRAYS_OPENCL_KERNEL");
+//			program.build(buildDevice, opts.str().c_str());
 //		} catch (cl::Error err) {
 //			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-//			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
+//			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH compilation error:\n" << strError.c_str());
 //
 //			throw err;
 //		}
@@ -95,55 +242,51 @@ namespace luxrays {
 //				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 //				//	"] Forced work group size: " << workGroupSize);
 //			}
+//
+//			// Set arguments
+//			u_int argIndex = 3;
+//			for (u_int j = 0; j < vertsBuffs.size(); ++j)
+//				kernels[i]->setArg(argIndex++, *vertsBuffs[j]);
+//			for (u_int j = 0; j < nodeBuffs.size(); ++j)
+//				kernels[i]->setArg(argIndex++, *nodeBuffs[j]);
 //		}
 //	}
-//	virtual ~OpenCLBVHKernels() {
-//		device->FreeMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-//		delete vertsBuff;
-//		vertsBuff = NULL;
-//		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-//		delete trisBuff;
-//		trisBuff = NULL;
-//		device->FreeMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
-//		delete bvhBuff;
-//		bvhBuff = NULL;
+//	virtual ~OpenCLMBVHKernels() {
+//		BOOST_FOREACH(cl::Buffer *buf, vertsBuffs) {
+//			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
+//			delete buf;
+//		}
+//		BOOST_FOREACH(cl::Buffer *buf, nodeBuffs) {
+//			device->FreeMemory(buf->getInfo<CL_MEM_SIZE>());
+//			delete buf;
+//		}
+//		device->FreeMemory(leafNodeOffsetBuff->getInfo<CL_MEM_SIZE>());
+//		delete leafNodeOffsetBuff;
+//		device->FreeMemory(leafsTriangleOffsetBuff->getInfo<CL_MEM_SIZE>());
+//		delete leafsTriangleOffsetBuff;
+//		device->FreeMemory(leafsTransformIndexBuff->getInfo<CL_MEM_SIZE>());
+//		delete leafsTransformIndexBuff;
 //	}
 //
-//	void SetBuffers(cl::Buffer *v, u_int nt, cl::Buffer *t,
-//		u_int nn, cl::Buffer *b);
 //	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
 //	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 //		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 //		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 //
 //	// BVH fields
-//	cl::Buffer *vertsBuff;
-//	cl::Buffer *trisBuff;
-//	cl::Buffer *bvhBuff;
+//	vector<cl::Buffer *> vertsBuffs;
+//	vector<cl::Buffer *> nodeBuffs;
+//	cl::Buffer *leafNodeOffsetBuff;
+//	cl::Buffer *leafsTriangleOffsetBuff;
+//	cl::Buffer *leafsTransformIndexBuff;
 //};
 //
-//void OpenCLBVHKernels::SetBuffers(cl::Buffer *v,
-//	u_int nt, cl::Buffer *t, u_int nn, cl::Buffer *b) {
-//	vertsBuff = v;
-//	trisBuff = t;
-//	bvhBuff = b;
-//
-//	// Set arguments
-//	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-//		kernel->setArg(2, *vertsBuff);
-//		kernel->setArg(3, *trisBuff);
-//		kernel->setArg(4, nt);
-//		kernel->setArg(5, nn);
-//		kernel->setArg(6, *bvhBuff);
-//	}
-//}
-//
-//void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+//void OpenCLMBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 //		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 //		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 //	kernels[kernelIndex]->setArg(0, rBuff);
 //	kernels[kernelIndex]->setArg(1, hBuff);
-//	kernels[kernelIndex]->setArg(7, rayCount);
+//	kernels[kernelIndex]->setArg(2, rayCount);
 //
 //	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
 //	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
@@ -153,49 +296,9 @@ namespace luxrays {
 
 OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
+	// Setup kernels
+	//return new OpenCLMBVHKernels(device, kernelCount, this);
 	return NULL;
-
-//	const Context *deviceContext = device->GetContext();
-//	cl::Context &oclContext = device->GetOpenCLContext();
-//	const std::string &deviceName(device->GetName());
-//
-//	// Allocate buffers
-//	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-//		"] Vertices buffer size: " <<
-//		(sizeof(Point) * preprocessedMesh->GetTotalVertexCount() / 1024) <<
-//		"Kbytes");
-//	cl::Buffer *vertsBuff = new cl::Buffer(oclContext,
-//		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-//		sizeof(Point) * preprocessedMesh->GetTotalVertexCount(),
-//		preprocessedMesh->GetVertices());
-//	device->AllocMemory(vertsBuff->getInfo<CL_MEM_SIZE>());
-//
-//	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-//		"] Triangle indices buffer size: " <<
-//		(sizeof(Triangle) * preprocessedMesh->GetTotalTriangleCount() / 1024) <<
-//		"Kbytes");
-//	cl::Buffer *trisBuff = new cl::Buffer(oclContext,
-//		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-//		sizeof(Triangle) * preprocessedMesh->GetTotalTriangleCount(),
-//		preprocessedMesh->GetTriangles());
-//	device->AllocMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-//
-//	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-//		"] BVH buffer size: " <<
-//		(sizeof(BVHAccelArrayNode) * nNodes / 1024) <<
-//		"Kbytes");
-//	cl::Buffer *bvhBuff = new cl::Buffer(oclContext,
-//		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-//		sizeof(BVHAccelArrayNode) * nNodes,
-//		(void*)bvhTree);
-//	device->AllocMemory(bvhBuff->getInfo<CL_MEM_SIZE>());
-//
-//	// Setup kernels
-//	OpenCLBVHKernels *kernels = new OpenCLBVHKernels(device, kernelCount);
-//	kernels->SetBuffers(vertsBuff, preprocessedMesh->GetTotalTriangleCount(),
-//		trisBuff, nNodes, bvhBuff);
-//
-//	return kernels;
 }
 
 #else
@@ -211,7 +314,7 @@ OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 
 MBVHAccel::MBVHAccel(const Context *context,
 		const u_int treetype, const int csamples, const int icost,
-		const int tcost, const float ebonus) : leafIndexByMesh(MeshPtrCompare), ctx(context) {
+		const int tcost, const float ebonus) : ctx(context) {
 	// Make sure treeType is 2, 4 or 8
 	if (treetype <= 2) params.treeType = 2;
 	else if (treetype <= 4) params.treeType = 4;
@@ -235,9 +338,16 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 
 	const u_int nLeafs = meshes.size();
 	LR_LOG(ctx, "Building Multilevel Bounding Volume Hierarchy, leafs: " << nLeafs);
-	leafs.reserve(nLeafs);
-	leafsOffset.reserve(nLeafs);
+
+	std::vector<u_int> leafsIndex;
+	std::vector<u_int> leafsTransformIndex;
+	std::vector<u_int> leafsTriangleOffset;
+
+	leafsIndex.reserve(nLeafs);
 	leafsTransformIndex.reserve(nLeafs);
+	leafsTriangleOffset.reserve(nLeafs);
+
+	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueLeafIndexByMesh(MeshPtrCompare);
 
 	meshIDs = new TriangleMeshID[totalTriangleCount];
 	meshTriangleIDs = new TriangleID[totalTriangleCount];
@@ -257,8 +367,10 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
 				leaf->Init(meshes[i]);
 
-				leafIndexByMesh[meshes[i]] = leafs.size();
-				leafs.push_back(leaf);
+				const u_int uniqueLeafIndex = uniqueLeafs.size();
+				uniqueLeafIndexByMesh[meshes[i]] = uniqueLeafIndex;
+				uniqueLeafs.push_back(leaf);
+				leafsIndex.push_back(uniqueLeafIndex);
 				leafsTransformIndex.push_back(NULL_INDEX);
 				break;
 			}
@@ -266,44 +378,48 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshes[i];
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = leafIndexByMesh.find(itm->GetTriangleMesh());
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
 
-				if (it == leafIndexByMesh.end()) {
+				if (it == uniqueLeafIndexByMesh.end()) {
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
 					leaf->Init(itm);
 
-					leafIndexByMesh[itm->GetTriangleMesh()] = leafs.size();
-					leafs.push_back(leaf);
+					const u_int uniqueLeafIndex = uniqueLeafs.size();
+					uniqueLeafIndexByMesh[itm->GetTriangleMesh()] = uniqueLeafIndex;
+					uniqueLeafs.push_back(leaf);
+					leafsIndex.push_back(uniqueLeafIndex);
 				} else {
 					//LR_LOG(ctx, "Cached BVH leaf");
-					leafs.push_back(leafs[it->second]);
+					leafsIndex.push_back(it->second);
 				}
 
-				leafsTransformIndex.push_back(leafsTransform.size());
-				leafsTransform.push_back(itm->GetTransformation());
+				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
+				uniqueLeafsTransform.push_back(itm->GetTransformation());
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
 				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshes[i];
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = leafIndexByMesh.find(eitm->GetExtTriangleMesh());
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(eitm->GetExtTriangleMesh());
 
-				if (it == leafIndexByMesh.end()) {
+				if (it == uniqueLeafIndexByMesh.end()) {
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
 					leaf->Init(eitm);
 
-					leafIndexByMesh[eitm->GetExtTriangleMesh()] = leafs.size();
-					leafs.push_back(leaf);
+					const u_int uniqueLeafIndex = uniqueLeafs.size();
+					uniqueLeafIndexByMesh[eitm->GetExtTriangleMesh()] = uniqueLeafIndex;
+					uniqueLeafs.push_back(leaf);
+					leafsIndex.push_back(uniqueLeafIndex);
 				} else {
 					//LR_LOG(ctx, "Cached BVH leaf");
-					leafs.push_back(leafs[it->second]);
+					leafsIndex.push_back(it->second);
 				}
 
-				leafsTransformIndex.push_back(leafsTransform.size());
-				leafsTransform.push_back(eitm->GetTransformation());
+				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
+				uniqueLeafsTransform.push_back(eitm->GetTransformation());
 				break;
 			}
 			default:
@@ -311,7 +427,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				break;
 		}
 
-		leafsOffset[i] = currentOffset;
+		leafsTriangleOffset.push_back(currentOffset);
 
 		for (u_int j = 0; j < meshes[i]->GetTotalTriangleCount(); ++j) {
 			meshIDs[currentOffset + j] = i;
@@ -331,7 +447,9 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 		BVHAccelTreeNode *ptr = new BVHAccelTreeNode();
 		// Get the bounding box from the mesh so it is in global coordinates
 		ptr->bbox = meshes[i]->GetBBox();
-		ptr->primitive = i;
+		ptr->bvhLeaf.leafIndex = leafsIndex[i];
+		ptr->bvhLeaf.transformIndex = leafsTransformIndex[i];
+		ptr->bvhLeaf.triangleOffsetIndex = leafsTriangleOffset[i];
 		ptr->leftChild = NULL;
 		ptr->rightSibling = NULL;
 		bvList.push_back(ptr);
@@ -347,8 +465,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 	BVHAccel::FreeHierarchy(rootNode);
 
 	size_t totalMem = nRootNodes;
-	for (std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = leafIndexByMesh.begin(); it != leafIndexByMesh.end(); it++)
-		totalMem += leafs[it->second]->nNodes;
+	BOOST_FOREACH(BVHAccel *bvh, uniqueLeafs)
+		totalMem += bvh->nNodes;
 	totalMem *= sizeof(BVHAccelArrayNode);
 	LR_LOG(ctx, "Total Multilevel BVH memory usage: " << totalMem / 1024 << "Kbytes");
 	//LR_LOG(ctx, "Finished building Multilevel Bounding Volume Hierarchy array");
@@ -360,8 +478,8 @@ MBVHAccel::~MBVHAccel() {
 	if (initialized) {
 		delete[] meshIDs;
 		delete[] meshTriangleIDs;
-		for (std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = leafIndexByMesh.begin(); it != leafIndexByMesh.end(); it++)
-			delete leafs[it->second];
+		BOOST_FOREACH(BVHAccel *bvh, uniqueLeafs)
+			delete bvh;
 		delete bvhRootTree;
 	}
 }
@@ -374,11 +492,11 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	assert (initialized);
 
 	bool insideLeafTree = false;
-	u_int currentLeafIndex = 0;
 	u_int currentRootNode = 0;
 	u_int rootStopNode = BVHNodeData_GetSkipIndex(bvhRootTree[0].nodeData); // Non-existent
 	u_int currentNode = currentRootNode;
 	u_int currentStopNode = rootStopNode; // Non-existent
+	u_int currentTriangleOffset = 0;
 	BVHAccelArrayNode *currentTree = bvhRootTree;
 	const Mesh *currentMesh = NULL;
 
@@ -425,7 +543,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 						rayHit->t = t;
 						rayHit->b1 = b1;
 						rayHit->b2 = b2;
-						rayHit->index = node.triangleLeaf.triangleIndex + leafsOffset[currentLeafIndex];
+						rayHit->index = node.triangleLeaf.triangleIndex + currentTriangleOffset;
 						// Continue testing for closer intersections
 					}
 				}
@@ -433,15 +551,16 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 				++currentNode;
 			} else {
 				// I have to check a leaf tree
-				currentLeafIndex = node.bvhLeaf.index;
-				BVHAccel *leaf = leafs[currentLeafIndex];
+				const u_int currentLeafIndex = node.bvhLeaf.leafIndex;
+				BVHAccel *leaf = uniqueLeafs[currentLeafIndex];
 				currentTree = leaf->bvhTree;
 				currentMesh = leaf->mesh;
 				// Transform the ray in the local coordinate system
-				if (leafsTransformIndex[currentLeafIndex] != NULL_INDEX) {
-					currentRay = Inverse(leafsTransform[leafsTransformIndex[currentLeafIndex]]) * (*ray);
+				if (node.bvhLeaf.transformIndex != NULL_INDEX) {
+					currentRay = Inverse(uniqueLeafsTransform[node.bvhLeaf.transformIndex]) * (*ray);
 					currentRay.maxt = rayHit->t;
 				}
+				currentTriangleOffset = node.bvhLeaf.triangleOffsetIndex;
 
 				currentRootNode = currentNode + 1;
 				currentNode = 0;
