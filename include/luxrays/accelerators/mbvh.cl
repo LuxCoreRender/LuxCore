@@ -35,8 +35,10 @@ typedef struct {
 			uint triangleIndex;
 		} triangleLeaf;
 		struct {
-			uint index;
-		} bvhLeaf;
+			uint leafIndex;
+			uint transformIndex;
+			uint triangleOffsetIndex;
+		} bvhLeaf; // Used by MBVH
 	};
 	// Most significant bit is used to mark leafs
 	uint nodeData;
@@ -48,6 +50,31 @@ typedef struct {
 #define BVHNodeData_GetPageIndex(nodeData) (((nodeData) & 0x70000000u) >> 28)
 #define BVHNodeData_GetNodeIndex(nodeData) ((nodeData) & 0x0fffffffu)
 #endif
+
+void TransformP(Point *ptrans, const Point *p, __global Matrix4x4 *m) {
+    const float x = p->x;
+    const float y = p->y;
+    const float z = p->z;
+
+	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z + m->m[0][3];
+	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z + m->m[1][3];
+	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z + m->m[2][3];
+	const float w = m->m[3][0] * x + m->m[3][1] * y + m->m[3][2] * z + m->m[3][3];
+
+    ptrans->x /= w;
+    ptrans->y /= w;
+    ptrans->z /= w;
+}
+
+void TransformV(Vector *ptrans, const Vector *p, __global Matrix4x4 *m) {
+    const float x = p->x;
+    const float y = p->y;
+    const float z = p->z;
+
+	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z;
+	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z;
+	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z;
+}
 
 void Triangle_Intersect(
 		const float3 rayOrig,
@@ -101,11 +128,11 @@ void Triangle_Intersect(
 }
 
 int BBox_IntersectP(
-		const float3 rayOrig, const float3 invRayDir,
+		const float3 rayOrig, const float3 rayDir,
 		const float mint, const float maxt,
 		const float3 pMin, const float3 pMax) {
-	const float3 l1 = (pMin - rayOrig) * invRayDir;
-	const float3 l2 = (pMax - rayOrig) * invRayDir;
+	const float3 l1 = (pMin - rayOrig) / rayDir;
+	const float3 l2 = (pMax - rayOrig) / rayDir;
 	const float3 tNear = fmin(l1, l2);
 	const float3 tFar = fmax(l1, l2);
 
@@ -115,10 +142,10 @@ int BBox_IntersectP(
 	return (t1 > t0);
 }
 
-#if (MBVH_NODES_PAGE_COUNT > 1)
+#if (BVH_NODES_PAGE_COUNT > 1)
 void NextNode(uint *pageIndex, uint *nodeIndex) {
 	++(*nodeIndex);
-	if (*nodeIndex >= MBVH_NODES_PAGE_SIZE) {
+	if (*nodeIndex >= BVH_NODES_PAGE_SIZE) {
 		*nodeIndex = 0;
 		++(*pageIndex);
 	}
@@ -129,6 +156,9 @@ __kernel void Intersect(
 		__global Ray *rays,
 		__global RayHit *rayHits,
 		const uint rayCount
+#if defined(MBVH_HAS_TRANSFORMATIONS)
+		, __global Matrix4x4 *leafTransformations
+#endif
 #if defined(MBVH_VERTS_PAGE0)
 		, __global Point *vertPage0
 #endif
@@ -239,23 +269,96 @@ __kernel void Intersect(
 #if defined(MBVH_NODES_PAGE7)
 	nodePages[7] = nodePage7;
 #endif
-
-	const uint stopPage = BVHNodeData_GetPageIndex(nodePage0[0].nodeData);
-	const uint stopNode = BVHNodeData_GetNodeIndex(nodePage0[0].nodeData); // Non-existent
-	uint currentPage = 0; // Root Node Page
-#else
-	const uint stopNode = BVHNodeData_GetSkipIndex(nodePage0[0].nodeData); // Non-existent
 #endif
 
+	bool insideLeafTree = false;
+	uint currentRootNode = 0;
+	uint rootStopNode = BVHNodeData_GetSkipIndex(nodePage0[0].nodeData); // Non-existent
+	uint currentNode = currentRootNode;
+	uint currentStopNode = rootStopNode; // Non-existent
+	uint currentTriangleOffset = 0;
+	__global BVHAccelArrayNode *currentTree = nodePage0;
+
 	__global Ray *ray = &rays[gid];
-	const float3 rayOrig = VLOAD3F(&ray->o.x);
-	const float3 rayDir = VLOAD3F(&ray->d.x);
+	const float3 rootRayOrig = VLOAD3F(&ray->o.x);
+	float3 currentRayOrig = rootRayOrig;
+	const float3 rootRayDir = VLOAD3F(&ray->d.x);
+	float3 currentRayDir = rootRayDir;
 	const float mint = ray->mint;
 	float maxt = ray->maxt;
 
-	const float3 invRayDir = 1.f / rayDir;
+	uint hitIndex = NULL_INDEX;
 
-	// TODO
+	float t, b1, b2;
+	for (;;) {
+		if (currentNode >= currentStopNode) {
+			if (insideLeafTree) {
+				// Go back to the root tree
+				currentTree = nodePage0;
+				currentNode = currentRootNode;
+				currentStopNode = rootStopNode;
+				currentRayOrig = rootRayOrig;
+				currentRayDir = rootRayDir;
+				insideLeafTree = false;
+
+				// Check if the leaf was the very last root node
+				if (currentNode >= currentStopNode)
+					break;
+			} else {
+				// Done
+				break;
+			}
+		}
+
+		__global BVHAccelArrayNode *node = &currentTree[currentNode];
+
+		const uint nodeData = node->nodeData;
+		if (BVHNodeData_IsLeaf(nodeData)) {
+			if (insideLeafTree) {
+				// I'm inside a leaf tree, I have to check the triangle
+				const float3 p0 = VLOAD3F(&vertPage0[node->triangleLeaf.v[0]].x);
+				const float3 p1 = VLOAD3F(&vertPage0[node->triangleLeaf.v[1]].x);
+				const float3 p2 = VLOAD3F(&vertPage0[node->triangleLeaf.v[2]].x);
+
+				Triangle_Intersect(currentRayOrig, currentRayDir, mint, &maxt, &hitIndex, &b1, &b2,
+					node->triangleLeaf.triangleIndex + currentTriangleOffset, p0, p1, p2);
+				++currentNode;
+			} else {
+				// I have to check a leaf tree
+				currentTree = &nodePage0[node->bvhLeaf.leafIndex];
+
+#if defined(MBVH_HAS_TRANSFORMATIONS)
+				// Transform the ray in the local coordinate system
+				if (node->bvhLeaf.transformIndex != NULL_INDEX) {
+					// Transform ray origin
+					__global Matrix4x4 *m = &leafTransformations[node->bvhLeaf.transformIndex];
+					TransformP(&currentRayOrig, &rootRayOrig, m);
+					TransformV(&currentRayDir, &rootRayDir, m);
+				}
+#endif 
+				currentTriangleOffset = node->bvhLeaf.triangleOffsetIndex;
+
+				currentRootNode = currentNode + 1;
+				currentNode = 0;
+				currentStopNode = BVHNodeData_GetSkipIndex(currentTree[0].nodeData);
+
+				// Now, I'm inside a leaf tree
+				insideLeafTree = true;
+			}
+		} else {
+			// It is a node, check the bounding box
+			const float3 pMin = VLOAD3F(&node->bvhNode.bboxMin[0]);
+			const float3 pMax = VLOAD3F(&node->bvhNode.bboxMax[0]);
+
+			if (BBox_IntersectP(currentRayOrig, currentRayDir, mint, maxt, pMin, pMax))
+				++currentNode;
+			else {
+				// I don't need to use BVHNodeData_GetSkipIndex() here because
+				// I already know the leaf flag is 0
+				currentNode = nodeData;
+			}
+		}
+	}
 
 	// Write result
 	__global RayHit *rayHit = &rayHits[gid];

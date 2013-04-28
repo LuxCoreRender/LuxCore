@@ -170,8 +170,7 @@ public:
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
-			luxrays::ocl::KernelSource_bbox_types +
-			luxrays::ocl::KernelSource_triangle_types);
+			luxrays::ocl::KernelSource_bbox_types);
 		code += luxrays::ocl::KernelSource_bvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
@@ -309,14 +308,14 @@ void BVHAccel::Init(const Mesh *m) {
 	std::vector<BVHAccelTreeNode *> bvList;
 	bvList.reserve(mesh->GetTotalTriangleCount());
 	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-		BVHAccelTreeNode *ptr = new BVHAccelTreeNode();
-		ptr->bbox = p[i].WorldBound(v);
+		BVHAccelTreeNode *node = new BVHAccelTreeNode();
+		node->bbox = p[i].WorldBound(v);
 		// NOTE - Ratow - Expand bbox a little to make sure rays collide
-		ptr->bbox.Expand(MachineEpsilon::E(ptr->bbox));
-		ptr->triangleLeaf.index = i;
-		ptr->leftChild = NULL;
-		ptr->rightSibling = NULL;
-		bvList.push_back(ptr);
+		node->bbox.Expand(MachineEpsilon::E(node->bbox));
+		node->triangleLeaf.index = i;
+		node->leftChild = NULL;
+		node->rightSibling = NULL;
+		bvList.push_back(node);
 	}
 
 	LR_LOG(ctx, "Building Bounding Volume Hierarchy, primitives: " << mesh->GetTotalTriangleCount());
