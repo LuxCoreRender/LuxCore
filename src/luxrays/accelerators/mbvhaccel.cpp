@@ -432,8 +432,6 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 
 	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueLeafIndexByMesh(MeshPtrCompare);
 
-	meshIDs = new TriangleMeshID[totalTriangleCount];
-	meshTriangleIDs = new TriangleID[totalTriangleCount];
 	u_int currentOffset = 0;
 
 	double lastPrint = WallClockTime();
@@ -511,12 +509,6 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 		}
 
 		leafsTriangleOffset.push_back(currentOffset);
-
-		for (u_int j = 0; j < meshes[i]->GetTotalTriangleCount(); ++j) {
-			meshIDs[currentOffset + j] = i;
-			meshTriangleIDs[currentOffset + j] = j;
-		}
-
 		currentOffset += meshes[i]->GetTotalTriangleCount();
 	}
 
@@ -559,8 +551,6 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 
 MBVHAccel::~MBVHAccel() {
 	if (initialized) {
-		delete[] meshIDs;
-		delete[] meshTriangleIDs;
 		BOOST_FOREACH(BVHAccel *bvh, uniqueLeafs)
 			delete bvh;
 		delete bvhRootTree;

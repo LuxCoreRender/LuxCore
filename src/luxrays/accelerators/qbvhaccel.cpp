@@ -423,8 +423,6 @@ QBVHAccel::QBVHAccel(const Context *context,
 	initialized = false;
 	preprocessedMesh = NULL;
 	mesh = NULL;
-	meshIDs = NULL;
-	meshTriangleIDs = NULL;
 	maxDepth = 0;
 }
 
@@ -437,8 +435,6 @@ QBVHAccel::~QBVHAccel() {
 			preprocessedMesh->Delete();
 			delete preprocessedMesh;
 		}
-		delete[] meshIDs;
-		delete[] meshTriangleIDs;
 	}
 }
 
@@ -446,8 +442,7 @@ void QBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 		const u_int totalTriangleCount) {
 	assert (!initialized);
 
-	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
-			meshes, &meshIDs, &meshTriangleIDs);
+	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount, meshes);
 	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
 	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
 

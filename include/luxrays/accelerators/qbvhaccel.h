@@ -397,17 +397,6 @@ public:
 		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
-		return meshIDs[index];
-	}
-	virtual const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
-		return meshTriangleIDs[index];
-	}
-	virtual const TriangleID *GetMeshTriangleIDTable() const {
-		return meshTriangleIDs;
-	}
-
 	/**
 	   Intersect a ray in world space against the
 	   primitive and fills in an Intersection object.
@@ -524,8 +513,6 @@ private:
 	const Context *ctx;
 	TriangleMesh *preprocessedMesh;
 	const Mesh *mesh;
-	TriangleMeshID *meshIDs;
-	TriangleID *meshTriangleIDs;
 
 	int maxDepth;
 

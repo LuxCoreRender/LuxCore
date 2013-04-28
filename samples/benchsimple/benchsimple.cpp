@@ -135,7 +135,6 @@ int main(int argc, char** argv) {
 		luxrays::TriangleMesh *mesh = new luxrays::TriangleMesh(TRIANGLE_COUNT * 3, TRIANGLE_COUNT, verts, tris);
 		luxrays::DataSet *dataSet = new luxrays::DataSet(ctx);
 		dataSet->Add(mesh);
-		dataSet->Preprocess();
 		ctx->SetDataSet(dataSet);
 
 		//--------------------------------------------------------------------------

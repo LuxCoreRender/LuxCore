@@ -23,6 +23,7 @@
 #include <cassert>
 #include <deque>
 #include <sstream>
+#include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"
@@ -38,6 +39,23 @@ using namespace luxrays;
 static unsigned int DataSetID = 0;
 static boost::mutex DataSetIDMutex;
 
+std::string Accelerator::AcceleratorType2String(const AcceleratorType type) {
+	switch(type) {
+		case ACCEL_AUTO:
+			return "AUTO";
+		case ACCEL_BVH:
+			return "BVH";
+		case ACCEL_QBVH:
+			return "QBVH";
+		case ACCEL_MQBVH:
+			return "MQBVH";
+		case ACCEL_MBVH:
+			return "MBVH";
+		default:
+			throw std::runtime_error("Unknown AcceleratorType in AcceleratorType2String()");
+	}
+}
+
 DataSet::DataSet(const Context *luxRaysContext) {
 	{
 		boost::unique_lock<boost::mutex> lock(DataSetIDMutex);
@@ -47,19 +65,14 @@ DataSet::DataSet(const Context *luxRaysContext) {
 
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
-	preprocessed = false;
-
-	accelType = ACCEL_QBVH;
-	accel = NULL;
 }
 
 DataSet::~DataSet() {
-	delete accel;
+	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it)
+		delete it->second;
 }
 
 TriangleMeshID DataSet::Add(const Mesh *mesh) {
-	assert (!preprocessed);
-
 	const TriangleMeshID id = meshes.size();
 	meshes.push_back(mesh);
 
@@ -69,79 +82,74 @@ TriangleMeshID DataSet::Add(const Mesh *mesh) {
 	bbox = Union(bbox, mesh->GetBBox());
 	bsphere = bbox.BoundingSphere();
 
+	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
+		meshIDs.push_back(id);
+		meshTriangleIDs.push_back(i);
+	}
+
 	return id;
 }
 
-void DataSet::Preprocess() {
-	assert (!preprocessed);
+const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
+	std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
+	if (it == accels.end()) {
+		LR_LOG(context, "Adding DataSet accelerator: " << Accelerator::AcceleratorType2String(accelType));
+		LR_LOG(context, "Total vertex count: " << totalVertexCount);
+		LR_LOG(context, "Total triangle count: " << totalTriangleCount);
 
-	LR_LOG(context, "Preprocessing DataSet");
-	LR_LOG(context, "Total vertex count: " << totalVertexCount);
-	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
+		if (totalTriangleCount == 0)
+			throw std::runtime_error("An empty DataSet can not be preprocessed");
 
-	if (totalTriangleCount == 0)
-		throw std::runtime_error("An empty DataSet can not be preprocessed");
+		// Build the Accelerator
+		Accelerator *accel;
+		switch (accelType) {
+			case ACCEL_BVH: {
+				const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
+				const int costSamples = 0; // Samples to get for cost minimization
+				const int isectCost = 80;
+				const int travCost = 10;
+				const float emptyBonus = 0.5f;
 
-	// Build the Acceleretor
-	switch (accelType) {
-		case ACCEL_BVH: {
-			const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
-			const int costSamples = 0; // Samples to get for cost minimization
-			const int isectCost = 80;
-			const int travCost = 10;
-			const float emptyBonus = 0.5f;
+				accel = new BVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
+				break;
+			}
+			case ACCEL_QBVH: {
+				const int maxPrimsPerLeaf = 4;
+				const int fullSweepThreshold = 4 * maxPrimsPerLeaf;
+				const int skipFactor = 1;
 
-			accel = new BVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
-			break;
+				accel = new QBVHAccel(context,
+						maxPrimsPerLeaf, fullSweepThreshold, skipFactor);
+				break;
+			}
+			case ACCEL_MQBVH: {
+				const int fullSweepThreshold = 4;
+				const int skipFactor = 1;
+
+				accel = new MQBVHAccel(context, fullSweepThreshold, skipFactor);
+				break;
+			}
+			case ACCEL_MBVH: {
+				const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
+				const int costSamples = 0; // Samples to get for cost minimization
+				const int isectCost = 80;
+				const int travCost = 10;
+				const float emptyBonus = 0.5f;
+
+				accel = new MBVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
+				break;
+			}
+			default:
+				throw std::runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
 		}
-		case ACCEL_QBVH: {
-			const int maxPrimsPerLeaf = 4;
-			const int fullSweepThreshold = 4 * maxPrimsPerLeaf;
-			const int skipFactor = 1;
 
-			accel = new QBVHAccel(context,
-					maxPrimsPerLeaf, fullSweepThreshold, skipFactor);
-			break;
-		}
-		case ACCEL_MQBVH: {
-			const int fullSweepThreshold = 4;
-			const int skipFactor = 1;
+		accel->Init(meshes, totalVertexCount, totalTriangleCount);
 
-			accel = new MQBVHAccel(context, fullSweepThreshold, skipFactor);
-			break;
-		}
-		case ACCEL_MBVH: {
-			const int treeType = 4; // Tree type to generate (2 = binary, 4 = quad, 8 = octree)
-			const int costSamples = 0; // Samples to get for cost minimization
-			const int isectCost = 80;
-			const int travCost = 10;
-			const float emptyBonus = 0.5f;
+		accels[accelType] = accel;
 
-			accel = new MBVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
-			break;
-		}
-		default:
-			assert (false);
-	}
-
-	accel->Init(meshes, totalVertexCount, totalTriangleCount);
-
-	// Free the list of mesh
-	meshes.clear();
-
-	preprocessed = true;
-}
-
-void DataSet::UpdateMeshes() {
-	assert (preprocessed);
-	assert (accelType == ACCEL_MQBVH);
-
-	MQBVHAccel *mqbvh = (MQBVHAccel *)accel;
-	mqbvh->Update();
-}
-
-bool DataSet::Intersect(const Ray *ray, RayHit *hit) const {
-	return accel->Intersect(ray, hit);
+		return accel;
+	} else
+		return it->second;
 }
 
 bool DataSet::IsEqual(const DataSet *dataSet) const {

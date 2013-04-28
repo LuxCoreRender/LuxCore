@@ -46,16 +46,6 @@ public:
 		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
-		return meshIDs[index];
-	}
-	virtual const TriangleMeshID *GetMeshIDTable() const { return meshIDs; }
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
-		return meshTriangleIDs[index];
-	}
-	virtual const TriangleID *GetMeshTriangleIDTable() const {
-		return meshTriangleIDs;
-	}
 	unsigned int GetNNodes() const { return nNodes; }
 	QBVHNode *GetTree() const { return nodes; }
 	unsigned int GetNLeafs() const { return nLeafs; }
@@ -93,8 +83,6 @@ private:
 	QBVHAccel **leafs;
 	const Transform **leafsTransform;
 	unsigned int *leafsOffset;
-	TriangleMeshID *meshIDs;
-	TriangleID *meshTriangleIDs;
 
 	const Context *ctx;
 	bool initialized;

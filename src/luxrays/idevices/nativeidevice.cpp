@@ -52,8 +52,10 @@ NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
 	delete rayBufferQueue;
 }
 
-void NativeThreadIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
+void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
+
+	accel = dataSet->GetAccelerator(ACCEL_QBVH);
 }
 
 void NativeThreadIntersectionDevice::Start() {
@@ -149,7 +151,7 @@ void NativeThreadIntersectionDevice::IntersectionThread(NativeThreadIntersection
 			const size_t rayCount = rayBuffer->GetRayCount();
 			for (unsigned int i = 0; i < rayCount; ++i) {
 				hb[i].SetMiss();
-				renderDevice->dataSet->Intersect(&rb[i], &hb[i]);
+				renderDevice->accel->Intersect(&rb[i], &hb[i]);
 			}
 			renderDevice->threadTotalDataParallelRayCount[threadIndex] += rayCount;
 			queue->PushDone(rayBuffer);

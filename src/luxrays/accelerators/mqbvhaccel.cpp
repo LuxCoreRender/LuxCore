@@ -113,7 +113,7 @@ public:
 
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 		cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o);
-	virtual void UpdateDataSet(const DataSet *newDataSet);
+//	virtual void UpdateDataSet(const DataSet *newDataSet);
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
@@ -148,44 +148,44 @@ void OpenCLMQBVHKernels::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 	}
 }
 
-void OpenCLMQBVHKernels::UpdateDataSet(const DataSet *newDataSet) {
-	const Context *deviceContext = device->GetContext();
-	const std::string &deviceName(device->GetName());
-	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-		"] Updating DataSet");
-
-	const MQBVHAccel *mqbvh = (MQBVHAccel *)newDataSet->GetAccelerator();
-
-	// Upload QBVH leafs transformations
-	Matrix4x4 *invTrans = new Matrix4x4[mqbvh->GetNLeafs()];
-	for (u_int i = 0; i < mqbvh->GetNLeafs(); ++i) {
-		if (mqbvh->GetTransforms()[i])
-			invTrans[i] = mqbvh->GetTransforms()[i]->mInv;
-		else
-			invTrans[i] = Matrix4x4();
-	}
-
-	device->GetOpenCLQueue().enqueueWriteBuffer(
-		*invTransBuff,
-		CL_TRUE,
-		0,
-		mqbvh->GetNLeafs() * sizeof(Matrix4x4),
-		invTrans);
-	delete[] invTrans;
-
-	// Update MQBVH nodes
-	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
-	delete mqbvhBuff;
-
-	mqbvhBuff = new cl::Buffer(deviceDesc->GetOCLContext(),
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		sizeof(QBVHNode) * mqbvh->GetNNodes(), mqbvh->GetTree());
-	device->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
-
-	BOOST_FOREACH(cl::Kernel *kernel, kernels)
-		kernel->setArg(2, *mqbvhBuff);
-}
+//void OpenCLMQBVHKernels::UpdateDataSet(const DataSet *newDataSet) {
+//	const Context *deviceContext = device->GetContext();
+//	const std::string &deviceName(device->GetName());
+//	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
+//	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+//		"] Updating DataSet");
+//
+//	const MQBVHAccel *mqbvh = (MQBVHAccel *)newDataSet->GetAccelerator();
+//
+//	// Upload QBVH leafs transformations
+//	Matrix4x4 *invTrans = new Matrix4x4[mqbvh->GetNLeafs()];
+//	for (u_int i = 0; i < mqbvh->GetNLeafs(); ++i) {
+//		if (mqbvh->GetTransforms()[i])
+//			invTrans[i] = mqbvh->GetTransforms()[i]->mInv;
+//		else
+//			invTrans[i] = Matrix4x4();
+//	}
+//
+//	device->GetOpenCLQueue().enqueueWriteBuffer(
+//		*invTransBuff,
+//		CL_TRUE,
+//		0,
+//		mqbvh->GetNLeafs() * sizeof(Matrix4x4),
+//		invTrans);
+//	delete[] invTrans;
+//
+//	// Update MQBVH nodes
+//	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+//	delete mqbvhBuff;
+//
+//	mqbvhBuff = new cl::Buffer(deviceDesc->GetOCLContext(),
+//		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+//		sizeof(QBVHNode) * mqbvh->GetNNodes(), mqbvh->GetTree());
+//	device->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+//
+//	BOOST_FOREACH(cl::Kernel *kernel, kernels)
+//		kernel->setArg(2, *mqbvhBuff);
+//}
 
 void OpenCLMQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -344,8 +344,6 @@ MQBVHAccel::~MQBVHAccel() {
 	if (initialized) {
 		FreeAligned(nodes);
 
-		delete[] meshTriangleIDs;
-		delete[] meshIDs;
 		delete[] leafsOffset;
 		delete[] leafsTransform;
 		delete[] leafs;
@@ -372,8 +370,6 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 	leafs = new QBVHAccel*[nLeafs];
 	leafsTransform = new const Transform*[nLeafs];
 	leafsOffset = new u_int[nLeafs];
-	meshIDs = new TriangleMeshID[totalTriangleCount];
-	meshTriangleIDs = new TriangleID[totalTriangleCount];
 	u_int currentOffset = 0;
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < nLeafs; ++i) {
@@ -436,12 +432,6 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 		}
 
 		leafsOffset[i] = currentOffset;
-
-		for (u_int j = 0; j < meshList[i]->GetTotalTriangleCount(); ++j) {
-			meshIDs[currentOffset + j] = i;
-			meshTriangleIDs[currentOffset + j] = j;
-		}
-
 		currentOffset += meshList[i]->GetTotalTriangleCount();
 	}
 

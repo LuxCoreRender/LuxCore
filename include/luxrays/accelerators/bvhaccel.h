@@ -87,19 +87,6 @@ public:
 		const u_int totalVertexCount,
 		const u_int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const u_int index) const {
-		return meshIDs[index];
-	}
-	virtual const TriangleMeshID *GetMeshIDTable() const {
-		return meshIDs;
-	}
-	virtual const TriangleID GetMeshTriangleID(const u_int index) const {
-		return meshTriangleIDs[index];
-	}
-	virtual const TriangleID *GetMeshTriangleIDTable() const {
-		return meshTriangleIDs;
-	}
-
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	friend class MBVHAccel;
@@ -139,8 +126,6 @@ private:
 	const Context *ctx;
 	TriangleMesh *preprocessedMesh;
 	const Mesh *mesh;
-	TriangleMeshID *meshIDs;
-	TriangleID *meshTriangleIDs;
 
 	bool initialized;
 };

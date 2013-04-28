@@ -79,7 +79,7 @@ public:
 	static size_t RayBufferSize;
 
 protected:
-	void SetDataSet(const DataSet *newDataSet);
+	void SetDataSet(DataSet *newDataSet);
 	void Start();
 	void Interrupt();
 	void Stop();

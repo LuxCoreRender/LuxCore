@@ -59,6 +59,9 @@ public:
 	virtual size_t GetMaxMemoryAllocSize() const {
 		return oclDevice.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
 	}
+	virtual u_int GetNativeVectorWidthFloat() const {
+		return oclDevice.getInfo<CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT>();
+	}
 
 	u_int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 	void SetForceWorkGroupSize(const u_int size) const { forceWorkGroupSize = size; }

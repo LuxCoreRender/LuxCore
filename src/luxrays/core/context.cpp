@@ -82,6 +82,9 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 		LR_LOG(this, "Device " << i << " compute units: " <<
 			desc->GetComputeUnits());
 
+		LR_LOG(this, "Device " << i << " preferred float vector width: " <<
+			desc->GetNativeVectorWidthFloat());
+
 		LR_LOG(this, "Device " << i << " max allocable memory: " <<
 			desc->GetMaxMemory() / (1024 * 1024) << "MBytes");
 
@@ -110,24 +113,24 @@ void Context::SetDataSet(DataSet *dataSet) {
 		idevices[i]->SetDataSet(currentDataSet);
 }
 
-void Context::UpdateDataSet() {
-	assert (started);
-
-	if (currentDataSet->GetAcceleratorType() != ACCEL_MQBVH)
-		throw std::runtime_error("Context::UpdateDataSet supported only with MQBVH accelerator");
-
-	// Update the data set
-	currentDataSet->UpdateMeshes();
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Update all OpenCL devices
-	for (u_int i = 0; i < idevices.size(); ++i) {
-		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
-		if (oclDevice)
-			oclDevice->UpdateDataSet();
-	}
-#endif
-}
+//void Context::UpdateDataSet() {
+//	assert (started);
+//
+//	if (currentDataSet->GetAcceleratorType() != ACCEL_MQBVH)
+//		throw std::runtime_error("Context::UpdateDataSet supported only with MQBVH accelerator");
+//
+//	// Update the data set
+//	currentDataSet->UpdateMeshes();
+//
+//#if !defined(LUXRAYS_DISABLE_OPENCL)
+//	// Update all OpenCL devices
+//	for (u_int i = 0; i < idevices.size(); ++i) {
+//		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
+//		if (oclDevice)
+//			oclDevice->UpdateDataSet();
+//	}
+//#endif
+//}
 
 void Context::Start() {
 	assert (!started);

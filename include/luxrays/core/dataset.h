@@ -23,6 +23,7 @@
 #define	_LUXRAYS_DATASET_H
 
 #include <deque>
+#include <vector>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
@@ -36,19 +37,8 @@ public:
 	~DataSet();
 
 	TriangleMeshID Add(const Mesh *mesh);
-	void Preprocess();
-	bool IsPreprocessed() const { return preprocessed; }
 
-	bool Intersect(const Ray *ray, RayHit *hit) const;
-
-	const TriangleMeshID GetMeshID(const unsigned int index) const { return accel->GetMeshID(index); }
-	const TriangleMeshID *GetMeshIDTable() const { return accel->GetMeshIDTable(); }
-	const TriangleID GetMeshTriangleID(const unsigned int index) const { return accel->GetMeshTriangleID(index); }
-	const TriangleID *GetMeshTriangleIDTable() const { return accel->GetMeshTriangleIDTable(); }
-
-	void SetAcceleratorType(AcceleratorType type) { accelType = type; }
-	AcceleratorType GetAcceleratorType() const { return accelType; }
-	const Accelerator *GetAccelerator() const { return accel; }
+	const Accelerator *GetAccelerator(const AcceleratorType accelType);
 
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }
@@ -59,11 +49,21 @@ public:
 	unsigned int GetDataSetID() const { return dataSetID; }
 	bool IsEqual(const DataSet *dataSet) const;
 
+	const TriangleMeshID GetMeshID(const u_int index) const {
+		return meshIDs[index];
+	}
+	const TriangleMeshID *GetMeshIDTable() const {
+		return &meshIDs[0];
+	}
+	const TriangleID GetMeshTriangleID(const u_int index) const {
+		return meshTriangleIDs[index];
+	}
+	const TriangleID *GetMeshTriangleIDTable() const {
+		return &meshTriangleIDs[0];
+	}
+
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
-
-protected:
-	void UpdateMeshes();
 
 private:
 	unsigned int dataSetID;
@@ -73,14 +73,13 @@ private:
 	unsigned int totalVertexCount;
 	unsigned int totalTriangleCount;
 	std::deque<const Mesh *> meshes;
-
-	bool preprocessed;
+	std::vector<TriangleMeshID> meshIDs;
+	std::vector<TriangleID> meshTriangleIDs;
 
 	BBox bbox;
 	BSphere bsphere;
 
-	AcceleratorType accelType;
-	Accelerator *accel;
+	std::map<AcceleratorType, Accelerator *> accels;
 };
 
 }

@@ -57,7 +57,7 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
-	renderConfig->scene->UpdateDataSet(ctx);
+	renderConfig->scene->Preprocess(ctx);
 
 	samplesCount = 0;
 	elapsedTime = 0.0f;
@@ -126,35 +126,35 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 	assert (started);
 	assert (editMode);
 
-	bool dataSetUpdated;
-	if (editActions.Has(GEOMETRY_EDIT) ||
-			((renderConfig->scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH) &&
-			editActions.Has(INSTANCE_TRANS_EDIT))) {
-		// Stop all intersection devices
-		ctx->Stop();
-
-		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
-		ctx->SetDataSet(NULL);
-
-		// For all other accelerator, I have to rebuild the DataSet
-		renderConfig->scene->UpdateDataSet(ctx);
-
-		// Set the LuxRays SataSet
-		ctx->SetDataSet(renderConfig->scene->dataSet);
-
-		// Restart all intersection devices
-		ctx->Start();
-
-		dataSetUpdated = true;
-	} else
-		dataSetUpdated = false;
-
-	if (!dataSetUpdated &&
-			(renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) &&
-			editActions.Has(INSTANCE_TRANS_EDIT)) {
-		// Update the DataSet
-		ctx->UpdateDataSet();
-	}
+//	bool dataSetUpdated;
+//	if (editActions.Has(GEOMETRY_EDIT) ||
+//			((renderConfig->scene->dataSet->GetAcceleratorType() != ACCEL_MQBVH) &&
+//			editActions.Has(INSTANCE_TRANS_EDIT))) {
+//		// Stop all intersection devices
+//		ctx->Stop();
+//
+//		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
+//		ctx->SetDataSet(NULL);
+//
+//		// For all other accelerator, I have to rebuild the DataSet
+//		renderConfig->scene->UpdateDataSet(ctx);
+//
+//		// Set the LuxRays SataSet
+//		ctx->SetDataSet(renderConfig->scene->dataSet);
+//
+//		// Restart all intersection devices
+//		ctx->Start();
+//
+//		dataSetUpdated = true;
+//	} else
+//		dataSetUpdated = false;
+//
+//	if (!dataSetUpdated &&
+//			(renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH) &&
+//			editActions.Has(INSTANCE_TRANS_EDIT)) {
+//		// Update the DataSet
+//		ctx->UpdateDataSet();
+//	}
 
 	samplesCount = 0;
 	elapsedTime = 0.0f;

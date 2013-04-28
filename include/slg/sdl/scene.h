@@ -42,12 +42,10 @@ namespace slg {
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
-	Scene(const int accType = -1);
+	Scene();
 	// Constructor used to load a scene from file
-	Scene(const std::string &fileName, const int accType = -1, const float imageScale = 1.f);
+	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();
-
-	int GetAccelType() const { return accelType; }
 
 	LightSource *GetLightByType(const LightSourceType lightType) const;
 	LightSource *SampleAllLights(const float u, float *pdf) const;
@@ -56,7 +54,7 @@ public:
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 
-	void UpdateDataSet(luxrays::Context *ctx);
+	void Preprocess(luxrays::Context *ctx);
 
 	luxrays::Properties ToProperties(const std::string &directoryName);
 
@@ -145,8 +143,6 @@ protected:
 		const std::string &defaultValue);
 
 	Texture *GetTexture(const std::string &name);
-
-	int accelType;
 };
 
 }

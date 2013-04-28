@@ -45,19 +45,6 @@ public:
 		const unsigned int totalVertexCount,
 		const unsigned int totalTriangleCount);
 
-	virtual const TriangleMeshID GetMeshID(const unsigned int index) const {
-		return meshIDs[index];
-	}
-	virtual const TriangleMeshID *GetMeshIDTable() const {
-		return meshIDs;
-	}
-	virtual const TriangleID GetMeshTriangleID(const unsigned int index) const {
-		return meshTriangleIDs[index];
-	}
-	virtual const TriangleID *GetMeshTriangleIDTable() const {
-		return meshTriangleIDs;
-	}
-
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -77,8 +64,6 @@ private:
 	std::vector<Matrix4x4> uniqueLeafsTransform;
 	
 	const Context *ctx;
-	TriangleMeshID *meshIDs;
-	TriangleID *meshTriangleIDs;
 
 	bool initialized;
 };

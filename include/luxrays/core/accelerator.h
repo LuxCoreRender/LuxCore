@@ -22,13 +22,15 @@
 #ifndef _LUXRAYS_ACCELERATOR_H
 #define	_LUXRAYS_ACCELERATOR_H
 
+#include <string>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/trianglemesh.h"
 
 namespace luxrays {
 
 typedef enum {
-	ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH, ACCEL_MBVH
+	ACCEL_AUTO, ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH, ACCEL_MBVH
 } AcceleratorType;
 
 class OpenCLKernels;
@@ -45,12 +47,10 @@ public:
 		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const = 0;
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount, const u_int totalTriangleCount) = 0;
-	virtual const TriangleMeshID GetMeshID(const u_int index) const = 0;
-	virtual const TriangleMeshID *GetMeshIDTable() const = 0;
-	virtual const TriangleID GetMeshTriangleID(const u_int index) const = 0;
-	virtual const TriangleID *GetMeshTriangleIDTable() const = 0;
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
+
+	static std::string AcceleratorType2String(const AcceleratorType type);
 };
 
 }

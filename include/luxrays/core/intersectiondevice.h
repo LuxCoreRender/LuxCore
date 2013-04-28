@@ -30,7 +30,7 @@ namespace luxrays {
 
 class IntersectionDevice : public Device {
 public:
-	const DataSet *GetDataSet() const { return dataSet; }
+	const Accelerator *GetAccelerator() const { return accel; }
 
 	virtual size_t GetQueueSize() = 0;
 
@@ -102,7 +102,7 @@ public:
 
 	virtual bool TraceRay(const Ray *ray, RayHit *rayHit) {
 		statsTotalSerialRayCount += 1.0;
-		return dataSet->Intersect(ray, rayHit);
+		return accel->Intersect(ray, rayHit);
 	}
 
 	friend class Context;
@@ -112,11 +112,12 @@ protected:
 	IntersectionDevice(const Context *context, const DeviceType type, const size_t index);
 	virtual ~IntersectionDevice();
 
-	virtual void SetDataSet(const DataSet *newDataSet);
-	virtual void UpdateDataSet() { }
+	virtual void SetDataSet(DataSet *newDataSet);
+//	virtual void UpdateDataSet() { }
 	virtual void Start();
 
-	const DataSet *dataSet;
+	DataSet *dataSet;
+	const Accelerator *accel;
 	mutable double statsStartTime, statsTotalSerialRayCount, statsTotalDataParallelRayCount,
 		statsDeviceIdleTime, statsDeviceTotalTime;
 
@@ -148,7 +149,7 @@ public:
 	void SetThreadCount(const u_int count) { assert(!started); threadCount = count; }
 	u_int GetThreadCount() { return threadCount; }
 
-	virtual void SetDataSet(const DataSet *newDataSet);
+	virtual void SetDataSet(DataSet *newDataSet);
 	virtual void Start();
 	virtual void Interrupt();
 	virtual void Stop();

@@ -258,7 +258,7 @@ IntersectionDevice::IntersectionDevice(const Context *context,
 IntersectionDevice::~IntersectionDevice() {
 }
 
-void IntersectionDevice::SetDataSet(const DataSet *newDataSet) {
+void IntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	assert (!started);
 	assert ((newDataSet == NULL) || ((newDataSet != NULL) && newDataSet->IsPreprocessed()));
 

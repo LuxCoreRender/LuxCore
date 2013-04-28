@@ -409,7 +409,7 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
 			;
 
-	switch (renderEngine->renderConfig->scene->dataSet->GetAcceleratorType()) {
+	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
 			ss << " -D PARAM_ACCEL_BVH";
 			break;
@@ -423,7 +423,7 @@ void PathOCLRenderThread::InitKernels() {
 			ss << " -D PARAM_ACCEL_MBVH";
 			break;
 		default:
-			assert (false);
+			throw new std::runtime_error("Unknown accelerator in PathOCLRenderThread::InitKernels()");
 	}
 
 	if (normalsBuff)

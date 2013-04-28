@@ -41,19 +41,16 @@
 using namespace luxrays;
 using namespace slg;
 
-Scene::Scene(const int accType) {
+Scene::Scene() {
 	camera = NULL;
 
 	envLight = NULL;
 	sunLight = NULL;
 
 	dataSet = NULL;
-
-	accelType = accType;
 }
 
-Scene::Scene(const std::string &fileName, const int accType, const float imageScale) {
-	accelType = accType;
+Scene::Scene(const std::string &fileName, const float imageScale) {
 	imgMapCache.SetImageResize(imageScale);
 
 	SDL_LOG("Reading scene: " << fileName);
@@ -121,39 +118,14 @@ Scene::~Scene() {
 	delete dataSet;
 }
 
-void Scene::UpdateDataSet(Context *ctx) {
+void Scene::Preprocess(Context *ctx) {
 	delete dataSet;
 	dataSet = new DataSet(ctx);
-
-	// Check the type of accelerator to use
-	switch (accelType) {
-		case -1:
-			// Use default settings
-			break;
-		case 0:
-			dataSet->SetAcceleratorType(ACCEL_BVH);
-			break;
-		case 1:
-		case 2:
-			dataSet->SetAcceleratorType(ACCEL_QBVH);
-			break;
-		case 3:
-			dataSet->SetAcceleratorType(ACCEL_MQBVH);
-			break;
-		case 4:
-			dataSet->SetAcceleratorType(ACCEL_MBVH);
-			break;
-		default:
-			throw std::runtime_error("Unknown accelerator.type");
-			break;
-	}
 
 	// Add all objects
 	const std::vector<ExtMesh *> &objects = meshDefs.GetAllMesh();
 	for (std::vector<ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
 		dataSet->Add(*obj);
-
-	dataSet->Preprocess();
 }
 
 Properties Scene::ToProperties(const std::string &directoryName) {

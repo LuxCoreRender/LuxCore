@@ -56,7 +56,7 @@ VirtualIntersectionDevice::~VirtualIntersectionDevice() {
 		delete realDevices[i];
 }
 
-void VirtualIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
+void VirtualIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
 	// Set the real devices data set

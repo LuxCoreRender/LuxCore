@@ -58,6 +58,7 @@ public:
 	const std::string &GetName() const { return name; }
 	const DeviceType GetType() const { return type; };
 	virtual int GetComputeUnits() const { return 1; }
+	virtual u_int GetNativeVectorWidthFloat() const { return 4; };
 	virtual size_t GetMaxMemory() const { return 0; }
 	virtual size_t GetMaxMemoryAllocSize() const { return 0; }
 

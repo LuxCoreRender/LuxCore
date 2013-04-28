@@ -774,9 +774,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									// Set the flag to Update the DataSet
 									ExtMesh *mesh = scene->meshDefs.GetExtMesh(objName);
 									if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-										if (session->renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
-											session->editActions.AddAction(INSTANCE_TRANS_EDIT);
-										else
+//										if (session->renderConfig->scene->dataSet->GetAcceleratorType() == ACCEL_MQBVH)
+//											session->editActions.AddAction(INSTANCE_TRANS_EDIT);
+//										else
 											session->editActions.AddAction(GEOMETRY_EDIT);
 									} else
 										session->editActions.AddAction(GEOMETRY_EDIT);

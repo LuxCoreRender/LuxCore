@@ -231,13 +231,23 @@ RayBuffer *OpenCLIntersectionDevice::PopRayBuffer(const u_int queueIndex) {
 	return oclQueues[queueIndex]->PopRayBuffer();
 }
 
-void OpenCLIntersectionDevice::SetDataSet(const DataSet *newDataSet) {
+void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
+
+	// Check if the OpenCL device prefer float4 or float1
+	if (deviceDesc->GetNativeVectorWidthFloat() >= 4) {
+		// The device prefers float4
+		dataSet->GetAccelerator(ACCEL_QBVH);
+		accel = dataSet->GetAccelerator(ACCEL_QBVH);
+	} else {
+		dataSet->GetAccelerator(ACCEL_BVH);
+		accel = dataSet->GetAccelerator(ACCEL_BVH);
+	}
 }
 
-void OpenCLIntersectionDevice::UpdateDataSet() {
-	kernels->UpdateDataSet(dataSet);
-}
+//void OpenCLIntersectionDevice::UpdateDataSet() {
+//	kernels->UpdateDataSet(dataSet);
+//}
 
 void OpenCLIntersectionDevice::Start() {
 	IntersectionDevice::Start();
@@ -245,8 +255,7 @@ void OpenCLIntersectionDevice::Start() {
 	oclQueues.clear();
 	if (dataParallelSupport) {
 		// Compile all required kernels
-		kernels = dataSet->GetAccelerator()->NewOpenCLKernels(this,
-				queueCount * bufferCount, stackSize, disableImageStorage);
+		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize, disableImageStorage);
 
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
@@ -254,8 +263,7 @@ void OpenCLIntersectionDevice::Start() {
 		}
 	} else {
 		// Compile all required kernels
-		kernels = dataSet->GetAccelerator()->NewOpenCLKernels(this,
-				1, stackSize, disableImageStorage);
+		kernels = accel->NewOpenCLKernels(this, 1, stackSize, disableImageStorage);
 
 		// I need to create at least one queue (for GPU rendering)
 		oclQueues.push_back(new OpenCLDeviceQueue(this, 0));

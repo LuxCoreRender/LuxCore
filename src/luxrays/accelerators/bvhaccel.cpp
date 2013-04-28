@@ -277,8 +277,6 @@ BVHAccel::BVHAccel(const Context *context,
 	params.emptyBonus = ebonus;
 
 	preprocessedMesh = NULL;
-	meshIDs = NULL;
-	meshTriangleIDs = NULL;
 
 	initialized = false;
 }
@@ -288,8 +286,7 @@ void BVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVer
 	assert (!initialized);
 
 	// Build the preprocessed mesh
-	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount,
-			meshes, &meshIDs, &meshTriangleIDs);
+	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount, meshes);
 	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
 	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
 
@@ -343,8 +340,6 @@ BVHAccel::~BVHAccel() {
 			delete preprocessedMesh;
 		}
 
-		delete[] meshIDs;
-		delete[] meshTriangleIDs;
 		delete bvhTree;
 	}
 }
