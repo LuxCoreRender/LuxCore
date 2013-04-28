@@ -155,6 +155,7 @@ public:
 			const u_int tmpLeftNodeCount = pageNodeCount - tmpNodeIndex;
 			const bool isRootTree = (currentNodes == mbvh->bvhRootTree);
 			const u_int vertOffset = currentVertOffset;
+			const u_int leafIndex = currentLeafIndex;
 
 			// Check if there is enough space in the temporary buffer for all nodes
 			u_int copiedIndexStart, copiedIndexEnd;
@@ -174,8 +175,11 @@ public:
 					currentVertOffset += mbvh->uniqueLeafs[currentLeafIndex]->mesh->GetTotalVertexCount();
 					++currentLeafIndex;
 				}
-				currentNodes = mbvh->uniqueLeafs[currentLeafIndex]->bvhTree;
-				currentNodesCount = mbvh->uniqueLeafs[currentLeafIndex]->nNodes;
+
+				if (currentLeafIndex < mbvh->uniqueLeafs.size()) {
+					currentNodes = mbvh->uniqueLeafs[currentLeafIndex]->bvhTree;
+					currentNodesCount = mbvh->uniqueLeafs[currentLeafIndex]->nNodes;
+				}
 			} else {
 				// There isn't enough space for all mesh vertices. Fill the current buffer.
 				memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[nodeIndex],
@@ -193,8 +197,21 @@ public:
 
 				if (isRootTree) {
 					// I'm handling the root nodes
-					if (BVHNodeData_IsLeaf(node->nodeData))
-						node->bvhLeaf.leafIndex = leafNodeOffset[node->bvhLeaf.leafIndex];
+					if (BVHNodeData_IsLeaf(node->nodeData)) {
+						const u_int nextNodeIndex = leafNodeOffset[node->bvhLeaf.leafIndex];
+						const u_int nodePage = nextNodeIndex / maxNodeCount;
+						const u_int nodeIndex = nextNodeIndex % maxNodeCount;
+						// Encode the page in 30, 29, 28 bits of the node index (last
+						// bit is used to encode if it is a leaf or not)
+						node->bvhLeaf.leafIndex = (nodePage << 28) | nodeIndex;
+					} else {
+						const u_int nextNodeIndex = BVHNodeData_GetSkipIndex(node->nodeData);
+						const u_int nodePage = nextNodeIndex / maxNodeCount;
+						const u_int nodeIndex = nextNodeIndex % maxNodeCount;
+						// Encode the page in 30, 29, 28 bits of the node index (last
+						// bit is used to encode if it is a leaf or not)
+						node->nodeData = (nodePage << 28) | nodeIndex;
+					}
 				} else {
 					// I'm handling a leaf nodes
 					if (BVHNodeData_IsLeaf(node->nodeData)) {
@@ -206,6 +223,13 @@ public:
 							// Encode the page in the last 3 bits of the vertex index
 							node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
 						}
+					} else {
+						const u_int nextNodeIndex = BVHNodeData_GetSkipIndex(node->nodeData) + leafNodeOffset[leafIndex];
+						const u_int nodePage = nextNodeIndex / maxNodeCount;
+						const u_int nodeIndex = nextNodeIndex % maxNodeCount;
+						// Encode the page in 30, 29, 28 bits of the node index (last
+						// bit is used to encode if it is a leaf or not)
+						node->nodeData = (nodePage << 28) | nodeIndex;
 					}
 				}
 			}
