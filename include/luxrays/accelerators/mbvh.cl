@@ -272,12 +272,26 @@ __kernel void Intersect(
 #endif
 
 	bool insideLeafTree = false;
+#if (MBVH_NODES_PAGE_COUNT == 1)
 	uint currentRootNode = 0;
 	uint rootStopNode = BVHNodeData_GetSkipIndex(nodePage0[0].nodeData); // Non-existent
-	uint currentNode = currentRootNode;
 	uint currentStopNode = rootStopNode; // Non-existent
+	uint currentNode = currentRootNode;
+#else
+	uint currentRootPage = 0;
+	uint currentRootNode = 0;
+
+	const uint rootStopPage = BVHNodeData_GetPageIndex(nodePage0[0].nodeData);
+	const uint rootStopNode = BVHNodeData_GetNodeIndex(nodePage0[0].nodeData); // Non-existent
+
+	uint currentStopPage = rootStopPage; // Non-existent
+	uint currentStopNode = rootStopNode; // Non-existent
+
+	uint currentPage = 0; // Root Node Page
+	uint currentNode = currentRootNode;
+#endif
+	
 	uint currentTriangleOffset = 0;
-	__global BVHAccelArrayNode *currentTree = nodePage0;
 
 	__global Ray *ray = &rays[gid];
 	const float3 rootRayOrig = VLOAD3F(&ray->o.x);
@@ -291,18 +305,32 @@ __kernel void Intersect(
 
 	float t, b1, b2;
 	for (;;) {
+#if (MBVH_NODES_PAGE_COUNT == 1)
 		if (currentNode >= currentStopNode) {
+#else
+		if ((currentPage >= currentStopPage) && (currentNode >= currentStopNode)) {
+#endif
 			if (insideLeafTree) {
 				// Go back to the root tree
-				currentTree = nodePage0;
+#if (MBVH_NODES_PAGE_COUNT == 1)
 				currentNode = currentRootNode;
 				currentStopNode = rootStopNode;
+#else
+				currentPage = currentRootPage;
+				currentNode = currentRootNode;
+				currentStopPage = rootStopPage;
+				currentStopNode = rootStopNode;
+#endif
 				currentRayOrig = rootRayOrig;
 				currentRayDir = rootRayDir;
 				insideLeafTree = false;
 
 				// Check if the leaf was the very last root node
+#if (MBVH_NODES_PAGE_COUNT == 1)
 				if (currentNode >= currentStopNode)
+#else
+				if ((currentPage >= currentStopPage) && (currentNode >= currentStopNode))
+#endif
 					break;
 			} else {
 				// Done
@@ -310,13 +338,17 @@ __kernel void Intersect(
 			}
 		}
 
-		__global BVHAccelArrayNode *node = &currentTree[currentNode];
-
+#if (MBVH_NODES_PAGE_COUNT == 1)
+		__global BVHAccelArrayNode *node = &nodePage0[currentNode];
+#else
+		__global BVHAccelArrayNode *nodePage = nodePages[currentPage];
+		__global BVHAccelArrayNode *node = &nodePages[currentNode];
+#endif
 		const uint nodeData = node->nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			if (insideLeafTree) {
 				// I'm inside a leaf tree, I have to check the triangle
-#if (BVH_VERTS_PAGE_COUNT == 1)
+#if (MBVH_VERTS_PAGE_COUNT == 1)
 				// Fast path for when there is only one memory page
 				const float3 p0 = VLOAD3F(&vertPage0[node->triangleLeaf.v[0]].x);
 				const float3 p1 = VLOAD3F(&vertPage0[node->triangleLeaf.v[1]].x);
@@ -346,8 +378,6 @@ __kernel void Intersect(
 				++currentNode;
 			} else {
 				// I have to check a leaf tree
-				currentTree = &nodePage0[node->bvhLeaf.leafIndex];
-
 #if defined(MBVH_HAS_TRANSFORMATIONS)
 				// Transform the ray in the local coordinate system
 				if (node->bvhLeaf.transformIndex != NULL_INDEX) {
@@ -360,8 +390,8 @@ __kernel void Intersect(
 				currentTriangleOffset = node->bvhLeaf.triangleOffsetIndex;
 
 				currentRootNode = currentNode + 1;
-				currentNode = 0;
-				currentStopNode = BVHNodeData_GetSkipIndex(currentTree[0].nodeData);
+				currentNode = node->bvhLeaf.leafIndex;
+				currentStopNode = BVHNodeData_GetSkipIndex(nodePage0[currentNode].nodeData);
 
 				// Now, I'm inside a leaf tree
 				insideLeafTree = true;
