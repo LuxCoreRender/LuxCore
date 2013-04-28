@@ -145,7 +145,7 @@ public:
 		BVHAccelArrayNode *tmpNodes = new BVHAccelArrayNode[pageNodeCount];
 		u_int tmpNodeIndex = 0;
 
-		u_int nodeIndex = 0;
+		u_int currentNodeIndex = 0;
 		currentLeafIndex = 0;
 		const BVHAccelArrayNode *currentNodes = mbvh->bvhRootTree;
 		u_int currentNodesCount = mbvh->nRootNodes;
@@ -159,14 +159,15 @@ public:
 
 			// Check if there is enough space in the temporary buffer for all nodes
 			u_int copiedIndexStart, copiedIndexEnd;
-			if (tmpLeftNodeCount >= currentNodesCount) {
+			const u_int toCopy = currentNodesCount - currentNodeIndex;
+			if (tmpLeftNodeCount >= toCopy) {
 				// There is enough space for all nodes
-				memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[nodeIndex],
-						sizeof(BVHAccelArrayNode) * currentNodesCount);
+				memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
+						sizeof(BVHAccelArrayNode) * toCopy);
 				copiedIndexStart = tmpNodeIndex;
-				copiedIndexEnd = tmpNodeIndex + currentNodesCount;
+				copiedIndexEnd = tmpNodeIndex + toCopy;
 
-				tmpNodeIndex += currentNodesCount;
+				tmpNodeIndex += toCopy;
 				// Move to the next leaf tree
 				if (isRootTree) {
 					// Move from the root nodes to the first leaf node. currentLeafIndex
@@ -179,16 +180,17 @@ public:
 				if (currentLeafIndex < mbvh->uniqueLeafs.size()) {
 					currentNodes = mbvh->uniqueLeafs[currentLeafIndex]->bvhTree;
 					currentNodesCount = mbvh->uniqueLeafs[currentLeafIndex]->nNodes;
+					currentNodeIndex = 0;
 				}
 			} else {
 				// There isn't enough space for all mesh vertices. Fill the current buffer.
-				memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[nodeIndex],
+				memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
 						sizeof(BVHAccelArrayNode) * tmpLeftNodeCount);
 				copiedIndexStart = tmpNodeIndex;
 				copiedIndexEnd = tmpNodeIndex + tmpLeftNodeCount;
 
 				tmpNodeIndex += tmpLeftNodeCount;
-				nodeIndex += tmpLeftNodeCount;
+				currentNodeIndex += tmpLeftNodeCount;
 			}
 
 			// Update the vertex references
@@ -238,7 +240,7 @@ public:
 				// The temporary buffer is full, send the data to the OpenCL device
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 					"] MBVH node buffer size (Page " << nodeBuffs.size() <<", " <<
-					totalNodeCount << " nodes): " <<
+					tmpNodeIndex << " nodes): " <<
 					(sizeof(BVHAccelArrayNode) * totalNodeCount / 1024) <<
 					"Kbytes");
 				cl::Buffer *nb = new cl::Buffer(oclContext,

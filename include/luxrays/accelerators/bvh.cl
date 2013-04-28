@@ -21,7 +21,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-
 typedef struct {
 	union {
 		struct {
