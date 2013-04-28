@@ -316,9 +316,30 @@ __kernel void Intersect(
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			if (insideLeafTree) {
 				// I'm inside a leaf tree, I have to check the triangle
+#if (BVH_VERTS_PAGE_COUNT == 1)
+				// Fast path for when there is only one memory page
 				const float3 p0 = VLOAD3F(&vertPage0[node->triangleLeaf.v[0]].x);
 				const float3 p1 = VLOAD3F(&vertPage0[node->triangleLeaf.v[1]].x);
 				const float3 p2 = VLOAD3F(&vertPage0[node->triangleLeaf.v[2]].x);
+#else
+				const uint v0 = node->triangleLeaf.v[0];
+				const uint pv0 = (v0 & 0xe0000000u) >> 29;
+				const uint iv0 = (v0 & 0x1fffffffu);
+				__global Point *vp0 = vertPages[pv0];
+				const float3 p0 = VLOAD3F(&vp0[iv0].x);
+
+				const uint v1 = node->triangleLeaf.v[1];
+				const uint pv1 = (v1 & 0xe0000000u) >> 29;
+				const uint iv1 = (v1 & 0x1fffffffu);
+				__global Point *vp1 = vertPages[pv1];
+				const float3 p1 = VLOAD3F(&vp1[iv1].x);
+
+				const uint v2 = node->triangleLeaf.v[2];
+				const uint pv2 = (v2 & 0xe0000000u) >> 29;
+				const uint iv2 = (v2 & 0x1fffffffu);
+				__global Point *vp2 = vertPages[pv2];
+				const float3 p2 = VLOAD3F(&vp2[iv2].x);
+#endif
 
 				Triangle_Intersect(currentRayOrig, currentRayDir, mint, &maxt, &hitIndex, &b1, &b2,
 					node->triangleLeaf.triangleIndex + currentTriangleOffset, p0, p1, p2);

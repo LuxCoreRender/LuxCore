@@ -80,28 +80,30 @@ public:
 
 			// Check if there is enough space in the temporary buffer for all vertices
 			const Mesh *currentMesh = mbvh->uniqueLeafs[currentLeafIndex]->mesh;
-			if (tmpLeftVertCount >= currentMesh->GetTotalVertexCount()) {
+			const u_int toCopy = currentMesh->GetTotalVertexCount() - meshVertIndex;
+			if (tmpLeftVertCount >= toCopy) {
 				// There is enough space for all mesh vertices
 				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[meshVertIndex]),
-						sizeof(Point) * currentMesh->GetTotalVertexCount());
-				tmpVertIndex += currentMesh->GetTotalVertexCount();
+						sizeof(Point) * toCopy);
+				tmpVertIndex += toCopy;
 
 				// Move to the next mesh
 				++currentLeafIndex;
+				meshVertIndex = 0;
 			} else {
 				// There isn't enough space for all mesh vertices. Fill the current buffer.
 				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[meshVertIndex]),
 						sizeof(Point) * tmpLeftVertCount);
 
-				meshVertIndex += tmpLeftVertCount;
 				tmpVertIndex += tmpLeftVertCount;
+				meshVertIndex += tmpLeftVertCount;
 			}
 
 			if ((tmpVertIndex >= pageVertCount) || (currentLeafIndex >=  mbvh->uniqueLeafs.size())) {
 				// The temporary buffer is full, send the data to the OpenCL device
 				LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 						"] Vertices buffer size (Page " << vertsBuffs.size() <<", " <<
-						pageVertCount << " vertices): " <<
+						tmpVertIndex << " vertices): " <<
 						(sizeof(Point) * pageVertCount / 1024) <<
 						"Kbytes");
 				cl::Buffer *vb = new cl::Buffer(oclContext,
@@ -121,67 +123,112 @@ public:
 		// Allocate BVH node buffers
 		//----------------------------------------------------------------------
 
+		// Check how many pages I have to allocate
+		const size_t maxNodeCount = maxMemAlloc / sizeof(BVHAccelArrayNode);
+
 		u_int totalNodeCount = mbvh->nRootNodes;
 		for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i)
 			totalNodeCount += mbvh->uniqueLeafs[i]->nNodes;
 
-		BVHAccelArrayNode *tmpNodes = new BVHAccelArrayNode[totalNodeCount];
-		// Leave the space for the root nodes
-		u_int currentBVHNodeCount = mbvh->nRootNodes;
-		u_int currentVertOffset = 0;
-		std::vector<u_int> leafNodeOffset;
+		const u_int pageNodeCount = Min<size_t>(totalNodeCount, maxNodeCount);
 
+		// Initialize the node offset vector
+		std::vector<u_int> leafNodeOffset;
+		u_int currentBVHNodeCount = mbvh->nRootNodes;
 		for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i) {
 			const BVHAccel *leafBVH = mbvh->uniqueLeafs[i];
-
-			memcpy(&tmpNodes[currentBVHNodeCount], leafBVH->bvhTree, sizeof(BVHAccelArrayNode) * leafBVH->nNodes);
-			// Update the vertex references
-			for (u_int i = currentBVHNodeCount; i < currentBVHNodeCount + leafBVH->nNodes; ++i) {
-				BVHAccelArrayNode *node = &tmpNodes[i];
-				if (BVHNodeData_IsLeaf(node->nodeData)) {
-					// Update the vertex references
-					for (u_int j = 0; j < 3; ++j) {
-						const u_int vertIndex = node->triangleLeaf.v[j] + currentVertOffset;
-						const u_int vertexPage = vertIndex / maxVertCount;
-						const u_int vertexIndex = vertIndex % maxVertCount;
-						// Encode the page in the last 3 bits of the vertex index
-						node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
-					}
-				}
-			}
-
-			currentVertOffset += leafBVH->mesh->GetTotalVertexCount();
 			leafNodeOffset.push_back(currentBVHNodeCount);
 			currentBVHNodeCount += leafBVH->nNodes;
 		}
 
-		// Copy the root nodes at the beginning of the OpenCL buffer
-		for (u_int i = 0; i < mbvh->nRootNodes; ++i) {
-			BVHAccelArrayNode *srcNode = &mbvh->bvhRootTree[i];
-			BVHAccelArrayNode *dstNode = &tmpNodes[i];
+		// Allocate a temporary buffer for the copy of the BVH nodes
+		BVHAccelArrayNode *tmpNodes = new BVHAccelArrayNode[pageNodeCount];
+		u_int tmpNodeIndex = 0;
 
-			if (BVHNodeData_IsLeaf(srcNode->nodeData)) {
-				dstNode->bvhLeaf.leafIndex = leafNodeOffset[srcNode->bvhLeaf.leafIndex];
-				dstNode->bvhLeaf.transformIndex = srcNode->bvhLeaf.transformIndex;
-				dstNode->bvhLeaf.triangleOffsetIndex = srcNode->bvhLeaf.triangleOffsetIndex;
-				dstNode->nodeData = srcNode->nodeData;
-			} else
-				*dstNode = *srcNode;
-			
+		u_int nodeIndex = 0;
+		currentLeafIndex = 0;
+		const BVHAccelArrayNode *currentNodes = mbvh->bvhRootTree;
+		u_int currentNodesCount = mbvh->nRootNodes;
+		u_int currentVertOffset = 0;
+
+		while (currentLeafIndex < mbvh->uniqueLeafs.size()) {
+			const u_int tmpLeftNodeCount = pageNodeCount - tmpNodeIndex;
+			const bool isRootTree = (currentNodes == mbvh->bvhRootTree);
+			const u_int vertOffset = currentVertOffset;
+
+			// Check if there is enough space in the temporary buffer for all nodes
+			u_int copiedIndexStart, copiedIndexEnd;
+			if (tmpLeftNodeCount >= currentNodesCount) {
+				// There is enough space for all nodes
+				memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[nodeIndex],
+						sizeof(BVHAccelArrayNode) * currentNodesCount);
+				copiedIndexStart = tmpNodeIndex;
+				copiedIndexEnd = tmpNodeIndex + currentNodesCount;
+
+				tmpNodeIndex += currentNodesCount;
+				// Move to the next leaf tree
+				if (isRootTree) {
+					// Move from the root nodes to the first leaf node. currentLeafIndex
+					// is already 0
+				} else {
+					currentVertOffset += mbvh->uniqueLeafs[currentLeafIndex]->mesh->GetTotalVertexCount();
+					++currentLeafIndex;
+				}
+				currentNodes = mbvh->uniqueLeafs[currentLeafIndex]->bvhTree;
+				currentNodesCount = mbvh->uniqueLeafs[currentLeafIndex]->nNodes;
+			} else {
+				// There isn't enough space for all mesh vertices. Fill the current buffer.
+				memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[nodeIndex],
+						sizeof(BVHAccelArrayNode) * tmpLeftNodeCount);
+				copiedIndexStart = tmpNodeIndex;
+				copiedIndexEnd = tmpNodeIndex + tmpLeftNodeCount;
+
+				tmpNodeIndex += tmpLeftNodeCount;
+				nodeIndex += tmpLeftNodeCount;
+			}
+
+			// Update the vertex references
+			for (u_int i = copiedIndexStart; i < copiedIndexEnd; ++i) {
+				BVHAccelArrayNode *node = &tmpNodes[i];
+
+				if (isRootTree) {
+					// I'm handling the root nodes
+					if (BVHNodeData_IsLeaf(node->nodeData))
+						node->bvhLeaf.leafIndex = leafNodeOffset[node->bvhLeaf.leafIndex];
+				} else {
+					// I'm handling a leaf nodes
+					if (BVHNodeData_IsLeaf(node->nodeData)) {
+						// Update the vertex references
+						for (u_int j = 0; j < 3; ++j) {
+							const u_int vertIndex = node->triangleLeaf.v[j] + vertOffset;
+							const u_int vertexPage = vertIndex / maxVertCount;
+							const u_int vertexIndex = vertIndex % maxVertCount;
+							// Encode the page in the last 3 bits of the vertex index
+							node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
+						}
+					}
+				}
+			}
+
+			if ((tmpNodeIndex >= pageNodeCount) || (currentLeafIndex >=  mbvh->uniqueLeafs.size())) {
+				// The temporary buffer is full, send the data to the OpenCL device
+				LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+					"] MBVH node buffer size (Page " << nodeBuffs.size() <<", " <<
+					totalNodeCount << " nodes): " <<
+					(sizeof(BVHAccelArrayNode) * totalNodeCount / 1024) <<
+					"Kbytes");
+				cl::Buffer *nb = new cl::Buffer(oclContext,
+					CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+					sizeof(BVHAccelArrayNode) * tmpNodeIndex,
+					(void *)&tmpNodes[0]);
+				device->AllocMemory(nb->getInfo<CL_MEM_SIZE>());
+				nodeBuffs.push_back(nb);
+				if (nodeBuffs.size() > 8)
+					throw std::runtime_error("Too many BVH node pages required in OpenCLMBVHKernels()");
+
+				tmpNodeIndex = 0;
+			}
 		}
-
-		// Allocate bvh node OpenCL buffer
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			"] BVH buffer size (Page " << nodeBuffs.size() <<", " <<
-			totalNodeCount << " nodes): " <<
-			(sizeof(BVHAccelArrayNode) * totalNodeCount / 1024) <<
-			"Kbytes");
-		cl::Buffer *nodeBuff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-			sizeof(BVHAccelArrayNode) * totalNodeCount,
-			(void *)tmpNodes);
-		device->AllocMemory(nodeBuff->getInfo<CL_MEM_SIZE>());
-		nodeBuffs.push_back(nodeBuff);
 		delete tmpNodes;
 
 		if (mbvh->uniqueLeafsTransform.size() > 0) {
@@ -205,7 +252,7 @@ public:
 		std::stringstream opts;
 		opts << " -D LUXRAYS_OPENCL_KERNEL"
 				" -D MBVH_VERTS_PAGE_COUNT=" << vertsBuffs.size() <<
-				" -D MBVH_NODES_PAGE_SIZE=" << 1 <<
+				" -D MBVH_NODES_PAGE_SIZE=" << pageNodeCount <<
 				" -D MBVH_NODES_PAGE_COUNT=" << nodeBuffs.size();
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			opts << " -D MBVH_VERTS_PAGE" << i << "=1";
