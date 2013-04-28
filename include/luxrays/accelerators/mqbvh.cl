@@ -43,7 +43,7 @@ typedef struct {
 	int4 children;
 } QBVHNode;
 
-void TransformP(Point *ptrans, Point *p, __global Matrix4x4 *m) {
+void TransformP(Point *ptrans, const Point *p, __global Matrix4x4 *m) {
     const float x = p->x;
     const float y = p->y;
     const float z = p->z;
@@ -58,7 +58,7 @@ void TransformP(Point *ptrans, Point *p, __global Matrix4x4 *m) {
     ptrans->z /= w;
 }
 
-void TransformV(Vector *ptrans, Vector *p, __global Matrix4x4 *m) {
+void TransformV(Vector *ptrans, const Vector *p, __global Matrix4x4 *m) {
     const float x = p->x;
     const float y = p->y;
     const float z = p->z;
@@ -280,7 +280,7 @@ __kernel void Intersect(
         __global unsigned int *qbvhMemMap,
 		__global QBVHNode *leafNodes,
 		__global QuadTiangle *leafQuadTris,
-        __global Matrix4x4 *invTrans,
+        __global Matrix4x4 *leafTransformations,
         __global unsigned int *leafsOffset) {
 	// Select the ray to check
 	const int gid = get_global_id(0);
@@ -363,8 +363,8 @@ __kernel void Intersect(
 			const uint leafIndex = QBVHNode_FirstQuadIndex(nodeData);
 
             Ray tray;
-            TransformP(&tray.o, &rayOrig, &invTrans[leafIndex]);
-            TransformV(&tray.d, &rayDir, &invTrans[leafIndex]);
+            TransformP(&tray.o, &rayOrig, &leafTransformations[leafIndex]);
+            TransformV(&tray.d, &rayDir, &leafTransformations[leafIndex]);
             tray.mint = ray4.mint.s0;
             tray.maxt = ray4.maxt.s0;
 
