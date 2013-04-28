@@ -98,7 +98,7 @@ public:
 		const u_int totalNodeCount = bvh->nNodes;
 		const BVHAccelArrayNode *nodes = bvh->bvhTree;
 		// Allocate a temporary buffer for the copy of the BVH nodes
-		BVHAccelArrayNode *tmpBvh = new BVHAccelArrayNode[Min<size_t>(bvh->nNodes, maxNodeCount)];
+		BVHAccelArrayNode *tmpNodes = new BVHAccelArrayNode[Min<size_t>(bvh->nNodes, maxNodeCount)];
 		u_int nodeIndex = 0;
 
 		do {
@@ -106,11 +106,11 @@ public:
 			const u_int pageNodeCount = Min<size_t>(leftNodeCount, maxNodeCount);
 
 			// Make a copy of the nodes
-			memcpy(tmpBvh, &nodes[nodeIndex], sizeof(BVHAccelArrayNode) * pageNodeCount);
+			memcpy(tmpNodes, &nodes[nodeIndex], sizeof(BVHAccelArrayNode) * pageNodeCount);
 
 			// Update the vertex and node references
 			for (u_int i = 0; i < pageNodeCount; ++i) {
-				BVHAccelArrayNode *node = &tmpBvh[i];
+				BVHAccelArrayNode *node = &tmpNodes[i];
 				if (BVHNodeData_IsLeaf(node->nodeData)) {
 					// Update the vertex references
 					for (u_int j = 0; j < 3; ++j) {
@@ -138,7 +138,7 @@ public:
 			cl::Buffer *bb = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(BVHAccelArrayNode) * pageNodeCount,
-				(void *)tmpBvh);
+				(void *)tmpNodes);
 			device->AllocMemory(bb->getInfo<CL_MEM_SIZE>());
 			nodeBuffs.push_back(bb);
 
@@ -147,7 +147,7 @@ public:
 
 			nodeIndex += pageNodeCount;
 		} while (nodeIndex < totalNodeCount);
-		delete tmpBvh;
+		delete tmpNodes;
 
 		//----------------------------------------------------------------------
 		// Compile kernel sources
