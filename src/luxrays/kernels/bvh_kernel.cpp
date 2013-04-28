@@ -24,7 +24,6 @@ std::string KernelSource_bvh =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
-"\n"
 "typedef struct {\n"
 "	union {\n"
 "		struct {\n"

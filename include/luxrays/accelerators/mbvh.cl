@@ -21,7 +21,6 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-
 typedef struct {
 	union {
 		struct {
@@ -142,10 +141,10 @@ int BBox_IntersectP(
 	return (t1 > t0);
 }
 
-#if (BVH_NODES_PAGE_COUNT > 1)
+#if (MBVH_NODES_PAGE_COUNT > 1)
 void NextNode(uint *pageIndex, uint *nodeIndex) {
 	++(*nodeIndex);
-	if (*nodeIndex >= BVH_NODES_PAGE_SIZE) {
+	if (*nodeIndex >= MBVH_NODES_PAGE_SIZE) {
 		*nodeIndex = 0;
 		++(*pageIndex);
 	}
@@ -281,8 +280,9 @@ __kernel void Intersect(
 	uint currentRootPage = 0;
 	uint currentRootNode = 0;
 
-	const uint rootStopPage = BVHNodeData_GetPageIndex(nodePage0[0].nodeData);
-	const uint rootStopNode = BVHNodeData_GetNodeIndex(nodePage0[0].nodeData); // Non-existent
+	const uint rootStopIndex = nodePage0[0].nodeData;
+	const uint rootStopPage = BVHNodeData_GetPageIndex(rootStopIndex);
+	const uint rootStopNode = BVHNodeData_GetNodeIndex(rootStopIndex); // Non-existent
 
 	uint currentStopPage = rootStopPage; // Non-existent
 	uint currentStopNode = rootStopNode; // Non-existent
@@ -303,12 +303,12 @@ __kernel void Intersect(
 
 	uint hitIndex = NULL_INDEX;
 
-	float t, b1, b2;
+	float b1, b2;
 	for (;;) {
 #if (MBVH_NODES_PAGE_COUNT == 1)
 		if (currentNode >= currentStopNode) {
 #else
-		if ((currentPage >= currentStopPage) && (currentNode >= currentStopNode)) {
+		if (!((currentPage < currentStopPage) || (currentNode < currentStopNode))) {
 #endif
 			if (insideLeafTree) {
 				// Go back to the root tree
@@ -329,7 +329,7 @@ __kernel void Intersect(
 #if (MBVH_NODES_PAGE_COUNT == 1)
 				if (currentNode >= currentStopNode)
 #else
-				if ((currentPage >= currentStopPage) && (currentNode >= currentStopNode))
+				if (!((currentPage < currentStopPage) || (currentNode < currentStopNode)))
 #endif
 					break;
 			} else {
@@ -342,7 +342,7 @@ __kernel void Intersect(
 		__global BVHAccelArrayNode *node = &nodePage0[currentNode];
 #else
 		__global BVHAccelArrayNode *nodePage = nodePages[currentPage];
-		__global BVHAccelArrayNode *node = &nodePages[currentNode];
+		__global BVHAccelArrayNode *node = &nodePage[currentNode];
 #endif
 		const uint nodeData = node->nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
@@ -375,7 +375,11 @@ __kernel void Intersect(
 
 				Triangle_Intersect(currentRayOrig, currentRayDir, mint, &maxt, &hitIndex, &b1, &b2,
 					node->triangleLeaf.triangleIndex + currentTriangleOffset, p0, p1, p2);
+#if (MBVH_NODES_PAGE_COUNT == 1)
 				++currentNode;
+#else
+				NextNode(&currentPage, &currentNode);
+#endif
 			} else {
 				// I have to check a leaf tree
 #if defined(MBVH_HAS_TRANSFORMATIONS)
@@ -389,9 +393,25 @@ __kernel void Intersect(
 #endif 
 				currentTriangleOffset = node->bvhLeaf.triangleOffsetIndex;
 
+				const uint leafIndex = node->bvhLeaf.leafIndex;
+#if (MBVH_NODES_PAGE_COUNT == 1)
 				currentRootNode = currentNode + 1;
-				currentNode = node->bvhLeaf.leafIndex;
+				currentNode = leafIndex;
 				currentStopNode = BVHNodeData_GetSkipIndex(nodePage0[currentNode].nodeData);
+#else
+				currentRootPage = currentPage;
+				currentRootNode = currentNode;
+				NextNode(&currentRootPage, &currentRootNode);
+
+				currentPage = BVHNodeData_GetPageIndex(leafIndex);
+				currentNode = BVHNodeData_GetNodeIndex(leafIndex);
+
+				__global BVHAccelArrayNode *stopNodePage = nodePages[currentPage];
+				__global BVHAccelArrayNode *stopNode = &stopNodePage[currentNode];
+				const uint stopIndex = stopNode->nodeData;
+				currentStopPage = BVHNodeData_GetPageIndex(stopIndex);
+				currentStopNode = BVHNodeData_GetNodeIndex(stopIndex);
+#endif
 
 				// Now, I'm inside a leaf tree
 				insideLeafTree = true;
@@ -401,12 +421,21 @@ __kernel void Intersect(
 			const float3 pMin = VLOAD3F(&node->bvhNode.bboxMin[0]);
 			const float3 pMax = VLOAD3F(&node->bvhNode.bboxMax[0]);
 
-			if (BBox_IntersectP(currentRayOrig, currentRayDir, mint, maxt, pMin, pMax))
+			if (BBox_IntersectP(currentRayOrig, currentRayDir, mint, maxt, pMin, pMax)) {
+#if (MBVH_NODES_PAGE_COUNT == 1)
 				++currentNode;
-			else {
+#else
+				NextNode(&currentPage, &currentNode);
+#endif
+			} else {
+#if (MBVH_NODES_PAGE_COUNT == 1)
 				// I don't need to use BVHNodeData_GetSkipIndex() here because
-				// I already know the leaf flag is 0
+				// I already know the flag (i.e. the last bit) is 0
 				currentNode = nodeData;
+#else
+				currentPage = BVHNodeData_GetPageIndex(nodeData);
+				currentNode = BVHNodeData_GetNodeIndex(nodeData);
+#endif
 			}
 		}
 	}
