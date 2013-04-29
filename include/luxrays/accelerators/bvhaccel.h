@@ -82,7 +82,7 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const;
+		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_int totalVertexCount,
 		const u_int totalTriangleCount);

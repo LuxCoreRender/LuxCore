@@ -79,10 +79,6 @@ public:
 		return deviceDesc->GetMaxMemory();
 	}
 
-	void DisableImageStorage(const bool v) {
-		disableImageStorage = v;
-	}
-
 	//--------------------------------------------------------------------------
 	// Data parallel interface: to trace large set of rays directly from the GPU
 	//--------------------------------------------------------------------------
@@ -196,7 +192,7 @@ private:
 	vector<OpenCLDeviceQueue *> oclQueues;
 	OpenCLKernels *kernels;
 
-	bool reportedPermissionError, disableImageStorage;
+	bool reportedPermissionError;
 };
 
 }

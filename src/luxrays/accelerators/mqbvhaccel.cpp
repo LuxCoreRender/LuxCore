@@ -201,7 +201,7 @@ void OpenCLMQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_in
 }
 
 OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
+		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {
 	const Context *deviceContext = device->GetContext();
 	cl::Context &oclContext = device->GetOpenCLContext();
 	const std::string &deviceName(device->GetName());
@@ -328,7 +328,7 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
+		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {
 	return NULL;
 }
 

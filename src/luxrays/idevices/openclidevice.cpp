@@ -183,7 +183,6 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	deviceDesc = desc;
 	deviceName = (desc->GetName() + "Intersect").c_str();
 	reportedPermissionError = false;
-	disableImageStorage = false;
 
 	// Check if OpenCL 1.1 is available
 	if (!desc->IsOpenCL_1_1()) {
@@ -260,7 +259,7 @@ void OpenCLIntersectionDevice::Start() {
 	oclQueues.clear();
 	if (dataParallelSupport) {
 		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize, disableImageStorage);
+		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize, enableImageStorage);
 
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
@@ -268,7 +267,7 @@ void OpenCLIntersectionDevice::Start() {
 		}
 	} else {
 		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, 1, stackSize, disableImageStorage);
+		kernels = accel->NewOpenCLKernels(this, 1, stackSize, enableImageStorage);
 
 		// I need to create at least one queue (for GPU rendering)
 		oclQueues.push_back(new OpenCLDeviceQueue(this, 0));
