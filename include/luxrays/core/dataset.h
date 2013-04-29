@@ -36,6 +36,9 @@ public:
 	DataSet(const Context *luxRaysContext);
 	~DataSet();
 
+	AcceleratorType GetAcceleratorType() const { return accelType; }
+	void SetAcceleratorType(AcceleratorType type) { accelType = type; }
+
 	bool GetInstanceSupport(const bool v) const { return enableInstanceSupport; }
 	void SetInstanceSupport(const bool v) { enableInstanceSupport = v; }
 	bool RequiresInstanceSupport() const { return enableInstanceSupport && hasInstances; }
@@ -86,6 +89,7 @@ private:
 
 	std::map<AcceleratorType, Accelerator *> accels;
 
+	AcceleratorType accelType;
 	bool hasInstances, enableInstanceSupport;
 };
 

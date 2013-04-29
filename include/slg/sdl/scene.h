@@ -29,6 +29,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/extmeshcache.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/core/accelerator.h"
 #include "slg/camera/camera.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/light.h"
@@ -127,6 +128,7 @@ public:
 	std::vector<Material *> objectMaterials; // One for each object
 
 	luxrays::DataSet *dataSet;
+	luxrays::AcceleratorType accelType;
 	bool enableInstanceSupport;
 
 	luxrays::ExtMeshCache extMeshCache; // Mesh objects

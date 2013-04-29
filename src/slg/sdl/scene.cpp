@@ -48,6 +48,7 @@ Scene::Scene() {
 	sunLight = NULL;
 
 	dataSet = NULL;
+	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
 }
 
@@ -106,6 +107,7 @@ Scene::Scene(const std::string &fileName, const float imageScale) {
 		throw std::runtime_error("The scene doesn't include any light source");
 
 	dataSet = NULL;
+	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
 }
 
@@ -124,6 +126,7 @@ void Scene::Preprocess(Context *ctx) {
 	delete dataSet;
 	dataSet = new DataSet(ctx);
 	dataSet->SetInstanceSupport(enableInstanceSupport);
+	dataSet->SetAcceleratorType(accelType);
 
 	// Add all objects
 	const std::vector<ExtMesh *> &objects = meshDefs.GetAllMesh();

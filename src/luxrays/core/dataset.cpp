@@ -66,6 +66,7 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
 
+	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
 	hasInstances = false;
 }
