@@ -127,6 +127,7 @@ public:
 	std::vector<Material *> objectMaterials; // One for each object
 
 	luxrays::DataSet *dataSet;
+	bool enableInstanceSupport;
 
 	luxrays::ExtMeshCache extMeshCache; // Mesh objects
 	ImageMapCache imgMapCache; // Image maps

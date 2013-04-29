@@ -76,6 +76,7 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 
 		scene = new Scene(sceneFileName, imageScale);
 	}
+	scene->enableInstanceSupport = cfg.GetBoolean("accelerator.instances.enable", true);
 
 	// Remove unused material
 	scene->RemoveUnusedMaterials();

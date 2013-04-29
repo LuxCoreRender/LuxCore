@@ -237,11 +237,16 @@ void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	// Check if the OpenCL device prefer float4 or float1
 	if (deviceDesc->GetNativeVectorWidthFloat() >= 4) {
 		// The device prefers float4
-		dataSet->GetAccelerator(ACCEL_QBVH);
-		accel = dataSet->GetAccelerator(ACCEL_QBVH);
+		if (dataSet->RequiresInstanceSupport())
+			accel = dataSet->GetAccelerator(ACCEL_MQBVH);
+		else
+			accel = dataSet->GetAccelerator(ACCEL_QBVH);
 	} else {
-		dataSet->GetAccelerator(ACCEL_BVH);
-		accel = dataSet->GetAccelerator(ACCEL_BVH);
+		// The device prefers float1
+		if (dataSet->RequiresInstanceSupport())
+			accel = dataSet->GetAccelerator(ACCEL_MBVH);
+		else
+			accel = dataSet->GetAccelerator(ACCEL_BVH);
 	}
 }
 

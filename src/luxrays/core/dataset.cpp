@@ -65,6 +65,9 @@ DataSet::DataSet(const Context *luxRaysContext) {
 
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
+
+	enableInstanceSupport = true;
+	hasInstances = false;
 }
 
 DataSet::~DataSet() {
@@ -86,6 +89,9 @@ TriangleMeshID DataSet::Add(const Mesh *mesh) {
 		meshIDs.push_back(id);
 		meshTriangleIDs.push_back(i);
 	}
+
+	if ((mesh->GetType() == TYPE_TRIANGLE_INSTANCE) || (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE))
+		hasInstances = true;
 
 	return id;
 }

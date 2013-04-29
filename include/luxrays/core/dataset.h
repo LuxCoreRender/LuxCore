@@ -36,6 +36,11 @@ public:
 	DataSet(const Context *luxRaysContext);
 	~DataSet();
 
+	bool GetInstanceSupport(const bool v) const { return enableInstanceSupport; }
+	void SetInstanceSupport(const bool v) { enableInstanceSupport = v; }
+	bool RequiresInstanceSupport() const { return enableInstanceSupport && hasInstances; }
+	bool HasInstances() const { return hasInstances; }
+
 	TriangleMeshID Add(const Mesh *mesh);
 
 	const Accelerator *GetAccelerator(const AcceleratorType accelType);
@@ -80,6 +85,8 @@ private:
 	BSphere bsphere;
 
 	std::map<AcceleratorType, Accelerator *> accels;
+
+	bool hasInstances, enableInstanceSupport;
 };
 
 }
