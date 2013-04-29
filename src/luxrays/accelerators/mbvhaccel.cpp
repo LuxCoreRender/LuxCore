@@ -27,6 +27,7 @@
 #include <functional>
 #include <algorithm>
 #include <limits>
+#include <boost/foreach.hpp>
 
 #include "luxrays/accelerators/mbvhaccel.h"
 #include "luxrays/core/utils.h"
