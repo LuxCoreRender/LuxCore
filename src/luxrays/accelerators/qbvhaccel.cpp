@@ -264,7 +264,7 @@ void OpenCLQBVHImageKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const 
 }
 
 OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
+		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {
 	const Context *deviceContext = device->GetContext();
 	cl::Context &oclContext = device->GetOpenCLContext();
 	const std::string &deviceName(device->GetName());
@@ -276,7 +276,7 @@ OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	bool useImage = true;
 	size_t nodeWidth, nodeHeight, leafWidth, leafHeight;
 	// Check if I can use image to store the data set
-	if (disableImageStorage) {
+	if (!enableImageStorage) {
 		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 			"] Disable forced for QBVH scene storage inside image");
 		useImage = false;
@@ -411,7 +411,7 @@ OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device, const u_int kernelCount,
-		const u_int stackSize, const bool disableImageStorage) const {
+		const u_int stackSize, const bool enableImageStorage) const {
 	return NULL;
 }
 

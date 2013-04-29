@@ -803,10 +803,13 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 	intersectionDevices[0]->SetQueueCount(renderThreadCount);
 
 	// Check if I have to set max. QBVH stack size
+	const bool enableImageStorage = renderConfig->cfg.GetBoolean("accelerator.imagestorage.enable", true);
 	const size_t qbvhStackSize = renderConfig->cfg.GetInt("accelerator.qbvh.stacksize.max",
 			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
+	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
+		intersectionDevices[i]->SetEnableImageStorage(enableImageStorage);
 		intersectionDevices[i]->SetMaxStackSize(qbvhStackSize);
+	}
 
 	// Set the LuxRays DataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);

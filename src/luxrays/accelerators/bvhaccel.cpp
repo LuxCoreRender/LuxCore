@@ -247,7 +247,7 @@ void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int 
 }
 
 OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
+		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {
 	// Setup kernels
 	return new OpenCLBVHKernels(device, kernelCount, this);
 }
@@ -255,7 +255,7 @@ OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 #else
 
 OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool disableImageStorage) const {
+		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {
 	return NULL;
 }
 
