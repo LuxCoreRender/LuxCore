@@ -76,7 +76,24 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 
 		scene = new Scene(sceneFileName, imageScale);
 	}
+
 	scene->enableInstanceSupport = cfg.GetBoolean("accelerator.instances.enable", true);
+	const string accelType = cfg.GetString("accelerator.type", "AUTO");
+	// "-1" is for compatibility with the past. however all other old values are
+	// not emulated (i.e. the "AUTO" behavior is preferred in that case)
+	if ((accelType == "AUTO") || (accelType == "-1"))
+		scene->accelType = ACCEL_AUTO;
+	else if (accelType == "BVH")
+		scene->accelType = ACCEL_BVH;
+	else if (accelType == "MBVH")
+		scene->accelType = ACCEL_MBVH;
+	else if (accelType == "QBVH")
+		scene->accelType = ACCEL_QBVH;
+	else if (accelType == "MQBVH")
+		scene->accelType = ACCEL_MQBVH;
+	else {
+		SLG_LOG("Unknown accelerator type (using AUTO instead): " << accelType);
+	}
 
 	// Remove unused material
 	scene->RemoveUnusedMaterials();

@@ -233,19 +233,24 @@ RayBuffer *OpenCLIntersectionDevice::PopRayBuffer(const u_int queueIndex) {
 void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
-	// Check if the OpenCL device prefer float4 or float1
-	if (deviceDesc->GetNativeVectorWidthFloat() >= 4) {
-		// The device prefers float4
-		if (dataSet->RequiresInstanceSupport())
-			accel = dataSet->GetAccelerator(ACCEL_MQBVH);
-		else
-			accel = dataSet->GetAccelerator(ACCEL_QBVH);
+	const AcceleratorType accelType = dataSet->GetAcceleratorType();
+	if (accelType != ACCEL_AUTO) {
+		accel = dataSet->GetAccelerator(accelType);
 	} else {
-		// The device prefers float1
-		if (dataSet->RequiresInstanceSupport())
-			accel = dataSet->GetAccelerator(ACCEL_MBVH);
-		else
-			accel = dataSet->GetAccelerator(ACCEL_BVH);
+		// Check if the OpenCL device prefer float4 or float1
+		if (deviceDesc->GetNativeVectorWidthFloat() >= 4) {
+			// The device prefers float4
+			if (dataSet->RequiresInstanceSupport())
+				accel = dataSet->GetAccelerator(ACCEL_MQBVH);
+			else
+				accel = dataSet->GetAccelerator(ACCEL_QBVH);
+		} else {
+			// The device prefers float1
+			if (dataSet->RequiresInstanceSupport())
+				accel = dataSet->GetAccelerator(ACCEL_MBVH);
+			else
+				accel = dataSet->GetAccelerator(ACCEL_BVH);
+		}
 	}
 }
 
