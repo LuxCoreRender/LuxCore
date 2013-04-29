@@ -105,7 +105,6 @@ Context::~Context() {
 
 void Context::SetDataSet(DataSet *dataSet) {
 	assert (!started);
-	assert ((dataSet == NULL) || ((dataSet != NULL) && dataSet->IsPreprocessed()));
 
 	currentDataSet = dataSet;
 
@@ -113,24 +112,21 @@ void Context::SetDataSet(DataSet *dataSet) {
 		idevices[i]->SetDataSet(currentDataSet);
 }
 
-//void Context::UpdateDataSet() {
-//	assert (started);
-//
-//	if (currentDataSet->GetAcceleratorType() != ACCEL_MQBVH)
-//		throw std::runtime_error("Context::UpdateDataSet supported only with MQBVH accelerator");
-//
-//	// Update the data set
-//	currentDataSet->UpdateMeshes();
-//
-//#if !defined(LUXRAYS_DISABLE_OPENCL)
-//	// Update all OpenCL devices
-//	for (u_int i = 0; i < idevices.size(); ++i) {
-//		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
-//		if (oclDevice)
-//			oclDevice->UpdateDataSet();
-//	}
-//#endif
-//}
+void Context::UpdateDataSet() {
+	assert (started);
+
+	// Update the data set
+	currentDataSet->Update();
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Update all OpenCL devices
+	for (u_int i = 0; i < idevices.size(); ++i) {
+		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
+		if (oclDevice)
+			oclDevice->Update();
+	}
+#endif
+}
 
 void Context::Start() {
 	assert (!started);

@@ -119,7 +119,7 @@ public:
 	DataSet *GetCurrentDataSet() const { return currentDataSet; }
 
 	void SetDataSet(DataSet *dataSet);
-//	void UpdateDataSet();
+	void UpdateDataSet();
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to Context management (i.e. start/stop, etc.)

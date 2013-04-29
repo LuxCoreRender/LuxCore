@@ -48,7 +48,7 @@ public:
 		}
 	}
 
-//	virtual void UpdateDataSet(const DataSet *newDataSet) = 0;
+	virtual void Update(const DataSet *newDataSet) = 0;
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
@@ -121,7 +121,7 @@ public:
 	static size_t RayBufferSize;
 
 protected:
-//	virtual void UpdateDataSet();
+	virtual void Update();
 
 private:
 	static void IntersectionThread(OpenCLIntersectionDevice *renderDevice);

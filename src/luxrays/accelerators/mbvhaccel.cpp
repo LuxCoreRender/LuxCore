@@ -354,7 +354,7 @@ public:
 		}
 	}
 
-	virtual void UpdateDataSet(const DataSet *newDataSet) { assert(false); }
+	virtual void Update(const DataSet *newDataSet) { assert(false); }
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);

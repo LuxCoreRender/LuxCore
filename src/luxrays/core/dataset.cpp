@@ -159,6 +159,22 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 		return it->second;
 }
 
+bool DataSet::DoesAllAcceleratorsSupportUpdate() const {
+	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+		if (!it->second->DoesSupportUpdate())
+			return false;
+	}
+
+	return true;
+}
+
+const void DataSet::Update() {
+	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+		assert(it->second->DoesSupportUpdate());
+		it->second->Update();
+	}
+}
+
 bool DataSet::IsEqual(const DataSet *dataSet) const {
 	return (dataSet != NULL) && (dataSetID == dataSet->dataSetID);
 }
