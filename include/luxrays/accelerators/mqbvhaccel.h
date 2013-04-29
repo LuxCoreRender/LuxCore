@@ -53,7 +53,8 @@ public:
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	void Update();
+	virtual bool DoesSupportUpdate() const { return true; }
+	virtual void Update();
 
 private:
 	static bool MeshPtrCompare(const Mesh *, const Mesh *);

@@ -47,6 +47,8 @@ public:
 	TriangleMeshID Add(const Mesh *mesh);
 
 	const Accelerator *GetAccelerator(const AcceleratorType accelType);
+	bool DoesAllAcceleratorsSupportUpdate() const;
+	const void Update();
 
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }

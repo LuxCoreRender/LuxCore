@@ -36,8 +36,8 @@ namespace luxrays {
 
 class OpenCLMQBVHKernels : public OpenCLKernels {
 public:
-	OpenCLMQBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount) :
-		OpenCLKernels(dev, kernelCount), mqbvhBuff(NULL), memMapBuff(NULL), leafBuff(NULL),
+	OpenCLMQBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MQBVHAccel *accel) :
+		OpenCLKernels(dev, kernelCount), mqbvh(accel), mqbvhBuff(NULL), memMapBuff(NULL), leafBuff(NULL),
 		leafQuadTrisBuff(NULL), invTransBuff(NULL), trisOffsetBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
 		const std::string &deviceName(device->GetName());
@@ -113,12 +113,14 @@ public:
 
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 		cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o);
-//	virtual void UpdateDataSet(const DataSet *newDataSet);
+	virtual void Update(const DataSet *newDataSet);
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
 protected:
+	const MQBVHAccel *mqbvh;
+
 	// MQBVH fields
 	cl::Buffer *mqbvhBuff;
 	cl::Buffer *memMapBuff;
@@ -148,44 +150,42 @@ void OpenCLMQBVHKernels::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 	}
 }
 
-//void OpenCLMQBVHKernels::UpdateDataSet(const DataSet *newDataSet) {
-//	const Context *deviceContext = device->GetContext();
-//	const std::string &deviceName(device->GetName());
-//	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
-//	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-//		"] Updating DataSet");
-//
-//	const MQBVHAccel *mqbvh = (MQBVHAccel *)newDataSet->GetAccelerator();
-//
-//	// Upload QBVH leafs transformations
-//	Matrix4x4 *invTrans = new Matrix4x4[mqbvh->GetNLeafs()];
-//	for (u_int i = 0; i < mqbvh->GetNLeafs(); ++i) {
-//		if (mqbvh->GetTransforms()[i])
-//			invTrans[i] = mqbvh->GetTransforms()[i]->mInv;
-//		else
-//			invTrans[i] = Matrix4x4();
-//	}
-//
-//	device->GetOpenCLQueue().enqueueWriteBuffer(
-//		*invTransBuff,
-//		CL_TRUE,
-//		0,
-//		mqbvh->GetNLeafs() * sizeof(Matrix4x4),
-//		invTrans);
-//	delete[] invTrans;
-//
-//	// Update MQBVH nodes
-//	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
-//	delete mqbvhBuff;
-//
-//	mqbvhBuff = new cl::Buffer(deviceDesc->GetOCLContext(),
-//		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-//		sizeof(QBVHNode) * mqbvh->GetNNodes(), mqbvh->GetTree());
-//	device->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
-//
-//	BOOST_FOREACH(cl::Kernel *kernel, kernels)
-//		kernel->setArg(2, *mqbvhBuff);
-//}
+void OpenCLMQBVHKernels::Update(const DataSet *newDataSet) {
+	const Context *deviceContext = device->GetContext();
+	const std::string &deviceName(device->GetName());
+	OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
+	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+		"] Updating DataSet");
+
+	// Upload QBVH leafs transformations
+	Matrix4x4 *invTrans = new Matrix4x4[mqbvh->GetNLeafs()];
+	for (u_int i = 0; i < mqbvh->GetNLeafs(); ++i) {
+		if (mqbvh->GetTransforms()[i])
+			invTrans[i] = mqbvh->GetTransforms()[i]->mInv;
+		else
+			invTrans[i] = Matrix4x4();
+	}
+
+	device->GetOpenCLQueue().enqueueWriteBuffer(
+		*invTransBuff,
+		CL_TRUE,
+		0,
+		mqbvh->GetNLeafs() * sizeof(Matrix4x4),
+		invTrans);
+	delete[] invTrans;
+
+	// Update MQBVH nodes
+	device->FreeMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+	delete mqbvhBuff;
+
+	mqbvhBuff = new cl::Buffer(deviceDesc->GetOCLContext(),
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+		sizeof(QBVHNode) * mqbvh->GetNNodes(), mqbvh->GetTree());
+	device->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
+
+	BOOST_FOREACH(cl::Kernel *kernel, kernels)
+		kernel->setArg(2, *mqbvhBuff);
+}
 
 void OpenCLMQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -318,7 +318,7 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	device->AllocMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
 
 	// Setup kernels
-	OpenCLMQBVHKernels *kernels = new OpenCLMQBVHKernels(device, kernelCount);
+	OpenCLMQBVHKernels *kernels = new OpenCLMQBVHKernels(device, kernelCount, this);
 	kernels->SetBuffers(mqbvhBuff, leafBuff, leafQuadTrisBuff, memMapBuff,
 				invTransBuff, trisOffsetBuff);
 

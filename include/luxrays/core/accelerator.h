@@ -47,6 +47,8 @@ public:
 		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const = 0;
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount, const u_int totalTriangleCount) = 0;
+	virtual bool DoesSupportUpdate() const { return false; }
+	virtual void Update() { throw new std::runtime_error("Internal error in Accelerator::Update()"); }
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
 

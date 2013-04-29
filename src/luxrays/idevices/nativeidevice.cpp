@@ -55,14 +55,16 @@ NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
 void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
-	const AcceleratorType accelType = dataSet->GetAcceleratorType();
-	if (accelType != ACCEL_AUTO) {
-		accel = dataSet->GetAccelerator(accelType);
-	} else {
-		if (dataSet->RequiresInstanceSupport())
-			accel = dataSet->GetAccelerator(ACCEL_MQBVH);
-		else
-			accel = dataSet->GetAccelerator(ACCEL_QBVH);
+	if (dataSet) {
+		const AcceleratorType accelType = dataSet->GetAcceleratorType();
+		if (accelType != ACCEL_AUTO) {
+			accel = dataSet->GetAccelerator(accelType);
+		} else {
+			if (dataSet->RequiresInstanceSupport())
+				accel = dataSet->GetAccelerator(ACCEL_MQBVH);
+			else
+				accel = dataSet->GetAccelerator(ACCEL_QBVH);
+		}
 	}
 }
 
