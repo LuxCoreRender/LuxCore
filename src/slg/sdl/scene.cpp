@@ -48,6 +48,7 @@ Scene::Scene() {
 	sunLight = NULL;
 
 	dataSet = NULL;
+	enableInstanceSupport = true;
 }
 
 Scene::Scene(const std::string &fileName, const float imageScale) {
@@ -105,6 +106,7 @@ Scene::Scene(const std::string &fileName, const float imageScale) {
 		throw std::runtime_error("The scene doesn't include any light source");
 
 	dataSet = NULL;
+	enableInstanceSupport = true;
 }
 
 Scene::~Scene() {
@@ -121,6 +123,7 @@ Scene::~Scene() {
 void Scene::Preprocess(Context *ctx) {
 	delete dataSet;
 	dataSet = new DataSet(ctx);
+	dataSet->SetInstanceSupport(enableInstanceSupport);
 
 	// Add all objects
 	const std::vector<ExtMesh *> &objects = meshDefs.GetAllMesh();

@@ -55,7 +55,10 @@ NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
 void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
-	accel = dataSet->GetAccelerator(ACCEL_QBVH);
+	if (dataSet->RequiresInstanceSupport())
+		accel = dataSet->GetAccelerator(ACCEL_MQBVH);
+	else
+		accel = dataSet->GetAccelerator(ACCEL_QBVH);
 }
 
 void NativeThreadIntersectionDevice::Start() {
