@@ -62,7 +62,7 @@ public:
 		//----------------------------------------------------------------------
 
 		// Check how many pages I have to allocate
-		const size_t maxVertCount = maxMemAlloc / (sizeof(Point) * 3);
+		const size_t maxVertCount = maxMemAlloc / sizeof(Point);
 		const u_int totalVertCount = bvh->preprocessedMesh->GetTotalVertexCount();
 		const Point *verts = bvh->preprocessedMesh->GetVertices();
 		u_int vertIndex = 0;

@@ -45,6 +45,7 @@ public:
 
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const = 0;
+	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount, const u_int totalTriangleCount) = 0;
 	virtual bool DoesSupportUpdate() const { return false; }
