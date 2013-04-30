@@ -44,6 +44,7 @@ std::string KernelSource_mbvh =
 "	};\n"
 "	// Most significant bit is used to mark leafs\n"
 "	uint nodeData;\n"
+"	int pad0; // To align to float4\n"
 "} BVHAccelArrayNode;\n"
 "\n"
 "#define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)\n"
