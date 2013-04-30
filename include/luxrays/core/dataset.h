@@ -66,10 +66,7 @@ public:
 		return &meshIDs[0];
 	}
 	const TriangleID GetMeshTriangleID(const u_int index) const {
-		return meshTriangleIDs[index];
-	}
-	const TriangleID *GetMeshTriangleIDTable() const {
-		return &meshTriangleIDs[0];
+		return index - meshTriangleOffset[GetMeshID(index)];
 	}
 
 	friend class Context;
@@ -83,8 +80,8 @@ private:
 	unsigned int totalVertexCount;
 	unsigned int totalTriangleCount;
 	std::deque<const Mesh *> meshes;
-	std::vector<TriangleMeshID> meshIDs;
-	std::vector<TriangleID> meshTriangleIDs;
+	std::vector<TriangleMeshID> meshIDs; // One for each triangle
+	std::vector<TriangleMeshID> meshTriangleOffset; // One for each mesh
 
 	BBox bbox;
 	BSphere bsphere;

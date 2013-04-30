@@ -80,16 +80,16 @@ TriangleMeshID DataSet::Add(const Mesh *mesh) {
 	const TriangleMeshID id = meshes.size();
 	meshes.push_back(mesh);
 
-	totalVertexCount += mesh->GetTotalVertexCount();
-	totalTriangleCount += mesh->GetTotalTriangleCount();
-
 	bbox = Union(bbox, mesh->GetBBox());
 	bsphere = bbox.BoundingSphere();
 
-	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
+	// TODO: optimize memory used by meshTriangleOffset and meshIDs vectors
+	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
 		meshIDs.push_back(id);
-		meshTriangleIDs.push_back(i);
-	}
+	meshTriangleOffset.push_back(totalTriangleCount);
+
+	totalVertexCount += mesh->GetTotalVertexCount();
+	totalTriangleCount += mesh->GetTotalTriangleCount();
 
 	if ((mesh->GetType() == TYPE_TRIANGLE_INSTANCE) || (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE))
 		hasInstances = true;
