@@ -50,72 +50,6 @@ typedef struct {
 #define BVHNodeData_GetNodeIndex(nodeData) ((nodeData) & 0x0fffffffu)
 #endif
 
-void Triangle_Intersect(
-		const float3 rayOrig,
-		const float3 rayDir,
-		const float mint,
-		float *maxt,
-		uint *hitIndex,
-		float *hitB1,
-		float *hitB2,
-		const uint currentIndex,
-		const float3 v0,
-		const float3 v1,
-		const float3 v2) {
-
-	// Calculate intersection
-	const float3 e1 = v1 - v0;
-	const float3 e2 = v2 - v0;
-	const float3 s1 = cross(rayDir, e2);
-
-	const float divisor = dot(s1, e1);
-	if (divisor == 0.f)
-		return;
-
-	const float invDivisor = 1.f / divisor;
-
-	// Compute first barycentric coordinate
-	const float3 d = rayOrig - v0;
-	const float b1 = dot(d, s1) * invDivisor;
-	if (b1 < 0.f)
-		return;
-
-	// Compute second barycentric coordinate
-	const float3 s2 = cross(d, e1);
-	const float b2 = dot(rayDir, s2) * invDivisor;
-	if (b2 < 0.f)
-		return;
-
-	const float b0 = 1.f - b1 - b2;
-	if (b0 < 0.f)
-		return;
-
-	// Compute _t_ to intersection point
-	const float t = dot(e2, s2) * invDivisor;
-	if (t < mint || t > *maxt)
-		return;
-
-	*maxt = t;
-	*hitB1 = b1;
-	*hitB2 = b2;
-	*hitIndex = currentIndex;
-}
-
-int BBox_IntersectP(
-		const float3 rayOrig, const float3 invRayDir,
-		const float mint, const float maxt,
-		const float3 pMin, const float3 pMax) {
-	const float3 l1 = (pMin - rayOrig) * invRayDir;
-	const float3 l2 = (pMax - rayOrig) * invRayDir;
-	const float3 tNear = fmin(l1, l2);
-	const float3 tFar = fmax(l1, l2);
-
-	float t0 = fmax(fmax(fmax(tNear.x, tNear.y), fmax(tNear.x, tNear.z)), mint);
-    float t1 = fmin(fmin(fmin(tFar.x, tFar.y), fmin(tFar.x, tFar.z)), maxt);
-
-	return (t1 > t0);
-}
-
 #if (BVH_NODES_PAGE_COUNT > 1)
 void NextNode(uint *pageIndex, uint *nodeIndex) {
 	++(*nodeIndex);
@@ -249,10 +183,13 @@ __kernel void Intersect(
 #endif
 
 	__global Ray *ray = &rays[gid];
-	const float3 rayOrig = VLOAD3F(&ray->o.x);
-	const float3 rayDir = VLOAD3F(&ray->d.x);
-	const float mint = ray->mint;
-	float maxt = ray->maxt;
+//	const float3 rayOrig = VLOAD3F(&ray->o.x);
+//	const float3 rayDir = VLOAD3F(&ray->d.x);
+//	const float mint = ray->mint;
+//	float maxt = ray->maxt;
+	float3 rayOrig, rayDir;
+	float mint, maxt;
+	Ray_ReadAligned4(ray, &rayOrig, &rayDir, &mint, &maxt);
 
 	const float3 invRayDir = 1.f / rayDir;
 
@@ -310,7 +247,7 @@ __kernel void Intersect(
 			const float3 pMin = VLOAD3F(&node->bvhNode.bboxMin[0]);
 			const float3 pMax = VLOAD3F(&node->bvhNode.bboxMax[0]);
 
-			if (BBox_IntersectP(rayOrig, invRayDir, mint, maxt, pMin, pMax)) {
+			if (BBox_IntersectP(pMin, pMax, rayOrig, invRayDir, mint, maxt)) {
 #if (BVH_NODES_PAGE_COUNT == 1)
 				++currentNode;
 #else
@@ -330,9 +267,5 @@ __kernel void Intersect(
 	}
 
 	// Write result
-	__global RayHit *rayHit = &rayHits[gid];
-	rayHit->t = maxt;
-	rayHit->b1 = b1;
-	rayHit->b2 = b2;
-	rayHit->index = hitIndex;
+	RayHit_WriteAligned4(&rayHits[gid], maxt, b1, b2, hitIndex);
 }

@@ -1,5 +1,3 @@
-#line 2 "ray_funcs.cl"
-
 /***************************************************************************
  *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
@@ -21,41 +19,23 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
-		const float mint, const float maxt) {
-	VSTORE3F(orig, &ray->o.x);
-	VSTORE3F(dir, &ray->d.x);
-	ray->mint = mint;
-	ray->maxt = maxt;
-}
+#include "luxrays/core/accelerator.h"
 
-void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir, const float maxt) {
-	VSTORE3F(orig, &ray->o.x);
-	VSTORE3F(dir, &ray->d.x);
-	ray->mint = MachineEpsilon_E_Float3(orig);
-	ray->maxt = maxt;
-}
+using namespace luxrays;
 
-void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir) {
-	VSTORE3F(orig, &ray->o.x);
-	VSTORE3F(dir, &ray->d.x);
-	ray->mint = MachineEpsilon_E_Float3(orig);
-	ray->maxt = INFINITY;
-}
-
-void Ray_ReadAligned4(__global Ray *ray, float3 *rayOrig, float3 *rayDir, float *mint, float *maxt) {
-	__global float4 *basePtr =(__global float4 *)ray;
-	const float4 data0 = (*basePtr++);
-	const float4 data1 = (*basePtr);
-
-	*rayOrig = (float3)(data0.x, data0.y, data0.z);
-	*rayDir = (float3)(data0.w, data1.x, data1.y);
-
-	*mint = data1.z;
-	*maxt = data1.w;
-}
-
-void RayHit_WriteAligned4(__global RayHit *rayHit, const float t, const float b1, const float b2, const uint index) {
-	__global float4 *data = (__global float4 *)rayHit;
-	*data = (float4)(t, b1, b2, as_float(index));
+std::string Accelerator::AcceleratorType2String(const AcceleratorType type) {
+	switch(type) {
+		case ACCEL_AUTO:
+			return "AUTO";
+		case ACCEL_BVH:
+			return "BVH";
+		case ACCEL_QBVH:
+			return "QBVH";
+		case ACCEL_MQBVH:
+			return "MQBVH";
+		case ACCEL_MBVH:
+			return "MBVH";
+		default:
+			throw std::runtime_error("Unknown AcceleratorType in AcceleratorType2String()");
+	}
 }

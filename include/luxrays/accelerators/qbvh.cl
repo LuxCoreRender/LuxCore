@@ -330,8 +330,5 @@ __kernel void Intersect(
 	//printf("MaxDepth=%02d\n", maxDepth);
 
 	// Write result
-	rayHits[gid].t = rayHit.t;
-	rayHits[gid].b1 = rayHit.b1;
-	rayHits[gid].b2 = rayHit.b2;
-	rayHits[gid].index = rayHit.index;
+	RayHit_WriteAligned4(&rayHits[gid], rayHit.t, rayHit.b1, rayHit.b2, rayHit.index);
 }

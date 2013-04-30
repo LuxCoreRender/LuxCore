@@ -49,13 +49,18 @@ public:
 		// Compile the source
 		std::stringstream params;
 		params << "-D LUXRAYS_OPENCL_KERNEL"
+				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
+				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 				" -D QBVH_STACK_SIZE=" << stackSize;
 
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
+			luxrays::ocl::KernelSource_epsilon_types +
+			luxrays::ocl::KernelSource_epsilon_funcs +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
+			luxrays::ocl::KernelSource_ray_funcs +
 			luxrays::ocl::KernelSource_bbox_types);
 		code += luxrays::ocl::KernelSource_qbvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
@@ -131,14 +136,19 @@ public:
 		// Compile the source
 		std::stringstream params;
 		params << "-D LUXRAYS_OPENCL_KERNEL"
+				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
+				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 				" -D USE_IMAGE_STORAGE"
 				" -D QBVH_STACK_SIZE=" << stackSize;
 
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
+			luxrays::ocl::KernelSource_epsilon_types +
+			luxrays::ocl::KernelSource_epsilon_funcs +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
+			luxrays::ocl::KernelSource_ray_funcs +
 			luxrays::ocl::KernelSource_bbox_types);
 		code += luxrays::ocl::KernelSource_qbvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));

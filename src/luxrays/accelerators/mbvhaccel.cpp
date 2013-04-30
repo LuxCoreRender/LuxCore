@@ -278,6 +278,8 @@ public:
 		// Compile options
 		std::stringstream opts;
 		opts << " -D LUXRAYS_OPENCL_KERNEL"
+				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
+				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 				" -D MBVH_VERTS_PAGE_COUNT=" << vertsBuffs.size() <<
 				" -D MBVH_NODES_PAGE_SIZE=" << pageNodeCount <<
 				" -D MBVH_NODES_PAGE_COUNT=" << nodeBuffs.size();
@@ -291,12 +293,18 @@ public:
 
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
+			luxrays::ocl::KernelSource_epsilon_types +
+			luxrays::ocl::KernelSource_epsilon_funcs +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
+			luxrays::ocl::KernelSource_ray_funcs +
 			luxrays::ocl::KernelSource_bbox_types +
+			luxrays::ocl::KernelSource_bbox_funcs +
 			luxrays::ocl::KernelSource_matrix4x4_types +
-			luxrays::ocl::KernelSource_triangle_types);
+			luxrays::ocl::KernelSource_matrix4x4_funcs +
+			luxrays::ocl::KernelSource_triangle_types +
+			luxrays::ocl::KernelSource_triangle_funcs);
 		code += luxrays::ocl::KernelSource_mbvh;
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);

@@ -118,6 +118,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/normal_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bbox_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bbox_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
@@ -137,6 +138,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/qbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/accelerator.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/dataset.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp
@@ -180,6 +182,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/vector_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/normal_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bbox_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bbox_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/spectrum_types_kernel.cpp
