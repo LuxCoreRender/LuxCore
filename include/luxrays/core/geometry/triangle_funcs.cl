@@ -59,3 +59,54 @@ float Triangle_InterpolateAlpha(const float a0, const float a1, const float a2,
 		const float b0, const float b1, const float b2) {
 	return b0 * a0 + b1 * a1 + b2 * a2;
 }
+
+void Triangle_Intersect(
+		const float3 rayOrig,
+		const float3 rayDir,
+		const float mint,
+		float *maxt,
+		uint *hitIndex,
+		float *hitB1,
+		float *hitB2,
+		const uint currentIndex,
+		const float3 v0,
+		const float3 v1,
+		const float3 v2) {
+
+	// Calculate intersection
+	const float3 e1 = v1 - v0;
+	const float3 e2 = v2 - v0;
+	const float3 s1 = cross(rayDir, e2);
+
+	const float divisor = dot(s1, e1);
+	if (divisor == 0.f)
+		return;
+
+	const float invDivisor = 1.f / divisor;
+
+	// Compute first barycentric coordinate
+	const float3 d = rayOrig - v0;
+	const float b1 = dot(d, s1) * invDivisor;
+	if (b1 < 0.f)
+		return;
+
+	// Compute second barycentric coordinate
+	const float3 s2 = cross(d, e1);
+	const float b2 = dot(rayDir, s2) * invDivisor;
+	if (b2 < 0.f)
+		return;
+
+	const float b0 = 1.f - b1 - b2;
+	if (b0 < 0.f)
+		return;
+
+	// Compute _t_ to intersection point
+	const float t = dot(e2, s2) * invDivisor;
+	if (t < mint || t > *maxt)
+		return;
+
+	*maxt = t;
+	*hitB1 = b1;
+	*hitB2 = b2;
+	*hitIndex = currentIndex;
+}

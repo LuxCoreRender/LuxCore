@@ -53,6 +53,7 @@ extern std::string KernelSource_vector_types;
 extern std::string KernelSource_vector_funcs;
 extern std::string KernelSource_normal_types;
 extern std::string KernelSource_bbox_types;
+extern std::string KernelSource_bbox_funcs;
 extern std::string KernelSource_triangle_types;
 extern std::string KernelSource_triangle_funcs;
 extern std::string KernelSource_uv_types;

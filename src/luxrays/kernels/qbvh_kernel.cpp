@@ -333,9 +333,6 @@ std::string KernelSource_qbvh =
 "	//printf(\"MaxDepth=%02d\\n\", maxDepth);\n"
 "\n"
 "	// Write result\n"
-"	rayHits[gid].t = rayHit.t;\n"
-"	rayHits[gid].b1 = rayHit.b1;\n"
-"	rayHits[gid].b2 = rayHit.b2;\n"
-"	rayHits[gid].index = rayHit.index;\n"
+"	RayHit_WriteAligned4(&rayHits[gid], rayHit.t, rayHit.b1, rayHit.b2, rayHit.index);\n"
 "}\n"
 ; } }

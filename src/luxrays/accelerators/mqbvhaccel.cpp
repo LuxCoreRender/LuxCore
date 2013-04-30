@@ -45,11 +45,19 @@ public:
 		cl::Device &oclDevice = device->GetOpenCLDevice();
 
 		// Compile sources
+		std::stringstream params;
+		params << "-D LUXRAYS_OPENCL_KERNEL"
+				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
+				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
+
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
+			luxrays::ocl::KernelSource_epsilon_types +
+			luxrays::ocl::KernelSource_epsilon_funcs +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
+			luxrays::ocl::KernelSource_ray_funcs +
 			luxrays::ocl::KernelSource_bbox_types +
 			luxrays::ocl::KernelSource_matrix4x4_types);
 		code += luxrays::ocl::KernelSource_mqbvh;
@@ -58,7 +66,7 @@ public:
 		try {
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, "-D LUXRAYS_OPENCL_KERNEL");
+			program.build(buildDevice, params.str().c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
