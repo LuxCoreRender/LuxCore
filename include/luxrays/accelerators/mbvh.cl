@@ -204,12 +204,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	uint currentTriangleOffset = 0;
 
 	__global Ray *ray = &rays[gid];
-	const float3 rootRayOrig = VLOAD3F(&ray->o.x);
+	//const float3 rootRayOrig = VLOAD3F(&ray->o.x);
+	//const float3 rootRayDir = VLOAD3F(&ray->d.x);
+	//const float mint = ray->mint;
+	//float maxt = ray->maxt;
+	float3 rootRayOrig, rootRayDir;
+	float mint, maxt;
+	Ray_ReadAligned4(ray, &rootRayOrig, &rootRayDir, &mint, &maxt);
+
 	float3 currentRayOrig = rootRayOrig;
-	const float3 rootRayDir = VLOAD3F(&ray->d.x);
 	float3 currentRayDir = rootRayDir;
-	const float mint = ray->mint;
-	float maxt = ray->maxt;
 
 	uint hitIndex = NULL_INDEX;
 
@@ -254,37 +258,50 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 		__global BVHAccelArrayNode *nodePage = nodePages[currentPage];
 		__global BVHAccelArrayNode *node = &nodePage[currentNode];
 #endif
-		const uint nodeData = node->nodeData;
+// Read the node
+		__global float4 *data = (__global float4 *)node;
+		const float4 data0 = *data++;
+		const float4 data1 = *data;
+
+		//const uint nodeData = node->nodeData;
+		const uint nodeData = as_uint(data1.s2);
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			if (insideLeafTree) {
 				// I'm inside a leaf tree, I have to check the triangle
+				
+				//const uint i0 = node->triangleLeaf.v[0];
+				//const uint i1 = node->triangleLeaf.v[1];
+				//const uint i2 = node->triangleLeaf.v[2];
+				const uint v0 = as_uint(data0.s0);
+				const uint v1 = as_uint(data0.s1);
+				const uint v2 = as_uint(data0.s2);
+
 #if (MBVH_VERTS_PAGE_COUNT == 1)
 				// Fast path for when there is only one memory page
-				const float3 p0 = VLOAD3F(&vertPage0[node->triangleLeaf.v[0]].x);
-				const float3 p1 = VLOAD3F(&vertPage0[node->triangleLeaf.v[1]].x);
-				const float3 p2 = VLOAD3F(&vertPage0[node->triangleLeaf.v[2]].x);
+				const float3 p0 = VLOAD3F(&vertPage0[v0].x);
+				const float3 p1 = VLOAD3F(&vertPage0[v1].x);
+				const float3 p2 = VLOAD3F(&vertPage0[v2].x);
 #else
-				const uint v0 = node->triangleLeaf.v[0];
 				const uint pv0 = (v0 & 0xe0000000u) >> 29;
 				const uint iv0 = (v0 & 0x1fffffffu);
 				__global Point *vp0 = vertPages[pv0];
 				const float3 p0 = VLOAD3F(&vp0[iv0].x);
 
-				const uint v1 = node->triangleLeaf.v[1];
 				const uint pv1 = (v1 & 0xe0000000u) >> 29;
 				const uint iv1 = (v1 & 0x1fffffffu);
 				__global Point *vp1 = vertPages[pv1];
 				const float3 p1 = VLOAD3F(&vp1[iv1].x);
 
-				const uint v2 = node->triangleLeaf.v[2];
 				const uint pv2 = (v2 & 0xe0000000u) >> 29;
 				const uint iv2 = (v2 & 0x1fffffffu);
 				__global Point *vp2 = vertPages[pv2];
 				const float3 p2 = VLOAD3F(&vp2[iv2].x);
 #endif
 
+				//const uint triangleIndex = node->triangleLeaf.triangleIndex + currentTriangleOffset;
+				const uint triangleIndex = as_uint(data0.s3) + currentTriangleOffset;
 				Triangle_Intersect(currentRayOrig, currentRayDir, mint, &maxt, &hitIndex, &b1, &b2,
-					node->triangleLeaf.triangleIndex + currentTriangleOffset, p0, p1, p2);
+					triangleIndex, p0, p1, p2);
 #if (MBVH_NODES_PAGE_COUNT == 1)
 				++currentNode;
 #else
@@ -294,16 +311,20 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 				// I have to check a leaf tree
 #if defined(MBVH_HAS_TRANSFORMATIONS)
 				// Transform the ray in the local coordinate system
-				if (node->bvhLeaf.transformIndex != NULL_INDEX) {
+				//const uint transformIndex = node->bvhLeaf.transformIndex;
+				const uint transformIndex = as_int(data0.s1);
+				if (transformIndex != NULL_INDEX) {
 					// Transform ray origin
-					__global Matrix4x4 *m = &leafTransformations[node->bvhLeaf.transformIndex];
+					__global Matrix4x4 *m = &leafTransformations[transformIndex];
 					currentRayOrig = Matrix4x4_ApplyPoint(m, rootRayOrig);
 					currentRayDir = Matrix4x4_ApplyVector(m, rootRayDir);
 				}
 #endif 
-				currentTriangleOffset = node->bvhLeaf.triangleOffsetIndex;
+				//currentTriangleOffset = node->bvhLeaf.triangleOffsetIndex;
+				currentTriangleOffset = as_int(data0.s2);
 
-				const uint leafIndex = node->bvhLeaf.leafIndex;
+				//const uint leafIndex = node->bvhLeaf.leafIndex;
+				const uint leafIndex = as_int(data0.s0);
 #if (MBVH_NODES_PAGE_COUNT == 1)
 				currentRootNode = currentNode + 1;
 				currentNode = leafIndex;
@@ -328,8 +349,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 			}
 		} else {
 			// It is a node, check the bounding box
-			const float3 pMin = VLOAD3F(&node->bvhNode.bboxMin[0]);
-			const float3 pMax = VLOAD3F(&node->bvhNode.bboxMax[0]);
+			//const float3 pMin = VLOAD3F(&node->bvhNode.bboxMin[0]);
+			//const float3 pMax = VLOAD3F(&node->bvhNode.bboxMax[0]);
+			const float3 pMin = (float3)(data0.s0, data0.s1, data0.s2);
+			const float3 pMax = (float3)(data0.s3, data1.s0, data1.s1);
 
 			if (BBox_IntersectP(pMin, pMax, currentRayOrig, 1.f / currentRayDir, mint, maxt)) {
 #if (MBVH_NODES_PAGE_COUNT == 1)
