@@ -272,7 +272,7 @@ void LeafIntersect(
 	}
 }
 
-__kernel void Intersect(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 		__global Ray *rays,
 		__global RayHit *rayHits,
 		__global QBVHNode *nodes,

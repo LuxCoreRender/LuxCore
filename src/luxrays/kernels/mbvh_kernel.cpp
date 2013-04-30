@@ -63,7 +63,7 @@ std::string KernelSource_mbvh =
 "}\n"
 "#endif\n"
 "\n"
-"__kernel void Intersect(\n"
+"__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(\n"
 "		__global Ray *rays,\n"
 "		__global RayHit *rayHits,\n"
 "		const uint rayCount\n"
