@@ -41,6 +41,7 @@ typedef struct {
 	};
 	// Most significant bit is used to mark leafs
 	uint nodeData;
+	int pad0; // To align to float4
 } BVHAccelArrayNode;
 
 #define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
