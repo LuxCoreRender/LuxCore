@@ -66,6 +66,7 @@ struct BVHAccelArrayNode {
 	};
 	// Most significant bit is used to mark leafs
 	u_int nodeData;
+	int pad0; // To align to float4
 };
 
 #define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
