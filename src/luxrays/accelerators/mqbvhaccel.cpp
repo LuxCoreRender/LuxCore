@@ -250,7 +250,7 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		"] MQBVH leaf Nodes buffer size: " <<
 		(totalNodesCount * sizeof(QBVHNode) / 1024) << "Kbytes");
 	cl::Buffer *leafBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		totalNodesCount * sizeof(QBVHNode), allLeafs);
+		sizeof(QBVHNode) * totalNodesCount, allLeafs);
 	device->AllocMemory(leafBuff->getInfo<CL_MEM_SIZE>());
 	delete[] allLeafs;
 
@@ -271,7 +271,7 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		"] MQBVH QuadTriangle buffer size: " <<
 		(totalQuadTrisCount * sizeof(QuadTriangle) / 1024) << "Kbytes");
 	cl::Buffer *leafQuadTrisBuff = new cl::Buffer(oclContext, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		totalQuadTrisCount * sizeof(QuadTriangle), allQuadTris);
+		sizeof(QuadTriangle) * totalQuadTrisCount, allQuadTris);
 	device->AllocMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
 	delete[] allQuadTris;
 
@@ -286,7 +286,7 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		"Kbytes");
 	cl::Buffer *memMapBuff = new cl::Buffer(oclContext,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		nLeafs * sizeof(u_int) * 2, memMap);
+		sizeof(u_int) * nLeafs * 2, memMap);
 	device->AllocMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
 	delete[] memMap;
 
@@ -325,11 +325,48 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	return kernels;
 }
 
+bool MQBVHAccel::CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
+	const OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
+
+	u_int totalNodesCount = 0;
+	u_int totalQuadTrisCount = 0;
+	for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+		const QBVHAccel *qbvh = it->second;
+		totalNodesCount += qbvh->nNodes;
+		totalQuadTrisCount += qbvh->nQuads;
+	}
+
+	// Check if I can allocate enough space for the accelerator data
+	if (sizeof(QBVHNode) * nNodes > deviceDesc->GetMaxMemoryAllocSize()) {
+		LR_LOG(device->GetContext(), "[OpenCL device::" << device->GetName() <<
+			"] Can not run QBVH because root node buffer is too big: " <<
+			(sizeof(QBVHNode) * nNodes / 1024) << "Kbytes");
+		return false;
+	}
+	if (sizeof(QBVHNode) * totalNodesCount > deviceDesc->GetMaxMemoryAllocSize()) {
+		LR_LOG(device->GetContext(), "[OpenCL device::" << device->GetName() <<
+			"] Can not run QBVH because leafs node buffer is too big: " <<
+			(sizeof(QBVHNode) * totalNodesCount / 1024) << "Kbytes");
+		return false;
+	}
+	if (sizeof(QuadTriangle) * totalQuadTrisCount > deviceDesc->GetMaxMemoryAllocSize()) {
+		LR_LOG(device->GetContext(), "[OpenCL device::" << device->GetName() <<
+			"] Can not run QBVH because triangle buffer is too big: " <<
+			(sizeof(QuadTriangle) * totalQuadTrisCount / 1024) << "Kbytes");
+		return false;
+	}
+	return true;
+}
+
 #else
 
 OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {
 	return NULL;
+}
+
+bool MQBVHAccel::CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
+	return false;
 }
 
 #endif

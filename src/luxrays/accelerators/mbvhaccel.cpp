@@ -64,7 +64,7 @@ public:
 		//----------------------------------------------------------------------
 
 		// Check how many pages I have to allocate
-		const size_t maxVertCount = maxMemAlloc / (sizeof(Point) * 3);
+		const size_t maxVertCount = maxMemAlloc / sizeof(Point);
 		u_int totalVertCount = 0;
 		for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i)
 			totalVertCount += mbvh->uniqueLeafs[i]->mesh->GetTotalVertexCount();

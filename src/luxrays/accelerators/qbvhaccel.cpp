@@ -408,11 +408,34 @@ OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	}
 }
 
+bool QBVHAccel::CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
+	const OpenCLDeviceDescription *deviceDesc = device->GetDeviceDesc();
+
+	// Check if I can allocate enough space for the accelerator data
+	if (sizeof(QBVHNode) * nNodes > deviceDesc->GetMaxMemoryAllocSize()) {
+		LR_LOG(device->GetContext(), "[OpenCL device::" << device->GetName() <<
+			"] Can not run QBVH because node buffer is too big: " <<
+			(sizeof(QBVHNode) * nNodes / 1024) << "Kbytes");
+		return false;
+	}
+	if (sizeof(QuadTriangle) * nQuads > deviceDesc->GetMaxMemoryAllocSize()) {
+		LR_LOG(device->GetContext(), "[OpenCL device::" << device->GetName() <<
+			"] Can not run QBVH because triangle buffer is too big: " <<
+			(sizeof(QuadTriangle) * nQuads / 1024) << "Kbytes");
+		return false;
+	}
+	return true;
+}
+
 #else
 
 OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device, const u_int kernelCount,
 		const u_int stackSize, const bool enableImageStorage) const {
 	return NULL;
+}
+
+bool QBVHAccel::CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
+	return false;
 }
 
 #endif
