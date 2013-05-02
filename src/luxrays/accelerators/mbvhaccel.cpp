@@ -528,7 +528,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 	//--------------------------------------------------------------------------
 
 	std::vector<BVHAccelTreeNode *> bvList;
-	bvList.reserve(totalTriangleCount);
+	bvList.reserve(nLeafs);
 	for (u_int i = 0; i < nLeafs; ++i) {
 		BVHAccelTreeNode *node = new BVHAccelTreeNode();
 		// Get the bounding box from the mesh so it is in global coordinates
