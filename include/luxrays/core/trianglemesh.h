@@ -121,7 +121,7 @@ protected:
 class InstanceTriangleMesh : public Mesh {
 public:
 	InstanceTriangleMesh(TriangleMesh *m, const Transform &t) {
-		assert (mesh != NULL);
+		assert (m != NULL);
 
 		trans = t;
 		mesh = m;
