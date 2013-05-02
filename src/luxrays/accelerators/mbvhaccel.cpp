@@ -451,21 +451,23 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 			lastPrint = now;
 		}
 
-		switch (meshes[i]->GetType()) {
+		const Mesh *mesh = meshes[i];
+
+		switch (mesh->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
 				BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
-				leaf->Init(meshes[i]);
+				leaf->Init(mesh);
 
 				const u_int uniqueLeafIndex = uniqueLeafs.size();
-				uniqueLeafIndexByMesh[meshes[i]] = uniqueLeafIndex;
+				uniqueLeafIndexByMesh[mesh] = uniqueLeafIndex;
 				uniqueLeafs.push_back(leaf);
 				leafsIndex.push_back(uniqueLeafIndex);
 				leafsTransformIndex.push_back(NULL_INDEX);
 				break;
 			}
 			case TYPE_TRIANGLE_INSTANCE: {
-				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshes[i];
+				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)mesh;
 
 				// Check if a BVH has already been created
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
@@ -489,7 +491,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
-				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshes[i];
+				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)mesh;
 
 				// Check if a BVH has already been created
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(eitm->GetExtTriangleMesh());
@@ -518,7 +520,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 		}
 
 		leafsTriangleOffset.push_back(currentOffset);
-		currentOffset += meshes[i]->GetTotalTriangleCount();
+		currentOffset += mesh->GetTotalTriangleCount();
 	}
 
 	//--------------------------------------------------------------------------
