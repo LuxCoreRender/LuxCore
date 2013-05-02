@@ -39,23 +39,6 @@ using namespace luxrays;
 static unsigned int DataSetID = 0;
 static boost::mutex DataSetIDMutex;
 
-std::string Accelerator::AcceleratorType2String(const AcceleratorType type) {
-	switch(type) {
-		case ACCEL_AUTO:
-			return "AUTO";
-		case ACCEL_BVH:
-			return "BVH";
-		case ACCEL_QBVH:
-			return "QBVH";
-		case ACCEL_MQBVH:
-			return "MQBVH";
-		case ACCEL_MBVH:
-			return "MBVH";
-		default:
-			throw std::runtime_error("Unknown AcceleratorType in AcceleratorType2String()");
-	}
-}
-
 DataSet::DataSet(const Context *luxRaysContext) {
 	{
 		boost::unique_lock<boost::mutex> lock(DataSetIDMutex);
@@ -63,10 +46,15 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	}
 	context = luxRaysContext;
 
+	totalMeshCount = 0;
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
 
+	meshIDs = NULL;
+	meshTriangleOffset = NULL;
+
 	accelType = ACCEL_AUTO;
+	preprocessed = false;
 	enableInstanceSupport = true;
 	hasInstances = false;
 }
@@ -74,19 +62,16 @@ DataSet::DataSet(const Context *luxRaysContext) {
 DataSet::~DataSet() {
 	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it)
 		delete it->second;
+
+	delete[] meshIDs;
+	delete[] meshTriangleOffset;
 }
 
 TriangleMeshID DataSet::Add(const Mesh *mesh) {
-	const TriangleMeshID id = meshes.size();
+	assert (!preprocessed);
+
+	const TriangleMeshID id = totalMeshCount++;
 	meshes.push_back(mesh);
-
-	bbox = Union(bbox, mesh->GetBBox());
-	bsphere = bbox.BoundingSphere();
-
-	// TODO: optimize memory used by meshTriangleOffset and meshIDs vectors
-	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-		meshIDs.push_back(id);
-	meshTriangleOffset.push_back(totalTriangleCount);
 
 	totalVertexCount += mesh->GetTotalVertexCount();
 	totalTriangleCount += mesh->GetTotalTriangleCount();
@@ -95,6 +80,38 @@ TriangleMeshID DataSet::Add(const Mesh *mesh) {
 		hasInstances = true;
 
 	return id;
+}
+void DataSet::Preprocess() {
+	assert (!preprocessed);
+
+	LR_LOG(context, "Preprocessing DataSet");
+	LR_LOG(context, "Total vertex count: " << totalVertexCount);
+	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
+
+	if (totalTriangleCount == 0)
+		throw std::runtime_error("An empty DataSet can not be preprocessed");
+
+	LR_LOG(context, "Mesh IDs storage: " << sizeof(TriangleMeshID) * totalTriangleCount / 1024 << "Kbytes");
+	meshIDs = new TriangleMeshID[totalTriangleCount];
+	LR_LOG(context, "Mesh triangle offset storage: " << sizeof(TriangleID) * totalMeshCount / 1024 << "Kbytes");
+	meshTriangleOffset = new TriangleID[totalMeshCount];
+	u_int triangleOffset = 0;
+	u_int triangleIndex = 0;
+	for (u_int meshIndex = 0; meshIndex < totalMeshCount; ++meshIndex) {
+		bbox = Union(bbox, meshes[meshIndex]->GetBBox());
+
+		const u_int triCount = meshes[meshIndex]->GetTotalTriangleCount();
+		for (u_int i = 0; i < triCount; ++i)
+			meshIDs[triangleIndex++] = meshIndex;
+
+		meshTriangleOffset[meshIndex] = triangleOffset;
+		triangleOffset += triCount;
+	}
+	
+	bsphere = bbox.BoundingSphere();
+
+	preprocessed = true;
+	LR_LOG(context, "Preprocessing DataSet done");
 }
 
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {

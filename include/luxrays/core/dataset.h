@@ -45,6 +45,8 @@ public:
 	bool HasInstances() const { return hasInstances; }
 
 	TriangleMeshID Add(const Mesh *mesh);
+	void Preprocess();
+	bool IsPreprocessed() const { return preprocessed; }
 
 	const Accelerator *GetAccelerator(const AcceleratorType accelType);
 	bool DoesAllAcceleratorsSupportUpdate() const;
@@ -53,10 +55,10 @@ public:
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }
 
-	unsigned int GetTotalVertexCount() const { return totalVertexCount; }
-	unsigned int GetTotalTriangleCount() const { return totalTriangleCount; }
+	u_int GetTotalVertexCount() const { return totalVertexCount; }
+	u_int GetTotalTriangleCount() const { return totalTriangleCount; }
 
-	unsigned int GetDataSetID() const { return dataSetID; }
+	u_int GetDataSetID() const { return dataSetID; }
 	bool IsEqual(const DataSet *dataSet) const;
 
 	const TriangleMeshID GetMeshID(const u_int index) const {
@@ -73,15 +75,16 @@ public:
 	friend class OpenCLIntersectionDevice;
 
 private:
-	unsigned int dataSetID;
+	u_int dataSetID;
 
 	const Context *context;
 
-	unsigned int totalVertexCount;
-	unsigned int totalTriangleCount;
+	u_int totalMeshCount;
+	u_int totalVertexCount;
+	u_int totalTriangleCount;
 	std::deque<const Mesh *> meshes;
-	std::vector<TriangleMeshID> meshIDs; // One for each triangle
-	std::vector<TriangleMeshID> meshTriangleOffset; // One for each mesh
+	TriangleMeshID *meshIDs; // One for each triangle
+	TriangleID *meshTriangleOffset; // One for each mesh
 
 	BBox bbox;
 	BSphere bsphere;
@@ -89,7 +92,7 @@ private:
 	std::map<AcceleratorType, Accelerator *> accels;
 
 	AcceleratorType accelType;
-	bool hasInstances, enableInstanceSupport;
+	bool preprocessed, hasInstances, enableInstanceSupport;
 };
 
 }
