@@ -132,6 +132,8 @@ void Scene::Preprocess(Context *ctx) {
 	const std::vector<ExtMesh *> &objects = meshDefs.GetAllMesh();
 	for (std::vector<ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
 		dataSet->Add(*obj);
+
+	dataSet->Preprocess();
 }
 
 Properties Scene::ToProperties(const std::string &directoryName) {
