@@ -73,7 +73,7 @@ public:
 
 	// Compiled AreaLights
 	vector<slg::ocl::TriangleLight> triLightDefs;
-	vector<u_int> meshLights;
+	vector<u_int> meshTriLightDefsOffset;
 
 	// Compiled InfiniteLights
 	slg::ocl::InfiniteLight *infiniteLight;

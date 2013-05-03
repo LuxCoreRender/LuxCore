@@ -258,8 +258,8 @@ private:
 class TriangleLight : public LightSource {
 public:
 	TriangleLight() { }
-	TriangleLight(const Material *mat, const u_int triangleGlobalIndex, const luxrays::ExtMesh *mesh,
-		const unsigned int triangleIndex);
+	TriangleLight(const Material *mat, const luxrays::ExtMesh *mesh,
+		const u_int meshIndex, const u_int triangleIndex);
 	virtual ~TriangleLight() { }
 
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
@@ -269,7 +269,8 @@ public:
 
 	void Init();
 	const luxrays::ExtMesh *GetMesh() const { return mesh; }
-	unsigned int GetTriIndex() const { return triIndex; }
+	u_int GetMeshIndex() const { return meshIndex; }
+	u_int GetTriangleIndex() const { return triangleIndex; }
 	float GetArea() const { return area; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
@@ -289,7 +290,7 @@ public:
 private:
 	const Material *lightMaterial;
 	const luxrays::ExtMesh *mesh;
-	u_int triGlobalIndex, triIndex;
+	u_int meshIndex, triangleIndex;
 	float area, invArea;
 };
 

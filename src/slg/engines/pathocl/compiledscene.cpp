@@ -489,7 +489,7 @@ void CompiledScene::CompileAreaLights() {
 		for (u_int i = 0; i < scene->triLightDefs.size(); ++i) {
 			const TriangleLight *tl = scene->triLightDefs[i];
 			const ExtMesh *mesh = tl->GetMesh();
-			const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriIndex()]);
+			const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriangleIndex()]);
 
 			slg::ocl::TriangleLight *triLight = &triLightDefs[i];
 			ASSIGN_VECTOR(triLight->v0, mesh->GetVertex(tri->v[0]));
@@ -510,16 +510,9 @@ void CompiledScene::CompileAreaLights() {
 			triLight->materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
 		}
 
-		meshLights.resize(scene->triangleLights.size());
-		for (u_int i = 0; i < scene->triangleLights.size(); ++i) {
-			if (scene->triangleLights[i]) {
-				// Look for the index
-				meshLights[i] = triLightByPtr.find(scene->triangleLights[i])->second;
-			} else
-				meshLights[i] = NULL_INDEX;
-		}
+		meshTriLightDefsOffset = scene->meshTriLightDefsOffset;
 	} else
-		meshLights.resize(0);
+		meshTriLightDefsOffset.resize(0);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Triangle area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
