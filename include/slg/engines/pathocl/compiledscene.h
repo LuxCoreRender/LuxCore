@@ -70,9 +70,6 @@ public:
 	vector<luxrays::Triangle> tris;
 	vector<luxrays::ocl::Mesh> meshDescs;
 	const luxrays::TriangleMeshID *meshIDs;
-	// One element for each mesh, it used to translate the RayBuffer currentTriangleIndex
-	// to mesh TriangleID (with MQBVH)
-	u_int *meshFirstTriangleOffset;
 
 	// Compiled AreaLights
 	vector<slg::ocl::TriangleLight> triLightDefs;
