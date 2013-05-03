@@ -469,18 +469,18 @@ Properties SunLight::ToProperties() const {
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight(const Material *mat, const u_int triangleGlobalIndex, const ExtMesh *m,
-		const unsigned int triangleIndex) {
+TriangleLight::TriangleLight(const Material *mat, const ExtMesh *m,
+		const u_int mIndex, const unsigned int tIndex) {
 	lightMaterial = mat;
-	triGlobalIndex = triangleGlobalIndex;
 	mesh = m;
-	triIndex = triangleIndex;
+	meshIndex = mIndex;
+	triangleIndex = tIndex;
 
 	Init();
 }
 
 void TriangleLight::Init() {
-	area = mesh->GetTriangleArea(triIndex);
+	area = mesh->GetTriangleArea(triangleIndex);
 	invArea = 1.f / area;
 }
 
@@ -490,10 +490,10 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Origin
 	float b0, b1, b2;
-	mesh->Sample(triIndex, u0, u1, orig, &b0, &b1, &b2);
+	mesh->Sample(triangleIndex, u0, u1, orig, &b0, &b1, &b2);
 
 	// Build the local frame
-	const Normal N = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
+	const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
 	Frame frame(N);
 
 	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
@@ -513,7 +513,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = localDirOut.z;
 
-	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	const UV triUV = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	const HitPoint hitPoint = { Vector(-N), *orig, triUV, N, N, passThroughEvent, false };
 
 	return lightMaterial->GetEmittedRadiance(hitPoint) * localDirOut.z;
@@ -525,8 +525,8 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh->Sample(triIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = mesh->GetGeometryNormal(triIndex); // Light sources are supposed to be flat
+	mesh->Sample(triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	const Normal &sampleN = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
 
 	*dir = samplePoint - p;
 	const float distanceSquared = dir->LengthSquared();
@@ -545,7 +545,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
-	const UV triUV = mesh->InterpolateTriUV(triIndex, b1, b2);
+	const UV triUV = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, sampleN, sampleN, passThroughEvent, false };
 
 	return lightMaterial->GetEmittedRadiance(hitPoint);

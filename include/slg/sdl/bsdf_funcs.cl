@@ -28,7 +28,7 @@ void BSDF_Init(
 		__global uint *meshMats,
 		__global uint *meshIDs,
 #if (PARAM_DL_LIGHT_COUNT > 0)
-		__global uint *meshLights,
+		__global uint *meshTriLightDefsOffset,
 #endif
 		__global Point *vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
@@ -147,7 +147,7 @@ void BSDF_Init(
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 	// Check if it is a light source
-	bsdf->triangleLightSourceIndex = meshLights[currentTriangleIndex];
+	bsdf->triangleLightSourceIndex = meshTriLightDefsOffset[meshIndex];
 #endif
 
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)

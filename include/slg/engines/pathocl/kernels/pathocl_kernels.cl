@@ -275,7 +275,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if (PARAM_DL_LIGHT_COUNT > 0)
 		, __global TriangleLight *triLightDefs
-		, __global uint *meshLights
+		, __global uint *meshTriLightDefsOffset
 #endif
 		IMAGEMAPS_PARAM_DECL
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -327,7 +327,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					meshDescs,
 					meshMats, meshIDs,
 #if (PARAM_DL_LIGHT_COUNT > 0)
-					meshLights,
+					meshTriLightDefsOffset,
 #endif
 					vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
@@ -468,7 +468,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					meshDescs,
 					meshMats, meshIDs,
 #if (PARAM_DL_LIGHT_COUNT > 0)
-					meshLights,
+					meshTriLightDefsOffset,
 #endif
 					vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)

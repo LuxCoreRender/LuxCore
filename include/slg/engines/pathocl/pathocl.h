@@ -141,7 +141,7 @@ protected:
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *triLightDefsBuff;
-	cl::Buffer *meshLightsBuff;
+	cl::Buffer *meshTriLightDefsOffsetBuff;
 	cl::Buffer *imageMapDescsBuff;
 	vector<cl::Buffer *> imageMapsBuff;
 

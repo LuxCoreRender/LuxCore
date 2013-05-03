@@ -97,7 +97,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	trianglesBuff = NULL;
 	cameraBuff = NULL;
 	triLightDefsBuff = NULL;
-	meshLightsBuff = NULL;
+	meshTriLightDefsOffsetBuff = NULL;
 	imageMapDescsBuff = NULL;
 
 	// Check the kind of kernel cache to use
@@ -322,11 +322,11 @@ void PathOCLRenderThread::InitTriangleAreaLights() {
 	if (cscene->triLightDefs.size() > 0) {
 		AllocOCLBufferRO(&triLightDefsBuff, &cscene->triLightDefs[0],
 			sizeof(slg::ocl::TriangleLight) * cscene->triLightDefs.size(), "Triangle AreaLights");
-		AllocOCLBufferRO(&meshLightsBuff, &cscene->meshLights[0],
-			sizeof(u_int) * cscene->meshLights.size(), "Triangle AreaLights index");
+		AllocOCLBufferRO(&meshTriLightDefsOffsetBuff, &cscene->meshTriLightDefsOffset[0],
+			sizeof(u_int) * cscene->meshTriLightDefsOffset.size(), "Triangle AreaLights offsets");
 	} else {
 		FreeOCLBuffer(&triLightDefsBuff);
-		FreeOCLBuffer(&meshLightsBuff);
+		FreeOCLBuffer(&meshTriLightDefsOffsetBuff);
 	}
 }
 
@@ -1153,7 +1153,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
 	if (triLightDefsBuff) {
 		advancePathsKernel->setArg(argIndex++, *triLightDefsBuff);
-		advancePathsKernel->setArg(argIndex++, *meshLightsBuff);
+		advancePathsKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
 	}
 	if (imageMapDescsBuff) {
 		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);
@@ -1244,7 +1244,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&skyLightBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&triLightDefsBuff);
-	FreeOCLBuffer(&meshLightsBuff);
+	FreeOCLBuffer(&meshTriLightDefsOffsetBuff);
 	FreeOCLBuffer(&imageMapDescsBuff);
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 		FreeOCLBuffer(&imageMapsBuff[i]);

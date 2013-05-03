@@ -54,7 +54,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.triangleLights[rayHit.index];
+		triangleLightSource = scene.triLightDefs[scene.meshTriLightDefsOffset[meshIndex]];
 	else
 		triangleLightSource = NULL;
 

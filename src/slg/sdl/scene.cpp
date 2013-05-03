@@ -382,21 +382,20 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 	if (wasLightSource || newMat->IsLightSource()) {
 		// I have to build a new version of lights and triangleLightSource
 		std::vector<TriangleLight *> newTriLights;
-		std::vector<TriangleLight *> newTriangleLightSources;
+		std::vector<u_int> newMeshTriLightOffset;
 
 		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
 			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
 
 			if (objectMaterials[i]->IsLightSource()) {
+				newMeshTriLightOffset.push_back(newTriLights.size());
+
 				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-					TriangleLight *tl = new TriangleLight(objectMaterials[i], newTriangleLightSources.size(), mesh, j);
+					TriangleLight *tl = new TriangleLight(objectMaterials[i], mesh, i, j);
 					newTriLights.push_back(tl);
-					newTriangleLightSources.push_back(tl);
 				}
-			} else {
-				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j)
-					newTriangleLightSources.push_back(NULL);
-			}
+			} else
+				newMeshTriLightOffset.push_back(NULL_INDEX);
 		}
 
 		// Delete all old TriangleLight
@@ -405,7 +404,7 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 
 		// Use the new versions
 		triLightDefs = newTriLights;
-		triangleLights = newTriangleLightSources;
+		meshTriLightDefsOffset = newMeshTriLightOffset;
 	}
 }
 
@@ -461,15 +460,13 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 	if (mat->IsLightSource()) {
 		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
 
+		meshTriLightDefsOffset.push_back(triLightDefs.size());
 		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-			TriangleLight *tl = new TriangleLight(mat, triangleLights.size(), meshObject, i);
+			TriangleLight *tl = new TriangleLight(mat, meshObject, meshDefs.GetSize() - 1, i);
 			triLightDefs.push_back(tl);
-			triangleLights.push_back(tl);
 		}
-	} else {		
-		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i)
-			triangleLights.push_back(NULL);
-	}
+	} else
+		meshTriLightDefsOffset.push_back(NULL_INDEX);
 }
 
 void Scene::UpdateObjectTransformation(const std::string &objName, const Transform &trans) {
@@ -484,12 +481,9 @@ void Scene::UpdateObjectTransformation(const std::string &objName, const Transfo
 	// Check if it is a light source
 	const u_int meshIndex = meshDefs.GetExtMeshIndex(objName);
 	if (objectMaterials[meshIndex]->IsLightSource()) {
-		// Have to update all light source using this mesh
-		for (u_int i = 0; i < triLightDefs.size(); ++i) {
-			TriangleLight *tl = dynamic_cast<TriangleLight *>(triLightDefs[i]);
-			if (tl && tl->GetMesh() == mesh)
-				tl->Init();
-		}
+		// Have to update all light sources using this mesh
+		for (u_int i = meshTriLightDefsOffset[meshIndex]; i < mesh->GetTotalTriangleCount(); ++i)
+			triLightDefs[i]->Init();
 	}
 }
 

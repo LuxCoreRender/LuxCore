@@ -123,7 +123,7 @@ public:
 	InfiniteLightBase *envLight; // A SLG scene can have only one infinite light
 	SunLight *sunLight;
 	std::vector<TriangleLight *> triLightDefs; // One for each light source (doesn't include sun/infinite light)
-	std::vector<TriangleLight *> triangleLights; // One for each triangle
+	std::vector<u_int> meshTriLightDefsOffset; // One for each mesh
 
 	std::vector<Material *> objectMaterials; // One for each object
 
