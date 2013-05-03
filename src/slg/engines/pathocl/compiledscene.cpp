@@ -39,8 +39,6 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	infiniteLight = NULL;
 	sunLight = NULL;
 	skyLight = NULL;
-	
-	meshFirstTriangleOffset = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -48,7 +46,6 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 }
 
 CompiledScene::~CompiledScene() {
-	delete[] meshFirstTriangleOffset;
 	delete infiniteLight;
 	delete sunLight;
 	delete skyLight;
