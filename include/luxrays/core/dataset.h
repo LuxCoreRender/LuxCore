@@ -55,8 +55,8 @@ public:
 	const BBox &GetBBox() const { return bbox; }
 	const BSphere &GetBSphere() const { return bsphere; }
 
-	u_int GetTotalVertexCount() const { return totalVertexCount; }
-	u_int GetTotalTriangleCount() const { return totalTriangleCount; }
+	u_longlong GetTotalVertexCount() const { return totalVertexCount; }
+	u_longlong GetTotalTriangleCount() const { return totalTriangleCount; }
 
 	u_int GetDataSetID() const { return dataSetID; }
 	bool IsEqual(const DataSet *dataSet) const;
@@ -69,9 +69,8 @@ private:
 
 	const Context *context;
 
-	u_int totalMeshCount;
-	u_int totalVertexCount;
-	u_int totalTriangleCount;
+	u_longlong totalVertexCount;
+	u_longlong totalTriangleCount;
 	std::deque<const Mesh *> meshes;
 
 	BBox bbox;

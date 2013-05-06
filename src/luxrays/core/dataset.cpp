@@ -47,7 +47,6 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	}
 	context = luxRaysContext;
 
-	totalMeshCount = 0;
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
 
@@ -65,7 +64,7 @@ DataSet::~DataSet() {
 TriangleMeshID DataSet::Add(const Mesh *mesh) {
 	assert (!preprocessed);
 
-	const TriangleMeshID id = totalMeshCount++;
+	const TriangleMeshID id = meshes.size();
 	meshes.push_back(mesh);
 
 	totalVertexCount += mesh->GetTotalVertexCount();

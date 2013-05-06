@@ -464,8 +464,8 @@ QBVHAccel::~QBVHAccel() {
 	}
 }
 
-void QBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_int totalVertexCount,
-		const u_int totalTriangleCount) {
+void QBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalVertexCount,
+		const u_longlong totalTriangleCount) {
 	assert (!initialized);
 
 	meshes = ms;

@@ -312,8 +312,8 @@ BVHAccel::BVHAccel(const Context *context,
 	initialized = false;
 }
 
-void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_int totVert,
-		const u_int totTri) {
+void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert,
+		const u_longlong totTri) {
 	assert (!initialized);
 
 	meshes = ms;
