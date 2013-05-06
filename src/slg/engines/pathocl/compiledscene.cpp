@@ -87,8 +87,6 @@ void CompiledScene::CompileGeometry() {
 	tris.resize(0);
 	meshDescs.resize(0);
 
-	meshIDs = scene->dataSet->GetMeshIDTable();
-
 	//----------------------------------------------------------------------
 	// Translate geometry
 	//----------------------------------------------------------------------
@@ -102,12 +100,10 @@ void CompiledScene::CompileGeometry() {
 	newMeshDesc.uvsOffset = 0;
 	newMeshDesc.colsOffset = 0;
 	newMeshDesc.alphasOffset = 0;
-	newMeshDesc.firstTriangleOffset = 0;
 	memcpy(&newMeshDesc.trans.m, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
 	memcpy(&newMeshDesc.trans.mInv, &Matrix4x4::MAT_IDENTITY, sizeof(float[4][4]));
 
 	slg::ocl::Mesh currentMeshDesc;
-	u_int firstTriangleOffset = 0;
 	for (u_int i = 0; i < objCount; ++i) {
 		ExtMesh *mesh = objs[i];
 
@@ -168,9 +164,6 @@ void CompiledScene::CompileGeometry() {
 
 			isExistingInstance = false;
 		}
-
-		currentMeshDesc.firstTriangleOffset = firstTriangleOffset;
-		firstTriangleOffset += mesh->GetTotalTriangleCount();
 
 		if (!isExistingInstance) {
 			//------------------------------------------------------------------

@@ -64,6 +64,7 @@ private:
 	std::vector<Matrix4x4> uniqueLeafsTransform;
 	
 	const Context *ctx;
+	std::deque<const Mesh *> meshes;
 
 	bool initialized;
 };

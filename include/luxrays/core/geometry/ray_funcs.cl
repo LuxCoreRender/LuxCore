@@ -54,8 +54,3 @@ void Ray_ReadAligned4(__global Ray *ray, float3 *rayOrig, float3 *rayDir, float 
 	*mint = data1.z;
 	*maxt = data1.w;
 }
-
-void RayHit_WriteAligned4(__global RayHit *rayHit, const float t, const float b1, const float b2, const uint index) {
-	__global float4 *data = (__global float4 *)rayHit;
-	*data = (float4)(t, b1, b2, as_float(index));
-}

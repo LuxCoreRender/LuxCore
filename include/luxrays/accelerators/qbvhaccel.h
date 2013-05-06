@@ -67,41 +67,42 @@ public:
 
 	QuadTriangle() { };
 
-	QuadTriangle(const Triangle *tris, const Point *verts,
-			const unsigned int p1,
-			const unsigned int p2,
-			const unsigned int p3,
-			const unsigned int p4) {
+	QuadTriangle(const std::deque<const Mesh *> &meshes,
+			const unsigned int m0, const unsigned int m1, const unsigned int m2, const unsigned int m3,
+			const unsigned int i0, const unsigned int i1, const unsigned int i2, const unsigned int i3) {
 
-		primitives[0] = p1;
-		primitives[1] = p2;
-		primitives[2] = p3;
-		primitives[3] = p4;
+		meshIndex[0] = m0;
+		meshIndex[1] = m1;
+		meshIndex[2] = m2;
+		meshIndex[3] = m3;
+
+		triangleIndex[0] = i0;
+		triangleIndex[1] = i1;
+		triangleIndex[2] = i2;
+		triangleIndex[3] = i3;
 
 		for (u_int i = 0; i < 4; ++i) {
-			const Triangle *t = &tris[primitives[i]];
+			const Mesh *mesh = meshes[meshIndex[i]];
+			const Triangle *t = &(mesh->GetTriangles()[triangleIndex[i]]);
 
-			reinterpret_cast<float *> (&origx)[i] = verts[t->v[0]].x;
-			reinterpret_cast<float *> (&origy)[i] = verts[t->v[0]].y;
-			reinterpret_cast<float *> (&origz)[i] = verts[t->v[0]].z;
+			const Point p0 = mesh->GetVertex(t->v[0]);
+			const Point p1 = mesh->GetVertex(t->v[1]);
+			const Point p2 = mesh->GetVertex(t->v[2]);
+			reinterpret_cast<float *> (&origx)[i] = p0.x;
+			reinterpret_cast<float *> (&origy)[i] = p0.y;
+			reinterpret_cast<float *> (&origz)[i] = p0.z;
 
-			reinterpret_cast<float *> (&edge1x)[i] = verts[t->v[1]].x - verts[t->v[0]].x;
-			reinterpret_cast<float *> (&edge1y)[i] = verts[t->v[1]].y - verts[t->v[0]].y;
-			reinterpret_cast<float *> (&edge1z)[i] = verts[t->v[1]].z - verts[t->v[0]].z;
+			reinterpret_cast<float *> (&edge1x)[i] = p1.x - p0.x;
+			reinterpret_cast<float *> (&edge1y)[i] = p1.y - p0.y;
+			reinterpret_cast<float *> (&edge1z)[i] = p1.z - p0.z;
 
-			reinterpret_cast<float *> (&edge2x)[i] = verts[t->v[2]].x - verts[t->v[0]].x;
-			reinterpret_cast<float *> (&edge2y)[i] = verts[t->v[2]].y - verts[t->v[0]].y;
-			reinterpret_cast<float *> (&edge2z)[i] = verts[t->v[2]].z - verts[t->v[0]].z;
+			reinterpret_cast<float *> (&edge2x)[i] = p2.x - p0.x;
+			reinterpret_cast<float *> (&edge2y)[i] = p2.y - p0.y;
+			reinterpret_cast<float *> (&edge2z)[i] = p2.z - p0.z;
 		}
 	}
 
 	~QuadTriangle() {
-	}
-
-	BBox WorldBound(const Triangle *tris, const Point *verts) const {
-		return Union(
-				Union(tris[primitives[0]].WorldBound(verts), tris[primitives[1]].WorldBound(verts)),
-				Union(tris[primitives[2]].WorldBound(verts), tris[primitives[3]].WorldBound(verts)));
 	}
 
 	bool Intersect(const QuadRay &ray4, const Ray &ray, RayHit *rayHit) const {
@@ -165,7 +166,8 @@ public:
 		rayHit->t = ray.maxt;
 		rayHit->b1 = reinterpret_cast<const float *> (&b1)[hit];
 		rayHit->b2 = reinterpret_cast<const float *> (&b2)[hit];
-		rayHit->index = primitives[hit];
+		rayHit->meshIndex = meshIndex[hit];
+		rayHit->triangleIndex = triangleIndex[hit];
 
 		return true;
 	}
@@ -173,7 +175,7 @@ public:
 	__m128 origx, origy, origz;
 	__m128 edge1x, edge1y, edge1z;
 	__m128 edge2x, edge2y, edge2z;
-	unsigned int primitives[4];
+	unsigned int meshIndex[4], triangleIndex[4];
 };
 
 // This code is based on Flexray by Anthony Pajot (anthony.pajot@alumni.enseeiht.fr)
@@ -404,22 +406,18 @@ public:
 	*/
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	const TriangleMesh *GetPreprocessedMesh() const {
-		return preprocessedMesh;
-	}
-
 	friend class MQBVHAccel;
 
 private:
 	// A special initialization method used only by MQBVHAccel
-	void Init(const Mesh *m);
+	void Init(const Mesh *m, const TriangleMeshID *preprocessedMeshIDs);
 
 	/**
 	   Build the tree that will contain the primitives indexed from start
 	   to end in the primsIndexes array.
 	*/
-	void BuildTree(u_int start, u_int end, u_int *primsIndexes,
-		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
+	void BuildTree(u_int start, u_int end, std::vector<u_int> &meshIndexes, std::vector<u_int> &triangleIndexes,
+		std::vector<std::vector<BBox> > &primsBboxes, std::vector<std::vector<Point> > &primsCentroids, const BBox &nodeBbox,
 		const BBox &centroidsBbox, int32_t parentIndex,
 		int32_t childIndex, int depth);
 	
@@ -456,7 +454,7 @@ private:
 	   switch a node and its subnodes from the
 	   traditional form of QBVH to the pre-swizzled one.
 	*/
-	void PreSwizzle(int32_t nodeIndex, u_int *primsIndexes);
+	void PreSwizzle(int32_t nodeIndex, std::vector<u_int> &meshIndexes, std::vector<u_int> &triangleIndexes);
 
 	/**
 	   Create a leaf using the pre-swizzled layout,
@@ -464,7 +462,7 @@ private:
 	   are organized following the traditional layout
 	*/
 	void CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex, 
-		u_int *primsIndexes);
+		std::vector<u_int> &meshIndexes, std::vector<u_int> &triangleIndexes);
 
 	/**
 	   the actual number of quads
@@ -512,8 +510,7 @@ private:
 	u_int maxPrimsPerLeaf;
 
 	const Context *ctx;
-	TriangleMesh *preprocessedMesh;
-	const Mesh *mesh;
+	std::deque<const Mesh *> meshes;
 
 	int maxDepth;
 

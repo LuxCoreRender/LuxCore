@@ -307,13 +307,13 @@ OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 
 		// 7 pixels required for the storage of a QBVH node
 		const size_t nodePixelRequired = nNodes * 7;
-		nodeWidth = Min(RoundUp(static_cast<u_int>(sqrtf(nodePixelRequired)), 7u),  0x7fffu);
+		nodeWidth = Min(RoundUp(static_cast<u_int>(sqrtf(nodePixelRequired)), 7u),  (0x7fffu / 7u) * 7u);
 		nodeHeight = nodePixelRequired / nodeWidth +
 			(((nodePixelRequired % nodeWidth) == 0) ? 0 : 1);
 
-		// 10 pixels required for the storage of QBVH Triangles
-		const size_t leafPixelRequired = nQuads * 10;
-		leafWidth = Min(RoundUp(static_cast<u_int>(sqrtf(leafPixelRequired)), 10u), 32760u);
+		// 11 pixels required for the storage of QBVH Triangles
+		const size_t leafPixelRequired = nQuads * 11;
+		leafWidth = Min(RoundUp(static_cast<u_int>(sqrtf(leafPixelRequired)), 11u), (0x7fffu / 11u) * 11u);
 		leafHeight = leafPixelRequired / leafWidth +
 			(((leafPixelRequired % leafWidth) == 0) ? 0 : 1);
 
@@ -378,9 +378,9 @@ OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 				if (QBVHNode::IsEmpty(index)) {
 					inodes[offset + 6 * 4 + j] = index;
 				} else if (QBVHNode::IsLeaf(index)) {
-					int32_t count = QBVHNode::FirstQuadIndex(index) * 10;
-					// "/ 10" in order to not waste bits
-					const unsigned short x = static_cast<unsigned short>((count % leafWidth) / 10);
+					int32_t count = QBVHNode::FirstQuadIndex(index) * 11;
+					// "/ 11" in order to not waste bits
+					const unsigned short x = static_cast<unsigned short>((count % leafWidth) / 11);
 					const unsigned short y = static_cast<unsigned short>(count / leafWidth);
 					((int32_t *)inodes)[offset + 6 * 4 + j] =  0x80000000 |
 						(((static_cast<int32_t>(QBVHNode::NbQuadPrimitives(index)) - 1) & 0xf) << 27) |
@@ -454,8 +454,6 @@ QBVHAccel::QBVHAccel(const Context *context,
 		u_int mp, u_int fst, u_int sf) : fullSweepThreshold(fst),
 		skipFactor(sf), maxPrimsPerLeaf(mp), ctx(context) {
 	initialized = false;
-	preprocessedMesh = NULL;
-	mesh = NULL;
 	maxDepth = 0;
 }
 
@@ -463,36 +461,18 @@ QBVHAccel::~QBVHAccel() {
 	if (initialized) {
 		FreeAligned(prims);
 		FreeAligned(nodes);
-
-		if (preprocessedMesh) {
-			preprocessedMesh->Delete();
-			delete preprocessedMesh;
-		}
 	}
 }
 
-void QBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount,
+void QBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_int totalVertexCount,
 		const u_int totalTriangleCount) {
 	assert (!initialized);
 
-	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount, meshes);
-	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
-	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
-
-	LR_LOG(ctx, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
-	LR_LOG(ctx, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");
-
-	Init(preprocessedMesh);
-}
-
-void QBVHAccel::Init(const Mesh *m) {
-	assert (!initialized);
-
-	mesh = m;
-	const u_int totalTriangleCount = mesh->GetTotalTriangleCount();
+	meshes = ms;
 
 	// Temporary data for building
-	u_int *primsIndexes = new u_int[totalTriangleCount + 3]; // For the case where
+	std::vector<u_int> meshIndexes(totalTriangleCount + 3);
+	std::vector<u_int> triangleIndexes(totalTriangleCount + 3); // For the case where
 	// the last quad would begin at the last primitive
 	// (or the second or third last primitive)
 
@@ -511,62 +491,68 @@ void QBVHAccel::Init(const Mesh *m) {
 	// The arrays that will contain
 	// - the bounding boxes for all triangles
 	// - the centroids for all triangles
-	BBox *primsBboxes = new BBox[totalTriangleCount];
-	Point *primsCentroids = new Point[totalTriangleCount];
+	std::vector<std::vector<BBox> > primsBboxes(totalTriangleCount);
+	std::vector<std::vector<Point> > primsCentroids(totalTriangleCount);
 	// The bouding volume of all the centroids
 	BBox centroidsBbox;
 
-	const Point *verts = mesh->GetVertices();
-	const Triangle *triangles = mesh->GetTriangles();
-
 	// Fill each base array
-	for (u_int i = 0; i < totalTriangleCount; ++i) {
-		// This array will be reorganized during construction.
-		primsIndexes[i] = i;
+	u_int absoluteIndex = 0;
+	for (u_int i = 0; i < meshes.size(); ++i) {
+		const Mesh *mesh = meshes[i];
+		const Triangle *p = mesh->GetTriangles();
+		primsBboxes[i].resize(mesh->GetTotalTriangleCount());
+		primsCentroids[i].resize(mesh->GetTotalTriangleCount());
 
-		// Compute the bounding box for the triangle
-		primsBboxes[i] = triangles[i].WorldBound(verts);
-		primsBboxes[i].Expand(MachineEpsilon::E(primsBboxes[i]));
-		primsCentroids[i] = (primsBboxes[i].pMin + primsBboxes[i].pMax) * .5f;
+		for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
+			// This array will be reorganized during construction.
+			meshIndexes[absoluteIndex] = i;
+			triangleIndexes[absoluteIndex++] = j;
 
-		// Update the global bounding boxes
-		worldBound = Union(worldBound, primsBboxes[i]);
-		centroidsBbox = Union(centroidsBbox, primsCentroids[i]);
+			// Compute the bounding box for the triangle
+			primsBboxes[i][j] = Union(
+					BBox(mesh->GetVertex(p[j].v[0]), mesh->GetVertex(p[j].v[1])),
+					mesh->GetVertex(p[j].v[2]));
+			primsBboxes[i][j].Expand(MachineEpsilon::E(primsBboxes[i][j]));
+			primsCentroids[i][j] = (primsBboxes[i][j].pMin + primsBboxes[i][j].pMax) * .5f;
+
+			// Update the global bounding boxes
+			worldBound = Union(worldBound, primsBboxes[i][j]);
+			centroidsBbox = Union(centroidsBbox, primsCentroids[i][j]);
+		}
 	}
 
 	// Arbitrarily take the last primitive for the last 3
-	primsIndexes[totalTriangleCount] = totalTriangleCount - 1;
-	primsIndexes[totalTriangleCount + 1] = totalTriangleCount - 1;
-	primsIndexes[totalTriangleCount + 2] = totalTriangleCount - 1;
+	meshIndexes[totalTriangleCount] = meshIndexes[totalTriangleCount - 1];
+	meshIndexes[totalTriangleCount + 1] = meshIndexes[totalTriangleCount - 1];
+	meshIndexes[totalTriangleCount + 2] = meshIndexes[totalTriangleCount - 1];
+	triangleIndexes[totalTriangleCount] = triangleIndexes[totalTriangleCount - 1];
+	triangleIndexes[totalTriangleCount + 1] = triangleIndexes[totalTriangleCount - 1];
+	triangleIndexes[totalTriangleCount + 2] = triangleIndexes[totalTriangleCount - 1];
 
 	// Recursively build the tree
 	LR_LOG(ctx, "Building QBVH, primitives: " << totalTriangleCount << ", initial nodes: " << maxNodes);
 
 	nQuads = 0;
-	BuildTree(0, totalTriangleCount, primsIndexes, primsBboxes, primsCentroids,
+	BuildTree(0, totalTriangleCount, meshIndexes, triangleIndexes, primsBboxes, primsCentroids,
 			worldBound, centroidsBbox, -1, 0, 0);
 
 	prims = AllocAligned<QuadTriangle>(nQuads);
 	nQuads = 0;
-	PreSwizzle(0, primsIndexes);
+	PreSwizzle(0, meshIndexes, triangleIndexes);
 
 	LR_LOG(ctx, "QBVH completed with " << nNodes << "/" << maxNodes << " nodes");
 	LR_LOG(ctx, "Total QBVH memory usage: " << nNodes * sizeof(QBVHNode) / 1024 << "Kbytes");
 	LR_LOG(ctx, "Total QBVH QuadTriangle count: " << nQuads);
 	LR_LOG(ctx, "Max. QBVH Depth: " << maxDepth);
 
-	// Release temporary memory
-	delete[] primsBboxes;
-	delete[] primsCentroids;
-	delete[] primsIndexes;
-
 	initialized = true;
 }
 
 /***************************************************/
 
-void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
-		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
+void QBVHAccel::BuildTree(u_int start, u_int end, std::vector<u_int> &meshIndexes, std::vector<u_int> &triangleIndexes,
+		std::vector<std::vector<BBox> > &primsBboxes, std::vector<std::vector<Point> > &primsCentroids, const BBox &nodeBbox,
 		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex, int depth) {
 	maxDepth = (depth >= maxDepth) ? depth : maxDepth; // Set depth so we know how much stack we need later.
 
@@ -631,14 +617,15 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 	}
 
 	for (u_int i = start; i < end; i += step) {
-		u_int primIndex = primsIndexes[i];
+		const u_int mIndex = meshIndexes[i];
+		const u_int tIndex = triangleIndexes[i];
 
 		// Binning is relative to the centroids bbox and to the
 		// primitives' centroid.
-		const int binId = Min(NB_BINS - 1, Floor2Int(k1 * (primsCentroids[primIndex][axis] - k0)));
+		const int binId = Min(NB_BINS - 1, Floor2Int(k1 * (primsCentroids[mIndex][tIndex][axis] - k0)));
 
 		bins[binId]++;
-		binsBbox[binId] = Union(binsBbox[binId], primsBboxes[primIndex]);
+		binsBbox[binId] = Union(binsBbox[binId], primsBboxes[mIndex][tIndex]);
 	}
 
 	//--------------
@@ -715,31 +702,34 @@ void QBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 
 	u_int storeIndex = start;
 	for (u_int i = start; i < end; ++i) {
-		u_int primIndex = primsIndexes[i];
+		const u_int mIndex = meshIndexes[i];
+		const u_int tIndex = triangleIndexes[i];
 
-		if (primsCentroids[primIndex][axis] <= splitPos) {
+		if (primsCentroids[mIndex][tIndex][axis] <= splitPos) {
 			// Swap
-			primsIndexes[i] = primsIndexes[storeIndex];
-			primsIndexes[storeIndex] = primIndex;
+			meshIndexes[i] = meshIndexes[storeIndex];
+			meshIndexes[storeIndex] = mIndex;
+			triangleIndexes[i] = triangleIndexes[storeIndex];
+			triangleIndexes[storeIndex] = tIndex;
 			++storeIndex;
 
 			// Update the bounding boxes,
 			// this triangle is on the left side
-			leftChildBbox = Union(leftChildBbox, primsBboxes[primIndex]);
-			leftChildCentroidsBbox = Union(leftChildCentroidsBbox, primsCentroids[primIndex]);
+			leftChildBbox = Union(leftChildBbox, primsBboxes[mIndex][tIndex]);
+			leftChildCentroidsBbox = Union(leftChildCentroidsBbox, primsCentroids[mIndex][tIndex]);
 		} else {
 			// Update the bounding boxes,
 			// this triangle is on the right side.
-			rightChildBbox = Union(rightChildBbox, primsBboxes[primIndex]);
-			rightChildCentroidsBbox = Union(rightChildCentroidsBbox, primsCentroids[primIndex]);
+			rightChildBbox = Union(rightChildBbox, primsBboxes[mIndex][tIndex]);
+			rightChildCentroidsBbox = Union(rightChildCentroidsBbox, primsCentroids[mIndex][tIndex]);
 		}
 	}
 
 	// Build recursively
-	BuildTree(start, storeIndex, primsIndexes, primsBboxes, primsCentroids,
+	BuildTree(start, storeIndex, meshIndexes, triangleIndexes, primsBboxes, primsCentroids,
 			leftChildBbox, leftChildCentroidsBbox, currentNode,
 			leftChildIndex, depth + 1);
-	BuildTree(storeIndex, end, primsIndexes, primsBboxes, primsCentroids,
+	BuildTree(storeIndex, end, meshIndexes, triangleIndexes, primsBboxes, primsCentroids,
 			rightChildBbox, rightChildCentroidsBbox, currentNode,
 			rightChildIndex, depth + 1);
 }
@@ -774,17 +764,17 @@ void QBVHAccel::CreateTempLeaf(int32_t parentIndex, int32_t childIndex,
 	nQuads += quads;
 }
 
-void QBVHAccel::PreSwizzle(int32_t nodeIndex, u_int *primsIndexes) {
+void QBVHAccel::PreSwizzle(int32_t nodeIndex, std::vector<u_int> &meshIndexes, std::vector<u_int> &triangleIndexes) {
 	for (int i = 0; i < 4; ++i) {
 		if (nodes[nodeIndex].ChildIsLeaf(i))
-			CreateSwizzledLeaf(nodeIndex, i, primsIndexes);
+			CreateSwizzledLeaf(nodeIndex, i, meshIndexes, triangleIndexes);
 		else
-			PreSwizzle(nodes[nodeIndex].children[i], primsIndexes);
+			PreSwizzle(nodes[nodeIndex].children[i], meshIndexes, triangleIndexes);
 	}
 }
 
 void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
-		u_int *primsIndexes) {
+		std::vector<u_int> &meshIndexes, std::vector<u_int> &triangleIndexes) {
 	QBVHNode &node = nodes[parentIndex];
 	if (node.LeafIsEmpty(childIndex))
 		return;
@@ -794,12 +784,10 @@ void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
 	u_int primOffset = node.FirstQuadIndexForLeaf(childIndex);
 	u_int primNum = nQuads;
 
-	const Point *vertices = mesh->GetVertices();
-	const Triangle *triangles = mesh->GetTriangles();
-
 	for (u_int q = 0; q < nbQuads; ++q) {
-		new (&prims[primNum]) QuadTriangle(triangles, vertices, primsIndexes[primOffset],
-				primsIndexes[primOffset + 1], primsIndexes[primOffset + 2], primsIndexes[primOffset + 3]);
+		new (&prims[primNum]) QuadTriangle(meshes,
+				meshIndexes[primOffset], meshIndexes[primOffset + 1], meshIndexes[primOffset + 2], meshIndexes[primOffset + 3],
+				triangleIndexes[primOffset], triangleIndexes[primOffset + 1], triangleIndexes[primOffset + 2], triangleIndexes[primOffset + 3]);
 
 		++primNum;
 		primOffset += 4;

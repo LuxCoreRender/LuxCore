@@ -33,12 +33,12 @@ struct BVHAccelTreeNode {
 	BBox bbox;
 	union {
 		struct {
-			u_int index;
+			u_int meshIndex, triangleIndex;
 		} triangleLeaf;
 		struct {
 			u_int leafIndex;
 			u_int transformIndex;
-			u_int triangleOffsetIndex;
+			u_int meshOffsetIndex;
 		} bvhLeaf;
 	};
 
@@ -56,12 +56,12 @@ struct BVHAccelArrayNode {
 		} bvhNode;
 		struct {
 			u_int v[3];
-			u_int triangleIndex;
+			u_int meshIndex, triangleIndex;
 		} triangleLeaf;
 		struct {
 			u_int leafIndex;
 			u_int transformIndex;
-			u_int triangleOffsetIndex;
+			u_int meshOffsetIndex;
 		} bvhLeaf; // Used by MBVH
 	};
 	// Most significant bit is used to mark leafs
@@ -113,11 +113,8 @@ private:
 		u_int begin, u_int end, float *splitValue,
 		u_int *bestAxis);
 
-	static u_int BuildArray(const Triangle *triangles, BVHAccelTreeNode *node,
+	static u_int BuildArray(const std::deque<const Mesh *> *meshes, BVHAccelTreeNode *node,
 		u_int offset, BVHAccelArrayNode *bvhTree);
-
-	// A special initialization method used only by MBVHAccel
-	void Init(const Mesh *m);
 
 	BVHParams params;
 
@@ -125,8 +122,8 @@ private:
 	BVHAccelArrayNode *bvhTree;
 
 	const Context *ctx;
-	TriangleMesh *preprocessedMesh;
-	const Mesh *mesh;
+	std::deque<const Mesh *> meshes;
+	u_int totalVertexCount, totalTriangleCount;
 
 	bool initialized;
 };

@@ -36,7 +36,7 @@ typedef struct {
 		struct {
 			uint leafIndex;
 			uint transformIndex;
-			uint triangleOffsetIndex;
+			uint meshOffsetIndex;
 		} bvhLeaf; // Used by MBVH
 	};
 	// Most significant bit is used to mark leafs
@@ -201,7 +201,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	uint currentNode = currentRootNode;
 #endif
 	
-	uint currentTriangleOffset = 0;
+	uint currentMeshOffset = 0;
 
 	__global Ray *ray = &rays[gid];
 	//const float3 rootRayOrig = VLOAD3F(&ray->o.x);
@@ -215,7 +215,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	float3 currentRayOrig = rootRayOrig;
 	float3 currentRayDir = rootRayDir;
 
-	uint hitIndex = NULL_INDEX;
+	uint hitMeshIndex = NULL_INDEX;
+	uint hitTriangleIndex = NULL_INDEX;
 
 	float b1, b2;
 	for (;;) {
@@ -298,10 +299,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 				const float3 p2 = VLOAD3F(&vp2[iv2].x);
 #endif
 
-				//const uint triangleIndex = node->triangleLeaf.triangleIndex + currentTriangleOffset;
-				const uint triangleIndex = as_uint(data0.s3) + currentTriangleOffset;
-				Triangle_Intersect(currentRayOrig, currentRayDir, mint, &maxt, &hitIndex, &b1, &b2,
-					triangleIndex, p0, p1, p2);
+				//const uint meshIndex = node->triangleLeaf.meshIndex + currentMeshOffset;
+				//const uint triangleIndex = node->triangleLeaf.triangleIndex;
+				const uint meshIndex = as_uint(data0.s3) + currentMeshOffset;
+				const uint triangleIndex = as_uint(data1.s0);
+				Triangle_Intersect(currentRayOrig, currentRayDir, mint, &maxt, &hitMeshIndex, &hitTriangleIndex, &b1, &b2,
+					meshIndex, triangleIndex, p0, p1, p2);
 #if (MBVH_NODES_PAGE_COUNT == 1)
 				++currentNode;
 #else
@@ -320,8 +323,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 					currentRayDir = Matrix4x4_ApplyVector(m, rootRayDir);
 				}
 #endif 
-				//currentTriangleOffset = node->bvhLeaf.triangleOffsetIndex;
-				currentTriangleOffset = as_int(data0.s2);
+				//currentMeshOffset = node->bvhLeaf.meshOffsetIndex;
+				currentMeshOffset = as_int(data0.s2);
 
 				//const uint leafIndex = node->bvhLeaf.leafIndex;
 				const uint leafIndex = as_int(data0.s0);
@@ -374,5 +377,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	}
 
 	// Write result
-	RayHit_WriteAligned4(&rayHits[gid], maxt, b1, b2, hitIndex);
+	__global RayHit *rayHit = &rayHits[gid];
+	rayHit->t = maxt;
+	rayHit->b1 = b1;
+	rayHit->b2 = b2;
+	rayHit->meshIndex = hitMeshIndex;
+	rayHit->triangleIndex = hitTriangleIndex;
 }

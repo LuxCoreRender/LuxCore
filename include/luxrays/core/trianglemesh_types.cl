@@ -33,6 +33,5 @@ typedef struct {
 	unsigned int trisOffset;
 
 	// Information used by MQBVH
-	unsigned int firstTriangleOffset;
 	Transform trans;
 } Mesh;

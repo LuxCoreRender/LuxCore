@@ -65,39 +65,53 @@ public:
 
 		// Check how many pages I have to allocate
 		const size_t maxVertCount = maxMemAlloc / sizeof(Point);
+		std::vector<std::vector<u_int> > vertOffsetPerLeafMesh;
+		vertOffsetPerLeafMesh.resize(mbvh->uniqueLeafs.size());
 		u_int totalVertCount = 0;
-		for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i)
-			totalVertCount += mbvh->uniqueLeafs[i]->mesh->GetTotalVertexCount();
+		for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i) {
+			BVHAccel *leaf = mbvh->uniqueLeafs[i];
+
+			for (u_int j = 0; j < leaf->meshes.size(); ++j) {
+				vertOffsetPerLeafMesh[i].push_back(totalVertCount);
+				totalVertCount += leaf->meshes[j]->GetTotalVertexCount();
+			}
+		}
 		// Allocate a temporary buffer for the copy of the BVH vertices
 		const u_int pageVertCount = Min<size_t>(totalVertCount, maxVertCount);
 		Point *tmpVerts = new Point[pageVertCount];
 		u_int tmpVertIndex = 0;
 
-		u_int meshVertIndex = 0;
 		u_int currentLeafIndex = 0;
+		u_int currentMeshIndex = 0;
+		u_int currentMeshVertIndex = 0;
 
 		while (currentLeafIndex < mbvh->uniqueLeafs.size()) {
 			const u_int tmpLeftVertCount = pageVertCount - tmpVertIndex;
 
 			// Check if there is enough space in the temporary buffer for all vertices
-			const Mesh *currentMesh = mbvh->uniqueLeafs[currentLeafIndex]->mesh;
-			const u_int toCopy = currentMesh->GetTotalVertexCount() - meshVertIndex;
+			const Mesh *currentMesh = mbvh->uniqueLeafs[currentLeafIndex]->meshes[currentMeshIndex];
+			const u_int toCopy = currentMesh->GetTotalVertexCount() - currentMeshVertIndex;
 			if (tmpLeftVertCount >= toCopy) {
 				// There is enough space for all mesh vertices
-				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[meshVertIndex]),
+				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[currentMeshVertIndex]),
 						sizeof(Point) * toCopy);
 				tmpVertIndex += toCopy;
 
 				// Move to the next mesh
-				++currentLeafIndex;
-				meshVertIndex = 0;
+				++currentMeshIndex;
+				if (currentMeshIndex >= mbvh->uniqueLeafs[currentLeafIndex]->meshes.size()) {
+					// Move to the next leaf
+					++currentLeafIndex;
+					currentMeshIndex = 0;
+				}
+				currentMeshVertIndex = 0;
 			} else {
 				// There isn't enough space for all mesh vertices. Fill the current buffer.
-				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[meshVertIndex]),
+				memcpy(&tmpVerts[tmpVertIndex], &(currentMesh->GetVertices()[currentMeshVertIndex]),
 						sizeof(Point) * tmpLeftVertCount);
 
 				tmpVertIndex += tmpLeftVertCount;
-				meshVertIndex += tmpLeftVertCount;
+				currentMeshVertIndex += tmpLeftVertCount;
 			}
 
 			if ((tmpVertIndex >= pageVertCount) || (currentLeafIndex >=  mbvh->uniqueLeafs.size())) {
@@ -119,6 +133,7 @@ public:
 				tmpVertIndex = 0;
 			}
 		}
+		delete[] tmpVerts;
 
 		//----------------------------------------------------------------------
 		// Allocate BVH node buffers
@@ -150,12 +165,10 @@ public:
 		currentLeafIndex = 0;
 		const BVHAccelArrayNode *currentNodes = mbvh->bvhRootTree;
 		u_int currentNodesCount = mbvh->nRootNodes;
-		u_int currentVertOffset = 0;
 
 		while (currentLeafIndex < mbvh->uniqueLeafs.size()) {
 			const u_int tmpLeftNodeCount = pageNodeCount - tmpNodeIndex;
 			const bool isRootTree = (currentNodes == mbvh->bvhRootTree);
-			const u_int vertOffset = currentVertOffset;
 			const u_int leafIndex = currentLeafIndex;
 
 			// Check if there is enough space in the temporary buffer for all nodes
@@ -173,10 +186,8 @@ public:
 				if (isRootTree) {
 					// Move from the root nodes to the first leaf node. currentLeafIndex
 					// is already 0
-				} else {
-					currentVertOffset += mbvh->uniqueLeafs[currentLeafIndex]->mesh->GetTotalVertexCount();
+				} else
 					++currentLeafIndex;
-				}
 
 				if (currentLeafIndex < mbvh->uniqueLeafs.size()) {
 					currentNodes = mbvh->uniqueLeafs[currentLeafIndex]->bvhTree;
@@ -220,7 +231,7 @@ public:
 					if (BVHNodeData_IsLeaf(node->nodeData)) {
 						// Update the vertex references
 						for (u_int j = 0; j < 3; ++j) {
-							const u_int vertIndex = node->triangleLeaf.v[j] + vertOffset;
+							const u_int vertIndex = node->triangleLeaf.v[j] + vertOffsetPerLeafMesh[leafIndex][node->triangleLeaf.meshIndex];
 							const u_int vertexPage = vertIndex / maxVertCount;
 							const u_int vertexIndex = vertIndex % maxVertCount;
 							// Encode the page in the last 3 bits of the vertex index
@@ -256,7 +267,7 @@ public:
 				tmpNodeIndex = 0;
 			}
 		}
-		delete tmpNodes;
+		delete[] tmpNodes;
 
 		if (mbvh->uniqueLeafsTransform.size() > 0) {
 			// Allocate the transformation buffer
@@ -420,9 +431,11 @@ MBVHAccel::MBVHAccel(const Context *context,
 	initialized = false;
 }
 
-void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount,
+void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_int totalVertexCount,
 		const u_int totalTriangleCount) {
 	assert (!initialized);
+
+	meshes = ms;
 
 	//--------------------------------------------------------------------------
 	// Build all BVH leafs
@@ -433,15 +446,11 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 
 	std::vector<u_int> leafsIndex;
 	std::vector<u_int> leafsTransformIndex;
-	std::vector<u_int> leafsTriangleOffset;
 
 	leafsIndex.reserve(nLeafs);
 	leafsTransformIndex.reserve(nLeafs);
-	leafsTriangleOffset.reserve(nLeafs);
 
 	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueLeafIndexByMesh(MeshPtrCompare);
-
-	u_int currentOffset = 0;
 
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < nLeafs; ++i) {
@@ -457,7 +466,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
 				BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
-				leaf->Init(mesh);
+				std::deque<const Mesh *> mlist(1, mesh);
+				leaf->Init(mlist, mesh->GetTotalVertexCount(), mesh->GetTotalTriangleCount());
 
 				const u_int uniqueLeafIndex = uniqueLeafs.size();
 				uniqueLeafIndexByMesh[mesh] = uniqueLeafIndex;
@@ -473,12 +483,15 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
+					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
+
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
-					leaf->Init(itm);
+					std::deque<const Mesh *> mlist(1, instancedMesh);
+					leaf->Init(mlist, instancedMesh->GetTotalVertexCount(), instancedMesh->GetTotalTriangleCount());
 
 					const u_int uniqueLeafIndex = uniqueLeafs.size();
-					uniqueLeafIndexByMesh[itm->GetTriangleMesh()] = uniqueLeafIndex;
+					uniqueLeafIndexByMesh[instancedMesh] = uniqueLeafIndex;
 					uniqueLeafs.push_back(leaf);
 					leafsIndex.push_back(uniqueLeafIndex);
 				} else {
@@ -497,12 +510,15 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(eitm->GetExtTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
+					ExtTriangleMesh *instancedMesh = eitm->GetExtTriangleMesh();
+
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
-					leaf->Init(eitm);
+					std::deque<const Mesh *> mlist(1, instancedMesh);
+					leaf->Init(mlist, instancedMesh->GetTotalVertexCount(), instancedMesh->GetTotalTriangleCount());
 
 					const u_int uniqueLeafIndex = uniqueLeafs.size();
-					uniqueLeafIndexByMesh[eitm->GetExtTriangleMesh()] = uniqueLeafIndex;
+					uniqueLeafIndexByMesh[instancedMesh] = uniqueLeafIndex;
 					uniqueLeafs.push_back(leaf);
 					leafsIndex.push_back(uniqueLeafIndex);
 				} else {
@@ -518,9 +534,6 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 				assert (false);
 				break;
 		}
-
-		leafsTriangleOffset.push_back(currentOffset);
-		currentOffset += mesh->GetTotalTriangleCount();
 	}
 
 	//--------------------------------------------------------------------------
@@ -535,7 +548,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVe
 		node->bbox = meshes[i]->GetBBox();
 		node->bvhLeaf.leafIndex = leafsIndex[i];
 		node->bvhLeaf.transformIndex = leafsTransformIndex[i];
-		node->bvhLeaf.triangleOffsetIndex = leafsTriangleOffset[i];
+		node->bvhLeaf.meshOffsetIndex = i;
 		node->leftChild = NULL;
 		node->rightSibling = NULL;
 		bvList.push_back(node);
@@ -580,9 +593,8 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	u_int rootStopNode = BVHNodeData_GetSkipIndex(bvhRootTree[0].nodeData); // Non-existent
 	u_int currentNode = currentRootNode;
 	u_int currentStopNode = rootStopNode; // Non-existent
-	u_int currentTriangleOffset = 0;
+	u_int currentMeshOffset = 0;
 	BVHAccelArrayNode *currentTree = bvhRootTree;
-	const Mesh *currentMesh = NULL;
 
 	Ray currentRay(*ray);
 	rayHit->t = ray->maxt;
@@ -614,6 +626,10 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			if (insideLeafTree) {
 				// I'm inside a leaf tree, I have to check the triangle
+				const u_int absoluteMeshIndex = node.triangleLeaf.meshIndex + currentMeshOffset;
+				const Mesh *currentMesh = meshes[absoluteMeshIndex];
+				// I use currentMesh->GetVertices() in order to have access to not
+				// transformed vertices in the case of instances
 				const Point *vertices = currentMesh->GetVertices();
 				const Point &p0 = vertices[node.triangleLeaf.v[0]];
 				const Point &p1 = vertices[node.triangleLeaf.v[1]];
@@ -626,7 +642,8 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 						rayHit->t = t;
 						rayHit->b1 = b1;
 						rayHit->b2 = b2;
-						rayHit->index = node.triangleLeaf.triangleIndex + currentTriangleOffset;
+						rayHit->meshIndex = absoluteMeshIndex;
+						rayHit->triangleIndex = node.triangleLeaf.triangleIndex;
 						// Continue testing for closer intersections
 					}
 				}
@@ -634,9 +651,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 				++currentNode;
 			} else {
 				// I have to check a leaf tree
-				BVHAccel *leaf = uniqueLeafs[node.bvhLeaf.leafIndex];
-				currentTree = leaf->bvhTree;
-				currentMesh = leaf->mesh;
+				currentTree = uniqueLeafs[node.bvhLeaf.leafIndex]->bvhTree;
 				// Transform the ray in the local coordinate system
 				if (node.bvhLeaf.transformIndex != NULL_INDEX) {
 					const Matrix4x4 &m = uniqueLeafsTransform[node.bvhLeaf.transformIndex];
@@ -656,7 +671,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 
 					currentRay.maxt = rayHit->t;
 				}
-				currentTriangleOffset = node.bvhLeaf.triangleOffsetIndex;
+				currentMeshOffset = node.bvhLeaf.meshOffsetIndex;
 
 				currentRootNode = currentNode + 1;
 				currentNode = 0;

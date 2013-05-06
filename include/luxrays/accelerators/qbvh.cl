@@ -31,7 +31,7 @@ typedef struct {
 	float4 origx, origy, origz;
 	float4 edge1x, edge1y, edge1z;
 	float4 edge2x, edge2y, edge2z;
-	uint4 primitives;
+	uint4 meshIndex, triangleIndex;
 } QuadTiangle;
 
 typedef struct {
@@ -77,7 +77,7 @@ void QuadTriangle_Intersect(
     const float4 origx, const float4 origy, const float4 origz,
     const float4 edge1x, const float4 edge1y, const float4 edge1z,
     const float4 edge2x, const float4 edge2y, const float4 edge2z,
-    const uint4 primitives,
+    const uint4 meshIndex,  const uint4 triangleIndex,
     QuadRay *ray4, RayHit *rayHit) {
 	//--------------------------------------------------------------------------
 	// Calc. b1 coordinate
@@ -114,7 +114,7 @@ void QuadTriangle_Intersect(
 
     float _b1, _b2;
 	float maxt = ray4->maxt.s0;
-    uint index;
+    uint mIndex, tIndex;
 
     int4 cond = isnotequal(divisor, (float4)0.f) & isgreaterequal(b0, (float4)0.f) &
 			isgreaterequal(b1, (float4)0.f) & isgreaterequal(b2, (float4)0.f) &
@@ -124,27 +124,31 @@ void QuadTriangle_Intersect(
     maxt = select(maxt, t.s0, cond0);
     _b1 = select(0.f, b1.s0, cond0);
     _b2 = select(0.f, b2.s0, cond0);
-    index = select(NULL_INDEX, primitives.s0, cond0);
+    mIndex = select(NULL_INDEX, meshIndex.s0, cond0);
+	tIndex = select(NULL_INDEX, triangleIndex.s0, cond0);
 
     const int cond1 = cond.s1 && (t.s1 < maxt);
     maxt = select(maxt, t.s1, cond1);
     _b1 = select(_b1, b1.s1, cond1);
     _b2 = select(_b2, b2.s1, cond1);
-    index = select(index, primitives.s1, cond1);
+    mIndex = select(mIndex, meshIndex.s1, cond1);
+	tIndex = select(tIndex, triangleIndex.s1, cond1);
 
     const int cond2 = cond.s2 && (t.s2 < maxt);
     maxt = select(maxt, t.s2, cond2);
     _b1 = select(_b1, b1.s2, cond2);
     _b2 = select(_b2, b2.s2, cond2);
-    index = select(index, primitives.s2, cond2);
+    mIndex = select(mIndex, meshIndex.s2, cond2);
+	tIndex = select(tIndex, triangleIndex.s2, cond2);
 
     const int cond3 = cond.s3 && (t.s3 < maxt);
     maxt = select(maxt, t.s3, cond3);
     _b1 = select(_b1, b1.s3, cond3);
     _b2 = select(_b2, b2.s3, cond3);
-    index = select(index, primitives.s3, cond3);
+    mIndex = select(mIndex, meshIndex.s3, cond3);
+	tIndex = select(tIndex, triangleIndex.s3, cond3);
 
-	if (index == NULL_INDEX)
+	if (mIndex == NULL_INDEX)
 		return;
 
 	ray4->maxt = (float4)maxt;
@@ -152,7 +156,8 @@ void QuadTriangle_Intersect(
 	rayHit->t = maxt;
 	rayHit->b1 = _b1;
 	rayHit->b2 = _b2;
-	rayHit->index = index;
+	rayHit->meshIndex = mIndex;
+	rayHit->triangleIndex = tIndex;
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
@@ -204,7 +209,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	const int isigns2 = 1 - signs2;
 
 	RayHit rayHit;
-	rayHit.index = NULL_INDEX;
+	rayHit.meshIndex = NULL_INDEX;
+	rayHit.triangleIndex = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
@@ -238,6 +244,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 		if (!QBVHNode_IsLeaf(nodeData)) {
 #ifdef USE_IMAGE_STORAGE
             // Read the node information from the image storage
+
+			// 7 pixels required for the storage of a QBVH node
             const ushort inx = (nodeData >> 16) * 7;
             const ushort iny = (nodeData & 0xffff);
             const float4 bboxes_minX = as_float4(read_imageui(nodes, imageSampler, (int2)(inx + bboxes_minXIndex, iny)));
@@ -283,7 +291,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 			const uint offset = QBVHNode_FirstQuadIndex(nodeData);
 
 #ifdef USE_IMAGE_STORAGE
-            ushort inx = (offset >> 16) * 10;
+			// 11 pixels required for the storage of QBVH Triangles
+            ushort inx = (offset >> 16) * 11;
             ushort iny = (offset & 0xffff);
 #endif
 
@@ -298,7 +307,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
                 const float4 edge2x = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
                 const float4 edge2y = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
                 const float4 edge2z = as_float4(read_imageui(quadTris, imageSampler, (int2)(inx++, iny)));
-                const uint4 primitives = read_imageui(quadTris, imageSampler, (int2)(inx++, iny));
+                const uint4 meshIndex = read_imageui(quadTris, imageSampler, (int2)(inx++, iny));
+				const uint4 triangleIndex = read_imageui(quadTris, imageSampler, (int2)(inx++, iny));
 
                 if (inx >= quadTrisImageWidth) {
                     inx = 0;
@@ -315,13 +325,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
                 const float4 edge2x = quadTri->edge2x;
                 const float4 edge2y = quadTri->edge2y;
                 const float4 edge2z = quadTri->edge2z;
-                const uint4 primitives = quadTri->primitives;
+                const uint4 meshIndex = quadTri->meshIndex;
+				const uint4 triangleIndex = quadTri->triangleIndex;
 #endif
 				QuadTriangle_Intersect(
                     origx, origy, origz,
                     edge1x, edge1y, edge1z,
                     edge2x, edge2y, edge2z,
-                    primitives,
+                    meshIndex, triangleIndex,
                     &ray4, &rayHit);
             }
 		}
@@ -330,5 +341,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	//printf("MaxDepth=%02d\n", maxDepth);
 
 	// Write result
-	RayHit_WriteAligned4(&rayHits[gid], rayHit.t, rayHit.b1, rayHit.b2, rayHit.index);
+	__global RayHit *rh = &rayHits[gid];
+	rh->t = rayHit.t;
+	rh->b1 = rayHit.b1;
+	rh->b2 = rayHit.b2;
+	rh->meshIndex = rayHit.meshIndex;
+	rh->triangleIndex = rayHit.triangleIndex;
 }

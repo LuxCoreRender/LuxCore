@@ -65,10 +65,12 @@ void Triangle_Intersect(
 		const float3 rayDir,
 		const float mint,
 		float *maxt,
-		uint *hitIndex,
+		uint *hitMeshIndex,
+		uint *hitTriangleIndex,
 		float *hitB1,
 		float *hitB2,
-		const uint currentIndex,
+		const uint currentMeshIndex,
+		const uint currentTriangleIndex,
 		const float3 v0,
 		const float3 v1,
 		const float3 v2) {
@@ -108,5 +110,6 @@ void Triangle_Intersect(
 	*maxt = t;
 	*hitB1 = b1;
 	*hitB2 = b2;
-	*hitIndex = currentIndex;
+	*hitMeshIndex = currentMeshIndex;
+	*hitTriangleIndex = currentTriangleIndex;
 }
