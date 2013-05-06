@@ -63,14 +63,39 @@ public:
 
 		// Check how many pages I have to allocate
 		const size_t maxVertCount = maxMemAlloc / sizeof(Point);
-		const u_int totalVertCount = bvh->preprocessedMesh->GetTotalVertexCount();
-		const Point *verts = bvh->preprocessedMesh->GetVertices();
-		u_int vertIndex = 0;
+		const u_int totalVertCount = bvh->totalVertexCount;
 
+		// Allocate the temporary vertex buffer
+		Point *tmpVerts = new Point[Min<size_t>(totalVertCount, maxVertCount)];
+		std::deque<const Mesh *>::const_iterator mesh = bvh->meshes.begin();
+
+		u_int vertsCopied = 0;
+		u_int meshVertIndex = 0;
+		std::vector<u_int> meshVertexOffsets;
+		meshVertexOffsets.reserve(bvh->meshes.size());
+		meshVertexOffsets.push_back(0);
 		do {
-			const u_int leftVertCount = totalVertCount - vertIndex;
+			const u_int leftVertCount = totalVertCount - vertsCopied;
 			const u_int pageVertCount = Min<size_t>(leftVertCount, maxVertCount);
 
+			// Fill the temporary vertex buffer
+			u_int meshVertCount = (*mesh)->GetTotalVertexCount();
+			for (u_int i = 0; i < pageVertCount; ++i) {
+				if (meshVertIndex >= meshVertCount) {
+					// Move to the next mesh
+					if (++mesh == bvh->meshes.end())
+						break;
+
+					meshVertexOffsets.push_back(vertsCopied);
+
+					meshVertCount = (*mesh)->GetTotalVertexCount();
+					meshVertIndex = 0;
+				}
+				tmpVerts[i] = (*mesh)->GetVertex(meshVertIndex++);
+				++vertsCopied;
+			}
+
+			// Allocate the OpenCL buffer
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				"] Vertices buffer size (Page " << vertsBuffs.size() <<", " <<
 				pageVertCount << " vertices): " <<
@@ -79,15 +104,14 @@ public:
 			cl::Buffer *vb = new cl::Buffer(oclContext,
 				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 				sizeof(Point) * pageVertCount,
-				(void *)&verts[vertIndex]);
+				(void *)tmpVerts);
 			device->AllocMemory(vb->getInfo<CL_MEM_SIZE>());
 			vertsBuffs.push_back(vb);
 
 			if (vertsBuffs.size() > 8)
 				throw std::runtime_error("Too many vertex pages required in OpenCLBVHKernels()");
-
-			vertIndex += pageVertCount;
-		} while (vertIndex < totalVertCount);
+		} while (vertsCopied < totalVertCount);
+		delete[] tmpVerts;
 
 		//----------------------------------------------------------------------
 		// Allocate BVH node buffers
@@ -114,8 +138,9 @@ public:
 				if (BVHNodeData_IsLeaf(node->nodeData)) {
 					// Update the vertex references
 					for (u_int j = 0; j < 3; ++j) {
-						const u_int vertexPage = node->triangleLeaf.v[j] / maxVertCount;
-						const u_int vertexIndex = node->triangleLeaf.v[j] % maxVertCount;
+						const u_int vertexGlobalIndex = node->triangleLeaf.v[j] + meshVertexOffsets[node->triangleLeaf.meshIndex];
+						const u_int vertexPage = vertexGlobalIndex / maxVertCount;
+						const u_int vertexIndex = vertexGlobalIndex % maxVertCount;
 						// Encode the page in the last 3 bits of the vertex index
 						node->triangleLeaf.v[j] = (vertexPage << 29) | vertexIndex;
 					}
@@ -284,46 +309,43 @@ BVHAccel::BVHAccel(const Context *context,
 	params.traversalCost = tcost;
 	params.emptyBonus = ebonus;
 
-	preprocessedMesh = NULL;
-
 	initialized = false;
 }
 
-void BVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount,
-		const u_int totalTriangleCount) {
+void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_int totVert,
+		const u_int totTri) {
 	assert (!initialized);
 
-	// Build the preprocessed mesh
-	preprocessedMesh = TriangleMesh::Merge(totalVertexCount, totalTriangleCount, meshes);
-	assert (preprocessedMesh->GetTotalVertexCount() == totalVertexCount);
-	assert (preprocessedMesh->GetTotalTriangleCount() == totalTriangleCount);
-
-	LR_LOG(ctx, "Total vertices memory usage: " << totalVertexCount * sizeof(Point) / 1024 << "Kbytes");
-	LR_LOG(ctx, "Total triangles memory usage: " << totalTriangleCount * sizeof(Triangle) / 1024 << "Kbytes");
-
-	Init(preprocessedMesh);
-}
-
-void BVHAccel::Init(const Mesh *m) {
-	mesh = m;
-
-	const Point *v = mesh->GetVertices();
-	const Triangle *p = mesh->GetTriangles();
+	meshes = ms;
+	totalVertexCount = totVert;
+	totalTriangleCount = totTri;
 
 	std::vector<BVHAccelTreeNode *> bvList;
-	bvList.reserve(mesh->GetTotalTriangleCount());
-	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-		BVHAccelTreeNode *node = new BVHAccelTreeNode();
-		node->bbox = p[i].WorldBound(v);
-		// NOTE - Ratow - Expand bbox a little to make sure rays collide
-		node->bbox.Expand(MachineEpsilon::E(node->bbox));
-		node->triangleLeaf.index = i;
-		node->leftChild = NULL;
-		node->rightSibling = NULL;
-		bvList.push_back(node);
+	bvList.reserve(totalTriangleCount);
+	u_int meshIndex = 0;
+	BOOST_FOREACH(const Mesh *mesh, meshes) {
+		const Triangle *p = mesh->GetTriangles();
+
+		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
+			BVHAccelTreeNode *node = new BVHAccelTreeNode();
+
+			node->bbox = Union(
+					BBox(mesh->GetVertex(p[i].v[0]), mesh->GetVertex(p[i].v[1])),
+					mesh->GetVertex(p[i].v[2]));
+			// NOTE - Ratow - Expand bbox a little to make sure rays collide
+			node->bbox.Expand(MachineEpsilon::E(node->bbox));
+			node->triangleLeaf.meshIndex = meshIndex;
+			node->triangleLeaf.triangleIndex = i;
+
+			node->leftChild = NULL;
+			node->rightSibling = NULL;
+			bvList.push_back(node);
+		}
+		
+		++meshIndex;
 	}
 
-	LR_LOG(ctx, "Building Bounding Volume Hierarchy, primitives: " << mesh->GetTotalTriangleCount());
+	LR_LOG(ctx, "Building Bounding Volume Hierarchy, primitives: " << totalTriangleCount);
 
 	nNodes = 0;
 	BVHAccelTreeNode *rootNode = BuildHierarchy(&nNodes, params, bvList, 0, bvList.size(), 2);
@@ -331,7 +353,7 @@ void BVHAccel::Init(const Mesh *m) {
 	LR_LOG(ctx, "Pre-processing Bounding Volume Hierarchy, total nodes: " << nNodes);
 
 	bvhTree = new BVHAccelArrayNode[nNodes];
-	BuildArray(p, rootNode, 0, bvhTree);
+	BuildArray(&meshes, rootNode, 0, bvhTree);
 	FreeHierarchy(rootNode);
 
 	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(BVHAccelArrayNode) / 1024 << "Kbytes");
@@ -341,15 +363,8 @@ void BVHAccel::Init(const Mesh *m) {
 }
 
 BVHAccel::~BVHAccel() {
-	if (initialized) {
-		if (preprocessedMesh) {
-			// preprocessedMesh is not allocated when BVHAccel is used by MBVHAccel
-			preprocessedMesh->Delete();
-			delete preprocessedMesh;
-		}
-
+	if (initialized)
 		delete bvhTree;
-	}
 }
 
 void BVHAccel::FreeHierarchy(BVHAccelTreeNode *node) {
@@ -500,7 +515,7 @@ void BVHAccel::FindBestSplit(const BVHParams &params, std::vector<BVHAccelTreeNo
 	}
 }
 
-u_int BVHAccel::BuildArray(const Triangle *triangles, BVHAccelTreeNode *node,
+u_int BVHAccel::BuildArray(const std::deque<const Mesh *> *meshes, BVHAccelTreeNode *node,
 		u_int offset, BVHAccelArrayNode *bvhTree) {
 	// Build array by recursively traversing the tree depth-first
 	while (node) {
@@ -509,22 +524,24 @@ u_int BVHAccel::BuildArray(const Triangle *triangles, BVHAccelTreeNode *node,
 		if (node->leftChild) {
 			// It is a BVH node
 			memcpy(&p->bvhNode.bboxMin[0], &node->bbox, sizeof(float) * 6);
-			offset = BuildArray(triangles, node->leftChild, offset + 1, bvhTree);
+			offset = BuildArray(meshes, node->leftChild, offset + 1, bvhTree);
 			p->nodeData = offset;
 		} else {
 			// It is a leaf
-			if (triangles) {
+			if (meshes) {
 				// It is a BVH of triangles
-				const Triangle *triangle = &triangles[node->triangleLeaf.index];
+				const Triangle *triangles = (*meshes)[node->triangleLeaf.meshIndex]->GetTriangles();
+				const Triangle *triangle = &triangles[node->triangleLeaf.triangleIndex];
 				p->triangleLeaf.v[0] = triangle->v[0];
 				p->triangleLeaf.v[1] = triangle->v[1];
 				p->triangleLeaf.v[2] = triangle->v[2];
-				p->triangleLeaf.triangleIndex = node->triangleLeaf.index;
+				p->triangleLeaf.meshIndex = node->triangleLeaf.meshIndex;
+				p->triangleLeaf.triangleIndex = node->triangleLeaf.triangleIndex;
 			} else {
 				// It is a BVH of BVHs (i.e. MBVH)
 				p->bvhLeaf.leafIndex = node->bvhLeaf.leafIndex;
 				p->bvhLeaf.transformIndex = node->bvhLeaf.transformIndex;
-				p->bvhLeaf.triangleOffsetIndex = node->bvhLeaf.triangleOffsetIndex;
+				p->bvhLeaf.meshOffsetIndex = node->bvhLeaf.meshOffsetIndex;
 			}
 
 			// Mark as a leaf
@@ -548,7 +565,6 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 	rayHit->t = ray.maxt;
 	rayHit->SetMiss();
 
-	const Point *vertices = preprocessedMesh->GetVertices();
 	float t, b1, b2;
 	while (currentNode < stopNode) {
 		const BVHAccelArrayNode &node = bvhTree[currentNode];
@@ -556,9 +572,10 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the triangle
-			const Point &p0 = vertices[node.triangleLeaf.v[0]];
-			const Point &p1 = vertices[node.triangleLeaf.v[1]];
-			const Point &p2 = vertices[node.triangleLeaf.v[2]];
+			const Mesh *mesh = meshes[node.triangleLeaf.meshIndex];
+			const Point p0 = mesh->GetVertex(node.triangleLeaf.v[0]);
+			const Point p1 = mesh->GetVertex(node.triangleLeaf.v[1]);
+			const Point p2 = mesh->GetVertex(node.triangleLeaf.v[2]);
 
 			if (Triangle::Intersect(ray, p0, p1, p2, &t, &b1, &b2)) {
 				if (t < rayHit->t) {
@@ -566,7 +583,8 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 					rayHit->t = t;
 					rayHit->b1 = b1;
 					rayHit->b2 = b2;
-					rayHit->index = node.triangleLeaf.triangleIndex;
+					rayHit->meshIndex = node.triangleLeaf.meshIndex;
+					rayHit->triangleIndex = node.triangleLeaf.triangleIndex;
 					// Continue testing for closer intersections
 				}
 			}

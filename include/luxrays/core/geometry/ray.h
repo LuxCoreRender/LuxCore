@@ -66,7 +66,7 @@ public:
 	Vector d;
 	mutable float mint, maxt;
 	float time;
-	float pad[3]; // Add padding to avoid size discrepancies with OpenCL (TODO: remove)
+	float pad[3]; // Add padding to avoid size discrepancies with OpenCL
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Ray &r) {
@@ -78,10 +78,10 @@ class RayHit {
 public:
 	float t;
 	float b1, b2; // Barycentric coordinates of the hit point
-	unsigned int index;
+	unsigned int meshIndex, triangleIndex;
 
-	void SetMiss() { index = 0xffffffffu; };
-	bool Miss() const { return (index == 0xffffffffu); };
+	void SetMiss() { meshIndex = 0xffffffffu; };
+	bool Miss() const { return (meshIndex == 0xffffffffu); };
 };
 
 }

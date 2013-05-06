@@ -30,8 +30,6 @@
 #include "slg/renderconfig.h"
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/accelerators/mqbvhaccel.h"
-#include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
@@ -83,7 +81,6 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	alphaFrameBufferBuff = NULL;
 	materialsBuff = NULL;
 	texturesBuff = NULL;
-	meshIDBuff = NULL;
 	meshDescsBuff = NULL;
 	meshMatsBuff = NULL;
 	infiniteLightBuff = NULL;
@@ -259,12 +256,7 @@ void PathOCLRenderThread::InitCamera() {
 }
 
 void PathOCLRenderThread::InitGeometry() {
-	Scene *scene = renderEngine->renderConfig->scene;
 	CompiledScene *cscene = renderEngine->compiledScene;
-
-	const u_int trianglesCount = scene->dataSet->GetTotalTriangleCount();
-	AllocOCLBufferRO(&meshIDBuff, (void *)cscene->meshIDs,
-			sizeof(u_int) * trianglesCount, "MeshIDs");
 
 	if (cscene->normals.size() > 0)
 		AllocOCLBufferRO(&normalsBuff, &cscene->normals[0],
@@ -1132,7 +1124,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *materialsBuff);
 	advancePathsKernel->setArg(argIndex++, *texturesBuff);
 	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
-	advancePathsKernel->setArg(argIndex++, *meshIDBuff);
 	advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, *vertsBuff);
 	if (normalsBuff)
@@ -1230,7 +1221,6 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&alphaFrameBufferBuff);
 	FreeOCLBuffer(&materialsBuff);
 	FreeOCLBuffer(&texturesBuff);
-	FreeOCLBuffer(&meshIDBuff);
 	FreeOCLBuffer(&meshDescsBuff);
 	FreeOCLBuffer(&meshMatsBuff);
 	FreeOCLBuffer(&normalsBuff);

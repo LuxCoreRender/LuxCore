@@ -33,33 +33,30 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	hitPoint.p = ray(rayHit.t);
 	hitPoint.fixedDir = -ray.d;
 
-	const u_int meshIndex = scene.dataSet->GetMeshID(rayHit.index);
-
 	// Get the triangle
-	mesh = scene.meshDefs.GetExtMesh(meshIndex);
-	triIndex = scene.dataSet->GetMeshTriangleID(rayHit.index);
+	mesh = scene.meshDefs.GetExtMesh(rayHit.meshIndex);
 
 	// Get the material
-	material = scene.objectMaterials[meshIndex];
+	material = scene.objectMaterials[rayHit.meshIndex];
 
 	// Interpolate face normal
-	hitPoint.geometryN = mesh->GetGeometryNormal(triIndex);
-	hitPoint.shadeN = mesh->InterpolateTriNormal(triIndex, rayHit.b1, rayHit.b2);
+	hitPoint.geometryN = mesh->GetGeometryNormal(rayHit.triangleIndex);
+	hitPoint.shadeN = mesh->InterpolateTriNormal(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
 	// Interpolate color
-	hitPoint.color = mesh->InterpolateTriColor(triIndex, rayHit.b1, rayHit.b2);
+	hitPoint.color = mesh->InterpolateTriColor(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
 	// Interpolate alpha
-	hitPoint.alpha = mesh->InterpolateTriAlpha(triIndex, rayHit.b1, rayHit.b2);
+	hitPoint.alpha = mesh->InterpolateTriAlpha(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.triLightDefs[scene.meshTriLightDefsOffset[meshIndex]];
+		triangleLightSource = scene.triLightDefs[scene.meshTriLightDefsOffset[rayHit.meshIndex]];
 	else
 		triangleLightSource = NULL;
 
 	// Interpolate UV coordinates
-	hitPoint.uv = mesh->InterpolateTriUV(triIndex, rayHit.b1, rayHit.b2);
+	hitPoint.uv = mesh->InterpolateTriUV(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
 	// Check if I have to apply normal mapping
 	if (material->HasNormalTex()) {

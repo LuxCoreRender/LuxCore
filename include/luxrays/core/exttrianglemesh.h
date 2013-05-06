@@ -332,7 +332,6 @@ public:
 	u_int GetSize() const { return static_cast<u_int>(meshs.size()); }
   
 private:
-
 	std::vector<ExtMesh *> meshs;
 	std::map<std::string, ExtMesh *> meshsByName;
 };

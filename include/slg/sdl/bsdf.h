@@ -72,12 +72,9 @@ public:
 
 private:
 	const luxrays::ExtMesh *mesh;
-	u_int triIndex;
-
 	const Material *material;
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
 	luxrays::Frame frame;
-
 };
 	
 }

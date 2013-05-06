@@ -25,10 +25,10 @@ typedef struct {
 	Point o;
 	Vector d;
 	float mint, maxt, time;
-	float pad[3]; // TODO: remove (here and in ray.h)
+	float pad[3];
 } Ray;
 
 typedef struct {
 	float t, b1, b2;
-	unsigned int index;
+	unsigned int meshIndex, triangleIndex;
 } RayHit;

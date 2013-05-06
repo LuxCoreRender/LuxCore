@@ -38,7 +38,7 @@ class OpenCLMQBVHKernels : public OpenCLKernels {
 public:
 	OpenCLMQBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MQBVHAccel *accel) :
 		OpenCLKernels(dev, kernelCount), mqbvh(accel), mqbvhBuff(NULL), memMapBuff(NULL), leafBuff(NULL),
-		leafQuadTrisBuff(NULL), invTransBuff(NULL), trisOffsetBuff(NULL) {
+		leafQuadTrisBuff(NULL), invTransBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
 		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -114,13 +114,10 @@ public:
 		device->FreeMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
 		delete invTransBuff;
 		invTransBuff = NULL;
-		device->FreeMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
-		delete trisOffsetBuff;
-		trisOffsetBuff = NULL;
 	}
 
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
-		cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o);
+		cl::Buffer *mm, cl::Buffer *t);
 	virtual void Update(const DataSet *newDataSet);
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -135,17 +132,15 @@ protected:
 	cl::Buffer *leafBuff;
 	cl::Buffer *leafQuadTrisBuff;
 	cl::Buffer *invTransBuff;
-	cl::Buffer *trisOffsetBuff;
 };
 
 void OpenCLMQBVHKernels::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
-	cl::Buffer *mm, cl::Buffer *t, cl::Buffer *o) {
+	cl::Buffer *mm, cl::Buffer *t) {
 	mqbvhBuff = m;
 	leafBuff = l;
 	leafQuadTrisBuff = q;
 	memMapBuff = mm;
 	invTransBuff = t;
-	trisOffsetBuff = o;
 
 	// Set arguments
 	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
@@ -154,7 +149,6 @@ void OpenCLMQBVHKernels::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 		kernel->setArg(5, *leafBuff);
 		kernel->setArg(6, *leafQuadTrisBuff);
 		kernel->setArg(7, *invTransBuff);
-		kernel->setArg(8, *trisOffsetBuff);
 	}
 }
 
@@ -316,19 +310,10 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	device->AllocMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
 	delete[] invTrans;
 
-	// Upload primitive offsets
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-		"] MQBVH primitive offsets buffer size: " <<
-		(sizeof(u_int) * nLeafs / 1024) << "Kbytes");
-	cl::Buffer *trisOffsetBuff = new cl::Buffer(oclContext,
-		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		sizeof(u_int) * nLeafs, leafsOffset);
-	device->AllocMemory(trisOffsetBuff->getInfo<CL_MEM_SIZE>());
-
 	// Setup kernels
 	OpenCLMQBVHKernels *kernels = new OpenCLMQBVHKernels(device, kernelCount, this);
 	kernels->SetBuffers(mqbvhBuff, leafBuff, leafQuadTrisBuff, memMapBuff,
-				invTransBuff, trisOffsetBuff);
+				invTransBuff);
 
 	return kernels;
 }
@@ -389,7 +374,6 @@ MQBVHAccel::~MQBVHAccel() {
 	if (initialized) {
 		FreeAligned(nodes);
 
-		delete[] leafsOffset;
 		delete[] leafsTransform;
 		delete[] leafs;
 
@@ -414,7 +398,6 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 
 	leafs = new QBVHAccel*[nLeafs];
 	leafsTransform = new const Transform*[nLeafs];
-	leafsOffset = new u_int[nLeafs];
 	u_int currentOffset = 0;
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < nLeafs; ++i) {
@@ -428,7 +411,8 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
 				leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
-				leafs[i]->Init(meshList[i]);
+				leafs[i]->Init(std::deque<const Mesh *>(1, meshList[i]),
+						meshList[i]->GetTotalVertexCount(), meshList[i]->GetTotalTriangleCount());
 				accels[meshList[i]] = leafs[i];
 
 				leafsTransform[i] = NULL;
@@ -443,7 +427,8 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 				if (it == accels.end()) {
 					// Create a new QBVH
 					leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
-					leafs[i]->Init(itm);
+					leafs[i]->Init(std::deque<const Mesh *>(1, itm->GetTriangleMesh()),
+							itm->GetTotalVertexCount(), itm->GetTotalTriangleCount());
 					accels[itm->GetTriangleMesh()] = leafs[i];
 				} else {
 					//LR_LOG(ctx, "Cached QBVH leaf");
@@ -461,7 +446,8 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 				if (it == accels.end()) {
 					// Create a new QBVH
 					leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
-					leafs[i]->Init(eitm);
+					leafs[i]->Init(std::deque<const Mesh *>(1, eitm->GetExtTriangleMesh()),
+							eitm->GetTotalVertexCount(), eitm->GetTotalTriangleCount());
 					accels[eitm->GetExtTriangleMesh()] = leafs[i];
 				} else {
 					//LR_LOG(ctx, "Cached QBVH leaf");
@@ -476,7 +462,6 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalV
 				break;
 		}
 
-		leafsOffset[i] = currentOffset;
 		currentOffset += meshList[i]->GetTotalTriangleCount();
 	}
 
@@ -849,7 +834,8 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 					rayHit->t = rh.t;
 					rayHit->b1 = rh.b1;
 					rayHit->b2 = rh.b2;
-					rayHit->index = rh.index + leafsOffset[leafIndex];
+					rayHit->meshIndex = leafIndex;
+					rayHit->triangleIndex = rh.triangleIndex;
 
 					ray.maxt = rh.t;
 				}
@@ -859,7 +845,8 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 					rayHit->t = rh.t;
 					rayHit->b1 = rh.b1;
 					rayHit->b2 = rh.b2;
-					rayHit->index = rh.index + leafsOffset[leafIndex];
+					rayHit->meshIndex = leafIndex;
+					rayHit->triangleIndex = rh.triangleIndex;
 
 					ray.maxt = rh.t;
 				}

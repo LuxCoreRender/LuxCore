@@ -61,16 +61,6 @@ public:
 	u_int GetDataSetID() const { return dataSetID; }
 	bool IsEqual(const DataSet *dataSet) const;
 
-	const TriangleMeshID GetMeshID(const u_int index) const {
-		return meshIDs[index];
-	}
-	const TriangleMeshID *GetMeshIDTable() const {
-		return &meshIDs[0];
-	}
-	const TriangleID GetMeshTriangleID(const u_int index) const {
-		return index - meshTriangleOffset[GetMeshID(index)];
-	}
-
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
 
@@ -83,8 +73,6 @@ private:
 	u_int totalVertexCount;
 	u_int totalTriangleCount;
 	std::deque<const Mesh *> meshes;
-	TriangleMeshID *meshIDs; // One for each triangle
-	TriangleID *meshTriangleOffset; // One for each mesh
 
 	BBox bbox;
 	BSphere bsphere;

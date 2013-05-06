@@ -69,7 +69,6 @@ public:
 	vector<float> alphas;
 	vector<luxrays::Triangle> tris;
 	vector<luxrays::ocl::Mesh> meshDescs;
-	const luxrays::TriangleMeshID *meshIDs;
 
 	// Compiled AreaLights
 	vector<slg::ocl::TriangleLight> triLightDefs;

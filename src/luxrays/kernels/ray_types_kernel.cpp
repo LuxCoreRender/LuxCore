@@ -28,11 +28,11 @@ std::string KernelSource_ray_types =
 "	Point o;\n"
 "	Vector d;\n"
 "	float mint, maxt, time;\n"
-"	float pad[3]; // TODO: remove (here and in ray.h)\n"
+"	float pad[3];\n"
 "} Ray;\n"
 "\n"
 "typedef struct {\n"
 "	float t, b1, b2;\n"
-"	unsigned int index;\n"
+"	unsigned int meshIndex, triangleIndex;\n"
 "} RayHit;\n"
 ; } }

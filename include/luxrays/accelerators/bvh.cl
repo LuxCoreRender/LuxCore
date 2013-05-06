@@ -31,12 +31,12 @@ typedef struct {
 		} bvhNode;
 		struct {
 			uint v[3];
-			uint triangleIndex;
+			uint meshIndex, triangleIndex;
 		} triangleLeaf;
 		struct {
 			uint leafIndex;
 			uint transformIndex;
-			uint triangleOffsetIndex;
+			uint meshOffsetIndex;
 		} bvhLeaf; // Used by MBVH
 	};
 	// Most significant bit is used to mark leafs
@@ -176,8 +176,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	nodePages[7] = nodePage7;
 #endif
 
-	const uint stopPage = BVHNodeData_GetPageIndex(nodePage0[0].nodeData);
-	const uint stopNode = BVHNodeData_GetNodeIndex(nodePage0[0].nodeData); // Non-existent
+	const uint rootNodeData = nodePage0[0].nodeData;
+	const uint stopPage = BVHNodeData_GetPageIndex(rootNodeData);
+	const uint stopNode = BVHNodeData_GetNodeIndex(rootNodeData); // Non-existent
 	uint currentPage = 0; // Root Node Page
 #else
 	const uint stopNode = BVHNodeData_GetSkipIndex(nodePage0[0].nodeData); // Non-existent
@@ -194,7 +195,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 
 	const float3 invRayDir = 1.f / rayDir;
 
-	uint hitIndex = NULL_INDEX;
+	uint hitMeshIndex = NULL_INDEX;
+	uint hitTriangleIndex = NULL_INDEX;
 	uint currentNode = 0; // Root Node
 
 	float b1, b2;
@@ -246,9 +248,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 #endif
 
 			//const uint triangleIndex = node->triangleLeaf.triangleIndex;
-			const uint triangleIndex = as_uint(data0.s3);
-			Triangle_Intersect(rayOrig, rayDir, mint, &maxt, &hitIndex, &b1, &b2,
-					triangleIndex, p0, p1, p2);
+			const uint meshIndex = as_uint(data0.s3);
+			const uint triangleIndex = as_uint(data1.s0);
+
+			Triangle_Intersect(rayOrig, rayDir, mint, &maxt, &hitMeshIndex, &hitTriangleIndex,
+					&b1, &b2, meshIndex, triangleIndex, p0, p1, p2);
 #if (BVH_NODES_PAGE_COUNT == 1)
 			++currentNode;
 #else
@@ -281,5 +285,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	}
 
 	// Write result
-	RayHit_WriteAligned4(&rayHits[gid], maxt, b1, b2, hitIndex);
+	__global RayHit *rayHit = &rayHits[gid];
+	rayHit->t = maxt;
+	rayHit->b1 = b1;
+	rayHit->b2 = b2;
+	rayHit->meshIndex = hitMeshIndex;
+	rayHit->triangleIndex = hitTriangleIndex;
 }

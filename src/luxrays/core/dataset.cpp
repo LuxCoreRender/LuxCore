@@ -24,6 +24,7 @@
 #include <deque>
 #include <sstream>
 #include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"
@@ -50,9 +51,6 @@ DataSet::DataSet(const Context *luxRaysContext) {
 	totalVertexCount = 0;
 	totalTriangleCount = 0;
 
-	meshIDs = NULL;
-	meshTriangleOffset = NULL;
-
 	accelType = ACCEL_AUTO;
 	preprocessed = false;
 	enableInstanceSupport = true;
@@ -62,9 +60,6 @@ DataSet::DataSet(const Context *luxRaysContext) {
 DataSet::~DataSet() {
 	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it)
 		delete it->second;
-
-	delete[] meshIDs;
-	delete[] meshTriangleOffset;
 }
 
 TriangleMeshID DataSet::Add(const Mesh *mesh) {
@@ -91,23 +86,8 @@ void DataSet::Preprocess() {
 	if (totalTriangleCount == 0)
 		throw std::runtime_error("An empty DataSet can not be preprocessed");
 
-	LR_LOG(context, "Mesh IDs storage: " << sizeof(TriangleMeshID) * totalTriangleCount / 1024 << "Kbytes");
-	meshIDs = new TriangleMeshID[totalTriangleCount];
-	LR_LOG(context, "Mesh triangle offset storage: " << sizeof(TriangleID) * totalMeshCount / 1024 << "Kbytes");
-	meshTriangleOffset = new TriangleID[totalMeshCount];
-	u_int triangleOffset = 0;
-	u_int triangleIndex = 0;
-	for (u_int meshIndex = 0; meshIndex < totalMeshCount; ++meshIndex) {
-		bbox = Union(bbox, meshes[meshIndex]->GetBBox());
-
-		const u_int triCount = meshes[meshIndex]->GetTotalTriangleCount();
-		for (u_int i = 0; i < triCount; ++i)
-			meshIDs[triangleIndex++] = meshIndex;
-
-		meshTriangleOffset[meshIndex] = triangleOffset;
-		triangleOffset += triCount;
-	}
-	
+	BOOST_FOREACH(const Mesh *m, meshes)
+		bbox = Union(bbox, m->GetBBox());
 	bsphere = bbox.BoundingSphere();
 
 	preprocessed = true;

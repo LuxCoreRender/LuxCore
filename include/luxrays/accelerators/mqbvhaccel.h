@@ -84,7 +84,6 @@ private:
 	std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)> accels;
 	QBVHAccel **leafs;
 	const Transform **leafsTransform;
-	unsigned int *leafsOffset;
 
 	const Context *ctx;
 	bool initialized;

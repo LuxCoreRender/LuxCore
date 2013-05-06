@@ -247,7 +247,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global Material *mats,
 		__global Texture *texs,
 		__global uint *meshMats,
-		__global uint *meshIDs,
 		__global Mesh *meshDescs,
 		__global Point *vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
@@ -310,7 +309,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
-	const uint currentTriangleIndex = rayHit->index;
+	const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
 
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
@@ -320,12 +319,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == RT_NEXT_VERTEX) {
-		if (currentTriangleIndex != NULL_INDEX) {
+		if (!rayMiss) {
 			// Something was hit
 
 			BSDF_Init(bsdf,
 					meshDescs,
-					meshMats, meshIDs,
+					meshMats,
 #if (PARAM_DL_LIGHT_COUNT > 0)
 					meshTriLightDefsOffset,
 #endif
@@ -455,7 +454,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	if (pathState == RT_DL) {
 		pathState = GENERATE_NEXT_VERTEX_RAY;
 
-		if (currentTriangleIndex == NULL_INDEX) {
+		if (rayMiss) {
 			// Nothing was hit, the light source is visible
 			float3 radiance = VLOAD3F(&sample->radiance.r);
 			const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r);
@@ -466,7 +465,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		else {
 			BSDF_Init(&task->passThroughState.passThroughBsdf,
 					meshDescs,
-					meshMats, meshIDs,
+					meshMats,
 #if (PARAM_DL_LIGHT_COUNT > 0)
 					meshTriLightDefsOffset,
 #endif

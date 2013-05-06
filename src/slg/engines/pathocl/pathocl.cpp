@@ -35,8 +35,6 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/accelerators/mqbvhaccel.h"
-#include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/oclintersectiondevice.h"
 
 #include "slg/slg.h"

@@ -57,9 +57,4 @@ std::string KernelSource_ray_funcs =
 "	*mint = data1.z;\n"
 "	*maxt = data1.w;\n"
 "}\n"
-"\n"
-"void RayHit_WriteAligned4(__global RayHit *rayHit, const float t, const float b1, const float b2, const uint index) {\n"
-"	__global float4 *data = (__global float4 *)rayHit;\n"
-"	*data = (float4)(t, b1, b2, as_float(index));\n"
-"}\n"
 ; } }
