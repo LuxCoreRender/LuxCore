@@ -85,8 +85,8 @@ public:
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
-		const u_int totalVertexCount,
-		const u_int totalTriangleCount);
+		const u_longlong totalVertexCount,
+		const u_longlong totalTriangleCount);
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
@@ -123,7 +123,7 @@ private:
 
 	const Context *ctx;
 	std::deque<const Mesh *> meshes;
-	u_int totalVertexCount, totalTriangleCount;
+	u_longlong totalVertexCount, totalTriangleCount;
 
 	bool initialized;
 };

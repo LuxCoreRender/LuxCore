@@ -41,7 +41,7 @@ public:
 	void SetDeleteMeshData(const bool v) { deleteMeshData = v; }
 
 	void DefineExtMesh(const std::string &fileName,
-		const long plyNbVerts, const long plyNbTris,
+		const u_int plyNbVerts, const u_int plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
 		luxrays::Spectrum *cols, float *alphas,
 		const bool usePlyNormals);

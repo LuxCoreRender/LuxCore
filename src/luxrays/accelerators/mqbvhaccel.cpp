@@ -386,8 +386,8 @@ bool MQBVHAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
 	return p0 < p1;
 }
 
-void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_int totalVertexCount,
-		const u_int totalTriangleCount) {
+void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount,
+		const u_longlong totalTriangleCount) {
 	assert (!initialized);
 
 	meshList = meshes;

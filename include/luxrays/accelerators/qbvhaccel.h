@@ -397,8 +397,8 @@ public:
 		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const;
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
-		const unsigned int totalVertexCount,
-		const unsigned int totalTriangleCount);
+		const u_longlong totalVertexCount,
+		const u_longlong totalTriangleCount);
 
 	/**
 	   Intersect a ray in world space against the

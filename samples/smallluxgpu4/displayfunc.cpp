@@ -224,7 +224,7 @@ void displayFunc(void) {
 		session->renderEngine->GetPass(),
 		session->renderEngine->GetTotalSamplesSec() / 1000000.0,
 		int(session->renderEngine->GetTotalRaysSec() / 1000.0),
-		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.f);
+		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 	session->film->UpdateScreenBuffer();
 	const float *pixels = session->film->GetScreenBuffer();
