@@ -73,8 +73,7 @@ void Properties::Load(std::istream &stream) {
 			value.resize(value.size() - 1);
 		boost::trim(value);
 
-		props[key] = value;
-		keys.push_back(key);
+		SetString(key, value);
 	}
 }
 
@@ -191,13 +190,12 @@ std::vector<float> Properties::GetFloatVector(const std::string propName, const 
 }
 
 void Properties::SetString(const std::string &propName, const std::string &value) {
-	props[propName] = value;
-
-	std::vector<std::string>::iterator it = std::find(keys.begin(), keys.end(), propName);
-	if (it == keys.end())
+	if (props.find(propName) == props.end()) {
+		// It is a new key
 		keys.push_back(propName);
-	else
-		*it = propName;
+	}
+
+	props[propName] = value;
 }
 
 std::string Properties::SetString(const std::string &property) {
@@ -215,13 +213,9 @@ std::string Properties::SetString(const std::string &property) {
 }
 
 void Properties::Delete(const std::string &propName) {
-	std::vector<std::string>::iterator it = keys.begin();
-	while (it != keys.end()) {
-		if (*it == propName)
-			it = keys.erase(it);
-		else
-			++it;
-	}
+	std::vector<std::string>::iterator it = std::find(keys.begin(), keys.end(), propName);
+	if (it != keys.end())
+		keys.erase(it);
 
 	props.erase(propName);
 }
