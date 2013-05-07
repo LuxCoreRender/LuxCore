@@ -22,6 +22,33 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
+// Sample Priority
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+bool PrioritySample(float scr_x, float scr_y, float margin, __global PriorityPixel *priorityFrameBuffer) {
+	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * scr_x + .5f), (uint)(PARAM_IMAGE_WIDTH - 1));
+	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * scr_y + .5f), (uint)(PARAM_IMAGE_HEIGHT - 1));
+	const uint index = XY2FrameBufferIndex(x, y);
+	return ((priorityFrameBuffer[index - 1].priority <= margin) && 
+		(priorityFrameBuffer[index].priority <= margin) &&
+		(priorityFrameBuffer[index + 1].priority <= margin) &&
+		(priorityFrameBuffer[index - 1 + PARAM_IMAGE_WIDTH + 2].priority <= margin) &&
+		(priorityFrameBuffer[index + PARAM_IMAGE_WIDTH + 2].priority <= margin) &&
+		(priorityFrameBuffer[index + 1 + PARAM_IMAGE_WIDTH + 2].priority <= margin) &&
+		(priorityFrameBuffer[index - 1 - PARAM_IMAGE_WIDTH - 2].priority <= margin) &&
+		(priorityFrameBuffer[index - PARAM_IMAGE_WIDTH - 2].priority <= margin) &&
+		(priorityFrameBuffer[index + 1 - PARAM_IMAGE_WIDTH - 2].priority <= margin));
+}
+
+float AdvancePriorityMargin (float a) {
+	a *= 0.8f;
+	a -= 0.01f;
+	return a;
+}
+#endif
+
+//------------------------------------------------------------------------------
 // Random Sampler Kernel
 //------------------------------------------------------------------------------
 
@@ -44,9 +71,26 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+#endif
+		) {
+
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	float prioritymargin = 1.f;
+	do {
+	prioritymargin = AdvancePriorityMargin(prioritymargin);
+#endif
+
 	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
 	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	} while (PrioritySample(sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer));
+#endif
+
 
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -62,6 +106,12 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+		, __global Pixel *frameBufferOld
+		, __global Pixel *frameBufferOlder
+#endif
+
 		) {
 	SplatSample(frameBuffer,
 			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
@@ -69,11 +119,28 @@ void Sampler_NextSample(
 			alphaFrameBuffer,
 			sample->alpha,
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+			priorityFrameBuffer,
+			frameBufferOld,
+			frameBufferOlder,
+#endif
 			1.f);
 
 	// Move to the next assigned pixel
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	float prioritymargin = 1.f;
+	do {
+	prioritymargin = AdvancePriorityMargin(prioritymargin);
+#endif
+
 	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
 	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	} while (PrioritySample(sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer));
+#endif
+
 
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -106,9 +173,26 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU) {
+void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+#endif
+		) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Rnd_FloatValue(seed);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	float prioritymargin = 1.f;
+	while (PrioritySample(proposedU[IDX_SCREEN_X], proposedU[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer)) {
+	prioritymargin = AdvancePriorityMargin(prioritymargin);
+
+	proposedU[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+	proposedU[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+	
+	}
+#endif
+
+
+
 }
 
 float Mutate(Seed *seed, const float x) {
@@ -162,7 +246,11 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(seed, currentU[i]);
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+#endif
+) {
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
 
@@ -181,7 +269,11 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 #endif
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	LargeStep(seed, 0, sampleDataPathBase);
+	LargeStep(seed, 0, sampleDataPathBase
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, priorityFrameBuffer
+#endif
+		);
 
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -197,6 +289,12 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+		, __global Pixel *frameBufferOld
+		, __global Pixel *frameBufferOlder
+#endif
+
 		) {
 	//--------------------------------------------------------------------------
 	// Accept/Reject the sample
@@ -327,6 +425,11 @@ void Sampler_NextSample(
 				alphaFrameBuffer,
 				contribAlpha,
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+				priorityFrameBuffer,
+				frameBufferOld,
+				frameBufferOlder,
+#endif
 				norm);
 		}
 
@@ -343,7 +446,12 @@ void Sampler_NextSample(
 
 	__global float *proposedU = &sampleData[proposed * TOTAL_U_SIZE];
 	if (Rnd_FloatValue(seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
-		LargeStep(seed, sample->largeMutationCount, proposedU);
+		LargeStep(seed, sample->largeMutationCount, proposedU
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+			, priorityFrameBuffer
+#endif
+		);
+
 		sample->smallMutationCount = 0;
 	} else {
 		__global float *currentU = &sampleData[current * TOTAL_U_SIZE];
@@ -410,7 +518,11 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+#endif
+	) {
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	sample->alpha = 1.f;
@@ -423,10 +535,23 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	const uint pixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
 	sample->pixelIndex = pixelIndex;
 	uint x, y;
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	float prioritymargin = 1.f;
+	do {
+#endif
+
+
 	PixelIndex2XY(pixelIndex, &x, &y);
 
 	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
 	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	
+	prioritymargin = AdvancePriorityMargin(prioritymargin);
+	} while (PrioritySample(sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer));
+#endif
+
 
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -442,6 +567,12 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+		, __global Pixel *frameBufferOld
+		, __global Pixel *frameBufferOlder
+#endif
+
 		) {
 	SplatSample(frameBuffer,
 			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
@@ -449,9 +580,21 @@ void Sampler_NextSample(
 			alphaFrameBuffer,
 			sample->alpha,
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		priorityFrameBuffer,
+		frameBufferOld,
+		frameBufferOlder,
+#endif
 			1.f);
 
 	// Move to the next assigned pixel
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	float prioritymargin = 1.f;
+	do {
+#endif
+
+
 	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
 	if (nextPixelIndex > PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) {
 		nextPixelIndex = get_global_id(0);
@@ -463,6 +606,13 @@ void Sampler_NextSample(
 
 	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
 	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+
+	prioritymargin = AdvancePriorityMargin(prioritymargin);
+	} while (PrioritySample(sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer));
+#endif
+
 
 	VSTORE3F(BLACK, &sample->radiance.r);
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)

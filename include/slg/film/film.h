@@ -91,6 +91,14 @@ public:
 
 		enableAlphaChannel = alphaChannel;
 	}
+
+	void SetPriorityMapFlag(const bool priorityMap) {
+		// Alpha buffer uses the weights in PER_PIXEL_NORMALIZED buffer
+		//assert (!alphaChannel || (alphaChannel && enablePerPixelNormalizedBuffer));
+
+		enablePriorityMap = priorityMap;
+	}
+	bool IsPriorityMapEnabled() const { return enablePriorityMap; }
 	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
 
 	void SetOverlappedScreenBufferUpdateFlag(const bool overlappedScreenBufferUpdate) {
@@ -113,6 +121,7 @@ public:
 		SetPerScreenNormalizedBufferFlag(HasPerScreenNormalizedBuffer());
 		SetFrameBufferFlag(HasFrameBuffer());
 		SetAlphaChannelFlag(film.IsAlphaChannelEnabled());
+		SetPriorityMapFlag(film.IsPriorityMapEnabled());
 		SetFilterType(film.GetFilterType());
 		SetToneMapParams(*(film.GetToneMapParams()));
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
@@ -158,6 +167,10 @@ public:
 		return alphaFrameBuffer->GetPixel(x, y);
 	}
 
+	const PriorityPixel *GetPriorityPixel(const u_int x, const u_int y) const {
+		return priorityFrameBuffer->GetPixel(x, y);
+	}
+
 	//--------------------------------------------------------------------------
 
 	void ResetConvergenceTest();
@@ -181,12 +194,17 @@ public:
 		alphaFrameBuffer->SetPixel(x, y, alpha);
 	}
 
+	void SetPriority(const u_int x, const u_int y, const float priority) {
+		priorityFrameBuffer->SetPixel(x, y, priority);
+	}
+
 	void AddAlpha(const u_int x, const u_int y, const float alpha,
 		const float weight) {
 		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
 
 		ap->alpha += weight * alpha;
 	}
+//no priority to add
 
 	void SplatFiltered(const FilmBufferType type, const float screenX,
 		const float screenY, const luxrays::Spectrum &radiance, const float alpha,
@@ -224,6 +242,7 @@ private:
 	// Two sample buffers, one PER_PIXEL_NORMALIZED and the other PER_SCREEN_NORMALIZED
 	SampleFrameBuffer *sampleFrameBuffer[2];
 	AlphaFrameBuffer *alphaFrameBuffer;
+	PriorityFrameBuffer *priorityFrameBuffer;
 	FrameBuffer *frameBuffer;
 
 	ConvergenceTest *convTest;
@@ -231,7 +250,7 @@ private:
 	Filter *filter;
 	FilterLUTs *filterLUTs;
 
-	bool enableAlphaChannel, enabledOverlappedScreenBufferUpdate,
+	bool enableAlphaChannel, enablePriorityMap, enabledOverlappedScreenBufferUpdate,
 		enablePerPixelNormalizedBuffer, enablePerScreenNormalizedBuffer,
 		enableFrameBuffer;
 };

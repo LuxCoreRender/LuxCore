@@ -33,12 +33,14 @@ Film::Film(const unsigned int w, const unsigned int h) {
 	sampleFrameBuffer[PER_PIXEL_NORMALIZED] = NULL;
 	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
 	alphaFrameBuffer = NULL;
+	priorityFrameBuffer = NULL;
 	frameBuffer = NULL;
 	convTest = NULL;
 
 	enablePerPixelNormalizedBuffer = true;
 	enablePerScreenNormalizedBuffer = false;
 	enableAlphaChannel = false;
+	enablePriorityMap = true;
 	enableFrameBuffer = true;
 	enabledOverlappedScreenBufferUpdate = true;
 
@@ -199,7 +201,6 @@ void Film::AddFilm(const Film &film,
 			}
 		}
 	}
-
 	if (enableAlphaChannel && film.enableAlphaChannel) {
 		AlphaFrameBuffer *fbDst = alphaFrameBuffer;
 		const AlphaFrameBuffer *fbSrc = film.alphaFrameBuffer;
@@ -245,6 +246,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 
 							const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixel(ridx);
 							const float weight = sp->weight;
+
 							if (weight == 0.f) {
 								pixel[x].alpha = 0.f;
 							} else {
@@ -252,6 +254,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 								const AlphaPixel *ap = alphaFrameBuffer->GetPixel(ridx);
 								pixel[x].alpha = ap->alpha * iw;
 							}
+
 						}
 
 						// Next line
@@ -312,7 +315,9 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 					for (unsigned int y = 0; y < height; ++y) {
 						BYTE *pixel = (BYTE *)bits;
 						for (unsigned int x = 0; x < width; ++x) {
+
 							const int offset = 3 * (x + y * width);
+
 							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
 							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
 							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);

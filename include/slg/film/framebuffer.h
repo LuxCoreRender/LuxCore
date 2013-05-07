@@ -186,6 +186,10 @@ typedef struct {
 	float alpha;
 } AlphaPixel;
 
+typedef struct {
+	float priority;
+} PriorityPixel;
+
 class AlphaFrameBuffer {
 public:
 	AlphaFrameBuffer(const unsigned int w, const unsigned int h)
@@ -263,6 +267,71 @@ private:
 
 	AlphaPixel *pixels;
 };
+
+
+class PriorityFrameBuffer {
+public:
+	PriorityFrameBuffer(const unsigned int w, const unsigned int h)
+		: width(w), height(h) {
+		pixels = new PriorityPixel[width * height];
+
+		Clear();
+	}
+	~PriorityFrameBuffer() {
+		delete[] pixels;
+	}
+
+
+	void Clear() {
+
+		for (unsigned int i = 0; i < width * height; ++i)
+			pixels[i].priority = 1.f;
+	};
+
+	PriorityPixel *GetPixels() const { return pixels; }
+
+	void SetPixel(const unsigned int x, const unsigned int y, const float a) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		PriorityPixel *pixel = &pixels[x + y * width];
+		pixel->priority = a;
+	}
+
+	void SetPixel(const unsigned int index, const float a) {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		pixels[index].priority = a;
+	}
+
+	PriorityPixel *GetPixel(const unsigned int x, const unsigned int y) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		return &pixels[x + y * width];
+	}
+
+	PriorityPixel *GetPixel(const unsigned int index) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		return &pixels[index];
+	}
+
+	unsigned int GetWidth() const { return width; }
+	unsigned int GetHeight() const { return height; }
+
+private:
+	const unsigned int width, height;
+
+	PriorityPixel *pixels;
+};
+
 
 }
 

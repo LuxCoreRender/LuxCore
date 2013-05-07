@@ -182,6 +182,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		__global GPUTaskStats *taskStats,
 		__global Ray *rays,
 		__global Camera *camera
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -195,7 +198,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	// Initialize the sample and path
 	__global Sample *sample = &task->sample;
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, sample, sampleData);
+	Sampler_Init(&seed, sample, sampleData
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, priorityFrameBuffer
+#endif
+	);
 	GenerateCameraPath(task, sampleData, camera, &rays[gid], &seed);
 
 	// Save the seed
@@ -216,6 +223,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+		, __global Pixel *frameBufferOld
+		, __global Pixel *frameBufferOlder
+#endif
+
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= (PARAM_IMAGE_WIDTH + 2) * (PARAM_IMAGE_HEIGHT + 2))
@@ -227,6 +240,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 	__global AlphaPixel *ap = &alphaFrameBuffer[gid];
 	ap->alpha = 0.f;
 #endif
+
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	__global PriorityPixel *pm = &priorityFrameBuffer[gid];
+	pm->priority = 1.f;
+	VSTORE4F(0.f, &frameBufferOld[gid].c.r);	
+	VSTORE4F(0.f, &frameBufferOlder[gid].c.r);
+#endif
+
 }
 
 //------------------------------------------------------------------------------
@@ -280,6 +301,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, __global PriorityPixel *priorityFrameBuffer
+		, __global Pixel *frameBufferOld
+		, __global Pixel *frameBufferOlder
+#endif
+
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -680,6 +707,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 				, alphaFrameBuffer
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+				, priorityFrameBuffer
+				, frameBufferOld
+				, frameBufferOlder
+#endif
+
 				);
 		taskStats[gid].sampleCount += 1;
 

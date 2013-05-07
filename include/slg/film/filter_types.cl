@@ -34,6 +34,10 @@ typedef struct {
 	float alpha;
 } AlphaPixel;
 
+typedef struct {
+	float priority;
+} PriorityPixel;
+
 //------------------------------------------------------------------------------
 // Filter data types
 //------------------------------------------------------------------------------
