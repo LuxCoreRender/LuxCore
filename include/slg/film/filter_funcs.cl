@@ -105,6 +105,19 @@ Error: unknown image filter !!!
 
 #endif
 
+float sumc(const Pixel pixel) {
+	float value = pixel.c.r / pixel.count;
+	value += pixel.c.g / pixel.count;
+	value += pixel.c.b / pixel.count;
+	return value;
+}
+
+float AddPixelDifference(const Pixel pixel1, const Pixel pixel2) {
+	return (fabs(pixel1.c.r / pixel1.count - pixel2.c.r / pixel2.count) + 
+		fabs(pixel1.c.g / pixel1.count - pixel2.c.g / pixel2.count) + 
+		fabs(pixel1.c.b / pixel1.count - pixel2.c.b / pixel2.count));
+}
+
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 void AtomicAdd(__global float *val, const float delta) {
 	union {
@@ -123,7 +136,13 @@ void AtomicAdd(__global float *val, const float delta) {
 }
 #endif
 
-void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weight) {
+void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	, __global Pixel *oldPixel
+	, __global Pixel *olderPixel
+	, __global PriorityPixel *priorityPixel
+#endif	
+	) {
 	/*if (isnan(rad->r) || isinf(rad->r) ||
 			isnan(rad->g) || isinf(rad->g) ||
 			isnan(rad->b) || isinf(rad->b) ||
@@ -145,6 +164,18 @@ void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weig
 	p += s;
 	VSTORE4F(p, &(pixel->c.r));
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	if ((oldPixel->count) * 2 < (pixel->count)) {
+		priorityPixel->priority = 
+			AddPixelDifference(*pixel, *oldPixel) / (sumc(*pixel) + sumc(*oldPixel)) + 
+			(AddPixelDifference(*oldPixel, *olderPixel) / (sumc(*oldPixel) + sumc(*olderPixel))) / 2 +
+			0.01f;
+		p = VLOAD4F(&(oldPixel->c.r));
+		VSTORE4F(p, &(olderPixel->c.r));
+		p = VLOAD4F(&(pixel->c.r));
+		VSTORE4F(p, &(oldPixel->c.r));
+	}
+#endif	
 }
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
@@ -159,7 +190,13 @@ void Pixel_AddAlpha(__global AlphaPixel *apixel, const float alpha, const float 
 
 #if (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3)
 void Pixel_AddFilteredRadiance(__global Pixel *pixel, const float3 rad,
-	const float distX, const float distY, const float weight) {
+	const float distX, const float distY, const float weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	. __global Pixel *oldpixel
+	, __global Pixel *olderPixel
+	, __global PriorityPixel *priorityPixel
+#endif	
+	) {
 	const float filterWeight = ImageFilter_Evaluate(distX, distY);
 
 	Pixel_AddRadiance(pixel, rad, weight * filterWeight);
@@ -184,12 +221,28 @@ void SplatSample(__global Pixel *frameBuffer,
 		__global AlphaPixel *alphaFrameBuffer,
 		const float alpha,
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		__global PriorityPixel *priorityFrameBuffer,
+		__global Pixel *frameBufferOld,
+		__global Pixel *frameBufferOlder,
+#endif
 		const float weight) {
 	const uint x = min((uint)floor(PARAM_IMAGE_WIDTH * scrX + .5f), (uint)(PARAM_IMAGE_WIDTH - 1));
 	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * scrY + .5f), (uint)(PARAM_IMAGE_HEIGHT - 1));
-	
-	__global Pixel *pixel = &frameBuffer[XY2FrameBufferIndex(x, y)];
-	Pixel_AddRadiance(pixel, radiance, weight);
+	uint index = XY2FrameBufferIndex(x, y);
+	__global Pixel *pixel = &frameBuffer[index];
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+	__global Pixel *pixelOld = &frameBufferOld[index];
+	__global Pixel *pixelOlder = &frameBufferOlder[index];
+	__global PriorityPixel *prioritypixel = &priorityFrameBuffer[index];
+#endif
+	Pixel_AddRadiance(pixel, radiance, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 	__global AlphaPixel *apixel = &alphaFrameBuffer[XY2FrameBufferIndex(x, y)];
@@ -205,6 +258,11 @@ void SplatSample(__global Pixel *frameBuffer,
 		__global AlphaPixel *alphaFrameBuffer,
 		const float alpha,
 #endif
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		__global PriorityPixel *priorityFrameBuffer,
+		__global Pixel *frameBufferOld,
+		__global Pixel *frameBufferOlder,
+#endif
 		const float weight) {
 	const float px = PARAM_IMAGE_WIDTH * scrX + .5f;
 	const float py = PARAM_IMAGE_HEIGHT * scrY + .5f;
@@ -217,25 +275,124 @@ void SplatSample(__global Pixel *frameBuffer,
 
 	{
 		__global Pixel *pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y - 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		__global Pixel *pixelOld = &frameBufferOld[XY2FrameBufferIndex(x - 1, y - 1)];
+		__global Pixel *pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x - 1, y - 1)];
+		__global PriorityPixel *prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x - 1, y - 1)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy + 1.f, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 		pixel = &frameBuffer[XY2FrameBufferIndex(x, y - 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy + 1.f, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x, y - 1)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x, y - 1)];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x, y - 1)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy + 1.f, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y - 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x + 1, y - 1)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x + 1, y - 1];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x + 1, y - 1)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy + 1.f, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 
 		pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x - 1, y)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x - 1, y)];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x - 1, y)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 		pixel = &frameBuffer[XY2FrameBufferIndex(x, y)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x, y)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x, y)];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x, y)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x + 1, y)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x + 1, y)];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x + 1, y)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 
 		pixel = &frameBuffer[XY2FrameBufferIndex(x - 1, y + 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x - 1, y + 1)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x - 1, y + 1)];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x - 1, y + 1)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx + 1.f, sy - 1.f, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 		pixel = &frameBuffer[XY2FrameBufferIndex(x, y + 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy - 1.f, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x, y + 1)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x, y + 1)];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x, y + 1)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx, sy - 1.f, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 		pixel = &frameBuffer[XY2FrameBufferIndex(x + 1, y + 1)];
-		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f, weight);
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		pixelOld = &frameBufferOld[XY2FrameBufferIndex(x + 1, y + 1)];
+		pixelOlder = &frameBufferOlder[XY2FrameBufferIndex(x + 1, y + 1)];
+		prioritypixel = &priorityFrameBuffer[XY2FrameBufferIndex(x + 1, y + 1)];
+#endif
+		Pixel_AddFilteredRadiance(pixel, radiance, sx - 1.f, sy - 1.f, weight
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+		, pixelOld
+		, pixelOlder
+		, prioritypixel
+#endif
+		);
 	}
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
