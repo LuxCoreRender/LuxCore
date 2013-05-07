@@ -80,7 +80,7 @@ public:
 		triCount = meshTriCount;
 		vertices = meshVertices;
 		tris = meshTris;
-	};
+	}
 	virtual ~TriangleMesh() { };
 	virtual void Delete() {
 		delete[] vertices;

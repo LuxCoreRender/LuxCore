@@ -185,7 +185,13 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		SDL_LOG("Saving mesh information:");
 		const std::vector<ExtMesh *> &meshes =  extMeshCache.GetMeshes();
 		std::set<std::string> savedMeshes;
+		double lastPrint = WallClockTime();
 		for (u_int i = 0; i < meshes.size(); ++i) {
+			if (WallClockTime() - lastPrint > 2.0) {
+				SDL_LOG("  " << i << "/" << meshes.size());
+				lastPrint = WallClockTime();
+			}
+
 			u_int meshIndex;
 			if (meshes[i]->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 				const ExtInstanceTriangleMesh *m = (ExtInstanceTriangleMesh *)meshes[i];
@@ -196,16 +202,22 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 
 			// Check if I have already saved this mesh (mostly useful for instances)
 			if (savedMeshes.find(fileName) == savedMeshes.end()) {
-				SDL_LOG("  " + fileName);
+				//SDL_LOG("  " + fileName);
 				meshes[i]->WritePly(fileName);
 				savedMeshes.insert(fileName);
 			}
 		}
 
 		SDL_LOG("Saving object information:");
-		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
+		lastPrint = WallClockTime();
+		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {			
+			if (WallClockTime() - lastPrint > 2.0) {
+				SDL_LOG("  " << i << "/" << meshDefs.GetSize());
+				lastPrint = WallClockTime();
+			}
+
 			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
-			SDL_LOG("  " + mesh->GetName());
+			//SDL_LOG("  " + mesh->GetName());
 			props.Load(mesh->ToProperties(objectMaterials[i]->GetName(), extMeshCache));
 		}
 
