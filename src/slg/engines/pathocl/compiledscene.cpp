@@ -945,8 +945,8 @@ void CompiledScene::CompileImageMaps() {
 
 		if (!found) {
 			// Check if I can add a new page
-			if (imageMapMemBlocks.size() > 5)
-				throw std::runtime_error("More than 5 blocks of memory are required for image maps");
+			if (imageMapMemBlocks.size() > 8)
+				throw std::runtime_error("More than 8 blocks of memory are required for image maps");
 
 			// Add a new page
 			imageMapMemBlocks.push_back(vector<float>());
