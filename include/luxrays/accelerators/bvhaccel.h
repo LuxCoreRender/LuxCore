@@ -23,6 +23,7 @@
 #define	_LUXRAYS_BVHACCEL_H
 
 #include <vector>
+#include <boost/foreach.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
