@@ -61,6 +61,8 @@ public:
 	}
 
 	const luxrays::Vector &GetDir() const { return dir; }
+	const luxrays::Vector &GetX() const { return x; }
+	const luxrays::Vector &GetY() const { return y; }
 	const float GetPixelArea() const { return pixelArea; }
 	const u_int GetFilmWeight() const { return filmWidth; }
 	const u_int GetFilmHeight() const { return filmHeight; }

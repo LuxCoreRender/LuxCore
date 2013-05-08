@@ -53,6 +53,20 @@ void ExtMeshCache::DefineExtMesh(const std::string &fileName,
 	DefineExtMesh(fileName, mesh, usePlyNormals);
 }
 
+void ExtMeshCache::DeleteExtMesh(const std::string &fileName, const bool usePlyNormals) {
+	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
+
+	// Check if the mesh has been loaded
+	std::map<std::string, ExtTriangleMesh *>::iterator it = maps.find(key);
+
+	if (it != maps.end()) {
+		if (deleteMeshData)
+			it->second->Delete();
+		meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
+		maps.erase(it);
+	}
+}
+
 ExtMesh *ExtMeshCache::FindExtMesh(const std::string &fileName, const bool usePlyNormals) {
 	// Check if the mesh has been already loaded
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;

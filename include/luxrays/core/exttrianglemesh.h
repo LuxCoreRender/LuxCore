@@ -285,8 +285,19 @@ public:
 		return (meshsByName.count(name) > 0);
 	}
 	void DefineExtMesh(const std::string &name, ExtMesh *t) {
-		meshs.push_back(t);
+		meshes.push_back(t);
 		meshsByName.insert(std::make_pair(name, t));
+	}
+	void DeleteExtMesh(const std::string &name) {
+		// Look for the mesh
+		std::map<std::string, ExtMesh *>::iterator it = meshsByName.find(name);
+
+		if (it != meshsByName.end()) {
+			// I don't delete the ExtMesh here because they are usually stored
+			// in a ExtMeshCache
+			meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
+			meshsByName.erase(it);
+		}
 	}
 
 	ExtMesh *GetExtMesh(const std::string &name) {
@@ -300,19 +311,19 @@ public:
 	}
 
 	ExtMesh *GetExtMesh(const u_int index) {
-		return meshs[index];
+		return meshes[index];
 	}
 
 	const ExtMesh *GetExtMesh(const u_int index) const {
-		return meshs[index];
+		return meshes[index];
 	}
 
 	u_int GetExtMeshIndex(const std::string &name) {
 		return GetExtMeshIndex(GetExtMesh(name));
 	}
 	u_int GetExtMeshIndex(const ExtMesh *m) const {
-		for (u_int i = 0; i < meshs.size(); ++i) {
-			if (m == meshs[i])
+		for (u_int i = 0; i < meshes.size(); ++i) {
+			if (m == meshes[i])
 				return i;
 		}
 
@@ -321,18 +332,18 @@ public:
 
 	vector<std::string> GetExtMeshNames() const {
 		vector<std::string> names;
-		names.reserve(meshs.size());
+		names.reserve(meshes.size());
 		for (std::map<std::string, ExtMesh *>::const_iterator it = meshsByName.begin(); it != meshsByName.end(); ++it)
 			names.push_back(it->first);
 
 		return names;
 	}
 
-	std::vector<ExtMesh *> &GetAllMesh() { return meshs; }
-	u_int GetSize() const { return static_cast<u_int>(meshs.size()); }
+	std::vector<ExtMesh *> &GetAllMesh() { return meshes; }
+	u_int GetSize() const { return static_cast<u_int>(meshes.size()); }
   
 private:
-	std::vector<ExtMesh *> meshs;
+	std::vector<ExtMesh *> meshes;
 	std::map<std::string, ExtMesh *> meshsByName;
 };
 
