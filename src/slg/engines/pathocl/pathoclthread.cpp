@@ -541,10 +541,11 @@ void PathOCLRenderThread::InitKernels() {
 
 	if (imageMapDescsBuff) {
 		ss << " -D PARAM_HAS_IMAGEMAPS";
-		if (imageMapsBuff.size() > 5)
+		if (imageMapsBuff.size() > 8)
 			throw std::runtime_error("Too many memory pages required for image maps");
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			ss << " -D PARAM_IMAGEMAPS_PAGE_" << i;
+		ss << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
 	}
 
 	if (renderEngine->compiledScene->useBumpMapping)

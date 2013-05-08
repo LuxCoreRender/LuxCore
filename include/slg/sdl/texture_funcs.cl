@@ -153,45 +153,9 @@ float Turbulence(const float3 P, const float omega, const int maxOctaves) {
 
 #if defined(PARAM_HAS_IMAGEMAPS)
 
-__global float *ImageMap_GetPixelsAddress(
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	__global float *imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	__global float *imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	__global float *imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	__global float *imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	__global float *imageMapBuff4,
-#endif
-	const uint page, const uint offset
-    ) {
-    switch (page) {
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-        case 1:
-            return &imageMapBuff1[offset];
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-        case 2:
-            return &imageMapBuff2[offset];
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-        case 3:
-            return &imageMapBuff3[offset];
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-        case 4:
-            return &imageMapBuff4[offset];
-#endif
-        default:
-        case 0:
-            return &imageMapBuff0[offset];
-    }
+__global float *ImageMap_GetPixelsAddress(__global float **imageMapBuff,
+		const uint page, const uint offset) {
+	return &imageMapBuff[page][offset];
 }
 
 float ImageMap_GetTexel_Float(__global float *pixels,
@@ -331,22 +295,7 @@ void ImageMapTexture_EvaluateFloat(__global Texture *texture, __global HitPoint 
 		IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		imageMapBuff4,
-#endif
-		imageMap->pageIndex, imageMap->pixelsIndex);
+			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(&texture->imageMapTex.mapping, hitPoint);
@@ -362,22 +311,7 @@ void ImageMapTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoi
 		IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		imageMapBuff4,
-#endif
-		imageMap->pageIndex, imageMap->pixelsIndex);
+			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(&texture->imageMapTex.mapping, hitPoint);

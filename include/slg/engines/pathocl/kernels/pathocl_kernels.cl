@@ -276,7 +276,30 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		, __global TriangleLight *triLightDefs
 		, __global uint *meshTriLightDefsOffset
 #endif
-		IMAGEMAPS_PARAM_DECL
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+		, __global ImageMap *imageMapDescs, __global float *imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+		, __global float *imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+		, __global float *imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+		, __global float *imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+		, __global float *imageMapBuff4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+		, __global float *imageMapBuff5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+		, __global float *imageMapBuff6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+		, __global float *imageMapBuff7
+#endif
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)
 		, __global AlphaPixel *alphaFrameBuffer
 #endif
@@ -306,6 +329,35 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	seedValue.s3 = task->seed.s3;
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
+
+#if defined(PARAM_HAS_IMAGEMAPS)
+	// Initialize image maps page pointer table
+	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+	imageMapBuff[0] = imageMapBuff0;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+	imageMapBuff[1] = imageMapBuff1;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+	imageMapBuff[2] = imageMapBuff2;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+	imageMapBuff[3] = imageMapBuff3;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+	imageMapBuff[4] = imageMapBuff4;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+	imageMapBuff[5] = imageMapBuff5;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+	imageMapBuff[6] = imageMapBuff6;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+	imageMapBuff[7] = imageMapBuff7;
+#endif
+#endif
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];

@@ -32,22 +32,7 @@ float3 InfiniteLight_GetRadiance(
 	IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-		imageMapBuff0,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-		imageMapBuff1,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-		imageMapBuff2,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-		imageMapBuff3,
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-		imageMapBuff4,
-#endif
-		imageMap->pageIndex, imageMap->pixelsIndex);
+			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->light2World, -dir));
 	const float2 uv = (float2)(
