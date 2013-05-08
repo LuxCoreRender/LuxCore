@@ -47,6 +47,7 @@ public:
 		const bool usePlyNormals);
 	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals);
+	void DeleteExtMesh(const std::string &fileName, const bool usePlyNormals);
 
 	ExtMesh *FindExtMesh(const std::string &fileName, const bool usePlyNormals);
 
@@ -58,7 +59,7 @@ public:
 
 	const std::vector<ExtMesh *> &GetMeshes() const { return meshes; }
 
-private:
+public:
 	std::map<std::string, ExtTriangleMesh *> maps;
 	std::vector<ExtMesh *> meshes;
 
