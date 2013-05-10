@@ -38,7 +38,7 @@ public:
 	: x(_x), y(_y), z(_z) {
 	}
 
-	Point(float v[3]) : x(v[0]), y(v[1]), z(v[2]) {
+	Point(const float v[3]) : x(v[0]), y(v[1]), z(v[2]) {
 	}
 
 	Point operator+(const Vector &v) const {
