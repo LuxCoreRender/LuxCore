@@ -40,7 +40,7 @@ Film::Film(const unsigned int w, const unsigned int h) {
 	enablePerPixelNormalizedBuffer = true;
 	enablePerScreenNormalizedBuffer = false;
 	enableAlphaChannel = false;
-	enablePriorityMap = true;
+	enablePriorityMap = false;
 	enableFrameBuffer = true;
 	enabledOverlappedScreenBufferUpdate = true;
 

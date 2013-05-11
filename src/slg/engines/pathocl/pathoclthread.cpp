@@ -58,7 +58,6 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	alphaFrameBuffer = NULL;
 	priorityFrameBuffer = NULL;
 	frameBufferOld = NULL;
-	frameBufferOlder = NULL;
 
 	gpuTaskStats = NULL;
 
@@ -85,7 +84,6 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	alphaFrameBufferBuff = NULL;
 	priorityFrameBufferBuff = NULL;
 	frameBufferOldBuff = NULL;
-	frameBufferOlderBuff = NULL;
 
 	materialsBuff = NULL;
 	texturesBuff = NULL;
@@ -139,7 +137,6 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete[] alphaFrameBuffer;
 	delete[] priorityFrameBuffer;
 	delete[] frameBufferOld;
-	delete[] frameBufferOlder;
 
 	delete[] gpuTaskStats;
 
@@ -257,9 +254,6 @@ void PathOCLRenderThread::InitFrameBuffer() {
 	delete[] frameBufferOld;
 	frameBufferOld = NULL;
 
-	delete[] frameBufferOlder;
-	frameBufferOlder = NULL;
-
 	// Check if the film has an alpha channel
 	if (renderEngine->film->IsAlphaChannelEnabled()) {
 		alphaFrameBuffer = new slg::ocl::AlphaPixel[frameBufferPixelCount];
@@ -289,17 +283,6 @@ void PathOCLRenderThread::InitFrameBuffer() {
 		}
 
 		AllocOCLBufferRW(&frameBufferOldBuff, sizeof(slg::ocl::Pixel) * frameBufferPixelCount, "FrameBufferOld");
-
-		frameBufferOlder = new slg::ocl::Pixel[frameBufferPixelCount];
-
-		for (u_int i = 0; i < frameBufferPixelCount; ++i) {
-			frameBufferOlder[i].c.r = 0.f;
-			frameBufferOlder[i].c.g = 0.f;
-			frameBufferOlder[i].c.b = 0.f;
-			frameBufferOlder[i].count = 0.f;
-		}
-
-		AllocOCLBufferRW(&frameBufferOlderBuff, sizeof(slg::ocl::Pixel) * frameBufferPixelCount, "FrameBufferOlder");
 
 	}
 }
@@ -1214,7 +1197,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 	if (priorityFrameBufferBuff) {
 		advancePathsKernel->setArg(argIndex++, *priorityFrameBufferBuff);
 		advancePathsKernel->setArg(argIndex++, *frameBufferOldBuff);
-		advancePathsKernel->setArg(argIndex++, *frameBufferOlderBuff);
 	}
 
 	//--------------------------------------------------------------------------
@@ -1228,7 +1210,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 	if (priorityFrameBufferBuff) {
 		initFBKernel->setArg(argIndex++, *priorityFrameBufferBuff);
 		initFBKernel->setArg(argIndex++, *frameBufferOldBuff);
-		initFBKernel->setArg(argIndex++, *frameBufferOlderBuff);
 	}
 
 	//--------------------------------------------------------------------------
@@ -1294,7 +1275,6 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&alphaFrameBufferBuff);
 	FreeOCLBuffer(&priorityFrameBufferBuff);
 	FreeOCLBuffer(&frameBufferOldBuff);
-	FreeOCLBuffer(&frameBufferOlderBuff);
 	FreeOCLBuffer(&materialsBuff);
 	FreeOCLBuffer(&texturesBuff);
 	FreeOCLBuffer(&meshDescsBuff);
@@ -1439,15 +1419,13 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				frameBuffer);
 
 			// Check if I have to transfer the alpha channel too
-			//		
-			// temporary hack to save priority map as alpha
 			if (alphaFrameBufferBuff) {
 				// Async. transfer of the alpha channel
 				oclQueue.enqueueReadBuffer(
-					*priorityFrameBufferBuff,
+					*alphaFrameBufferBuff,
 					CL_FALSE,
 					0,
-					priorityFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
+					alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
 					alphaFrameBuffer);
 			}
 
@@ -1523,22 +1501,11 @@ void PathOCLRenderThread::RenderThreadImpl() {
 	// Check if I have to transfer the alpha channel too
 	if (alphaFrameBufferBuff) {
 		oclQueue.enqueueReadBuffer(
-			*priorityFrameBufferBuff,
+			*alphaFrameBufferBuff,
 			CL_TRUE,
 			0,
-			priorityFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
+			alphaFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
 			alphaFrameBuffer);
 	}
-/*
-	// Check if I have to transfer the priority channel too
-	if (priorityFrameBufferBuff) {
-		oclQueue.enqueueReadBuffer(
-			*priorityFrameBufferBuff,
-			CL_TRUE,
-			0,
-			priorityFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
-			priorityFrameBuffer);
-	}
-*/
 }
 #endif

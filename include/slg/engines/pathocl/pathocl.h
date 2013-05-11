@@ -127,7 +127,6 @@ protected:
 	cl::Buffer *alphaFrameBufferBuff;
 	cl::Buffer *priorityFrameBufferBuff;
 	cl::Buffer *frameBufferOldBuff;
-	cl::Buffer *frameBufferOlderBuff;
 
 	cl::Buffer *materialsBuff;
 	cl::Buffer *texturesBuff;
@@ -161,7 +160,6 @@ protected:
 	slg::ocl::AlphaPixel *alphaFrameBuffer;
 	slg::ocl::PriorityPixel *priorityFrameBuffer;
 	slg::ocl::Pixel *frameBufferOld;
-	slg::ocl::Pixel *frameBufferOlder;
 	u_int frameBufferPixelCount;
 
 	bool started, editMode;

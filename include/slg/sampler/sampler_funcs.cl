@@ -79,7 +79,7 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 
 
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
-	float prioritymargin = 1.f;
+	float prioritymargin = 0.2f;
 	do {
 	prioritymargin = AdvancePriorityMargin(prioritymargin);
 #endif
@@ -109,7 +109,6 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 		, __global PriorityPixel *priorityFrameBuffer
 		, __global Pixel *frameBufferOld
-		, __global Pixel *frameBufferOlder
 #endif
 
 		) {
@@ -122,14 +121,13 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 			priorityFrameBuffer,
 			frameBufferOld,
-			frameBufferOlder,
 #endif
 			1.f);
 
 	// Move to the next assigned pixel
 
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
-	float prioritymargin = 1.f;
+	float prioritymargin = 0.2f;
 	do {
 	prioritymargin = AdvancePriorityMargin(prioritymargin);
 #endif
@@ -181,7 +179,7 @@ void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Rnd_FloatValue(seed);
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
-	float prioritymargin = 1.f;
+	float prioritymargin = 0.2f;
 	while (PrioritySample(proposedU[IDX_SCREEN_X], proposedU[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer)) {
 	prioritymargin = AdvancePriorityMargin(prioritymargin);
 
@@ -292,7 +290,6 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 		, __global PriorityPixel *priorityFrameBuffer
 		, __global Pixel *frameBufferOld
-		, __global Pixel *frameBufferOlder
 #endif
 
 		) {
@@ -428,7 +425,6 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 				priorityFrameBuffer,
 				frameBufferOld,
-				frameBufferOlder,
 #endif
 				norm);
 		}
@@ -536,7 +532,7 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	sample->pixelIndex = pixelIndex;
 	uint x, y;
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
-	float prioritymargin = 1.f;
+	float prioritymargin = 0.2f;
 	do {
 #endif
 
@@ -570,7 +566,6 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 		, __global PriorityPixel *priorityFrameBuffer
 		, __global Pixel *frameBufferOld
-		, __global Pixel *frameBufferOlder
 #endif
 
 		) {
@@ -583,14 +578,13 @@ void Sampler_NextSample(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 		priorityFrameBuffer,
 		frameBufferOld,
-		frameBufferOlder,
 #endif
 			1.f);
 
 	// Move to the next assigned pixel
 
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
-	float prioritymargin = 1.f;
+	float prioritymargin = 0.2f;
 	do {
 #endif
 

@@ -81,6 +81,8 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	// Check if I have to enable the alpha channel
 	film->SetAlphaChannelFlag(cfg.GetInt("film.alphachannel.enable", 0) != 0);
+	// Check if I have to enable the priority map
+	film->SetPriorityMapFlag(cfg.GetInt("film.prioritymap.enable", 0) != 0);
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
