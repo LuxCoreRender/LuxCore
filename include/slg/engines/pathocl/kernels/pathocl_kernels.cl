@@ -226,7 +226,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 		, __global PriorityPixel *priorityFrameBuffer
 		, __global Pixel *frameBufferOld
-		, __global Pixel *frameBufferOlder
 #endif
 
 		) {
@@ -245,7 +244,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 	__global PriorityPixel *pm = &priorityFrameBuffer[gid];
 	pm->priority = 1.f;
 	VSTORE4F(0.f, &frameBufferOld[gid].c.r);	
-	VSTORE4F(0.f, &frameBufferOlder[gid].c.r);
 #endif
 
 }
@@ -304,7 +302,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 		, __global PriorityPixel *priorityFrameBuffer
 		, __global Pixel *frameBufferOld
-		, __global Pixel *frameBufferOlder
 #endif
 
 		) {
@@ -710,7 +707,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 				, priorityFrameBuffer
 				, frameBufferOld
-				, frameBufferOlder
 #endif
 
 				);

@@ -391,6 +391,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 					} else if (command == "image.reset") {
 						if (state == EDIT) {
 							session->film->Reset();
+							session->renderEngine->GenerateNewSeed();
 							boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 						} else {
 							boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
