@@ -304,6 +304,28 @@ public:
 	void DefineImgMap(const std::string &name, ImageMap *im);
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
+
+    // Get a path from imageMap object.
+
+	const std::string &GetPath(const slg::ImageMap *im)const {
+		for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it) {
+			if (it->second == im)
+				return it->first;
+		}
+		throw std::runtime_error("Unknown ImageMap in ImageMapCache::GetPath()");
+	}
+
+	void DeleteImageMap(const slg::ImageMap *im) {
+		for (std::map<std::string, ImageMap *>::iterator it = maps.begin(); it != maps.end(); ++it) {
+			if (it->second == im) {
+				delete it->second;
+				maps.erase(it);
+
+				return;
+			}
+		}
+	}
+
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
 	void GetImageMaps(std::vector<ImageMap *> &ims);

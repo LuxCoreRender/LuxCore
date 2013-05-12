@@ -53,6 +53,12 @@ Scene::Scene() {
 }
 
 Scene::Scene(const std::string &fileName, const float imageScale) {
+	// Just in case there is an unexpected exception during the scene loading
+    camera = NULL;
+	envLight = NULL;
+	sunLight = NULL;
+	dataSet = NULL;
+
 	imgMapCache.SetImageResize(imageScale);
 
 	SDL_LOG("Reading scene: " << fileName);

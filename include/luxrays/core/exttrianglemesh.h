@@ -26,6 +26,7 @@
 #include <cstdlib>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/spectrum.h"
@@ -298,6 +299,32 @@ public:
 			meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
 			meshsByName.erase(it);
 		}
+	}
+    
+	// Helper function for GetReferenceCount().
+	inline static luxrays::ExtTriangleMesh *GetReferMesh(ExtMesh *object) {
+		luxrays::ExtTriangleMesh *pGeometry = NULL;
+		luxrays::ExtInstanceTriangleMesh *pInstance = dynamic_cast<luxrays::ExtInstanceTriangleMesh*>(object);
+
+		if (pInstance)
+			pGeometry = pInstance->GetExtTriangleMesh();
+		else
+			pGeometry = dynamic_cast<luxrays::ExtTriangleMesh*>(object);
+
+		return pGeometry;
+	}
+
+    // Get the number of objects (i.e. instances) that refer pGeometry.  Used
+	// to safely delete a mesh: remove a mesh from ExtMeshCache when it's refcount less 1.
+	u_int GetReferenceCount(luxrays::ExtTriangleMesh *pGeometry) {
+		u_int ref = 0;
+
+		BOOST_FOREACH(ExtMesh *object, meshes) {
+			if (GetReferMesh(object) == pGeometry)
+				ref++;
+		}
+
+		return ref;
 	}
 
 	ExtMesh *GetExtMesh(const std::string &name) {

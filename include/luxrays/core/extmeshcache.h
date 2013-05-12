@@ -47,7 +47,11 @@ public:
 		const bool usePlyNormals);
 	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals);
+
+	// Note: before call to DeleteExtMesh, be sore to not have any instance referencing
+	// the geometry
 	void DeleteExtMesh(const std::string &fileName, const bool usePlyNormals);
+    void DeleteExtMesh(luxrays::ExtTriangleMesh *mesh);
 
 	ExtMesh *FindExtMesh(const std::string &fileName, const bool usePlyNormals);
 
@@ -61,6 +65,7 @@ public:
 
 public:
 	std::map<std::string, ExtTriangleMesh *> maps;
+	// Used to preserve insertion order and to retrive insertion index
 	std::vector<ExtMesh *> meshes;
 
 	bool deleteMeshData;
