@@ -378,6 +378,18 @@ void PathOCLRenderThread::InitImageMaps() {
 
 void PathOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
+	// Allocate GPU task buffers
+	//--------------------------------------------------------------------------
+
+	InitGPUTaskBuffer();
+
+	//--------------------------------------------------------------------------
+	// Allocate sample data buffers
+	//--------------------------------------------------------------------------
+
+	InitSampleBuffer();
+
+	//--------------------------------------------------------------------------
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
@@ -871,10 +883,124 @@ void PathOCLRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Using cached kernels");
 }
 
-void PathOCLRenderThread::InitRender() {
+void PathOCLRenderThread::InitGPUTaskBuffer() {
+	const u_int taskCount = renderEngine->taskCount;
+	const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
+	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
+
+	// Add Seed memory size
+	size_t gpuTaksSize = sizeof(slg::ocl::Seed);
+
+	// Add Sample memory size
+	if (renderEngine->sampler->type == slg::ocl::RANDOM) {
+		gpuTaksSize += sizeof(Spectrum);
+
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else if (renderEngine->sampler->type == slg::ocl::METROPOLIS) {
+		gpuTaksSize += 2 * sizeof(Spectrum) + 3 * sizeof(float) + 5 * sizeof(u_int);
+		
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else if (renderEngine->sampler->type == slg::ocl::SOBOL) {
+		gpuTaksSize += 2 * sizeof(float) + 2 * sizeof(u_int) + sizeof(Spectrum);
+
+		if (alphaFrameBufferBuff)
+			gpuTaksSize += sizeof(float);
+	} else
+		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
+
+	// Add PathStateBase memory size
+	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
+
+	// Add PathStateBase.BSDF.HitPoint memory size
+	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
+			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY))
+		hitPointSize += sizeof(Spectrum);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
+		hitPointSize += sizeof(float);
+	if (hasPassThrough)
+		hitPointSize += sizeof(float);
+
+	// Add PathStateBase.BSDF memory size
+	size_t bsdfSize = hitPointSize;
+	// Add PathStateBase.BSDF.materialIndex memory size
+	bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
+	if (triAreaLightCount > 0)
+		bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.Frame memory size
+	bsdfSize += sizeof(slg::ocl::Frame);
+	gpuTaksSize += bsdfSize;
+
+	// Add PathStateDirectLight memory size
+	if ((triAreaLightCount > 0) || sunLightBuff) {
+		gpuTaksSize += sizeof(Spectrum) + sizeof(float) + sizeof(int);
+
+		// Add PathStateDirectLight.tmpHitPoint memory size
+		if (triAreaLightCount > 0)
+			gpuTaksSize += hitPointSize;
+
+		// Add PathStateDirectLightPassThrough memory size
+		if (hasPassThrough)
+			gpuTaksSize += sizeof(float) + bsdfSize;
+	}
+
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
+	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
+}
+
+void PathOCLRenderThread::InitSampleBuffer() {
 	Scene *scene = renderEngine->renderConfig->scene;
 	const u_int taskCount = renderEngine->taskCount;
-	double tStart, tEnd;
+	const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
+	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
+
+	const size_t eyePathVertexDimension =
+		// IDX_SCREEN_X, IDX_SCREEN_Y
+		2 +
+		// IDX_EYE_PASSTROUGHT
+		(hasPassThrough ? 1 : 0) +
+		// IDX_DOF_X, IDX_DOF_Y
+		((scene->camera->lensRadius > 0.f) ? 2 : 0);
+	const size_t PerPathVertexDimension =
+		// IDX_PASSTHROUGH,
+		(hasPassThrough ? 1 : 0) +
+		// IDX_BSDF_X, IDX_BSDF_Y
+		2 +
+		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
+		(((triAreaLightCount > 0) || sunLightBuff) ? (4 + (hasPassThrough ? 1 : 0)) : 0) +
+		// IDX_RR
+		1;
+	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * renderEngine->maxPathDepth;
+
+	size_t uDataSize;
+	if ((renderEngine->sampler->type == slg::ocl::RANDOM) ||
+			(renderEngine->sampler->type == slg::ocl::SOBOL)) {
+		// Only IDX_SCREEN_X, IDX_SCREEN_Y
+		uDataSize = sizeof(float) * 2;
+		
+		if (renderEngine->sampler->type == slg::ocl::SOBOL) {
+			// Limit the number of dimension where I use Sobol sequence (after, I switch
+			// to Random sampler.
+			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
+		}
+	} else if (renderEngine->sampler->type == slg::ocl::METROPOLIS) {
+		// Metropolis needs 2 sets of samples, the current and the proposed mutation
+		uDataSize = 2 * sizeof(float) * sampleDimensions;
+	} else
+		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
+
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
+
+	// TOFIX
+	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount + 1, "SampleData"); // +1 to avoid METROPOLIS + Intel\AMD OpenCL crash
+}
+
+void PathOCLRenderThread::InitRender() {
+	const u_int taskCount = renderEngine->taskCount;
 
 	// In case renderEngine->taskCount has changed
 	delete gpuTaskStats;
@@ -948,132 +1074,14 @@ void PathOCLRenderThread::InitRender() {
 	// Allocate Ray/RayHit buffers
 	//--------------------------------------------------------------------------
 
-	tStart = WallClockTime();
-
 	AllocOCLBufferRW(&raysBuff, sizeof(Ray) * taskCount, "Ray");
 	AllocOCLBufferRW(&hitsBuff, sizeof(RayHit) * taskCount, "RayHit");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU task buffers
-	//--------------------------------------------------------------------------
-
-	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
-
-	// Add Seed memory size
-	size_t gpuTaksSize = sizeof(slg::ocl::Seed);
-
-	// Add Sample memory size
-	if (renderEngine->sampler->type == slg::ocl::RANDOM) {
-		gpuTaksSize += sizeof(Spectrum);
-
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(float);
-	} else if (renderEngine->sampler->type == slg::ocl::METROPOLIS) {
-		gpuTaksSize += 2 * sizeof(Spectrum) + 3 * sizeof(float) + 5 * sizeof(u_int);
-		
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(float);
-	} else if (renderEngine->sampler->type == slg::ocl::SOBOL) {
-		gpuTaksSize += 2 * sizeof(float) + 2 * sizeof(u_int) + sizeof(Spectrum);
-
-		if (alphaFrameBufferBuff)
-			gpuTaksSize += sizeof(float);
-	} else
-		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
-
-	// Add PathStateBase memory size
-	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
-
-	// Add PathStateBase.BSDF.HitPoint memory size
-	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
-	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
-			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY))
-		hitPointSize += sizeof(Spectrum);
-	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
-		hitPointSize += sizeof(float);
-	if (hasPassThrough)
-		hitPointSize += sizeof(float);
-
-	// Add PathStateBase.BSDF memory size
-	size_t bsdfSize = hitPointSize;
-	// Add PathStateBase.BSDF.materialIndex memory size
-	bsdfSize += sizeof(u_int);
-	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
-	if (triAreaLightCount > 0)
-		bsdfSize += sizeof(u_int);
-	// Add PathStateBase.BSDF.Frame memory size
-	bsdfSize += sizeof(slg::ocl::Frame);
-	gpuTaksSize += bsdfSize;
-
-	// Add PathStateDirectLight memory size
-	if ((triAreaLightCount > 0) || sunLightBuff) {
-		gpuTaksSize += sizeof(Spectrum) + sizeof(float) + sizeof(int);
-
-		// Add PathStateDirectLight.tmpHitPoint memory size
-		if (triAreaLightCount > 0)
-			gpuTaksSize += hitPointSize;
-
-		// Add PathStateDirectLightPassThrough memory size
-		if (hasPassThrough)
-			gpuTaksSize += sizeof(float) + bsdfSize;
-	}
-
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
-	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
-
-	//--------------------------------------------------------------------------
-	// Allocate sample data buffers
-	//--------------------------------------------------------------------------
-
-	const size_t eyePathVertexDimension =
-		// IDX_SCREEN_X, IDX_SCREEN_Y
-		2 +
-		// IDX_EYE_PASSTROUGHT
-		(hasPassThrough ? 1 : 0) +
-		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? 2 : 0);
-	const size_t PerPathVertexDimension =
-		// IDX_PASSTHROUGH,
-		(hasPassThrough ? 1 : 0) +
-		// IDX_BSDF_X, IDX_BSDF_Y
-		2 +
-		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		(((triAreaLightCount > 0) || sunLightBuff) ? (4 + (hasPassThrough ? 1 : 0)) : 0) +
-		// IDX_RR
-		1;
-	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * renderEngine->maxPathDepth;
-
-	size_t uDataSize;
-	if ((renderEngine->sampler->type == slg::ocl::RANDOM) ||
-			(renderEngine->sampler->type == slg::ocl::SOBOL)) {
-		// Only IDX_SCREEN_X, IDX_SCREEN_Y
-		uDataSize = sizeof(float) * 2;
-		
-		if (renderEngine->sampler->type == slg::ocl::SOBOL) {
-			// Limit the number of dimension where I use Sobol sequence (after, I switch
-			// to Random sampler.
-			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, renderEngine->maxPathDepth);
-		}
-	} else if (renderEngine->sampler->type == slg::ocl::METROPOLIS) {
-		// Metropolis needs 2 sets of samples, the current and the proposed mutation
-		uDataSize = 2 * sizeof(float) * sampleDimensions;
-	} else
-		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(renderEngine->sampler->type));
-
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
-
-	// TOFIX
-	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount + 1, "SampleData"); // +1 to avoid METROPOLIS + Intel\AMD OpenCL crash
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
 	//--------------------------------------------------------------------------
 
 	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::GPUTaskStats) * taskCount, "GPUTask Stats");
-
-	tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] OpenCL buffer creation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -1283,6 +1291,11 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if (editActions.Has(GEOMETRY_EDIT)) {
 		// Update Scene Geometry
 		InitGeometry();
+	}
+
+	if (editActions.Has(IMAGEMAPS_EDIT)) {
+		// Update Image Maps
+		InitImageMaps();
 	}
 
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {

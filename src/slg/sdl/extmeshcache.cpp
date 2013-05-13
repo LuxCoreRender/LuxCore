@@ -38,7 +38,7 @@ ExtMeshCache::~ExtMeshCache() {
 void ExtMeshCache::DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals) {
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-	maps.insert(std::make_pair(key, mesh));
+	meshByName.insert(std::make_pair(key, mesh));
 	meshes.push_back(mesh);
 }
 
@@ -57,26 +57,26 @@ void ExtMeshCache::DeleteExtMesh(const std::string &fileName, const bool usePlyN
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
 
 	// Check if the mesh has been loaded
-	std::map<std::string, ExtTriangleMesh *>::iterator it = maps.find(key);
+	std::map<std::string, ExtTriangleMesh *>::iterator it = meshByName.find(key);
 
-	if (it != maps.end()) {
+	if (it != meshByName.end()) {
 		if (deleteMeshData)
 			it->second->Delete();
 		meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
-		maps.erase(it);
+		meshByName.erase(it);
 	}
 }
 
 void ExtMeshCache::DeleteExtMesh(luxrays::ExtTriangleMesh *mesh) {
-	std::map<std::string, ExtTriangleMesh *>::iterator it = maps.begin();
+	std::map<std::string, ExtTriangleMesh *>::iterator it = meshByName.begin();
 
-	while (it != maps.end()) {
+	while (it != meshByName.end()) {
 		if (it->second == mesh) {
 			if (deleteMeshData)
 				it->second->Delete();
 
 			meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
-			maps.erase(it);
+			meshByName.erase(it);
 			return;
 		}
 		it++;
@@ -86,8 +86,8 @@ void ExtMeshCache::DeleteExtMesh(luxrays::ExtTriangleMesh *mesh) {
 ExtMesh *ExtMeshCache::FindExtMesh(const std::string &fileName, const bool usePlyNormals) {
 	// Check if the mesh has been already loaded
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-	std::map<std::string, ExtTriangleMesh *>::const_iterator it = maps.find(key);
-	if (it == maps.end())
+	std::map<std::string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
+	if (it == meshByName.end())
 		return NULL;
 	else
 		return it->second;
@@ -97,13 +97,13 @@ ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePly
 	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
 
 	// Check if the mesh has been already loaded
-	std::map<std::string, ExtTriangleMesh *>::const_iterator it = maps.find(key);
+	std::map<std::string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
 
-	if (it == maps.end()) {
+	if (it == meshByName.end()) {
 		// I have yet to load the file
 		ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName, usePlyNormals);
 
-		maps.insert(std::make_pair(key, mesh));
+		meshByName.insert(std::make_pair(key, mesh));
 		meshes.push_back(mesh);
 
 		return mesh;

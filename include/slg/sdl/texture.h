@@ -305,10 +305,9 @@ public:
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
 
-    // Get a path from imageMap object.
-
+	// Get a path from imageMap object
 	const std::string &GetPath(const slg::ImageMap *im)const {
-		for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it) {
+		for (std::map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im)
 				return it->first;
 		}
@@ -316,11 +315,12 @@ public:
 	}
 
 	void DeleteImageMap(const slg::ImageMap *im) {
-		for (std::map<std::string, ImageMap *>::iterator it = maps.begin(); it != maps.end(); ++it) {
+		for (std::map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im) {
 				delete it->second;
-				maps.erase(it);
 
+				maps.erase(std::find(maps.begin(), maps.end(), it->second));
+				mapByName.erase(it);
 				return;
 			}
 		}
@@ -329,11 +329,14 @@ public:
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
 	void GetImageMaps(std::vector<ImageMap *> &ims);
-	u_int GetSize()const { return static_cast<u_int>(maps.size()); }
-	bool IsImageMapDefined(const std::string &name) const { return maps.find(name) != maps.end(); }
+	u_int GetSize()const { return static_cast<u_int>(mapByName.size()); }
+	bool IsImageMapDefined(const std::string &name) const { return mapByName.find(name) != mapByName.end(); }
 
 private:
-	std::map<std::string, ImageMap *> maps;
+	std::map<std::string, ImageMap *> mapByName;
+	// Used to preserve insertion order and to retrieve insertion index
+	std::vector<ImageMap *> maps;
+
 	float allImageScale;
 };
 

@@ -64,8 +64,8 @@ public:
 	const std::vector<ExtMesh *> &GetMeshes() const { return meshes; }
 
 public:
-	std::map<std::string, ExtTriangleMesh *> maps;
-	// Used to preserve insertion order and to retrive insertion index
+	std::map<std::string, ExtTriangleMesh *> meshByName;
+	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<ExtMesh *> meshes;
 
 	bool deleteMeshData;

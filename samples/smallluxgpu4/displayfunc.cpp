@@ -481,69 +481,6 @@ void keyFunc(unsigned char key, int x, int y) {
 #endif
 			break;
 		}
-
-// TODO: investigate this bug
-//case 'z':
-//        {//when press once ,switch material and image randomly.
-//            //material range.
-//            static const char*  types[] = {
-//                "matte",
-//                "mirror",
-//                "glass",
-//                "metal",
-//                "archglass",
-//                "mattetranslucent",
-//                "glossy2",
-//                "metal2",
-//                "roughglass"
-//            };
-//            //filename range,these file is come from scenes come with slg source.
-//            static const char* filenames[] = {
-//                "scenes/bump/map.png",
-//                "scenes/bump/map2.png",
-//                "scenes/bump/normal.png",
-//                "scenes/cat/EgyptCat.png",
-//                "scenes/cat/EgyptCat_DISP.png",
-//                "scenes/luxball/lux.png",
-//                "scenes/luxball/lux2.png",
-//                "scenes/studiotest/test-light.png",
-//                "scenes/studiotest/test-light2.png",
-//                "scenes/studiotest/test-light3.png",
-//            };
-//            //increment image name suffix.
-//            static  int     matSuffix = 0;
-//            //get a random index of material
-//            int matidx = ::rand() % (sizeof(types) / sizeof(const char*));
-//            //get a random index of filename
-//            int imgIdx = ::rand() % (sizeof(filenames) / sizeof(const char*));
-//
-//            luxrays::Properties props;
-//
-//            //define a random image.
-//            std::string imageName = "image" + boost::lexical_cast<std::string>(matSuffix++);
-//            props.SetString("scene.textures." + imageName + ".file",filenames[imgIdx]);
-//            session->renderConfig->scene->DefineTextures(props);
-//
-//            //set material type to matidx.
-//            props.SetString("scene.materials.shell.type",types[matidx]);
-//            //set material bump channel to use the random image texture.
-//            props.SetString("scene.materials.shell.bumptex",imageName);
-//
-//            session->renderConfig->scene->UpdateMaterial("shell",props);
-//#if 1
-//            //the follow code cause a crash. even put `session->BeginEdit()` to begin of instruction to modify scene.
-//            session->BeginEdit();
-//            session->editActions.AddAction(MATERIAL_TYPES_EDIT);
-//            session->editActions.AddAction(MATERIALS_EDIT);
-//            //the follow line has no any effect.
-//            session->editActions.AddAction(IMAGEMAPS_EDIT);
-//            session->EndEdit();
-//#else
-//            session->Stop();
-//            session->Start();
-//#endif
-//            break;
-//        }
 		default:
 			break;
 	}
