@@ -628,7 +628,7 @@ void CompiledScene::CompileSkyLight() {
 
 void CompiledScene::CompileTextures() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
-	SLG_LOG("[PathOCLRenderThread::CompiledScene]   Texture size: " << sizeof(slg::ocl::Texture));
+	//SLG_LOG("[PathOCLRenderThread::CompiledScene]   Texture size: " << sizeof(slg::ocl::Texture));
 
 	//--------------------------------------------------------------------------
 	// Translate textures

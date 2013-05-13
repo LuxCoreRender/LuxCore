@@ -529,15 +529,15 @@ ImageMapCache::ImageMapCache() {
 }
 
 ImageMapCache::~ImageMapCache() {
-	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
-		delete it->second;
+	BOOST_FOREACH(ImageMap *m, maps)
+		delete m;
 }
 
 ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float gamma) {
 	// Check if the texture map has been already loaded
-	std::map<std::string, ImageMap *>::const_iterator it = maps.find(fileName);
+	std::map<std::string, ImageMap *>::const_iterator it = mapByName.find(fileName);
 
-	if (it == maps.end()) {
+	if (it == mapByName.end()) {
 		// I have yet to load the file
 
 		ImageMap *im = new ImageMap(fileName, gamma);
@@ -556,7 +556,8 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 			im->Resize(newWidth, newHeight);
 		}
 
-		maps.insert(std::make_pair(fileName, im));
+		mapByName.insert(std::make_pair(fileName, im));
+		maps.push_back(im);
 
 		return im;
 	} else {
@@ -568,19 +569,16 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 	}
 }
 
-void ImageMapCache::DefineImgMap(const std::string &name, ImageMap *tm) {
+void ImageMapCache::DefineImgMap(const std::string &name, ImageMap *im) {
 	SDL_LOG("Define ImageMap: " << name);
-	maps.insert(std::make_pair(name, tm));
+	mapByName.insert(std::make_pair(name, im));
+	maps.push_back(im);
 }
 
 u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
-	// TODO: use a std::map
-	u_int i = 0;
-	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it) {
-		if (it->second == im)
+	for (u_int i = 0; i < maps.size(); ++i) {
+		if (maps[i] == im)
 			return i;
-		else
-			++i;
 	}
 
 	throw std::runtime_error("Unknown image map: " + boost::lexical_cast<std::string>(im));
@@ -588,8 +586,9 @@ u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
 
 void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
 	ims.reserve(maps.size());
-	for (std::map<std::string, ImageMap *>::const_iterator it = maps.begin(); it != maps.end(); ++it)
-		ims.push_back(it->second);
+	
+	BOOST_FOREACH(ImageMap *im, maps)
+		ims.push_back(im);
 }
 
 //------------------------------------------------------------------------------

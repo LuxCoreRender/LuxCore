@@ -84,6 +84,8 @@ protected:
 	void InitSunLight();
 	void InitSkyLight();
 	void InitKernels();
+	void InitGPUTaskBuffer();
+	void InitSampleBuffer();
 
 	virtual void SetKernelArgs();
 
