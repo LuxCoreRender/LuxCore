@@ -202,7 +202,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 		, priorityFrameBuffer
 #endif
-	);
+		);
 	GenerateCameraPath(task, sampleData, camera, &rays[gid], &seed);
 
 	// Save the seed

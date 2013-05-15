@@ -81,11 +81,11 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 	float prioritymargin = 0.2f;
 	do {
-	prioritymargin = AdvancePriorityMargin(prioritymargin);
+		prioritymargin = AdvancePriorityMargin(prioritymargin);
 #endif
 
-	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+		sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+		sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
 
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 	} while (PrioritySample(sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer));
@@ -178,19 +178,16 @@ void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU
 		) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Rnd_FloatValue(seed);
+
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
 	float prioritymargin = 0.2f;
 	while (PrioritySample(proposedU[IDX_SCREEN_X], proposedU[IDX_SCREEN_Y], prioritymargin, priorityFrameBuffer)) {
-	prioritymargin = AdvancePriorityMargin(prioritymargin);
+		prioritymargin = AdvancePriorityMargin(prioritymargin);
 
-	proposedU[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	proposedU[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
-	
+		proposedU[IDX_SCREEN_X] = Rnd_FloatValue(seed);
+		proposedU[IDX_SCREEN_Y] = Rnd_FloatValue(seed);	
 	}
 #endif
-
-
-
 }
 
 float Mutate(Seed *seed, const float x) {
