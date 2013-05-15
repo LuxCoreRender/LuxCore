@@ -105,18 +105,22 @@ Error: unknown image filter !!!
 
 #endif
 
-float sumc(const Pixel pixel) {
-	float value = pixel.c.r / pixel.count;
-	value += pixel.c.g / pixel.count;
-	value += pixel.c.b / pixel.count;
-	return value;
+#if defined(PARAM_ENABLE_PRIORITY_MAP)
+float PixelSum(const float4 pixel) {
+	const float icount = 1.f / pixel.s3;
+
+	return (pixel.s0 + pixel.s1 + pixel.s2) * icount;
 }
 
-float AddPixelDifference(const Pixel pixel1, const Pixel pixel2) {
-	return (fabs(pixel1.c.r / pixel1.count - pixel2.c.r / pixel2.count) + 
-		fabs(pixel1.c.g / pixel1.count - pixel2.c.g / pixel2.count) + 
-		fabs(pixel1.c.b / pixel1.count - pixel2.c.b / pixel2.count));
+float PixelDifference(const float4 pixel1, const float4 pixel2) {
+	const float icount1 = 1.f / pixel1.s3;
+	const float icount2 = 1.f / pixel2.s3;
+
+	return (fabs(pixel1.s0 * icount1 - pixel2.s0 * icount2) + 
+		fabs(pixel1.s1 * icount1 - pixel2.s1 * icount2) + 
+		fabs(pixel1.s2 * icount1 - pixel2.s2 * icount2));
 }
+#endif
 
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 void AtomicAdd(__global float *val, const float delta) {
@@ -163,15 +167,26 @@ void Pixel_AddRadiance(__global Pixel *pixel, const float3 rad, const float weig
 	p += s;
 	VSTORE4F(p, &(pixel->c.r));
 #endif
+
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
-	if ((oldPixel->count) * 1.2f < (pixel->count)) {
-		priorityPixel->priority -= 0.01f;
-		priorityPixel->priority /= 1.2f;
-		priorityPixel->priority = 
-			AddPixelDifference(*pixel, *oldPixel) / (sumc(*pixel) + sumc(*oldPixel) + 0.1f) + 
-			0.01f;
-		p = VLOAD4F(&(pixel->c.r));
-		VSTORE4F(p, &(oldPixel->c.r));
+	const float4 oldp = VLOAD4F(&(oldPixel->c.r));
+	const float4 newp = VLOAD4F(&(pixel->c.r));
+
+	if (newp.s3 > oldp.s3 * 1.2f) {
+		// Update the priority
+		float priority = priorityPixel->priority;
+		if ((oldp.s3 > 0.f) && // This check is required in order to avoid NaN at the first step
+			(newp.s3 > 8.f) // Wait at least for 8 samples before to start the process (in order to have a more accurate estimation of convergence)
+			) {
+			priority = 
+				PixelDifference(newp, oldp) / (PixelSum(newp) + PixelSum(oldp) + 0.1f) + 
+				0.01f;
+		} else
+			priority = 1.f;
+		priorityPixel->priority = priority;
+
+		// Update the pixel value
+		VSTORE4F(newp, &(oldPixel->c.r));
 	}
 #endif
 }
@@ -232,14 +247,11 @@ void SplatSample(__global Pixel *frameBuffer,
 	const uint y = min((uint)floor(PARAM_IMAGE_HEIGHT * scrY + .5f), (uint)(PARAM_IMAGE_HEIGHT - 1));
 	uint index = XY2FrameBufferIndex(x, y);
 	__global Pixel *pixel = &frameBuffer[index];
-#if defined(PARAM_ENABLE_PRIORITY_MAP)
-	__global Pixel *pixelOld = &frameBufferOld[index];
-	__global PriorityPixel *prioritypixel = &priorityFrameBuffer[index];
-#endif
+
 	Pixel_AddRadiance(pixel, radiance, weight
 #if defined(PARAM_ENABLE_PRIORITY_MAP)
-		, pixelOld
-		, prioritypixel
+		, &frameBufferOld[index]
+		, &priorityFrameBuffer[index]
 #endif
 		);
 

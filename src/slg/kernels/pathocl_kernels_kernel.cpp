@@ -205,7 +205,7 @@ std::string KernelSource_pathocl_kernels =
 "#if defined(PARAM_ENABLE_PRIORITY_MAP)\n"
 "		, priorityFrameBuffer\n"
 "#endif\n"
-"	);\n"
+"		);\n"
 "	GenerateCameraPath(task, sampleData, camera, &rays[gid], &seed);\n"
 "\n"
 "	// Save the seed\n"
