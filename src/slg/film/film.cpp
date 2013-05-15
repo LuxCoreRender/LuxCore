@@ -33,7 +33,6 @@ Film::Film(const unsigned int w, const unsigned int h) {
 	sampleFrameBuffer[PER_PIXEL_NORMALIZED] = NULL;
 	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
 	alphaFrameBuffer = NULL;
-	priorityFrameBuffer = NULL;
 	frameBuffer = NULL;
 	convTest = NULL;
 
