@@ -245,6 +245,9 @@ __kernel void UpdateScreenBuffer(
 		__global Pixel *srcFrameBuffer,
 		__global Spectrum *screenBuffer) {
 	const int gid = get_global_id(0);
+	if (gid >= FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
+		return;
+
 	const int x = gid % FRAMEBUFFER_WIDTH - 2;
 	const int y = gid / FRAMEBUFFER_WIDTH - 2;
 	if ((x < 0) || (y < 0) || (x >= PARAM_IMAGE_WIDTH) || (y >= PARAM_IMAGE_HEIGHT))
