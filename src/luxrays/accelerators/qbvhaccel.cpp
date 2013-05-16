@@ -79,25 +79,21 @@ public:
 
 		for (u_int i = 0; i < kernelCount; ++i) {
 			kernels[i] = new cl::Kernel(program, "Intersect");
-			kernels[i]->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE,
-				&workGroupSize);
-			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			//	"] QBVH kernel work group size: " << workGroupSize);
 
-			kernels[i]->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE,
-				&workGroupSize);
-			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			//	"] Suggested work group size: " << workGroupSize);
-
-			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0) {
+			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+			else {
+				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
+					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] Forced work group size: " << workGroupSize);
-			} else if (workGroupSize > 256) {
-				// Otherwise I will probably run out of local memory
-				workGroupSize = 256;
-				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] Cap work group size to: " << workGroupSize);
+				//	"] QBVH kernel work group size: " << workGroupSize);
+
+				if (workGroupSize > 256) {
+					// Otherwise I will probably run out of local memory
+					workGroupSize = 256;
+					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+					//	"] Cap work group size to: " << workGroupSize);
+				}
 			}
 		}
 	}
@@ -168,26 +164,21 @@ public:
 
 		for (u_int i = 0; i < kernelCount; ++i) {
 			kernels[i] = new cl::Kernel(program, "Intersect");
-			kernels[i]->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE,
-				&workGroupSize);
-			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			//	"] QBVH Image Storage kernel work group size: " <<
-			//	workGroupSize);
 
-			kernels[i]->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE,
-				&workGroupSize);
-			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			//	"] Suggested work group size: " << workGroupSize);
-
-			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0) {
+			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+			else {
+				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
+					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] Forced work group size: " << workGroupSize);
-			} else if (workGroupSize > 256) {
-				// Otherwise I will probably run out of local memory
-				workGroupSize = 256;
-				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] Cap work group size to: " << workGroupSize);
+				//	"] QBVH kernel work group size: " << workGroupSize);
+
+				if (workGroupSize > 256) {
+					// Otherwise I will probably run out of local memory
+					workGroupSize = 256;
+					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+					//	"] Cap work group size to: " << workGroupSize);
+				}
 			}
 		}
 	}

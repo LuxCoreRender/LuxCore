@@ -477,8 +477,10 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 
 	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
 	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
-	const u_int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 64);
-	const u_int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
+	// 0 means use the value suggested by the OpenCL driver
+	const u_int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 0);
+	// 0 means use the value suggested by the OpenCL driver
+	const u_int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 0);
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 
 	// Start OpenCL devices
