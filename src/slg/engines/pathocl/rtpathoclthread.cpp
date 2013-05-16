@@ -196,7 +196,8 @@ void RTPathOCLRenderThread::UpdateOCLBuffers() {
 
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-		cl::NDRange(renderEngine->taskCount), cl::NDRange(initWorkGroupSize));
+		cl::NDRange(RoundUp<u_int>(renderEngine->taskCount, initWorkGroupSize)),
+		cl::NDRange(initWorkGroupSize));
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();
@@ -243,7 +244,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					*(hitsBuff), engine->taskCount, NULL, NULL);
 				// Advance to next path state
 				oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-					cl::NDRange(engine->taskCount), cl::NDRange(advancePathsWorkGroupSize));
+					cl::NDRange(RoundUp<u_int>(engine->taskCount, advancePathsWorkGroupSize)),
+					cl::NDRange(advancePathsWorkGroupSize));
 			}
 
 			// No need to transfer the frame buffer if I'm the display thread

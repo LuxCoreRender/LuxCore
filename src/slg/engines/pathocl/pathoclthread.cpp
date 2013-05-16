@@ -389,9 +389,6 @@ void PathOCLRenderThread::CompileKernel(cl::Program *program, cl::Kernel **kerne
 		(*kernel)->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, workgroupSize);
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] " << name << " workgroup size: " << *workgroupSize);
 	}
-
-	if (renderEngine->taskCount % *workgroupSize != 0)
-		throw std::runtime_error("opencl.task.count is not multiple of workgroup size. Set a correct workgroup size with opencl.gpu.workgroup.size or opencl.cpu.workgroup.size.");
 }
 
 void PathOCLRenderThread::InitKernels() {
@@ -1067,7 +1064,8 @@ void PathOCLRenderThread::InitRender() {
 
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
+			cl::NDRange(RoundUp<u_int>(taskCount, initWorkGroupSize)),
+			cl::NDRange(initWorkGroupSize));
 	oclQueue.finish();
 
 	// Reset statistics in order to be more accurate
@@ -1309,7 +1307,8 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 
 		// Initialize the tasks buffer
 		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-				cl::NDRange(renderEngine->taskCount), cl::NDRange(initWorkGroupSize));
+				cl::NDRange(RoundUp<u_int>(renderEngine->taskCount, initWorkGroupSize)),
+				cl::NDRange(initWorkGroupSize));
 	}
 
 	// Reset statistics in order to be more accurate
@@ -1384,7 +1383,8 @@ void PathOCLRenderThread::RenderThreadImpl() {
 
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-							cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
+							cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+							cl::NDRange(advancePathsWorkGroupSize));
 				}
 				oclQueue.flush();
 
