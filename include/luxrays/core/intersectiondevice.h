@@ -117,7 +117,6 @@ protected:
 	virtual ~IntersectionDevice();
 
 	virtual void SetDataSet(DataSet *newDataSet);
-//	virtual void UpdateDataSet() { }
 	virtual void Start();
 
 	DataSet *dataSet;

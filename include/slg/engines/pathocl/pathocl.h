@@ -87,6 +87,7 @@ protected:
 	void InitGPUTaskBuffer();
 	void InitSampleBuffer();
 
+	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
 	virtual void SetKernelArgs();
 
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
