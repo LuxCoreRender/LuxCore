@@ -480,7 +480,11 @@ OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
 	// 0 means use the value suggested by the OpenCL driver
 	const u_int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 0);
 	// 0 means use the value suggested by the OpenCL driver
+#if defined(__APPLE__)	
+	const u_int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
+#else
 	const u_int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 0);
+#endif
 	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
 
 	// Start OpenCL devices
