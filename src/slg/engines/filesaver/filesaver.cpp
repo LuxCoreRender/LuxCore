@@ -24,6 +24,7 @@
 #include <fstream>
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include "slg/engines/filesaver/filesaver.h"
 
@@ -89,7 +90,7 @@ void FileSaverRenderEngine::SaveScene() {
 		// Remove FileSaver Option
 		cfg.Delete("filesaver.directory");
 
-		std::ofstream cfgFile(cfgFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+		boost::filesystem::ofstream cfgFile(cfgFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 		if(!cfgFile.is_open())
 			throw std::runtime_error("Unable to open: " + cfgFileName);
 
@@ -110,7 +111,7 @@ void FileSaverRenderEngine::SaveScene() {
 		Properties props = renderConfig->scene->ToProperties(dirPath.generic_string());
 
 		// Write the scene file
-		std::ofstream sceneFile(sceneFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+		boost::filesystem::ofstream sceneFile(sceneFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 		if(!sceneFile.is_open())
 			throw std::runtime_error("Unable to open: " + sceneFileName);
 		sceneFile << props.ToString();
