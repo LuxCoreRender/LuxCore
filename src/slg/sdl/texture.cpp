@@ -22,6 +22,7 @@
 #include <sstream>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
+#include <boost/locale.hpp>
 
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/texture.h"
@@ -29,6 +30,22 @@
 
 using namespace luxrays;
 using namespace slg;
+
+// According Masol Lee's test FreeImage unicode support works only on Windows. FreeImage
+// documentation seems to confirm that unicode functions are supported only on Windows.
+#ifdef WIN32
+#define ENABLE_UNICODE_SUPPORT 1
+#else
+#undef ENABLE_UNICODE_SUPPORT
+#endif
+
+
+#ifdef ENABLE_UNICODE_SUPPORT
+#else
+#define FreeImage_GetFileTypeU  FreeImage_GetFileType
+#define FreeImage_GetFIFFromFilenameU FreeImage_GetFIFFromFilename
+#define FreeImage_LoadU FreeImage_Load
+#endif
 
 //------------------------------------------------------------------------------
 // Texture utility functions
@@ -217,12 +234,17 @@ ImageMap::ImageMap(const std::string &fileName, const float g) {
 
 	SDL_LOG("Reading texture map: " << fileName);
 
-	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(fileName.c_str(), 0);
+#if ENABLE_UNICODE_SUPPORT
+    std::wstring  wfilename = boost::locale::conv::utf_to_utf<wchar_t>(fileName);
+#else
+    const std::string  &wfilename = fileName;
+#endif
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeU(wfilename.c_str(), 0);
 	if(fif == FIF_UNKNOWN)
-		fif = FreeImage_GetFIFFromFilename(fileName.c_str());
+		fif = FreeImage_GetFIFFromFilenameU(wfilename.c_str());
 
 	if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
-		FIBITMAP *dib = FreeImage_Load(fif, fileName.c_str(), 0);
+		FIBITMAP *dib = FreeImage_LoadU(fif, wfilename.c_str(), 0);
 
 		if (!dib)
 			throw std::runtime_error("Unable to read texture map: " + fileName);
@@ -514,7 +536,11 @@ FIBITMAP *ImageMap::GetFreeImageBitMap() const {
 void ImageMap::WriteImage(const std::string &fileName) const {
 	FIBITMAP *dib = GetFreeImageBitMap();
 
+#if ENABLE_UNICODE_SUPPORT
+	if (!FreeImage_SaveU(FIF_EXR, dib, boost::locale::conv::utf_to_utf<wchar_t>(fileName).c_str(), 0))
+#else
 	if (!FreeImage_Save(FIF_EXR, dib, fileName.c_str(), 0))
+#endif
 		throw std::runtime_error("Failed image save");
 
 	FreeImage_Unload(dib);

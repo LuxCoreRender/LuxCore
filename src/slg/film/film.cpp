@@ -20,8 +20,24 @@
  ***************************************************************************/
 
 #include <boost/lexical_cast.hpp>
+#include <boost/locale.hpp>
 
 #include "slg/film/film.h"
+
+
+// According Masol Lee's test FreeImage unicode support works only on Windows. FreeImage
+// documentation seems to confirm that unicode functions are supported only on Windows.
+#ifdef WIN32
+#define ENABLE_UNICODE_SUPPORT 1
+#else
+#undef ENABLE_UNICODE_SUPPORT
+#endif
+
+#ifdef ENABLE_UNICODE_SUPPORT
+#else
+#define FreeImage_GetFIFFromFilenameU FreeImage_GetFIFFromFilename
+#define FreeImage_SaveU FreeImage_Save
+#endif
 
 using namespace luxrays;
 using namespace slg;
@@ -220,7 +236,13 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 		return;
 	}
 
-	FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fileName.c_str());
+#if ENABLE_UNICODE_SUPPORT
+    std::wstring  wfilename = boost::locale::conv::utf_to_utf<wchar_t>(fileName);
+#else
+    const std::string  &wfilename = fileName;
+#endif
+
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilenameU(wfilename.c_str());
 	if (fif != FIF_UNKNOWN) {
 		if ((fif == FIF_HDR) || (fif == FIF_EXR)) {
 			// In order to merge the 2 sample buffers
@@ -258,7 +280,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						bits += pitch;
 					}
 
-					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+					if (!FreeImage_SaveU(fif, dib, wfilename.c_str(), 0))
 						throw std::runtime_error("Failed image save");
 
 					FreeImage_Unload(dib);
@@ -286,7 +308,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						bits += pitch;
 					}
 
-					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+					if (!FreeImage_SaveU(fif, dib, wfilename.c_str(), 0))
 						throw std::runtime_error("Failed image save");
 
 					FreeImage_Unload(dib);
@@ -337,7 +359,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						bits += pitch;
 					}
 
-					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+					if (!FreeImage_SaveU(fif, dib, wfilename.c_str(), 0))
 						throw std::runtime_error("Failed image save");
 
 					FreeImage_Unload(dib);
@@ -367,7 +389,7 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 						bits += pitch;
 					}
 
-					if (!FreeImage_Save(fif, dib, fileName.c_str(), 0))
+					if (!FreeImage_SaveU(fif, dib, wfilename.c_str(), 0))
 						throw std::runtime_error("Failed image save");
 
 					FreeImage_Unload(dib);
