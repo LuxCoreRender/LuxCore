@@ -22,7 +22,56 @@
 #ifndef _LUXRAYS_H
 #define	_LUXRAYS_H
 
+#include <boost/version.hpp>
+
 #include "luxrays/cfg.h"
+
+//------------------------------------------------------------------------------
+// Configure unicode support (requires Boost version 1.50 or better)
+
+#if (BOOST_VERSION / 100000 >= 1) && (BOOST_VERSION / 100 % 1000 >= 50)
+#define ENABLE_UNICODE_SUPPORT 1
+#else
+#undef ENABLE_UNICODE_SUPPORT
+#endif
+
+//------------------------------------------------------------------------------
+
+#if defined(ENABLE_UNICODE_SUPPORT)
+#include <boost/locale.hpp>
+#include <boost/filesystem/fstream.hpp>
+
+#define BOOST_IFSTREAM boost::filesystem::ifstream
+#define BOOST_OFSTREAM boost::filesystem::ofstream
+
+#else
+
+#define BOOST_IFSTREAM std::ifstream
+#define BOOST_OFSTREAM std::ofstream
+
+#endif
+
+// According Masol Lee's test FreeImage unicode support works only on Windows. FreeImage
+// documentation seems to confirm that unicode functions are supported only on Windows.
+#if defined(ENABLE_UNICODE_SUPPORT) && defined(WIN32)
+
+#define FREEIMAGE_CONVFILENAME(a)  boost::locale::conv::utf_to_utf<wchar_t>(a)
+#define FREEIMAGE_GETFILETYPE  FreeImage_GetFileTypeU
+#define FREEIMAGE_GETFIFFROMFILENAME FreeImage_GetFIFFromFilenameU
+#define FREEIMAGE_LOAD FreeImage_LoadU
+#define FREEIMAGE_SAVE FreeImage_SaveU
+
+#else
+
+#define FREEIMAGE_CONVFILENAME(a)  (a)
+#define FREEIMAGE_GETFILETYPE  FreeImage_GetFileType
+#define FREEIMAGE_GETFIFFROMFILENAME FreeImage_GetFIFFromFilename
+#define FREEIMAGE_LOAD FreeImage_Load
+#define FREEIMAGE_SAVE FreeImage_Save
+
+#endif
+
+//------------------------------------------------------------------------------
 
 typedef unsigned char u_char;
 typedef unsigned short u_short;

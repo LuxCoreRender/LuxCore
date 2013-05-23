@@ -26,9 +26,9 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <string.h>
 
+#include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/utils/ocl.h"
 
@@ -301,7 +301,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		if (sizes[0] > 0) {
 			// Add the kernel to the cache
 			boost::filesystem::create_directories(dirName);
-			boost::filesystem::ofstream file(fileName.c_str(), std::ios_base::out | std::ios_base::binary);
+			BOOST_OFSTREAM file(fileName.c_str(), std::ios_base::out | std::ios_base::binary);
 			file.write(bins[0], sizes[0]);
 
 			// Check for errors
@@ -324,7 +324,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		if (kernelSize > 0) {
 			char *kernelBin = new char[kernelSize];
 
-			boost::filesystem::ifstream file(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
+			BOOST_IFSTREAM file(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
 			file.read(kernelBin, kernelSize);
 
 			// Check for errors
