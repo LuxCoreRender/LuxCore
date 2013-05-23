@@ -22,7 +22,6 @@
 #include <sstream>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
-#include <boost/locale.hpp>
 
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/texture.h"
