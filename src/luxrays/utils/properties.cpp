@@ -29,8 +29,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/filesystem/fstream.hpp>
 
+#include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/utils.h"
 
@@ -79,7 +79,7 @@ void Properties::Load(std::istream &stream) {
 }
 
 void Properties::LoadFromFile(const std::string &fileName) {
-	boost::filesystem::ifstream file(fileName.c_str(), std::ios::in);
+	BOOST_IFSTREAM file(fileName.c_str(), std::ios::in);
 	char buf[512];
 	if (file.fail()) {
 		sprintf(buf, "Unable to open file %s", fileName.c_str());
