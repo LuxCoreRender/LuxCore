@@ -312,7 +312,7 @@ std::string KernelSource_material_funcs =
 "	const bool into = (fixedDir.z > 0.f);\n"
 "	const float3 shadeN = (float3)(0.f, 0.f, into ? 1.f : -1.f);\n"
 "\n"
-"	const float phi = 2.f * M_PI * u0;\n"
+"	const float phi = 2.f * M_PI_F * u0;\n"
 "	const float cosTheta = pow(1.f - u1, exponent);\n"
 "	const float sinTheta = sqrt(fmax(0.f, 1.f - cosTheta * cosTheta));\n"
 "	const float x = cos(phi) * sinTheta;\n"

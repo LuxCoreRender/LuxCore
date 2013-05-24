@@ -309,7 +309,7 @@ float3 GlossyReflection(const float3 fixedDir, const float exponent,
 	const bool into = (fixedDir.z > 0.f);
 	const float3 shadeN = (float3)(0.f, 0.f, into ? 1.f : -1.f);
 
-	const float phi = 2.f * M_PI * u0;
+	const float phi = 2.f * M_PI_F * u0;
 	const float cosTheta = pow(1.f - u1, exponent);
 	const float sinTheta = sqrt(fmax(0.f, 1.f - cosTheta * cosTheta));
 	const float x = cos(phi) * sinTheta;
