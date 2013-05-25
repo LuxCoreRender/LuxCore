@@ -1324,10 +1324,14 @@ void PathOCLRenderThread::RenderThreadImpl() {
 	const u_int taskCount = renderEngine->taskCount;
 
 	try {
+		// signed int in order to avoid problems with underflows (when computing
+		// iterations - 1)
+		int iterations = 1;
+
 		double startTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
-			/*if(threadIndex == 0)
-				cerr<< "[DEBUG] =================================");*/
+			/*if (threadIndex == 0)
+				cerr << "[DEBUG] =================================";*/
 
 			// Async. transfer of the frame buffer
 			oclQueue.enqueueReadBuffer(
@@ -1356,23 +1360,21 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				sizeof(slg::ocl::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
+			// Decide the target refresh time based on screen refresh interval
+			const u_int screenRefreshInterval = renderEngine->renderConfig->GetScreenRefreshInterval();
+			double targetTime;
+			if (screenRefreshInterval <= 100)
+				targetTime = 0.025; // 25 ms
+			else if (screenRefreshInterval <= 500)
+				targetTime = 0.050; // 50 ms
+			else
+				targetTime = 0.075; // 75 ms
+
 			for (;;) {
 				cl::Event event;
 
-				// Decide how many kernels to enqueue
-				const u_int screenRefreshInterval = renderEngine->renderConfig->GetScreenRefreshInterval();
-
-				u_int iterations;
-				if (screenRefreshInterval <= 100)
-					iterations = 1;
-				else if (screenRefreshInterval <= 500)
-					iterations = 2;
-				else if (screenRefreshInterval <= 1000)
-					iterations = 4;
-				else
-					iterations = 8;
-
-				for (u_int i = 0; i < iterations; ++i) {
+				const double t1 = WallClockTime();
+				for (int i = 0; i < iterations; ++i) {
 					// Trace rays
 					if (i == 0)
 						intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
@@ -1389,13 +1391,21 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				oclQueue.flush();
 
 				event.wait();
-				const double elapsedTime = WallClockTime() - startTime;
+				const double t2 = WallClockTime();
 
-				/*if(threadIndex == 0)
-					cerr<< "[DEBUG] Elapsed time: " << elapsedTime * 1000.0 <<
-							"ms (screenRefreshInterval: " << renderEngine->screenRefreshInterval << ")");*/
+				/*if (threadIndex == 0)
+					cerr << "[DEBUG] Delta time: " << (t2 - t1) * 1000.0 <<
+							"ms (screenRefreshInterval: " << screenRefreshInterval <<
+							" iterations: " << iterations << ")\n";*/
 
-				if ((elapsedTime * 1000.0 > (double)screenRefreshInterval) ||
+				// Check if I have to adjust the number of kernel enqueued
+				if (t2 - t1 > targetTime)
+					iterations = Max(iterations - 1, 1);
+				else
+					iterations = Min(iterations + 1, 128);
+
+				// Check if it is time to refresh the screen
+				if (((t2 - startTime) * 1000.0 > (double)screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
 					break;
 			}
