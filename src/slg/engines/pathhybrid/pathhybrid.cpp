@@ -19,29 +19,25 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "slg/engines/bidirhybrid/bidirhybrid.h"
+#include "slg/engines/pathhybrid/pathhybrid.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// BiDirHybridRenderEngine
+// PathHybridRenderEngine
 //------------------------------------------------------------------------------
 
-BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+PathHybridRenderEngine::PathHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		HybridRenderEngine(rcfg, flm, flmMutex) {
-	// For classic BiDir, the count is always 1
-	eyePathCount = 1;
-	lightPathCount = 1;
-
 	film->SetPerPixelNormalizedBufferFlag(true);
-	film->SetPerScreenNormalizedBufferFlag(true);
+	film->SetPerScreenNormalizedBufferFlag(false);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 }
 
-void BiDirHybridRenderEngine::StartLockLess() {
+void PathHybridRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
@@ -49,9 +45,8 @@ void BiDirHybridRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
+	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
 
 	HybridRenderEngine::StartLockLess();
 }

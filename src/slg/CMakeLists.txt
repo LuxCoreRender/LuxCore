@@ -144,6 +144,9 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/filesaver/filesaver.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathhybrid.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathhybridthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp

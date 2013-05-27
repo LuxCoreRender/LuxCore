@@ -19,39 +19,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "slg/engines/bidirhybrid/bidirhybrid.h"
+#include "slg/engines/pathhybrid/pathhybrid.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// BiDirHybridRenderEngine
+// PathHybridRenderThread
 //------------------------------------------------------------------------------
 
-BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		HybridRenderEngine(rcfg, flm, flmMutex) {
-	// For classic BiDir, the count is always 1
-	eyePathCount = 1;
-	lightPathCount = 1;
-
-	film->SetPerPixelNormalizedBufferFlag(true);
-	film->SetPerScreenNormalizedBufferFlag(true);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->Init();
-}
-
-void BiDirHybridRenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
-
-	//--------------------------------------------------------------------------
-	// Rendering parameters
-	//--------------------------------------------------------------------------
-
-	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
-
-	HybridRenderEngine::StartLockLess();
+PathHybridRenderThread::PathHybridRenderThread(PathHybridRenderEngine *engine,
+		const u_int index, IntersectionDevice *device) :
+		HybridRenderThread(engine, index, device) {
 }
