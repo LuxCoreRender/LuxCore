@@ -42,7 +42,8 @@ typedef enum {
 	CBIDIRHYBRID = 9,
 	BIDIRVMCPU = 10,
 	FILESAVER = 11,
-	RTPATHOCL = 12
+	RTPATHOCL = 12,
+	PATHHYBRID = 13
 } RenderEngineType;
 
 //------------------------------------------------------------------------------
@@ -227,6 +228,7 @@ public:
 	virtual ~HybridRenderState();
 
 	virtual void GenerateRays(HybridRenderThread *renderThread) = 0;
+	// Returns the number of contributions (mostly for statistics)
 	virtual double CollectResults(HybridRenderThread *renderThread) = 0;
 
 	friend class HybridRenderThread;

@@ -29,6 +29,7 @@
 #include "slg/engines/cbidirhybrid/cbidirhybrid.h"
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 #include "slg/engines/filesaver/filesaver.h"
+#include "slg/engines/pathhybrid/pathhybrid.h"
 #include "slg/sdl/bsdf.h"
 
 #include "luxrays/core/intersectiondevice.h"
@@ -227,6 +228,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return FILESAVER;
 	if ((type.compare("12") == 0) || (type.compare("RTPATHOCL") == 0))
 		return RTPATHOCL;
+	if ((type.compare("13") == 0) || (type.compare("PATHHYBRID") == 0))
+		return PATHHYBRID;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -250,6 +253,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "FILESAVER";
 		case RTPATHOCL:
 			return "RTPATHOCL";
+		case PATHHYBRID:
+			return "PATHHYBRID";
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
@@ -285,6 +290,8 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
 			return new PathCPURenderEngine(renderConfig, film, filmMutex);
 #endif
+		case PATHHYBRID:
+			return new PathHybridRenderEngine(renderConfig, film, filmMutex);
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}

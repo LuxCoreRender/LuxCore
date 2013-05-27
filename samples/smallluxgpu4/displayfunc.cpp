@@ -111,6 +111,8 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "7", "CPU bidir. VM path tracing");
 	PrintHelpString(320, fontOffset, "8", "RT OpenCL path tracing");
 	fontOffset -= 15;
+	PrintHelpString(15, fontOffset, "9", "Hybrid path tracing");
+	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
 	fontOffset -= 15;
@@ -466,6 +468,12 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->renderConfig->SetScreenRefreshInterval(33);
 			break;
 #endif
+		case '9':
+			session->SetRenderingEngineType(PATHHYBRID);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			optRealTimeMode = false;
+			break;
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
