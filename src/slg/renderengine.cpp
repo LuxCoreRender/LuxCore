@@ -827,7 +827,7 @@ HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
 	// Set the LuxRays DataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
-	SLG_LOG("Starting "<< renderThreadCount << " BiDir hybrid render threads");
+	SLG_LOG("Starting "<< renderThreadCount << " Hybrid render threads");
 	renderThreads.resize(renderThreadCount, NULL);
 }
 
