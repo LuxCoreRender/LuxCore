@@ -228,7 +228,7 @@ public:
 	virtual ~HybridRenderState();
 
 	virtual void GenerateRays(HybridRenderThread *renderThread) = 0;
-	// Returns the number of contributions (mostly for statistics)
+	// Returns the number of rendered samples (mostly for statistics)
 	virtual double CollectResults(HybridRenderThread *renderThread) = 0;
 
 	friend class HybridRenderThread;

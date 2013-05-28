@@ -44,7 +44,7 @@ void PathHybridRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
+	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
 
