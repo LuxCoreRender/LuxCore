@@ -132,19 +132,19 @@ public:
 		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 	}
 
-	bool GetUV(const Point *verts, const Point &hitPoint, float *b1, float *b2) const {
+	bool GetBaryCoords(const Point *verts, const Point &hitPoint, float *b1, float *b2) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
 
-		return GetUV(p0, p1, p2, hitPoint, b1, b2);
+		return GetBaryCoords(p0, p1, p2, hitPoint, b1, b2);
 	}
 
 	static float Area(const Point &p0, const Point &p1, const Point &p2) {
 		return 0.5f * Cross(p1 - p0, p2 - p0).Length();
 	}
 
-	static bool GetUV(const Point &p0, const Point &p1, const Point &p2,
+	static bool GetBaryCoords(const Point &p0, const Point &p1, const Point &p2,
 			const Point &hitPoint, float *b1, float *b2) {
 		const Vector u = p1 - p0;
 		const Vector v = p2 - p0;
