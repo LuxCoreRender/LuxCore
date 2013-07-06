@@ -140,8 +140,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 				scene->camera->GetPixelArea());
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
-			eyeVertex.dVC = 0.f;
-			eyeVertex.dVM = 0.f;
+			eyeVertex.dVC = 1.f;
+			eyeVertex.dVM = 1.f;
 
 			eyeVertex.depth = 1;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
