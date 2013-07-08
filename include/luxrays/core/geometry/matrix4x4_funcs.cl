@@ -47,3 +47,14 @@ float3 Matrix4x4_ApplyVector(__global Matrix4x4 *m, const float3 vector) {
 			dot(row2, vector)
 			);
 }
+
+float3 Matrix4x4_ApplyNormal(__global Matrix4x4 *m, const float3 normal) {
+	const float3 row0 = (float3)(m->m[0][0], m->m[1][0], m->m[2][0]);
+	const float3 row1 = (float3)(m->m[0][1], m->m[1][1], m->m[2][1]);
+	const float3 row2 = (float3)(m->m[0][2], m->m[1][2], m->m[2][2]);
+	return (float3)(
+			dot(row0, normal),
+			dot(row1, normal),
+			dot(row2, normal)
+			);
+}

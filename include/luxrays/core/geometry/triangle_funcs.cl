@@ -28,12 +28,12 @@ void Triangle_UniformSample(const float u0, const float u1, float *b1, float *b2
 }
 
 float3 Triangle_Sample(const float3 p0, const float3 p1, const float3 p2,
-		const float u0, const float u1,
-		float *b0, float *b1, float *b2) {
-		Triangle_UniformSample(u0, u1, b1, b2);
-		*b0 = 1.f - (*b1) - (*b2);
+	const float u0, const float u1,
+	float *b0, float *b1, float *b2) {
+	Triangle_UniformSample(u0, u1, b1, b2);
+	*b0 = 1.f - (*b1) - (*b2);
 
-		return (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
+	return (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 }
 
 float3 Triangle_GetGeometryNormal(const float3 p0, const float3 p1, const float3 p2) {

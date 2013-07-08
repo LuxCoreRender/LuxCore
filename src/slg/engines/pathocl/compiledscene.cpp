@@ -143,6 +143,7 @@ void CompiledScene::CompileGeometry() {
 			memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
 			memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
 
+			// In order to express normals and vertices in local coordinates
 			mesh = imesh->GetExtTriangleMesh();
 		} else {
 			// It is a not instanced mesh
@@ -167,7 +168,7 @@ void CompiledScene::CompileGeometry() {
 
 		if (!isExistingInstance) {
 			//------------------------------------------------------------------
-			// Translate mesh normals
+			// Translate mesh normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
 			if (mesh->HasNormals()) {
@@ -207,7 +208,7 @@ void CompiledScene::CompileGeometry() {
 				currentMeshDesc.alphasOffset = NULL_INDEX;
 
 			//------------------------------------------------------------------
-			// Translate mesh vertices
+			// Translate mesh vertices (expressed in local coordinates)
 			//------------------------------------------------------------------
 
 			for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
