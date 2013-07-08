@@ -29,10 +29,18 @@ float3 Transform_ApplyVector(__global Transform *trans, const float3 vector) {
 	return Matrix4x4_ApplyVector(&trans->m, vector);
 }
 
+float3 Transform_ApplyNormal(__global Transform *trans, const float3 normal) {
+	return Matrix4x4_ApplyNormal(&trans->m, normal);
+}
+
 float3 Transform_InvApplyPoint(__global Transform *trans, const float3 point) {
 	return Matrix4x4_ApplyPoint(&trans->mInv, point);
 }
 
 float3 Transform_InvApplyVector(__global Transform *trans, const float3 vector) {
 	return Matrix4x4_ApplyVector(&trans->mInv, vector);
+}
+
+float3 Transform_InvApplyNormal(__global Transform *trans, const float3 normal) {
+	return Matrix4x4_ApplyNormal(&trans->mInv, normal);
 }

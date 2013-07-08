@@ -81,19 +81,26 @@ void BSDF_Init(
 	const float b1 = rayHit->b1;
 	const float b2 = rayHit->b2;
 
-	const float3 geometryN = Mesh_GetGeometryNormal(iVertices, iTriangles, triangleIndex);
+	// Geometry normal expressed in local coordinates
+	float3 geometryN = Mesh_GetGeometryNormal(iVertices, iTriangles, triangleIndex);
+	// Transform to global coordinates
+	geometryN = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryN));
+	// Store the geometry normal
 	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
+
+	// The shading normal
 	float3 shadeN;
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 	if (meshDesc->normalsOffset != NULL_INDEX) {
 		__global Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
+		// Shading normal expressed in local coordinates
 		shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
+		// Transform to global coordinates
+		shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
 	} else
 #endif
 		shadeN = geometryN;
-#if defined(PARAM_ACCEL_MQBVH)
-	shadeN = normalize(Transform_InvApplyVector(&meshDesc->trans, shadeN));
-#endif
+	// Shade normal can not yet be stored because of normal and bump mapping
 
 	//--------------------------------------------------------------------------
 	// Get UV coordinate
