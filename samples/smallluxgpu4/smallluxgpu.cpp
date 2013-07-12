@@ -124,7 +124,7 @@ void SLGTerminate(void) {
 }
 #endif
 
-void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
+static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
 	if(fif != FIF_UNKNOWN)
 		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
