@@ -108,14 +108,12 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		} else
 			dbdv = 0.f;
 
-		const Vector bump(dbdu, dbdv, 1.f);
-
 		Vector v1, v2;
 		CoordinateSystem(Vector(hitPoint.shadeN), &v1, &v2);
 		hitPoint.shadeN = Normalize(Normal(
-				v1.x * bump.x + v2.x * bump.y + hitPoint.shadeN.x * bump.z,
-				v1.y * bump.x + v2.y * bump.y + hitPoint.shadeN.y * bump.z,
-				v1.z * bump.x + v2.z * bump.y + hitPoint.shadeN.z * bump.z));
+				v1.x * dbdu + v2.x * dbdv + hitPoint.shadeN.x,
+				v1.y * dbdu + v2.y * dbdv + hitPoint.shadeN.y,
+				v1.z * dbdu + v2.z * dbdv + hitPoint.shadeN.z));
 	}
 
 	frame.SetFromZ(hitPoint.shadeN);
