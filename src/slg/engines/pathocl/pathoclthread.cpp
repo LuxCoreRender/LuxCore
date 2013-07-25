@@ -747,6 +747,15 @@ void PathOCLRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Compiling kernels ");
 
+		// Some debug code to write the OpenCL kernel source to a file
+		/*const std::string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".txt";
+		std::ofstream kernelFile(kernelFileName.c_str());
+		string kernelDefs = kernelsParameters;
+		boost::replace_all(kernelDefs, "-D", "\n#define");
+		boost::replace_all(kernelDefs, "=", " ");
+		kernelFile << kernelDefs << std::endl << std::endl << kernelSource << std::endl;
+		kernelFile.close();*/
+
 		bool cached;
 		cl::STRING_CLASS error;
 		cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
