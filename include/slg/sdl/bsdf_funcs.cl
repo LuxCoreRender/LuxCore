@@ -192,11 +192,14 @@ void BSDF_Init(
 		const float b0 = Texture_GetFloatValue(tex, &bsdf->hitPoint
 			TEXTURES_PARAM);
 
+		// Placing the the following line here as a workaround for an AMD OpenCL compiler bug
+		VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
+
 		float dbdu;
 		if (dudv.s0 > 0.f) {
 			// This is a simple trick. The correct code would require true differential information.
 			VSTORE3F((float3)(hitPointP.x + dudv.s0, hitPointP.y, hitPointP.z), &bsdf->hitPoint.p.x);
-			VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
+			//VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
 			const float bu = Texture_GetFloatValue(tex, &bsdf->hitPoint
 				TEXTURES_PARAM);
 
@@ -204,11 +207,14 @@ void BSDF_Init(
 		} else
 			dbdu = 0.f;
 
+		// Placing the the following line here as a workaround for an AMD OpenCL compiler bug
+		VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
+
 		float dbdv;
 		if (dudv.s1 > 0.f) {
 			// This is a simple trick. The correct code would require true differential information.
 			VSTORE3F((float3)(hitPointP.x, hitPointP.y + dudv.s1, hitPointP.z), &bsdf->hitPoint.p.x);
-			VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
+			//VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
 			const float bv = Texture_GetFloatValue(tex, &bsdf->hitPoint
 				TEXTURES_PARAM);
 
@@ -220,14 +226,12 @@ void BSDF_Init(
 		VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
 		VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
 
-		const float3 bump = (float3)(dbdu, dbdv, 1.f);
-
 		float3 v1, v2;
 		CoordinateSystem(shadeN, &v1, &v2);
 		shadeN = normalize((float3)(
-				v1.x * bump.x + v2.x * bump.y + shadeN.x * bump.z,
-				v1.y * bump.x + v2.y * bump.y + shadeN.y * bump.z,
-				v1.z * bump.x + v2.z * bump.y + shadeN.z * bump.z));
+				v1.x * dbdu + v2.x * dbdv + shadeN.x,
+				v1.y * dbdu + v2.y * dbdv + shadeN.y,
+				v1.z * dbdu + v2.z * dbdv + shadeN.z));
 	}
 #endif
 #endif
