@@ -53,6 +53,7 @@ extern bool optMouseGrabMode;
 extern bool optUseLuxVRName;
 extern bool optOSDPrintHelp;
 extern bool optRealTimeMode;
+extern bool optUseGameMode;
 extern float optMoveScale;
 extern float optMoveStep;
 extern float optRotateStep;

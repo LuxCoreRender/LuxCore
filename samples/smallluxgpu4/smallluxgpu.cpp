@@ -60,6 +60,7 @@ bool optMouseGrabMode = false;
 bool optUseLuxVRName = false;
 bool optOSDPrintHelp = false;
 bool optRealTimeMode = false;
+bool optUseGameMode = false;
 float optMoveScale = 1.f;
 float optMoveStep = .5f;
 float optRotateStep = 4.f;
@@ -406,6 +407,7 @@ int main(int argc, char *argv[]) {
 							" -d [current directory path]" << endl <<
 							" -m Makes the mouse operations work in \"grab mode\"" << endl << 
 							" -R <use LuxVR name>" << endl <<
+							" -g <enable full screen mode>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
 				}
@@ -436,6 +438,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
 				else if (argv[i][1] == 'R') optUseLuxVRName = true;
+
+				else if (argv[i][1] == 'g') optUseGameMode = true;
 
 				else {
 					SLG_LOG("Invalid option: " << argv[i]);
