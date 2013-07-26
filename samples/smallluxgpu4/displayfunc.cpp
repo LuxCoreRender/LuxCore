@@ -634,20 +634,26 @@ static void motionFunc(int x, int y) {
 void InitGlut(int argc, char *argv[], const u_int width, const u_int height) {
 	glutInit(&argc, argv);
 
-	glutInitWindowSize(width, height);
-	// Center the window
-	const u_int scrWidth = glutGet(GLUT_SCREEN_WIDTH);
-	const u_int scrHeight = glutGet(GLUT_SCREEN_HEIGHT);
-	if ((scrWidth + 50 < width) || (scrHeight + 50 < height))
-		glutInitWindowPosition(0, 0);
-	else
-		glutInitWindowPosition((scrWidth - width) / 2, (scrHeight - height) / 2);
+	if (optUseGameMode) {
+		const string screenDef = ToString(width) + "x" + ToString(height);
+		glutGameModeString(screenDef.c_str());
+		glutEnterGameMode();	
+	} else {
+		glutInitWindowSize(width, height);
+		// Center the window
+		const u_int scrWidth = glutGet(GLUT_SCREEN_WIDTH);
+		const u_int scrHeight = glutGet(GLUT_SCREEN_HEIGHT);
+		if ((scrWidth + 50 < width) || (scrHeight + 50 < height))
+			glutInitWindowPosition(0, 0);
+		else
+			glutInitWindowPosition((scrWidth - width) / 2, (scrHeight - height) / 2);
 
-	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-	if (optUseLuxVRName)
-		glutCreateWindow(LUXVR_LABEL.c_str());
-	else
-		glutCreateWindow(SLG_LABEL.c_str());
+		glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
+		if (optUseLuxVRName)
+			glutCreateWindow(LUXVR_LABEL.c_str());
+		else
+			glutCreateWindow(SLG_LABEL.c_str());
+	}
 }
 
 void RunGlut() {
