@@ -62,8 +62,8 @@ void CompiledScene::CompileCamera() {
 	camera.hither = scene->camera->clipHither;
 	camera.lensRadius = scene->camera->lensRadius;
 	camera.focalDistance = scene->camera->focalDistance;
-	memcpy(camera.rasterToCamera.m.m, scene->camera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-	memcpy(camera.cameraToWorld.m.m, scene->camera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+	memcpy(camera.rasterToCamera.m.m, scene->camera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
+	memcpy(camera.cameraToWorld.m.m, scene->camera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
 }
 
 static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {

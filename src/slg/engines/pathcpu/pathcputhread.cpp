@@ -184,8 +184,8 @@ void PathCPURenderThread::RenderFunc() {
 		float alpha = 1.f;
 
 		Ray eyeRay;
-		const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		const float screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+		const float screenX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+		const float screenY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(screenX, screenY, &eyeRay,
 			sampler->GetSample(2), sampler->GetSample(3));
 

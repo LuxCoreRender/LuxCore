@@ -67,9 +67,9 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 	const int interval = (renderEngineType == RTPATHOCL) ? 33 : 100;
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", interval);
 
-	if (scn) {
+	if (scn)
 		scene = scn;
-	} else {
+	else {
 		// Create the Scene
 		const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
 		const float imageScale = Max(.01f, cfg.GetFloat("images.scale", 1.f));

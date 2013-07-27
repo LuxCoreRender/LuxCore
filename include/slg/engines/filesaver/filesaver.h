@@ -41,6 +41,10 @@ public:
 
 	RenderEngineType GetEngineType() const { return FILESAVER; }
 
+	virtual bool IsHorizontalStereoSupported() const {
+		return true;
+	}
+
 protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess() { }
