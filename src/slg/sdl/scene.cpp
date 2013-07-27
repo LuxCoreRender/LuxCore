@@ -300,6 +300,17 @@ void Scene::CreateCamera(const Properties &props) {
 	camera->lensRadius = props.GetFloat("scene.camera.lensradius", 0.f);
 	camera->focalDistance = props.GetFloat("scene.camera.focaldistance", 10.f);
 	camera->fieldOfView = props.GetFloat("scene.camera.fieldofview", 45.f);
+
+	if (props.GetBoolean("scene.camera.horizontalstereo.enable", false)) {
+		SDL_LOG("Camera horizontal stereo enabled");
+		camera->enableHorizontalStereo();
+
+		const float eyeDistance = props.GetFloat("scene.camera.horizontalstereo.eyedistance", .0626f);
+		SDL_LOG("Camera horizontal stereo eye distance: " << eyeDistance);
+		camera->SetHorizontalStereoEyeDistance(eyeDistance);
+	} else {
+		SDL_LOG("Camera horizontal stereo disabled");
+	}
 }
 
 void Scene::DefineTextures(const std::string &propsString) {

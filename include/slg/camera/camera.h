@@ -43,22 +43,20 @@ using namespace luxrays::ocl;
 
 class PerspectiveCamera {
 public:
-	PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t, const luxrays::Vector &u, const float *region = NULL) :
-		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
-		lensRadius(0.f), focalDistance(10.f) {
-		if (region) {
-			autoUpdateFilmRegion = false;
-			filmRegion[0] = region[0];
-			filmRegion[1] = region[1];
-			filmRegion[2] = region[2];
-			filmRegion[3] = region[3];
-		} else
-			autoUpdateFilmRegion = true;
-			
-	}
-
+	PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
+			const luxrays::Vector &u, const float *region = NULL);
 	~PerspectiveCamera() {
 	}
+
+	const void enableHorizontalStereo() {
+		if (!autoUpdateFilmRegion)
+			throw std::runtime_error("Can not enable horizontal stereo support without film region auto-update");
+
+		enableHorizStereo = true;
+	}
+	const bool IsHorizontalStereoEnabled() const { return enableHorizStereo; }
+	void SetHorizontalStereoEyeDistance(const float v) { horizStereoEyeDistance = v; }
+	const float GetHorizontalStereoEyeDistance() const { return horizStereoEyeDistance; }
 
 	const luxrays::Vector &GetDir() const { return dir; }
 	const luxrays::Vector &GetX() const { return x; }
@@ -130,12 +128,12 @@ public:
 		ray->maxt = luxrays::Min(ray->maxt, clipYon / cosi);
 	}
 
-	const luxrays::Matrix4x4 GetRasterToCameraMatrix() const {
-		return rasterToCamera.GetMatrix();
+	const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const {
+		return camTrans[index].rasterToCamera.GetMatrix();
 	}
 
-	const luxrays::Matrix4x4 GetCameraToWorldMatrix() const {
-		return cameraToWorld.GetMatrix();
+	const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const {
+		return camTrans[index].cameraToWorld.GetMatrix();
 	}
 
 	float GetClipYon() const { return clipYon; }
@@ -148,21 +146,36 @@ public:
 	luxrays::Vector up;
 	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
-	float filmRegion[4];
-	bool autoUpdateFilmRegion;
+	//--------------------------------------------------------------------------
+	// Oculus Rift post-processing pixel shader
+	//--------------------------------------------------------------------------
+	
+	static void OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY);
 
 private:
-	u_int filmWidth, filmHeight, filmSubRegion[4];
+	typedef struct {
+		luxrays::Transform cameraToWorld;
+		luxrays::Transform screenToCamera, screenToWorld;
+		luxrays::Transform rasterToScreen, rasterToWorld;
+		luxrays::Transform rasterToCamera;
+	} CameraTransforms;
+
+	void InitCameraTransforms(CameraTransforms *trans, const float screen[4],
+		const float eyeOffset,
+		const float screenOffsetX, const float screenOffsetY);
+
+	u_int filmWidth, filmHeight;
 
 	// Calculated values
 	float pixelArea;
 	luxrays::Vector dir, x, y;
 
 	// ProjectiveCamera Protected Data
-	luxrays::Transform cameraToWorld;
-	luxrays::Transform screenToCamera, screenToWorld;
-	luxrays::Transform rasterToScreen, rasterToWorld;
-	luxrays::Transform rasterToCamera;
+	std::vector<CameraTransforms> camTrans;
+
+	float filmRegion[4], horizStereoEyeDistance;
+	bool autoUpdateFilmRegion, enableHorizStereo;
+
 };
 
 }
