@@ -417,12 +417,15 @@ void keyFunc(unsigned char key, int x, int y) {
 			UpdateMoveStep();
 			SLG_LOG("Camera move scale: " << optMoveScale);
 			break;
-		case 'l':
-			session->SetRenderingEngineType(PATHOCL);
-			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-			optRealTimeMode = false;
+		case 'u': {
+			session->BeginEdit();
+			session->renderConfig->scene->camera->SetHorizontalStereo(!session->renderConfig->scene->camera->IsHorizontalStereoEnabled());
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
 			break;
+		}
 		case 'k': {
 			session->BeginEdit();
 			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyeDistance();
@@ -435,7 +438,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->EndEdit();
 			break;
 		}
-		case 'j': {
+		case 'l': {
 			session->BeginEdit();
 			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyeDistance();
 			const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
@@ -446,7 +449,14 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->editActions.AddAction(CAMERA_EDIT);
 			session->EndEdit();
 			break;
-		}		case '2':
+		}
+		case '1':
+			session->SetRenderingEngineType(PATHOCL);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			optRealTimeMode = false;
+			break;
+		case '2':
 			session->SetRenderingEngineType(LIGHTCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
