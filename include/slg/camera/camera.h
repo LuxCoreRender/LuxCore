@@ -48,11 +48,11 @@ public:
 	~PerspectiveCamera() {
 	}
 
-	const void enableHorizontalStereo() {
+	const void SetHorizontalStereo(const bool v) {
 		if (!autoUpdateFilmRegion)
 			throw std::runtime_error("Can not enable horizontal stereo support without film region auto-update");
 
-		enableHorizStereo = true;
+		enableHorizStereo = v;
 	}
 	const bool IsHorizontalStereoEnabled() const { return enableHorizStereo; }
 	void SetHorizontalStereoEyeDistance(const float v) { horizStereoEyeDistance = v; }

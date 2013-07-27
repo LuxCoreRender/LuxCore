@@ -303,13 +303,14 @@ void Scene::CreateCamera(const Properties &props) {
 
 	if (props.GetBoolean("scene.camera.horizontalstereo.enable", false)) {
 		SDL_LOG("Camera horizontal stereo enabled");
-		camera->enableHorizontalStereo();
+		camera->SetHorizontalStereo(true);
 
 		const float eyeDistance = props.GetFloat("scene.camera.horizontalstereo.eyedistance", .0626f);
 		SDL_LOG("Camera horizontal stereo eye distance: " << eyeDistance);
 		camera->SetHorizontalStereoEyeDistance(eyeDistance);
 	} else {
 		SDL_LOG("Camera horizontal stereo disabled");
+		camera->SetHorizontalStereo(false);
 	}
 }
 
