@@ -55,6 +55,13 @@ public:
 		enableHorizStereo = v;
 	}
 	const bool IsHorizontalStereoEnabled() const { return enableHorizStereo; }
+	const void SetOculusRiftBarrel(const bool v) {
+		if (!enableHorizStereo)
+			throw std::runtime_error("Can not enable Oculus Rift Barrel post-processing without horizontal stereo");
+
+		enableOculusRiftBarrel = v;
+	}
+	const bool IsOculusRiftBarrelEnabled() const { return enableOculusRiftBarrel; }
 	void SetHorizontalStereoEyeDistance(const float v) { horizStereoEyeDistance = v; }
 	const float GetHorizontalStereoEyeDistance() const { return horizStereoEyeDistance; }
 
@@ -174,7 +181,7 @@ private:
 	std::vector<CameraTransforms> camTrans;
 
 	float filmRegion[4], horizStereoEyeDistance;
-	bool autoUpdateFilmRegion, enableHorizStereo;
+	bool autoUpdateFilmRegion, enableHorizStereo, enableOculusRiftBarrel;
 
 };
 

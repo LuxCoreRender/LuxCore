@@ -426,6 +426,17 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->EndEdit();
 			break;
 		}
+		case 'y': {
+			if (session->renderConfig->scene->camera->IsHorizontalStereoEnabled()) {
+				session->BeginEdit();
+				session->renderConfig->scene->camera->SetOculusRiftBarrel(!session->renderConfig->scene->camera->IsOculusRiftBarrelEnabled());
+				session->renderConfig->scene->camera->Update(
+					session->film->GetWidth(), session->film->GetHeight());
+				session->editActions.AddAction(CAMERA_EDIT);
+				session->EndEdit();
+			}
+			break;
+		}
 		case 'k': {
 			session->BeginEdit();
 			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyeDistance();
