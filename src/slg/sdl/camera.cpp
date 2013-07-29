@@ -41,6 +41,7 @@ PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Poi
 		autoUpdateFilmRegion = true;
 
 	enableHorizStereo = false;
+	enableOculusRiftBarrel = false;
 	horizStereoEyeDistance = .0626f;
 }
 
@@ -175,10 +176,13 @@ void PerspectiveCamera::GenerateRay(
 	u_int transIndex;
 	Point Pras, Pcamera;
 	if (enableHorizStereo) {
-		OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight,
-				&Pras.x, &Pras.y);
-		Pras.x = Min(Pras.x * filmWidth, (float)(filmWidth - 1));
-		Pras.y = Min(Pras.y * filmHeight, (float)(filmHeight - 1));
+		if (enableOculusRiftBarrel) {
+			OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight,
+					&Pras.x, &Pras.y);
+			Pras.x = Min(Pras.x * filmWidth, (float)(filmWidth - 1));
+			Pras.y = Min(Pras.y * filmHeight, (float)(filmHeight - 1));
+		} else
+			Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
 
 		if (filmX < filmWidth * .5f) {
 			// Left eye
@@ -277,6 +281,7 @@ Properties PerspectiveCamera::ToProperties() const {
 	props.SetString("scene.camera.focaldistance", ToString(focalDistance));
 	props.SetString("scene.camera.fieldofview", ToString(fieldOfView));
 	props.SetString("scene.camera.horizontalstereo.enable", ToString(enableHorizStereo));
+	props.SetString("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable", ToString(enableOculusRiftBarrel));
 
 	return props;
 }
