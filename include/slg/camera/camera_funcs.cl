@@ -21,6 +21,57 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
+void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
+	// Express the sample in coordinates relative to the eye center
+	float ex, ey;
+	if (x < .5f) {
+		// A left eye sample
+		ex = x * 4.f - 1.f;
+		ey = y * 2.f - 1.f;
+	} else {
+		// A right eye sample
+		ex = (x - .5f) * 4.f - 1.f;
+		ey = y * 2.f - 1.f;
+	}
+
+	if ((ex == 0.f) && (ey == 0.f)) {
+		*barrelX = 0.f;
+		*barrelY = 0.f;
+		return;
+	}
+
+	// Distance from the eye center
+	const float distance = sqrt(ex * ex + ey * ey);
+
+	// "Push" the sample away base on the distance from the center
+	const float scale = 1.f / 1.4f;
+	const float k0 = 1.f;
+	const float k1 = .22f;
+	const float k2 = .23f;
+	const float k3 = 0.f;
+	const float distance2 = distance * distance;
+	const float distance4 = distance2 * distance2;
+	const float distance6 = distance2 * distance4;
+	const float fr = scale * (k0 + k1 * distance2 + k2 * distance4 + k3 * distance6);
+
+	ex *= fr;
+	ey *= fr;
+
+	// Clamp the coordinates
+	ex = clamp(ex, -1.f, 1.f);
+	ey = clamp(ey, -1.f, 1.f);
+
+	if (x < .5f) {
+		*barrelX = (ex + 1.f) * .25f;
+		*barrelY = (ey + 1.f) * .5f;
+	} else {
+		*barrelX = (ex + 1.f) * .25f + .5f;
+		*barrelY = (ey + 1.f) * .5f;
+	}
+}
+#endif
+
 void Camera_GenerateRay(
 		__global Camera *camera,
 		__global Ray *ray,
@@ -29,11 +80,26 @@ void Camera_GenerateRay(
 		, const float dofSampleX, const float dofSampleY
 #endif
 		) {
-	const float screenX = min(scrSampleX * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min(scrSampleY * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
+#if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO)
+	// Left eye or right eye
+	const uint transIndex = (scrSampleX < .5f) ? 0 : 1;
+#else
+	const uint transIndex = 0;
+#endif
 
-	float3 Pras = (float3)(screenX, PARAM_IMAGE_HEIGHT - screenY - 1.f, 0.f);
-	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera, Pras);
+	float ssx, ssy;
+#if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO) && defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
+	Camera_OculusRiftBarrelPostprocess(scrSampleX, scrSampleY, &ssx, &ssy);
+#else
+	ssx = scrSampleX;
+	ssy = scrSampleY;
+#endif
+
+	const float screenX = min(ssx * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
+	const float screenY = min((1.f - ssy) * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
+	float3 Pras = (float3)(screenX, screenY, 0.f);
+
+	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera[transIndex], Pras);
 	float3 rayDir = rayOrig;
 
 	const float hither = camera->hither;
@@ -65,8 +131,8 @@ void Camera_GenerateRay(
 	const float maxt = (camera->yon - hither) / rayDir.z;
 
 	// Transform ray in world coordinates
-	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld, rayOrig);
-	rayDir = Transform_ApplyVector(&camera->cameraToWorld, rayDir);
+	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld[transIndex], rayOrig);
+	rayDir = Transform_ApplyVector(&camera->cameraToWorld[transIndex], rayDir);
 
 	Ray_Init3(ray, rayOrig, rayDir, maxt);
 

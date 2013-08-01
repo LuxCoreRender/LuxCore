@@ -62,8 +62,19 @@ void CompiledScene::CompileCamera() {
 	camera.hither = scene->camera->clipHither;
 	camera.lensRadius = scene->camera->lensRadius;
 	camera.focalDistance = scene->camera->focalDistance;
-	memcpy(camera.rasterToCamera.m.m, scene->camera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
-	memcpy(camera.cameraToWorld.m.m, scene->camera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+
+	memcpy(camera.rasterToCamera[0].m.m, scene->camera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
+	memcpy(camera.cameraToWorld[0].m.m, scene->camera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+	if (scene->camera->IsHorizontalStereoEnabled()) {
+		enableHorizStereo = true;
+		enableOculusRiftBarrel = scene->camera->IsOculusRiftBarrelEnabled();
+
+		memcpy(camera.rasterToCamera[1].m.m, scene->camera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
+		memcpy(camera.cameraToWorld[1].m.m, scene->camera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));		
+	} else {
+		enableHorizStereo = false;
+		enableOculusRiftBarrel = false;
+	}
 }
 
 static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {

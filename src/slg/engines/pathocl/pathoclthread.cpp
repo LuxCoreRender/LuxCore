@@ -541,6 +541,12 @@ void PathOCLRenderThread::InitKernels() {
 	
 	if (cscene->camera.lensRadius > 0.f)
 		ss << " -D PARAM_CAMERA_HAS_DOF";
+	if (cscene->enableHorizStereo) {
+		ss << " -D PARAM_CAMERA_ENABLE_HORIZ_STEREO";
+
+		if (cscene->enableOculusRiftBarrel)
+			ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
+	}
 
 	if (infiniteLightBuff)
 		ss << " -D PARAM_HAS_INFINITELIGHT";

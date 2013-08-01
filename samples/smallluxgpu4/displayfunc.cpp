@@ -417,24 +417,23 @@ void keyFunc(unsigned char key, int x, int y) {
 			UpdateMoveStep();
 			SLG_LOG("Camera move scale: " << optMoveScale);
 			break;
+		case 'y': {
+			if (session->renderConfig->scene->camera->IsHorizontalStereoEnabled()) {
+				session->Stop();
+				session->renderConfig->scene->camera->SetOculusRiftBarrel(!session->renderConfig->scene->camera->IsOculusRiftBarrelEnabled());
+				session->renderConfig->scene->camera->Update(
+					session->film->GetWidth(), session->film->GetHeight());
+				session->Start();
+			}
+			break;
+		}
 		case 'u': {
-			session->BeginEdit();
+			session->Stop();
 			session->renderConfig->scene->camera->SetHorizontalStereo(!session->renderConfig->scene->camera->IsHorizontalStereoEnabled());
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
-			break;
-		}
-		case 'y': {
-			if (session->renderConfig->scene->camera->IsHorizontalStereoEnabled()) {
-				session->BeginEdit();
-				session->renderConfig->scene->camera->SetOculusRiftBarrel(!session->renderConfig->scene->camera->IsOculusRiftBarrelEnabled());
-				session->renderConfig->scene->camera->Update(
-					session->film->GetWidth(), session->film->GetHeight());
-				session->editActions.AddAction(CAMERA_EDIT);
-				session->EndEdit();
-			}
+			session->Start();
 			break;
 		}
 		case 'k': {
