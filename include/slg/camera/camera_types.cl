@@ -22,8 +22,8 @@
  ***************************************************************************/
 
 typedef struct {
-	Transform rasterToCamera;
-	Transform cameraToWorld;
+	Transform rasterToCamera[2]; // 2 used for stereo rendering
+	Transform cameraToWorld[2]; // 2 used for stereo rendering
 
 	// Placed here for Transform memory alignement
 	float lensRadius;

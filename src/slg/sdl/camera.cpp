@@ -184,20 +184,14 @@ void PerspectiveCamera::GenerateRay(
 		} else
 			Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
 
-		if (filmX < filmWidth * .5f) {
-			// Left eye
-			transIndex = 0;
-			Pcamera = Point(camTrans[0].rasterToCamera * Pras);
-		} else {
-			// Right eye
-			transIndex = 1;
-			Pcamera = Point(camTrans[1].rasterToCamera * Pras);
-		}
+		// Left eye or right eye
+		transIndex = (filmX < filmWidth * .5f) ? 0 : 1;
 	} else {
 		transIndex = 0;
 		Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
-		Pcamera = Point(camTrans[0].rasterToCamera * Pras);
 	}
+
+	Pcamera = Point(camTrans[transIndex].rasterToCamera * Pras);
 
 	ray->o = Pcamera;
 	ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
