@@ -49,14 +49,14 @@ public:
 	}
 
 	const void SetHorizontalStereo(const bool v) {
-		if (!autoUpdateFilmRegion)
+		if (v && !autoUpdateFilmRegion)
 			throw std::runtime_error("Can not enable horizontal stereo support without film region auto-update");
 
 		enableHorizStereo = v;
 	}
 	const bool IsHorizontalStereoEnabled() const { return enableHorizStereo; }
 	const void SetOculusRiftBarrel(const bool v) {
-		if (!enableHorizStereo)
+		if (v && !enableHorizStereo)
 			throw std::runtime_error("Can not enable Oculus Rift Barrel post-processing without horizontal stereo");
 
 		enableOculusRiftBarrel = v;

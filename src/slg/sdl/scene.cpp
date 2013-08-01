@@ -315,8 +315,8 @@ void Scene::CreateCamera(const Properties &props) {
 			SDL_LOG("Camera Oculus Rift Barrel post-processing enabled");
 			camera->SetOculusRiftBarrel(true);
 		} else {
-			SDL_LOG("Camera horizontal stereo disabled");
-			camera->SetHorizontalStereo(false);
+			SDL_LOG("Camera Oculus Rift Barrel post-processing disabled");
+			camera->SetOculusRiftBarrel(false);
 		}
 	} else {
 		SDL_LOG("Camera horizontal stereo disabled");
