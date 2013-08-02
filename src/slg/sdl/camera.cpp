@@ -43,7 +43,7 @@ PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Poi
 	enableHorizStereo = false;
 	enableOculusRiftBarrel = false;
 	horizStereoEyesDistance = .0626f;
-	horizStereoLensDistance = .1f;
+	horizStereoLensDistance = .2779f;
 }
 
 void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
