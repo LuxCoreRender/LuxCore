@@ -4,7 +4,8 @@ scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
 scene.camera.fieldofview = 120.0
 scene.camera.horizontalstereo.enable = 1
 scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable = 1
-scene.camera.horizontalstereo.eyedistance = 0.664263
+scene.camera.horizontalstereo.eyesdistance = 0.2262
+scene.camera.horizontalstereo.lensdistance = 0.2779
 ################################################################################
 scene.materials.shell.type = mirror
 scene.materials.shell.kr = 0.75 0.75 0.75

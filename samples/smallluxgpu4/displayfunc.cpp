@@ -438,10 +438,10 @@ void keyFunc(unsigned char key, int x, int y) {
 		}
 		case 'k': {
 			session->BeginEdit();
-			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyeDistance();
+			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
 			const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
-			SLG_LOG("Camera horizontal stereo eye distance: " << newEyeDistance);
-			session->renderConfig->scene->camera->SetHorizontalStereoEyeDistance(newEyeDistance);
+			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
@@ -450,10 +450,34 @@ void keyFunc(unsigned char key, int x, int y) {
 		}
 		case 'l': {
 			session->BeginEdit();
-			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyeDistance();
+			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
 			const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
-			SLG_LOG("Camera horizontal stereo eye distance: " << newEyeDistance);
-			session->renderConfig->scene->camera->SetHorizontalStereoEyeDistance(newEyeDistance);
+			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
+			break;
+		}
+		case ',': {
+			session->BeginEdit();
+			const float currentLenDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
+			const float newLensDistance = currentLenDistance + ((currentLenDistance == 0.f) ? .1f : (currentLenDistance * 0.05f));
+			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
+			session->renderConfig->scene->camera->Update(
+				session->film->GetWidth(), session->film->GetHeight());
+			session->editActions.AddAction(CAMERA_EDIT);
+			session->EndEdit();
+			break;
+		}
+		case '.': {
+			session->BeginEdit();
+			const float currentLensDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
+			const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
+			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);

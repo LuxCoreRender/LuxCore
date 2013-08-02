@@ -42,8 +42,8 @@ PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Poi
 
 	enableHorizStereo = false;
 	enableOculusRiftBarrel = false;
-	horizStereoEyeDistance = .0626f;
-	horizStereoLensDistance = .1;
+	horizStereoEyesDistance = .0626f;
+	horizStereoLensDistance = .1f;
 }
 
 void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
@@ -136,9 +136,9 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 		const float offset = (screen[1] - screen[0]) * .25f  - horizStereoLensDistance * .5f;
 
 		// Left eye
-		InitCameraTransforms(&camTrans[0], screen, -horizStereoEyeDistance * .5f, offset, 0.f);
+		InitCameraTransforms(&camTrans[0], screen, -horizStereoEyesDistance * .5f, offset, 0.f);
 		// Right eye
-		InitCameraTransforms(&camTrans[1], screen, horizStereoEyeDistance * .5f, -offset, 0.f);
+		InitCameraTransforms(&camTrans[1], screen, horizStereoEyesDistance * .5f, -offset, 0.f);
 	} else {
 		camTrans.resize(1);
 		InitCameraTransforms(&camTrans[0], screen, 0.f, 0.f, 0.f);
