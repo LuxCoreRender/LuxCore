@@ -62,8 +62,8 @@ public:
 		enableOculusRiftBarrel = v;
 	}
 	const bool IsOculusRiftBarrelEnabled() const { return enableOculusRiftBarrel; }
-	void SetHorizontalStereoEyeDistance(const float v) { horizStereoEyeDistance = v; }
-	const float GetHorizontalStereoEyeDistance() const { return horizStereoEyeDistance; }
+	void SetHorizontalStereoEyesDistance(const float v) { horizStereoEyesDistance = v; }
+	const float GetHorizontalStereoEyesDistance() const { return horizStereoEyesDistance; }
 	void SetHorizontalStereoLensDistance(const float v) { horizStereoLensDistance = v; }
 	const float GetHorizontalStereoLensDistance() const { return horizStereoLensDistance; }
 
@@ -182,7 +182,7 @@ private:
 	// ProjectiveCamera Protected Data
 	std::vector<CameraTransforms> camTrans;
 
-	float filmRegion[4], horizStereoEyeDistance, horizStereoLensDistance;
+	float filmRegion[4], horizStereoEyesDistance, horizStereoLensDistance;
 	bool autoUpdateFilmRegion, enableHorizStereo, enableOculusRiftBarrel;
 
 };

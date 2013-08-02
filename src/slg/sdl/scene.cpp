@@ -305,9 +305,12 @@ void Scene::CreateCamera(const Properties &props) {
 		SDL_LOG("Camera horizontal stereo enabled");
 		camera->SetHorizontalStereo(true);
 
-		const float eyeDistance = props.GetFloat("scene.camera.horizontalstereo.eyedistance", .0626f);
-		SDL_LOG("Camera horizontal stereo eye distance: " << eyeDistance);
-		camera->SetHorizontalStereoEyeDistance(eyeDistance);
+		const float eyesDistance = props.GetFloat("scene.camera.horizontalstereo.eyesdistance", .0626f);
+		SDL_LOG("Camera horizontal stereo eyes distance: " << eyesDistance);
+		camera->SetHorizontalStereoEyesDistance(eyesDistance);
+		const float lesnDistance = props.GetFloat("scene.camera.horizontalstereo.lensdistance", .1f);
+		SDL_LOG("Camera horizontal stereo lens distance: " << lesnDistance);
+		camera->SetHorizontalStereoLensDistance(lesnDistance);
 
 
 		// Check if I have to enable Oculus Rift Barrel post-processing
