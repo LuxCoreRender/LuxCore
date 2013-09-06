@@ -518,6 +518,9 @@ void MQBVHAccel::Update() {
 void MQBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		BBox *primsBboxes, Point *primsCentroids, const BBox &nodeBbox,
 		const BBox &centroidsBbox, int32_t parentIndex, int32_t childIndex, int depth) {
+	if (depth > 64)
+		throw std::runtime_error("Maximum recursion depth reached while constructing MQBVH");
+
 	// Create a leaf ?
 	//********
 	if (end - start == 1) {
@@ -550,14 +553,6 @@ void MQBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 	// for the nodeBbox is an axis of 0 extent for the centroids one.).
 	const int axis = centroidsBbox.MaximumExtent();
 
-	// Precompute values that are constant with respect to the current
-	// primitive considered.
-	const float k0 = centroidsBbox.pMin[axis];
-	const float k1 = NB_BINS / (centroidsBbox.pMax[axis] - k0);
-
-	if (k1 == INFINITY)
-		throw std::runtime_error("MQBVH unable to handle geometry, too many primitives with the same centroid");
-
 	// Create an intermediate node if the depth indicates to do so.
 	// Register the split axis.
 	if (depth % 2 == 0) {
@@ -566,15 +561,62 @@ void MQBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 		rightChildIndex = 2;
 	}
 
-	for (u_int i = start; i < end; i += step) {
-		u_int primIndex = primsIndexes[i];
+	// Precompute values that are constant with respect to the current
+	// primitive considered.
+	const float k0 = centroidsBbox.pMin[axis];
+	const float k1 = NB_BINS / (centroidsBbox.pMax[axis] - k0);
 
-		// Binning is relative to the centroids bbox and to the
-		// primitives' centroid.
-		const int binId = Min(NB_BINS - 1, Floor2Int(k1 * (primsCentroids[primIndex][axis] - k0)));
+	if (k1 == INFINITY) {
+		// All centroids are exactly the same. I will just store even primitives
+		// on one side and odd on the other.
 
-		bins[binId]++;
-		binsBbox[binId] = Union(binsBbox[binId], primsBboxes[primIndex]);
+		LR_LOG(ctx, "MQBVH detects too many primitives with the same centroid");
+
+		BBox leftChildBbox, rightChildBbox;
+		BBox leftChildCentroidsBbox, rightChildCentroidsBbox;
+
+		u_int storeIndex = start;
+		for (u_int i = start; i < end; ++i) {
+			u_int primIndex = primsIndexes[i];
+
+			// Just store even primitives on one side and odd on the other
+			if (i % 2) {
+				// Swap
+				primsIndexes[i] = primsIndexes[storeIndex];
+				primsIndexes[storeIndex] = primIndex;
+				++storeIndex;
+
+				// Update the bounding boxes,
+				// this object is on the left side
+				leftChildBbox = Union(leftChildBbox, primsBboxes[primIndex]);
+				leftChildCentroidsBbox = Union(leftChildCentroidsBbox, primsCentroids[primIndex]);
+			} else {
+				// Update the bounding boxes,
+				// this object is on the right side.
+				rightChildBbox = Union(rightChildBbox, primsBboxes[primIndex]);
+				rightChildCentroidsBbox = Union(rightChildCentroidsBbox, primsCentroids[primIndex]);
+			}
+		}
+
+		// Build recursively
+		BuildTree(start, storeIndex, primsIndexes, primsBboxes, primsCentroids,
+				leftChildBbox, leftChildCentroidsBbox, currentNode,
+				leftChildIndex, depth + 1);
+		BuildTree(storeIndex, end, primsIndexes, primsBboxes, primsCentroids,
+				rightChildBbox, rightChildCentroidsBbox, currentNode,
+				rightChildIndex, depth + 1);
+		return;
+	} else {
+		for (u_int i = start; i < end; i += step) {
+			u_int primIndex = primsIndexes[i];
+
+			// Binning is relative to the centroids bbox and to the
+			// primitives' centroid.
+			const int binId = Min(NB_BINS - 1, Floor2Int(k1 * (primsCentroids[primIndex][axis] - k0)));
+
+			bins[binId]++;
+			binsBbox[binId] = Union(binsBbox[binId], primsBboxes[primIndex]);
+		}
 	}
 
 	//--------------
