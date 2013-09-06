@@ -111,6 +111,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/material_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/material_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_funcs.cl
@@ -180,6 +181,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_funcs_kernel.cpp

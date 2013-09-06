@@ -39,6 +39,7 @@ extern std::string KernelSource_mc_funcs;
 extern std::string KernelSource_bsdf_types;
 extern std::string KernelSource_bsdf_funcs;
 extern std::string KernelSource_material_types;
+extern std::string KernelSource_materialdefs_funcs;
 extern std::string KernelSource_material_funcs;
 extern std::string KernelSource_texture_types;
 extern std::string KernelSource_texture_funcs;
