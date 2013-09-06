@@ -162,12 +162,12 @@ void BSDF_Init(
 	//--------------------------------------------------------------------------
 	// Check if I have to apply normal mapping
 	//--------------------------------------------------------------------------
-	const uint normalTexIndex = mat->normalTexIndex;
-	if (normalTexIndex != NULL_INDEX) {
-		// Apply normal mapping
-		const float3 color = Texture_GetSpectrumValue(&texs[normalTexIndex], &bsdf->hitPoint
-			TEXTURES_PARAM);
-		const float3 xyz = 2.f * color - 1.f;
+
+	const float3 normalColor = Material_GetNormalTexValue(mat, &bsdf->hitPoint
+		MATERIALS_PARAM);
+
+	if (!Spectrum_IsBlack(normalColor)) {
+		const float3 xyz = 2.f * normalColor - 1.f;
 
 		float3 v1, v2;
 		CoordinateSystem(shadeN, &v1, &v2);
@@ -182,56 +182,17 @@ void BSDF_Init(
 	//--------------------------------------------------------------------------
 	// Check if I have to apply bump mapping
 	//--------------------------------------------------------------------------
-	const uint bumpTexIndex = mat->bumpTexIndex;
-	if (bumpTexIndex != NULL_INDEX) {
-		// Apply bump mapping
-		__global Texture *tex = &texs[bumpTexIndex];
-		const float2 dudv = Texture_GetDuDv(tex, &bsdf->hitPoint
-			TEXTURES_PARAM);
 
-		const float b0 = Texture_GetFloatValue(tex, &bsdf->hitPoint
-			TEXTURES_PARAM);
+	const float2 bumpUV = Material_GetBumpTexValue(mat, &bsdf->hitPoint
+		MATERIALS_PARAM);
 
-		// Placing the the following line here as a workaround for an AMD OpenCL compiler bug
-		VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
-
-		float dbdu;
-		if (dudv.s0 > 0.f) {
-			// This is a simple trick. The correct code would require true differential information.
-			VSTORE3F((float3)(hitPointP.x + dudv.s0, hitPointP.y, hitPointP.z), &bsdf->hitPoint.p.x);
-			//VSTORE2F((float2)(hitPointUV.s0 + dudv.s0, hitPointUV.s1), &bsdf->hitPoint.uv.u);
-			const float bu = Texture_GetFloatValue(tex, &bsdf->hitPoint
-				TEXTURES_PARAM);
-
-			dbdu = (bu - b0) / dudv.s0;
-		} else
-			dbdu = 0.f;
-
-		// Placing the the following line here as a workaround for an AMD OpenCL compiler bug
-		VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
-
-		float dbdv;
-		if (dudv.s1 > 0.f) {
-			// This is a simple trick. The correct code would require true differential information.
-			VSTORE3F((float3)(hitPointP.x, hitPointP.y + dudv.s1, hitPointP.z), &bsdf->hitPoint.p.x);
-			//VSTORE2F((float2)(hitPointUV.s0, hitPointUV.s1 + dudv.s1), &bsdf->hitPoint.uv.u);
-			const float bv = Texture_GetFloatValue(tex, &bsdf->hitPoint
-				TEXTURES_PARAM);
-
-			dbdv = (bv - b0) / dudv.s1;
-		} else
-			dbdv = 0.f;
-
-		// Restore p and uv value
-		VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
-		VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
-
+	if ((bumpUV.s0 != 0.f) || (bumpUV.s1 != 0.f)) {
 		float3 v1, v2;
 		CoordinateSystem(shadeN, &v1, &v2);
 		shadeN = normalize((float3)(
-				v1.x * dbdu + v2.x * dbdv + shadeN.x,
-				v1.y * dbdu + v2.y * dbdv + shadeN.y,
-				v1.z * dbdu + v2.z * dbdv + shadeN.z));
+				v1.x * bumpUV.s0 + v2.x * bumpUV.s1 + shadeN.x,
+				v1.y * bumpUV.s0 + v2.y * bumpUV.s1 + shadeN.y,
+				v1.z * bumpUV.s0 + v2.z * bumpUV.s1 + shadeN.z));
 	}
 #endif
 #endif

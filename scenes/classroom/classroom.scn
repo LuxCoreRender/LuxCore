@@ -1,4 +1,9 @@
 scene.camera.lookat = -6.078912 0.763888 -0.244332 3.862433 -0.287569 -0.49751
+#scene.camera.fieldofview = 75.0
+#scene.camera.horizontalstereo.enable = 1
+#scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable = 1
+##scene.camera.horizontalstereo.eyesdistance = 0.2262
+#scene.camera.horizontalstereo.lensdistance = 0.2779
 ################################################################################
 scene.materials.chrome.type = mirror
 scene.materials.mirror.chrome =  1.0 1.0 1.0
