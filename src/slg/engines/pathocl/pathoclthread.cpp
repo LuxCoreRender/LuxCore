@@ -736,6 +736,7 @@ void PathOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_trianglemesh_funcs <<
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_texture_funcs <<
+			slg::ocl::KernelSource_materialdefs_funcs <<
 			slg::ocl::KernelSource_material_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
