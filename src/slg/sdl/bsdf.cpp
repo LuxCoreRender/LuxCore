@@ -61,8 +61,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Check if I have to apply normal mapping
 	if (material->HasNormalTex()) {
 		// Apply normal mapping
-		const Texture *nm = material->GetNormalTexture();
-		const Spectrum color = nm->GetSpectrumValue(hitPoint);
+		const Spectrum color = material->GetNormalTexValue(hitPoint);
 
 		const float x = 2.f * color.r - 1.f;
 		const float y = 2.f * color.g - 1.f;
@@ -79,41 +78,14 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Check if I have to apply bump mapping
 	if (material->HasBumpTex()) {
 		// Apply bump mapping
-		const Texture *bm = material->GetBumpTexture();
-		const UV &dudv = bm->GetDuDv();
-
-		const float b0 = bm->GetFloatValue(hitPoint);
-
-		float dbdu;
-		if (dudv.u > 0.f) {
-			// This is a simple trick. The correct code would require true differential information.
-			HitPoint tmpHitPoint = hitPoint;
-			tmpHitPoint.p.x += dudv.u;
-			tmpHitPoint.uv.u += dudv.u;
-			const float bu = bm->GetFloatValue(tmpHitPoint);
-
-			dbdu = (bu - b0) / dudv.u;
-		} else
-			dbdu = 0.f;
-
-		float dbdv;
-		if (dudv.v > 0.f) {
-			// This is a simple trick. The correct code would require true differential information.
-			HitPoint tmpHitPoint = hitPoint;
-			tmpHitPoint.p.y += dudv.v;
-			tmpHitPoint.uv.v += dudv.v;
-			const float bv = bm->GetFloatValue(tmpHitPoint);
-
-			dbdv = (bv - b0) / dudv.v;
-		} else
-			dbdv = 0.f;
+		const UV uv = material->GetBumpTexValue(hitPoint);
 
 		Vector v1, v2;
 		CoordinateSystem(Vector(hitPoint.shadeN), &v1, &v2);
 		hitPoint.shadeN = Normalize(Normal(
-				v1.x * dbdu + v2.x * dbdv + hitPoint.shadeN.x,
-				v1.y * dbdu + v2.y * dbdv + hitPoint.shadeN.y,
-				v1.z * dbdu + v2.z * dbdv + hitPoint.shadeN.z));
+				v1.x * uv.u + v2.x * uv.v + hitPoint.shadeN.x,
+				v1.y * uv.u + v2.y * uv.v + hitPoint.shadeN.y,
+				v1.z * uv.u + v2.z * uv.v + hitPoint.shadeN.z));
 	}
 
 	frame.SetFromZ(hitPoint.shadeN);

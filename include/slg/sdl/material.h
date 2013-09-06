@@ -88,6 +88,46 @@ public:
 		else
 			return luxrays::Spectrum();
 	}
+	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const {
+		if (bumpTex) {
+			const luxrays::UV &dudv = bumpTex->GetDuDv();
+
+			const float b0 = bumpTex->GetFloatValue(hitPoint);
+
+			float dbdu;
+			if (dudv.u > 0.f) {
+				// This is a simple trick. The correct code would require true differential information.
+				HitPoint tmpHitPoint = hitPoint;
+				tmpHitPoint.p.x += dudv.u;
+				tmpHitPoint.uv.u += dudv.u;
+				const float bu = bumpTex->GetFloatValue(tmpHitPoint);
+
+				dbdu = (bu - b0) / dudv.u;
+			} else
+				dbdu = 0.f;
+
+			float dbdv;
+			if (dudv.v > 0.f) {
+				// This is a simple trick. The correct code would require true differential information.
+				HitPoint tmpHitPoint = hitPoint;
+				tmpHitPoint.p.y += dudv.v;
+				tmpHitPoint.uv.v += dudv.v;
+				const float bv = bumpTex->GetFloatValue(tmpHitPoint);
+
+				dbdv = (bv - b0) / dudv.v;
+			} else
+				dbdv = 0.f;
+
+			return luxrays::UV(dbdu, dbdv);
+		} else
+			return luxrays::UV();
+	}
+	virtual luxrays::Spectrum GetNormalTexValue(const HitPoint &hitPoint) const {
+		if (normalTex)
+			return normalTex->GetSpectrumValue(hitPoint);
+		else
+			return luxrays::Spectrum();
+	}
 
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
@@ -408,6 +448,13 @@ public:
 	virtual bool IsLightSource() const {
 		return (matA->IsLightSource() || matB->IsLightSource());
 	}
+	virtual bool HasBumpTex() const { 
+		return (matA->HasBumpTex() || matB->HasBumpTex());
+	}
+	virtual bool HasNormalTex() const { 
+		return (matA->HasNormalTex() || matB->HasNormalTex());
+	}
+
 	virtual bool IsDelta() const {
 		return (matA->IsDelta() && matB->IsDelta());
 	}
@@ -418,6 +465,8 @@ public:
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
+	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetNormalTexValue(const HitPoint &hitPoint) const;
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,

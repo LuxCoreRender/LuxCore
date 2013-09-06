@@ -559,6 +559,34 @@ Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint) const {
 	return result;
 }
 
+UV MixMaterial::GetBumpTexValue(const HitPoint &hitPoint) const {
+	UV result;
+
+	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+
+	if (matA->HasBumpTex() && (weight1 > 0.f))
+		result += weight1 * matA->GetBumpTexValue(hitPoint);
+	if (matB->HasBumpTex() && (weight2 > 0.f))
+		result += weight2 * matB->GetBumpTexValue(hitPoint);
+
+	return result;	
+}
+
+Spectrum MixMaterial::GetNormalTexValue(const HitPoint &hitPoint) const {
+	Spectrum result;
+
+	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+
+	if (matA->HasNormalTex() && (weight1 > 0.f))
+		result += weight1 * matA->GetNormalTexValue(hitPoint);
+	if (matB->HasNormalTex() && (weight2 > 0.f))
+		result += weight2 * matB->GetNormalTexValue(hitPoint);
+
+	return result;
+}
+
 Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
