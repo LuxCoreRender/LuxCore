@@ -100,6 +100,7 @@ public:
 
 	void SetFilterType(const FilterType filter);
 	FilterType GetFilterType() const { return filterType; }
+	const Filter *GetFilter() const { return filter; }
 
 	const ToneMapParams *GetToneMapParams() const { return toneMapParams; }
 	void SetToneMapParams(const ToneMapParams &params) {
@@ -169,27 +170,18 @@ public:
 		statsTotalSampleCount += count;
 	}
 
-	void AddRadiance(const FilmBufferType type, const u_int x, const u_int y,
-		const luxrays::Spectrum &radiance, const float weight) {
-		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
+	void SetPixel(const FilmBufferType type,
+		const u_int x, const u_int y,
+		const luxrays::Spectrum &radiance, const float alpha,
+		const float weight = 1.f);
 
-		sp->radiance += weight * radiance;
-		sp->weight += weight;
-	}
+	void AddSample(const FilmBufferType type,
+		const u_int x, const u_int y,
+		const luxrays::Spectrum &radiance, const float alpha,
+		const float weight = 1.f);
 
-	void SetAlpha(const u_int x, const u_int y, const float alpha) {
-		alphaFrameBuffer->SetPixel(x, y, alpha);
-	}
-
-	void AddAlpha(const u_int x, const u_int y, const float alpha,
-		const float weight) {
-		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
-
-		ap->alpha += weight * alpha;
-	}
-
-	void SplatFiltered(const FilmBufferType type, const float screenX,
-		const float screenY, const luxrays::Spectrum &radiance, const float alpha,
+	void SplatSample(const FilmBufferType type, const float filmX,
+		const float filmY, const luxrays::Spectrum &radiance, const float alpha,
 		const float weight = 1.f);
 
 private:
@@ -209,6 +201,33 @@ private:
 				Radiance2PixelFloat(c.r),
 				Radiance2PixelFloat(c.g),
 				Radiance2PixelFloat(c.b));
+	}
+
+	void SetRadiance(const FilmBufferType type, const u_int x, const u_int y,
+		const luxrays::Spectrum &radiance, const float weight) {
+		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
+
+		sp->radiance = weight * radiance;
+		sp->weight = weight;
+	}
+
+	void AddRadiance(const FilmBufferType type, const u_int x, const u_int y,
+		const luxrays::Spectrum &radiance, const float weight) {
+		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
+
+		sp->radiance += weight * radiance;
+		sp->weight += weight;
+	}
+
+	void SetAlpha(const u_int x, const u_int y, const float alpha) {
+		alphaFrameBuffer->SetPixel(x, y, alpha);
+	}
+
+	void AddAlpha(const u_int x, const u_int y, const float alpha,
+		const float weight) {
+		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
+
+		ap->alpha += weight * alpha;
 	}
 
 	u_int width, height, pixelCount;

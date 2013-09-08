@@ -42,22 +42,24 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	const Properties &cfg = renderConfig->cfg;
 
-	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	if (renderConfig->GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion))
-		renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, filmSubRegion);
-	else
-		renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, NULL);
-
 	periodiceSaveTime = cfg.GetFloat("batch.periodicsave", 0.f);
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
 	//--------------------------------------------------------------------------
+	// Update the Camera
+	//--------------------------------------------------------------------------
+
+	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
+	u_int *subRegion = (renderConfig->GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion)) ?
+		filmSubRegion : NULL;
+	renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
+
+	//--------------------------------------------------------------------------
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = new Film(renderConfig->scene->camera->GetFilmWeight(),
-			renderConfig->scene->camera->GetFilmHeight());
+	film = new Film(filmFullWidth, filmFullHeight);
 
 	const FilterType filterType = Filter::String2FilterType(cfg.GetString("film.filter.type", "GAUSSIAN"));
 	film->SetFilterType(filterType);

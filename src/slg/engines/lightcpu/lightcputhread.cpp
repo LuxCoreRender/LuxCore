@@ -31,7 +31,7 @@ using namespace slg;
 
 LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPURenderThread(engine, index, device, true, true) {
+		CPUNoTileRenderThread(engine, index, device, true, true) {
 }
 
 void LightCPURenderThread::ConnectToEye(const float u0,

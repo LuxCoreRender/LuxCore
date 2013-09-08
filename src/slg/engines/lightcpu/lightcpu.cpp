@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex) {
+		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
 	film->SetPerPixelNormalizedBufferFlag(true);
 	film->SetPerScreenNormalizedBufferFlag(true);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
@@ -49,5 +49,5 @@ void LightCPURenderEngine::StartLockLess() {
 	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
 	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
 
-	CPURenderEngine::StartLockLess();
+	CPUNoTileRenderEngine::StartLockLess();
 }

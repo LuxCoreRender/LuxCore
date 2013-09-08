@@ -267,8 +267,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 		session->Stop();
 
 		session->renderConfig->scene->camera->Update(newWidth, newHeight);
-		session->film->Init(session->renderConfig->scene->camera->GetFilmWeight(),
-			session->renderConfig->scene->camera->GetFilmHeight());
+		session->film->Init(newWidth, newHeight);
 
 		session->Start();
 
@@ -537,6 +536,12 @@ void keyFunc(unsigned char key, int x, int y) {
 #endif
 		case '9':
 			session->SetRenderingEngineType(PATHHYBRID);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			optRealTimeMode = false;
+			break;
+		case '0':
+			session->SetRenderingEngineType(BIASPATHCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;

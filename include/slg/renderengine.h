@@ -22,6 +22,8 @@
 #ifndef _SLG_RENDERENGINE_H
 #define	_SLG_RENDERENGINE_H
 
+#include <deque>
+
 #include "luxrays/core/utils.h"
 
 #include "slg/slg.h"
@@ -43,7 +45,8 @@ typedef enum {
 	BIDIRVMCPU = 10,
 	FILESAVER = 11,
 	RTPATHOCL = 12,
-	PATHHYBRID = 13
+	PATHHYBRID = 13,
+	BIASPATHCPU = 14
 } RenderEngineType;
 
 //------------------------------------------------------------------------------
@@ -150,9 +153,7 @@ class CPURenderEngine;
 class CPURenderThread {
 public:
 	CPURenderThread(CPURenderEngine *engine,
-			const u_int index, luxrays::IntersectionDevice *dev,
-			const bool enablePerPixelNormBuffer,
-			const bool enablePerScreenNormBuffer);
+			const u_int index, luxrays::IntersectionDevice *dev);
 	virtual ~CPURenderThread();
 
 	virtual void Start();
@@ -170,17 +171,13 @@ protected:
 	virtual void StartRenderThread();
 	virtual void StopRenderThread();
 
-	virtual void RenderFunc() = 0;
-
 	u_int threadIndex;
 	CPURenderEngine *renderEngine;
 
 	boost::thread *renderThread;
-	Film *threadFilm;
 	luxrays::IntersectionDevice *device;
 
 	bool started, editMode;
-	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
 };
 
 class CPURenderEngine : public RenderEngine {
@@ -200,10 +197,93 @@ protected:
 	virtual void BeginEditLockLess();
 	virtual void EndEditLockLess(const EditActionList &editActions);
 
-	virtual void UpdateFilmLockLess();
-	virtual void UpdateCounters();
+	virtual void UpdateFilmLockLess() = 0;
+	virtual void UpdateCounters() = 0;
 
 	vector<CPURenderThread *> renderThreads;
+};
+
+//------------------------------------------------------------------------------
+// CPU render engines with no tile rendering
+//------------------------------------------------------------------------------
+
+class CPUNoTileRenderEngine;
+
+class CPUNoTileRenderThread : public CPURenderThread {
+public:
+	CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
+			const u_int index, luxrays::IntersectionDevice *dev,
+			const bool enablePerPixelNormBuffer,
+			const bool enablePerScreenNormBuffer);
+	virtual ~CPUNoTileRenderThread();
+
+	friend class CPUNoTileRenderEngine;
+
+protected:
+	virtual void StartRenderThread();
+
+	Film *threadFilm;
+
+	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
+};
+
+class CPUNoTileRenderEngine : public CPURenderEngine {
+public:
+	CPUNoTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~CPUNoTileRenderEngine();
+
+	friend class CPUNoTileRenderThread;
+
+protected:
+	virtual void UpdateFilmLockLess();
+	virtual void UpdateCounters();
+};
+
+//------------------------------------------------------------------------------
+// CPU render engines with no tile rendering
+//------------------------------------------------------------------------------
+
+class CPUTileRenderEngine;
+
+class CPUTileRenderThread : public CPURenderThread {
+public:
+	CPUTileRenderThread(CPUTileRenderEngine *engine,
+			const u_int index, luxrays::IntersectionDevice *dev);
+	virtual ~CPUTileRenderThread();
+
+	friend class CPUTileRenderEngine;
+
+protected:
+	virtual void StartRenderThread();
+
+	Film *tileFilm;
+};
+
+class CPUTileRenderEngine : public CPURenderEngine {
+public:
+	CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~CPUTileRenderEngine();
+
+	friend class CPUTileRenderThread;
+
+protected:
+	typedef struct {
+		u_int xStart, yStart;
+	} Tile;
+
+	void InitTiles();
+	const Tile *NextTile(const Tile *tile, const Film *tileFilm);
+
+	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	virtual void UpdateFilmLockLess() { }
+	virtual void UpdateCounters();
+
+	u_int tileSize;
+	boost::mutex tileMutex;
+	std::deque<Tile *> todoTiles;
+	std::vector<Tile *> pendingTiles;
 };
 
 //------------------------------------------------------------------------------

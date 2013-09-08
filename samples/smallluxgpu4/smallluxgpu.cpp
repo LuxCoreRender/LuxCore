@@ -205,13 +205,12 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 					boost::lexical_cast<string>(filmSubRegion[3]));
 
 			// Update the camera and resize the film
-			session->renderConfig->scene->camera->Update(
-					originalFilmWidth + 2 * filterBorder,
-					originalFilmHeight + 2 * filterBorder,
+			const u_int filmWidth = originalFilmWidth + 2 * filterBorder;
+			const u_int filmHeight = originalFilmHeight + 2 * filterBorder;
+			session->renderConfig->scene->camera->Update(filmWidth, filmHeight,
 					filmSubRegion);
 			
-			session->film->Init(session->renderConfig->scene->camera->GetFilmWeight(),
-					session->renderConfig->scene->camera->GetFilmHeight());
+			session->film->Init(filmWidth, filmHeight);
 
 			if (sessionStarted) {
 				session->editActions.AddAction(CAMERA_EDIT);

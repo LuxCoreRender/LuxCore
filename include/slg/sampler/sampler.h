@@ -84,6 +84,11 @@ public:
 	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
+	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
+		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+			film->SplatSample(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, weight);
+	}
+
 	luxrays::RandomGenerator *rndGen;
 	Film *film;
 };
@@ -101,12 +106,7 @@ public:
 	virtual void RequestSamples(const u_int size) { }
 
 	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
-	virtual void NextSample(const std::vector<SampleResult> &sampleResults) {
-		film->AddSampleCount(1.0);
-
-		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
-	}
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 };
 
 //------------------------------------------------------------------------------

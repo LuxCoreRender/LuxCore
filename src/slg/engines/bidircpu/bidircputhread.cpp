@@ -34,7 +34,7 @@ using namespace slg;
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPURenderThread(engine, index, device, true, true) {
+		CPUNoTileRenderThread(engine, index, device, true, true) {
 }
 
 void BiDirCPURenderThread::ConnectVertices(

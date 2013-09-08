@@ -19,66 +19,36 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_LIGHTCPU_H
-#define	_SLG_LIGHTCPU_H
+#include "slg/engines/biaspathcpu/biaspathcpu.h"
 
-#include "luxrays/core/randomgen.h"
-#include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/sampler/sampler.h"
-#include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
-
-namespace slg {
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-// Light tracing CPU render engine
+// PathCPURenderEngine
 //------------------------------------------------------------------------------
 
-class LightCPURenderEngine;
-
-class LightCPURenderThread : public CPUNoTileRenderThread {
-public:
-	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
-
-	friend class LightCPURenderEngine;
-
-private:
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&LightCPURenderThread::RenderFunc, this); }
-
-	void RenderFunc();
-
-	void ConnectToEye(const float u0,
-			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
-			vector<SampleResult> &sampleResults);
-	void TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults);
-};
-
-class LightCPURenderEngine : public CPUNoTileRenderEngine {
-public:
-	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-
-	RenderEngineType GetEngineType() const { return LIGHTCPU; }
-
-	// Signed because of the delta parameter
-	int maxPathDepth;
-
-	int rrDepth;
-	float rrImportanceCap;
-
-	friend class LightCPURenderThread;
-
-protected:
-	virtual void StartLockLess();
-
-private:
-	CPURenderThread *NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) {
-		return new LightCPURenderThread(this, index, device);
-	}
-};
-
+BiasPathCPURenderEngine::BiasPathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		CPUTileRenderEngine(rcfg, flm, flmMutex) {
+	film->SetPerPixelNormalizedBufferFlag(true);
+	film->SetPerScreenNormalizedBufferFlag(false);
+	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->Init();
 }
 
-#endif	/* _SLG_LIGHTCPU_H */
+void BiasPathCPURenderEngine::StartLockLess() {
+	const Properties &cfg = renderConfig->cfg;
+
+	//--------------------------------------------------------------------------
+	// Rendering parameters
+	//--------------------------------------------------------------------------
+
+	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
+	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
+	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
+
+	aaSamples = Max(1, cfg.GetInt("biaspath.aa.size", 3));
+
+	CPUTileRenderEngine::StartLockLess();
+}

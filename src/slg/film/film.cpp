@@ -523,7 +523,39 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 	}
 }
 
-void Film::SplatFiltered(const FilmBufferType type, const float screenX,
+void Film::SetPixel(const FilmBufferType type,
+		const u_int x, const u_int y,
+		const luxrays::Spectrum &radiance, const float alpha,
+		const float weight) {
+	assert (!radiance.IsNaN() && !radiance.IsInf());
+
+	if (radiance.IsNaN() || radiance.IsInf() ||
+			(x < 0) || (x >= width) || (y < 0) || (y >= height))
+		return;
+
+	SetRadiance(type, x, y, radiance, weight);
+
+	if (enableAlphaChannel)
+		SetAlpha(x, y, alpha);
+}
+
+void Film::AddSample(const FilmBufferType type,
+		const u_int x, const u_int y,
+		const luxrays::Spectrum &radiance, const float alpha,
+		const float weight) {
+	assert (!radiance.IsNaN() && !radiance.IsInf());
+
+	if (radiance.IsNaN() || radiance.IsInf() ||
+			(x < 0) || (x >= width) || (y < 0) || (y >= height))
+		return;
+
+	AddRadiance(type, x, y, radiance, weight);
+
+	if (enableAlphaChannel)
+		AddAlpha(x, y, alpha, weight);
+}
+
+void Film::SplatSample(const FilmBufferType type, const float screenX,
 		const float screenY, const Spectrum &radiance, const float alpha,
 		const float weight) {
 	assert (!radiance.IsNaN() && !radiance.IsInf());

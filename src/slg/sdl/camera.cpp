@@ -47,6 +47,9 @@ PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Poi
 }
 
 void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
+	filmWidth = width;
+	filmHeight = height;
+
 	// Used to move translate the camera
 	dir = target - orig;
 	dir = Normalize(dir);
@@ -58,16 +61,14 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	y = Normalize(y);
 
 	// Initialize screen information
-	const float frame = float(width) / float(height);
+	const float frame = float(filmWidth) / float(filmHeight);
 	float screen[4];
 
-	filmWidth = width;
-	filmHeight = height;
 	u_int filmSubRegion[4];
 	filmSubRegion[0] = 0;
-	filmSubRegion[1] = width - 1;
+	filmSubRegion[1] = filmWidth - 1;
 	filmSubRegion[2] = 0;
-	filmSubRegion[3] = height - 1;
+	filmSubRegion[3] = filmHeight - 1;
 
 	if (autoUpdateFilmRegion) {
 		if (enableHorizStereo) {
@@ -114,8 +115,8 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 		filmWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
 		filmHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 
-		const float halfW = width * .5f;
-		const float halfH = height * .5f;
+		const float halfW = filmWidth * .5f;
+		const float halfH = filmHeight * .5f;
 		if (frame < 1.f) {
 			screen[0] = -frame * (-halfW + filmSubRegion[0]) / (-halfW);
 			screen[1] = frame * (filmSubRegion[0] + filmWidth - halfW) / halfW;

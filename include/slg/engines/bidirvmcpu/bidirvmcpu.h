@@ -94,7 +94,7 @@ public:
 	friend class BiDirVMCPURenderEngine;
 
 private:
-	boost::thread *AllocRenderThread() { return new boost::thread(&BiDirVMCPURenderThread::RenderFuncVM, this); }
+	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiDirVMCPURenderThread::RenderFuncVM, this); }
 
 	void RenderFuncVM();
 };

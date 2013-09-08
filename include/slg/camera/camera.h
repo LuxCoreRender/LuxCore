@@ -25,6 +25,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/transform.h"
 #include "slg/core/mc.h"
+#include "slg/film/film.h"
 
 namespace slg {
 	
@@ -71,8 +72,6 @@ public:
 	const luxrays::Vector &GetX() const { return x; }
 	const luxrays::Vector &GetY() const { return y; }
 	const float GetPixelArea() const { return pixelArea; }
-	const u_int GetFilmWeight() const { return filmWidth; }
-	const u_int GetFilmHeight() const { return filmHeight; }
 
 	void Translate(const luxrays::Vector &t) {
 		orig += t;
@@ -121,13 +120,14 @@ public:
 		Rotate(-k, x);
 	}
 
-	void Update(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion = NULL);
+	void Update(const u_int filmWidth, const u_int filmHeight,
+		const u_int *filmSubRegion = NULL);
 
 	void GenerateRay(
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, const float u1, const float u2) const;
 	bool GetSamplePosition(const luxrays::Point &p, const luxrays::Vector &wi,
-		float distance, float *x, float *y) const;
+		float distance, float *filmX, float *filmY) const;
 
 	bool SampleLens(const float u1, const float u2,
 		luxrays::Point *lensPoint) const;
@@ -173,6 +173,7 @@ private:
 		const float eyeOffset,
 		const float screenOffsetX, const float screenOffsetY);
 
+	// A copy of Film values
 	u_int filmWidth, filmHeight;
 
 	// Calculated values

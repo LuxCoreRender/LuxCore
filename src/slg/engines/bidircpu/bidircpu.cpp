@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPURenderEngine(rcfg, flm, flmMutex) {
+		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
 	lightPathsCount = 1;
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
@@ -53,5 +53,5 @@ void BiDirCPURenderEngine::StartLockLess() {
 	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
 	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
 
-	CPURenderEngine::StartLockLess();
+	CPUNoTileRenderEngine::StartLockLess();
 }

@@ -50,7 +50,7 @@ typedef struct {
 
 class BiDirCPURenderEngine;
 
-class BiDirCPURenderThread : public CPURenderThread {
+class BiDirCPURenderThread : public CPUNoTileRenderThread {
 public:
 	BiDirCPURenderThread(BiDirCPURenderEngine *engine, const u_int index,
 			luxrays::IntersectionDevice *device);
@@ -68,7 +68,7 @@ protected:
 		return a * a; // Power heuristic
 	}
 
-	boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
+	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
 
 	void RenderFunc();
 
@@ -100,7 +100,7 @@ protected:
 	float vmNormalization; // 1 / (Pi * radius^2 * light_path_count)
 };
 
-class BiDirCPURenderEngine : public CPURenderEngine {
+class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	BiDirCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 

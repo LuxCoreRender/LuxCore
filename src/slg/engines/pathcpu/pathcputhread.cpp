@@ -34,7 +34,7 @@ using namespace slg;
 
 PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPURenderThread(engine, index, device, true, false) {
+		CPUNoTileRenderThread(engine, index, device, true, false) {
 }
 
 void PathCPURenderThread::DirectLightSampling(
@@ -159,7 +159,7 @@ void PathCPURenderThread::RenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	PerspectiveCamera *camera = scene->camera;
-	Film * film = threadFilm;
+	Film *film = threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();
 
@@ -266,6 +266,7 @@ void PathCPURenderThread::RenderFunc() {
 		}
 
 		assert (!radiance.IsNaN() && !radiance.IsInf());
+		assert (!isnan(alpha) && !isinf(alpha));
 
 		sampleResults[0].screenX = screenX;
 		sampleResults[0].screenY = screenY;

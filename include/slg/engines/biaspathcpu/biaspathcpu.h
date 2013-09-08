@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_LIGHTCPU_H
-#define	_SLG_LIGHTCPU_H
+#ifndef _SLG_BIASPATHCPU_H
+#define	_SLG_BIASPATHCPU_H
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
@@ -32,42 +32,56 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Light tracing CPU render engine
+// Biased path tracing CPU render engine
 //------------------------------------------------------------------------------
 
-class LightCPURenderEngine;
+class BiasPathCPURenderEngine;
 
-class LightCPURenderThread : public CPUNoTileRenderThread {
+class BiasPathCPURenderThread : public CPUTileRenderThread {
 public:
-	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index,
+	BiasPathCPURenderThread(BiasPathCPURenderEngine *engine, const u_int index,
 			luxrays::IntersectionDevice *device);
 
-	friend class LightCPURenderEngine;
+	friend class BiasPathCPURenderEngine;
 
 private:
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&LightCPURenderThread::RenderFunc, this); }
+	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiasPathCPURenderThread::RenderFunc, this); }
 
 	void RenderFunc();
 
-	void ConnectToEye(const float u0,
-			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
-			vector<SampleResult> &sampleResults);
-	void TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults);
+	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
+		const u_int ix, const u_int iy, float *u0, float *u1) const;
+
+	void DirectLightSampling(const float u0, const float u1,
+			const float u2, const float u3, const float u4,
+			const luxrays::Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
+			luxrays::Spectrum *radiance);
+
+	void DirectHitFiniteLight(const bool lastSpecular,
+			const luxrays::Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
+			const float lastPdfW, luxrays::Spectrum *radiance);
+
+	void DirectHitInfiniteLight(const bool lastSpecular, const luxrays::Spectrum &pathThrouput,
+			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
+
+	void TracePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
+		luxrays::Spectrum *radiance, float *alpha);
 };
 
-class LightCPURenderEngine : public CPUNoTileRenderEngine {
+class BiasPathCPURenderEngine : public CPUTileRenderEngine {
 public:
-	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiasPathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	RenderEngineType GetEngineType() const { return LIGHTCPU; }
+	RenderEngineType GetEngineType() const { return BIASPATHCPU; }
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
-
 	int rrDepth;
 	float rrImportanceCap;
 
-	friend class LightCPURenderThread;
+	u_int aaSamples;
+
+	friend class BiasPathCPURenderThread;
 
 protected:
 	virtual void StartLockLess();
@@ -75,10 +89,10 @@ protected:
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
-		return new LightCPURenderThread(this, index, device);
+		return new BiasPathCPURenderThread(this, index, device);
 	}
 };
 
 }
 
-#endif	/* _SLG_LIGHTCPU_H */
+#endif	/* _SLG_BIASPATHCPU_H */

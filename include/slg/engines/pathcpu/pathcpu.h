@@ -37,7 +37,7 @@ namespace slg {
 
 class PathCPURenderEngine;
 
-class PathCPURenderThread : public CPURenderThread {
+class PathCPURenderThread : public CPUNoTileRenderThread {
 public:
 	PathCPURenderThread(PathCPURenderEngine *engine, const u_int index,
 			luxrays::IntersectionDevice *device);
@@ -45,7 +45,7 @@ public:
 	friend class PathCPURenderEngine;
 
 private:
-	boost::thread *AllocRenderThread() { return new boost::thread(&PathCPURenderThread::RenderFunc, this); }
+	virtual boost::thread *AllocRenderThread() { return new boost::thread(&PathCPURenderThread::RenderFunc, this); }
 
 	void RenderFunc();
 
@@ -62,7 +62,7 @@ private:
 			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
 };
 
-class PathCPURenderEngine : public CPURenderEngine {
+class PathCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	PathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 

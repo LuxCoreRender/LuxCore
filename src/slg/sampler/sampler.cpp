@@ -57,6 +57,15 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 }
 
 //------------------------------------------------------------------------------
+// Random sampler
+//------------------------------------------------------------------------------
+
+void RandomSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+	film->AddSampleCount(1.0);
+	AddSamplesToFilm(sampleResults);
+}
+
+//------------------------------------------------------------------------------
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
@@ -196,10 +205,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	if ((accProb == 1.f) || (rndGen->floatValue() < accProb)) {
 		// Add accumulated SampleResult of previous reference sample
 		const float norm = weight / (currentLuminance / meanIntensity + currentLargeMutationProbability);
-		if (norm > 0.f) {
-			for (std::vector<SampleResult>::const_iterator sr = currentSampleResult.begin(); sr < currentSampleResult.end(); ++sr)
-				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, norm);
-		}
+		if (norm > 0.f)
+			AddSamplesToFilm(currentSampleResult, norm);
 
 		// Save new contributions for reference
 		weight = newWeight;
@@ -213,10 +220,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	} else {
 		// Add contribution of new sample before rejecting it
 		const float norm = newWeight / (newLuminance / meanIntensity + currentLargeMutationProbability);
-		if (norm > 0.f) {
-			for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, norm);
-		}
+		if (norm > 0.f)
+			AddSamplesToFilm(sampleResults, norm);
 
 		// Restart from previous reference
 		stamp = currentStamp;
@@ -281,9 +286,7 @@ float SobolSampler::GetSample(const u_int index) {
 
 void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
-
-	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-		film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
+	AddSamplesToFilm(sampleResults);
 
 	++pass;
 }

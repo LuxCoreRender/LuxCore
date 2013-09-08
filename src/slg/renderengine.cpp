@@ -30,6 +30,7 @@
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 #include "slg/engines/filesaver/filesaver.h"
 #include "slg/engines/pathhybrid/pathhybrid.h"
+#include "slg/engines/biaspathcpu/biaspathcpu.h"
 #include "slg/sdl/bsdf.h"
 
 #include "luxrays/core/intersectiondevice.h"
@@ -189,7 +190,6 @@ void RenderEngine::UpdateFilm() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
 	if (started) {
-		elapsedTime = WallClockTime() - startTime;
 		UpdateFilmLockLess();
 		UpdateCounters();
 
@@ -234,6 +234,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return RTPATHOCL;
 	if ((type.compare("13") == 0) || (type.compare("PATHHYBRID") == 0))
 		return PATHHYBRID;
+	if ((type.compare("14") == 0) || (type.compare("BIASPATHCPU") == 0))
+		return BIASPATHCPU;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -259,6 +261,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "RTPATHOCL";
 		case PATHHYBRID:
 			return "PATHHYBRID";
+		case BIASPATHCPU:
+			return "BIASPATHCPU";
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
@@ -296,6 +300,8 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 #endif
 		case PATHHYBRID:
 			return new PathHybridRenderEngine(renderConfig, film, filmMutex);
+		case BIASPATHCPU:
+			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}
@@ -306,18 +312,13 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 //------------------------------------------------------------------------------
 
 CPURenderThread::CPURenderThread(CPURenderEngine *engine,
-		const u_int index, IntersectionDevice *dev,
-		const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) {
+		const u_int index, IntersectionDevice *dev) {
 	threadIndex = index;
 	renderEngine = engine;
 	device = dev;
 
 	started = false;
 	editMode = false;
-
-	threadFilm = NULL;
-	enablePerPixelNormBuffer = enablePerPixelNormBuf;
-	enablePerScreenNormBuffer = enablePerScreenNormBuf;
 }
 
 CPURenderThread::~CPURenderThread() {
@@ -325,8 +326,6 @@ CPURenderThread::~CPURenderThread() {
 		EndEdit(EditActionList());
 	if (started)
 		Stop();
-
-	delete threadFilm;
 }
 
 void CPURenderThread::Start() {
@@ -347,18 +346,6 @@ void CPURenderThread::Stop() {
 }
 
 void CPURenderThread::StartRenderThread() {
-	const u_int filmWidth = renderEngine->film->GetWidth();
-	const u_int filmHeight = renderEngine->film->GetHeight();
-
-	delete threadFilm;
-
-	threadFilm = new Film(filmWidth, filmHeight);
-	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->SetPerPixelNormalizedBufferFlag(enablePerPixelNormBuffer);
-	threadFilm->SetPerScreenNormalizedBufferFlag(enablePerScreenNormBuffer);
-	threadFilm->SetFrameBufferFlag(false);
-	threadFilm->Init();
-
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
 }
@@ -454,27 +441,214 @@ void CPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
 		renderThreads[i]->EndEdit(editActions);
 }
 
-void CPURenderEngine::UpdateFilmLockLess() {
+//------------------------------------------------------------------------------
+// CPUNoTileRenderThread
+//------------------------------------------------------------------------------
+
+CPUNoTileRenderThread::CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
+		const u_int index, IntersectionDevice *dev,
+		const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) :
+		CPURenderThread(engine, index, dev) {
+	threadFilm = NULL;
+	enablePerPixelNormBuffer = enablePerPixelNormBuf;
+	enablePerScreenNormBuffer = enablePerScreenNormBuf;
+}
+
+CPUNoTileRenderThread::~CPUNoTileRenderThread() {
+	delete threadFilm;
+}
+
+void CPUNoTileRenderThread::StartRenderThread() {
+	CPUNoTileRenderEngine *cpuNoTileEngine = (CPUNoTileRenderEngine *)renderEngine;
+
+	const u_int filmWidth = cpuNoTileEngine->film->GetWidth();
+	const u_int filmHeight = cpuNoTileEngine->film->GetHeight();
+
+	delete threadFilm;
+
+	threadFilm = new Film(filmWidth, filmHeight);
+	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
+	threadFilm->SetPerPixelNormalizedBufferFlag(enablePerPixelNormBuffer);
+	threadFilm->SetPerScreenNormalizedBufferFlag(enablePerScreenNormBuffer);
+	threadFilm->SetFrameBufferFlag(false);
+	threadFilm->Init();
+
+	CPURenderThread::StartRenderThread();
+}
+
+//------------------------------------------------------------------------------
+// CPUNoTileRenderEngine
+//------------------------------------------------------------------------------
+
+CPUNoTileRenderEngine::CPUNoTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+	CPURenderEngine(cfg, flm, flmMutex) {
+}
+
+CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
+}
+
+void CPUNoTileRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
 	film->Reset();
 
 	// Merge the all thread films
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		if (renderThreads[i] && renderThreads[i]->threadFilm)
-			film->AddFilm(*(renderThreads[i]->threadFilm));
+		if (!renderThreads[i])
+			continue;
+
+		const Film *threadFilm = ((CPUNoTileRenderThread *)renderThreads[i])->threadFilm;
+		if (threadFilm)
+			film->AddFilm(*threadFilm);
 	}
 }
 
-void CPURenderEngine::UpdateCounters() {
+void CPUNoTileRenderEngine::UpdateCounters() {
+	elapsedTime = WallClockTime() - startTime;
+
 	// Update the sample count statistic
 	samplesCount = film->GetTotalSampleCount();
 
 	// Update the ray count statistic
 	double totalCount = 0.0;
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		totalCount += renderThreads[i]->device->GetTotalRaysCount();
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		const CPUNoTileRenderThread *thread = (CPUNoTileRenderThread *)renderThreads[i];
+		totalCount += thread->device->GetTotalRaysCount();
+	}
 	raysCount = totalCount;
+}
+
+//------------------------------------------------------------------------------
+// CPUTileRenderThread
+//------------------------------------------------------------------------------
+
+CPUTileRenderThread::CPUTileRenderThread(CPUTileRenderEngine *engine,
+		const u_int index, IntersectionDevice *dev) :
+		CPURenderThread(engine, index, dev) {
+	tileFilm = NULL;
+}
+
+CPUTileRenderThread::~CPUTileRenderThread() {
+	delete tileFilm;
+}
+
+void CPUTileRenderThread::StartRenderThread() {
+	delete tileFilm;
+
+	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
+	tileFilm = new Film(cpuTileEngine->tileSize, cpuTileEngine->tileSize);
+	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
+	tileFilm->SetPerPixelNormalizedBufferFlag(true);
+	tileFilm->SetPerScreenNormalizedBufferFlag(false);
+	tileFilm->SetFrameBufferFlag(false);
+	tileFilm->Init();
+
+	CPURenderThread::StartRenderThread();
+}
+
+//------------------------------------------------------------------------------
+// CPUTileRenderEngine
+//------------------------------------------------------------------------------
+
+CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+	CPURenderEngine(cfg, flm, flmMutex) {
+	tileSize =  Max(cfg->cfg.GetInt("tile.size", 32), 8);
+}
+
+CPUTileRenderEngine::~CPUTileRenderEngine() {
+}
+
+void CPUTileRenderEngine::InitTiles() {
+	u_int x = 0;
+	u_int y = 0;
+
+	// Linear tile order
+	for (;;) {
+		Tile *tile = new Tile;
+		tile->xStart = x;
+		tile->yStart = y;
+		todoTiles.push_back(tile);
+
+		x += tileSize;
+		if (x >= film->GetWidth()) {
+			x = 0;
+
+			y += tileSize;
+			if (y >= film->GetHeight())
+				break;
+		}
+	}
+}
+
+const CPUTileRenderEngine::Tile *CPUTileRenderEngine::NextTile(const Tile *tile, const Film *tileFilm) {
+	// Check if I have to add the tile to the film
+	if (tile) {
+		boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+		film->AddSampleCount(tileFilm->GetTotalSampleCount());
+		film->AddFilm(*tileFilm,
+				0, 0,
+				Min(tileSize, film->GetWidth() - tile->xStart),
+				Min(tileSize, film->GetHeight() - tile->yStart),
+				tile->xStart, tile->yStart);
+	}
+
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	if (tile) {
+		// Remove the tile from pending list
+		pendingTiles.erase(std::remove(pendingTiles.begin(), pendingTiles.end(), tile), pendingTiles.end());
+
+		// Now I can free the memory
+		delete tile;
+	}
+
+	if (todoTiles.size() == 0)
+		return NULL;
+
+	Tile *newTile = todoTiles.front();
+	todoTiles.pop_front();
+	pendingTiles.push_back(newTile);
+	return newTile;
+}
+
+void CPUTileRenderEngine::StartLockLess() {
+	InitTiles();
+
+	CPURenderEngine::StartLockLess();
+}
+
+void CPUTileRenderEngine::StopLockLess() {
+	CPURenderEngine::StopLockLess();
+
+	// Free all left tiles
+	BOOST_FOREACH(Tile *tile, todoTiles) {
+		delete tile;
+	}
+	todoTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		delete tile;
+	}
+	pendingTiles.clear();
+}
+
+void CPUTileRenderEngine::UpdateCounters() {
+	// Update the statistics only until when the rendering is not finished
+	if ((todoTiles.size() > 0) || (pendingTiles.size() > 0)) {
+		elapsedTime = WallClockTime() - startTime;
+
+		// Update the sample count statistic
+		samplesCount = film->GetTotalSampleCount();
+
+		// Update the ray count statistic
+		double totalCount = 0.0;
+		for (size_t i = 0; i < renderThreads.size(); ++i) {
+			const CPUTileRenderThread *thread = (CPUTileRenderThread *)renderThreads[i];
+			totalCount += thread->device->GetTotalRaysCount();
+		}
+		raysCount = totalCount;
+	}
 }
 
 //------------------------------------------------------------------------------
